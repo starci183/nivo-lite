@@ -10,6 +10,9 @@ export const SOURCE_CHARS_MAX = 120_000
 /** Tags kept on one knowledge source. */
 export const TAGS_MAX = 12
 
+/** A new customer's need when the API caller supplies none; historical rows used it as a sentinel. */
+export const DEFAULT_API_NEED = "Created through the API"
+
 /** The window of events read when the caller names none: one day. */
 const EVENTS_DEFAULT_WINDOW_MS = 86_400_000
 

@@ -9,6 +9,7 @@ import type {
     LeadName,
     NewLead,
     OptionalLeadRecord,
+    PublicLeadFactsPatch,
 } from "./lead-records.contracts"
 import type { LeadRecordRow } from "./persistence/lead-records.rows"
 import {
@@ -21,6 +22,8 @@ import {
     MARK_LEAD_WON,
     MATCH_LEAD,
     REPLACE_LEAD_CONTEXT,
+    PATCH_PUBLIC_LEAD,
+    APPLY_PUBLIC_LEAD_STAGE,
 } from "./persistence/lead-records.sql"
 
 @Injectable()
@@ -29,8 +32,12 @@ export class LeadRecordsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** The lead of the workspace, or null when there is none with that id. */
-    async find(workspaceId: string, leadId: string): Promise<OptionalLeadRecord> {
-        const rows = await this.entityManager.query<Array<LeadRecordRow>>(FIND_LEAD, [workspaceId, leadId])
+    async find(
+        workspaceId: string,
+        leadId: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<OptionalLeadRecord> {
+        const rows = await manager.query<Array<LeadRecordRow>>(FIND_LEAD, [workspaceId, leadId])
         return rows[0] ?? null
     }
 
@@ -42,9 +49,9 @@ export class LeadRecordsService {
     }
 
     /** Matches a customer by phone, email, or exact name and channel when the input has no contact. */
-    async match(match: LeadMatch): Promise<OptionalLeadRecord> {
+    async match(match: LeadMatch, manager: EntityManager = this.entityManager): Promise<OptionalLeadRecord> {
         const name = match.name?.trim() ?? ""
-        const rows = await this.entityManager.query<Array<LeadRecordRow>>(MATCH_LEAD, [
+        const rows = await manager.query<Array<LeadRecordRow>>(MATCH_LEAD, [
             match.workspaceId,
             match.phone,
             match.email,
@@ -103,6 +110,22 @@ export class LeadRecordsService {
     /** A confirmed order won the deal, unless it was lost. */
     async markWon(workspaceId: string, leadId: string): Promise<void> {
         await this.entityManager.query(MARK_LEAD_WON, [workspaceId, leadId])
+    }
+
+    /** Patches only the supplied nonempty API facts in the caller's transaction; null need preserves it. */
+    async patchPublicFacts(patch: PublicLeadFactsPatch, manager: EntityManager): Promise<void> {
+        await manager.query(PATCH_PUBLIC_LEAD, [patch.workspaceId, patch.leadId, patch.company, patch.need])
+    }
+
+    /** Applies an API outcome once, without reopening a closed deal; null means no stage changed. */
+    async applyPublicStage(
+        workspaceId: string,
+        leadId: string,
+        stage: string,
+        manager: EntityManager,
+    ): Promise<OptionalLeadRecord> {
+        const rows = await manager.query<Array<LeadRecordRow>>(APPLY_PUBLIC_LEAD_STAGE, [workspaceId, leadId, stage])
+        return rows[0] ?? null
     }
 
     /** The names of the given leads. */

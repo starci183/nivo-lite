@@ -130,6 +130,7 @@ describe("PublicLeadsService / acceptLead", () => {
                 name: "Nguyen A",
                 contact: "84912000701",
                 need: "price",
+                needSupplied: true,
                 channel: "Zalo",
                 company: "ACME",
                 note: "vip",
@@ -164,6 +165,7 @@ describe("PublicLeadsService / acceptLead", () => {
                 name: "Nguyen A",
                 contact: "a@b.co",
                 need: "Created through the API",
+                needSupplied: false,
                 channel: "API",
                 company: "",
                 note: "",
@@ -176,6 +178,39 @@ describe("PublicLeadsService / acceptLead", () => {
 })
 
 describe("PublicLeadsService / acceptLead", () => {
+    it.each([
+        ["omitted", undefined, false],
+        ["empty", "", false],
+        ["explicit default text", "Created through the API", true],
+    ] as const)("records need presence for %s input", async (_name, need, needSupplied) => {
+        const tx = transactionOf([MATCH_LEAD_BY_PHONE, [{ id: "lead-7" }]], [INSERT_REQUEST, [RECORDED]])
+        const { service } = await build(tx.em)
+
+        await service.acceptLead({ ...LEAD, need })
+
+        expect(tx.em.query).toHaveBeenCalledWith(INSERT_REQUEST, [
+            "workspace-1",
+            "key-1",
+            "lead",
+            "lead:key-1:",
+            "crm-9",
+            JSON.stringify({
+                name: "Nguyen A",
+                contact: "84912000701",
+                need: "Created through the API",
+                needSupplied,
+                channel: "Zalo",
+                company: "ACME",
+                note: "vip",
+                stage: "qualified",
+                externalId: "crm-9",
+                source: "api:n8n",
+            }),
+        ])
+    })
+})
+
+describe("PublicLeadsService / customer matching", () => {
     it("answers the customer an email matches", async () => {
         const tx = transactionOf([MATCH_LEAD_BY_EMAIL, [{ id: "lead-4" }]], [INSERT_REQUEST, [RECORDED]])
         const { service } = await build(tx.em)

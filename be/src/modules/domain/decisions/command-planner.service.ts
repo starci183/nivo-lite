@@ -76,20 +76,25 @@ export class CommandPlannerService {
      * Validates the command and answers the work to run, or the refusal. The plan's `onInserted` hook writes the Office mirror
      * line and the `command.sent` evidence once, and only when the engine really inserted the item.
      */
-    async plan(ctx: WorkContext, input: SendCommandInput): Promise<CommandPlan> {
-        const receiver = await this.modules.entryOf(input.to)
-        if (receiver === null) return this.refuse(ctx, input, "unknown_module", `no agent ${input.to}`)
+    async plan(
+        ctx: WorkContext,
+        input: SendCommandInput,
+        manager: EntityManager = this.entityManager,
+    ): Promise<CommandPlan> {
+        const receiver = await this.modules.entryOf(input.to, manager)
+        if (receiver === null) return this.refuse(ctx, input, manager, "unknown_module", `no agent ${input.to}`)
         const accepted = receiver.accepts.find((candidate) => candidate.command === input.command)
         if (accepted === undefined) {
-            return this.refuse(ctx, input, "unknown_command", `${input.to} does not accept ${input.command}`)
+            return this.refuse(ctx, input, manager, "unknown_command", `${input.to} does not accept ${input.command}`)
         }
-        const sender = await this.senderOf(ctx, input.from)
-        if (sender === null) return this.refuse(ctx, input, "unknown_sender", `no sender ${input.from}`)
+        const sender = await this.senderOf(ctx, input.from, manager)
+        if (sender === null) return this.refuse(ctx, input, manager, "unknown_sender", `no sender ${input.from}`)
         const missing = missingPayload(accepted.requiredFields, input.payload)
         if (missing.length > 0) {
             return this.refuse(
                 ctx,
                 input,
+                manager,
                 "missing_fields",
                 `${input.to}.${input.command} needs ${missing.join(", ")}`,
                 missing,
@@ -97,38 +102,56 @@ export class CommandPlannerService {
         }
         const address = splitPayload(input.payload, accepted.subjectType)
         if (!isSubjectType(address.subjectType)) {
-            return this.refuse(ctx, input, "missing_fields", `${address.subjectType} is not a kind of record`, [
-                "subject_type",
-            ])
-        }
-        const position = await this.positionOf(ctx, input)
-        if (tooDeep(position.depth)) {
-            return this.refuse(ctx, input, "too_deep", `depth ${position.depth} is deeper than the chain allows`)
-        }
-        const dedupeKey = input.dedupeKey ?? defaultDedupeKey(input.command, address.subjectType, address.subjectId)
-        if (position.chainId !== null && (await this.repeats(ctx, position.chainId, accepted, address, dedupeKey))) {
             return this.refuse(
                 ctx,
                 input,
+                manager,
+                "missing_fields",
+                `${address.subjectType} is not a kind of record`,
+                ["subject_type"],
+            )
+        }
+        const position = await this.positionOf(ctx, input, manager)
+        if (tooDeep(position.depth)) {
+            return this.refuse(
+                ctx,
+                input,
+                manager,
+                "too_deep",
+                `depth ${position.depth} is deeper than the chain allows`,
+            )
+        }
+        const dedupeKey = input.dedupeKey ?? defaultDedupeKey(input.command, address.subjectType, address.subjectId)
+        if (
+            position.chainId !== null &&
+            (await this.repeats(ctx, position.chainId, accepted, address, dedupeKey, manager))
+        ) {
+            return this.refuse(
+                ctx,
+                input,
+                manager,
                 "cycle",
                 `${input.command} on ${address.subjectType} already ran in chain ${position.chainId}`,
             )
         }
-        const instance = await this.instanceFor(ctx, input, receiver, address, position)
-        return this.accept({
-            ctx,
-            input,
-            accepted,
-            sender: sender.label,
-            address,
-            subjectType: address.subjectType,
-            position,
-            dedupeKey,
-            instance,
-        })
+        const instance = await this.instanceFor(ctx, input, receiver, address, position, manager)
+        return this.accept(
+            {
+                ctx,
+                input,
+                accepted,
+                sender: sender.label,
+                address,
+                subjectType: address.subjectType,
+                position,
+                dedupeKey,
+                instance,
+            },
+            manager,
+        )
     }
 
-    private accept(parts: AcceptedCommandParts): PlannedCommand {
+    private accept(parts: AcceptedCommandParts, manager: EntityManager): PlannedCommand {
         const { input, accepted, address, position, instance } = parts
         let inserted = false
         const spec: WorkSpec = {
@@ -149,37 +172,41 @@ export class CommandPlannerService {
             installationId: instance?.id ?? null,
             onInserted: async (row: WorkItem) => {
                 inserted = true
-                await this.announce(parts, row)
+                await this.announce(parts, row, manager)
             },
         }
         return { ok: true, spec, depth: position.depth, inserted: () => inserted }
     }
 
     /** The Office mirror line and the `command.sent` evidence of a command that became a work item. */
-    private async announce(parts: AcceptedCommandParts, row: WorkItem): Promise<void> {
+    private async announce(parts: AcceptedCommandParts, row: WorkItem, manager: EntityManager): Promise<void> {
         const { ctx, input, accepted, address, instance } = parts
-        const subject = await this.subjectPhrase(ctx, address)
-        const toName = instanceLabel(await this.modules.nameOf(input.to, ctx.locale), instance?.name ?? null)
+        const subject = await this.subjectPhrase(ctx, address, manager)
+        const toName = instanceLabel(await this.modules.nameOf(input.to, ctx.locale, manager), instance?.name ?? null)
         const params = { to: toName, from: parts.sender, what: accepted.description[ctx.locale], subject }
         const body = this.catalog.get(subject === "" ? "command.mirror" : "command.mirror.subject", params, ctx.locale)
         await this.safely(
-            () => this.office.post(ctx, { command: true, body, lead_id: row.lead_id, work_item_id: row.id }),
+            () => this.office.post(ctx, { command: true, body, lead_id: row.lead_id, work_item_id: row.id }, manager),
             WorkEngineLogEvent.OfficeFailed,
         )
         const target = instance === null ? input.to : `${input.to}[${instance.name ?? instance.id}]`
         await this.safely(
             () =>
-                this.evidence.log(ctx, {
-                    lead_id: row.lead_id,
-                    work_item_id: row.id,
-                    kind: "command.sent",
-                    actor: parts.sender,
-                    summary: `${target}.${input.command}`,
-                    evidence:
-                        instance === null
-                            ? input.reason
-                            : `${input.reason} · instance ${instance.id} (${instance.via})`,
-                }),
+                this.evidence.log(
+                    ctx,
+                    {
+                        lead_id: row.lead_id,
+                        work_item_id: row.id,
+                        kind: "command.sent",
+                        actor: parts.sender,
+                        summary: `${target}.${input.command}`,
+                        evidence:
+                            instance === null
+                                ? input.reason
+                                : `${input.reason} · instance ${instance.id} (${instance.via})`,
+                    },
+                    manager,
+                ),
             WorkEngineLogEvent.EvidenceFailed,
         )
     }
@@ -187,54 +214,59 @@ export class CommandPlannerService {
     private async refuse(
         ctx: WorkContext,
         input: SendCommandInput,
+        manager: EntityManager,
         refused: CommandRefusal,
         detail: string,
         missing?: ReadonlyArray<string>,
     ): Promise<CommandRefused> {
         await this.safely(
             () =>
-                this.evidence.log(ctx, {
-                    kind: "command.refused",
-                    actor: "NIVO",
-                    summary: `${input.from} -> ${input.to}.${input.command}: ${refused}`,
-                    evidence: detail,
-                }),
+                this.evidence.log(
+                    ctx,
+                    {
+                        kind: "command.refused",
+                        actor: "NIVO",
+                        summary: `${input.from} -> ${input.to}.${input.command}: ${refused}`,
+                        evidence: detail,
+                    },
+                    manager,
+                ),
             WorkEngineLogEvent.EvidenceFailed,
         )
         return { ok: false, refused, detail, ...(missing === undefined ? {} : { missing }) }
     }
 
     /** Who sends: the owner, an input, a module or an agent of the workspace; null when the id names nobody. */
-    private async senderOf(ctx: WorkContext, from: string): Promise<OptionalCommandSender> {
+    private async senderOf(ctx: WorkContext, from: string, manager: EntityManager): Promise<OptionalCommandSender> {
         if (from === "owner") return { label: this.catalog.get("command.sender.owner", {}, ctx.locale) }
         if (from === "inbound") return { label: this.catalog.get("command.sender.inbound", {}, ctx.locale) }
-        if ((await this.modules.entryOf(from)) !== null) return { label: await this.modules.nameOf(from, ctx.locale) }
+        if ((await this.modules.entryOf(from, manager)) !== null)
+            return { label: await this.modules.nameOf(from, ctx.locale, manager) }
         if (!isUuid(from)) return null
-        const agent = (
-            await this.entityManager.query<Array<SenderAgentRow>>(FIND_SENDER_AGENT, [ctx.workspaceId, from])
-        )[0]
+        const agent = (await manager.query<Array<SenderAgentRow>>(FIND_SENDER_AGENT, [ctx.workspaceId, from]))[0]
         if (agent === undefined) return null
-        const registered = await this.modules.entryOf(agent.module)
+        const registered = await this.modules.entryOf(agent.module, manager)
         if (registered === null) return { label: agent.name }
         const instanceName = registered.multiInstance ? agent.installation_name : null
-        return { label: instanceLabel(await this.modules.nameOf(agent.module, ctx.locale), instanceName) }
+        return { label: instanceLabel(await this.modules.nameOf(agent.module, ctx.locale, manager), instanceName) }
     }
 
     /** Where the command sits in its chain: after its parent, or after the deepest item of the chain it names. */
-    private async positionOf(ctx: WorkContext, input: SendCommandInput): Promise<ChainPosition> {
+    private async positionOf(
+        ctx: WorkContext,
+        input: SendCommandInput,
+        manager: EntityManager,
+    ): Promise<ChainPosition> {
         const named = input.chainId ?? null
         if (input.parentId !== undefined && input.parentId !== null) {
             const parent = (
-                await this.entityManager.query<Array<ParentPositionRow>>(FIND_PARENT_POSITION, [
-                    ctx.workspaceId,
-                    input.parentId,
-                ])
+                await manager.query<Array<ParentPositionRow>>(FIND_PARENT_POSITION, [ctx.workspaceId, input.parentId])
             )[0]
             if (parent === undefined) return { chainId: named, depth: 0 }
             return { chainId: named ?? parent.chain_id ?? parent.id, depth: parent.depth + 1 }
         }
         if (named === null) return { chainId: null, depth: 0 }
-        const top = (await this.entityManager.query<Array<ChainTopRow>>(FIND_CHAIN_TOP, [ctx.workspaceId, named]))[0]
+        const top = (await manager.query<Array<ChainTopRow>>(FIND_CHAIN_TOP, [ctx.workspaceId, named]))[0]
         return { chainId: named, depth: top === undefined ? 1 : top.depth + 1 }
     }
 
@@ -245,9 +277,10 @@ export class CommandPlannerService {
         accepted: ModuleCommand,
         address: SplitPayload,
         dedupeKey: string,
+        manager: EntityManager,
     ): Promise<boolean> {
         const row = (
-            await this.entityManager.query<Array<RepeatsRow>>(CHAIN_REPEATS_COMMAND, [
+            await manager.query<Array<RepeatsRow>>(CHAIN_REPEATS_COMMAND, [
                 ctx.workspaceId,
                 chainId,
                 accepted.action,
@@ -273,13 +306,14 @@ export class CommandPlannerService {
         receiver: ModuleEntry,
         address: SplitPayload,
         position: ChainPosition,
+        manager: EntityManager,
     ): Promise<OptionalInstanceChoice> {
         if (!receiver.multiInstance) return null
         try {
-            const given = await this.givenInstance(ctx, input)
+            const given = await this.givenInstance(ctx, input, manager)
             if (given !== null) return given
             const hit = (
-                await this.entityManager.query<Array<ResolvedInstallationRow>>(RESOLVE_INSTALLATION, [
+                await manager.query<Array<ResolvedInstallationRow>>(RESOLVE_INSTALLATION, [
                     ctx.workspaceId,
                     input.to,
                     this.conversationOf(address),
@@ -294,10 +328,14 @@ export class CommandPlannerService {
         }
     }
 
-    private async givenInstance(ctx: WorkContext, input: SendCommandInput): Promise<OptionalInstanceChoice> {
+    private async givenInstance(
+        ctx: WorkContext,
+        input: SendCommandInput,
+        manager: EntityManager,
+    ): Promise<OptionalInstanceChoice> {
         if (input.installationId === undefined || input.installationId === null) return null
         const row = (
-            await this.entityManager.query<Array<GivenInstallationRow>>(FIND_GIVEN_INSTALLATION, [
+            await manager.query<Array<GivenInstallationRow>>(FIND_GIVEN_INSTALLATION, [
                 ctx.workspaceId,
                 input.to,
                 input.installationId,
@@ -307,9 +345,9 @@ export class CommandPlannerService {
     }
 
     /** "order #DH-1" / "customer Lan"; empty when the subject has no readable label. A label is a courtesy: it never blocks a command. */
-    private async subjectPhrase(ctx: WorkContext, address: SplitPayload): Promise<string> {
+    private async subjectPhrase(ctx: WorkContext, address: SplitPayload, manager: EntityManager): Promise<string> {
         if (address.subjectId === null) return ""
-        const label = await this.labelOf(ctx, address)
+        const label = await this.labelOf(ctx, address, manager)
         if (label === null) return ""
         const shown = shownSubject(address.subjectType, label)
         const key = `command.subject.${address.subjectType}`
@@ -317,9 +355,9 @@ export class CommandPlannerService {
         return word === key ? shown : `${word} ${shown}`
     }
 
-    private async labelOf(ctx: WorkContext, address: SplitPayload): Promise<string | null> {
+    private async labelOf(ctx: WorkContext, address: SplitPayload, manager: EntityManager): Promise<string | null> {
         try {
-            const rows = await this.entityManager.query<Array<SubjectLabelRow>>(FIND_SUBJECT_LABEL, [
+            const rows = await manager.query<Array<SubjectLabelRow>>(FIND_SUBJECT_LABEL, [
                 ctx.workspaceId,
                 address.subjectType,
                 address.subjectId,

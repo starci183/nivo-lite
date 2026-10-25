@@ -26,6 +26,7 @@ import { RefreshZaloTokensQueueModule } from "@features/jobs/refresh-zalo-tokens
 import { RunZaloWizardQueueModule } from "@features/jobs/run-zalo-wizard"
 import { RunChatTurnQueueModule } from "@features/jobs/run-chat-turn"
 import { RunLeadActionQueueModule } from "@features/jobs/run-lead-action"
+import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
 import { ReconcileBankCreditQueueModule } from "@features/jobs/reconcile-bank-credit"
 import { CreatePaymentOrderQueueModule } from "@features/jobs/create-payment-order"
 import { ApplyBookingStatusQueueModule } from "@features/jobs/apply-booking-status"
@@ -72,6 +73,7 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     RunZaloWizardQueueModule.register({}),
     RunChatTurnQueueModule.register({}),
     RunLeadActionQueueModule.register({}),
+    ProcessPublicApiQueueModule.register({}),
     ReconcileBankCreditQueueModule.register({}),
     CreatePaymentOrderQueueModule.register({}),
     ApplyBookingStatusQueueModule.register({}),

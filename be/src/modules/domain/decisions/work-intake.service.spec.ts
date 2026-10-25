@@ -1,4 +1,4 @@
-import { builder, mock } from "@starci/jest-preset"
+import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { WorkItemsService } from "@modules/domain/work-items"
 import type { NewWorkItem } from "@modules/domain/work-items"
@@ -68,6 +68,7 @@ const build = async (rows: Rows = {}) => {
     const insert = jest.fn().mockResolvedValue(rows.inserted === undefined ? itemOf() : rows.inserted)
     const findByDedupe = jest.fn().mockResolvedValue(rows.existing === undefined ? null : rows.existing)
     const action = rows.action === undefined ? actionOf() : rows.action
+    const modules = mock<ModuleCatalogService>({ actionOf: jest.fn().mockResolvedValue(action) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkIntakeService,
@@ -78,12 +79,12 @@ const build = async (rows: Rows = {}) => {
             { provide: WorkItemsService, useValue: mock<WorkItemsService>({ insert, findByDedupe }) },
             {
                 provide: ModuleCatalogService,
-                useValue: mock<ModuleCatalogService>({ actionOf: jest.fn().mockResolvedValue(action) }),
+                useValue: modules,
             },
             { provide: EvidenceService, useValue: evidence },
         ],
     }).compile()
-    return { service: moduleRef.get(WorkIntakeService), evidence, insert, findByDedupe }
+    return { service: moduleRef.get(WorkIntakeService), evidence, insert, findByDedupe, modules }
 }
 
 describe("WorkIntakeService", () => {
@@ -104,21 +105,24 @@ describe("WorkIntakeService", () => {
 
         expect(result.created).toBe(true)
         expect(result.item.id).toBe("item-1")
-        expect(insert).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            chainId: "chain-1",
-            depth: 2,
-            department: "sales",
-            action: "send_quote",
-            subjectType: "lead",
-            subjectId: "lead-1",
-            leadId: "lead-1",
-            inboundEventId: "in-1",
-            parentId: "p-1",
-            dedupeKey: "send_quote:lead-1",
-            proposal: { summary: "Quote", fields: {} },
-            installationId: "inst-1",
-        } satisfies NewWorkItem)
+        expect(insert).toHaveBeenCalledWith(
+            {
+                workspaceId: "ws-1",
+                chainId: "chain-1",
+                depth: 2,
+                department: "sales",
+                action: "send_quote",
+                subjectType: "lead",
+                subjectId: "lead-1",
+                leadId: "lead-1",
+                inboundEventId: "in-1",
+                parentId: "p-1",
+                dedupeKey: "send_quote:lead-1",
+                proposal: { summary: "Quote", fields: {} },
+                installationId: "inst-1",
+            } satisfies NewWorkItem,
+            undefined,
+        )
     })
 
     it("starts a new chain at depth 0 when the spec names none", async () => {
@@ -137,6 +141,7 @@ describe("WorkIntakeService", () => {
                 installationId: null,
                 proposal: { summary: "", fields: {} },
             }),
+            undefined,
         )
     })
 
@@ -160,15 +165,19 @@ describe("WorkIntakeService", () => {
         expect(result.created).toBe(false)
         expect(result.item.id).toBe("old")
         expect(seen).toEqual([])
-        expect(findByDedupe).toHaveBeenCalledWith("ws-1", "send_quote:lead-1")
-        expect(evidence.log).toHaveBeenCalledWith(ctx, {
-            lead_id: "lead-1",
-            work_item_id: "old",
-            kind: "core.duplicate_blocked",
-            actor: "NIVO",
-            summary: "text:engine.duplicate",
-            evidence: "send_quote:lead-1",
-        })
+        expect(findByDedupe).toHaveBeenCalledWith("ws-1", "send_quote:lead-1", undefined)
+        expect(evidence.log).toHaveBeenCalledWith(
+            ctx,
+            {
+                lead_id: "lead-1",
+                work_item_id: "old",
+                kind: "core.duplicate_blocked",
+                actor: "NIVO",
+                summary: "text:engine.duplicate",
+                evidence: "send_quote:lead-1",
+            },
+            undefined,
+        )
     })
 
     it("is not found when the key is used but the item cannot be read", async () => {
@@ -181,5 +190,48 @@ describe("WorkIntakeService", () => {
         const { service } = await build({ action: null })
 
         await expect(service.insert(ctx, specOf())).rejects.toThrow(DecisionsErrorCode.UnknownAction)
+    })
+
+    it("inserts the exact durable execution choices through the supplied transaction", async () => {
+        const { service, insert, modules } = await build()
+        const manager = mockEntityManager()
+
+        await service.insert(
+            ctx,
+            specOf({
+                seed: { summary: "API message", draft: "Exact API text" },
+                preset: true,
+                noChain: true,
+                forceAsk: "over_authority",
+            }),
+            manager,
+        )
+        expect(modules.actionOf).toHaveBeenCalledWith("send_quote", manager)
+
+        expect(insert).toHaveBeenCalledWith(
+            expect.objectContaining({
+                proposal: {
+                    summary: "API message",
+                    fields: {},
+                    draft: "Exact API text",
+                    execution: { preset: true, noChain: true, forceAsk: "over_authority" },
+                },
+            }),
+            manager,
+        )
+    })
+
+    it("uses the supplied transaction for duplicate lookup and evidence", async () => {
+        const { service, evidence, findByDedupe } = await build({ inserted: null, existing: itemOf() })
+        const manager = mockEntityManager()
+
+        expect((await service.insert(ctx, specOf(), manager)).created).toBe(false)
+
+        expect(findByDedupe).toHaveBeenCalledWith("ws-1", "send_quote:lead-1", manager)
+        expect(evidence.log).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ kind: "core.duplicate_blocked" }),
+            manager,
+        )
     })
 })

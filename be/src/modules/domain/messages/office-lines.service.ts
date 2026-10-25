@@ -23,13 +23,13 @@ export class OfficeLinesService {
      * Posts one line. It speaks as the department's agent (Sales, Accounting, Chatbot) when that agent exists; without one,
      * and always for a command mirror, it stays a NIVO system line.
      */
-    async post(ctx: MessagesScope, line: OfficeLineInput): Promise<void> {
+    async post(ctx: MessagesScope, line: OfficeLineInput, manager: EntityManager = this.entityManager): Promise<void> {
         const agent = await this.speaker(ctx, line)
         const [kind, name, agentId] =
             agent === null
                 ? ["system", line.command === true ? COMMAND_LINE_AUTHOR : CORE_LINE_AUTHOR, null]
                 : ["agent", agent.name, agent.id]
-        await this.entityManager.query(INSERT_MESSAGE, [
+        await manager.query(INSERT_MESSAGE, [
             ctx.workspaceId,
             kind,
             name,

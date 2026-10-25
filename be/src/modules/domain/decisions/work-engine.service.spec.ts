@@ -1,22 +1,21 @@
-import { mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { mock } from "@starci/jest-preset"
+import type { Logger } from "@modules/platform/logging"
+import type { MessageCatalog } from "@modules/platform/i18n"
+import type { WorkPerformerRegistry } from "./work-performer.port"
+import type { OutboundAccessGate } from "./work-engine.port"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
 import type * as Work from "./decisions.contracts"
 import { ModuleCatalogService } from "./module-catalog.service"
 import { WorkApprovalService } from "./work-approval.service"
 import { WorkChainService } from "./work-chain.service"
-import type { OutboundAccess, ProposalSeed } from "./work-engine.contracts"
 import { OUTBOUND_ACCESS_GATE } from "./work-engine.decorators"
-import type { OutboundAccessGate } from "./work-engine.port"
 import { WorkEngineService } from "./work-engine.service"
 import { WorkIntakeService } from "./work-intake.service"
 import { WORK_PERFORMER_REGISTRY } from "./work-performer.port"
-import type { WorkPerformerRegistry } from "./work-performer.port"
 import { WorkRecorderService } from "./work-recorder.service"
 import { DecisionsErrorCode } from "./errors/decisions.error"
 import type { InboundWorkSource } from "./inbound-work.contracts"
@@ -29,9 +28,25 @@ import {
     actionEntry,
     specOf,
     performedOf,
+    messageProposalOf,
+    approvalMessageOf,
+    queuedRuns,
+    performerFailures,
+    decisionFailures,
+    approvalCases,
+    idleRuns,
+    preparedOrderOf,
+    preparedAddress,
+    replySeed,
+    inboundReply,
+    orderSeeds,
+    recordOnlyCases,
+    inboundBatches,
+    candidates,
+    owner,
 } from "@tests/fixtures/builders/work-engine.builder"
 
-const anything = (): unknown => expect.anything()
+import type { WorkEngineFixtureOptions } from "@tests/fixtures/builders/work-engine.builder"
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 const quoteResult = { summary: "Sent the quote" }
@@ -45,17 +60,9 @@ const autoPlan = { path: "auto", by: { name: "NIVO", kind: "policy" }, outcome: 
 const authorityAsk = objectLike({
     verdict: objectLike({ verdict: "ask", reason: "over_authority" }),
 })
-const anyValue = anything()
+const anyValue: unknown = expect.anything()
 const editedDraft = objectLike({ draft: "x" })
 
-interface Options {
-    readonly performer?: Work.WorkPerformer | null
-    readonly rule?: Work.OptionalAuthorityRule
-    readonly access?: OutboundAccess
-    readonly action?: Work.ActionEntry | null
-    readonly created?: boolean
-    readonly items?: Partial<WorkItemsService>
-}
 const resolved = <T>(value: T) => jest.fn().mockResolvedValue(value)
 const performerOf = (overrides: Partial<Work.WorkPerformer> = {}): Work.WorkPerformer => {
     const performer = mock<Work.WorkPerformer>({
@@ -65,7 +72,7 @@ const performerOf = (overrides: Partial<Work.WorkPerformer> = {}): Work.WorkPerf
     })
     return performer
 }
-const build = async (options: Options = {}) => {
+const build = async (options: WorkEngineFixtureOptions = {}) => {
     const performer = options.performer === undefined ? performerOf() : options.performer
     const logger = mock<Logger>()
     const catalog = mock<MessageCatalog>()
@@ -130,154 +137,185 @@ const build = async (options: Options = {}) => {
         error: logger.error,
     }
 }
-const run = async (options: Options = {}, overrides: Partial<Work.WorkSpec> = {}) => {
+const run = async (options: WorkEngineFixtureOptions = {}, overrides: Partial<Work.WorkSpec> = {}) => {
     const built = await build(options)
     return { built, item: await built.service.runWork(ctx, specOf(overrides)) }
 }
 
-describe("WorkEngineService", () => {
-    describe("runWork", () => {
-        it("answers the existing item when the dedupe key was used", async () => {
-            const { built, item } = await run({ created: false })
-            expect(item.id).toBe("item-1")
-            expect(built.items.claim).not.toHaveBeenCalled()
+describe("WorkEngineService / durable execution choices", () => {
+    it("uses the exact queued draft without preparation and asks when the producer requires approval", async () => {
+        const proposal = approvalMessageOf({ summary: "API message", fields: {} })
+        const built = await build({ items: { claim: resolved(itemOf({ proposal })) } })
+
+        await built.service.runQueuedItem(ctx, "item-1")
+
+        expect(built.performer?.prepare).not.toHaveBeenCalled()
+        expect(built.items.savePrepared).not.toHaveBeenCalled()
+        expect(built.ask).toHaveBeenCalledWith(ctx, expect.objectContaining({ proposal }), proposal, authorityAsk)
+        expect(built.performer?.perform).not.toHaveBeenCalled()
+    })
+
+    it("finishes a queued preset message automatically without chaining", async () => {
+        const proposal = messageProposalOf()
+        const built = await build({
+            items: { nextQueued: resolved(itemOf({ proposal })), claim: resolved(itemOf({ proposal })) },
         })
 
-        it("only inserts a queued item", async () => {
-            const { built, item } = await run({}, { queue: true })
-            expect(item.status).toBe("queued")
-            expect(built.items.claim).not.toHaveBeenCalled()
+        expect(await built.service.runQueued(ctx, 1)).toBe(1)
+        expect(built.performer?.prepare).not.toHaveBeenCalled()
+        expect(built.performer?.perform).toHaveBeenCalledWith(ctx, expect.anything(), proposal, autoPlan.by)
+        expect(built.continueChain).not.toHaveBeenCalled()
+    })
+
+    it("retains durable choices when preparing a queued proposal", async () => {
+        const proposal: Work.Proposal = { ...quote, execution: { noChain: true } }
+        const prepared: Work.Proposal = { summary: "Prepared", fields: { items: "coffee" } }
+        const built = await build({
+            performer: performerOf({ prepare: resolved({ proposal: prepared }) }),
+            items: { claim: resolved(itemOf({ proposal })) },
         })
 
-        it("answers the item when another worker already holds it", async () => {
-            const { built, item } = await run({ items: { claim: resolved(null) } })
-            expect(item.status).toBe("queued")
-            expect(built.items.claim).toHaveBeenCalledWith("ws-1", "item-1")
-            expect(built.performer?.prepare).not.toHaveBeenCalled()
-        })
+        await built.service.runQueuedItem(ctx, "item-1")
 
-        it("prepares, passes the gate, performs and logs an automatic item, then continues the chain", async () => {
-            const proposal = { summary: "Work.Prepared", fields: { items: "tea" } }
-            const prepared: Work.Prepared = {
-                proposal,
-                patch: { lead_id: "lead-2", subject_type: "order", subject_id: "order-1" },
-            }
-            const performer = performerOf({ prepare: resolved(prepared) })
-            const saved = itemOf({ lead_id: "lead-2", proposal })
-            const { built, item } = await run({ performer, items: { savePrepared: resolved(saved) } })
-            expect(item.status).toBe("done")
-            expect(built.items.savePrepared).toHaveBeenCalledWith("item-1", {
-                proposal,
-                subjectType: "order",
-                subjectId: "order-1",
-                leadId: "lead-2",
-            })
-            expect(built.ruleFor).toHaveBeenCalledWith(ctx, "send_quote", "inst-1")
-            expect(built.items.markDone).toHaveBeenCalledWith("item-1", { ...autoResult, proposal })
-            expect(built.finished).toHaveBeenCalledWith(ctx, saved, doneItem, proposal, autoPlan, performedOf())
-            expect(built.continueChain).toHaveBeenCalledWith(ctx, doneItem)
-            expect(built.ask).not.toHaveBeenCalled()
+        expect(built.items.savePrepared).toHaveBeenCalledWith("item-1", {
+            ...blankPatch,
+            proposal: { ...prepared, execution: { preset: undefined, noChain: true, forceAsk: undefined } },
         })
+        expect(built.continueChain).not.toHaveBeenCalled()
+    })
 
-        it("keeps the stored address when the performer corrects none", async () => {
-            const { built } = await run({})
-            expect(built.items.savePrepared).toHaveBeenCalledWith("item-1", blankPatch)
-        })
+    it("retains the producer's no-chain choice after a person's approval and edits", async () => {
+        const proposal = approvalMessageOf({ draft: "Original" })
+        const built = await build({ items: { reopen: resolved(itemOf({ proposal })) } })
 
-        it("records the href and the customer the performer found", async () => {
-            const performer = performerOf({
-                perform: resolved(performedOf({ href: "/quotes/1", lead_id: "lead-9" })),
-            })
-            const { built } = await run({ performer })
-            expect(built.items.markDone).toHaveBeenCalledWith(
-                "item-1",
-                expect.objectContaining({ result: { summary: "Sent the quote", href: "/quotes/1" }, leadId: "lead-9" }),
-            )
-        })
+        await built.service.resumeWork(ctx, "item-1", "approved", { draft: "Edited" }, owner)
 
-        it("skips the prepare step of a preset item and the chain of a no-chain item", async () => {
-            const { built } = await run({}, { preset: true, noChain: true })
-            expect(built.performer?.prepare).not.toHaveBeenCalled()
-            expect(built.items.savePrepared).not.toHaveBeenCalled()
-            expect(built.finished).toHaveBeenCalledTimes(1)
-            expect(built.continueChain).not.toHaveBeenCalled()
-        })
+        expect(built.performer?.perform).toHaveBeenCalledWith(
+            ctx,
+            expect.anything(),
+            expect.objectContaining({ draft: "Edited", execution: proposal.execution }),
+            { name: "Lan", kind: "owner" },
+        )
+        expect(built.continueChain).not.toHaveBeenCalled()
     })
 })
 
-describe("WorkEngineService", () => {
-    describe("runWork", () => {
-        it.each([
-            { label: "with a label", action: actionEntry(), result: { summary: "engine.recordOnly(Send quote)" } },
-            { label: "without a label", action: null, result: { summary: "engine.recordOnly(send_quote)" } },
-        ])("records an action without a performer $label", async ({ action, result }) => {
-            const { built } = await run({ performer: null, action })
-            expect(built.items.markDone).toHaveBeenCalledWith(
-                "item-1",
-                expect.objectContaining({ result, evidence: "pending", leadId: "lead-1" }),
-            )
-        })
+describe("WorkEngineService / runWork", () => {
+    it.each(idleRuns)("returns queued work $label without performing it", async ({ created, queue, held }) => {
+        const { built, item } = await run({ created, items: held ? { claim: resolved(null) } : {} }, { queue })
+        expect(item).toMatchObject({ id: "item-1", status: "queued" })
+        expect(built.items.claim.mock.calls).toEqual(held ? [["ws-1", "item-1"]] : [])
+        expect(built.performer?.prepare).not.toHaveBeenCalled()
+    })
 
-        it("asks a person when the owner has granted no rule", async () => {
-            const { built, item } = await run({ rule: null })
-            expect(item.status).toBe("waiting_decision")
-            expect(built.ask).toHaveBeenCalledWith(ctx, existingItem, quote, {
-                verdict: objectLike({ verdict: "ask", reason: "not_allowed" }),
-                rule: null,
-            })
-            expect(built.finished).not.toHaveBeenCalled()
-        })
+    it("prepares, passes the gate, performs and logs an automatic item, then continues the chain", async () => {
+        const prepared = preparedOrderOf()
+        const { proposal } = prepared
+        const performer = performerOf({ prepare: resolved(prepared) })
+        const saved = itemOf({ lead_id: "lead-2", proposal })
+        const { built, item } = await run({ performer, items: { savePrepared: resolved(saved) } })
+        expect(item.status).toBe("done")
+        expect(built.items.savePrepared).toHaveBeenCalledWith("item-1", preparedAddress)
+        expect(built.ruleFor).toHaveBeenCalledWith(ctx, "send_quote", "inst-1")
+        expect(built.items.markDone).toHaveBeenCalledWith("item-1", { ...autoResult, proposal })
+        expect(built.finished).toHaveBeenCalledWith(ctx, saved, doneItem, proposal, autoPlan, performedOf())
+        expect(built.continueChain).toHaveBeenCalledWith(ctx, doneItem)
+        expect(built.ask).not.toHaveBeenCalled()
+    })
 
-        it("asks a person when the item was forced to ask", async () => {
-            const { built } = await run({}, { preset: true, forceAsk: "unclear_outcome" })
-            expect(built.ask).toHaveBeenCalledWith(ctx, anyValue, anyValue, {
-                verdict: { verdict: "ask", reason: "unclear_outcome", reasons: ["unclear_outcome"], missing: [] },
-                rule: ruleOf(),
-            })
-        })
+    it("keeps the stored address when the performer corrects none", async () => {
+        const { built } = await run({})
+        expect(built.items.savePrepared).toHaveBeenCalledWith("item-1", blankPatch)
+    })
 
-        it.each(["auto", "ask", "read"] as const)("honors the %s outbound grant", async (access) => {
-            const { built } = await run({ access }, { preset: true })
-            if (access === "auto") {
-                expect(built.accessOf).toHaveBeenCalledWith(ctx, existingItem, anyValue)
-                expect(built.finished).toHaveBeenCalledTimes(1)
-            } else {
-                expect(built.ask).toHaveBeenCalledWith(ctx, anyValue, anyValue, authorityAsk)
-            }
+    it("records the href and the customer the performer found", async () => {
+        const performer = performerOf({
+            perform: resolved(performedOf({ href: "/quotes/1", lead_id: "lead-9" })),
         })
+        const { built } = await run({ performer })
+        expect(built.items.markDone).toHaveBeenCalledWith(
+            "item-1",
+            expect.objectContaining({ result: { summary: "Sent the quote", href: "/quotes/1" }, leadId: "lead-9" }),
+        )
+    })
 
-        it("does not look at the access of an action that sends no message", async () => {
-            const { built } = await run(
-                {
-                    action: actionEntry({ action: "classify_lead" }),
-                    items: { claim: resolved(itemOf({ action: "classify_lead" })) },
-                },
-                { action: "classify_lead", preset: true },
-            )
-            expect(built.accessOf).not.toHaveBeenCalled()
+    it("skips the prepare step of a preset item and the chain of a no-chain item", async () => {
+        const { built } = await run({}, { preset: true, noChain: true })
+        expect(built.performer?.prepare).not.toHaveBeenCalled()
+        expect(built.items.savePrepared).not.toHaveBeenCalled()
+        expect(built.finished).toHaveBeenCalledTimes(1)
+        expect(built.continueChain).not.toHaveBeenCalled()
+    })
+})
+
+describe("WorkEngineService / runWork", () => {
+    it.each(recordOnlyCases)("records an action without a performer $label", async ({ action, result }) => {
+        const { built } = await run({ performer: null, action })
+        expect(built.items.markDone).toHaveBeenCalledWith(
+            "item-1",
+            expect.objectContaining({ result, evidence: "pending", leadId: "lead-1" }),
+        )
+    })
+
+    it("asks a person when the owner has granted no rule", async () => {
+        const { built, item } = await run({ rule: null })
+        expect(item.status).toBe("waiting_decision")
+        expect(built.ask).toHaveBeenCalledWith(ctx, existingItem, quote, {
+            verdict: objectLike({ verdict: "ask", reason: "not_allowed" }),
+            rule: null,
         })
+        expect(built.finished).not.toHaveBeenCalled()
+    })
 
-        it.each([
-            { cause: new RangeError("model down"), message: "model down" },
-            { cause: "x".repeat(600), message: "x".repeat(500) },
-        ])("fails the item and records the normalized failure $message", async ({ cause, message }) => {
+    it("asks a person when the item was forced to ask", async () => {
+        const { built } = await run({}, { preset: true, forceAsk: "unclear_outcome" })
+        expect(built.ask).toHaveBeenCalledWith(ctx, anyValue, anyValue, {
+            verdict: { verdict: "ask", reason: "unclear_outcome", reasons: ["unclear_outcome"], missing: [] },
+            rule: ruleOf(),
+        })
+    })
+
+    it.each(["auto", "ask", "read"] as const)("honors the %s outbound grant", async (access) => {
+        const { built } = await run({ access }, { preset: true })
+        if (access === "auto") {
+            expect(built.accessOf).toHaveBeenCalledWith(ctx, existingItem, anyValue)
+            expect(built.finished).toHaveBeenCalledTimes(1)
+        } else {
+            expect(built.ask).toHaveBeenCalledWith(ctx, anyValue, anyValue, authorityAsk)
+        }
+    })
+
+    it("does not look at the access of an action that sends no message", async () => {
+        const { built } = await run(
+            {
+                action: actionEntry({ action: "classify_lead" }),
+                items: { claim: resolved(itemOf({ action: "classify_lead" })) },
+            },
+            { action: "classify_lead", preset: true },
+        )
+        expect(built.accessOf).not.toHaveBeenCalled()
+    })
+
+    it.each(performerFailures)(
+        "fails the item and records the normalized failure $message",
+        async ({ cause, message }) => {
             const performer = performerOf({ prepare: jest.fn().mockRejectedValue(cause) })
             const { built, item } = await run({ performer })
             expect(item.status).toBe("failed")
             expect(built.items.markFailed).toHaveBeenCalledWith("item-1", message)
             expect(built.failed).toHaveBeenCalledWith(ctx, existingItem, message)
-        })
+        },
+    )
 
-        it("still answers a failed item when the failure cannot be saved", async () => {
-            const performer = performerOf({ perform: jest.fn().mockRejectedValue(new RangeError("send failed")) })
-            const { built, item } = await run({
-                performer,
-                items: { markFailed: jest.fn().mockRejectedValue(new RangeError("db down")) },
-            })
-            expect(item).toEqual(expect.objectContaining({ status: "failed", error: "send failed" }))
-            expect(built.error).toHaveBeenCalledWith(WorkEngineLogEvent.MarkFailedFailed, expect.any(RangeError), {
-                workItemId: "item-1",
-            })
+    it("still answers a failed item when the failure cannot be saved", async () => {
+        const performer = performerOf({ perform: jest.fn().mockRejectedValue(new RangeError("send failed")) })
+        const { built, item } = await run({
+            performer,
+            items: { markFailed: jest.fn().mockRejectedValue(new RangeError("db down")) },
+        })
+        expect(item).toEqual(expect.objectContaining({ status: "failed", error: "send failed" }))
+        expect(built.error).toHaveBeenCalledWith(WorkEngineLogEvent.MarkFailedFailed, expect.any(RangeError), {
+            workItemId: "item-1",
         })
     })
 })
@@ -290,15 +328,14 @@ describe("WorkEngineService", () => {
     })
 
     describe("runQueued", () => {
-        it.each([
-            { limit: 0, queued: null, count: 0, reads: [] },
-            { limit: 3, queued: null, count: 0, reads: [["ws-1"]] },
-            { limit: 2, queued: itemOf(), count: 2, reads: [["ws-1"], ["ws-1"]] },
-        ])("processes $count items with a limit of $limit", async ({ limit, queued, count, reads }) => {
-            const built = await build({ items: { nextQueued: resolved(queued) } })
-            expect(await built.service.runQueued(ctx, limit)).toBe(count)
-            expect(built.items.nextQueued.mock.calls).toEqual(reads)
-        })
+        it.each(queuedRuns)(
+            "processes $count items with a limit of $limit",
+            async ({ limit, queued, count, reads }) => {
+                const built = await build({ items: { nextQueued: resolved(queued) } })
+                expect(await built.service.runQueued(ctx, limit)).toBe(count)
+                expect(built.items.nextQueued.mock.calls).toEqual(reads)
+            },
+        )
         it("processes up to the limit, oldest first, and counts only what it took", async () => {
             const built = await build()
             const { claim, nextQueued } = built.items
@@ -332,156 +369,129 @@ describe("WorkEngineService", () => {
                 expect(built.continueChain).toHaveBeenCalledWith(ctx, doneItem)
             } else expect(built.performer?.prepare).not.toHaveBeenCalled()
         })
-        it.each([0, 1, 4])("runInboundQueued bounds input claims to a batch of %s", async (limit) => {
-            const built = await build()
-            built.items.nextInboundQueued
-                .mockResolvedValueOnce(itemOf({ id: limit === 4 ? "held-1" : "item-1" }))
-                .mockResolvedValueOnce(itemOf())
-            if (limit === 4) built.items.claim.mockResolvedValueOnce(null)
-            await expect(built.service.runInboundQueued(ctx, "event-1", limit)).resolves.toBe(limit === 0 ? 0 : 1)
-            expect(built.items.nextInboundQueued.mock.calls).toEqual(
-                Array.from({ length: limit === 4 ? 3 : limit }, () => ["ws-1", "event-1"]),
-            )
-            const claims = limit === 0 ? [] : [["ws-1", "item-1"]]
-            if (limit === 4) claims.unshift(["ws-1", "held-1"])
-            expect(built.items.claim.mock.calls).toEqual(claims)
-            expect(built.items.nextQueued).not.toHaveBeenCalled()
-            expect(built.performer?.prepare).toHaveBeenCalledTimes(limit === 0 ? 0 : 1)
-            expect(built.items.markDone).toHaveBeenCalledTimes(limit === 0 ? 0 : 1)
-        })
+        it.each(inboundBatches)(
+            "runInboundQueued bounds input claims to a batch of $limit",
+            async ({ limit, queued, claimed, reads, claims, count }) => {
+                const built = await build()
+                for (const row of queued) built.items.nextInboundQueued.mockResolvedValueOnce(row)
+                for (const row of claimed) built.items.claim.mockResolvedValueOnce(row)
+                await expect(built.service.runInboundQueued(ctx, "event-1", limit)).resolves.toBe(count)
+                expect(built.items.nextInboundQueued.mock.calls).toEqual(reads)
+                expect(built.items.claim.mock.calls).toEqual(claims)
+                expect(built.items.nextQueued).not.toHaveBeenCalled()
+                expect(built.performer?.prepare).toHaveBeenCalledTimes(count)
+                expect(built.items.markDone).toHaveBeenCalledTimes(count)
+            },
+        )
     })
 })
 
-describe("WorkEngineService", () => {
-    describe("resumeWork", () => {
-        const owner = { name: "Lan", kind: "owner" } as const
-        it("refuses a decision on an item that no longer waits", async () => {
-            const built = await build({ items: { reopen: resolved(null) } })
-            await expect(built.service.resumeWork(ctx, "item-1", "approved", {}, owner)).rejects.toThrow(
-                DecisionsErrorCode.NotWaiting,
-            )
-            expect(built.items.reopen).toHaveBeenCalledWith("ws-1", "item-1")
-        })
+describe("WorkEngineService / resumeWork", () => {
+    it("refuses a decision on an item that no longer waits", async () => {
+        const built = await build({ items: { reopen: resolved(null) } })
+        await expect(built.service.resumeWork(ctx, "item-1", "approved", {}, owner)).rejects.toThrow(
+            DecisionsErrorCode.NotWaiting,
+        )
+        expect(built.items.reopen).toHaveBeenCalledWith("ws-1", "item-1")
+    })
 
-        it("stops the work with the action's undo and tells the people", async () => {
-            const onReject = resolved(undefined)
-            const built = await build({ performer: performerOf({ onReject }) })
-            const item = await built.service.resumeWork(ctx, "item-1", "rejected", { draft: "x" }, owner, "no")
-            expect(item.status).toBe("rejected")
-            expect(onReject).toHaveBeenCalledWith(ctx, existingItem, anyValue, owner)
-            expect(built.items.markRejected).toHaveBeenCalledWith(
-                "item-1",
-                { ...quote, draft: "x" },
-                { summary: "engine.rejectedResult()" },
-            )
-            expect(built.rejected).toHaveBeenCalledWith(ctx, existingItem, editedDraft, owner, "no")
-        })
+    it("stops the work with the action's undo and tells the people", async () => {
+        const onReject = resolved(undefined)
+        const built = await build({ performer: performerOf({ onReject }) })
+        const item = await built.service.resumeWork(ctx, "item-1", "rejected", { draft: "x" }, owner, "no")
+        expect(item.status).toBe("rejected")
+        expect(onReject).toHaveBeenCalledWith(ctx, existingItem, anyValue, owner)
+        expect(built.items.markRejected).toHaveBeenCalledWith(
+            "item-1",
+            { ...quote, draft: "x" },
+            { summary: "engine.rejectedResult()" },
+        )
+        expect(built.rejected).toHaveBeenCalledWith(ctx, existingItem, editedDraft, owner, "no")
+    })
 
-        it("needs no undo from a performer without one, or from an action without a performer", async () => {
-            const plain = await build()
-            const none = await build({ performer: null })
-            await plain.service.resumeWork(ctx, "item-1", "rejected", {}, owner)
-            await none.service.resumeWork(ctx, "item-1", "rejected", {}, owner)
-            expect(plain.rejected).toHaveBeenCalledWith(ctx, anyValue, anyValue, owner, null)
-            expect(none.rejected).toHaveBeenCalledTimes(1)
-        })
+    it("needs no undo from a performer without one, or from an action without a performer", async () => {
+        const plain = await build()
+        const none = await build({ performer: null })
+        await plain.service.resumeWork(ctx, "item-1", "rejected", {}, owner)
+        await none.service.resumeWork(ctx, "item-1", "rejected", {}, owner)
+        expect(plain.rejected).toHaveBeenCalledWith(ctx, anyValue, anyValue, owner, null)
+        expect(none.rejected).toHaveBeenCalledTimes(1)
+    })
 
-        it.each([
-            ["rejected", "onReject", "undo failed"],
-            ["approved", "perform", "send failed"],
-        ] as const)("fails and rethrows a %s decision", async (decision, method, message) => {
-            const performer = performerOf({ [method]: jest.fn().mockRejectedValue(new RangeError(message)) })
-            const built = await build({ performer, rule: decision === "approved" ? ruleOf({ mode: "ask" }) : ruleOf() })
-            await expect(built.service.resumeWork(ctx, "item-1", decision, {}, owner)).rejects.toThrow(message)
-            expect(built.failed).toHaveBeenCalledWith(ctx, existingItem, message)
-        })
+    it.each(decisionFailures)("fails and rethrows a %s decision", async (decision, method, message) => {
+        const performer = performerOf({ [method]: jest.fn().mockRejectedValue(new RangeError(message)) })
+        const built = await build({ performer, rule: decision === "approved" ? ruleOf({ mode: "ask" }) : ruleOf() })
+        await expect(built.service.resumeWork(ctx, "item-1", decision, {}, owner)).rejects.toThrow(message)
+        expect(built.failed).toHaveBeenCalledWith(ctx, existingItem, message)
+    })
 
-        it.each([
-            ["unchanged", {}, null, "approved", expect.objectContaining({ outcome: "clear" })],
-            ["edited", { amount_vnd: 90 }, "cheaper", "edited", expect.objectContaining({ amount_vnd: 90 })],
-        ] as const)("logs an %s approval", async (_, edits, note, outcome, proposal) => {
-            const built = await build({ rule: ruleOf({ mode: "ask" }) })
-            const item = await built.service.resumeWork(ctx, "item-1", "approved", edits, owner, note)
-            expect(item.status).toBe("done")
-            expect(built.items.markDone).toHaveBeenCalledWith("item-1", humanDone)
-            const plan = { path: "human", by: owner, outcome, note, before: quote }
-            expect(built.finished).toHaveBeenCalledWith(ctx, waitingItem, doneItem, proposal, plan, performedOf())
-            expect(built.continueChain).toHaveBeenCalledTimes(1)
-        })
+    it.each(
+        approvalCases.map(
+            ([label, edits, note, outcome, proposal]) => [label, edits, note, outcome, objectLike(proposal)] as const,
+        ),
+    )("logs an %s approval", async (_, edits, note, outcome, proposal) => {
+        const built = await build({ rule: ruleOf({ mode: "ask" }) })
+        const item = await built.service.resumeWork(ctx, "item-1", "approved", edits, owner, note)
+        expect(item.status).toBe("done")
+        expect(built.items.markDone).toHaveBeenCalledWith("item-1", humanDone)
+        const plan = { path: "human", by: owner, outcome, note, before: quote }
+        expect(built.finished).toHaveBeenCalledWith(ctx, waitingItem, doneItem, proposal, plan, performedOf())
+        expect(built.continueChain).toHaveBeenCalledTimes(1)
+    })
 
-        it("sends the item back to waiting and names the fields that are still missing", async () => {
-            const built = await build({ rule: ruleOf({ required_fields: ["need"] }) })
-            await expect(built.service.resumeWork(ctx, "item-1", "approved", {}, owner)).rejects.toMatchObject({
-                code: DecisionsErrorCode.StillMissing,
-                params: { fields: "Need" },
-            })
-            expect(built.items.markStillWaiting).toHaveBeenCalledWith("item-1", {
-                proposal: quote,
-                missing: ["need"],
-                reason: "missing_data",
-                reasons: ["missing_data"],
-            })
-            expect(built.finished).not.toHaveBeenCalled()
+    it("sends the item back to waiting and names the fields that are still missing", async () => {
+        const built = await build({ rule: ruleOf({ required_fields: ["need"] }) })
+        await expect(built.service.resumeWork(ctx, "item-1", "approved", {}, owner)).rejects.toMatchObject({
+            code: DecisionsErrorCode.StillMissing,
+            params: { fields: "Need" },
         })
+        expect(built.items.markStillWaiting).toHaveBeenCalledWith("item-1", {
+            proposal: quote,
+            missing: ["need"],
+            reason: "missing_data",
+            reasons: ["missing_data"],
+        })
+        expect(built.finished).not.toHaveBeenCalled()
     })
 })
 
-describe("WorkEngineService", () => {
-    describe("resumeWork", () => {
-        const owner = { name: "Lan", kind: "owner" } as const
-        const candidates = [
-            { id: "inv-1", label: "One", amount_vnd: 1 },
-            { id: "inv-2", label: "Two", amount_vnd: 2 },
-        ]
-        const proposal: Work.Proposal = { summary: "Pay", fields: {}, candidates }
-        it("asks the person to choose among several candidates", async () => {
-            const built = await build({
-                items: { reopen: resolved(itemOf({ proposal, reason: "unclear_outcome" })) },
-            })
-            await expect(built.service.resumeWork(ctx, "item-1", "approved", {}, owner)).rejects.toMatchObject({
-                code: DecisionsErrorCode.ChooseCandidate,
-            })
-            expect(built.items.markStillWaiting).toHaveBeenCalledWith(
-                "item-1",
-                expect.objectContaining({ proposal, reason: "unclear_outcome" }),
-            )
+describe("WorkEngineService / candidate decisions", () => {
+    const proposal: Work.Proposal = { summary: "Pay", fields: {}, candidates }
+    it("asks the person to choose among several candidates", async () => {
+        const built = await build({
+            items: { reopen: resolved(itemOf({ proposal, reason: "unclear_outcome" })) },
         })
-
-        it("accepts the chosen candidate", async () => {
-            const built = await build({
-                rule: ruleOf({ mode: "ask" }),
-                items: { reopen: resolved(itemOf({ proposal })) },
-            })
-            await built.service.resumeWork(ctx, "item-1", "approved", { candidateId: "inv-2" }, owner)
-            const chosen = objectLike({ candidates: [candidates[1]] })
-            expect(built.finished).toHaveBeenCalledWith(ctx, anyValue, anyValue, chosen, anyValue, anyValue)
+        await expect(built.service.resumeWork(ctx, "item-1", "approved", {}, owner)).rejects.toMatchObject({
+            code: DecisionsErrorCode.ChooseCandidate,
         })
+        expect(built.items.markStillWaiting).toHaveBeenCalledWith(
+            "item-1",
+            expect.objectContaining({ proposal, reason: "unclear_outcome" }),
+        )
     })
 
-    describe("inputs to work", () => {
-        const event: InboundWorkSource = { id: "event-1" }
-        it("starts the department's work for an inbound event", async () => {
-            const built = await build({ created: false })
-            const seed: ProposalSeed = { summary: "Hi" }
-            await built.service.startInboundWork(ctx, event, "reply_customer", seed, "lead-1")
-            expect(built.insert).toHaveBeenCalledWith(ctx, {
-                action: "reply_customer",
-                subject_type: "inbound",
-                subject_id: "event-1",
-                inbound_event_id: "event-1",
-                lead_id: "lead-1",
-                dedupeKey: "reply_customer:inbound:event-1",
-                seed,
-            })
+    it("accepts the chosen candidate", async () => {
+        const built = await build({
+            rule: ruleOf({ mode: "ask" }),
+            items: { reopen: resolved(itemOf({ proposal })) },
         })
-        it("starts the confirmation of an order", async () => {
-            const built = await build({ created: false })
-            await built.service.startOrderWork(ctx, event, { items: "tea", amount_vnd: 500, lead_id: "lead-2" })
-            await built.service.startOrderWork(ctx, event, { items: "tea", amount_vnd: null })
-            expect(built.insert.mock.calls.map(([, spec]) => [spec.action, spec.lead_id, spec.seed])).toEqual([
-                ["confirm_order", "lead-2", { amount_vnd: 500, fields: { items: "tea", amount_vnd: 500 } }],
-                ["confirm_order", null, { amount_vnd: null, fields: { items: "tea", amount_vnd: null } }],
-            ])
-        })
+        await built.service.resumeWork(ctx, "item-1", "approved", { candidateId: "inv-2" }, owner)
+        const chosen = objectLike({ candidates: [candidates[1]] })
+        expect(built.finished).toHaveBeenCalledWith(ctx, anyValue, anyValue, chosen, anyValue, anyValue)
+    })
+})
+
+describe("WorkEngineService / inputs to work", () => {
+    const event: InboundWorkSource = { id: "event-1" }
+    it("starts the department's work for an inbound event", async () => {
+        const built = await build({ created: false })
+        await built.service.startInboundWork(ctx, event, "reply_customer", replySeed, "lead-1")
+        expect(built.insert).toHaveBeenCalledWith(ctx, inboundReply)
+    })
+    it("starts the confirmation of an order", async () => {
+        const built = await build({ created: false })
+        await built.service.startOrderWork(ctx, event, { items: "tea", amount_vnd: 500, lead_id: "lead-2" })
+        await built.service.startOrderWork(ctx, event, { items: "tea", amount_vnd: null })
+        expect(built.insert.mock.calls.map(([, spec]) => [spec.action, spec.lead_id, spec.seed])).toEqual(orderSeeds)
     })
 })

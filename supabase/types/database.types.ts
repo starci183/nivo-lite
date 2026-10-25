@@ -1,4 +1,4 @@
-// migrations-sha256: 19718e693cda7ef0bbbd4543b5f5809968064b419c1aef532ff0089826f4e024
+// migrations-sha256: e60a793d9abd74754298145d1ca3bb2f28ffa4391adc88035f6611168729b977
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -3390,13 +3390,13 @@ isOneToOne: false
                   ]
                 },"public_api": {
                   Row: {
-                    "created_at": string,"dedupe_key": string,"duplicates": number,"id": string,"key_id": string,"kind": string,"lead_id": string | null,"payload": NonNullable<Json>,"processed_at": string | null,"workspace_id": string
+                    "created_at": string,"dedupe_key": string,"duplicates": number,"id": string,"key_id": string,"kind": string,"lead_id": string | null,"need_supplied": boolean | null,"payload": NonNullable<Json>,"processed_at": string | null,"workspace_id": string
                   }
                   Insert: {
-                    "created_at"?: string,"dedupe_key": string,"duplicates"?: number,"id"?: string,"key_id": string,"kind": string,"lead_id"?: string | null,"payload": NonNullable<Json>,"processed_at"?: string | null,"workspace_id": string
+                    "created_at"?: string,"dedupe_key": string,"duplicates"?: number,"id"?: string,"key_id": string,"kind": string,"lead_id"?: string | null,"need_supplied"?: boolean | null,"payload": NonNullable<Json>,"processed_at"?: string | null,"workspace_id": string
                   }
                   Update: {
-                    "created_at"?: string,"dedupe_key"?: string,"duplicates"?: number,"id"?: string,"key_id"?: string,"kind"?: string,"lead_id"?: string | null,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"workspace_id"?: string
+                    "created_at"?: string,"dedupe_key"?: string,"duplicates"?: number,"id"?: string,"key_id"?: string,"kind"?: string,"lead_id"?: string | null,"need_supplied"?: boolean | null,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {

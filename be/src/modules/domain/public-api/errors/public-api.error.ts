@@ -13,6 +13,10 @@ export enum PublicApiErrorCode {
     ContentTooLong = "PUBLIC_API_CONTENT_TOO_LONG",
     /** The insert answered no row: the knowledge source was not written. */
     NotWritten = "PUBLIC_API_NOT_WRITTEN",
+    /** A queued request is malformed, unsupported, or cannot be reconciled with its ledger. */
+    RequestInvalid = "PUBLIC_API_REQUEST_INVALID",
+    /** No ledger request belongs to this workspace and request identity. */
+    RequestNotFound = "PUBLIC_API_REQUEST_NOT_FOUND",
 }
 
 /** How each public-api code travels. */
@@ -22,6 +26,8 @@ export const PUBLIC_API_ERROR_KINDS: Record<PublicApiErrorCode, ErrorKind> = {
     [PublicApiErrorCode.TargetMissing]: "invalid",
     [PublicApiErrorCode.ContentTooLong]: "invalid",
     [PublicApiErrorCode.NotWritten]: "internal",
+    [PublicApiErrorCode.RequestInvalid]: "invalid",
+    [PublicApiErrorCode.RequestNotFound]: "not-found",
 }
 
 /** The one error class of the public-api capability. */

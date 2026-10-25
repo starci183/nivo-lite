@@ -13,7 +13,14 @@ import type {
     ListLeadsParams,
     RecordedRequest,
 } from "./public-api.contracts"
-import { clampLimit, contactParts, dedupePrefix, leadFacts, normaliseContact } from "./public-api.policy"
+import {
+    clampLimit,
+    contactParts,
+    DEFAULT_API_NEED,
+    dedupePrefix,
+    leadFacts,
+    normaliseContact,
+} from "./public-api.policy"
 import type { LeadsRow } from "./persistence/public-api.rows"
 import {
     INSERT_REQUEST,
@@ -26,9 +33,6 @@ import {
 /** Customers listed by default and at most. */
 const LEADS_LIMIT_DEFAULT = 50
 const LEADS_LIMIT_MAX = 200
-
-/** The text recorded for a customer handed over without a need. */
-const DEFAULT_NEED = "Created through the API"
 
 type LeadId = Pick<LeadsRow, "id">
 type LeadRow = Pick<
@@ -80,7 +84,8 @@ export class PublicLeadsService {
         const body: LeadRequestBody = {
             name: lead.name,
             contact: normaliseContact(contact),
-            need: lead.need || DEFAULT_NEED,
+            need: lead.need || DEFAULT_API_NEED,
+            needSupplied: lead.need !== "",
             channel: lead.channel,
             company: lead.company,
             note: lead.note,

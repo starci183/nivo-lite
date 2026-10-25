@@ -4,6 +4,9 @@ export const LEAD_STAGES = ["new", "qualified", "proposal", "won", "lost"] as co
 /** One stage of a customer. */
 export type LeadStage = (typeof LEAD_STAGES)[number]
 
+/** The customer resolved by fulfillment, or null while its gated handoff still waits to capture one. */
+export type PublicLeadFulfillmentResult = string | null
+
 /** The kinds of request the public API accepts into its ledger. */
 export type RequestKind = "lead" | "message" | "knowledge"
 
@@ -15,6 +18,8 @@ export interface LeadRequestBody {
     readonly contact: string | null
     /** What the customer needs, or a default text. */
     readonly need: string
+    /** True for a nonempty caller-supplied need; absent on historical requests. */
+    readonly needSupplied?: boolean
     /** The channel the customer came through. */
     readonly channel: string
     /** The company, or an empty string. */
@@ -27,6 +32,22 @@ export interface LeadRequestBody {
     readonly externalId: string
     /** The source named in evidence: `api:<key name>`. */
     readonly source: string
+}
+
+/** The historical inline lead job reuses the inbound event already admitted by its producer. */
+export interface LegacyLeadRequestBody {
+    /** The original inbound event identity. */
+    readonly inboundEventId: string
+    /** The API key's display name, used in evidence. */
+    readonly keyName: string
+    /** The original channel, restored only from verified admission evidence when the historical producer omitted it. */
+    readonly channel?: string
+    /** A nonempty company replaces the existing one. */
+    readonly company: string
+    /** The requested outcome, or none. */
+    readonly stage: LeadStage | null
+    /** An optional note retained in customer evidence. */
+    readonly note: string
 }
 
 /** The body of an accepted message request, as the job reads it from the ledger. */

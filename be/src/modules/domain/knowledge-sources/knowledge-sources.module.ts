@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { KnowledgeQueueModule } from "@modules/queues/knowledge"
+import { ApiKnowledgeSourcesService } from "./api-knowledge-sources.service"
 import { KNOWLEDGE_STORAGE } from "./knowledge-sources.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./knowledge-sources.module-definition"
 import { KnowledgeSourcesService } from "./knowledge-sources.service"
@@ -18,8 +19,9 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 { provide: KNOWLEDGE_STORAGE, useExisting: options.storage },
                 KnowledgeSourcesService,
+                ApiKnowledgeSourcesService,
             ],
-            exports: [KnowledgeSourcesService],
+            exports: [KnowledgeSourcesService, ApiKnowledgeSourcesService],
         }
     }
 }
