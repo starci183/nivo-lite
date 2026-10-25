@@ -47,11 +47,11 @@ const agentRowOf = (
     }
 }
 
-/** Newest activity first; rows without an instant sink, keeping their given order. */
+/** Newest activity first, by instant (sources format ISO times differently); rows without an instant sink, keeping their given order. */
 const byRecency = (a: SortableRow, b: SortableRow): number => {
     if (a.sortAt === null) return b.sortAt === null ? 0 : 1
     if (b.sortAt === null) return -1
-    return b.sortAt.localeCompare(a.sortAt)
+    return Date.parse(b.sortAt) - Date.parse(a.sortAt)
 }
 
 /** The Hub rooms of the left column and the one on screen. */
