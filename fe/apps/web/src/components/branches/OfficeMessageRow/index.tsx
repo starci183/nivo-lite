@@ -10,6 +10,8 @@ type OfficeMessageRowProps = {
     /** The avatar, drawn once per group by the thread. */
     readonly avatar: ReactNode
     readonly text: OfficeText
+    /** The status line under this bubble: the view carries one only for my last line, and only while nothing waits to send. */
+    readonly status: ReactNode
     readonly onReply: (handle: string) => void
 }
 
@@ -79,6 +81,7 @@ export const OfficeMessageRow = (props: OfficeMessageRowProps) => {
                 message.side === "outgoing" ? undefined : <div className={AVATAR_SLOT_CLASS_NAME}>{props.avatar}</div>
             }
             status={message.isAi ? <Badge tone="neutral">{props.text("aiBadge")}</Badge> : undefined}
+            footer={props.status}
             actions={
                 <ButtonGroup label={`${message.author ?? ""} ${message.time}`}>
                     <Button variant="secondary" size="sm" onPress={onCopy}>

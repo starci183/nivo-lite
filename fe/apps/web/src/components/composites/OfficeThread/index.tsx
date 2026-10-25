@@ -5,6 +5,7 @@ import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
 import { OfficeCommandCard } from "@/components/branches/OfficeCommandCard"
 import { OfficeExceptionCard } from "@/components/branches/OfficeExceptionCard"
 import { OfficeExceptionForm } from "@/components/branches/OfficeExceptionForm"
+import { OfficeMessageStatus } from "@/components/branches/OfficeMessageStatus"
 import { OfficeMessageRow } from "@/components/branches/OfficeMessageRow"
 import { OfficeOutboxBubble } from "@/components/branches/OfficeOutboxBubble"
 import { OfficeResultCard } from "@/components/branches/OfficeResultCard"
@@ -190,6 +191,7 @@ const renderOfficeThreadItems = (props: OfficeThreadProps) => {
                       message={item}
                       avatar={item.avatar === null ? null : <OfficeAvatar avatar={item.avatar} size="sm" />}
                       text={text}
+                      status={item.status === null ? null : <OfficeMessageStatus status={item.status} text={text} />}
                       onReply={props.on.reply}
                   />
               )

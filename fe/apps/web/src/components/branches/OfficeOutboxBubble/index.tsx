@@ -1,4 +1,5 @@
 import { ChatBubble, Text } from "@starci/grammar/common"
+import { Icon } from "@/components/leaves/Icon"
 import type { OfficeOutboxView, OfficeText } from "@/modules/types"
 import { ROW_FIRST_CLASS_NAME } from "./classNames"
 
@@ -16,7 +17,14 @@ export const OfficeOutboxBubble = (props: OfficeOutboxBubbleProps) => {
             <ChatBubble
                 side="outgoing"
                 footer={
-                    <Text size="xs" tone="muted" live="polite">
+                    <Text
+                        size="xs"
+                        tone="muted"
+                        live="polite"
+                        startContent={
+                            line.isFailed ? undefined : <Icon props={{ name: "messageSending", usage: "chip" }} />
+                        }
+                    >
                         {line.isFailed ? text("sendFailed") : text("sending")}
                     </Text>
                 }

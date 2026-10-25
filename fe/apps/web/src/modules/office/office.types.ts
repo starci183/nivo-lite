@@ -1,8 +1,16 @@
 import type { InstallationConnectionNeed } from "@/modules/installations"
-import type { OfficeRoomMembersView } from "@/modules/types"
+import type { OfficeConversationState, OfficePreviewKind, OfficeRoomMembersView } from "@/modules/types"
 
 /** Who wrote a line. */
 export type OfficeAuthorKind = "human" | "agent" | "system"
+
+/** What the back end reports about who got and who read one line of mine; none means it reports nothing (the line shows as sent). */
+export interface OfficeMessageReceipt {
+    /** Another member's client fetched the line. */
+    readonly isDelivered: boolean
+    /** The members whose read marker is past the line, oldest read first. */
+    readonly seenBy: ReadonlyArray<{ readonly id: string; readonly name: string }>
+}
 
 /** One line of the Office thread. */
 export interface OfficeMessage {
@@ -20,6 +28,8 @@ export interface OfficeMessage {
     readonly card: OfficeCardPayload | null
     /** The live state of the card (pending, approved, declined, done, failed, queued, info). */
     readonly cardState: string | null
+    /** The delivery receipt of the line; null until the wire carries it. */
+    readonly receipt: OfficeMessageReceipt | null
 }
 
 /** The WebVTT captions of a card video, as the editor produced them. */
@@ -74,6 +84,10 @@ export interface OfficeRoom {
     readonly lastBody: string | null
     readonly lastAuthor: string | null
     readonly lastAt: string | null
+    /** What the last line is; "text" until the wire says otherwise. */
+    readonly lastKind: OfficePreviewKind
+    /** My mention, mute, seen and typing flags of the room; all false until the wire carries them. */
+    readonly state: OfficeConversationState
     readonly agentIds: ReadonlyArray<string>
     readonly homeAgentIds: ReadonlyArray<string>
     readonly userIds: ReadonlyArray<string>
