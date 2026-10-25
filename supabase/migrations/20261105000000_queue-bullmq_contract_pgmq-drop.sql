@@ -1,6 +1,7 @@
 -- BullMQ transports jobs; PostgreSQL remains the durable, fenced source of truth.
 -- The preceding cutover migration adopts pgmq rows before the old functions are dropped below.
 
+BEGIN;
 ALTER TABLE public.job_outbox ADD COLUMN IF NOT EXISTS run_lease_until timestamptz;
 ALTER TABLE public.job_outbox ADD COLUMN run_token uuid;
 ALTER TABLE public.job_outbox ADD COLUMN relay_lease_until timestamptz;
@@ -343,3 +344,4 @@ REVOKE EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text) FRO
 GRANT EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text) TO app_be;
 REVOKE EXECUTE ON FUNCTION public.job_stats() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.job_stats() TO app_be;
+COMMIT;
