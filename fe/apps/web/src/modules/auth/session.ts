@@ -26,8 +26,8 @@ export const renewSessionToken = (): Promise<string | undefined> => {
     return inFlight
 }
 
-/** Calls `onChange` with the event name on every sign-in, sign-out and token refresh and answers the function that stops listening. */
-export const subscribeToAuthChange = (onChange: (event: string) => void): (() => void) => {
-    const listener = authClient().auth.onAuthStateChange((event) => onChange(event))
+/** Calls `onChange` with the event name and the id of the person the session now belongs to (`null` when signed out) on every sign-in, sign-out and token refresh, and answers the function that stops listening. */
+export const subscribeToAuthChange = (onChange: (event: string, userId: string | null) => void): (() => void) => {
+    const listener = authClient().auth.onAuthStateChange((event, session) => onChange(event, session?.user.id ?? null))
     return () => listener.data.subscription.unsubscribe()
 }

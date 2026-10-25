@@ -5,6 +5,7 @@ import { GrammarRoot } from "@starci/grammar/common"
 import { NextIntlClientProvider } from "next-intl"
 import { ThemeProvider, useTheme } from "next-themes"
 import { useSyncExternalStore } from "react"
+import { SWRConfig } from "swr"
 import type { ReactNode } from "react"
 import { SideEffectsLayout } from "@/features/layouts/SideEffectsLayout"
 import { intlTagOf, navigation } from "@/modules/i18n"
@@ -50,6 +51,12 @@ const GrammarRouting = (props: LayerProps) => {
     return <RouterProvider navigate={(href) => router.push(href)}>{props.children}</RouterProvider>
 }
 
+/**
+ * Every read keeps what it last showed while a new key or a revalidation is in flight, so it never falls back to skeletons; and a focus
+ * regain revalidates at most once per interval instead of on every tab switch.
+ */
+const READ_DEFAULTS = { keepPreviousData: true, focusThrottleInterval: 30_000 } as const
+
 /** The copy, theme, React Aria and auth-refresh contexts above every route. */
 export const Providers = (props: ProvidersProps) => (
     <NextIntlClientProvider locale={props.locale} messages={props.messages} timeZone={props.timeZone}>
@@ -58,9 +65,11 @@ export const Providers = (props: ProvidersProps) => (
                 <GrammarRouting>
                     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
                         <ThemedRoot>
-                            {props.children}
-                            <ToastProvider />
-                            <SideEffectsLayout />
+                            <SWRConfig value={READ_DEFAULTS}>
+                                {props.children}
+                                <ToastProvider />
+                                <SideEffectsLayout />
+                            </SWRConfig>
                         </ThemedRoot>
                     </ThemeProvider>
                 </GrammarRouting>
