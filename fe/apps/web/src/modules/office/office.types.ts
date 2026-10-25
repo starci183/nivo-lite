@@ -86,6 +86,12 @@ export interface OfficeRoom {
     }>
 }
 
+/** The caller's unread counts of the direct conversations, as id → count maps. */
+export interface OfficeConversationUnread {
+    readonly agents: ReadonlyMap<string, number>
+    readonly leads: ReadonlyMap<string, number>
+}
+
 /** One approval request (an execution waiting for, or already given, a decision). */
 export interface OfficeApproval {
     readonly id: string

@@ -1,4 +1,14 @@
-import { Button, Drawer, FillViewport, Heading, IconButton, IconTile, SurfaceCard, Text } from "@starci/grammar/common"
+import {
+    Button,
+    Divider,
+    Drawer,
+    FillViewport,
+    Heading,
+    IconButton,
+    IconTile,
+    SurfaceCard,
+    Text,
+} from "@starci/grammar/common"
 import { OfficeComposer } from "@/components/composites/OfficeComposer"
 import { OfficeConversations } from "@/components/composites/OfficeConversations"
 import { OfficeInfoPanel } from "@/components/composites/OfficeInfoPanel"
@@ -20,6 +30,7 @@ import {
     HEAD_CLASS_NAME,
     HEAD_TEXT_CLASS_NAME,
     INFO_COLUMN_CLASS_NAME,
+    LIST_BODY_CLASS_NAME,
     LIST_COLUMN_CLASS_NAME,
     LIST_COLUMN_HIDDEN_CLASS_NAME,
     PHONE_ONLY_CLASS_NAME,
@@ -83,24 +94,29 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
     return (
         <>
             <FillViewport minHeight="md" bottomInset="none">
-                <SurfaceCard ariaLabel={text("messengerLabel")} composition="joined" height="fill" frame="frameless">
-                    <div className={BODY_CLASS_NAME}>
-                        <div
-                            className={
-                                view.phoneView === "list" ? LIST_COLUMN_CLASS_NAME : LIST_COLUMN_HIDDEN_CLASS_NAME
-                            }
-                        >
-                            <OfficeConversations
-                                props={{ list: view.list, isLoading: view.isLoading, text }}
-                                on={{ openGroup: on.openGroup, openAgent: on.openAgent, openCustomer: on.openCustomer }}
-                            />
-                        </div>
-                        <div
-                            className={
-                                view.phoneView === "thread" ? THREAD_COLUMN_CLASS_NAME : THREAD_COLUMN_HIDDEN_CLASS_NAME
-                            }
-                        >
+                <div className={BODY_CLASS_NAME}>
+                    <div className={view.phoneView === "list" ? LIST_COLUMN_CLASS_NAME : LIST_COLUMN_HIDDEN_CLASS_NAME}>
+                        <SurfaceCard ariaLabel={text("listLabel")} composition="joined" height="fill">
+                            <div className={LIST_BODY_CLASS_NAME}>
+                                <OfficeConversations
+                                    props={{ list: view.list, isLoading: view.isLoading, text }}
+                                    on={{
+                                        openGroup: on.openGroup,
+                                        openAgent: on.openAgent,
+                                        openCustomer: on.openCustomer,
+                                    }}
+                                />
+                            </div>
+                        </SurfaceCard>
+                    </div>
+                    <div
+                        className={
+                            view.phoneView === "thread" ? THREAD_COLUMN_CLASS_NAME : THREAD_COLUMN_HIDDEN_CLASS_NAME
+                        }
+                    >
+                        <SurfaceCard ariaLabel={text("messengerLabel")} composition="joined" height="fill">
                             <OfficeMessengerHeader {...props} />
+                            <Divider semantics="presentation" />
                             {isTasks ? (
                                 <div className={TASKS_CLASS_NAME}>
                                     <OfficeTasks props={{ tasks: view.tasks, text }} on={{ openLeads: on.openLeads }} />
@@ -123,12 +139,16 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
                                     <OfficeComposer props={view.composer} on={{ change: on.change, send: on.send }} />
                                 </>
                             )}
-                        </div>
-                        {view.isInfoDocked && view.isInfoOpen ? (
-                            <div className={INFO_COLUMN_CLASS_NAME}>{infoPanel}</div>
-                        ) : null}
+                        </SurfaceCard>
                     </div>
-                </SurfaceCard>
+                    {view.isInfoDocked && view.isInfoOpen ? (
+                        <div className={INFO_COLUMN_CLASS_NAME}>
+                            <SurfaceCard ariaLabel={text("infoTitle")} composition="joined" height="fill">
+                                {infoPanel}
+                            </SurfaceCard>
+                        </div>
+                    ) : null}
+                </div>
             </FillViewport>
             {view.isInfoDocked ? null : (
                 <Drawer
@@ -154,7 +174,12 @@ const OfficeMessengerHeader = (props: OfficeMessengerBaseProps) => {
     return (
         <div className={HEAD_CLASS_NAME}>
             <div className={PHONE_ONLY_CLASS_NAME}>
-                <IconButton source={nivoIconSource("back", "leading")} label={text("back")} onPress={on.back} />
+                <IconButton
+                    intent="neutral"
+                    source={nivoIconSource("back", "leading")}
+                    label={text("back")}
+                    onPress={on.back}
+                />
             </div>
             <div className={HEAD_AVATAR_CLASS_NAME}>
                 <IconTile source={nivoIconSource("community", "leading")} tone="neutral" />
@@ -170,17 +195,18 @@ const OfficeMessengerHeader = (props: OfficeMessengerBaseProps) => {
             <div className={HEAD_ACTIONS_CLASS_NAME}>
                 {isTasks ? (
                     <div className={WIDE_ONLY_CLASS_NAME}>
-                        <Button variant="ghost" size="sm" onPress={on.showChat}>
+                        <Button intent="neutral" size="sm" onPress={on.showChat}>
                             {text("tasksBack")}
                         </Button>
                     </div>
                 ) : null}
                 {!isTasks && view.chip !== null ? (
-                    <Button variant="outline" size="sm" onPress={on.chip}>
+                    <Button intent="alternative" size="sm" onPress={on.chip}>
                         {view.chip}
                     </Button>
                 ) : null}
                 <IconButton
+                    intent="neutral"
                     source={nivoIconSource("sidebar", "leading")}
                     label={view.isInfoOpen ? text("infoClose") : text("infoOpen")}
                     isActive={view.isInfoOpen}

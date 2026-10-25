@@ -6,13 +6,24 @@ import { InjectCommandBus, InjectQueryBus } from "@modules/platform/cqrs"
 import type { Principal } from "@modules/platform/cqrs"
 import { AcceptedLocale } from "@modules/platform/i18n"
 import type { Locale } from "@modules/platform/i18n"
+import { ListConversationUnreadQuery } from "../../application/list-conversation-unread.query"
 import { ListOfficeRoomsQuery } from "../../application/list-office-rooms.query"
+import { MarkConversationReadCommand } from "../../application/mark-conversation-read.command"
 import { MarkRoomReadCommand } from "../../application/mark-room-read.command"
 import { SetupOfficeRoomsCommand } from "../../application/setup-office-rooms.command"
 import { OfficeAckType } from "./dto/office-ack.type"
+import { OfficeConversationReadInput } from "./dto/office-conversation-read.input"
 import { OfficeRoomKeyInput } from "./dto/office-room-key.input"
 import { OfficeRoomType } from "./dto/office-room.type"
-import { toMarkRoomReadRequest, toOfficeAckType, toOfficeRoomsType, toWorkspaceRequest } from "./office.mapper"
+import { OfficeConversationUnreadType } from "./dto/office-unread.type"
+import {
+    toConversationUnreadType,
+    toMarkConversationReadRequest,
+    toMarkRoomReadRequest,
+    toOfficeAckType,
+    toOfficeRoomsType,
+    toWorkspaceRequest,
+} from "./office.mapper"
 
 @Resolver()
 /** GraphQL doors of the Hub rooms: the list with unread counts, the read marker and the room setup. */
@@ -34,6 +45,18 @@ export class OfficeRoomsResolver {
         return toOfficeRoomsType(result)
     }
 
+    /** The caller's unread counts of the agent and customer conversations. */
+    @Query(() => OfficeConversationUnreadType, { name: "officeConversationUnread" })
+    async officeConversationUnread(
+        @CurrentPrincipal() principal: Principal,
+        @WorkspaceId() workspaceId: string,
+    ): Promise<OfficeConversationUnreadType> {
+        const result = await this.queryBus.execute(
+            new ListConversationUnreadQuery({ request: toWorkspaceRequest(workspaceId), principal }),
+        )
+        return toConversationUnreadType(result)
+    }
+
     /** Marks a room read by the caller up to now. */
     @Mutation(() => OfficeAckType, { name: "markOfficeRoomRead" })
     async markOfficeRoomRead(
@@ -43,6 +66,22 @@ export class OfficeRoomsResolver {
     ): Promise<OfficeAckType> {
         await this.commandBus.execute(
             new MarkRoomReadCommand({ request: toMarkRoomReadRequest(workspaceId, input), principal }),
+        )
+        return toOfficeAckType()
+    }
+
+    /** Marks a direct conversation (one agent's or one customer's lines) read by the caller up to now. */
+    @Mutation(() => OfficeAckType, { name: "markOfficeConversationRead" })
+    async markOfficeConversationRead(
+        @CurrentPrincipal() principal: Principal,
+        @WorkspaceId() workspaceId: string,
+        @Args("input") input: OfficeConversationReadInput,
+    ): Promise<OfficeAckType> {
+        await this.commandBus.execute(
+            new MarkConversationReadCommand({
+                request: toMarkConversationReadRequest(workspaceId, input),
+                principal,
+            }),
         )
         return toOfficeAckType()
     }

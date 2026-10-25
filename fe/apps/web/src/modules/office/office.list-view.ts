@@ -8,7 +8,7 @@ import type {
 } from "@/modules/types"
 import { RECENT_CUSTOMERS } from "./office.consts"
 import { threadDayKey } from "./office.thread"
-import type { OfficeAgent, OfficeMessage, OfficeStaff, OfficeTask } from "./office.types"
+import type { OfficeAgent, OfficeConversationUnread, OfficeMessage, OfficeStaff, OfficeTask } from "./office.types"
 import { agentAvatarOf } from "./office.words"
 import type { OfficeContext, OfficeWords } from "./office.words"
 
@@ -30,6 +30,7 @@ const agentRowOf = (
     messages: ReadonlyArray<OfficeMessage>,
     words: OfficeWords,
     context: OfficeContext,
+    unread: number,
 ): SortableRow => {
     const said = lastBy(messages, agent.id)
     const role = words.moduleName(agent.module)
@@ -41,7 +42,7 @@ const agentRowOf = (
             label: agent.name,
             description: agent.isActive ? (said?.body ?? role) : words.t("agentPreviewPaused"),
             time: said === null ? null : officeListTimeOf(said.createdAt, words, context),
-            unread: 0,
+            unread,
             avatar: agentAvatarOf(agent.module, agent.name),
         },
     }
@@ -59,6 +60,8 @@ export interface OfficeRoomListInput {
     readonly rows: ReadonlyArray<OfficeRoomRowView>
     /** The id of the room on screen ("office" for the Office room). */
     readonly selected: string
+    /** The caller's unread counts of the direct conversations. */
+    readonly unread: OfficeConversationUnread
 }
 
 /** The left column: one conversation list — the rooms, the agents and the recent customers, newest first. */
@@ -85,7 +88,9 @@ export const officeListViewOf = (
                 members: room.members ?? null,
             },
         })),
-        ...context.agents.map((agent) => agentRowOf(agent, messages, words, context)),
+        ...context.agents.map((agent) =>
+            agentRowOf(agent, messages, words, context, rooms.unread.agents.get(agent.id) ?? 0),
+        ),
         ...context.leads.slice(0, RECENT_CUSTOMERS).map((lead) => ({
             sortAt: lead.createdAt,
             row: {
@@ -94,7 +99,7 @@ export const officeListViewOf = (
                 label: lead.name,
                 description: lead.preview ?? words.t("customerPreviewNone"),
                 time: officeListTimeOf(lead.createdAt, words, context),
-                unread: 0,
+                unread: rooms.unread.leads.get(lead.id) ?? 0,
                 avatar: { kind: "person" as const, name: lead.name },
             },
         })),

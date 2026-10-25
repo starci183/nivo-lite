@@ -20,6 +20,7 @@ export const OfficeMessenger = () => {
     const isLoading = office.slot.isLoading === true
 
     const { onMention, onSend } = composerCommands(draft, setDraft, setFocusKey, office, frame)
+    const openDirect = directOpener(office, router)
 
     const onChip = () => {
         const target = office.firstJump
@@ -71,8 +72,8 @@ export const OfficeMessenger = () => {
                 infoOpenChange: frame.setInfoOpen,
                 showChat: frame.showChat,
                 openGroup: roomOpener(setRoom, frame, office),
-                openAgent: (id) => router.push(agentChatHref(id)),
-                openCustomer: (id) => router.push(leadHref(id)),
+                openAgent: (id) => openDirect("agent", id),
+                openCustomer: (id) => openDirect("lead", id),
                 jumpApproval: jump.jumpApproval,
                 jumpException: jump.jumpException,
                 jumpCard: jump.jumpCard,
@@ -113,6 +114,14 @@ const roomOpener =
         setRoom(room)
         frame.showThread()
         void office.markRead(room)
+    }
+
+/** Opens an agent's or a customer's direct conversation and marks it read on the way. */
+const directOpener =
+    (office: ReturnType<typeof useOfficeMessenger>, router: ReturnType<typeof navigation.useRouter>) =>
+    (kind: "agent" | "lead", id: string) => {
+        void office.markConversationRead(kind, id)
+        router.push(kind === "agent" ? agentChatHref(id) : leadHref(id))
     }
 
 /** Resolves the loaded thread state and sender activity. */

@@ -2432,7 +2432,7 @@
       "what": "Customers and sales leads, who owns each, and the next step.",
       "steps": [
         "Open Customers",
-        "Press New › New customer to add one",
+        "Press New lead to add one",
         "Open a customer to see history and assign work"
       ],
       "keywords": [

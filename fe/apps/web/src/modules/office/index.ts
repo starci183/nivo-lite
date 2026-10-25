@@ -29,6 +29,7 @@ export {
 export type { OfficeChannelWire } from "./office.rooms"
 export type {
     OfficeAgent,
+    OfficeConversationUnread,
     OfficeRoom,
     OfficeApproval,
     OfficeCandidate,

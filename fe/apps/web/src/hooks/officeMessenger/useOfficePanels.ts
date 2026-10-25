@@ -16,7 +16,14 @@ import {
     staffHandlesOf,
     taskViewsOf,
 } from "@/modules/office"
-import type { OfficeAgent, OfficeChannelWire, OfficeMessage, OfficeRoom, OfficeWords } from "@/modules/office"
+import type {
+    OfficeAgent,
+    OfficeChannelWire,
+    OfficeConversationUnread,
+    OfficeMessage,
+    OfficeRoom,
+    OfficeWords,
+} from "@/modules/office"
 
 /** The room on screen and the Hub around it. */
 export interface PanelRoom {
@@ -27,6 +34,8 @@ export interface PanelRoom {
     readonly channels: ReadonlyArray<OfficeChannelWire>
     /** The agents seated in the room (every agent in the Office room). */
     readonly agents: ReadonlyArray<OfficeAgent>
+    /** The caller's unread counts of the direct conversations. */
+    readonly unread: OfficeConversationUnread
 }
 
 /** The side columns and the composer's mention list, with their words; `board` is already scoped to the room. */
@@ -38,7 +47,7 @@ export const useOfficePanels = (
     room: PanelRoom,
 ) => {
     const me = useMember()
-    const { current, key, rooms, channels, agents } = room
+    const { current, key, rooms, channels, agents, unread } = room
     return useMemo(() => {
         const context = contextOf(me, board, null, [])
         const handles = staffHandlesOf(
@@ -53,6 +62,7 @@ export const useOfficePanels = (
             list: officeListViewOf(messages, waitingCount, words, context, {
                 rows: roomRowsOf(rooms, words, (iso) => officeListTimeOf(iso, words, context)),
                 selected: key ?? "office",
+                unread,
             }),
             info: infoViewOf(
                 { pending: board.pending, openWork: board.exceptions, people, handles, tasks: board.tasks },
@@ -69,5 +79,5 @@ export const useOfficePanels = (
             tasks: taskViewsOf(board.tasks, words),
             mentions: mentionOptionsOf(board.agents, board.staff, handles, words),
         }
-    }, [messages, board, waitingCount, words, me, current, key, rooms, channels, agents])
+    }, [messages, board, waitingCount, words, me, current, key, rooms, channels, agents, unread])
 }

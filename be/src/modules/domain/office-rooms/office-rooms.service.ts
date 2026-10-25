@@ -7,15 +7,40 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { OfficeRoomsError, OfficeRoomsErrorCode } from "./errors/office-rooms.error"
-import type { RoomChoice, RoomView } from "./office-rooms.contracts"
-import type { OpenedRow, RoomMembersRow, RoomRow, RoomSummaryRow } from "./persistence/office-rooms.rows"
+import type { ConversationUnreadListView, RoomChoice, RoomView } from "./office-rooms.contracts"
+import type {
+    ConversationUnreadRow,
+    OpenedRow,
+    RoomMembersRow,
+    RoomRow,
+    RoomSummaryRow,
+} from "./persistence/office-rooms.rows"
 import { LIST_ROOM_MEMBERS } from "./persistence/office-room-members.sql"
-import { ENSURE_ROOMS, LIST_ROOMS, MARK_ROOM_READ, OFFICE_ROOM_SUMMARY } from "./persistence/office-rooms.sql"
+import {
+    ENSURE_ROOMS,
+    LIST_AGENT_UNREAD,
+    LIST_LEAD_UNREAD,
+    LIST_ROOMS,
+    MARK_AGENT_READ,
+    MARK_LEAD_READ,
+    MARK_ROOM_READ,
+    OFFICE_ROOM_SUMMARY,
+} from "./persistence/office-rooms.sql"
 
 /** Only owners and managers open the department rooms of a workspace. */
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 /** The read marker key of the general Office room. */
 const OFFICE_READ_KEY = ""
+
+/** The marker-write of each direct conversation kind; undefined names a kind that is not one. */
+const markOf = (kind: string) => {
+    if (kind === "agent") return MARK_AGENT_READ
+    if (kind === "lead") return MARK_LEAD_READ
+    return undefined
+}
+
+/** Only the conversations with unseen lines, as the badge contract reads them. */
+const withUnread = (rows: ReadonlyArray<ConversationUnreadRow>) => rows.filter((row) => row.unread > 0)
 
 const EMPTY_SUMMARY: RoomSummaryRow = { unread: 0, last_body: null, last_author: null, last_at: null }
 
@@ -55,6 +80,28 @@ export class OfficeRoomsService {
             members: roomMembers.get(null) ?? emptyMembers,
         }
         return [office, ...rows.map((row): RoomView => ({ ...row, members: roomMembers.get(row.key) ?? emptyMembers }))]
+    }
+
+    /** The unread counts of the caller's direct conversations: the agents' and the customers' lines of the thread. */
+    async unread(principalId: string, workspaceId: string): Promise<ConversationUnreadListView> {
+        const member = await this.members.require(principalId, workspaceId)
+        const params = [workspaceId, member.userId, member.displayName]
+        const [agents, leads] = await Promise.all([
+            this.entityManager.query<Array<ConversationUnreadRow>>(LIST_AGENT_UNREAD, params),
+            this.entityManager.query<Array<ConversationUnreadRow>>(LIST_LEAD_UNREAD, params),
+        ])
+        return { agents: withUnread(agents), leads: withUnread(leads) }
+    }
+
+    /** Marks a direct conversation read by the caller up to now; a wrong kind or an id outside the workspace is refused. */
+    async markConversationRead(principalId: string, workspaceId: string, kind: string, id: string): Promise<void> {
+        const member = await this.members.require(principalId, workspaceId)
+        const mark = markOf(kind)
+        if (mark === undefined)
+            throw new OfficeRoomsError({ code: OfficeRoomsErrorCode.ConversationInvalid, params: { id } })
+        const rows = await this.entityManager.query<Array<unknown>>(mark, [workspaceId, member.userId, id])
+        if (rows.length === 0)
+            throw new OfficeRoomsError({ code: OfficeRoomsErrorCode.ConversationInvalid, params: { id } })
     }
 
     /** Marks a room (null = the Office room) read by the caller up to now. */

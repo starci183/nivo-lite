@@ -4978,6 +4978,7 @@ type Mutation {
   markChatDelivered(input: ChatReceiptInput!): ChatMarkerAckType!
   markChatRead(input: ChatReceiptInput!): ChatMarkerAckType!
   markContentPublished(input: MarkContentPublishedInput!): MarkContentPublishedType!
+  markOfficeConversationRead(input: OfficeConversationReadInput!): OfficeAckType!
   markOfficeRoomRead(input: OfficeRoomKeyInput!): OfficeAckType!
   markOrderShipped(input: MarkOrderShippedInput!): MarkOrderShippedType!
   markVideoPublished(input: MarkVideoPublishedInput!): VideoProjectType!
@@ -5233,6 +5234,21 @@ type OfficeConfirmResultType {
   created: Boolean!
   module: String!
   workItemId: ID!
+}
+
+input OfficeConversationReadInput {
+  id: ID! @inputBounds(maxLength: 40)
+  kind: String!
+}
+
+type OfficeConversationUnreadEntryType {
+  id: ID!
+  unread: Int!
+}
+
+type OfficeConversationUnreadType {
+  agents: [OfficeConversationUnreadEntryType!]!
+  leads: [OfficeConversationUnreadEntryType!]!
 }
 
 type OfficeMessagePageType {
@@ -5840,6 +5856,7 @@ type Query {
   nivoKnowledge: [NivoEntryType!]!
   nivoKnowledgeCount(input: NivoKnowledgeCountInput!): Int!
   officeCommandCandidates: [OfficeCandidateType!]!
+  officeConversationUnread: OfficeConversationUnreadType!
   officeDecidedApprovals: [OfficeApprovalType!]!
   officeMessages(input: ListOfficeMessagesInput!): OfficeMessagePageType!
   officePendingApprovals: [OfficeApprovalType!]!
