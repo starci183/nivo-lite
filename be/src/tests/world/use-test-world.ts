@@ -4,7 +4,7 @@ import { createLiteWorld } from "./lite-world.service"
 
 /** Gives each suite a local connection and its own module graph, with guaranteed cleanup. */
 export const useTestWorld = (options: LiteWorldOptions): LiteWorld => {
-    const world = createLiteWorld(options.modules)
+    const world = createLiteWorld(options.modules, options.sandbox)
     beforeAll(() => world.open())
     afterAll(() => world.close())
     return world
