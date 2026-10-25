@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { AGENT_NAME_LIMITS, useAgentIdentity } from "@/hooks/agentProfile"
-import { AVATAR_ACCEPT } from "@/hooks/avatar"
+import { useAvatarEditorView } from "@/hooks/avatar"
 import { isManager, useMember } from "@/hooks/member"
 import { AgentProfileIdentityBase } from "./component"
 
@@ -16,8 +16,9 @@ export const AgentProfileIdentity = (props: AgentProfileIdentityProps) => {
     const t = useTranslations("agentProfile")
     const member = useMember()
     const identity = useAgentIdentity(props.agentId)
-    if (!isManager(member)) return null
     const { agent, avatar } = identity
+    const editor = useAvatarEditorView(avatar, agent?.avatarUrl !== null && agent?.avatarUrl !== undefined)
+    if (!isManager(member)) return null
     return (
         <AgentProfileIdentityBase
             props={{
@@ -25,16 +26,7 @@ export const AgentProfileIdentity = (props: AgentProfileIdentityProps) => {
                 seed: props.agentId,
                 picture: avatar.preview ?? agent?.avatarUrl ?? null,
                 name: identity.name,
-                avatar: {
-                    label: t("identityAvatarLabel"),
-                    prompt: t("identityAvatarPrompt"),
-                    hint: t("identityAvatarHint"),
-                    accept: AVATAR_ACCEPT,
-                    error: avatar.problem === null ? undefined : t(`identityAvatarError_${avatar.problem}`),
-                    removeLabel: t("identityAvatarRemove"),
-                    canRemove: agent?.avatarUrl !== null && agent?.avatarUrl !== undefined,
-                    isBusy: avatar.isBusy,
-                },
+                avatar: editor,
                 nameLabel: t("identityNameLabel"),
                 nameHint: t("identityNameHint", { handle: agent?.handle ?? "" }),
                 nameError: identity.isNameInvalid ? t("identityNameError", AGENT_NAME_LIMITS) : undefined,

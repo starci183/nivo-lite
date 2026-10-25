@@ -88,6 +88,7 @@ const ICON_SOURCES = {
     cart: cuts(Outline.ShoppingCartIcon, Solid.ShoppingCartIcon),
     notification: cuts(Outline.BellIcon, Solid.BellIcon),
     account: cuts(Outline.UserCircleIcon, Solid.UserCircleIcon),
+    profile: cuts(Outline.IdentificationIcon, Solid.IdentificationIcon),
     saved: cuts(Outline.BookmarkIcon, Solid.BookmarkIcon),
     blog: cuts(Outline.NewspaperIcon, Solid.NewspaperIcon),
     talents: cuts(Outline.SparklesIcon, Solid.SparklesIcon),
