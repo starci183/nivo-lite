@@ -37,10 +37,15 @@ export const OfficeMessageStatus = (props: OfficeMessageStatusProps) => {
                     label={status.label}
                     size="sm"
                     max={READERS_SHOWN}
-                    items={status.readers.map((reader) => ({ id: reader.id, name: reader.name, seed: reader.name }))}
+                    items={status.readers.map((reader) => ({ id: reader.id, name: reader.name, seed: reader.id }))}
                     overflowLabel={(n) => text("readersOverflow", { n })}
                 />
             )}
+            {status.moreReaders > 0 ? (
+                <Text size="xs" tone="muted">
+                    {text("readersOverflow", { n: status.moreReaders })}
+                </Text>
+            ) : null}
         </div>
     )
 }

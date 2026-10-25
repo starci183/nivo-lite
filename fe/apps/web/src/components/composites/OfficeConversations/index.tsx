@@ -63,25 +63,6 @@ const leadingOf = (row: OfficeConversationRowView, text: OfficeText): ListBoxIte
     )
 }
 
-/** The tone of the preview: accent while someone types, strong while unread, muted otherwise. */
-const previewToneOf = (row: OfficeConversationRowView): "accent" | "default" | "muted" => {
-    if (row.isTyping) return "accent"
-    return row.isUnread ? "default" : "muted"
-}
-
-/** The one-line preview, drawn strong while unread. */
-const descriptionOf = (row: OfficeConversationRowView): ListBoxItem["description"] => (
-    <Text
-        as="span"
-        size="sm"
-        tone={previewToneOf(row)}
-        weight={row.isUnread ? "semibold" : "normal"}
-        overflow="truncate"
-    >
-        {row.description}
-    </Text>
-)
-
 /** The unread indicator: the capped count in red with an accent "@" before it for a mention, or a red dot when muted. */
 const badgeOf = (badge: OfficeUnreadBadgeView): ReactNode => {
     if (badge.kind === "dot") return <Badge tone="danger" isDot />
@@ -124,7 +105,8 @@ const itemsOf = (rows: ReadonlyArray<OfficeConversationRowView>, text: OfficeTex
     rows.map((row) => ({
         id: row.id,
         label: row.label,
-        description: descriptionOf(row),
+        description: row.description,
+        ...(row.isUnread ? { emphasis: "unread" as const } : {}),
         leading: leadingOf(row, text),
         trailing: trailingOf(row),
     }))

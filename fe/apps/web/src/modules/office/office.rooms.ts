@@ -17,6 +17,8 @@ import type {
     OfficeWork,
 } from "./office.types"
 import { NO_CONVERSATION_STATE } from "./office.conversation-state"
+import { roomStateOf } from "./office.chat-state"
+import type { ChatMarkerWire } from "./office.chat-state"
 import { officePreviewOf } from "./office.preview"
 import { avatarOfAgentId, NIVO_AVATAR } from "./office.words"
 import type { OfficeContext, OfficeWords } from "./office.words"
@@ -139,8 +141,8 @@ interface RoomWire {
     }>
 }
 
-/** One back end room as the Hub uses it. */
-export const toOfficeRoom = (row: RoomWire): OfficeRoom => ({
+/** One back end room as the Hub uses it, with the caller's side of it (mute, read of my last line, who types) when known. */
+export const toOfficeRoom = (row: RoomWire, marker?: ChatMarkerWire, isTyping = false): OfficeRoom => ({
     key: row.key ?? null,
     name: row.name,
     unread: row.unread,
@@ -148,7 +150,7 @@ export const toOfficeRoom = (row: RoomWire): OfficeRoom => ({
     lastAuthor: row.last_author ?? null,
     lastAt: row.last_at ?? null,
     lastKind: "text",
-    state: NO_CONVERSATION_STATE,
+    state: roomStateOf(marker, isTyping),
     agentIds: row.agent_ids,
     homeAgentIds: row.home_agent_ids,
     userIds: row.user_ids,

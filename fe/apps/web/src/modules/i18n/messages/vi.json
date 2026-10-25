@@ -4119,6 +4119,8 @@
     "memberCountAgents": "{n} thành viên · {agents} agent",
     "needsApprovalChip": "Cần duyệt ({n})",
     "infoOpen": "Xem thông tin nhóm",
+    "muteChat": "Tắt thông báo cuộc trò chuyện",
+    "unmuteChat": "Bật lại thông báo cuộc trò chuyện",
     "infoClose": "Ẩn thông tin nhóm",
     "infoTitle": "Thông tin nhóm",
     "conversationLabel": "Cuộc trò chuyện Office",

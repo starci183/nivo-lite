@@ -10,6 +10,8 @@ export interface OfficeMessageReceipt {
     readonly isDelivered: boolean
     /** The members whose read marker is past the line, oldest read first. */
     readonly seenBy: ReadonlyArray<{ readonly id: string; readonly name: string }>
+    /** Every other member who read the line, including those beyond the few `seenBy` names. */
+    readonly seenCount: number
 }
 
 /** One line of the Office thread. */

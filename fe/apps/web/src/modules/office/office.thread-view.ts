@@ -10,7 +10,17 @@ const isMyBubble = (item: OfficeThreadItem): boolean =>
     item.kind === "message" && item.variant === "bubble" && item.side === "outgoing"
 
 /**
- * The words and the cards of every entry of the thread; my last line, and only it, carries its delivery status
+ * The line that carries the status: the one the back end attached its receipt to, when it is my bubble (it stays there while
+ * others post newer lines), otherwise my last bubble, which then reads as sent.
+ */
+const statusTargetOf = (items: ReadonlyArray<OfficeThreadItem>, entries: ReadonlyArray<ThreadEntry>): number => {
+    const receipted = entries.findIndex((entry) => entry.kind === "message" && entry.message.receipt !== null)
+    const receiptItem = items[receipted]
+    return receiptItem !== undefined && isMyBubble(receiptItem) ? receipted : items.findLastIndex(isMyBubble)
+}
+
+/**
+ * The words and the cards of every entry of the thread; one line of mine, and only it, carries its delivery status
  * (none while a line waits to send, since that one is then the last).
  */
 export const threadViewsOf = (
@@ -28,11 +38,11 @@ export const threadViewsOf = (
         if (entry.kind === "card") return resultCardView(entry, words, context)
         return messageView(entry, words, context)
     })
-    const lastMine = items.findLastIndex(isMyBubble)
-    const item = items[lastMine]
-    const entry = entries[lastMine]
+    const target = statusTargetOf(items, entries)
+    const item = items[target]
+    const entry = entries[target]
     if (hasOutbox || item?.kind !== "message" || entry?.kind !== "message") return items
     return items.map((candidate, index) =>
-        index === lastMine ? { ...item, status: messageStatusOf(entry.message.receipt, words) } : candidate,
+        index === target ? { ...item, status: messageStatusOf(entry.message.receipt, words) } : candidate,
     )
 }

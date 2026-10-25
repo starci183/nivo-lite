@@ -8,6 +8,8 @@ export {
     OPEN_WORK_STATUSES,
 } from "./office.consts"
 export { acceptsCommands, bodyPartsOf, mentionsOf, mergeMessages } from "./office.helpers"
+export { chatTargetOf, typingSignalOf, withReceipt, withTypingSignal } from "./office.chat-state"
+export type { ChatMarkerWire, TypingSignal } from "./office.chat-state"
 export { staffHandlesOf } from "./office.handles"
 export { infoViewOf } from "./office.info-view"
 export { officeListTimeOf, officeListViewOf, mentionOptionsOf, taskViewsOf } from "./office.list-view"

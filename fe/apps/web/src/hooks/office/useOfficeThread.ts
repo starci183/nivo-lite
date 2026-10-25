@@ -22,10 +22,11 @@ interface EarlierPages {
 
 /**
  * The thread of one Hub room (null = the Office room, every line): the newest page, read again every few seconds, and the earlier
- * pages the person asked for in that room.
+ * pages the person asked for in that room. `onFetched` hears the newest line id after each read of the newest page.
  */
 export const useOfficeThread = (
     room: string | null,
+    onFetched: (lastMessageId: string | null) => void,
 ): {
     readonly slot: DataSlot<ReadonlyArray<OfficeMessage>>
     readonly reload: () => void
@@ -33,7 +34,13 @@ export const useOfficeThread = (
     readonly isLoadingEarlier: boolean
     readonly loadEarlier: () => void
 } => {
-    const latest = useQueryOfficeMessagesSwr({ limit: OFFICE_PAGE_SIZE, room }, { refreshInterval: OFFICE_POLL_MS })
+    const latest = useQueryOfficeMessagesSwr(
+        { limit: OFFICE_PAGE_SIZE, room },
+        {
+            refreshInterval: OFFICE_POLL_MS,
+            onSuccess: (page) => onFetched(mergeMessages([page.messages.map(toOfficeMessage)]).at(-1)?.id ?? null),
+        },
+    )
     const [pages, setPages] = useState<EarlierPages>({ room, lines: [], cursor: undefined })
     const current: EarlierPages = pages.room === room ? pages : { room, lines: [], cursor: undefined }
     const page = latest.earlier

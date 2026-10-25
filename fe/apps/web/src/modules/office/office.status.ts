@@ -8,10 +8,16 @@ import type { OfficeWords } from "./office.words"
  */
 export const messageStatusOf = (receipt: OfficeMessageReceipt | null, words: OfficeWords): OfficeMessageStatusView => {
     if ((receipt?.seenBy.length ?? 0) > 0) {
-        return { kind: "seen", label: words.t("statusSeen"), readers: receipt?.seenBy ?? [] }
+        const readers = receipt?.seenBy ?? []
+        return {
+            kind: "seen",
+            label: words.t("statusSeen"),
+            readers,
+            moreReaders: Math.max(0, (receipt?.seenCount ?? 0) - readers.length),
+        }
     }
     if (receipt?.isDelivered === true) {
-        return { kind: "delivered", label: words.t("statusDelivered"), readers: [] }
+        return { kind: "delivered", label: words.t("statusDelivered"), readers: [], moreReaders: 0 }
     }
-    return { kind: "sent", label: words.t("statusSent"), readers: [] }
+    return { kind: "sent", label: words.t("statusSent"), readers: [], moreReaders: 0 }
 }

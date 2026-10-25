@@ -28,6 +28,7 @@ const AVATAR_SIZE: Record<NonNullable<AgentMarkProps["size"]>, AvatarSize> = {
 export const AgentMark = (props: AgentMarkProps) => (
     <Avatar
         name={props.label}
+        kind="agent"
         seed={props.seed ?? props.label}
         {...(props.src ? { src: props.src } : {})}
         size={AVATAR_SIZE[props.size ?? "md"]}

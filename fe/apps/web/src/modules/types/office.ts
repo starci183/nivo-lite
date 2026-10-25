@@ -70,6 +70,8 @@ export interface OfficeMessageStatusView {
     readonly label: string
     /** Every reader, oldest read first; the view draws the first few and a "+N". */
     readonly readers: ReadonlyArray<OfficeSeenReaderView>
+    /** Readers beyond the names in `readers`; the view says "N more". */
+    readonly moreReaders: number
 }
 
 /** An approval request as a card under an agent line. */

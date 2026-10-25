@@ -19,26 +19,12 @@ const AVATAR_SIZE: Record<NonNullable<PersonAvatarProps["size"]>, AvatarSize> = 
     lg: "lg",
 }
 
-/** The initials of a name: first and last word that start with a letter ("Ada Lovelace" gives "AL"). */
-const initialsOf = (name: string): string => {
-    // Only words that start with a letter count, and a bracketed note is dropped: "Ada L. (Facebook)" gives "AL".
-    const words = withoutParentheses(name)
-        .trim()
-        .split(/\s+/)
-        .filter((word) => /^\p{L}/u.test(word))
-    if (words.length === 0) return "?"
-    const first = words[0]?.[0] ?? ""
-    const last = words.length > 1 ? (words.at(-1)?.[0] ?? "") : ""
-    return (first + last).toLocaleUpperCase("vi")
-}
-
-/** Displays a person's avatar with their initials as the fallback. */
+/** A person's avatar: the picture, else Grammar's generated initials of the name (a bracketed note is not part of the name). */
 export const PersonAvatar = (props: PersonAvatarProps) => (
     <Avatar
-        name={props.name}
+        name={withoutParentheses(props.name).trim()}
         {...(props.src ? { src: props.src } : {})}
         {...(props.seed === undefined ? {} : { seed: props.seed })}
-        fallback={initialsOf(props.name)}
         size={AVATAR_SIZE[props.size ?? "md"]}
     />
 )

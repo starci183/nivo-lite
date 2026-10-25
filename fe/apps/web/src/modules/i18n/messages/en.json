@@ -4119,6 +4119,8 @@
     "memberCountAgents": "{n} members · {agents} agents",
     "needsApprovalChip": "Needs approval ({n})",
     "infoOpen": "Show chat info",
+    "muteChat": "Mute this chat",
+    "unmuteChat": "Unmute this chat",
     "infoClose": "Hide chat info",
     "infoTitle": "Chat info",
     "conversationLabel": "Office conversation",

@@ -108,6 +108,8 @@ const ICON_SOURCES = {
     expand: cuts(Outline.ChevronDownIcon, Solid.ChevronDownIcon),
     collapseRail: cuts(Outline.ChevronDoubleLeftIcon, Solid.ChevronDoubleLeftIcon),
     google: cuts(GoogleMark, GoogleMark),
+    mute: cuts(Outline.BellSlashIcon, Solid.BellSlashIcon),
+    unmute: cuts(Outline.BellIcon, Solid.BellIcon),
     messageSending: cuts(Outline.ClockIcon, Solid.ClockIcon),
     messageSent: cuts(Outline.CheckIcon, Solid.CheckIcon),
     messageDelivered: cuts(Outline.CheckCircleIcon, Outline.CheckCircleIcon),
