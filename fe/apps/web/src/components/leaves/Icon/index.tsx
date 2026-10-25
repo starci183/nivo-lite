@@ -114,6 +114,9 @@ export type IconName = keyof typeof ICON_SOURCES
 /** Resolve an app-owned semantic icon name to the glyph cut Grammar's Icon asks for in a given usage. */
 export const nivoIconSource = (name: IconName, usage: IconUsage = "chip") => ICON_SOURCES[name][usage]
 
+/** A client component reference lets the server console shell supply its drawer glyph without invoking client code. */
+export const ConsoleDrawerIcon = ICON_SOURCES.more.leading
+
 /** What the glyph draws: a meaning, never a component, so a Server Component caller crosses the boundary with a plain name. */
 type IconProps = {
     readonly props: {

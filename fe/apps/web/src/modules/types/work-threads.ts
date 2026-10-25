@@ -35,13 +35,23 @@ export interface ApprovalLineView {
     readonly tone: StatusTone
 }
 
+/** What the line under an approval card's policy says: nothing, that it ran out, or a live Grammar countdown. */
+export type ApprovalExpiryView =
+    | { readonly kind: "none" }
+    | { readonly kind: "expired"; readonly line: string }
+    | {
+          readonly kind: "countdown"
+          readonly expiresAt: string
+          readonly locale: string
+      }
+
 /** The approval card of a message, worded. */
 export interface ThreadApprovalCardView {
     readonly messageId: string
     readonly title: string
     readonly ruleLine: string
     readonly policyLabel: string
-    readonly expiryLine: string
+    readonly expiry: ApprovalExpiryView
     readonly approvers: ReadonlyArray<ApprovalLineView>
     readonly excluded: ReadonlyArray<{ readonly id: string; readonly line: string }>
     readonly fallbackLine: string | null

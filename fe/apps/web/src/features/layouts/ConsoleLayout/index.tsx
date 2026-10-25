@@ -14,7 +14,15 @@ export const ConsoleLayout = async (props: ConsoleLayoutProps) => {
     return (
         <ConsoleSessionGate>
             <ConsoleLayoutBase
-                props={{ mainNavigationLabel: t("mainNavigation"), workspaceLabel: t("groupWorkspace") }}
+                props={{
+                    mainNavigationLabel: t("mainNavigation"),
+                    workspaceLabel: t("groupWorkspace"),
+                    drawer: {
+                        title: t("mainNavigation"),
+                        openLabel: t("openMenu"),
+                        closeLabel: t("closeMenu"),
+                    },
+                }}
             >
                 {props.children}
             </ConsoleLayoutBase>

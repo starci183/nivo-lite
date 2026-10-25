@@ -41,6 +41,7 @@ const memberItemsOf = (row: Extract<OfficeConversationRowView, { kind: "group" }
     (row.members?.preview ?? []).map((member, index) => ({
         id: `${row.id}-member-${index}`,
         name: member.name,
+        seed: member.name,
         ...(member.avatarUrl === null ? {} : { src: member.avatarUrl }),
     }))
 

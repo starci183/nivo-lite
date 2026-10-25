@@ -63,7 +63,7 @@ const createTeamMembersDetails = (input: TeamMembersControllerInput) => {
                     {
                         id: "remove",
                         label: t("actionRemove"),
-                        tone: "negative",
+                        tone: "danger",
                         onAction: () => setAsking({ userId: row.userId, kind: "remove" }),
                     },
                 ],

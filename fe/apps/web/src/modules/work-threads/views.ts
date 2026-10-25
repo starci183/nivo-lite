@@ -1,7 +1,7 @@
 import type { ThreadMessageType, WorkChainType } from "@/modules/api"
-import type { ThreadApprovalCardView, ChainPanelView } from "@/modules/types"
+import type { ApprovalExpiryView, ThreadApprovalCardView, ChainPanelView } from "@/modules/types"
 import { chainStatusTone, stepKindKey } from "./chain"
-import { wallClockOf, countdownOf, hasPassed } from "./countdown"
+import { wallClockOf } from "./countdown"
 
 /** The words of the work threads catalog the view builders use. */
 export type ThreadWords = (key: string, values?: Record<string, string | number>) => string
@@ -45,19 +45,26 @@ const decidedLineOf = (card: NonNullable<ThreadMessageType["approval"]>, t: Thre
     })
 }
 
-/** The line under a card's policy: how long it has left, that it ran out, or nothing once a person decided it. */
-const expiryLineOf = (card: NonNullable<ThreadMessageType["approval"]>, now: number, t: ThreadWords): string => {
-    if (card.outcome === "approved" || card.outcome === "rejected") return ""
-    return card.outcome === "expired" || hasPassed(card.expiresAt, now)
-        ? t("expiredLine")
-        : t("expiresIn", { time: countdownOf(card.expiresAt, now) })
+/** The line under a card's policy: a live countdown, that it ran out, or nothing once a person decided it. */
+const expiryOf = (
+    card: NonNullable<ThreadMessageType["approval"]>,
+    t: ThreadWords,
+    locale: string,
+): ApprovalExpiryView => {
+    if (card.outcome === "approved" || card.outcome === "rejected") return { kind: "none" }
+    if (card.outcome === "expired") return { kind: "expired", line: t("expiredLine") }
+    return {
+        kind: "countdown",
+        expiresAt: card.expiresAt,
+        locale,
+    }
 }
 
 /** The approval card of a message as the card draws it. */
 export const approvalViewOf = (
     message: ThreadMessageType,
-    now: number,
     t: ThreadWords,
+    locale: string,
 ): ThreadApprovalCardView | null => {
     const card = message.approval
     if (card === null) return null
@@ -66,7 +73,7 @@ export const approvalViewOf = (
         title: t("approvalTitle", { action: card.action }),
         ruleLine: t("ruleLine", { rule: card.rule }),
         policyLabel: t(policyKey(card.policy)),
-        expiryLine: expiryLineOf(card, now, t),
+        expiry: expiryOf(card, t, locale),
         approvers: card.approvers.map((approver) => ({
             id: approver.memberId,
             name: approver.name,

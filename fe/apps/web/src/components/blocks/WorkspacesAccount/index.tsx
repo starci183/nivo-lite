@@ -22,7 +22,7 @@ export const WorkspacesAccount = () => {
                 email: user?.email ?? "",
                 entries: [
                     ...(hasWorkspace ? [{ id: "account", label: t("accountMenu"), href: APP_ROUTES.account }] : []),
-                    { id: "signout", label: t("signOut"), tone: "negative" as const, onAction: signOut.signOut },
+                    { id: "signout", label: t("signOut"), tone: "danger" as const, onAction: signOut.signOut },
                 ],
             }}
         />

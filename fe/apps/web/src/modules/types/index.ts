@@ -319,6 +319,7 @@ export type { SetupWriteDraft } from "./setup-write-draft"
 export type { ModuleIconName } from "./module-icon"
 
 export type {
+    ApprovalExpiryView,
     ThreadApprovalCardView,
     ApprovalLineView,
     BodySegment,

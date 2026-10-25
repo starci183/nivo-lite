@@ -7,14 +7,8 @@ import { useThemeSwitch } from "@/hooks/theme"
 import { navigation } from "@/modules/i18n"
 import { ConsoleDrawerContentBase } from "./component"
 
-/** What the drawer body reports besides its own commands. */
-interface ConsoleDrawerContentProps {
-    /** Called after a destination is chosen, so the drawer can close. */
-    readonly onNavigate: () => void
-}
-
 /** The connected drawer body: the rail's destinations with language and appearance. */
-export const ConsoleDrawerContent = (props: ConsoleDrawerContentProps) => {
+export const ConsoleDrawerContent = () => {
     const session = useCurrentConsoleSession()
     const t = useTranslations("shell")
     const router = navigation.useRouter()
@@ -36,10 +30,7 @@ export const ConsoleDrawerContent = (props: ConsoleDrawerContentProps) => {
                 isDark: theme.isDark,
             }}
             on={{
-                go: (href) => {
-                    props.onNavigate()
-                    router.push(href)
-                },
+                go: router.push,
                 chooseLocale: language.choose,
                 chooseDark: theme.choose,
             }}

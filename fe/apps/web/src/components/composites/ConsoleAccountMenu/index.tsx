@@ -1,23 +1,28 @@
 import { AvatarButton, DropdownMenu } from "@starci/grammar/common"
-import type { DropdownMenuEntry } from "@starci/grammar/common"
+import type { DropdownMenuEntry, DropdownMenuItem } from "@starci/grammar/common"
 import { nivoIconSource } from "../../leaves/Icon"
-import { avatarPictureOf } from "../../leaves/PersonAvatar"
 
 /** The glyph and tone of the account menu's two commands, by their ids. */
 const COMMAND_LOOKS: Record<
     string,
-    { readonly iconSource: ReturnType<typeof nivoIconSource>; readonly tone?: "negative" }
+    { readonly iconSource: ReturnType<typeof nivoIconSource>; readonly tone?: "danger" }
 > = {
     "account-page": { iconSource: nivoIconSource("account", "leading") },
-    signout: { iconSource: nivoIconSource("signIn", "leading"), tone: "negative" },
+    signout: { iconSource: nivoIconSource("signIn", "leading"), tone: "danger" },
+}
+
+/** Gives a known command its glyph without keeping an identity mark in the same slot. */
+const withCommandLook = (item: DropdownMenuItem): DropdownMenuItem => {
+    const look = COMMAND_LOOKS[item.id]
+    if (look === undefined) return item
+    const { mark: _mark, ...command } = item
+    return { ...command, ...look }
 }
 
 /** Gives the account page and sign-out items their leading glyph (sign out marked destructive). */
 const withLooks = (entries: ReadonlyArray<DropdownMenuEntry>): ReadonlyArray<DropdownMenuEntry> =>
     entries.map((entry) =>
-        entry.kind === "section"
-            ? { ...entry, items: entry.items.map((item) => ({ ...item, ...COMMAND_LOOKS[item.id] })) }
-            : { ...entry, ...COMMAND_LOOKS[entry.id] },
+        entry.kind === "section" ? { ...entry, items: entry.items.map(withCommandLook) } : withCommandLook(entry),
     )
 
 /** What the account button draws and opens. */
@@ -35,7 +40,12 @@ export const ConsoleAccountMenu = (props: ConsoleAccountMenuProps) => (
         placement="bottom end"
         entries={withLooks(props.entries)}
         trigger={
-            <AvatarButton size="control" name={props.userName} {...avatarPictureOf(props.avatarUrl, props.userSeed)} />
+            <AvatarButton
+                size="control"
+                name={props.userName}
+                seed={props.userSeed}
+                {...(props.avatarUrl ? { src: props.avatarUrl } : {})}
+            />
         }
     />
 )

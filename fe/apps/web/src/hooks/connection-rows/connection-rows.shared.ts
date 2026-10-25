@@ -110,8 +110,8 @@ export const menuOf = (c: Connection, canManage: boolean, t: RowTranslate): Read
         ...(c.provider === "sepay" && settled ? [{ id: "keys", label: t("showKey") }] : []),
     ]
     const danger = live
-        ? { id: "disconnect", label: t("disconnect"), tone: "negative" as const }
-        : { id: "remove", label: t("remove"), tone: "negative" as const }
+        ? { id: "disconnect", label: t("disconnect"), tone: "danger" as const }
+        : { id: "remove", label: t("remove"), tone: "danger" as const }
     return [...(commands.length > 0 ? [{ id: "commands", items: commands }] : []), { id: "danger", items: [danger] }]
 }
 

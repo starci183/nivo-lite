@@ -1,5 +1,5 @@
 export { bodySegmentsOf } from "./body"
-export { CLOCK_TICK_MS, THREAD_POLL_MS } from "./consts"
+export { THREAD_POLL_MS } from "./consts"
 export { composerOptionsOf, mentionsToSend, pickedOf } from "./composer"
 export type { PickedMention } from "./composer"
 export { approvalViewOf, chainViewOf } from "./views"

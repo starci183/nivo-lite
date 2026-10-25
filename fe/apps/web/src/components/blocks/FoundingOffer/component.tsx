@@ -2,19 +2,16 @@ import {
     Alert,
     Badge,
     Button,
-    DescriptionList,
     Image,
     Meter,
     Region,
+    RelativeTime,
     SectionHeader,
     SurfaceCard,
     Text,
     TextAction,
 } from "@starci/grammar/common"
 import { HERO_COPY, HERO_COUNTDOWN, HERO_ROW, PILL_WRAP, STRIP } from "./classNames"
-
-/** One countdown unit: its word and the two-digit figure (or a dash before the first tick). */
-export type FoundingOfferUnit = { readonly id: string; readonly term: string; readonly value: string }
 
 /** Every sentence of the campaign, resolved by the connected block. */
 export interface FoundingOfferBaseProps {
@@ -36,7 +33,7 @@ export interface FoundingOfferBaseProps {
         readonly caption: string
         readonly conditions: string
         readonly countdownAria: string
-        readonly units: ReadonlyArray<FoundingOfferUnit>
+        readonly countdown: { readonly dateTime: string; readonly locale: string; readonly fallback: string }
         readonly slots: { readonly claimed: number; readonly cap: number; readonly label: string } | null
     }
     readonly on: { readonly dismiss: () => void }
@@ -87,14 +84,11 @@ const Hero = ({ props }: PartProps) => (
                     {props.cta}
                 </Button>
                 <div className={HERO_COUNTDOWN} role="timer" aria-label={props.countdownAria}>
-                    <DescriptionList
-                        layout="stat-strip"
-                        isDivided
-                        items={props.units.map((unit) => ({
-                            id: unit.id,
-                            term: unit.term,
-                            description: unit.value,
-                        }))}
+                    <RelativeTime
+                        dateTime={props.countdown.dateTime}
+                        locale={props.countdown.locale}
+                        mode="countdown"
+                        fallback={props.countdown.fallback}
                     />
                 </div>
             </div>

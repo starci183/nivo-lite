@@ -12,11 +12,11 @@ export interface RowPrimary {
     readonly isPending: boolean
 }
 
-/** One command of a row's menu; destructive ones carry the negative tone. */
+/** One command of a row's menu; destructive ones carry the danger tone. */
 export interface RowMenuItem {
     readonly id: string
     readonly label: string
-    readonly tone?: "negative"
+    readonly tone?: "danger"
 }
 
 /** One section of a row's menu. */

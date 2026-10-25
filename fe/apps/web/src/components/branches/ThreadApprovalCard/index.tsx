@@ -1,4 +1,5 @@
 import { Badge, Button, SurfaceCard, Text } from "@starci/grammar/common"
+import { ApprovalCountdown } from "@/components/leaves/ApprovalCountdown"
 import type { ThreadApprovalCardView, ThreadApprovalLabels } from "@/modules/types"
 import {
     ACTIONS_CLASS_NAME,
@@ -60,9 +61,7 @@ export const ThreadApprovalCard = (props: ThreadApprovalCardProps) => {
                 </Text>
                 <div className={FACTS_CLASS_NAME}>
                     <Text size="sm">{card.policyLabel}</Text>
-                    <Text size="sm" tone="muted">
-                        {card.expiryLine}
-                    </Text>
+                    <ApprovalCountdown expiry={card.expiry} />
                 </div>
                 <div className={PEOPLE_CLASS_NAME}>
                     {card.approvers.map((person) => (

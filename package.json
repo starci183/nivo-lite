@@ -47,7 +47,7 @@
     "@nestjs/testing": "11.2.5",
     "@starci/cli": "1.7.31",
     "@starci/eslint-canon-be": "3.4.41",
-    "@starci/eslint-canon-fe": "8.4.40",
+    "@starci/eslint-canon-fe": "8.4.41",
     "@starci/hfs": "4.7.31",
     "@starci/jest-preset": "2.3.6",
     "@starci/prettier-config": "1.0.4",
