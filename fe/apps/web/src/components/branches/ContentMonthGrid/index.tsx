@@ -64,11 +64,10 @@ const monthCellInteraction = (
     props: ContentMonthGridProps,
     cell: GridCell | undefined,
 ): DataTableCellInteraction | undefined => {
-    if (cell?.day == null) return { tone: "muted" }
+    if (cell?.day == null) return undefined
     const day = cell.day
     const key = cell.dateKey
     return {
-        isHighlighted: props.overKey === key || props.todayKey === key,
         ...(props.pickedId !== null && props.canManage ? { onAction: () => props.onDrop(day) } : {}),
         onDragOver: (event) => {
             if (props.pickedId === null) return
@@ -110,7 +109,7 @@ const MonthDayCell = ({ props, cell }: MonthDayCellProps) => {
                     />
                     {props.canManage && post.canMove ? (
                         <Button
-                            variant="ghost"
+                            intent="neutral"
                             size="sm"
                             aria-pressed={props.pickedId === post.id}
                             onPress={() => props.onPick(post.id)}
@@ -121,7 +120,7 @@ const MonthDayCell = ({ props, cell }: MonthDayCellProps) => {
                 </div>
             ))}
             {list.length > MAX_CHIPS && props.expandedKey !== key ? (
-                <Button variant="ghost" size="sm" onPress={() => props.onExpand(key)}>
+                <Button intent="neutral" size="sm" onPress={() => props.onExpand(key)}>
                     {props.t("moreItems", { n: list.length - MAX_CHIPS })}
                 </Button>
             ) : null}

@@ -7,12 +7,12 @@ import {
     Form,
     Heading,
     Input,
-    ListItem,
+    ListRow,
     SurfaceCard,
     SurfaceListCard,
     Text,
 } from "@starci/grammar/common"
-import { CARD_CLASS_NAME, FORM_CLASS_NAME, REWARD_CLASS_NAME } from "./classNames"
+import { CARD_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** One reward the shop lists. */
 export interface LoyaltyCheckReward {
@@ -110,13 +110,12 @@ export const LoyaltyCheckFormBase = (props: LoyaltyCheckFormBaseProps) => {
                                     name="phone"
                                     label={props.props.phone.label}
                                     placeholder={props.props.phone.placeholder}
-                                    variant="secondary"
                                     isRequired
                                     isDisabled={isBusy}
                                     value={props.props.phone.value}
                                     onValueChange={on.setPhone}
                                 />
-                                <Button variant="primary" width="fill" type="submit" isPending={isBusy}>
+                                <Button intent="commit" width="fill" type="submit" isPending={isBusy}>
                                     {props.props.phone.send}
                                 </Button>
                             </div>
@@ -159,23 +158,21 @@ const renderGreeting = (props: LoyaltyCheckFormBaseProps) => {
                 <SurfaceListCard
                     label={result.rewardsTitle}
                     headingLevel={3}
-                    depth="nested"
                     empty={<EmptyNotice message={result.noRewards} />}
                 >
                     {result.rewards.map((reward) => (
-                        <ListItem key={reward.id} className={REWARD_CLASS_NAME}>
-                            <Badge tone={reward.canRedeem ? "success" : "neutral"}>{reward.badge}</Badge>
-                            <Text weight="semibold">{reward.name}</Text>
-                            <Text size="sm" tone="muted">
-                                {reward.detail}
-                            </Text>
-                        </ListItem>
+                        <ListRow
+                            key={reward.id}
+                            title={reward.name}
+                            description={reward.detail}
+                            badges={<Badge tone={reward.canRedeem ? "success" : "neutral"}>{reward.badge}</Badge>}
+                        />
                     ))}
                 </SurfaceListCard>
                 <Text size="sm" tone="muted">
                     {result.redeemHint}
                 </Text>
-                <Button variant="outline" onPress={on.back}>
+                <Button intent="neutral" onPress={on.back}>
                     {props.props.back}
                 </Button>
             </div>
@@ -197,21 +194,20 @@ const renderVerificationCode = (props: LoyaltyCheckFormBaseProps) => {
                         name="code"
                         kind="code"
                         label={props.props.code.label}
-                        variant="secondary"
                         isRequired
                         isDisabled={isBusy}
                         value={props.props.code.value}
                         onValueChange={on.setCode}
                     />
-                    <Button variant="primary" width="fill" type="submit" isPending={isBusy}>
+                    <Button intent="commit" width="fill" type="submit" isPending={isBusy}>
                         {props.props.code.check}
                     </Button>
                 </div>
             </Form>
-            <Button variant="outline" isDisabled={isBusy} onPress={on.sendCode}>
+            <Button intent="neutral" isDisabled={isBusy} onPress={on.sendCode}>
                 {props.props.code.resend}
             </Button>
-            <Button variant="tertiary" isDisabled={isBusy} onPress={on.back}>
+            <Button intent="dismiss" isDisabled={isBusy} onPress={on.back}>
                 {props.props.back}
             </Button>
         </>

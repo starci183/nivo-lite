@@ -21,7 +21,6 @@ type AutomationDetailFrameProps = {
     readonly dismissLabel: string
     readonly isBusy: boolean
     /** The detail sits inside another bounded surface (the module settings card). */
-    readonly isNested: boolean
     readonly onClose: () => void
     readonly onDismiss: () => void
     /** The sections: settings, message, gate, runs. */
@@ -31,7 +30,7 @@ type AutomationDetailFrameProps = {
 /** Everything about one automation in one surface: its name, the alerts, the sections, the run-now action and "not for me". */
 export const AutomationDetailFrame = (props: AutomationDetailFrameProps) => (
     <aside className={DETAIL_CLASS} aria-label={props.name} id="automation-detail">
-        <SurfaceCard depth={props.isNested ? "nested" : "top"}>
+        <SurfaceCard>
             <div className={DETAIL_STACK_CLASS}>
                 <div className={HEAD_ROW_CLASS}>
                     <div className={FACTS_CLASS}>
@@ -40,7 +39,7 @@ export const AutomationDetailFrame = (props: AutomationDetailFrameProps) => (
                             {props.description}
                         </Text>
                     </div>
-                    <Button variant="ghost" size="sm" onPress={props.onClose}>
+                    <Button intent="neutral" size="sm" onPress={props.onClose}>
                         {props.closeLabel}
                     </Button>
                 </div>
@@ -49,7 +48,7 @@ export const AutomationDetailFrame = (props: AutomationDetailFrameProps) => (
                 {props.children}
                 {props.runNow === undefined ? null : (
                     <div className={ACTIONS_CLASS}>
-                        <Button variant="secondary" isPending={props.runNow.isPending} onPress={props.runNow.onPress}>
+                        <Button intent="neutral" isPending={props.runNow.isPending} onPress={props.runNow.onPress}>
                             {props.runNow.label}
                         </Button>
                         {props.runNow.startedText === undefined ? null : (
@@ -60,7 +59,7 @@ export const AutomationDetailFrame = (props: AutomationDetailFrameProps) => (
                     </div>
                 )}
                 <div className={ACTIONS_CLASS}>
-                    <Button variant="ghost" size="sm" isDisabled={props.isBusy} onPress={props.onDismiss}>
+                    <Button intent="neutral" size="sm" isDisabled={props.isBusy} onPress={props.onDismiss}>
                         {props.dismissLabel}
                     </Button>
                 </div>

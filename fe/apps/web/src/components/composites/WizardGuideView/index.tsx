@@ -23,7 +23,6 @@ const fieldOf = (field: GuideField, props: WizardGuideViewProps) => {
                 name={field.token}
                 label={field.label}
                 hint={field.hint}
-                variant="secondary"
                 kind={field.isSecret ? "password" : "text"}
                 value={field.value}
                 isReadOnly={!field.isEditable}
@@ -48,7 +47,6 @@ const fieldOf = (field: GuideField, props: WizardGuideViewProps) => {
                 id={`guide-${field.field}`}
                 name={field.field}
                 label={field.label}
-                variant="secondary"
                 kind={field.isSecret ? "password" : "text"}
                 hint={field.hint}
                 {...(props.isDisabled === undefined ? {} : { isDisabled: props.isDisabled })}
@@ -64,7 +62,6 @@ const fieldOf = (field: GuideField, props: WizardGuideViewProps) => {
                 name={field.id}
                 label={field.label}
                 description={field.hint}
-                variant="secondary"
                 isReadOnly
                 options={[{ id: "provider-option", label: field.option }]}
                 value="provider-option"
@@ -93,7 +90,7 @@ export const WizardGuideView = (props: WizardGuideViewProps) => (
                     <Label as="h4" id={`guide-screen-${screen.id}`}>
                         {screen.heading}
                     </Label>
-                    <SurfaceCard depth="nested">
+                    <SurfaceCard>
                         <div className={classNames.fields}>{screen.fields.map((field) => fieldOf(field, props))}</div>
                     </SurfaceCard>
                 </div>

@@ -167,14 +167,14 @@ const renderContextBody = ({ view, l, on, p, isSkeleton }: RenderContextBodyCont
                 </div>
                 <div className={HEADER_ACTIONS_CLASS_NAME}>
                     {view.hasConversation ? (
-                        <Button variant="ghost" size="sm" href="#history">
+                        <Button intent="neutral" size="sm" href="#history">
                             {l.viewConversation}
                         </Button>
                     ) : null}
-                    <Button variant="outline" size="sm" onPress={on.copy}>
+                    <Button intent="neutral" size="sm" onPress={on.copy}>
                         {l.copy}
                     </Button>
-                    <Button variant="outline" size="sm" isPending={p.isPending} onPress={on.refresh}>
+                    <Button intent="neutral" size="sm" isPending={p.isPending} onPress={on.refresh}>
                         {l.refresh}
                     </Button>
                 </div>
@@ -202,7 +202,7 @@ const renderContextBody = ({ view, l, on, p, isSkeleton }: RenderContextBodyCont
         </div>
         <div className={GROUP_CLASS_NAME}>
             <Heading level={3}>{l.customerWords}</Heading>
-            <SurfaceCard depth="nested">
+            <SurfaceCard>
                 <blockquote className={QUOTE_CLASS_NAME}>
                     <Text isSkeleton={isSkeleton}>{view.need}</Text>
                 </blockquote>

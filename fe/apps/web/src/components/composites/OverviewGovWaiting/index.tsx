@@ -45,7 +45,7 @@ export const OverviewGovWaiting = (props: OverviewGovWaitingProps) => {
                             <Text weight="semibold">{props.figures.count}</Text>
                             <div className={WAIT_LIST_CLASS_NAME}>
                                 {cards.map(({ item, action }) => (
-                                    <SurfaceCard key={item.id} depth="nested" wholeAction={action}>
+                                    <SurfaceCard key={item.id} wholeAction={action}>
                                         <div className={TILE_COPY_CLASS_NAME}>
                                             <div className={CHIP_ROW_CLASS_NAME}>
                                                 <Badge tone="neutral">{item.department}</Badge>

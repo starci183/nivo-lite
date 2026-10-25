@@ -59,7 +59,7 @@ export const SalesActivityBase = (props: SalesActivityBaseProps) => {
                     >
                         <Text size="sm">{row.summary}</Text>
                         {row.evidence === null ? null : (
-                            <SurfaceCard depth="nested" ariaLabel={p.evidenceTitle}>
+                            <SurfaceCard ariaLabel={p.evidenceTitle}>
                                 <Text size="xs" tone="muted" weight="medium">
                                     {p.evidenceTitle}
                                 </Text>

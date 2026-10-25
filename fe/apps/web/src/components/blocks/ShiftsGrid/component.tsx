@@ -130,7 +130,6 @@ export const ShiftsGridBase = (props: ShiftsGridBaseProps) => (
                                     label={props.props.assignLabel}
                                     isLabelHidden
                                     name={`assign-${shift.id}`}
-                                    variant="secondary"
                                     value={shift.staffId}
                                     options={props.props.assignOptions}
                                     onValueChange={(value) => props.on.assign(shift.id, value ?? props.props.openId)}
@@ -160,8 +159,6 @@ const gridCellInteraction = (
     const cell = row.cells.find((candidate) => candidate.date === columnId)
     if (cell === undefined) return undefined
     return {
-        isHighlighted: cell.isTarget,
-        tone: cell.isOff ? "muted" : "neutral",
         ...(cell.canDrop ? { onAction: () => props.on.place(row.id) } : {}),
         onDragOver: (event) => {
             if (!cell.canDrop) return
@@ -212,7 +209,7 @@ const renderGridCell = ({ cell, props }: RenderGridCellInput) => (
             >
                 <Button
                     size="sm"
-                    variant="ghost"
+                    intent="neutral"
                     isDisabled={!props.props.editable}
                     aria-pressed={chip.isPicked}
                     onPress={() => props.on.pick(chip.id)}

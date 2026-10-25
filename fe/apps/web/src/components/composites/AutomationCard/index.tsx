@@ -65,7 +65,6 @@ type AutomationCardProps = {
     readonly isEnabled: boolean
     readonly isSwitchDisabled: boolean
     /** The card sits inside another bounded surface: outline instead of elevation. */
-    readonly isNested: boolean
     readonly dataKey: string
     readonly onSelect: () => void
     readonly onToggle: (next: boolean) => void
@@ -78,7 +77,7 @@ type AutomationCardProps = {
  * detail (the switch is a separate, disjoint control); the selected card carries the one accent sweep.
  */
 export const AutomationCard = (props: AutomationCardProps) => (
-    <SurfaceCard ariaLabel={props.name} depth={props.isNested ? "nested" : "top"} isHighlight={props.isSelected}>
+    <SurfaceCard ariaLabel={props.name} isHighlight={props.isSelected}>
         <div className={CARD_STACK_CLASS} data-automation={props.dataKey}>
             <div className={CARD_TOP_CLASS}>
                 <IconTile source={nivoIconSource(ICONS[props.icon] ?? "apps", "leading")} tone="neutral" />
@@ -141,12 +140,11 @@ type AutomationCardSkeletonProps = {
     readonly loadingLabel: string
     readonly statusLabel: string
     readonly selectLabel: string
-    readonly isNested: boolean
 }
 
 /** One automation card while the collection loads: the resolved card's anatomy as inert geometry. */
 export const AutomationCardSkeleton = (props: AutomationCardSkeletonProps) => (
-    <SurfaceCard ariaLabel={props.loadingLabel} depth={props.isNested ? "nested" : "top"}>
+    <SurfaceCard ariaLabel={props.loadingLabel}>
         <div className={CARD_STACK_CLASS} aria-busy="true">
             <div className={CARD_TOP_CLASS}>
                 <IconTile source={nivoIconSource("trigger", "leading")} tone="neutral" isSkeleton />

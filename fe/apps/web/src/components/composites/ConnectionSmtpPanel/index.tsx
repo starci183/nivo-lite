@@ -30,7 +30,7 @@ type PanelFormProps = {
 
 const PanelForm = (props: PanelFormProps) => (
     <div className={classNames.full}>
-        <SurfaceCard depth="nested" ariaLabel={props.ariaLabel}>
+        <SurfaceCard ariaLabel={props.ariaLabel}>
             <div className={classNames.panel}>
                 {props.field}
                 {props.hint === undefined ? null : (
@@ -40,14 +40,14 @@ const PanelForm = (props: PanelFormProps) => (
                 )}
                 <div className={classNames.actions}>
                     <Button
-                        variant="primary"
+                        intent="commit"
                         isPending={props.isPending}
                         isDisabled={props.isConfirmDisabled}
                         onPress={props.onConfirm}
                     >
                         {props.confirmLabel}
                     </Button>
-                    <Button variant="ghost" onPress={props.onCancel}>
+                    <Button intent="neutral" onPress={props.onCancel}>
                         {props.cancelLabel}
                     </Button>
                 </div>
@@ -61,14 +61,14 @@ export const ConnectionSmtpPanel = (props: ConnectionSmtpPanelProps) => (
     <>
         <div className={classNames.actions}>
             {props.isDefault ? <Badge tone="success">{props.labels.defaultBadge}</Badge> : null}
-            <Button variant="secondary" isDisabled={props.isPending} onPress={() => props.onToggle("test")}>
+            <Button intent="neutral" isDisabled={props.isPending} onPress={() => props.onToggle("test")}>
                 {props.labels.test}
             </Button>
-            <Button variant="outline" isDisabled={props.isPending} onPress={() => props.onToggle("password")}>
+            <Button intent="neutral" isDisabled={props.isPending} onPress={() => props.onToggle("password")}>
                 {props.labels.changePassword}
             </Button>
             {props.canSetDefault ? (
-                <Button variant="outline" isDisabled={props.isPending} onPress={props.onMakeDefault}>
+                <Button intent="neutral" isDisabled={props.isPending} onPress={props.onMakeDefault}>
                     {props.labels.setDefault}
                 </Button>
             ) : null}
@@ -81,7 +81,6 @@ export const ConnectionSmtpPanel = (props: ConnectionSmtpPanelProps) => (
                         id={`smtp-row-to-${props.id}`}
                         name="testTo"
                         label={props.labels.testTo}
-                        variant="secondary"
                         isDisabled={props.isPending}
                         value={props.to}
                         onValueChange={props.onTo}
@@ -103,7 +102,6 @@ export const ConnectionSmtpPanel = (props: ConnectionSmtpPanelProps) => (
                         id={`smtp-row-pw-${props.id}`}
                         name="password"
                         label={props.labels.newPassword}
-                        variant="secondary"
                         kind="password"
                         isDisabled={props.isPending}
                         value={props.password}

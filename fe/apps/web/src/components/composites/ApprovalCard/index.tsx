@@ -75,7 +75,7 @@ export const ApprovalCard = (props: ApprovalCardProps) => {
     const shownText = view.isWaiting && view.isEditing ? view.editText : view.draft
     return (
         <div className={APPROVAL_CARD_COLUMN_CLASS_NAME}>
-            <SurfaceCard composition="joined" depth="nested" ariaLabel={view.nextAction}>
+            <SurfaceCard composition="joined" ariaLabel={view.nextAction}>
                 <div className={APPROVAL_CARD_BAND_CLASS_NAME}>
                     <div className={APPROVAL_CARD_STATUS_ROW_CLASS_NAME}>
                         {view.agent === null ? null : (
@@ -112,7 +112,6 @@ const renderApprovalCardDraft = (
     <div className={APPROVAL_CARD_BAND_DIVIDED_CLASS_NAME}>
         {view.isWaiting && view.isEditing ? (
             <Textarea
-                variant="secondary"
                 label={labels.draft}
                 rows={8}
                 value={view.editText}
@@ -120,9 +119,11 @@ const renderApprovalCardDraft = (
                 onValueChange={on.editChange}
             />
         ) : (
-            <div className={APPROVAL_CARD_QUOTE_CLASS_NAME}>
-                <Text>{view.draft}</Text>
-            </div>
+            <SurfaceCard>
+                <div className={APPROVAL_CARD_QUOTE_CLASS_NAME}>
+                    <Text>{view.draft}</Text>
+                </div>
+            </SurfaceCard>
         )}
         <div className={APPROVAL_CARD_META_ROW_CLASS_NAME}>
             <Text size="xs" tone="muted">
@@ -143,18 +144,18 @@ const renderApprovalCardDraft = (
         {view.isWaiting && view.canDecide ? (
             <div className={APPROVAL_CARD_ACTIONS_CLASS_NAME}>
                 <Button
-                    variant="primary"
+                    intent="commit"
                     isPending={view.pendingDecision === "approved"}
                     isDisabled={isBusy || (view.isEditing && view.editText.trim().length === 0)}
                     onPress={() => on.decide("approved")}
                 >
                     {labels.approveSend}
                 </Button>
-                <Button variant="outline" isDisabled={isBusy} onPress={on.toggleEdit}>
+                <Button intent="alternative" isDisabled={isBusy} onPress={on.toggleEdit}>
                     {view.isEditing ? labels.discardEdits : labels.edit}
                 </Button>
                 <Button
-                    variant="ghost"
+                    intent="alternative"
                     isPending={view.pendingDecision === "rejected"}
                     isDisabled={isBusy}
                     onPress={() => on.decide("rejected")}

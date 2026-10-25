@@ -107,7 +107,7 @@ export const SalesDecisionRow = (props: SalesDecisionRowProps) => {
                 </Text>
             )}
             {row.draft === null ? null : (
-                <SurfaceCard depth="nested" ariaLabel={l.draftLabel}>
+                <SurfaceCard ariaLabel={l.draftLabel}>
                     <Text size="xs" tone="muted" weight="medium">
                         {l.draftLabel}
                     </Text>
@@ -144,7 +144,7 @@ const renderSalesDecisionRowActions = (
 ) => (
     <>
         <Button
-            variant="primary"
+            intent="commit"
             size="sm"
             isPending={row.isApproveBusy}
             isDisabled={row.isApproveDisabled}
@@ -153,12 +153,13 @@ const renderSalesDecisionRowActions = (
             {l.approveLabel}
         </Button>
         {row.canEdit ? (
-            <Button variant="outline" size="sm" isDisabled={row.isBusy} onPress={() => on.toggleEdit(row.id)}>
+            <Button intent="neutral" size="sm" isDisabled={row.isBusy} onPress={() => on.toggleEdit(row.id)}>
                 {row.editLabel}
             </Button>
         ) : null}
         <Button
-            variant="danger-soft"
+            intent="destructive"
+            step="entry"
             size="sm"
             isPending={row.isRejectBusy}
             isDisabled={row.isBusy}

@@ -24,7 +24,6 @@ type JumpRowProps = {
 /** One waiting thing as a compact card whose whole face jumps to it in the thread. */
 const JumpRow = (props: JumpRowProps) => (
     <SurfaceCard
-        depth="nested"
         wholeAction={{
             kind: "button",
             press: () => props.onJump(props.row.id),

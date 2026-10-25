@@ -158,7 +158,6 @@ const renderAutomationCards = (
                           loadingLabel={labels.loading}
                           statusLabel={labels.status}
                           selectLabel={labels.select}
-                          isNested={isNested}
                       />
                   ))
                 : null}
@@ -167,7 +166,6 @@ const renderAutomationCards = (
                 <AutomationCard
                     key={card.dataKey}
                     {...card}
-                    isNested={isNested}
                     onSelect={() => on.select(card.dataKey)}
                     onToggle={(next) => on.toggle(card.dataKey, next)}
                 >

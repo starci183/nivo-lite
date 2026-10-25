@@ -76,14 +76,13 @@ interface DatabaseTablePreviewProps {
 export const DatabaseTableMapper = (props: DatabaseTableMapperProps) => {
     const { props: view, on } = props
     return (
-        <SurfaceCard depth="nested">
+        <SurfaceCard>
             <div className={classNames.fields}>
                 <Text size="sm" weight="semibold">
                     {view.title}
                 </Text>
                 <Select
                     label={view.text.entity}
-                    variant="secondary"
                     isDisabled={view.isDisabled}
                     value={view.entity}
                     options={view.entities}
@@ -92,7 +91,6 @@ export const DatabaseTableMapper = (props: DatabaseTableMapperProps) => {
                 <Select
                     label={view.text.id}
                     description={view.text.idHint}
-                    variant="secondary"
                     isDisabled={view.isDisabled}
                     value={view.idColumn}
                     options={view.names}
@@ -100,7 +98,6 @@ export const DatabaseTableMapper = (props: DatabaseTableMapperProps) => {
                 />
                 <Select
                     label={view.text.titleColumn}
-                    variant="secondary"
                     isDisabled={view.isDisabled}
                     value={view.titleColumn}
                     options={[view.noneColumn, ...view.names]}
@@ -109,14 +106,12 @@ export const DatabaseTableMapper = (props: DatabaseTableMapperProps) => {
                 <Select
                     label={view.text.updated}
                     description={view.text.updatedHint}
-                    variant="secondary"
                     isDisabled={view.isDisabled}
                     value={view.updatedColumn}
                     options={[view.noneColumn, ...view.names]}
                     onValueChange={on.updated}
                 />
                 <CheckboxGroup
-                    variant="secondary"
                     label={view.text.columns}
                     isDisabled={view.isDisabled}
                     options={view.names.map((name) => ({ value: name.id, label: name.label }))}
@@ -130,7 +125,7 @@ export const DatabaseTableMapper = (props: DatabaseTableMapperProps) => {
                 )}
                 <div className={classNames.buttons}>
                     <Button
-                        variant="outline"
+                        intent="neutral"
                         isPending={view.isPreviewing}
                         isDisabled={!view.canPreview}
                         onPress={on.preview}
