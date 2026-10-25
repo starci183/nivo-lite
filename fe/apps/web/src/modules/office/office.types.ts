@@ -1,4 +1,5 @@
 import type { InstallationConnectionNeed } from "@/modules/installations"
+import type { OfficeRoomMembersView } from "@/modules/types"
 
 /** Who wrote a line. */
 export type OfficeAuthorKind = "human" | "agent" | "system"
@@ -76,6 +77,7 @@ export interface OfficeRoom {
     readonly agentIds: ReadonlyArray<string>
     readonly homeAgentIds: ReadonlyArray<string>
     readonly userIds: ReadonlyArray<string>
+    readonly members?: OfficeRoomMembersView | null
     readonly pins: ReadonlyArray<{
         readonly id: string
         readonly title: string

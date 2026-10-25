@@ -1,6 +1,6 @@
 import { leadHref } from "@/modules/routes"
 import type {
-    OfficeChatRowView,
+    OfficeConversationRowView,
     OfficeListView,
     OfficeMentionView,
     OfficeRoomRowView,
@@ -19,21 +19,39 @@ export const officeListTimeOf = (iso: string, words: OfficeWords, context: Offic
 const lastBy = (messages: ReadonlyArray<OfficeMessage>, agentId: string): OfficeMessage | null =>
     messages.findLast((message) => message.agentId === agentId) ?? null
 
+/** A conversation row with the instant it sorts by; the instant itself is not drawn. */
+interface SortableRow {
+    readonly row: OfficeConversationRowView
+    readonly sortAt: string | null
+}
+
 const agentRowOf = (
     agent: OfficeAgent,
     messages: ReadonlyArray<OfficeMessage>,
     words: OfficeWords,
     context: OfficeContext,
-): OfficeChatRowView => {
+): SortableRow => {
     const said = lastBy(messages, agent.id)
     const role = words.moduleName(agent.module)
     return {
-        id: agent.id,
-        label: agent.name,
-        description: agent.isActive ? (said?.body ?? role) : words.t("agentPreviewPaused"),
-        time: said === null ? null : officeListTimeOf(said.createdAt, words, context),
-        avatar: agentAvatarOf(agent.module, agent.name),
+        sortAt: said?.createdAt ?? null,
+        row: {
+            id: agent.id,
+            kind: "agent",
+            label: agent.name,
+            description: agent.isActive ? (said?.body ?? role) : words.t("agentPreviewPaused"),
+            time: said === null ? null : officeListTimeOf(said.createdAt, words, context),
+            unread: 0,
+            avatar: agentAvatarOf(agent.module, agent.name),
+        },
     }
+}
+
+/** Newest activity first; rows without an instant sink, keeping their given order. */
+const byRecency = (a: SortableRow, b: SortableRow): number => {
+    if (a.sortAt === null) return b.sortAt === null ? 0 : 1
+    if (b.sortAt === null) return -1
+    return b.sortAt.localeCompare(a.sortAt)
 }
 
 /** The Hub rooms of the left column and the one on screen. */
@@ -43,7 +61,7 @@ export interface OfficeRoomListInput {
     readonly selected: string
 }
 
-/** The left column: the group, the agents and the recent customers. */
+/** The left column: one conversation list — the rooms, the agents and the recent customers, newest first. */
 export const officeListViewOf = (
     messages: ReadonlyArray<OfficeMessage>,
     pendingCount: number,
@@ -53,21 +71,41 @@ export const officeListViewOf = (
 ): OfficeListView => {
     const last = messages.at(-1) ?? null
     const prefix = last === null || last.authorKind === "system" ? "" : `${last.authorName}: `
-    return {
-        rooms: rooms.rows,
-        selectedRoom: rooms.selected,
-        groupLabel: words.t("title"),
-        groupPreview: last === null ? words.t("groupPreviewEmpty") : `${prefix}${last.body}`,
-        groupTime: last === null ? null : officeListTimeOf(last.createdAt, words, context),
-        pendingCount,
-        agents: context.agents.map((agent) => agentRowOf(agent, messages, words, context)),
-        customers: context.leads.slice(0, RECENT_CUSTOMERS).map((lead) => ({
-            id: lead.id,
-            label: lead.name,
-            description: lead.preview ?? words.t("customerPreviewNone"),
-            time: officeListTimeOf(lead.createdAt, words, context),
-            avatar: { kind: "person", name: lead.name },
+    const groupPreview = last === null ? words.t("groupPreviewEmpty") : `${prefix}${last.body}`
+    const sortable: ReadonlyArray<SortableRow> = [
+        ...rooms.rows.map((room) => ({
+            sortAt: room.sortAt,
+            row: {
+                id: room.id,
+                kind: "group" as const,
+                label: room.label,
+                description: room.id === "office" && room.description === "" ? groupPreview : room.description,
+                time: room.time,
+                unread: room.unread,
+                members: room.members ?? null,
+            },
         })),
+        ...context.agents.map((agent) => agentRowOf(agent, messages, words, context)),
+        ...context.leads.slice(0, RECENT_CUSTOMERS).map((lead) => ({
+            sortAt: lead.createdAt,
+            row: {
+                id: lead.id,
+                kind: "customer" as const,
+                label: lead.name,
+                description: lead.preview ?? words.t("customerPreviewNone"),
+                time: officeListTimeOf(lead.createdAt, words, context),
+                unread: 0,
+                avatar: { kind: "person" as const, name: lead.name },
+            },
+        })),
+    ]
+    return {
+        conversations: sortable
+            .slice()
+            .sort(byRecency)
+            .map((entry) => entry.row),
+        selectedRoom: rooms.selected,
+        pendingCount,
     }
 }
 

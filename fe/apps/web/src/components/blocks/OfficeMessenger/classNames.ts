@@ -1,13 +1,13 @@
 /** The columns inside the messenger card; the body paints the surface itself. */
 export const BODY_CLASS_NAME = "flex h-full min-h-0 min-w-0 bg-surface"
 
-/** The left column: full width on phones, a fixed width beside the thread from md. */
+/** The left column: full width on phones, a fixed width beside the thread from md; it owns the panel content edge. */
 export const LIST_COLUMN_CLASS_NAME =
-    "flex w-full min-w-0 shrink-0 flex-col border-separator md:w-72 md:border-r xl:w-80"
+    "flex w-full min-w-0 shrink-0 flex-col border-separator px-4 md:w-72 md:border-r xl:w-80"
 
 /** The left column while the thread shows on a phone. */
 export const LIST_COLUMN_HIDDEN_CLASS_NAME =
-    "hidden w-full min-w-0 shrink-0 flex-col border-separator md:flex md:w-72 md:border-r xl:w-80"
+    "hidden w-full min-w-0 shrink-0 flex-col border-separator px-4 md:flex md:w-72 md:border-r xl:w-80"
 
 /** The centre column: header, thread, composer. */
 export const THREAD_COLUMN_CLASS_NAME = "flex min-w-0 flex-1 flex-col"

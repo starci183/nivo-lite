@@ -204,13 +204,17 @@ export interface OfficeWorkDecision {
     readonly basis: string | null
 }
 
-/** One row of the conversation list. */
-export interface OfficeChatRowView {
-    readonly id: string
-    readonly label: string
-    readonly description: string
-    readonly time: string | null
-    readonly avatar: OfficeAvatarView
+/** One member shown in the composite avatar of a Hub room. */
+export interface OfficeRoomMemberPreviewView {
+    readonly name: string
+    /** The existing profile picture URL, or null for the name-based avatar. */
+    readonly avatarUrl: string | null
+}
+
+/** The total membership and at most four avatar previews of a Hub room. */
+export interface OfficeRoomMembersView {
+    readonly count: number
+    readonly preview: ReadonlyArray<OfficeRoomMemberPreviewView>
 }
 
 /** One Hub room of the room list. */
@@ -220,8 +224,33 @@ export interface OfficeRoomRowView {
     readonly label: string
     readonly description: string
     readonly time: string | null
+    /** The last-activity instant the conversation list sorts by; null sinks the row. */
+    readonly sortAt: string | null
+    readonly unread: number
+    readonly members?: OfficeRoomMembersView | null
+}
+
+/** What every conversation row shows: the name, the last message, its time and the unread count. */
+interface OfficeConversationBaseView {
+    readonly id: string
+    readonly label: string
+    readonly description: string
+    readonly time: string | null
     readonly unread: number
 }
+
+/** One row of the single conversation list: a Hub room, an agent or a recent customer. */
+export type OfficeConversationRowView =
+    | (OfficeConversationBaseView & {
+          readonly kind: "group"
+          /** The member composite of the room; null when the wire sends none. */
+          readonly members: OfficeRoomMembersView | null
+      })
+    | (OfficeConversationBaseView & {
+          readonly kind: "agent" | "customer"
+          /** The person/agent mark of the direct row. */
+          readonly avatar: OfficeAvatarView
+      })
 
 /** One channel of the room panel. */
 export interface OfficeChannelRowView {
@@ -242,16 +271,11 @@ export interface OfficePinRowView {
 
 /** The left column. */
 export interface OfficeListView {
-    /** The Hub rooms, the Office room first. */
-    readonly rooms: ReadonlyArray<OfficeRoomRowView>
+    /** Every conversation of the panel, the newest activity first. */
+    readonly conversations: ReadonlyArray<OfficeConversationRowView>
     /** The id of the room shown. */
     readonly selectedRoom: string
-    readonly groupLabel: string
-    readonly groupPreview: string
-    readonly groupTime: string | null
     readonly pendingCount: number
-    readonly agents: ReadonlyArray<OfficeChatRowView>
-    readonly customers: ReadonlyArray<OfficeChatRowView>
 }
 
 /** A jump row of the info panel (an approval or an exception). */
