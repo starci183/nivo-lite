@@ -1,6 +1,7 @@
 "use client"
 
 import useSWR from "swr"
+import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryMcpConnectors } from "@/modules/api/graphql/queries/query-mcp-connectors"
 
 /** The SWR key of the mcpConnectors query. */
@@ -15,4 +16,4 @@ const readConnectors = async ({ signal }: { signal?: AbortSignal } = {}) => {
 
 /** The MCP gateway connectors of the workspace and their pinned tools; nothing is read while `enabled` is false (not a manager). */
 export const useQueryMcpConnectorsSwr = (enabled: boolean) =>
-    useSWR(enabled ? QUERY_MCP_CONNECTORS_SWR_KEY : null, readConnectors)
+    useSWR(useWorkspaceKey(QUERY_MCP_CONNECTORS_SWR_KEY, [], enabled), readConnectors)

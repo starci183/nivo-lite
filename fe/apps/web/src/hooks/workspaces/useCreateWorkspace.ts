@@ -5,6 +5,7 @@ import { useCallback } from "react"
 import { mutate } from "swr"
 import { useMutateCreateWorkspaceSwr, QUERY_MY_WORKSPACES_SWR_KEY } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
+import { matchesSwrKey } from "@/modules/utils"
 
 /**
  * Creates a free workspace through the back end and toasts the outcome. Answers the new workspace id, or `undefined` when it
@@ -18,7 +19,7 @@ export const useCreateWorkspace = () => {
         async (name: string): Promise<string | undefined> => {
             const created = await runGraphQL(() => trigger({ name }), { successMessage: t("created") })
             if (created === undefined) return undefined
-            await mutate(QUERY_MY_WORKSPACES_SWR_KEY)
+            await mutate(matchesSwrKey(QUERY_MY_WORKSPACES_SWR_KEY))
             return created.id
         },
         [runGraphQL, trigger, t],

@@ -6,6 +6,7 @@ import { mutate } from "swr"
 import { QUERY_MY_ACCOUNT_SWR_KEY } from "@/hooks/swr"
 import { signOutOthers } from "@/modules/auth"
 import { toast } from "@/modules/toast"
+import { matchesSwrKey } from "@/modules/utils"
 
 /** Signs the account out of every other device (Supabase Auth) and toasts the outcome. The device list is revalidated on success. */
 export const useSignOutOthers = () => {
@@ -21,7 +22,7 @@ export const useSignOutOthers = () => {
             return false
         }
         toast.success(tToast("successTitle"), { description: t("othersDone") })
-        await mutate(QUERY_MY_ACCOUNT_SWR_KEY)
+        await mutate(matchesSwrKey(QUERY_MY_ACCOUNT_SWR_KEY))
         return true
     }, [t, tToast])
     return { run, isPending }

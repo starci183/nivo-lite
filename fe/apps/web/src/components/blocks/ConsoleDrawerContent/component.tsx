@@ -2,7 +2,7 @@ import type { ConsoleNavItem } from "@/modules/types"
 import { ConsoleSidebar } from "../../composites/ConsoleSidebar"
 import { LanguageMenu } from "../../composites/LanguageMenu"
 import { ThemeSwitch } from "../../composites/ThemeSwitch"
-import { BODY, FOOTER, LIST } from "./classNames"
+import { CONTROLS } from "./classNames"
 
 /** The destinations, words and state of the compact navigation drawer, resolved by the connected block. */
 export interface ConsoleDrawerContentBaseProps {
@@ -24,27 +24,29 @@ export interface ConsoleDrawerContentBaseProps {
     }
 }
 
-/** Draws the navigation drawer body: the language and appearance controls, then the same destinations as the wide rail. */
+/** Draws the navigation drawer body: the language and appearance controls ride the grammar sidebar's header slot above the same destinations as the wide rail. */
 export const ConsoleDrawerContentBase = (props: ConsoleDrawerContentBaseProps) => (
-    <div className={BODY}>
-        <div className={FOOTER}>
-            <LanguageMenu
-                label={props.props.languageLabel}
-                value={props.props.locale}
-                options={props.props.localeOptions}
-                isDisabled={props.props.isLocalePending}
-                onChange={props.on.chooseLocale}
-            />
-            <ThemeSwitch isDark={props.props.isDark} label={props.props.themeLabel} onChange={props.on.chooseDark} />
-        </div>
-        <div className={LIST}>
-            <ConsoleSidebar
-                items={props.props.items}
-                label={props.props.label}
-                presentation="drawer"
-                groupLabels={props.props.groupLabels}
-                onGo={props.on.go}
-            />
-        </div>
-    </div>
+    <ConsoleSidebar
+        items={props.props.items}
+        label={props.props.label}
+        presentation="drawer"
+        groupLabels={props.props.groupLabels}
+        header={
+            <div className={CONTROLS}>
+                <LanguageMenu
+                    label={props.props.languageLabel}
+                    value={props.props.locale}
+                    options={props.props.localeOptions}
+                    isDisabled={props.props.isLocalePending}
+                    onChange={props.on.chooseLocale}
+                />
+                <ThemeSwitch
+                    isDark={props.props.isDark}
+                    label={props.props.themeLabel}
+                    onChange={props.on.chooseDark}
+                />
+            </div>
+        }
+        onGo={props.on.go}
+    />
 )

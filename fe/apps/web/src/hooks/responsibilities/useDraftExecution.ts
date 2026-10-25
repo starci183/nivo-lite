@@ -10,6 +10,7 @@ import {
 } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
+import { matchesSwrKey } from "@/modules/utils"
 
 /** The action that is being written: its id and the responsibility it drafts for. */
 interface Drafting {
@@ -43,7 +44,7 @@ export const useDraftExecution = () => {
             void runGraphQL(
                 async () => {
                     if (failure !== null) throw failure
-                    await mutate(QUERY_RESPONSIBILITIES_SWR_KEY)
+                    await mutate(matchesSwrKey(QUERY_RESPONSIBILITIES_SWR_KEY))
                 },
                 { successMessage: t("draftReady") },
             )

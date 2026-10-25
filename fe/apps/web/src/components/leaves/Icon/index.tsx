@@ -64,6 +64,7 @@ const ICON_SOURCES = {
     complete: cuts(Outline.CheckCircleIcon, Solid.CheckCircleIcon),
     pending: cuts(StarciOutline.CircleIcon, StarciOutline.CircleIcon),
     signIn: cuts(Outline.ArrowRightStartOnRectangleIcon, Solid.ArrowRightEndOnRectangleIcon),
+    signOut: cuts(Outline.ArrowRightEndOnRectangleIcon, Solid.ArrowRightStartOnRectangleIcon),
     signUp: cuts(Outline.UserPlusIcon, Solid.UserPlusIcon),
     close: cuts(Outline.XMarkIcon, Solid.XMarkIcon),
     trash: cuts(Outline.TrashIcon, Solid.TrashIcon),

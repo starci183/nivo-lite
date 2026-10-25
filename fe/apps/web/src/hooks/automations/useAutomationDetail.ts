@@ -5,6 +5,7 @@ import { useCallback, useState } from "react"
 import { mutate } from "swr"
 import { QUERY_AUTOMATIONS_SWR_KEY, useMutateProposeAutomationBodySwr, useMutateRunAutomationNowSwr } from "@/hooks/swr"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
+import { matchesSwrKey } from "@/modules/utils"
 import type { AutomationValues } from "@/modules/automations"
 import type { AutomationCardView, ConfigValue } from "@/modules/types"
 
@@ -97,7 +98,7 @@ export const useAutomationDetail = (card: AutomationCardView | null): Automation
         void runGraphQL(() => runNow.trigger({ templateKey: key }), { successMessage: t("runNowStarted") }).then(
             (queued) => {
                 setWork((previous) => ({ ...previous, isStarting: false, isStarted: queued === true }))
-                if (queued === true) void mutate(QUERY_AUTOMATIONS_SWR_KEY)
+                if (queued === true) void mutate(matchesSwrKey(QUERY_AUTOMATIONS_SWR_KEY))
             },
         )
     }, [runGraphQL, runNow, key, t])

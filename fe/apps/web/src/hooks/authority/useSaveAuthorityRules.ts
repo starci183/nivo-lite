@@ -5,6 +5,7 @@ import { useCallback } from "react"
 import { mutate } from "swr"
 import { QUERY_AUTHORITY_SWR_KEY, useMutateSaveAuthorityRuleSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
+import { matchesSwrKey } from "@/modules/utils"
 import type { RuleChange } from "@/modules/authority"
 
 /** Writes the edited authority rules through the back end (one write per rule) and toasts the outcome once; the sheet is read again. */
@@ -31,7 +32,7 @@ export const useSaveAuthorityRules = () => {
                     ),
                 { successMessage: t("saved") },
             )
-            await mutate(QUERY_AUTHORITY_SWR_KEY)
+            await mutate(matchesSwrKey(QUERY_AUTHORITY_SWR_KEY))
             return done !== undefined
         },
         [runGraphQL, trigger, t],

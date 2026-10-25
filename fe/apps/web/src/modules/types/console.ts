@@ -58,3 +58,9 @@ export interface ConsoleSession {
     readonly workspaces: ReadonlyArray<ConsoleWorkspace>
     readonly currentWorkspaceId: string
 }
+
+/** The id of the account page item; the account menu composite recognises it to draw its glyph. */
+export const ACCOUNT_ITEM = "account-page"
+
+/** The id of the sign-out item; the account menu composite recognises it to draw its glyph and mark it destructive. */
+export const SIGN_OUT_ITEM = "signout"

@@ -6,6 +6,7 @@ import { mutate } from "swr"
 import { QUERY_MY_WORKSPACES_SWR_KEY, useMutateAcceptInviteSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
+import { matchesSwrKey } from "@/modules/utils"
 
 /**
  * Accepts an invitation for the signed-in person through the back end and toasts the outcome (a failure shows the server-localized
@@ -22,7 +23,7 @@ export const useAcceptInvite = () => {
             const joined = await runGraphQL(() => trigger({ token }), { successMessage: t("joined") })
             if (joined === undefined) return undefined
             select(joined.workspaceId)
-            await mutate(QUERY_MY_WORKSPACES_SWR_KEY)
+            await mutate(matchesSwrKey(QUERY_MY_WORKSPACES_SWR_KEY))
             return joined.workspaceId
         },
         [runGraphQL, trigger, select, t],

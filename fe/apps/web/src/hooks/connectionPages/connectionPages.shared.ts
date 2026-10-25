@@ -68,7 +68,7 @@ export const connectionPageView = <Node extends { readonly id: string }>(
             return true
         })
     const hasNextPage = last?.pageInfo.hasNextPage ?? false
-    const isLoadingMore = pages !== undefined && query.size > pages.length
+    const isLoadingMore = pages !== undefined && query.size > pages.length && query.isValidating
     const loadMore = () => {
         if (!hasNextPage || query.isValidating) return
         if (query.error !== undefined) {

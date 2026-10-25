@@ -9,7 +9,7 @@ import { SWRConfig } from "swr"
 import type { ReactNode } from "react"
 import { SideEffectsLayout } from "@/features/layouts/SideEffectsLayout"
 import { intlTagOf, navigation } from "@/modules/i18n"
-import { ReduxProvider } from "@/redux"
+import { ReduxProvider, useAppSelector } from "@/redux"
 
 /** What the provider stack takes from the locale layout. */
 type ProvidersProps = {
@@ -52,10 +52,23 @@ const GrammarRouting = (props: LayerProps) => {
 }
 
 /**
- * Every read keeps what it last showed while a new key or a revalidation is in flight, so it never falls back to skeletons; and a focus
- * regain revalidates at most once per interval instead of on every tab switch.
+ * A focus regain revalidates at most once per interval instead of on every tab switch. Reads that want to keep their last
+ * answer while a new one is in flight opt in per read (useBookingRange, useBookingBoard, useQueryAgentChatPageSwr).
  */
-const READ_DEFAULTS = { keepPreviousData: true, focusThrottleInterval: 30_000 } as const
+const READ_DEFAULTS = { focusThrottleInterval: 30_000 } as const
+
+/** Each viewer gets their own SWR cache: a real identity change remounts the provider on a fresh Map, so nothing from the previous person can be drawn. */
+const ViewerCache = (props: LayerProps) => {
+    const viewerId = useAppSelector((state) => state.viewer.viewerId)
+    return (
+        <SWRConfig
+            key={viewerId === undefined ? "pending" : (viewerId ?? "signed-out")}
+            value={{ ...READ_DEFAULTS, provider: () => new Map() }}
+        >
+            {props.children}
+        </SWRConfig>
+    )
+}
 
 /** The copy, theme, React Aria and auth-refresh contexts above every route. */
 export const Providers = (props: ProvidersProps) => (
@@ -65,11 +78,11 @@ export const Providers = (props: ProvidersProps) => (
                 <GrammarRouting>
                     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
                         <ThemedRoot>
-                            <SWRConfig value={READ_DEFAULTS}>
+                            <ViewerCache>
                                 {props.children}
                                 <ToastProvider />
                                 <SideEffectsLayout />
-                            </SWRConfig>
+                            </ViewerCache>
                         </ThemedRoot>
                     </ThemeProvider>
                 </GrammarRouting>

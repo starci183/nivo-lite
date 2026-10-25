@@ -2,6 +2,7 @@
 
 import useSWR, { useSWRConfig } from "swr"
 import { mutateStartFirstWorkspace } from "@/modules/api/graphql/mutations/mutation-start-first-workspace"
+import { matchesSwrKey } from "@/modules/utils"
 import { QUERY_MY_WORKSPACES_SWR_KEY } from "../queries/useQueryMyWorkspacesSwr"
 
 /** The SWR key of the start first workspace mutation. */
@@ -26,7 +27,7 @@ export const useMutateStartFirstWorkspaceSwr = (enabled: boolean) => {
             revalidateOnReconnect: false,
             shouldRetryOnError: false,
             onSuccess: (workspaceId) => {
-                if (workspaceId !== null) void mutate(QUERY_MY_WORKSPACES_SWR_KEY)
+                if (workspaceId !== null) void mutate(matchesSwrKey(QUERY_MY_WORKSPACES_SWR_KEY))
             },
         },
     )

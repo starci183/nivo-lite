@@ -5,6 +5,7 @@ import { useState, useTransition } from "react"
 import { mutate } from "swr"
 import { QUERY_INVENTORY_WORKBENCH_SWR_KEY } from "@/hooks/swr"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
+import { matchesSwrKey } from "@/modules/utils"
 
 /** What one command run leaves on the screen. */
 export interface InventoryRun {
@@ -35,7 +36,7 @@ export const useInventoryRun = (): InventoryRun => {
             const text = onOk?.(value) ?? null
             setNotice(text)
             toast.success(t("successTitle"), { description: text ?? t("defaultSuccess") })
-            await mutate(QUERY_INVENTORY_WORKBENCH_SWR_KEY)
+            await mutate(matchesSwrKey(QUERY_INVENTORY_WORKBENCH_SWR_KEY))
         })
     }
     return { exec, isPending, error, notice }

@@ -11,6 +11,7 @@ import {
 } from "@/hooks/swr"
 import type { MutateSaveMemberGrantsRequest } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
+import { matchesSwrKey } from "@/modules/utils"
 import type { PermissionChange } from "@/modules/permissions"
 
 /** The limits one save carries: the members who may approve and the largest amount each may approve. */
@@ -58,7 +59,7 @@ export const useSavePermission = () => {
                 },
                 { successMessage: t("saved") },
             )
-            await mutate(QUERY_AUTHORITY_SWR_KEY)
+            await mutate(matchesSwrKey(QUERY_AUTHORITY_SWR_KEY))
             await mutate(isGrantsKey)
             return done !== undefined
         },

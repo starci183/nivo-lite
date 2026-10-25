@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react"
 import { useSWRConfig } from "swr"
 import { subscribeToAuthChange } from "@/modules/auth"
 import { navigation } from "@/modules/i18n"
+import { setViewerId, useAppDispatch } from "@/redux"
 
 /** The person the console last saw: `undefined` before the first answer, `null` when nobody is signed in. */
 type SeenUser = string | null | undefined
@@ -16,20 +17,23 @@ type SeenUser = string | null | undefined
  */
 export const AuthSideEffect = () => {
     const router = navigation.useRouter()
+    const dispatch = useAppDispatch()
     const { mutate } = useSWRConfig()
     const seen = useRef<SeenUser>(undefined)
     useEffect(
         () =>
             subscribeToAuthChange((event, userId) => {
+                dispatch(setViewerId(userId))
                 const previous = seen.current
                 seen.current = userId
                 // The first answer only records who is signed in (the browser may announce it as SIGNED_IN before INITIAL_SESSION).
                 if (previous === undefined || previous === userId) return
                 if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") return
-                void mutate(() => true, undefined)
+                // Drop the answers without refetching them: the per-viewer cache and the server refresh own what comes next.
+                void mutate(() => true, undefined, { revalidate: false })
                 router.refresh()
             }),
-        [mutate, router],
+        [dispatch, mutate, router],
     )
     return null
 }

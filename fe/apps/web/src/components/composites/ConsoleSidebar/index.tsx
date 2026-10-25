@@ -1,5 +1,6 @@
 import { Badge, Sidebar } from "@starci/grammar/common"
 import type { SidebarGroup, SidebarItem } from "@starci/grammar/common"
+import type { ReactNode } from "react"
 import type { ConsoleNavItem } from "@/modules/types"
 import { nivoIconSource } from "@/components/leaves/Icon"
 
@@ -10,6 +11,10 @@ type ConsoleSidebarProps = {
     readonly presentation: "rail" | "drawer"
     readonly groupLabels: { readonly operate: string; readonly setup: string }
     readonly onGo: (href: string) => void
+    /** Above the groups (the drawer puts its language and appearance controls there). */
+    readonly header?: ReactNode
+    /** Below the groups. */
+    readonly footer?: ReactNode
     /** Collapse command and words; the drawer never collapses, so it passes none. */
     readonly collapse?: {
         readonly isCollapsed: boolean
@@ -52,6 +57,8 @@ export const ConsoleSidebar = (props: ConsoleSidebarProps) => (
         label={props.label}
         presentation={props.presentation}
         groups={toGroups(props.items, props.groupLabels)}
+        {...(props.header === undefined ? {} : { header: props.header })}
+        {...(props.footer === undefined ? {} : { footer: props.footer })}
         {...selectedKeyOf(props.items)}
         {...(props.collapse === undefined
             ? {}

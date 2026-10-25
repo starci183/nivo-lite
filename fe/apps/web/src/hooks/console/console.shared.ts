@@ -1,4 +1,5 @@
 import type { DropdownMenuEntry, DropdownMenuSection } from "@starci/grammar/common"
+import { ACCOUNT_ITEM, SIGN_OUT_ITEM } from "@/modules/types"
 import type { ConsoleIconName, ConsoleSession, ConsoleWorkspace } from "@/modules/types"
 
 /** The console route of the Office, the page people come to first. */
@@ -151,12 +152,6 @@ export const accountEntriesOf = (input: AccountEntriesInput): ReadonlyArray<Drop
         ],
     },
 ]
-
-/** The id of the account page item; the account menu composite recognises it to draw its glyph. */
-export const ACCOUNT_ITEM = "account-page"
-
-/** The id of the sign-out item; the account menu composite recognises it to draw its glyph and mark it destructive. */
-export const SIGN_OUT_ITEM = "signout"
 
 /** Translates one key of the shell catalog. */
 type ShellWords = (key: string, values?: Record<string, string | number>) => string
