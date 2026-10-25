@@ -2607,7 +2607,7 @@
         "integration"
       ]
     },
-    "connections.sepay": {
+    "connections-sepay": {
       "title": "SePay bank feed",
       "what": "Money arriving in your bank account reaches the Accounting agent for matching.",
       "steps": [
@@ -2633,7 +2633,7 @@
         "incoming money"
       ]
     },
-    "connections.telegram": {
+    "connections-telegram": {
       "title": "Telegram bot",
       "what": "Customers message your Telegram bot and the Chatbot agent answers.",
       "steps": [
@@ -2652,7 +2652,7 @@
         "answer customers"
       ]
     },
-    "connections.zalo_oa": {
+    "connections-zalo_oa": {
       "title": "Zalo OA",
       "what": "Customers message your Zalo Official Account and the Chatbot agent answers.",
       "steps": [
@@ -2668,7 +2668,7 @@
         "oa"
       ]
     },
-    "connections.smtp": {
+    "connections-smtp": {
       "title": "Outgoing email",
       "what": "Send reports, receipts and reminders from your own shop email.",
       "steps": [
@@ -2684,7 +2684,7 @@
         "thu dien tu"
       ]
     },
-    "connections.google": {
+    "connections-google": {
       "title": "Google Sheets",
       "what": "NIVO records orders in your Google spreadsheet.",
       "steps": [
@@ -2700,7 +2700,7 @@
         "spreadsheet"
       ]
     },
-    "connections.webhook": {
+    "connections-webhook": {
       "title": "n8n / Webhook",
       "what": "Send events (new customer, order, payment) to n8n, Make or Zapier.",
       "steps": [
@@ -3923,9 +3923,6 @@
     "open": "Open {name}",
     "statusPaused": "Paused",
     "chat": "Chat",
-    "hintName": "Shown to customers and teammates.",
-    "hintHandle": "Teammates type @ and this name in Office.",
-    "hintRole": "One line on what this agent is accountable for.",
     "suggestTitle": "Suggest setup with AI",
     "kindCustomer": "Customer"
   },
@@ -4468,6 +4465,7 @@
     "stepKnowledge": "Add business knowledge",
     "hintKnowledge": "Tell the Chatbot what you sell so it answers correctly.",
     "ctaKnowledge": "Add knowledge",
+    "stepTest": "Try the chatbot",
     "hintTest": "Chat with it on the customer channel before going live.",
     "ctaTest": "Test the Chatbot",
     "stepLead": "Capture your first website lead",
@@ -4582,7 +4580,6 @@
     "navOverview": "Overview",
     "navOffice": "Office",
     "navThreads": "Work threads",
-    "navMore": "More",
     "navAuthority": "Authority",
     "navInbox": "Inbox",
     "navDecisions": "Decisions",
@@ -4608,11 +4605,6 @@
     "signedIn": "Signed in",
     "searchLeads": "Search leads",
     "searchPlaceholder": "Search leads…",
-    "newLabel": "New",
-    "newLead": "New lead",
-    "addModule": "Add agent",
-    "testChatbot": "Test Chatbot",
-    "buyChatbot": "Buy Chatbot",
     "notifications": "Notifications",
     "pendingTitle": "{count} awaiting your approval",
     "nothingWaiting": "Nothing is waiting for your approval.",
@@ -4625,12 +4617,19 @@
     "errorText": "The data shown here may be out of date. Try again.",
     "retry": "Try again",
     "notFoundTitle": "Page not found",
-    "brandLogo": "NIVO",
     "languageLabel": "Language",
     "localeShortVi": "VI",
     "localeShortEn": "EN",
     "localeNameVi": "Tiếng Việt",
-    "localeNameEn": "English"
+    "localeNameEn": "English",
+    "searchShortcut": "Ctrl K",
+    "closeSearch": "Close search",
+    "themeLabel": "Dark mode",
+    "collapseRail": "Collapse navigation",
+    "expandRail": "Expand navigation",
+    "openMenu": "Open navigation menu",
+    "closeMenu": "Close navigation menu",
+    "headerActions": "Quick actions"
   },
   "shifts": {
     "loadFailTitle": "Shifts could not be loaded",
@@ -6832,7 +6831,7 @@
     "registerTitle": "Add a remote connector",
     "registerHint": "An MCP server of your own system (Streamable HTTP). Its tools stay unapproved until an owner or manager approves the tool list.",
     "fieldKey": "Key",
-    "fieldKeyHint": "Lowercase letters, digits and dashes; tools are named <key>.<tool>.",
+    "fieldKeyHint": "Lowercase letters, digits and dashes; tools are named '<'key'>'.'<'tool'>'.",
     "fieldName": "Name",
     "fieldUrl": "Endpoint URL",
     "fieldUrlHint": "https://, or http:// to a local address.",

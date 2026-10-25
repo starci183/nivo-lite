@@ -2607,7 +2607,7 @@
         "integration"
       ]
     },
-    "connections.sepay": {
+    "connections-sepay": {
       "title": "Kết nối SePay (tiền về)",
       "what": "Tiền vào tài khoản ngân hàng được báo cho agent Kế toán để đối soát.",
       "steps": [
@@ -2633,7 +2633,7 @@
         "incoming money"
       ]
     },
-    "connections.telegram": {
+    "connections-telegram": {
       "title": "Kết nối bot Telegram",
       "what": "Khách nhắn bot Telegram của bạn, agent Chatbot trả lời.",
       "steps": [
@@ -2652,7 +2652,7 @@
         "answer customers"
       ]
     },
-    "connections.zalo_oa": {
+    "connections-zalo_oa": {
       "title": "Kết nối Zalo OA",
       "what": "Khách nhắn Zalo Official Account của cửa hàng, agent Chatbot trả lời.",
       "steps": [
@@ -2668,7 +2668,7 @@
         "oa"
       ]
     },
-    "connections.smtp": {
+    "connections-smtp": {
       "title": "Email gửi đi",
       "what": "Gửi báo cáo, biên nhận, nhắc nợ bằng email của chính cửa hàng.",
       "steps": [
@@ -2684,7 +2684,7 @@
         "thu dien tu"
       ]
     },
-    "connections.google": {
+    "connections-google": {
       "title": "Google Sheets",
       "what": "NIVO ghi đơn hàng vào bảng tính Google của bạn.",
       "steps": [
@@ -2700,7 +2700,7 @@
         "spreadsheet"
       ]
     },
-    "connections.webhook": {
+    "connections-webhook": {
       "title": "n8n / Webhook",
       "what": "Gửi sự kiện (khách mới, chốt đơn, nhận tiền) sang n8n, Make, Zapier.",
       "steps": [
@@ -3923,9 +3923,6 @@
     "open": "Mở {name}",
     "statusPaused": "Tạm dừng",
     "chat": "Chat",
-    "hintName": "Hiển thị cho khách và đồng đội.",
-    "hintHandle": "Đồng đội gõ @ và tên này trong Office.",
-    "hintRole": "Một dòng về việc trợ lý này chịu trách nhiệm.",
     "suggestTitle": "Gợi ý thiết lập bằng AI",
     "kindCustomer": "Khách hàng"
   },
@@ -4468,6 +4465,7 @@
     "stepKnowledge": "Thêm kiến thức doanh nghiệp",
     "hintKnowledge": "Cho Chatbot biết bạn bán gì để trả lời đúng.",
     "ctaKnowledge": "Thêm kiến thức",
+    "stepTest": "Dùng thử chatbot",
     "hintTest": "Trò chuyện thử trên kênh khách hàng trước khi chạy thật.",
     "ctaTest": "Dùng thử Chatbot",
     "stepLead": "Ghi nhận khách hàng đầu tiên từ website",
@@ -4582,7 +4580,6 @@
     "navOverview": "Tổng quan",
     "navOffice": "Office",
     "navThreads": "Luồng việc",
-    "navMore": "Thêm",
     "navAuthority": "Giao quyền",
     "navInbox": "Đầu vào",
     "navDecisions": "Lịch sử quyết định",
@@ -4608,11 +4605,6 @@
     "signedIn": "Đã đăng nhập",
     "searchLeads": "Tìm khách hàng",
     "searchPlaceholder": "Tìm khách hàng…",
-    "newLabel": "Tạo mới",
-    "newLead": "Khách hàng mới",
-    "addModule": "Thêm agent",
-    "testChatbot": "Dùng thử Chatbot",
-    "buyChatbot": "Mua Chatbot",
     "notifications": "Thông báo",
     "pendingTitle": "{count} việc cần bạn duyệt",
     "nothingWaiting": "Không có việc nào đang chờ bạn duyệt.",
@@ -4625,12 +4617,19 @@
     "errorText": "Dữ liệu hiển thị có thể đã cũ. Hãy thử lại.",
     "retry": "Thử lại",
     "notFoundTitle": "Không tìm thấy trang",
-    "brandLogo": "NIVO",
     "languageLabel": "Ngôn ngữ",
     "localeShortVi": "VI",
     "localeShortEn": "EN",
     "localeNameVi": "Tiếng Việt",
-    "localeNameEn": "English"
+    "localeNameEn": "English",
+    "searchShortcut": "Ctrl K",
+    "closeSearch": "Đóng tìm kiếm",
+    "themeLabel": "Giao diện tối",
+    "collapseRail": "Thu gọn thanh điều hướng",
+    "expandRail": "Mở rộng thanh điều hướng",
+    "openMenu": "Mở menu điều hướng",
+    "closeMenu": "Đóng menu điều hướng",
+    "headerActions": "Thao tác nhanh"
   },
   "shifts": {
     "loadFailTitle": "Chưa tải được lịch ca",
@@ -6832,7 +6831,7 @@
     "registerTitle": "Thêm kết nối từ xa",
     "registerHint": "Máy chủ MCP của hệ thống riêng (Streamable HTTP). Công cụ của nó chưa được dùng cho tới khi chủ hoặc quản lý duyệt danh sách công cụ.",
     "fieldKey": "Mã kết nối",
-    "fieldKeyHint": "Chữ thường, số và dấu gạch ngang; công cụ được đặt tên <mã>.<công cụ>.",
+    "fieldKeyHint": "Chữ thường, số và dấu gạch ngang; công cụ được đặt tên '<'mã'>'.'<'công cụ'>'.",
     "fieldName": "Tên",
     "fieldUrl": "Địa chỉ endpoint",
     "fieldUrlHint": "https://, hoặc http:// tới địa chỉ nội bộ.",
