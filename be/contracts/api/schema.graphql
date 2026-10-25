@@ -1,3 +1,5 @@
+directive @inputBounds(version: Int = 1, maxLength: Int, maxItems: Int, min: Float, max: Float, itemMaxLength: Int, itemMaxItems: Int, itemMin: Float, itemMax: Float) on INPUT_FIELD_DEFINITION
+
 type AcceptInviteType {
   workspaceId: ID!
 }
@@ -303,15 +305,15 @@ type AccountingWorkbenchType {
 }
 
 input AddBookingInput {
-  date: String!
+  date: String! @inputBounds(maxLength: 10)
   force: Boolean!
-  name: String!
-  note: String
-  party: Int!
-  phone: String
-  resourceId: ID
-  serviceId: ID!
-  time: String!
+  name: String! @inputBounds(maxLength: 120)
+  note: String @inputBounds(maxLength: 400)
+  party: Int! @inputBounds(min: 1, max: 200)
+  phone: String @inputBounds(maxLength: 40)
+  resourceId: ID @inputBounds(maxLength: 36)
+  serviceId: ID! @inputBounds(maxLength: 36)
+  time: String! @inputBounds(maxLength: 5)
 }
 
 type AddBookingType {
@@ -323,35 +325,35 @@ type AddLoyaltyPresetRewardsType {
 }
 
 input AddResponsibilityInput {
-  dueAt: String = null
-  leadId: ID!
-  nextAction: String!
-  owner: String!
-  title: String!
+  dueAt: String = null @inputBounds(maxLength: 40)
+  leadId: ID! @inputBounds(maxLength: 36)
+  nextAction: String! @inputBounds(maxLength: 1000)
+  owner: String! @inputBounds(maxLength: 36)
+  title: String! @inputBounds(maxLength: 200)
 }
 
 input AddShiftsDraftShiftInput {
-  date: String!
-  end: String!
-  positionId: ID!
-  scheduleId: ID!
-  staffId: ID
-  start: String!
+  date: String! @inputBounds(maxLength: 10)
+  end: String! @inputBounds(maxLength: 5)
+  positionId: ID! @inputBounds(maxLength: 36)
+  scheduleId: ID! @inputBounds(maxLength: 36)
+  staffId: ID @inputBounds(maxLength: 36)
+  start: String! @inputBounds(maxLength: 5)
 }
 
 input AdjustInventoryStockInput {
   counted: Float
   delta: Float
-  itemId: ID!
-  locationId: ID
-  reason: String!
+  itemId: ID! @inputBounds(maxLength: 36)
+  locationId: ID @inputBounds(maxLength: 36)
+  reason: String! @inputBounds(maxLength: 300)
 }
 
 input AdjustLoyaltyPointsInput {
-  customerId: ID!
-  points: Int!
-  reason: String!
-  token: String!
+  customerId: ID! @inputBounds(maxLength: 36)
+  points: Int! @inputBounds(min: -1000000000, max: 1000000000)
+  reason: String! @inputBounds(maxLength: 300)
+  token: String! @inputBounds(maxLength: 120)
 }
 
 type AdjustLoyaltyPointsType {
@@ -431,8 +433,8 @@ type AdminErrorType {
 }
 
 input AdminExtendSubscriptionInput {
-  days: Int!
-  workspaceId: ID!
+  days: Int! @inputBounds(min: 1, max: 366)
+  workspaceId: ID! @inputBounds(maxLength: 36)
 }
 
 type AdminHealthType {
@@ -528,8 +530,8 @@ type AdminPlatformTransferType {
 }
 
 input AdminResendWorkspaceInviteInput {
-  inviteId: ID!
-  workspaceId: ID!
+  inviteId: ID! @inputBounds(maxLength: 36)
+  workspaceId: ID! @inputBounds(maxLength: 36)
 }
 
 type AdminSessionType {
@@ -537,14 +539,14 @@ type AdminSessionType {
 }
 
 input AdminSetWorkspacePlanInput {
-  creditsLimit: Int = null
-  planCode: String!
-  workspaceId: ID!
+  creditsLimit: Int = null @inputBounds(min: 0, max: 100000000)
+  planCode: String! @inputBounds(maxLength: 40)
+  workspaceId: ID! @inputBounds(maxLength: 36)
 }
 
 input AdminSetWorkspaceStatusInput {
   status: String!
-  workspaceId: ID!
+  workspaceId: ID! @inputBounds(maxLength: 36)
 }
 
 type AdminSignupDayType {
@@ -602,7 +604,7 @@ type AdminWorkspaceHeaderType {
 }
 
 input AdminWorkspaceInput {
-  workspaceId: ID!
+  workspaceId: ID! @inputBounds(maxLength: 36)
 }
 
 type AdminWorkspaceItemType {
@@ -639,7 +641,7 @@ type AdminWorkspaceNameType {
 
 input AdminWorkspacesInput {
   filter: String! = "all"
-  query: String! = ""
+  query: String! = "" @inputBounds(maxLength: 120)
 }
 
 type AgentAckType {
@@ -669,7 +671,7 @@ type AgentChatConversationType {
 }
 
 input AgentChatConversationsInput {
-  agentId: ID!
+  agentId: ID! @inputBounds(maxLength: 36)
 }
 
 type AgentChatHolderType {
@@ -685,11 +687,11 @@ type AgentChatMessageType {
 }
 
 input AgentChatMessagesInput {
-  conversationId: ID!
+  conversationId: ID! @inputBounds(maxLength: 36)
 }
 
 input AgentChatPageInput {
-  agentId: ID!
+  agentId: ID! @inputBounds(maxLength: 36)
   welcome: Boolean! = false
 }
 
@@ -706,7 +708,7 @@ type AgentChatPageType {
 }
 
 input AgentChatTurnStatusInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type AgentChatTurnStatusType {
@@ -741,7 +743,7 @@ type AgentConnectionCandidateType {
 }
 
 input AgentConnectionCandidatesInput {
-  agentId: ID!
+  agentId: ID! @inputBounds(maxLength: 36)
 }
 
 type AgentConnectionType {
@@ -811,8 +813,8 @@ type AgentDashboardGapsType {
 }
 
 input AgentDashboardInput {
-  installationId: ID
-  module: String!
+  installationId: ID @inputBounds(maxLength: 36)
+  module: String! @inputBounds(maxLength: 60)
 }
 
 type AgentDashboardItemType {
@@ -864,12 +866,12 @@ type AgentEngineStatusType {
 }
 
 input AgentGenMessageInput {
-  content: String!
+  content: String! @inputBounds(maxLength: 60000)
   role: String!
 }
 
 input AgentGenerationIdInput {
-  generationId: ID!
+  generationId: ID! @inputBounds(maxLength: 36)
 }
 
 type AgentGenerationRequestedType {
@@ -896,7 +898,7 @@ type AgentGenerationUsageType {
 }
 
 input AgentIdInput {
-  agentId: ID!
+  agentId: ID! @inputBounds(maxLength: 36)
 }
 
 type AgentOwnerCardType {
@@ -991,8 +993,8 @@ type AgentTagTargetType {
 }
 
 input AgentTextsInput {
-  instructions: String!
-  knowledge: String!
+  instructions: String! @inputBounds(maxLength: 20000)
+  knowledge: String! @inputBounds(maxLength: 50000)
 }
 
 type ApiKeyType {
@@ -1012,7 +1014,7 @@ type ApplyImportType {
 }
 
 input ApplyInventoryStarterInput {
-  key: String!
+  key: String! @inputBounds(maxLength: 40)
 }
 
 type ApplyResultType {
@@ -1020,9 +1022,9 @@ type ApplyResultType {
 }
 
 input ApplyShiftsImportInput {
-  coverage: String!
-  positions: String!
-  staff: String!
+  coverage: String! @inputBounds(maxLength: 50000)
+  positions: String! @inputBounds(maxLength: 20000)
+  staff: String! @inputBounds(maxLength: 50000)
 }
 
 type ApplyStarterType {
@@ -1032,17 +1034,17 @@ type ApplyStarterType {
 }
 
 input ApplyToHiringJobInput {
-  answers: [HiringApplyAnswerInput!]!
-  availability: String!
+  answers: [HiringApplyAnswerInput!]! @inputBounds(maxItems: 50)
+  availability: String! @inputBounds(maxLength: 500)
   consent: Boolean!
-  cvName: String
-  cvPath: String
-  email: String!
-  job: String!
-  name: String!
-  phone: String!
-  website: String
-  ws: String!
+  cvName: String @inputBounds(maxLength: 255)
+  cvPath: String @inputBounds(maxLength: 500)
+  email: String! @inputBounds(maxLength: 254)
+  job: String! @inputBounds(maxLength: 120)
+  name: String! @inputBounds(maxLength: 160)
+  phone: String! @inputBounds(maxLength: 40)
+  website: String @inputBounds(maxLength: 200)
+  ws: String! @inputBounds(maxLength: 80)
 }
 
 type ApprovalExecutionType {
@@ -1053,16 +1055,16 @@ type ApprovalExecutionType {
 }
 
 input ApproveLeadGenCommentInput {
-  draft: String
-  workItemId: ID!
+  draft: String @inputBounds(maxLength: 4000)
+  workItemId: ID! @inputBounds(maxLength: 36)
 }
 
 input ApproveMcpConnectorInput {
-  key: String!
+  key: String! @inputBounds(maxLength: 31)
 }
 
 input ApproveVideoProjectInput {
-  projectId: ID!
+  projectId: ID! @inputBounds(maxLength: 36)
 }
 
 type ApproverMemberType {
@@ -1075,57 +1077,57 @@ type ApproverMemberType {
 
 input ArchiveVideoProjectInput {
   archived: Boolean!
-  projectId: ID!
+  projectId: ID! @inputBounds(maxLength: 36)
 }
 
 input AskGuideInput {
-  history: [GuideTurnInput!]!
-  path: String!
-  question: String!
+  history: [GuideTurnInput!]! @inputBounds(maxItems: 20)
+  path: String! @inputBounds(maxLength: 500)
+  question: String! @inputBounds(maxLength: 2000)
 }
 
 input AskKnowledgeInput {
-  audience: String!
-  module: String!
-  question: String!
+  audience: String! @inputBounds(maxLength: 40)
+  module: String! @inputBounds(maxLength: 64)
+  question: String! @inputBounds(maxLength: 600)
 }
 
 input AssignAgentWorkInput {
-  action: String
-  agentId: ID!
-  amount: Float
-  amountVnd: Float
-  leadId: ID
-  text: String!
+  action: String @inputBounds(maxLength: 41)
+  agentId: ID! @inputBounds(maxLength: 36)
+  amount: Float @inputBounds(min: 0)
+  amountVnd: Float @inputBounds(min: 0)
+  leadId: ID @inputBounds(maxLength: 36)
+  text: String! @inputBounds(maxLength: 4000)
 }
 
 input AssignResponsibilityInput {
-  dueAt: String = null
-  nextAction: String!
-  owner: String!
-  responsibilityId: ID!
-  title: String = null
+  dueAt: String = null @inputBounds(maxLength: 40)
+  nextAction: String! @inputBounds(maxLength: 1000)
+  owner: String! @inputBounds(maxLength: 36)
+  responsibilityId: ID! @inputBounds(maxLength: 36)
+  title: String = null @inputBounds(maxLength: 200)
 }
 
 input AssignWorkItemInput {
-  staffId: ID
-  workItemId: ID!
+  staffId: ID @inputBounds(maxLength: 36)
+  workItemId: ID! @inputBounds(maxLength: 36)
 }
 
 input AttachedFileInput {
-  contentBase64: String!
-  name: String!
+  contentBase64: String! @inputBounds(maxLength: 28000000)
+  name: String! @inputBounds(maxLength: 255)
 }
 
 input AuthorityPatchInput {
-  brand_voice: String
-  goal_first_reply_minutes: Int
-  goal_new_customers: Int
-  goal_note: String
-  goal_revenue_vnd: Int
-  limits_note: String
-  policies: String
-  reply_style: String
+  brand_voice: String @inputBounds(maxLength: 4000)
+  goal_first_reply_minutes: Int @inputBounds(min: 0, max: 100000)
+  goal_new_customers: Int @inputBounds(min: 0, max: 1000000)
+  goal_note: String @inputBounds(maxLength: 2000)
+  goal_revenue_vnd: Int @inputBounds(min: 0, max: 1000000000000000)
+  limits_note: String @inputBounds(maxLength: 4000)
+  policies: String @inputBounds(maxLength: 8000)
+  reply_style: String @inputBounds(maxLength: 4000)
 }
 
 type AuthorityProfileType {
@@ -1142,20 +1144,20 @@ type AuthorityProfileType {
 }
 
 input AuthorityRuleChangeInput {
-  action: String!
-  agents: [ID!]
+  action: String! @inputBounds(maxLength: 80)
+  agents: [ID!] @inputBounds(maxItems: 50)
   approval_policy: String
-  approver_members: [ID!]
-  approver_roles: [String!]
-  approver_rooms: [String!]
-  ask_max: Float
-  auto_max: Float
-  department: String!
-  limit_vnd: Int = null
+  approver_members: [ID!] @inputBounds(maxItems: 50)
+  approver_roles: [String!] @inputBounds(maxItems: 3)
+  approver_rooms: [String!] @inputBounds(maxItems: 20)
+  ask_max: Float @inputBounds(min: 0, max: 1000000000000)
+  auto_max: Float @inputBounds(min: 0, max: 1000000000000)
+  department: String! @inputBounds(maxLength: 40)
+  limit_vnd: Int = null @inputBounds(min: 0, max: 1000000000000)
   mode: String!
-  note: String = null
-  required_fields: [String!] = []
-  timeout_minutes: Int
+  note: String = null @inputBounds(maxLength: 500)
+  required_fields: [String!] = [] @inputBounds(maxItems: 30, itemMaxLength: 60)
+  timeout_minutes: Int @inputBounds(min: 1, max: 10080)
   unit: String
 }
 
@@ -1186,15 +1188,15 @@ type AuthoritySheetType {
 }
 
 input AuthorizeDriveInput {
-  returnTo: String!
+  returnTo: String! @inputBounds(maxLength: 200)
 }
 
 input AuthorizeGoogleInput {
-  returnTo: String!
+  returnTo: String! @inputBounds(maxLength: 200)
 }
 
 input AuthorizeMetaInput {
-  connectionId: ID
+  connectionId: ID @inputBounds(maxLength: 64)
 }
 
 type AuthorizeUrlType {
@@ -1202,7 +1204,7 @@ type AuthorizeUrlType {
 }
 
 input AuthorizeZaloInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 type AutomationCardType {
@@ -1251,7 +1253,7 @@ type AutomationRunType {
 }
 
 input AutomationRunsInput {
-  template: String! = ""
+  template: String! = "" @inputBounds(maxLength: 61)
 }
 
 type AutomationSuggestionType {
@@ -1261,7 +1263,7 @@ type AutomationSuggestionType {
 }
 
 input AutomationSuggestionsInput {
-  module: String! = ""
+  module: String! = "" @inputBounds(maxLength: 41)
 }
 
 type AutomationsOverviewType {
@@ -1315,14 +1317,14 @@ type BillingPlanFeaturesType {
 }
 
 input BillingPlanInput {
-  code: String!
+  code: String! @inputBounds(maxLength: 40)
 }
 
 input BillingPlanQuoteInput {
   cycle: String
-  planCode: String!
-  seats: Int
-  tierCredits: Float
+  planCode: String! @inputBounds(maxLength: 40)
+  seats: Int @inputBounds(min: 1, max: 1000)
+  tierCredits: Float @inputBounds(min: 1, max: 100000000)
 }
 
 type BillingPlanQuoteType {
@@ -1375,7 +1377,7 @@ type BillingReviewTransactionType {
 }
 
 input BillingReviewTransactionsInput {
-  orderIds: [ID!]!
+  orderIds: [ID!]! @inputBounds(maxItems: 50)
 }
 
 type BillingStorageType {
@@ -1449,8 +1451,8 @@ type BookingBoardHoursType {
 }
 
 input BookingBoardInput {
-  from: String
-  to: String
+  from: String @inputBounds(maxLength: 10)
+  to: String @inputBounds(maxLength: 10)
 }
 
 type BookingBoardResourceType {
@@ -1520,9 +1522,9 @@ type BookingFiguresType {
 }
 
 input BookingHoursRowInput {
-  end: String!
-  start: String!
-  weekday: Int!
+  end: String! @inputBounds(maxLength: 5)
+  start: String! @inputBounds(maxLength: 5)
+  weekday: Int! @inputBounds(min: 1, max: 7)
 }
 
 type BookingResourceStatType {
@@ -1643,8 +1645,8 @@ type BrainType {
 }
 
 input BrandColorInput {
-  hex: String!
-  name: String!
+  hex: String! @inputBounds(maxLength: 7)
+  name: String! @inputBounds(maxLength: 40)
 }
 
 type BrandColorType {
@@ -1653,13 +1655,13 @@ type BrandColorType {
 }
 
 input BrandKitInput {
-  address: String!
-  avoid: [String!]!
-  brandName: String!
-  colors: [BrandColorInput!]!
-  fonts: [String!]!
-  imagery: [String!]!
-  tone: String!
+  address: String! @inputBounds(maxLength: 200)
+  avoid: [String!]! @inputBounds(maxItems: 10, itemMaxLength: 120)
+  brandName: String! @inputBounds(maxLength: 80)
+  colors: [BrandColorInput!]! @inputBounds(maxItems: 6)
+  fonts: [String!]! @inputBounds(maxItems: 4, itemMaxLength: 60)
+  imagery: [String!]! @inputBounds(maxItems: 5, itemMaxLength: 120)
+  tone: String! @inputBounds(maxLength: 400)
 }
 
 type BrandKitType {
@@ -1685,11 +1687,11 @@ type BrandProposalType {
 }
 
 input BrandProposalsInput {
-  installationId: ID!
+  installationId: ID! @inputBounds(maxLength: 36)
 }
 
 input CancelBookingInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type CancelBookingType {
@@ -1698,20 +1700,20 @@ type CancelBookingType {
 }
 
 input CancelTelegramLoginInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input CardDecisionInput {
-  attributeLabel: String
+  attributeLabel: String @inputBounds(maxLength: 120)
   decision: String!
-  limitVnd: Int
+  limitVnd: Int @inputBounds(min: 0, max: 1000000000000)
   mode: String
   onlyThisAgent: Boolean
   resolution: String
   scope: String
-  situation: String
-  subjectLabel: String
-  value: String
+  situation: String @inputBounds(maxLength: 200)
+  subjectLabel: String @inputBounds(maxLength: 160)
+  value: String @inputBounds(maxLength: 2000)
 }
 
 type ChainStepType {
@@ -1742,12 +1744,12 @@ type ChainSummaryType {
 
 input ChangeMemberRoleInput {
   role: String!
-  userId: ID!
+  userId: ID! @inputBounds(maxLength: 36)
 }
 
 input ChangeSmtpPasswordInput {
-  connectionId: ID!
-  password: String!
+  connectionId: ID! @inputBounds(maxLength: 64)
+  password: String! @inputBounds(maxLength: 500)
 }
 
 type ChannelValueType {
@@ -1756,7 +1758,7 @@ type ChannelValueType {
 }
 
 input ChatAnswerStatusInput {
-  workItemId: ID!
+  workItemId: ID! @inputBounds(maxLength: 36)
 }
 
 type ChatHandlingType {
@@ -1773,7 +1775,7 @@ type ChatReplyProgressType {
 }
 
 input ChatReplyStatusInput {
-  messageId: ID!
+  messageId: ID! @inputBounds(maxLength: 36)
 }
 
 type ChatbotConversationType {
@@ -1853,7 +1855,7 @@ type ChatbotMetricsType {
 }
 
 input ChatbotOverviewInput {
-  installationId: ID
+  installationId: ID @inputBounds(maxLength: 36)
 }
 
 type ChatbotOverviewType {
@@ -1864,7 +1866,7 @@ type ChatbotOverviewType {
 }
 
 input ChatbotThreadInput {
-  conversationId: ID!
+  conversationId: ID! @inputBounds(maxLength: 36)
 }
 
 type ChatbotThreadType {
@@ -1877,11 +1879,11 @@ type ChatbotThreadType {
 }
 
 input CheckConnectionInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input CheckInBookingInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type CheckInBookingType {
@@ -1894,21 +1896,21 @@ type CheckInType {
 }
 
 input CheckMcpConnectorInput {
-  key: String!
+  key: String! @inputBounds(maxLength: 31)
 }
 
 input CheckMetaInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
   repair: Boolean!
 }
 
 input ChooseMetaPageInput {
-  connectionId: ID!
-  pageId: String!
+  connectionId: ID! @inputBounds(maxLength: 64)
+  pageId: String! @inputBounds(maxLength: 64)
 }
 
 input CompleteBookingInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type CompleteBookingType {
@@ -1917,7 +1919,7 @@ type CompleteBookingType {
 }
 
 input ConfirmBookingInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type ConfirmBookingType {
@@ -1926,8 +1928,8 @@ type ConfirmBookingType {
 }
 
 input ConnectTelegramInput {
-  name: String!
-  token: String!
+  name: String! @inputBounds(maxLength: 120)
+  token: String! @inputBounds(maxLength: 200)
 }
 
 type ConnectionAgentType {
@@ -1976,8 +1978,8 @@ type ConnectionType {
 }
 
 input ConnectionWishInput {
-  access: String
-  connectionId: ID!
+  access: String @inputBounds(maxLength: 8)
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 type ContentActorType {
@@ -2077,9 +2079,9 @@ type ContentBrandSourceType {
 
 input ContentCadenceInput {
   channel: String!
-  days: [Int!]!
-  postsPerWeek: Int!
-  time: String!
+  days: [Int!]! @inputBounds(maxItems: 7, itemMin: 1, itemMax: 7)
+  postsPerWeek: Int! @inputBounds(min: 0, max: 21)
+  time: String! @inputBounds(maxLength: 5)
 }
 
 type ContentCadenceType {
@@ -2116,7 +2118,7 @@ type ContentItemIdType {
 }
 
 input ContentItemInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type ContentItemMediaType {
@@ -2156,8 +2158,8 @@ type ContentItemType {
 }
 
 input ContentItemsInput {
-  from: String
-  to: String
+  from: String @inputBounds(maxLength: 40)
+  to: String @inputBounds(maxLength: 40)
 }
 
 type ContentLastPlanType {
@@ -2168,8 +2170,8 @@ type ContentLastPlanType {
 }
 
 input ContentLinkInput {
-  label: String!
-  url: String!
+  label: String! @inputBounds(maxLength: 80)
+  url: String! @inputBounds(maxLength: 2048)
 }
 
 type ContentLinkType {
@@ -2178,20 +2180,20 @@ type ContentLinkType {
 }
 
 input ContentMediaInput {
-  limit: Int! = 30
-  paths: [String!]! = []
-  videoIds: [ID!]! = []
+  limit: Int! = 30 @inputBounds(min: 1, max: 80)
+  paths: [String!]! = [] @inputBounds(maxItems: 80, itemMaxLength: 1024)
+  videoIds: [ID!]! = [] @inputBounds(maxItems: 80)
 }
 
 input ContentMediaLibraryInput {
-  limit: Int! = 30
+  limit: Int! = 30 @inputBounds(min: 1, max: 80)
 }
 
 input ContentMediaRefInput {
-  id: String
-  kind: String!
-  name: String!
-  path: String
+  id: String @inputBounds(maxLength: 36)
+  kind: String! @inputBounds(maxLength: 16)
+  name: String! @inputBounds(maxLength: 255)
+  path: String @inputBounds(maxLength: 1024)
   suggested: Boolean
 }
 
@@ -2239,10 +2241,10 @@ type ContentPillarCoverageType {
 
 input ContentPillarInput {
   active: Boolean!
-  description: String!
-  id: ID
-  name: String!
-  weight: Int!
+  description: String! @inputBounds(maxLength: 300)
+  id: ID @inputBounds(maxLength: 36)
+  name: String! @inputBounds(maxLength: 80)
+  weight: Int! @inputBounds(min: 0, max: 20)
 }
 
 type ContentPillarType {
@@ -2264,10 +2266,10 @@ type ContentPublishedMarkType {
 }
 
 input ContentVariantInput {
-  channel: String!
-  hashtags: [String!]!
-  note: String!
-  text: String!
+  channel: String! @inputBounds(maxLength: 32)
+  hashtags: [String!]! @inputBounds(maxItems: 30, itemMaxLength: 80)
+  note: String! @inputBounds(maxLength: 600)
+  text: String! @inputBounds(maxLength: 6000)
 }
 
 type ContentVariantType {
@@ -2299,7 +2301,7 @@ type ContextNoteType {
 }
 
 input ContextNotesInput {
-  installationId: ID!
+  installationId: ID! @inputBounds(maxLength: 36)
 }
 
 type ContextVersionType {
@@ -2312,9 +2314,9 @@ type ContextVersionType {
 }
 
 input CreateAccountingAdjustmentInput {
-  correctedAmount: Float
-  note: String!
-  targetId: String!
+  correctedAmount: Float @inputBounds(min: 0, max: 9007199254740991)
+  note: String! @inputBounds(maxLength: 1000)
+  targetId: String! @inputBounds(maxLength: 36)
   targetType: String!
 }
 
@@ -2329,23 +2331,23 @@ type CreateAccountingAdjustmentType {
 }
 
 input CreateAgentInput {
-  handle: String!
-  instructions: String!
-  module: String!
-  name: String!
-  role: String!
+  handle: String! @inputBounds(maxLength: 40)
+  instructions: String! @inputBounds(maxLength: 20000)
+  module: String! @inputBounds(maxLength: 60)
+  name: String! @inputBounds(maxLength: 120)
+  role: String! @inputBounds(maxLength: 300)
 }
 
 input CreateApiKeyInput {
-  agentId: String
-  name: String!
+  agentId: String @inputBounds(maxLength: 36)
+  name: String! @inputBounds(maxLength: 200)
 }
 
 input CreateContentItemInput {
-  channels: [String!]!
-  pillarId: ID
-  scheduledAt: String
-  title: String!
+  channels: [String!]! @inputBounds(maxItems: 4)
+  pillarId: ID @inputBounds(maxLength: 36)
+  scheduledAt: String @inputBounds(maxLength: 40)
+  title: String! @inputBounds(maxLength: 200)
 }
 
 type CreateCvUploadType {
@@ -2354,40 +2356,40 @@ type CreateCvUploadType {
 }
 
 input CreateHiringCvUploadInput {
-  fileName: String!
-  job: String!
-  ws: String!
+  fileName: String! @inputBounds(maxLength: 255)
+  job: String! @inputBounds(maxLength: 120)
+  ws: String! @inputBounds(maxLength: 80)
 }
 
 input CreateInventoryPoInput {
-  expectedAt: String!
-  lines: [CreatePoLineInput!]!
-  supplierId: String!
+  expectedAt: String! @inputBounds(maxLength: 20)
+  lines: [CreatePoLineInput!]! @inputBounds(maxItems: 200)
+  supplierId: String! @inputBounds(maxLength: 40)
 }
 
 input CreateInviteInput {
-  email: String!
+  email: String! @inputBounds(maxLength: 254)
   role: String!
-  staffId: ID
+  staffId: ID @inputBounds(maxLength: 36)
 }
 
 input CreateKnowledgeUploadInput {
-  filename: String!
+  filename: String! @inputBounds(maxLength: 200)
 }
 
 input CreateLeadInput {
-  channel: String!
-  company: String!
-  contactName: String!
-  email: String
-  need: String!
-  phone: String
+  channel: String! @inputBounds(maxLength: 100)
+  company: String! @inputBounds(maxLength: 200)
+  contactName: String! @inputBounds(maxLength: 200)
+  email: String @inputBounds(maxLength: 320)
+  need: String! @inputBounds(maxLength: 2000)
+  phone: String @inputBounds(maxLength: 80)
 }
 
 input CreatePoLineInput {
-  itemId: ID!
-  qty: String!
-  unitCost: String!
+  itemId: ID! @inputBounds(maxLength: 36)
+  qty: String! @inputBounds(maxLength: 40)
+  unitCost: String! @inputBounds(maxLength: 40)
 }
 
 input CreateResponsibilityInput {
@@ -2395,27 +2397,27 @@ input CreateResponsibilityInput {
 }
 
 input CreateVideoMediaUploadInput {
-  name: String!
-  size: Int!
-  type: String!
+  name: String! @inputBounds(maxLength: 200)
+  size: Int! @inputBounds(min: 1, max: 52428800)
+  type: String! @inputBounds(maxLength: 100)
 }
 
 input CreateVideoProjectInput {
-  aspect: String!
-  goal: String!
+  aspect: String! @inputBounds(maxLength: 5)
+  goal: String! @inputBounds(maxLength: 40)
   inputs: VideoInputsInput
-  targetSeconds: Int!
-  title: String
+  targetSeconds: Int! @inputBounds(min: 10, max: 90)
+  title: String @inputBounds(maxLength: 120)
 }
 
 input CreateWorkThreadInput {
-  leadId: ID = null
-  orderId: ID = null
-  title: String!
+  leadId: ID = null @inputBounds(maxLength: 36)
+  orderId: ID = null @inputBounds(maxLength: 36)
+  title: String! @inputBounds(maxLength: 200)
 }
 
 input CreateWorkspaceInput {
-  name: String!
+  name: String! @inputBounds(maxLength: 120)
 }
 
 type CreateWorkspaceType {
@@ -2478,7 +2480,7 @@ type CreditQuotaStatusType {
 }
 
 input CreditRecentCostInput {
-  from: String!
+  from: String! @inputBounds(maxLength: 10)
 }
 
 type CreditTopupLotType {
@@ -2741,7 +2743,7 @@ type DashboardWebsiteLeadType {
 scalar DataJson
 
 input DataSyncRunInput {
-  runId: ID!
+  runId: ID! @inputBounds(maxLength: 64)
 }
 
 type DataSyncRunType {
@@ -2776,74 +2778,74 @@ type DatabaseTableType {
 }
 
 input DatabaseTargetInput {
-  database: String!
+  database: String! @inputBounds(maxLength: 128)
   engine: String!
-  host: String!
-  password: String!
-  port: Int!
+  host: String! @inputBounds(maxLength: 253)
+  password: String! @inputBounds(maxLength: 512)
+  port: Int! @inputBounds(min: 1, max: 65535)
   ssl: Boolean!
-  user: String!
+  user: String! @inputBounds(maxLength: 128)
 }
 
 input DecideBrainFactInput {
-  action: String!
-  id: ID!
-  note: String
-  situation: String
+  action: String! @inputBounds(maxLength: 40)
+  id: ID! @inputBounds(maxLength: 36)
+  note: String @inputBounds(maxLength: 1000)
+  situation: String @inputBounds(maxLength: 500)
 }
 
 input DecideBrainLessonInput {
-  action: String!
-  id: ID!
+  action: String! @inputBounds(maxLength: 40)
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 input DecideBrandProposalInput {
   decision: String!
   kit: BrandKitInput
-  proposalId: ID!
+  proposalId: ID! @inputBounds(maxLength: 36)
 }
 
 input DecideExecutionInput {
   decision: String!
-  editedDraft: String
-  executionId: ID!
+  editedDraft: String @inputBounds(maxLength: 10000)
+  executionId: ID! @inputBounds(maxLength: 36)
 }
 
 input DecideSalesDraftInput {
   decision: String!
-  editedDraft: String
-  id: ID!
+  editedDraft: String @inputBounds(maxLength: 4000)
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 input DecideSalesWorkItemInput {
-  basis: String
+  basis: String @inputBounds(maxLength: 1000)
   decision: String!
   edits: SalesWorkEditsInput
-  id: ID!
-  note: String
+  id: ID! @inputBounds(maxLength: 36)
+  note: String @inputBounds(maxLength: 1000)
 }
 
 input DecideSetupCardInput {
-  cardId: ID!
+  cardId: ID! @inputBounds(maxLength: 36)
   change: CardDecisionInput!
 }
 
 input DecideShiftsAvailabilityInput {
   approve: Boolean!
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 input DecideThreadApprovalInput {
-  messageId: ID!
+  messageId: ID! @inputBounds(maxLength: 36)
   verdict: String!
 }
 
 input DecideWorkItemInput {
-  basis: String
+  basis: String @inputBounds(maxLength: 1000)
   decision: String!
   edits: WorkEditsInput
-  note: String
-  workItemId: ID!
+  note: String @inputBounds(maxLength: 1000)
+  workItemId: ID! @inputBounds(maxLength: 36)
 }
 
 type DecisionRecordType {
@@ -2867,11 +2869,11 @@ type DeleteCandidateType {
 }
 
 input DeleteConnectionInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input DeleteKnowledgeSourceInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type DeviceSessionType {
@@ -2884,15 +2886,15 @@ type DeviceSessionType {
 }
 
 input DisconnectConnectionInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input DismissContextNoteInput {
-  noteId: ID!
+  noteId: ID! @inputBounds(maxLength: 36)
 }
 
 input DismissKnowledgeGapInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type DocumentPassageType {
@@ -2903,8 +2905,8 @@ type DocumentPassageType {
 }
 
 input DraftCampaignInput {
-  brief: String!
-  name: String!
+  brief: String! @inputBounds(maxLength: 400)
+  name: String! @inputBounds(maxLength: 100)
   segment: LoyaltySegmentInput!
 }
 
@@ -2917,7 +2919,7 @@ type DraftCampaignType {
 }
 
 input DraftLeadExecutionInput {
-  responsibilityId: String!
+  responsibilityId: String! @inputBounds(maxLength: 36)
 }
 
 type DraftLowStockType {
@@ -2950,36 +2952,36 @@ type DriveGrantType {
 }
 
 input DriveLinkedFolderInput {
-  url: String!
+  url: String! @inputBounds(maxLength: 2048)
 }
 
 input DrivePickedFolderInput {
-  folderId: String!
-  token: String!
+  folderId: String! @inputBounds(maxLength: 200)
+  token: String! @inputBounds(maxLength: 4096)
 }
 
 input DuplicateVideoProjectInput {
-  projectId: ID!
+  projectId: ID! @inputBounds(maxLength: 36)
 }
 
 input EmitAutomationEventInput {
   data: JsonObject!
-  dedupe: String!
-  event: String!
+  dedupe: String! @inputBounds(maxLength: 300)
+  event: String! @inputBounds(maxLength: 80)
 }
 
 input EnqueueKnowledgeSourceInput {
-  content: String
-  installationId: ID
-  kind: String!
-  module: String
-  origin: String
-  storagePath: String
-  tags: [String!]
-  title: String!
-  topic: String
-  url: String
-  visibility: String
+  content: String @inputBounds(maxLength: 120000)
+  installationId: ID @inputBounds(maxLength: 36)
+  kind: String! @inputBounds(maxLength: 40)
+  module: String @inputBounds(maxLength: 64)
+  origin: String @inputBounds(maxLength: 40)
+  storagePath: String @inputBounds(maxLength: 1024)
+  tags: [String!] @inputBounds(maxItems: 30, itemMaxLength: 60)
+  title: String! @inputBounds(maxLength: 300)
+  topic: String @inputBounds(maxLength: 200)
+  url: String @inputBounds(maxLength: 2048)
+  visibility: String @inputBounds(maxLength: 40)
 }
 
 type ExplainScheduleType {
@@ -2987,13 +2989,13 @@ type ExplainScheduleType {
 }
 
 input FieldValueInput {
-  name: String!
-  number: Float
-  text: String
+  name: String! @inputBounds(maxLength: 60)
+  number: Float @inputBounds(min: -1000000000000, max: 1000000000000)
+  text: String @inputBounds(maxLength: 2000)
 }
 
 input FinishWebhookConnectionInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 type FirstEventStateType {
@@ -3019,31 +3021,31 @@ type GenerateAdType {
 }
 
 input GetConnectionFirstEventInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input GetContentAiStatusInput {
-  id: String!
+  id: String! @inputBounds(maxLength: 36)
 }
 
 input GetMetaConnectionInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input GetMoneyConnectionInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input GetRecentTitlesInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 input GetVideoProjectInput {
-  projectId: ID!
+  projectId: ID! @inputBounds(maxLength: 36)
 }
 
 input GetZaloConnectionInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 type GoogleStateType {
@@ -3086,14 +3088,14 @@ enum GovernanceWorkStatus {
 
 input GrantAgentConnectionInput {
   access: String!
-  agentId: ID!
-  connectionId: ID!
+  agentId: ID! @inputBounds(maxLength: 36)
+  connectionId: ID! @inputBounds(maxLength: 36)
   purpose: String!
 }
 
 input GrantWishInput {
-  access: String
-  agentId: ID!
+  access: String @inputBounds(maxLength: 8)
+  agentId: ID! @inputBounds(maxLength: 64)
 }
 
 type GuideAskedType {
@@ -3103,11 +3105,11 @@ type GuideAskedType {
 
 input GuideTurnInput {
   role: String!
-  text: String!
+  text: String! @inputBounds(maxLength: 2000)
 }
 
 input HandoffToAccountingInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type HiringAnswerType {
@@ -3117,14 +3119,14 @@ type HiringAnswerType {
 }
 
 input HiringApplyAnswerInput {
-  answer: String!
-  questionId: String!
+  answer: String! @inputBounds(maxLength: 4000)
+  questionId: String! @inputBounds(maxLength: 60)
 }
 
 input HiringAvailabilityWindowInput {
-  endMin: Int!
-  startMin: Int!
-  weekday: Int!
+  endMin: Int! @inputBounds(min: 0, max: 1440)
+  startMin: Int! @inputBounds(min: 0, max: 1440)
+  weekday: Int! @inputBounds(min: 0, max: 6)
 }
 
 type HiringBenchType {
@@ -3148,7 +3150,7 @@ type HiringCandidateDetailType {
 }
 
 input HiringCandidateRefInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type HiringCandidateType {
@@ -3224,13 +3226,13 @@ type HiringInterviewType {
 }
 
 input HiringJobQuestionInput {
-  choices: [String!]
-  expectChoices: [String!]
+  choices: [String!] @inputBounds(maxItems: 30)
+  expectChoices: [String!] @inputBounds(maxItems: 30)
   expectNumber: Float
   expectYesNo: String
-  id: String
+  id: String @inputBounds(maxLength: 60)
   required: Boolean!
-  text: String!
+  text: String! @inputBounds(maxLength: 1000)
   type: String!
 }
 
@@ -3246,16 +3248,16 @@ type HiringJobQuestionType {
 }
 
 input HiringJobRefInput {
-  jobId: ID!
+  jobId: ID! @inputBounds(maxLength: 36)
 }
 
 input HiringJobRequirementsInput {
-  availability: [String!]!
-  experienceNote: String!
-  experienceYears: Int
-  mustHave: [String!]!
-  niceToHave: [String!]!
-  skills: [String!]!
+  availability: [String!]! @inputBounds(maxItems: 30)
+  experienceNote: String! @inputBounds(maxLength: 500)
+  experienceYears: Int @inputBounds(min: 0, max: 60)
+  mustHave: [String!]! @inputBounds(maxItems: 30)
+  niceToHave: [String!]! @inputBounds(maxItems: 30)
+  skills: [String!]! @inputBounds(maxItems: 30)
 }
 
 type HiringJobRequirementsType {
@@ -3300,7 +3302,7 @@ type HiringMemberType {
 }
 
 input HiringOfferRefInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type HiringOfferTermsType {
@@ -3370,7 +3372,7 @@ type HiringStatusType {
 }
 
 input HiringTokenInput {
-  token: String!
+  token: String! @inputBounds(maxLength: 200)
 }
 
 type HiringWindowType {
@@ -3380,8 +3382,8 @@ type HiringWindowType {
 }
 
 input HoldWorkItemInput {
-  note: String!
-  workItemId: ID!
+  note: String! @inputBounds(maxLength: 1000)
+  workItemId: ID! @inputBounds(maxLength: 36)
 }
 
 type ImapConnectionType {
@@ -3403,7 +3405,7 @@ type ImapFoldersType {
 }
 
 input ImportInventoryPasteInput {
-  raw: String!
+  raw: String! @inputBounds(maxLength: 200000)
 }
 
 type ImportPasteType {
@@ -3430,17 +3432,17 @@ type InboundEventType {
 }
 
 input InboundEventsInput {
-  limit: Int! = 40
+  limit: Int! = 40 @inputBounds(min: 1, max: 100)
 }
 
 input InstallModuleInput {
-  moduleKey: String!
-  name: String = null
+  moduleKey: String! @inputBounds(maxLength: 24)
+  name: String = null @inputBounds(maxLength: 160)
   newInstance: Boolean = false
 }
 
 input InstanceOfRecordInput {
-  recordId: ID!
+  recordId: ID! @inputBounds(maxLength: 36)
 }
 
 type InventoryItemType {
@@ -3521,7 +3523,7 @@ type InventoryPoLineType {
 }
 
 input InventoryPoRefInput {
-  poId: ID!
+  poId: ID! @inputBounds(maxLength: 36)
 }
 
 type InventoryPoType {
@@ -3544,8 +3546,8 @@ type InventoryPoType {
 }
 
 input InventoryRecipeLineInput {
-  itemId: ID!
-  qty: String!
+  itemId: ID! @inputBounds(maxLength: 36)
+  qty: String! @inputBounds(maxLength: 40)
 }
 
 type InventoryRecipeLineType {
@@ -3556,7 +3558,7 @@ type InventoryRecipeLineType {
 }
 
 input InventoryRecipeRefInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type InventoryRecipeType {
@@ -3613,7 +3615,7 @@ type InvitePreviewType {
 }
 
 input InviteRefInput {
-  inviteId: ID!
+  inviteId: ID! @inputBounds(maxLength: 36)
 }
 
 type InviteResultType {
@@ -3623,15 +3625,15 @@ type InviteResultType {
 }
 
 input InviteTokenInput {
-  token: String!
+  token: String! @inputBounds(maxLength: 200)
 }
 
 scalar JsonObject
 
 input KeepCurrentBrainFactInput {
-  attribute: String!
-  installationId: ID
-  subjectKey: String!
+  attribute: String! @inputBounds(maxLength: 300)
+  installationId: ID @inputBounds(maxLength: 36)
+  subjectKey: String! @inputBounds(maxLength: 300)
 }
 
 type KnowledgeSourceDetailType {
@@ -3640,7 +3642,7 @@ type KnowledgeSourceDetailType {
 }
 
 input KnowledgeSourceInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type KnowledgeSourceTextType {
@@ -3681,7 +3683,7 @@ type KnowledgeSourceType {
 }
 
 input KnowledgeSourcesInput {
-  module: String
+  module: String @inputBounds(maxLength: 64)
 }
 
 type KnowledgeSuggestionContextType {
@@ -3703,7 +3705,7 @@ type LeadActionResultType {
 }
 
 input LeadActionStatusInput {
-  id: String!
+  id: String! @inputBounds(maxLength: 36)
 }
 
 type LeadActionStatusType {
@@ -3727,8 +3729,8 @@ type LeadBoardConnectionType {
 }
 
 input LeadBoardInput {
-  after: String = null
-  first: Int = 50
+  after: String = null @inputBounds(maxLength: 2048)
+  first: Int = 50 @inputBounds(min: 1, max: 100)
 }
 
 type LeadBoardPageInfo {
@@ -3796,7 +3798,7 @@ type LeadFlowDecisionType {
 }
 
 input LeadFlowInput {
-  leadId: String!
+  leadId: String! @inputBounds(maxLength: 36)
 }
 
 type LeadFlowInvoiceType {
@@ -3993,7 +3995,7 @@ type LeadGenWorkbenchType {
 }
 
 input LeadJourneyInput {
-  leadId: ID!
+  leadId: ID! @inputBounds(maxLength: 36)
 }
 
 type LeadJourneyResponsibilityType {
@@ -4042,7 +4044,7 @@ type LeadResponsibilityType {
 }
 
 input LeadWaitInput {
-  leadId: ID!
+  leadId: ID! @inputBounds(maxLength: 36)
 }
 
 type LeadWaitType {
@@ -4052,7 +4054,7 @@ type LeadWaitType {
 }
 
 input LessonMiningStatusInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type LessonMiningStatusType {
@@ -4070,28 +4072,28 @@ type LinkStaffType {
 }
 
 input ListAgentsInput {
-  module: String
+  module: String @inputBounds(maxLength: 60)
 }
 
 input ListDecisionHistoryInput {
-  department: String = null
+  department: String = null @inputBounds(maxLength: 60)
   kind: String = "all"
-  limit: Int = 50
+  limit: Int = 50 @inputBounds(min: 1, max: 100)
 }
 
 input ListOfficeMessagesInput {
   before: OfficeThreadCursorInput = null
-  limit: Int = 50
-  room: String = null
+  limit: Int = 50 @inputBounds(min: 1, max: 100)
+  room: String = null @inputBounds(maxLength: 20)
 }
 
 input ListSalesOrdersInput {
-  after: String = null
-  first: Int = 50
+  after: String = null @inputBounds(maxLength: 2048)
+  first: Int = 50 @inputBounds(min: 1, max: 100)
 }
 
 input ListTelegramChatsInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input ListVideoProjectsInput {
@@ -4099,41 +4101,41 @@ input ListVideoProjectsInput {
 }
 
 input ListWorkItemsInput {
-  action: String
+  action: String @inputBounds(maxLength: 80)
   after: WorkItemCursorInput
-  limit: Int = 50
-  statuses: [String!] = []
+  limit: Int = 50 @inputBounds(min: 1, max: 100)
+  statuses: [String!] = [] @inputBounds(maxItems: 5)
 }
 
 input ListWorkThreadsInput {
-  after: String = null
-  first: Int = 50
-  leadId: ID = null
+  after: String = null @inputBounds(maxLength: 2048)
+  first: Int = 50 @inputBounds(min: 1, max: 100)
+  leadId: ID = null @inputBounds(maxLength: 36)
 }
 
 input LoadCsvImportInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input LoadDatabaseConnectionInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input LoadImapConnectionInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input LoadOpenApiConnectionInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input LoadOpenApiSpecInput {
-  specText: String!
-  specUrl: String!
+  specText: String! @inputBounds(maxLength: 5000000)
+  specUrl: String! @inputBounds(maxLength: 1000)
 }
 
 input LoadTelegramUserSetupInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 type LocalizedTextType {
@@ -4143,9 +4145,9 @@ type LocalizedTextType {
 
 input LoyaltyBirthdayInput {
   enabled: Boolean!
-  note: String!
-  points: Int!
-  rewardKey: String!
+  note: String! @inputBounds(maxLength: 200)
+  points: Int! @inputBounds(min: 0, max: 1000000)
+  rewardKey: String! @inputBounds(maxLength: 40)
 }
 
 type LoyaltyBirthdayType {
@@ -4173,7 +4175,7 @@ type LoyaltyBoardType {
 }
 
 input LoyaltyCampaignInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type LoyaltyCampaignViewType {
@@ -4197,9 +4199,9 @@ type LoyaltyCampaignViewType {
 }
 
 input LoyaltyCategoryInput {
-  label: String!
-  match: String!
-  perThousandVnd: Float!
+  label: String! @inputBounds(maxLength: 40)
+  match: String! @inputBounds(maxLength: 40)
+  perThousandVnd: Float! @inputBounds(min: 0, max: 1000)
 }
 
 type LoyaltyCategoryType {
@@ -4213,7 +4215,7 @@ input LoyaltyConfigInput {
   earn: LoyaltyEarnInput!
   expiry: LoyaltyExpiryInput!
   promo: LoyaltyPromoInput!
-  tiers: [LoyaltyTierInput!]!
+  tiers: [LoyaltyTierInput!]! @inputBounds(maxItems: 8)
 }
 
 type LoyaltyConfigType {
@@ -4225,11 +4227,11 @@ type LoyaltyConfigType {
 }
 
 input LoyaltyEarnInput {
-  categories: [LoyaltyCategoryInput!]!
-  minOrderVnd: Float!
-  perThousandVnd: Float!
-  perVisit: Int!
-  trigger: String!
+  categories: [LoyaltyCategoryInput!]! @inputBounds(maxItems: 12)
+  minOrderVnd: Float! @inputBounds(min: 0, max: 1000000000000)
+  perThousandVnd: Float! @inputBounds(min: 0, max: 1000)
+  perVisit: Int! @inputBounds(min: 0, max: 100000)
+  trigger: String! @inputBounds(maxLength: 7)
 }
 
 type LoyaltyEarnType {
@@ -4246,8 +4248,8 @@ type LoyaltyExpiringType {
 }
 
 input LoyaltyExpiryInput {
-  months: Int!
-  warnDays: Int!
+  months: Int! @inputBounds(min: 0, max: 120)
+  warnDays: Int! @inputBounds(min: 1, max: 180)
 }
 
 type LoyaltyExpiryType {
@@ -4290,7 +4292,7 @@ type LoyaltyMemberDetailType {
 }
 
 input LoyaltyMemberInput {
-  customerId: ID!
+  customerId: ID! @inputBounds(maxLength: 36)
 }
 
 type LoyaltyMemberType {
@@ -4329,10 +4331,10 @@ type LoyaltyProgramType {
 }
 
 input LoyaltyPromoInput {
-  batch: Int!
-  hourFrom: String!
-  hourTo: String!
-  maxPerMonth: Int!
+  batch: Int! @inputBounds(min: 1, max: 200)
+  hourFrom: String! @inputBounds(maxLength: 5)
+  hourTo: String! @inputBounds(maxLength: 5)
+  maxPerMonth: Int! @inputBounds(min: 1, max: 60)
 }
 
 type LoyaltyPromoType {
@@ -4375,9 +4377,9 @@ type LoyaltySampleMemberType {
 
 input LoyaltySegmentInput {
   birthdayThisMonth: Boolean!
-  inactiveDays: Int!
-  minSpendVnd: Float!
-  tiers: [String!]!
+  inactiveDays: Int! @inputBounds(min: 0, max: 3650)
+  minSpendVnd: Float! @inputBounds(min: 0, max: 1000000000000)
+  tiers: [String!]! @inputBounds(maxItems: 8, itemMaxLength: 24)
 }
 
 type LoyaltySegmentType {
@@ -4409,12 +4411,12 @@ type LoyaltyTierCountType {
 }
 
 input LoyaltyTierInput {
-  benefit: String!
-  key: String!
-  minSpendVnd: Float!
-  multiplier: Float!
-  name: String!
-  winbackDays: Int!
+  benefit: String! @inputBounds(maxLength: 200)
+  key: String! @inputBounds(maxLength: 24)
+  minSpendVnd: Float! @inputBounds(min: 0, max: 1000000000000)
+  multiplier: Float! @inputBounds(min: 1, max: 10)
+  name: String! @inputBounds(maxLength: 30)
+  winbackDays: Int! @inputBounds(min: 7, max: 365)
 }
 
 type LoyaltyTierType {
@@ -4431,7 +4433,7 @@ type ManualEvidenceType {
 }
 
 input MarkBookingNoShowInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type MarkBookingNoShowType {
@@ -4440,10 +4442,10 @@ type MarkBookingNoShowType {
 }
 
 input MarkContentPublishedInput {
-  channel: String!
-  how: String! = ""
-  id: ID!
-  url: String! = ""
+  channel: String! @inputBounds(maxLength: 20)
+  how: String! = "" @inputBounds(maxLength: 1000)
+  id: ID! @inputBounds(maxLength: 36)
+  url: String! = "" @inputBounds(maxLength: 2000)
 }
 
 type MarkContentPublishedType {
@@ -4452,9 +4454,9 @@ type MarkContentPublishedType {
 }
 
 input MarkOrderShippedInput {
-  carrier: String!
-  orderId: ID!
-  trackingCode: String!
+  carrier: String! @inputBounds(maxLength: 80)
+  orderId: ID! @inputBounds(maxLength: 36)
+  trackingCode: String! @inputBounds(maxLength: 80)
 }
 
 type MarkOrderShippedType {
@@ -4464,15 +4466,15 @@ type MarkOrderShippedType {
 }
 
 input MarkVideoPublishedInput {
-  projectId: ID!
+  projectId: ID! @inputBounds(maxLength: 36)
 }
 
 input MarketingReportInput {
-  weekStart: String! = ""
+  weekStart: String! = "" @inputBounds(maxLength: 10)
 }
 
 input McpCallLogInput {
-  limit: Int
+  limit: Int @inputBounds(min: 1, max: 200)
 }
 
 type McpCallLogType {
@@ -4520,8 +4522,8 @@ type McpToolType {
 }
 
 input MemberGrantChangeInput {
-  maxAmount: Float = null
-  memberId: ID!
+  maxAmount: Float = null @inputBounds(min: 0, max: 1000000000000)
+  memberId: ID! @inputBounds(maxLength: 36)
 }
 
 type MemberGrantType {
@@ -4532,7 +4534,7 @@ type MemberGrantType {
 }
 
 input MemberGrantsInput {
-  action: String!
+  action: String! @inputBounds(maxLength: 80)
 }
 
 type MemberListingType {
@@ -4547,7 +4549,7 @@ type MemberListingType {
 }
 
 input MemberRefInput {
-  userId: ID!
+  userId: ID! @inputBounds(maxLength: 36)
 }
 
 type MemberType {
@@ -4740,7 +4742,7 @@ type ModuleInstallResultType {
 }
 
 input ModuleInstallationIdInput {
-  installationId: ID!
+  installationId: ID! @inputBounds(maxLength: 36)
 }
 
 type ModuleInstallationType {
@@ -4763,7 +4765,7 @@ type ModuleInstallationType {
 }
 
 input ModuleKeyInput {
-  key: String!
+  key: String! @inputBounds(maxLength: 24)
 }
 
 type ModuleRequirementFactsType {
@@ -4785,9 +4787,9 @@ type ModulesCatalogType {
 
 input MoveBookingInput {
   force: Boolean!
-  id: ID!
-  resourceId: ID!
-  startAt: String!
+  id: ID! @inputBounds(maxLength: 36)
+  resourceId: ID! @inputBounds(maxLength: 36)
+  startAt: String! @inputBounds(maxLength: 40)
 }
 
 type MoveBookingType {
@@ -4799,13 +4801,13 @@ type MoveCandidateType {
 }
 
 input MoveContentItemInput {
-  id: ID!
-  scheduledAt: String!
+  id: ID! @inputBounds(maxLength: 36)
+  scheduledAt: String! @inputBounds(maxLength: 40)
 }
 
 input MoveHiringCandidateInput {
-  id: ID!
-  reason: String
+  id: ID! @inputBounds(maxLength: 36)
+  reason: String @inputBounds(maxLength: 1000)
   stage: String!
 }
 
@@ -5095,11 +5097,11 @@ type MyAccountType {
 }
 
 input NewResponsibilityInput {
-  due_at: String = null
-  lead_id: ID!
-  next_action: String!
-  owner: String!
-  title: String!
+  due_at: String = null @inputBounds(maxLength: 40)
+  lead_id: ID! @inputBounds(maxLength: 36)
+  next_action: String! @inputBounds(maxLength: 400)
+  owner: String! @inputBounds(maxLength: 36)
+  title: String! @inputBounds(maxLength: 200)
 }
 
 type NivoEntryType {
@@ -5114,7 +5116,7 @@ type NivoEntryType {
 }
 
 input NivoKnowledgeCountInput {
-  module: String!
+  module: String! @inputBounds(maxLength: 40)
 }
 
 type OfficeAckType {
@@ -5141,7 +5143,7 @@ type OfficeApprovalType {
 }
 
 input OfficeCandidateIdInput {
-  candidateId: ID!
+  candidateId: ID! @inputBounds(maxLength: 36)
 }
 
 type OfficeCandidateType {
@@ -5193,7 +5195,7 @@ type OfficeProposeOutcomeType {
 }
 
 input OfficeRoomKeyInput {
-  room: String = null
+  room: String = null @inputBounds(maxLength: 20)
 }
 
 enum OfficeRoomMemberKind {
@@ -5243,8 +5245,8 @@ type OfficeShownRowType {
 }
 
 input OfficeThreadCursorInput {
-  createdAt: String!
-  id: ID!
+  createdAt: String! @inputBounds(maxLength: 40)
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type OfficeThreadCursorType {
@@ -5258,11 +5260,11 @@ type OpenApiAuthHintType {
 }
 
 input OpenApiAuthInput {
-  name: String!
-  password: String!
-  type: String!
-  user: String!
-  value: String!
+  name: String! @inputBounds(maxLength: 100)
+  password: String! @inputBounds(maxLength: 500)
+  type: String! @inputBounds(maxLength: 20)
+  user: String! @inputBounds(maxLength: 500)
+  value: String! @inputBounds(maxLength: 4000)
 }
 
 type OpenApiConnectionType {
@@ -5298,17 +5300,17 @@ type OpeningDayType {
 }
 
 input OpeningHoursInput {
-  close: String!
-  open: String!
-  weekday: Int!
+  close: String! @inputBounds(maxLength: 5)
+  open: String! @inputBounds(maxLength: 5)
+  weekday: Int! @inputBounds(min: 0, max: 6)
 }
 
 input PaymentOrderInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 input PaymentOrderRequestStatusInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type PaymentOrderRequestStatusType {
@@ -5335,35 +5337,35 @@ type PickedFolderType {
 }
 
 input PostOfficeMessageInput {
-  body: String!
-  room: String = null
+  body: String! @inputBounds(maxLength: 4000)
+  room: String = null @inputBounds(maxLength: 20)
 }
 
 input PostSetupMessageInput {
-  setupSessionId: ID!
-  text: String!
+  setupSessionId: ID! @inputBounds(maxLength: 36)
+  text: String! @inputBounds(maxLength: 4000)
 }
 
 input PostThreadMessageInput {
-  body: String!
-  mentions: [ThreadMentionRefInput!]! = []
-  quoted: [String!]! = []
-  threadId: ID!
+  body: String! @inputBounds(maxLength: 4000)
+  mentions: [ThreadMentionRefInput!]! = [] @inputBounds(maxItems: 20)
+  quoted: [String!]! = [] @inputBounds(maxItems: 10, itemMaxLength: 2500)
+  threadId: ID! @inputBounds(maxLength: 36)
 }
 
 input PreviewCsvSourceInput {
-  connectionId: ID
-  entity: String
+  connectionId: ID @inputBounds(maxLength: 64)
+  entity: String @inputBounds(maxLength: 30)
   file: UploadedFileInput
   grid: DataJson
-  kind: String!
-  link: String
-  sheet: String
-  text: String
+  kind: String! @inputBounds(maxLength: 10)
+  link: String @inputBounds(maxLength: 600)
+  sheet: String @inputBounds(maxLength: 200)
+  text: String @inputBounds(maxLength: 10485760)
 }
 
 input PreviewDatabaseTableInput {
-  connectionId: ID
+  connectionId: ID @inputBounds(maxLength: 64)
   mapping: DataJson!
   target: DatabaseTargetInput!
 }
@@ -5394,9 +5396,9 @@ type PreviewShiftsBlockType {
 }
 
 input PreviewShiftsImportInput {
-  coverage: String!
-  positions: String!
-  staff: String!
+  coverage: String! @inputBounds(maxLength: 50000)
+  positions: String! @inputBounds(maxLength: 20000)
+  staff: String! @inputBounds(maxLength: 50000)
 }
 
 type PreviewShiftsImportType {
@@ -5452,16 +5454,16 @@ type ProposalType {
 
 input ProposeBrandKitInput {
   file: AttachedFileInput!
-  installationId: String! = ""
-  setupSessionId: String! = ""
+  installationId: String! = "" @inputBounds(maxLength: 36)
+  setupSessionId: String! = "" @inputBounds(maxLength: 36)
 }
 
 input ProposeOfficeCommandInput {
-  messageId: ID!
+  messageId: ID! @inputBounds(maxLength: 36)
 }
 
 input ProposeShiftsWeekInput {
-  week: String!
+  week: String! @inputBounds(maxLength: 10)
 }
 
 type ProposeWeekType {
@@ -5476,10 +5478,10 @@ type ProposeWeekType {
 }
 
 input ProviderKeysInput {
-  apiKey: String
-  checksumKey: String
-  clientId: String
-  secureKey: String
+  apiKey: String @inputBounds(maxLength: 400)
+  checksumKey: String @inputBounds(maxLength: 400)
+  clientId: String @inputBounds(maxLength: 400)
+  secureKey: String @inputBounds(maxLength: 400)
 }
 
 type ProviderKeysResultType {
@@ -5488,7 +5490,7 @@ type ProviderKeysResultType {
 }
 
 input PublicBookingPageInput {
-  slug: String!
+  slug: String! @inputBounds(maxLength: 41)
 }
 
 type PublicBookingPageType {
@@ -5509,10 +5511,10 @@ type PublicBookingServiceType {
 }
 
 input PublicBookingTimesInput {
-  date: String!
-  party: Int!
-  serviceId: String!
-  slug: String!
+  date: String! @inputBounds(maxLength: 10)
+  party: Int! @inputBounds(min: 1, max: 20)
+  serviceId: String! @inputBounds(maxLength: 36)
+  slug: String! @inputBounds(maxLength: 41)
 }
 
 type PublicBookingTimesType {
@@ -5520,8 +5522,8 @@ type PublicBookingTimesType {
 }
 
 input PublicHiringJobInput {
-  job: String!
-  ws: String!
+  job: String! @inputBounds(maxLength: 120)
+  ws: String! @inputBounds(maxLength: 80)
 }
 
 type PublicInterviewType {
@@ -5569,7 +5571,7 @@ type PublicLoyaltyNextTierType {
 }
 
 input PublicLoyaltyPageInput {
-  slug: String!
+  slug: String! @inputBounds(maxLength: 40)
 }
 
 type PublicLoyaltyPageType {
@@ -5828,16 +5830,16 @@ type QueuedAgentChatTurnType {
 }
 
 input ReadLeadGenCommentStatusInput {
-  workItemId: ID!
+  workItemId: ID! @inputBounds(maxLength: 36)
 }
 
 input ReadLeadGenWorkbenchInput {
-  installationId: ID
+  installationId: ID @inputBounds(maxLength: 36)
 }
 
 input ReassignShiftsShiftInput {
-  shiftId: ID!
-  staffId: ID
+  shiftId: ID! @inputBounds(maxLength: 36)
+  staffId: ID @inputBounds(maxLength: 36)
 }
 
 type ReassignShiftsShiftType {
@@ -5845,16 +5847,16 @@ type ReassignShiftsShiftType {
 }
 
 input ReceiveInventoryPoInput {
-  invoiceNo: String!
-  lines: [ReceivePoLineInput!]!
-  note: String!
-  poId: ID!
+  invoiceNo: String! @inputBounds(maxLength: 80)
+  lines: [ReceivePoLineInput!]! @inputBounds(maxItems: 200)
+  note: String! @inputBounds(maxLength: 1000)
+  poId: ID! @inputBounds(maxLength: 36)
 }
 
 input ReceivePoLineInput {
-  lineId: ID!
-  qty: String!
-  unitCost: String!
+  lineId: ID! @inputBounds(maxLength: 36)
+  qty: String! @inputBounds(maxLength: 40)
+  unitCost: String! @inputBounds(maxLength: 40)
 }
 
 type ReceivePoType {
@@ -5892,17 +5894,17 @@ type ReconcilePaymentType {
 }
 
 input RecordManualEvidenceInput {
-  amount: Float!
-  content: String!
-  date: String!
-  note: String
-  payer: String
+  amount: Float! @inputBounds(min: 1, max: 1000000000000)
+  content: String! @inputBounds(maxLength: 500)
+  date: String! @inputBounds(maxLength: 10)
+  note: String @inputBounds(maxLength: 1000)
+  payer: String @inputBounds(maxLength: 120)
 }
 
 input RecordOutcomeInput {
-  evidence: String!
-  leadId: ID!
-  stage: String!
+  evidence: String! @inputBounds(maxLength: 2000)
+  leadId: ID! @inputBounds(maxLength: 36)
+  stage: String! @inputBounds(maxLength: 20)
 }
 
 type RecordOutcomeType {
@@ -5916,9 +5918,9 @@ type RecordOutcomeType {
 }
 
 input RedeemLoyaltyRewardInput {
-  customerId: ID!
-  rewardId: ID!
-  token: String!
+  customerId: ID! @inputBounds(maxLength: 36)
+  rewardId: ID! @inputBounds(maxLength: 36)
+  token: String! @inputBounds(maxLength: 120)
 }
 
 type RedeemLoyaltyRewardType {
@@ -5927,25 +5929,25 @@ type RedeemLoyaltyRewardType {
 }
 
 input RefreshLeadContextInput {
-  leadId: String!
+  leadId: String! @inputBounds(maxLength: 36)
 }
 
 input RegisterMcpConnectorInput {
-  contractVersion: String!
-  credential: String
-  key: String!
-  name: String!
-  timeoutMs: Int
-  url: String!
+  contractVersion: String! @inputBounds(maxLength: 60)
+  credential: String @inputBounds(maxLength: 4096)
+  key: String! @inputBounds(maxLength: 31)
+  name: String! @inputBounds(maxLength: 80)
+  timeoutMs: Int @inputBounds(min: 500, max: 15000)
+  url: String! @inputBounds(maxLength: 2000)
 }
 
 input ReindexKnowledgeSourceInput {
-  content: String
-  sourceId: ID!
+  content: String @inputBounds(maxLength: 120000)
+  sourceId: ID! @inputBounds(maxLength: 36)
 }
 
 input RemoveBookingExceptionInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type RemoveBookingExceptionType {
@@ -5953,7 +5955,7 @@ type RemoveBookingExceptionType {
 }
 
 input RemoveBookingResourceInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type RemoveBookingResourceType {
@@ -5961,7 +5963,7 @@ type RemoveBookingResourceType {
 }
 
 input RemoveBookingServiceInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type RemoveBookingServiceType {
@@ -5969,7 +5971,7 @@ type RemoveBookingServiceType {
 }
 
 input RemoveBookingWaitlistEntryInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type RemoveBookingWaitlistEntryType {
@@ -5977,7 +5979,7 @@ type RemoveBookingWaitlistEntryType {
 }
 
 input RemoveLoyaltyRewardInput {
-  rewardId: ID!
+  rewardId: ID! @inputBounds(maxLength: 36)
 }
 
 type RemoveLoyaltyRewardType {
@@ -5985,18 +5987,18 @@ type RemoveLoyaltyRewardType {
 }
 
 input RenameAgentInput {
-  agentId: ID!
-  name: String!
+  agentId: ID! @inputBounds(maxLength: 36)
+  name: String! @inputBounds(maxLength: 120)
 }
 
 input RenameInstallationAgentInput {
-  installationId: ID!
-  name: String!
+  installationId: ID! @inputBounds(maxLength: 36)
+  name: String! @inputBounds(maxLength: 80)
 }
 
 input RenameModuleInstallationInput {
-  installationId: ID!
-  name: String!
+  installationId: ID! @inputBounds(maxLength: 36)
+  name: String! @inputBounds(maxLength: 160)
 }
 
 type ReportDayType {
@@ -6033,85 +6035,85 @@ type ReportSuggestionType {
 }
 
 input RequestAgentGenerationInput {
-  kind: String!
-  messages: [AgentGenMessageInput!]!
-  module: String!
-  purpose: String!
+  kind: String! @inputBounds(maxLength: 40)
+  messages: [AgentGenMessageInput!]! @inputBounds(maxItems: 60)
+  module: String! @inputBounds(maxLength: 40)
+  purpose: String! @inputBounds(maxLength: 60)
   responseFormat: String!
-  timeoutMs: Int
+  timeoutMs: Int @inputBounds(min: 5000, max: 120000)
 }
 
 input RequestAgentSyncInput {
   force: Boolean
-  installationId: ID
+  installationId: ID @inputBounds(maxLength: 36)
 }
 
 input RequestChatAnswerInput {
-  conversationId: ID!
+  conversationId: ID! @inputBounds(maxLength: 36)
   locale: String! = "vi"
-  text: String
-  workItemId: ID!
+  text: String @inputBounds(maxLength: 4000)
+  workItemId: ID! @inputBounds(maxLength: 36)
 }
 
 input RequestChatReplyInput {
-  body: String!
-  conversationId: ID!
+  body: String! @inputBounds(maxLength: 4000)
+  conversationId: ID! @inputBounds(maxLength: 36)
   locale: String! = "vi"
 }
 
 input RequestContentDraftInput {
-  hint: String
-  id: String!
+  hint: String @inputBounds(maxLength: 12000)
+  id: String! @inputBounds(maxLength: 36)
 }
 
 input RequestContentMediaUploadInput {
-  contentType: String!
-  name: String!
-  sizeBytes: Int!
+  contentType: String! @inputBounds(maxLength: 32)
+  name: String! @inputBounds(maxLength: 255)
+  sizeBytes: Int! @inputBounds(min: 1, max: 10485760)
 }
 
 input RequestContentMonthPlanInput {
-  month: String!
+  month: String! @inputBounds(maxLength: 7)
 }
 
 input RequestContentQuickDraftInput {
-  channels: [String!]!
-  topic: String!
+  channels: [String!]! @inputBounds(maxItems: 4)
+  topic: String! @inputBounds(maxLength: 12000)
 }
 
 input RequestDataSyncInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input RequestHiringInterviewInput {
-  candidateId: ID!
-  durationMin: Int!
-  interviewerUserId: ID
-  location: String!
+  candidateId: ID! @inputBounds(maxLength: 36)
+  durationMin: Int! @inputBounds(min: 5, max: 480)
+  interviewerUserId: ID @inputBounds(maxLength: 36)
+  location: String! @inputBounds(maxLength: 500)
   mode: String!
 }
 
 input RequestHiringOfferInput {
-  candidateId: ID!
-  note: String!
-  pay: String!
-  probation: String!
-  startDate: String!
-  title: String!
+  candidateId: ID! @inputBounds(maxLength: 36)
+  note: String! @inputBounds(maxLength: 2000)
+  pay: String! @inputBounds(maxLength: 200)
+  probation: String! @inputBounds(maxLength: 200)
+  startDate: String! @inputBounds(maxLength: 60)
+  title: String! @inputBounds(maxLength: 200)
 }
 
 input RequestInventorySendInput {
   kind: String!
-  poId: ID!
+  poId: ID! @inputBounds(maxLength: 36)
 }
 
 input RequestLessonMiningInput {
-  module: String!
+  module: String! @inputBounds(maxLength: 64)
 }
 
 input RequestLoyaltyCodeInput {
-  phone: String!
-  slug: String!
+  phone: String! @inputBounds(maxLength: 30)
+  slug: String! @inputBounds(maxLength: 40)
 }
 
 type RequestLoyaltyCodeType {
@@ -6121,9 +6123,9 @@ type RequestLoyaltyCodeType {
 input RequestPaymentOrderInput {
   cycle: String
   kind: String!
-  seats: Int
-  target: String
-  tierCredits: Float
+  seats: Int @inputBounds(min: 1, max: 1000)
+  target: String @inputBounds(maxLength: 40)
+  tierCredits: Float @inputBounds(min: 1, max: 100000000)
 }
 
 type RequestPaymentOrderType {
@@ -6132,16 +6134,16 @@ type RequestPaymentOrderType {
 }
 
 input RequestPublicBookingInput {
-  email: String
-  name: String!
-  note: String
-  party: Int!
-  phone: String!
-  serviceId: String!
-  slug: String!
-  start: String!
-  token: String!
-  website: String
+  email: String @inputBounds(maxLength: 120)
+  name: String! @inputBounds(maxLength: 120)
+  note: String @inputBounds(maxLength: 400)
+  party: Int! @inputBounds(min: 1, max: 20)
+  phone: String! @inputBounds(maxLength: 40)
+  serviceId: String! @inputBounds(maxLength: 36)
+  slug: String! @inputBounds(maxLength: 41)
+  start: String! @inputBounds(maxLength: 40)
+  token: String! @inputBounds(maxLength: 64)
+  website: String @inputBounds(maxLength: 200)
 }
 
 type RequestPublicBookingType {
@@ -6158,16 +6160,16 @@ type RequestSendType {
 }
 
 input RequestShiftsLeaveInput {
-  from: String!
-  reason: String!
-  to: String!
+  from: String! @inputBounds(maxLength: 10)
+  reason: String! @inputBounds(maxLength: 300)
+  to: String! @inputBounds(maxLength: 10)
 }
 
 input RequestShiftsSwapInput {
   kind: String!
-  reason: String!
-  shiftId: ID!
-  toStaffId: ID
+  reason: String! @inputBounds(maxLength: 300)
+  shiftId: ID! @inputBounds(maxLength: 36)
+  toStaffId: ID @inputBounds(maxLength: 36)
 }
 
 type RequestStatusType {
@@ -6175,7 +6177,7 @@ type RequestStatusType {
 }
 
 input RequestVideoRenderInput {
-  projectId: ID!
+  projectId: ID! @inputBounds(maxLength: 36)
 }
 
 type RequestVideoRenderType {
@@ -6186,7 +6188,7 @@ type RequestVideoRenderType {
 }
 
 input RequestVideoScriptInput {
-  projectId: String!
+  projectId: String! @inputBounds(maxLength: 36)
 }
 
 type RequestVideoScriptType {
@@ -6196,17 +6198,17 @@ type RequestVideoScriptType {
 }
 
 input ResendTelegramCodeInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input RespondHiringInterviewInput {
-  start: String
-  token: String!
+  start: String @inputBounds(maxLength: 40)
+  token: String! @inputBounds(maxLength: 200)
 }
 
 input RespondHiringOfferInput {
   accept: Boolean!
-  token: String!
+  token: String! @inputBounds(maxLength: 200)
 }
 
 type RespondOfferType {
@@ -6263,59 +6265,59 @@ type RetrievedPassageType {
 }
 
 input RetryFailedStepInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 input RetryKnowledgeSourceInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 input ReturnZaloAuthorizationInput {
-  code: String!
-  oaId: String
-  state: String!
+  code: String! @inputBounds(maxLength: 2048)
+  oaId: String @inputBounds(maxLength: 60)
+  state: String! @inputBounds(maxLength: 300)
 }
 
 input RevealSepayKeyInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input RevealWebhookConnectionInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input RevokeAgentConnectionInput {
-  agentId: ID!
-  connectionId: ID!
+  agentId: ID! @inputBounds(maxLength: 36)
+  connectionId: ID! @inputBounds(maxLength: 36)
 }
 
 input RevokeApiKeyInput {
-  keyId: ID!
+  keyId: ID! @inputBounds(maxLength: 36)
 }
 
 input RevokeSessionInput {
-  sessionId: ID!
+  sessionId: ID! @inputBounds(maxLength: 36)
 }
 
 input RunCsvImportInput {
-  connectionId: ID
-  entity: String
+  connectionId: ID @inputBounds(maxLength: 64)
+  entity: String @inputBounds(maxLength: 30)
   file: UploadedFileInput
   grid: DataJson
-  kind: String!
-  link: String
+  kind: String! @inputBounds(maxLength: 10)
+  link: String @inputBounds(maxLength: 600)
   mapping: DataJson!
-  name: String
-  schedule: Int
-  sheet: String
-  text: String
+  name: String @inputBounds(maxLength: 200)
+  schedule: Int @inputBounds(min: 60, max: 1440)
+  sheet: String @inputBounds(maxLength: 200)
+  text: String @inputBounds(maxLength: 10485760)
 }
 
 input RunDocumentImportInput {
-  connectionId: ID
-  files: [UploadedFileInput!]
-  link: String
-  name: String
+  connectionId: ID @inputBounds(maxLength: 64)
+  files: [UploadedFileInput!] @inputBounds(maxItems: 20)
+  link: String @inputBounds(maxLength: 600)
+  name: String @inputBounds(maxLength: 200)
 }
 
 input RunFlowInput {
@@ -6334,7 +6336,7 @@ type RunStepType {
 }
 
 input SalesActionStatusInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type SalesActionType {
@@ -6441,9 +6443,9 @@ type SalesDecisionType {
 }
 
 input SalesFieldValueInput {
-  name: String!
-  number: Float
-  text: String
+  name: String! @inputBounds(maxLength: 64)
+  number: Float @inputBounds(min: -1000000000000, max: 1000000000000)
+  text: String @inputBounds(maxLength: 500)
 }
 
 type SalesHandoffInvoiceType {
@@ -6496,7 +6498,7 @@ type SalesOrderConnectionType {
 }
 
 input SalesOrderInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type SalesOrderPageInfo {
@@ -6539,10 +6541,10 @@ type SalesSourceConversionType {
 }
 
 input SalesWorkEditsInput {
-  amount_vnd: Float
-  candidateId: ID
-  draft: String
-  fields: [SalesFieldValueInput!]
+  amount_vnd: Float @inputBounds(min: 0, max: 1000000000000)
+  candidateId: ID @inputBounds(maxLength: 36)
+  draft: String @inputBounds(maxLength: 4000)
+  fields: [SalesFieldValueInput!] @inputBounds(maxItems: 30)
 }
 
 type SalesWorkbenchType {
@@ -6570,11 +6572,11 @@ type SaveAvailabilityType {
 
 input SaveBookingExceptionInput {
   closed: Boolean!
-  date: String!
-  end: String!
-  note: String!
-  resourceId: ID
-  start: String!
+  date: String! @inputBounds(maxLength: 10)
+  end: String! @inputBounds(maxLength: 5)
+  note: String! @inputBounds(maxLength: 200)
+  resourceId: ID @inputBounds(maxLength: 36)
+  start: String! @inputBounds(maxLength: 5)
 }
 
 type SaveBookingExceptionType {
@@ -6582,8 +6584,8 @@ type SaveBookingExceptionType {
 }
 
 input SaveBookingHoursInput {
-  resourceId: ID!
-  rows: [BookingHoursRowInput!]!
+  resourceId: ID! @inputBounds(maxLength: 36)
+  rows: [BookingHoursRowInput!]! @inputBounds(maxItems: 56)
 }
 
 type SaveBookingHoursType {
@@ -6591,17 +6593,17 @@ type SaveBookingHoursType {
 }
 
 input SaveBookingPolicyInput {
-  address: String!
+  address: String! @inputBounds(maxLength: 300)
   autoConfirm: Boolean!
-  cancelWindowHours: Int!
-  depositPct: Int!
+  cancelWindowHours: Int! @inputBounds(min: 0, max: 720)
+  depositPct: Int! @inputBounds(min: 0, max: 100)
   handoffOrder: Boolean!
-  lateCancelFeePct: Int!
-  maxAdvanceDays: Int!
-  minLeadMin: Int!
-  noShowFeeVnd: Int!
-  slotStepMin: Int!
-  timezone: String!
+  lateCancelFeePct: Int! @inputBounds(min: 0, max: 100)
+  maxAdvanceDays: Int! @inputBounds(min: 1, max: 365)
+  minLeadMin: Int! @inputBounds(min: 0, max: 100000)
+  noShowFeeVnd: Int! @inputBounds(min: 0, max: 1000000000)
+  slotStepMin: Int! @inputBounds(min: 5, max: 240)
+  timezone: String! @inputBounds(maxLength: 80)
 }
 
 type SaveBookingPolicyType {
@@ -6610,8 +6612,8 @@ type SaveBookingPolicyType {
 
 input SaveBookingPublicPageInput {
   enabled: Boolean!
-  note: String!
-  slug: String!
+  note: String! @inputBounds(maxLength: 400)
+  slug: String! @inputBounds(maxLength: 80)
 }
 
 type SaveBookingPublicPageType {
@@ -6620,11 +6622,11 @@ type SaveBookingPublicPageType {
 
 input SaveBookingResourceInput {
   active: Boolean!
-  capacity: Int!
-  id: ID
-  kind: String!
-  name: String!
-  staffId: ID
+  capacity: Int! @inputBounds(min: 1, max: 200)
+  id: ID @inputBounds(maxLength: 36)
+  kind: String! @inputBounds(maxLength: 40)
+  name: String! @inputBounds(maxLength: 120)
+  staffId: ID @inputBounds(maxLength: 36)
 }
 
 type SaveBookingResourceType {
@@ -6633,14 +6635,14 @@ type SaveBookingResourceType {
 
 input SaveBookingServiceInput {
   active: Boolean!
-  bufferMin: Int!
-  description: String!
-  durationMin: Int!
-  followupDays: Int
-  id: ID
-  name: String!
-  priceVnd: Int
-  resourceKind: String!
+  bufferMin: Int! @inputBounds(min: 0, max: 480)
+  description: String! @inputBounds(maxLength: 600)
+  durationMin: Int! @inputBounds(min: 5, max: 1440)
+  followupDays: Int @inputBounds(min: 1, max: 730)
+  id: ID @inputBounds(maxLength: 36)
+  name: String! @inputBounds(maxLength: 160)
+  priceVnd: Int @inputBounds(min: 0, max: 1000000000)
+  resourceKind: String! @inputBounds(maxLength: 40)
 }
 
 type SaveBookingServiceType {
@@ -6648,63 +6650,63 @@ type SaveBookingServiceType {
 }
 
 input SaveBrainFactInput {
-  attributeLabel: String!
-  gapId: ID
-  modules: [String!]!
-  note: String
-  scope: String!
-  subjectLabel: String!
-  subjectType: String!
-  validFrom: String
-  validTo: String
-  value: String!
+  attributeLabel: String! @inputBounds(maxLength: 200)
+  gapId: ID @inputBounds(maxLength: 36)
+  modules: [String!]! @inputBounds(maxItems: 20, itemMaxLength: 64)
+  note: String @inputBounds(maxLength: 1000)
+  scope: String! @inputBounds(maxLength: 40)
+  subjectLabel: String! @inputBounds(maxLength: 200)
+  subjectType: String! @inputBounds(maxLength: 40)
+  validFrom: String @inputBounds(maxLength: 40)
+  validTo: String @inputBounds(maxLength: 40)
+  value: String! @inputBounds(maxLength: 4000)
 }
 
 input SaveBrainLessonInput {
-  appliesWhen: String
-  body: String!
-  module: String
-  title: String!
+  appliesWhen: String @inputBounds(maxLength: 1000)
+  body: String! @inputBounds(maxLength: 4000)
+  module: String @inputBounds(maxLength: 64)
+  title: String! @inputBounds(maxLength: 200)
 }
 
 input SaveContentBrandInput {
-  avoid: String!
-  brandVoice: String!
-  cta: String!
-  hashtags: String!
+  avoid: String! @inputBounds(maxLength: 1500)
+  brandVoice: String! @inputBounds(maxLength: 1500)
+  cta: String! @inputBounds(maxLength: 300)
+  hashtags: String! @inputBounds(maxLength: 4000)
 }
 
 input SaveContentCadenceInput {
-  rows: [ContentCadenceInput!]!
+  rows: [ContentCadenceInput!]! @inputBounds(maxItems: 4)
 }
 
 input SaveContentItemInput {
-  brief: String
-  channels: [String!]
-  hashtags: [String!]
-  id: ID!
-  links: [ContentLinkInput!]
-  media: [ContentMediaRefInput!]
-  pillarId: ID
-  scheduledAt: String
-  title: String
-  variants: [ContentVariantInput!]
+  brief: String @inputBounds(maxLength: 4000)
+  channels: [String!] @inputBounds(maxItems: 4)
+  hashtags: [String!] @inputBounds(maxItems: 30, itemMaxLength: 80)
+  id: ID! @inputBounds(maxLength: 36)
+  links: [ContentLinkInput!] @inputBounds(maxItems: 10)
+  media: [ContentMediaRefInput!] @inputBounds(maxItems: 10)
+  pillarId: ID @inputBounds(maxLength: 36)
+  scheduledAt: String @inputBounds(maxLength: 40)
+  title: String @inputBounds(maxLength: 200)
+  variants: [ContentVariantInput!] @inputBounds(maxItems: 4)
 }
 
 input SaveContentPillarsInput {
-  rows: [ContentPillarInput!]!
+  rows: [ContentPillarInput!]! @inputBounds(maxItems: 100)
 }
 
 input SaveContractInput {
-  amountVnd: Float = null
-  contractId: ID = null
-  customerName: String!
-  endsOn: String!
-  leadId: ID = null
-  note: String!
-  plan: String!
-  startsOn: String!
-  status: String!
+  amountVnd: Float = null @inputBounds(min: 0, max: 9007199254740991)
+  contractId: ID = null @inputBounds(maxLength: 36)
+  customerName: String! @inputBounds(maxLength: 200)
+  endsOn: String! @inputBounds(maxLength: 10)
+  leadId: ID = null @inputBounds(maxLength: 36)
+  note: String! @inputBounds(maxLength: 600)
+  plan: String! @inputBounds(maxLength: 200)
+  startsOn: String! @inputBounds(maxLength: 10)
+  status: String! @inputBounds(maxLength: 20)
 }
 
 type SaveContractType {
@@ -6720,109 +6722,109 @@ type SaveContractType {
 }
 
 input SaveDatabaseConnectionInput {
-  connectionId: ID
+  connectionId: ID @inputBounds(maxLength: 64)
   everyMinutes: Int
-  name: String!
+  name: String! @inputBounds(maxLength: 200)
   tables: DataJson!
   target: DatabaseTargetInput!
 }
 
 input SaveHiringAvailabilityInput {
-  memberUserId: ID!
-  windows: [HiringAvailabilityWindowInput!]!
+  memberUserId: ID! @inputBounds(maxLength: 36)
+  windows: [HiringAvailabilityWindowInput!]! @inputBounds(maxItems: 49)
 }
 
 input SaveHiringJobInput {
-  channels: [String!]
-  closesAt: String
-  description: String
+  channels: [String!] @inputBounds(maxItems: 10)
+  closesAt: String @inputBounds(maxLength: 40)
+  description: String @inputBounds(maxLength: 8000)
   employmentType: String
-  headcount: Int
-  id: ID
-  location: String
-  payMaxVnd: Float
-  payMinVnd: Float
+  headcount: Int @inputBounds(min: 1, max: 100)
+  id: ID @inputBounds(maxLength: 36)
+  location: String @inputBounds(maxLength: 200)
+  payMaxVnd: Float @inputBounds(min: 0)
+  payMinVnd: Float @inputBounds(min: 0)
   payUnit: String
-  position: String
-  questions: [HiringJobQuestionInput!]!
+  position: String @inputBounds(maxLength: 120)
+  questions: [HiringJobQuestionInput!]! @inputBounds(maxItems: 30)
   requirements: HiringJobRequirementsInput
-  schedule: String
-  title: String!
+  schedule: String @inputBounds(maxLength: 200)
+  title: String! @inputBounds(maxLength: 200)
 }
 
 input SaveHiringNotesInput {
-  id: ID!
-  notes: String!
+  id: ID! @inputBounds(maxLength: 36)
+  notes: String! @inputBounds(maxLength: 10000)
 }
 
 input SaveHiringSettingsInput {
-  adTone: String
-  applyConsentText: String
+  adTone: String @inputBounds(maxLength: 200)
+  applyConsentText: String @inputBounds(maxLength: 4000)
   autoCloseWhenFilled: Boolean
   notifyNewCandidate: Boolean
-  publicSlug: String
+  publicSlug: String @inputBounds(maxLength: 80)
   remindInterview: Boolean
-  retentionDays: Int
+  retentionDays: Int @inputBounds(min: 0, max: 3650)
 }
 
 input SaveHoldingMessageInput {
-  installationId: ID!
-  value: String!
+  installationId: ID! @inputBounds(maxLength: 36)
+  value: String! @inputBounds(maxLength: 400)
 }
 
 input SaveImapConnectionInput {
-  connectionId: ID
-  email: String!
-  folders: [String!]
-  host: String!
-  name: String!
-  password: String!
-  port: Int!
-  security: String!
-  sinceDays: Int
-  syncEveryMinutes: Int
-  user: String!
+  connectionId: ID @inputBounds(maxLength: 64)
+  email: String! @inputBounds(maxLength: 400)
+  folders: [String!] @inputBounds(maxItems: 100, itemMaxLength: 400)
+  host: String! @inputBounds(maxLength: 400)
+  name: String! @inputBounds(maxLength: 200)
+  password: String! @inputBounds(maxLength: 1000)
+  port: Int! @inputBounds(min: 1, max: 65535)
+  security: String! @inputBounds(maxLength: 16)
+  sinceDays: Int @inputBounds(min: 1, max: 3650)
+  syncEveryMinutes: Int @inputBounds(min: 1, max: 10080)
+  user: String! @inputBounds(maxLength: 400)
 }
 
 input SaveInventoryItemInput {
-  aliases: String!
-  category: String!
-  cost: String!
-  id: ID
-  name: String!
-  openingQty: String
-  reorderPoint: String!
-  reorderQty: String!
-  sell: String!
-  sku: String!
-  supplierId: String!
-  unit: String!
-  units: String!
+  aliases: String! @inputBounds(maxLength: 600)
+  category: String! @inputBounds(maxLength: 80)
+  cost: String! @inputBounds(maxLength: 40)
+  id: ID @inputBounds(maxLength: 36)
+  name: String! @inputBounds(maxLength: 160)
+  openingQty: String @inputBounds(maxLength: 40)
+  reorderPoint: String! @inputBounds(maxLength: 40)
+  reorderQty: String! @inputBounds(maxLength: 40)
+  sell: String! @inputBounds(maxLength: 40)
+  sku: String! @inputBounds(maxLength: 40)
+  supplierId: String! @inputBounds(maxLength: 40)
+  unit: String! @inputBounds(maxLength: 30)
+  units: String! @inputBounds(maxLength: 300)
 }
 
 input SaveInventoryLocationInput {
-  id: ID
-  name: String!
+  id: ID @inputBounds(maxLength: 36)
+  name: String! @inputBounds(maxLength: 120)
 }
 
 input SaveInventoryRecipeInput {
-  aliases: String!
-  id: ID
-  lines: [InventoryRecipeLineInput!]!
-  name: String!
+  aliases: String! @inputBounds(maxLength: 600)
+  id: ID @inputBounds(maxLength: 36)
+  lines: [InventoryRecipeLineInput!]! @inputBounds(maxItems: 100)
+  name: String! @inputBounds(maxLength: 160)
 }
 
 input SaveInventorySupplierInput {
-  channel: String!
-  contactName: String!
-  email: String!
-  id: ID
-  leadTime: String!
-  name: String!
-  note: String!
-  phone: String!
-  terms: String!
-  zalo: String!
+  channel: String! @inputBounds(maxLength: 20)
+  contactName: String! @inputBounds(maxLength: 160)
+  email: String! @inputBounds(maxLength: 254)
+  id: ID @inputBounds(maxLength: 36)
+  leadTime: String! @inputBounds(maxLength: 20)
+  name: String! @inputBounds(maxLength: 160)
+  note: String! @inputBounds(maxLength: 1000)
+  phone: String! @inputBounds(maxLength: 40)
+  terms: String! @inputBounds(maxLength: 300)
+  zalo: String! @inputBounds(maxLength: 80)
 }
 
 type SaveJobType {
@@ -6833,125 +6835,125 @@ type SaveJobType {
 input SaveLoyaltyProgramInput {
   config: LoyaltyConfigInput
   enabled: Boolean
-  name: String
+  name: String @inputBounds(maxLength: 80)
 }
 
 input SaveLoyaltyRewardInput {
   active: Boolean!
-  id: ID
-  key: String
-  kind: String!
-  minTierKey: String
-  name: String!
-  note: String!
-  perCustomerLimit: Int
-  percent: Int
-  pointsCost: Int!
-  stock: Int
-  valueVnd: Float!
+  id: ID @inputBounds(maxLength: 36)
+  key: String @inputBounds(maxLength: 40)
+  kind: String! @inputBounds(maxLength: 8)
+  minTierKey: String @inputBounds(maxLength: 24)
+  name: String! @inputBounds(maxLength: 80)
+  note: String! @inputBounds(maxLength: 200)
+  perCustomerLimit: Int @inputBounds(min: 1, max: 1000000000)
+  percent: Int @inputBounds(min: 1, max: 100)
+  pointsCost: Int! @inputBounds(min: 1, max: 1000000000)
+  stock: Int @inputBounds(min: 0, max: 1000000000)
+  valueVnd: Float! @inputBounds(min: 0, max: 1000000000000)
 }
 
 input SaveMemberGrantsInput {
-  action: String!
-  grants: [MemberGrantChangeInput!]!
+  action: String! @inputBounds(maxLength: 80)
+  grants: [MemberGrantChangeInput!]! @inputBounds(maxItems: 200)
 }
 
 input SaveOpenApiConnectionInput {
   auth: OpenApiAuthInput!
   config: DataJson!
-  connectionId: ID
-  name: String!
+  connectionId: ID @inputBounds(maxLength: 64)
+  name: String! @inputBounds(maxLength: 200)
   syncEveryMinutes: Int
 }
 
 input SaveProviderKeysInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
   values: ProviderKeysInput!
 }
 
 input SaveReplyTimeoutInput {
-  installationId: ID!
-  value: Int!
+  installationId: ID! @inputBounds(maxLength: 36)
+  value: Int! @inputBounds(min: 5, max: 120)
 }
 
 input SaveShiftsAvailabilityInput {
   available: Boolean!
-  date: String
-  end: String!
-  note: String
-  staffId: ID
-  start: String!
-  weekday: Int
+  date: String @inputBounds(maxLength: 10)
+  end: String! @inputBounds(maxLength: 5)
+  note: String @inputBounds(maxLength: 300)
+  staffId: ID @inputBounds(maxLength: 36)
+  start: String! @inputBounds(maxLength: 5)
+  weekday: Int @inputBounds(min: 0, max: 6)
 }
 
 input SaveShiftsCoverageInput {
-  end: String!
-  id: ID
-  ideal: Int!
-  min: Int!
+  end: String! @inputBounds(maxLength: 5)
+  id: ID @inputBounds(maxLength: 36)
+  ideal: Int! @inputBounds(min: 0)
+  min: Int! @inputBounds(min: 0)
   peak: Boolean!
-  positionId: ID!
-  start: String!
-  weekdays: [Int!]!
+  positionId: ID! @inputBounds(maxLength: 36)
+  start: String! @inputBounds(maxLength: 5)
+  weekdays: [Int!]! @inputBounds(maxItems: 7, itemMin: 0, itemMax: 6)
 }
 
 input SaveShiftsPositionInput {
-  color: String
-  id: ID
-  name: String!
+  color: String @inputBounds(maxLength: 40)
+  id: ID @inputBounds(maxLength: 36)
+  name: String! @inputBounds(maxLength: 80)
 }
 
 input SaveShiftsSettingsInput {
-  leaveNoticeDays: Int!
-  noshowMinutes: Int!
-  openingHours: [OpeningHoursInput!]!
-  overtimeHoursWeek: Int!
-  remindMinutes: Int!
-  swapNoticeHours: Int!
+  leaveNoticeDays: Int! @inputBounds(min: 0)
+  noshowMinutes: Int! @inputBounds(min: 0)
+  openingHours: [OpeningHoursInput!]! @inputBounds(maxItems: 7)
+  overtimeHoursWeek: Int! @inputBounds(min: 0)
+  remindMinutes: Int! @inputBounds(min: 0)
+  swapNoticeHours: Int! @inputBounds(min: 0)
 }
 
 input SaveShiftsStaffInput {
   active: Boolean
-  id: ID
-  maxDay: Float
-  maxWeek: Float
-  minRest: Float
-  name: String!
-  phone: String
-  positionIds: [ID!]!
-  staffRowId: ID
-  telegramChatId: String
-  wage: Float
-  zaloUserId: String
+  id: ID @inputBounds(maxLength: 36)
+  maxDay: Float @inputBounds(min: 0)
+  maxWeek: Float @inputBounds(min: 0)
+  minRest: Float @inputBounds(min: 0)
+  name: String! @inputBounds(maxLength: 120)
+  phone: String @inputBounds(maxLength: 40)
+  positionIds: [ID!]! @inputBounds(maxItems: 30)
+  staffRowId: ID @inputBounds(maxLength: 36)
+  telegramChatId: String @inputBounds(maxLength: 40)
+  wage: Float @inputBounds(min: 0)
+  zaloUserId: String @inputBounds(maxLength: 40)
 }
 
 input SaveStaffInput {
   active: Boolean
-  email: String
-  id: ID
-  name: String!
-  role: String!
+  email: String @inputBounds(maxLength: 254)
+  id: ID @inputBounds(maxLength: 36)
+  name: String! @inputBounds(maxLength: 120)
+  role: String! @inputBounds(maxLength: 80)
 }
 
 input SaveTelegramUserSetupInput {
-  chats: [TelegramPickedChatInput!]!
-  connectionId: ID!
+  chats: [TelegramPickedChatInput!]! @inputBounds(maxItems: 50)
+  connectionId: ID! @inputBounds(maxLength: 64)
   everyMinutes: Int
   sinceDays: Int!
 }
 
 input SaveVideoBrandInput {
-  logoPath: String
-  musicTrack: String
-  primary: String!
-  secondary: String!
-  shopName: String!
-  voice: String!
+  logoPath: String @inputBounds(maxLength: 300)
+  musicTrack: String @inputBounds(maxLength: 60)
+  primary: String! @inputBounds(maxLength: 7)
+  secondary: String! @inputBounds(maxLength: 7)
+  shopName: String! @inputBounds(maxLength: 60)
+  voice: String! @inputBounds(maxLength: 80)
 }
 
 input SaveZaloOaSecretInput {
-  connectionId: ID!
-  oaSecret: String!
+  connectionId: ID! @inputBounds(maxLength: 64)
+  oaSecret: String! @inputBounds(maxLength: 200)
 }
 
 type SavedContentRowsType {
@@ -6982,24 +6984,24 @@ type SavedFactType {
 }
 
 input SendAgentChatMessageInput {
-  body: String!
-  conversationId: ID!
+  body: String! @inputBounds(maxLength: 4000)
+  conversationId: ID! @inputBounds(maxLength: 36)
 }
 
 input SendAgentCommandInput {
-  command: String!
-  fields: [FieldValueInput!]
-  leadId: ID
-  reason: String!
-  subjectId: ID
+  command: String! @inputBounds(maxLength: 80)
+  fields: [FieldValueInput!] @inputBounds(maxItems: 30)
+  leadId: ID @inputBounds(maxLength: 36)
+  reason: String! @inputBounds(maxLength: 200)
+  subjectId: ID @inputBounds(maxLength: 36)
   subjectType: String
-  to: String!
+  to: String! @inputBounds(maxLength: 60)
 }
 
 input SendSmtpTestInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
   makeDefault: Boolean!
-  to: String!
+  to: String! @inputBounds(maxLength: 254)
 }
 
 type SepayKeyType {
@@ -7008,44 +7010,44 @@ type SepayKeyType {
 }
 
 input SetAgentConnectionsInput {
-  agentId: ID!
-  connections: [ConnectionWishInput!]!
+  agentId: ID! @inputBounds(maxLength: 64)
+  connections: [ConnectionWishInput!]! @inputBounds(maxItems: 200)
 }
 
 input SetAgentOwnershipInput {
-  agentId: ID!
-  assignableRoles: [String!]!
-  assignableRooms: [String!]!
-  canTagAgentIds: [ID!]!
-  fallbackMemberId: ID!
-  ownerMemberId: ID!
+  agentId: ID! @inputBounds(maxLength: 36)
+  assignableRoles: [String!]! @inputBounds(maxItems: 3)
+  assignableRooms: [String!]! @inputBounds(maxItems: 6)
+  canTagAgentIds: [ID!]! @inputBounds(maxItems: 50)
+  fallbackMemberId: ID! @inputBounds(maxLength: 36)
+  ownerMemberId: ID! @inputBounds(maxLength: 36)
 }
 
 input SetAgentStatusInput {
   active: Boolean!
-  agentId: ID!
+  agentId: ID! @inputBounds(maxLength: 36)
 }
 
 input SetAgentTextsInput {
-  agentId: ID!
+  agentId: ID! @inputBounds(maxLength: 36)
   texts: AgentTextsInput!
 }
 
 input SetChatHandlingInput {
-  conversationId: ID!
+  conversationId: ID! @inputBounds(maxLength: 36)
   locale: String! = "vi"
   takeOver: Boolean!
 }
 
 input SetConnectionAgentsInput {
-  agents: [GrantWishInput!]!
-  connectionId: ID!
+  agents: [GrantWishInput!]! @inputBounds(maxItems: 200)
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input SetConnectionGrantInput {
-  access: String
-  agentId: ID!
-  connectionId: ID!
+  access: String @inputBounds(maxLength: 8)
+  agentId: ID! @inputBounds(maxLength: 64)
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input SetContentAutomationInput {
@@ -7054,72 +7056,72 @@ input SetContentAutomationInput {
 }
 
 input SetDefaultSmtpInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input SetHiringInterviewStatusInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
   status: String!
 }
 
 input SetHiringJobStatusInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
   status: String!
 }
 
 input SetInventoryItemActiveInput {
   active: Boolean!
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 input SetKnowledgeSuggestionStateInput {
-  key: String!
-  state: String
+  key: String! @inputBounds(maxLength: 60)
+  state: String @inputBounds(maxLength: 40)
 }
 
 input SetMcpConnectorCredentialInput {
-  credential: String!
-  key: String!
+  credential: String! @inputBounds(maxLength: 4096)
+  key: String! @inputBounds(maxLength: 31)
 }
 
 input SetMcpToolGrantInput {
-  agentId: String!
-  constraintsJson: String
-  limitVnd: Float
+  agentId: String! @inputBounds(maxLength: 36)
+  constraintsJson: String @inputBounds(maxLength: 2000)
+  limitVnd: Float @inputBounds(min: 0)
   mode: String!
-  tool: String!
+  tool: String! @inputBounds(maxLength: 112)
 }
 
 input SetMemberStatusInput {
   status: String!
-  userId: ID!
+  userId: ID! @inputBounds(maxLength: 36)
 }
 
 input SetModuleLiveInput {
-  installationId: ID!
+  installationId: ID! @inputBounds(maxLength: 36)
   live: Boolean!
 }
 
 input SetOperatingModeInput {
-  installationId: ID!
+  installationId: ID! @inputBounds(maxLength: 36)
   mode: String!
 }
 
 input SetSetupGateInput {
   action: String!
-  evidence: String = ""
-  gateKey: String!
-  setupSessionId: ID!
+  evidence: String = "" @inputBounds(maxLength: 800)
+  gateKey: String! @inputBounds(maxLength: 60)
+  setupSessionId: ID! @inputBounds(maxLength: 36)
 }
 
 input SetSyncScheduleInput {
-  connectionId: ID!
-  everyMinutes: Int
+  connectionId: ID! @inputBounds(maxLength: 64)
+  everyMinutes: Int @inputBounds(min: 5, max: 10080)
 }
 
 input SettleWonDealInput {
-  evidence: String
-  leadId: String!
+  evidence: String @inputBounds(maxLength: 2000)
+  leadId: String! @inputBounds(maxLength: 36)
 }
 
 type SetupApplyResultType {
@@ -7197,7 +7199,7 @@ type SetupVersionsType {
 }
 
 input ShareVideoProjectInput {
-  projectId: ID!
+  projectId: ID! @inputBounds(maxLength: 36)
 }
 
 type ShellAgentType {
@@ -7224,8 +7226,8 @@ type ShellExceptionType {
 }
 
 input ShellWindowInput {
-  foundingFrom: String!
-  foundingTo: String!
+  foundingFrom: String! @inputBounds(maxLength: 40)
+  foundingTo: String! @inputBounds(maxLength: 40)
 }
 
 type ShiftLeaveType {
@@ -7283,7 +7285,7 @@ type ShiftsAvailType {
 }
 
 input ShiftsAvailabilityRefInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type ShiftsAvailabilityType {
@@ -7335,7 +7337,7 @@ type ShiftsColleagueType {
 }
 
 input ShiftsCoverageRefInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type ShiftsFiguresType {
@@ -7382,7 +7384,7 @@ type ShiftsMyShiftType {
 }
 
 input ShiftsPositionRefInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type ShiftsPriorType {
@@ -7401,7 +7403,7 @@ type ShiftsRequestsType {
 }
 
 input ShiftsScheduleRefInput {
-  scheduleId: ID!
+  scheduleId: ID! @inputBounds(maxLength: 36)
 }
 
 type ShiftsScheduleType {
@@ -7446,7 +7448,7 @@ type ShiftsSetupType {
 }
 
 input ShiftsShiftRefInput {
-  shiftId: ID!
+  shiftId: ID! @inputBounds(maxLength: 36)
 }
 
 type ShiftsStaffRowType {
@@ -7520,9 +7522,9 @@ type StaffOptionType {
 }
 
 input StartAgentChatConversationInput {
-  agentId: ID!
+  agentId: ID! @inputBounds(maxLength: 36)
   kind: String!
-  visitorName: String = null
+  visitorName: String = null @inputBounds(maxLength: 80)
 }
 
 type StartFirstWorkspaceType {
@@ -7530,52 +7532,52 @@ type StartFirstWorkspaceType {
 }
 
 input StartMoneyConnectionInput {
-  accountNumber: String!
-  bankCode: String!
-  environment: String!
-  holder: String!
-  name: String!
-  provider: String!
+  accountNumber: String! @inputBounds(maxLength: 60)
+  bankCode: String! @inputBounds(maxLength: 40)
+  environment: String! @inputBounds(maxLength: 10)
+  holder: String! @inputBounds(maxLength: 160)
+  name: String! @inputBounds(maxLength: 120)
+  provider: String! @inputBounds(maxLength: 20)
 }
 
 input StartSmtpConnectionInput {
-  fromEmail: String!
-  fromName: String!
-  host: String!
-  password: String!
-  port: Int!
-  preset: String!
-  replyTo: String!
-  security: String!
-  user: String!
+  fromEmail: String! @inputBounds(maxLength: 254)
+  fromName: String! @inputBounds(maxLength: 80)
+  host: String! @inputBounds(maxLength: 253)
+  password: String! @inputBounds(maxLength: 500)
+  port: Int! @inputBounds(min: 1, max: 65535)
+  preset: String! @inputBounds(maxLength: 40)
+  replyTo: String! @inputBounds(maxLength: 254)
+  security: String! @inputBounds(maxLength: 10)
+  user: String! @inputBounds(maxLength: 254)
 }
 
 input StartTelegramLoginInput {
-  connectionId: ID
+  connectionId: ID @inputBounds(maxLength: 64)
   consent: Boolean!
-  name: String!
-  phone: String!
+  name: String! @inputBounds(maxLength: 120)
+  phone: String! @inputBounds(maxLength: 40)
 }
 
 input StartWebhookConnectionInput {
-  events: [String!]!
-  name: String!
-  url: String!
+  events: [String!]! @inputBounds(maxItems: 20, itemMaxLength: 40)
+  name: String! @inputBounds(maxLength: 120)
+  url: String! @inputBounds(maxLength: 2048)
 }
 
 input StartZaloConnectionInput {
-  appId: String!
-  appSecret: String!
-  name: String!
+  appId: String! @inputBounds(maxLength: 40)
+  appSecret: String! @inputBounds(maxLength: 200)
+  name: String! @inputBounds(maxLength: 120)
 }
 
 input StockTakeCountInput {
   counted: Float!
-  itemId: ID!
+  itemId: ID! @inputBounds(maxLength: 36)
 }
 
 input StopFailedStepInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type StopFailedStepType {
@@ -7586,7 +7588,7 @@ type StopFailedStepType {
 scalar StringMap
 
 input SubmitContentForApprovalInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type SubmitContentForApprovalType {
@@ -7602,17 +7604,17 @@ type SubmitLoyaltyCampaignType {
 }
 
 input SubmitTelegramCodeInput {
-  code: String!
-  connectionId: ID!
+  code: String! @inputBounds(maxLength: 32)
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input SubmitTelegramPasswordInput {
-  connectionId: ID!
-  password: String!
+  connectionId: ID! @inputBounds(maxLength: 64)
+  password: String! @inputBounds(maxLength: 256)
 }
 
 input SuggestLeadOwnerInput {
-  leadId: String!
+  leadId: String! @inputBounds(maxLength: 36)
 }
 
 type SuggestionDecisionType {
@@ -7626,16 +7628,16 @@ type SyncLoyaltyMembersType {
 }
 
 input SyncMcpConnectorInput {
-  key: String!
+  key: String! @inputBounds(maxLength: 31)
 }
 
 input TakeInventoryStockInput {
-  counts: [StockTakeCountInput!]!
+  counts: [StockTakeCountInput!]! @inputBounds(maxItems: 500)
 }
 
 input TakeOverAgentChatConversationInput {
-  conversationId: ID!
-  line: String! = ""
+  conversationId: ID! @inputBounds(maxLength: 36)
+  line: String! = "" @inputBounds(maxLength: 400)
   take: Boolean!
 }
 
@@ -7667,9 +7669,9 @@ type TelegramLoginStartedType {
 }
 
 input TelegramPickedChatInput {
-  id: String!
+  id: String! @inputBounds(maxLength: 24)
   kind: String!
-  title: String!
+  title: String! @inputBounds(maxLength: 120)
 }
 
 type TelegramPickedChatType {
@@ -7724,7 +7726,7 @@ type TemplateDefinitionType {
 }
 
 input TemplateKeyInput {
-  templateKey: String!
+  templateKey: String! @inputBounds(maxLength: 61)
 }
 
 type TemplateN8nType {
@@ -7759,35 +7761,35 @@ type TemplateTriggerType {
 }
 
 input TestDatabaseInput {
-  connectionId: ID
+  connectionId: ID @inputBounds(maxLength: 64)
   target: DatabaseTargetInput!
 }
 
 input TestImapConnectionInput {
-  connectionId: ID
-  email: String!
-  folders: [String!]
-  host: String!
-  name: String!
-  password: String!
-  port: Int!
-  security: String!
-  sinceDays: Int
-  syncEveryMinutes: Int
-  user: String!
+  connectionId: ID @inputBounds(maxLength: 64)
+  email: String! @inputBounds(maxLength: 400)
+  folders: [String!] @inputBounds(maxItems: 100, itemMaxLength: 400)
+  host: String! @inputBounds(maxLength: 400)
+  name: String! @inputBounds(maxLength: 200)
+  password: String! @inputBounds(maxLength: 1000)
+  port: Int! @inputBounds(min: 1, max: 65535)
+  security: String! @inputBounds(maxLength: 16)
+  sinceDays: Int @inputBounds(min: 1, max: 3650)
+  syncEveryMinutes: Int @inputBounds(min: 1, max: 10080)
+  user: String! @inputBounds(maxLength: 400)
 }
 
 input TestOpenApiOperationInput {
   auth: OpenApiAuthInput!
-  baseUrl: String!
-  connectionId: ID
-  fixedQuery: String!
-  itemsPath: String!
+  baseUrl: String! @inputBounds(maxLength: 1000)
+  connectionId: ID @inputBounds(maxLength: 64)
+  fixedQuery: String! @inputBounds(maxLength: 500)
+  itemsPath: String! @inputBounds(maxLength: 200)
   op: DataJson!
 }
 
 input TestWebhookConnectionInput {
-  connectionId: ID!
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 type ThreadApprovalCardType {
@@ -7822,7 +7824,7 @@ type ThreadCardExcludedType {
 }
 
 input ThreadMentionRefInput {
-  id: String!
+  id: String! @inputBounds(maxLength: 80)
   kind: String!
 }
 
@@ -7853,15 +7855,15 @@ type ThreadMessageType {
 
 input ToggleHiringOnboardingInput {
   done: Boolean!
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 input TransferInventoryStockInput {
-  fromLocationId: ID!
-  itemId: ID!
-  note: String!
-  qty: Float!
-  toLocationId: ID!
+  fromLocationId: ID! @inputBounds(maxLength: 36)
+  itemId: ID! @inputBounds(maxLength: 36)
+  note: String! @inputBounds(maxLength: 300)
+  qty: Float! @inputBounds(min: 0.000001)
+  toLocationId: ID! @inputBounds(maxLength: 36)
 }
 
 type TransferStockType {
@@ -7870,8 +7872,8 @@ type TransferStockType {
 }
 
 input TransitionContentItemInput {
-  id: ID!
-  kind: String!
+  id: ID! @inputBounds(maxLength: 36)
+  kind: String! @inputBounds(maxLength: 16)
 }
 
 type TrustType {
@@ -7886,35 +7888,35 @@ input UpdateAuthorityInput {
 
 input UpdateAutomationPipelineInput {
   autoSend: Boolean
-  body: String
+  body: String @inputBounds(maxLength: 4000)
   dismissed: Boolean
   enabled: Boolean
-  googleConnectionId: ID
-  templateKey: String!
+  googleConnectionId: ID @inputBounds(maxLength: 36)
+  templateKey: String! @inputBounds(maxLength: 61)
   values: JsonObject
 }
 
 input UpdateInventoryPoDraftInput {
-  expectedAt: String!
-  lines: [UpdatePoLineInput!]!
-  poId: ID!
-  supplierId: String!
+  expectedAt: String! @inputBounds(maxLength: 20)
+  lines: [UpdatePoLineInput!]! @inputBounds(maxItems: 200)
+  poId: ID! @inputBounds(maxLength: 36)
+  supplierId: String! @inputBounds(maxLength: 40)
 }
 
 input UpdateKnowledgeSourceInput {
-  module: String
-  sourceId: ID!
-  tags: [String!]
-  title: String
-  topic: String
-  visibility: String
+  module: String @inputBounds(maxLength: 64)
+  sourceId: ID! @inputBounds(maxLength: 36)
+  tags: [String!] @inputBounds(maxItems: 30, itemMaxLength: 60)
+  title: String @inputBounds(maxLength: 300)
+  topic: String @inputBounds(maxLength: 200)
+  visibility: String @inputBounds(maxLength: 40)
 }
 
 input UpdateLoyaltyMemberInput {
-  birthday: String
-  customerId: ID!
-  name: String
-  note: String
+  birthday: String @inputBounds(maxLength: 10)
+  customerId: ID! @inputBounds(maxLength: 36)
+  name: String @inputBounds(maxLength: 80)
+  note: String @inputBounds(maxLength: 500)
 }
 
 type UpdateLoyaltyMemberType {
@@ -7922,43 +7924,43 @@ type UpdateLoyaltyMemberType {
 }
 
 input UpdateMoneyConnectionInput {
-  accountNumber: String!
-  apiKey: String
-  bankCode: String!
-  connectionId: ID!
-  environment: String!
-  holder: String!
-  name: String!
+  accountNumber: String! @inputBounds(maxLength: 60)
+  apiKey: String @inputBounds(maxLength: 200)
+  bankCode: String! @inputBounds(maxLength: 40)
+  connectionId: ID! @inputBounds(maxLength: 64)
+  environment: String! @inputBounds(maxLength: 10)
+  holder: String! @inputBounds(maxLength: 160)
+  name: String! @inputBounds(maxLength: 120)
 }
 
 input UpdatePoLineInput {
-  lineId: ID!
-  qty: String!
-  unitCost: String!
+  lineId: ID! @inputBounds(maxLength: 36)
+  qty: String! @inputBounds(maxLength: 40)
+  unitCost: String! @inputBounds(maxLength: 40)
 }
 
 input UpdateProfileInput {
-  name: String!
+  name: String! @inputBounds(maxLength: 120)
 }
 
 input UpdateResponsibilityStatusInput {
-  responsibilityId: ID!
+  responsibilityId: ID! @inputBounds(maxLength: 36)
   status: String!
 }
 
 input UpdateVideoProjectInput {
-  aspect: String
-  goal: String
+  aspect: String @inputBounds(maxLength: 5)
+  goal: String @inputBounds(maxLength: 40)
   inputs: VideoInputsInput
-  projectId: ID!
-  script: [VideoSceneInput!]
-  targetSeconds: Int
-  title: String
+  projectId: ID! @inputBounds(maxLength: 36)
+  script: [VideoSceneInput!] @inputBounds(maxItems: 12)
+  targetSeconds: Int @inputBounds(min: 10, max: 90)
+  title: String @inputBounds(maxLength: 120)
 }
 
 input UpdateWebhookEventsInput {
-  connectionId: ID!
-  events: [String!]!
+  connectionId: ID! @inputBounds(maxLength: 64)
+  events: [String!]! @inputBounds(maxItems: 20, itemMaxLength: 40)
 }
 
 type UploadAddressType {
@@ -7968,14 +7970,14 @@ type UploadAddressType {
 }
 
 input UploadedFileInput {
-  contentBase64: String!
-  name: String!
+  contentBase64: String! @inputBounds(maxLength: 14000000)
+  name: String! @inputBounds(maxLength: 255)
 }
 
 input VerifyLoyaltyCodeInput {
-  code: String!
-  phone: String!
-  slug: String!
+  code: String! @inputBounds(maxLength: 20)
+  phone: String! @inputBounds(maxLength: 30)
+  slug: String! @inputBounds(maxLength: 40)
 }
 
 type VerifyLoyaltyCodeType {
@@ -8003,9 +8005,9 @@ type VideoFiguresType {
 
 input VideoInputsInput {
   auto: Boolean!
-  media: [String!]!
-  notes: String!
-  sourceIds: [ID!]!
+  media: [String!]! @inputBounds(maxItems: 40, itemMaxLength: 300)
+  notes: String! @inputBounds(maxLength: 600)
+  sourceIds: [ID!]! @inputBounds(maxItems: 12)
 }
 
 type VideoInputsType {
@@ -8050,7 +8052,7 @@ type VideoProjectType {
 }
 
 input VideoRenderStatusInput {
-  id: ID!
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type VideoRenderStatusType {
@@ -8081,12 +8083,12 @@ type VideoRenderType {
 }
 
 input VideoSceneInput {
-  caption: String!
-  id: String!
-  media: String
-  role: String!
-  visual: String!
-  voiceover: String!
+  caption: String! @inputBounds(maxLength: 160)
+  id: String! @inputBounds(maxLength: 60)
+  media: String @inputBounds(maxLength: 300)
+  role: String! @inputBounds(maxLength: 10)
+  visual: String! @inputBounds(maxLength: 240)
+  voiceover: String! @inputBounds(maxLength: 420)
 }
 
 type VideoSceneType {
@@ -8104,7 +8106,7 @@ type VideoScopeType {
 }
 
 input VideoScriptStatusInput {
-  id: String!
+  id: String! @inputBounds(maxLength: 36)
 }
 
 type VideoScriptStatusType {
@@ -8129,7 +8131,7 @@ type VideoSourceType {
 }
 
 input WantConnectorInput {
-  connectorId: String!
+  connectorId: String! @inputBounds(maxLength: 60)
 }
 
 type WebhookEventsType {
@@ -8193,15 +8195,15 @@ type WorkChainType {
 }
 
 input WorkEditsInput {
-  amount_vnd: Int
-  candidateId: ID
-  draft: String
-  fields: [FieldValueInput!]
+  amount_vnd: Int @inputBounds(min: 0, max: 1000000000000)
+  candidateId: ID @inputBounds(maxLength: 36)
+  draft: String @inputBounds(maxLength: 10000)
+  fields: [FieldValueInput!] @inputBounds(maxItems: 30)
 }
 
 input WorkItemCursorInput {
-  createdAt: String!
-  id: ID!
+  createdAt: String! @inputBounds(maxLength: 40)
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 type WorkItemCursorType {
@@ -8210,7 +8212,7 @@ type WorkItemCursorType {
 }
 
 input WorkItemIdInput {
-  workItemId: ID!
+  workItemId: ID! @inputBounds(maxLength: 36)
 }
 
 type WorkItemPageType {
@@ -8260,7 +8262,7 @@ type WorkThreadConnectionType {
 }
 
 input WorkThreadIdInput {
-  threadId: ID!
+  threadId: ID! @inputBounds(maxLength: 36)
 }
 
 type WorkThreadListingType {
