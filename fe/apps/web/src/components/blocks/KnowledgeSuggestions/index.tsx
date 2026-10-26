@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useKnowledgeIdeas, useLibraryCommands } from "@/hooks/knowledge"
 import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
@@ -13,30 +14,65 @@ interface SuggestionItem {
     readonly state?: IdeaDecision
 }
 
+/** How many ideas show before "see more". */
+const VISIBLE_IDEAS = 5
+
+/** The longest hint a compact row carries: one line. */
+const HINT_MAX = 70
+
+/** The first line of a hint, clipped to what fits one line. */
+const oneLineOf = (hint: string): string => {
+    const first = hint.split(/(?<=[.!?])\s/u)[0] ?? hint
+    return first.length > HINT_MAX ? `${first.slice(0, HINT_MAX - 1).trimEnd()}…` : first
+}
+
+type Translate = ReturnType<typeof useTranslations<"knowledge">>
+
+/** One open idea: its topic and a one-line hint, with add, not-applicable and hide as quiet icon actions. */
+const openRowOf = (
+    t: Translate,
+    commands: ReturnType<typeof useLibraryCommands>,
+    item: SuggestionItem,
+): KnowledgeRowView => ({
+    id: item.key,
+    title: t(`suggest_${item.key}_topic`),
+    lines: [oneLineOf(t(`suggest_${item.key}_hint`))],
+    actions: [
+        {
+            id: "add",
+            label: t("suggestAdd"),
+            icon: "add",
+            intent: "neutral",
+            href: brainTabHref("sources", { add: item.key }),
+        },
+        {
+            id: "na",
+            label: t("suggestNotApplicable"),
+            icon: "close",
+            intent: "dismiss",
+            onPress: () => commands.decide(item.key, "not_applicable"),
+        },
+        {
+            id: "hide",
+            label: t("suggestDismiss"),
+            icon: "hidePassword",
+            intent: "dismiss",
+            onPress: () => commands.decide(item.key, "dismissed"),
+        },
+    ],
+})
+
 /** The connected suggestions: opens the add drawer through the address, sets an idea aside or brings it back. */
 export const KnowledgeSuggestions = () => {
     const t = useTranslations("knowledge")
     const commands = useLibraryCommands()
     const ideas = useKnowledgeIdeas()
+    const [isExpanded, setIsExpanded] = useState(false)
     const decidedLabelOf = (item: SuggestionItem): string | undefined => {
         if (item.state === undefined) return undefined
         return t(item.state === "dismissed" ? "suggestHidden" : "suggestNA")
     }
-    const openRow = (item: SuggestionItem): KnowledgeRowView => ({
-        id: item.key,
-        title: t(`suggest_${item.key}_topic`),
-        lines: [t(`suggest_${item.key}_hint`)],
-        actions: [
-            { id: "add", label: t("suggestAdd"), href: brainTabHref("sources", { add: item.key }) },
-            { id: "na", label: t("suggestNotApplicable"), onPress: () => commands.decide(item.key, "not_applicable") },
-            {
-                id: "hide",
-                label: t("suggestDismiss"),
-                intent: "neutral",
-                onPress: () => commands.decide(item.key, "dismissed"),
-            },
-        ],
-    })
+    const openRow = (item: SuggestionItem): KnowledgeRowView => openRowOf(t, commands, item)
     const skippedRow = (item: SuggestionItem): KnowledgeRowView => {
         const decided = decidedLabelOf(item)
         return {
@@ -58,11 +94,19 @@ export const KnowledgeSuggestions = () => {
                         failTitle: t("detailFailed"),
                     },
                     label: t("suggestTitle"),
-                    rows: ideas.open.map(openRow),
+                    rows: (isExpanded ? ideas.open : ideas.open.slice(0, VISIBLE_IDEAS)).map(openRow),
                     isLoading: ideas.isLoading,
                     isPending: commands.isPending,
                     emptyTitle: t("suggestAllDone"),
                 },
+                more:
+                    ideas.open.length > VISIBLE_IDEAS
+                        ? {
+                              label: isExpanded
+                                  ? t("suggestFewer")
+                                  : t("suggestMore", { count: ideas.open.length - VISIBLE_IDEAS }),
+                          }
+                        : undefined,
                 skipped:
                     ideas.skipped.length === 0
                         ? undefined
@@ -74,6 +118,7 @@ export const KnowledgeSuggestions = () => {
                               emptyTitle: t("suggestAllDone"),
                           },
             }}
+            on={{ toggleMore: () => setIsExpanded((now) => !now) }}
         />
     )
 }

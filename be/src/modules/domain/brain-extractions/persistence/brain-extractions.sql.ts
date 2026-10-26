@@ -29,5 +29,12 @@ export const FINISH_EXTRACTION = sql`WITH changed AS (
 )
 SELECT source_id FROM changed`
 
+/** Settles a reading that is not done as failed ($1 workspace, $2 source, $3 note). */
+export const FAIL_EXTRACTION = sql`WITH changed AS (
+    UPDATE public.brain_extractions SET status = 'failed', error = $3, updated_at = now()
+    WHERE workspace_id = $1 AND source_id = $2 AND status <> 'done' RETURNING source_id
+)
+SELECT source_id FROM changed`
+
 /** Where the reading of each document of a workspace stands ($1 workspace). */
 export const LIST_EXTRACTIONS = sql`SELECT source_id, status FROM public.brain_extractions WHERE workspace_id = $1 LIMIT 500`

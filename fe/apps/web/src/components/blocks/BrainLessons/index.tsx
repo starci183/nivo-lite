@@ -42,7 +42,7 @@ const buildBrainLessonsState = (
                       {
                           id: "retire",
                           label: t("retireLesson"),
-                          intent: "destructive" as const,
+                          intent: "neutral" as const,
                           onPress: () => desk.decide(lesson.id, "retired"),
                       },
                   ]
@@ -108,6 +108,7 @@ const brainLessonsProps = (
             ? {
                   agentLabel: t("lessonsAgent"),
                   agentOptions: board.lenses.map((lens) => ({ id: lens.module, label: lens.name })),
+                  agentPlaceholder: t("selectPlaceholder"),
                   agent: desk.agent,
                   mineLabel: t("mine"),
                   addTitle: t("addLesson"),

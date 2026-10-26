@@ -1,4 +1,17 @@
-import { Badge, Button, EmptyNotice, ListRow, Meter, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
+import {
+    Badge,
+    Button,
+    EmptyNotice,
+    IconButton,
+    ListRow,
+    Meter,
+    SurfaceListCard,
+    Text,
+    TextAction,
+    Tooltip,
+} from "@starci/grammar/common"
+import { nivoIconSource } from "@/components/leaves/Icon"
+import type { IconName } from "@/components/leaves/Icon"
 import { ACTIONS_CLASS_NAME, DETAIL_CLASS_NAME, LINE_CLASS_NAME, TEXT_CLASS_NAME } from "./classNames"
 
 /** One link or button at the end of a row. */
@@ -7,7 +20,9 @@ export interface RowActionView {
     readonly label: string
     /** Where a link goes; a button when absent. */
     readonly href?: string
-    readonly intent?: "commit" | "alternative" | "neutral" | "destructive"
+    readonly intent?: "commit" | "alternative" | "neutral" | "dismiss" | "destructive"
+    /** A glyph: the action is then a quiet icon button whose label is its tooltip and accessible name. */
+    readonly icon?: IconName
     readonly onPress?: () => void
 }
 
@@ -67,8 +82,8 @@ interface ItemButtonProps {
     readonly isPending: boolean
 }
 
-/** One button of a row: a destructive command opens its confirmation first, every other one is a plain item action. */
-const ItemButton = (props: ItemButtonProps) =>
+/** A text button of a row. */
+const TextButton = (props: ItemButtonProps) =>
     props.item.intent === "destructive" ? (
         <Button
             intent="destructive"
@@ -88,12 +103,32 @@ const ItemButton = (props: ItemButtonProps) =>
         </Button>
     )
 
+/** One button of a row: a destructive command opens its confirmation first, every other one is a plain item action. */
+const ItemButton = (props: ItemButtonProps) => {
+    const { item } = props
+    if (item.icon !== undefined) {
+        return (
+            <Tooltip content={item.label}>
+                <IconButton
+                    source={nivoIconSource(item.icon, "leading")}
+                    label={item.label}
+                    intent={item.intent === "destructive" || item.intent === undefined ? "neutral" : item.intent}
+                    isDisabled={props.isPending}
+                    {...(item.href === undefined ? {} : { href: item.href })}
+                    {...(item.onPress === undefined ? {} : { onPress: item.onPress })}
+                />
+            </Tooltip>
+        )
+    }
+    return <TextButton {...props} />
+}
+
 /** The links and buttons of one row or part. */
 export const ActionList = (props: ActionListProps) =>
     props.items.length === 0 ? null : (
         <div className={ACTIONS_CLASS_NAME}>
             {props.items.map((item) =>
-                item.href === undefined ? (
+                item.href === undefined || item.icon !== undefined ? (
                     <ItemButton key={item.id} item={item} isPending={props.isPending} />
                 ) : (
                     <Text key={item.id}>

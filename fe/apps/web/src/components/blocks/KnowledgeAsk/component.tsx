@@ -29,6 +29,7 @@ export interface KnowledgeAskBaseProps {
         readonly placeholder: string
         readonly questionLabel: string
         readonly agentLabel: string
+        readonly selectPlaceholder: string
         readonly agentOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
         readonly audienceLabel: string
         readonly audienceOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
@@ -77,6 +78,7 @@ export const KnowledgeAskBase = (props: KnowledgeAskBaseProps) => {
                             label={panel.agentLabel}
                             name="agent"
                             options={panel.agentOptions}
+                            placeholder={panel.selectPlaceholder}
                             value={panel.agent?.id ?? null}
                             isSkeleton={panel.isSkeleton}
                             isDisabled={panel.isPending}

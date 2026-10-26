@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import type { AskAsAgentInput, AskedPassage } from "./agent-ask.contracts"
 import type { AgentKnowledgeLens, LensCell, LensCounts, LensLanes } from "./agents.contracts"
 import { InjectInstallations, InjectKnowledge } from "./agents.decorators"
 import type { InstallationDirectory, KnowledgeLens } from "./agents.port"
@@ -37,6 +38,11 @@ export class AgentLensesService {
         @InjectInstallations() private readonly installations: InstallationDirectory,
         @InjectKnowledge() private readonly knowledge: KnowledgeLens,
     ) {}
+
+    /** Tries a question as an agent: the passages its view reads, then the confirmed facts of the same view. Any member may try. */
+    ask(userId: string, workspaceId: string, input: AskAsAgentInput): Promise<ReadonlyArray<AskedPassage>> {
+        return this.knowledge.ask(userId, workspaceId, input)
+    }
 
     /** The customer's view, then the view of every active agent, oldest first. */
     async list(userId: string, workspaceId: string): Promise<ReadonlyArray<AgentKnowledgeLens>> {

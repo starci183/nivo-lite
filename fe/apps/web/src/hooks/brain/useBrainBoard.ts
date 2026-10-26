@@ -1,6 +1,6 @@
 import { currentTime } from "@/modules/brain"
 import { useWorkspaceMember } from "@/hooks/knowledge"
-import type { BrainFact, BrainGap, BrainLens, BrainLesson } from "@/modules/types"
+import type { BrainExtraction, BrainFact, BrainGap, BrainLens, BrainLesson } from "@/modules/types"
 import { useBrain } from "./useBrain"
 
 /** What a list of the Second Brain draws: its rows, whether the member may write, and whether it is still loading. */
@@ -9,6 +9,8 @@ interface BrainBoard {
     readonly lessons: ReadonlyArray<BrainLesson>
     readonly gaps: ReadonlyArray<BrainGap>
     readonly lenses: ReadonlyArray<BrainLens>
+    /** Where the reading of each document's facts stands. */
+    readonly extractions: ReadonlyArray<BrainExtraction>
     /** Owners and managers write; everyone reads. */
     readonly canWrite: boolean
     /** The moment the page was read, in milliseconds: the age of a value is judged against it. */
@@ -25,6 +27,7 @@ export const useBrainBoard = (): BrainBoard => {
         lessons: brain?.lessons ?? [],
         gaps: brain?.gaps ?? [],
         lenses: brain?.lenses ?? [],
+        extractions: brain?.extractions ?? [],
         canWrite: member.canWrite,
         nowMs: currentTime(),
         isLoading: member.isLoading || isLoading || brain === undefined,

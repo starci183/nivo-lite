@@ -16,7 +16,7 @@ export const toSourceRecord = (row: KnowledgeSourcesRow): SourceRecord => ({
     storagePath: row.storage_path,
     sourceUrl: row.source_url,
     createdBy: row.created_by,
-    updatedAt: row.updated_at,
+    updatedAt: new Date(row.updated_at).toISOString(),
 })
 
 /** A source as the Knowledge page lists it, from the row the database answers. */

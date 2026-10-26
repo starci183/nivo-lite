@@ -39,7 +39,7 @@ export interface KnowledgeSourcesRow {
     /** Creation instant. */
     readonly created_at: string
     /** Last change. */
-    readonly updated_at: string
+    readonly updated_at: string | Date
 }
 
 /** The agent instance a document may be kept for. */

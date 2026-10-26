@@ -63,6 +63,7 @@ export const BrainFactForm = (props: BrainFactFormProps) => {
                         ? undefined
                         : t("gapAnswerFor", { question: address.preset.question }),
                 typeLabel: t("fSubjectType"),
+                selectPlaceholder: t("selectPlaceholder"),
                 typeOptions: FACT_SUBJECT_TYPES.map((type) => ({ id: type, label: t(TYPE_KEY[type]) })),
                 subjectLabel: t("fSubject"),
                 subjectHint: t("fSubjectHint"),

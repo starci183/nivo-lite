@@ -106,3 +106,15 @@ describe("AgentLensesService", () => {
         await expect(lenses.list("u1", "w1")).rejects.toBe(refusal)
     })
 })
+
+describe("AgentLensesService ask", () => {
+    it("hands the question to the knowledge lens of the agents", async () => {
+        const { lenses, knowledge } = await build([])
+        const input = { module: "sales", audience: "customer", question: "price" }
+        knowledge.ask.mockResolvedValue([])
+
+        await expect(lenses.ask("u1", "w1", input)).resolves.toEqual([])
+
+        expect(knowledge.ask).toHaveBeenCalledWith("u1", "w1", input)
+    })
+})

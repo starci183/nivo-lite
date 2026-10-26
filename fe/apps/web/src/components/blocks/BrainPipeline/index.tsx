@@ -28,8 +28,8 @@ export const BrainPipeline = () => {
                     {
                         id: "lessons",
                         label: t("stepLearn"),
-                        value: String(figures.extracted),
-                        meta: t("stepLearnMeta", { n: figures.lessons }),
+                        value: String(figures.learned),
+                        meta: t("stepLearnMeta", { facts: figures.learnedFacts, lessons: figures.learnedLessons }),
                         href: brainTabHref("lessons"),
                         isWaiting: false,
                     },

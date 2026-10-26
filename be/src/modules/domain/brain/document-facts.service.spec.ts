@@ -103,11 +103,13 @@ describe("DocumentFactsService", () => {
     })
 
     it("marks an exhausted valid job ready with an unread-facts note", async () => {
-        const { service, sources } = await build()
+        const { service, sources, extractions } = await build()
 
         await service.giveUp({})
         expect(sources.ready).not.toHaveBeenCalled()
+        expect(extractions.fail).not.toHaveBeenCalled()
         await service.giveUp(PAYLOAD)
+        expect(extractions.fail).toHaveBeenCalledWith(WS, SOURCE, ExtractionNote.Aborted)
         expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, StoredNote.FactsUnread)
     })
 

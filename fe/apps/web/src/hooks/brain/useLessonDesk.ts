@@ -39,7 +39,8 @@ export const useLessonDesk = (firstAgent: string): LessonDesk => {
     const command = useBrainCommand()
     const runGraphQL = useGraphQLWithToast()
     const { trigger: requestMining, isMutating: isRequesting } = useMutateRequestLessonMiningSwr()
-    const [agent, setAgent] = useState(firstAgent)
+    const [chosen, setChosen] = useState<string | undefined>()
+    const agent = chosen ?? firstAgent
     const [draft, setDraft] = useState<LessonDraft>(EMPTY_DRAFT)
     const [miningId, setMiningId] = useState<string | undefined>()
     const [mined, setMined] = useState<MineOutcome | null>(null)
@@ -58,7 +59,7 @@ export const useLessonDesk = (firstAgent: string): LessonDesk => {
         draft,
         mined,
         isPending: command.isPending || isRequesting || miningId !== undefined,
-        setAgent: (value) => setAgent(value ?? agent),
+        setAgent: (value) => setChosen(value ?? agent),
         setTitle: (title) => setDraft((now) => ({ ...now, title })),
         setBody: (body) => setDraft((now) => ({ ...now, body })),
         setWhen: (appliesWhen) => setDraft((now) => ({ ...now, appliesWhen })),

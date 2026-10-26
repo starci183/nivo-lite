@@ -40,3 +40,4 @@ export type {
     AgentOwnership,
     Region,
 } from "./agents.contracts"
+export type { AskAsAgentInput, AskedPassage } from "./agent-ask.contracts"

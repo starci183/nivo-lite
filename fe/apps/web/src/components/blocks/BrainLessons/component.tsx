@@ -8,6 +8,7 @@ interface WriteView {
     readonly agentLabel: string
     readonly agentOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
     readonly agent: string
+    readonly agentPlaceholder: string
     readonly mineLabel: string
     readonly addTitle: string
     readonly titleLabel: string
@@ -51,7 +52,8 @@ const WritePart = (props: WritePartProps) => (
                 label={props.view.agentLabel}
                 name="agent"
                 options={props.view.agentOptions}
-                value={props.view.agent}
+                value={props.view.agent === "" ? null : props.view.agent}
+                placeholder={props.view.agentPlaceholder}
                 isDisabled={props.view.isPending}
                 onValueChange={props.on.setAgent}
             />

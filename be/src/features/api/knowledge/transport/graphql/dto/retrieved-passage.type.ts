@@ -3,7 +3,7 @@ import { Field, Float, ID, Int, ObjectType } from "@nestjs/graphql"
 @ObjectType()
 /** One passage an agent would retrieve for a question, labelled by layer. */
 export class RetrievedPassageType {
-    /** `nivo` (base knowledge) or `business` (the owner's documents). */
+    /** `nivo` (base knowledge), `business` (the owner's documents) or `fact` (a confirmed fact of the brain). */
     @Field(() => String)
     layer!: string
 
@@ -35,7 +35,7 @@ export class RetrievedPassageType {
     @Field(() => Float)
     score!: number
 
-    /** `public` or `internal`. */
+    /** `public` or `internal` for a passage; the scope of a fact (`public`, `internal` or `restricted`). */
     @Field(() => String)
     visibility!: string
 

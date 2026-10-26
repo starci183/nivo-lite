@@ -28,7 +28,6 @@ export const useBrainStats = (): BrainStats => {
             facts,
             lessons: brain?.lessons ?? [],
             documents: sources ?? [],
-            extractions: brain?.extractions ?? [],
             gapsOpen: brain?.gapsOpen ?? 0,
         }),
         isMaintenanceDue: member.canWrite && needsMaintenance(facts, currentTime()),

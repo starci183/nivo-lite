@@ -5,6 +5,7 @@ import { mutate } from "swr"
 import {
     QUERY_KNOWLEDGE_SOURCES_SWR_KEY,
     QUERY_KNOWLEDGE_SUGGESTIONS_SWR_KEY,
+    useMutateReindexKnowledgeSourceSwr,
     useMutateRetryKnowledgeSourceSwr,
     useMutateSetKnowledgeSuggestionStateSwr,
 } from "@/hooks/swr"
@@ -17,6 +18,8 @@ interface LibraryCommands {
     readonly retrying: ReadonlySet<string>
     readonly isPending: boolean
     readonly retry: (sourceId: string) => void
+    /** Reads a ready document again so its facts are read. */
+    readonly reread: (sourceId: string) => void
     /** Decides a suggestion; a null state brings it back. */
     readonly decide: (key: string, state: IdeaDecision | null) => void
 }
@@ -25,11 +28,20 @@ interface LibraryCommands {
 export const useLibraryCommands = (): LibraryCommands => {
     const runGraphQL = useGraphQLWithToast()
     const { trigger: retrySource } = useMutateRetryKnowledgeSourceSwr()
+    const { trigger: reindexSource } = useMutateReindexKnowledgeSourceSwr()
     const { trigger: decideSuggestion, isMutating } = useMutateSetKnowledgeSuggestionStateSwr()
     const [retrying, setRetrying] = useState<ReadonlySet<string>>(new Set())
     const retry = (sourceId: string) => {
         setRetrying((now) => new Set(now).add(sourceId))
         void runGraphQL(() => retrySource({ id: sourceId }), { showSuccessToast: false }).then(async (done) => {
+            setRetrying((now) => new Set([...now].filter((id) => id !== sourceId)))
+            if (done !== undefined)
+                await mutate((key) => Array.isArray(key) && key[0] === QUERY_KNOWLEDGE_SOURCES_SWR_KEY)
+        })
+    }
+    const reread = (sourceId: string) => {
+        setRetrying((now) => new Set(now).add(sourceId))
+        void runGraphQL(() => reindexSource({ sourceId }), { showSuccessToast: false }).then(async (done) => {
             setRetrying((now) => new Set([...now].filter((id) => id !== sourceId)))
             if (done !== undefined)
                 await mutate((key) => Array.isArray(key) && key[0] === QUERY_KNOWLEDGE_SOURCES_SWR_KEY)
@@ -41,5 +53,5 @@ export const useLibraryCommands = (): LibraryCommands => {
                 await mutate((key) => Array.isArray(key) && key[0] === QUERY_KNOWLEDGE_SUGGESTIONS_SWR_KEY)
         })
     }
-    return { retrying, isPending: isMutating, retry, decide }
+    return { retrying, isPending: isMutating, retry, reread, decide }
 }

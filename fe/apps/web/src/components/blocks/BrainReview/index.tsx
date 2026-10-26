@@ -101,7 +101,7 @@ export const BrainReview = () => {
                   {
                       id: "approve",
                       label: t("apply"),
-                      intent: "commit",
+                      intent: "neutral",
                       onPress: () => desk.decide(lesson.id, "active"),
                   },
                   {
@@ -120,7 +120,7 @@ export const BrainReview = () => {
                     section: {
                         id: "brain-review-title",
                         title: t("tabReview"),
-                        description: t("reviewEmptyBody"),
+                        description: t("reviewIntro"),
                         failTitle: t("loadFailed"),
                     },
                     label: t("tabReview"),
@@ -154,7 +154,7 @@ const reviewRowActions = (
     const decide = (id: string, label: string, action: "apply" | "choose"): RowActionView => ({
         id: `decide-${id}`,
         label,
-        intent: "commit",
+        intent: "neutral",
         onPress: () => command.send("fact.decide", { id, action }, { done: t("applied") }),
     })
     const reject = (id: string, label: string): RowActionView => ({

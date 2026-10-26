@@ -6,6 +6,7 @@ import { ExtractionNote } from "./brain-extractions.contracts"
 import { BrainExtractionsService } from "./brain-extractions.service"
 import type { BrainExtractionRow } from "./persistence/brain-extractions.rows"
 import {
+    FAIL_EXTRACTION,
     FINISH_EXTRACTION,
     LIST_EXTRACTIONS,
     SAVE_PROGRESS,
@@ -192,6 +193,19 @@ describe("BrainExtractionsService", () => {
             await expect(service.finish(WS, "s1", "model-1")).resolves.toBeUndefined()
 
             expect(em.query).toHaveBeenCalledWith(FINISH_EXTRACTION, [WS, "s1", "model-1"])
+        })
+    })
+})
+
+describe("BrainExtractionsService settling", () => {
+    describe("fail", () => {
+        it("settles an unfinished reading as failed with the note", async () => {
+            const em = mockEntityManager({ query: [FAIL_EXTRACTION, []] })
+            const service = await build(em)
+
+            await service.fail(WS, "s1", ExtractionNote.Aborted)
+
+            expect(em.query.mock.calls).toEqual([[FAIL_EXTRACTION, [WS, "s1", ExtractionNote.Aborted]]])
         })
     })
 })

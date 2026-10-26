@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type {
     AgentAudience,
+    AskAsAgentInput,
+    AskedPassage,
     BaseRule,
     KnowledgeDocument,
     KnowledgeLens,
@@ -9,6 +11,8 @@ import type {
     OptionalId,
     OptionalOpenGaps,
 } from "@modules/domain/agents"
+import type { FactRecord } from "@modules/domain/brain-facts"
+import { KnowledgeSearchService } from "@modules/domain/knowledge"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { NivoKnowledgeService } from "@modules/domain/nivo-knowledge"
@@ -20,6 +24,28 @@ import { audienceOfModule, viewOf } from "./knowledge-view.policy"
 const RULE_KINDS: ReadonlySet<string> = new Set(["authority", "escalation", "tone"])
 /** The facts counted for a lens. */
 const COUNT_LIMIT = 500
+/** How many facts one question gets back. */
+const FACT_LIMIT = 5
+/** The longest question that is searched. */
+const QUESTION_MAX_CHARS = 500
+/** The layer of a result row that is a confirmed fact of the brain. */
+const FACT_LAYER = "fact"
+
+/** A fact as a result row: its scope is the visibility, and it has no document or place in one. */
+const factRow = (fact: FactRecord, module: string): AskedPassage => ({
+    layer: FACT_LAYER,
+    id: fact.id,
+    sourceId: null,
+    module,
+    kind: FACT_LAYER,
+    title: `${fact.subjectLabel} · ${fact.attributeLabel}`,
+    content: fact.unit === null ? fact.value : `${fact.value} ${fact.unit}`,
+    score: 1,
+    visibility: fact.scope,
+    topic: null,
+    order: null,
+})
+
 /** The Postgres code of a relation that does not exist: the gaps are not kept in this database. */
 const UNDEFINED_TABLE = "42P01"
 
@@ -44,6 +70,7 @@ export class AgentKnowledgeLensService implements KnowledgeLens {
         private readonly recall: KnowledgeRecallService,
         private readonly nivo: NivoKnowledgeService,
         private readonly gaps: KnowledgeGapsService,
+        private readonly search: KnowledgeSearchService,
     ) {}
 
     /** Who the module talks to. */
@@ -99,6 +126,24 @@ export class AgentKnowledgeLensService implements KnowledgeLens {
             documents: { public: publicDocs, internal: internalDocs },
             facts: { public: byScope("public"), internal: byScope("internal"), restricted: byScope("restricted") },
         }
+    }
+
+    /**
+     * Tries a question as an agent: the passages the view reads, then the confirmed facts of the same view (module, audience and
+     * instance go through the one view policy). The search proves the membership and the module first; a blank question finds nothing.
+     */
+    async ask(userId: string, workspaceId: string, input: AskAsAgentInput): Promise<ReadonlyArray<AskedPassage>> {
+        const passages = await this.search.ask(userId, workspaceId, input)
+        const question = input.question.trim().slice(0, QUESTION_MAX_CHARS)
+        if (question === "") return passages
+        const view = viewOf({
+            workspaceId,
+            module: input.module,
+            audience: input.audience === "customer" ? "customer" : "internal",
+            installationId: input.installationId ?? null,
+        })
+        const facts = await this.recall.factsMatching(view, question, FACT_LIMIT)
+        return [...facts.map((fact) => factRow(fact, input.module)), ...passages]
     }
 
     /** Which kinds of knowledge the view of the module reads, by the same policy that builds the view. */

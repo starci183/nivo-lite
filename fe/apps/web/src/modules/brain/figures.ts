@@ -1,9 +1,6 @@
 import { isDocumentActive } from "@/modules/documents"
-import type { BrainExtraction, BrainFact, BrainLesson, KnowledgeDocument } from "@/modules/types"
+import type { BrainFact, BrainLesson, KnowledgeDocument } from "@/modules/types"
 import { reviewBoardOf } from "./board"
-
-/** The statuses of a document that mean a worker is still on it. */
-const READING_STATUSES: ReadonlySet<string> = new Set(["queued", "running"])
 
 /** The numbers the Second Brain page opens with. */
 export interface BrainFigures {
@@ -16,10 +13,14 @@ export interface BrainFigures {
     readonly lessons: number
     readonly proposedLessons: number
     readonly gaps: number
-    /** Documents a worker is still on, by their status or by the reading of their facts. */
+    /** Documents a worker is still on: the same state the rows of the library show as "reading". */
     readonly processing: number
-    /** The proposals NIVO read out of the documents and that nobody has decided yet. */
-    readonly extracted: number
+    /** The facts NIVO read out of the documents (waiting, in force or scheduled). */
+    readonly learnedFacts: number
+    /** The lessons the agents learned (in force or waiting). */
+    readonly learnedLessons: number
+    /** What was learned: the facts read from documents plus the lessons. */
+    readonly learned: number
     /** The facts and the lessons that wait for an owner or a manager to decide. */
     readonly waiting: number
 }
@@ -29,7 +30,6 @@ interface FiguresInput {
     readonly facts: ReadonlyArray<BrainFact>
     readonly lessons: ReadonlyArray<BrainLesson>
     readonly documents: ReadonlyArray<Pick<KnowledgeDocument, "status">>
-    readonly extractions: ReadonlyArray<BrainExtraction>
     readonly gapsOpen: number
 }
 
@@ -37,7 +37,12 @@ interface FiguresInput {
 export const figuresOf = (input: FiguresInput): BrainFigures => {
     const plan = reviewBoardOf(input.facts)
     const indexing = input.documents.filter((one) => isDocumentActive(one.status)).length
-    const reading = input.extractions.filter((one) => READING_STATUSES.has(one.status)).length
+    const learnedFacts = input.facts.filter(
+        (fact) => fact.sourceKind === "document" && ["proposed", "active", "scheduled"].includes(fact.status),
+    ).length
+    const learnedLessons = input.lessons.filter(
+        (lesson) => lesson.status === "active" || lesson.status === "proposed",
+    ).length
     return {
         documents: input.documents.length,
         indexing,
@@ -48,8 +53,10 @@ export const figuresOf = (input: FiguresInput): BrainFigures => {
         lessons: input.lessons.filter((lesson) => lesson.status === "active").length,
         proposedLessons: input.lessons.filter((lesson) => lesson.status === "proposed").length,
         gaps: input.gapsOpen,
-        processing: Math.max(indexing, reading),
-        extracted: input.facts.filter((fact) => fact.status === "proposed" && fact.sourceKind === "document").length,
+        processing: indexing,
+        learnedFacts,
+        learnedLessons,
+        learned: learnedFacts + learnedLessons,
         waiting: plan.cards + input.lessons.filter((lesson) => lesson.status === "proposed").length,
     }
 }

@@ -71,6 +71,16 @@ describe("toSourceRecord", () => {
     })
 })
 
+describe("toSourceRecord instants", () => {
+    it("answers updatedAt as an ISO string when the driver gives a Date", async () => {
+        const subject = await buildSubject()
+
+        const record = subject.toSourceRecord(rowOf({ updated_at: new Date("2026-10-02T00:00:00.000Z") }))
+
+        expect(record.updatedAt).toBe("2026-10-02T00:00:00.000Z")
+    })
+})
+
 const summary = {
     id: "s1",
     workspaceId: "w1",

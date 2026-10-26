@@ -34,13 +34,13 @@ export const useAskKnowledge = (agents: ReadonlyArray<AgentLens>): AskKnowledge 
     const { trigger } = useQueryAskKnowledgeSwr()
     const [question, setQuestion] = useState("")
     const [chosen, setChosen] = useState<string | undefined>()
-    const [picked, setPicked] = useState<AskAudience>("customer")
+    const [picked, setPicked] = useState<AskAudience | undefined>()
     const [results, setResults] = useState<ReadonlyArray<RetrievedPassage> | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
     const agent = agents.find((one) => one.id === chosen) ?? agents[0]
     const canPickAudience = agent?.audience === "internal"
-    const audience: AskAudience = canPickAudience ? picked : "customer"
+    const audience: AskAudience = canPickAudience ? (picked ?? "internal") : "customer"
     const ask = () => {
         const text = question.trim().slice(0, 500)
         if (text === "" || agent === undefined) return
@@ -73,6 +73,7 @@ export const useAskKnowledge = (agents: ReadonlyArray<AgentLens>): AskKnowledge 
         setQuestion,
         setAgent: (value) => {
             setChosen(agents.find((one) => one.id === value)?.id ?? chosen)
+            setPicked(undefined)
             setResults(null)
         },
         setAudience: (value) => setPicked(value === "internal" ? "internal" : "customer"),

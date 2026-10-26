@@ -27,8 +27,8 @@ export const BrainFacts = () => {
             : []
     const rowOf = (fact: BrainFact): KnowledgeRowView => ({
         id: fact.id,
-        title: fact.unit === null ? fact.value : `${fact.value} ${fact.unit}`,
-        lines: [`${fact.subjectLabel} · ${fact.attributeLabel}`, ...validityLines(fact)],
+        title: `${fact.subjectLabel} · ${fact.attributeLabel}`,
+        lines: [fact.unit === null ? fact.value : `${fact.value} ${fact.unit}`, ...validityLines(fact)],
         badges: [
             { label: t(TYPE_KEY[fact.subjectType]), tone: "neutral" },
             { label: t(SCOPE_KEY[fact.scope]), tone: SCOPE_TONE[fact.scope] },
@@ -41,7 +41,7 @@ export const BrainFacts = () => {
                   {
                       id: "retire",
                       label: t("retire"),
-                      intent: "destructive",
+                      intent: "neutral",
                       onPress: () =>
                           command.send("fact.decide", { id: fact.id, action: "retire" }, { done: t("retiredDone") }),
                   },
@@ -55,7 +55,7 @@ export const BrainFacts = () => {
                     section: {
                         id: "brain-facts-title",
                         title: t("tabFacts"),
-                        description: t("reviewEmptyBody"),
+                        description: t("factsIntro"),
                         failTitle: t("loadFailed"),
                         action: board.canWrite
                             ? { id: "add", label: t("addFact"), href: brainTabHref("facts", { fact: "new" }) }

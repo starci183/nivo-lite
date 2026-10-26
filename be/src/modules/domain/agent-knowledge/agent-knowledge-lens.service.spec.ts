@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { FactRecord, Scope } from "@modules/domain/brain-facts"
+import { KnowledgeSearchService } from "@modules/domain/knowledge"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { NivoKnowledgeService } from "@modules/domain/nivo-knowledge"
@@ -49,6 +50,20 @@ const nivoItem = (module: string, slug: string, kind: string) => ({
     updatedAt: "2026-10-01T00:00:00.000Z",
 })
 
+const PASSAGE = {
+    layer: "business",
+    id: "p1",
+    sourceId: "s1",
+    module: null,
+    kind: "text",
+    title: "T",
+    content: "C",
+    score: 0.5,
+    visibility: "public",
+    topic: null,
+    order: 0,
+}
+
 const build = async () => {
     const sources = mock<KnowledgeSourcesService>({
         readableFor: jest.fn().mockResolvedValue([]),
@@ -68,6 +83,7 @@ const build = async () => {
             ]),
     })
     const gaps = mock<KnowledgeGapsService>({ openOfModule: jest.fn() })
+    const search = mock<KnowledgeSearchService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentKnowledgeLensService,
@@ -75,9 +91,10 @@ const build = async () => {
             { provide: KnowledgeRecallService, useValue: recall },
             { provide: NivoKnowledgeService, useValue: nivo },
             { provide: KnowledgeGapsService, useValue: gaps },
+            { provide: KnowledgeSearchService, useValue: search },
         ],
     }).compile()
-    return { lens: moduleRef.get(AgentKnowledgeLensService), sources, recall, nivo, gaps }
+    return { lens: moduleRef.get(AgentKnowledgeLensService), sources, recall, nivo, gaps, search }
 }
 
 describe("AgentKnowledgeLensService", () => {
@@ -257,4 +274,59 @@ describe("AgentKnowledgeLensService", () => {
             await expect(lens.openGapsOf(WS, "chatbot", 5)).rejects.toBe(cause)
         },
     )
+})
+
+describe("AgentKnowledgeLensService ask", () => {
+    const input = { module: "accounting", audience: "customer", installationId: "i1", question: "  delivery days " }
+
+    it("answers the facts of the view before the passages, with the scope as visibility", async () => {
+        const { lens, recall, search } = await build()
+        recall.factsMatching.mockResolvedValue([{ ...factOf("restricted"), unit: "VND" }])
+        search.ask.mockResolvedValue([{ ...PASSAGE }])
+
+        const found = await lens.ask("u1", WS, input)
+
+        expect(search.ask).toHaveBeenCalledWith("u1", WS, input)
+        expect(recall.factsMatching).toHaveBeenCalledWith(
+            { workspaceId: WS, module: "accounting", audience: "customer", installationId: "i1" },
+            "delivery days",
+            5,
+        )
+        expect(found).toEqual([
+            expect.objectContaining({
+                layer: "fact",
+                id: "restricted",
+                title: "Delivery · Days",
+                content: "Sunday VND",
+                visibility: "restricted",
+                sourceId: null,
+            }),
+            PASSAGE,
+        ])
+    })
+
+    it("never widens a customer-facing module to the team view, and words a fact without a unit as its value", async () => {
+        const { lens, recall, search } = await build()
+        recall.factsMatching.mockResolvedValue([factOf("public")])
+        search.ask.mockResolvedValue([])
+
+        const found = await lens.ask("u1", WS, { module: "chatbot", audience: "internal", question: "x" })
+
+        expect(recall.factsMatching).toHaveBeenCalledWith(
+            { workspaceId: WS, module: "chatbot", audience: "customer", installationId: null },
+            "x",
+            5,
+        )
+        expect(found[0]?.content).toBe("Sunday")
+    })
+
+    it("reads no facts for a blank question", async () => {
+        const { lens, recall, search } = await build()
+        search.ask.mockResolvedValue([])
+
+        await expect(lens.ask("u1", WS, { module: "chatbot", audience: "internal", question: " " })).resolves.toEqual(
+            [],
+        )
+        expect(recall.factsMatching).not.toHaveBeenCalled()
+    })
 })

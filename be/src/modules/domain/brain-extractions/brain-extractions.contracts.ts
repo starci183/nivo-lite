@@ -7,6 +7,8 @@ export enum ExtractionNote {
     ModelBusy = "BRAIN_NOTE_MODEL_BUSY",
     /** The model answered something that could not be read. */
     AnswerUnreadable = "BRAIN_NOTE_ANSWER_UNREADABLE",
+    /** The reading stopped on an error and its retries ran out. */
+    Aborted = "BRAIN_NOTE_READING_ABORTED",
 }
 
 /** Where the reading of one document stands. */

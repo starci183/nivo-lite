@@ -67,16 +67,22 @@ export const DOCUMENT_IDEAS: ReadonlyArray<DocumentIdea> = [
     { key: "brand_voice", modules: MODULE_KEYS, visibility: "internal" },
 ]
 
-/** The suggestions that fit the installed modules and the business type of the workspace. */
+/** How many of the installed agents an idea is for; a suggestion for every agent counts once, so it ranks after the specific ones. */
+export const relevanceOf = (idea: DocumentIdea, installed: ReadonlyArray<ModuleKey>): number =>
+    idea.modules.length >= MODULE_KEYS.length ? 0.5 : idea.modules.filter((module) => installed.includes(module)).length
+
+/** The suggestions that fit the installed modules and the business type of the workspace, the most relevant to the installed agents first. */
 export const ideasFor = (
     installed: ReadonlyArray<ModuleKey>,
     businessType: string | null,
 ): ReadonlyArray<DocumentIdea> =>
-    DOCUMENT_IDEAS.filter(
-        (one) =>
-            one.modules.some((module) => installed.includes(module)) &&
-            (one.businessTypes === undefined || businessType === null || one.businessTypes.includes(businessType)),
-    )
+    [
+        ...DOCUMENT_IDEAS.filter(
+            (one) =>
+                one.modules.some((module) => installed.includes(module)) &&
+                (one.businessTypes === undefined || businessType === null || one.businessTypes.includes(businessType)),
+        ),
+    ].sort((a, b) => relevanceOf(b, installed) - relevanceOf(a, installed))
 
 /** One question and its answer. */
 export interface QaPair {

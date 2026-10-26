@@ -18,8 +18,8 @@ import type { AgentModule } from "@/hooks/knowledge"
 import { useBrainBoard } from "@/hooks/brain"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref, knowledgeSourceHref } from "@/modules/routes"
-import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
-import type { KnowledgeDocument } from "@/modules/types"
+import type { KnowledgeRowView, RowActionView } from "@/components/composites/KnowledgeRows"
+import type { BrainExtraction, KnowledgeDocument } from "@/modules/types"
 import { KnowledgeLibraryBase } from "./component"
 
 type Translate = ReturnType<typeof useTranslations<"knowledge">>
@@ -28,16 +28,59 @@ type Translate = ReturnType<typeof useTranslations<"knowledge">>
  * Where a document stands in one word: still being read, learnt (with how many facts it gave, when the viewer may see them),
  * failed, or what else holds it back.
  */
-const statusLabelOf = (t: Translate, source: KnowledgeDocument, learnedFacts: number | null): string => {
+const statusLabelOf = (
+    t: Translate,
+    source: KnowledgeDocument,
+    reading: BrainExtraction["status"] | undefined,
+    learnedFacts: number | null,
+): string => {
     if (isDocumentActive(source.status)) return t("libReading")
     if (source.status === "failed") return t("libFailed")
     if (source.status !== "ready") return t(DOCUMENT_STATUS_KEYS[source.status])
+    if (reading !== "done") return t("libFactsNone")
     return learnedFacts === null ? t("libLearnedPlain") : t("libLearned", { count: learnedFacts })
 }
 
 /** The agent a document is kept for, or every agent. */
 const moduleLabelOf = (t: Translate, source: KnowledgeDocument): string =>
     source.module !== null && isAgentModule(source.module) ? t(`module_${source.module}`) : t("moduleAll")
+
+/** The badges of a row: where the document stands (a ready one whose facts were not read is neutral), who may read it and for which agent. */
+const badgesOf = (
+    t: Translate,
+    source: KnowledgeDocument,
+    status: string,
+    reading: BrainExtraction["status"] | undefined,
+): NonNullable<KnowledgeRowView["badges"]> => [
+    {
+        label: status,
+        tone: source.status === "ready" && reading !== "done" ? "neutral" : DOCUMENT_STATUS_TONE[source.status],
+    },
+    {
+        label: t(source.visibility === "public" ? "vis_public" : "vis_internal"),
+        tone: source.visibility === "public" ? "accent" : "neutral",
+    },
+    { label: moduleLabelOf(t, source), tone: "neutral" },
+]
+
+/** What a row may offer to run again. */
+interface RetryChoice {
+    readonly canRetry: boolean
+    readonly canRetryFacts: boolean
+}
+
+/** The neutral "try again" of a row: the document itself, or only the reading of its facts. */
+const retryActionsOf = (
+    t: Translate,
+    commands: ReturnType<typeof useLibraryCommands>,
+    sourceId: string,
+    choice: RetryChoice,
+): ReadonlyArray<RowActionView> => [
+    ...(choice.canRetry ? [{ id: "retry", label: t("retry"), onPress: () => commands.retry(sourceId) }] : []),
+    ...(choice.canRetryFacts
+        ? [{ id: "retry-facts", label: t("retry"), onPress: () => commands.reread(sourceId) }]
+        : []),
+]
 
 /** Props for the connected documents list. */
 interface KnowledgeLibraryProps {
@@ -65,27 +108,22 @@ export const KnowledgeLibrary = (props: KnowledgeLibraryProps) => {
             ...(source.topic === null ? [] : [source.topic]),
             format.dateTime(new Date(source.createdAt), { dateStyle: "medium" }),
         ]
-        const status = statusLabelOf(t, source, member.canWrite ? factsOf(source) : null)
+        const reading = board.extractions.find((one) => one.sourceId === source.id)?.status
+        const status = statusLabelOf(t, source, reading, member.canWrite ? factsOf(source) : null)
         const canRetry =
             member.canWrite && source.status === "failed" && source.error !== null && !isReadyNote(source.error)
+        const canRetryFacts = member.canWrite && source.status === "ready" && reading !== "done"
         return {
             id: source.id,
             title: source.title,
             href: knowledgeSourceHref(source.id),
             lines: [parts.join(" · "), ...(source.error === null ? [] : [t(noteKeyOf(source.error))])],
-            badges: [
-                { label: status, tone: DOCUMENT_STATUS_TONE[source.status] },
-                {
-                    label: t(source.visibility === "public" ? "vis_public" : "vis_internal"),
-                    tone: source.visibility === "public" ? ("accent" as const) : ("neutral" as const),
-                },
-                { label: moduleLabelOf(t, source), tone: "neutral" as const },
-            ],
+            badges: badgesOf(t, source, status, reading),
             progress:
                 isDocumentActive(source.status) && source.progress > 0
                     ? { label: status, value: source.progress }
                     : undefined,
-            actions: canRetry ? [{ id: "retry", label: t("retry"), onPress: () => commands.retry(source.id) }] : [],
+            actions: retryActionsOf(t, commands, source.id, { canRetry, canRetryFacts }),
         }
     }
     const filterTo = (value: string | null) => {
@@ -110,6 +148,7 @@ export const KnowledgeLibrary = (props: KnowledgeLibraryProps) => {
                     emptyBody: t("emptyBody"),
                 },
                 filterLabel: t("filterModule"),
+                selectPlaceholder: t("selectPlaceholder"),
                 filterOptions: [
                     { id: "all", label: t("filterAll") },
                     ...AGENT_MODULES.map((key) => ({ id: key, label: t(`module_${key}`) })),

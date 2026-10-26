@@ -106,12 +106,12 @@ export const toNivoEntry = (row: NivoEntryType): NivoEntry => ({
 /** The passage an `askKnowledge` item stands for. */
 export const toRetrievedPassage = (row: RetrievedPassageType): RetrievedPassage => ({
     key: `${row.layer}-${row.id}`,
-    layer: row.layer === "nivo" ? "nivo" : "business",
+    layer: row.layer === "nivo" || row.layer === "fact" ? row.layer : "business",
     title: row.title,
     topic: row.topic ?? null,
     content: row.content,
     score: row.score,
-    visibility: row.visibility === "public" ? "public" : "internal",
+    visibility: row.visibility === "public" || row.visibility === "restricted" ? row.visibility : "internal",
     sourceId: row.sourceId ?? null,
     position: row.order === null ? null : row.order + 1,
 })

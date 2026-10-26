@@ -8,6 +8,7 @@ export interface KnowledgeLibraryBaseProps {
     readonly props: {
         readonly list: KnowledgeRowsProps
         readonly filterLabel: string
+        readonly selectPlaceholder: string
         readonly filterOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
         readonly filter: string
     }
@@ -26,6 +27,7 @@ export const KnowledgeLibraryBase = (props: KnowledgeLibraryBaseProps) => (
                     label={props.props.filterLabel}
                     name="module"
                     options={props.props.filterOptions}
+                    placeholder={props.props.selectPlaceholder}
                     value={props.props.filter}
                     isSkeleton={props.props.list.isLoading}
                     onValueChange={props.on.setFilter}

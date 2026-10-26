@@ -1,3 +1,4 @@
+import type { AskAsAgentInput, AskedPassage } from "./agent-ask.contracts"
 import type {
     AgentAudience,
     LensCounts,
@@ -132,6 +133,8 @@ export interface KnowledgeLens {
     baseRulesOf(folders: ReadonlyArray<string>): Promise<ReadonlyArray<BaseRule>>
     /** Document and fact counts by visibility. */
     countsFor(workspaceId: string, module: string, installationId: OptionalId): Promise<LensCounts>
+    /** Tries a question as an agent: the passages its view reads, then the confirmed facts of the same view. */
+    ask(userId: string, workspaceId: string, input: AskAsAgentInput): Promise<ReadonlyArray<AskedPassage>>
     /** Which kinds of knowledge the view of the module reads. */
     lanesOf(module: string): LensLanes
     /** Which kinds of knowledge the public's view reads. */

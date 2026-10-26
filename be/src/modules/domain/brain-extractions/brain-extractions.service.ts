@@ -10,6 +10,7 @@ import type {
 } from "./brain-extractions.contracts"
 import type { BrainExtractionRow, ExtractionStateRow } from "./persistence/brain-extractions.rows"
 import {
+    FAIL_EXTRACTION,
     FINISH_EXTRACTION,
     LIST_EXTRACTIONS,
     SAVE_PROGRESS,
@@ -79,5 +80,10 @@ export class BrainExtractionsService {
     /** Closes the reading as done. */
     async finish(workspaceId: string, sourceId: string, model: string): Promise<void> {
         await this.entityManager.query(FINISH_EXTRACTION, [workspaceId, sourceId, model])
+    }
+
+    /** Settles a reading that has not finished as failed, so it never stays running. */
+    async fail(workspaceId: string, sourceId: string, note: string): Promise<void> {
+        await this.entityManager.query(FAIL_EXTRACTION, [workspaceId, sourceId, note])
     }
 }

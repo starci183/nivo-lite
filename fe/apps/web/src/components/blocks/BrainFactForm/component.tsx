@@ -21,6 +21,7 @@ export interface BrainFactFormBaseProps {
         /** The customer question the fact answers, kept in view while it is written. */
         readonly question?: string | undefined
         readonly typeLabel: string
+        readonly selectPlaceholder: string
         readonly typeOptions: ReadonlyArray<ChoiceView>
         readonly subjectLabel: string
         readonly subjectHint: string
@@ -151,6 +152,7 @@ const renderFactSubjectFields = (props: BrainFactFormBaseProps) => (
             label={props.props.typeLabel}
             name="subjectType"
             options={props.props.typeOptions}
+            placeholder={props.props.selectPlaceholder}
             value={props.props.subjectType}
             isDisabled={props.props.isPending}
             onValueChange={props.on.setType}

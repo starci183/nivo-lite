@@ -70,6 +70,7 @@ export class DocumentFactsService {
     async giveUp(payload: object): Promise<void> {
         const run = sourcePayloadOf(payload)
         if (run === null) return
+        await this.extractions.fail(run.workspaceId, run.sourceId, ExtractionNote.Aborted)
         await this.sources.ready(run.workspaceId, run.sourceId, StoredNote.FactsUnread)
     }
 
