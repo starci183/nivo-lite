@@ -90,7 +90,6 @@ const sourcesOf = (props: VideoInputsStepBaseProps) => {
                 <CheckboxGroup
                     label={props.props.sourcesHeading}
                     description={props.props.sourcesHint}
-                    variant="secondary"
                     isDisabled={!props.props.canEdit}
                     value={props.props.sourceIds}
                     options={props.props.sources.map((source) => ({
@@ -120,7 +119,6 @@ export const VideoInputsStepBase = (props: VideoInputsStepBaseProps) => (
                 {sourcesOf(props)}
                 <Textarea
                     label={props.props.notesLabel}
-                    variant="secondary"
                     description={props.props.notesHint}
                     rows={3}
                     maxLength={600}
@@ -144,7 +142,6 @@ export const VideoInputsStepBase = (props: VideoInputsStepBaseProps) => (
                                 {previewOf(tile)}
                                 <Checkbox
                                     label={tile.name}
-                                    variant="secondary"
                                     isSelected={tile.selected}
                                     isDisabled={!props.props.canEdit}
                                     onSelectedChange={() => props.on.toggleMedia(tile.path)}

@@ -1,4 +1,5 @@
-import { SectionHeader, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
+import { Fragment } from "react"
+import { Divider, SectionHeader, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
 import { AccountingBlock } from "@/components/branches/AccountingBlock"
 import type { GovStatusRow } from "@/hooks/overviewResults"
 import {
@@ -58,8 +59,11 @@ export const OverviewGovResults = (props: OverviewGovResultsProps) => (
         <SurfaceCard ariaLabel={props.figures.title}>
             <div className={STACK_CLASS_NAME}>
                 <div className={STATUS_LIST_CLASS_NAME}>
-                    {props.figures.rows.map((row) => (
-                        <StatusRow key={row.id} row={row} />
+                    {props.figures.rows.map((row, index) => (
+                        <Fragment key={row.id}>
+                            {index > 0 ? <Divider semantics="presentation" /> : null}
+                            <StatusRow row={row} />
+                        </Fragment>
                     ))}
                 </div>
                 <Text size="sm" tone="muted">
