@@ -1,7 +1,6 @@
+export { MOVE_ACTION, actionsOf } from "@/modules/booking-desk"
 export {
     BOOKING_STATUS_TONE,
-    MOVE_ACTION,
-    actionsOf,
     blankPlacementOf,
     dayGroups,
     detailOf,

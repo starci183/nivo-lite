@@ -16,7 +16,7 @@ export const LeadNotFoundPageBase = (props: LeadNotFoundPageBaseProps) => (
     <PageContainer measure="reading">
         <SurfaceCard ariaLabel={props.props.ariaLabel}>
             <EmptyNotice message={props.props.title} description={props.props.body} />
-            <Button variant="secondary" href={props.props.backHref}>
+            <Button intent="neutral" href={props.props.backHref}>
                 {props.props.backLabel}
             </Button>
         </SurfaceCard>

@@ -1,36 +1,12 @@
 import type { BadgeTone, DescriptionListItem } from "@starci/grammar/common"
-import type { BookingAction, BookingView } from "@/modules/types"
+import type { BookingView } from "@/modules/types"
+import { ACTION_KEY, actionsOf, isMovable, isNextAction, MOVE_ACTION, rowIntent } from "@/modules/booking-desk"
 import type { PlacementFields } from "./useBookingPlacement"
 
 /** What the desk tells the owner after a command: a catalog code. */
 export interface DeskNotice {
     readonly tone: "affirmative" | "negative"
     readonly code: string
-}
-
-/** The notice that follows each successful action. */
-export const NOTICE_OF_ACTION: Readonly<Record<BookingAction, string>> = {
-    confirm: "did_confirm",
-    "check-in": "did_check_in",
-    done: "did_done",
-    "no-show": "did_no_show",
-    cancel: "did_cancel",
-}
-
-/** The id of the detail action that opens the move dialog; it is not a status change. */
-export const MOVE_ACTION = "move"
-
-/** Whether a booking can still be moved. */
-export const isMovable = (status: string): boolean =>
-    status === "requested" || status === "confirmed" || status === "rescheduled"
-
-/** The actions a booking offers in its current state, primary first. */
-export const actionsOf = (status: string, checkedIn: boolean): ReadonlyArray<BookingAction> => {
-    if (status === "requested") return ["confirm", "cancel"]
-    if (status === "confirmed" || status === "rescheduled") {
-        return [...(checkedIn ? [] : (["check-in"] as const)), "done", "no-show", "cancel"]
-    }
-    return []
 }
 
 /** The badge tone of each booking status. */
@@ -41,19 +17,6 @@ export const BOOKING_STATUS_TONE: Readonly<Record<string, BadgeTone>> = {
     done: "success",
     no_show: "danger",
     cancelled: "neutral",
-}
-
-const ACTION_KEY: Readonly<Record<BookingAction, string>> = {
-    confirm: "act_confirm",
-    "check-in": "act_check_in",
-    done: "act_done",
-    "no-show": "act_no_show",
-    cancel: "act_cancel",
-}
-
-const actionVariant = (action: BookingAction): "primary" | "outline" | "danger-soft" => {
-    if (action === "cancel") return "danger-soft"
-    return action === "confirm" || action === "check-in" ? "primary" : "outline"
 }
 
 /** A catalog reader: the key and its values. */
@@ -97,7 +60,7 @@ export const bookingRowOf = (booking: BookingView, words: DeskWords, withActions
     actions: withActions
         ? actionsOf(booking.status, booking.checkedIn)
               .filter((action) => action !== "cancel")
-              .map((action) => ({ id: action, label: words.say(ACTION_KEY[action]), variant: actionVariant(action) }))
+              .map((action) => ({ id: action, label: words.say(ACTION_KEY[action]), intent: rowIntent(action) }))
         : [],
 })
 
@@ -137,6 +100,12 @@ const detailItems = (booking: BookingView, words: DeskWords): ReadonlyArray<Desc
     return rows.filter((row): row is DescriptionListItem => row !== null)
 }
 
+/** The one next step of a booking, when its status has one: the dialog commits to it. */
+const nextOf = (booking: BookingView, words: DeskWords) => {
+    const action = actionsOf(booking.status, booking.checkedIn).find(isNextAction)
+    return action === undefined ? {} : { next: { id: action, label: words.say(ACTION_KEY[action]) } }
+}
+
 /** The detail dialog of a booking: its facts, status and the actions its status allows. */
 export const detailOf = (booking: BookingView, words: DeskWords) => ({
     title: booking.customer === "" ? words.say("customerFallback") : booking.customer,
@@ -147,14 +116,17 @@ export const detailOf = (booking: BookingView, words: DeskWords) => ({
     items: detailItems(booking, words),
     ...(booking.leadId === null ? {} : { customerHref: `/leads/${booking.leadId}` }),
     customerLabel: words.say("viewCustomer"),
+    ...nextOf(booking, words),
     actions: [
-        ...actionsOf(booking.status, booking.checkedIn).map((action) => ({
-            id: action,
-            label: words.say(ACTION_KEY[action]),
-            variant: actionVariant(action),
-        })),
+        ...actionsOf(booking.status, booking.checkedIn)
+            .filter((action) => !isNextAction(action))
+            .map((action) => ({
+                id: action,
+                label: words.say(ACTION_KEY[action]),
+                intent: action === "cancel" ? ("destructive" as const) : ("neutral" as const),
+            })),
         ...(isMovable(booking.status)
-            ? [{ id: MOVE_ACTION, label: words.say("move"), variant: "outline" as const }]
+            ? [{ id: MOVE_ACTION, label: words.say("move"), intent: "neutral" as const }]
             : []),
     ],
 })

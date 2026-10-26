@@ -14,7 +14,7 @@ export interface AgentWorkbenchPageBaseProps {
 export const AgentWorkbenchPageBase = (props: AgentWorkbenchPageBaseProps) => (
     <SurfaceCard ariaLabel={props.props.title}>
         <EmptyNotice message={props.props.title} description={props.props.body} />
-        <Button variant="secondary" href={props.props.setupHref}>
+        <Button intent="neutral" href={props.props.setupHref}>
             {props.props.setupLabel}
         </Button>
     </SurfaceCard>
