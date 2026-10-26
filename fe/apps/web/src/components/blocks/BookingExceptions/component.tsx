@@ -71,14 +71,12 @@ const renderExceptionFields = (p: BookingExceptionsBaseProps["props"], on: Booki
             <div className={GRID_CLASS}>
                 <Select
                     label={p.appliesLabel}
-                    variant="secondary"
                     options={p.applies}
                     value={p.fields.resourceId}
                     onValueChange={(resourceId) => on.change({ resourceId: resourceId ?? "all" })}
                 />
                 <DateField
                     label={p.dateLabel}
-                    variant="secondary"
                     isRequired
                     value={parseDate(p.fields.date)}
                     onValueChange={(value) => {
@@ -89,14 +87,12 @@ const renderExceptionFields = (p: BookingExceptionsBaseProps["props"], on: Booki
                     id="booking-exception-note"
                     name="note"
                     label={p.noteLabel}
-                    variant="secondary"
                     placeholder={p.notePlaceholder}
                     value={p.fields.note}
                     onValueChange={(note) => on.change({ note })}
                 />
             </div>
             <Checkbox
-                variant="secondary"
                 label={p.closedLabel}
                 isSelected={p.fields.closed}
                 onSelectedChange={(closed) => on.change({ closed })}
@@ -105,7 +101,6 @@ const renderExceptionFields = (p: BookingExceptionsBaseProps["props"], on: Booki
                 <div className={GRID_CLASS}>
                     <TimeField
                         label={p.startLabel}
-                        variant="secondary"
                         granularity="minute"
                         hourCycle={24}
                         value={parseTime(p.fields.start)}
@@ -115,7 +110,6 @@ const renderExceptionFields = (p: BookingExceptionsBaseProps["props"], on: Booki
                     />
                     <TimeField
                         label={p.endLabel}
-                        variant="secondary"
                         granularity="minute"
                         hourCycle={24}
                         value={parseTime(p.fields.end)}

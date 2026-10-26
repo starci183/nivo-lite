@@ -21,7 +21,6 @@ export const InviteLink = (props: InviteLinkProps) => (
             id={props.id}
             name="inviteLink"
             label={props.label}
-            variant="secondary"
             value={props.link}
             isReadOnly
             isCopyable

@@ -83,7 +83,6 @@ export const SignupFormBase = (props: SignupFormBaseProps) => {
                     id="signup-name"
                     name="name"
                     label={view.nameLabel}
-                    variant="secondary"
                     isRequired
                     isDisabled={view.isPending}
                     value={view.name}

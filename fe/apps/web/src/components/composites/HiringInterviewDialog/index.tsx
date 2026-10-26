@@ -63,7 +63,6 @@ export const HiringInterviewDialog = (props: HiringInterviewDialogProps) => {
                     <>
                         <Select
                             label={say("ivInterviewer")}
-                            variant="secondary"
                             options={members}
                             value={values.interviewerUserId}
                             onValueChange={(id) => on.text("interviewerUserId", id ?? "")}
@@ -78,13 +77,11 @@ export const HiringInterviewDialog = (props: HiringInterviewDialogProps) => {
                             id="iv-loc"
                             name="location"
                             label={say(values.mode === "online" ? "ivLink" : "ivPlace")}
-                            variant="secondary"
                             value={values.location}
                             onValueChange={(location) => on.text("location", location)}
                         />
                         <NumberField
                             label={say("ivDuration")}
-                            variant="secondary"
                             minValue={15}
                             maxValue={180}
                             step={15}

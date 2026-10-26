@@ -34,7 +34,6 @@ export const SalesDecisionFields = (props: SalesDecisionFieldsProps) => (
                 id={`${props.anchor}-${field.name}`}
                 name={field.name}
                 label={field.label}
-                variant="secondary"
                 value={field.value}
                 isDisabled={props.isBusy}
                 onValueChange={(value) => props.onField(field.name, value)}
@@ -43,7 +42,6 @@ export const SalesDecisionFields = (props: SalesDecisionFieldsProps) => (
         {props.showDraftField ? (
             <Textarea
                 label={props.draftLabel}
-                variant="secondary"
                 rows={4}
                 value={props.draftValue}
                 isDisabled={props.isBusy}
@@ -55,7 +53,6 @@ export const SalesDecisionFields = (props: SalesDecisionFieldsProps) => (
                 id={`${props.anchor}-amount`}
                 name="amount_vnd"
                 label={props.amountLabel}
-                variant="secondary"
                 value={props.amountValue}
                 isDisabled={props.isBusy}
                 onValueChange={props.onAmount}

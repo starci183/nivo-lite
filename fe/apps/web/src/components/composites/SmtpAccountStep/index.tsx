@@ -26,7 +26,6 @@ export const SmtpAccountStep = (props: SmtpAccountStepProps) => {
                     id="smtp-from-name"
                     name="fromName"
                     label={text.fieldFromName}
-                    variant="secondary"
                     hint={text.fieldFromNameHint}
                     isDisabled={locked}
                     value={account.values.fromName}
@@ -36,7 +35,6 @@ export const SmtpAccountStep = (props: SmtpAccountStepProps) => {
                     id="smtp-from-email"
                     name="fromEmail"
                     label={text.fieldFromEmail}
-                    variant="secondary"
                     hint={text.fieldFromEmailHint}
                     isDisabled={locked}
                     value={account.values.fromEmail}
@@ -46,7 +44,6 @@ export const SmtpAccountStep = (props: SmtpAccountStepProps) => {
                     id="smtp-reply-to"
                     name="replyTo"
                     label={text.fieldReplyTo}
-                    variant="secondary"
                     hint={text.fieldReplyToHint}
                     isDisabled={locked}
                     value={account.values.replyTo}
@@ -58,7 +55,6 @@ export const SmtpAccountStep = (props: SmtpAccountStepProps) => {
                         id="smtp-user"
                         name="user"
                         label={text.fieldUser}
-                        variant="secondary"
                         hint={text.fieldUserHint}
                         isDisabled={locked}
                         value={account.values.user}
@@ -96,7 +92,6 @@ const renderSmtpAccountStepServerFields = (
             id="smtp-host"
             name="host"
             label={text.fieldHost}
-            variant="secondary"
             isDisabled={locked}
             value={account.host}
             onValueChange={props.onHost}
@@ -105,14 +100,12 @@ const renderSmtpAccountStepServerFields = (
             id="smtp-port"
             name="port"
             label={text.fieldPort}
-            variant="secondary"
             isDisabled={locked}
             value={account.port}
             onValueChange={props.onPort}
         />
         <Select
             label={text.fieldSecurity}
-            variant="secondary"
             isDisabled={locked}
             value={account.security}
             options={[...account.securityOptions]}
@@ -131,7 +124,6 @@ const renderSmtpAccountStepPassword = (
         id="smtp-password"
         name="password"
         label={account.passwordLabel}
-        variant="secondary"
         kind="password"
         hint={account.passwordHint}
         isDisabled={locked}

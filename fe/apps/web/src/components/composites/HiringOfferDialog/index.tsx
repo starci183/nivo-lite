@@ -71,7 +71,6 @@ const renderHiringOfferDialogFields = (
                     id="of-title"
                     name="title"
                     label={say("offerRole")}
-                    variant="secondary"
                     value={values.title}
                     onValueChange={(title) => on.text("title", title)}
                 />
@@ -80,7 +79,6 @@ const renderHiringOfferDialogFields = (
                     name="pay"
                     label={say("offerPay")}
                     hint={say("offerPayExample")}
-                    variant="secondary"
                     isRequired
                     value={values.pay}
                     onValueChange={(pay) => on.text("pay", pay)}
@@ -90,7 +88,6 @@ const renderHiringOfferDialogFields = (
                         id="of-start"
                         name="start_date"
                         label={say("offerStart")}
-                        variant="secondary"
                         value={values.startDate}
                         onValueChange={(startDate) => on.text("startDate", startDate)}
                     />
@@ -98,14 +95,12 @@ const renderHiringOfferDialogFields = (
                         id="of-prob"
                         name="probation"
                         label={say("offerProbation")}
-                        variant="secondary"
                         value={values.probation}
                         onValueChange={(probation) => on.text("probation", probation)}
                     />
                 </div>
                 <Textarea
                     label={say("offerNote")}
-                    variant="secondary"
                     rows={2}
                     value={values.note}
                     onValueChange={(note) => on.text("note", note)}

@@ -1,5 +1,6 @@
 import {
     Avatar,
+    Divider,
     EmptyNotice,
     Heading,
     HorizontalScrollRegion,
@@ -62,6 +63,7 @@ export const ChatbotConversationList = (props: ChatbotConversationListProps) => 
         <div className={HEAD_CLASS_NAME}>
             <Heading level={2}>{props.title}</Heading>
         </div>
+        <Divider semantics="presentation" />
         <div className={SEARCH_CLASS_NAME}>
             <SearchField
                 label={props.searchLabel}

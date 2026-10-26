@@ -41,7 +41,6 @@ export const LoyaltyBirthdaySection = (props: LoyaltyBirthdaySectionProps) => (
             />
             <Select
                 label={props.rewardLabel}
-                variant="secondary"
                 options={props.rewardOptions}
                 value={props.rewardKey === "" ? "none" : props.rewardKey}
                 isDisabled={props.isDisabled || !props.isOn}

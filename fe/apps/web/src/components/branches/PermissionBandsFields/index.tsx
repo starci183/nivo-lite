@@ -39,16 +39,9 @@ export const PermissionBandsFields = (props: PermissionBandsFieldsProps) => {
     const { props: p, on } = props
     return (
         <div className={SECTION_CLASS_NAME}>
-            <Select
-                variant="secondary"
-                label={p.copy.unitLabel}
-                options={p.unitOptions}
-                value={p.unit}
-                onValueChange={on.unit}
-            />
+            <Select label={p.copy.unitLabel} options={p.unitOptions} value={p.unit} onValueChange={on.unit} />
             <div className={BAND_FIELDS_CLASS_NAME}>
                 <NumberField
-                    variant="secondary"
                     label={p.copy.autoMaxLabel}
                     minValue={0}
                     formatOptions={WHOLE}
@@ -56,7 +49,6 @@ export const PermissionBandsFields = (props: PermissionBandsFieldsProps) => {
                     onValueChange={on.autoMax}
                 />
                 <NumberField
-                    variant="secondary"
                     label={p.copy.askMaxLabel}
                     minValue={0}
                     formatOptions={WHOLE}

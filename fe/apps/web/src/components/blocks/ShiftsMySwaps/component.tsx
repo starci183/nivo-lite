@@ -1,5 +1,5 @@
-import { Badge, ListItem, SectionHeader, SurfaceListCard, Text } from "@starci/grammar/common"
-import { ROW_CLASS_NAME, SECTION_CLASS_NAME } from "./classNames"
+import { Badge, ListRow, SectionHeader, SurfaceListCard } from "@starci/grammar/common"
+import { SECTION_CLASS_NAME } from "./classNames"
 
 /** Copy and requests the connected swap list supplies. */
 export interface ShiftsMySwapsBaseProps {
@@ -21,10 +21,7 @@ export const ShiftsMySwapsBase = (props: ShiftsMySwapsBaseProps) =>
             <SectionHeader level={2} title={props.props.title} />
             <SurfaceListCard ariaLabel={props.props.title}>
                 {props.props.rows.map((row) => (
-                    <ListItem key={row.id} className={ROW_CLASS_NAME}>
-                        <Text size="sm">{row.text}</Text>
-                        <Badge tone={row.tone}>{row.badge}</Badge>
-                    </ListItem>
+                    <ListRow key={row.id} title={row.text} badges={<Badge tone={row.tone}>{row.badge}</Badge>} />
                 ))}
             </SurfaceListCard>
         </div>

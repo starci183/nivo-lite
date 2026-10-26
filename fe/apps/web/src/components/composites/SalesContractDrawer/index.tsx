@@ -66,7 +66,6 @@ export const SalesContractDrawer = (props: SalesContractDrawerProps) => {
             <Select
                 label={p.leadLabel}
                 value={p.lead}
-                variant="secondary"
                 options={p.leadOptions}
                 onValueChange={(value) => on.lead(value ?? "")}
             />
@@ -74,7 +73,6 @@ export const SalesContractDrawer = (props: SalesContractDrawerProps) => {
                 id="contract-customer"
                 name="customer"
                 label={p.customerLabel}
-                variant="secondary"
                 value={p.customer}
                 onValueChange={on.customer}
                 isRequired
@@ -84,42 +82,25 @@ export const SalesContractDrawer = (props: SalesContractDrawerProps) => {
                 name="plan"
                 label={p.planLabel}
                 hint={p.planHint}
-                variant="secondary"
                 value={p.plan}
                 onValueChange={on.plan}
             />
-            <DatePicker
-                name="startsOn"
-                label={p.startLabel}
-                variant="secondary"
-                value={p.start}
-                onValueChange={on.start}
-                isRequired
-            />
+            <DatePicker name="startsOn" label={p.startLabel} value={p.start} onValueChange={on.start} isRequired />
             {renderSalesContractDrawerEndDate(p, on)}
             <Input
                 id="contract-amount"
                 name="amount"
                 label={p.amountLabel}
-                variant="secondary"
                 value={p.amount}
                 onValueChange={on.amount}
             />
             <Select
                 label={p.statusLabel}
                 value={p.status}
-                variant="secondary"
                 options={p.statusOptions}
                 onValueChange={(value) => on.status(value ?? "active")}
             />
-            <Textarea
-                id="contract-note"
-                label={p.noteLabel}
-                variant="secondary"
-                rows={2}
-                value={p.note}
-                onValueChange={on.note}
-            />
+            <Textarea id="contract-note" label={p.noteLabel} rows={2} value={p.note} onValueChange={on.note} />
         </FormDrawer>
     )
 }
@@ -130,7 +111,6 @@ const renderSalesContractDrawerEndDate = (p: SalesContractDrawerProps["props"], 
         name="endsOn"
         label={p.endLabel}
         description={p.endHint}
-        variant="secondary"
         value={p.end}
         {...(p.start === null ? {} : { minValue: p.start })}
         onValueChange={on.end}

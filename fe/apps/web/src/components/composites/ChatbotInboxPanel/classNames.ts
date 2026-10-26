@@ -4,8 +4,8 @@ export const WORKBENCH_CLASS_NAME = "flex min-w-0 flex-col gap-4"
 /** The three panes, filling the joined card that FillViewport sizes. */
 export const INBOX_CLASS_NAME = "relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden"
 
-/** Conversation list pane; one inline seam against the thread from md. */
-const LIST_PANE_CLASS_NAME = "w-full min-w-0 shrink-0 flex-col border-separator md:w-80 md:border-r"
+/** Conversation list pane. */
+const LIST_PANE_CLASS_NAME = "w-full min-w-0 shrink-0 flex-col md:w-80"
 /** The list pane while it is the open pane. */
 export const LIST_PANE_OPEN_CLASS_NAME = `${LIST_PANE_CLASS_NAME} flex`
 /** The list pane when only wide screens show it beside the thread. */
@@ -20,7 +20,7 @@ export const THREAD_PANE_WIDE_ONLY_CLASS_NAME = `${THREAD_PANE_CLASS_NAME} hidde
 
 /** Customer pane: an overlay on narrow screens, a docked column from xl. */
 const SIDE_PANE_CLASS_NAME =
-    "absolute inset-0 z-20 flex-col overflow-y-auto bg-surface sm:left-auto sm:w-80 sm:border-l sm:border-separator xl:static xl:z-auto xl:w-80 xl:shrink-0"
+    "absolute inset-0 z-20 flex-col overflow-y-auto sm:left-auto sm:w-80 xl:static xl:z-auto xl:w-80 xl:shrink-0"
 /** The customer pane while the member opened it. */
 export const SIDE_PANE_OPEN_CLASS_NAME = `${SIDE_PANE_CLASS_NAME} flex`
 /** The customer pane when it is only shown docked beside the thread. */

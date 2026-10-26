@@ -19,7 +19,6 @@ export const EmailField = (props: EmailFieldProps) => (
         kind="email"
         label={props.label}
         placeholder={props.placeholder}
-        variant="secondary"
         isRequired
         isDisabled={props.isDisabled}
         value={props.value}

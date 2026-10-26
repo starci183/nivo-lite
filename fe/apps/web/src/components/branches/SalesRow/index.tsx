@@ -1,12 +1,6 @@
 import type { ReactNode } from "react"
-import { ListItem, Text, TextAction } from "@starci/grammar/common"
-import {
-    CHIPS_CLASS_NAME,
-    ROW_ACTIONS_CLASS_NAME,
-    ROW_CLASS_NAME,
-    ROW_FOCUSED_CLASS_NAME,
-    ROW_MAIN_CLASS_NAME,
-} from "./classNames"
+import { ListItem, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
+import { CHIPS_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames"
 
 /** The parts of one Sales row: marks, who it is about, the detail lines and the commands. */
 type SalesRowProps = {
@@ -34,8 +28,8 @@ export const SalesRow = (props: SalesRowProps) => {
         ) : (
             <TextAction href={props.customerHref}>{props.customer}</TextAction>
         )
-    return (
-        <ListItem id={props.id} className={props.isFocused ? ROW_FOCUSED_CLASS_NAME : ROW_CLASS_NAME}>
+    const row = (
+        <div className={ROW_CLASS_NAME}>
             <div className={ROW_MAIN_CLASS_NAME}>
                 <div className={CHIPS_CLASS_NAME}>{props.chips}</div>
                 {props.customer === "" ? null : name}
@@ -43,6 +37,7 @@ export const SalesRow = (props: SalesRowProps) => {
             </div>
             {props.actions === undefined ? null : <div className={ROW_ACTIONS_CLASS_NAME}>{props.actions}</div>}
             {props.aside}
-        </ListItem>
+        </div>
     )
+    return <ListItem id={props.id}>{props.isFocused ? <SurfaceCard isHighlight>{row}</SurfaceCard> : row}</ListItem>
 }

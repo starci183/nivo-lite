@@ -95,7 +95,6 @@ export const LoyaltyOverviewBase = (props: LoyaltyOverviewBaseProps) => (
                     id="loyalty-public-link"
                     name="publicLink"
                     label={props.props.link.title}
-                    variant="secondary"
                     value={props.props.link.url}
                     isReadOnly
                     isCopyable

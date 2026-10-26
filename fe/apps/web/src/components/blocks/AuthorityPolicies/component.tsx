@@ -37,7 +37,6 @@ export const AuthorityPoliciesBase = (props: AuthorityPoliciesBaseProps) => {
             {(_, isSkeleton) => (
                 <AuthoritySection section={view.section} isSkeleton={isSkeleton} onSave={props.on.save}>
                     <Textarea
-                        variant="secondary"
                         isSkeleton={isSkeleton}
                         label={view.policiesLabel}
                         description={view.policiesHint}
@@ -46,7 +45,6 @@ export const AuthorityPoliciesBase = (props: AuthorityPoliciesBaseProps) => {
                         onValueChange={props.on.policies}
                     />
                     <Textarea
-                        variant="secondary"
                         isSkeleton={isSkeleton}
                         label={view.replyStyleLabel}
                         description={view.replyStyleHint}
@@ -55,7 +53,6 @@ export const AuthorityPoliciesBase = (props: AuthorityPoliciesBaseProps) => {
                         onValueChange={props.on.replyStyle}
                     />
                     <Textarea
-                        variant="secondary"
                         isSkeleton={isSkeleton}
                         label={view.brandVoiceLabel}
                         description={view.brandVoiceHint}

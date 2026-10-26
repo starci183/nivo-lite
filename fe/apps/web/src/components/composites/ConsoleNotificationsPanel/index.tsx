@@ -1,6 +1,6 @@
-import { Button, List, ListItem, Text, TextAction } from "@starci/grammar/common"
+import { Button, List, ListRow, Text, TextAction } from "@starci/grammar/common"
 import type { ConsolePending } from "@/modules/types"
-import { ITEM, LIST, PANEL } from "./classNames"
+import { PANEL } from "./classNames"
 
 /** The words of the bell, resolved by the caller. */
 type ConsoleNotificationsCopy = {
@@ -27,20 +27,21 @@ export const ConsoleNotificationsPanel = (props: ConsoleNotificationsPanelProps)
                 {props.copy.nothingWaiting}
             </Text>
         ) : (
-            <List label={props.copy.title} className={LIST}>
+            <List label={props.copy.title}>
                 {props.pending.slice(0, 5).map((item) => (
-                    <ListItem key={item.id} className={ITEM}>
-                        <TextAction href={item.href} appearance="inline" onFollow={props.onClose}>
-                            {item.leadName}
-                        </TextAction>
-                        <Text size="sm" tone="muted" overflow="clamp-2">
-                            {item.summary}
-                        </Text>
-                    </ListItem>
+                    <ListRow
+                        key={item.id}
+                        title={
+                            <TextAction href={item.href} appearance="inline" onFollow={props.onClose}>
+                                {item.leadName}
+                            </TextAction>
+                        }
+                        description={item.summary}
+                    />
                 ))}
             </List>
         )}
-        <Button variant="outline" size="sm" width="fill" onPress={props.onOpenOffice}>
+        <Button intent="neutral" size="sm" width="fill" onPress={props.onOpenOffice}>
             {props.copy.openOffice}
         </Button>
     </div>

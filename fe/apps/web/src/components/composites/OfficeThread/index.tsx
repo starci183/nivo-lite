@@ -48,7 +48,7 @@ export const OfficeThread = (props: OfficeThreadProps) => {
                     />
                 ) : null}
                 {view.state === "ready" && view.hasEarlier ? (
-                    <Button variant="ghost" size="sm" isPending={view.isLoadingEarlier} onPress={props.on.loadEarlier}>
+                    <Button intent="neutral" size="sm" isPending={view.isLoadingEarlier} onPress={props.on.loadEarlier}>
                         {text("loadEarlier")}
                     </Button>
                 ) : null}

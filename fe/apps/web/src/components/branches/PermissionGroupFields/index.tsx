@@ -51,14 +51,12 @@ export const PermissionGroupFields = (props: PermissionGroupFieldsProps) => {
             <div className={SECTION_CLASS_NAME}>
                 <Text weight="semibold">{p.copy.groupLabel}</Text>
                 <CheckboxGroup
-                    variant="secondary"
                     label={p.copy.rolesLabel}
                     options={optionsOf(p.roleOptions)}
                     value={p.roles}
                     onValueChange={on.roles}
                 />
                 <CheckboxGroup
-                    variant="secondary"
                     label={p.copy.roomsLabel}
                     description={p.roomOptions.length === 0 ? p.copy.roomsNone : undefined}
                     options={optionsOf(p.roomOptions)}
@@ -66,7 +64,6 @@ export const PermissionGroupFields = (props: PermissionGroupFieldsProps) => {
                     onValueChange={on.rooms}
                 />
                 <CheckboxGroup
-                    variant="secondary"
                     label={p.copy.membersLabel}
                     description={p.copy.membersHint}
                     options={optionsOf(p.memberOptions)}
@@ -75,14 +72,12 @@ export const PermissionGroupFields = (props: PermissionGroupFieldsProps) => {
                 />
             </div>
             <RadioGroup
-                variant="secondary"
                 label={p.copy.policyLabel}
                 options={optionsOf(p.policyOptions)}
                 value={p.policy}
                 onValueChange={on.policy}
             />
             <Select
-                variant="secondary"
                 label={p.copy.timeoutLabel}
                 description={p.copy.timeoutNote}
                 options={p.timeoutOptions}

@@ -20,7 +20,6 @@ export const LoyaltyField = (props: LoyaltyFieldProps) => (
         id={props.id}
         name={props.name ?? props.id}
         label={props.label}
-        variant="secondary"
         value={props.value}
         isRequired={props.isRequired === true}
         isDisabled={props.isDisabled}

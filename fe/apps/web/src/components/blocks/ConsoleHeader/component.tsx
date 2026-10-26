@@ -126,7 +126,7 @@ const Actions = ({ props, on }: ConsoleHeaderBaseProps) => (
                     <IconButton
                         source={nivoIconSource("locale", "leading")}
                         label={props.languageLabel}
-                        variant="tertiary"
+                        intent="dismiss"
                         size="control"
                         isDisabled={props.isLocalePending}
                     />
@@ -151,6 +151,7 @@ const Actions = ({ props, on }: ConsoleHeaderBaseProps) => (
                 <IconButton
                     source={nivoIconSource("notification", "leading")}
                     label={props.notificationsCopy.bell}
+                    intent="neutral"
                     badge={Math.max(props.pendingCount, 0)}
                     badgeLabel={props.notificationsCopy.title}
                     size="control"

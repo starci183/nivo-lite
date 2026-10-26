@@ -110,14 +110,12 @@ const renderServiceFields = (p: BookingServicesBaseProps["props"], on: BookingSe
                 id="booking-service-name"
                 name="name"
                 label={p.form.nameLabel}
-                variant="secondary"
                 isRequired
                 value={p.form.fields.name}
                 onValueChange={(name) => on.change({ name })}
             />
             <NumberField
                 label={p.form.durationLabel}
-                variant="secondary"
                 minValue={5}
                 step={5}
                 value={p.form.fields.durationMin}
@@ -125,7 +123,6 @@ const renderServiceFields = (p: BookingServicesBaseProps["props"], on: BookingSe
             />
             <NumberField
                 label={p.form.bufferLabel}
-                variant="secondary"
                 minValue={0}
                 step={5}
                 value={p.form.fields.bufferMin}
@@ -135,7 +132,6 @@ const renderServiceFields = (p: BookingServicesBaseProps["props"], on: BookingSe
                 id="booking-service-price"
                 name="price"
                 label={p.form.priceLabel}
-                variant="secondary"
                 placeholder={p.form.pricePlaceholder}
                 value={p.form.fields.price}
                 onValueChange={(price) => on.change({ price })}
@@ -144,7 +140,6 @@ const renderServiceFields = (p: BookingServicesBaseProps["props"], on: BookingSe
                 id="booking-service-kind"
                 name="resourceKind"
                 label={p.form.kindLabel}
-                variant="secondary"
                 placeholder={p.form.kindPlaceholder}
                 value={p.form.fields.resourceKind}
                 onValueChange={(resourceKind) => on.change({ resourceKind })}
@@ -153,7 +148,6 @@ const renderServiceFields = (p: BookingServicesBaseProps["props"], on: BookingSe
                 id="booking-service-followup"
                 name="followup"
                 label={p.form.followupLabel}
-                variant="secondary"
                 placeholder={p.form.followupPlaceholder}
                 value={p.form.fields.followup}
                 onValueChange={(followup) => on.change({ followup })}
@@ -163,7 +157,6 @@ const renderServiceFields = (p: BookingServicesBaseProps["props"], on: BookingSe
                     id="booking-service-description"
                     name="description"
                     label={p.form.descriptionLabel}
-                    variant="secondary"
                     value={p.form.fields.description}
                     onValueChange={(description) => on.change({ description })}
                 />

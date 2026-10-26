@@ -47,7 +47,6 @@ export const BookingPolicyFormBase = (props: BookingPolicyFormBaseProps) => {
                             <NumberField
                                 key={rule.id}
                                 label={rule.label}
-                                variant="secondary"
                                 minValue={0}
                                 step={1}
                                 value={rule.value}
@@ -59,24 +58,17 @@ export const BookingPolicyFormBase = (props: BookingPolicyFormBaseProps) => {
                                 id="booking-policy-address"
                                 name="address"
                                 label={p.addressLabel}
-                                variant="secondary"
                                 value={p.address}
                                 onValueChange={on.changeAddress}
                             />
                         </div>
                     </div>
                     <Checkbox
-                        variant="secondary"
                         label={p.autoConfirmLabel}
                         isSelected={p.autoConfirm}
                         onSelectedChange={on.toggleAutoConfirm}
                     />
-                    <Checkbox
-                        variant="secondary"
-                        label={p.handoffLabel}
-                        isSelected={p.handoff}
-                        onSelectedChange={on.toggleHandoff}
-                    />
+                    <Checkbox label={p.handoffLabel} isSelected={p.handoff} onSelectedChange={on.toggleHandoff} />
                     <BookingSaveLine
                         label={p.saveLabel}
                         isPending={p.isPending}
