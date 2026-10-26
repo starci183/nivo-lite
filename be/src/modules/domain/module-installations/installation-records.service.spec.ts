@@ -5,6 +5,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { InstallationRecordsService } from "./installation-records.service"
 import type { InstallationRecord, NewInstallation } from "./module-installations.contracts"
 import {
+    REMOVE_INSTALLATION,
     ACTIVATE_VERSION,
     FIND_FIRST_OF_MODULE,
     FIND_INSTALLATION,
@@ -271,7 +272,7 @@ describe("InstallationRecordsService / writes", () => {
 
         await expect(service.rename("ws-1", "inst-1", "Front desk")).resolves.toBe("done")
         await expect(service.setOperatingMode("ws-1", "inst-1", "autopilot")).resolves.toBe("done")
-        await expect(service.setLive("ws-1", "inst-1", true)).resolves.toBe("done")
+        await expect(service.setLive("ws-1", "inst-1", true, false)).resolves.toBe("done")
         await expect(service.activateVersion("ws-1", "inst-1", "version-2", "ready")).resolves.toBe("done")
 
         expect(em.query).toHaveBeenNthCalledWith(1, RENAME_INSTALLATION, ["inst-1", "ws-1", "Front desk"])
@@ -289,8 +290,15 @@ describe("InstallationRecordsService / writes", () => {
         const service = await build(em)
 
         await expect(service.rename("ws-1", "inst-1", "Front desk")).resolves.toBe("done")
-        await expect(service.setLive("ws-1", "inst-9", false)).resolves.toBe("missing")
+        await expect(service.setLive("ws-1", "inst-9", false, false)).resolves.toBe("missing")
         expect(em.query).toHaveBeenCalledWith(SET_LIVE, ["inst-9", "ws-1", false, "paused"])
+    })
+    it("records a live agent that waits for a connection as needs_connection", async () => {
+        const em = mockEntityManager({ query: [SET_LIVE, [{ id: "inst-1" }]] })
+        const service = await build(em)
+
+        await expect(service.setLive("ws-1", "inst-1", true, true)).resolves.toBe("done")
+        expect(em.query).toHaveBeenCalledWith(SET_LIVE, ["inst-1", "ws-1", true, "needs_connection"])
     })
     it("answers taken on a unique violation and stores the settings as JSON", async () => {
         const em = mockEntityManager({ query: [SAVE_SETTINGS, []] })
@@ -306,7 +314,7 @@ describe("InstallationRecordsService / writes", () => {
         em.query.mockRejectedValueOnce(failure)
         const service = await build(em)
 
-        await expect(service.setLive("ws-1", "inst-1", true)).rejects.toBe(failure)
+        await expect(service.setLive("ws-1", "inst-1", true, false)).rejects.toBe(failure)
     })
 })
 
@@ -348,5 +356,18 @@ describe("InstallationRecordsService / settleConnection", () => {
             [SETTLE_CONNECTION, ["inst-1", "ws-1", false]],
             [SETTLE_CONNECTION, ["inst-1", "ws-1", true]],
         ])
+    })
+})
+
+describe("InstallationRecordsService > markRemoved", () => {
+    it("removes the row through the manager it is given, and says when there is nothing to remove", async () => {
+        const em = mockEntityManager({ query: [REMOVE_INSTALLATION, [{ id: "inst-1" }]] })
+        const service = await build(mockEntityManager())
+
+        await expect(service.markRemoved("ws-1", "inst-1", "Lan", em)).resolves.toBe("done")
+        expect(em.query).toHaveBeenCalledWith(REMOVE_INSTALLATION, ["inst-1", "ws-1", "Lan"])
+
+        const none = mockEntityManager({ query: [REMOVE_INSTALLATION, []] })
+        await expect(service.markRemoved("ws-1", "inst-1", "Lan", none)).resolves.toBe("missing")
     })
 })

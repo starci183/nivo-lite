@@ -169,6 +169,8 @@ describe("dashboard mapper", () => {
             operatingMode: "assist",
             settings: {},
             activeContextVersionId: null,
+            liveEnabled: false,
+            removed: false,
         }
 
         it("names the agent of an installation", async () => {

@@ -26,6 +26,7 @@ import type { PostSetupMessageRequest } from "../../application/post-setup-messa
 import type { RenameInstallationAgentRequest } from "../../application/rename-installation-agent.contracts"
 import type { RenameInstallationRequest } from "../../application/rename-installation.contracts"
 import type { SaveInstallationSettingRequest } from "../../application/save-installation-setting.contracts"
+import type { RemoveAgentRequest } from "../../application/remove-agent.contracts"
 import type { SetModuleLiveRequest } from "../../application/set-module-live.contracts"
 import type { SetOperatingModeRequest } from "../../application/set-operating-mode.contracts"
 import type { SetSetupGateRequest } from "../../application/set-setup-gate.contracts"
@@ -133,6 +134,12 @@ export const toSetupMessageType = (message: SetupMessageRecord): SetupMessageTyp
 
 /** Maps the live switch of the GraphQL input, with the workspace it names, to the command request. */
 export const toSetModuleLiveRequest = (workspaceId: string, input: SetModuleLiveInput): SetModuleLiveRequest => ({
+    workspaceId,
+    ...input,
+})
+
+/** Maps the removal of the GraphQL input, with the workspace it names, to the command request. */
+export const toRemoveAgentRequest = (workspaceId: string, input: ModuleInstallationIdInput): RemoveAgentRequest => ({
     workspaceId,
     ...input,
 })

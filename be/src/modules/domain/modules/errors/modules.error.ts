@@ -22,6 +22,8 @@ export enum ModulesErrorCode {
     AgentMissing = "MODULES_AGENT_MISSING",
     /** The display name of the agent is outside its limits. */
     AgentNameInvalid = "MODULES_AGENT_NAME_INVALID",
+    /** The installation was removed: it only keeps its history. */
+    InstallationRemoved = "MODULES_INSTALLATION_REMOVED",
     /** Going live needs an applied context version. */
     NeedsVersion = "MODULES_NEEDS_VERSION",
     /** A setting name or value is outside its limits. */
@@ -62,6 +64,7 @@ export const MODULES_ERROR_KINDS: Record<ModulesErrorCode, ErrorKind> = {
     [ModulesErrorCode.InstallationNotFound]: "not-found",
     [ModulesErrorCode.AgentMissing]: "not-found",
     [ModulesErrorCode.AgentNameInvalid]: "invalid",
+    [ModulesErrorCode.InstallationRemoved]: "conflict",
     [ModulesErrorCode.NeedsVersion]: "invalid",
     [ModulesErrorCode.SettingInvalid]: "invalid",
     [ModulesErrorCode.GatesUnconfirmed]: "invalid",

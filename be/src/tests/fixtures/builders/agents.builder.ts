@@ -13,6 +13,8 @@ export const agentInstallationOf = builder<Installation>({
     operatingMode: "assist",
     settings: {},
     activeContextVersionId: null,
+    liveEnabled: false,
+    removed: false,
 })
 
 /** The manager who reads the agents spec dashboards. */

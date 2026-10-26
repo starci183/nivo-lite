@@ -16,6 +16,7 @@ import { applyOperatingMode } from "./operating-mode.policy"
 import { appliesToAgent, judgeChange } from "./rule-settings.policy"
 import type { ApprovalSetupRow, OperatingModeRow, RuleRecordRow, RuleRow } from "./persistence/authority-rules.rows"
 import {
+    DISABLE_AGENT_RULES,
     FIND_APPROVAL_SETUP,
     FIND_OPERATING_MODE,
     FIND_RULE,
@@ -105,6 +106,11 @@ export class AuthorityRulesService {
             })
         }
         return saved
+    }
+
+    /** Switches off the rules a removed agent was granted, inside the caller's transaction. */
+    async disableForAgent(workspaceId: string, agentId: string, manager: EntityManager): Promise<void> {
+        await manager.query(DISABLE_AGENT_RULES, [workspaceId, agentId])
     }
 
     /** Grants the default rules of a module to the workspace; a rule the owner already set is never overwritten. */

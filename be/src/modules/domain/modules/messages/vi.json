@@ -505,6 +505,7 @@
   "errors.MODULES_INSTALLATION_NOT_FOUND": "Không tìm thấy agent đã cài.",
   "errors.MODULES_AGENT_MISSING": "Agent này chưa có nhân viên AI đi kèm.",
   "errors.MODULES_AGENT_NAME_INVALID": "Tên hiển thị cần từ {{min}} đến {{max}} ký tự.",
+  "errors.MODULES_INSTALLATION_REMOVED": "Agent này đã được gỡ. Lịch sử vẫn được giữ, nhưng không thể sửa hay bật lại.",
   "errors.MODULES_NEEDS_VERSION": "Cần áp dụng một bản thiết lập trước khi bật agent.",
   "errors.MODULES_SETTING_INVALID": "Giá trị cài đặt không hợp lệ.",
   "errors.MODULES_GATES_UNCONFIRMED": "Hãy xác nhận mọi mục trong danh sách trước khi áp dụng.",

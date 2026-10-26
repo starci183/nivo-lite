@@ -1,7 +1,10 @@
-import { factOf, gapOf } from "../../../tests/fixtures/builders/setup-cards.builder"
+import { REGISTRY, factOf, gapOf } from "../../../tests/fixtures/builders/setup-cards.builder"
 import { Test } from "@nestjs/testing"
-import { FakeClock, builder, mock } from "@starci/jest-preset"
+import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
+import { DecisionsErrorCode } from "@modules/domain/decisions"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { AuthorityRuleRecord } from "@modules/domain/authority-rules"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import { EventsService } from "@modules/domain/events"
@@ -129,6 +132,7 @@ const build = async () => {
     facts.propose.mockResolvedValue({ fact: factOf(), outcome: "applied" })
     const rules = mock<AuthorityRulesService>()
     rules.list.mockResolvedValue([])
+    const actions = mock<AuthorityActionsService>({ list: jest.fn().mockResolvedValue(REGISTRY) })
     const gaps = mock<KnowledgeGapsService>()
     const events = mock<EventsService>()
     const sync = mock<AgentSyncService>()
@@ -144,6 +148,8 @@ const build = async () => {
             { provide: ModulesService, useValue: modules },
             { provide: BrainFactsService, useValue: facts },
             { provide: AuthorityRulesService, useValue: rules },
+            { provide: AuthorityActionsService, useValue: actions },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: mockEntityManager() },
             { provide: KnowledgeGapsService, useValue: gaps },
             { provide: EventsService, useValue: events },
             { provide: AgentSyncService, useValue: sync },
@@ -329,26 +335,34 @@ describe("SetupCardsService > decide", () => {
             result: { outcome: "applied", ruleId: "rule-9" },
             decidedBy: "Lan",
         })
-        for (const action of ["send_email", "unknown"]) {
-            writes.find.mockResolvedValue(ruleCard({ action }))
-            rules.save.mockResolvedValue(ruleOf({ action, mode: "never", limit_vnd: null }))
-            await service.decide("u1", "ws-1", "card-1", { decision: "confirm", mode: "never" }, "vi")
-            expect(rules.save).toHaveBeenCalledWith("ws-1", {
-                action,
-                department: "accounting",
-                mode: "never",
-                limit_vnd: null,
-                required_fields: action === "send_email" ? ["contact"] : [],
-                note: null,
-            })
-            expect(events.record.mock.calls.at(-1)?.[0]?.summary).toBe(
-                `accounting.${action} -> never (${ACCOUNTING_MODULE.name.vi} setup chat)`,
-            )
-        }
+        writes.find.mockResolvedValue(ruleCard({ action: "send_email" }))
+        rules.save.mockResolvedValue(ruleOf({ action: "send_email", mode: "never", limit_vnd: null }))
+        await service.decide("u1", "ws-1", "card-1", { decision: "confirm", mode: "never" }, "vi")
+        expect(rules.save).toHaveBeenCalledWith("ws-1", {
+            action: "send_email",
+            department: "accounting",
+            mode: "never",
+            limit_vnd: null,
+            required_fields: ["contact"],
+            note: null,
+        })
+        expect(events.record.mock.calls.at(-1)?.[0]?.summary).toBe(
+            `accounting.send_email -> never (${ACCOUNTING_MODULE.name.vi} setup chat)`,
+        )
     })
 })
 
 describe("SetupCardsService > decide", () => {
+    it.each([
+        ["unknown", "never", DecisionsErrorCode.UnknownAction],
+        ["pay_vendor", "auto", DecisionsErrorCode.ModeCapped],
+    ] as const)("refuses the rule of %s as the Authority page would", async (action, mode, code) => {
+        const { service, writes, rules } = await build()
+        writes.find.mockResolvedValue(ruleCard({ action }))
+        const decision = { decision: "confirm", mode } as const
+        await expect(service.decide("u1", "ws-1", "card-1", decision, "en")).rejects.toMatchObject({ code })
+        expect(rules.save).not.toHaveBeenCalled()
+    })
     it.each([undefined, null, "", "private", 0, {}, []])("keeps the fact scope for edit %p", async (scope) => {
         const { service, writes, facts, sync, installations, messages, gaps, closed } = await build()
         writes.find.mockResolvedValue(factCard({ scope: "restricted" }))

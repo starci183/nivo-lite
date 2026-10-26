@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { McpGatewayService } from "@modules/domain/mcp-gateway"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
+import { InstallationRecordsService, lifecycleOf } from "@modules/domain/module-installations"
 import type { InstallationRecord, InstallationStatus } from "@modules/domain/module-installations"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 import type { ConnectionNeed, InstallationView } from "./modules.contracts"
@@ -30,7 +30,8 @@ export class ModuleReadinessService {
 
     /** An installation with what it still needs connected. */
     async withNeeds(record: InstallationRecord): Promise<InstallationView> {
-        return { ...record, connectionNeeds: await this.needsOf(record.workspaceId, record.moduleKey) }
+        const connectionNeeds = await this.needsOf(record.workspaceId, record.moduleKey)
+        return { ...record, connectionNeeds, lifecycle: lifecycleOf(record, connectionNeeds.length) }
     }
 
     /**

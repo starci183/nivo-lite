@@ -58,6 +58,8 @@ const INSTALLATION = {
     operatingMode: "assist",
     settings: { processor: "openclaw" },
     activeContextVersionId: "version-1",
+    liveEnabled: true,
+    removed: false,
 }
 
 const build = async () => {
@@ -86,6 +88,13 @@ describe("InstallationDirectoryService > byId, firstOfModule and ofAgent", () =>
         await expect(service.firstOfModule("ws-1", "accounting")).resolves.toEqual(INSTALLATION)
         await expect(service.ofAgent("ws-1", "agent-1")).resolves.toEqual(INSTALLATION)
         expect(installations.find).toHaveBeenCalledWith("ws-1", "inst-1")
+    })
+
+    it("marks a removed installation", async () => {
+        const { service, installations } = await build()
+        installations.find.mockResolvedValue(recordOf({ status: "removed" }))
+
+        await expect(service.byId("ws-1", "inst-1")).resolves.toMatchObject({ removed: true })
     })
 
     it("answers null when no installation matches", async () => {

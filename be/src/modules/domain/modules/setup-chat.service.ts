@@ -161,6 +161,7 @@ export class SetupChatService {
     async apply(principalId: string, workspaceId: string, installationId: string, locale: Locale): Promise<number> {
         const member = await this.members.require(principalId, workspaceId, GOVERNORS)
         const installation = await this.installationOf(workspaceId, installationId)
+        if (installation.status === "removed") throw new ModulesError({ code: ModulesErrorCode.InstallationRemoved })
         const module = await this.modules.find(installation.moduleKey)
         const draft = await this.openDraft(installation, locale)
         if (!allGatesConfirmed(module, draft.gateEvidence)) {

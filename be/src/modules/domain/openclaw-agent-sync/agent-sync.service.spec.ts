@@ -42,6 +42,8 @@ const installationOf = builder<Installation>({
     operatingMode: "assist",
     settings: {},
     activeContextVersionId: null,
+    liveEnabled: false,
+    removed: false,
 })
 
 const BUNDLE: AgentBundle = {
@@ -73,6 +75,7 @@ interface Setup {
     dirs?: boolean
     internalCurrent?: boolean
     internalRegistered?: boolean
+    sibling?: boolean
 }
 
 const build = async (setup: Setup = {}) => {
@@ -90,6 +93,7 @@ const build = async (setup: Setup = {}) => {
     )
     const installations = mock<InstallationDirectory>({
         byId: jest.fn(() => Promise.resolve(setup.installation === undefined ? installationOf() : setup.installation)),
+        firstOfModule: jest.fn(() => Promise.resolve(setup.sibling === true ? installationOf({ id: "i2" }) : null)),
         onOpenclaw: jest.fn(() =>
             Promise.resolve([
                 { id: "i1", workspaceId: WORKSPACE },
@@ -103,6 +107,7 @@ const build = async (setup: Setup = {}) => {
         ),
         isCurrent: jest.fn(() => setup.current === true || setup.internalCurrent === true),
         register: jest.fn(() => setup.registered === true || setup.internalRegistered === true),
+        unregister: jest.fn(() => true),
     })
     const writer = mock<WorkspaceWriterService>({
         contentHash: jest.fn(() => "hash-1"),
@@ -417,6 +422,23 @@ describe("AgentSyncService", () => {
             await expect(service.ensureInternalAgent(WORKSPACE)).rejects.toMatchObject({
                 code: OpenclawAgentSyncErrorCode.WorkspaceUnavailable,
             })
+        })
+    })
+})
+
+describe("AgentSyncService", () => {
+    describe("syncInstallation of a removed installation", () => {
+        it("takes a removed installation out of OpenClaw unless another instance of the module is left", async () => {
+            const removed = installationOf({ removed: true })
+            const alone = await build({ installation: removed })
+            await expect(alone.service.syncInstallation(WORKSPACE, "i1", false)).resolves.toBeNull()
+            expect(alone.registry.unregister).toHaveBeenCalledWith("ws-12345678-chatbot")
+            expect(alone.pause.wait).toHaveBeenCalledWith(2000)
+            expect(alone.bundles.build).not.toHaveBeenCalled()
+
+            const shared = await build({ installation: removed, sibling: true })
+            await expect(shared.service.syncInstallation(WORKSPACE, "i1", false)).resolves.toBeNull()
+            expect(shared.registry.unregister).not.toHaveBeenCalled()
         })
     })
 })

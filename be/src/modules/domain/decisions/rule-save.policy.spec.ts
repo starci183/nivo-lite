@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { AuthorityRuleRecord, RuleChange } from "@modules/domain/authority-rules"
-import { ruleSummary, runsAlone } from "./rule-save.policy"
+import { ruleSummary } from "./rule-save.policy"
 
 const SUBJECT = Symbol("rule-save.policy")
 
@@ -37,32 +37,10 @@ const savedOf = builder<AuthorityRuleRecord>({
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { runsAlone, ruleSummary } }],
+        providers: [{ provide: SUBJECT, useValue: { ruleSummary } }],
     }).compile()
-    return moduleRef.get<{ runsAlone: typeof runsAlone; ruleSummary: typeof ruleSummary }>(SUBJECT)
+    return moduleRef.get<{ ruleSummary: typeof ruleSummary }>(SUBJECT)
 }
-
-describe("rule save policy > runsAlone", () => {
-    it("is true for an auto rule, banded or not", async () => {
-        const subject = await buildSubject()
-
-        expect(subject.runsAlone(changeOf({ mode: "auto" }))).toBe(true)
-    })
-
-    it("is true for a rule that asks but has an auto band, which the bands turn into auto", async () => {
-        const subject = await buildSubject()
-
-        expect(subject.runsAlone(changeOf({ mode: "ask", auto_max: 3, ask_max: 15 }))).toBe(true)
-    })
-
-    it("is false for ask without an auto band, and for never whatever its bands", async () => {
-        const subject = await buildSubject()
-
-        expect(subject.runsAlone(changeOf({ mode: "ask" }))).toBe(false)
-        expect(subject.runsAlone(changeOf({ mode: "ask", auto_max: null, ask_max: 15 }))).toBe(false)
-        expect(subject.runsAlone(changeOf({ mode: "never", auto_max: 3, ask_max: 15 }))).toBe(false)
-    })
-})
 
 describe("rule save policy > ruleSummary", () => {
     it("names the department, the action and the mode", async () => {

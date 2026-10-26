@@ -409,7 +409,9 @@ describe("CustomerTurnRuntimeService", () => {
 
 describe("CustomerTurnRuntimeService readiness", () => {
     it.each([
-        ["ready" as const, { reply: "50k" }, 1],
+        ["live" as const, { reply: "50k" }, 1],
+        ["ready" as const, "installation_not_running", 0],
+        ["removed" as const, "installation_not_running", 0],
         ["needs_connection" as const, "needs_connection", 0],
         ["setup" as const, "installation_not_running", 0],
     ])("answers an installation the readiness settles as %s", async (status, answer, runs) => {
@@ -421,6 +423,22 @@ describe("CustomerTurnRuntimeService readiness", () => {
         )
         expect(readiness.settle).toHaveBeenCalledWith(WS, "inst-1")
         expect(gateway.runTurn).toHaveBeenCalledTimes(runs)
+    })
+
+    it("does not answer for an installation the owner has not switched on, whatever its status says", async () => {
+        const { runtime, installations, readiness, gateway } = await build()
+        installations.ofAgent.mockResolvedValue({ ...installationOf(), liveEnabled: false })
+        readiness.settle.mockResolvedValueOnce("live")
+        await expect(runtime.propose(turn)).resolves.toBe("installation_not_running")
+        expect(gateway.runTurn).not.toHaveBeenCalled()
+    })
+
+    it("does not answer for an installation with no applied context version, whatever its status says", async () => {
+        const { runtime, installations, readiness, gateway } = await build()
+        installations.ofAgent.mockResolvedValue({ ...installationOf(), activeContextVersionId: null })
+        readiness.settle.mockResolvedValueOnce("live")
+        await expect(runtime.propose(turn)).resolves.toBe("installation_not_running")
+        expect(gateway.runTurn).not.toHaveBeenCalled()
     })
 
     it("asks no readiness for an agent without an installation", async () => {
