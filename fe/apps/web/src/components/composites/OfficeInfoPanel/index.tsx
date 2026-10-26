@@ -1,4 +1,4 @@
-import { Badge, Button, IconButton, Region, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
+import { Badge, Button, Divider, IconButton, Region, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
 import { OfficeRoomResources } from "@/components/branches/OfficeRoomResources"
 import { nivoIconSource } from "@/components/leaves/Icon"
@@ -25,7 +25,6 @@ type JumpRowProps = {
 /** One waiting thing as a compact card whose whole face jumps to it in the thread. */
 const JumpRow = (props: JumpRowProps) => (
     <SurfaceCard
-        depth="nested"
         wholeAction={{
             kind: "button",
             press: () => props.onJump(props.row.id),
@@ -85,11 +84,13 @@ export const OfficeInfoPanel = (props: OfficeInfoPanelProps) => {
                     </div>
                     <IconButton
                         source={nivoIconSource("close", "leading")}
+                        intent="dismiss"
                         label={text("infoClose")}
                         onPress={props.on.close}
                     />
                 </div>
             ) : null}
+            {isDocked ? <Divider semantics="presentation" /> : null}
             <div className={isDocked ? BODY_CLASS_NAME : DRAWER_BODY_CLASS_NAME}>
                 <JumpList
                     title={text("pendingTitle")}
@@ -120,7 +121,7 @@ export const OfficeInfoPanel = (props: OfficeInfoPanelProps) => {
                     <Text size="sm" tone="muted">
                         {info.tasksSummary}
                     </Text>
-                    <Button variant="secondary" size="sm" width="fill" onPress={props.on.openTasks}>
+                    <Button intent="alternative" size="sm" width="fill" onPress={props.on.openTasks}>
                         {text("tasksOpen")}
                     </Button>
                 </Region>
@@ -167,12 +168,12 @@ const renderOfficeInfoPanelMembers = (
                     )}
                     <div className={ACTIONS_CLASS_NAME}>
                         {member.mention === null ? null : (
-                            <Button variant="ghost" size="sm" onPress={() => props.on.mention(member.mention ?? "")}>
+                            <Button intent="neutral" size="sm" onPress={() => props.on.mention(member.mention ?? "")}>
                                 {text("mention")}
                             </Button>
                         )}
                         {member.chatHref === null ? null : (
-                            <Button variant="ghost" size="sm" href={member.chatHref}>
+                            <Button intent="neutral" size="sm" href={member.chatHref}>
                                 {text("chat11")}
                             </Button>
                         )}
@@ -186,7 +187,7 @@ const renderOfficeInfoPanelMembers = (
                 )}
             </div>
         ))}
-        <Button variant="outline" size="sm" width="fill" href={info.addAgentHref}>
+        <Button intent="alternative" size="sm" width="fill" href={info.addAgentHref}>
             {text("addAgent")}
         </Button>
     </Region>

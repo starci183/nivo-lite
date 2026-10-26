@@ -1,4 +1,4 @@
-import { PageContainer, Text, TopBar } from "@starci/grammar/common"
+import { PageContainer, SectionHeader } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { AdminAccount } from "@/components/blocks/AdminAccount"
 import { AdminNavigation } from "@/components/blocks/AdminNavigation"
@@ -12,17 +12,20 @@ export interface AdminLayoutBaseProps {
     readonly children: ReactNode
 }
 
-/** Draws the team console frame: the top bar with brand, destinations and who is signed in, then the routed page. */
+/** Draws the team console frame: the header with brand, destinations and who is signed in, then the routed page. */
 export const AdminLayoutBase = (props: AdminLayoutBaseProps) => (
-    <>
-        <TopBar
-            position="static"
-            brand={<Text weight="semibold">{props.props.title}</Text>}
-            navigation={<AdminNavigation />}
-            actions={<AdminAccount />}
-        />
-        <PageContainer measure="full">
-            <div className={PAGE_CLASS_NAME}>{props.children}</div>
-        </PageContainer>
-    </>
+    <PageContainer measure="full">
+        <div className={PAGE_CLASS_NAME}>
+            <SectionHeader
+                title={props.props.title}
+                action={
+                    <>
+                        <AdminNavigation />
+                        <AdminAccount />
+                    </>
+                }
+            />
+            {props.children}
+        </div>
+    </PageContainer>
 )

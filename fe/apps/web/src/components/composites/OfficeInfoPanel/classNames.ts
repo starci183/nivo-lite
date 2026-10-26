@@ -1,5 +1,5 @@
 /** The header band of the docked column. */
-export const HEAD_CLASS_NAME = "flex h-18 shrink-0 items-center gap-3 border-b border-separator px-4"
+export const HEAD_CLASS_NAME = "flex h-18 shrink-0 items-center gap-3 px-4"
 
 /** The title block of the header. */
 export const HEAD_TEXT_CLASS_NAME = "flex min-w-0 flex-1 flex-col"
