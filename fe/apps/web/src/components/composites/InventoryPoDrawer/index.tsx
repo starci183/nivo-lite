@@ -6,7 +6,7 @@ import { InventoryPoLine } from "@/components/branches/InventoryPoLine"
 import { InventoryPoActions } from "@/components/leaves/InventoryPoActions"
 import { InventoryField } from "@/components/leaves/InventoryField"
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
-import { Badge, Drawer, Text, Textarea } from "@starci/grammar/common"
+import { Badge, Drawer, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 
 import { FORM_CLASS_NAME, QUOTE_CLASS_NAME } from "./classNames"
 /** One purchase order in a drawer: edit a draft, approve a waiting message, receive goods, read a finished order. */
@@ -57,7 +57,6 @@ export const InventoryPoDrawer = (props: InventoryPoDrawerProps) => {
                 {p.mode === "receive" ? renderInventoryPoDrawerInvoice(say, p, on) : null}
                 {p.messageEditable ? (
                     <Textarea
-                        variant="secondary"
                         label={p.messageTitle}
                         description={say("poMessageHint")}
                         rows={9}
@@ -66,12 +65,14 @@ export const InventoryPoDrawer = (props: InventoryPoDrawerProps) => {
                     />
                 ) : null}
                 {!p.messageEditable && p.message !== "" ? (
-                    <div className={QUOTE_CLASS_NAME}>
-                        <Text size="xs" tone="muted" weight="medium">
-                            {say("poMessageDrafted")}
-                        </Text>
-                        <Text size="sm">{p.message}</Text>
-                    </div>
+                    <SurfaceCard ariaLabel={say("poMessageDrafted")}>
+                        <div className={QUOTE_CLASS_NAME}>
+                            <Text size="xs" tone="muted" weight="medium">
+                                {say("poMessageDrafted")}
+                            </Text>
+                            <Text size="sm">{p.message}</Text>
+                        </div>
+                    </SurfaceCard>
                 ) : null}
                 {p.sendNote === null ? null : (
                     <Text size="sm" tone="muted">

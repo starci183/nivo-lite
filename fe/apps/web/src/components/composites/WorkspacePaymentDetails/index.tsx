@@ -78,7 +78,6 @@ export const WorkspacePaymentDetails = (props: WorkspacePaymentDetailsProps) => 
                             id={field.id}
                             name={field.id}
                             label={field.label}
-                            variant="secondary"
                             value={field.value}
                             isReadOnly
                             isCopyable

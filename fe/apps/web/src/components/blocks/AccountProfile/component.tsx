@@ -29,7 +29,6 @@ export const AccountProfileBase = (props: AccountProfileBaseProps) => (
                     name="name"
                     label={props.props.nameLabel}
                     hint={props.props.nameHint}
-                    variant="secondary"
                     isRequired
                     isDisabled={props.props.isPending}
                     isSkeleton={props.props.isLoading}
