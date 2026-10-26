@@ -32,7 +32,6 @@ export const TelegramUserChats = (props: TelegramUserChatsProps) => (
             {props.text.hint}
         </Text>
         <SearchField
-            variant="secondary"
             label={props.text.search}
             placeholder={props.text.placeholder}
             isDisabled={props.isDisabled}
@@ -49,7 +48,6 @@ export const TelegramUserChats = (props: TelegramUserChatsProps) => (
             </Text>
         ) : (
             <CheckboxGroup
-                variant="secondary"
                 label={props.text.label}
                 isLabelHidden
                 isDisabled={props.isDisabled}

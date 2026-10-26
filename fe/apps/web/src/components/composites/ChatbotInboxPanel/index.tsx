@@ -61,7 +61,9 @@ export const ChatbotInboxPanel = (props: ChatbotInboxPanelProps) => {
                                 }
                                 aria-label={props.sideLabel}
                             >
-                                {props.side}
+                                <SurfaceCard ariaLabel={props.sideLabel} composition="joined" height="fill">
+                                    {props.side}
+                                </SurfaceCard>
                             </aside>
                         ) : null}
                     </div>
