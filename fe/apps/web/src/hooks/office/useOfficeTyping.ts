@@ -1,9 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useMember } from "@/hooks/member"
-import { useMutateSetChatTypingSwr, useQueryChatTypingChannelSwr } from "@/hooks/swr"
-import { joinPrivateBroadcast } from "@/modules/auth"
+import { useMutateSetChatTypingSwr, useSubscribeChatTypingSwr } from "@/hooks/swr"
 import { chatTargetOf, typingSignalOf, withTypingSignal } from "@/modules/office"
 import type { TypingSignal } from "@/modules/office"
 
@@ -16,53 +15,35 @@ interface LastSent {
     readonly at: number
 }
 
-type SignalMap = ReadonlyMap<string, ReadonlyArray<TypingSignal>>
-
-/** The map with one more signal recorded for a room. */
-const withSignalIn = (current: SignalMap, key: string, signal: Parameters<typeof withTypingSignal>[1]): SignalMap =>
-    new Map(current).set(key, withTypingSignal(current.get(key) ?? [], signal))
-
-/** The map without the signals whose deadline has passed. */
-const withoutLapsed = (current: SignalMap): SignalMap =>
-    new Map([...current].map(([key, entries]) => [key, entries.filter((entry) => entry.expiresAt > Date.now())]))
-
 /**
- * Who else is typing in each listed Hub room, over its authorized private broadcast channel, and the command that tells the
- * others this person types in the open room. A signal lapses at its own deadline even when the stop never arrives.
+ * Who else is typing in one Hub room (null = the Office room), over the back end typing event stream, and the
+ * command that tells the others this person types. A signal lapses at its own deadline even when the stop never arrives.
  */
-export const useOfficeTyping = (room: string | null, keys: ReadonlyArray<string | null>) => {
+export const useOfficeTyping = (room: string | null) => {
     const me = useMember()
-    const channels = useQueryChatTypingChannelSwr(keys.map(chatTargetOf))
     const { trigger } = useMutateSetChatTypingSwr()
-    const [signals, setSignals] = useState<SignalMap>(new Map())
+    const [signals, setSignals] = useState<ReadonlyArray<TypingSignal>>([])
     const lastSent = useRef<LastSent | null>(null)
     const myId = me?.userId ?? null
-    const answers = channels.data
+    const onPush = useCallback(
+        (payload: unknown) => {
+            const signal = typingSignalOf(payload)
+            if (signal === null || signal.id === myId) return
+            setSignals((current) => withTypingSignal(current, signal))
+        },
+        [myId],
+    )
+    useSubscribeChatTypingSwr(chatTargetOf(room), onPush)
+
+    useEffect(() => () => setSignals([]), [room, myId])
 
     useEffect(() => {
-        if (answers === undefined) return undefined
-        const leaves = answers.flatMap(({ request, channel }) => {
-            if (channel?.private !== true) return []
-            const key = request.room ?? ""
-            return [
-                joinPrivateBroadcast(channel.topic, channel.event, (payload) => {
-                    const signal = typingSignalOf(payload)
-                    if (signal === null || signal.id === myId) return
-                    setSignals((current) => withSignalIn(current, key, signal))
-                }),
-            ]
-        })
-        return () => {
-            leaves.forEach((leave) => leave())
-            setSignals(new Map())
-        }
-    }, [answers, myId])
-
-    useEffect(() => {
-        const active = [...signals.values()].flat()
-        if (active.length === 0) return undefined
-        const next = Math.min(...active.map((entry) => entry.expiresAt))
-        const timer = setTimeout(() => setSignals(withoutLapsed), Math.max(0, next - Date.now()) + 50)
+        if (signals.length === 0) return undefined
+        const next = Math.min(...signals.map((entry) => entry.expiresAt))
+        const timer = setTimeout(
+            () => setSignals((current) => current.filter((entry) => entry.expiresAt > Date.now())),
+            Math.max(0, next - Date.now()) + 50,
+        )
         return () => clearTimeout(timer)
     }, [signals])
 
@@ -78,11 +59,15 @@ export const useOfficeTyping = (room: string | null, keys: ReadonlyArray<string 
                 void trigger({ target: chatTargetOf(room), typing: true }, { throwOnError: false })
             } else if (!isTyping && previous !== null) {
                 lastSent.current = null
-                void trigger({ target: chatTargetOf(previous.room), typing: false }, { throwOnError: false })
+                void trigger({ target: chatTargetOf(room), typing: false }, { throwOnError: false })
             }
         },
         [room, trigger],
     )
 
-    return { names: (signals.get(room ?? "") ?? []).map((entry) => entry.name), byRoom: signals, onDraft }
+    const byRoom: ReadonlyMap<string, ReadonlyArray<TypingSignal>> = useMemo(
+        () => new Map([[room ?? "", signals]]),
+        [room, signals],
+    )
+    return { names: signals.map((entry) => entry.name), byRoom, onDraft }
 }

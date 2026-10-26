@@ -37,10 +37,7 @@ export const useOfficeRooms = (selected: string | null, viewer: OfficeMentionVie
     const rooms = useQueryOfficeRoomsSwr(LIVE)
     const unread = useQueryOfficeConversationUnreadSwr(LIVE)
     const { markers, setMute } = useOfficeMarkers((rooms.data ?? []).map((room) => room.key ?? null))
-    const peers = useOfficeTyping(
-        selected,
-        (rooms.data ?? []).map((room) => room.key ?? null),
-    )
+    const peers = useOfficeTyping(selected)
     const connections = useQueryConnectionsSwr()
     const markConversation = useMutateMarkOfficeConversationReadSwr()
     const runGraphQL = useGraphQLWithToast()

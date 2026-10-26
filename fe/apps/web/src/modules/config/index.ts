@@ -28,6 +28,8 @@ export const sessionCookieOptions = {
 const apiUrl = (): string => required("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL)
 /** The GraphQL endpoint of the back end api. */
 export const graphqlUrl = (): string => `${apiUrl()}/graphql`
+/** The back end's event-stream endpoint at `path`, on the origin of its GraphQL endpoint (the streams of modules/api/sse). */
+export const eventStreamUrl = (path: string): string => new URL(path, graphqlUrl()).href
 
 /** Transport tuning of the GraphQL client: request timeout and the retry backoff (milliseconds, attempts). */
 export const graphqlTuning = {
