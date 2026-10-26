@@ -150,7 +150,7 @@ const renderRewardRow = ({ row, p, on }: RenderRewardRowContext) => (
                     isDisabled={p.isPending}
                     onSelectedChange={(active) => on.toggle(row.id, active)}
                 />
-                <Button intent="neutral" size="sm" isDisabled={p.isPending} onPress={() => on.edit(row.id)}>
+                <Button intent="neutral" isDisabled={p.isPending} onPress={() => on.edit(row.id)}>
                     {p.editLabel}
                 </Button>
                 <AlertDialog

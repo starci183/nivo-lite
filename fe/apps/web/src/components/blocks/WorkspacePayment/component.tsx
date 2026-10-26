@@ -35,14 +35,14 @@ export interface WorkspacePaymentBaseProps {
 const PaymentActions = (props: WorkspacePaymentBaseProps) => {
     if (props.props.phase === "paid") {
         return (
-            <Button intent="commit" size="lg" href={props.props.returnTo}>
+            <Button intent="commit" href={props.props.returnTo}>
                 {props.props.openLabel}
             </Button>
         )
     }
     return (
         <>
-            <Button intent="commit" size="lg" isDisabled={!props.props.canRegenerate} onPress={props.on.regenerate}>
+            <Button intent="commit" isDisabled={!props.props.canRegenerate} onPress={props.on.regenerate}>
                 {props.props.regenerateLabel}
             </Button>
             <Button intent="neutral" href={props.props.allWorkspacesHref}>
