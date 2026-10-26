@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { useMutatePostOfficeMessageSwr, useMutateProposeOfficeCommandSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { bodyPartsOf } from "@/modules/office"
@@ -29,10 +29,12 @@ interface OutboxRow {
     readonly id: string
     readonly body: string
     readonly isFailed: boolean
+    /** The server id once the post succeeded; the row stays until the thread data holds this id. */
+    readonly postedId: string | null
 }
 
-/** Posts a line to the Office: an optimistic bubble, the post, then (for an owner or manager) the read as a command. */
-export const useOfficeSend = () => {
+/** Posts a line to the Office: an optimistic bubble kept until the server copy is in the thread data, the post, then (for an owner or manager) the read as a command. */
+export const useOfficeSend = (knownIds: ReadonlySet<string>) => {
     const runGraphQL = useGraphQLWithToast()
     const post = useMutatePostOfficeMessageSwr()
     const propose = useMutateProposeOfficeCommandSwr()
@@ -40,10 +42,14 @@ export const useOfficeSend = () => {
     const [typing, setTyping] = useState<string | null>(null)
     const [reading, setReading] = useState<ReadingAgent | null>(null)
 
+    const isSettled = useCallback((row: OutboxRow) => row.postedId !== null && knownIds.has(row.postedId), [knownIds])
     const send = useCallback(
         async (plan: SendPlan): Promise<boolean> => {
             const id = `pending-${Date.now()}`
-            setOutbox((current) => [...current, { id, body: plan.body, isFailed: false }])
+            setOutbox((current) => [
+                ...current.filter((row) => !isSettled(row)),
+                { id, body: plan.body, isFailed: false, postedId: null },
+            ])
             setTyping(plan.callNames.length > 0 ? plan.callNames.join(", ") : null)
             setReading(plan.reading)
             const posted = await runGraphQL(() => post.trigger({ body: plan.body, room: plan.room }), {
@@ -55,23 +61,25 @@ export const useOfficeSend = () => {
                 setReading(null)
                 return false
             }
+            setOutbox((current) => current.map((row) => (row.id === id ? { ...row, postedId: posted.id } : row)))
             if (plan.shouldPropose) {
                 await runGraphQL(() => propose.trigger({ messageId: posted.id }), { showSuccessToast: false })
             }
             await refreshOffice()
-            setOutbox((current) => current.filter((row) => row.id !== id))
             setTyping(null)
             setReading(null)
             return true
         },
-        [runGraphQL, post, propose],
+        [runGraphQL, post, propose, isSettled],
     )
 
     const dismissFailed = useCallback(() => setOutbox((current) => current.filter((row) => !row.isFailed)), [])
-    const views: ReadonlyArray<OfficeOutboxView> = outbox.map((row) => ({
-        id: row.id,
-        parts: bodyPartsOf(row.body),
-        isFailed: row.isFailed,
-    }))
+    const views = useMemo<ReadonlyArray<OfficeOutboxView>>(
+        () =>
+            outbox
+                .filter((row) => !isSettled(row))
+                .map((row) => ({ id: row.id, parts: bodyPartsOf(row.body), isFailed: row.isFailed })),
+        [outbox, isSettled],
+    )
     return { send, dismissFailed, outbox: views, typing, reading, isSending: post.isMutating || propose.isMutating }
 }

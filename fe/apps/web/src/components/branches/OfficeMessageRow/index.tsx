@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
 import { Badge, Button, ButtonGroup, ChatBubble, Text } from "@starci/grammar/common"
 import type { OfficeBodyPart, OfficeMessageView, OfficeText } from "@/modules/types"
-import { AVATAR_SLOT_CLASS_NAME, NOTICE_CLASS_NAME, ROW_FIRST_CLASS_NAME } from "./classNames"
+import { AVATAR_SLOT_CLASS_NAME, NOTICE_CLASS_NAME, rowClassNameOf } from "./classNames"
 
 /** What one chat line draws. */
 type OfficeMessageRowProps = {
@@ -108,5 +108,5 @@ export const OfficeMessageRow = (props: OfficeMessageRowProps) => {
             ) : null}
         </ChatBubble>
     )
-    return message.isContinuation ? bubble : <div className={ROW_FIRST_CLASS_NAME}>{bubble}</div>
+    return <div className={rowClassNameOf(message.side === "outgoing", message.isContinuation)}>{bubble}</div>
 }
