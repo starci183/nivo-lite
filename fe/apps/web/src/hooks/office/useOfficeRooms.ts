@@ -8,7 +8,7 @@ import {
     useQueryOfficeRoomsSwr,
 } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { OFFICE_POLL_MS, toOfficeRoom } from "@/modules/office"
+import { toOfficeRoom } from "@/modules/office"
 import type {
     OfficeAgentConversation,
     OfficeChannelWire,
@@ -18,8 +18,6 @@ import type {
 } from "@/modules/office"
 import { useOfficeMarkers } from "./useOfficeMarkers"
 import { useOfficeTyping } from "./useOfficeTyping"
-
-const LIVE = { refreshInterval: OFFICE_POLL_MS }
 
 const unreadOf = (entries: ReadonlyArray<{ readonly id: string; readonly unread: number }> | undefined) =>
     new Map((entries ?? []).map((entry) => [entry.id, entry.unread]))
@@ -34,8 +32,8 @@ const agentConversationsOf = (entries: ReadonlyArray<{ readonly id: string } & O
  * and whether my last line was read (`markers`), and who types in each room.
  */
 export const useOfficeRooms = (selected: string | null, viewer: OfficeMentionViewer) => {
-    const rooms = useQueryOfficeRoomsSwr(LIVE)
-    const unread = useQueryOfficeConversationUnreadSwr(LIVE)
+    const rooms = useQueryOfficeRoomsSwr()
+    const unread = useQueryOfficeConversationUnreadSwr()
     const { markers, setMute } = useOfficeMarkers((rooms.data ?? []).map((room) => room.key ?? null))
     const peers = useOfficeTyping(selected)
     const connections = useQueryConnectionsSwr()

@@ -1,4 +1,4 @@
-/** How often the thread, the approvals and the work items are read again, in milliseconds. */
+/** How often the approvals and the work items are read again, in milliseconds (the office-activity stream does not announce them). */
 export const OFFICE_POLL_MS = 4000
 
 /** How many lines one page of the thread holds. */

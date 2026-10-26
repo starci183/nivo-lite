@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo } from "react"
 import { isManager, useMember } from "@/hooks/member"
+import { useSubscribeOfficeActivitySwr } from "@/hooks/swr"
 import {
     useOfficeBoard,
     useOfficeDecisions,
@@ -85,6 +86,7 @@ const useSendLine = (
 /** The whole Office messenger for one Hub room (null = the Office room): its data, its words and its commands. */
 export const useOfficeMessenger = (focusedId: string | null, roomKey: string | null, isThreadVisible: boolean) => {
     const me = useMember()
+    useSubscribeOfficeActivitySwr()
     const words = useOfficeWords()
     const fullBoard = useOfficeBoard()
     const handles = staffHandlesOf(

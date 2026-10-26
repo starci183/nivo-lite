@@ -2,7 +2,7 @@
 
 import { slotOfSwr } from "@/hooks/slot"
 import { useQueryOfficeMessagesSwr } from "@/hooks/swr"
-import { OFFICE_PAGE_SIZE, OFFICE_POLL_MS, mergeMessages, toOfficeMessage } from "@/modules/office"
+import { OFFICE_PAGE_SIZE, mergeMessages, toOfficeMessage } from "@/modules/office"
 import type { OfficeMessage } from "@/modules/office"
 import type { DataSlot } from "@/modules/types"
 import { useCallback, useEffect, useState } from "react"
@@ -21,8 +21,8 @@ interface EarlierPages {
 }
 
 /**
- * The thread of one Hub room (null = the Office room, every line): the newest page, read again every few seconds, and the earlier
- * pages the person asked for in that room. Polling continues in hidden tabs for delivery; `onFetched` hears the newest fetched id.
+ * The thread of one Hub room (null = the Office room, every line): the newest page, read again when the office-activity stream announces a change, and the earlier
+ * pages the person asked for in that room. The stream delivers in hidden tabs too; `onFetched` hears the newest fetched id.
  */
 export const useOfficeThread = (
     room: string | null,
@@ -34,13 +34,7 @@ export const useOfficeThread = (
     readonly isLoadingEarlier: boolean
     readonly loadEarlier: () => void
 } => {
-    const latest = useQueryOfficeMessagesSwr(
-        { limit: OFFICE_PAGE_SIZE, room },
-        {
-            refreshInterval: OFFICE_POLL_MS,
-            refreshWhenHidden: true,
-        },
-    )
+    const latest = useQueryOfficeMessagesSwr({ limit: OFFICE_PAGE_SIZE, room })
     const fetched = latest.data
     const isValidating = latest.isValidating
     useEffect(() => {

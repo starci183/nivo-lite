@@ -13,7 +13,7 @@ interface ReceiptMemory {
 
 /**
  * Acknowledges fetched lines independently of visibility. A read additionally requires the thread on screen in the visible,
- * focused document. Focus and frame changes can mark an already fetched line read without waiting for another poll.
+ * focused document. Focus and frame changes can mark an already fetched line read without waiting for another read.
  */
 export const useOfficeReceipts = (room: string | null, isThreadVisible: boolean, onRead: () => void) => {
     const { trigger: deliver } = useMutateMarkChatDeliveredSwr()
