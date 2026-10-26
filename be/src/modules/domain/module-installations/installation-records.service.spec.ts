@@ -5,6 +5,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { InstallationRecordsService } from "./installation-records.service"
 import type { InstallationRecord, NewInstallation } from "./module-installations.contracts"
 import {
+    REMOVE_INSTALLATION,
     ACTIVATE_VERSION,
     FIND_FIRST_OF_MODULE,
     FIND_INSTALLATION,
@@ -355,5 +356,18 @@ describe("InstallationRecordsService / settleConnection", () => {
             [SETTLE_CONNECTION, ["inst-1", "ws-1", false]],
             [SETTLE_CONNECTION, ["inst-1", "ws-1", true]],
         ])
+    })
+})
+
+describe("InstallationRecordsService > markRemoved", () => {
+    it("removes the row through the manager it is given, and says when there is nothing to remove", async () => {
+        const em = mockEntityManager({ query: [REMOVE_INSTALLATION, [{ id: "inst-1" }]] })
+        const service = await build(mockEntityManager())
+
+        await expect(service.markRemoved("ws-1", "inst-1", "Lan", em)).resolves.toBe("done")
+        expect(em.query).toHaveBeenCalledWith(REMOVE_INSTALLATION, ["inst-1", "ws-1", "Lan"])
+
+        const none = mockEntityManager({ query: [REMOVE_INSTALLATION, []] })
+        await expect(service.markRemoved("ws-1", "inst-1", "Lan", none)).resolves.toBe("missing")
     })
 })

@@ -51,9 +51,17 @@ export class ProfileActivationService {
         const statuses: Array<[string, InstallationStatus]> = []
         await eachInOrder(kept, async ({ handle, installation, answers }) => {
             await this.applySetup(target, installation, answers)
-            statuses.push([handle, await this.readiness.settle(target.workspaceId, installation.id)])
+            statuses.push([handle, await this.goLive(target.workspaceId, installation.id)])
         })
         return Object.fromEntries(statuses)
+    }
+
+    /** Settles the installation; one that is ready is then switched on, since only a running agent answers customers. */
+    private async goLive(workspaceId: string, installationId: string): Promise<InstallationStatus> {
+        const settled = await this.readiness.settle(workspaceId, installationId)
+        if (settled !== "ready") return settled
+        await this.installations.setLive(workspaceId, installationId, true, false)
+        return "live"
     }
 
     /**

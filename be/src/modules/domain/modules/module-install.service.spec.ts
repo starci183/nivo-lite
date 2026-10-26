@@ -21,7 +21,6 @@ import {
     installationRecordOf as recordOf,
 } from "@tests/fixtures/builders/module-install.builder"
 
-/** What the readiness mock adds to a record. */
 const VIEWED = { connectionNeeds: [], lifecycle: "ready" } as const
 
 const requestOf = builder<InstallRequest>({
@@ -226,13 +225,13 @@ describe("ModuleInstallService > rename", () => {
 })
 
 describe("ModuleInstallService > setLive", () => {
-    it("refuses to go live before a context version is applied", async () => {
+    it.each([
+        [{ activeContextVersionId: null }, ModulesErrorCode.NeedsVersion],
+        [{ status: "removed" }, ModulesErrorCode.InstallationRemoved],
+    ] as const)("refuses to go live for %o", async (patch, code) => {
         const { service, installations } = await build()
-        installations.find.mockResolvedValue(recordOf({ activeContextVersionId: null }))
-
-        await expect(service.setLive("u1", "ws-1", "inst-1", true)).rejects.toMatchObject({
-            code: ModulesErrorCode.NeedsVersion,
-        })
+        installations.find.mockResolvedValue(recordOf(patch))
+        await expect(service.setLive("u1", "ws-1", "inst-1", true)).rejects.toMatchObject({ code })
     })
 
     it("switches the installation and its agent live", async () => {

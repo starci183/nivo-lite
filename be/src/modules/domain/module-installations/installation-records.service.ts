@@ -34,6 +34,7 @@ import {
     LIST_INSTANCE_NAMES,
     LIST_ON_OPENCLAW,
     LIST_WORKSPACES_OF_MODULE,
+    REMOVE_INSTALLATION,
     RENAME_INSTALLATION,
     SAVE_SETTINGS,
     SET_LIVE,
@@ -171,6 +172,16 @@ export class InstallationRecordsService {
             [installationId, workspaceId, live, liveStatusOf(live, waitingForConnection)],
             manager,
         )
+    }
+
+    /** Removes an installation for good, inside the caller's transaction; "missing" when it is not of the workspace or is already removed. */
+    markRemoved(
+        workspaceId: string,
+        installationId: string,
+        removedBy: string,
+        manager: EntityManager,
+    ): Promise<InstallationWrite> {
+        return this.write(REMOVE_INSTALLATION, [installationId, workspaceId, removedBy], manager)
     }
 
     /** Replaces the settings of an installation. */

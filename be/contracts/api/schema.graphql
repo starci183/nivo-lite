@@ -5016,6 +5016,7 @@ type Mutation {
   refreshLeadContext(input: RefreshLeadContextInput!): LeadActionQueuedType!
   registerMcpConnector(input: RegisterMcpConnectorInput!): Boolean!
   reindexKnowledgeSource(input: ReindexKnowledgeSourceInput!): SourceRefType!
+  removeAgent(input: ModuleInstallationIdInput!): ModuleInstallationType!
   removeBookingException(input: RemoveBookingExceptionInput!): RemoveBookingExceptionType!
   removeBookingResource(input: RemoveBookingResourceInput!): RemoveBookingResourceType!
   removeBookingService(input: RemoveBookingServiceInput!): RemoveBookingServiceType!

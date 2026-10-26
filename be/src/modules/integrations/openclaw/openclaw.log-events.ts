@@ -10,6 +10,8 @@ export enum OpenclawLogEvent {
     FrameRejected = "openclaw.frame_rejected",
     /** An agent entry was written into openclaw.json. */
     AgentRegistered = "openclaw.agent_registered",
+    /** An agent entry was taken out of openclaw.json because its installation was removed. */
+    AgentUnregistered = "openclaw.agent_unregistered",
     /** openclaw.json could not be read as JSON. */
     ConfigUnreadable = "openclaw.config_unreadable",
     /** The managed-file manifest of a workspace could not be read as JSON; it is treated as empty. */

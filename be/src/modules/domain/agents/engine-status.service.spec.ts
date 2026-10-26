@@ -80,6 +80,8 @@ describe("EngineStatusService", () => {
                 operatingMode: "assist",
                 settings: { processor: "nivo" },
                 activeContextVersionId: null,
+                liveEnabled: false,
+                removed: false,
             }
             const { service, installations } = await build({ enabled: true, dirs: true, installation })
 

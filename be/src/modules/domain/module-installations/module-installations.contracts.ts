@@ -2,14 +2,14 @@
  * Where an installation stands. `needs_connection`: applied, but a capability role its module requires has no usable connector,
  * so the agent does not run until one is connected (then it is live again); `paused` is the owner's own stop.
  */
-export type InstallationStatus = "installing" | "setup" | "ready" | "live" | "paused" | "needs_connection"
+export type InstallationStatus = "installing" | "setup" | "ready" | "live" | "paused" | "needs_connection" | "removed"
 
 /**
  * What the product may say about an installation, derived from the facts and never stored: `needs_setup` (no applied context version,
  * whatever the stored status says), `needs_connection` (applied, a required connection is missing), `paused` (the owner's stop), `ready`
- * (applied and connected, not switched on yet) and `running` (applied, connected and switched on). Only `running` may be shown as running.
+ * (applied and connected, not switched on yet) and `running` (applied, connected and switched on). `removed` is the terminal state of an uninstalled agent: its history stays readable, nothing runs. Only `running` may be shown as running.
  */
-export type InstallationLifecycle = "needs_setup" | "needs_connection" | "paused" | "ready" | "running"
+export type InstallationLifecycle = "needs_setup" | "needs_connection" | "paused" | "ready" | "running" | "removed"
 
 /** The status a connection check left an installation in, or null when it did not change it. */
 export type OptionalInstallationStatus = InstallationStatus | null

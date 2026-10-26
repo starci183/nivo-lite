@@ -41,13 +41,13 @@ export class ModuleInstallationType {
     @Field(() => String, { nullable: true })
     agentAvatarUrl?: string | null
 
-    /** `installing`, `setup`, `ready`, `live`, `paused` or `needs_connection` (waits for a required connection). */
+    /** `installing`, `setup`, `ready`, `live`, `paused`, `needs_connection` (waits for a required connection) or `removed`. */
     @Field()
     status!: string
 
     /**
      * What the product may say, derived from the facts: `needs_setup` (no applied version), `needs_connection`, `paused`, `ready`
-     * (applied, not switched on) or `running` (applied, connected and switched on). Show "running" only for `running`.
+     * (applied, not switched on), `running` (applied, connected and switched on) or `removed` (uninstalled, history only). Show "running" only for `running`.
      */
     @Field()
     lifecycle!: string

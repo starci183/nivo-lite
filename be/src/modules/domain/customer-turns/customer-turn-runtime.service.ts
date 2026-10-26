@@ -40,7 +40,7 @@ const NEEDS_CONNECTION = "needs_connection"
 /** Why a turn does not run while the agent's installation is not running (installing, in setup, paused). */
 const NOT_RUNNING = "installation_not_running"
 /** The installation statuses a turn runs in. */
-const RUNNING: ReadonlySet<string> = new Set(["ready", "live"])
+const RUNNING = "live"
 /** Why a turn of an agent holding connector grants does not run: no tool token can be minted (no tool secret). */
 const TOOLS_NOT_CONFIGURED = "tools_not_configured"
 /** What separates the tool block from the rest of the system text. */
@@ -96,8 +96,10 @@ export class CustomerTurnRuntimeService implements ChatTurnRuntime {
         if ((await this.usage.blockedBy(workspaceId, USAGE_KIND, LOCALE)) !== null) return QUOTA
         const installation = await this.installations.ofAgent(workspaceId, conversation.agent.id)
         const status = installation === null ? null : await this.readiness.settle(workspaceId, installation.id)
-        if (status !== null && !RUNNING.has(status)) return status === NEEDS_CONNECTION ? NEEDS_CONNECTION : NOT_RUNNING
-        if (installation !== null && installation.activeContextVersionId === null) return NOT_RUNNING
+        if (status !== null && status !== RUNNING) return status === NEEDS_CONNECTION ? NEEDS_CONNECTION : NOT_RUNNING
+        // Only a running agent answers: switched on by the owner and holding an applied version.
+        if (installation !== null && (installation.activeContextVersionId === null || !installation.liveEnabled))
+            return NOT_RUNNING
         const timeoutMs = replyTimeoutSec(installation?.settings ?? null) * 1000
         const token = this.access.open(turn, timeoutMs)
         const answered = await this.guarded(turn, installation, timeoutMs, token)

@@ -56,6 +56,8 @@ const CARE_INSTALLATION: Installation = {
     operatingMode: "assist",
     settings: {},
     activeContextVersionId: null,
+    liveEnabled: false,
+    removed: false,
 }
 const NOTE = { to: "care", note: "booking confirmed" }
 const PRICE_LIST = [{ layer: 2 as const, kind: "brain_document", ref: "src-1", label: "Price list" }]

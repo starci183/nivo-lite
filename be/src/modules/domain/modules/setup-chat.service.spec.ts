@@ -284,6 +284,15 @@ describe("SetupChatService > setGate", () => {
 })
 
 describe("SetupChatService > apply", () => {
+    it("refuses to apply a setup to a removed agent", async () => {
+        const { service, installations } = await build()
+        installations.find.mockResolvedValue(installationOf({ status: "removed" }))
+
+        await expect(service.apply("u1", "ws-1", "inst-1", "en")).rejects.toMatchObject({
+            code: ModulesErrorCode.InstallationRemoved,
+        })
+    })
+
     it("refuses a draft whose gates are not all confirmed", async () => {
         const { service } = await build()
 

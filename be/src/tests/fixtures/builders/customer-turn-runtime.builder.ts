@@ -18,6 +18,8 @@ export const runtimeInstallationOf = (settings: Installation["settings"] = {}): 
     operatingMode: "assist",
     settings,
     activeContextVersionId: "version-1",
+    liveEnabled: true,
+    removed: false,
 })
 
 /** The customer turn the runtime specs answer. */

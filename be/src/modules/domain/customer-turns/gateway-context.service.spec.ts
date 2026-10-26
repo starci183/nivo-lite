@@ -43,6 +43,8 @@ const INSTALLATION: Installation = {
     operatingMode: "assist",
     settings: {},
     activeContextVersionId: null,
+    liveEnabled: false,
+    removed: false,
 }
 const BY_PHONE: Installation = { ...INSTALLATION, settings: { identity_match: "phone" } }
 const LEAD: CapturedLead = { contactName: "Lan", company: "", need: "two nights", phone: "0900", email: null }

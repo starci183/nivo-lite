@@ -352,19 +352,17 @@ describe("SetupCardsService > decide", () => {
     })
 })
 
-describe("SetupCardsService > decide against the catalogue", () => {
-    it("refuses an auto rule for a capped action as the Authority page would, and saves nothing", async () => {
+describe("SetupCardsService > decide", () => {
+    it.each([
+        ["unknown", "never", DecisionsErrorCode.UnknownAction],
+        ["pay_vendor", "auto", DecisionsErrorCode.ModeCapped],
+    ] as const)("refuses the rule of %s as the Authority page would", async (action, mode, code) => {
         const { service, writes, rules } = await build()
-        writes.find.mockResolvedValue(ruleCard({ action: "pay_vendor" }))
-        const decision = { decision: "confirm", mode: "auto" } as const
-        await expect(service.decide("u1", "ws-1", "card-1", decision, "en")).rejects.toMatchObject({
-            code: DecisionsErrorCode.ModeCapped,
-        })
+        writes.find.mockResolvedValue(ruleCard({ action }))
+        const decision = { decision: "confirm", mode } as const
+        await expect(service.decide("u1", "ws-1", "card-1", decision, "en")).rejects.toMatchObject({ code })
         expect(rules.save).not.toHaveBeenCalled()
     })
-})
-
-describe("SetupCardsService > decide", () => {
     it.each([undefined, null, "", "private", 0, {}, []])("keeps the fact scope for edit %p", async (scope) => {
         const { service, writes, facts, sync, installations, messages, gaps, closed } = await build()
         writes.find.mockResolvedValue(factCard({ scope: "restricted" }))

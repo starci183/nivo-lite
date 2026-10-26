@@ -266,3 +266,46 @@ describe("AgentRegistryService", () => {
         })
     })
 })
+
+describe("AgentRegistryService", () => {
+    describe("unregister", () => {
+        it("takes only the agent out of the list and keeps every other entry and key", async () => {
+            const disk = memoryFiles({
+                [CONFIG]: JSON.stringify({
+                    gateway: { reload: { mode: "hybrid" } },
+                    agents: { list: [{ id: "main", default: true }, { id: AGENT }, { id: "other" }] },
+                }),
+            })
+            const { registry, logger } = await build({}, disk)
+
+            expect(registry.unregister(AGENT)).toBe(true)
+
+            const config = stored(disk.store)
+            expect(config.gateway).toEqual({ reload: { mode: "hybrid" } })
+            expect(config.agents.list).toEqual([{ id: "main", default: true }, { id: "other" }])
+            expect(disk.files.writeText).toHaveBeenCalledWith(CONFIG, disk.store.get(CONFIG), 0o600)
+            expect(logger.info).toHaveBeenCalledTimes(1)
+        })
+
+        it("rewrites nothing when the agent is not listed, or when registration is off", async () => {
+            const disk = memoryFiles({ [CONFIG]: JSON.stringify({ agents: { list: [{ id: "other" }] } }) })
+            const { registry } = await build({}, disk)
+            expect(registry.unregister(AGENT)).toBe(false)
+            expect(disk.files.writeText).not.toHaveBeenCalled()
+
+            const off = await build({ manageAgents: false }, disk)
+            expect(off.registry.unregister("other")).toBe(false)
+            expect(disk.files.writeText).not.toHaveBeenCalled()
+        })
+
+        it("refuses to overwrite a config it cannot read", async () => {
+            const disk = memoryFiles({ [CONFIG]: "{ broken" })
+            const { registry } = await build({}, disk)
+
+            expect(thrownBy(() => registry.unregister(AGENT))).toEqual(
+                objectLike({ code: OpenclawErrorCode.ConfigInvalid }),
+            )
+            expect(disk.store.get(CONFIG)).toBe("{ broken")
+        })
+    })
+})

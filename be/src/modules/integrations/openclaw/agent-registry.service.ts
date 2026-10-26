@@ -87,6 +87,26 @@ export class AgentRegistryService {
         return true
     }
 
+    /** Takes the agent out of openclaw.json (its workspace files stay). Answers true when the file was rewritten, so the gateway reloads it. */
+    unregister(agentId: string): boolean {
+        const configDir = this.options.configDir
+        if (!this.options.manageAgents || configDir === undefined) return false
+        const config = this.readConfig(configDir)
+        if (config === null) {
+            throw new OpenclawError({ code: OpenclawErrorCode.ConfigInvalid, params: { key: CONFIG_FILE } })
+        }
+        const list = agentListOf(config)
+        const kept = list.filter((entry) => !(isAgentEntry(entry) && entry.id === agentId))
+        if (kept.length === list.length) return false
+        this.files.writeText(
+            posix.join(configDir, CONFIG_FILE),
+            JSON.stringify({ ...config, agents: { ...agentsOf(config), list: kept } }, null, 2),
+            CONFIG_MODE,
+        )
+        this.logger.info(OpenclawLogEvent.AgentUnregistered, { agentId })
+        return true
+    }
+
     private dirsIn(configDir: string, agentId: string): WorkspaceDirs {
         return {
             local: posix.join(configDir, `workspace-${agentId}`),

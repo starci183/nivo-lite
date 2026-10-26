@@ -91,3 +91,18 @@ export const SEED_DEFAULT_RULES = sql`
     SELECT $1, $2, d.action, d.mode, d.limit_vnd, ARRAY(SELECT jsonb_array_elements_text(d.required_fields))
     FROM jsonb_to_recordset($3::jsonb) AS d(action text, mode text, limit_vnd bigint, required_fields jsonb)
     ON CONFLICT (workspace_id, department, action) DO NOTHING`
+
+/**
+ * Switches off what a removed agent was granted ($1 workspace, $2 agent). A rule that lists the agent among others only loses it; a
+ * rule that listed it alone stays as it is but never acts (a rule that lists agents applies to those agents only), so nothing
+ * widens to the other agents of the department.
+ */
+export const DISABLE_AGENT_RULES = sql`
+    WITH changed AS (
+        UPDATE public.authority_rules
+        SET mode = CASE WHEN agents = ARRAY[$2::uuid] THEN 'never' ELSE mode END,
+            agents = CASE WHEN agents = ARRAY[$2::uuid] THEN agents ELSE array_remove(agents, $2::uuid) END,
+            updated_at = now()
+        WHERE workspace_id = $1 AND $2::uuid = ANY(agents)
+        RETURNING id)
+    SELECT id FROM changed`

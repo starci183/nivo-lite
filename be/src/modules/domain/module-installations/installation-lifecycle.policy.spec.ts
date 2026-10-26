@@ -26,6 +26,12 @@ describe("lifecycleOf", () => {
         },
     )
 
+    it("is removed whatever else is stored", async () => {
+        const { lifecycleOf } = await buildSubject()
+        expect(lifecycleOf(factsOf("removed", true, null), 2)).toBe("removed")
+        expect(lifecycleOf(factsOf("removed", false), 0)).toBe("removed")
+    })
+
     it("reads the owner's pause before anything else", async () => {
         const { lifecycleOf } = await buildSubject()
         expect(lifecycleOf(factsOf("paused", false), 2)).toBe("paused")
