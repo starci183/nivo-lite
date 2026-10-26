@@ -1,4 +1,4 @@
-import { Field, Int, ObjectType } from "@nestjs/graphql"
+import { Field, ID, Int, ObjectType } from "@nestjs/graphql"
 import { OfficeRoomMembersType } from "./office-room-members.type"
 import { OfficeRoomPinType } from "./office-room-pin.type"
 
@@ -28,6 +28,10 @@ export class OfficeRoomType {
     /** The newest line's author. */
     @Field(() => String, { nullable: true })
     last_author?: string | null
+
+    /** The newest line's author account, null on a legacy line. */
+    @Field(() => ID, { nullable: true })
+    last_author_user_id?: string | null
 
     /** When the newest line was written, ISO 8601. */
     @Field(() => String, { nullable: true })

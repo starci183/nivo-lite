@@ -2,8 +2,8 @@ import "server-only"
 
 import { NextResponse, type NextRequest } from "next/server"
 import { callbackNext } from "@/modules/auth"
-import { exchangeAuthCode, verifyOtp } from "@/modules/auth/server"
-import { APP_ROUTES, AUTH_ROUTES, requestOrigin } from "@/modules/routes"
+import { exchangeAuthCode, requestOrigin, verifyOtp } from "@/modules/auth/server"
+import { APP_ROUTES, AUTH_ROUTES } from "@/modules/routes"
 
 /** Exchanges one provider credential and redirects to the validated destination, preserving legacy email links. */
 export const GET = async (request: NextRequest): Promise<NextResponse> => {

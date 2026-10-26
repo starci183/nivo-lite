@@ -10,6 +10,7 @@ interface MessageWire {
     readonly id: string
     readonly author_kind: string
     readonly author_name: string
+    readonly author_user_id?: string | null
     readonly body: string
     readonly created_at: string
     readonly agent_id?: string | null
@@ -25,6 +26,7 @@ export const toOfficeMessage = (row: MessageWire): OfficeMessage => ({
     id: row.id,
     authorKind: AUTHOR_KINDS.find((kind) => kind === row.author_kind) ?? "system",
     authorName: row.author_name,
+    authorUserId: row.author_user_id ?? null,
     body: row.body,
     createdAt: row.created_at,
     agentId: row.agent_id ?? null,

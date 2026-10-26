@@ -14,11 +14,25 @@ export interface OfficeMessageReceipt {
     readonly seenCount: number
 }
 
+/** The signed-in account as the views compare authors with it: the account id decides, the display name only on a legacy line. */
+export interface OfficeViewer {
+    readonly userId: string | null
+    readonly name: string | null
+}
+
+/** Who wrote a line, as the views compare it with the viewer. */
+export interface OfficeAuthorRef {
+    readonly userId: string | null
+    readonly name: string
+}
+
 /** One line of the Office thread. */
 export interface OfficeMessage {
     readonly id: string
     readonly authorKind: OfficeAuthorKind
     readonly authorName: string
+    /** The account that wrote the line; null on a legacy line. */
+    readonly authorUserId: string | null
     readonly body: string
     readonly createdAt: string
     readonly agentId: string | null
@@ -85,6 +99,8 @@ export interface OfficeRoom {
     readonly unread: number
     readonly lastBody: string | null
     readonly lastAuthor: string | null
+    /** The account of the last line's author; null on a legacy line. */
+    readonly lastAuthorUserId: string | null
     readonly lastAt: string | null
     /** What the last line is; "text" until the wire says otherwise. */
     readonly lastKind: OfficePreviewKind

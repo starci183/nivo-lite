@@ -20,6 +20,8 @@ export interface PostedMessage {
     readonly author_kind: string
     /** The author's display name. */
     readonly author_name: string
+    /** The account that wrote it; null on a legacy line or a line no member wrote. */
+    readonly author_user_id: string | null
     /** The agent that wrote it, when one did. */
     readonly agent_id: string | null
     /** The staff member it was written as, or null for the owner. */

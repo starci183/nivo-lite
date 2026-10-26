@@ -11,9 +11,19 @@ import { RECENT_CUSTOMERS } from "./office.consts"
 import { NO_CONVERSATION_STATE, unreadBadgeOf } from "./office.conversation-state"
 import { zaloTimeOf } from "./office.list-time"
 import { officePreviewOf, previewKindOf } from "./office.preview"
-import type { OfficeAgent, OfficeConversationUnread, OfficeMessage, OfficeStaff, OfficeTask } from "./office.types"
+import type {
+    OfficeAgent,
+    OfficeConversationUnread,
+    OfficeMessage,
+    OfficeStaff,
+    OfficeTask,
+    OfficeViewer,
+} from "./office.types"
 import { agentAvatarOf } from "./office.words"
 import type { OfficeContext, OfficeWords } from "./office.words"
+
+/** The viewer of a preview that names no author, so no line is compared with them. */
+const NO_VIEWER: OfficeViewer = { userId: null, name: null }
 
 /** List time as Zalo draws it: "Just now", "N min", "N h", "Yesterday", "N days", then dd/MM. */
 export const officeListTimeOf = (iso: string, words: OfficeWords, context: OfficeContext): string =>
@@ -45,7 +55,11 @@ interface SortableRow {
 const agentPreviewOf = (agent: OfficeAgent, said: OfficeMessage | null, role: string, words: OfficeWords): string => {
     if (!agent.isActive) return words.t("agentPreviewPaused")
     if (said === null) return role
-    return officePreviewOf({ kind: previewKindOf(said), body: said.body, author: null }, null, words)
+    return officePreviewOf(
+        { kind: previewKindOf(said), body: said.body, author: null, authorUserId: null },
+        NO_VIEWER,
+        words,
+    )
 }
 
 const agentRowOf = (
@@ -104,8 +118,9 @@ export const officeListViewOf = (
                       kind: previewKindOf(last),
                       body: last.body,
                       author: last.authorKind === "system" ? null : last.authorName,
+                      authorUserId: last.authorUserId,
                   },
-                  context.meName,
+                  { userId: context.meUserId, name: context.meName },
                   words,
               )
     const sortable: ReadonlyArray<SortableRow> = [

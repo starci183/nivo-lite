@@ -60,7 +60,10 @@ export const useOfficePanels = (
                 : board.people.filter((person) => current.userIds.includes(person.userId))
         return {
             list: officeListViewOf(messages, waitingCount, words, context, {
-                rows: roomRowsOf(rooms, words, (iso) => officeListTimeOf(iso, words, context), context.meName),
+                rows: roomRowsOf(rooms, words, (iso) => officeListTimeOf(iso, words, context), {
+                    userId: context.meUserId,
+                    name: context.meName,
+                }),
                 selected: key ?? "office",
                 unread,
             }),

@@ -13,7 +13,7 @@ export const LIST_ROOMS = sql`
                  AND m.created_at > COALESCE(rd.last_read_at, '-infinity'::timestamptz)
                  AND m.author_user_id IS DISTINCT FROM $2
                  AND NOT (m.author_user_id IS NULL AND m.author_kind = 'human' AND m.author_name = $3)))::int AS unread,
-           last.body AS last_body, last.author_name AS last_author, to_json(last.created_at) #>> '{}' AS last_at,
+           last.body AS last_body, last.author_name AS last_author, last.author_user_id::text AS last_author_user_id, to_json(last.created_at) #>> '{}' AS last_at,
            COALESCE((SELECT array_agg(rm.agent_id::text ORDER BY rm.created_at) FROM public.office_rooms_members rm
                      WHERE rm.room_id = r.id AND rm.agent_id IS NOT NULL), '{}'::text[]) AS agent_ids,
            COALESCE((SELECT array_agg(rm.agent_id::text ORDER BY rm.created_at) FROM public.office_rooms_members rm
@@ -26,7 +26,7 @@ export const LIST_ROOMS = sql`
     FROM public.office_rooms r
     LEFT JOIN public.office_rooms_reads rd ON rd.workspace_id = r.workspace_id AND rd.user_id = $2 AND rd.room = r.key
     LEFT JOIN LATERAL (
-        SELECT m.body, m.author_name, m.created_at FROM public.messages m
+        SELECT m.body, m.author_name, m.author_user_id, m.created_at FROM public.messages m
         WHERE m.workspace_id = r.workspace_id AND m.room = r.key
         ORDER BY m.created_at DESC, m.id DESC LIMIT 1
     ) last ON true
@@ -40,7 +40,7 @@ export const OFFICE_ROOM_SUMMARY = sql`
         SELECT rd.last_read_at FROM public.office_rooms_reads rd
         WHERE rd.workspace_id = $1 AND rd.user_id = $2 AND rd.room = '' LIMIT 1
     ), newest AS (
-        SELECT m.body, m.author_name, m.created_at FROM public.messages m
+        SELECT m.body, m.author_name, m.author_user_id, m.created_at FROM public.messages m
         WHERE m.workspace_id = $1 ORDER BY m.created_at DESC, m.id DESC LIMIT 1
     )
     SELECT LEAST(99, (
@@ -51,6 +51,7 @@ export const OFFICE_ROOM_SUMMARY = sql`
                  AND NOT (m.author_user_id IS NULL AND m.author_kind = 'human' AND m.author_name = $3)))::int AS unread,
            (SELECT body FROM newest LIMIT 1) AS last_body,
            (SELECT author_name FROM newest LIMIT 1) AS last_author,
+           (SELECT author_user_id::text FROM newest LIMIT 1) AS last_author_user_id,
            (SELECT to_json(created_at) #>> '{}' FROM newest LIMIT 1) AS last_at
     LIMIT 1`
 

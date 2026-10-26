@@ -5,7 +5,7 @@ import { sql } from "@modules/platform/database"
  * room (the Office room), a room key reads that room only. A card's state is read live from the decision its ref names.
  */
 export const LIST_MESSAGES = sql`
-    SELECT m.id, m.author_kind, m.author_name, m.agent_id, m.staff_id, m.body, m.lead_id, m.work_item_id,
+    SELECT m.id, m.author_kind, m.author_name, m.author_user_id::text AS author_user_id, m.agent_id, m.staff_id, m.body, m.lead_id, m.work_item_id,
            l.contact_name AS lead_name, w.department, m.room, m.card::text AS card_json,
            CASE
                WHEN m.card IS NULL THEN NULL

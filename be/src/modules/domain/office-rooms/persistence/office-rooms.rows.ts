@@ -32,6 +32,8 @@ export interface RoomSummaryRow {
     last_body: string | null
     /** The newest line's author. */
     last_author: string | null
+    /** The newest line's author account; null on a legacy line. */
+    last_author_user_id: string | null
     /** When the newest line was written, ISO 8601. */
     last_at: string | null
 }

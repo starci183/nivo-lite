@@ -113,9 +113,6 @@ export const toAgentSync = (row: AgentSyncWire): AgentSyncView => ({
 /** Poll the sync status this often while a sync is queued or running. */
 export const SYNC_POLL_BUSY_MS = 2500
 
-/** The clock the "checked n seconds ago" line follows ticks this often. */
-export const SYNC_CLOCK_MS = 15_000
-
 /** Poll the sync status this often while idle, so a background sync shows up on its own. */
 export const SYNC_POLL_IDLE_MS = 20_000
 
