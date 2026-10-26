@@ -34,7 +34,6 @@ export const CsvImportDocs = (props: CsvImportDocsProps) => (
             id="csv-doc-link"
             name="doclink"
             label={props.text.linkDocLabel}
-            variant="secondary"
             hint={props.text.linkDocHint}
             placeholder={props.text.linkDocPlaceholder}
             isDisabled={props.isDisabled}
