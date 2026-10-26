@@ -60,6 +60,7 @@ export const AgentCatalog = () => {
                     card: {
                         name: agent.name,
                         seed: agent.seed,
+                        avatarUrl: agent.avatarUrl,
                         roleName: agent.roleName,
                         statusLabel: t(`lifecycle_${agent.lifecycle}`),
                         statusTone: agent.tone,

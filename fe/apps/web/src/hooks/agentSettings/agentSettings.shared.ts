@@ -146,7 +146,7 @@ export const toAgentInstallationView = (installation: Installation): AgentInstal
     name: installation.name,
     isMulti: installation.isMulti,
     mode: installation.operatingMode,
-    isLive: installation.liveEnabled,
+    isLive: installation.lifecycle === "running",
     hasVersion: installation.activeContextVersionId !== null,
     timeoutSec: replyTimeoutOf(installation.settings),
     holdingMessage: holdingMessageOf(installation.settings),

@@ -31,7 +31,7 @@ export const AgentLiveCard = (props: AgentLiveCardProps) => {
                 title: t("liveTitle"),
                 switchLabel: t("liveSwitch"),
                 isLive,
-                statusLabel: isLive ? t("status_live") : t("status_paused"),
+                statusLabel: isLive ? t("lifecycle_running") : t("lifecycle_ready"),
                 help: t("liveHelp"),
                 blocker: !hasVersion && slot.items !== undefined ? t("liveNeedsVersion") : "",
                 isDisabled: !canEdit || isSaving || (!hasVersion && !isLive),

@@ -27,6 +27,7 @@ export const AgentInstanceRail = (props: AgentInstanceRailProps) => {
                     id: item.id,
                     name: item.name,
                     seed: item.seed,
+                    avatarUrl: item.avatarUrl,
                     roleName: item.roleName,
                     isCurrent: item.isCurrent,
                     statusLabel: t(`lifecycle_${item.lifecycle}`),

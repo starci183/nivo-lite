@@ -20,6 +20,7 @@ const mutation1: TypedDocumentNode<MutateSaveReplyTimeoutResponse, InputVariable
             createdAt
             id
             isMulti
+            lifecycle
             liveEnabled
             moduleKey
             name

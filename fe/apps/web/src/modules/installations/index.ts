@@ -8,6 +8,7 @@ export {
     agentSubtitleOf,
     agentStatusOf,
     foldText,
+    installationLifecycleOf,
 } from "./installations.status"
 export type { AgentLifecycle } from "./installations.status"
 export { agentHref, agentListHref } from "./installations.routes"

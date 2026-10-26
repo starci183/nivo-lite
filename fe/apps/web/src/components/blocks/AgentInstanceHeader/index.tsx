@@ -21,6 +21,7 @@ export const AgentInstanceHeader = (props: AgentInstanceHeaderProps) => {
             props={{
                 name: header.name,
                 seed: header.seed,
+                avatarUrl: header.avatarUrl,
                 isEarly: header.isEarly,
                 earlyLabel: t("earlyBadge"),
                 statusLabel: t(`lifecycle_${header.lifecycle}`),

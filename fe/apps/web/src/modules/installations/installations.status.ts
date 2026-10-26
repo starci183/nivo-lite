@@ -1,4 +1,4 @@
-import type { Installation, InstallationStatus } from "./installations.types"
+import type { Installation, InstallationLifecycle, InstallationStatus } from "./installations.types"
 
 /** The status an agent shows in lists and the frame: its installation status, or not installed. */
 type ShownStatus = InstallationStatus | "notInstalled"
@@ -19,8 +19,8 @@ export const AGENT_STATUS_TONE: Readonly<Record<ShownStatus, "neutral" | "accent
         needs_connection: "warning",
     }
 
-/** The lifecycle of an agent as the business rules name it (the BE `lifecycle` field), or not installed. */
-export type AgentLifecycle = "needs_setup" | "needs_connection" | "paused" | "ready" | "running" | "notInstalled"
+/** The lifecycle an agent shows: the one the back end names, or not installed. */
+export type AgentLifecycle = InstallationLifecycle | "notInstalled"
 
 /** The badge tone of each lifecycle. */
 export const AGENT_LIFECYCLE_TONE: Readonly<Record<AgentLifecycle, "neutral" | "accent" | "success" | "warning">> = {
@@ -30,29 +30,12 @@ export const AGENT_LIFECYCLE_TONE: Readonly<Record<AgentLifecycle, "neutral" | "
     paused: "neutral",
     ready: "accent",
     running: "success",
+    removed: "neutral",
 }
 
-/**
- * The one view-model of how an installed agent reads in lists, rails and the header. Until the BE sends `lifecycle` it is derived
- * from the status: `running` only when the agent really runs (status `live` and the live switch on). Swap this derivation for the
- * wire field and every badge follows.
- */
-export const agentLifecycleOf = (installation: Installation | null | undefined): AgentLifecycle => {
-    if (installation === null || installation === undefined) return "notInstalled"
-    switch (installation.status) {
-        case "live":
-            return installation.liveEnabled ? "running" : "ready"
-        case "ready":
-            return "ready"
-        case "paused":
-            return "paused"
-        case "needs_connection":
-            return "needs_connection"
-        case "installing":
-        case "setup":
-            return "needs_setup"
-    }
-}
+/** The one view-model of how an installed agent reads in lists, rails and the header: the lifecycle of the back end. */
+export const agentLifecycleOf = (installation: Installation | null | undefined): AgentLifecycle =>
+    installation?.lifecycle ?? "notInstalled"
 
 /** The badge tone of a lifecycle. */
 export const agentLifecycleTone = (lifecycle: AgentLifecycle): (typeof AGENT_LIFECYCLE_TONE)[AgentLifecycle] =>
@@ -78,3 +61,16 @@ export const agentSubtitleOf = (parts: AgentSubtitleParts): string =>
     [parts.handle === "" ? "" : `@${parts.handle}`, parts.roleName, parts.channels.join(", ")]
         .filter((part) => part !== "")
         .join(" · ")
+
+const LIFECYCLES: ReadonlyArray<InstallationLifecycle> = [
+    "needs_setup",
+    "needs_connection",
+    "paused",
+    "ready",
+    "running",
+    "removed",
+]
+
+/** The closed lifecycle a wire text names; an unknown text reads as needing setup, the safe one: it never claims to be running. */
+export const installationLifecycleOf = (value: string): InstallationLifecycle =>
+    LIFECYCLES.find((lifecycle) => lifecycle === value) ?? "needs_setup"

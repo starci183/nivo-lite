@@ -67,6 +67,7 @@ const SKELETON_KEYS = ["a", "b", "c"] as const
 const SKELETON_TEAM_CARD: AgentTeamCardProps = {
     name: "...",
     seed: "...",
+    avatarUrl: null,
     roleName: "...",
     statusLabel: "...",
     statusTone: "neutral",

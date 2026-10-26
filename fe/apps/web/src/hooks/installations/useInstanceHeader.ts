@@ -28,6 +28,7 @@ export const useInstanceHeader = (module: ModuleKey, installationId: string) => 
         name: installation === undefined ? "" : installationPersonName(installation),
         handle: installation?.agentHandle ?? "",
         seed: installation?.agentId ?? installation?.id ?? "",
+        avatarUrl: installation?.agentAvatarUrl ?? null,
         typeName,
         subtitle: agentSubtitleOf({
             handle: installation?.agentHandle ?? "",

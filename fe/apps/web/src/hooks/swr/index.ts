@@ -85,6 +85,7 @@ export { useMutateProposeOfficeCommandSwr, useMutateProposeShiftsWeekSwr } from 
 export { useMutateReassignShiftsShiftSwr, useMutateReceiveInventoryPoSwr } from "./api"
 export { useMutateRecordManualEvidenceSwr, useMutateRecordOutcomeSwr, useMutateRedeemLoyaltyRewardSwr } from "./api"
 export { useMutateRefreshLeadContextSwr, useMutateReindexKnowledgeSourceSwr } from "./api"
+export { useMutateRemoveAgentSwr } from "./api"
 export { useMutateRemoveBookingExceptionSwr, useMutateRemoveBookingResourceSwr } from "./api"
 export { useMutateRemoveBookingServiceSwr, useMutateRemoveBookingWaitlistEntrySwr } from "./api"
 export { useMutateRemoveLoyaltyRewardSwr, useMutateRemoveMemberSwr } from "./api"

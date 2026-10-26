@@ -9,6 +9,7 @@ export interface AgentInstanceRailItem {
     readonly id: string
     readonly name: string
     readonly seed: string
+    readonly avatarUrl: string | null
     readonly roleName: string
     readonly isCurrent: boolean
     readonly statusLabel: string
@@ -51,7 +52,7 @@ export const AgentInstanceRailBase = (props: AgentInstanceRailBaseProps) => (
                     id: item.id,
                     label: item.name,
                     description: `${item.roleName} · ${item.statusLabel}`,
-                    leading: <AgentMark label={item.name} seed={item.seed} size="md" />,
+                    leading: <AgentMark label={item.name} seed={item.seed} src={item.avatarUrl} size="md" />,
                     trailing: <Badge isDot tone={item.statusTone} />,
                 }))}
             />

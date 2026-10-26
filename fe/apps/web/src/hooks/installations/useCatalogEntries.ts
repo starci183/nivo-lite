@@ -39,6 +39,7 @@ interface InstalledAgent {
     readonly name: string
     /** The seed of the generated avatar. */
     readonly seed: string
+    readonly avatarUrl: string | null
     readonly roleName: string
     readonly lifecycle: AgentLifecycle
     readonly tone: ReturnType<typeof agentLifecycleTone>
@@ -97,6 +98,7 @@ export const useCatalogEntries = (): {
             id: installation.id,
             name: installationPersonName(installation),
             seed: installation.agentId ?? installation.id,
+            avatarUrl: installation.agentAvatarUrl,
             roleName: copy === undefined ? "" : pickCopy(copy.name, locale),
             lifecycle,
             tone: agentLifecycleTone(lifecycle),

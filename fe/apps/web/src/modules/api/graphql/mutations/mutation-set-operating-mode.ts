@@ -20,6 +20,7 @@ const mutation1: TypedDocumentNode<MutateSetOperatingModeResponse, InputVariable
             createdAt
             id
             isMulti
+            lifecycle
             liveEnabled
             moduleKey
             name

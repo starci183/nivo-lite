@@ -8,6 +8,7 @@ import { COPY, META, ROW } from "./classNames"
 export type AgentTeamCardProps = {
     readonly name: string
     readonly seed: string
+    readonly avatarUrl: string | null
     readonly roleName: string
     readonly statusLabel: string
     readonly statusTone: BadgeTone
@@ -20,7 +21,7 @@ export type AgentTeamCardProps = {
 export const AgentTeamCard = (props: AgentTeamCardProps) => (
     <SurfaceCard ariaLabel={props.name} wholeAction={{ kind: "link", href: props.href, label: props.name }}>
         <div className={ROW}>
-            <AgentMark label={props.name} seed={props.seed} size="md" />
+            <AgentMark label={props.name} seed={props.seed} src={props.avatarUrl} size="md" />
             <div className={COPY}>
                 <Text weight="semibold" overflow="truncate" isSkeleton={props.isLoading}>
                     {props.name}

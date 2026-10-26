@@ -9,6 +9,7 @@ export interface AgentInstanceHeaderBaseProps {
     readonly props: {
         readonly name: string
         readonly seed: string
+        readonly avatarUrl: string | null
         readonly isEarly: boolean
         readonly earlyLabel: string
         readonly statusLabel: string
@@ -33,7 +34,13 @@ export const AgentInstanceHeaderBase = (props: AgentInstanceHeaderBaseProps) => 
     const view = props.props
     return (
         <div className={HEADER}>
-            <AgentMark label={view.name} seed={view.seed} size="control" isSkeleton={view.isLoading} />
+            <AgentMark
+                label={view.name}
+                seed={view.seed}
+                src={view.avatarUrl}
+                size="control"
+                isSkeleton={view.isLoading}
+            />
             <div className={HEADER_COPY}>
                 <div className={HEADER_TITLE}>
                     <Heading level={1} isSkeleton={view.isLoading}>

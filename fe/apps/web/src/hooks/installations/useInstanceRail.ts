@@ -21,6 +21,7 @@ export const useInstanceRail = (installationId: string) => {
                 href: agentHref(other.moduleKey, other.id),
                 name: installationPersonName(other),
                 seed: other.agentId ?? other.id,
+                avatarUrl: other.agentAvatarUrl,
                 roleName: copy === undefined ? "" : pickCopy(copy.name, locale),
                 isCurrent: other.id === installationId,
                 lifecycle,
