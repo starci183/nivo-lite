@@ -1,14 +1,14 @@
 import {
     DescriptionList,
     EmptyNotice,
-    ListItem,
+    ListRow,
     Meter,
     SurfaceCard,
     SurfaceListCard,
     Text,
 } from "@starci/grammar/common"
 import type { DescriptionListStatItem } from "@starci/grammar/common"
-import { ROW_CLASS, STACK_CLASS } from "./classNames"
+import { STACK_CLASS } from "./classNames"
 
 /** Props for {@link BookingStatsBase}. */
 export interface BookingStatsBaseProps {
@@ -42,18 +42,19 @@ export const BookingStatsBase = (props: BookingStatsBaseProps) => (
             empty={<EmptyNotice message={props.props.utilisationEmpty} />}
         >
             {props.props.resources.map((resource) => (
-                <ListItem key={resource.id} className={ROW_CLASS}>
-                    <Meter
-                        label={resource.name}
-                        value={resource.pct}
-                        minValue={0}
-                        maxValue={100}
-                        valueLabel={resource.valueLabel}
-                    />
-                    <Text size="xs" tone="muted">
-                        {resource.hoursText}
-                    </Text>
-                </ListItem>
+                <ListRow
+                    key={resource.id}
+                    title={
+                        <Meter
+                            label={resource.name}
+                            value={resource.pct}
+                            minValue={0}
+                            maxValue={100}
+                            valueLabel={resource.valueLabel}
+                        />
+                    }
+                    description={resource.hoursText}
+                />
             ))}
         </SurfaceListCard>
     </div>

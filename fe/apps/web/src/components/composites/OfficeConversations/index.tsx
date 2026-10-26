@@ -1,6 +1,16 @@
 import { useState } from "react"
 import type { ReactNode } from "react"
-import { AvatarGroup, Badge, Icon, ListBox, NavLandmark, SearchField, Tabs, Text } from "@starci/grammar/common"
+import {
+    AvatarGroup,
+    Badge,
+    Divider,
+    Icon,
+    ListBox,
+    NavLandmark,
+    SearchField,
+    Tabs,
+    Text,
+} from "@starci/grammar/common"
 import type { AvatarGroupItem, ListBoxItem } from "@starci/grammar/common"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
 import { nivoIconSource } from "@/components/leaves/Icon"
@@ -113,6 +123,7 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
                     <Text weight="semibold">{text("listTitle")}</Text>
                 </div>
             </div>
+            <Divider semantics="presentation" />
             <div className={SEARCH_CLASS_NAME}>
                 <SearchField
                     label={text("searchLabel")}
