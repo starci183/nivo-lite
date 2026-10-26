@@ -18,7 +18,6 @@ export const ConnectionCopyInput = (props: ConnectionCopyInputProps) => (
         id={props.id}
         name={props.name}
         label={props.label}
-        variant="secondary"
         value={props.value}
         isReadOnly
         {...(props.isSecret === true ? { kind: "password" as const } : {})}
