@@ -92,7 +92,6 @@ export const SmtpWizardBase = (props: SmtpWizardBaseProps) => {
                         {text.chooseHint}
                     </Text>
                     <RadioGroup
-                        variant="secondary"
                         label={text.stepProvider}
                         isLabelHidden
                         value={view.presetId}
@@ -105,7 +104,6 @@ export const SmtpWizardBase = (props: SmtpWizardBaseProps) => {
                                 {text.modeTitle}
                             </Text>
                             <RadioGroup
-                                variant="secondary"
                                 label={text.modeTitle}
                                 isLabelHidden
                                 value={view.modeId}
@@ -146,14 +144,12 @@ const renderSmtpVerification = ({ text, busy, view, on }: RenderSmtpVerification
             id="smtp-test-to"
             name="testTo"
             label={text.testToLabel}
-            variant="secondary"
             hint={text.testToHint}
             isDisabled={busy}
             value={view.testTo}
             onValueChange={on.testTo}
         />
         <CheckboxGroup
-            variant="secondary"
             label={text.makeDefault}
             isLabelHidden
             isDisabled={busy}

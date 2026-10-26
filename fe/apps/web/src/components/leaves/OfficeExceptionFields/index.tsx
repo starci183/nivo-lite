@@ -52,7 +52,6 @@ const renderMissingFields = (
                     id={`${item.id}-${field.name}`}
                     name={field.name}
                     label={field.label}
-                    variant="secondary"
                     value={values[field.name] ?? ""}
                     isDisabled={isLocked}
                     onValueChange={(next) => setValues((current) => ({ ...current, [field.name]: next }))}
@@ -97,7 +96,6 @@ const renderCandidates = (
     return (
         <RadioGroup
             label={text("exceptionCandidates")}
-            variant="secondary"
             value={candidateId}
             isDisabled={isLocked}
             onValueChange={setCandidateId}
@@ -134,7 +132,6 @@ const renderDraft = (
                     id={`${item.id}-amount`}
                     name="amount_vnd"
                     label={text("exceptionAmount")}
-                    variant="secondary"
                     value={amount}
                     isDisabled={isLocked}
                     onValueChange={setAmount}

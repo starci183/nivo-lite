@@ -49,7 +49,6 @@ export const SalesShipDrawer = (props: SalesShipDrawerProps) => {
                 name="carrier"
                 label={p.carrierLabel}
                 hint={p.carrierHint}
-                variant="secondary"
                 value={p.carrier}
                 onValueChange={on.carrier}
                 isRequired
@@ -58,7 +57,6 @@ export const SalesShipDrawer = (props: SalesShipDrawerProps) => {
                 id="ship-tracking"
                 name="tracking"
                 label={p.trackingLabel}
-                variant="secondary"
                 value={p.tracking}
                 onValueChange={on.tracking}
                 isRequired
