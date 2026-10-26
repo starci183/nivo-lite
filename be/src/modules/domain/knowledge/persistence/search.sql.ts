@@ -14,7 +14,7 @@ export const MATCH_KNOWLEDGE = sql`WITH q AS (
     SELECT 'business'::text AS layer, c.id, c.source_id, c.module, s.kind, s.title, c.content,
         (CASE WHEN tsq.use_vec AND c.embedding IS NOT NULL AND c.embedding_model = $7 THEN greatest(0, 1 - (c.embedding <=> $3::extensions.vector)) * 0.7 ELSE 0 END
             + CASE WHEN tsq.query IS NOT NULL THEN least(1, ts_rank(c.fts, tsq.query)) * 0.3 ELSE 0 END)::real AS score,
-        c.visibility, s.topic,
+        c.visibility, s.topic, c.ord,
         (tsq.use_vec AND c.embedding IS NOT NULL AND c.embedding_model = $7 AND (c.embedding <=> $3::extensions.vector) < 0.8)
             OR (tsq.query IS NOT NULL AND c.fts @@ tsq.query) AS hit
     FROM tsq, public.knowledge_chunks c
@@ -26,7 +26,7 @@ export const MATCH_KNOWLEDGE = sql`WITH q AS (
     SELECT 'nivo'::text AS layer, k.id, NULL::uuid AS source_id, k.module, k.kind, k.title, k.body AS content,
         (CASE WHEN tsq.use_vec AND k.embedding IS NOT NULL AND k.embedding_model = $7 THEN greatest(0, 1 - (k.embedding <=> $3::extensions.vector)) * 0.7 ELSE 0 END
             + CASE WHEN tsq.query IS NOT NULL THEN least(1, ts_rank(k.fts, tsq.query)) * 0.3 ELSE 0 END)::real AS score,
-        'internal'::text AS visibility, NULL::text AS topic,
+        'internal'::text AS visibility, NULL::text AS topic, NULL::int AS ord,
         (tsq.use_vec AND k.embedding IS NOT NULL AND k.embedding_model = $7 AND (k.embedding <=> $3::extensions.vector) < 0.8)
             OR (tsq.query IS NOT NULL AND k.fts @@ tsq.query) AS hit
     FROM tsq, public.nivo_knowledge k
@@ -34,7 +34,7 @@ export const MATCH_KNOWLEDGE = sql`WITH q AS (
 ), merged AS (
     SELECT * FROM business UNION ALL SELECT * FROM nivo
 )
-SELECT layer, id, source_id, module, kind, title, content, score, visibility, topic
+SELECT layer, id, source_id, module, kind, title, content, score, visibility, topic, ord
 FROM merged WHERE hit ORDER BY score DESC LIMIT greatest(1, least(coalesce($5, 8), 40))`
 
 /** The audience (customer or internal) a module's agent speaks to ($1 module key). */

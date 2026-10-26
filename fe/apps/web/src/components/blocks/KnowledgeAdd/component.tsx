@@ -1,19 +1,16 @@
-import type { useTranslations } from "next-intl"
-import type { useAddDocuments, useAddInstances, AddMode, AddPreset, QueueItem } from "@/hooks/knowledge"
+import type { AddPreset, ModuleKey } from "@/hooks/knowledge"
 
-import { Button, Drawer, SegmentedControl, Text } from "@starci/grammar/common"
+import { Drawer, SegmentedControl, Text } from "@starci/grammar/common"
 import { AddFilesPanel, type LinkRowView, type QueueRowView } from "@/components/composites/AddFilesPanel"
 
 import { AddNotePanel, type PairView } from "@/components/composites/AddNotePanel"
 
+import { DocumentDropZone, type DropWayView } from "@/components/composites/DocumentDropZone"
 import { DrawerFooter } from "@/components/composites/DrawerFooter"
 import { FormNotice } from "@/components/composites/FormNotice"
 import { AddOptionsPanel, type ChoiceView } from "@/components/composites/AddOptionsPanel"
 
 import { DRAWER_BODY_CLASS_NAME } from "./classNames"
-
-/** Badge tones used by the document upload queue. */
-type QueueStatusTone = "success" | "danger" | "warning" | "neutral"
 
 /** The words and values of the files and links panel. */
 interface FilesView {
@@ -65,12 +62,22 @@ interface OptionsView {
     readonly visibilityOptions: ReadonlyArray<ChoiceView>
 }
 
+/** The words and ways of the drop zone the page shows in place of an add button. */
+interface ZoneView {
+    readonly label: string
+    readonly prompt: string
+    readonly hint: string
+    readonly ways: ReadonlyArray<DropWayView>
+    readonly driveNote?: string | undefined
+    readonly driveFailure?: string | undefined
+}
+
 /** Copy, values and state the connected drawer supplies. */
 export interface KnowledgeAddBaseProps {
     readonly props: {
-        /** Set when the member may only read: the words replace the button and the drawer. */
+        /** Set when the member may only read: the words replace the drop zone and the drawer. */
         readonly readOnlyNote?: string | undefined
-        readonly buttonLabel: string
+        readonly zone: ZoneView
         readonly title: string
         readonly description: string
         readonly closeLabel: string
@@ -89,7 +96,7 @@ export interface KnowledgeAddBaseProps {
         readonly error?: string | undefined
     }
     readonly on: {
-        readonly open: () => void
+        readonly dropFiles: (files: Array<File>) => void
         readonly close: () => void
         readonly setMode: (value: string) => void
         readonly addFiles: (files: Array<File>) => void
@@ -111,7 +118,7 @@ export interface KnowledgeAddBaseProps {
     }
 }
 
-/** Draws the button and the drawer that adds documents: files and links, a written note, or questions with answers. */
+/** Draws the drop zone and the drawer that adds documents: files and links, a written note, or questions with answers. */
 export const KnowledgeAddBase = (props: KnowledgeAddBaseProps) =>
     props.props.readOnlyNote !== undefined ? (
         <Text size="sm" tone="muted">
@@ -119,9 +126,16 @@ export const KnowledgeAddBase = (props: KnowledgeAddBaseProps) =>
         </Text>
     ) : (
         <>
-            <Button intent="commit" onPress={props.on.open}>
-                {props.props.buttonLabel}
-            </Button>
+            <DocumentDropZone
+                label={props.props.zone.label}
+                prompt={props.props.zone.prompt}
+                hint={props.props.zone.hint}
+                ways={props.props.zone.ways}
+                driveNote={props.props.zone.driveNote}
+                driveFailure={props.props.zone.driveFailure}
+                isDisabled={props.props.isBusy}
+                onFiles={props.on.dropFiles}
+            />
             <KnowledgeAddDrawer {...props} />
         </>
     )
@@ -193,80 +207,12 @@ const KnowledgeAddDrawer = (props: KnowledgeAddBaseProps) => (
 
 /** Props for the connected add documents drawer. */
 export interface KnowledgeAddProps {
-    /** The words shown instead of the button to members who may only read. */
+    /** The words shown instead of the drop zone to members who may only read. */
     readonly readOnlyNote: string
+    /** The agent the list of documents is filtered to; the drawer returns to it when it closes. */
+    readonly module: ModuleKey | "all"
     /** Whether the address asks for the drawer to be open. */
     readonly isOpen: boolean
     /** The idea the drawer was opened from, or null. */
     readonly preset: AddPreset | null
-}
-
-/** Inputs needed to build the KnowledgeAddContent section. */
-export interface BuildDocumentFilesViewContext {
-    readonly t: ReturnType<typeof useTranslations<"knowledge">>
-    readonly add: ReturnType<typeof useAddDocuments>
-    readonly queue: ReturnType<typeof useAddDocuments>["queue"]
-    readonly queueRow: (item: QueueItem) => {
-        id: string
-        name: string
-        detail: string
-        statusLabel: string
-        statusTone: QueueStatusTone
-        error: string | undefined
-        canRemove: boolean
-    }
-    readonly filesNote: () => string | undefined
-}
-
-/** Inputs needed to build the KnowledgeAddContent section. */
-export interface BuildAddDocumentsViewContext {
-    readonly t: ReturnType<typeof useTranslations<"knowledge">>
-    readonly submitLabel: () => string
-    readonly canWrite: ReturnType<typeof useAddInstances>["canWrite"]
-    readonly props: KnowledgeAddProps
-    readonly add: ReturnType<typeof useAddDocuments>
-    readonly queue: ReturnType<typeof useAddDocuments>["queue"]
-    readonly queueRow: (item: QueueItem) => {
-        id: string
-        name: string
-        detail: string
-        statusLabel: string
-        statusTone: QueueStatusTone
-        error: string | undefined
-        canRemove: boolean
-    }
-    readonly filesNote: () => string | undefined
-    readonly note: ReturnType<typeof useAddDocuments>["note"]
-    readonly missingTitle: boolean
-    readonly missingBody: boolean
-    readonly options: ReturnType<typeof useAddDocuments>["options"]
-    readonly instances: ReturnType<typeof useAddInstances>["instances"]
-}
-
-/** Available document entry modes. */
-export const MODES: ReadonlyArray<AddMode> = ["files", "write", "faq"]
-
-/** Translation keys for the entry-mode tabs. */
-export const MODE_KEYS: Readonly<Record<AddMode, "tabFiles" | "tabWrite" | "tabFaq">> = {
-    files: "tabFiles",
-    write: "tabWrite",
-    faq: "tabFaq",
-}
-
-/** Feedback tone for each queued document status. */
-export const STATUS_TONE: Readonly<Record<QueueItem["status"], QueueStatusTone>> = {
-    waiting: "neutral",
-    uploading: "warning",
-    queued: "success",
-    failed: "danger",
-}
-
-/** Translation keys for queued document statuses. */
-export const QUEUE_STATUS_KEYS: Readonly<
-    Record<QueueItem["status"], "itemWaiting" | "itemUploading" | "itemQueued" | "itemFailed">
-> = {
-    waiting: "itemWaiting",
-    uploading: "itemUploading",
-    queued: "itemQueued",
-    failed: "itemFailed",
 }

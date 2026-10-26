@@ -2,6 +2,7 @@
 // so each object type is read off the operation that selects most of its fields).
 import type {
     AgentGenerationStatusQuery,
+    AgentKnowledgeLensesQuery,
     CreditPacksBoughtQuery,
     AccountingWorkbenchQuery,
     AgentChatTurnStatusQuery,
@@ -123,6 +124,9 @@ export type BrainExtractionType = BrainQuery["brain"]["extractions"][number]
 export type BrainFactType = BrainQuery["brain"]["facts"][number]
 /** The `BrainGapType` object of the back end contract, as the operations of this app select it. */
 export type BrainGapType = BrainQuery["brain"]["gaps"][number]
+/** The `AgentKnowledgeLensType` object of the back end contract, as the operations of this app select it. */
+export type AgentKnowledgeLensType = AgentKnowledgeLensesQuery["agentKnowledgeLenses"][number]
+
 /** The `BrainLensType` object of the back end contract, as the operations of this app select it. */
 export type BrainLensType = BrainQuery["brain"]["lenses"][number]
 /** The `BrainLessonType` object of the back end contract, as the operations of this app select it. */

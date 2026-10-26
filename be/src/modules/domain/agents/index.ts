@@ -15,6 +15,7 @@ export type {
     OptionalContextVersion,
     OptionalInstallation,
 } from "./agents.port"
+export { AgentLensesService } from "./agent-lenses.service"
 export { AgentsService } from "./agents.service"
 export { AgentIdentityService } from "./agent-identity.service"
 export { AgentOwnershipService } from "./agent-ownership.service"
@@ -27,7 +28,9 @@ export type {
     AgentDashboardData,
     AgentSummary,
     AgentAudience,
+    AgentKnowledgeLens,
     LensCounts,
+    LensLanes,
     OptionalId,
     OptionalOpenGaps,
     OptionalAgentText,

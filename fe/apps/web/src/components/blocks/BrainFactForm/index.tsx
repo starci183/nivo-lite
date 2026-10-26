@@ -3,7 +3,8 @@
 import { useTranslations } from "next-intl"
 import { SCOPE_KEY, TYPE_KEY, useBrainCommand, useBrainForm, useFactForm } from "@/hooks/brain"
 import { navigation } from "@/modules/i18n"
-import { KNOWLEDGE_ROUTES } from "@/modules/routes"
+import { brainTabHref } from "@/modules/routes"
+import type { BrainTab } from "@/modules/routes"
 import { FACT_SUBJECT_TYPES } from "@/modules/types"
 import type { FactScope, FactSubjectType } from "@/modules/types"
 import { BrainFactFormBase } from "./component"
@@ -16,6 +17,8 @@ interface BrainFactFormProps {
     readonly edit: string | undefined
     /** The `answer` of the address: the customer question the fact answers. */
     readonly answer: string | undefined
+    /** The tab the form sits on and returns to when it closes. */
+    readonly tab: BrainTab
 }
 
 const SCOPES: ReadonlyArray<FactScope> = ["public", "internal", "restricted"]
@@ -32,7 +35,7 @@ export const BrainFactForm = (props: BrainFactFormProps) => {
     const address = useBrainForm(props)
     const form = useFactForm(address.editing, address.preset, address.formKey)
     const command = useBrainCommand()
-    const close = () => router.replace(KNOWLEDGE_ROUTES.brain)
+    const close = () => router.replace(brainTabHref(props.tab))
     const submit = () => {
         if (!form.isComplete) return
         command.send("fact.save", form.payload(address.preset?.gapId), { onResult: close })

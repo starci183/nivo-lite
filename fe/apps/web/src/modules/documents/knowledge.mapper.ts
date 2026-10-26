@@ -112,6 +112,8 @@ export const toRetrievedPassage = (row: RetrievedPassageType): RetrievedPassage 
     content: row.content,
     score: row.score,
     visibility: row.visibility === "public" ? "public" : "internal",
+    sourceId: row.sourceId ?? null,
+    position: row.order === null ? null : row.order + 1,
 })
 
 /** What the `knowledgeSuggestions` answer gives the page: the business type and the decision per suggestion key. */

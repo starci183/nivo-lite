@@ -30,6 +30,7 @@ import { LessonMiningStatusResolver } from "./lesson-mining-status.resolver"
 import { AuthorizeDriveResolver } from "./authorize-drive.resolver"
 import { DisconnectDriveResolver } from "./disconnect-drive.resolver"
 import { GetDriveGrantResolver } from "./get-drive-grant.resolver"
+import { AgentKnowledgeLensesResolver } from "./agent-knowledge-lenses.resolver"
 
 @Module({
     imports: [KnowledgeApiModule.register({})],
@@ -63,6 +64,7 @@ import { GetDriveGrantResolver } from "./get-drive-grant.resolver"
         AuthorizeDriveResolver,
         DisconnectDriveResolver,
         GetDriveGrantResolver,
+        AgentKnowledgeLensesResolver,
     ],
 })
 /** The GraphQL transport of the knowledge feature. */

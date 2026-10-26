@@ -7,7 +7,7 @@ export interface RowActionView {
     readonly label: string
     /** Where a link goes; a button when absent. */
     readonly href?: string
-    readonly intent?: "alternative" | "neutral" | "destructive"
+    readonly intent?: "commit" | "alternative" | "neutral" | "destructive"
     readonly onPress?: () => void
 }
 

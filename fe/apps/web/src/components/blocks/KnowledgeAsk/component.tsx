@@ -1,8 +1,25 @@
-import { Form, SegmentedControl, Select, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import {
+    Avatar,
+    EmptyNotice,
+    Form,
+    SegmentedControl,
+    Select,
+    SurfaceCard,
+    Text,
+    Textarea,
+} from "@starci/grammar/common"
 import { FormActions } from "@/components/composites/FormActions"
 import { KnowledgeRows } from "@/components/composites/KnowledgeRows"
 import type { KnowledgeRowsProps } from "@/components/composites/KnowledgeRows"
-import { CHOICES_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
+import { CHOICES_CLASS_NAME, IDENTITY_CLASS_NAME, IDENTITY_COPY_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
+
+/** The agent the question is asked as. */
+interface IdentityView {
+    readonly id: string
+    readonly name: string
+    readonly avatarUrl: string | undefined
+    readonly caption: string
+}
 
 /** Copy, values and state the connected question panel supplies. */
 export interface KnowledgeAskBaseProps {
@@ -11,15 +28,18 @@ export interface KnowledgeAskBaseProps {
         readonly hint: string
         readonly placeholder: string
         readonly questionLabel: string
-        readonly moduleLabel: string
-        readonly moduleOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
+        readonly agentLabel: string
+        readonly agentOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
         readonly audienceLabel: string
         readonly audienceOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
         readonly submitLabel: string
         readonly failTitle: string
+        /** Said instead of the form when no agent is installed yet. */
+        readonly noAgents: string
         readonly question: string
-        readonly module: string
+        readonly agent: IdentityView | undefined
         readonly audience: string
+        readonly canPickAudience: boolean
         readonly isPending: boolean
         /** The panel is loading: the labels stay, the inputs and the action are skeletons. */
         readonly isSkeleton: boolean
@@ -29,16 +49,22 @@ export interface KnowledgeAskBaseProps {
     }
     readonly on: {
         readonly setQuestion: (value: string) => void
-        readonly setModule: (value: string | null) => void
+        readonly setAgent: (value: string | null) => void
         readonly setAudience: (value: string) => void
         readonly ask: () => void
     }
 }
 
-/** Draws the panel that shows what an agent would find for a question, as a customer or as the team. */
+/** Draws the panel that shows what an agent would find for a question, as a customer or as the team. It only reads. */
 export const KnowledgeAskBase = (props: KnowledgeAskBaseProps) => {
     const { props: panel, on } = props
-
+    if (!panel.isSkeleton && panel.agent === undefined) {
+        return (
+            <SurfaceCard label={panel.title} headingLevel={2}>
+                <EmptyNotice message={panel.noAgents} />
+            </SurfaceCard>
+        )
+    }
     return (
         <SurfaceCard label={panel.title} headingLevel={2}>
             <Form label={panel.title} onSubmit={on.ask} isPending={panel.isPending}>
@@ -46,6 +72,42 @@ export const KnowledgeAskBase = (props: KnowledgeAskBaseProps) => {
                     <Text size="sm" tone="muted">
                         {panel.hint}
                     </Text>
+                    <div className={CHOICES_CLASS_NAME}>
+                        <Select
+                            label={panel.agentLabel}
+                            name="agent"
+                            options={panel.agentOptions}
+                            value={panel.agent?.id ?? null}
+                            isSkeleton={panel.isSkeleton}
+                            isDisabled={panel.isPending}
+                            onValueChange={on.setAgent}
+                        />
+                        <SegmentedControl
+                            label={panel.audienceLabel}
+                            name="audience"
+                            options={panel.audienceOptions.map((one) => ({ value: one.id, label: one.label }))}
+                            value={panel.audience}
+                            isSkeleton={panel.isSkeleton}
+                            isDisabled={panel.isPending || !panel.canPickAudience}
+                            onValueChange={on.setAudience}
+                        />
+                    </div>
+                    {panel.agent === undefined ? null : (
+                        <div className={IDENTITY_CLASS_NAME}>
+                            <Avatar
+                                name={panel.agent.name}
+                                seed={panel.agent.id}
+                                kind="agent"
+                                {...(panel.agent.avatarUrl === undefined ? {} : { src: panel.agent.avatarUrl })}
+                            />
+                            <div className={IDENTITY_COPY_CLASS_NAME}>
+                                <Text weight="semibold">{panel.agent.name}</Text>
+                                <Text size="xs" tone="muted">
+                                    {panel.agent.caption}
+                                </Text>
+                            </div>
+                        </div>
+                    )}
                     <Textarea
                         id="knowledge-ask-question"
                         name="question"
@@ -58,26 +120,6 @@ export const KnowledgeAskBase = (props: KnowledgeAskBaseProps) => {
                         isSkeleton={panel.isSkeleton}
                         onValueChange={on.setQuestion}
                     />
-                    <div className={CHOICES_CLASS_NAME}>
-                        <Select
-                            label={panel.moduleLabel}
-                            name="module"
-                            options={panel.moduleOptions}
-                            value={panel.module}
-                            isSkeleton={panel.isSkeleton}
-                            isDisabled={panel.isPending}
-                            onValueChange={on.setModule}
-                        />
-                        <SegmentedControl
-                            label={panel.audienceLabel}
-                            name="audience"
-                            options={panel.audienceOptions.map((one) => ({ value: one.id, label: one.label }))}
-                            value={panel.audience}
-                            isSkeleton={panel.isSkeleton}
-                            isDisabled={panel.isPending}
-                            onValueChange={on.setAudience}
-                        />
-                    </div>
                     <FormActions
                         failTitle={panel.failTitle}
                         error={panel.error}

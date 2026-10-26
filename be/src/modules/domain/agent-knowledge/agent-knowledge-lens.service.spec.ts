@@ -91,6 +91,21 @@ describe("AgentKnowledgeLensService", () => {
 })
 
 describe("AgentKnowledgeLensService", () => {
+    it("opens the internal lanes only to the team view of a module, never to the public", async () => {
+        const { lens } = await build()
+        expect(lens.lanesOf("accounting")).toMatchObject({ documentInternal: true, factRestricted: true })
+        expect(lens.customerLanes()).toEqual({
+            documentPublic: true,
+            documentInternal: false,
+            factPublic: true,
+            factInternal: false,
+            factRestricted: false,
+        })
+        expect(lens.lanesOf("chatbot")).toMatchObject({ documentPublic: true, factInternal: false })
+    })
+})
+
+describe("AgentKnowledgeLensService", () => {
     it("orders the module's own rules before core and leaves other kinds out", async () => {
         const { lens } = await build()
         const rules = await lens.baseRulesOf(["chatbot", "core"])

@@ -2,7 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useBrainBoard, useBrainCommand } from "@/hooks/brain"
-import { KNOWLEDGE_ROUTES } from "@/modules/routes"
+import { brainTabHref } from "@/modules/routes"
 import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
 import type { BrainGap } from "@/modules/types"
 import { BrainGapsBase } from "./component"
@@ -30,7 +30,7 @@ export const BrainGaps = (props: BrainGapsProps) => {
                 ...(gap.reopenedCount > 0 ? [{ label: t("gapReopened"), tone: "warning" as const }] : []),
             ],
             actions: [
-                { id: "answer", label: t("gapAnswer"), href: `${KNOWLEDGE_ROUTES.brain}?answer=${gap.id}` },
+                { id: "answer", label: t("gapAnswer"), href: brainTabHref("gaps", { answer: gap.id }) },
                 {
                     id: "dismiss",
                     label: t("gapDismiss"),

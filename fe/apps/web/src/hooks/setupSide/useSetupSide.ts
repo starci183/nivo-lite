@@ -8,7 +8,7 @@ import { mapSlot } from "@/hooks/slot"
 import { MODULE_KEYS, isModuleKey } from "@/modules/catalog"
 import { gateEntry, gateHint, gateLabel } from "@/modules/installations"
 import type { ContextVersion, SetupSession } from "@/modules/installations"
-import { KNOWLEDGE_ROUTES } from "@/modules/routes"
+import { KNOWLEDGE_ROUTES, brainTabHref } from "@/modules/routes"
 import type { DataSlot } from "@/modules/types"
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { setupRequirementsNoticeOf } from "./setupSide.shared"
@@ -116,7 +116,7 @@ const knowledgeOf = (
         businessLine: t("k_cardBusiness", { count: business }),
         publicLine: business > 0 ? t("k_cardPublic", { count: counts?.publicSources ?? 0 }) : "",
         emptyHint: counts !== null && business === 0 ? t("k_cardEmpty") : "",
-        knowledgeHref: `${KNOWLEDGE_ROUTES.library}?module=${moduleKey}`,
+        knowledgeHref: brainTabHref("sources", { module: moduleKey }),
         knowledgeLabel: t("k_cardLink"),
         nivoHref: KNOWLEDGE_ROUTES.nivo,
         nivoLabel: t("k_nivoLink"),

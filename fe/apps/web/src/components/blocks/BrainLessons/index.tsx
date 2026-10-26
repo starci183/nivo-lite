@@ -21,9 +21,6 @@ const STATUS_KEY: Readonly<Record<BrainLesson["status"], "statusActive" | "statu
     rejected: "statusRetired",
 }
 
-/** What can be decided about a lesson. */
-type LessonAction = "active" | "rejected" | "retired"
-
 /** The connected lessons: how each agent should work, the proposals to approve and the form that writes one. */
 /** Connects the state and commands used by BrainLessons. */
 const buildBrainLessonsState = (
@@ -39,20 +36,17 @@ const buildBrainLessonsState = (
         return t("mineDone", { n: mined.proposed, c: mined.corrections, k: mined.newCases })
     }
     const rowOf = (lesson: BrainLesson): KnowledgeRowView => {
-        const decide = (id: string, label: string, action: LessonAction, intent: "alternative" | "destructive") => ({
-            id,
-            label,
-            intent,
-            onPress: () => desk.decide(lesson.id, action),
-        })
-        const approve =
-            lesson.status === "proposed"
+        const retire =
+            lesson.status === "active"
                 ? [
-                      decide("approve", t("apply"), "active", "alternative"),
-                      decide("reject", t("reject"), "rejected", "alternative"),
+                      {
+                          id: "retire",
+                          label: t("retireLesson"),
+                          intent: "destructive" as const,
+                          onPress: () => desk.decide(lesson.id, "retired"),
+                      },
                   ]
                 : []
-        const retire = lesson.status === "active" ? [decide("retire", t("retireLesson"), "retired", "destructive")] : []
         return {
             id: lesson.id,
             title: lesson.title,
@@ -61,7 +55,7 @@ const buildBrainLessonsState = (
                 { label: agentName(lesson.module), tone: "neutral" },
                 { label: t(STATUS_KEY[lesson.status]), tone: STATUS_TONE[lesson.status] },
             ],
-            actions: board.canWrite ? [...approve, ...retire] : [],
+            actions: board.canWrite ? retire : [],
         }
     }
     return { desk, t, noticeOf, board, rowOf }
@@ -105,7 +99,7 @@ const brainLessonsProps = (
                 notice: desk.mined === null ? undefined : noticeOf(desk.mined),
             },
             label: t("tabLessons"),
-            rows: board.lessons.map(rowOf),
+            rows: board.lessons.filter((lesson) => lesson.status !== "proposed").map(rowOf),
             isLoading: board.isLoading,
             isPending: desk.isPending,
             emptyTitle: t("lessonsEmpty"),

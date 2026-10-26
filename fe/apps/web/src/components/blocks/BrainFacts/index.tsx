@@ -2,7 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { SCOPE_KEY, SCOPE_TONE, FACT_SOURCE_KEY, TYPE_KEY, useBrainBoard, useBrainCommand } from "@/hooks/brain"
-import { KNOWLEDGE_ROUTES } from "@/modules/routes"
+import { brainTabHref } from "@/modules/routes"
 import type { BrainFact } from "@/modules/types"
 import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
 import { BrainFactsBase } from "./component"
@@ -37,7 +37,7 @@ export const BrainFacts = () => {
         ],
         actions: board.canWrite
             ? [
-                  { id: "edit", label: t("editValue"), href: `${KNOWLEDGE_ROUTES.brain}?edit=${fact.id}` },
+                  { id: "edit", label: t("editValue"), href: brainTabHref("facts", { edit: fact.id }) },
                   {
                       id: "retire",
                       label: t("retire"),
@@ -58,7 +58,7 @@ export const BrainFacts = () => {
                         description: t("reviewEmptyBody"),
                         failTitle: t("loadFailed"),
                         action: board.canWrite
-                            ? { id: "add", label: t("addFact"), href: `${KNOWLEDGE_ROUTES.brain}?fact=new` }
+                            ? { id: "add", label: t("addFact"), href: brainTabHref("facts", { fact: "new" }) }
                             : undefined,
                     },
                     label: t("tabFacts"),

@@ -9,7 +9,7 @@ import {
     useMutateChatbotDismissKnowledgeGapSwr,
     useQueryChatbotGapsSwr,
 } from "@/hooks/swr"
-import { KNOWLEDGE_ROUTES } from "@/modules/routes"
+import { brainTabHref } from "@/modules/routes"
 import { useGraphQLWithToast } from "@/modules/toast"
 
 /** One unanswered question, already worded. */
@@ -86,7 +86,7 @@ export const useChatbotGaps = (workspaceId: string | undefined, isManager: boole
                           ...(gap.reopenedCount > 0 ? [{ label: t("gapReopened"), tone: "warning" as const }] : []),
                       ],
                       answerLabel: t("gapAnswer"),
-                      answerHref: `${KNOWLEDGE_ROUTES.brain}?answer=${gap.id}`,
+                      answerHref: brainTabHref("gaps", { answer: gap.id }),
                       dismissLabel: t("gapDismiss"),
                   }
               }),

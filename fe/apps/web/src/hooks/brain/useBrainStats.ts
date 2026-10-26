@@ -6,6 +6,10 @@ import { useBrain } from "./useBrain"
 /** What the figures of the Second Brain draw. */
 interface BrainStats {
     readonly figures: BrainFigures
+    /** How many agents read from the brain: one lens per kind of agent in use. */
+    readonly agents: number
+    /** Owners and managers decide what waits for review; others only read. */
+    readonly canDecide: boolean
     /** Whether a scheduled value is due or a value in force has ended, and the person may bring the brain up to date. */
     readonly isMaintenanceDue: boolean
     readonly isLoading: boolean
@@ -18,6 +22,8 @@ export const useBrainStats = (): BrainStats => {
     const { sources, isLoading: sourcesLoading } = useKnowledgeSources()
     const facts = brain?.facts ?? []
     return {
+        agents: brain?.lenses.length ?? 0,
+        canDecide: member.canWrite,
         figures: figuresOf({
             facts,
             lessons: brain?.lessons ?? [],

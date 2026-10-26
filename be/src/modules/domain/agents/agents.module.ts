@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { AgentsQueueModule } from "@modules/queues/agents"
 import { AgentBundleService } from "./agent-bundle.service"
 import { AgentIdentityService } from "./agent-identity.service"
+import { AgentLensesService } from "./agent-lenses.service"
 import { AgentOwnershipService } from "./agent-ownership.service"
 import { AGENTS_INSTALLATIONS, AGENTS_KNOWLEDGE, AGENTS_MODULES, AGENTS_OPTIONS } from "./agents.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agents.module-definition"
@@ -46,8 +47,9 @@ export class AgentsModule extends ConfigurableModuleClass {
                       providers: [
                           { provide: AGENTS_KNOWLEDGE, useClass: options.ports.knowledge },
                           EngineStatusService,
+                          AgentLensesService,
                       ],
-                      exports: [AGENTS_KNOWLEDGE, EngineStatusService],
+                      exports: [AGENTS_KNOWLEDGE, EngineStatusService, AgentLensesService],
                   }
         return {
             ...base,

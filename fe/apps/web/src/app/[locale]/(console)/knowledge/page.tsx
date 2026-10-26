@@ -1,8 +1,8 @@
-import { KnowledgePage } from "@/features/pages/KnowledgePage"
+import { KnowledgeRedirectPage } from "@/features/pages/KnowledgeRedirectPage"
 
-export { knowledgeMetadata as generateMetadata } from "@/features/pages/KnowledgePage"
+export { knowledgeRedirectMetadata as generateMetadata } from "@/features/pages/KnowledgeRedirectPage"
 
-/** What the address may ask for: the agent filter and the idea the add drawer opens on. */
+/** What the old address may carry: the agent filter and the idea the add drawer opens on. */
 interface KnowledgeSearch {
     readonly module?: string
     readonly add?: string
@@ -13,10 +13,10 @@ interface KnowledgeRouteProps {
     readonly searchParams: Promise<KnowledgeSearch>
 }
 
-/** The documents of the workspace: everyone reads, owners and managers write. */
+/** Moved: the documents are the sources tab of the Second Brain, so the old address forwards there. */
 const Page = async ({ searchParams }: KnowledgeRouteProps) => {
     const { module, add } = await searchParams
-    return <KnowledgePage module={module} add={add} />
+    return <KnowledgeRedirectPage module={module} add={add} />
 }
 
 export default Page

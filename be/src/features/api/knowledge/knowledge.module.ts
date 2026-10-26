@@ -28,6 +28,7 @@ import { LessonMiningStatusHandler } from "./application/lesson-mining-status.ha
 import { AuthorizeDriveHandler } from "./application/authorize-drive.handler"
 import { DisconnectDriveHandler } from "./application/disconnect-drive.handler"
 import { GetDriveGrantHandler } from "./application/get-drive-grant.handler"
+import { AgentKnowledgeLensesHandler } from "./application/agent-knowledge-lenses.handler"
 import { ConfigurableModuleClass } from "./knowledge.module-definition"
 
 @Module({
@@ -61,6 +62,7 @@ import { ConfigurableModuleClass } from "./knowledge.module-definition"
         AuthorizeDriveHandler,
         DisconnectDriveHandler,
         GetDriveGrantHandler,
+        AgentKnowledgeLensesHandler,
     ],
 })
 /** The knowledge feature: the handlers of its application. */

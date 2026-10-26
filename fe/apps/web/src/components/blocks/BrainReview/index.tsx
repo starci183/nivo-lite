@@ -1,10 +1,10 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { FACT_SOURCE_KEY, adviceFor, reviewBoardOf, useBrainBoard, useBrainCommand } from "@/hooks/brain"
+import { FACT_SOURCE_KEY, adviceFor, reviewBoardOf, useBrainBoard, useBrainCommand, useLessonDesk } from "@/hooks/brain"
 import type { ReviewConflict, ReviewSingle } from "@/hooks/brain"
 import type { KnowledgeRowView, RowActionView, RowPartView } from "@/components/composites/KnowledgeRows"
-import type { BrainFact } from "@/modules/types"
+import type { BrainFact, BrainLesson } from "@/modules/types"
 import { BrainReviewBase } from "./component"
 
 /** The connected review list: words each proposal, suggests what to do with it and sends the decision to the back end. */
@@ -18,12 +18,11 @@ const buildBrainReviewState = (
     const { byLine, titleOf, decide, reject, gated } = reviewRowActions(t, command, board)
     const singleRow = (single: ReviewSingle): KnowledgeRowView => {
         const advice = adviceFor(single.p, single.current, board.nowMs)
-        const isApply = advice.action === "apply" || advice.action === "schedule"
         const part: RowPartView = {
             id: single.p.id,
             title: t("newValue", { value: single.p.value }),
             lines: [byLine(single.p), `${t("suggestion")}: ${t(advice.reasonKey, advice.params)}`],
-            actions: gated([decide(single.p.id, t("apply"), "apply", isApply), reject(single.p.id, t("reject"))]),
+            actions: gated([decide(single.p.id, t("apply"), "apply"), reject(single.p.id, t("reject"))]),
         }
         return {
             id: single.p.id,
@@ -40,6 +39,7 @@ const buildBrainReviewState = (
             {
                 id: `keep-${group.key}`,
                 label: t("keepCurrentValue"),
+                intent: "alternative",
                 onPress: () =>
                     command.send(
                         "fact.keep",
@@ -62,7 +62,7 @@ const buildBrainReviewState = (
             id: option.id,
             title: option.value,
             lines: [`${t("conflictOption", { n: index + 1 })} · ${byLine(option)}`],
-            actions: gated([decide(option.id, t("apply"), "choose", false)]),
+            actions: gated([decide(option.id, t("apply"), "choose")]),
         })),
     })
     const retireRow = (single: ReviewSingle): KnowledgeRowView => ({
@@ -75,10 +75,7 @@ const buildBrainReviewState = (
                 id: single.p.id,
                 title: single.current?.value ?? single.p.value,
                 lines: [byLine(single.p)],
-                actions: gated([
-                    decide(single.p.id, t("retireApply"), "apply", false),
-                    reject(single.p.id, t("retireKeep")),
-                ]),
+                actions: gated([decide(single.p.id, t("retireApply"), "apply"), reject(single.p.id, t("retireKeep"))]),
             },
         ],
     })
@@ -91,8 +88,31 @@ export const BrainReview = () => {
     const command = useBrainCommand()
     const board = useBrainBoard()
 
+    const desk = useLessonDesk("")
     const connected = buildBrainReviewState(board, t, command)
     const { plan, groupRow, singleRow, retireRow } = connected
+    const lessonRow = (lesson: BrainLesson): KnowledgeRowView => ({
+        id: lesson.id,
+        title: lesson.title,
+        lines: [lesson.body, ...(lesson.appliesWhen === "" ? [] : [lesson.appliesWhen])],
+        badges: [{ label: t("statusProposed"), tone: "warning" }],
+        actions: board.canWrite
+            ? [
+                  {
+                      id: "approve",
+                      label: t("apply"),
+                      intent: "commit",
+                      onPress: () => desk.decide(lesson.id, "active"),
+                  },
+                  {
+                      id: "reject",
+                      label: t("reject"),
+                      intent: "alternative",
+                      onPress: () => desk.decide(lesson.id, "rejected"),
+                  },
+              ]
+            : [],
+    })
     return (
         <BrainReviewBase
             props={{
@@ -108,9 +128,10 @@ export const BrainReview = () => {
                         ...plan.groups.map(groupRow),
                         ...plan.singles.map(singleRow),
                         ...plan.retires.map(retireRow),
+                        ...board.lessons.filter((lesson) => lesson.status === "proposed").map(lessonRow),
                     ],
                     isLoading: board.isLoading,
-                    isPending: command.isPending,
+                    isPending: command.isPending || desk.isPending,
                     emptyTitle: t("reviewEmptyTitle"),
                     emptyBody: t("reviewEmptyBody"),
                 },
@@ -130,10 +151,10 @@ const reviewRowActions = (
 ) => {
     const byLine = (fact: BrainFact): string =>
         t("by", { who: fact.proposedBy, source: t(FACT_SOURCE_KEY[fact.sourceKind]), trust: fact.trust })
-    const decide = (id: string, label: string, action: "apply" | "choose", isPrimary: boolean): RowActionView => ({
+    const decide = (id: string, label: string, action: "apply" | "choose"): RowActionView => ({
         id: `decide-${id}`,
         label,
-        intent: isPrimary ? "alternative" : "neutral",
+        intent: "commit",
         onPress: () => command.send("fact.decide", { id, action }, { done: t("applied") }),
     })
     const reject = (id: string, label: string): RowActionView => ({

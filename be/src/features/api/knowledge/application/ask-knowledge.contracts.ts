@@ -8,4 +8,6 @@ export interface AskKnowledgeRequest {
     readonly module: string
     /** `customer` sees public passages only; `internal` sees all. */
     readonly audience: string
+    /** The agent instance the question is asked as, or absent for the shared knowledge only. */
+    readonly installationId?: string | null | undefined
 }

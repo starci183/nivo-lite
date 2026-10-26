@@ -159,6 +159,53 @@ export interface FactCounts {
     readonly restricted: number
 }
 
+/** Which kinds of knowledge a view reads: documents and facts by who may read them. */
+export interface LensLanes {
+    /** Documents anyone may see. */
+    readonly documentPublic: boolean
+    /** Documents for the team. */
+    readonly documentInternal: boolean
+    /** Facts anyone may see. */
+    readonly factPublic: boolean
+    /** Facts for the team. */
+    readonly factInternal: boolean
+    /** Facts restricted to named agents. */
+    readonly factRestricted: boolean
+}
+
+/** One view of the shared knowledge: the customer's, or the one of an installed agent. */
+export interface AgentKnowledgeLens {
+    /** customer for the public's view, agent for an installed agent. */
+    readonly kind: "customer" | "agent"
+    /** The agent, or null for the customer. */
+    readonly agentId: string | null
+    /** The instance the view is scoped to, or null. */
+    readonly installationId: string | null
+    /** The module of the agent, or null for the customer. */
+    readonly module: string | null
+    /** The display name of the agent, or null for the customer. */
+    readonly name: string | null
+    /** The picture of the agent, or null. */
+    readonly avatarUrl: string | null
+    /** The audience of the view. */
+    readonly audience: AgentAudience
+    /** What the view reads of each kind of knowledge, in the order a person reads them. */
+    readonly cells: ReadonlyArray<LensCell>
+}
+
+/** The kinds of shared knowledge a view can read. */
+export type LensLaneKey = keyof LensLanes
+
+/** What one view reads of one kind of knowledge. */
+export interface LensCell {
+    /** The kind of knowledge. */
+    readonly lane: LensLaneKey
+    /** Whether the view may read it, by the policy that builds the view. */
+    readonly isOpen: boolean
+    /** How many items the view reads of it, or null when they are not counted (the customer's view). */
+    readonly count: number | null
+}
+
 /** What the agent can read: document and fact counts by visibility. */
 export interface LensCounts {
     /** The audience of the lens. */

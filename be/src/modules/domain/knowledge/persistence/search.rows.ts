@@ -26,4 +26,6 @@ export interface PassageRow {
     readonly visibility: string
     /** The topic. */
     readonly topic: string | null
+    /** The order of the passage inside its document, or null for the base knowledge. */
+    readonly ord?: number | null
 }

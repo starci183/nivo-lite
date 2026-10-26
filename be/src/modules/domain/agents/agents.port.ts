@@ -1,4 +1,11 @@
-import type { AgentAudience, LensCounts, OptionalId, OptionalOpenGaps, OptionalAgentText } from "./agents.contracts"
+import type {
+    AgentAudience,
+    LensCounts,
+    LensLanes,
+    OptionalId,
+    OptionalOpenGaps,
+    OptionalAgentText,
+} from "./agents.contracts"
 
 /** A module installation (an agent instance) as the agents capability needs it. Owned by the modules lane (module_installations). */
 export interface Installation {
@@ -125,6 +132,10 @@ export interface KnowledgeLens {
     baseRulesOf(folders: ReadonlyArray<string>): Promise<ReadonlyArray<BaseRule>>
     /** Document and fact counts by visibility. */
     countsFor(workspaceId: string, module: string, installationId: OptionalId): Promise<LensCounts>
+    /** Which kinds of knowledge the view of the module reads. */
+    lanesOf(module: string): LensLanes
+    /** Which kinds of knowledge the public's view reads. */
+    customerLanes(): LensLanes
     /** Up to `limit` open gaps of the module, most asked first; null when the gaps are not kept. */
     openGapsOf(workspaceId: string, module: string, limit: number): Promise<OptionalOpenGaps>
 }

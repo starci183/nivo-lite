@@ -18,6 +18,7 @@ const query1: TypedDocumentNode<QueryAskKnowledgeResponse, InputVariables<QueryA
             kind
             layer
             module
+            order
             score
             sourceId
             title

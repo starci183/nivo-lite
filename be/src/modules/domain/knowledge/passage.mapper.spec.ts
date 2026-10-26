@@ -27,6 +27,7 @@ describe("toPassage", () => {
                 score: 0.5,
                 visibility: "public",
                 topic: "hours",
+                ord: 2,
             }),
         ).toEqual({
             layer: "business",
@@ -39,6 +40,7 @@ describe("toPassage", () => {
             score: 0.5,
             visibility: "public",
             topic: "hours",
+            order: 2,
         })
     })
 })

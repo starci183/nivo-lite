@@ -43,4 +43,5 @@ export {
     workItemHref,
 } from "./console-routes"
 export { AUTOMATION_ROUTES, automationFocusPath, newModulePath } from "./automations-routes"
-export { KNOWLEDGE_ROUTES, knowledgeSourceHref } from "./knowledge-routes"
+export { BRAIN_TABS, DEFAULT_BRAIN_TAB, KNOWLEDGE_ROUTES, brainTabHref, knowledgeSourceHref } from "./knowledge-routes"
+export type { BrainTab } from "./knowledge-routes"

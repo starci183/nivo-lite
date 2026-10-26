@@ -30,6 +30,8 @@ export interface AskInput {
     readonly module: string
     /** customer sees public passages only. */
     readonly audience: string
+    /** The agent instance the question is asked as: its own documents join the shared ones. Absent = the shared knowledge only. */
+    readonly installationId?: string | null | undefined
 }
 
 /** One retrieved passage, labelled by layer: nivo = base knowledge of NIVO, business = the owner's documents. */
@@ -54,6 +56,8 @@ export interface Passage {
     readonly visibility: string
     /** The topic. */
     readonly topic: string | null
+    /** The order of the passage inside its document (from 0), or null for the base knowledge. */
+    readonly order?: number | null
 }
 
 /** One model call to meter. */
@@ -137,7 +141,7 @@ export interface LensRequest {
     /** A narrower audience the caller asks for. */
     readonly requestedAudience?: Audience
     /** The agent instance. */
-    readonly installationId?: string | null
+    readonly installationId?: string | null | undefined
 }
 
 /** The text of a source and the better title it may bring. */

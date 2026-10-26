@@ -18,6 +18,10 @@ export interface BrainFigures {
     readonly gaps: number
     /** Documents a worker is still on, by their status or by the reading of their facts. */
     readonly processing: number
+    /** The proposals NIVO read out of the documents and that nobody has decided yet. */
+    readonly extracted: number
+    /** The facts and the lessons that wait for an owner or a manager to decide. */
+    readonly waiting: number
 }
 
 /** What the figures are counted from. */
@@ -45,5 +49,7 @@ export const figuresOf = (input: FiguresInput): BrainFigures => {
         proposedLessons: input.lessons.filter((lesson) => lesson.status === "proposed").length,
         gaps: input.gapsOpen,
         processing: Math.max(indexing, reading),
+        extracted: input.facts.filter((fact) => fact.status === "proposed" && fact.sourceKind === "document").length,
+        waiting: plan.cards + input.lessons.filter((lesson) => lesson.status === "proposed").length,
     }
 }

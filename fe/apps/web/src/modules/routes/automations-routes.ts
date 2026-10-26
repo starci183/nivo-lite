@@ -2,7 +2,7 @@
 export const AUTOMATION_ROUTES = {
     developers: "/developers",
     connections: "/connections",
-    knowledge: "/knowledge",
+    knowledge: "/brain?tab=sources",
     connectEmail: "/connections?connect=smtp",
     decisions: "/decisions",
 } as const

@@ -72,6 +72,20 @@ describe("KnowledgeSearchService", () => {
             ])
         })
 
+        it("scopes the search to the agent instance the question is asked as", async () => {
+            const em = mockEntityManager({ query: stubs("internal") })
+            const { service } = await build(em)
+
+            await service.ask("u1", WS, {
+                question: "q",
+                module: "chatbot",
+                audience: "internal",
+                installationId: "i1",
+            })
+
+            expect(em.query).toHaveBeenCalledWith(MATCH_KNOWLEDGE, expect.arrayContaining(["i1"]))
+        })
+
         it("shows public passages only when the customer view is asked for", async () => {
             const em = mockEntityManager({ query: stubs("internal") })
             const { service } = await build(em)

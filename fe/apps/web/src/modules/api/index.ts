@@ -88,6 +88,7 @@ export type {
     AccountingWorkbenchType,
     AgentChatTurnStatusType,
     AgentGenerationStatusType,
+    AgentKnowledgeLensType,
     AutomationCardType,
     AutomationGoogleAccountType,
     AutomationRunType,

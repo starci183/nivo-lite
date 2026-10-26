@@ -1,4 +1,4 @@
-import { Field, Float, ID, ObjectType } from "@nestjs/graphql"
+import { Field, Float, ID, Int, ObjectType } from "@nestjs/graphql"
 
 @ObjectType()
 /** One passage an agent would retrieve for a question, labelled by layer. */
@@ -42,4 +42,8 @@ export class RetrievedPassageType {
     /** The topic. */
     @Field(() => String, { nullable: true })
     topic?: string | null
+
+    /** The order of the passage inside its document (from 0), for a business passage. */
+    @Field(() => Int, { nullable: true })
+    order?: number | null
 }

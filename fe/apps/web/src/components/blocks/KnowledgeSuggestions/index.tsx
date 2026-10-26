@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useKnowledgeIdeas, useLibraryCommands } from "@/hooks/knowledge"
 import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
-import { KNOWLEDGE_ROUTES } from "@/modules/routes"
+import { brainTabHref } from "@/modules/routes"
 import type { IdeaDecision } from "@/modules/types"
 import { KnowledgeSuggestionsBase } from "./component"
 
@@ -27,7 +27,7 @@ export const KnowledgeSuggestions = () => {
         title: t(`suggest_${item.key}_topic`),
         lines: [t(`suggest_${item.key}_hint`)],
         actions: [
-            { id: "add", label: t("suggestAdd"), href: `${KNOWLEDGE_ROUTES.library}?add=${item.key}` },
+            { id: "add", label: t("suggestAdd"), href: brainTabHref("sources", { add: item.key }) },
             { id: "na", label: t("suggestNotApplicable"), onPress: () => commands.decide(item.key, "not_applicable") },
             {
                 id: "hide",

@@ -1,0 +1,64 @@
+"use client"
+
+import { useTranslations } from "next-intl"
+import { useBrainCommand, useBrainStats } from "@/hooks/brain"
+import { brainTabHref } from "@/modules/routes"
+import { BrainPipelineBase } from "./component"
+
+/** The connected pipeline: how many documents came in, what NIVO learnt, what waits for review and what the agents use. */
+export const BrainPipeline = () => {
+    const t = useTranslations("secondBrain")
+    const brain = useTranslations("brain")
+    const command = useBrainCommand()
+    const { figures, agents, canDecide, isMaintenanceDue, isLoading } = useBrainStats()
+    return (
+        <BrainPipelineBase
+            props={{
+                label: t("pipelineLabel"),
+                isSkeleton: isLoading,
+                steps: [
+                    {
+                        id: "sources",
+                        label: t("stepSources"),
+                        value: String(figures.documents),
+                        meta: t("stepSourcesMeta", { n: figures.processing }),
+                        href: brainTabHref("sources"),
+                        isWaiting: false,
+                    },
+                    {
+                        id: "lessons",
+                        label: t("stepLearn"),
+                        value: String(figures.extracted),
+                        meta: t("stepLearnMeta", { n: figures.lessons }),
+                        href: brainTabHref("lessons"),
+                        isWaiting: false,
+                    },
+                    {
+                        id: "review",
+                        label: t("stepReview"),
+                        value: String(figures.waiting),
+                        meta: t("stepReviewMeta", { n: figures.conflicts }),
+                        href: brainTabHref("review"),
+                        isWaiting: canDecide && figures.waiting > 0,
+                    },
+                    {
+                        id: "facts",
+                        label: t("stepUse"),
+                        value: String(figures.facts),
+                        meta: t("stepUseMeta", { n: agents }),
+                        href: brainTabHref("facts"),
+                        isWaiting: false,
+                    },
+                ],
+                maintain: isMaintenanceDue
+                    ? {
+                          title: brain("maintainTitle"),
+                          body: brain("maintainBody"),
+                          actionLabel: brain("maintainAction"),
+                      }
+                    : undefined,
+            }}
+            on={{ maintain: () => command.send("brain.maintain", undefined) }}
+        />
+    )
+}

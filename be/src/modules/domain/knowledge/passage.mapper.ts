@@ -13,4 +13,5 @@ export const toPassage = (row: PassageRow): Passage => ({
     score: row.score,
     visibility: row.visibility,
     topic: row.topic,
+    order: row.ord ?? null,
 })

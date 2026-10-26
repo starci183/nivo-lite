@@ -5,6 +5,7 @@ import type {
     KnowledgeDocument,
     KnowledgeLens,
     LensCounts,
+    LensLanes,
     OptionalId,
     OptionalOpenGaps,
 } from "@modules/domain/agents"
@@ -12,6 +13,7 @@ import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { NivoKnowledgeService } from "@modules/domain/nivo-knowledge"
 import { KnowledgeRecallService } from "./knowledge-recall.service"
+import { CUSTOMER_MODULE, lanesOfView } from "./knowledge-lanes.policy"
 import { audienceOfModule, viewOf } from "./knowledge-view.policy"
 
 /** The base-knowledge kinds an agent keeps as rules: authority and escalation (AGENTS.md) and tone (SOUL.md). */
@@ -97,6 +99,16 @@ export class AgentKnowledgeLensService implements KnowledgeLens {
             documents: { public: publicDocs, internal: internalDocs },
             facts: { public: byScope("public"), internal: byScope("internal"), restricted: byScope("restricted") },
         }
+    }
+
+    /** Which kinds of knowledge the view of the module reads, by the same policy that builds the view. */
+    lanesOf(module: string): LensLanes {
+        return lanesOfView(module)
+    }
+
+    /** Which kinds of knowledge the public's view reads, by the same policy. */
+    customerLanes(): LensLanes {
+        return lanesOfView(CUSTOMER_MODULE, "customer")
     }
 
     /** Up to `limit` open questions of the module, most asked first; null only when the gaps are not kept at all. */

@@ -9,6 +9,7 @@ export const toAskKnowledgeRequest = (workspaceId: string, input: AskKnowledgeIn
     question: input.question,
     module: input.module,
     audience: input.audience,
+    installationId: input.installationId,
 })
 
 /** Maps the answer to the GraphQL type. */

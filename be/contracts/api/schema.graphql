@@ -908,6 +908,23 @@ input AgentIdInput {
   agentId: ID! @inputBounds(maxLength: 36)
 }
 
+type AgentKnowledgeLaneType {
+  count: Int
+  lane: String!
+  open: Boolean!
+}
+
+type AgentKnowledgeLensType {
+  agentId: ID
+  audience: String!
+  avatarUrl: String
+  installationId: ID
+  kind: String!
+  lanes: [AgentKnowledgeLaneType!]!
+  module: String
+  name: String
+}
+
 type AgentOwnerCardType {
   active: Boolean!
   memberId: ID!
@@ -1097,6 +1114,7 @@ input AskGuideInput {
 
 input AskKnowledgeInput {
   audience: String! @inputBounds(maxLength: 40)
+  installationId: ID @inputBounds(maxLength: 36)
   module: String! @inputBounds(maxLength: 64)
   question: String! @inputBounds(maxLength: 600)
 }
@@ -5791,6 +5809,7 @@ type Query {
   agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
   agentEngineStatus: AgentEngineStatusType!
   agentGenerationStatus(input: AgentGenerationIdInput!): AgentGenerationStatusType!
+  agentKnowledgeLenses: [AgentKnowledgeLensType!]!
   agentPage(input: AgentIdInput!): AgentPageType!
   agentSyncStatus(input: ModuleInstallationIdInput!): AgentSyncStatusType!
   agents(input: ListAgentsInput!): [AgentSummaryType!]!
@@ -6397,6 +6416,7 @@ type RetrievedPassageType {
   kind: String!
   layer: String!
   module: String
+  order: Int
   score: Float!
   sourceId: ID
   title: String!

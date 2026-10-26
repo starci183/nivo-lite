@@ -41,6 +41,7 @@ export class KnowledgeSearchService {
             module: input.module,
             moduleAudience: row.audience === "customer" ? "customer" : "internal",
             requestedAudience: input.audience === "customer" ? "customer" : "internal",
+            installationId: input.installationId ?? null,
         })
         return this.passages(lens, question, ASK_LIMIT)
     }
