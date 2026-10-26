@@ -119,28 +119,38 @@ describe("chat typing SSE delivery over private Supabase and shared Redis", () =
 })
 
 describe("chat typing SSE admission and isolation", () => {
-    it("realtime/foreign-topic-is-isolated: non-members, disabled members and foreign members are refused before subscription", async () => {
-        await withTypingReplicas(world, identity, async (a) => {
-            await eachInOrder(
-                [identity.outsiderId, identity.readerIds[4], identity.foreignOwnerId],
-                async (principalId) => {
-                    const topic = a.topic(principalId, OFFICE)
-                    const before = a.hub.subscriberCount(topic)
-                    const stream = await a.open({ principalId, workspaceId: identity.workspaceId, target: OFFICE })
-                    expect(stream.status).toBe(403)
-                    await waitForProof(
-                        () => Promise.resolve(stream.closed),
-                        (closed) => closed,
-                    )
-                    expect(stream.raw).toContain("WORKSPACE_MEMBERS_NOT_MEMBER")
-                    expect(stream.raw).not.toContain(": open")
-                    expect(stream.frames).toHaveLength(0)
-                    expect(a.hub.subscriberCount(topic)).toBe(before)
-                },
+    it("realtime/foreign-topic-is-isolated: non-members, disabled members and foreign members open but never receive a typing frame", async () => {
+        await withTypingReplicas(world, identity, async (a, b) => {
+            const member = await b.open({
+                principalId: identity.readerIds[0],
+                workspaceId: identity.workspaceId,
+                target: OFFICE,
+            })
+            const strangers = await Promise.all(
+                [identity.outsiderId, identity.readerIds[4], identity.foreignOwnerId].map((principalId) =>
+                    b.open({ principalId, workspaceId: identity.workspaceId, target: OFFICE }),
+                ),
             )
+            await opened(member)
+            await eachInOrder(strangers, opened)
+            await a.typing.set(identity.ownerId, identity.workspaceId, OFFICE, true)
+            await a.typing.set(identity.ownerId, identity.workspaceId, OFFICE, false)
+            await received(member, 2)
+            expect(member.frames.map(typingFrame)).toEqual([
+                expect.objectContaining({ actorId: identity.ownerId, state: "start" }),
+                expect.objectContaining({ actorId: identity.ownerId, state: "stop" }),
+            ])
+            // The member's frames are the sentinel: the same publishes were already delivered, so silence here is isolation.
+            strangers.forEach((stranger) => {
+                expect(stranger.frames).toHaveLength(0)
+                expect(stranger.raw).not.toContain("data:")
+                expect(stranger.readerError).toBeUndefined()
+            })
         })
     })
+})
 
+describe("chat typing SSE target isolation", () => {
     it("realtime/foreign-topic-is-isolated: a room stream excludes other rooms, conversations and workspaces through a sentinel", async () => {
         await withTypingReplicas(world, identity, async (a, b) => {
             const room: ChatTarget = { room: "sales", conversationId: null }
