@@ -9,7 +9,13 @@ import {
 } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { OFFICE_POLL_MS, toOfficeRoom } from "@/modules/office"
-import type { OfficeChannelWire, OfficeConversationUnread, OfficeMentionViewer, OfficeRoom } from "@/modules/office"
+import type {
+    OfficeAgentConversation,
+    OfficeChannelWire,
+    OfficeConversationUnread,
+    OfficeMentionViewer,
+    OfficeRoom,
+} from "@/modules/office"
 import { useOfficeMarkers } from "./useOfficeMarkers"
 import { useOfficeTyping } from "./useOfficeTyping"
 
@@ -17,6 +23,9 @@ const LIVE = { refreshInterval: OFFICE_POLL_MS }
 
 const unreadOf = (entries: ReadonlyArray<{ readonly id: string; readonly unread: number }> | undefined) =>
     new Map((entries ?? []).map((entry) => [entry.id, entry.unread]))
+
+const agentConversationsOf = (entries: ReadonlyArray<{ readonly id: string } & OfficeAgentConversation> | undefined) =>
+    new Map((entries ?? []).map((entry) => [entry.id, { unread: entry.unread, last: entry.last }]))
 
 /**
  * The Hub rooms and the direct conversations with the caller's unread counts, and the workspace channels the room panel
@@ -44,7 +53,7 @@ export const useOfficeRooms = (selected: string | null, viewer: OfficeMentionVie
         ) ?? []
     ).map((room) => (room.key === selected ? { ...room, unread: 0 } : room))
     const conversationUnread: OfficeConversationUnread = useMemo(
-        () => ({ agents: unreadOf(unread.data?.agents), leads: unreadOf(unread.data?.leads) }),
+        () => ({ agents: agentConversationsOf(unread.data?.agents), leads: unreadOf(unread.data?.leads) }),
         [unread.data],
     )
     const refreshRooms = useCallback(() => {

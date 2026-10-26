@@ -7,8 +7,9 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { OfficeRoomsError, OfficeRoomsErrorCode } from "./errors/office-rooms.error"
-import type { ConversationUnreadListView, RoomChoice, RoomView } from "./office-rooms.contracts"
+import type { AgentConversationView, ConversationUnreadListView, RoomChoice, RoomView } from "./office-rooms.contracts"
 import type {
+    AgentConversationRow,
     ConversationUnreadRow,
     OpenedRow,
     RoomMembersRow,
@@ -41,6 +42,16 @@ const markOf = (kind: string) => {
 
 /** Only the conversations with unseen lines, as the badge contract reads them. */
 const withUnread = (rows: ReadonlyArray<ConversationUnreadRow>) => rows.filter((row) => row.unread > 0)
+
+/** One agent's direct conversation as the row draws it: the unread count and the newest line, even fully read. */
+const agentConversationOf = (row: AgentConversationRow): AgentConversationView => ({
+    id: row.id,
+    unread: row.unread,
+    last:
+        row.last_at === null
+            ? null
+            : { body: row.last_body ?? "", at: row.last_at, authorId: row.last_author_id, author: row.last_author },
+})
 
 const EMPTY_SUMMARY: RoomSummaryRow = {
     unread: 0,
@@ -89,15 +100,15 @@ export class OfficeRoomsService {
         return [office, ...rows.map((row): RoomView => ({ ...row, members: roomMembers.get(row.key) ?? emptyMembers }))]
     }
 
-    /** The unread counts of the caller's direct conversations: the agents' and the customers' lines of the thread. */
+    /** The caller's direct conversations: every agent with its unread count and newest line, and the unread customer ones. */
     async unread(principalId: string, workspaceId: string): Promise<ConversationUnreadListView> {
         const member = await this.members.require(principalId, workspaceId)
         const params = [workspaceId, member.userId, member.displayName]
         const [agents, leads] = await Promise.all([
-            this.entityManager.query<Array<ConversationUnreadRow>>(LIST_AGENT_UNREAD, params),
+            this.entityManager.query<Array<AgentConversationRow>>(LIST_AGENT_UNREAD, params),
             this.entityManager.query<Array<ConversationUnreadRow>>(LIST_LEAD_UNREAD, params),
         ])
-        return { agents: withUnread(agents), leads: withUnread(leads) }
+        return { agents: agents.map(agentConversationOf), leads: withUnread(leads) }
     }
 
     /** Marks a direct conversation read by the caller up to now; a wrong kind or an id outside the workspace is refused. */

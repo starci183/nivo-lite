@@ -24,6 +24,18 @@ export interface ConversationUnreadRow {
     unread: number
 }
 
+/** One agent's direct conversation: its unread count and its newest line. */
+export interface AgentConversationRow extends ConversationUnreadRow {
+    /** The newest line's text; null while nobody wrote. */
+    last_body: string | null
+    /** The workspace account id of the newest line's author; null for the agent's own lines and unattributed legacy ones. */
+    last_author_id: string | null
+    /** The display name of the newest line's human author; null for the agent's own and system lines. */
+    last_author: string | null
+    /** When the newest line was written, ISO 8601; null while nobody wrote. */
+    last_at: string | null
+}
+
 /** The newest line and the unread count of a room. */
 export interface RoomSummaryRow {
     /** Lines the caller has not read, at most 99. */

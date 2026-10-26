@@ -73,20 +73,34 @@ export const OFFICE_ROOM_SUMMARY = sql`
 export const MARK_ROOM_READ = sql`SELECT public.mark_office_room_read($1, $2, $3) LIMIT 1`
 
 /**
- * The caller's unread line counts of every agent of the workspace, capped at 99 ($1 workspace, $2 the caller's user id, $3
- * their display name). An agent's conversation is its lines of the Office thread; its read marker lives in
- * office_rooms_reads under the scope key 'agent:<agent id>'.
+ * Every agent of the workspace with the caller's unread line count of its direct conversation, capped at 99, and the
+ * conversation's newest line ($1 workspace, $2 the caller's user id, $3 their display name). An agent's direct
+ * conversation is the member test chats it answers (agent_messages of its 'test' agent_conversations); its read marker
+ * lives in office_rooms_reads under the scope key 'agent:<agent id>'.
  */
 export const LIST_AGENT_UNREAD = sql`
     SELECT a.id::text AS id, LEAST(99, (
-               SELECT count(*) FROM public.messages m
-               WHERE m.workspace_id = a.workspace_id AND m.agent_id = a.id
+               SELECT count(*) FROM public.agent_messages m
+               JOIN public.agent_conversations c ON c.id = m.conversation_id AND c.workspace_id = m.workspace_id
+               WHERE m.workspace_id = a.workspace_id AND c.agent_id = a.id AND c.kind = 'test'
                  AND m.created_at > COALESCE(rd.last_read_at, '-infinity'::timestamptz)
                  AND m.author_user_id IS DISTINCT FROM $2
-                 AND NOT (m.author_user_id IS NULL AND m.author_kind = 'human' AND m.author_name = $3)))::int AS unread
+                 AND NOT (m.author_user_id IS NULL AND m.author_kind = 'human' AND m.author_name = $3)))::int AS unread,
+           last.body AS last_body, last.author_id AS last_author_id, last.author_name AS last_author,
+           last.created_at AS last_at
     FROM public.agents a
     LEFT JOIN public.office_rooms_reads rd
            ON rd.workspace_id = a.workspace_id AND rd.user_id = $2 AND rd.room = 'agent:' || a.id::text
+    LEFT JOIN LATERAL (
+        SELECT m.body, m.author_user_id::text AS author_id,
+               COALESCE(m.author_name, wm.display_name) AS author_name,
+               to_json(m.created_at) #>> '{}' AS created_at
+        FROM public.agent_messages m
+        JOIN public.agent_conversations c ON c.id = m.conversation_id AND c.workspace_id = m.workspace_id
+        LEFT JOIN public.workspace_members wm ON wm.workspace_id = m.workspace_id AND wm.user_id = m.author_user_id
+        WHERE m.workspace_id = a.workspace_id AND c.agent_id = a.id AND c.kind = 'test'
+        ORDER BY m.created_at DESC, m.id DESC LIMIT 1
+    ) last ON true
     WHERE a.workspace_id = $1
     ORDER BY a.id
     LIMIT 100`

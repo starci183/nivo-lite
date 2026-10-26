@@ -13,17 +13,15 @@ import { zaloTimeOf } from "./office.list-time"
 import { officePreviewOf, previewKindOf } from "./office.preview"
 import type {
     OfficeAgent,
+    OfficeAgentConversation,
+    OfficeAgentLine,
     OfficeConversationUnread,
     OfficeMessage,
     OfficeStaff,
     OfficeTask,
-    OfficeViewer,
 } from "./office.types"
 import { agentAvatarOf } from "./office.words"
 import type { OfficeContext, OfficeWords } from "./office.words"
-
-/** The viewer of a preview that names no author, so no line is compared with them. */
-const NO_VIEWER: OfficeViewer = { userId: null, name: null }
 
 /** List time as Zalo draws it: "Just now", "N min", "N h", "Yesterday", "N days", then dd/MM. */
 export const officeListTimeOf = (iso: string, words: OfficeWords, context: OfficeContext): string =>
@@ -42,44 +40,46 @@ const rowStateOf = (unread: number, state: OfficeConversationState) => ({
 const previewWhileTyping = (isTyping: boolean, preview: string, words: OfficeWords): string =>
     isTyping ? words.t("previewTyping") : preview
 
-const lastBy = (messages: ReadonlyArray<OfficeMessage>, agentId: string): OfficeMessage | null =>
-    messages.findLast((message) => message.agentId === agentId) ?? null
-
 /** A conversation row with the instant it sorts by; the instant itself is not drawn. */
 interface SortableRow {
     readonly row: OfficeConversationRowView
     readonly sortAt: string | null
 }
 
-/** The preview of an agent row: its last line (a label for media), else its role; a paused agent says so. */
-const agentPreviewOf = (agent: OfficeAgent, said: OfficeMessage | null, role: string, words: OfficeWords): string => {
+/** The preview of an agent row: its direct conversation's last line, else its role; a paused agent says so. */
+const agentPreviewOf = (
+    agent: OfficeAgent,
+    last: OfficeAgentLine | null,
+    role: string,
+    words: OfficeWords,
+    context: OfficeContext,
+): string => {
     if (!agent.isActive) return words.t("agentPreviewPaused")
-    if (said === null) return role
+    if (last === null) return role
     return officePreviewOf(
-        { kind: previewKindOf(said), body: said.body, author: null, authorUserId: null },
-        NO_VIEWER,
+        { kind: "text", body: last.body, author: last.author, authorUserId: last.authorId },
+        { userId: context.meUserId, name: context.meName },
         words,
     )
 }
 
 const agentRowOf = (
     agent: OfficeAgent,
-    messages: ReadonlyArray<OfficeMessage>,
+    conversation: OfficeAgentConversation | undefined,
     words: OfficeWords,
     context: OfficeContext,
-    unread: number,
 ): SortableRow => {
-    const said = lastBy(messages, agent.id)
+    const last = conversation?.last ?? null
     const role = words.moduleName(agent.module)
     return {
-        sortAt: said?.createdAt ?? null,
+        sortAt: last?.at ?? null,
         row: {
             id: agent.id,
             kind: "agent",
             label: agent.name,
-            description: agentPreviewOf(agent, said, role, words),
-            time: said === null ? null : officeListTimeOf(said.createdAt, words, context),
-            ...rowStateOf(unread, NO_CONVERSATION_STATE),
+            description: agentPreviewOf(agent, last, role, words, context),
+            time: last === null ? null : officeListTimeOf(last.at, words, context),
+            ...rowStateOf(conversation?.unread ?? 0, NO_CONVERSATION_STATE),
             avatar: agentAvatarOf(agent),
         },
     }
@@ -97,7 +97,7 @@ export interface OfficeRoomListInput {
     readonly rows: ReadonlyArray<OfficeRoomRowView>
     /** The id of the room on screen ("office" for the Office room). */
     readonly selected: string
-    /** The caller's unread counts of the direct conversations. */
+    /** The caller's direct conversations: every agent conversation, and the unread customer ones. */
     readonly unread: OfficeConversationUnread
 }
 
@@ -140,9 +140,7 @@ export const officeListViewOf = (
                 members: room.members ?? null,
             },
         })),
-        ...context.agents.map((agent) =>
-            agentRowOf(agent, messages, words, context, rooms.unread.agents.get(agent.id) ?? 0),
-        ),
+        ...context.agents.map((agent) => agentRowOf(agent, rooms.unread.agents.get(agent.id), words, context)),
         ...context.leads.slice(0, RECENT_CUSTOMERS).map((lead) => ({
             sortAt: lead.createdAt,
             row: {
