@@ -13,7 +13,6 @@ interface InventorySelectProps {
 /** A choice field in the secondary form variant: an empty value shows the placeholder, a change answers an id or an empty text. */
 export const InventorySelect = (props: InventorySelectProps) => (
     <Select
-        variant="secondary"
         label={props.label}
         {...(props.placeholder === undefined ? {} : { placeholder: props.placeholder })}
         value={props.value === "" ? null : props.value}

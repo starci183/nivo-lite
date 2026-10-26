@@ -33,7 +33,6 @@ export const PublicBookingContact = (props: PublicBookingContactProps) => {
                     id="booking-public-name"
                     name="name"
                     label={p.labels.name}
-                    variant="secondary"
                     isRequired
                     value={p.fields.name}
                     onValueChange={(name) => on.change({ name })}
@@ -43,7 +42,6 @@ export const PublicBookingContact = (props: PublicBookingContactProps) => {
                     name="phone"
                     kind="tel"
                     label={p.labels.phone}
-                    variant="secondary"
                     isRequired
                     value={p.fields.phone}
                     onValueChange={(phone) => on.change({ phone })}
@@ -53,13 +51,11 @@ export const PublicBookingContact = (props: PublicBookingContactProps) => {
                     name="email"
                     kind="email"
                     label={p.labels.email}
-                    variant="secondary"
                     value={p.fields.email}
                     onValueChange={(email) => on.change({ email })}
                 />
                 <NumberField
                     label={p.labels.party}
-                    variant="secondary"
                     minValue={1}
                     maxValue={20}
                     step={1}
@@ -70,7 +66,6 @@ export const PublicBookingContact = (props: PublicBookingContactProps) => {
                     id="booking-public-note"
                     name="note"
                     label={p.labels.note}
-                    variant="secondary"
                     value={p.fields.note}
                     onValueChange={(note) => on.change({ note })}
                 />
