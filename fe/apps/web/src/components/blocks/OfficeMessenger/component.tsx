@@ -14,7 +14,7 @@ import { OfficeConversations } from "@/components/composites/OfficeConversations
 import { OfficeInfoPanel } from "@/components/composites/OfficeInfoPanel"
 import { OfficeTasks } from "@/components/composites/OfficeTasks"
 import { OfficeThread } from "@/components/composites/OfficeThread"
-import { nivoIconSource } from "@/components/leaves/Icon"
+import { Icon, nivoIconSource } from "@/components/leaves/Icon"
 import type {
     OfficeInfoView,
     OfficeListView,
@@ -29,6 +29,7 @@ import {
     HEAD_AVATAR_CLASS_NAME,
     HEAD_CLASS_NAME,
     HEAD_TEXT_CLASS_NAME,
+    HEAD_TITLE_CLASS_NAME,
     INFO_COLUMN_CLASS_NAME,
     LIST_BODY_CLASS_NAME,
     LIST_COLUMN_CLASS_NAME,
@@ -188,7 +189,12 @@ const OfficeMessengerHeader = (props: OfficeMessengerBaseProps) => {
                 <IconTile source={nivoIconSource("community", "leading")} tone="neutral" />
             </div>
             <div className={HEAD_TEXT_CLASS_NAME}>
-                <Heading level={1}>{isTasks ? text("tasksTitle") : view.title}</Heading>
+                <div className={HEAD_TITLE_CLASS_NAME}>
+                    <Heading level={1}>{isTasks ? text("tasksTitle") : view.title}</Heading>
+                    {!isTasks && view.isMuted ? (
+                        <Icon props={{ name: "muted", usage: "leading", ariaLabel: text("mutedChat") }} />
+                    ) : null}
+                </div>
                 {isTasks ? null : (
                     <Text size="sm" tone="muted" overflow="truncate" isSkeleton={view.isLoading}>
                         {view.subtitle}
@@ -210,7 +216,7 @@ const OfficeMessengerHeader = (props: OfficeMessengerBaseProps) => {
                 ) : null}
                 <IconButton
                     intent="neutral"
-                    source={nivoIconSource(view.isMuted ? "unmute" : "mute", "leading")}
+                    source={nivoIconSource(view.isMuted ? "muted" : "unmuted", "leading")}
                     label={view.isMuted ? text("unmuteChat") : text("muteChat")}
                     isActive={view.isMuted}
                     onPress={on.toggleMute}

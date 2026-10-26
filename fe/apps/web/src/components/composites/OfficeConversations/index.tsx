@@ -41,14 +41,23 @@ const inFilter = (row: OfficeConversationRowView, filter: FilterId): boolean => 
     return row.unread > 0
 }
 
+/** Silent placeholders for the members the preview does not name; the grid counts them but never draws them. */
+const padItems = (rowId: string, n: number): ReadonlyArray<AvatarGroupItem> =>
+    Array.from({ length: n }, (_, index) => ({ id: `${rowId}-member-pad-${index}`, name: "" }))
+
 /** The member previews of a group row as composite-avatar items. */
-const memberItemsOf = (row: Extract<OfficeConversationRowView, { kind: "group" }>): ReadonlyArray<AvatarGroupItem> =>
-    (row.members?.preview ?? []).map((member, index) => ({
+const memberItemsOf = (row: Extract<OfficeConversationRowView, { kind: "group" }>): ReadonlyArray<AvatarGroupItem> => {
+    const preview = (row.members?.preview ?? []).map((member, index) => ({
         id: `${row.id}-member-${index}`,
         name: member.name,
         seed: member.name,
         ...(member.avatarUrl === null ? {} : { src: member.avatarUrl }),
     }))
+    // The grid's fourth cell draws the TOTAL count from items.length once it passes four, so five
+    // or more members draw three avatars plus the count cell.
+    const total = Math.max(row.members?.count ?? 0, preview.length)
+    return [...preview, ...padItems(row.id, total > 4 ? total - preview.length : 0)]
+}
 
 /** A group row leads with its member composite and nothing else; a direct row with its mark. */
 const leadingOf = (row: OfficeConversationRowView, text: OfficeText): ListBoxItem["leading"] => {
@@ -87,7 +96,19 @@ const trailingOf = (row: OfficeConversationRowView): ListBoxItem["trailing"] => 
             </Text>
         )}
         <div className={INDICATOR_CLASS_NAME}>
-            {row.isLastSeen ? <Icon props={{ name: "messageSeen", usage: "chip" }} /> : null}
+            {row.isLastSeen ? (
+                <Text
+                    as="span"
+                    size="sm"
+                    tone="accent"
+                    startContent={
+                        <>
+                            <Icon props={{ name: "messageSeen", usage: "chip" }} />
+                            <Icon props={{ name: "messageSeen", usage: "chip" }} />
+                        </>
+                    }
+                />
+            ) : null}
             {row.badge === null ? null : badgeOf(row.badge)}
         </div>
     </div>

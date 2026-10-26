@@ -4117,6 +4117,7 @@
     "infoOpen": "Show chat info",
     "muteChat": "Mute this chat",
     "unmuteChat": "Unmute this chat",
+    "mutedChat": "Notifications muted",
     "infoClose": "Hide chat info",
     "infoTitle": "Chat info",
     "conversationLabel": "Office conversation",
