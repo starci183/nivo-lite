@@ -102,6 +102,7 @@ export const toOfficeMessageType = (message: PostedMessage): OfficeMessageType =
 export const toOfficeRoomsType = (rooms: ReadonlyArray<RoomView>): Array<OfficeRoomType> =>
     rooms.map((room) => ({
         ...room,
+        unread_mention_bodies: [...room.unread_mention_bodies],
         agent_ids: [...room.agent_ids],
         home_agent_ids: [...room.home_agent_ids],
         user_ids: [...room.user_ids],

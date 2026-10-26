@@ -4,19 +4,33 @@ import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryChatTypingChannel } from "@/modules/api/graphql/queries/query-chat-typing-channel"
-import type { QueryChatTypingChannelRequest } from "@/modules/api/graphql/queries/query-chat-typing-channel"
+import type {
+    QueryChatTypingChannelRequest,
+    QueryChatTypingChannelResult,
+} from "@/modules/api/graphql/queries/query-chat-typing-channel"
 
 /** The SWR key of {@link useQueryChatTypingChannelSwr}. */
 export const QUERY_CHAT_TYPING_CHANNEL_SWR_KEY = "QUERY_CHAT_TYPING_CHANNEL_SWR"
 
-/** The back end `chatTypingChannel` query: the private broadcast topic of one target. Pass `null` to wait for a target. */
+/** One target and its authorized private typing channel. */
+interface ChatTypingChannelAnswer {
+    readonly request: QueryChatTypingChannelRequest
+    readonly channel: QueryChatTypingChannelResult | undefined
+}
+
+/** The back end `chatTypingChannel` query for every listed target, in the order asked. */
 export const useQueryChatTypingChannelSwr = (
-    request: QueryChatTypingChannelRequest | null,
-    config?: SWRConfiguration,
+    targets: ReadonlyArray<QueryChatTypingChannelRequest>,
+    config?: SWRConfiguration<ReadonlyArray<ChatTypingChannelAnswer>>,
 ) =>
     useSWR(
-        useWorkspaceKey(QUERY_CHAT_TYPING_CHANNEL_SWR_KEY, [JSON.stringify(request)], request !== null),
-        async () =>
-            request === null ? undefined : (await queryChatTypingChannel({ request })).data?.chatTypingChannel,
+        useWorkspaceKey(QUERY_CHAT_TYPING_CHANNEL_SWR_KEY, [JSON.stringify(targets)]),
+        async (): Promise<ReadonlyArray<ChatTypingChannelAnswer>> =>
+            Promise.all(
+                targets.map(async (request) => ({
+                    request,
+                    channel: (await queryChatTypingChannel({ request })).data?.chatTypingChannel,
+                })),
+            ),
         config,
     )

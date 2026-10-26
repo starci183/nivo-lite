@@ -44,6 +44,7 @@ const withUnread = (rows: ReadonlyArray<ConversationUnreadRow>) => rows.filter((
 
 const EMPTY_SUMMARY: RoomSummaryRow = {
     unread: 0,
+    unread_mention_bodies: [],
     last_body: null,
     last_author: null,
     last_author_user_id: null,

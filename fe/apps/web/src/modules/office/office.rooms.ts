@@ -17,7 +17,8 @@ import type {
     OfficeViewer,
     OfficeWork,
 } from "./office.types"
-import { NO_CONVERSATION_STATE } from "./office.conversation-state"
+import { hasUnreadMention, NO_CONVERSATION_STATE } from "./office.conversation-state"
+import type { OfficeMentionViewer } from "./office.conversation-state"
 import { roomStateOf } from "./office.chat-state"
 import type { ChatMarkerWire } from "./office.chat-state"
 import { officePreviewOf } from "./office.preview"
@@ -127,6 +128,7 @@ interface RoomWire {
     readonly key?: string | null
     readonly name: string
     readonly unread: number
+    readonly unread_mention_bodies: ReadonlyArray<string>
     readonly last_body?: string | null
     readonly last_author?: string | null
     readonly last_author_user_id?: string | null
@@ -144,7 +146,12 @@ interface RoomWire {
 }
 
 /** One back end room as the Hub uses it, with the caller's side of it (mute, read of my last line, who types) when known. */
-export const toOfficeRoom = (row: RoomWire, marker?: ChatMarkerWire, isTyping = false): OfficeRoom => ({
+export const toOfficeRoom = (
+    row: RoomWire,
+    marker?: ChatMarkerWire,
+    isTyping = false,
+    viewer?: OfficeMentionViewer,
+): OfficeRoom => ({
     key: row.key ?? null,
     name: row.name,
     unread: row.unread,
@@ -153,7 +160,7 @@ export const toOfficeRoom = (row: RoomWire, marker?: ChatMarkerWire, isTyping = 
     lastAuthorUserId: row.last_author_user_id ?? null,
     lastAt: row.last_at ?? null,
     lastKind: "text",
-    state: roomStateOf(marker, isTyping),
+    state: roomStateOf(marker, isTyping, row.unread > 0 && hasUnreadMention(row.unread_mention_bodies, viewer)),
     agentIds: row.agent_ids,
     homeAgentIds: row.home_agent_ids,
     userIds: row.user_ids,

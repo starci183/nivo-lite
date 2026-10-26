@@ -36,6 +36,7 @@ const roomOf = builder<RoomRow>({
     name: "Marketing",
     position: 3,
     unread: 1,
+    unread_mention_bodies: ["Please review @linh"],
     last_body: "Content is ready",
     last_author: "AI Marketing",
     last_author_user_id: null,
@@ -96,6 +97,7 @@ describe("OfficeRoomsService.rooms", () => {
     it("answers the Office room first, then the department rooms, read as the caller", async () => {
         const summary = {
             unread: 3,
+            unread_mention_bodies: ["Earlier request for @Mai Linh", "Please review @linh"],
             last_body: "hi",
             last_author: "An",
             last_author_user_id: "u-2",
@@ -146,7 +148,14 @@ describe("OfficeRoomsService.rooms", () => {
         const { service } = await build(em)
 
         await expect(service.rooms("u-1", "ws-1")).resolves.toEqual([
-            officeOf({ unread: 0, last_body: null, last_author: null, last_author_user_id: null, last_at: null }),
+            officeOf({
+                unread: 0,
+                unread_mention_bodies: [],
+                last_body: null,
+                last_author: null,
+                last_author_user_id: null,
+                last_at: null,
+            }),
         ])
     })
 })

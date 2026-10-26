@@ -21,6 +21,10 @@ export class OfficeRoomType {
     @Field(() => Int)
     unread!: number
 
+    /** Incoming unread bodies containing @, for matching the caller's handle or display name. */
+    @Field(() => [String])
+    unread_mention_bodies!: Array<string>
+
     /** The newest line's text. */
     @Field(() => String, { nullable: true })
     last_body?: string | null

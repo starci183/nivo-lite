@@ -5344,6 +5344,7 @@ type OfficeRoomType {
   pins: [OfficeRoomPinType!]!
   position: Int!
   unread: Int!
+  unread_mention_bodies: [String!]!
   user_ids: [String!]!
 }
 

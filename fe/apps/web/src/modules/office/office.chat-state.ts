@@ -22,8 +22,13 @@ export interface ChatRoomTarget {
 export const chatTargetOf = (room: string | null): ChatRoomTarget => (room === null ? {} : { room })
 
 /** The flags of a room row from what the back end knows of the caller's side: the mute, the read of my last line, who types. */
-export const roomStateOf = (marker: ChatMarkerWire | undefined, isTyping: boolean): OfficeConversationState => ({
+export const roomStateOf = (
+    marker: ChatMarkerWire | undefined,
+    isTyping: boolean,
+    hasMention: boolean,
+): OfficeConversationState => ({
     ...NO_CONVERSATION_STATE,
+    hasMention,
     isMuted: marker?.muted ?? false,
     isLastSeen: marker?.lastOwnMessage?.status === "seen",
     isTyping,

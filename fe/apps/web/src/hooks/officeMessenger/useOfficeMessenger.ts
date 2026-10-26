@@ -9,7 +9,6 @@ import {
     useOfficeRooms,
     useOfficeSend,
     useOfficeThread,
-    useOfficeTyping,
     useOfficeWords,
 } from "@/hooks/office"
 import type { OfficeBoard } from "@/hooks/office"
@@ -21,6 +20,7 @@ import {
     roomApprovalsOf,
     roomOf,
     roomWorksOf,
+    staffHandlesOf,
     withReceipt,
 } from "@/modules/office"
 import type { OfficeRoom } from "@/modules/office"
@@ -84,12 +84,19 @@ const useSendLine = (
 
 /** The whole Office messenger for one Hub room (null = the Office room): its data, its words and its commands. */
 export const useOfficeMessenger = (focusedId: string | null, roomKey: string | null, isThreadVisible: boolean) => {
+    const me = useMember()
     const words = useOfficeWords()
-    const peers = useOfficeTyping(roomKey)
-    const hub = useOfficeRooms(roomKey, peers.names.length > 0)
+    const fullBoard = useOfficeBoard()
+    const handles = staffHandlesOf(
+        fullBoard.staff,
+        fullBoard.agents.map((agent) => agent.handle),
+    )
+    const hub = useOfficeRooms(roomKey, {
+        name: me?.name ?? null,
+        handle: me?.staffId == null ? null : (handles.get(me.staffId) ?? null),
+    })
     const receipts = useOfficeReceipts(roomKey, isThreadVisible, hub.refreshRooms)
     const thread = useOfficeThread(roomKey, receipts.onFetched)
-    const fullBoard = useOfficeBoard()
     const sender = useOfficeSend()
     const decisions = useOfficeDecisions()
     const current = roomOf(hub.rooms, roomKey)
@@ -135,8 +142,8 @@ export const useOfficeMessenger = (focusedId: string | null, roomKey: string | n
         roomTitle: current === null ? null : current.name,
         isMuted: marker?.muted ?? false,
         setMuted: (muted: boolean) => hub.setMute(roomKey, muted),
-        peersTyping: peers.names,
-        onDraft: peers.onDraft,
+        peersTyping: hub.peers.names,
+        onDraft: hub.peers.onDraft,
         onDutyCount: roomAgents.filter((agent) => agent.isActive).length,
         reading:
             sender.reading === null
