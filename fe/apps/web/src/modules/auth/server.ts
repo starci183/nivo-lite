@@ -6,6 +6,7 @@ import type { EmailOtpType } from "@supabase/supabase-js"
 import { authFailure, authOk, failureOf } from "./outcome"
 import { cookieAuthClient } from "./server-client"
 
+export { onPublicOrigin, requestOrigin } from "./request-origin"
 export { refreshSession } from "./server-client"
 
 const EMAIL_LINK_TYPES: ReadonlyArray<EmailOtpType> = [

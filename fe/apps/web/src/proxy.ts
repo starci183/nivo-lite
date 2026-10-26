@@ -1,9 +1,12 @@
 import { negotiateLocale } from "@nivo-lite/i18n/proxy"
 import { NextRequest, NextResponse } from "next/server"
 import { sessionCookieOptions } from "./modules/config"
-import { refreshSession } from "./modules/auth/server"
+import { onPublicOrigin, refreshSession } from "./modules/auth/server"
 import { LOCALES, LOCALE_COOKIE } from "./modules/i18n"
-import { APP_ROUTES, onPublicOrigin } from "./modules/routes"
+
+// The two destinations the proxy redirects to; the proxy cannot evaluate the routes barrel, so it names them itself.
+const LOGIN_PATH = "/login"
+const DASHBOARD_PATH = "/dashboard"
 
 // Reachable without a session. Webhooks (Telegram, bank connection) are each verified by their own secret header; /api/n8n by a per-run bearer token (hash stored with an expiry).
 const PUBLIC_PATHS = [
@@ -102,7 +105,7 @@ export const proxy = async (original: NextRequest): Promise<NextResponse> => {
     }
     const loginUrl = (): URL => {
         const url = request.nextUrl.clone()
-        url.pathname = APP_ROUTES.login
+        url.pathname = LOGIN_PATH
         url.search = ""
         return url
     }
@@ -115,10 +118,10 @@ export const proxy = async (original: NextRequest): Promise<NextResponse> => {
     }
 
     // Signed-in users who open the sign-in page go straight to where they were headed.
-    if (pathname === APP_ROUTES.login && request.nextUrl.searchParams.get("reason") !== "disabled") {
+    if (pathname === LOGIN_PATH && request.nextUrl.searchParams.get("reason") !== "disabled") {
         const url = request.nextUrl.clone()
         const next = safeNext(request.nextUrl.searchParams.get("next"))
-        url.pathname = APP_ROUTES.dashboard
+        url.pathname = DASHBOARD_PATH
         url.search = ""
         return redirectTo(next ? new URL(next, request.nextUrl.origin) : url)
     }

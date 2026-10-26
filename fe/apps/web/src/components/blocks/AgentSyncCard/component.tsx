@@ -1,11 +1,15 @@
-import { Badge, Button, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Button, RelativeTime, SurfaceCard, Text } from "@starci/grammar/common"
 import { ACTIONS, STACK } from "./classNames"
 
 /** Copy and state of the sync card of an agent. */
 export interface AgentSyncCardBaseProps {
     readonly props: {
         readonly title: string
+        /** The line's words; where it names when the copy was checked, the moment stands in `{time}`. */
         readonly lineText: string
+        /** When the copy was last checked (RFC 3339); null when the line names no moment. */
+        readonly lineCheckedAt: string | null
+        readonly locale: string
         readonly lineTone: "success" | "warning" | "danger" | "neutral"
         readonly resyncLabel: string
         readonly isResyncDisabled: boolean
@@ -21,7 +25,16 @@ export const AgentSyncCardBase = (props: AgentSyncCardBaseProps) => (
         <div className={STACK}>
             <div className={ACTIONS} aria-live="polite">
                 <Badge isDot tone={props.props.lineTone}>
-                    {props.props.lineText}
+                    {props.props.lineCheckedAt === null ? (
+                        props.props.lineText
+                    ) : (
+                        <RelativeTime
+                            dateTime={props.props.lineCheckedAt}
+                            locale={props.props.locale}
+                            template={props.props.lineText}
+                            fallback={props.props.lineText.replace("{time}", "")}
+                        />
+                    )}
                 </Badge>
                 <Button
                     intent="neutral"

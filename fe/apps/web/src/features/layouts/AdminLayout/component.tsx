@@ -1,4 +1,4 @@
-import { PageContainer, Text, TopBar } from "@starci/grammar/common"
+import { PageContainer, Text, TopBar, WorkspaceShell } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { AdminAccount } from "@/components/blocks/AdminAccount"
 import { AdminNavigation } from "@/components/blocks/AdminNavigation"
@@ -14,15 +14,21 @@ export interface AdminLayoutBaseProps {
 
 /** Draws the team console frame: the top bar with brand, destinations and who is signed in, then the routed page. */
 export const AdminLayoutBase = (props: AdminLayoutBaseProps) => (
-    <>
-        <TopBar
-            position="static"
-            brand={<Text weight="semibold">{props.props.title}</Text>}
-            navigation={<AdminNavigation />}
-            actions={<AdminAccount />}
-        />
-        <PageContainer measure="full">
-            <div className={PAGE_CLASS_NAME}>{props.children}</div>
-        </PageContainer>
-    </>
+    <WorkspaceShell
+        viewport="flow"
+        header={
+            <TopBar
+                position="static"
+                brand={<Text weight="semibold">{props.props.title}</Text>}
+                navigation={<AdminNavigation />}
+                actions={<AdminAccount />}
+            />
+        }
+        primaryLabel={props.props.title}
+        primary={
+            <PageContainer measure="full">
+                <div className={PAGE_CLASS_NAME}>{props.children}</div>
+            </PageContainer>
+        }
+    />
 )

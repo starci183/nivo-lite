@@ -43,7 +43,7 @@ export const useGuideSpotlight = (pathname: string): ((target: string | undefine
     useEffect(() => {
         const target = takeQueued()
         if (target === null) return undefined
-        const started = Date.now()
+        let attempts = 0
         let timer: ReturnType<typeof setTimeout> | undefined
         let outlined: HTMLElement | null = null
         const look = () => {
@@ -56,7 +56,8 @@ export const useGuideSpotlight = (pathname: string): ((target: string | undefine
                 timer = setTimeout(() => element.classList.remove(...SPOTLIGHT), SHOW_MS)
                 return
             }
-            if (Date.now() - started < WAIT_MS) timer = setTimeout(look, LOOK_MS)
+            attempts += 1
+            if (attempts * LOOK_MS < WAIT_MS) timer = setTimeout(look, LOOK_MS)
         }
         look()
         return () => {
