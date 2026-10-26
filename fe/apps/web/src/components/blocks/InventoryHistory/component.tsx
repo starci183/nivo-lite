@@ -1,21 +1,14 @@
 import {
     Badge,
     EmptyNotice,
-    ListItem,
+    ListRow,
     SearchField,
     SegmentedControl,
     SurfaceListCard,
     Text,
 } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
-import {
-    CHIPS_CLASS_NAME,
-    ROW_CLASS_NAME,
-    ROW_MAIN_CLASS_NAME,
-    STACK_CLASS_NAME,
-    TOOLBAR_CLASS_NAME,
-    TOOLBAR_FIELD_CLASS_NAME,
-} from "./classNames"
+import { STACK_CLASS_NAME, TOOLBAR_CLASS_NAME, TOOLBAR_FIELD_CLASS_NAME } from "./classNames"
 
 /** One stock movement, every word already resolved. */
 export interface MovementRowView {
@@ -80,25 +73,23 @@ export const InventoryHistoryBase = (props: InventoryHistoryBaseProps) => {
                 empty={<EmptyNotice message={p.emptyTitle} description={p.emptyBody} />}
             >
                 {p.rows.map((row) => (
-                    <ListItem key={row.id} className={ROW_CLASS_NAME}>
-                        <div className={ROW_MAIN_CLASS_NAME}>
-                            <div className={CHIPS_CLASS_NAME}>
-                                <Badge tone={row.kindTone}>{row.kindLabel}</Badge>
-                                <Text weight="semibold">{`${row.itemName} ${row.quantity}`}</Text>
-                            </div>
-                            <Text size="sm" tone="muted">
-                                {row.detail}
+                    <ListRow
+                        key={row.id}
+                        title={`${row.itemName} ${row.quantity}`}
+                        badges={<Badge tone={row.kindTone}>{row.kindLabel}</Badge>}
+                        description={row.detail}
+                        actions={
+                            <Text size="xs" tone="muted">
+                                {row.stamp}
                             </Text>
-                            {row.evidence === null ? null : (
-                                <Text size="xs" tone="muted" overflow="clamp-2">
-                                    {row.evidence}
-                                </Text>
-                            )}
-                        </div>
-                        <Text size="xs" tone="muted">
-                            {row.stamp}
-                        </Text>
-                    </ListItem>
+                        }
+                    >
+                        {row.evidence === null ? null : (
+                            <Text size="xs" tone="muted" overflow="clamp-2">
+                                {row.evidence}
+                            </Text>
+                        )}
+                    </ListRow>
                 ))}
             </SurfaceListCard>
         </div>
