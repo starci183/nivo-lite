@@ -1,7 +1,13 @@
-import { Badge, List, ListItem, SectionHeader, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
+import { Badge, Divider, List, ListItem, SectionHeader, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
 import { AccountingBlock } from "@/components/branches/AccountingBlock"
 import type { GovHistoryRow } from "@/hooks/overviewGov"
-import { STACK_CLASS_NAME, HISTORY_LIST_CLASS_NAME, HISTORY_ROW_CLASS_NAME, CHIP_ROW_CLASS_NAME } from "./classNames"
+import {
+    STACK_CLASS_NAME,
+    HISTORY_LIST_CLASS_NAME,
+    HISTORY_ROW_CLASS_NAME,
+    HISTORY_BODY_CLASS_NAME,
+    CHIP_ROW_CLASS_NAME,
+} from "./classNames"
 
 /** The figures of the history block. */
 export interface OverviewGovHistoryProps {
@@ -33,20 +39,23 @@ export const OverviewGovHistory = (props: OverviewGovHistoryProps) => (
                     <Text tone="muted">{props.figures.empty}</Text>
                 ) : (
                     <List label={props.figures.title} className={HISTORY_LIST_CLASS_NAME}>
-                        {props.figures.rows.map((row) => (
+                        {props.figures.rows.map((row, index) => (
                             <ListItem key={row.id} className={HISTORY_ROW_CLASS_NAME}>
-                                <div className={CHIP_ROW_CLASS_NAME}>
-                                    <Text size="sm" weight="semibold">
-                                        {row.action}
-                                    </Text>
-                                    <Badge tone={row.outcomeTone}>{row.outcome}</Badge>
-                                    <Text size="xs" tone="muted">
-                                        {row.when}
+                                {index > 0 ? <Divider semantics="presentation" /> : null}
+                                <div className={HISTORY_BODY_CLASS_NAME}>
+                                    <div className={CHIP_ROW_CLASS_NAME}>
+                                        <Text size="sm" weight="semibold">
+                                            {row.action}
+                                        </Text>
+                                        <Badge tone={row.outcomeTone}>{row.outcome}</Badge>
+                                        <Text size="xs" tone="muted">
+                                            {row.when}
+                                        </Text>
+                                    </div>
+                                    <Text size="sm" tone="muted">
+                                        {row.detail}
                                     </Text>
                                 </div>
-                                <Text size="sm" tone="muted">
-                                    {row.detail}
-                                </Text>
                             </ListItem>
                         ))}
                     </List>

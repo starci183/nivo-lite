@@ -5,17 +5,18 @@ import {
     InformationCircleIcon,
     XCircleIcon,
 } from "@heroicons/react/24/outline"
+import { IconTile } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 
 /** Options a status toast accepts: the HeroUI ones, minus the `variant` each status already implies. */
 type StatusToastOptions = Parameters<typeof heroToast.success>[1]
 
-/** Per-status indicator (size-6) of the one icon set, injected so every app toast reads the same; a caller can override `options.indicator`. */
+/** Per-status indicator of the one icon set, injected so every app toast reads the same; a caller can override `options.indicator`. */
 const INDICATOR: Record<"success" | "danger" | "warning" | "info", ReactNode> = {
-    success: <CheckCircleIcon className="size-6 text-success-soft-foreground" />,
-    danger: <XCircleIcon className="size-6 text-danger-soft-foreground" />,
-    warning: <ExclamationTriangleIcon className="size-6 text-warning-soft-foreground" />,
-    info: <InformationCircleIcon className="size-6 text-accent-soft-foreground" />,
+    success: <IconTile source={CheckCircleIcon} tone="success" size="sm" />,
+    danger: <IconTile source={XCircleIcon} tone="danger" size="sm" />,
+    warning: <IconTile source={ExclamationTriangleIcon} tone="warning" size="sm" />,
+    info: <IconTile source={InformationCircleIcon} tone="accent" size="sm" />,
 }
 
 /**

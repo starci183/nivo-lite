@@ -59,7 +59,6 @@ export const AccountingEvidenceFields = (props: AccountingEvidenceFieldsProps) =
                 id="wb-acc-amount"
                 name="amount"
                 label={form.amountLabel}
-                variant="secondary"
                 value={form.amount}
                 isRequired
                 isDisabled={form.isSaving}
@@ -69,7 +68,6 @@ export const AccountingEvidenceFields = (props: AccountingEvidenceFieldsProps) =
             <DateField
                 name="date"
                 label={form.dateLabel}
-                variant="secondary"
                 isRequired
                 isDisabled={form.isSaving}
                 value={parseDate(form.date)}
@@ -81,7 +79,6 @@ export const AccountingEvidenceFields = (props: AccountingEvidenceFieldsProps) =
                     id="wb-acc-content"
                     name="content"
                     label={form.contentLabel}
-                    variant="secondary"
                     value={form.content}
                     isRequired
                     isDisabled={form.isSaving}
@@ -94,7 +91,6 @@ export const AccountingEvidenceFields = (props: AccountingEvidenceFieldsProps) =
                     id="wb-acc-payer"
                     name="payer"
                     label={form.payerLabel}
-                    variant="secondary"
                     value={form.payer}
                     isDisabled={form.isSaving}
                     onValueChange={(value) => props.onChange("payer", value)}
@@ -105,7 +101,6 @@ export const AccountingEvidenceFields = (props: AccountingEvidenceFieldsProps) =
                     id="wb-acc-note"
                     name="note"
                     label={form.noteLabel}
-                    variant="secondary"
                     rows={3}
                     value={form.note}
                     isDisabled={form.isSaving}
