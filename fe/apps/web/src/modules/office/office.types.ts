@@ -201,8 +201,10 @@ export interface OfficeAgent {
     readonly handle: string
     /** The picture the owner gave the agent; null draws the generated avatar of its id. */
     readonly avatarUrl: string | null
-    /** The agent is live and on duty. */
+    /** The agent is running: the one truth behind "on duty", read from the lifecycle. */
     readonly isActive: boolean
+    /** The lifecycle of the back end: what the agent reads as when it is not running. */
+    readonly lifecycle: string
     /** The roles a `needs_connection` agent waits for, each with the connectors that would satisfy it; null otherwise. */
     readonly waitsFor: ReadonlyArray<InstallationConnectionNeed> | null
 }

@@ -1,8 +1,8 @@
 /** The stack of one card: the illustration band, the copy, the actions at the foot. */
 export const CARD = "flex h-full min-w-0 flex-col gap-3"
 
-/** The illustration band on its tinted plate. */
-export const BAND = "h-32 w-full overflow-hidden"
+/** The illustration band on its tinted plate: the whole figure, contained and centred, with air around it. */
+export const BAND = "w-full px-6 py-3"
 
 /** The name and the badges of a card. */
 export const CARD_HEAD = "flex flex-wrap items-center justify-between gap-2"
