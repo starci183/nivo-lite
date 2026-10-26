@@ -7,9 +7,12 @@ export type { PostgresSession, PostgresSessionTarget, PostgresTlsOptions } from 
 export { DATABASE_ERROR_KINDS } from "./errors/database.error"
 export { parsePrimaryDatabaseConfig } from "./primary.config"
 export {
+    AFTER_COMMIT,
+    InjectAfterCommit,
     InjectPrimaryEntityManager,
     InjectRateLimitStore,
     PRIMARY_ENTITY_MANAGER,
     RATE_LIMIT_STORE,
 } from "./primary.decorators"
+export type { AfterCommit } from "./after-commit.port"
 export type { RateLimitStore } from "./rate-limit-store.port"

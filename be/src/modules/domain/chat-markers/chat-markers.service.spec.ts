@@ -258,9 +258,11 @@ describe("ChatMarkersService mute", () => {
                 [SET_CHAT_MUTED, []],
             ],
         })
-        const { service } = await build(em)
+        const { service, activity } = await build(em)
 
         await service.mute("principal", "workspace", target, muted)
+
+        expect(activity.unread.mock.calls).toEqual([["workspace", activityNameOf(target), "member"]])
 
         expect(em.query).toHaveBeenCalledWith(SET_CHAT_MUTED, [
             "workspace",

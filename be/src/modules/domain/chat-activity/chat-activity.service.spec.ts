@@ -1,12 +1,13 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, fakeIds, mock, mockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { AFTER_COMMIT, PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import type { AfterCommit } from "@modules/platform/database"
 import { IDS } from "@modules/platform/ids"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { REALTIME_HUB } from "@modules/platform/realtime"
-import type { RealtimeHub, RealtimeTransaction } from "@modules/platform/realtime"
+import type { RealtimeHub } from "@modules/platform/realtime"
 import { ChatActivityLogEvent } from "./chat-activity.log-events"
 import { ChatActivityService } from "./chat-activity.service"
 import { chatActivityTopic } from "./chat-activity.policy"
@@ -16,12 +17,15 @@ import { LIST_ACTIVE_MEMBER_IDS } from "./persistence/chat-activity.sql"
 const NOW = "2026-10-26T01:00:00.000Z"
 const WS = "WS-1"
 const MEMBERS: ReadonlyArray<ActiveMemberRow> = [{ user_id: "author" }, { user_id: "bob" }, { user_id: "cara" }]
-const within: RealtimeTransaction = { query: () => Promise.resolve([]) }
+const inside = mockEntityManager()
 
 const build = async (members: ReadonlyArray<ActiveMemberRow> = MEMBERS) => {
     const entityManager = mockEntityManager({ query: [LIST_ACTIVE_MEMBER_IDS, members] })
     const hub = mock<RealtimeHub>({ publish: jest.fn().mockResolvedValue(undefined) })
     const logger = mock<Logger>({ info: jest.fn(), warn: jest.fn(), error: jest.fn() })
+    const commits = mock<AfterCommit>({
+        run: jest.fn((_manager: unknown, task: () => Promise<void>) => task()),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChatActivityService,
@@ -30,9 +34,10 @@ const build = async (members: ReadonlyArray<ActiveMemberRow> = MEMBERS) => {
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: IDS, useValue: fakeIds() },
             { provide: LOGGER, useValue: logger },
+            { provide: AFTER_COMMIT, useValue: commits },
         ],
     }).compile()
-    return { service: moduleRef.get(ChatActivityService), entityManager, hub, logger }
+    return { service: moduleRef.get(ChatActivityService), entityManager, hub, logger, commits }
 }
 
 const fieldOf = (frame: object, key: string): string => {
@@ -40,29 +45,28 @@ const fieldOf = (frame: object, key: string): string => {
     return typeof value === "string" ? value : ""
 }
 
-/** The recipient, kind, target and transaction of every published frame, in publishing order. */
+/** The recipient, kind, target and time of every published frame, in publishing order. */
 const published = (hub: Pick<jest.Mocked<RealtimeHub>, "publish">) =>
-    hub.publish.mock.calls.map(([topic, frame, tx]) => ({
+    hub.publish.mock.calls.map(([topic, frame]) => ({
         topic: topic.name,
         kind: fieldOf(frame, "kind"),
         target: fieldOf(frame, "roomOrConversation"),
         at: fieldOf(frame, "at"),
-        tx,
     }))
 
 describe("ChatActivityService.message", () => {
     it("tells every active member of the line and every member but its author of the unread", async () => {
         const { service, entityManager, hub } = await build()
 
-        await service.message(WS, "room:sales", "author", within)
+        await service.message(WS, "room:sales", "author", inside)
 
         expect(entityManager.query.mock.calls).toEqual([[LIST_ACTIVE_MEMBER_IDS, [WS]]])
         expect(published(hub)).toEqual([
-            { topic: chatActivityTopic("author", WS).name, kind: "message", target: "room:sales", at: NOW, tx: within },
-            { topic: chatActivityTopic("bob", WS).name, kind: "message", target: "room:sales", at: NOW, tx: within },
-            { topic: chatActivityTopic("cara", WS).name, kind: "message", target: "room:sales", at: NOW, tx: within },
-            { topic: chatActivityTopic("bob", WS).name, kind: "unread", target: "room:sales", at: NOW, tx: within },
-            { topic: chatActivityTopic("cara", WS).name, kind: "unread", target: "room:sales", at: NOW, tx: within },
+            { topic: chatActivityTopic("author", WS).name, kind: "message", target: "room:sales", at: NOW },
+            { topic: chatActivityTopic("bob", WS).name, kind: "message", target: "room:sales", at: NOW },
+            { topic: chatActivityTopic("cara", WS).name, kind: "message", target: "room:sales", at: NOW },
+            { topic: chatActivityTopic("bob", WS).name, kind: "unread", target: "room:sales", at: NOW },
+            { topic: chatActivityTopic("cara", WS).name, kind: "unread", target: "room:sales", at: NOW },
         ])
     })
 
@@ -83,7 +87,6 @@ describe("ChatActivityService.message", () => {
         await service.message(WS, "room:office", null)
 
         expect(published(hub).filter((frame) => frame.kind === "unread")).toHaveLength(3)
-        expect(published(hub).every((frame) => frame.tx === undefined)).toBe(true)
     })
 
     it("pushes nothing when the workspace has no active member", async () => {
@@ -128,7 +131,6 @@ describe("ChatActivityService.receipt", () => {
                 kind: "receipt",
                 target: "conversation:cv-1",
                 at: NOW,
-                tx: undefined,
             })),
         )
     })
@@ -138,10 +140,10 @@ describe("ChatActivityService.unread", () => {
     it("tells only the named active member", async () => {
         const { service, hub } = await build()
 
-        await service.unread(WS, "agent:a-1", "bob", within)
+        await service.unread(WS, "agent:a-1", "bob", inside)
 
         expect(published(hub)).toEqual([
-            { topic: chatActivityTopic("bob", WS).name, kind: "unread", target: "agent:a-1", at: NOW, tx: within },
+            { topic: chatActivityTopic("bob", WS).name, kind: "unread", target: "agent:a-1", at: NOW },
         ])
     })
 
@@ -151,5 +153,41 @@ describe("ChatActivityService.unread", () => {
         await service.unread(WS, "room:sales", "stranger")
 
         expect(hub.publish).not.toHaveBeenCalled()
+    })
+})
+
+describe("ChatActivityService after the commit", () => {
+    it("holds every push until the writer's transaction committed", async () => {
+        const { service, hub, commits } = await build()
+        const held: Array<() => Promise<void>> = []
+        commits.run.mockImplementation((_manager, task) => {
+            held.push(task)
+            return Promise.resolve()
+        })
+
+        await service.message(WS, "room:sales", "author", inside)
+
+        expect(commits.run.mock.calls.map(([manager]) => manager)).toEqual([inside])
+        expect(hub.publish).not.toHaveBeenCalled()
+        await held[0]?.()
+        expect(hub.publish).toHaveBeenCalledTimes(5)
+    })
+
+    it("pushes nothing when the transaction rolls back and the held work is dropped", async () => {
+        const { service, hub, commits } = await build()
+        commits.run.mockResolvedValue(undefined)
+
+        await service.receipt(WS, "room:sales", inside)
+        await service.unread(WS, "room:sales", "bob", inside)
+
+        expect(hub.publish).not.toHaveBeenCalled()
+    })
+
+    it("runs at once on the primary manager when the writer is not inside a transaction", async () => {
+        const { service, entityManager, commits } = await build()
+
+        await service.receipt(WS, "room:sales")
+
+        expect(commits.run.mock.calls.map(([manager]) => manager)).toEqual([entityManager])
     })
 })

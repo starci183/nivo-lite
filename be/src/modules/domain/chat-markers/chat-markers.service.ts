@@ -89,6 +89,7 @@ export class ChatMarkersService {
             target.conversationId,
             muted,
         ])
+        await this.activity.unread(workspaceId, chatActivityTarget(target), member.userId)
     }
 
     private async receiptParams(
