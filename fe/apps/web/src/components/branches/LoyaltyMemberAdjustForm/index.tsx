@@ -48,7 +48,7 @@ export const LoyaltyMemberAdjustForm = (props: LoyaltyMemberAdjustFormProps) => 
                 onChange={props.onReason}
             />
             <div>
-                <Button type="submit" variant="secondary" isPending={props.isPending} isDisabled={!props.canSubmit}>
+                <Button type="submit" intent="neutral" isPending={props.isPending} isDisabled={!props.canSubmit}>
                     {props.submitLabel}
                 </Button>
             </div>

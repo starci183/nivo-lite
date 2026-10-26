@@ -1,4 +1,4 @@
-import { Button, Fieldset, Input, Text } from "@starci/grammar/common"
+import { Button, Fieldset, HorizontalScrollRegion, Input, Text } from "@starci/grammar/common"
 import { csvImportGridClassNames as classNames } from "./classNames"
 
 /** One column of the grid as drawn: its name, the label of its name field and the label of its cells. */
@@ -34,14 +34,13 @@ interface CsvImportGridProps extends CsvImportGridView {
 export const CsvImportGrid = (props: CsvImportGridProps) => (
     <div className={classNames.root}>
         <Fieldset legend={props.text.title} isLegendHidden>
-            <div className={classNames.scroll}>
+            <HorizontalScrollRegion overflow="needed" aria-label={props.text.title}>
                 <div className={classNames.row}>
                     {props.columns.map((column) => (
                         <div key={column.id} className={classNames.cell}>
                             <Input
                                 id={`csv-h-${column.id}`}
                                 name={`csv-h-${column.id}`}
-                                variant="secondary"
                                 label={column.label}
                                 value={column.name}
                                 isDisabled={props.isDisabled}
@@ -57,7 +56,6 @@ export const CsvImportGrid = (props: CsvImportGridProps) => (
                                 <Input
                                     id={`csv-${row.id}-${column.id}`}
                                     name={`csv-${row.id}-${column.id}`}
-                                    variant="secondary"
                                     label={column.cellLabel}
                                     value={row.cells[at] ?? ""}
                                     isDisabled={props.isDisabled}
@@ -66,7 +64,8 @@ export const CsvImportGrid = (props: CsvImportGridProps) => (
                             </div>
                         ))}
                         <Button
-                            variant="ghost"
+                            intent="destructive"
+                            step="entry"
                             isDisabled={props.isDisabled}
                             onPress={() => props.on.removeRow(row.id)}
                         >
@@ -74,13 +73,13 @@ export const CsvImportGrid = (props: CsvImportGridProps) => (
                         </Button>
                     </div>
                 ))}
-            </div>
+            </HorizontalScrollRegion>
         </Fieldset>
         <div className={classNames.actions}>
-            <Button variant="outline" isDisabled={props.isDisabled || props.isFull} onPress={props.on.addRow}>
+            <Button intent="neutral" isDisabled={props.isDisabled || props.isFull} onPress={props.on.addRow}>
                 {props.text.addRow}
             </Button>
-            <Button variant="outline" isDisabled={props.isDisabled} onPress={props.on.addColumn}>
+            <Button intent="neutral" isDisabled={props.isDisabled} onPress={props.on.addColumn}>
                 {props.text.addColumn}
             </Button>
             <Text size="xs" tone="muted">

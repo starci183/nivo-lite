@@ -31,7 +31,7 @@ export const CheckEmail = (props: CheckEmailProps) => (
             <Alert title={props.notice.title} description={props.notice.text} tone={props.notice.tone} />
         )}
         <Button
-            variant="secondary"
+            intent="neutral"
             width="fill"
             isPending={props.isPending}
             isDisabled={props.isWaiting}

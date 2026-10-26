@@ -33,6 +33,7 @@ export const ConsoleSearch = (props: ConsoleSearchProps) =>
         <>
             <div className={ICON}>
                 <IconButton
+                    intent="neutral"
                     source={nivoIconSource("search", "leading")}
                     label={props.label}
                     onPress={() => props.onOpenChange(true)}

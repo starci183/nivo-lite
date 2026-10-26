@@ -41,7 +41,6 @@ export const LoyaltyRewardForm = (props: LoyaltyRewardFormProps) => (
                 id="reward-name"
                 name="name"
                 label={props.nameLabel}
-                variant="secondary"
                 isRequired
                 isError={props.nameError !== undefined}
                 errorMessage={props.nameError}
@@ -56,7 +55,6 @@ export const LoyaltyRewardForm = (props: LoyaltyRewardFormProps) => (
                     id="reward-stock"
                     name="stock"
                     label={props.stockLabel}
-                    variant="secondary"
                     hint={props.stockHint}
                     value={props.values.stock}
                     isDisabled={props.isPending}
@@ -66,7 +64,6 @@ export const LoyaltyRewardForm = (props: LoyaltyRewardFormProps) => (
                     id="reward-limit"
                     name="limit"
                     label={props.limitLabel}
-                    variant="secondary"
                     hint={props.limitHint}
                     value={props.values.limit}
                     isDisabled={props.isPending}
@@ -75,7 +72,6 @@ export const LoyaltyRewardForm = (props: LoyaltyRewardFormProps) => (
             </div>
             <Select
                 label={props.minTierLabel}
-                variant="secondary"
                 options={props.tierOptions}
                 value={props.values.minTier}
                 isDisabled={props.isPending}
@@ -83,7 +79,6 @@ export const LoyaltyRewardForm = (props: LoyaltyRewardFormProps) => (
             />
             <Textarea
                 label={props.noteLabel}
-                variant="secondary"
                 rows={2}
                 maxLength={props.noteMax}
                 value={props.values.note}
@@ -97,10 +92,10 @@ export const LoyaltyRewardForm = (props: LoyaltyRewardFormProps) => (
                 onSelectedChange={(active) => props.onActive(active)}
             />
             <div className={ACTIONS_CLASS_NAME}>
-                <Button type="submit" variant="primary" isPending={props.isPending}>
+                <Button type="submit" intent="commit" isPending={props.isPending}>
                     {props.saveLabel}
                 </Button>
-                <Button variant="outline" isDisabled={props.isPending} onPress={props.onCancel}>
+                <Button intent="neutral" isDisabled={props.isPending} onPress={props.onCancel}>
                     {props.cancelLabel}
                 </Button>
             </div>
@@ -120,7 +115,6 @@ const renderLoyaltyRewardFormValueFields = (
             id="reward-value"
             name="value"
             label={props.valueLabel}
-            variant="secondary"
             hint={props.valueHint}
             value={props.values.value}
             isDisabled={props.isPending}
@@ -131,7 +125,6 @@ const renderLoyaltyRewardFormValueFields = (
                 id="reward-percent"
                 name="percent"
                 label={props.percentLabel}
-                variant="secondary"
                 value={props.values.percent}
                 isDisabled={props.isPending}
                 onValueChange={(value) => props.onChange("percent", value)}
@@ -150,7 +143,6 @@ const renderLoyaltyRewardFormKindFields = (
     <div className={FIELD_PAIR_CLASS_NAME}>
         <Select
             label={props.kindLabel}
-            variant="secondary"
             options={props.kindOptions}
             value={props.values.kind}
             isDisabled={props.isPending}
@@ -160,7 +152,6 @@ const renderLoyaltyRewardFormKindFields = (
             id="reward-cost"
             name="cost"
             label={props.costLabel}
-            variant="secondary"
             isRequired
             isError={props.costError !== undefined}
             errorMessage={props.costError}

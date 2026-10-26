@@ -1,5 +1,5 @@
 import { Time } from "@internationalized/date"
-import { Button, Input, NumberField, Region, Switch, Text, TimeField } from "@starci/grammar/common"
+import { Button, Divider, Input, NumberField, Region, Switch, Text, TimeField } from "@starci/grammar/common"
 import { ACTIONS_CLASS, FIELDS_CLASS, SECTION_CLASS } from "./classNames"
 
 /** What every setting field carries. */
@@ -91,7 +91,6 @@ const FieldView = (props: FieldViewProps) => {
             name={field.key}
             label={field.label}
             hint={field.description}
-            variant="secondary"
             value={field.value}
             isDisabled={isBusy}
             onValueChange={(value) =>
@@ -105,13 +104,14 @@ const FieldView = (props: FieldViewProps) => {
 export const AutomationSettings = (props: AutomationSettingsProps) =>
     props.fields.length === 0 ? null : (
         <Region className={SECTION_CLASS} label={props.sectionLabel}>
+            <Divider semantics="presentation" />
             <div className={FIELDS_CLASS}>
                 {props.fields.map((field) => (
                     <FieldView key={field.key} field={field} isBusy={props.isBusy} onChange={props.onChange} />
                 ))}
             </div>
             <div className={ACTIONS_CLASS}>
-                <Button variant="secondary" isPending={props.isBusy} onPress={props.onSave}>
+                <Button intent="neutral" isPending={props.isBusy} onPress={props.onSave}>
                     {props.saveLabel}
                 </Button>
                 {props.savedText === undefined ? null : (

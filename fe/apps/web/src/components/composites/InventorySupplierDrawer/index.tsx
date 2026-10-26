@@ -32,7 +32,6 @@ export const InventorySupplierDrawer = (props: InventorySupplierDrawerProps) => 
             name={name}
             label={label}
             {...(kind === undefined ? {} : { kind })}
-            variant="secondary"
             value={p.values[name]}
             onValueChange={(value) => on.field(name, value)}
         />
@@ -65,7 +64,6 @@ export const InventorySupplierDrawer = (props: InventorySupplierDrawerProps) => 
                 </div>
                 {text("terms", "sup-terms", say("supplierTerms"))}
                 <Textarea
-                    variant="secondary"
                     label={say("supplierNote")}
                     rows={2}
                     value={p.values.note}
@@ -73,7 +71,7 @@ export const InventorySupplierDrawer = (props: InventorySupplierDrawerProps) => 
                 />
                 <InventoryNotices error={p.error} />
                 <div>
-                    <Button variant="primary" isPending={p.isPending} onPress={on.save}>
+                    <Button intent="commit" isPending={p.isPending} onPress={on.save}>
                         {say("save")}
                     </Button>
                 </div>

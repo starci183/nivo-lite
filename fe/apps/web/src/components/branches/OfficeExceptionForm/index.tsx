@@ -145,7 +145,7 @@ const renderOfficeExceptionFormActions = ({
     <div className={ACTIONS_CLASS_NAME}>
         {isFailed ? null : (
             <Button
-                variant="primary"
+                intent="commit"
                 isPending={props.isBusy}
                 isDisabled={isLocked || isOtherIncomplete || isBasisMissing}
                 onPress={onApprove}
@@ -154,12 +154,12 @@ const renderOfficeExceptionFormActions = ({
             </Button>
         )}
         {isFailed || item.isReconcile || (item.draft === null && item.amount === null) ? null : (
-            <Button variant="outline" isDisabled={isLocked} onPress={() => setIsEditing((value) => !value)}>
+            <Button intent="neutral" isDisabled={isLocked} onPress={() => setIsEditing((value) => !value)}>
                 {isEditing ? text("exceptionCancelEdit") : text("exceptionEditContinue")}
             </Button>
         )}
         <Button
-            variant="ghost"
+            intent="alternative"
             isDisabled={isLocked}
             onPress={() => props.onDecide(item.id, { ...REJECTION, decision: "rejected" })}
         >

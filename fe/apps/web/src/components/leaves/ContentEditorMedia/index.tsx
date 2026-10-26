@@ -76,7 +76,8 @@ export const ContentEditorMedia = (props: ContentEditorMediaProps) => (
                         ) : null}
                         {props.isEditable ? (
                             <Button
-                                variant="danger-soft"
+                                intent="destructive"
+                                step="entry"
                                 size="sm"
                                 isDisabled={props.isPending}
                                 onPress={() => props.onRemove(tile.key)}
@@ -117,7 +118,7 @@ const renderContentEditorMediaTools = (
     >,
 ) => (
     <div className={TOOLS_CLASS_NAME}>
-        <Button variant="outline" size="sm" isDisabled={props.isPending} onPress={props.onToggleLibrary}>
+        <Button intent="neutral" size="sm" isDisabled={props.isPending} onPress={props.onToggleLibrary}>
             {props.t("mediaAttachLibrary")}
         </Button>
         <FileDropzone
@@ -133,7 +134,6 @@ const renderContentEditorMediaTools = (
         />
         {props.videos.length > 0 ? (
             <Select
-                variant="secondary"
                 label={props.t("mediaVideo")}
                 isLabelHidden
                 placeholder={props.t("mediaVideo")}

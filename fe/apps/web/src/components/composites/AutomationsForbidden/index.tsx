@@ -17,7 +17,7 @@ export const AutomationsForbidden = (props: AutomationsForbiddenProps) => {
         <div className={PAGE_CLASS}>
             <SectionHeader level={1} title={props.title} description={props.body} />
             <div className={LINK_ROW_CLASS}>
-                <Button variant="secondary" href={props.backHref}>
+                <Button intent="neutral" href={props.backHref}>
                     {props.backLabel}
                 </Button>
             </div>

@@ -12,10 +12,10 @@ interface AccountingFormActionsProps {
 /** The closing line of a form: the way out first, the primary action last. */
 export const AccountingFormActions = (props: AccountingFormActionsProps) => (
     <div className={ACTIONS_CLASS_NAME}>
-        <Button variant="ghost" isDisabled={props.isSaving} onPress={props.onCancel}>
+        <Button intent="neutral" isDisabled={props.isSaving} onPress={props.onCancel}>
             {props.cancelLabel}
         </Button>
-        <Button type="submit" isPending={props.isSaving}>
+        <Button intent="commit" type="submit" isPending={props.isSaving}>
             {props.saveLabel}
         </Button>
     </div>

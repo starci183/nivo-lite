@@ -36,7 +36,7 @@ export const AccountingQuestionCard = (props: AccountingQuestionCardProps) => (
                 {props.props.isOpen && props.props.canAct ? renderAccountingQuestionCardActions(props) : null}
                 {props.props.leadHref ? (
                     <div>
-                        <Button variant="ghost" href={props.props.leadHref}>
+                        <Button intent="neutral" href={props.props.leadHref}>
                             {props.props.leadLabel}
                         </Button>
                     </div>
@@ -50,18 +50,18 @@ export const AccountingQuestionCard = (props: AccountingQuestionCardProps) => (
 const renderAccountingQuestionCardActions = (props: NonNullable<AccountingQuestionCardProps>) => (
     <div className={ACTIONS_CLASS_NAME}>
         {!props.props.isFailed ? (
-            <Button type="submit" isPending={props.props.isBusy}>
+            <Button intent="commit" type="submit" isPending={props.props.isBusy}>
                 {props.props.approveLabel}
             </Button>
         ) : null}
         {!props.props.isFailed &&
         props.props.basis === null &&
         (props.props.draft !== null || props.props.amount !== null) ? (
-            <Button type="button" variant="outline" isDisabled={props.props.isBusy} onPress={props.on.toggleEdit}>
+            <Button type="button" intent="neutral" isDisabled={props.props.isBusy} onPress={props.on.toggleEdit}>
                 {props.props.editLabel}
             </Button>
         ) : null}
-        <Button type="button" variant="ghost" isDisabled={props.props.isBusy} onPress={props.on.reject}>
+        <Button type="button" intent="alternative" isDisabled={props.props.isBusy} onPress={props.on.reject}>
             {props.props.rejectLabel}
         </Button>
     </div>

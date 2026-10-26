@@ -38,7 +38,6 @@ export const LoyaltyCampaignMessage = (props: LoyaltyCampaignMessageProps) => {
                 id="promo-name"
                 name="name"
                 label={copy.name}
-                variant="secondary"
                 hint={copy.nameHint}
                 value={values.name}
                 isDisabled={props.props.isBusy}
@@ -46,7 +45,6 @@ export const LoyaltyCampaignMessage = (props: LoyaltyCampaignMessageProps) => {
             />
             <Textarea
                 label={copy.brief}
-                variant="secondary"
                 description={copy.briefHint}
                 errorMessage={briefError}
                 rows={4}
@@ -58,7 +56,7 @@ export const LoyaltyCampaignMessage = (props: LoyaltyCampaignMessageProps) => {
             />
             <div>
                 <Button
-                    variant="primary"
+                    intent="commit"
                     isPending={props.props.isBusy}
                     isDisabled={props.props.isSubmitDisabled}
                     onPress={on.submit}

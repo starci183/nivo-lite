@@ -71,7 +71,7 @@ export const OfficeCommandCard = (props: OfficeCommandCardProps) => {
             {isLoading || status === "pending" ? (
                 <div className={ACTIONS_CLASS_NAME}>
                     <Button
-                        variant="ghost"
+                        intent="neutral"
                         size="sm"
                         isSkeleton={isLoading}
                         isDisabled={isLoading || props.isBusy}
@@ -80,7 +80,7 @@ export const OfficeCommandCard = (props: OfficeCommandCardProps) => {
                         {text("cmdCancel")}
                     </Button>
                     <Button
-                        variant="primary"
+                        intent="commit"
                         size="sm"
                         isSkeleton={isLoading}
                         isPending={props.isBusy}
@@ -93,7 +93,7 @@ export const OfficeCommandCard = (props: OfficeCommandCardProps) => {
             ) : null}
             {command?.workHref === undefined || command.workHref === null ? null : (
                 <div className={ACTIONS_CLASS_NAME}>
-                    <Button variant="secondary" size="sm" href={command.workHref}>
+                    <Button intent="neutral" size="sm" href={command.workHref}>
                         {text("cmdOpenWork")}
                     </Button>
                 </div>

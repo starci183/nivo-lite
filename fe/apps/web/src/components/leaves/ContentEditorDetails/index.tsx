@@ -39,13 +39,11 @@ export const ContentEditorDetails = (props: ContentEditorDetailsProps) => {
                 id="ce-title"
                 name="title"
                 label={t("fieldTitle")}
-                variant="secondary"
                 value={props.title}
                 isDisabled={locked}
                 onValueChange={props.onTitle}
             />
             <Textarea
-                variant="secondary"
                 label={t("fieldBrief")}
                 rows={3}
                 value={props.brief}
@@ -53,7 +51,6 @@ export const ContentEditorDetails = (props: ContentEditorDetailsProps) => {
                 onValueChange={props.onBrief}
             />
             <Select
-                variant="secondary"
                 label={t("fieldPillar")}
                 options={[{ id: "", label: t("noPillar") }, ...props.pillars.map((p) => ({ id: p.id, label: p.name }))]}
                 value={props.pillarId ?? ""}
@@ -63,7 +60,6 @@ export const ContentEditorDetails = (props: ContentEditorDetailsProps) => {
             <CheckboxGroup
                 label={t("fieldChannels")}
                 orientation="horizontal"
-                variant="secondary"
                 options={props.channelOptions}
                 value={props.channels}
                 isDisabled={locked}
@@ -73,7 +69,6 @@ export const ContentEditorDetails = (props: ContentEditorDetailsProps) => {
                 id="ce-date"
                 name="date"
                 label={t("fieldDate")}
-                variant="secondary"
                 value={props.date}
                 hint={t("addDateHint")}
                 isDisabled={props.isDateLocked}
@@ -83,7 +78,6 @@ export const ContentEditorDetails = (props: ContentEditorDetailsProps) => {
                 id="ce-time"
                 name="time"
                 label={t("fieldTime")}
-                variant="secondary"
                 value={props.time}
                 hint={t("addTimeHint")}
                 isDisabled={props.isDateLocked}
@@ -105,14 +99,13 @@ const renderContentEditorDetailsHintFields = (
             id="ce-hint"
             name="hint"
             label={t("draftHint")}
-            variant="secondary"
             value={props.hint}
             isDisabled={props.isPending}
             onValueChange={props.onHint}
         />
         <div>
             <Button
-                variant="secondary"
+                intent="neutral"
                 isPending={props.isDrafting}
                 isDisabled={props.isPending || props.channels.length === 0}
                 onPress={props.onDraft}

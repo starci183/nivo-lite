@@ -7,6 +7,7 @@ import {
     NumberField,
     RadioGroup,
     SegmentedControl,
+    SurfaceCard,
     Text,
     Textarea,
 } from "@starci/grammar/common"
@@ -36,7 +37,6 @@ interface SetupWriteViewProps {
 const FactFields = (props: SetupWriteViewProps) => (
     <>
         <Textarea
-            variant="secondary"
             name={`write-${props.props.proposal.id}-value`}
             label={props.props.proposal.valueLabel}
             rows={2}
@@ -71,7 +71,6 @@ const RuleFields = (props: SetupWriteViewProps) => (
         />
         {props.props.proposal.hasLimit ? (
             <NumberField
-                variant="secondary"
                 label={props.props.proposal.limitLabel}
                 minValue={0}
                 step={1_000_000}
@@ -89,77 +88,79 @@ export const SetupWriteView = (props: SetupWriteViewProps) => {
     const { decided, proposal } = props.props
     if (decided !== null) {
         return (
-            <div className={WRITE}>
-                <div className={WRITE_HEAD}>
-                    <Text size="sm" tone="muted">
-                        {decided.line}
-                    </Text>
-                    <Badge isDot tone={decided.tone}>
-                        {decided.label}
-                    </Badge>
+            <SurfaceCard ariaLabel={decided.line}>
+                <div className={WRITE}>
+                    <div className={WRITE_HEAD}>
+                        <Text size="sm" tone="muted">
+                            {decided.line}
+                        </Text>
+                        <Badge isDot tone={decided.tone}>
+                            {decided.label}
+                        </Badge>
+                    </div>
                 </div>
-            </div>
+            </SurfaceCard>
         )
     }
     return (
-        <div className={WRITE}>
-            <div className={WRITE_HEAD}>
-                <Text weight="semibold" size="sm">
-                    {proposal.head}
-                </Text>
-                {proposal.hasGap ? <Badge tone="warning">{proposal.gapLabel}</Badge> : null}
-            </div>
-            <DescriptionList layout="stacked" items={proposal.items} />
-            {proposal.sharedNote === "" ? null : (
-                <Text size="xs" tone="muted">
-                    {proposal.sharedNote}
-                </Text>
-            )}
-            {proposal.isEditing ? (
-                <div className={WRITE_FIELDS}>
-                    {proposal.isFact ? <FactFields {...props} /> : <RuleFields {...props} />}
+        <SurfaceCard ariaLabel={proposal.head}>
+            <div className={WRITE}>
+                <div className={WRITE_HEAD}>
+                    <Text weight="semibold" size="sm">
+                        {proposal.head}
+                    </Text>
+                    {proposal.hasGap ? <Badge tone="warning">{proposal.gapLabel}</Badge> : null}
                 </div>
-            ) : null}
-            {proposal.isConflict ? (
-                <div className={WRITE_FIELDS}>
-                    <Alert tone="cautionary" title={proposal.conflictTitle} description={proposal.conflictBody} />
-                    <RadioGroup
-                        label={proposal.conflictTitle}
-                        isLabelHidden
-                        variant="secondary"
-                        value={proposal.resolution}
-                        onValueChange={props.on.resolution}
-                        options={proposal.resolutionOptions}
-                    />
-                    {proposal.resolution === "both" ? (
-                        <Input
-                            id={`write-${proposal.id}-situation`}
-                            name="situation"
-                            variant="secondary"
-                            label={proposal.situationLabel}
-                            value={proposal.situation}
-                            onValueChange={props.on.situation}
+                <DescriptionList layout="stacked" items={proposal.items} />
+                {proposal.sharedNote === "" ? null : (
+                    <Text size="xs" tone="muted">
+                        {proposal.sharedNote}
+                    </Text>
+                )}
+                {proposal.isEditing ? (
+                    <div className={WRITE_FIELDS}>
+                        {proposal.isFact ? <FactFields {...props} /> : <RuleFields {...props} />}
+                    </div>
+                ) : null}
+                {proposal.isConflict ? (
+                    <div className={WRITE_FIELDS}>
+                        <Alert tone="cautionary" title={proposal.conflictTitle} description={proposal.conflictBody} />
+                        <RadioGroup
+                            label={proposal.conflictTitle}
+                            isLabelHidden
+                            value={proposal.resolution}
+                            onValueChange={props.on.resolution}
+                            options={proposal.resolutionOptions}
                         />
-                    ) : null}
+                        {proposal.resolution === "both" ? (
+                            <Input
+                                id={`write-${proposal.id}-situation`}
+                                name="situation"
+                                label={proposal.situationLabel}
+                                value={proposal.situation}
+                                onValueChange={props.on.situation}
+                            />
+                        ) : null}
+                    </div>
+                ) : null}
+                <div className={ACTIONS}>
+                    <Button
+                        intent="commit"
+                        size="sm"
+                        isPending={proposal.isPending}
+                        isDisabled={!proposal.canConfirm}
+                        onPress={props.on.confirm}
+                    >
+                        {proposal.confirmLabel}
+                    </Button>
+                    <Button intent="neutral" size="sm" isDisabled={proposal.isPending} onPress={props.on.toggleEdit}>
+                        {proposal.editLabel}
+                    </Button>
+                    <Button intent="alternative" size="sm" isDisabled={proposal.isPending} onPress={props.on.reject}>
+                        {proposal.rejectLabel}
+                    </Button>
                 </div>
-            ) : null}
-            <div className={ACTIONS}>
-                <Button
-                    variant="primary"
-                    size="sm"
-                    isPending={proposal.isPending}
-                    isDisabled={!proposal.canConfirm}
-                    onPress={props.on.confirm}
-                >
-                    {proposal.confirmLabel}
-                </Button>
-                <Button variant="ghost" size="sm" isDisabled={proposal.isPending} onPress={props.on.toggleEdit}>
-                    {proposal.editLabel}
-                </Button>
-                <Button variant="ghost" size="sm" isDisabled={proposal.isPending} onPress={props.on.reject}>
-                    {proposal.rejectLabel}
-                </Button>
             </div>
-        </div>
+        </SurfaceCard>
     )
 }

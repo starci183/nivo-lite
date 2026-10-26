@@ -41,7 +41,7 @@ export const OfficeRoomResources = (props: OfficeRoomResourcesProps) => (
             <Section title={props.text("cardsTitle")} count={`${props.cards.length}`}>
                 {props.cards.map((card) => (
                     <div key={card.id} className={TEXT_CLASS_NAME}>
-                        <Button variant="ghost" size="sm" onPress={() => props.onJump(card.id)}>
+                        <Button intent="neutral" size="sm" onPress={() => props.onJump(card.id)}>
                             {card.title}
                         </Button>
                         <Text size="xs" tone="muted" overflow="truncate">
@@ -81,7 +81,7 @@ export const OfficeRoomResources = (props: OfficeRoomResourcesProps) => (
                                 {pin.title}
                             </Text>
                         ) : (
-                            <Button variant="ghost" size="sm" href={pin.href}>
+                            <Button intent="neutral" size="sm" href={pin.href}>
                                 {pin.title}
                             </Button>
                         )}

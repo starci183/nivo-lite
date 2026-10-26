@@ -1,5 +1,5 @@
-import { Badge, Button, EmptyNotice, ListItem, Meter, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
-import { ACTIONS_CLASS_NAME, BADGES_CLASS_NAME, LINE_CLASS_NAME, ROW_CLASS_NAME, TEXT_CLASS_NAME } from "./classNames"
+import { Badge, Button, EmptyNotice, ListRow, Meter, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
+import { ACTIONS_CLASS_NAME, DETAIL_CLASS_NAME, LINE_CLASS_NAME, TEXT_CLASS_NAME } from "./classNames"
 
 /** One link or button at the end of a row. */
 export interface RowActionView {
@@ -7,7 +7,7 @@ export interface RowActionView {
     readonly label: string
     /** Where a link goes; a button when absent. */
     readonly href?: string
-    readonly variant?: "primary" | "outline" | "ghost"
+    readonly intent?: "alternative" | "neutral" | "destructive"
     readonly onPress?: () => void
 }
 
@@ -62,20 +62,39 @@ interface RowProps {
     readonly isPending: boolean
 }
 
+interface ItemButtonProps {
+    readonly item: RowActionView
+    readonly isPending: boolean
+}
+
+/** One button of a row: a destructive command opens its confirmation first, every other one is a plain item action. */
+const ItemButton = (props: ItemButtonProps) =>
+    props.item.intent === "destructive" ? (
+        <Button
+            intent="destructive"
+            step="entry"
+            isPending={props.isPending}
+            {...(props.item.onPress !== undefined && { onPress: props.item.onPress })}
+        >
+            {props.item.label}
+        </Button>
+    ) : (
+        <Button
+            intent={props.item.intent ?? "neutral"}
+            isPending={props.isPending}
+            {...(props.item.onPress !== undefined && { onPress: props.item.onPress })}
+        >
+            {props.item.label}
+        </Button>
+    )
+
 /** The links and buttons of one row or part. */
 export const ActionList = (props: ActionListProps) =>
     props.items.length === 0 ? null : (
         <div className={ACTIONS_CLASS_NAME}>
             {props.items.map((item) =>
                 item.href === undefined ? (
-                    <Button
-                        key={item.id}
-                        variant={item.variant ?? "outline"}
-                        isPending={props.isPending}
-                        {...(item.onPress !== undefined && { onPress: item.onPress })}
-                    >
-                        {item.label}
-                    </Button>
+                    <ItemButton key={item.id} item={item} isPending={props.isPending} />
                 ) : (
                     <Text key={item.id}>
                         <TextAction href={item.href}>{item.label}</TextAction>
@@ -87,48 +106,47 @@ export const ActionList = (props: ActionListProps) =>
 
 /** One row: the title with its lines, the badges, the actions and the parts that have their own. */
 const Row = (props: RowProps) => (
-    <ListItem className={ROW_CLASS_NAME}>
-        <div className={LINE_CLASS_NAME}>
-            <div className={TEXT_CLASS_NAME}>
-                <Text weight="semibold" overflow="truncate">
-                    {props.row.href === undefined ? (
-                        props.row.title
-                    ) : (
-                        <TextAction href={props.row.href}>{props.row.title}</TextAction>
-                    )}
-                </Text>
-                {(props.row.lines ?? []).map((line) => (
-                    <Text key={line} size="sm" tone="muted">
-                        {line}
-                    </Text>
-                ))}
-                {props.row.progress === undefined ? null : (
-                    <Meter label={props.row.progress.label} value={props.row.progress.value} isLabelHidden />
-                )}
-            </div>
-            <div className={BADGES_CLASS_NAME}>
+    <ListRow
+        title={
+            props.row.href === undefined ? (
+                props.row.title
+            ) : (
+                <TextAction href={props.row.href}>{props.row.title}</TextAction>
+            )
+        }
+        description={(props.row.lines ?? []).length === 0 ? null : (props.row.lines ?? []).join(" · ")}
+        badges={
+            <>
                 {(props.row.badges ?? []).map((badge) => (
                     <Badge key={badge.label} tone={badge.tone}>
                         {badge.label}
                     </Badge>
                 ))}
+            </>
+        }
+        actions={<ActionList items={props.row.actions ?? []} isPending={props.isPending} />}
+    >
+        {props.row.progress === undefined && (props.row.parts ?? []).length === 0 ? null : (
+            <div className={DETAIL_CLASS_NAME}>
+                {props.row.progress === undefined ? null : (
+                    <Meter label={props.row.progress.label} value={props.row.progress.value} isLabelHidden />
+                )}
+                {(props.row.parts ?? []).map((part) => (
+                    <div key={part.id} className={LINE_CLASS_NAME}>
+                        <div className={TEXT_CLASS_NAME}>
+                            <Text>{part.title}</Text>
+                            {(part.lines ?? []).map((line) => (
+                                <Text key={line} size="xs" tone="muted">
+                                    {line}
+                                </Text>
+                            ))}
+                        </div>
+                        <ActionList items={part.actions ?? []} isPending={props.isPending} />
+                    </div>
+                ))}
             </div>
-            <ActionList items={props.row.actions ?? []} isPending={props.isPending} />
-        </div>
-        {(props.row.parts ?? []).map((part) => (
-            <div key={part.id} className={LINE_CLASS_NAME}>
-                <div className={TEXT_CLASS_NAME}>
-                    <Text>{part.title}</Text>
-                    {(part.lines ?? []).map((line) => (
-                        <Text key={line} size="xs" tone="muted">
-                            {line}
-                        </Text>
-                    ))}
-                </div>
-                <ActionList items={part.actions ?? []} isPending={props.isPending} />
-            </div>
-        ))}
-    </ListItem>
+        )}
+    </ListRow>
 )
 
 /** The list itself: a card of rows, or the notice that shows while there are none. */

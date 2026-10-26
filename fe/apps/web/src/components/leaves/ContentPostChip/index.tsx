@@ -34,7 +34,7 @@ export const ContentPostChip = (props: ContentPostChipProps) => (
         <Text size="xs" tone="muted">
             {props.post.time} · {props.post.statusLabel}
         </Text>
-        <Button variant="tertiary" size="sm" width="fill" onPress={() => props.onOpen(props.post.id)}>
+        <Button intent="dismiss" size="sm" width="fill" onPress={() => props.onOpen(props.post.id)}>
             {props.post.title}
         </Button>
     </div>

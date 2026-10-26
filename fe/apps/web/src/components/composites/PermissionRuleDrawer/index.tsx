@@ -126,7 +126,6 @@ export const PermissionRuleDrawer = (props: PermissionRuleDrawerProps) => {
         >
             <div className={FORM_CLASS_NAME}>
                 <CheckboxGroup
-                    variant="secondary"
                     label={p.copy.agentsLabel}
                     description={p.copy.agentsHint}
                     options={optionsOf(p.agentOptions)}
@@ -157,10 +156,10 @@ export const PermissionRuleDrawer = (props: PermissionRuleDrawerProps) => {
                 ) : null}
                 {asks ? <AskedFields {...props} /> : null}
                 <div className={ACTIONS_CLASS_NAME}>
-                    <Button variant="primary" isPending={p.isPending} isDisabled={!p.canSave} onPress={on.save}>
+                    <Button intent="commit" isPending={p.isPending} isDisabled={!p.canSave} onPress={on.save}>
                         {p.copy.save}
                     </Button>
-                    <Button variant="outline" isDisabled={p.isPending} onPress={on.close}>
+                    <Button intent="neutral" isDisabled={p.isPending} onPress={on.close}>
                         {p.copy.cancel}
                     </Button>
                 </div>

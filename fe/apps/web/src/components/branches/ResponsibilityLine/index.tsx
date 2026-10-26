@@ -111,13 +111,13 @@ export const ResponsibilityLine = (props: ResponsibilityLineProps) => {
             }
             actions={
                 <div className={ACTIONS_CLASS}>
-                    <Button variant="outline" href={leadHref(row.leadId)}>
+                    <Button intent="neutral" href={leadHref(row.leadId)}>
                         {labels.open}
                     </Button>
                     <DropdownMenu
                         placement="bottom end"
                         trigger={
-                            <Button variant="ghost" size="sm" isPending={props.isDrafting}>
+                            <Button intent="neutral" size="sm" isPending={props.isDrafting}>
                                 {props.isDrafting ? labels.drafting : labels.more}
                             </Button>
                         }

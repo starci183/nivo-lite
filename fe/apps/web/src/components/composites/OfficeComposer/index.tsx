@@ -1,8 +1,15 @@
 import { useEffect, useRef } from "react"
-import { Button, Fieldset, Icon, Text, Textarea } from "@starci/grammar/common"
+import { Button, Divider, Fieldset, Icon, Text, Textarea } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeComposerProps } from "@/modules/types"
-import { CHIPS_CLASS_NAME, COMPOSER_CLASS_NAME, FIELD_CLASS_NAME, HINT_CLASS_NAME, ROW_CLASS_NAME } from "./classNames"
+import {
+    CHIPS_CLASS_NAME,
+    COMPOSER_BODY_CLASS_NAME,
+    COMPOSER_CLASS_NAME,
+    FIELD_CLASS_NAME,
+    HINT_CLASS_NAME,
+    ROW_CLASS_NAME,
+} from "./classNames"
 
 /** Resolves quick questions, including the optional connected chatbot. */
 const promptsOf = (view: OfficeComposerProps["props"]): ReadonlyArray<string> => [
@@ -13,6 +20,32 @@ const promptsOf = (view: OfficeComposerProps["props"]): ReadonlyArray<string> =>
     view.text("promptInvoices"),
     ...(view.chatbotHandle === null ? [] : [view.text("promptChatbot", { handle: view.chatbotHandle })]),
 ]
+
+/** What the row of quick questions draws and reports. */
+type QuickPromptsProps = {
+    readonly view: OfficeComposerProps["props"]
+    readonly prompts: ReadonlyArray<string>
+    readonly onPrompt: (prompt: string) => void
+}
+
+/** The row of quick questions above the field. */
+const QuickPrompts = (props: QuickPromptsProps) => (
+    <Fieldset legend={props.view.text("quickLabel")} isLegendHidden>
+        <div className={CHIPS_CLASS_NAME}>
+            {props.prompts.map((prompt) => (
+                <Button
+                    key={prompt}
+                    intent="neutral"
+                    size="sm"
+                    isDisabled={props.view.isLoading}
+                    onPress={() => props.onPrompt(prompt)}
+                >
+                    {prompt}
+                </Button>
+            ))}
+        </div>
+    </Fieldset>
+)
 
 /** The pinned composer: a slim row of quick questions, then "@", the message field and Send. */
 export const OfficeComposer = (props: OfficeComposerProps) => {
@@ -39,53 +72,46 @@ export const OfficeComposer = (props: OfficeComposerProps) => {
 
     return (
         <div className={COMPOSER_CLASS_NAME}>
-            <Fieldset legend={text("quickLabel")} isLegendHidden>
-                <div className={CHIPS_CLASS_NAME}>
-                    {prompts.map((prompt) => (
-                        <Button
-                            key={prompt}
-                            variant="secondary"
-                            size="sm"
-                            isDisabled={view.isLoading}
-                            onPress={() => onPrompt(prompt)}
-                        >
-                            {prompt}
-                        </Button>
-                    ))}
+            <Divider semantics="presentation" />
+            <div className={COMPOSER_BODY_CLASS_NAME}>
+                <QuickPrompts view={view} prompts={prompts} onPrompt={onPrompt} />
+                <div className={ROW_CLASS_NAME}>
+                    <Button
+                        intent="neutral"
+                        aria-label={text("mentionButton")}
+                        isDisabled={view.isLoading}
+                        onPress={onAt}
+                    >
+                        @
+                    </Button>
+                    <div ref={hostRef} className={FIELD_CLASS_NAME}>
+                        <Textarea
+                            label={text("composerLabel")}
+                            isLabelHidden
+                            placeholder={text("composerPlaceholder")}
+                            rows={1}
+                            isSkeleton={view.isLoading}
+                            value={view.draft}
+                            onValueChange={props.on.change}
+                            onSubmitShortcut={props.on.send}
+                            mentions={{ options: view.mentions, label: text("mentionLabel") }}
+                        />
+                    </div>
+                    <Button
+                        intent="commit"
+                        isPending={view.isSending}
+                        isDisabled={view.isLoading || view.draft.trim().length === 0}
+                        onPress={props.on.send}
+                        startContent={<Icon source={nivoIconSource("send", "leading")} usage="leading" />}
+                    >
+                        {text("send")}
+                    </Button>
                 </div>
-            </Fieldset>
-            <div className={ROW_CLASS_NAME}>
-                <Button variant="ghost" aria-label={text("mentionButton")} isDisabled={view.isLoading} onPress={onAt}>
-                    @
-                </Button>
-                <div ref={hostRef} className={FIELD_CLASS_NAME}>
-                    <Textarea
-                        label={text("composerLabel")}
-                        isLabelHidden
-                        variant="secondary"
-                        placeholder={text("composerPlaceholder")}
-                        rows={1}
-                        isSkeleton={view.isLoading}
-                        value={view.draft}
-                        onValueChange={props.on.change}
-                        onSubmitShortcut={props.on.send}
-                        mentions={{ options: view.mentions, label: text("mentionLabel") }}
-                    />
+                <div className={HINT_CLASS_NAME}>
+                    <Text size="xs" tone="muted">
+                        {text("composerHint")}
+                    </Text>
                 </div>
-                <Button
-                    variant="primary"
-                    isPending={view.isSending}
-                    isDisabled={view.isLoading || view.draft.trim().length === 0}
-                    onPress={props.on.send}
-                    startContent={<Icon source={nivoIconSource("send", "leading")} usage="leading" />}
-                >
-                    {text("send")}
-                </Button>
-            </div>
-            <div className={HINT_CLASS_NAME}>
-                <Text size="xs" tone="muted">
-                    {text("composerHint")}
-                </Text>
             </div>
         </div>
     )

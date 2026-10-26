@@ -68,17 +68,16 @@ const CredentialCard = (props: CredentialCardProps) => (
                     name="credential"
                     kind="password"
                     label={props.view.text.label}
-                    variant="secondary"
                     isRequired
                     isDisabled={props.view.isPending}
                     value={props.view.value}
                     onValueChange={props.on.credentialChange}
                 />
                 <div className={ACTIONS_CLASS_NAME}>
-                    <Button type="submit" variant="primary" isPending={props.view.isPending}>
+                    <Button type="submit" intent="commit" isPending={props.view.isPending}>
                         {props.view.text.submit}
                     </Button>
-                    <Button variant="secondary" isDisabled={props.view.isPending} onPress={props.on.credentialClose}>
+                    <Button intent="alternative" isDisabled={props.view.isPending} onPress={props.on.credentialClose}>
                         {props.view.text.cancel}
                     </Button>
                 </div>
@@ -108,7 +107,6 @@ export const McpConnectorForms = (props: McpConnectorFormsProps) => {
                                 name="key"
                                 label={view.text.key}
                                 hint={view.text.keyHint}
-                                variant="secondary"
                                 isRequired
                                 isDisabled={view.isPending}
                                 value={view.values.key}
@@ -118,7 +116,6 @@ export const McpConnectorForms = (props: McpConnectorFormsProps) => {
                                 id="mcp-register-name"
                                 name="name"
                                 label={view.text.name}
-                                variant="secondary"
                                 isRequired
                                 isDisabled={view.isPending}
                                 value={view.values.name}
@@ -129,7 +126,6 @@ export const McpConnectorForms = (props: McpConnectorFormsProps) => {
                                 name="url"
                                 label={view.text.url}
                                 hint={view.text.urlHint}
-                                variant="secondary"
                                 isRequired
                                 isDisabled={view.isPending}
                                 value={view.values.url}
@@ -139,7 +135,6 @@ export const McpConnectorForms = (props: McpConnectorFormsProps) => {
                                 id="mcp-register-contract"
                                 name="contractVersion"
                                 label={view.text.contractVersion}
-                                variant="secondary"
                                 isRequired
                                 isDisabled={view.isPending}
                                 value={view.values.contractVersion}
@@ -151,14 +146,13 @@ export const McpConnectorForms = (props: McpConnectorFormsProps) => {
                                 kind="password"
                                 label={view.text.credential}
                                 hint={view.text.credentialHint}
-                                variant="secondary"
                                 isDisabled={view.isPending}
                                 value={view.values.credential}
                                 onValueChange={props.on.registerField("credential")}
                             />
                         </div>
                         <div className={ACTIONS_CLASS_NAME}>
-                            <Button type="submit" variant="primary" isPending={view.isPending}>
+                            <Button type="submit" intent="commit" isPending={view.isPending}>
                                 {view.text.submit}
                             </Button>
                         </div>

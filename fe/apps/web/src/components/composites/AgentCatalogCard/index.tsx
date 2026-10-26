@@ -66,18 +66,18 @@ export const AgentCatalogCard = (props: AgentCatalogCardProps) => (
             ) : null}
             <div className={FOOT}>
                 {props.isLoading ? (
-                    <Button variant="secondary" isSkeleton>
+                    <Button intent="alternative" isSkeleton>
                         {props.openLabel}
                     </Button>
                 ) : null}
                 {!props.isLoading && props.openHref !== null ? (
-                    <Button variant="secondary" href={props.openHref}>
+                    <Button intent="alternative" href={props.openHref}>
                         {props.openLabel}
                     </Button>
                 ) : null}
                 {!props.isLoading && props.openHref === null && props.canInstall ? (
                     <Button
-                        variant="primary"
+                        intent="commit"
                         isPending={props.isInstalling}
                         isDisabled={props.isBlocked}
                         onPress={props.onInstall}

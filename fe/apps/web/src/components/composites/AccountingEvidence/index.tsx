@@ -84,7 +84,13 @@ export const AccountingEvidence = (props: AccountingEvidenceProps) => {
                 empty={data.creditsEmpty}
                 emptyBody={data.creditsEmptyBody}
                 records={data.credits}
-                action={data.isFormOpen ? undefined : <Button onPress={on.openForm}>{data.formOpenLabel}</Button>}
+                action={
+                    data.isFormOpen ? undefined : (
+                        <Button intent="neutral" onPress={on.openForm}>
+                            {data.formOpenLabel}
+                        </Button>
+                    )
+                }
             >
                 {data.isFormOpen ? <ManualEvidenceForm form={data.form} on={on} /> : null}
             </AccountingRecordSection>

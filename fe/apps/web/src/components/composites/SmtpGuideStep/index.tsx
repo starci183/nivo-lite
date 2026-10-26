@@ -31,7 +31,7 @@ export const SmtpGuideStep = (props: SmtpGuideStepProps) => (
                         </Text>
                         {step.link === null ? null : (
                             <div className={classNames.buttons}>
-                                <Button variant="outline" href={step.link.url} target="_blank" rel="noreferrer">
+                                <Button intent="neutral" href={step.link.url} target="_blank" rel="noreferrer">
                                     {step.link.label}
                                 </Button>
                             </div>

@@ -28,7 +28,7 @@ export const CopyTextButton = (props: CopyTextButtonProps) => {
             .catch(() => setIsCopied(false))
     }
     return (
-        <Button variant="ghost" size="sm" onPress={onCopy}>
+        <Button intent="neutral" size="sm" onPress={onCopy}>
             {isCopied ? props.copiedLabel : props.copyLabel}
         </Button>
     )

@@ -1,17 +1,9 @@
 import { cn } from "@heroui/react"
 
-/** Composer: the card's closing band with one leading seam (BOUNDARY-1 case-3). */
-export const COMPOSER_CLASS_NAME = cn(
-    "flex",
-    "shrink-0",
-    "flex-col",
-    "gap-2",
-    "border-t",
-    "border-separator",
-    "px-4",
-    "pt-3",
-    "pb-4",
-)
+/** Composer: the closing band of the card; a Divider opens it. */
+export const COMPOSER_CLASS_NAME = cn("flex", "shrink-0", "flex-col")
+/** The inset body of the composer band. */
+export const COMPOSER_BODY_CLASS_NAME = cn("flex", "flex-col", "gap-2", "px-4", "pt-3", "pb-4")
 /** The row of prompt chips above the field. */
 export const CHIPS_CLASS_NAME = cn("flex", "min-w-0", "items-center", "gap-2", "overflow-x-auto")
 /** The field and the send button on one line. */

@@ -14,10 +14,10 @@ type DrawerFooterProps = {
 /** The cancel and the main action at the foot of a drawer. */
 export const DrawerFooter = (props: DrawerFooterProps) => (
     <div className={FOOTER_CLASS_NAME}>
-        <Button variant="ghost" isDisabled={props.isPending} onPress={props.onCancel}>
+        <Button intent="neutral" isDisabled={props.isPending} onPress={props.onCancel}>
             {props.cancelLabel}
         </Button>
-        <Button variant="primary" isPending={props.isPending} onPress={props.onSubmit}>
+        <Button intent="commit" isPending={props.isPending} onPress={props.onSubmit}>
             {props.submitLabel}
         </Button>
     </div>

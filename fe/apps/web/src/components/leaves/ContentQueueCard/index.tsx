@@ -1,4 +1,4 @@
-import { Button, ListRow, Text } from "@starci/grammar/common"
+import { Button, ListRow, SurfaceCard, Text } from "@starci/grammar/common"
 import type { ContentT, PostView, QuoteView } from "@/hooks/content"
 import { ACTIONS_CLASS_NAME, QUOTE_CLASS_NAME } from "./classNames"
 
@@ -31,13 +31,14 @@ export const ContentQueueCard = (props: ContentQueueCardProps) => {
             description={post.when}
             actions={
                 <div className={ACTIONS_CLASS_NAME}>
-                    <Button variant="outline" size="sm" onPress={() => props.onOpen(post.id)}>
+                    <Button intent="neutral" size="sm" onPress={() => props.onOpen(post.id)}>
                         {t("queueOpen")}
                     </Button>
                     {props.canDecide && props.hasDecision ? (
                         <>
                             <Button
-                                variant="danger-soft"
+                                intent="destructive"
+                                step="entry"
                                 size="sm"
                                 isPending={props.isPending && props.busy === "rejected"}
                                 isDisabled={props.isPending}
@@ -46,7 +47,7 @@ export const ContentQueueCard = (props: ContentQueueCardProps) => {
                                 {t("reject")}
                             </Button>
                             <Button
-                                variant="primary"
+                                intent="alternative"
                                 size="sm"
                                 isPending={props.isPending && props.busy === "approved"}
                                 isDisabled={props.isPending}
@@ -60,14 +61,16 @@ export const ContentQueueCard = (props: ContentQueueCardProps) => {
             }
         >
             {props.quotes.map((quote) => (
-                <div key={quote.channel} className={QUOTE_CLASS_NAME}>
-                    <Text size="xs" tone="muted" weight="medium">
-                        {quote.label}
-                    </Text>
-                    <Text as="p" size="sm">
-                        {quote.text}
-                    </Text>
-                </div>
+                <SurfaceCard key={quote.channel} ariaLabel={quote.label}>
+                    <div className={QUOTE_CLASS_NAME}>
+                        <Text size="xs" tone="muted" weight="medium">
+                            {quote.label}
+                        </Text>
+                        <Text as="p" size="sm">
+                            {quote.text}
+                        </Text>
+                    </div>
+                </SurfaceCard>
             ))}
             {props.hasDecision ? null : (
                 <Text size="sm" tone="muted">

@@ -44,14 +44,13 @@ export const ContentEditorLinks = (props: ContentEditorLinksProps) => (
                             id={`ce-${field.name}-${link.key}`}
                             name={`${field.name}-${link.key}`}
                             label={props.t(field.labelKey)}
-                            variant="secondary"
                             value={link[field.key]}
                             isDisabled={!props.isEditable}
                             onValueChange={(v) => props.onChange(link.key, { [field.key]: v })}
                         />
                     ))}
                     {props.isEditable ? (
-                        <Button variant="danger-soft" size="sm" onPress={() => props.onRemove(link.key)}>
+                        <Button intent="destructive" step="entry" size="sm" onPress={() => props.onRemove(link.key)}>
                             {props.t("linkRemove")}
                         </Button>
                     ) : null}
@@ -59,7 +58,7 @@ export const ContentEditorLinks = (props: ContentEditorLinksProps) => (
             ))}
             {props.isEditable ? (
                 <div>
-                    <Button variant="outline" size="sm" onPress={props.onAdd}>
+                    <Button intent="neutral" size="sm" onPress={props.onAdd}>
                         {props.t("linkAdd")}
                     </Button>
                 </div>

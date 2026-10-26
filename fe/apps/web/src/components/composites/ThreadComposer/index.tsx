@@ -1,6 +1,6 @@
-import { Button, Text, Textarea } from "@starci/grammar/common"
+import { Button, Divider, Text, Textarea } from "@starci/grammar/common"
 import type { ComposerOption } from "@/modules/types"
-import { COMPOSER_CLASS_NAME, FIELD_CLASS_NAME, ROW_CLASS_NAME } from "./classNames"
+import { COMPOSER_BODY_CLASS_NAME, COMPOSER_CLASS_NAME, FIELD_CLASS_NAME, ROW_CLASS_NAME } from "./classNames"
 
 /** The words and state of the composer. */
 type ThreadComposerProps = {
@@ -25,31 +25,33 @@ export const ThreadComposer = (props: ThreadComposerProps) => {
     const canSend = !props.isDisabled && props.draft.trim().length > 0
     return (
         <div className={COMPOSER_CLASS_NAME}>
-            <div className={ROW_CLASS_NAME}>
-                <div className={FIELD_CLASS_NAME}>
-                    <Textarea
-                        id="thread-message"
-                        label={props.label}
-                        isLabelHidden
-                        variant="secondary"
-                        rows={1}
-                        isDisabled={props.isDisabled}
-                        placeholder={props.placeholder}
-                        value={props.draft}
-                        onValueChange={props.onDraft}
-                        onSubmitShortcut={() => {
-                            if (canSend) props.onSend()
-                        }}
-                        mentions={{ options: props.options, label: props.mentionLabel, onSelect: props.onPick }}
-                    />
+            <Divider semantics="presentation" />
+            <div className={COMPOSER_BODY_CLASS_NAME}>
+                <div className={ROW_CLASS_NAME}>
+                    <div className={FIELD_CLASS_NAME}>
+                        <Textarea
+                            id="thread-message"
+                            label={props.label}
+                            isLabelHidden
+                            rows={1}
+                            isDisabled={props.isDisabled}
+                            placeholder={props.placeholder}
+                            value={props.draft}
+                            onValueChange={props.onDraft}
+                            onSubmitShortcut={() => {
+                                if (canSend) props.onSend()
+                            }}
+                            mentions={{ options: props.options, label: props.mentionLabel, onSelect: props.onPick }}
+                        />
+                    </div>
+                    <Button intent="commit" isPending={props.isSending} isDisabled={!canSend} onPress={props.onSend}>
+                        {props.sendLabel}
+                    </Button>
                 </div>
-                <Button variant="primary" isPending={props.isSending} isDisabled={!canSend} onPress={props.onSend}>
-                    {props.sendLabel}
-                </Button>
+                <Text size="xs" tone="muted">
+                    {props.hint}
+                </Text>
             </div>
-            <Text size="xs" tone="muted">
-                {props.hint}
-            </Text>
         </div>
     )
 }

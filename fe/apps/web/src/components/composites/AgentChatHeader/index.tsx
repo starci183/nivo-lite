@@ -1,8 +1,14 @@
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { ModuleIconName } from "@/modules/types"
-import { Avatar, Badge, Button, Text } from "@starci/grammar/common"
+import { Avatar, Badge, Button, Divider, Text } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
-import { BACK_CLASS_NAME, HEADER_ACTIONS_CLASS_NAME, HEADER_CLASS_NAME, HEADER_COPY_CLASS_NAME } from "./classNames"
+import {
+    BACK_CLASS_NAME,
+    HEADER_ACTIONS_CLASS_NAME,
+    HEADER_CLASS_NAME,
+    HEADER_COPY_CLASS_NAME,
+    HEADER_WRAP_CLASS_NAME,
+} from "./classNames"
 
 /** The words and state of the chat header, with what its controls do. */
 export interface AgentChatHeaderProps {
@@ -45,41 +51,44 @@ const HeaderMark = (props: HeaderMarkProps) => {
 
 /** The header of the chat: who the agent is, what state the conversation is in and what the owner can do with it. */
 export const AgentChatHeader = (props: AgentChatHeaderProps) => (
-    <div className={HEADER_CLASS_NAME}>
-        <div className={BACK_CLASS_NAME}>
-            <Button variant="ghost" size="sm" onPress={props.onBack}>
-                {props.backLabel}
-            </Button>
-        </div>
-        <HeaderMark glyph={props.glyph} module={props.module} name={props.name} isSkeleton={props.isSkeleton} />
-        <div className={HEADER_COPY_CLASS_NAME}>
-            <Text weight="semibold" overflow="truncate" isSkeleton={props.isSkeleton}>
-                {props.name}
-            </Text>
-            <Text size="xs" tone="muted" overflow="truncate" isSkeleton={props.isSkeleton}>
-                {props.subtitle}
-            </Text>
-        </div>
-        <div className={HEADER_ACTIONS_CLASS_NAME}>
-            {props.badge === null ? null : <Badge tone="success">{props.badge}</Badge>}
-            {props.takeover === null ? null : (
-                <Button variant="outline" size="sm" isPending={props.takeover.isPending} onPress={props.onTakeover}>
-                    {props.takeover.label}
+    <div className={HEADER_WRAP_CLASS_NAME}>
+        <div className={HEADER_CLASS_NAME}>
+            <div className={BACK_CLASS_NAME}>
+                <Button intent="neutral" size="sm" onPress={props.onBack}>
+                    {props.backLabel}
                 </Button>
-            )}
-            {props.openLeadLabel === null ? null : (
-                <Button variant="outline" size="sm" onPress={props.onOpenLead}>
-                    {props.openLeadLabel}
+            </div>
+            <HeaderMark glyph={props.glyph} module={props.module} name={props.name} isSkeleton={props.isSkeleton} />
+            <div className={HEADER_COPY_CLASS_NAME}>
+                <Text weight="semibold" overflow="truncate" isSkeleton={props.isSkeleton}>
+                    {props.name}
+                </Text>
+                <Text size="xs" tone="muted" overflow="truncate" isSkeleton={props.isSkeleton}>
+                    {props.subtitle}
+                </Text>
+            </div>
+            <div className={HEADER_ACTIONS_CLASS_NAME}>
+                {props.badge === null ? null : <Badge tone="success">{props.badge}</Badge>}
+                {props.takeover === null ? null : (
+                    <Button intent="neutral" size="sm" isPending={props.takeover.isPending} onPress={props.onTakeover}>
+                        {props.takeover.label}
+                    </Button>
+                )}
+                {props.openLeadLabel === null ? null : (
+                    <Button intent="neutral" size="sm" onPress={props.onOpenLead}>
+                        {props.openLeadLabel}
+                    </Button>
+                )}
+                <Button intent="neutral" size="sm" isDisabled={props.isSkeleton} onPress={props.onToggleList}>
+                    {props.historyLabel}
                 </Button>
-            )}
-            <Button variant="ghost" size="sm" isDisabled={props.isSkeleton} onPress={props.onToggleList}>
-                {props.historyLabel}
-            </Button>
-            {props.setup === null ? null : (
-                <Button variant="ghost" size="sm" href={props.setup.href}>
-                    {props.setup.label}
-                </Button>
-            )}
+                {props.setup === null ? null : (
+                    <Button intent="neutral" size="sm" href={props.setup.href}>
+                        {props.setup.label}
+                    </Button>
+                )}
+            </div>
         </div>
+        <Divider semantics="presentation" />
     </div>
 )

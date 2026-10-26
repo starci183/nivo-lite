@@ -15,12 +15,12 @@ interface HiringDialogFooterProps {
 /** The footer of a request dialog: cancel (or done, once answered) and the send button until then. */
 export const HiringDialogFooter = (props: HiringDialogFooterProps) => (
     <>
-        <Button variant="tertiary" onPress={props.onClose}>
+        <Button intent="dismiss" onPress={props.onClose}>
             {props.say(props.isDone ? "done" : "cancel")}
         </Button>
         {props.isDone ? null : (
             <Button
-                variant="primary"
+                intent="commit"
                 isPending={props.isBusy}
                 isDisabled={props.isBusy || !props.canSend}
                 onPress={props.onSend}

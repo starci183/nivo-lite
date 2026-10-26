@@ -86,7 +86,6 @@ export const InventoryAdjustDrawer = (props: InventoryAdjustDrawerProps) => {
                     name="reason"
                     label={p.isMove ? say("adjustNote") : say("adjustReason")}
                     {...(p.isMove ? {} : { hint: say("adjustReasonHint") })}
-                    variant="secondary"
                     value={p.reason}
                     onValueChange={on.reason}
                 />
@@ -97,7 +96,7 @@ export const InventoryAdjustDrawer = (props: InventoryAdjustDrawerProps) => {
                 )}
                 <InventoryNotices error={p.error} notice={p.notice} />
                 <div>
-                    <Button variant="primary" isPending={p.isPending} isDisabled={!p.canSubmit} onPress={on.submit}>
+                    <Button intent="commit" isPending={p.isPending} isDisabled={!p.canSubmit} onPress={on.submit}>
                         {p.submitLabel}
                     </Button>
                 </div>

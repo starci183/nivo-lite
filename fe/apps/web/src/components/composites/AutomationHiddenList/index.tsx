@@ -1,5 +1,4 @@
-import { Button, Disclosure, List, ListItem, Text } from "@starci/grammar/common"
-import { HIDDEN_ROW_CLASS, ROWS_CLASS } from "./classNames"
+import { Button, Disclosure, List, ListRow } from "@starci/grammar/common"
 
 /** One automation the owner hid. */
 type AutomationHiddenItem = {
@@ -20,19 +19,22 @@ type AutomationHiddenListProps = {
 export const AutomationHiddenList = (props: AutomationHiddenListProps) =>
     props.items.length === 0 ? null : (
         <Disclosure title={props.title}>
-            <List label={props.title} className={ROWS_CLASS}>
+            <List label={props.title}>
                 {props.items.map((item) => (
-                    <ListItem key={item.key} className={HIDDEN_ROW_CLASS}>
-                        <Text size="sm">{item.name}</Text>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            isDisabled={item.isBusy}
-                            onPress={() => props.onRestore(item.key)}
-                        >
-                            {props.restoreLabel}
-                        </Button>
-                    </ListItem>
+                    <ListRow
+                        key={item.key}
+                        title={item.name}
+                        actions={
+                            <Button
+                                intent="neutral"
+                                size="sm"
+                                isDisabled={item.isBusy}
+                                onPress={() => props.onRestore(item.key)}
+                            >
+                                {props.restoreLabel}
+                            </Button>
+                        }
+                    />
                 ))}
             </List>
         </Disclosure>

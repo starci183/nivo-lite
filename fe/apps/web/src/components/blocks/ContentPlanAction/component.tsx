@@ -4,7 +4,6 @@ import {
     getContentCommandProgressProps,
     renderContentCommandProgress,
 } from "@/components/composites/ContentSettingsCard"
-import { ActionPair } from "@/components/composites/ActionPair"
 import { SlotView } from "@/components/composites/SlotView"
 import type { ContentNote, ContentT } from "@/hooks/content"
 import { FORM_CLASS_NAME } from "./classNames"
@@ -32,20 +31,14 @@ export interface ContentPlanActionBaseProps {
 
 /** The footer of the plan dialog: close it, or run the plan. */
 const PlanFooter = (props: ContentPlanActionBaseProps) => (
-    <ActionPair
-        first={{
-            label: props.props.t("close"),
-            intent: "dismiss",
-            isDisabled: props.props.isPending,
-            onPress: props.on.close,
-        }}
-        second={{
-            label: props.props.t("planRun"),
-            intent: "commit",
-            isPending: props.props.isPending,
-            onPress: props.on.run,
-        }}
-    />
+    <>
+        <Button intent="dismiss" isDisabled={props.props.isPending} onPress={props.on.close}>
+            {props.props.t("close")}
+        </Button>
+        <Button intent="commit" isPending={props.props.isPending} onPress={props.on.run}>
+            {props.props.t("planRun")}
+        </Button>
+    </>
 )
 
 /** Draws the primary command of the workbench, "Plan the month", and its dialog: pick the month, wait for OpenClaw, read how long it took. */

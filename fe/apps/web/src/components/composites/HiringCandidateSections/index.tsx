@@ -77,7 +77,8 @@ const CandidateResponses = (props: CandidateSectionContentProps) => {
                     <Text size="sm">{offer.text}</Text>
                     {offer.canCancel ? (
                         <Button
-                            variant="ghost"
+                            intent="destructive"
+                            step="entry"
                             size="sm"
                             isDisabled={p.isBusy}
                             onPress={() => on.cancelOffer(offer.id)}
@@ -102,7 +103,6 @@ const CandidateRecords = (props: CandidateSectionContentProps) => {
             <Textarea
                 label={say("candNotesLabel")}
                 isLabelHidden
-                variant="secondary"
                 rows={3}
                 value={p.notes}
                 onValueChange={on.notes}
@@ -110,7 +110,7 @@ const CandidateRecords = (props: CandidateSectionContentProps) => {
             />
             <div className={ACTIONS_CLASS_NAME}>
                 <Button
-                    variant="secondary"
+                    intent="neutral"
                     size="sm"
                     isPending={p.isBusy}
                     isDisabled={p.isBusy || !p.canSaveNotes}
@@ -135,7 +135,7 @@ const CandidateRecords = (props: CandidateSectionContentProps) => {
                 {p.retention}
             </Text>
             <div className={ACTIONS_CLASS_NAME}>
-                <Button variant="danger-soft" size="sm" onPress={() => on.openDialog("delete")}>
+                <Button intent="destructive" step="entry" size="sm" onPress={() => on.openDialog("delete")}>
                     {say("candDelete")}
                 </Button>
             </div>
@@ -150,18 +150,24 @@ const CandidateActions = (props: CandidateSectionContentProps) => {
     const { on } = props
     return (
         <div className={ACTIONS_CLASS_NAME}>
-            <Button variant="primary" size="sm" isDisabled={!p.canSchedule} onPress={() => on.openDialog("interview")}>
+            <Button intent="commit" size="sm" isDisabled={!p.canSchedule} onPress={() => on.openDialog("interview")}>
                 {say("candSchedule")}
             </Button>
-            <Button variant="secondary" size="sm" isDisabled={!p.canOffer} onPress={() => on.openDialog("offer")}>
+            <Button intent="alternative" size="sm" isDisabled={!p.canOffer} onPress={() => on.openDialog("offer")}>
                 {say("candOffer")}
             </Button>
             {p.canShortlist ? (
-                <Button variant="tertiary" size="sm" isDisabled={p.isBusy} onPress={on.shortlist}>
+                <Button intent="dismiss" size="sm" isDisabled={p.isBusy} onPress={on.shortlist}>
                     {say("candShortlist")}
                 </Button>
             ) : null}
-            <Button variant="danger-soft" size="sm" isDisabled={!p.canReject} onPress={() => on.openDialog("reject")}>
+            <Button
+                intent="destructive"
+                step="entry"
+                size="sm"
+                isDisabled={!p.canReject}
+                onPress={() => on.openDialog("reject")}
+            >
                 {say("candReject")}
             </Button>
         </div>
