@@ -43,7 +43,7 @@ interface GuideBubbleMessage {
 interface GuideBubbleBaseProps {
     readonly props: {
         readonly isOpen: boolean
-        /** The page is a messenger with its own composer and panels: the floating button is not drawn there, so it never covers them. */
+        /** The page is a messenger or an agent detail with its own composer and panels: the floating button is not drawn there, so it never covers them. */
         readonly overComposer: boolean
         readonly openLabel: string
         readonly closeLabel: string

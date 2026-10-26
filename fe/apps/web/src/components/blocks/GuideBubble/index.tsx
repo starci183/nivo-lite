@@ -26,7 +26,7 @@ export const GuideBubble = () => {
     const { messages, isAsking, ask, restart } = useGuideConversation(isManagerRole)
     const [question, setQuestion] = useState("")
     const here = pageAt(pathname)
-    const overComposer = pathname.endsWith("/chat")
+    const overComposer = pathname.endsWith("/chat") || /\/agents\/[^/]+/.test(pathname)
 
     const send = (text: string) => {
         if (text.trim() === "" || isAsking) return
