@@ -10,14 +10,13 @@ interface InventoryFieldProps {
     readonly onChange: (value: string) => void
 }
 
-/** A labelled text field in the secondary form variant, with an optional hint. */
+/** A labelled text field with an optional hint. */
 export const InventoryField = (props: InventoryFieldProps) => (
     <Input
         id={props.id}
         name={props.name}
         label={props.label}
         {...(props.hint === undefined ? {} : { hint: props.hint })}
-        variant="secondary"
         value={props.value}
         onValueChange={props.onChange}
     />
