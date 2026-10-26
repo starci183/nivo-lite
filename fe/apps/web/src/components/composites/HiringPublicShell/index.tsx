@@ -13,6 +13,7 @@ interface HiringPublicShellProps {
 /** The frame of the pages a candidate opens without signing in: a reading column in the shell, with the foot line. */
 export const HiringPublicShell = (props: HiringPublicShellProps) => (
     <WorkspaceShell
+        viewport="flow"
         align="stretch"
         primaryLabel={props.label}
         primary={
