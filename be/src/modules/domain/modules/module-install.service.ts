@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
 import { AgentIdentityService, AgentsService } from "@modules/domain/agents"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { EventsService } from "@modules/domain/events"
@@ -12,6 +13,7 @@ import type {
     RequirementFacts,
 } from "@modules/domain/module-installations"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
@@ -47,6 +49,7 @@ const expectWritten = (written: InstallationWrite): void => {
  */
 export class ModuleInstallService {
     constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly installations: InstallationRecordsService,
         private readonly members: WorkspaceMembersService,
         private readonly catalog: ModulesService,
@@ -122,7 +125,7 @@ export class ModuleInstallService {
         await this.members.require(principalId, workspaceId, GOVERNORS)
         const clean = cleanInstanceName(name)
         if (clean === null) throw new ModulesError({ code: ModulesErrorCode.InstanceNameInvalid })
-        const current = await this.require(workspaceId, installationId)
+        const current = await this.requireActive(workspaceId, installationId)
         const siblings = await this.installations.instanceNames(workspaceId, current.moduleKey, current.id)
         if (siblings.some((other) => instanceNameKey(other.name) === instanceNameKey(clean))) {
             throw new ModulesError({ code: ModulesErrorCode.InstanceNameTaken })
@@ -139,11 +142,15 @@ export class ModuleInstallService {
         mode: InstallationMode,
     ): Promise<InstallationView> {
         await this.members.require(principalId, workspaceId, GOVERNORS)
+        await this.requireActive(workspaceId, installationId)
         expectWritten(await this.installations.setOperatingMode(workspaceId, installationId, mode))
         return this.viewOf(workspaceId, installationId)
     }
 
-    /** Switches an agent live (it acts on channels) or paused (it stays silent); going live needs an applied context version. */
+    /**
+     * Switches an agent live (it acts on channels) or paused (it stays silent); going live needs an applied context version. Going live
+     * with a required connection missing records `needs_connection`, not `live`: the agent runs once the connection is there.
+     */
     async setLive(
         principalId: string,
         workspaceId: string,
@@ -151,12 +158,18 @@ export class ModuleInstallService {
         live: boolean,
     ): Promise<InstallationView> {
         await this.members.require(principalId, workspaceId, GOVERNORS)
-        const current = await this.require(workspaceId, installationId)
+        const current = await this.requireActive(workspaceId, installationId)
         if (live && current.activeContextVersionId === null) {
             throw new ModulesError({ code: ModulesErrorCode.NeedsVersion })
         }
-        expectWritten(await this.installations.setLive(workspaceId, installationId, live))
-        if (current.agentId !== null) await this.agents.setStatus(principalId, workspaceId, current.agentId, live)
+        const waiting = live && (await this.readiness.needsOf(workspaceId, current.moduleKey)).length > 0
+        // One transaction: the installation and its agent are switched together or not at all.
+        await this.entityManager.transaction(async (tx) => {
+            expectWritten(await this.installations.setLive(workspaceId, installationId, live, waiting, tx))
+            if (current.agentId !== null) {
+                await this.agents.setStatus(principalId, workspaceId, current.agentId, live, tx)
+            }
+        })
         return this.viewOf(workspaceId, installationId)
     }
 
@@ -172,7 +185,7 @@ export class ModuleInstallService {
         if (clean.length < AGENT_NAME_LIMITS.min) {
             throw new ModulesError({ code: ModulesErrorCode.AgentNameInvalid, params: AGENT_NAME_LIMITS })
         }
-        const current = await this.require(workspaceId, installationId)
+        const current = await this.requireActive(workspaceId, installationId)
         if (current.agentId === null) throw new ModulesError({ code: ModulesErrorCode.AgentMissing })
         await this.identity.rename(principalId, workspaceId, current.agentId, clean)
         await this.sync.requestNow({ workspaceId, installationId, force: false })
@@ -193,7 +206,7 @@ export class ModuleInstallService {
         await this.members.require(principalId, workspaceId, GOVERNORS)
         const change = settingOf(name, value)
         if (change === null) throw new ModulesError({ code: ModulesErrorCode.SettingInvalid })
-        const current = await this.require(workspaceId, installationId)
+        const current = await this.requireActive(workspaceId, installationId)
         expectWritten(
             await this.installations.saveSettings(workspaceId, installationId, withSetting(current.settings, change)),
         )
@@ -217,6 +230,13 @@ export class ModuleInstallService {
     /** The installation of the workspace with what it still needs connected. */
     private async viewOf(workspaceId: string, installationId: string): Promise<InstallationView> {
         return this.readiness.withNeeds(await this.require(workspaceId, installationId))
+    }
+
+    /** The installation of the workspace, refused when it was removed: a removed agent only keeps its history. */
+    private async requireActive(workspaceId: string, installationId: string): Promise<InstallationRecord> {
+        const found = await this.require(workspaceId, installationId)
+        if (found.status === "removed") throw new ModulesError({ code: ModulesErrorCode.InstallationRemoved })
+        return found
     }
 
     private async require(workspaceId: string, installationId: string): Promise<InstallationRecord> {

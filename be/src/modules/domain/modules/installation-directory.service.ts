@@ -30,6 +30,8 @@ const toInstallation = (record: InstallationRecord): Installation => ({
     operatingMode: record.operatingMode,
     settings: record.settings,
     activeContextVersionId: record.activeContextVersionId,
+    liveEnabled: record.liveEnabled,
+    removed: record.status === "removed",
 })
 
 @Injectable()

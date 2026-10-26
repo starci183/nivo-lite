@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { builder, mock } from "@starci/jest-preset"
+import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { AgentIdentityService, AgentsService } from "@modules/domain/agents"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { EventsService } from "@modules/domain/events"
@@ -7,6 +7,7 @@ import { InstallationRecordsService } from "@modules/domain/module-installations
 import type { AgentSyncStatus } from "@modules/domain/module-installations"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ACCOUNTING_MODULE } from "./accounting.contracts"
 import { CHATBOT_MODULE } from "./chatbot.contracts"
 import { ModulesErrorCode } from "./errors/modules.error"
@@ -20,6 +21,8 @@ import {
     installationRecordOf as recordOf,
 } from "@tests/fixtures/builders/module-install.builder"
 
+const VIEWED = { connectionNeeds: [], lifecycle: "ready" } as const
+
 const requestOf = builder<InstallRequest>({
     workspaceId: "ws-1",
     moduleKey: "chatbot",
@@ -29,6 +32,7 @@ const requestOf = builder<InstallRequest>({
 })
 
 const build = async () => {
+    const tx = fakeTransaction(mockEntityManager())
     const installations = mock<InstallationRecordsService>()
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(MEMBER)
@@ -40,10 +44,12 @@ const build = async () => {
     const events = mock<EventsService>()
     const sync = mock<AgentSyncService>()
     const readiness = mock<ModuleReadinessService>()
-    readiness.withNeeds.mockImplementation((record) => Promise.resolve({ ...record, connectionNeeds: [] }))
+    readiness.needsOf.mockResolvedValue([])
+    readiness.withNeeds.mockImplementation((record) => Promise.resolve({ ...record, ...VIEWED }))
     const moduleRef = await Test.createTestingModule({
         providers: [
             ModuleInstallService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: InstallationRecordsService, useValue: installations },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: ModulesService, useValue: catalog },
@@ -56,7 +62,7 @@ const build = async () => {
         ],
     }).compile()
     const service = moduleRef.get(ModuleInstallService)
-    return { service, installations, members, catalog, agents, identity, rules, events, sync, readiness }
+    return { tx, service, installations, members, catalog, agents, identity, rules, events, sync, readiness }
 }
 
 describe("ModuleInstallService > install", () => {
@@ -201,7 +207,7 @@ describe("ModuleInstallService > rename", () => {
 
         await expect(service.rename("u1", "ws-1", "inst-1", " Lobby ")).resolves.toEqual({
             ...recordOf({ name: "Lobby" }),
-            connectionNeeds: [],
+            ...VIEWED,
         })
         expect(installations.rename).toHaveBeenCalledWith("ws-1", "inst-1", "Lobby")
     })
@@ -219,13 +225,13 @@ describe("ModuleInstallService > rename", () => {
 })
 
 describe("ModuleInstallService > setLive", () => {
-    it("refuses to go live before a context version is applied", async () => {
+    it.each([
+        [{ activeContextVersionId: null }, ModulesErrorCode.NeedsVersion],
+        [{ status: "removed" }, ModulesErrorCode.InstallationRemoved],
+    ] as const)("refuses to go live for %o", async (patch, code) => {
         const { service, installations } = await build()
-        installations.find.mockResolvedValue(recordOf({ activeContextVersionId: null }))
-
-        await expect(service.setLive("u1", "ws-1", "inst-1", true)).rejects.toMatchObject({
-            code: ModulesErrorCode.NeedsVersion,
-        })
+        installations.find.mockResolvedValue(recordOf(patch))
+        await expect(service.setLive("u1", "ws-1", "inst-1", true)).rejects.toMatchObject({ code })
     })
 
     it("switches the installation and its agent live", async () => {
@@ -235,9 +241,19 @@ describe("ModuleInstallService > setLive", () => {
 
         await expect(service.setLive("u1", "ws-1", "inst-1", true)).resolves.toEqual({
             ...recordOf({ liveEnabled: true }),
-            connectionNeeds: [],
+            ...VIEWED,
         })
-        expect(agents.setStatus).toHaveBeenCalledWith("u1", "ws-1", "agent-1", true)
+        expect(agents.setStatus).toHaveBeenCalledWith("u1", "ws-1", "agent-1", true, expect.anything())
+        expect(installations.setLive).toHaveBeenCalledWith("ws-1", "inst-1", true, false, expect.anything())
+    })
+
+    it("records needs_connection, not live, when a required connection is missing", async () => {
+        const { service, installations, readiness } = await build()
+        installations.find.mockResolvedValue(recordOf())
+        readiness.needsOf.mockResolvedValue([{ role: "invoice.list", providers: ["misa"] }])
+        installations.setLive.mockResolvedValue("done")
+        await service.setLive("u1", "ws-1", "inst-1", true)
+        expect(installations.setLive).toHaveBeenCalledWith("ws-1", "inst-1", true, true, expect.anything())
     })
 })
 
@@ -266,7 +282,7 @@ describe("ModuleInstallService > renameAgent", () => {
 
         await expect(service.renameAgent("u1", "ws-1", "inst-1", " Mai ")).resolves.toEqual({
             ...recordOf(),
-            connectionNeeds: [],
+            ...VIEWED,
         })
         expect(identity.rename).toHaveBeenCalledWith("u1", "ws-1", "agent-1", "Mai")
         expect(sync.requestNow).toHaveBeenCalledWith({
@@ -330,7 +346,7 @@ describe("ModuleInstallService > reads", () => {
         const { service, installations, members } = await build()
         installations.list.mockResolvedValue([recordOf()])
 
-        await expect(service.list("u1", "ws-1")).resolves.toEqual([{ ...recordOf(), connectionNeeds: [] }])
+        await expect(service.list("u1", "ws-1")).resolves.toEqual([{ ...recordOf(), ...VIEWED }])
         expect(members.require).toHaveBeenCalledWith("u1", "ws-1")
     })
 
@@ -438,7 +454,7 @@ describe("ModuleInstallService lifecycle and reads", () => {
 
         await expect(service.setOperatingMode("u1", "ws-1", "inst-1", "autopilot")).resolves.toEqual({
             ...updated,
-            connectionNeeds: [],
+            ...VIEWED,
         })
         expect(members.require).toHaveBeenCalledWith("u1", "ws-1", ["owner", "manager"])
         expect(installations.setOperatingMode).toHaveBeenCalledWith("ws-1", "inst-1", "autopilot")
@@ -453,9 +469,9 @@ describe("ModuleInstallService lifecycle and reads", () => {
 
         await expect(service.setLive("u1", "ws-1", "inst-1", false)).resolves.toEqual({
             ...paused,
-            connectionNeeds: [],
+            ...VIEWED,
         })
-        expect(installations.setLive).toHaveBeenCalledWith("ws-1", "inst-1", false)
+        expect(installations.setLive).toHaveBeenCalledWith("ws-1", "inst-1", false, false, expect.anything())
         expect(agents.setStatus).not.toHaveBeenCalled()
         expect(installations.find).toHaveBeenCalledTimes(2)
     })

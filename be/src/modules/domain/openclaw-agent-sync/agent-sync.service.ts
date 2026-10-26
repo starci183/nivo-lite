@@ -107,6 +107,10 @@ export class AgentSyncService {
     async syncInstallation(workspaceId: string, installationId: string, force: boolean): Promise<OptionalSyncOutcome> {
         const installation = await this.installations.byId(workspaceId, installationId)
         if (installation === null) return null
+        if (installation.removed) {
+            await this.retire(installation)
+            return null
+        }
         if (!force && processorFromSettings(installation.settings) !== "openclaw") return null
         try {
             return await this.apply(await this.bundles.build(installation))
@@ -130,6 +134,17 @@ export class AgentSyncService {
             await this.pause.wait(this.options.reloadSettleMs)
         }
         return agentId
+    }
+
+    /**
+     * A removed installation leaves OpenClaw. The OpenClaw agent belongs to the module, not to the instance, so it is only taken out
+     * when no other instance of the module is left to run on it.
+     */
+    private async retire(installation: Installation): Promise<void> {
+        const sibling = await this.installations.firstOfModule(installation.workspaceId, installation.module)
+        if (sibling !== null) return
+        const dropped = this.registry.unregister(agentIdFor(installation.workspaceId, installation.module))
+        if (dropped) await this.pause.wait(this.options.reloadSettleMs)
     }
 
     private async fanOut(refs: ReadonlyArray<InstallationRef>): Promise<void> {

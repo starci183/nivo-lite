@@ -24,6 +24,8 @@ const installationOf = builder<Installation>({
     operatingMode: "assist",
     settings: {},
     activeContextVersionId: "v1",
+    liveEnabled: false,
+    removed: false,
 })
 
 const AGENT: AgentRow = {

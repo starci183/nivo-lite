@@ -185,8 +185,8 @@ describe("ProfileActivationService", () => {
             }
         })
 
-        it("bring the five HAKUEN installations to their settled status: accounting waits for its bank connection", async () => {
-            const { service, setup, readiness } = await build()
+        it("bring the five HAKUEN installations to their settled status: four run, accounting waits for its bank connection", async () => {
+            const { service, setup, readiness, installations } = await build()
             readiness.settle.mockImplementation((_workspaceId, installationId) =>
                 Promise.resolve(installationId === "installation-ai-ke-toan" ? "needs_connection" : "ready"),
             )
@@ -197,12 +197,15 @@ describe("ProfileActivationService", () => {
             }))
 
             await expect(service.activate(TARGET, kept)).resolves.toEqual({
-                "ai-marketing": "ready",
-                "ai-editor": "ready",
-                "ai-sales": "ready",
-                "ai-cskh": "ready",
+                "ai-marketing": "live",
+                "ai-editor": "live",
+                "ai-sales": "live",
+                "ai-cskh": "live",
                 "ai-ke-toan": "needs_connection",
             })
+            // Only a running agent answers customers: the four that are ready are switched on, the one that waits is not.
+            expect(installations.setLive).toHaveBeenCalledTimes(4)
+            expect(installations.setLive).not.toHaveBeenCalledWith(WS, "installation-ai-ke-toan", true, false)
             const gates = HAKUEN_PROFILE.agents.reduce((count, agent) => count + agent.setup.length, 0)
             expect(setup.setGate).toHaveBeenCalledTimes(gates)
             expect(setup.apply).toHaveBeenCalledTimes(HAKUEN_PROFILE.agents.length)

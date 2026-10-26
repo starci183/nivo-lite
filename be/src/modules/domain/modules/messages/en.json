@@ -505,6 +505,7 @@
   "errors.MODULES_INSTALLATION_NOT_FOUND": "The installed agent was not found.",
   "errors.MODULES_AGENT_MISSING": "This agent has no AI employee yet.",
   "errors.MODULES_AGENT_NAME_INVALID": "The display name needs {{min}} to {{max}} characters.",
+  "errors.MODULES_INSTALLATION_REMOVED": "This agent was removed. Its history stays, but it can no longer be changed or started.",
   "errors.MODULES_NEEDS_VERSION": "Apply a setup version before switching the agent on.",
   "errors.MODULES_SETTING_INVALID": "The setting value is not valid.",
   "errors.MODULES_GATES_UNCONFIRMED": "Confirm every item of the checklist before applying.",

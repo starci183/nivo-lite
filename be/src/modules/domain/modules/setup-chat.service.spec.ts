@@ -111,7 +111,9 @@ const build = async () => {
     const cards = mock<SetupCardsService>()
     const readiness = mock<ModuleReadinessService>()
     readiness.settle.mockResolvedValue("ready")
-    readiness.withNeeds.mockImplementation((record) => Promise.resolve({ ...record, connectionNeeds: [] }))
+    readiness.withNeeds.mockImplementation((record) =>
+        Promise.resolve({ ...record, connectionNeeds: [], lifecycle: "ready" }),
+    )
     const moduleRef = await Test.createTestingModule({
         providers: [
             SetupChatService,
@@ -157,7 +159,7 @@ describe("SetupChatService > state", () => {
         cards.viewsOf.mockResolvedValue([])
 
         await expect(service.state("u1", "ws-1", "inst-1", "en")).resolves.toEqual({
-            installation: { ...installationOf(), connectionNeeds: [] },
+            installation: { ...installationOf(), connectionNeeds: [], lifecycle: "ready" },
             session: sessionOf(),
             revisions: [{ id: "s-1", revision: 1, status: "draft" }],
             messages: [lineOf({ role: "assistant" }), lineOf({ id: "m-2" })],
@@ -282,6 +284,15 @@ describe("SetupChatService > setGate", () => {
 })
 
 describe("SetupChatService > apply", () => {
+    it("refuses to apply a setup to a removed agent", async () => {
+        const { service, installations } = await build()
+        installations.find.mockResolvedValue(installationOf({ status: "removed" }))
+
+        await expect(service.apply("u1", "ws-1", "inst-1", "en")).rejects.toMatchObject({
+            code: ModulesErrorCode.InstallationRemoved,
+        })
+    })
+
     it("refuses a draft whose gates are not all confirmed", async () => {
         const { service } = await build()
 

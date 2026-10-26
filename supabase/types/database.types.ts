@@ -1,4 +1,4 @@
-// migrations-sha256: bfa41c75948cba9ab62fa21d23d3497cf0ad5e04e590c9691071355360acbd74
+// migrations-sha256: 008c92a34ea069e8b357ac2c791419148804c27ad000fdce30408c5862c249d9
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -2924,13 +2924,13 @@ isOneToOne: false
                   ]
                 },"module_installations": {
                   Row: {
-                    "active_context_version_id": string | null,"agent_id": string | null,"created_at": string,"id": string,"is_multi": boolean,"live_enabled": boolean,"module_key": string,"name": string,"operating_mode": string,"settings": NonNullable<Json>,"status": string,"workspace_id": string
+                    "active_context_version_id": string | null,"agent_id": string | null,"created_at": string,"id": string,"is_multi": boolean,"live_enabled": boolean,"module_key": string,"name": string,"operating_mode": string,"removed_at": string | null,"removed_by": string | null,"settings": NonNullable<Json>,"status": string,"workspace_id": string
                   }
                   Insert: {
-                    "active_context_version_id"?: string | null,"agent_id"?: string | null,"created_at"?: string,"id"?: string,"is_multi"?: boolean,"live_enabled"?: boolean,"module_key": string,"name": string,"operating_mode"?: string,"settings"?: NonNullable<Json>,"status"?: string,"workspace_id": string
+                    "active_context_version_id"?: string | null,"agent_id"?: string | null,"created_at"?: string,"id"?: string,"is_multi"?: boolean,"live_enabled"?: boolean,"module_key": string,"name": string,"operating_mode"?: string,"removed_at"?: string | null,"removed_by"?: string | null,"settings"?: NonNullable<Json>,"status"?: string,"workspace_id": string
                   }
                   Update: {
-                    "active_context_version_id"?: string | null,"agent_id"?: string | null,"created_at"?: string,"id"?: string,"is_multi"?: boolean,"live_enabled"?: boolean,"module_key"?: string,"name"?: string,"operating_mode"?: string,"settings"?: NonNullable<Json>,"status"?: string,"workspace_id"?: string
+                    "active_context_version_id"?: string | null,"agent_id"?: string | null,"created_at"?: string,"id"?: string,"is_multi"?: boolean,"live_enabled"?: boolean,"module_key"?: string,"name"?: string,"operating_mode"?: string,"removed_at"?: string | null,"removed_by"?: string | null,"settings"?: NonNullable<Json>,"status"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {

@@ -35,3 +35,12 @@ export interface AuthorityActionsSyncReport {
     /** The action keys the database holds that the sync did not write; they are reported, never deleted. */
     readonly stale: ReadonlyArray<string>
 }
+
+/** An action of the catalogue, or none when the registry does not hold it. */
+export type OptionalActionRecord = AuthorityActionRecord | undefined
+
+/** Why the catalogue refuses a rule: the action is not registered under the rule's department, or a rule that runs alone is asked of a capped action. */
+export type RuleRefusal = "unknown_action" | "mode_capped"
+
+/** The refusal of a rule, or null when the catalogue allows it. */
+export type OptionalRuleRefusal = RuleRefusal | null

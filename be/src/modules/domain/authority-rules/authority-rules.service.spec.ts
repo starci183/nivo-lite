@@ -11,6 +11,7 @@ import {
     FIND_OPERATING_MODE,
     FIND_RULE,
     LIST_RULES,
+    DISABLE_AGENT_RULES,
     SEED_DEFAULT_RULES,
     UPSERT_RULE,
 } from "./persistence/authority-rules.sql"
@@ -284,5 +285,15 @@ describe("AuthorityRulesService > seedDefaults", () => {
             '[{"action":"send_follow_up","mode":"ask","limit_vnd":1000,"required_fields":' +
                 '["contact"]},{"action":"reply","mode":"auto","limit_vnd":null,"required_fields":[]}]',
         ])
+    })
+})
+
+describe("AuthorityRulesService > disableForAgent", () => {
+    it("switches off the grants of a removed agent through the manager it is given", async () => {
+        const em = mockEntityManager({ query: [DISABLE_AGENT_RULES, []] })
+        const service = await build(mockEntityManager())
+
+        await expect(service.disableForAgent("ws-1", "agent-1", em)).resolves.toBeUndefined()
+        expect(em.query).toHaveBeenCalledWith(DISABLE_AGENT_RULES, ["ws-1", "agent-1"])
     })
 })

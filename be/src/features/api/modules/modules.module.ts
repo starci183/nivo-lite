@@ -14,6 +14,7 @@ import { InstanceOfRecordHandler } from "./application/instance-of-record.handle
 import { ListInstallationsHandler } from "./application/list-installations.handler"
 import { ListSetupVersionsHandler } from "./application/list-setup-versions.handler"
 import { PostSetupMessageHandler } from "./application/post-setup-message.handler"
+import { RemoveAgentHandler } from "./application/remove-agent.handler"
 import { RenameInstallationAgentHandler } from "./application/rename-installation-agent.handler"
 import { RenameInstallationHandler } from "./application/rename-installation.handler"
 import { SaveInstallationSettingHandler } from "./application/save-installation-setting.handler"
@@ -39,6 +40,7 @@ import { ConfigurableModuleClass } from "./modules.module-definition"
         ListInstallationsHandler,
         ListSetupVersionsHandler,
         PostSetupMessageHandler,
+        RemoveAgentHandler,
         RenameInstallationAgentHandler,
         RenameInstallationHandler,
         SaveInstallationSettingHandler,

@@ -158,15 +158,17 @@ export class AgentsService {
         return summaryOf(row)
     }
 
-    /** Pauses or resumes an agent; a manager only. */
-    async setStatus(userId: string, workspaceId: string, agentId: string, active: boolean): Promise<void> {
+    /** Pauses or resumes an agent; a manager only. A caller that writes more rows with it passes its transaction's manager. */
+    async setStatus(
+        userId: string,
+        workspaceId: string,
+        agentId: string,
+        active: boolean,
+        manager: EntityManager = this.entityManager,
+    ): Promise<void> {
         await this.members.require(userId, workspaceId, GOVERNORS)
         this.expectChanged(
-            await this.entityManager.query<Array<IdRow>>(SET_AGENT_STATUS, [
-                agentId,
-                workspaceId,
-                active ? "active" : "paused",
-            ]),
+            await manager.query<Array<IdRow>>(SET_AGENT_STATUS, [agentId, workspaceId, active ? "active" : "paused"]),
             agentId,
         )
     }

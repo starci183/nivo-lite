@@ -20,6 +20,10 @@ export interface Installation {
     readonly settings: Readonly<Record<string, unknown>>
     /** The active context version, or null. */
     readonly activeContextVersionId: string | null
+    /** True when the owner switched the agent on. */
+    readonly liveEnabled: boolean
+    /** True when the agent was removed: only its history is left. */
+    readonly removed: boolean
 }
 
 /** An installation, or null when none matches. */

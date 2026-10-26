@@ -95,6 +95,7 @@ describe("ModuleReadinessService.needsOf", () => {
         await expect(readiness.withNeeds(recordOf())).resolves.toEqual({
             ...recordOf(),
             connectionNeeds: [{ role: "payment.credits.list", providers: ["SePay"] }],
+            lifecycle: "needs_connection",
         })
     })
 })

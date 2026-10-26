@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AuthorityService } from "@modules/domain/authority"
 import type { AuthorityPatch, AuthorityProfile } from "@modules/domain/authority"
-import { AuthorityActionsService } from "@modules/domain/authority-actions"
+import { AuthorityActionsService, ruleRefusalOf } from "@modules/domain/authority-actions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { AuthorityRuleRecord, RuleChange } from "@modules/domain/authority-rules"
 import { InvoicesService } from "@modules/domain/invoices"
@@ -28,7 +28,7 @@ import { EvidenceService } from "./evidence.service"
 import { clampPageSize, splitPage } from "./paging.policy"
 import { LIST_DECISION_HISTORY } from "./persistence/decision-history.sql"
 import type { AccountingWaitingWorkRow, WorkItemViewRow } from "./persistence/work-item-views.rows"
-import { ruleSummary, runsAlone } from "./rule-save.policy"
+import { ruleSummary } from "./rule-save.policy"
 import { FIND_WORK_ITEM_VIEW, LIST_ACCOUNTING_WAITING_WORK, LIST_WORK_ITEMS } from "./persistence/work-item-views.sql"
 
 /** A proposal field when it is text. */
@@ -146,10 +146,11 @@ export class DecisionsService {
     async saveRule(principalId: string, workspaceId: string, change: RuleChange): Promise<AuthorityRuleRecord> {
         const member = await this.members.require(principalId, workspaceId, MANAGERS)
         const record = (await this.actions.list(this.entityManager)).find((entry) => entry.action === change.action)
-        if (record?.module_key !== change.department)
-            throw new DecisionsError({ code: DecisionsErrorCode.UnknownAction, params: { action: change.action } })
-        if (runsAlone(change) && record.max_mode !== null)
-            throw new DecisionsError({ code: DecisionsErrorCode.ModeCapped, params: { action: change.action } })
+        const refusal = ruleRefusalOf(record, change)
+        if (refusal !== null) {
+            const code = refusal === "unknown_action" ? DecisionsErrorCode.UnknownAction : DecisionsErrorCode.ModeCapped
+            throw new DecisionsError({ code, params: { action: change.action } })
+        }
         const saved = await this.rules.save(workspaceId, change)
         await this.log(workspaceId, member, "authority.rule_updated", ruleSummary(saved, change))
         return saved
