@@ -31,7 +31,6 @@ export const OpenApiTestStep = (props: OpenApiTestStepProps) => (
         ) : (
             <Select
                 label={props.text.operation}
-                variant="secondary"
                 options={props.options}
                 value={props.value}
                 onValueChange={props.onOperation}
@@ -42,7 +41,6 @@ export const OpenApiTestStep = (props: OpenApiTestStepProps) => (
                 id="oa-test-q"
                 name="testQuery"
                 label={props.text.query}
-                variant="secondary"
                 value={props.query}
                 onValueChange={props.onQuery}
             />

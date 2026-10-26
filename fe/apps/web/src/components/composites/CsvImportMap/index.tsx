@@ -48,7 +48,6 @@ export const CsvImportMap = (props: CsvImportMapProps) => (
         {props.sheet === null ? null : (
             <Select
                 label={props.text.sheetLabel}
-                variant="secondary"
                 isDisabled={props.isDisabled}
                 value={props.sheet.value}
                 options={[...props.sheet.options]}
@@ -60,7 +59,6 @@ export const CsvImportMap = (props: CsvImportMapProps) => (
         <div className={classNames.fields}>
             <Select
                 label={props.text.mapId}
-                variant="secondary"
                 isDisabled={props.isDisabled}
                 value={props.values.idColumn}
                 options={[...props.idOptions]}
@@ -68,7 +66,6 @@ export const CsvImportMap = (props: CsvImportMapProps) => (
             />
             <Select
                 label={props.text.mapTitle}
-                variant="secondary"
                 isDisabled={props.isDisabled}
                 value={props.values.titleColumn}
                 options={[...props.optionalOptions]}
@@ -76,7 +73,6 @@ export const CsvImportMap = (props: CsvImportMapProps) => (
             />
             <Select
                 label={props.text.mapDate}
-                variant="secondary"
                 isDisabled={props.isDisabled}
                 value={props.values.dateColumn}
                 options={[...props.optionalOptions]}

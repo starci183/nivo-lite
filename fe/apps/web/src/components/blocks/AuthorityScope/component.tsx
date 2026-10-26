@@ -1,4 +1,5 @@
-import { Heading, NumberField, SegmentedControl, Text } from "@starci/grammar/common"
+import { Fragment } from "react"
+import { Divider, Heading, NumberField, SegmentedControl, Text } from "@starci/grammar/common"
 import { AuthoritySection } from "@/components/composites/AuthoritySection"
 import type { AuthoritySectionView } from "@/components/composites/AuthoritySection"
 import { SlotView } from "@/components/composites/SlotView"
@@ -68,35 +69,37 @@ export const AuthorityScopeBase = (props: AuthorityScopeBaseProps) => {
                                 </Text>
                             )}
                             <div className={RULE_LIST_CLASS}>
-                                {group.rows.map((row) => (
-                                    <div key={row.key} className={RULE_ROW_CLASS}>
-                                        <div className={RULE_NAME_CLASS}>
-                                            <Text weight="medium">{row.name}</Text>
-                                        </div>
-                                        <SegmentedControl
-                                            label={row.modeLabel}
-                                            isSkeleton={isSkeleton}
-                                            isLabelHidden
-                                            options={row.modes}
-                                            value={row.mode}
-                                            onValueChange={(value) => props.on.mode(row.key, value)}
-                                        />
-                                        {row.hasLimit ? (
-                                            <div className={RULE_LIMIT_CLASS}>
-                                                <NumberField
-                                                    variant="secondary"
-                                                    label={view.limitLabel}
-                                                    minValue={0}
-                                                    step={1_000_000}
-                                                    formatOptions={WHOLE}
-                                                    isSkeleton={isSkeleton}
-                                                    isDisabled={row.isLimitOff}
-                                                    value={row.limit}
-                                                    onValueChange={(value) => props.on.limit(row.key, value)}
-                                                />
+                                {group.rows.map((row, index) => (
+                                    <Fragment key={row.key}>
+                                        {index > 0 ? <Divider semantics="presentation" /> : null}
+                                        <div className={RULE_ROW_CLASS}>
+                                            <div className={RULE_NAME_CLASS}>
+                                                <Text weight="medium">{row.name}</Text>
                                             </div>
-                                        ) : null}
-                                    </div>
+                                            <SegmentedControl
+                                                label={row.modeLabel}
+                                                isSkeleton={isSkeleton}
+                                                isLabelHidden
+                                                options={row.modes}
+                                                value={row.mode}
+                                                onValueChange={(value) => props.on.mode(row.key, value)}
+                                            />
+                                            {row.hasLimit ? (
+                                                <div className={RULE_LIMIT_CLASS}>
+                                                    <NumberField
+                                                        label={view.limitLabel}
+                                                        minValue={0}
+                                                        step={1_000_000}
+                                                        formatOptions={WHOLE}
+                                                        isSkeleton={isSkeleton}
+                                                        isDisabled={row.isLimitOff}
+                                                        value={row.limit}
+                                                        onValueChange={(value) => props.on.limit(row.key, value)}
+                                                    />
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    </Fragment>
                                 ))}
                             </div>
                         </div>
