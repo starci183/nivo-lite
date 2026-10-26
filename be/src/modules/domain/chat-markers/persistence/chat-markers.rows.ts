@@ -19,3 +19,9 @@ export interface ChatStateRow {
     /** The newest authored message and its other-member receipts. */
     readonly last_own_message: ChatOwnMessage | null
 }
+
+/** One account admitted to a target. */
+export interface ChatTargetMemberRow {
+    /** The admitted account id. */
+    readonly user_id: string
+}

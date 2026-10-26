@@ -23,3 +23,17 @@ export interface ChatTypingSignal {
     /** ISO 8601 deadline; receivers discard expired signals, including after a disconnect. */
     readonly expiresAt: string
 }
+
+/** One typing frame on the realtime hub: `id` is `${actorId}:${at}`, the `Last-Event-ID` resume point. */
+export interface ChatTypingFrame {
+    /** The domain event id of the frame. */
+    readonly id: string
+    /** The workspace account that is typing. */
+    readonly actorId: string
+    /** Their display name. */
+    readonly actorName: string
+    /** Start refreshes the indicator, stop clears it. */
+    readonly state: "start" | "stop"
+    /** ISO 8601 time of the signal. */
+    readonly at: string
+}

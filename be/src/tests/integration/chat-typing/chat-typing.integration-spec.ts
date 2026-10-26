@@ -1,4 +1,6 @@
 import { ChatTypingService } from "@modules/domain/chat-typing"
+import { REALTIME_HUB } from "@modules/platform/realtime"
+import type { RealtimeHub, RealtimeTopic } from "@modules/platform/realtime"
 import { eachInOrder } from "@modules/platform/primitives"
 import { chatMarkersIdentity, persistChatMarkers } from "../../fixtures/builders/chat-markers.builder"
 import {
@@ -21,6 +23,11 @@ import { useTestWorld } from "../../world/use-test-world"
 const world = useTestWorld({ modules: [ChatTypingProofModule.register()] })
 const identity = chatMarkersIdentity(() => world.id())
 const OFFICE = { room: null, conversationId: null }
+/** What a member receives: the typing frames published to their own copy of the Office topic. */
+const receiverTopic = (recipientId: string): RealtimeTopic<object> => ({
+    name: `chat-typing:${recipientId}:${identity.workspaceId}:room:office`,
+    accepts: (frame: unknown): frame is object => typeof frame === "object" && frame !== null,
+})
 const roomTopic = (room: string) => `chat-typing:${identity.workspaceId}:room:${room}`
 const conversationTopic = (id: string) => `chat-typing:${identity.workspaceId}:conversation:${id}`
 
@@ -50,12 +57,18 @@ beforeAll(async () => {
 })
 
 describe("chat typing private broadcast over PostgreSQL", () => {
-    it("broadcasts only the admitted sender's identity, with a five-second start deadline and immediate stop", async () => {
+    it("publishes only the admitted sender's identity, with a five-second start deadline and immediate stop", async () => {
         const typing = world.resolve(ChatTypingService)
         const channel = await typing.channel(identity.ownerId, identity.workspaceId.toUpperCase(), OFFICE)
+        const frames = world
+            .resolve<RealtimeHub>(REALTIME_HUB)
+            .subscribe(receiverTopic(identity.readerIds[0]))
+            [Symbol.asyncIterator]()
         const started = await typing.set(identity.ownerId, identity.workspaceId, OFFICE, true)
         const stopped = await typing.set(identity.ownerId, identity.workspaceId, OFFICE, false)
-        const rows = await world.db.primary.query<Array<TypingBroadcastRow>>(READ_TYPING_BROADCASTS, [channel.topic])
+        const first = await frames.next()
+        const second = await frames.next()
+        await frames.return?.()
 
         expect(channel).toEqual({ topic: roomTopic("office"), event: "typing", private: true, ttlMs: 5000 })
         expect(started).toMatchObject({
@@ -67,12 +80,10 @@ describe("chat typing private broadcast over PostgreSQL", () => {
         expect(new Date(started.expiresAt).toISOString()).toBe(started.expiresAt)
         expect(new Date(stopped.expiresAt).toISOString()).toBe(stopped.expiresAt)
         expect(stopped.typing).toBe(false)
-        expect(rows).toEqual(
-            expect.arrayContaining([
-                { payload: started, event: "typing", private: true, extension: "broadcast" },
-                { payload: stopped, event: "typing", private: true, extension: "broadcast" },
-            ]),
-        )
+        expect([first.value, second.value]).toEqual([
+            expect.objectContaining({ actorId: identity.ownerId, actorName: "Shared name", state: "start" }),
+            expect.objectContaining({ actorId: identity.ownerId, actorName: "Shared name", state: "stop" }),
+        ])
     })
 
     it("separates department, agent and customer topics and rejects foreign, disabled and absent members", async () => {

@@ -43,6 +43,7 @@ import { RunShiftsAlertsQueueModule } from "@features/jobs/run-shifts-alerts"
 import { RunAccountingMorningQueueModule } from "@features/jobs/run-accounting-morning"
 import { RunMarketingTickQueueModule } from "@features/jobs/run-marketing-tick"
 import { RunLeadGenQueueModule } from "@features/jobs/run-lead-gen"
+import { SweepRealtimeEventsQueueModule } from "@features/jobs/sweep-realtime-events"
 
 /** The background jobs the api runs: each queue module registers its processor with the job runner. */
 export const API_JOB_QUEUES: Array<DynamicModule> = [
@@ -80,6 +81,7 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     PublishContentQueueModule.register({}),
     AcceptMetaEventQueueModule.register({}),
     RunLeadGenQueueModule.register({}),
+    SweepRealtimeEventsQueueModule.register({}),
     IssueInviteQueueModule.register({}),
     RenderVideoQueueModule.register({}),
     ConnectionCommandsQueueModule.register({}),

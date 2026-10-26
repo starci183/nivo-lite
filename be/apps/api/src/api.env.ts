@@ -6,6 +6,7 @@ import { parseHttpSecurityConfig } from "@modules/platform/http-security"
 import { parseJobsConfig } from "@modules/platform/jobs"
 import { parseJobsAlertConfig } from "@modules/domain/job-ops"
 import { parseQueueConfig } from "@modules/platform/queue"
+import { parseRealtimeConfig } from "@modules/platform/realtime"
 import { parseChannelsConfig } from "@modules/domain/channels"
 import { parseConnectionSecretsConfig } from "@modules/domain/connection-secrets"
 import { parseLoyaltyOtpsConfig } from "@modules/domain/loyalty-otps"
@@ -79,6 +80,8 @@ export interface ApiOptions {
     readonly telegramUser: ReturnType<typeof parseTelegramUserConfig>
     /** The platform team that may use the console. */
     readonly platformAdmin: ReturnType<typeof parsePlatformAdminConfig>
+    /** Which realtime hub the app runs: Redis while Redis is declared, else Postgres; the in-process hub is for tests and one replica. */
+    readonly realtime: ReturnType<typeof parseRealtimeConfig>
     /** How the BullMQ workers and the outbox relay run. */
     readonly queue: ReturnType<typeof parseQueueConfig>
     /** Who this worker is and how long a job claim lasts. */
@@ -110,11 +113,7 @@ export interface ApiOptions {
 /** Reads the API environment; missing or invalid values fail boot and secret readers prefer mounted files. */
 export const readApiEnv = (env: EnvSource): ApiOptions => ({
     server: parseServerConfig(env),
-    httpSecurity: {
-        ...parseHttpSecurityConfig(env),
-        // One entry per inbound provider, e.g. stripe: parseWebhookProviderConfig(env, "STRIPE"); lanes register theirs here.
-        webhooks: {},
-    },
+    httpSecurity: { ...parseHttpSecurityConfig(env), webhooks: {} },
     database: parsePrimaryDatabaseConfig(env),
     supabase: parseSupabaseConfig(env),
     llm: parseLlmConfig(env),
@@ -134,6 +133,7 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     mail: parseMailConfig(env),
     dataSources: parseDataSourcesConfig(env),
     telegramUser: parseTelegramUserConfig(env),
+    realtime: parseRealtimeConfig(env),
     queue: parseQueueConfig(env),
     jobs: parseJobsConfig(env),
     jobsAlert: parseJobsAlertConfig(env),

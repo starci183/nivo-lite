@@ -3,6 +3,13 @@ import { sql } from "@modules/platform/database"
 /** Shared backend/private realtime target admission ($1 workspace, $2 account, $3 room, $4 conversation). */
 export const CHAT_TARGET_MEMBER = sql`SELECT be_access.chat_target_member($1::uuid, $2::uuid, $3::text, $4::uuid) AS allowed LIMIT 1`
 
+/** Every active account the shared admission predicate admits to the target, ordered by id ($1 workspace, $2 room, $3 conversation). */
+export const CHAT_TARGET_MEMBER_IDS = sql`
+    SELECT m.user_id FROM public.workspace_members m
+    WHERE m.workspace_id = $1::uuid AND m.status = 'active'
+      AND be_access.chat_target_member($1::uuid, m.user_id, $2::text, $3::uuid)
+    ORDER BY m.user_id LIMIT 500`
+
 /** Resolves only a message actually fetched from the scoped target ($1 workspace, $2 room, $3 conversation, $4 message). */
 export const CHAT_MESSAGE_CURSOR = sql`
     SELECT to_json(m.created_at) #>> '{}' AS created_at FROM public.messages m

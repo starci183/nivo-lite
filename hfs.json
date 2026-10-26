@@ -25,7 +25,7 @@
           "kind": "api"
         }
       ],
-      "kinds": ["api", "cli", "jobs", "webhooks"],
+      "kinds": ["api", "cli", "jobs", "realtime", "webhooks"],
       "connections": [
         {
           "name": "primary",
@@ -36,7 +36,7 @@
         }
       ],
       "reads": ["supabase/types/"],
-      "patterns": ["webhooks", "queue", "fenced-job"],
+      "patterns": ["webhooks", "queue", "fenced-job", "realtime"],
       "backing": ["redis"],
       "queueOutbox": { "table": "public.job_outbox", "enqueue": "public.job_enqueue", "queueParameter": "p_queue" },
       "optionalSlots": ["repo.docs", "be.contract.graphql", "repo.i18n-dynamic-keys"]
