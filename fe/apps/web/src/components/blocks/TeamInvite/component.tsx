@@ -70,7 +70,6 @@ export const TeamInviteBase = (props: TeamInviteBaseProps) => (
                             name="email"
                             kind="email"
                             label={props.props.emailLabel}
-                            variant="secondary"
                             isRequired
                             isDisabled={props.props.isPending}
                             isSkeleton={props.props.isSkeleton}

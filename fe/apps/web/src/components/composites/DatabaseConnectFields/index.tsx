@@ -51,7 +51,6 @@ export const DatabaseConnectFields = (props: DatabaseConnectFieldsProps) => {
                     id="db-name"
                     name="name"
                     label={view.text.name}
-                    variant="secondary"
                     hint={view.text.nameHint}
                     isDisabled={view.isDisabled}
                     value={view.values.name}
@@ -59,7 +58,6 @@ export const DatabaseConnectFields = (props: DatabaseConnectFieldsProps) => {
                 />
                 <Select
                     label={view.text.engine}
-                    variant="secondary"
                     isDisabled={view.isDisabled}
                     value={view.values.engine}
                     options={view.engines}
@@ -69,7 +67,6 @@ export const DatabaseConnectFields = (props: DatabaseConnectFieldsProps) => {
                     id="db-host"
                     name="host"
                     label={view.text.host}
-                    variant="secondary"
                     hint={view.text.hostHint}
                     isDisabled={view.isDisabled}
                     value={view.values.host}
@@ -79,7 +76,6 @@ export const DatabaseConnectFields = (props: DatabaseConnectFieldsProps) => {
                     id="db-port"
                     name="port"
                     label={view.text.port}
-                    variant="secondary"
                     isDisabled={view.isDisabled}
                     value={view.values.port}
                     onValueChange={on.field("port")}
@@ -88,7 +84,6 @@ export const DatabaseConnectFields = (props: DatabaseConnectFieldsProps) => {
                     id="db-database"
                     name="database"
                     label={view.text.database}
-                    variant="secondary"
                     isDisabled={view.isDisabled}
                     value={view.values.database}
                     onValueChange={on.field("database")}
@@ -97,7 +92,6 @@ export const DatabaseConnectFields = (props: DatabaseConnectFieldsProps) => {
                     id="db-user"
                     name="user"
                     label={view.text.user}
-                    variant="secondary"
                     isDisabled={view.isDisabled}
                     value={view.values.user}
                     onValueChange={on.field("user")}
@@ -105,7 +99,6 @@ export const DatabaseConnectFields = (props: DatabaseConnectFieldsProps) => {
                 {renderDatabaseConnectFieldsPassword(view, on)}
             </div>
             <RadioGroup
-                variant="secondary"
                 label={view.text.ssl}
                 isDisabled={view.isDisabled}
                 value={view.ssl}
@@ -129,7 +122,6 @@ const renderDatabaseConnectFieldsPassword = (
         name="password"
         kind="password"
         label={view.text.password}
-        variant="secondary"
         isDisabled={view.isDisabled}
         value={view.values.password}
         hint={view.passwordHint}

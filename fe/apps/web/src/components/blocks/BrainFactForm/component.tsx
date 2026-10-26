@@ -108,7 +108,6 @@ export const BrainFactFormBase = (props: BrainFactFormBaseProps) => (
                     id="brain-fact-note"
                     name="note"
                     label={props.props.noteLabel}
-                    variant="secondary"
                     value={props.props.note}
                     isDisabled={props.props.isPending}
                     onValueChange={props.on.setNote}
@@ -128,7 +127,6 @@ const renderFactValidityFields = (props: BrainFactFormBaseProps) => (
             id="brain-fact-from"
             name="validFrom"
             label={props.props.fromLabel}
-            variant="secondary"
             placeholder="2026-01-31"
             value={props.props.validFrom}
             isDisabled={props.props.isPending}
@@ -138,7 +136,6 @@ const renderFactValidityFields = (props: BrainFactFormBaseProps) => (
             id="brain-fact-to"
             name="validTo"
             label={props.props.toLabel}
-            variant="secondary"
             placeholder="2026-12-31"
             value={props.props.validTo}
             isDisabled={props.props.isPending}
@@ -162,7 +159,6 @@ const renderFactSubjectFields = (props: BrainFactFormBaseProps) => (
             id="brain-fact-subject"
             name="subject"
             label={props.props.subjectLabel}
-            variant="secondary"
             hint={props.props.subjectHint}
             isRequired
             value={props.props.subject}
@@ -173,7 +169,6 @@ const renderFactSubjectFields = (props: BrainFactFormBaseProps) => (
             id="brain-fact-attribute"
             name="attribute"
             label={props.props.attributeLabel}
-            variant="secondary"
             hint={props.props.attributeHint}
             isRequired
             value={props.props.attribute}
@@ -184,7 +179,6 @@ const renderFactSubjectFields = (props: BrainFactFormBaseProps) => (
             id="brain-fact-value"
             name="value"
             label={props.props.valueLabel}
-            variant="secondary"
             rows={3}
             isRequired
             value={props.props.value}

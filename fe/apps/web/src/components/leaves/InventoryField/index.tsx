@@ -17,7 +17,6 @@ export const InventoryField = (props: InventoryFieldProps) => (
         name={props.name}
         label={props.label}
         {...(props.hint === undefined ? {} : { hint: props.hint })}
-        variant="secondary"
         value={props.value}
         onValueChange={props.onChange}
     />

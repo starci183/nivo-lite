@@ -1,4 +1,4 @@
-import { Text, Textarea } from "@starci/grammar/common"
+import { SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 import type { OfficeResultCardView, OfficeText } from "@/modules/types"
 import { QUOTE_CLASS_NAME } from "./classNames"
 
@@ -26,10 +26,12 @@ export const OfficeCardBody = (props: OfficeCardBodyProps) => {
         )
     if (props.card.body === null) return null
     return (
-        <div className={QUOTE_CLASS_NAME}>
-            <Text as="p" size="sm">
-                {props.card.body}
-            </Text>
-        </div>
+        <SurfaceCard ariaLabel={props.text("draftLabel")}>
+            <div className={QUOTE_CLASS_NAME}>
+                <Text as="p" size="sm">
+                    {props.card.body}
+                </Text>
+            </div>
+        </SurfaceCard>
     )
 }

@@ -1,4 +1,4 @@
-import { Badge, Disclosure, Heading, List, ListItem, Region, Text, TextAction } from "@starci/grammar/common"
+import { Badge, Disclosure, Divider, Heading, List, ListItem, Region, Text, TextAction } from "@starci/grammar/common"
 import {
     FACTS_CLASS,
     PRESERVE_LINES_CLASS,
@@ -51,50 +51,53 @@ const Note = (props: NoteProps) => (
 
 /** The recent runs of one automation: when, what happened, the message, and why. */
 export const AutomationRuns = (props: AutomationRunsProps) => (
-    <Region className={SECTION_CLASS} label={props.title}>
-        <Heading level={3}>{props.title}</Heading>
-        {props.rows.length === 0 ? (
-            <Text size="sm" tone="muted">
-                {props.emptyText}
-            </Text>
-        ) : (
-            <List label={props.title} className={ROWS_CLASS}>
-                {props.rows.map((row) => (
-                    <ListItem key={row.id} className={RUN_ROW_CLASS}>
-                        <div className={RUN_HEAD_CLASS}>
-                            <Badge isDot tone={row.tone}>
-                                {row.statusLabel}
-                            </Badge>
-                            <Text size="xs" tone="muted">
-                                {row.whenText}
-                            </Text>
-                            {row.decisionsHref === undefined ? null : (
-                                <TextAction href={row.decisionsHref} size="xs" appearance="inline">
-                                    {props.decisionsLabel}
-                                </TextAction>
+    <>
+        <Divider semantics="presentation" />
+        <Region className={SECTION_CLASS} label={props.title}>
+            <Heading level={3}>{props.title}</Heading>
+            {props.rows.length === 0 ? (
+                <Text size="sm" tone="muted">
+                    {props.emptyText}
+                </Text>
+            ) : (
+                <List label={props.title} className={ROWS_CLASS}>
+                    {props.rows.map((row) => (
+                        <ListItem key={row.id} className={RUN_ROW_CLASS}>
+                            <div className={RUN_HEAD_CLASS}>
+                                <Badge isDot tone={row.tone}>
+                                    {row.statusLabel}
+                                </Badge>
+                                <Text size="xs" tone="muted">
+                                    {row.whenText}
+                                </Text>
+                                {row.decisionsHref === undefined ? null : (
+                                    <TextAction href={row.decisionsHref} size="xs" appearance="inline">
+                                        {props.decisionsLabel}
+                                    </TextAction>
+                                )}
+                            </div>
+                            <Text size="sm">{row.summary}</Text>
+                            {row.errorText === undefined ? null : (
+                                <Text size="sm" tone="muted">
+                                    {row.errorText}
+                                </Text>
                             )}
-                        </div>
-                        <Text size="sm">{row.summary}</Text>
-                        {row.errorText === undefined ? null : (
-                            <Text size="sm" tone="muted">
-                                {row.errorText}
-                            </Text>
-                        )}
-                        {row.message === undefined && row.evidence === undefined ? null : (
-                            <Disclosure title={props.moreLabel} headingLevel={4}>
-                                <div className={FACTS_CLASS}>
-                                    {row.message === undefined ? null : (
-                                        <Note label={props.messageLabel} text={row.message} />
-                                    )}
-                                    {row.evidence === undefined ? null : (
-                                        <Note label={props.evidenceLabel} text={row.evidence} />
-                                    )}
-                                </div>
-                            </Disclosure>
-                        )}
-                    </ListItem>
-                ))}
-            </List>
-        )}
-    </Region>
+                            {row.message === undefined && row.evidence === undefined ? null : (
+                                <Disclosure title={props.moreLabel} headingLevel={4}>
+                                    <div className={FACTS_CLASS}>
+                                        {row.message === undefined ? null : (
+                                            <Note label={props.messageLabel} text={row.message} />
+                                        )}
+                                        {row.evidence === undefined ? null : (
+                                            <Note label={props.evidenceLabel} text={row.evidence} />
+                                        )}
+                                    </div>
+                                </Disclosure>
+                            )}
+                        </ListItem>
+                    ))}
+                </List>
+            )}
+        </Region>
+    </>
 )

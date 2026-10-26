@@ -1,4 +1,5 @@
 import { CheckboxGroup, Heading, Text, Textarea } from "@starci/grammar/common"
+import { DividedRow } from "@/components/leaves/DividedRow"
 import { AuthoritySection } from "@/components/composites/AuthoritySection"
 import type { AuthoritySectionView } from "@/components/composites/AuthoritySection"
 import { SlotView } from "@/components/composites/SlotView"
@@ -53,7 +54,6 @@ export const AuthorityLimitsBase = (props: AuthorityLimitsBaseProps) => {
             {(limits, isSkeleton) => (
                 <AuthoritySection section={view.section} isSkeleton={isSkeleton} onSave={props.on.save}>
                     <Textarea
-                        variant="secondary"
                         isSkeleton={isSkeleton}
                         label={view.noteLabel}
                         description={view.noteHint}
@@ -68,18 +68,19 @@ export const AuthorityLimitsBase = (props: AuthorityLimitsBaseProps) => {
                         </Text>
                     </div>
                     <div className={REQUIRED_LIST_CLASS}>
-                        {limits.rows.map((row) => (
-                            <div key={row.key} className={REQUIRED_ROW_CLASS}>
-                                <CheckboxGroup
-                                    variant="secondary"
-                                    label={row.label}
-                                    orientation="horizontal"
-                                    isSkeleton={isSkeleton}
-                                    options={view.fields}
-                                    value={row.value}
-                                    onValueChange={(value) => props.on.required(row.key, value)}
-                                />
-                            </div>
+                        {limits.rows.map((row, index) => (
+                            <DividedRow key={row.key} isFirst={index === 0}>
+                                <div className={REQUIRED_ROW_CLASS}>
+                                    <CheckboxGroup
+                                        label={row.label}
+                                        orientation="horizontal"
+                                        isSkeleton={isSkeleton}
+                                        options={view.fields}
+                                        value={row.value}
+                                        onValueChange={(value) => props.on.required(row.key, value)}
+                                    />
+                                </div>
+                            </DividedRow>
                         ))}
                     </div>
                 </AuthoritySection>

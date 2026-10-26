@@ -36,17 +36,11 @@ export const BookingPublicPageFormBase = (props: BookingPublicPageFormBaseProps)
         <BookingSetupSection title={p.title} hint={p.hint}>
             <Form label={p.title} isPending={p.isPending} onSubmit={on.save}>
                 <div className={STACK_CLASS}>
-                    <Checkbox
-                        variant="secondary"
-                        label={p.enabledLabel}
-                        isSelected={p.enabled}
-                        onSelectedChange={on.toggleEnabled}
-                    />
+                    <Checkbox label={p.enabledLabel} isSelected={p.enabled} onSelectedChange={on.toggleEnabled} />
                     <Input
                         id="booking-public-slug"
                         name="slug"
                         label={p.slugLabel}
-                        variant="secondary"
                         placeholder={p.slugPlaceholder}
                         value={p.slug}
                         onValueChange={on.changeSlug}
@@ -55,7 +49,6 @@ export const BookingPublicPageFormBase = (props: BookingPublicPageFormBaseProps)
                         id="booking-public-page-note"
                         name="note"
                         label={p.noteLabel}
-                        variant="secondary"
                         placeholder={p.notePlaceholder}
                         value={p.note}
                         onValueChange={on.changeNote}

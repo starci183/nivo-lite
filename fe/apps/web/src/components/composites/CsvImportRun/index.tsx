@@ -22,7 +22,6 @@ export const CsvImportRun = (props: CsvImportRunProps) => (
         {props.schedule === null ? null : (
             <Select
                 label={props.schedule.label}
-                variant="secondary"
                 isDisabled={props.isDisabled || props.done !== null}
                 value={props.schedule.value}
                 options={[...props.schedule.options]}

@@ -21,5 +21,5 @@ export const RULE_NAME_CLASS = cn("flex", "min-w-0", "flex-col", "gap-1")
 /** Limit cell of a rule row. */
 export const RULE_LIMIT_CLASS = cn("w-full")
 
-/** Rule rows list: one hairline between rows, none at the edges. */
-export const RULE_LIST_CLASS = cn("flex", "flex-col", "divide-y", "divide-separator")
+/** Rule rows list; a Divider sits between rows, none at the edges. */
+export const RULE_LIST_CLASS = cn("flex", "flex-col")

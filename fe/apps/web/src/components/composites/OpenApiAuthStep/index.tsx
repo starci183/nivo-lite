@@ -38,7 +38,6 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
                 id="oa-base"
                 name="baseUrl"
                 label={text.baseUrl}
-                variant="secondary"
                 hint={text.baseUrlHint}
                 isDisabled={isDisabled}
                 value={values.baseUrl}
@@ -46,7 +45,6 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
             />
             <Select
                 label={text.auth}
-                variant="secondary"
                 options={props.options}
                 value={values.authType}
                 onValueChange={props.onAuthType}
@@ -56,7 +54,6 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
                     id="oa-auth-name"
                     name="authName"
                     label={text.authName}
-                    variant="secondary"
                     hint={text.authNameError}
                     isDisabled={isDisabled}
                     value={values.authName}
@@ -68,7 +65,6 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
                     id="oa-auth-value"
                     name="authValue"
                     label={text.authValue}
-                    variant="secondary"
                     kind="password"
                     hint={text.secretHint}
                     isDisabled={isDisabled}
@@ -82,7 +78,6 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
                         id="oa-auth-user"
                         name="authUser"
                         label={text.user}
-                        variant="secondary"
                         isDisabled={isDisabled}
                         value={values.authUser}
                         onValueChange={(value) => onField("authUser", value)}
@@ -91,7 +86,6 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
                         id="oa-auth-pass"
                         name="authPass"
                         label={text.password}
-                        variant="secondary"
                         kind="password"
                         hint={text.secretHint}
                         isDisabled={isDisabled}

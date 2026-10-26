@@ -37,7 +37,6 @@ export const AddOptionsPanel = (props: AddOptionsPanelProps) => (
                 id="knowledge-add-topic"
                 name="topic"
                 label={props.topicLabel}
-                variant="secondary"
                 hint={props.topicHint}
                 value={props.topic}
                 isDisabled={props.isBusy}
@@ -47,7 +46,6 @@ export const AddOptionsPanel = (props: AddOptionsPanelProps) => (
                 id="knowledge-add-tags"
                 name="tags"
                 label={props.tagsLabel}
-                variant="secondary"
                 hint={props.tagsHint}
                 value={props.tags}
                 isDisabled={props.isBusy}

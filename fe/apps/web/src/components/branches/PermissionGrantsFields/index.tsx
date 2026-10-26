@@ -1,4 +1,5 @@
 import { Checkbox, NumberField, Text } from "@starci/grammar/common"
+import { DividedRow } from "@/components/leaves/DividedRow"
 import { GRANT_LIST_CLASS_NAME, GRANT_ROW_CLASS_NAME, SECTION_CLASS_NAME } from "./classNames"
 
 const WHOLE = { maximumFractionDigits: 2 }
@@ -38,26 +39,26 @@ export const PermissionGrantsFields = (props: PermissionGrantsFieldsProps) => {
                 {p.copy.grantsNote}
             </Text>
             <div className={GRANT_LIST_CLASS_NAME}>
-                {p.grants.map((grant) => (
-                    <div key={grant.memberId} className={GRANT_ROW_CLASS_NAME}>
-                        <Checkbox
-                            variant="secondary"
-                            label={grant.name}
-                            isDisabled={!p.canGrant}
-                            isSelected={grant.enabled}
-                            onSelectedChange={(enabled) => on.enabled(grant.memberId, enabled)}
-                        />
-                        <NumberField
-                            variant="secondary"
-                            label={grant.maxLabel}
-                            isLabelHidden
-                            minValue={0}
-                            formatOptions={WHOLE}
-                            isDisabled={!p.canGrant || !grant.enabled}
-                            value={grant.max}
-                            onValueChange={(value) => on.max(grant.memberId, value)}
-                        />
-                    </div>
+                {p.grants.map((grant, index) => (
+                    <DividedRow key={grant.memberId} isFirst={index === 0}>
+                        <div className={GRANT_ROW_CLASS_NAME}>
+                            <Checkbox
+                                label={grant.name}
+                                isDisabled={!p.canGrant}
+                                isSelected={grant.enabled}
+                                onSelectedChange={(enabled) => on.enabled(grant.memberId, enabled)}
+                            />
+                            <NumberField
+                                label={grant.maxLabel}
+                                isLabelHidden
+                                minValue={0}
+                                formatOptions={WHOLE}
+                                isDisabled={!p.canGrant || !grant.enabled}
+                                value={grant.max}
+                                onValueChange={(value) => on.max(grant.memberId, value)}
+                            />
+                        </div>
+                    </DividedRow>
                 ))}
             </div>
             <Text size="xs" tone="muted">

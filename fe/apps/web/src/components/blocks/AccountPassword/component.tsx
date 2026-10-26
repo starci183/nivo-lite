@@ -41,7 +41,6 @@ export const AccountPasswordBase = (props: AccountPasswordBaseProps) => (
                     name="current"
                     kind="password"
                     label={props.props.currentLabel}
-                    variant="secondary"
                     isRequired
                     isDisabled={props.props.isPending}
                     isSkeleton={props.props.isLoading}
@@ -53,7 +52,6 @@ export const AccountPasswordBase = (props: AccountPasswordBaseProps) => (
                     name="next"
                     kind="newPassword"
                     label={props.props.newLabel}
-                    variant="secondary"
                     isRequired
                     isDisabled={props.props.isPending}
                     isSkeleton={props.props.isLoading}
@@ -65,7 +63,6 @@ export const AccountPasswordBase = (props: AccountPasswordBaseProps) => (
                     name="confirm"
                     kind="newPassword"
                     label={props.props.confirmLabel}
-                    variant="secondary"
                     isRequired
                     isDisabled={props.props.isPending}
                     isSkeleton={props.props.isLoading}

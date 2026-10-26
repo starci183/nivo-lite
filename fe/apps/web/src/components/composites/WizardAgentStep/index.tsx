@@ -22,7 +22,6 @@ export const WizardAgentStep = (props: WizardAgentStepProps) => (
                     {props.hint}
                 </Text>
                 <CheckboxGroup
-                    variant="secondary"
                     label={props.hint}
                     isLabelHidden
                     {...(props.isDisabled !== undefined && { isDisabled: props.isDisabled })}

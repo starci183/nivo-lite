@@ -1,9 +1,20 @@
-import { Alert, DescriptionList, Heading, List, ListItem, Meter, SurfaceCard, Text } from "@starci/grammar/common"
+import {
+    Alert,
+    DescriptionList,
+    Divider,
+    Heading,
+    List,
+    ListItem,
+    Meter,
+    SurfaceCard,
+    Text,
+} from "@starci/grammar/common"
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import type { UsageCardView } from "@/hooks/usageCard"
 import {
     CHART_AXIS_CLASS_NAME,
     CHART_CLASS_NAME,
+    MODULE_LINE_CLASS_NAME,
     MODULE_LIST_CLASS_NAME,
     MODULE_ROW_CLASS_NAME,
     STACK_CLASS_NAME,
@@ -77,12 +88,15 @@ export const UsageCard = (props: UsageCardProps) => {
                     <Heading level={3}>{view.modulesTitle}</Heading>
                     {view.modules.length > 0 ? (
                         <List className={MODULE_LIST_CLASS_NAME} label={view.modulesTitle}>
-                            {view.modules.map((module) => (
+                            {view.modules.map((module, index) => (
                                 <ListItem key={module.id} className={MODULE_ROW_CLASS_NAME}>
-                                    <Text weight="medium">{module.label}</Text>
-                                    <Text size="sm" tone="muted">
-                                        {module.reading}
-                                    </Text>
+                                    {index > 0 ? <Divider semantics="presentation" /> : null}
+                                    <div className={MODULE_LINE_CLASS_NAME}>
+                                        <Text weight="medium">{module.label}</Text>
+                                        <Text size="sm" tone="muted">
+                                            {module.reading}
+                                        </Text>
+                                    </div>
                                 </ListItem>
                             ))}
                         </List>
@@ -109,7 +123,7 @@ const renderUsageCardDailyUsage = (daily: NonNullable<UsageCardProps["props"]["d
                     <Bar
                         dataKey="credits"
                         name={daily.creditsLabel}
-                        fill="currentColor"
+                        fill="var(--accent)"
                         minPointSize={props.on.minimumBarSize}
                         isAnimationActive={false}
                     />

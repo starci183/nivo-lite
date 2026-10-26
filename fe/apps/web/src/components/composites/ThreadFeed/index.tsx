@@ -1,9 +1,9 @@
-import { Badge, ChatBubble, ChatBubbleSkeletons, EmptyNotice, Text } from "@starci/grammar/common"
+import { Badge, ChatBubble, ChatBubbleSkeletons, EmptyNotice, SurfaceCard, Text } from "@starci/grammar/common"
 import { ThreadApprovalCard } from "@/components/branches/ThreadApprovalCard"
 import { ThreadAuthorMark } from "@/components/branches/ThreadAuthorMark"
 import { ThreadMentionChip } from "@/components/leaves/ThreadMentionChip"
 import type { ThreadMessageView, ThreadApprovalLabels } from "@/modules/types"
-import { BODY_CLASS_NAME, FEED_CLASS_NAME, QUOTE_CLASS_NAME } from "./classNames"
+import { BODY_CLASS_NAME, FEED_CLASS_NAME, QUOTE_BODY_CLASS_NAME, QUOTE_CLASS_NAME } from "./classNames"
 
 /** What the thread draws and asks. */
 type ThreadFeedProps = {
@@ -60,10 +60,14 @@ const Messages = (props: Omit<ThreadFeedProps, "label">) => {
                     </div>
                     {message.quoted.map((quote) => (
                         <div key={quote} className={QUOTE_CLASS_NAME}>
-                            <Text size="xs" tone="muted">
-                                {props.quotedLabel}
-                            </Text>
-                            <Text size="sm">{quote}</Text>
+                            <SurfaceCard ariaLabel={props.quotedLabel}>
+                                <div className={QUOTE_BODY_CLASS_NAME}>
+                                    <Text size="xs" tone="muted">
+                                        {props.quotedLabel}
+                                    </Text>
+                                    <Text size="sm">{quote}</Text>
+                                </div>
+                            </SurfaceCard>
                         </div>
                     ))}
                 </ChatBubble>

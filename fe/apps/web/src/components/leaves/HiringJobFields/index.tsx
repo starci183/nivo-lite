@@ -55,7 +55,6 @@ export const HiringJobFields = (props: HiringJobFieldsProps) => {
                 name="title"
                 label={say("jobTitleLabel")}
                 placeholder={say("jobTitlePlaceholder")}
-                variant="secondary"
                 isRequired
                 value={values.title}
                 onValueChange={(title) => onText("title", title)}
@@ -64,7 +63,6 @@ export const HiringJobFields = (props: HiringJobFieldsProps) => {
                 id="job-position"
                 name="position"
                 label={say("jobPosition")}
-                variant="secondary"
                 value={values.position}
                 onValueChange={(position) => onText("position", position)}
             />
@@ -79,7 +77,6 @@ export const HiringJobFields = (props: HiringJobFieldsProps) => {
                 name="schedule"
                 label={say("jobSchedule")}
                 placeholder={say("jobSchedulePlaceholder")}
-                variant="secondary"
                 value={values.schedule}
                 onValueChange={(schedule) => onText("schedule", schedule)}
             />
@@ -96,7 +93,6 @@ const numberValueOf = (amount: number | null): { readonly value?: number } => (a
 const renderPayFields = ({ say, values, options, onText, onNumber }: PayFieldsProps) => (
     <>
         <NumberField
-            variant="secondary"
             label={say("jobPayMin")}
             minValue={0}
             step={500000}
@@ -105,7 +101,6 @@ const renderPayFields = ({ say, values, options, onText, onNumber }: PayFieldsPr
             onValueChange={(value) => onNumber("payMin", Number.isFinite(value) ? value : null)}
         />
         <NumberField
-            variant="secondary"
             label={say("jobPayMax")}
             minValue={0}
             step={500000}
@@ -114,7 +109,6 @@ const renderPayFields = ({ say, values, options, onText, onNumber }: PayFieldsPr
             onValueChange={(value) => onNumber("payMax", Number.isFinite(value) ? value : null)}
         />
         <Select
-            variant="secondary"
             label={say("jobPayUnit")}
             options={options}
             value={values.payUnit}
@@ -130,12 +124,10 @@ const renderPlacementFields = ({ say, values, onText, onNumber }: PlacementField
             id="job-location"
             name="location"
             label={say("jobLocation")}
-            variant="secondary"
             value={values.location}
             onValueChange={(location) => onText("location", location)}
         />
         <NumberField
-            variant="secondary"
             label={say("jobHeadcount")}
             minValue={1}
             maxValue={500}

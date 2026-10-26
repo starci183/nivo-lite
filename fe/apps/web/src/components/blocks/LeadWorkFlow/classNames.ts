@@ -8,7 +8,7 @@ export const SECTION_CLASS_NAME = "flex flex-col gap-3"
 export const LIST_CLASS_NAME = "flex flex-col gap-3"
 
 /** One entry. */
-export const ITEM_CLASS_NAME = "flex flex-col gap-1 border-b border-separator pb-3 last:border-b-0 last:pb-0"
+export const ITEM_CLASS_NAME = "flex flex-col gap-1"
 
 /** Title line of an entry: the words beside the time or the badge. */
 export const ITEM_HEAD_CLASS_NAME = "flex flex-wrap items-baseline justify-between gap-2"
