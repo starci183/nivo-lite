@@ -12,7 +12,7 @@ const exec = promisify(execFile)
 const APP_ROOT = resolve(__dirname, "..", "..", "..", "..")
 
 /** The script that does the schema work of the sandbox: the test sources hold no schema-changing SQL. */
-const SANDBOX_SCRIPT = resolve(APP_ROOT, "scripts", "queue-cutover-sandbox.mjs")
+const SANDBOX_SCRIPT = resolve(APP_ROOT, "scripts", "integration", "queue-cutover-sandbox.mjs")
 
 /** The migration that moves every pgmq job into the outbox (expand), and the one that drops the pgmq functions (contract). */
 export const EXPAND_MIGRATION = "20261104235900_queue-cutover.sql"

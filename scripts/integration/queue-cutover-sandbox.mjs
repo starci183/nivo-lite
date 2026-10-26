@@ -5,9 +5,9 @@
 // backend lint refuses runtime DDL and raw query text there), so the schema work of the proof is done here and the proof calls
 // this script. It never touches the database the integration suites run on: it clones a pristine base database into a sandbox.
 //
-//   node scripts/queue-cutover-sandbox.mjs create       clone the base, apply every migration before the cutover pair
-//   node scripts/queue-cutover-sandbox.mjs apply <file> apply one migration file of supabase/migrations to the sandbox
-//   node scripts/queue-cutover-sandbox.mjs drop         remove the sandbox
+//   node scripts/integration/queue-cutover-sandbox.mjs create       clone the base, apply every migration before the cutover pair
+//   node scripts/integration/queue-cutover-sandbox.mjs apply <file> apply one migration file of supabase/migrations to the sandbox
+//   node scripts/integration/queue-cutover-sandbox.mjs drop         remove the sandbox
 //
 // Connection: PRIMARY_DB_URL (a local database of the private Supabase stack; any other host is refused).
 // Prerequisite: a database named nivo_proof_base on the same server, initialised by Supabase (roles, auth and storage schemas,

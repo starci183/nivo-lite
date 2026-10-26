@@ -38,9 +38,11 @@
       "reads": ["supabase/types/"],
       "patterns": ["webhooks", "queue", "fenced-job"],
       "backing": ["redis"],
+      "queueOutbox": { "table": "public.job_outbox", "enqueue": "public.job_enqueue", "queueParameter": "p_queue" },
       "optionalSlots": ["repo.docs", "be.contract.graphql", "repo.i18n-dynamic-keys"]
     },
     "fe": {
+      "grammar": "starci",
       "apps": [
         {
           "name": "web",
