@@ -17,5 +17,5 @@ export const OfficeAvatar = (props: OfficeAvatarProps) => {
     if (avatar.kind === "agent") {
         return <AgentMark label={avatar.label} seed={avatar.seed} src={avatar.src} size={props.size} />
     }
-    return <PersonAvatar name={avatar.name} size={props.size} />
+    return <PersonAvatar name={avatar.name} src={avatar.src} size={props.size} />
 }

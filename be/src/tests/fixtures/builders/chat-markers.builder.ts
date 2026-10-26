@@ -50,7 +50,7 @@ export const persistChatMarkers = (manager: EntityManager, identity: ChatMarkers
     manager.transaction(async (tx) => {
         const users = [identity.ownerId, ...identity.readerIds, identity.outsiderId, identity.foreignOwnerId]
         await eachInOrder(users, async (id) => {
-            await tx.insert("auth.users", { id })
+            await tx.insert("auth.users", { id, raw_user_meta_data: {} })
         })
         await tx.insert("public.workspaces", {
             id: identity.workspaceId,

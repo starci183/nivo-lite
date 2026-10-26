@@ -14,4 +14,8 @@ export class ChatSeenMemberType {
     /** Stable input for the existing initials avatar provider. */
     @Field(() => String)
     avatarSeed!: string
+
+    /** The profile picture; null keeps the generated initials avatar. */
+    @Field(() => String, { nullable: true })
+    avatarUrl!: string | null
 }

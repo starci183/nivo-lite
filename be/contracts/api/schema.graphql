@@ -1823,6 +1823,7 @@ input ChatReplyStatusInput {
 
 type ChatSeenMemberType {
   avatarSeed: String!
+  avatarUrl: String
   id: ID!
   name: String!
 }
@@ -4612,6 +4613,7 @@ input MemberGrantsInput {
 }
 
 type MemberListingType {
+  avatarUrl: String
   displayName: String!
   email: String!
   lastSignInAt: String

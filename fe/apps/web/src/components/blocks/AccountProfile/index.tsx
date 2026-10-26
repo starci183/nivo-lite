@@ -22,7 +22,7 @@ export const AccountProfile = () => {
         avatar,
         data?.uploadedAvatarUrl !== null && data?.uploadedAvatarUrl !== undefined,
     )
-    const form = useProfileForm(data?.name ?? "")
+    const form = useProfileForm(member?.name ?? data?.name ?? "")
 
     const submit = form.handleSubmit(async (values) => {
         await saveProfile(values.name)

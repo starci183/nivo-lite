@@ -9,7 +9,11 @@ export interface ChatMarkerWire {
         readonly id: string
         readonly status: "sent" | "delivered" | "seen"
         readonly seenByCount: number
-        readonly seenBy: ReadonlyArray<{ readonly id: string; readonly name: string }>
+        readonly seenBy: ReadonlyArray<{
+            readonly id: string
+            readonly name: string
+            readonly avatarUrl: string | null
+        }>
     } | null
 }
 
@@ -37,7 +41,7 @@ export const receiptOf = (marker: ChatMarkerWire | undefined): { id: string; rec
         id: last.id,
         receipt: {
             isDelivered: last.status !== "sent",
-            seenBy: last.seenBy.map((reader) => ({ id: reader.id, name: reader.name })),
+            seenBy: last.seenBy.map((reader) => ({ id: reader.id, name: reader.name, avatarUrl: reader.avatarUrl })),
             seenCount: last.seenByCount,
         },
     }

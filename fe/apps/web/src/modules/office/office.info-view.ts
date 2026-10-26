@@ -61,7 +61,7 @@ const personRowOf = (
         name: person.name,
         detail: [roleLabelOf(person.role, words), handle === null ? null : `@${handle}`].filter(Boolean).join(" · "),
         seen: isMe ? null : seenOf(person, words, context),
-        avatar: { kind: "person", name: person.name },
+        avatar: { kind: "person", name: person.name, src: person.avatarUrl },
         isMe,
         presence: null,
         mention: handle === null || isMe ? null : handle,

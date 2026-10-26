@@ -21,3 +21,9 @@ export interface MemberRow {
     /** Constrained by a CHECK in the table. */
     status: "active" | "disabled"
 }
+
+/** A bounded directory member with the profile picture visible to the workspace. */
+export interface MemberListingRow extends MemberRow {
+    /** The uploaded picture, else the provider picture; null for generated initials. */
+    avatar_url: string | null
+}

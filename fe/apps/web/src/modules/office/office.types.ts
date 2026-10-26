@@ -9,7 +9,7 @@ export interface OfficeMessageReceipt {
     /** Another member's client fetched the line. */
     readonly isDelivered: boolean
     /** The members whose read marker is past the line, oldest read first. */
-    readonly seenBy: ReadonlyArray<{ readonly id: string; readonly name: string }>
+    readonly seenBy: ReadonlyArray<{ readonly id: string; readonly name: string; readonly avatarUrl: string | null }>
     /** Every other member who read the line, including those beyond the few `seenBy` names. */
     readonly seenCount: number
 }
@@ -180,6 +180,7 @@ export interface OfficeAgent {
 export interface OfficePerson {
     readonly userId: string
     readonly name: string
+    readonly avatarUrl: string | null
     readonly role: "owner" | "manager" | "staff"
     readonly staffId: string | null
     readonly lastSeen: string | null

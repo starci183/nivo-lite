@@ -29,9 +29,18 @@ export const ENSURE_MEMBER = sql`
 
 /** Everyone in a workspace, owners first. */
 export const LIST_MEMBERS = sql`
-    SELECT m.workspace_id, m.user_id, m.role, m.staff_id, m.display_name, m.status
-    FROM public.workspace_members m
-    WHERE m.workspace_id = $1
+    WITH bounded AS (
+        SELECT m.workspace_id, m.user_id, m.role, m.staff_id, m.display_name, m.status, m.created_at, m.id
+        FROM public.workspace_members m
+        WHERE m.workspace_id = $1
+        ORDER BY CASE m.role WHEN 'owner' THEN 0 WHEN 'manager' THEN 1 ELSE 2 END, m.created_at ASC, m.id ASC
+        LIMIT 500
+    ), avatars AS MATERIALIZED (
+        SELECT id, avatar_url FROM be_access.workspace_member_avatars($1, ARRAY(SELECT user_id FROM bounded))
+    )
+    SELECT m.workspace_id, m.user_id, m.role, m.staff_id, m.display_name, m.status, a.avatar_url
+    FROM bounded m
+    LEFT JOIN avatars a ON a.id = m.user_id
     ORDER BY CASE m.role WHEN 'owner' THEN 0 WHEN 'manager' THEN 1 ELSE 2 END, m.created_at ASC, m.id ASC
     LIMIT 500`
 

@@ -170,7 +170,7 @@ describe("WorkspaceMembersService / list", () => {
         const em = mockEntityManager({
             query: [
                 [FIND_MEMBER, [rowOf({ role: "owner" })]],
-                [LIST_MEMBERS, [rowOf({ role: "owner" })]],
+                [LIST_MEMBERS, [{ ...rowOf({ role: "owner" }), avatar_url: "https://cdn.example.test/person.png" }]],
             ],
         })
         const { service, auth } = await build(em)
@@ -184,6 +184,7 @@ describe("WorkspaceMembersService / list", () => {
                 staffId: null,
                 displayName: "An",
                 status: "active",
+                avatarUrl: "https://cdn.example.test/person.png",
                 email: "an@example.test",
                 lastSignInAt: "2026-10-01T00:00:00.000Z",
             },
@@ -196,12 +197,14 @@ describe("WorkspaceMembersService / list", () => {
         const em = mockEntityManager({
             query: [
                 [FIND_MEMBER, [rowOf()]],
-                [LIST_MEMBERS, [rowOf()]],
+                [LIST_MEMBERS, [{ ...rowOf(), avatar_url: "https://cdn.example.test/person.png" }]],
             ],
         })
         const { service, auth } = await build(em)
 
-        await expect(service.list("user-1", "ws-1")).resolves.toMatchObject([{ email: "", lastSignInAt: null }])
+        await expect(service.list("user-1", "ws-1")).resolves.toMatchObject([
+            { avatarUrl: "https://cdn.example.test/person.png", email: "", lastSignInAt: null },
+        ])
         expect(auth.accountOf).not.toHaveBeenCalled()
     })
 
@@ -209,13 +212,15 @@ describe("WorkspaceMembersService / list", () => {
         const em = mockEntityManager({
             query: [
                 [FIND_MEMBER, [rowOf({ role: "manager" })]],
-                [LIST_MEMBERS, [rowOf()]],
+                [LIST_MEMBERS, [{ ...rowOf(), avatar_url: null }]],
             ],
         })
         const { service, auth } = await build(em)
         auth.accountOf.mockResolvedValue(refused("ACCOUNT_NOT_FOUND"))
 
-        await expect(service.list("user-1", "ws-1")).resolves.toMatchObject([{ email: "", lastSignInAt: null }])
+        await expect(service.list("user-1", "ws-1")).resolves.toMatchObject([
+            { avatarUrl: null, email: "", lastSignInAt: null },
+        ])
     })
 
     it("refuses a caller who is not in the workspace", async () => {

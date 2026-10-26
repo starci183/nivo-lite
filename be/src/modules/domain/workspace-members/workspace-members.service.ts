@@ -6,7 +6,7 @@ import type { StaffWrite } from "@modules/domain/staff"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused, unwrapOutcome } from "@modules/platform/primitives"
 import { WorkspaceMembersError, WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
-import type { MemberIdRow, MemberRow } from "./persistence/workspace-members.rows"
+import type { MemberIdRow, MemberListingRow, MemberRow } from "./persistence/workspace-members.rows"
 import {
     DELETE_MEMBER,
     ENSURE_MEMBER,
@@ -101,13 +101,18 @@ export class WorkspaceMembersService {
     /** Everyone in the caller's workspace, owners first; emails and sign-ins are blank for staff callers. */
     async list(userId: string, workspaceId: string): Promise<ReadonlyArray<MemberListing>> {
         const viewer = await this.require(userId, workspaceId)
-        const rows = await this.entityManager.query<Array<MemberRow>>(LIST_MEMBERS, [workspaceId])
+        const rows = await this.entityManager.query<Array<MemberListingRow>>(LIST_MEMBERS, [workspaceId])
         const showContact = isManagerRole(viewer.role)
         return Promise.all(
             rows.map(async (row) => {
                 const account = showContact ? await this.accounts.accountOf(row.user_id) : undefined
                 const known = account?.kind === "ok" ? account.value : undefined
-                return { ...toMember(row), email: known?.email ?? "", lastSignInAt: known?.lastSignInAt ?? null }
+                return {
+                    ...toMember(row),
+                    avatarUrl: row.avatar_url,
+                    email: known?.email ?? "",
+                    lastSignInAt: known?.lastSignInAt ?? null,
+                }
             }),
         )
     }

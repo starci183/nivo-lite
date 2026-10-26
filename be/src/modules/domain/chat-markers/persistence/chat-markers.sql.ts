@@ -72,6 +72,10 @@ export const CHAT_MARKER_STATE = sql`
               SELECT 1 FROM public.chat_markers s
               WHERE s.workspace_id = $1::uuid AND s.user_id = wm.user_id AND s.conversation_id = $4::uuid
                 AND (s.read_at, s.read_message_id) >= (own.created_at, own.id)) END
+    ), bounded_readers AS (
+        SELECT id, name FROM readers ORDER BY id LIMIT 3
+    ), reader_avatars AS MATERIALIZED (
+        SELECT id, avatar_url FROM be_access.workspace_member_avatars($1, ARRAY(SELECT id FROM bounded_readers))
     ), delivered AS (
         SELECT 1 FROM public.chat_markers s
         JOIN public.workspace_members wm ON wm.workspace_id = s.workspace_id AND wm.user_id = s.user_id AND wm.status = 'active'
@@ -87,8 +91,9 @@ export const CHAT_MARKER_STATE = sql`
            (SELECT json_build_object('id', own.id,
                     'status', CASE WHEN EXISTS (SELECT 1 FROM readers) THEN 'seen'
                                    WHEN EXISTS (SELECT 1 FROM delivered) THEN 'delivered' ELSE 'sent' END,
-                    'seenBy', COALESCE((SELECT json_agg(json_build_object('id', r.id, 'name', r.name, 'avatarSeed', r.id) ORDER BY r.id)
-                                       FROM (SELECT id, name FROM readers ORDER BY id LIMIT 3) r), '[]'::json),
+                    'seenBy', COALESCE((SELECT json_agg(json_build_object('id', r.id, 'name', r.name,
+                                             'avatarSeed', r.id, 'avatarUrl', a.avatar_url) ORDER BY r.id)
+                                       FROM bounded_readers r LEFT JOIN reader_avatars a ON a.id = r.id), '[]'::json),
                     'seenByCount', (SELECT count(*)::integer FROM readers))
             FROM own_message own LIMIT 1) AS last_own_message
     LIMIT 1`
