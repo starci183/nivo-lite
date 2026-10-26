@@ -86,11 +86,11 @@ export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
     { key: "credits", label: "navCredits", route: "/billing", icon: "wallet", group: "setup", managerOnly: true },
 ]
 
-/** The destination a path belongs to; an agent chat belongs to Agents, an unknown path to the overview. */
-export const activeDestinationKey = (pathname: string): string => {
+/** The destination a path belongs to; an agent chat belongs to Agents, a path outside the rail to none. */
+export const activeDestinationKey = (pathname: string): string | null => {
     if (pathname.startsWith("/modules/") && pathname.includes("/chat")) return "modules"
     const found = DESTINATIONS.find((d) => [d.route, ...(d.also ?? [])].some((route) => pathname.startsWith(route)))
-    return found?.key ?? "overview"
+    return found?.key ?? null
 }
 
 /** The menu section that switches workspace: the person's workspaces as a single choice, the current one selected (the grammar draws the marker). */

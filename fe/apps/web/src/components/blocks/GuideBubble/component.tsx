@@ -15,6 +15,7 @@ import {
     ASK_INPUT_CLASS,
     ASK_ROW_CLASS,
     BUBBLE_CLASS,
+    BUBBLE_RAISED_CLASS,
     FOOT_CLASS,
     LINKS_CLASS,
     MESSAGES_CLASS,
@@ -43,6 +44,8 @@ interface GuideBubbleMessage {
 interface GuideBubbleBaseProps {
     readonly props: {
         readonly isOpen: boolean
+        /** The page pins a composer to the bottom edge: the button floats above it instead of covering it. */
+        readonly overComposer: boolean
         readonly openLabel: string
         readonly closeLabel: string
         readonly title: string
@@ -72,7 +75,7 @@ interface GuideBubbleBaseProps {
 /** The guide: a floating button that opens a drawer chat which answers where to do things and opens the page it names. */
 export const GuideBubbleBase = (props: GuideBubbleBaseProps) => (
     <>
-        <div className={BUBBLE_CLASS}>
+        <div className={props.props.overComposer ? BUBBLE_RAISED_CLASS : BUBBLE_CLASS}>
             <IconButton
                 source={nivoIconSource(props.props.isOpen ? "close" : "support", "leading")}
                 label={props.props.isOpen ? props.props.closeLabel : props.props.openLabel}
