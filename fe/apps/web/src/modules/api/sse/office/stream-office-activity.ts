@@ -1,7 +1,8 @@
 import { eventStreamUrl } from "@/modules/config"
 import { LocalStorage, StorageId } from "@/modules/storage"
-import { followEventStream } from "../clients/read-event-stream"
-import type { StreamReporter } from "../clients/read-event-stream"
+import type { EventStreamHandle } from "@starci/event-stream"
+import { eventStream } from "../clients/event-stream"
+import type { StreamReporter } from "../clients/event-stream"
 
 /** What changed in the Office: a new line, a receipt (delivered or seen), or an unread count. */
 export type OfficeActivityKind = "message" | "receipt" | "unread"
@@ -49,18 +50,28 @@ const parsed = (data: string): unknown => {
     }
 }
 
+/** The notification of one frame, or null when its data is not one (the frame is then ignored). */
+const pushOf = (data: string): OfficeActivityPush | null => {
+    const push = parsed(data)
+    return isPush(push) ? push : null
+}
+
 /** Follows the office-activity event stream of the signed-in reader (`GET /realtime/office-activity`) in the active workspace until the signal aborts. */
-export const streamOfficeActivity = ({ signal, onOpen, onPush, report }: StreamOfficeActivityParams): Promise<void> => {
+export const streamOfficeActivity = ({
+    signal,
+    onOpen,
+    onPush,
+    report,
+}: StreamOfficeActivityParams): EventStreamHandle => {
     const workspaceId = LocalStorage.get<string>(StorageId.ActiveWorkspaceId)
-    return followEventStream({
-        url: eventStreamUrl("/realtime/office-activity"),
-        headers: workspaceId === undefined ? {} : { "X-Workspace-Id": workspaceId },
+    return eventStream.follow<OfficeActivityPush | null>(eventStreamUrl("/realtime/office-activity"), {
+        headers: workspaceId === undefined ? {} : { "x-workspace-id": workspaceId },
         signal,
-        onOpen,
-        onEvent: (event) => {
-            const push = parsed(event.data)
-            if (isPush(push)) onPush(push)
+        parse: pushOf,
+        onOpen: () => onOpen(),
+        onFrame: ({ data }) => {
+            if (data !== null) onPush(data)
         },
-        ...(report === undefined ? {} : { report }),
+        onError: (error) => report?.(`[event stream] ${error.message}`),
     })
 }

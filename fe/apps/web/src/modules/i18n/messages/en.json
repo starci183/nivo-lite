@@ -4114,6 +4114,8 @@
     "mentionButton": "Mention",
     "sendFailed": "Message not sent",
     "quickLabel": "Quick questions",
+    "quickPrevious": "Previous questions",
+    "quickNext": "Next questions",
     "promptAttention": "@sales Which customers need attention today?",
     "promptSummary": "@sales Summarise Customer A",
     "promptInvoices": "@accounting Which invoices are waiting?",

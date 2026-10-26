@@ -24,6 +24,7 @@ interface LandingNavActionsBaseProps {
 export const LandingNavActionsBase = (props: LandingNavActionsBaseProps) => (
     <>
         <SegmentedControl
+            size="control"
             label={props.props.language.label}
             isLabelHidden
             value={props.props.language.locale}

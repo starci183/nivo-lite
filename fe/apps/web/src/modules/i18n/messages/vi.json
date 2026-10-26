@@ -4119,6 +4119,8 @@
     "mentionButton": "Nhắc tên",
     "sendFailed": "Chưa gửi được tin nhắn",
     "quickLabel": "Câu hỏi nhanh",
+    "quickPrevious": "Câu hỏi trước",
+    "quickNext": "Câu hỏi tiếp",
     "promptAttention": "@sales Hôm nay khách nào cần xử lý?",
     "promptSummary": "@sales Tóm tắt Customer A",
     "promptInvoices": "@accounting Hóa đơn nào đang chờ?",

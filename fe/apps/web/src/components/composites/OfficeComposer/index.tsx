@@ -44,6 +44,8 @@ const QuickPrompts = (props: QuickPromptsProps) => (
         <HorizontalScrollRegion
             overflow="needed"
             aria-label={props.view.text("quickLabel")}
+            scrollPreviousLabel={props.view.text("quickPrevious")}
+            scrollNextLabel={props.view.text("quickNext")}
             className={CHIPS_CLASS_NAME}
         >
             {props.prompts.map((prompt) => (

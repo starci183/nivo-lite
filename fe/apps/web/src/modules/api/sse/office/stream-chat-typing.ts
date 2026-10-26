@@ -1,7 +1,8 @@
 import { eventStreamUrl } from "@/modules/config"
 import { LocalStorage, StorageId } from "@/modules/storage"
-import { followEventStream } from "../clients/read-event-stream"
-import type { StreamReporter } from "../clients/read-event-stream"
+import type { EventStreamHandle } from "@starci/event-stream"
+import { eventStream } from "../clients/event-stream"
+import type { StreamReporter } from "../clients/event-stream"
 
 /** One typing change the chat-typing stream pushes (be/src/features/realtime/chat-typing): who, whether they started or stopped, and when. */
 export interface ChatTypingPush {
@@ -53,27 +54,30 @@ const parsed = (data: string): unknown => {
     }
 }
 
-/** The stream path of one chat, with its target as the query. */
-const pathOf = ({ room, conversationId }: ChatTypingTarget): string => {
-    const query = new URLSearchParams()
-    if (room !== undefined) query.set("room", room)
-    if (conversationId !== undefined) query.set("conversationId", conversationId)
-    const text = query.toString()
-    return text === "" ? "/realtime/chat-typing" : `/realtime/chat-typing?${text}`
+/** The typing change of one frame, or null when its data is not one (the frame is then ignored). */
+const pushOf = (data: string): ChatTypingPush | null => {
+    const push = parsed(data)
+    return isPush(push) ? push : null
 }
 
 /** Follows the chat-typing event stream of one chat (`GET /realtime/chat-typing`) with the active workspace until the signal aborts. */
-export const streamChatTyping = ({ target, signal, onOpen, onPush, report }: StreamChatTypingParams): Promise<void> => {
+export const streamChatTyping = ({
+    target,
+    signal,
+    onOpen,
+    onPush,
+    report,
+}: StreamChatTypingParams): EventStreamHandle => {
     const workspaceId = LocalStorage.get<string>(StorageId.ActiveWorkspaceId)
-    return followEventStream({
-        url: eventStreamUrl(pathOf(target)),
-        headers: workspaceId === undefined ? {} : { "X-Workspace-Id": workspaceId },
+    return eventStream.follow<ChatTypingPush | null>(eventStreamUrl("/realtime/chat-typing"), {
+        query: { room: target.room, conversationId: target.conversationId },
+        headers: workspaceId === undefined ? {} : { "x-workspace-id": workspaceId },
         signal,
-        onOpen,
-        onEvent: (event) => {
-            const push = parsed(event.data)
-            if (isPush(push)) onPush(push)
+        parse: pushOf,
+        onOpen: () => onOpen(),
+        onFrame: ({ data }) => {
+            if (data !== null) onPush(data)
         },
-        ...(report === undefined ? {} : { report }),
+        onError: (error) => report?.(`[event stream] ${error.message}`),
     })
 }
