@@ -1,8 +1,11 @@
 import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
+import { AuthorityActionsService, ruleRefusalOf } from "@modules/domain/authority-actions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { AuthorityRuleRecord } from "@modules/domain/authority-rules"
 import { BrainFactsService, keyOf, sameValue } from "@modules/domain/brain-facts"
 import type { Evidence, Scope } from "@modules/domain/brain-facts"
+import { DecisionsError, DecisionsErrorCode } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
@@ -21,6 +24,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { Locale } from "@modules/platform/i18n"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 import type { CardDecision, CurrentFact, CurrentRule, SetupCardView } from "./module-setup.contracts"
@@ -70,6 +74,7 @@ interface ConfirmFactParams {
 export class SetupCardsService {
     constructor(
         @InjectClock() private readonly clock: Clock,
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly writes: SetupWritesService,
         private readonly sessions: SetupSessionsService,
         private readonly messages: SetupMessagesService,
@@ -78,6 +83,7 @@ export class SetupCardsService {
         private readonly modules: ModulesService,
         private readonly facts: BrainFactsService,
         private readonly rules: AuthorityRulesService,
+        private readonly actions: AuthorityActionsService,
         private readonly gaps: KnowledgeGapsService,
         private readonly events: EventsService,
         private readonly sync: AgentSyncService,
@@ -214,14 +220,22 @@ export class SetupCardsService {
             (await this.modules.catalog()).modules,
         )
         const definition = module.authorityActions.find((candidate) => candidate.action === base.action)
-        const saved = await this.rules.save(workspaceId, {
+        const ruleChange = {
             action: base.action,
             department: module.key,
             mode,
             limit_vnd: definition?.amountLimit === true ? limitVnd : null,
             required_fields: have.requiredFields,
             note: null,
-        })
+        }
+        // The same catalogue check as the Authority page's save: a registered action of this module, and no "auto" past its cap.
+        const record = (await this.actions.list(this.entityManager)).find((entry) => entry.action === base.action)
+        const refusal = ruleRefusalOf(record, ruleChange)
+        if (refusal !== null) {
+            const code = refusal === "unknown_action" ? DecisionsErrorCode.UnknownAction : DecisionsErrorCode.ModeCapped
+            throw new DecisionsError({ code, params: { action: base.action } })
+        }
+        const saved = await this.rules.save(workspaceId, ruleChange)
         const limit = saved.limit_vnd === null ? "" : ` < ${saved.limit_vnd}`
         await this.events.record({
             workspaceId,

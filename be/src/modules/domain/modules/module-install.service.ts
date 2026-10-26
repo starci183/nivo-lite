@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
 import { AgentIdentityService, AgentsService } from "@modules/domain/agents"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { EventsService } from "@modules/domain/events"
@@ -12,6 +13,7 @@ import type {
     RequirementFacts,
 } from "@modules/domain/module-installations"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
@@ -47,6 +49,7 @@ const expectWritten = (written: InstallationWrite): void => {
  */
 export class ModuleInstallService {
     constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly installations: InstallationRecordsService,
         private readonly members: WorkspaceMembersService,
         private readonly catalog: ModulesService,
@@ -159,8 +162,13 @@ export class ModuleInstallService {
             throw new ModulesError({ code: ModulesErrorCode.NeedsVersion })
         }
         const waiting = live && (await this.readiness.needsOf(workspaceId, current.moduleKey)).length > 0
-        expectWritten(await this.installations.setLive(workspaceId, installationId, live, waiting))
-        if (current.agentId !== null) await this.agents.setStatus(principalId, workspaceId, current.agentId, live)
+        // One transaction: the installation and its agent are switched together or not at all.
+        await this.entityManager.transaction(async (tx) => {
+            expectWritten(await this.installations.setLive(workspaceId, installationId, live, waiting, tx))
+            if (current.agentId !== null) {
+                await this.agents.setStatus(principalId, workspaceId, current.agentId, live, tx)
+            }
+        })
         return this.viewOf(workspaceId, installationId)
     }
 

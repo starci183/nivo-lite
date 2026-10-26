@@ -164,8 +164,13 @@ export class InstallationRecordsService {
         installationId: string,
         live: boolean,
         waitingForConnection: boolean,
+        manager: EntityManager = this.entityManager,
     ): Promise<InstallationWrite> {
-        return this.write(SET_LIVE, [installationId, workspaceId, live, liveStatusOf(live, waitingForConnection)])
+        return this.write(
+            SET_LIVE,
+            [installationId, workspaceId, live, liveStatusOf(live, waitingForConnection)],
+            manager,
+        )
     }
 
     /** Replaces the settings of an installation. */
@@ -226,8 +231,12 @@ export class InstallationRecordsService {
         return this.entityManager.query<Array<OpenclawInstallation>>(LIST_ON_OPENCLAW, [workspaceId, limit])
     }
 
-    private async write(statement: ReturnType<typeof sql>, parameters: Array<unknown>): Promise<InstallationWrite> {
-        const rows = await this.entityManager.query<Array<IdRow>>(statement, parameters).catch((cause: unknown) => {
+    private async write(
+        statement: ReturnType<typeof sql>,
+        parameters: Array<unknown>,
+        manager: EntityManager = this.entityManager,
+    ): Promise<InstallationWrite> {
+        const rows = await manager.query<Array<IdRow>>(statement, parameters).catch((cause: unknown) => {
             if (isUniqueViolation(cause)) return null
             throw cause
         })

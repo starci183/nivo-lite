@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { builder, mock } from "@starci/jest-preset"
+import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { AgentIdentityService, AgentsService } from "@modules/domain/agents"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { EventsService } from "@modules/domain/events"
@@ -7,6 +7,7 @@ import { InstallationRecordsService } from "@modules/domain/module-installations
 import type { AgentSyncStatus } from "@modules/domain/module-installations"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ACCOUNTING_MODULE } from "./accounting.contracts"
 import { CHATBOT_MODULE } from "./chatbot.contracts"
 import { ModulesErrorCode } from "./errors/modules.error"
@@ -32,6 +33,7 @@ const requestOf = builder<InstallRequest>({
 })
 
 const build = async () => {
+    const tx = fakeTransaction(mockEntityManager())
     const installations = mock<InstallationRecordsService>()
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(MEMBER)
@@ -48,6 +50,7 @@ const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             ModuleInstallService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: InstallationRecordsService, useValue: installations },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: ModulesService, useValue: catalog },
@@ -60,7 +63,7 @@ const build = async () => {
         ],
     }).compile()
     const service = moduleRef.get(ModuleInstallService)
-    return { service, installations, members, catalog, agents, identity, rules, events, sync, readiness }
+    return { tx, service, installations, members, catalog, agents, identity, rules, events, sync, readiness }
 }
 
 describe("ModuleInstallService > install", () => {
@@ -241,8 +244,8 @@ describe("ModuleInstallService > setLive", () => {
             ...recordOf({ liveEnabled: true }),
             ...VIEWED,
         })
-        expect(agents.setStatus).toHaveBeenCalledWith("u1", "ws-1", "agent-1", true)
-        expect(installations.setLive).toHaveBeenCalledWith("ws-1", "inst-1", true, false)
+        expect(agents.setStatus).toHaveBeenCalledWith("u1", "ws-1", "agent-1", true, expect.anything())
+        expect(installations.setLive).toHaveBeenCalledWith("ws-1", "inst-1", true, false, expect.anything())
     })
 
     it("records needs_connection, not live, when a required connection is missing", async () => {
@@ -251,7 +254,7 @@ describe("ModuleInstallService > setLive", () => {
         readiness.needsOf.mockResolvedValue([{ role: "invoice.list", providers: ["misa"] }])
         installations.setLive.mockResolvedValue("done")
         await service.setLive("u1", "ws-1", "inst-1", true)
-        expect(installations.setLive).toHaveBeenCalledWith("ws-1", "inst-1", true, true)
+        expect(installations.setLive).toHaveBeenCalledWith("ws-1", "inst-1", true, true, expect.anything())
     })
 })
 
@@ -469,7 +472,7 @@ describe("ModuleInstallService lifecycle and reads", () => {
             ...paused,
             ...VIEWED,
         })
-        expect(installations.setLive).toHaveBeenCalledWith("ws-1", "inst-1", false, false)
+        expect(installations.setLive).toHaveBeenCalledWith("ws-1", "inst-1", false, false, expect.anything())
         expect(agents.setStatus).not.toHaveBeenCalled()
         expect(installations.find).toHaveBeenCalledTimes(2)
     })
