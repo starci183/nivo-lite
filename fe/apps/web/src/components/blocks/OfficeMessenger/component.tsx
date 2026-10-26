@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import {
     Button,
     Divider,
@@ -26,6 +27,7 @@ import type {
 } from "@/modules/types"
 import {
     BODY_CLASS_NAME,
+    DIVIDER_CLASS_NAME,
     HEAD_ACTIONS_CLASS_NAME,
     HEAD_AVATAR_CLASS_NAME,
     HEAD_CLASS_NAME,
@@ -92,7 +94,6 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
     const view = props.props
     const on = props.on
     const { text } = view
-    const isTasks = view.centre === "tasks"
     const infoPanel = <MessengerInfoPanel {...props} />
 
     return (
@@ -115,6 +116,9 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
                                 }}
                             />
                         </Region>
+                        <div className={DIVIDER_CLASS_NAME}>
+                            <Divider orientation="vertical" semantics="presentation" />
+                        </div>
                         <Region
                             label={text("messengerLabel")}
                             className={
@@ -123,33 +127,10 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
                         >
                             <OfficeMessengerHeader {...props} />
                             <Divider semantics="presentation" />
-                            {isTasks ? (
-                                <div className={TASKS_CLASS_NAME}>
-                                    <OfficeTasks props={{ tasks: view.tasks, text }} on={{ openLeads: on.openLeads }} />
-                                </div>
-                            ) : (
-                                <>
-                                    <OfficeThread
-                                        props={view.thread}
-                                        on={{
-                                            decideApproval: on.decideApproval,
-                                            decideWork: on.decideWork,
-                                            decideCard: on.decideCard,
-                                            sendCommand: on.sendCommand,
-                                            cancelCommand: on.cancelCommand,
-                                            reply: on.reply,
-                                            loadEarlier: on.loadEarlier,
-                                            retry: on.retry,
-                                        }}
-                                    />
-                                    <OfficeComposer props={view.composer} on={{ change: on.change, send: on.send }} />
-                                </>
-                            )}
+                            <MessengerCentre {...props} />
                         </Region>
                         {view.isInfoDocked && view.isInfoOpen ? (
-                            <Region label={text("infoTitle")} className={INFO_COLUMN_CLASS_NAME}>
-                                {infoPanel}
-                            </Region>
+                            <InfoColumn label={text("infoTitle")}>{infoPanel}</InfoColumn>
                         ) : null}
                     </div>
                 </SurfaceCard>
@@ -168,6 +149,55 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
         </>
     )
 }
+
+/** The centre column body: the tasks view, or the thread with its composer. */
+const MessengerCentre = (props: OfficeMessengerBaseProps) => {
+    const view = props.props
+    const on = props.on
+    const { text } = view
+    const isTasks = view.centre === "tasks"
+    return (
+        <>
+            {isTasks ? (
+                <div className={TASKS_CLASS_NAME}>
+                    <OfficeTasks props={{ tasks: view.tasks, text }} on={{ openLeads: on.openLeads }} />
+                </div>
+            ) : (
+                <>
+                    <OfficeThread
+                        props={view.thread}
+                        on={{
+                            decideApproval: on.decideApproval,
+                            decideWork: on.decideWork,
+                            decideCard: on.decideCard,
+                            sendCommand: on.sendCommand,
+                            cancelCommand: on.cancelCommand,
+                            reply: on.reply,
+                            loadEarlier: on.loadEarlier,
+                            retry: on.retry,
+                        }}
+                    />
+                    <OfficeComposer props={view.composer} on={{ change: on.change, send: on.send }} />
+                </>
+            )}
+        </>
+    )
+}
+
+/** What the docked info column draws. */
+type InfoColumnProps = { readonly label: string; readonly children: ReactNode }
+
+/** The docked info column with the hairline that divides it from the thread. */
+const InfoColumn = (props: InfoColumnProps) => (
+    <>
+        <div className={DIVIDER_CLASS_NAME}>
+            <Divider orientation="vertical" semantics="presentation" />
+        </div>
+        <Region label={props.label} className={INFO_COLUMN_CLASS_NAME}>
+            {props.children}
+        </Region>
+    </>
+)
 
 /** Renders the OfficeMessengerHeader section. */
 const OfficeMessengerHeader = (props: OfficeMessengerBaseProps) => {

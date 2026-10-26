@@ -99,6 +99,7 @@ export const ChatbotConversationList = (props: ChatbotConversationListProps) => 
                 <ListBox
                     label={props.listLabel}
                     selectionMode="single"
+                    selectionIndicator="none"
                     selectedIds={props.selectedId === null ? [] : [props.selectedId]}
                     onSelectionChange={(ids) => {
                         const id = ids[0] ?? props.selectedId

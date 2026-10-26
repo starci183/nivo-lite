@@ -4210,7 +4210,7 @@
     "tasksOpen": "See team tasks",
     "tasksBack": "Back to chat",
     "mentionLabel": "Call an agent",
-    "mentionButton": "Call an agent with @",
+    "mentionButton": "Mention",
     "sendFailed": "Message not sent",
     "quickLabel": "Quick questions",
     "promptAttention": "@sales Which customers need attention today?",

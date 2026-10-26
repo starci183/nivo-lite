@@ -1,4 +1,4 @@
-import { Badge, Button, IconButton, ItemActions, Text, TextAction, Tooltip } from "@starci/grammar/common"
+import { Badge, IconButton, ItemActions, Text, TextAction, Tooltip } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeMemberRowView } from "@/modules/types"
@@ -81,9 +81,14 @@ export const OfficeMemberRow = (props: OfficeMemberRowProps) => (
                             </Tooltip>
                         )}
                         {props.member.chatHref === null ? null : (
-                            <Button intent="neutral" size="sm" href={props.member.chatHref}>
-                                {props.chatLabel}
-                            </Button>
+                            <Tooltip content={props.chatLabel}>
+                                <IconButton
+                                    intent="neutral"
+                                    source={nivoIconSource("chat", "leading")}
+                                    label={props.chatLabel}
+                                    href={props.member.chatHref}
+                                />
+                            </Tooltip>
                         )}
                     </div>
                 </ItemActions>

@@ -66,9 +66,14 @@ const MessageActions = ({ message, text, isCopied, onCopy, onReply }: MessageAct
             </Tooltip>
         )}
         {message.leadHref === null ? null : (
-            <Button intent="neutral" size="sm" href={message.leadHref}>
-                {message.leadLabel}
-            </Button>
+            <Tooltip content={message.leadLabel}>
+                <IconButton
+                    intent="neutral"
+                    source={nivoIconSource("openLead", "leading")}
+                    label={message.leadLabel}
+                    href={message.leadHref}
+                />
+            </Tooltip>
         )}
     </>
 )
