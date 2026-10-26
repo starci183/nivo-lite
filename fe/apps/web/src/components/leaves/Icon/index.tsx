@@ -106,6 +106,7 @@ const ICON_SOURCES = {
     copied: cuts(Outline.CheckIcon, Outline.CheckIcon),
     reply: cuts(Outline.ArrowUturnLeftIcon, Solid.ArrowUturnLeftIcon),
     mention: cuts(Outline.AtSymbolIcon, Solid.AtSymbolIcon),
+    openLead: cuts(Outline.ArrowTopRightOnSquareIcon, Solid.ArrowTopRightOnSquareIcon),
     chat: cuts(Outline.ChatBubbleLeftRightIcon, Solid.ChatBubbleLeftRightIcon),
     menu: cuts(Outline.Bars3Icon, Solid.Bars3Icon),
     expand: cuts(Outline.ChevronDownIcon, Solid.ChevronDownIcon),

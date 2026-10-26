@@ -39,3 +39,6 @@ export const WIDE_ONLY_CLASS_NAME = "hidden sm:inline"
 
 /** The tasks view scrolls in the centre column. */
 export const TASKS_CLASS_NAME = "min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
+
+/** The vertical hairline between two columns, from md up; on a phone only one column shows. */
+export const DIVIDER_CLASS_NAME = "hidden shrink-0 md:flex"
