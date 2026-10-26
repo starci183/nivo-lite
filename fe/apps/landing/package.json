@@ -15,7 +15,7 @@
     "@heroui/styles": "3.2.6",
     "@nivo-lite/i18n": "*",
     "@nivo-lite/offer": "*",
-    "@starci/grammar": "0.12.6",
+    "@starci/grammar": "0.12.8",
     "@xyflow/react": "12.11.6",
     "next": "16.4.2",
     "next-intl": "4.13.6",
