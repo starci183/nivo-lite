@@ -54,7 +54,6 @@ export const BookingCustomerFields = (props: BookingCustomerFieldsProps) => {
                 id="booking-place-name"
                 name="name"
                 label={labels.name}
-                variant="secondary"
                 isRequired
                 value={fields.name}
                 onValueChange={(name) => props.onChange({ name })}
@@ -64,13 +63,11 @@ export const BookingCustomerFields = (props: BookingCustomerFieldsProps) => {
                 name="phone"
                 kind="tel"
                 label={labels.phone}
-                variant="secondary"
                 value={fields.phone}
                 onValueChange={(phone) => props.onChange({ phone })}
             />
             <Select
                 label={labels.service}
-                variant="secondary"
                 options={props.serviceOptions}
                 value={fields.serviceId}
                 onValueChange={(serviceId) => props.onChange({ serviceId: serviceId ?? "" })}
