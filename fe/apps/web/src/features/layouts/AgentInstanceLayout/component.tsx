@@ -5,7 +5,7 @@ import { AgentInstanceHeader } from "@/components/blocks/AgentInstanceHeader"
 import { AgentInstanceRail } from "@/components/blocks/AgentInstanceRail"
 import { AgentTabs } from "@/components/blocks/AgentTabs"
 import type { ModuleKey } from "@/modules/catalog"
-import { BODY, FRAME, MAIN, RAIL_COLUMN, SEPARATOR, STACK } from "./classNames"
+import { BODY, FRAME, MAIN, RAIL_COLUMN, SEPARATOR, SEPARATOR_VERTICAL, STACK } from "./classNames"
 
 /** What the layout supplies: the type and the instance of the url. */
 export interface AgentInstanceLayoutBaseProps {
@@ -27,6 +27,9 @@ export const AgentInstanceLayoutBase = (props: AgentInstanceLayoutBaseProps) => 
                         </div>
                         <div className={SEPARATOR}>
                             <Divider semantics="presentation" />
+                        </div>
+                        <div className={SEPARATOR_VERTICAL}>
+                            <Divider orientation="vertical" semantics="presentation" />
                         </div>
                         <div className={MAIN}>
                             <AgentInstanceHeader

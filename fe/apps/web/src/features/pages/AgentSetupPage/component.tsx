@@ -2,7 +2,7 @@ import { Divider } from "@starci/grammar/common"
 import { AgentSetupChat } from "@/components/blocks/AgentSetupChat"
 import { AgentSetupSide } from "@/components/blocks/AgentSetupSide"
 import type { ModuleKey } from "@/modules/catalog"
-import { CHAT_COLUMN, SEPARATOR_HORIZONTAL, SIDE_COLUMN, SPLIT } from "./classNames"
+import { CHAT_COLUMN, SEPARATOR_HORIZONTAL, SEPARATOR_VERTICAL, SIDE_COLUMN, SPLIT } from "./classNames"
 
 /** The Setup tab of an agent: the type and the instance of the url. */
 export interface AgentSetupPageBaseProps {
@@ -20,6 +20,9 @@ export const AgentSetupPageBase = (props: AgentSetupPageBaseProps) => (
         </div>
         <div className={SEPARATOR_HORIZONTAL}>
             <Divider semantics="presentation" />
+        </div>
+        <div className={SEPARATOR_VERTICAL}>
+            <Divider orientation="vertical" semantics="presentation" />
         </div>
         <div className={SIDE_COLUMN}>
             <AgentSetupSide module={props.props.module} installationId={props.props.installationId} />

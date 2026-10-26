@@ -12,6 +12,9 @@ export const RAIL_COLUMN = cn("flex", "min-h-0", "min-w-0", "flex-col", "max-lg:
 /** The line between the rail and the main column: horizontal on narrow widths, vertical from lg. */
 export const SEPARATOR = cn("max-lg:block", "lg:hidden")
 
+/** The vertical hairline between the rail and the main column: hidden on narrow widths, a column from lg. */
+export const SEPARATOR_VERTICAL = cn("hidden", "shrink-0", "lg:flex")
+
 /** The main column: header, tabs and the routed tab. */
 export const MAIN = cn("flex", "min-h-0", "min-w-0", "flex-1", "flex-col")
 

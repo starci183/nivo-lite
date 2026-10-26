@@ -41,6 +41,7 @@ export const AgentInstanceRailBase = (props: AgentInstanceRailBaseProps) => (
             <ListBox
                 label={props.props.title}
                 selectionMode="single"
+                selectionIndicator="none"
                 isLoading={props.props.isLoading}
                 loadingRows={3}
                 selectedIds={props.props.items.filter((item) => item.isCurrent).map((item) => item.id)}
