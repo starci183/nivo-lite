@@ -5215,6 +5215,12 @@ type OfficeAckType {
   ok: Boolean!
 }
 
+type OfficeAgentConversationType {
+  id: ID!
+  last: OfficeConversationLastType
+  unread: Int!
+}
+
 type OfficeApprovalType {
   agentName: String
   agent_id: ID
@@ -5258,6 +5264,13 @@ type OfficeConfirmResultType {
   workItemId: ID!
 }
 
+type OfficeConversationLastType {
+  at: String!
+  author: String
+  authorId: ID
+  body: String!
+}
+
 input OfficeConversationReadInput {
   id: ID! @inputBounds(maxLength: 40)
   kind: String!
@@ -5269,7 +5282,7 @@ type OfficeConversationUnreadEntryType {
 }
 
 type OfficeConversationUnreadType {
-  agents: [OfficeConversationUnreadEntryType!]!
+  agents: [OfficeAgentConversationType!]!
   leads: [OfficeConversationUnreadEntryType!]!
 }
 

@@ -34,7 +34,7 @@ export interface PanelRoom {
     readonly channels: ReadonlyArray<OfficeChannelWire>
     /** The agents seated in the room (every agent in the Office room). */
     readonly agents: ReadonlyArray<OfficeAgent>
-    /** The caller's unread counts of the direct conversations. */
+    /** The caller's direct conversations: every agent conversation, and the unread customer ones. */
     readonly unread: OfficeConversationUnread
 }
 

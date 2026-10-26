@@ -9,7 +9,7 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { OfficeRoomsErrorCode } from "./errors/office-rooms.error"
 import { OfficeRoomsService } from "./office-rooms.service"
-import type { RoomMemberPreviewRow, RoomRow } from "./persistence/office-rooms.rows"
+import type { AgentConversationRow, RoomMemberPreviewRow, RoomRow } from "./persistence/office-rooms.rows"
 import { LIST_ROOM_MEMBERS } from "./persistence/office-room-members.sql"
 import {
     ENSURE_ROOMS,
@@ -59,6 +59,15 @@ const agentPreviewOf = builder<RoomMemberPreviewRow>({
     module: "content",
     name: "AI Marketing",
     avatarUrl: null,
+})
+
+const agentConversationOf = builder<AgentConversationRow>({
+    id: "a-1",
+    unread: 0,
+    last_body: null,
+    last_at: null,
+    last_author_id: null,
+    last_author: null,
 })
 
 const build = async (entityManager: MockEntityManager) => {
@@ -206,15 +215,21 @@ describe("OfficeRoomsService.markRead", () => {
     })
 })
 
-describe("OfficeRoomsService.unread", () => {
-    it("answers only the conversations with unseen lines, read as the caller", async () => {
+describe("OfficeRoomsService.unread agent conversations", () => {
+    it("answers every agent conversation with its newest line and only the unread customer ones", async () => {
         const em = mockEntityManager({
             query: [
                 [
                     LIST_AGENT_UNREAD,
                     [
-                        { id: "a-1", unread: 2 },
-                        { id: "a-2", unread: 0 },
+                        agentConversationOf({
+                            unread: 2,
+                            last_body: "hello",
+                            last_at: "2026-10-20T02:42:00+00:00",
+                            last_author_id: "u-1",
+                            last_author: "Mai Linh",
+                        }),
+                        agentConversationOf({ id: "a-2" }),
                     ],
                 ],
                 [
@@ -234,9 +249,47 @@ describe("OfficeRoomsService.unread", () => {
         expect(em.query).toHaveBeenCalledWith(LIST_AGENT_UNREAD, ["ws-1", "u-1", "Mai Linh"])
         expect(em.query).toHaveBeenCalledWith(LIST_LEAD_UNREAD, ["ws-1", "u-1", "Mai Linh"])
         expect(em.query).toHaveBeenCalledTimes(2)
-        expect(unread).toEqual({ agents: [{ id: "a-1", unread: 2 }], leads: [{ id: "l-1", unread: 1 }] })
+        expect(unread).toEqual({
+            agents: [
+                {
+                    id: "a-1",
+                    unread: 2,
+                    last: {
+                        body: "hello",
+                        at: "2026-10-20T02:42:00+00:00",
+                        authorId: "u-1",
+                        author: "Mai Linh",
+                    },
+                },
+                { id: "a-2", unread: 0, last: null },
+            ],
+            leads: [{ id: "l-1", unread: 1 }],
+        })
     })
 
+    it("answers an empty body for a conversation whose newest line reads no text", async () => {
+        const em = mockEntityManager({
+            query: [
+                [LIST_AGENT_UNREAD, [agentConversationOf({ last_at: "2026-10-20T02:42:00+00:00" })]],
+                [LIST_LEAD_UNREAD, []],
+            ],
+        })
+        const { service } = await build(em)
+
+        await expect(service.unread("u-1", "ws-1")).resolves.toEqual({
+            agents: [
+                {
+                    id: "a-1",
+                    unread: 0,
+                    last: { body: "", at: "2026-10-20T02:42:00+00:00", authorId: null, author: null },
+                },
+            ],
+            leads: [],
+        })
+    })
+})
+
+describe("OfficeRoomsService.unread", () => {
     it("answers empty lists when nothing is unread", async () => {
         const em = mockEntityManager({
             query: [

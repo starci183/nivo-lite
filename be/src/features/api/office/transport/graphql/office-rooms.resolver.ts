@@ -45,7 +45,7 @@ export class OfficeRoomsResolver {
         return toOfficeRoomsType(result)
     }
 
-    /** The caller's unread counts of the agent and customer conversations. */
+    /** The caller's direct conversations: every agent with its unread count and newest line, and the unread customer ones. */
     @Query(() => OfficeConversationUnreadType, { name: "officeConversationUnread" })
     async officeConversationUnread(
         @CurrentPrincipal() principal: Principal,

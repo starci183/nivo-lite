@@ -114,7 +114,7 @@ export const toMarkRoomReadRequest = (workspaceId: string, input: OfficeRoomKeyI
     room: input.room,
 })
 
-/** Maps the caller's unread counts of the direct conversations to the GraphQL type. */
+/** Maps the caller's direct conversations and their unread counts to the GraphQL type. */
 export const toConversationUnreadType = (view: ConversationUnreadListView): OfficeConversationUnreadType => ({
     agents: view.agents.map((entry) => ({ ...entry })),
     leads: view.leads.map((entry) => ({ ...entry })),

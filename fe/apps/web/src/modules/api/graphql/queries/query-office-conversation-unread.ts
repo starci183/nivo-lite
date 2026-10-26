@@ -12,6 +12,12 @@ const query1: TypedDocumentNode<QueryOfficeConversationUnreadResponse, Record<st
             agents {
                 id
                 unread
+                last {
+                    body
+                    at
+                    authorId
+                    author
+                }
             }
             leads {
                 id
@@ -32,7 +38,7 @@ const queryMap: Record<
     [QueryOfficeConversationUnread.Query1]: query1,
 }
 
-/** The back end `officeConversationUnread` query: the caller's unread counts of the agent and customer conversations. */
+/** The back end `officeConversationUnread` query: the caller's agent conversations with unread and newest line, and the unread customer conversations. */
 export const queryOfficeConversationUnread = async ({
     query = QueryOfficeConversationUnread.Query1,
     signal,

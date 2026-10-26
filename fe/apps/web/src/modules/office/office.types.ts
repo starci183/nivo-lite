@@ -102,9 +102,24 @@ export interface OfficeRoom {
     }>
 }
 
-/** The caller's unread counts of the direct conversations, as id → count maps. */
+/** The newest line of an agent's direct conversation, as its list row reads it. */
+export interface OfficeAgentLine {
+    readonly body: string
+    readonly at: string
+    /** The workspace account id of the line's human author; null for the agent's own and unattributed lines. */
+    readonly authorId: string | null
+    readonly author: string | null
+}
+
+/** The caller's side of one agent's direct conversation: the unread count and its newest line. */
+export interface OfficeAgentConversation {
+    readonly unread: number
+    readonly last: OfficeAgentLine | null
+}
+
+/** The caller's direct conversations: every agent conversation by agent id, and the unread customer counts by lead id. */
 export interface OfficeConversationUnread {
-    readonly agents: ReadonlyMap<string, number>
+    readonly agents: ReadonlyMap<string, OfficeAgentConversation>
     readonly leads: ReadonlyMap<string, number>
 }
 

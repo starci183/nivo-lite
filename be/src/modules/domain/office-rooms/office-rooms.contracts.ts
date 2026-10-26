@@ -78,10 +78,28 @@ export interface ConversationUnreadView {
     readonly unread: number
 }
 
-/** The caller's unread counts of the direct conversations; only conversations above zero are listed. */
+/** The newest line of one direct conversation, as its row reads it. */
+export interface ConversationLastView {
+    /** The line's text. */
+    readonly body: string
+    /** When the line was written, ISO 8601. */
+    readonly at: string
+    /** The workspace account id of the line's author; null for the agent's own lines and unattributed legacy ones. */
+    readonly authorId: string | null
+    /** The display name of the line's human author; null for the agent's own and system lines. */
+    readonly author: string | null
+}
+
+/** One agent's direct conversation: the caller's unread count and the newest line, listed even when fully read. */
+export interface AgentConversationView extends ConversationUnreadView {
+    /** The newest line, or null while nobody wrote. */
+    readonly last: ConversationLastView | null
+}
+
+/** The caller's unread counts of the direct conversations; only customer conversations above zero are listed. */
 export interface ConversationUnreadListView {
-    /** The unread agent conversations. */
-    readonly agents: ReadonlyArray<ConversationUnreadView>
+    /** The agent conversations, read or not: the rows draw their newest line. */
+    readonly agents: ReadonlyArray<AgentConversationView>
     /** The unread customer conversations. */
     readonly leads: ReadonlyArray<ConversationUnreadView>
 }
