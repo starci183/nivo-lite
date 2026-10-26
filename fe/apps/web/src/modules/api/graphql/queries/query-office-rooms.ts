@@ -15,6 +15,7 @@ const query1: TypedDocumentNode<QueryOfficeRoomsResponse, Record<string, never>>
             unread
             last_body
             last_author
+            last_author_user_id
             last_at
             agent_ids
             home_agent_ids

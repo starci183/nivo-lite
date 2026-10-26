@@ -15,6 +15,10 @@ export class OfficeMessageType {
     @Field()
     author_name!: string
 
+    /** The account that wrote it; null on a legacy line or a line no member wrote. */
+    @Field(() => ID, { nullable: true })
+    author_user_id?: string | null
+
     /** The agent that spoke, when one did. */
     @Field(() => ID, { nullable: true })
     agent_id?: string | null

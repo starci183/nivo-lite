@@ -16,6 +16,7 @@ const query1: TypedDocumentNode<QueryOfficeMessagesResponse, InputVariables<Quer
                 agent_id
                 author_kind
                 author_name
+                author_user_id
                 body
                 card_json
                 card_state

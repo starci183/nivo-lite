@@ -1,5 +1,6 @@
 import type { OfficePreviewKind } from "@/modules/types"
-import type { OfficeMessage } from "./office.types"
+import { isOwnAuthor } from "./office.helpers"
+import type { OfficeMessage, OfficeViewer } from "./office.types"
 import type { OfficeWords } from "./office.words"
 
 /** What a row's one-line preview is made of: what the last line is, its text and who wrote it (null for a direct row's other side). */
@@ -7,6 +8,8 @@ export interface OfficePreviewInput {
     readonly kind: OfficePreviewKind
     readonly body: string
     readonly author: string | null
+    /** The account that wrote it; null on a legacy line. */
+    readonly authorUserId: string | null
 }
 
 /** The kind of a line: a card that carries a picture or a video previews as that; anything else is text. */
@@ -28,9 +31,9 @@ const labelOf = (input: OfficePreviewInput, words: OfficeWords): string => {
 }
 
 /** The preview of a row on ONE line: "You: text" for my line, "Name: text" for another sender in a group, a label for media. */
-export const officePreviewOf = (input: OfficePreviewInput, meName: string | null, words: OfficeWords): string => {
+export const officePreviewOf = (input: OfficePreviewInput, viewer: OfficeViewer, words: OfficeWords): string => {
     const text = labelOf(input, words)
     if (input.author === null) return text
-    if (input.author === meName) return words.t("previewMine", { text })
+    if (isOwnAuthor({ userId: input.authorUserId, name: input.author }, viewer)) return words.t("previewMine", { text })
     return words.t("previewFrom", { name: input.author, text })
 }

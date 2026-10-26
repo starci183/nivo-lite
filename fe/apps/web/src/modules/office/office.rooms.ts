@@ -14,6 +14,7 @@ import type {
     OfficeCardPayload,
     OfficeMessage,
     OfficeRoom,
+    OfficeViewer,
     OfficeWork,
 } from "./office.types"
 import { NO_CONVERSATION_STATE } from "./office.conversation-state"
@@ -128,6 +129,7 @@ interface RoomWire {
     readonly unread: number
     readonly last_body?: string | null
     readonly last_author?: string | null
+    readonly last_author_user_id?: string | null
     readonly last_at?: string | null
     readonly agent_ids: ReadonlyArray<string>
     readonly home_agent_ids: ReadonlyArray<string>
@@ -148,6 +150,7 @@ export const toOfficeRoom = (row: RoomWire, marker?: ChatMarkerWire, isTyping = 
     unread: row.unread,
     lastBody: row.last_body ?? null,
     lastAuthor: row.last_author ?? null,
+    lastAuthorUserId: row.last_author_user_id ?? null,
     lastAt: row.last_at ?? null,
     lastKind: "text",
     state: roomStateOf(marker, isTyping),
@@ -187,9 +190,13 @@ export const roomWorksOf = (
 }
 
 /** The one-line preview of a room: its last line, or the invitation to write the first one. */
-const roomPreviewOf = (room: OfficeRoom, words: OfficeWords, meName: string | null): string => {
+const roomPreviewOf = (room: OfficeRoom, words: OfficeWords, viewer: OfficeViewer): string => {
     if (room.lastBody === null) return words.t("groupPreviewEmpty")
-    return officePreviewOf({ kind: room.lastKind, body: room.lastBody, author: room.lastAuthor }, meName, words)
+    return officePreviewOf(
+        { kind: room.lastKind, body: room.lastBody, author: room.lastAuthor, authorUserId: room.lastAuthorUserId },
+        viewer,
+        words,
+    )
 }
 
 /** The rows of the room list: the Office room first, then the department rooms, with their one-line previews and unread state. */
@@ -197,14 +204,14 @@ export const roomRowsOf = (
     rooms: ReadonlyArray<OfficeRoom>,
     words: OfficeWords,
     timeOf: (iso: string) => string,
-    meName: string | null,
+    viewer: OfficeViewer,
 ): ReadonlyArray<OfficeRoomRowView> =>
     (rooms.length === 0 ? [null] : rooms).map((room) => {
         const at = room?.lastAt ?? null
         return {
             id: room?.key ?? "office",
             label: room?.key == null ? words.t("title") : room.name,
-            description: room === null ? words.t("groupPreviewEmpty") : roomPreviewOf(room, words, meName),
+            description: room === null ? words.t("groupPreviewEmpty") : roomPreviewOf(room, words, viewer),
             time: at === null ? null : timeOf(at),
             sortAt: at,
             unread: room?.unread ?? 0,

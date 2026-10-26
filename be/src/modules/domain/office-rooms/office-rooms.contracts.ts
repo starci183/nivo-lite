@@ -50,6 +50,8 @@ export interface RoomView {
     readonly last_body: string | null
     /** The newest line's author. */
     readonly last_author: string | null
+    /** The newest line's author account; null on a legacy line. */
+    readonly last_author_user_id: string | null
     /** When the newest line was written, ISO 8601. */
     readonly last_at: string | null
     /** The agents seated in the room; empty for the Office room (everyone). */

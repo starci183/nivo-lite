@@ -5282,6 +5282,7 @@ type OfficeMessageType {
   agent_id: ID
   author_kind: String!
   author_name: String!
+  author_user_id: ID
   body: String!
   card_json: String
   card_state: String
@@ -5336,6 +5337,7 @@ type OfficeRoomType {
   key: String
   last_at: String
   last_author: String
+  last_author_user_id: ID
   last_body: String
   members: OfficeRoomMembersType!
   name: String!

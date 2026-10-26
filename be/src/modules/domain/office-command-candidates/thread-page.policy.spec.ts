@@ -17,6 +17,7 @@ const line = (id: string, createdAt: string): MessageView => ({
     id,
     author_kind: "human",
     author_name: "An",
+    author_user_id: null,
     agent_id: null,
     staff_id: null,
     body: "hi",

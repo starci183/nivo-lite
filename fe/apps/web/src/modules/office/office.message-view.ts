@@ -1,6 +1,6 @@
 import { leadHref, workItemHref } from "@/modules/routes"
 import type { OfficeApprovalView, OfficeCommandView, OfficeMessageView } from "@/modules/types"
-import { bodyPartsOf, isNivoLine } from "./office.helpers"
+import { bodyPartsOf, isNivoLine, isOwnAuthor } from "./office.helpers"
 import { threadDayKey } from "./office.thread"
 import type { ThreadEntry } from "./office.thread"
 import type { OfficeApproval, OfficeCandidate, OfficeMessage } from "./office.types"
@@ -33,7 +33,12 @@ export const messageView = (
     const message: OfficeMessage = entry.message
     const isNivo = isNivoLine(message)
     const isNotice = message.authorKind === "system" && !isNivo
-    const isMine = message.authorKind === "human" && message.authorName === context.meName
+    const isMine =
+        message.authorKind === "human" &&
+        isOwnAuthor(
+            { userId: message.authorUserId, name: message.authorName },
+            { userId: context.meUserId, name: context.meName },
+        )
     const agent = context.agents.find((candidate) => candidate.id === message.agentId)
     const isAgent = message.authorKind === "agent"
     const showAuthor = !entry.isContinuation && !isMine

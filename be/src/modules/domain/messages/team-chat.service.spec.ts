@@ -21,6 +21,7 @@ const posted = builder<PostedMessage>({
     id: "m-1",
     author_kind: "human",
     author_name: "Minh",
+    author_user_id: "u-1",
     agent_id: null,
     staff_id: "staff-1",
     body: "Hello team",

@@ -42,7 +42,13 @@ const markOf = (kind: string) => {
 /** Only the conversations with unseen lines, as the badge contract reads them. */
 const withUnread = (rows: ReadonlyArray<ConversationUnreadRow>) => rows.filter((row) => row.unread > 0)
 
-const EMPTY_SUMMARY: RoomSummaryRow = { unread: 0, last_body: null, last_author: null, last_at: null }
+const EMPTY_SUMMARY: RoomSummaryRow = {
+    unread: 0,
+    last_body: null,
+    last_author: null,
+    last_author_user_id: null,
+    last_at: null,
+}
 
 @Injectable()
 /** The Hub rooms: the general Office room first, then the department rooms, each with the caller's unread count. */
