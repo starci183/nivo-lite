@@ -70,7 +70,7 @@ export const AuthorityLimitsBase = (props: AuthorityLimitsBaseProps) => {
                     <div className={REQUIRED_LIST_CLASS}>
                         {limits.rows.map((row, index) => (
                             <Fragment key={row.key}>
-                                {index === 0 ? null : <Divider semantics="presentation" />}
+                                {index > 0 && <Divider semantics="presentation" />}
                                 <div className={REQUIRED_ROW_CLASS}>
                                     <CheckboxGroup
                                         label={row.label}
