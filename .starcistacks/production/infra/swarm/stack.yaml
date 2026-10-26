@@ -122,8 +122,8 @@ services:
       # openclaw-data and video-cache are single-host volumes: the placement is explicit, a replica is not high availability.
       placement: { constraints: [node.role == manager] }
       update_config:
-        { parallelism: 1, order: start-first, failure_action: rollback, monitor: 45s, max_failure_ratio: 0, delay: 5s }
-      rollback_config: { parallelism: 1, order: start-first, monitor: 45s }
+        { parallelism: 1, order: stop-first, failure_action: rollback, monitor: 45s, max_failure_ratio: 0, delay: 5s }
+      rollback_config: { parallelism: 1, order: stop-first, monitor: 45s }
       restart_policy: { condition: any, delay: 5s }
 
   nivo-mcp:
