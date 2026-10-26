@@ -80,7 +80,6 @@ export const GuideBubbleBase = (props: GuideBubbleBaseProps) => (
                 source={nivoIconSource(props.props.isOpen ? "close" : "support", "leading")}
                 label={props.props.isOpen ? props.props.closeLabel : props.props.openLabel}
                 intent="commit"
-                size="lg"
                 isFloating
                 onPress={props.on.toggle}
             />

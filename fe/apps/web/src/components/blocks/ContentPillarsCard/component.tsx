@@ -96,7 +96,6 @@ export const ContentPillarsCardBase = (props: ContentPillarsCardBaseProps) => {
                         <Button
                             intent="destructive"
                             step="entry"
-                            size="sm"
                             isDisabled={locked}
                             onPress={() => props.on.remove(row.key)}
                         >
