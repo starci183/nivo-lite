@@ -1,6 +1,7 @@
 import { PageContainer } from "@starci/grammar/common"
 import { AgentProfileAssignable } from "@/components/blocks/AgentProfileAssignable"
 import { AgentProfileHead } from "@/components/blocks/AgentProfileHead"
+import { AgentProfileIdentity } from "@/components/blocks/AgentProfileIdentity"
 import { AgentProfileOwner } from "@/components/blocks/AgentProfileOwner"
 import { AgentProfileRecent } from "@/components/blocks/AgentProfileRecent"
 import { AgentProfileRules } from "@/components/blocks/AgentProfileRules"
@@ -12,13 +13,17 @@ export interface AgentProfilePageBaseProps {
     readonly props: { readonly agentId: string }
 }
 
-/** Draws the profile of an agent: heading with the composer, owner and rules on the left, who may assign and whom it may tag on the right, recent work below. */
+/**
+ * Draws the profile of an agent: heading with the composer, its picture and name for a manager to edit, owner and rules on the
+ * left, who may assign and whom it may tag on the right, recent work below.
+ */
 export const AgentProfilePageBase = (props: AgentProfilePageBaseProps) => {
     const { agentId } = props.props
     return (
         <PageContainer measure="product">
             <div className={PAGE_CLASS}>
                 <AgentProfileHead agentId={agentId} />
+                <AgentProfileIdentity agentId={agentId} />
                 <div className={GRID_CLASS}>
                     <div className={COLUMN_CLASS}>
                         <AgentProfileOwner agentId={agentId} />

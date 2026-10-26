@@ -1,0 +1,5 @@
+export type { AvatarUpload } from "./avatars.contracts"
+export { AVATARS_ERROR_KINDS } from "./errors/avatars.error"
+export { AVATARS_MESSAGES } from "./messages/avatars.messages"
+export { AvatarsModule } from "./avatars.module"
+export { AvatarsService } from "./avatars.service"

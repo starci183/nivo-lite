@@ -1,8 +1,18 @@
 import type { InstallationConnectionNeed } from "@/modules/installations"
-import type { OfficeRoomMembersView } from "@/modules/types"
+import type { OfficeConversationState, OfficePreviewKind, OfficeRoomMembersView } from "@/modules/types"
 
 /** Who wrote a line. */
 export type OfficeAuthorKind = "human" | "agent" | "system"
+
+/** What the back end reports about who got and who read one line of mine; none means it reports nothing (the line shows as sent). */
+export interface OfficeMessageReceipt {
+    /** Another member's client fetched the line. */
+    readonly isDelivered: boolean
+    /** The members whose read marker is past the line, oldest read first. */
+    readonly seenBy: ReadonlyArray<{ readonly id: string; readonly name: string }>
+    /** Every other member who read the line, including those beyond the few `seenBy` names. */
+    readonly seenCount: number
+}
 
 /** One line of the Office thread. */
 export interface OfficeMessage {
@@ -20,6 +30,8 @@ export interface OfficeMessage {
     readonly card: OfficeCardPayload | null
     /** The live state of the card (pending, approved, declined, done, failed, queued, info). */
     readonly cardState: string | null
+    /** The delivery receipt of the line; null until the wire carries it. */
+    readonly receipt: OfficeMessageReceipt | null
 }
 
 /** The WebVTT captions of a card video, as the editor produced them. */
@@ -74,6 +86,10 @@ export interface OfficeRoom {
     readonly lastBody: string | null
     readonly lastAuthor: string | null
     readonly lastAt: string | null
+    /** What the last line is; "text" until the wire says otherwise. */
+    readonly lastKind: OfficePreviewKind
+    /** My mention, mute, seen and typing flags of the room; all false until the wire carries them. */
+    readonly state: OfficeConversationState
     readonly agentIds: ReadonlyArray<string>
     readonly homeAgentIds: ReadonlyArray<string>
     readonly userIds: ReadonlyArray<string>
@@ -84,6 +100,12 @@ export interface OfficeRoom {
         readonly href: string | null
         readonly note: string
     }>
+}
+
+/** The caller's unread counts of the direct conversations, as id → count maps. */
+export interface OfficeConversationUnread {
+    readonly agents: ReadonlyMap<string, number>
+    readonly leads: ReadonlyMap<string, number>
 }
 
 /** One approval request (an execution waiting for, or already given, a decision). */
@@ -146,6 +168,8 @@ export interface OfficeAgent {
     readonly module: string
     readonly name: string
     readonly handle: string
+    /** The picture the owner gave the agent; null draws the generated avatar of its id. */
+    readonly avatarUrl: string | null
     /** The agent is live and on duty. */
     readonly isActive: boolean
     /** The roles a `needs_connection` agent waits for, each with the connectors that would satisfy it; null otherwise. */

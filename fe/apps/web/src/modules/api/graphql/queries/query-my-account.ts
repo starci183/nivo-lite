@@ -16,6 +16,7 @@ const query1: Document = gql`
             email
             name
             providers
+            uploadedAvatarUrl
             sessions {
                 id
                 createdAt

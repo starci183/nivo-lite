@@ -1,8 +1,8 @@
 import { sql } from "@modules/platform/database"
 
-/** Stores what the customer wrote ($1 workspace, $2 conversation, $3 body). */
-export const INSERT_CUSTOMER_MESSAGE = sql`INSERT INTO public.agent_messages (workspace_id, conversation_id, role, body)
-VALUES ($1, $2, 'user', $3)
+/** Stores what the customer or test-chat member wrote ($1 workspace, $2 conversation, $3 body, $4 proven member user id or null). */
+export const INSERT_CUSTOMER_MESSAGE = sql`INSERT INTO public.agent_messages (workspace_id, conversation_id, role, body, author_user_id)
+VALUES ($1, $2, 'user', $3, $4)
 RETURNING id`
 
 /** Stores the greeting the agent opens a visit with ($1 workspace, $2 conversation, $3 body). */
@@ -60,9 +60,9 @@ WHERE id = $1`
 export const LIST_CHAT_MESSAGES = sql`SELECT id, role, body, created_at::text FROM public.agent_messages
 WHERE workspace_id = $1::uuid AND conversation_id = $2::uuid ORDER BY created_at, id LIMIT 300`
 
-/** Stores a human reply; an approved answer uses its work item id so retries reuse one message ($1 id or null, $2 workspace, $3 conversation, $4 body, $5 member name). */
-export const INSERT_HUMAN_MESSAGE = sql`INSERT INTO public.agent_messages (id, workspace_id, conversation_id, role, body, author_kind, author_name)
-VALUES (COALESCE($1::uuid, gen_random_uuid()), $2::uuid, $3::uuid, 'agent', $4, 'human', $5)
+/** Stores a human reply; an approved answer uses its work item id so retries reuse one message ($1 id or null, $2 workspace, $3 conversation, $4 body, $5 member name, $6 proven member user id or null). */
+export const INSERT_HUMAN_MESSAGE = sql`INSERT INTO public.agent_messages (id, workspace_id, conversation_id, role, body, author_kind, author_name, author_user_id)
+VALUES (COALESCE($1::uuid, gen_random_uuid()), $2::uuid, $3::uuid, 'agent', $4, 'human', $5, $6)
 ON CONFLICT (id) DO NOTHING
 RETURNING id`
 

@@ -18,16 +18,9 @@ export const OfficeMessenger = () => {
     const office = useOfficeMessenger(jump.focusedId, room)
     const { text } = office
     const isLoading = office.slot.isLoading === true
-
-    const { onMention, onSend } = composerCommands(draft, setDraft, setFocusKey, office, frame)
-
-    const onChip = () => {
-        const target = office.firstJump
-        if (target === null) return
-        if (target.kind === "approval") jump.jumpApproval(target.id)
-        else jump.jumpException(target.id)
-    }
-
+    const { onMention, onSend, onChange } = composerCommands(draft, setDraft, setFocusKey, office, frame)
+    const openDirect = directOpener(office, router)
+    const onChip = chipOpener(office, jump)
     return (
         <OfficeMessengerBase
             props={{
@@ -37,6 +30,7 @@ export const OfficeMessenger = () => {
                 isLoading,
                 isInfoOpen: frame.isInfoOpen,
                 isInfoDocked: frame.isInfoDocked,
+                isMuted: office.isMuted,
                 title: office.roomTitle ?? text("title"),
                 subtitle: officeSubtitle(office),
                 chip: office.firstJump === null ? null : text("needsApprovalChip", { n: office.waitingCount }),
@@ -63,16 +57,17 @@ export const OfficeMessenger = () => {
                 reply: onMention,
                 loadEarlier: office.thread.loadEarlier,
                 retry: office.thread.reload,
-                change: setDraft,
+                change: onChange,
                 send: onSend,
                 back: () => (frame.centre === "tasks" ? frame.showChat() : frame.showList()),
                 chip: onChip,
                 toggleInfo: frame.toggleInfo,
+                toggleMute: () => void office.setMuted(!office.isMuted),
                 infoOpenChange: frame.setInfoOpen,
                 showChat: frame.showChat,
                 openGroup: roomOpener(setRoom, frame, office),
-                openAgent: (id) => router.push(agentChatHref(id)),
-                openCustomer: (id) => router.push(leadHref(id)),
+                openAgent: (id) => openDirect("agent", id),
+                openCustomer: (id) => openDirect("lead", id),
                 jumpApproval: jump.jumpApproval,
                 jumpException: jump.jumpException,
                 jumpCard: jump.jumpCard,
@@ -83,6 +78,14 @@ export const OfficeMessenger = () => {
             }}
         />
     )
+}
+
+/** Jumps to the oldest thing that waits for a person, which the header chip names. */
+const chipOpener = (office: ReturnType<typeof useOfficeMessenger>, jump: ReturnType<typeof useOfficeJump>) => () => {
+    const target = office.firstJump
+    if (target === null) return
+    if (target.kind === "approval") jump.jumpApproval(target.id)
+    else jump.jumpException(target.id)
 }
 
 /** Decides the execution or work item a result card names, through the existing decision mutations. */
@@ -115,6 +118,14 @@ const roomOpener =
         void office.markRead(room)
     }
 
+/** Opens an agent's or a customer's direct conversation and marks it read on the way. */
+const directOpener =
+    (office: ReturnType<typeof useOfficeMessenger>, router: ReturnType<typeof navigation.useRouter>) =>
+    (kind: "agent" | "lead", id: string) => {
+        void office.markConversationRead(kind, id)
+        router.push(kind === "agent" ? agentChatHref(id) : leadHref(id))
+    }
+
 /** Resolves the loaded thread state and sender activity. */
 const officeThreadProps = (office: ReturnType<typeof useOfficeMessenger>) => {
     const { text } = office
@@ -128,12 +139,18 @@ const officeThreadProps = (office: ReturnType<typeof useOfficeMessenger>) => {
         items: office.items,
         outbox: office.sender.outbox,
         reading: office.reading,
-        typing: office.sender.typing === null ? "" : text("typing", { name: office.sender.typing }),
+        typing: typingOf(office),
         busyId: office.decisions.busyId,
         hasEarlier: office.thread.hasEarlier,
         isLoadingEarlier: office.thread.isLoadingEarlier,
         text,
     }
+}
+
+/** Who types now: the people typing in the room, else the agents the sender called; empty when nobody does. */
+const typingOf = (office: ReturnType<typeof useOfficeMessenger>): string => {
+    const names = office.peersTyping.length > 0 ? office.peersTyping.join(", ") : office.sender.typing
+    return names === null ? "" : office.text("typing", { name: names })
 }
 
 /** Owns the composer draft and restores a message when sending fails. */
@@ -155,22 +172,26 @@ const composerCommands = (
         if (body === "" || office.sender.isSending) return
         office.sender.dismissFailed()
         setDraft("")
+        office.onDraft("")
         void office.send(body).then((isSent) => {
             if (!isSent) setDraft((current) => (current === "" ? body : current))
         })
     }
 
-    return { onMention, onSend }
+    const onChange = (value: string) => {
+        setDraft(value)
+        office.onDraft(value)
+    }
+
+    return { onMention, onSend, onChange }
 }
 
-/** Resolves the member and agent count beneath the thread title. */
+/** Resolves the member and agent count beneath the thread title: counts only, so it stays one short line. */
 const officeSubtitle = (office: ReturnType<typeof useOfficeMessenger>): string => {
     const { text } = office
     if (office.roomTitle !== null) {
         const members = text("memberCount", { n: office.memberCount })
-        return office.roomOnDuty.length === 0
-            ? members
-            : `${members} · ${text("roomOnDuty", { names: office.roomOnDuty.join(", ") })}`
+        return office.onDutyCount === 0 ? members : `${members} · ${text("roomOnDuty", { n: office.onDutyCount })}`
     }
     if (office.memberCount === 1) return text("memberCountOne")
     if (office.agentCount > 0) return text("memberCountAgents", { n: office.memberCount, agents: office.agentCount })

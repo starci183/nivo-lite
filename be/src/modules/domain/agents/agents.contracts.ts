@@ -19,6 +19,8 @@ export interface AgentSummary {
     readonly role: string
     /** active or paused. */
     readonly status: string
+    /** The HTTPS address of the agent's picture, or null for the generated avatar. */
+    readonly avatarUrl: string | null
     /** When the agent was created, ISO 8601. */
     readonly createdAt: string
 }
@@ -334,6 +336,9 @@ export interface ToolListing {
 
 /** An id, or null when there is none. */
 export type OptionalId = string | null
+
+/** The HTTPS address of an agent picture, or null for the generated avatar. */
+export type OptionalAvatarUrl = string | null
 
 /** A text, or null when there is none. */
 export type OptionalAgentText = string | null

@@ -23,6 +23,7 @@ export const installationRecordOf = builder<InstallationRecord>({
     agentId: "agent-1",
     agentName: "Chatbot",
     agentHandle: "chatbot",
+    agentAvatarUrl: null,
     status: "ready",
     operatingMode: "assist",
     liveEnabled: false,
@@ -40,5 +41,6 @@ export const installAgentOf = builder<AgentSummary>({
     handle: "chatbot",
     role: "Care",
     status: "active",
+    avatarUrl: null,
     createdAt: "2026-10-01T00:00:00.000Z",
 })

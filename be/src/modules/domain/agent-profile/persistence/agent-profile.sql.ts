@@ -1,7 +1,7 @@
 import { sql } from "@modules/platform/database"
 
 /** The header of one agent of a workspace with the name of its home room and the mode of the instance that drives it ($1 agent, $2 workspace). */
-export const FIND_AGENT_HEAD = sql`SELECT a.id, a.name, a.handle, a.role, a.module, a.status,
+export const FIND_AGENT_HEAD = sql`SELECT a.id, a.name, a.handle, a.role, a.module, a.status, a.avatar_url,
     (SELECT r.name
      FROM public.office_rooms_members rm
      JOIN public.office_rooms r ON r.id = rm.room_id

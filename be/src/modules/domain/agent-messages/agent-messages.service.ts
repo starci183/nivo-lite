@@ -6,6 +6,7 @@ import type { Outcome } from "@modules/platform/primitives"
 import type {
     AgentThreadMessage,
     ApprovedMessageId,
+    AuthorUserId,
     CustomerMessagesDay,
     StoredMessage,
     StoredReply,
@@ -94,8 +95,9 @@ export class AgentMessagesService {
         body: string,
         authorName: string,
         manager: EntityManager,
+        authorUserId: AuthorUserId = null,
     ): Promise<string> {
-        return this.storeHumanMessage(workspaceId, conversationId, body, authorName, manager)
+        return this.storeHumanMessage(workspaceId, conversationId, body, authorName, manager, null, authorUserId)
     }
 
     /** Stores what the customer wrote and answers the message id. */
@@ -104,9 +106,15 @@ export class AgentMessagesService {
         conversationId: string,
         body: string,
         manager: EntityManager,
+        authorUserId: AuthorUserId = null,
     ): Promise<string> {
         return this.required(
-            await manager.query<Array<MessageIdRow>>(INSERT_CUSTOMER_MESSAGE, [workspaceId, conversationId, body]),
+            await manager.query<Array<MessageIdRow>>(INSERT_CUSTOMER_MESSAGE, [
+                workspaceId,
+                conversationId,
+                body,
+                authorUserId,
+            ]),
         )
     }
 
@@ -173,6 +181,7 @@ export class AgentMessagesService {
         authorName: string,
         manager: EntityManager = this.entityManager,
         approvedItemId: ApprovedMessageId = null,
+        authorUserId: AuthorUserId = null,
     ): Promise<string> {
         const rows = await manager.query<Array<MessageIdRow>>(INSERT_HUMAN_MESSAGE, [
             approvedItemId,
@@ -180,6 +189,7 @@ export class AgentMessagesService {
             conversationId,
             body,
             authorName,
+            authorUserId,
         ])
         if (rows[0] === undefined && approvedItemId !== null) return approvedItemId
         return this.required(rows)

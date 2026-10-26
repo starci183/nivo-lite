@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import { AgentsApiModule } from "../../agents.module"
+import { AgentAvatarResolver } from "./agent-avatar.resolver"
 import { AgentConnectionCandidatesResolver } from "./agent-connection-candidates.resolver"
 import { AgentConnectionsResolver } from "./agent-connections.resolver"
 import { AgentDashboardResolver } from "./agent-dashboard.resolver"
@@ -36,6 +37,7 @@ import { SetAgentTextsResolver } from "./set-agent-texts.resolver"
         AskGuideResolver,
         CreateAgentResolver,
         RenameAgentResolver,
+        AgentAvatarResolver,
         SetAgentStatusResolver,
         SetAgentTextsResolver,
         RequestAgentSyncResolver,

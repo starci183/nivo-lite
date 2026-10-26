@@ -31,6 +31,7 @@ export class TeamChatService {
             member.staffId,
             body.trim(),
             target,
+            member.userId,
         ])
         return row
     }

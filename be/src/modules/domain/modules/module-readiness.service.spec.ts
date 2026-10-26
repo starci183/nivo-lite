@@ -19,6 +19,7 @@ const recordOf = builder<InstallationRecord>({
     agentId: "agent-1",
     agentName: "AI Accounting",
     agentHandle: "accounting",
+    agentAvatarUrl: null,
     status: "live",
     operatingMode: "assist",
     liveEnabled: true,

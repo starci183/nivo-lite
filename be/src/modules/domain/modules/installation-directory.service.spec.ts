@@ -17,6 +17,7 @@ const recordOf = builder<InstallationRecord>({
     agentId: "agent-1",
     agentName: "Ke toan",
     agentHandle: "ketoan",
+    agentAvatarUrl: null,
     status: "live",
     operatingMode: "assist",
     liveEnabled: true,

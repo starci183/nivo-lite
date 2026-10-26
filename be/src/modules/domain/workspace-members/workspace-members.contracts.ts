@@ -90,8 +90,10 @@ export interface DirectoryAccount {
     readonly lastSignInAt: string | null
     /** The name from the profile, else the email local part. */
     readonly displayName: string
-    /** The picture of the sign-in provider profile (a public provider URL, not a stored object), when the directory knows one. */
+    /** The picture the team sees (the uploaded one, else the sign-in provider's), when the directory knows one. */
     readonly avatarUrl?: string | null
+    /** The HTTPS address of the picture the person uploaded, when they uploaded one. */
+    readonly uploadedAvatarUrl?: string | null
 }
 
 /** Where the capability reads accounts from; the composition root binds it to the identity provider. */
@@ -122,8 +124,10 @@ export interface AccountOverview {
     readonly name: string
     /** The account email. */
     readonly email: string
-    /** The picture of the sign-in provider profile, or null. */
+    /** The picture the team sees: the uploaded one, else the sign-in provider's, or null for the generated avatar. */
     readonly avatarUrl: string | null
+    /** The picture the person uploaded, or null when they have not (the remove action then has nothing to remove). */
+    readonly uploadedAvatarUrl: string | null
     /** The identity providers linked to the account (`google`, `email`). */
     readonly providers: ReadonlyArray<string>
     /** The devices signed in, the current one first. */

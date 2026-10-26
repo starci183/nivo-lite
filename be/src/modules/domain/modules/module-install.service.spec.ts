@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
-import { AgentsService } from "@modules/domain/agents"
+import { AgentIdentityService, AgentsService } from "@modules/domain/agents"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { EventsService } from "@modules/domain/events"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
@@ -35,6 +35,7 @@ const build = async () => {
     const catalog = mock<ModulesService>()
     catalog.find.mockResolvedValue(CHATBOT_MODULE)
     const agents = mock<AgentsService>()
+    const identity = mock<AgentIdentityService>()
     const rules = mock<AuthorityRulesService>()
     const events = mock<EventsService>()
     const sync = mock<AgentSyncService>()
@@ -47,6 +48,7 @@ const build = async () => {
             { provide: WorkspaceMembersService, useValue: members },
             { provide: ModulesService, useValue: catalog },
             { provide: AgentsService, useValue: agents },
+            { provide: AgentIdentityService, useValue: identity },
             { provide: AuthorityRulesService, useValue: rules },
             { provide: EventsService, useValue: events },
             { provide: AgentSyncService, useValue: sync },
@@ -54,7 +56,7 @@ const build = async () => {
         ],
     }).compile()
     const service = moduleRef.get(ModuleInstallService)
-    return { service, installations, members, catalog, agents, rules, events, sync, readiness }
+    return { service, installations, members, catalog, agents, identity, rules, events, sync, readiness }
 }
 
 describe("ModuleInstallService > install", () => {
@@ -259,14 +261,14 @@ describe("ModuleInstallService > renameAgent", () => {
     })
 
     it("renames the agent and asks for a sync without forcing it", async () => {
-        const { service, installations, agents, sync } = await build()
+        const { service, installations, identity, sync } = await build()
         installations.find.mockResolvedValue(recordOf())
 
         await expect(service.renameAgent("u1", "ws-1", "inst-1", " Mai ")).resolves.toEqual({
             ...recordOf(),
             connectionNeeds: [],
         })
-        expect(agents.rename).toHaveBeenCalledWith("u1", "ws-1", "agent-1", "Mai")
+        expect(identity.rename).toHaveBeenCalledWith("u1", "ws-1", "agent-1", "Mai")
         expect(sync.requestNow).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             installationId: "inst-1",

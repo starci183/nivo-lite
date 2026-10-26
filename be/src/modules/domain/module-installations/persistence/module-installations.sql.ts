@@ -24,6 +24,7 @@ export const INSTALLATION_OF_RECORD = sql`
 export const LIST_INSTALLATIONS = sql`
     SELECT i.id, i.workspace_id AS "workspaceId", i.module_key AS "moduleKey", i.name, i.is_multi AS "isMulti",
            i.agent_id AS "agentId", COALESCE(a.name, '') AS "agentName", COALESCE(a.handle, i.module_key) AS "agentHandle",
+           a.avatar_url AS "agentAvatarUrl",
            i.status, i.operating_mode AS "operatingMode", i.live_enabled AS "liveEnabled",
            i.active_context_version_id AS "activeContextVersionId", v.version AS "activeVersion", i.settings,
            to_json(i.created_at) #>> '{}' AS "createdAt"
@@ -38,6 +39,7 @@ export const LIST_INSTALLATIONS = sql`
 export const FIND_INSTALLATION = sql`
     SELECT i.id, i.workspace_id AS "workspaceId", i.module_key AS "moduleKey", i.name, i.is_multi AS "isMulti",
            i.agent_id AS "agentId", COALESCE(a.name, '') AS "agentName", COALESCE(a.handle, i.module_key) AS "agentHandle",
+           a.avatar_url AS "agentAvatarUrl",
            i.status, i.operating_mode AS "operatingMode", i.live_enabled AS "liveEnabled",
            i.active_context_version_id AS "activeContextVersionId", v.version AS "activeVersion", i.settings,
            to_json(i.created_at) #>> '{}' AS "createdAt"
@@ -51,6 +53,7 @@ export const FIND_INSTALLATION = sql`
 export const FIND_INSTALLATION_BY_ID = sql`
     SELECT i.id, i.workspace_id AS "workspaceId", i.module_key AS "moduleKey", i.name, i.is_multi AS "isMulti",
            i.agent_id AS "agentId", COALESCE(a.name, '') AS "agentName", COALESCE(a.handle, i.module_key) AS "agentHandle",
+           a.avatar_url AS "agentAvatarUrl",
            i.status, i.operating_mode AS "operatingMode", i.live_enabled AS "liveEnabled",
            i.active_context_version_id AS "activeContextVersionId", v.version AS "activeVersion", i.settings,
            to_json(i.created_at) #>> '{}' AS "createdAt"
@@ -64,6 +67,7 @@ export const FIND_INSTALLATION_BY_ID = sql`
 export const FIND_FIRST_OF_MODULE = sql`
     SELECT i.id, i.workspace_id AS "workspaceId", i.module_key AS "moduleKey", i.name, i.is_multi AS "isMulti",
            i.agent_id AS "agentId", COALESCE(a.name, '') AS "agentName", COALESCE(a.handle, i.module_key) AS "agentHandle",
+           a.avatar_url AS "agentAvatarUrl",
            i.status, i.operating_mode AS "operatingMode", i.live_enabled AS "liveEnabled",
            i.active_context_version_id AS "activeContextVersionId", v.version AS "activeVersion", i.settings,
            to_json(i.created_at) #>> '{}' AS "createdAt"
@@ -78,6 +82,7 @@ export const FIND_FIRST_OF_MODULE = sql`
 export const FIND_OF_AGENT = sql`
     SELECT i.id, i.workspace_id AS "workspaceId", i.module_key AS "moduleKey", i.name, i.is_multi AS "isMulti",
            i.agent_id AS "agentId", COALESCE(a.name, '') AS "agentName", COALESCE(a.handle, i.module_key) AS "agentHandle",
+           a.avatar_url AS "agentAvatarUrl",
            i.status, i.operating_mode AS "operatingMode", i.live_enabled AS "liveEnabled",
            i.active_context_version_id AS "activeContextVersionId", v.version AS "activeVersion", i.settings,
            to_json(i.created_at) #>> '{}' AS "createdAt"

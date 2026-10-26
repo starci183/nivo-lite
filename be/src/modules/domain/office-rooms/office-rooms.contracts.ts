@@ -20,7 +20,7 @@ export interface RoomMemberPreviewView {
     readonly module: string | null
     /** The member's display name in this workspace. */
     readonly name: string
-    /** The existing provider profile URL; null for members without a photo, including agents. */
+    /** The person's HTTPS profile photo or the agent's own picture; null for the generated avatar. */
     readonly avatarUrl: string | null
 }
 
@@ -66,3 +66,22 @@ export interface RoomView {
 
 /** A room key as a caller names it; null is the general Office room. Checked against the Hub rooms before use. */
 export type RoomChoice = string | null
+
+/** Which direct conversation a caller names: one agent's lines, or one customer's (lead's) lines. */
+export type ConversationKind = "agent" | "lead"
+
+/** The unread count of one direct conversation. */
+export interface ConversationUnreadView {
+    /** The agent or lead id. */
+    readonly id: string
+    /** Lines the caller has not read, at most 99. */
+    readonly unread: number
+}
+
+/** The caller's unread counts of the direct conversations; only conversations above zero are listed. */
+export interface ConversationUnreadListView {
+    /** The unread agent conversations. */
+    readonly agents: ReadonlyArray<ConversationUnreadView>
+    /** The unread customer conversations. */
+    readonly leads: ReadonlyArray<ConversationUnreadView>
+}

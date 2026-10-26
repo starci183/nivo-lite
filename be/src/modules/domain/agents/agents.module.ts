@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { AgentsQueueModule } from "@modules/queues/agents"
 import { AgentBundleService } from "./agent-bundle.service"
+import { AgentIdentityService } from "./agent-identity.service"
 import { AgentOwnershipService } from "./agent-ownership.service"
 import { AGENTS_INSTALLATIONS, AGENTS_KNOWLEDGE, AGENTS_MODULES, AGENTS_OPTIONS } from "./agents.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agents.module-definition"
@@ -25,6 +26,7 @@ export class AgentsModule extends ConfigurableModuleClass {
             { provide: AGENTS_MODULES, useClass: options.ports.modules },
             PauseClient,
             AgentsService,
+            AgentIdentityService,
             AgentBundleService,
             AgentOwnershipService,
         ]
@@ -33,6 +35,7 @@ export class AgentsModule extends ConfigurableModuleClass {
             AGENTS_INSTALLATIONS,
             PauseClient,
             AgentsService,
+            AgentIdentityService,
             AgentBundleService,
             AgentOwnershipService,
         ]

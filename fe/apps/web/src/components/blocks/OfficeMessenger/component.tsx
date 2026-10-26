@@ -49,6 +49,8 @@ export interface OfficeMessengerBaseProps {
         readonly isLoading: boolean
         readonly isInfoOpen: boolean
         readonly isInfoDocked: boolean
+        /** I muted this conversation: the list shows a dot instead of the count. */
+        readonly isMuted: boolean
         /** The name of the room shown. */
         readonly title: string
         readonly subtitle: string
@@ -65,6 +67,7 @@ export interface OfficeMessengerBaseProps {
             readonly back: () => void
             readonly chip: () => void
             readonly toggleInfo: () => void
+            readonly toggleMute: () => void
             readonly infoOpenChange: (isOpen: boolean) => void
             readonly showChat: () => void
             readonly openGroup: (id: string) => void
@@ -205,6 +208,13 @@ const OfficeMessengerHeader = (props: OfficeMessengerBaseProps) => {
                         {view.chip}
                     </Button>
                 ) : null}
+                <IconButton
+                    intent="neutral"
+                    source={nivoIconSource(view.isMuted ? "unmute" : "mute", "leading")}
+                    label={view.isMuted ? text("unmuteChat") : text("muteChat")}
+                    isActive={view.isMuted}
+                    onPress={on.toggleMute}
+                />
                 <IconButton
                     intent="neutral"
                     source={nivoIconSource("sidebar", "leading")}

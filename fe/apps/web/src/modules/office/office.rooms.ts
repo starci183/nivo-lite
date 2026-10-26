@@ -16,6 +16,10 @@ import type {
     OfficeRoom,
     OfficeWork,
 } from "./office.types"
+import { NO_CONVERSATION_STATE } from "./office.conversation-state"
+import { roomStateOf } from "./office.chat-state"
+import type { ChatMarkerWire } from "./office.chat-state"
+import { officePreviewOf } from "./office.preview"
 import { avatarOfAgentId, NIVO_AVATAR } from "./office.words"
 import type { OfficeContext, OfficeWords } from "./office.words"
 
@@ -137,14 +141,16 @@ interface RoomWire {
     }>
 }
 
-/** One back end room as the Hub uses it. */
-export const toOfficeRoom = (row: RoomWire): OfficeRoom => ({
+/** One back end room as the Hub uses it, with the caller's side of it (mute, read of my last line, who types) when known. */
+export const toOfficeRoom = (row: RoomWire, marker?: ChatMarkerWire, isTyping = false): OfficeRoom => ({
     key: row.key ?? null,
     name: row.name,
     unread: row.unread,
     lastBody: row.last_body ?? null,
     lastAuthor: row.last_author ?? null,
     lastAt: row.last_at ?? null,
+    lastKind: "text",
+    state: roomStateOf(marker, isTyping),
     agentIds: row.agent_ids,
     homeAgentIds: row.home_agent_ids,
     userIds: row.user_ids,
@@ -180,27 +186,29 @@ export const roomWorksOf = (
     return works.filter((work) => modules.has(work.department))
 }
 
-const previewOf = (body: string | null, author: string | null, words: OfficeWords): string => {
-    if (body === null) return words.t("groupPreviewEmpty")
-    return author === null ? body : `${author}: ${body}`
+/** The one-line preview of a room: its last line, or the invitation to write the first one. */
+const roomPreviewOf = (room: OfficeRoom, words: OfficeWords, meName: string | null): string => {
+    if (room.lastBody === null) return words.t("groupPreviewEmpty")
+    return officePreviewOf({ kind: room.lastKind, body: room.lastBody, author: room.lastAuthor }, meName, words)
 }
 
-/** The rows of the room list: the Office room first, then the department rooms, with their unread counts. */
+/** The rows of the room list: the Office room first, then the department rooms, with their one-line previews and unread state. */
 export const roomRowsOf = (
     rooms: ReadonlyArray<OfficeRoom>,
     words: OfficeWords,
     timeOf: (iso: string) => string,
+    meName: string | null,
 ): ReadonlyArray<OfficeRoomRowView> =>
     (rooms.length === 0 ? [null] : rooms).map((room) => {
         const at = room?.lastAt ?? null
         return {
             id: room?.key ?? "office",
             label: room?.key == null ? words.t("title") : room.name,
-            description:
-                room === null ? words.t("groupPreviewEmpty") : previewOf(room.lastBody, room.lastAuthor, words),
+            description: room === null ? words.t("groupPreviewEmpty") : roomPreviewOf(room, words, meName),
             time: at === null ? null : timeOf(at),
             sortAt: at,
             unread: room?.unread ?? 0,
+            state: room?.state ?? NO_CONVERSATION_STATE,
             members: room?.members ?? null,
         }
     })

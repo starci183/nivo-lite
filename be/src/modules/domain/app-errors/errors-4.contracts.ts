@@ -8,6 +8,7 @@ import { CONTENT_PUBLISHING_ERROR_KINDS } from "@modules/domain/content-publishi
 import { CONTENT_MEDIA_ERROR_KINDS } from "@modules/domain/content-media"
 import { MESSAGES_ERROR_KINDS } from "@modules/domain/messages"
 import { OFFICE_ROOMS_ERROR_KINDS } from "@modules/domain/office-rooms"
+import { CHAT_MARKERS_ERROR_KINDS } from "@modules/domain/chat-markers"
 import { MCP_GATEWAY_ERROR_KINDS } from "@modules/domain/mcp-gateway"
 import { MCP_GATEWAY_RECEIPTS_ERROR_KINDS } from "@modules/domain/mcp-gateway-receipts"
 import { MCP_ERROR_KINDS } from "@modules/integrations/mcp"
@@ -17,6 +18,7 @@ import { WORK_CHAINS_ERROR_KINDS } from "@modules/domain/work-chains"
 import { THREAD_MESSAGES_ERROR_KINDS } from "@modules/domain/thread-messages"
 import { THREAD_WORK_ERROR_KINDS } from "@modules/domain/thread-work"
 import { WORK_THREADS_ERROR_KINDS } from "@modules/domain/work-threads"
+import { AVATARS_ERROR_KINDS } from "@modules/domain/avatars"
 
 /** App-wide errors catalog, preserving registration order. */
 export const API_ERROR_KINDS_4 = [
@@ -30,6 +32,7 @@ export const API_ERROR_KINDS_4 = [
     CONTENT_MEDIA_ERROR_KINDS,
     MESSAGES_ERROR_KINDS,
     OFFICE_ROOMS_ERROR_KINDS,
+    CHAT_MARKERS_ERROR_KINDS,
     MCP_ERROR_KINDS,
     MCP_GATEWAY_ERROR_KINDS,
     MCP_GATEWAY_RECEIPTS_ERROR_KINDS,
@@ -39,4 +42,5 @@ export const API_ERROR_KINDS_4 = [
     WORK_THREADS_ERROR_KINDS,
     THREAD_MESSAGES_ERROR_KINDS,
     THREAD_WORK_ERROR_KINDS,
+    AVATARS_ERROR_KINDS,
 ]

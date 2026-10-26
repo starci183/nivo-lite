@@ -98,13 +98,36 @@ describe("AgentMessagesService listChat", () => {
     })
 })
 describe("AgentMessagesService storeHuman and storeHumanMessage", () => {
-    it("writes a person's reply through the caller's transaction", async () => {
-        const { service, em } = await build()
+    it("leaves automated human-labelled replies without an account identity", async () => {
+        const { service } = await build()
         const inside = mockEntityManager({ query: [INSERT_HUMAN_MESSAGE, [{ id: "human-1" }]] })
 
         await expect(service.storeHuman("ws-1", "conv-1", "Welcome", "Mai", inside)).resolves.toBe("human-1")
 
-        expect(inside.query).toHaveBeenCalledWith(INSERT_HUMAN_MESSAGE, [null, "ws-1", "conv-1", "Welcome", "Mai"])
+        expect(inside.query).toHaveBeenCalledWith(INSERT_HUMAN_MESSAGE, [
+            null,
+            "ws-1",
+            "conv-1",
+            "Welcome",
+            "Mai",
+            null,
+        ])
+    })
+
+    it("writes a person's reply through the caller's transaction", async () => {
+        const { service, em } = await build()
+        const inside = mockEntityManager({ query: [INSERT_HUMAN_MESSAGE, [{ id: "human-1" }]] })
+
+        await expect(service.storeHuman("ws-1", "conv-1", "Welcome", "Mai", inside, "user-1")).resolves.toBe("human-1")
+
+        expect(inside.query).toHaveBeenCalledWith(INSERT_HUMAN_MESSAGE, [
+            null,
+            "ws-1",
+            "conv-1",
+            "Welcome",
+            "Mai",
+            "user-1",
+        ])
         expect(em.query).not.toHaveBeenCalled()
     })
 
@@ -117,13 +140,14 @@ describe("AgentMessagesService storeHuman and storeHumanMessage", () => {
             service.storeHumanMessage("ws-1", "conv-1", "Approved", "Mai", inside, "approved-1"),
         ).resolves.toBe("approved-1")
 
-        expect(em.query).toHaveBeenCalledWith(INSERT_HUMAN_MESSAGE, [null, "ws-1", "conv-1", "Welcome", "Mai"])
+        expect(em.query).toHaveBeenCalledWith(INSERT_HUMAN_MESSAGE, [null, "ws-1", "conv-1", "Welcome", "Mai", null])
         expect(inside.query).toHaveBeenCalledWith(INSERT_HUMAN_MESSAGE, [
             "approved-1",
             "ws-1",
             "conv-1",
             "Approved",
             "Mai",
+            null,
         ])
     })
 
@@ -133,7 +157,7 @@ describe("AgentMessagesService storeHuman and storeHumanMessage", () => {
         await expect(service.storeHumanMessage("ws-1", "conv-1", "Welcome", "Mai")).rejects.toMatchObject({
             code: AgentMessagesErrorCode.NotStored,
         })
-        expect(em.query).toHaveBeenCalledWith(INSERT_HUMAN_MESSAGE, [null, "ws-1", "conv-1", "Welcome", "Mai"])
+        expect(em.query).toHaveBeenCalledWith(INSERT_HUMAN_MESSAGE, [null, "ws-1", "conv-1", "Welcome", "Mai", null])
     })
 })
 describe("AgentMessagesService storeAgentMessage", () => {
@@ -159,8 +183,10 @@ describe("AgentMessagesService storeCustomer and storeGreeting", () => {
         })
 
         await expect(service.storeCustomer("ws-1", "conv-1", "Hello", inside)).resolves.toBe("m-1")
+        await expect(service.storeCustomer("ws-1", "conv-1", "Test", inside, "user-1")).resolves.toBe("m-1")
         await expect(service.storeGreeting("ws-1", "conv-1", "Welcome", inside)).resolves.toBe("g-1")
-        expect(inside.query).toHaveBeenCalledWith(INSERT_CUSTOMER_MESSAGE, ["ws-1", "conv-1", "Hello"])
+        expect(inside.query).toHaveBeenCalledWith(INSERT_CUSTOMER_MESSAGE, ["ws-1", "conv-1", "Hello", null])
+        expect(inside.query).toHaveBeenCalledWith(INSERT_CUSTOMER_MESSAGE, ["ws-1", "conv-1", "Test", "user-1"])
     })
 
     it("fail loudly when the insert answers no row", async () => {

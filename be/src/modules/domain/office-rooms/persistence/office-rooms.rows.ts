@@ -16,6 +16,14 @@ export interface PinRow {
     note: string
 }
 
+/** The unread count of one agent or customer conversation. */
+export interface ConversationUnreadRow {
+    /** The agent or lead id. */
+    id: string
+    /** Lines the caller has not read, at most 99. */
+    unread: number
+}
+
 /** The newest line and the unread count of a room. */
 export interface RoomSummaryRow {
     /** Lines the caller has not read, at most 99. */

@@ -25,6 +25,7 @@ const headRowOf = builder<AgentHeadRow>({
     role: "Sales assistant",
     module: "sales",
     status: "active",
+    avatar_url: "https://cdn.example/a1.png",
     room_name: "Sales",
     operating_mode: "assist",
 })
@@ -58,15 +59,17 @@ describe("headOf", () => {
             role: "Sales assistant",
             module: "sales",
             status: "active",
+            avatarUrl: "https://cdn.example/a1.png",
             roomName: "Sales",
             operatingMode: "assist",
         })
     })
 
-    it("keeps a missing room and instance as null", async () => {
+    it("keeps a missing picture, room and instance as null", async () => {
         const subject = await buildSubject()
 
-        expect(subject.headOf(headRowOf({ room_name: null, operating_mode: null }))).toMatchObject({
+        expect(subject.headOf(headRowOf({ avatar_url: null, room_name: null, operating_mode: null }))).toMatchObject({
+            avatarUrl: null,
             roomName: null,
             operatingMode: null,
         })

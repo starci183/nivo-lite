@@ -88,6 +88,7 @@ const ICON_SOURCES = {
     cart: cuts(Outline.ShoppingCartIcon, Solid.ShoppingCartIcon),
     notification: cuts(Outline.BellIcon, Solid.BellIcon),
     account: cuts(Outline.UserCircleIcon, Solid.UserCircleIcon),
+    profile: cuts(Outline.IdentificationIcon, Solid.IdentificationIcon),
     saved: cuts(Outline.BookmarkIcon, Solid.BookmarkIcon),
     blog: cuts(Outline.NewspaperIcon, Solid.NewspaperIcon),
     talents: cuts(Outline.SparklesIcon, Solid.SparklesIcon),
@@ -107,6 +108,12 @@ const ICON_SOURCES = {
     expand: cuts(Outline.ChevronDownIcon, Solid.ChevronDownIcon),
     collapseRail: cuts(Outline.ChevronDoubleLeftIcon, Solid.ChevronDoubleLeftIcon),
     google: cuts(GoogleMark, GoogleMark),
+    mute: cuts(Outline.BellSlashIcon, Solid.BellSlashIcon),
+    unmute: cuts(Outline.BellIcon, Solid.BellIcon),
+    messageSending: cuts(Outline.ClockIcon, Solid.ClockIcon),
+    messageSent: cuts(Outline.CheckIcon, Solid.CheckIcon),
+    messageDelivered: cuts(Outline.CheckCircleIcon, Outline.CheckCircleIcon),
+    messageSeen: cuts(Solid.CheckCircleIcon, Solid.CheckCircleIcon),
 } satisfies Record<string, GlyphCuts>
 
 /** What an icon MEANS on these screens. The glyph that draws it is this file business. */

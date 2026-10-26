@@ -5,11 +5,12 @@ import type {
     MessagePage,
     ProposeOutcome,
 } from "@modules/domain/office-command-candidates"
-import type { RoomView } from "@modules/domain/office-rooms"
+import type { ConversationUnreadListView, RoomView } from "@modules/domain/office-rooms"
 import type { PostedMessage } from "@modules/domain/messages"
 import type { Locale } from "@modules/platform/i18n"
 import type { CancelCommandRequest } from "../../application/cancel-command.contracts"
 import type { ConfirmCommandRequest } from "../../application/confirm-command.contracts"
+import type { MarkConversationReadRequest } from "../../application/mark-conversation-read.contracts"
 import type { MarkRoomReadRequest } from "../../application/mark-room-read.contracts"
 import type { ListThreadMessagesRequest } from "../../application/list-thread-messages.contracts"
 import type { PostOfficeMessageRequest } from "../../application/post-office-message.contracts"
@@ -18,12 +19,14 @@ import type { ListOfficeMessagesInput } from "./dto/list-office-messages.input"
 import type { OfficeAckType } from "./dto/office-ack.type"
 import type { OfficeApprovalType } from "./dto/office-approval.type"
 import type { OfficeCandidateIdInput } from "./dto/office-candidate-id.input"
+import type { OfficeConversationReadInput } from "./dto/office-conversation-read.input"
 import type { OfficeCandidateType } from "./dto/office-candidate.type"
 import type { OfficeConfirmResultType } from "./dto/office-confirm-result.type"
 import type { OfficeMessageType } from "./dto/office-message.type"
 import type { OfficeMessagePageType } from "./dto/office-message-page.type"
 import type { OfficeRoomKeyInput } from "./dto/office-room-key.input"
 import type { OfficeRoomType } from "./dto/office-room.type"
+import type { OfficeConversationUnreadType } from "./dto/office-unread.type"
 import type { OfficeProposeOutcomeType } from "./dto/office-propose-outcome.type"
 import type { PostOfficeMessageInput } from "./dto/post-office-message.input"
 import type { ProposeOfficeCommandInput } from "./dto/propose-office-command.input"
@@ -109,4 +112,20 @@ export const toOfficeRoomsType = (rooms: ReadonlyArray<RoomView>): Array<OfficeR
 export const toMarkRoomReadRequest = (workspaceId: string, input: OfficeRoomKeyInput): MarkRoomReadRequest => ({
     workspaceId,
     room: input.room,
+})
+
+/** Maps the caller's unread counts of the direct conversations to the GraphQL type. */
+export const toConversationUnreadType = (view: ConversationUnreadListView): OfficeConversationUnreadType => ({
+    agents: view.agents.map((entry) => ({ ...entry })),
+    leads: view.leads.map((entry) => ({ ...entry })),
+})
+
+/** Maps the direct conversation of the GraphQL input, with the workspace, to the command request. */
+export const toMarkConversationReadRequest = (
+    workspaceId: string,
+    input: OfficeConversationReadInput,
+): MarkConversationReadRequest => ({
+    workspaceId,
+    kind: input.kind,
+    id: input.id,
 })

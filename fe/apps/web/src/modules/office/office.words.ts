@@ -34,18 +34,27 @@ export interface OfficeContext {
 /** The avatar of NIVO Core: a person mark named after the product. */
 export const NIVO_AVATAR: OfficeAvatarView = { kind: "person", name: "NIVO" }
 
-/** The avatar of an installed agent. */
-export const agentAvatarOf = (module: string, label: string): OfficeAvatarView => ({
+/** The avatar of an installed agent: its picture, else the generated avatar of its id. */
+export const agentAvatarOf = (agent: OfficeAgent): OfficeAvatarView => ({
     kind: "agent",
-    glyph: glyphOf(module),
-    module,
-    label,
+    glyph: glyphOf(agent.module),
+    module: agent.module,
+    label: agent.name,
+    seed: agent.id,
+    src: agent.avatarUrl,
 })
 
-/** The avatar of the agent with this id; an unknown agent draws the chatbot mark. */
+/** The avatar of the agent with this id, named as the line names it; an unknown agent draws the generated avatar of its name. */
 export const avatarOfAgentId = (context: OfficeContext, agentId: string | null, label: string): OfficeAvatarView => {
     const agent = context.agents.find((candidate) => candidate.id === agentId)
-    return agentAvatarOf(agent?.module ?? "chatbot", label)
+    return {
+        kind: "agent",
+        glyph: glyphOf(agent?.module ?? "chatbot"),
+        module: agent?.module ?? "chatbot",
+        label,
+        seed: agent?.id ?? label,
+        src: agent?.avatarUrl ?? null,
+    }
 }
 
 /** The active agent installed for a department, if any. */

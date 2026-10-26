@@ -20,6 +20,7 @@ import { CqrsModule } from "@modules/platform/cqrs"
 import { HttpSecurityModule } from "@modules/platform/http-security"
 import { DatabaseModule, PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QueueModule } from "@modules/platform/queue"
+import { RealtimeModule } from "@modules/platform/realtime"
 import { API_SCHEDULERS } from "./schedulers"
 import { JobsModule } from "@modules/platform/jobs"
 import { JobOpsModule } from "@modules/domain/job-ops"
@@ -41,6 +42,7 @@ export const platformModules = (options: ApiOptions): Array<DynamicModule> => [
     CqrsModule.register({ isGlobal: true }),
     HttpSecurityModule.register({ isGlobal: true, ...options.httpSecurity }),
     DatabaseModule.register({ isGlobal: true, connections: [options.database], typeParsers: appPgTypes }),
+    RealtimeModule.register({ isGlobal: true }),
     AppErrorsModule.register({ isGlobal: true }),
     QueueModule.register({ isGlobal: true, schedulers: API_SCHEDULERS, ...options.queue }),
     JobsModule.register({ isGlobal: true, connection: PRIMARY_ENTITY_MANAGER, ...options.jobs }),

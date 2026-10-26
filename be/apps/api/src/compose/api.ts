@@ -12,6 +12,8 @@ import { AdminGraphqlModule } from "@features/api/admin"
 import { WorkspacesGraphqlModule } from "@features/api/workspaces"
 import { InboxGraphqlModule } from "@features/api/inbox"
 import { AgentChatGraphqlModule } from "@features/api/agentchat"
+import { ChatMarkersGraphqlModule } from "@features/api/chatmarkers"
+import { ChattypingGraphqlModule } from "@features/api/chattyping"
 import { AgentChatModule } from "@modules/domain/agent-chat"
 import { AccountGraphqlModule } from "@features/api/account"
 import { ShellGraphqlModule } from "@features/api/shell"
@@ -36,6 +38,8 @@ export const apiModules = (): Array<DynamicModule> => [
     DataHubGraphqlModule.register({}),
     InboxGraphqlModule.register({}),
     AgentChatGraphqlModule.register({}),
+    ChatMarkersGraphqlModule.register({}),
+    ChattypingGraphqlModule.register({}),
     AgentChatModule.register({ isGlobal: true }),
     KnowledgeGraphqlModule.register({}),
     EvidenceGraphqlModule.register({}),

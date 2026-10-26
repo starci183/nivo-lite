@@ -20,6 +20,8 @@ export interface AgentRow {
     approval_rule: string
     /** Constrained by a CHECK in the table. */
     status: "active" | "paused"
+    /** The HTTPS address of the picture the owner gave the agent, or null for the generated avatar. */
+    avatar_url: string | null
     /** When the agent was created. */
     created_at: string
 }

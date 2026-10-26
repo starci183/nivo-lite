@@ -28,6 +28,8 @@ export interface InstallationRecord {
     readonly agentName: string
     /** The mention handle of the agent. */
     readonly agentHandle: string
+    /** The HTTPS address of the agent's picture; null for the generated avatar or when there is no agent. */
+    readonly agentAvatarUrl: string | null
     /** Where the installation stands. */
     readonly status: InstallationStatus
     /** How the agent runs. */

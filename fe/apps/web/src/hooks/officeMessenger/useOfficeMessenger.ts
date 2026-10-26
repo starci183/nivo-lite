@@ -5,9 +5,11 @@ import { isManager, useMember } from "@/hooks/member"
 import {
     useOfficeBoard,
     useOfficeDecisions,
+    useOfficeReceipts,
     useOfficeRooms,
     useOfficeSend,
     useOfficeThread,
+    useOfficeTyping,
     useOfficeWords,
 } from "@/hooks/office"
 import type { OfficeBoard } from "@/hooks/office"
@@ -19,6 +21,7 @@ import {
     roomApprovalsOf,
     roomOf,
     roomWorksOf,
+    withReceipt,
 } from "@/modules/office"
 import type { OfficeRoom } from "@/modules/office"
 import { useOfficePanels } from "./useOfficePanels"
@@ -51,39 +54,17 @@ const scopedBoard = (full: OfficeBoard, current: OfficeRoom | null): OfficeBoard
     decidedCards: roomWorksOf(current, full.decidedCards, full.agents),
 })
 
-/** The people of a room: its seated people, else the accounts (and, in the Office room, the staff without one). */
-const roomPeopleOf = (board: OfficeBoard, current: OfficeRoom | null): number => {
-    if (current !== null && current.userIds.length > 0) return current.userIds.length
-    const linked = board.people.filter((person) => person.staffId !== null).length
-    return board.people.length + (current === null ? board.staff.length - linked : 0)
-}
-
-/** The whole Office messenger for one Hub room (null = the Office room): its data, its words and its commands. */
-export const useOfficeMessenger = (focusedId: string | null, roomKey: string | null) => {
-    const words = useOfficeWords()
+/** The lines the sender needs about a body: the agents it calls and, for an owner or manager, the one command it reads. */
+const useSendLine = (
+    agents: OfficeBoard["agents"],
+    sender: ReturnType<typeof useOfficeSend>,
+    roomKey: string | null,
+) => {
     const me = useMember()
-    const thread = useOfficeThread(roomKey)
-    const hub = useOfficeRooms(roomKey)
-    const fullBoard = useOfficeBoard()
-    const sender = useOfficeSend()
-    const decisions = useOfficeDecisions()
-    const current = roomOf(hub.rooms, roomKey)
-    const roomAgents = roomAgentsOf(current, fullBoard.agents)
-    const board = useMemo(() => scopedBoard(fullBoard, current), [fullBoard, current])
-    const messages = thread.slot.items
-    const pendingCards = (messages ?? []).filter((line) => line.card !== null && line.cardState === "pending").length
-    const waitingCount = board.pending.length + board.exceptions.length + pendingCards
-    const items = useOfficeThreadView(messages, board, words, focusedId, decisions.alreadyIds)
-    const panelRoom = useMemo(
-        () => ({ current, key: roomKey, rooms: hub.rooms, channels: hub.channels, agents: roomAgents }),
-        [current, roomKey, hub.rooms, hub.channels, roomAgents],
-    )
-    const panels = useOfficePanels(messages ?? [], board, words, waitingCount, panelRoom)
-
-    const send = useCallback(
+    return useCallback(
         (body: string): Promise<boolean> => {
             const called = mentionsOf(body)
-            const active = board.agents.filter((agent) => agent.isActive)
+            const active = agents.filter((agent) => agent.isActive)
             const target = called.length === 1 ? active.find((agent) => agent.handle === called[0]) : undefined
             const canRead = isManager(me)
             return sender.send({
@@ -97,8 +78,46 @@ export const useOfficeMessenger = (focusedId: string | null, roomKey: string | n
                         : null,
             })
         },
-        [board.agents, me, sender, roomKey],
+        [agents, me, sender, roomKey],
     )
+}
+
+/** The whole Office messenger for one Hub room (null = the Office room): its data, its words and its commands. */
+export const useOfficeMessenger = (focusedId: string | null, roomKey: string | null) => {
+    const words = useOfficeWords()
+    const receipts = useOfficeReceipts(roomKey)
+    const thread = useOfficeThread(roomKey, receipts.onFetched)
+    const peers = useOfficeTyping(roomKey)
+    const hub = useOfficeRooms(roomKey, peers.names.length > 0)
+    const fullBoard = useOfficeBoard()
+    const sender = useOfficeSend()
+    const decisions = useOfficeDecisions()
+    const current = roomOf(hub.rooms, roomKey)
+    const roomAgents = roomAgentsOf(current, fullBoard.agents)
+    const board = useMemo(() => scopedBoard(fullBoard, current), [fullBoard, current])
+    const marker = hub.markers.get(roomKey ?? "")
+    const fetched = thread.slot.items
+    const messages = useMemo(
+        () => (fetched === undefined ? undefined : withReceipt(fetched, marker)),
+        [fetched, marker],
+    )
+    const pendingCards = (messages ?? []).filter((line) => line.card !== null && line.cardState === "pending").length
+    const waitingCount = board.pending.length + board.exceptions.length + pendingCards
+    const items = useOfficeThreadView(messages, board, words, focusedId, decisions.alreadyIds, sender.outbox.length > 0)
+    const panelRoom = useMemo(
+        () => ({
+            current,
+            key: roomKey,
+            rooms: hub.rooms,
+            channels: hub.channels,
+            agents: roomAgents,
+            unread: hub.unread,
+        }),
+        [current, roomKey, hub.rooms, hub.channels, roomAgents, hub.unread],
+    )
+    const panels = useOfficePanels(messages ?? [], board, words, waitingCount, panelRoom)
+
+    const send = useSendLine(board.agents, sender, roomKey)
 
     const oldestPending = [...board.pending].sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0]
     return {
@@ -111,10 +130,14 @@ export const useOfficeMessenger = (focusedId: string | null, roomKey: string | n
         waitingCount,
         firstJump: firstJumpOf(oldestPending, board.exceptions[0]),
         taskCount: board.tasks.length,
-        memberCount: roomAgents.length + roomPeopleOf(board, current),
+        memberCount: panels.info.members.length,
         agentCount: roomAgents.length,
         roomTitle: current === null ? null : current.name,
-        roomOnDuty: roomAgents.filter((agent) => agent.isActive).map((agent) => agent.name),
+        isMuted: marker?.muted ?? false,
+        setMuted: (muted: boolean) => hub.setMute(roomKey, muted),
+        peersTyping: peers.names,
+        onDraft: peers.onDraft,
+        onDutyCount: roomAgents.filter((agent) => agent.isActive).length,
         reading:
             sender.reading === null
                 ? null
@@ -127,5 +150,6 @@ export const useOfficeMessenger = (focusedId: string | null, roomKey: string | n
         text: words.t,
         send,
         markRead: hub.markRead,
+        markConversationRead: hub.markConversationRead,
     }
 }

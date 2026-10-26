@@ -660,6 +660,13 @@ type AgentAssignmentType {
   threadId: ID!
 }
 
+type AgentAvatarUploadType {
+  path: String!
+  publicUrl: String!
+  signedUrl: String!
+  token: String!
+}
+
 type AgentChatConversationType {
   channel: String!
   createdAt: String!
@@ -925,6 +932,7 @@ type AgentOwnershipType {
 }
 
 type AgentPageHeadType {
+  avatarUrl: String
   handle: String!
   id: ID!
   module: String!
@@ -968,6 +976,7 @@ type AgentRulesRegionType {
 }
 
 type AgentSummaryType {
+  avatarUrl: String
   createdAt: String!
   handle: String!
   id: ID!
@@ -1766,6 +1775,40 @@ type ChatHandlingType {
   handledBy: String
 }
 
+type ChatLastOwnMessageType {
+  id: ID!
+  seenBy: [ChatSeenMemberType!]!
+  seenByCount: Int!
+  status: ChatMessageStatus!
+}
+
+type ChatMarkerAckType {
+  ok: Boolean!
+}
+
+type ChatMarkerStateType {
+  lastOwnMessage: ChatLastOwnMessageType
+  muted: Boolean!
+}
+
+enum ChatMessageStatus {
+  delivered
+  seen
+  sent
+}
+
+input ChatMuteInput {
+  conversationId: ID = null @inputBounds(maxLength: 36)
+  muted: Boolean!
+  room: String = null @inputBounds(maxLength: 20)
+}
+
+input ChatReceiptInput {
+  conversationId: ID = null @inputBounds(maxLength: 36)
+  messageId: ID! @inputBounds(maxLength: 36)
+  room: String = null @inputBounds(maxLength: 20)
+}
+
 type ChatReplyProgressType {
   delivery: String
   errorCode: String
@@ -1776,6 +1819,37 @@ type ChatReplyProgressType {
 
 input ChatReplyStatusInput {
   messageId: ID! @inputBounds(maxLength: 36)
+}
+
+type ChatSeenMemberType {
+  avatarSeed: String!
+  id: ID!
+  name: String!
+}
+
+input ChatTargetInput {
+  conversationId: ID = null @inputBounds(maxLength: 36)
+  room: String = null @inputBounds(maxLength: 20)
+}
+
+type ChatTypingChannelType {
+  event: String!
+  private: Boolean!
+  topic: String!
+  ttlMs: Int!
+}
+
+type ChatTypingSignalType {
+  avatarSeed: String!
+  expiresAt: String!
+  id: String!
+  name: String!
+  typing: Boolean!
+}
+
+input ChatTypingTargetInput {
+  conversationId: String = null @inputBounds(maxLength: 36)
+  room: String = null @inputBounds(maxLength: 20)
 }
 
 type ChatbotConversationType {
@@ -4748,6 +4822,7 @@ input ModuleInstallationIdInput {
 type ModuleInstallationType {
   activeContextVersionId: ID
   activeVersion: Int
+  agentAvatarUrl: String
   agentHandle: String!
   agentId: ID
   agentName: String!
@@ -4910,7 +4985,10 @@ type Mutation {
   linkHiringStaff(input: HiringCandidateRefInput!): LinkStaffType!
   maintainBrain: Boolean!
   markBookingNoShow(input: MarkBookingNoShowInput!): MarkBookingNoShowType!
+  markChatDelivered(input: ChatReceiptInput!): ChatMarkerAckType!
+  markChatRead(input: ChatReceiptInput!): ChatMarkerAckType!
   markContentPublished(input: MarkContentPublishedInput!): MarkContentPublishedType!
+  markOfficeConversationRead(input: OfficeConversationReadInput!): OfficeAckType!
   markOfficeRoomRead(input: OfficeRoomKeyInput!): OfficeAckType!
   markOrderShipped(input: MarkOrderShippedInput!): MarkOrderShippedType!
   markVideoPublished(input: MarkVideoPublishedInput!): VideoProjectType!
@@ -4948,6 +5026,7 @@ type Mutation {
   renameAgent(input: RenameAgentInput!): AgentAckType!
   renameInstallationAgent(input: RenameInstallationAgentInput!): ModuleInstallationType!
   renameModuleInstallation(input: RenameModuleInstallationInput!): ModuleInstallationType!
+  requestAgentAvatarUpload(input: RequestAgentAvatarUploadInput!): AgentAvatarUploadType!
   requestAgentGeneration(input: RequestAgentGenerationInput!): AgentGenerationRequestedType!
   requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
   requestChatAnswer(input: RequestChatAnswerInput!): ChatReplyProgressType!
@@ -4962,6 +5041,7 @@ type Mutation {
   requestInventorySend(input: RequestInventorySendInput!): RequestSendType!
   requestLessonMining(input: RequestLessonMiningInput!): BrainCommandRefType!
   requestLoyaltyCode(input: RequestLoyaltyCodeInput!): RequestLoyaltyCodeType!
+  requestMyAvatarUpload(input: RequestMyAvatarUploadInput!): MyAvatarUploadType!
   requestPaymentOrder(input: RequestPaymentOrderInput!): RequestPaymentOrderType!
   requestPublicBooking(input: RequestPublicBookingInput!): RequestPublicBookingType!
   requestShiftsLeave(input: RequestShiftsLeaveInput!): RequestStatusType!
@@ -5029,11 +5109,14 @@ type Mutation {
   sendAgentChatMessage(input: SendAgentChatMessageInput!): QueuedAgentChatTurnType!
   sendAgentCommand(input: SendAgentCommandInput!): AgentCommandResultType!
   sendSmtpTest(input: SendSmtpTestInput!): SmtpTestResultType!
+  setAgentAvatar(input: SetAgentAvatarInput!): AgentAckType!
   setAgentConnections(input: SetAgentConnectionsInput!): Boolean!
   setAgentOwnership(input: SetAgentOwnershipInput!): AgentAckType!
   setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
   setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
   setChatHandling(input: SetChatHandlingInput!): ChatHandlingType!
+  setChatMuted(input: ChatMuteInput!): ChatMarkerAckType!
+  setChatTyping(input: SetChatTypingInput!): ChatTypingSignalType!
   setConnectionAgents(input: SetConnectionAgentsInput!): Boolean!
   setConnectionGrant(input: SetConnectionGrantInput!): Boolean!
   setContentAutomation(input: SetContentAutomationInput!): ContentBrandSettingsType!
@@ -5046,6 +5129,7 @@ type Mutation {
   setMcpToolGrant(input: SetMcpToolGrantInput!): Boolean!
   setMemberStatus(input: SetMemberStatusInput!): Boolean!
   setModuleLive(input: SetModuleLiveInput!): ModuleInstallationType!
+  setMyAvatar(input: SetMyAvatarInput!): Boolean!
   setOperatingMode(input: SetOperatingModeInput!): ModuleInstallationType!
   setSetupGate(input: SetSetupGateInput!): SetupSessionType!
   setSyncSchedule(input: SetSyncScheduleInput!): Boolean!
@@ -5094,6 +5178,14 @@ type MyAccountType {
   name: String!
   providers: [String!]!
   sessions: [DeviceSessionType!]!
+  uploadedAvatarUrl: String
+}
+
+type MyAvatarUploadType {
+  path: String!
+  publicUrl: String!
+  signedUrl: String!
+  token: String!
 }
 
 input NewResponsibilityInput {
@@ -5164,6 +5256,21 @@ type OfficeConfirmResultType {
   created: Boolean!
   module: String!
   workItemId: ID!
+}
+
+input OfficeConversationReadInput {
+  id: ID! @inputBounds(maxLength: 40)
+  kind: String!
+}
+
+type OfficeConversationUnreadEntryType {
+  id: ID!
+  unread: Int!
+}
+
+type OfficeConversationUnreadType {
+  agents: [OfficeConversationUnreadEntryType!]!
+  leads: [OfficeConversationUnreadEntryType!]!
 }
 
 type OfficeMessagePageType {
@@ -5687,7 +5794,9 @@ type Query {
   brain: BrainType!
   brandProposals(input: BrandProposalsInput!): [BrandProposalType!]!
   chatAnswerStatus(input: ChatAnswerStatusInput!): ChatReplyProgressType!
+  chatMarkerState(input: ChatTargetInput!): ChatMarkerStateType!
   chatReplyStatus(input: ChatReplyStatusInput!): ChatReplyProgressType!
+  chatTypingChannel(input: ChatTypingTargetInput!): ChatTypingChannelType!
   chatbotGaps: ChatbotGapsType!
   chatbotOverview(input: ChatbotOverviewInput!): ChatbotOverviewType!
   chatbotThread(input: ChatbotThreadInput!): ChatbotThreadType!
@@ -5769,6 +5878,7 @@ type Query {
   nivoKnowledge: [NivoEntryType!]!
   nivoKnowledgeCount(input: NivoKnowledgeCountInput!): Int!
   officeCommandCandidates: [OfficeCandidateType!]!
+  officeConversationUnread: OfficeConversationUnreadType!
   officeDecidedApprovals: [OfficeApprovalType!]!
   officeMessages(input: ListOfficeMessagesInput!): OfficeMessagePageType!
   officePendingApprovals: [OfficeApprovalType!]!
@@ -6034,6 +6144,11 @@ type ReportSuggestionType {
   title: String!
 }
 
+input RequestAgentAvatarUploadInput {
+  contentType: String! @inputBounds(maxLength: 100)
+  sizeBytes: Int! @inputBounds(min: 1, max: 2097152)
+}
+
 input RequestAgentGenerationInput {
   kind: String! @inputBounds(maxLength: 40)
   messages: [AgentGenMessageInput!]! @inputBounds(maxItems: 60)
@@ -6118,6 +6233,11 @@ input RequestLoyaltyCodeInput {
 
 type RequestLoyaltyCodeType {
   code: String!
+}
+
+input RequestMyAvatarUploadInput {
+  contentType: String! @inputBounds(maxLength: 100)
+  sizeBytes: Int! @inputBounds(min: 1, max: 2097152)
 }
 
 input RequestPaymentOrderInput {
@@ -7009,6 +7129,11 @@ type SepayKeyType {
   webhookUrl: String!
 }
 
+input SetAgentAvatarInput {
+  agentId: ID! @inputBounds(maxLength: 36)
+  path: String @inputBounds(maxLength: 80)
+}
+
 input SetAgentConnectionsInput {
   agentId: ID! @inputBounds(maxLength: 64)
   connections: [ConnectionWishInput!]! @inputBounds(maxItems: 200)
@@ -7037,6 +7162,11 @@ input SetChatHandlingInput {
   conversationId: ID! @inputBounds(maxLength: 36)
   locale: String! = "vi"
   takeOver: Boolean!
+}
+
+input SetChatTypingInput {
+  target: ChatTypingTargetInput!
+  typing: Boolean!
 }
 
 input SetConnectionAgentsInput {
@@ -7100,6 +7230,10 @@ input SetMemberStatusInput {
 input SetModuleLiveInput {
   installationId: ID! @inputBounds(maxLength: 36)
   live: Boolean!
+}
+
+input SetMyAvatarInput {
+  path: String @inputBounds(maxLength: 80)
 }
 
 input SetOperatingModeInput {

@@ -33,6 +33,7 @@ export const toOfficeMessage = (row: MessageWire): OfficeMessage => ({
     room: row.room ?? null,
     card: cardOf(row.card_json),
     cardState: row.card_state ?? null,
+    receipt: null,
 })
 
 /** The wire line of the back end approval queries. */

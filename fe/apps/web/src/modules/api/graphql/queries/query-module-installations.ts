@@ -12,6 +12,7 @@ const query1: TypedDocumentNode<QueryModuleInstallationsResponse> = gql`
         moduleInstallations {
             activeContextVersionId
             activeVersion
+            agentAvatarUrl
             agentHandle
             agentId
             agentName

@@ -313,6 +313,8 @@ describe("ChatReplyService", () => {
                 "Hello customer",
                 "An",
                 manager,
+                null,
+                "user-1",
             )
             expect(chatTurns.enqueueChatTurn).toHaveBeenCalledWith(
                 {

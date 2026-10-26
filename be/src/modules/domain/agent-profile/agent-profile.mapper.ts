@@ -9,6 +9,7 @@ export const headOf = (row: AgentHeadRow): AgentHead => ({
     role: row.role,
     module: row.module,
     status: row.status,
+    avatarUrl: row.avatar_url,
     roomName: row.room_name,
     operatingMode: row.operating_mode,
 })
