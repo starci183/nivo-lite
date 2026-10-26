@@ -1,5 +1,7 @@
 /** The floating host of the guide button: position and stacking only; the face and elevation belong to the grammar floating action. */
 export const BUBBLE_CLASS = "fixed bottom-6 right-6 z-50"
+/** The floating host on a chat surface: raised above the pinned composer it would otherwise cover. */
+export const BUBBLE_RAISED_CLASS = "fixed bottom-36 right-6 z-50"
 /** The one scroll owner of the drawer: the conversation. */
 export const MESSAGES_CLASS = "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto"
 /** Content stacked inside one guide chat bubble. */

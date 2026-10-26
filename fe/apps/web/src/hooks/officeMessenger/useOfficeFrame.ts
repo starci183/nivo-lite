@@ -48,7 +48,7 @@ const reduce = (state: FrameState, action: FrameAction): FrameState => {
 
 /** The frame of the Office messenger: wide screens dock the info panel as a column, narrower ones open it in a drawer. */
 export const useOfficeFrame = () => {
-    const [state, dispatch] = useReducer(reduce, { phoneView: "thread", centre: "chat", info: null })
+    const [state, dispatch] = useReducer(reduce, { phoneView: "list", centre: "chat", info: null })
     const isInfoDocked = useSyncExternalStore(subscribeWide, readWide, readWideOnServer)
     const isSideBySide = useSyncExternalStore(subscribeSideBySide, readSideBySide, readWideOnServer)
     const isInfoOpen = state.info ?? isInfoDocked
