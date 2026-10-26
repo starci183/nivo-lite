@@ -1,9 +1,8 @@
 import { useSWRConfig } from "swr"
 import useSWRSubscription from "swr/subscription"
-import { useWorkspaceKey } from "@/hooks/workspaceKey"
+import { useViewerKeyId, useWorkspaceKey } from "@/hooks/workspaceKey"
 import { streamOfficeActivity } from "@/modules/api/sse/office/stream-office-activity"
 import type { OfficeActivityKind, OfficeActivityPush } from "@/modules/api/sse/office/stream-office-activity"
-import { useAppSelector } from "@/redux"
 import { QUERY_CHAT_MARKER_STATE_SWR_KEY } from "../../graphql/queries/useQueryChatMarkerStateSwr"
 import { QUERY_OFFICE_CONVERSATION_UNREAD_SWR_KEY } from "../../graphql/queries/useQueryOfficeConversationUnreadSwr"
 import { QUERY_OFFICE_MESSAGES_SWR_KEY } from "../../graphql/queries/useQueryOfficeMessagesSwr"
@@ -37,9 +36,9 @@ const ALL_READS: ReadonlyArray<string> = [
  * since the last frame. A refused or broken attempt is the hook's error until the next frame.
  */
 export const useSubscribeOfficeActivitySwr = () => {
-    const userId = useAppSelector((state) => state.session.session?.userId)
+    const viewerId = useViewerKeyId()
     const { mutate } = useSWRConfig()
-    const key = useWorkspaceKey(SUBSCRIBE_OFFICE_ACTIVITY_SWR_KEY, [userId ?? null], userId !== undefined)
+    const key = useWorkspaceKey(SUBSCRIBE_OFFICE_ACTIVITY_SWR_KEY, [viewerId ?? null], viewerId !== undefined && viewerId !== "signed-out")
     return useSWRSubscription<OfficeActivityPush, Error, OfficeActivityStreamKey>(
         key as OfficeActivityStreamKey,
         ([, workspaceId], { next }) => {

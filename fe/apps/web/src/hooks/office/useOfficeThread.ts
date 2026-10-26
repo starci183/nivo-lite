@@ -2,7 +2,7 @@
 
 import { slotOfSwr } from "@/hooks/slot"
 import { useQueryOfficeMessagesSwr } from "@/hooks/swr"
-import { OFFICE_PAGE_SIZE, OFFICE_SAFETY_POLL_MS, mergeMessages, toOfficeMessage } from "@/modules/office"
+import { OFFICE_PAGE_SIZE, mergeMessages, toOfficeMessage } from "@/modules/office"
 import type { OfficeMessage } from "@/modules/office"
 import type { DataSlot } from "@/modules/types"
 import { useCallback, useEffect, useState } from "react"
@@ -21,7 +21,7 @@ interface EarlierPages {
 }
 
 /**
- * The thread of one Hub room (null = the Office room, every line): the newest page, read again when the office-activity stream announces a change (and rarely as a safety net), and the earlier
+ * The thread of one Hub room (null = the Office room, every line): the newest page, read again when the office-activity stream announces a change, and the earlier
  * pages the person asked for in that room. The stream delivers in hidden tabs too; `onFetched` hears the newest fetched id.
  */
 export const useOfficeThread = (
@@ -34,12 +34,7 @@ export const useOfficeThread = (
     readonly isLoadingEarlier: boolean
     readonly loadEarlier: () => void
 } => {
-    const latest = useQueryOfficeMessagesSwr(
-        { limit: OFFICE_PAGE_SIZE, room },
-        {
-            refreshInterval: OFFICE_SAFETY_POLL_MS,
-        },
-    )
+    const latest = useQueryOfficeMessagesSwr({ limit: OFFICE_PAGE_SIZE, room })
     const fetched = latest.data
     const isValidating = latest.isValidating
     useEffect(() => {

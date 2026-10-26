@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from "react"
 import { useMutateSetChatMutedSwr, useQueryChatMarkerStateSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { OFFICE_SAFETY_POLL_MS, chatTargetOf } from "@/modules/office"
+import { chatTargetOf } from "@/modules/office"
 import type { ChatMarkerWire } from "@/modules/office"
 
 /** The Hub room keys whose state is asked: a null key is the Office room. */
@@ -14,7 +14,7 @@ type RoomKeys = ReadonlyArray<string | null>
  * the office-activity stream, and `setMute` to change the mute of one room.
  */
 export const useOfficeMarkers = (keys: RoomKeys) => {
-    const states = useQueryChatMarkerStateSwr(keys.map(chatTargetOf), { refreshInterval: OFFICE_SAFETY_POLL_MS })
+    const states = useQueryChatMarkerStateSwr(keys.map(chatTargetOf))
     const { trigger } = useMutateSetChatMutedSwr()
     const runGraphQL = useGraphQLWithToast()
     const { mutate } = states

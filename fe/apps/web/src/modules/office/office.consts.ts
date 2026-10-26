@@ -1,9 +1,6 @@
 /** How often the approvals and the work items are read again, in milliseconds (the office-activity stream does not announce them). */
 export const OFFICE_POLL_MS = 4000
 
-/** How often the thread, the rooms, the unread counts and the markers are read again as a safety net behind the office-activity stream, in milliseconds. */
-export const OFFICE_SAFETY_POLL_MS = 60_000
-
 /** How many lines one page of the thread holds. */
 export const OFFICE_PAGE_SIZE = 50
 
