@@ -53,7 +53,6 @@ export const ImapAccountFields = (props: ImapAccountFieldsProps) => {
                 id="imap-name"
                 name="name"
                 label={view.text.name}
-                variant="secondary"
                 hint={view.text.nameHint}
                 isDisabled={view.isDisabled}
                 value={view.values.name}
@@ -63,14 +62,12 @@ export const ImapAccountFields = (props: ImapAccountFieldsProps) => {
                 id="imap-email"
                 name="email"
                 label={view.text.email}
-                variant="secondary"
                 isDisabled={view.isDisabled}
                 value={view.values.email}
                 onValueChange={on.field("email")}
             />
             <Select
                 label={view.text.provider}
-                variant="secondary"
                 isDisabled={view.isDisabled}
                 value={view.preset}
                 options={view.presets}
@@ -81,7 +78,6 @@ export const ImapAccountFields = (props: ImapAccountFieldsProps) => {
                 id="imap-user"
                 name="user"
                 label={view.text.user}
-                variant="secondary"
                 hint={view.text.userHint}
                 isDisabled={view.isDisabled}
                 value={view.values.user}
@@ -92,7 +88,6 @@ export const ImapAccountFields = (props: ImapAccountFieldsProps) => {
                 name="password"
                 kind="password"
                 label={view.text.password}
-                variant="secondary"
                 hint={view.passwordHint}
                 isDisabled={view.isDisabled}
                 value={view.values.password}
@@ -112,7 +107,6 @@ const renderImapAccountFieldsServerFields = (
             id="imap-host"
             name="host"
             label={view.text.host}
-            variant="secondary"
             isDisabled={view.isDisabled}
             value={view.values.host}
             onValueChange={on.field("host")}
@@ -121,14 +115,12 @@ const renderImapAccountFieldsServerFields = (
             id="imap-port"
             name="port"
             label={view.text.port}
-            variant="secondary"
             isDisabled={view.isDisabled}
             value={view.values.port}
             onValueChange={on.field("port")}
         />
         <Select
             label={view.text.security}
-            variant="secondary"
             isDisabled={view.isDisabled}
             value={view.values.security}
             options={view.securities}
