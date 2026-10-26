@@ -1,5 +1,15 @@
 import { useEffect, useRef } from "react"
-import { Button, Divider, Fieldset, Icon, IconButton, Text, Textarea, Tooltip } from "@starci/grammar/common"
+import {
+    Button,
+    Divider,
+    Fieldset,
+    HorizontalScrollRegion,
+    Icon,
+    IconButton,
+    Text,
+    Textarea,
+    Tooltip,
+} from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeComposerProps } from "@/modules/types"
 import {
@@ -31,7 +41,11 @@ type QuickPromptsProps = {
 /** The row of quick questions above the field. */
 const QuickPrompts = (props: QuickPromptsProps) => (
     <Fieldset legend={props.view.text("quickLabel")} isLegendHidden>
-        <div className={CHIPS_CLASS_NAME}>
+        <HorizontalScrollRegion
+            overflow="needed"
+            aria-label={props.view.text("quickLabel")}
+            className={CHIPS_CLASS_NAME}
+        >
             {props.prompts.map((prompt) => (
                 <Button
                     key={prompt}
@@ -43,7 +57,7 @@ const QuickPrompts = (props: QuickPromptsProps) => (
                     {prompt}
                 </Button>
             ))}
-        </div>
+        </HorizontalScrollRegion>
     </Fieldset>
 )
 

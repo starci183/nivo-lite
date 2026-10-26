@@ -5,7 +5,7 @@ export const COMPOSER_CLASS_NAME = "flex shrink-0 flex-col"
 export const COMPOSER_BODY_CLASS_NAME = "flex flex-col gap-2 px-4 pt-3 pb-4"
 
 /** Quick prompt chips: one row that scrolls sideways. */
-export const CHIPS_CLASS_NAME = "flex gap-2 overflow-x-auto pb-1"
+export const CHIPS_CLASS_NAME = "flex gap-2 pb-1"
 
 /** Input row: "@", the field, Send. */
 export const ROW_CLASS_NAME = "flex items-center gap-2"
