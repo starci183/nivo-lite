@@ -8,7 +8,7 @@ export const LEAD_GEN = {
     order: 15,
     icon: "community",
     glyph: "moduleLeadGen",
-    mascot: "/images/promo/mascot-chat.png",
+    mascot: "/images/agents/lead_gen.png",
     category: "sales_customer",
     status: "early",
     audience: "customer",

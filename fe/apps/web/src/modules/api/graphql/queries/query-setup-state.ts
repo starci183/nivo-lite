@@ -38,6 +38,7 @@ const query1: TypedDocumentNode<QuerySetupStateResponse, InputVariables<QuerySet
                 createdAt
                 id
                 isMulti
+                lifecycle
                 liveEnabled
                 moduleKey
                 name

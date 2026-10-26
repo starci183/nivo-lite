@@ -1,4 +1,4 @@
-import type { Installation, InstallationStatus } from "./installations.types"
+import type { Installation, InstallationLifecycle, InstallationStatus } from "./installations.types"
 
 /** The status an agent shows in lists and the frame: its installation status, or not installed. */
 type ShownStatus = InstallationStatus | "notInstalled"
@@ -19,16 +19,58 @@ export const AGENT_STATUS_TONE: Readonly<Record<ShownStatus, "neutral" | "accent
         needs_connection: "warning",
     }
 
-/** The filters of the catalogue by status. */
-export const STATUS_FILTERS = ["all", "installed", "notInstalled", "early"] as const
-const STATUS_FILTER_SET: ReadonlySet<unknown> = new Set(STATUS_FILTERS)
+/** The lifecycle an agent shows: the one the back end names, or not installed. */
+export type AgentLifecycle = InstallationLifecycle | "notInstalled"
 
-/** One status filter of the catalogue. */
-export type StatusFilter = (typeof STATUS_FILTERS)[number]
+/** The badge tone of each lifecycle. */
+export const AGENT_LIFECYCLE_TONE: Readonly<Record<AgentLifecycle, "neutral" | "accent" | "success" | "warning">> = {
+    notInstalled: "neutral",
+    needs_setup: "warning",
+    needs_connection: "warning",
+    paused: "neutral",
+    ready: "accent",
+    running: "success",
+    removed: "neutral",
+}
 
-/** Whether a text is a status filter of the catalogue. */
-export const isStatusFilter = (value: string | null | undefined): value is StatusFilter => STATUS_FILTER_SET.has(value)
+/** The one view-model of how an installed agent reads in lists, rails and the header: the lifecycle of the back end. */
+export const agentLifecycleOf = (installation: Installation | null | undefined): AgentLifecycle =>
+    installation?.lifecycle ?? "notInstalled"
+
+/** The badge tone of a lifecycle. */
+export const agentLifecycleTone = (lifecycle: AgentLifecycle): (typeof AGENT_LIFECYCLE_TONE)[AgentLifecycle] =>
+    AGENT_LIFECYCLE_TONE[lifecycle]
+
+/** The name an installed agent answers to: its own human name, else the instance label. */
+export const installationPersonName = (installation: Installation): string =>
+    [installation.agentName, installation.agentHandle, installation.name].find((name) => name.trim() !== "") ?? ""
 
 /** Accent-insensitive text for matching: NFD, marks stripped, d-stroke folded, lower case. */
 export const foldText = (text: string): string =>
     text.normalize("NFD").replace(/[̀-ͯ]/gu, "").replace(/đ/giu, "d").toLowerCase()
+
+/** The parts of the facts line under an agent name. */
+type AgentSubtitleParts = {
+    readonly handle: string
+    readonly roleName: string
+    readonly channels: ReadonlyArray<string>
+}
+
+/** The facts line under an agent name: "@handle - role - channels", the parts that exist joined by a middle dot. */
+export const agentSubtitleOf = (parts: AgentSubtitleParts): string =>
+    [parts.handle === "" ? "" : `@${parts.handle}`, parts.roleName, parts.channels.join(", ")]
+        .filter((part) => part !== "")
+        .join(" · ")
+
+const LIFECYCLES: ReadonlyArray<InstallationLifecycle> = [
+    "needs_setup",
+    "needs_connection",
+    "paused",
+    "ready",
+    "running",
+    "removed",
+]
+
+/** The closed lifecycle a wire text names; an unknown text reads as needing setup, the safe one: it never claims to be running. */
+export const installationLifecycleOf = (value: string): InstallationLifecycle =>
+    LIFECYCLES.find((lifecycle) => lifecycle === value) ?? "needs_setup"

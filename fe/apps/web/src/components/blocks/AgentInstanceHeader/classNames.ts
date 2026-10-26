@@ -1,16 +1,13 @@
 import { cn } from "@heroui/react"
 
-/** The trail above the header. */
-export const HEAD = cn("flex", "min-w-0", "flex-col", "gap-2")
+/** The avatar, the copy and the actions of the agent: wraps on narrow widths. */
+export const HEADER = cn("flex", "min-w-0", "flex-wrap", "items-center", "gap-3", "p-4")
 
-/** The mascot, the name and the facts of the agent. */
-export const HEADER = cn("flex", "min-w-0", "flex-wrap", "items-center", "gap-4")
-
-/** The copy next to the mascot. */
+/** The copy next to the avatar. */
 export const HEADER_COPY = cn("flex", "min-w-0", "flex-1", "basis-60", "flex-col", "gap-1")
 
 /** The name with its badges. */
 export const HEADER_TITLE = cn("flex", "flex-wrap", "items-center", "gap-2")
 
-/** The facts under the name. */
-export const HEADER_META = cn("flex", "flex-wrap", "items-center", "gap-x-4", "gap-y-1")
+/** The actions at the end of the header. */
+export const HEADER_ACTIONS = cn("flex", "shrink-0", "flex-wrap", "items-center", "gap-2")

@@ -6,7 +6,7 @@ export const SALES = {
     order: 20,
     icon: "cart",
     glyph: "moduleSales",
-    mascot: "/images/promo/mascot-point.png",
+    mascot: "/images/agents/sales.png",
     category: "sales_customer",
     status: "stable",
     audience: "internal",

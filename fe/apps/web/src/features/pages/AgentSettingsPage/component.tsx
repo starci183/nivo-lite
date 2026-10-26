@@ -5,10 +5,11 @@ import { AgentIdentityCard } from "@/components/blocks/AgentIdentityCard"
 import { AgentLiveCard } from "@/components/blocks/AgentLiveCard"
 import { LoyaltyProgramSettings } from "@/components/blocks/LoyaltyProgramSettings"
 import { AgentModeCard } from "@/components/blocks/AgentModeCard"
+import { AgentRemoveCard } from "@/components/blocks/AgentRemoveCard"
 import { AgentReplyCard } from "@/components/blocks/AgentReplyCard"
 import { AgentSyncCard } from "@/components/blocks/AgentSyncCard"
 import type { ModuleKey } from "@/modules/catalog"
-import { COLUMN, GRID } from "./classNames"
+import { COLUMN, GRID, PAGE } from "./classNames"
 
 /** The facts of the type and the instance the settings cards read. */
 export interface AgentSettingsPageBaseProps {
@@ -25,21 +26,24 @@ export interface AgentSettingsPageBaseProps {
 export const AgentSettingsPageBase = (props: AgentSettingsPageBaseProps) => {
     const { module, installationId } = props.props
     return (
-        <div className={GRID}>
-            <div className={COLUMN}>
-                <AgentIdentityCard installationId={installationId} module={module} glyph={props.props.glyph} />
-                <AgentModeCard installationId={installationId} module={module} />
+        <div className={PAGE}>
+            <div className={GRID}>
+                <div className={COLUMN}>
+                    <AgentIdentityCard installationId={installationId} module={module} glyph={props.props.glyph} />
+                    <AgentModeCard installationId={installationId} module={module} />
+                </div>
+                <div className={COLUMN}>
+                    <AgentLiveCard installationId={installationId} module={module} />
+                    <AgentConnectionAccess installationId={installationId} module={module} />
+                    <AgentAutomations />
+                    <AgentSyncCard installationId={installationId} />
+                    {props.props.extrasKey === "chatbot_reply" ? (
+                        <AgentReplyCard installationId={installationId} module={module} />
+                    ) : null}
+                    {props.props.extrasKey === "loyalty_program" ? <LoyaltyProgramSettings /> : null}
+                </div>
             </div>
-            <div className={COLUMN}>
-                <AgentLiveCard installationId={installationId} module={module} />
-                <AgentConnectionAccess installationId={installationId} module={module} />
-                <AgentAutomations />
-                <AgentSyncCard installationId={installationId} />
-                {props.props.extrasKey === "chatbot_reply" ? (
-                    <AgentReplyCard installationId={installationId} module={module} />
-                ) : null}
-                {props.props.extrasKey === "loyalty_program" ? <LoyaltyProgramSettings /> : null}
-            </div>
+            <AgentRemoveCard installationId={installationId} module={module} />
         </div>
     )
 }

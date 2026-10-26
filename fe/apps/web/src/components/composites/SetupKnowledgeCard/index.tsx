@@ -1,4 +1,4 @@
-import { List, ListItem, SurfaceCard, Text, TextAction } from "@starci/grammar/common"
+import { Heading, List, ListItem, Region, Text, TextAction } from "@starci/grammar/common"
 import { COUNTS, ROW, STACK } from "./classNames"
 
 /** The knowledge this module runs on, in the reader language. */
@@ -17,8 +17,9 @@ type SetupKnowledgeCardProps = {
 
 /** Draws the knowledge this module runs on: the sources of the business, and where to add more. */
 export const SetupKnowledgeCard = (props: SetupKnowledgeCardProps) => (
-    <SurfaceCard label={props.title} headingLevel={2}>
+    <Region label={props.title}>
         <div className={STACK}>
+            <Heading level={2}>{props.title}</Heading>
             <List label={props.title} className={COUNTS}>
                 <ListItem>
                     <Text size="sm" isSkeleton={props.isLoading}>
@@ -46,5 +47,5 @@ export const SetupKnowledgeCard = (props: SetupKnowledgeCardProps) => (
                 </TextAction>
             </div>
         </div>
-    </SurfaceCard>
+    </Region>
 )

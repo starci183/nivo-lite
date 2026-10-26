@@ -1,23 +1,17 @@
-/** The regions of the catalogue under the page heading. */
-export const REGIONS = "flex min-w-0 flex-col gap-6"
+/** The two sections under the page heading. */
+export const REGIONS = "flex min-w-0 flex-col gap-8"
 
-/** The toolbar: search and category on one row from sm, the status chips and the count under them. */
+/** One section: its heading and its content. */
+export const SECTION = "flex min-w-0 flex-col gap-4"
+
+/** The heading of a section with its count. */
+export const SECTION_HEAD = "flex min-w-0 items-baseline gap-2"
+
+/** The search field and the group filter under the heading of the roles. */
 export const TOOLBAR = "flex min-w-0 flex-col gap-3"
 
-/** The row of the search and the category select. */
-export const TOOLBAR_ROW = "flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end"
+/** The search field keeps a readable width from sm. */
+export const TOOLBAR_SEARCH = "min-w-0 sm:max-w-sm"
 
-/** The search field takes the remaining width. */
-export const TOOLBAR_SEARCH = "min-w-0 flex-1"
-
-/** The category select keeps a fixed width from sm. */
-export const TOOLBAR_SELECT = "w-full sm:w-56 sm:shrink-0"
-
-/** The status chips and the result count. */
-export const TOOLBAR_META = "flex min-w-0 flex-wrap items-center justify-between gap-3"
-
-/** One category: its heading and its cards. */
-export const CATEGORY = "flex min-w-0 flex-col gap-3"
-
-/** The cards of a category. */
-export const GRID = "grid grid-cols-1 gap-4 md:grid-cols-3"
+/** The cards of a section, three columns from xl. */
+export const GRID = "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"

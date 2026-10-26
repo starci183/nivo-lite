@@ -4,34 +4,52 @@ import { useLocale } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { MODULE_KEYS, MODULE_REGISTRY, pickCopy, pickCopyList } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
-import type { InstallationConnectionNeed } from "@/modules/installations"
-import { AGENT_STATUS_TONE, agentHref, agentStatusOf, foldText, instancesOf } from "@/modules/installations"
+import type { AgentLifecycle } from "@/modules/installations"
+import {
+    installationPersonName,
+    agentHref,
+    agentLifecycleOf,
+    agentLifecycleTone,
+    foldText,
+    instancesOf,
+} from "@/modules/installations"
 import type { DataSlot } from "@/modules/types"
 import { useInstallations } from "./useInstallations"
 
-/** One agent of the catalogue in the reader language, with whether (and how) it is installed. */
-interface CatalogEntry {
+/** One role of the catalogue in the reader language, with whether an agent of it is installed. */
+export interface CatalogRole {
     readonly key: ModuleKey
     readonly categoryKey: string
     /** The name, description and points folded for matching, in both languages. */
     readonly searchText: string
+    /** At least one agent of this role is installed. */
     readonly installed: boolean
     readonly isEarly: boolean
     readonly name: string
     readonly description: string
     readonly points: ReadonlyArray<string>
     readonly mascot: string
-    readonly status: ReturnType<typeof agentStatusOf>
-    readonly statusTone: (typeof AGENT_STATUS_TONE)[keyof typeof AGENT_STATUS_TONE]
-    /** What an installed agent waits for (`needs_connection`); empty otherwise. */
-    readonly connectionNeeds: ReadonlyArray<InstallationConnectionNeed>
-    /** Where an installed agent opens; null when it is not installed. */
+    /** Where the installed agent of this role opens; null when none is installed. */
     readonly openHref: string | null
 }
 
-/** The catalogue of agents with the install state of the active workspace, and its categories. */
+/** One installed agent as a person of the team. */
+interface InstalledAgent {
+    readonly id: string
+    readonly name: string
+    /** The seed of the generated avatar. */
+    readonly seed: string
+    readonly avatarUrl: string | null
+    readonly roleName: string
+    readonly lifecycle: AgentLifecycle
+    readonly tone: ReturnType<typeof agentLifecycleTone>
+    readonly href: string
+}
+
+/** The installed agents, the roles still to add (a single-instance role that is installed does not repeat), and the categories. */
 export const useCatalogEntries = (): {
-    readonly entries: ReadonlyArray<CatalogEntry>
+    readonly agents: ReadonlyArray<InstalledAgent>
+    readonly roles: ReadonlyArray<CatalogRole>
     readonly categories: ReadonlyArray<{ readonly key: string; readonly label: string }>
     readonly slot: DataSlot<boolean>
     readonly reload: () => void
@@ -39,39 +57,52 @@ export const useCatalogEntries = (): {
     const locale = useLocale() === "en" ? "en" : "vi"
     const { slot: installationsSlot, installations, reload: reloadInstallations } = useInstallations()
     const catalog = useModuleCatalog()
-    const entries = MODULE_KEYS.map((key): CatalogEntry => {
+    const roles = MODULE_KEYS.flatMap((key): ReadonlyArray<CatalogRole> => {
         const def = MODULE_REGISTRY[key]
         const copy = catalog.modules[key]
         const installation = installations === undefined ? undefined : instancesOf(installations, key)[0]
-        const status = agentStatusOf(installation)
+        if (installation !== undefined && !def.multiInstance) return []
         const category = catalog.categories.find((entry) => entry.key === def.category)
+        return [
+            {
+                key,
+                categoryKey: def.category,
+                installed: installation !== undefined,
+                isEarly: def.status === "early",
+                searchText: foldText(
+                    [
+                        copy?.name.vi ?? "",
+                        copy?.name.en ?? "",
+                        copy?.shortName.vi ?? "",
+                        copy?.shortName.en ?? "",
+                        copy?.description.vi ?? "",
+                        copy?.description.en ?? "",
+                        ...(copy?.points.vi ?? []),
+                        ...(copy?.points.en ?? []),
+                        category?.label.vi ?? "",
+                        category?.label.en ?? "",
+                    ].join(" "),
+                ),
+                name: copy === undefined ? "" : pickCopy(copy.name, locale),
+                description: copy === undefined ? "" : pickCopy(copy.description, locale),
+                points: copy === undefined ? [] : pickCopyList(copy.points, locale),
+                mascot: def.mascot,
+                openHref: installation === undefined ? null : agentHref(key, installation.id),
+            },
+        ]
+    })
+    const agents = (installations ?? []).map((installation): InstalledAgent => {
+        const copy = catalog.modules[installation.moduleKey]
+        const lifecycle = agentLifecycleOf(installation)
         return {
-            key,
-            categoryKey: def.category,
-            installed: installation !== undefined,
-            isEarly: def.status === "early",
-            searchText: foldText(
-                [
-                    copy?.name.vi ?? "",
-                    copy?.name.en ?? "",
-                    copy?.shortName.vi ?? "",
-                    copy?.shortName.en ?? "",
-                    copy?.description.vi ?? "",
-                    copy?.description.en ?? "",
-                    ...(copy?.points.vi ?? []),
-                    ...(copy?.points.en ?? []),
-                    category?.label.vi ?? "",
-                    category?.label.en ?? "",
-                ].join(" "),
-            ),
-            name: copy === undefined ? "" : pickCopy(copy.name, locale),
-            description: copy === undefined ? "" : pickCopy(copy.description, locale),
-            points: copy === undefined ? [] : pickCopyList(copy.points, locale),
-            mascot: def.mascot,
-            status,
-            statusTone: AGENT_STATUS_TONE[status],
-            connectionNeeds: installation?.connectionNeeds ?? [],
-            openHref: installation === undefined ? null : agentHref(key, null),
+            id: installation.id,
+            name: installationPersonName(installation),
+            seed: installation.agentId ?? installation.id,
+            avatarUrl: installation.agentAvatarUrl,
+            roleName: copy === undefined ? "" : pickCopy(copy.name, locale),
+            lifecycle,
+            tone: agentLifecycleTone(lifecycle),
+            href: agentHref(installation.moduleKey, installation.id),
         }
     })
     const categories =
@@ -91,7 +122,8 @@ export const useCatalogEntries = (): {
         items: catalog.slot.items === undefined || installationsSlot.items === undefined ? undefined : true,
     }
     return {
-        entries,
+        agents,
+        roles,
         categories,
         slot,
         reload: () => {

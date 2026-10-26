@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl"
 import { useConnectionNeedsCopy, useInstanceHeader } from "@/hooks/installations"
 import type { ModuleKey } from "@/hooks/installations"
-import { AGENTS_ROUTE, APP_ROUTES } from "@/modules/routes"
 import { AgentInstanceHeaderBase } from "./component"
 
 /** What the layout hands the header: the type and the instance of the url. */
@@ -12,38 +11,27 @@ interface AgentInstanceHeaderProps {
     readonly installationId: string
 }
 
-/** The connected header of an agent instance: a multi-instance type shows the instance name as the heading and the type in the trail. */
+/** The connected header of an agent instance: the person (avatar, name, status), "@handle - role - channels" and the chat and profile actions. */
 export const AgentInstanceHeader = (props: AgentInstanceHeaderProps) => {
     const t = useTranslations("modulesCore")
-    const ts = useTranslations("shell")
     const header = useInstanceHeader(props.module, props.installationId)
     const needs = useConnectionNeedsCopy()
     return (
         <AgentInstanceHeaderBase
             props={{
-                crumbLabel: ts("crumbLabel"),
-                crumbs: [
-                    { id: "home", label: ts("crumbHome"), href: APP_ROUTES.dashboard },
-                    { id: "modules", label: t("catalogTitle"), href: AGENTS_ROUTE },
-                    header.listHref === null
-                        ? { id: "module", label: header.typeName }
-                        : { id: "module", label: header.typeName, href: header.listHref },
-                ],
-                mascot: header.mascot,
-                title: header.multiName ?? header.typeName,
+                name: header.name,
+                seed: header.seed,
+                avatarUrl: header.avatarUrl,
                 isEarly: header.isEarly,
                 earlyLabel: t("earlyBadge"),
-                statusLabel: t(`status_${header.status}`),
+                statusLabel: t(`lifecycle_${header.lifecycle}`),
                 statusTone: header.statusTone,
+                subtitle: header.subtitle,
                 needs: { lines: needs.linesOf(header.connectionNeeds), linkLabel: needs.linkLabel, href: needs.href },
-                typeLine: header.multiName === null ? null : header.typeName,
-                versionLabel:
-                    header.activeVersion === null
-                        ? t("noVersion")
-                        : t("versionInUse", { version: header.activeVersion }),
-                liveLabel: header.isLive ? t("liveOn") : t("liveOff"),
+                chatHref: header.chatHref,
+                chatLabel: t("privateChat"),
                 profileHref: header.profileHref,
-                profileLabel: t("agentProfileLink"),
+                profileLabel: t("profileShort"),
                 isLoading: header.isLoading,
             }}
         />

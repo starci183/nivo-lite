@@ -1,5 +1,5 @@
 /** Blocks inside a card. */
-export const STACK = "flex min-w-0 flex-col gap-3"
+export const STACK = "flex min-w-0 flex-col gap-3 p-4"
 
 /** The counts of the knowledge a module runs on. */
 export const COUNTS = "flex flex-col gap-2"

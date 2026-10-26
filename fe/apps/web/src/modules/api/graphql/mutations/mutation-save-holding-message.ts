@@ -23,6 +23,7 @@ const mutation1: TypedDocumentNode<
             createdAt
             id
             isMulti
+            lifecycle
             liveEnabled
             moduleKey
             name

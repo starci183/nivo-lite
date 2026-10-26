@@ -1,14 +1,20 @@
-/** The stack of one card. */
-export const CARD = "flex h-full min-w-0 flex-col gap-4"
+/** The stack of one card: the illustration band, the copy, the actions at the foot. */
+export const CARD = "flex h-full min-w-0 flex-col gap-3"
+
+/** The illustration band on its tinted plate. */
+export const BAND = "h-32 w-full overflow-hidden"
 
 /** The name and the badges of a card. */
-export const CARD_HEAD = "flex items-start justify-between gap-3"
+export const CARD_HEAD = "flex flex-wrap items-center justify-between gap-2"
 
 /** A row of badges. */
-export const BADGES = "flex flex-wrap items-center justify-end gap-2"
+export const BADGES = "flex flex-wrap items-center gap-2"
 
-/** The short list of facts under the description. */
+/** The short list of capabilities under the description. */
 export const POINTS = "flex flex-col gap-1"
 
-/** The action row at the foot of a card. */
-export const FOOT = "mt-auto flex items-center justify-between gap-2 pt-2"
+/** The action row at the foot of a card, pinned so the actions align across cards. */
+export const FOOT = "mt-auto flex flex-wrap items-center gap-2 pt-2"
+
+/** The capabilities inside the details dialog. */
+export const DETAIL = "flex min-w-0 flex-col gap-3"

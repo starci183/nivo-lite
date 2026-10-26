@@ -8,7 +8,6 @@ export interface AgentsCatalogPageBaseProps {
     readonly props: {
         readonly crumbLabel: string
         readonly crumbs: ReadonlyArray<BreadcrumbItem>
-        readonly eyebrow: string
         readonly title: string
         readonly description: string
     }
@@ -20,12 +19,7 @@ export const AgentsCatalogPageBase = (props: AgentsCatalogPageBaseProps) => (
         <div className={REGIONS}>
             <div className={HEAD}>
                 <Breadcrumbs label={props.props.crumbLabel} items={props.props.crumbs} />
-                <SectionHeader
-                    level={1}
-                    eyebrow={props.props.eyebrow}
-                    title={props.props.title}
-                    description={props.props.description}
-                />
+                <SectionHeader level={1} title={props.props.title} description={props.props.description} />
             </div>
             <AgentCatalog />
         </div>

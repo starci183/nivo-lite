@@ -6,7 +6,7 @@ export const LOYALTY = {
     order: 70,
     icon: "reward",
     glyph: "moduleLoyalty",
-    mascot: "/images/promo/mascot-offer.png",
+    mascot: "/images/agents/loyalty.png",
     category: "sales_customer",
     status: "early",
     audience: "customer",

@@ -1,36 +1,46 @@
 "use client"
 
-import { useLocale } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { MODULE_REGISTRY, pickCopy } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
-import { AGENT_STATUS_TONE, agentListHref, agentStatusOf } from "@/modules/installations"
-import { agentProfileHref } from "@/modules/routes"
+import { agentLifecycleOf, agentLifecycleTone, agentSubtitleOf, installationPersonName } from "@/modules/installations"
+import { agentChatHref, agentProfileHref } from "@/modules/routes"
+import { useInstanceChannels } from "./useInstanceChannels"
 import { useInstanceGuard } from "./useInstanceGuard"
 
-/** The header of one agent instance: type, instance name, status, version and live state; skeleton data until the instance is known. */
+/** The header of one agent instance: the person (name, handle, avatar seed), the role, the lifecycle and the channels; skeleton data until the instance is known. */
 export const useInstanceHeader = (module: ModuleKey, installationId: string) => {
+    const t = useTranslations("modulesCore")
     const locale = useLocale() === "en" ? "en" : "vi"
     const guard = useInstanceGuard(module, installationId)
     const installation = guard.installation
     const def = MODULE_REGISTRY[module]
     const catalog = useModuleCatalog()
     const copy = catalog.modules[module]
+    const channelsOf = useInstanceChannels()
     const fallbackName = catalog.slot.isError === true ? module : ""
-    const status = agentStatusOf(installation)
-    const multiName = installation?.isMulti === true ? installation.name : null
+    const lifecycle = agentLifecycleOf(installation)
+    const channels = channelsOf(installation?.agentId ?? null)
+    const typeName = copy === undefined ? fallbackName : pickCopy(copy.name, locale)
     return {
         isLoading: installation === undefined || catalog.slot.isLoading === true,
-        typeName: copy === undefined ? fallbackName : pickCopy(copy.name, locale),
-        mascot: def.mascot,
+        name: installation === undefined ? "" : installationPersonName(installation),
+        handle: installation?.agentHandle ?? "",
+        seed: installation?.agentId ?? installation?.id ?? "",
+        avatarUrl: installation?.agentAvatarUrl ?? null,
+        typeName,
+        subtitle: agentSubtitleOf({
+            handle: installation?.agentHandle ?? "",
+            roleName: typeName,
+            channels: channels.length === 0 ? [t("headerNoChannels")] : channels,
+        }),
         isEarly: def.status === "early",
-        multiName,
-        listHref: multiName === null ? null : agentListHref(module),
-        status,
-        statusTone: AGENT_STATUS_TONE[status],
+        lifecycle,
+        statusTone: agentLifecycleTone(lifecycle),
+        channels,
         connectionNeeds: installation?.connectionNeeds ?? [],
-        activeVersion: installation?.activeVersion ?? null,
-        isLive: installation?.liveEnabled === true,
+        chatHref: installation?.agentId == null ? null : agentChatHref(installation.agentId),
         profileHref: installation?.agentId == null ? null : agentProfileHref(installation.agentId),
     }
 }

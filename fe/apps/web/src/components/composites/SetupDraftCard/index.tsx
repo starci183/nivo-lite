@@ -1,4 +1,4 @@
-import { Heading, List, ListItem, Skeleton, SurfaceCard, Text } from "@starci/grammar/common"
+import { Heading, List, ListItem, Region, Skeleton, Text } from "@starci/grammar/common"
 import { FACTS, STACK } from "./classNames"
 
 /** The draft of the setup in the reader language. */
@@ -13,8 +13,9 @@ type SetupDraftCardProps = {
 
 /** The draft being built in the setup chat: the summary of the business and the facts NIVO noted. */
 export const SetupDraftCard = (props: SetupDraftCardProps) => (
-    <SurfaceCard label={props.title} headingLevel={2}>
+    <Region label={props.title}>
         <div className={STACK}>
+            <Heading level={2}>{props.title}</Heading>
             {props.isLoading ? <Skeleton shape="text" lines={3} /> : null}
             {!props.isLoading && props.summary !== "" ? <Text size="sm">{props.summary}</Text> : null}
             {!props.isLoading && props.summary === "" ? (
@@ -35,5 +36,5 @@ export const SetupDraftCard = (props: SetupDraftCardProps) => (
                 </>
             ) : null}
         </div>
-    </SurfaceCard>
+    </Region>
 )

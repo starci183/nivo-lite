@@ -6,7 +6,7 @@ export const CONTENT = {
     order: 90,
     icon: "blog",
     glyph: "moduleContent",
-    mascot: "/images/promo/mascot-celebrate.png",
+    mascot: "/images/agents/content.png",
     category: "marketing",
     status: "early",
     audience: "internal",

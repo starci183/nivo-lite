@@ -20,7 +20,6 @@ export const AgentsCatalogPage = async () => {
                     { id: "home", label: ts("crumbHome"), href: APP_ROUTES.dashboard },
                     { id: "modules", label: t("catalogTitle") },
                 ],
-                eyebrow: t("eyebrow"),
                 title: t("catalogTitle"),
                 description: t("catalogDescription"),
             }}

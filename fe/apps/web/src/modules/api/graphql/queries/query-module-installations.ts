@@ -23,6 +23,7 @@ const query1: TypedDocumentNode<QueryModuleInstallationsResponse> = gql`
             createdAt
             id
             isMulti
+            lifecycle
             liveEnabled
             moduleKey
             name

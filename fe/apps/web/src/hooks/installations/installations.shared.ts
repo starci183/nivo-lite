@@ -1,7 +1,7 @@
 import type { ModuleIconName } from "@/modules/types"
 import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
-import { agentHref, agentListHref, instancesOf } from "@/modules/installations"
+import { agentHref, agentListHref, installationLifecycleOf, instancesOf } from "@/modules/installations"
 import { AGENTS_ROUTE } from "@/modules/routes"
 import type { AgentTab, Installation, InstallationStatus, OperatingMode } from "@/modules/installations"
 
@@ -14,8 +14,10 @@ interface InstallationWire {
     readonly isMulti: boolean
     readonly agentId?: string | null
     readonly agentName: string
+    readonly agentAvatarUrl?: string | null
     readonly agentHandle: string
     readonly status: string
+    readonly lifecycle: string
     readonly connectionNeeds: ReadonlyArray<{ readonly role: string; readonly providers: ReadonlyArray<string> }>
     readonly operatingMode: string
     readonly liveEnabled: boolean
@@ -58,8 +60,10 @@ const toInstallation = (row: InstallationWire): Installation | null =>
               isMulti: row.isMulti,
               agentId: row.agentId ?? null,
               agentName: row.agentName,
+              agentAvatarUrl: row.agentAvatarUrl ?? null,
               agentHandle: row.agentHandle,
               status: statusOf(row.status),
+              lifecycle: installationLifecycleOf(row.lifecycle),
               connectionNeeds: row.connectionNeeds,
               operatingMode: operatingModeOf(row.operatingMode),
               liveEnabled: row.liveEnabled,

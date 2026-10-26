@@ -6,11 +6,9 @@ import {
     Divider,
     EmptyNotice,
     FileDropzone,
-    FillViewport,
     Form,
     Heading,
     Spinner,
-    SurfaceCard,
     Text,
     Textarea,
 } from "@starci/grammar/common"
@@ -224,24 +222,20 @@ const Composer = (props: ChatPartProps) => (
 )
 
 const Chat = (props: ChatPartProps) => (
-    <FillViewport minHeight="md" bottomInset="page">
-        <SurfaceCard ariaLabel={props.content.chatTitle} composition="joined" height="fill">
-            <ChatWorkspace
-                label={props.content.chatTitle}
-                conversationLabel={props.content.chatTitle}
-                header={
-                    <div className={CHAT_BAND}>
-                        <Heading level={2}>{props.content.chatTitle}</Heading>
-                        <Text size="xs" tone="muted">
-                            {props.content.chatPrivate}
-                        </Text>
-                    </div>
-                }
-                conversation={<Conversation {...props} />}
-                composer={<Composer {...props} />}
-            />
-        </SurfaceCard>
-    </FillViewport>
+    <ChatWorkspace
+        label={props.content.chatTitle}
+        conversationLabel={props.content.chatTitle}
+        header={
+            <div className={CHAT_BAND}>
+                <Heading level={2}>{props.content.chatTitle}</Heading>
+                <Text size="xs" tone="muted">
+                    {props.content.chatPrivate}
+                </Text>
+            </div>
+        }
+        conversation={<Conversation {...props} />}
+        composer={<Composer {...props} />}
+    />
 )
 
 /** Draws the private chat with NIVO: the messages with their confirm cards, and the composer. */

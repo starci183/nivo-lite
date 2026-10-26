@@ -12,6 +12,9 @@ export type InstallationStatus = "installing" | "setup" | "ready" | "live" | "pa
  */
 export type InstallationConnectionNeed = { readonly role: string; readonly providers: ReadonlyArray<string> }
 
+/** The lifecycle the back end names: set up, waiting for a connection, paused, applied but not switched on, running, or removed. */
+export type InstallationLifecycle = "needs_setup" | "needs_connection" | "paused" | "ready" | "running" | "removed"
+
 /** How an installed agent runs: it proposes everything (assist) or follows the authority rules alone (autopilot). */
 export type OperatingMode = "assist" | "autopilot"
 
@@ -30,8 +33,12 @@ export type Installation = {
     readonly agentId: string | null
     /** The display name and handle of the agent (read-through, for headers and mentions). */
     readonly agentName: string
+    /** The picture the owner gave the agent; null for the generated avatar. */
+    readonly agentAvatarUrl: string | null
     readonly agentHandle: string
     readonly status: InstallationStatus
+    /** Where the agent stands by the business rules (the back end derives it): only `running` answers customers. */
+    readonly lifecycle: InstallationLifecycle
     /** The roles a `needs_connection` agent waits for, each with the connectors that would satisfy it; empty otherwise. */
     readonly connectionNeeds: ReadonlyArray<InstallationConnectionNeed>
     readonly operatingMode: OperatingMode

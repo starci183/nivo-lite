@@ -6,7 +6,7 @@ export const INVENTORY = {
     order: 60,
     icon: "servers",
     glyph: "moduleInventory",
-    mascot: "/images/promo/mascot-checklist.png",
+    mascot: "/images/agents/inventory.png",
     category: "operations",
     status: "early",
     audience: "internal",
