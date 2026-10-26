@@ -47,14 +47,14 @@ const NewThreadForm = (
             <div className={FORM_ACTIONS_CLASS_NAME}>
                 <Button
                     type="submit"
-                    variant="primary"
+                    intent="commit"
                     size="sm"
                     isPending={props.isCreating}
                     isDisabled={props.titleDraft.trim().length === 0}
                 >
                     {props.form.createLabel}
                 </Button>
-                <Button variant="ghost" size="sm" onPress={props.onCancelForm}>
+                <Button intent="neutral" size="sm" onPress={props.onCancelForm}>
                     {props.form.cancelLabel}
                 </Button>
             </div>
@@ -67,7 +67,7 @@ export const ThreadRail = (props: ThreadRailProps) => (
     <div className={RAIL_CLASS_NAME}>
         <div className={HEAD_CLASS_NAME}>
             <Text weight="semibold">{props.title}</Text>
-            <Button variant="secondary" size="sm" isDisabled={props.isSkeleton} onPress={props.onOpenForm}>
+            <Button intent="neutral" size="sm" isDisabled={props.isSkeleton} onPress={props.onOpenForm}>
                 {props.newLabel}
             </Button>
         </div>

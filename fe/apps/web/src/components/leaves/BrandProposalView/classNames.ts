@@ -1,5 +1,5 @@
-/** One brand proposal: a bordered card under the replies of NIVO. */
-export const CARD = "flex min-w-0 flex-col gap-3 rounded-lg border border-separator p-3"
+/** The content of one brand proposal card: layout only; a Grammar surface paints the card. */
+export const CARD = "flex min-w-0 flex-col gap-3"
 
 /** The title with its badge. */
 export const HEAD = "flex flex-wrap items-center justify-between gap-2"

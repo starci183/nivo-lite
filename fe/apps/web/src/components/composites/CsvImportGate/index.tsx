@@ -19,7 +19,7 @@ export const CsvImportGate = (props: CsvImportGateProps) =>
     ) : (
         <>
             <Alert tone="negative" title={props.failure} />
-            <Button variant="ghost" onPress={props.onClose}>
+            <Button intent="neutral" onPress={props.onClose}>
                 {props.closeLabel}
             </Button>
         </>

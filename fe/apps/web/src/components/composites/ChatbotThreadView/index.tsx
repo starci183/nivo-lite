@@ -97,6 +97,7 @@ export const ChatbotThreadView = (props: ChatbotThreadViewProps) => {
             <div className={HEAD_CLASS_NAME}>
                 <div className={PHONE_ONLY_CLASS_NAME}>
                     <IconButton
+                        intent="dismiss"
                         source={nivoIconSource("back", "leading")}
                         label={props.backLabel}
                         onPress={props.onBack}
@@ -108,12 +109,14 @@ export const ChatbotThreadView = (props: ChatbotThreadViewProps) => {
                     <ChatbotChips channel={props.channel} chips={props.chips} />
                 </div>
                 <IconButton
+                    intent="neutral"
                     source={nivoIconSource("sidebar", "leading")}
                     label={props.infoLabel}
                     isActive={props.isInfoOpen}
                     onPress={props.onToggleInfo}
                 />
             </div>
+            <Divider semantics="presentation" />
             {renderChatbotThreadViewEntries(props, endRef)}
             <ChatbotComposer
                 canReply={props.canReply}

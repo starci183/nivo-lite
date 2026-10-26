@@ -12,7 +12,7 @@ export const PromoLeadWaitBase = (props: PromoLeadWaitBaseProps) => (
         <Text size="sm" tone="muted">
             {props.props.text}
         </Text>
-        <Button variant="ghost" size="sm" href={props.props.seeHref}>
+        <Button intent="neutral" size="sm" href={props.props.seeHref}>
             {props.props.seeLabel}
         </Button>
     </div>

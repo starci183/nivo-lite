@@ -1,13 +1,7 @@
-import { Alert, Badge, Button, ListItem, Region, SectionHeader, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Alert, Badge, Button, ListRow, Region, SectionHeader, SurfaceListCard, Text } from "@starci/grammar/common"
 import { FormNotice } from "@/components/composites/FormNotice"
 import type { SessionRowView } from "@/hooks/account"
-import {
-    ACTIONS_CLASS_NAME,
-    SECTION_CLASS_NAME,
-    SESSION_INFO_CLASS_NAME,
-    SESSION_ROW_CLASS_NAME,
-    SESSION_TITLE_CLASS_NAME,
-} from "./classNames"
+import { ACTIONS_CLASS_NAME, SECTION_CLASS_NAME } from "./classNames"
 
 /** Copy, rows and state the connected sessions section supplies. */
 export interface AccountSessionsBaseProps {
@@ -53,45 +47,40 @@ export const AccountSessionsBase = (props: AccountSessionsBaseProps) => {
             {props.props.isFailed ? <Alert tone="negative" title={props.props.failedTitle} /> : null}
             <SurfaceListCard ariaLabel={props.props.title} isLoading={props.props.isSkeleton}>
                 {props.props.rows.map((row) => (
-                    <ListItem
+                    <ListRow
                         key={row.id}
-                        className={SESSION_ROW_CLASS_NAME}
-                        data-testid="session-row"
-                        data-current={row.isCurrent ? "1" : "0"}
-                    >
-                        <div className={SESSION_INFO_CLASS_NAME}>
-                            <div className={SESSION_TITLE_CLASS_NAME}>
-                                <Text weight="medium">{row.device}</Text>
-                                {row.isCurrent ? (
-                                    <Badge tone="accent" isDot>
-                                        {props.props.currentLabel}
-                                    </Badge>
-                                ) : null}
-                            </div>
-                            <Text size="sm" tone="muted">
-                                {row.facts}
-                            </Text>
-                        </div>
-                        {row.isCurrent ? (
-                            <Button
-                                variant="outline"
-                                isPending={props.props.busy === "this"}
-                                isDisabled={isBusy}
-                                onPress={props.on.signOutThis}
-                            >
-                                {props.props.signOutThisLabel}
-                            </Button>
-                        ) : (
-                            <Button
-                                variant="outline"
-                                isPending={props.props.busy === row.id}
-                                isDisabled={isBusy}
-                                onPress={() => props.on.revoke(row.id)}
-                            >
-                                {props.props.signOutLabel}
-                            </Button>
-                        )}
-                    </ListItem>
+                        title={row.device}
+                        description={row.facts}
+                        badges={
+                            row.isCurrent ? (
+                                <Badge tone="accent" isDot>
+                                    {props.props.currentLabel}
+                                </Badge>
+                            ) : null
+                        }
+                        actions={
+                            row.isCurrent ? (
+                                <Button
+                                    intent="neutral"
+                                    isPending={props.props.busy === "this"}
+                                    isDisabled={isBusy}
+                                    onPress={props.on.signOutThis}
+                                >
+                                    {props.props.signOutThisLabel}
+                                </Button>
+                            ) : (
+                                <Button
+                                    intent="destructive"
+                                    step="entry"
+                                    isPending={props.props.busy === row.id}
+                                    isDisabled={isBusy}
+                                    onPress={() => props.on.revoke(row.id)}
+                                >
+                                    {props.props.signOutLabel}
+                                </Button>
+                            )
+                        }
+                    />
                 ))}
             </SurfaceListCard>
             <FormNotice failTitle={props.props.failTitle} error={props.props.error} done={props.props.done} />
@@ -99,7 +88,8 @@ export const AccountSessionsBase = (props: AccountSessionsBaseProps) => {
                 {props.props.hasOthers ? (
                     <Button
                         isSkeleton={props.props.isSkeleton}
-                        variant="danger-soft"
+                        intent="destructive"
+                        step="entry"
                         isPending={props.props.busy === "others"}
                         isDisabled={isBusy}
                         onPress={props.on.signOutOthers}

@@ -1,4 +1,15 @@
-import { Button, ChatBubble, Drawer, Form, IconButton, Input, List, ListItem, Text } from "@starci/grammar/common"
+import {
+    Button,
+    ChatBubble,
+    Divider,
+    Drawer,
+    Form,
+    IconButton,
+    Input,
+    List,
+    ListItem,
+    Text,
+} from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import {
     ASK_INPUT_CLASS,
@@ -65,7 +76,7 @@ export const GuideBubbleBase = (props: GuideBubbleBaseProps) => (
             <IconButton
                 source={nivoIconSource(props.props.isOpen ? "close" : "support", "leading")}
                 label={props.props.isOpen ? props.props.closeLabel : props.props.openLabel}
-                variant="primary"
+                intent="commit"
                 size="lg"
                 isFloating
                 onPress={props.on.toggle}
@@ -99,7 +110,7 @@ export const GuideBubbleBase = (props: GuideBubbleBaseProps) => (
                     {props.props.suggestions.map((suggestion) => (
                         <Button
                             key={suggestion}
-                            variant="secondary"
+                            intent="neutral"
                             size="sm"
                             isDisabled={props.props.isThinking}
                             onPress={() => props.on.ask(suggestion)}
@@ -118,6 +129,7 @@ export const GuideBubbleBase = (props: GuideBubbleBaseProps) => (
 const GuideComposer = (props: GuideBubbleBaseProps) => {
     return (
         <div className={FOOT_CLASS}>
+            <Divider semantics="presentation" />
             <Form label={props.props.title} onSubmit={props.on.send} isPending={props.props.isThinking}>
                 <div className={ASK_ROW_CLASS}>
                     <div className={ASK_INPUT_CLASS}>
@@ -126,14 +138,13 @@ const GuideComposer = (props: GuideBubbleBaseProps) => {
                             name="question"
                             label={props.props.questionLabel}
                             placeholder={props.props.placeholder}
-                            variant="secondary"
                             value={props.props.question}
                             onValueChange={props.on.changeQuestion}
                         />
                     </div>
                     <Button
                         type="submit"
-                        variant="primary"
+                        intent="commit"
                         isPending={props.props.isThinking}
                         isDisabled={props.props.question.trim() === ""}
                     >
@@ -143,7 +154,7 @@ const GuideComposer = (props: GuideBubbleBaseProps) => {
             </Form>
             {props.props.messages.length === 0 ? null : (
                 <div>
-                    <Button variant="ghost" size="sm" isDisabled={props.props.isThinking} onPress={props.on.restart}>
+                    <Button intent="neutral" size="sm" isDisabled={props.props.isThinking} onPress={props.on.restart}>
                         {props.props.restartLabel}
                     </Button>
                 </div>
@@ -194,7 +205,7 @@ const GuideMessages = (props: GuideBubbleBaseProps) => {
                                     {message.links.map((link) => (
                                         <Button
                                             key={link.id}
-                                            variant="outline"
+                                            intent="neutral"
                                             size="sm"
                                             onPress={() => props.on.go(message.id, link.id)}
                                         >

@@ -9,7 +9,7 @@ type BookingAddButtonProps = {
 /** The button under a setup list that opens the form of a new row. */
 export const BookingAddButton = (props: BookingAddButtonProps) => (
     <div>
-        <Button size="sm" variant="outline" onPress={props.onPress}>
+        <Button size="sm" intent="neutral" onPress={props.onPress}>
             {props.label}
         </Button>
     </div>

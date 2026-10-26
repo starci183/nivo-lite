@@ -56,7 +56,7 @@ export const SalesContractsBase = (props: SalesContractsBaseProps) => {
                 {p.intro}
             </Text>
             <div className={ACTIONS_CLASS_NAME}>
-                <Button variant="primary" size="sm" onPress={on.add}>
+                <Button intent="commit" size="sm" onPress={on.add}>
                     {p.addLabel}
                 </Button>
             </div>
@@ -81,7 +81,7 @@ export const SalesContractsBase = (props: SalesContractsBaseProps) => {
                             </>
                         }
                         actions={
-                            <Button variant="outline" size="sm" onPress={() => on.edit(row.id)}>
+                            <Button intent="neutral" size="sm" onPress={() => on.edit(row.id)}>
                                 {p.editLabel}
                             </Button>
                         }

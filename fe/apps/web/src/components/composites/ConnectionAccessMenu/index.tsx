@@ -58,7 +58,7 @@ export const ConnectionAccessMenu = (props: ConnectionAccessMenuProps) => {
         <DropdownMenu
             placement="bottom end"
             trigger={
-                <Button variant="outline" size="sm" isPending={props.isPending}>
+                <Button intent="neutral" size="sm" isPending={props.isPending}>
                     {props.triggerLabel}
                 </Button>
             }

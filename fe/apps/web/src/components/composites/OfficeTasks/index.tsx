@@ -46,7 +46,6 @@ export const OfficeTasks = (props: OfficeTasksProps) => {
             <div className={FILTERS_CLASS_NAME}>
                 <div className={FILTER_CLASS_NAME}>
                     <Select
-                        variant="secondary"
                         label={text("filterOwner")}
                         options={ownerOptions}
                         value={owner}
@@ -55,7 +54,6 @@ export const OfficeTasks = (props: OfficeTasksProps) => {
                 </div>
                 <div className={FILTER_CLASS_NAME}>
                     <Select
-                        variant="secondary"
                         label={text("filterStatus")}
                         options={statusOptions}
                         value={status}
@@ -63,7 +61,7 @@ export const OfficeTasks = (props: OfficeTasksProps) => {
                     />
                 </div>
                 {owner !== ALL || status !== ALL ? (
-                    <Button variant="ghost" onPress={clear}>
+                    <Button intent="neutral" onPress={clear}>
                         {text("clearFilters")}
                     </Button>
                 ) : null}
@@ -123,7 +121,7 @@ const renderOfficeTasksVisibleTasks = (
                     </Text>
                 </div>
                 <div className={ROW_SIDE_CLASS_NAME}>
-                    <Button variant="outline" size="sm" href={task.leadHref}>
+                    <Button intent="neutral" size="sm" href={task.leadHref}>
                         {text("openArrow")}
                     </Button>
                 </div>

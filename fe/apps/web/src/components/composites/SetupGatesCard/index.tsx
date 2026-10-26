@@ -1,5 +1,5 @@
-import { Alert, Badge, Button, List, ListItem, Meter, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
-import { GATE, GATE_ACTIONS, GATE_HEAD, GATE_LIST, STACK } from "./classNames"
+import { Alert, Badge, Button, List, ListRow, Meter, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import { GATE_ACTIONS, GATE_BODY, STACK } from "./classNames"
 import { SetupGatesCardEvidence } from "./component"
 
 type GateTone = "neutral" | "warning" | "success"
@@ -63,26 +63,28 @@ export const SetupGatesCard = (props: SetupGatesCardProps) => (
             {props.gateFailure === "" ? null : (
                 <Alert title={props.gateFailureTitle} description={props.gateFailure} tone="negative" />
             )}
-            <List label={props.title} className={GATE_LIST}>
+            <List label={props.title}>
                 {props.gates.map((gate) => (
-                    <ListItem key={gate.key} className={GATE}>
-                        <div className={GATE_HEAD}>
-                            <Text weight="semibold" size="sm">
-                                {gate.label}
-                            </Text>
+                    <ListRow
+                        key={gate.key}
+                        title={gate.label}
+                        badges={
                             <Badge isDot isSkeleton={props.isLoading} tone={gate.statusTone}>
                                 {gate.statusLabel}
                             </Badge>
+                        }
+                    >
+                        <div className={GATE_BODY}>
+                            {props.editing === gate.key
+                                ? renderSetupGatesCardEdit(gate, props)
+                                : renderSetupGatesCardEvidence(gate, props)}
                         </div>
-                        {props.editing === gate.key
-                            ? renderSetupGatesCardEdit(gate, props)
-                            : renderSetupGatesCardEvidence(gate, props)}
-                    </ListItem>
+                    </ListRow>
                 ))}
             </List>
             <div className={STACK}>
                 <Button
-                    variant="primary"
+                    intent="commit"
                     isSkeleton={props.isLoading}
                     isPending={props.isApplying}
                     isDisabled={!props.canApply}
@@ -116,7 +118,7 @@ const renderSetupGatesCardEvidence = (
             <div className={GATE_ACTIONS}>
                 {gate.status === "proposed" ? (
                     <Button
-                        variant="secondary"
+                        intent="neutral"
                         size="sm"
                         isPending={props.isGating}
                         onPress={() => props.onGate(gate.key, "confirm")}
@@ -126,7 +128,7 @@ const renderSetupGatesCardEvidence = (
                 ) : null}
                 {gate.status === "confirmed" ? (
                     <Button
-                        variant="ghost"
+                        intent="neutral"
                         size="sm"
                         isPending={props.isGating}
                         onPress={() => props.onGate(gate.key, "reopen")}
@@ -134,7 +136,7 @@ const renderSetupGatesCardEvidence = (
                         {props.unconfirmLabel}
                     </Button>
                 ) : null}
-                <Button variant="ghost" size="sm" onPress={() => props.onStartEdit(gate.key, gate.evidence)}>
+                <Button intent="neutral" size="sm" onPress={() => props.onStartEdit(gate.key, gate.evidence)}>
                     {props.editLabel}
                 </Button>
             </div>
@@ -146,7 +148,6 @@ const renderSetupGatesCardEvidence = (
 const renderSetupGatesCardEdit = (gate: Pick<SetupGate, "key" | "label" | "hint">, props: SetupGatesCardProps) => (
     <>
         <Textarea
-            variant="secondary"
             name={`gate-${gate.key}`}
             label={gate.label}
             isLabelHidden
@@ -159,7 +160,7 @@ const renderSetupGatesCardEdit = (gate: Pick<SetupGate, "key" | "label" | "hint"
         />
         <div className={GATE_ACTIONS}>
             <Button
-                variant="primary"
+                intent="commit"
                 size="sm"
                 isPending={props.isGating}
                 isDisabled={props.editText.trim().length === 0}
@@ -167,7 +168,7 @@ const renderSetupGatesCardEdit = (gate: Pick<SetupGate, "key" | "label" | "hint"
             >
                 {props.editSaveLabel}
             </Button>
-            <Button variant="ghost" size="sm" onPress={props.onStopEdit}>
+            <Button intent="neutral" size="sm" onPress={props.onStopEdit}>
                 {props.editCancelLabel}
             </Button>
         </div>

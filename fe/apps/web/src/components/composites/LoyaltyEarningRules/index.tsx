@@ -61,7 +61,6 @@ export const LoyaltyEarningRules = (props: LoyaltyEarningRulesProps) => {
             {renderEarningRates(p, on)}
             <Select
                 label={copy.trigger}
-                variant="secondary"
                 description={copy.triggerHint}
                 options={p.triggerOptions}
                 value={values.trigger}
@@ -75,7 +74,7 @@ export const LoyaltyEarningRules = (props: LoyaltyEarningRulesProps) => {
             {props.children}
             {p.canEdit && p.canAddCategory ? (
                 <div>
-                    <Button variant="outline" size="sm" isDisabled={p.isPending} onPress={on.addCategory}>
+                    <Button intent="neutral" size="sm" isDisabled={p.isPending} onPress={on.addCategory}>
                         {copy.addCategory}
                     </Button>
                 </div>

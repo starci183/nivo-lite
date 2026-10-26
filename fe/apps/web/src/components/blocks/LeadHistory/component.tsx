@@ -85,7 +85,6 @@ export const LeadHistoryBase = (props: LeadHistoryBaseProps) => {
                                             </Text>
                                             {entry.evidence ? (
                                                 <SurfaceAccordionCard
-                                                    depth="nested"
                                                     isOpen={entry.isOpen}
                                                     onOpenChange={(isOpen) => on.toggle(entry.id, isOpen)}
                                                     summaryRender={l.evidenceLabel}

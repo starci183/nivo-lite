@@ -1,6 +1,6 @@
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
-import { Button, EmptyNotice, Input, ListItem, SearchField, SurfaceListCard, Text } from "@starci/grammar/common"
-import { COUNT_FIELD_CLASS_NAME, COUNT_ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
+import { Button, EmptyNotice, Input, ListRow, SearchField, SurfaceListCard, Text } from "@starci/grammar/common"
+import { COUNT_FIELD_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
 /** One item to count, every word already resolved. */
 export interface CountRowView {
@@ -59,32 +59,23 @@ export const InventoryCountBase = (props: InventoryCountBaseProps) => {
                 empty={<EmptyNotice message={p.emptyTitle} description={p.emptyBody} />}
             >
                 {p.rows.map((row) => (
-                    <ListItem key={row.id} className={COUNT_ROW_CLASS_NAME}>
-                        <div className={ROW_MAIN_CLASS_NAME}>
-                            <Text weight="semibold" overflow="clamp-2">
-                                {row.name}
-                            </Text>
-                            <Text size="xs" tone="muted">
-                                {row.machine}
-                            </Text>
-                        </div>
+                    <ListRow key={row.id} title={row.name} description={row.machine}>
                         <div className={COUNT_FIELD_CLASS_NAME}>
                             <Input
                                 id={`cnt-${row.id}`}
                                 name={`cnt-${row.id}`}
                                 label={row.fieldLabel}
-                                variant="secondary"
                                 placeholder={row.unit}
                                 value={row.value}
                                 onValueChange={(value) => on.count(row.id, value)}
                             />
                         </div>
-                    </ListItem>
+                    </ListRow>
                 ))}
             </SurfaceListCard>
             <InventoryNotices error={p.error} notice={p.notice} />
             <div>
-                <Button variant="primary" isPending={p.isPending} isDisabled={!p.canSubmit} onPress={on.submit}>
+                <Button intent="commit" isPending={p.isPending} isDisabled={!p.canSubmit} onPress={on.submit}>
                     {p.submitLabel}
                 </Button>
             </div>

@@ -19,7 +19,7 @@ export const OfficeCardActions = (props: OfficeCardActionsProps) => {
         <div className={ACTIONS_CLASS_NAME}>
             {card.canApprove ? (
                 <Button
-                    variant="primary"
+                    intent="commit"
                     size="sm"
                     isPending={isBusy}
                     isDisabled={isBusy}
@@ -29,17 +29,17 @@ export const OfficeCardActions = (props: OfficeCardActionsProps) => {
                 </Button>
             ) : null}
             {card.canEdit ? (
-                <Button variant="outline" size="sm" isDisabled={isBusy} onPress={() => props.setIsEditing(!isEditing)}>
+                <Button intent="neutral" size="sm" isDisabled={isBusy} onPress={() => props.setIsEditing(!isEditing)}>
                     {isEditing ? text("cancelEdit") : text("edit")}
                 </Button>
             ) : null}
             {card.canDecline ? (
-                <Button variant="ghost" size="sm" isDisabled={isBusy} onPress={() => props.decide("rejected")}>
+                <Button intent="alternative" size="sm" isDisabled={isBusy} onPress={() => props.decide("rejected")}>
                     {text("cardDecline")}
                 </Button>
             ) : null}
             {card.link === null ? null : (
-                <Button variant="ghost" size="sm" href={card.link.href}>
+                <Button intent="neutral" size="sm" href={card.link.href}>
                     {card.link.label}
                 </Button>
             )}

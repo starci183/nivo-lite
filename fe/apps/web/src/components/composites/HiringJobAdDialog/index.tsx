@@ -62,11 +62,11 @@ export const HiringJobAdDialog = (props: HiringJobAdDialogProps) => {
                           <div key={kind} className={AD_CLASS_NAME}>
                               <div className={HEAD_CLASS_NAME}>
                                   <Heading level={3}>{say(`adKind_${kind}`)}</Heading>
-                                  <Button variant="secondary" size="sm" onPress={() => on.copy(kind, ads[kind])}>
+                                  <Button intent="neutral" size="sm" onPress={() => on.copy(kind, ads[kind])}>
                                       {say(copiedId === kind ? "adCopied" : "adCopy")}
                                   </Button>
                               </div>
-                              <SurfaceCard depth="nested" ariaLabel={say(`adKind_${kind}`)}>
+                              <SurfaceCard ariaLabel={say(`adKind_${kind}`)}>
                                   <div className={PRE_WRAP_CLASS_NAME}>
                                       <Text as="p" size="sm">
                                           {ads[kind]}
@@ -91,10 +91,10 @@ const HiringJobAdDialogFooter = (props: HiringJobAdDialogProps) => {
     const { on } = props
     return (
         <>
-            <Button variant="tertiary" onPress={on.close}>
+            <Button intent="dismiss" onPress={on.close}>
                 {say("close")}
             </Button>
-            <Button variant="primary" isPending={isBusy} isDisabled={isBusy} onPress={on.generate}>
+            <Button intent="commit" isPending={isBusy} isDisabled={isBusy} onPress={on.generate}>
                 {say(ads === null ? "adWrite" : "adRewrite")}
             </Button>
         </>

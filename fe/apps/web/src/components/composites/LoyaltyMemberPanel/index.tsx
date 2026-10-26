@@ -76,7 +76,7 @@ const renderLoyaltyMemberPanelMember = (
             label={view.name}
             headingLevel={2}
             labelEnd={
-                <Button variant="ghost" size="sm" onPress={props.onClose}>
+                <Button intent="neutral" size="sm" onPress={props.onClose}>
                     {view.closeLabel}
                 </Button>
             }

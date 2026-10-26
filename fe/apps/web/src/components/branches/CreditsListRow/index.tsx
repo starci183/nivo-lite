@@ -28,7 +28,7 @@ export const CreditsListRow = (props: CreditsListRowProps) => {
             actions={
                 row.purchase ? (
                     <Button
-                        variant="secondary"
+                        intent="alternative"
                         size="sm"
                         isPending={row.purchase.pending}
                         isDisabled={row.purchase.disabled}

@@ -50,7 +50,7 @@ export const CreditsUpgrade = (props: CreditsUpgradeProps) => {
                     </div>
                     {copy.view.canBuy ? (
                         <div>
-                            <Button variant="secondary" href={contact.href} target="_blank" rel="noopener noreferrer">
+                            <Button intent="neutral" href={contact.href} target="_blank" rel="noopener noreferrer">
                                 {contact.action}
                             </Button>
                         </div>
@@ -80,13 +80,13 @@ export const CreditsUpgrade = (props: CreditsUpgradeProps) => {
         <div className={COLUMN_CLASS_NAME}>
             {offer}
             <Disclosure title={copy.plansTitle} headingLevel={3}>
-                <SurfaceListCard ariaLabel={copy.plansLabel} depth="nested" isLoading={copy.isSkeleton}>
+                <SurfaceListCard ariaLabel={copy.plansLabel} isLoading={copy.isSkeleton}>
                     {rows.map((row) => (
                         <CreditsListRow key={row.id} props={row.props} />
                     ))}
                 </SurfaceListCard>
                 {copy.view.canBuy && !copy.isSkeleton ? (
-                    <Button variant="outline" size="sm" href={copy.plansHref}>
+                    <Button intent="neutral" size="sm" href={copy.plansHref}>
                         {copy.plansCta}
                     </Button>
                 ) : null}
@@ -115,7 +115,7 @@ const renderCreditsUpgradeRecommendation = (
             {copy.view.canBuy ? (
                 <div>
                     <Button
-                        variant="primary"
+                        intent="commit"
                         isPending={upgrade.pending}
                         isDisabled={upgrade.disabled}
                         onPress={() => props.on.upgrade(upgrade.target)}

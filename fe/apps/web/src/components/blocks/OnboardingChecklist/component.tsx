@@ -1,6 +1,6 @@
-import { Button, IconButton, List, ListItem, Meter, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, IconButton, List, ListRow, Meter, SurfaceCard, Text } from "@starci/grammar/common"
 import { Icon, nivoIconSource } from "@/components/leaves/Icon"
-import { ALL_SET, CHECK_BODY, CHECK_LIST, STEP, STEP_NEXT } from "./classNames"
+import { ALL_SET, CHECK_BODY } from "./classNames"
 
 /** One onboarding step as the checklist draws it; `done` comes from real rows and events only. */
 export type OnboardingChecklistStep = {
@@ -31,35 +31,45 @@ export interface OnboardingChecklistBaseProps {
     readonly on: { readonly toggle: () => void }
 }
 
+/** How a step row reads: done, the one next step, or still waiting. */
+const stateOf = (isDone: boolean, isNext: boolean): "affirmative" | "informative" | "neutral" => {
+    if (isDone) return "affirmative"
+    return isNext ? "informative" : "neutral"
+}
+
 type StepsProps = Pick<OnboardingChecklistBaseProps, "props">
 
 const Steps = ({ props }: StepsProps) => {
     const nextKey = props.steps.find((step) => !step.done)?.key
     const doneIcon = { name: "complete", usage: "leading", ariaLabel: props.doneLabel } as const
     return (
-        <List as="ol" id={props.listId} label={props.title} className={CHECK_LIST}>
+        <List as="ol" id={props.listId} label={props.title}>
             {props.steps.map((step) => {
                 const isNext = step.key === nextKey
                 return (
-                    <ListItem key={step.key} className={isNext ? STEP_NEXT : STEP}>
-                        <Text
-                            size="sm"
-                            weight={step.done ? "normal" : "medium"}
-                            tone={step.done ? "muted" : "default"}
-                            isSuperseded={step.done}
-                            startContent={<Icon props={step.done ? doneIcon : PENDING_ICON} />}
-                        >
-                            {step.label}
-                        </Text>
-                        {isNext ? (
-                            <>
-                                <Text size="xs">{step.hint}</Text>
-                                <Button variant="secondary" size="sm" href={step.href}>
+                    <ListRow
+                        key={step.key}
+                        state={stateOf(step.done, isNext)}
+                        title={
+                            <Text
+                                size="sm"
+                                weight={step.done ? "normal" : "medium"}
+                                tone={step.done ? "muted" : "default"}
+                                isSuperseded={step.done}
+                                startContent={<Icon props={step.done ? doneIcon : PENDING_ICON} />}
+                            >
+                                {step.label}
+                            </Text>
+                        }
+                        description={isNext ? step.hint : null}
+                        actions={
+                            isNext ? (
+                                <Button intent="neutral" size="sm" href={step.href}>
                                     {step.cta}
                                 </Button>
-                            </>
-                        ) : null}
-                    </ListItem>
+                            ) : null
+                        }
+                    />
                 )
             })}
         </List>
@@ -89,7 +99,7 @@ const Checklist = ({ props, on }: OnboardingChecklistBaseProps) => {
             headingLevel={2}
             labelEnd={
                 <IconButton
-                    variant="ghost"
+                    intent="neutral"
                     source={nivoIconSource("disclosure", "leading")}
                     label={props.toggleLabel}
                     aria-expanded={props.isOpen}

@@ -58,7 +58,7 @@ export const WorkspacesListBase = (props: WorkspacesListBaseProps) => (
                         </div>
                         <div className={ACTIONS_CLASS_NAME}>
                             <Button
-                                variant={row.isPrimary ? "primary" : "secondary"}
+                                intent={row.isPrimary ? "alternative" : "neutral"}
                                 isDisabled={!row.canOpen}
                                 isPending={row.isOpening}
                                 onPress={() => props.on.open(row.id)}
@@ -66,7 +66,7 @@ export const WorkspacesListBase = (props: WorkspacesListBaseProps) => (
                                 {row.actionLabel}
                             </Button>
                             {row.billingHref === undefined ? null : (
-                                <Button variant="ghost" href={row.billingHref}>
+                                <Button intent="neutral" href={row.billingHref}>
                                     {props.props.billingLabel}
                                 </Button>
                             )}

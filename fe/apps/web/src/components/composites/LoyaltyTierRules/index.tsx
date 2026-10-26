@@ -25,7 +25,7 @@ export const LoyaltyTierRules = (props: LoyaltyTierRulesProps) => {
             {props.children}
             {p.canEdit && p.canAddTier ? (
                 <div>
-                    <Button variant="outline" size="sm" isDisabled={p.isPending} onPress={on.addTier}>
+                    <Button intent="neutral" size="sm" isDisabled={p.isPending} onPress={on.addTier}>
                         {copy.addTier}
                     </Button>
                 </div>

@@ -63,7 +63,7 @@ export const WaitingRegion = (props: WaitingRegionProps) => (
                         title={row.title}
                         description={row.description}
                         actions={
-                            <Button size="sm" variant="secondary" href={row.href}>
+                            <Button size="sm" intent="neutral" href={row.href}>
                                 {view.openLabel}
                             </Button>
                         }

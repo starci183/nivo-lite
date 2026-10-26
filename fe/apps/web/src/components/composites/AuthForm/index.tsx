@@ -24,7 +24,7 @@ export const AuthForm = (props: AuthFormProps) => (
             )}
             {props.children}
             {props.submitLabel === undefined ? null : (
-                <Button variant="primary" width="fill" type="submit" isPending={props.isPending}>
+                <Button intent="commit" width="fill" type="submit" isPending={props.isPending}>
                     {props.submitLabel}
                 </Button>
             )}

@@ -19,7 +19,7 @@ export const FormActions = (props: FormActionsProps) => (
         {props.error === undefined ? null : <Alert tone="negative" title={props.failTitle} description={props.error} />}
         {props.done === undefined ? null : <Alert tone="affirmative" title={props.done} />}
         <div className={ACTIONS_CLASS_NAME}>
-            <Button type="submit" variant="primary" isPending={props.isPending} isSkeleton={props.isSkeleton}>
+            <Button type="submit" intent="commit" isPending={props.isPending} isSkeleton={props.isSkeleton}>
                 {props.submitLabel}
             </Button>
         </div>

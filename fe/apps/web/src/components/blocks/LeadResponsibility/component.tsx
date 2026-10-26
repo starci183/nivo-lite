@@ -140,7 +140,7 @@ interface RenderStepOwnerContext {
 }
 /** Builds the accountableLabel section from the current view. */
 const renderStepOwner = ({ l, current, isSkeleton }: RenderStepOwnerContext) => (
-    <SurfaceCard depth="nested" ariaLabel={l.accountableLabel}>
+    <SurfaceCard ariaLabel={l.accountableLabel}>
         <div className={OWNER_ROW_CLASS_NAME}>
             <div className={OWNER_CLASS_NAME}>
                 {current.isAgent ? (
@@ -222,19 +222,19 @@ const renderCurrentStep = ({ isSkeleton, current, l, form, on }: RenderCurrentSt
         {isSkeleton || form !== null ? null : (
             <div className={ACTIONS_CLASS_NAME}>
                 {current.isDone ? (
-                    <Button variant="outline" onPress={() => on.open("add")}>
+                    <Button intent="neutral" onPress={() => on.open("add")}>
                         {l.addLabel}
                     </Button>
                 ) : (
                     <>
-                        <Button variant="outline" onPress={() => on.open("reassign")}>
+                        <Button intent="neutral" onPress={() => on.open("reassign")}>
                             {l.reassignLabel}
                         </Button>
-                        <Button variant="outline" onPress={() => on.open("due")}>
+                        <Button intent="neutral" onPress={() => on.open("due")}>
                             {l.changeDueLabel}
                         </Button>
                         {current.isAgent ? (
-                            <Button variant="ghost" href={l.askHref}>
+                            <Button intent="neutral" href={l.askHref}>
                                 {l.askLabel}
                             </Button>
                         ) : null}

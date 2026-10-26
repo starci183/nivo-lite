@@ -141,9 +141,9 @@ const renderEditorFooter = (props: ContentPostEditorBaseProps) => {
     const { t, item, isEditable, isPending, busy } = props.props
     const on = props.on
     const status = item.status
-    const transitionButton = (kind: ItemTransition, label: string, variant: "outline" | "ghost") => (
+    const transitionButton = (kind: ItemTransition, label: string) => (
         <Button
-            variant={variant}
+            intent="neutral"
             isPending={busy === "transition"}
             isDisabled={isPending}
             onPress={() => on.transition(kind)}
@@ -155,21 +155,21 @@ const renderEditorFooter = (props: ContentPostEditorBaseProps) => {
     return (
         <div className={FOOTER_CLASS_NAME}>
             {["idea", "draft", "skipped"].includes(status) ? (
-                <Button variant="danger-soft" isDisabled={isPending} onPress={() => on.deleteOpen(true)}>
+                <Button intent="destructive" step="entry" isDisabled={isPending} onPress={() => on.deleteOpen(true)}>
                     {t("remove")}
                 </Button>
             ) : null}
-            {["idea", "draft", "approved"].includes(status) ? transitionButton("skip", t("skip"), "ghost") : null}
-            {status === "approved" ? transitionButton("reopen", t("reopen"), "outline") : null}
-            {status === "skipped" ? transitionButton("restore", t("restore"), "outline") : null}
+            {["idea", "draft", "approved"].includes(status) ? transitionButton("skip", t("skip")) : null}
+            {status === "approved" ? transitionButton("reopen", t("reopen")) : null}
+            {status === "skipped" ? transitionButton("restore", t("restore")) : null}
             {isEditable ? (
-                <Button variant="outline" isPending={busy === "save"} isDisabled={isPending} onPress={on.save}>
+                <Button intent="neutral" isPending={busy === "save"} isDisabled={isPending} onPress={on.save}>
                     {t("save")}
                 </Button>
             ) : null}
             {status === "draft" ? (
                 <Button
-                    variant="primary"
+                    intent="commit"
                     isPending={busy === "submit"}
                     isDisabled={isPending || props.props.missingText}
                     onPress={on.submit}

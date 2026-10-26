@@ -1,6 +1,6 @@
 import { useState } from "react"
 import type { ReactNode } from "react"
-import { Badge, Button, Text, Textarea } from "@starci/grammar/common"
+import { Badge, Button, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 import { OfficeCardFrame } from "@/components/leaves/OfficeCardFrame"
 import type { OfficeApprovalView, OfficeText } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, LINK_CLASS_NAME, QUOTE_CLASS_NAME, STATUS_CLASS_NAME, TEXT_CLASS_NAME } from "./classNames"
@@ -71,15 +71,17 @@ export const OfficeApprovalCard = (props: OfficeApprovalCardProps) => {
                     onValueChange={setEditText}
                 />
             ) : (
-                <div className={QUOTE_CLASS_NAME}>
-                    <Text as="p" size="sm">
-                        {shown}
-                    </Text>
-                </div>
+                <SurfaceCard ariaLabel={approval.title === "" ? text("draftLabel") : approval.title}>
+                    <div className={QUOTE_CLASS_NAME}>
+                        <Text as="p" size="sm">
+                            {shown}
+                        </Text>
+                    </div>
+                </SurfaceCard>
             )}
             {!isWaiting && isLong ? (
                 <div>
-                    <Button variant="ghost" size="sm" onPress={() => setIsExpanded((value) => !value)}>
+                    <Button intent="neutral" size="sm" onPress={() => setIsExpanded((value) => !value)}>
                         {isExpanded ? text("showLess") : text("showMore")}
                     </Button>
                 </div>
@@ -111,7 +113,7 @@ const renderOfficeApprovalCardActions = (
 ) => (
     <div className={ACTIONS_CLASS_NAME}>
         <Button
-            variant="primary"
+            intent="commit"
             size="sm"
             isPending={props.isBusy}
             isDisabled={props.isBusy || (isEditing && trimmed.length === 0)}
@@ -119,11 +121,11 @@ const renderOfficeApprovalCardActions = (
         >
             {isEditing ? text("approveEdited") : text("approveSend")}
         </Button>
-        <Button variant="outline" size="sm" isDisabled={props.isBusy} onPress={onToggleEdit}>
+        <Button intent="neutral" size="sm" isDisabled={props.isBusy} onPress={onToggleEdit}>
             {isEditing ? text("cancelEdit") : text("edit")}
         </Button>
         <Button
-            variant="ghost"
+            intent="alternative"
             size="sm"
             isDisabled={props.isBusy}
             onPress={() => props.onDecide(approval.id, "rejected", null)}
@@ -145,7 +147,7 @@ const renderOfficeApprovalCardStatus = (
         <Badge tone="neutral">{text("aiBadge")}</Badge>
         {approval.leadHref === null ? null : (
             <div className={LINK_CLASS_NAME}>
-                <Button variant="ghost" size="sm" href={approval.leadHref}>
+                <Button intent="neutral" size="sm" href={approval.leadHref}>
                     {text("openLead")}
                 </Button>
             </div>

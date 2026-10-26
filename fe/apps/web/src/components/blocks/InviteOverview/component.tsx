@@ -27,10 +27,10 @@ const Actions = (props: InviteOverviewBaseProps) => {
                 <Text size="sm" tone="muted">
                     {view.signedOutHint}
                 </Text>
-                <Button variant="primary" width="fill" href={view.signInHref}>
+                <Button intent="commit" width="fill" href={view.signInHref}>
                     {view.signInLabel}
                 </Button>
-                <Button variant="secondary" width="fill" href={view.signUpHref}>
+                <Button intent="alternative" width="fill" href={view.signUpHref}>
                     {view.signUpLabel}
                 </Button>
             </>
@@ -43,7 +43,7 @@ const Actions = (props: InviteOverviewBaseProps) => {
                 <Text size="sm" tone="muted">
                     {view.mismatchBody}
                 </Text>
-                <Button variant="secondary" isPending={props.props.isSwitching} onPress={props.on.switchAccount}>
+                <Button intent="neutral" isPending={props.props.isSwitching} onPress={props.on.switchAccount}>
                     {props.props.switchLabel}
                 </Button>
             </>
@@ -54,7 +54,7 @@ const Actions = (props: InviteOverviewBaseProps) => {
             <Text size="sm" tone="muted">
                 {view.signedInAs}
             </Text>
-            <Button variant="primary" isPending={props.props.isAccepting} onPress={props.on.accept}>
+            <Button intent="commit" isPending={props.props.isAccepting} onPress={props.on.accept}>
                 {props.props.acceptLabel}
             </Button>
         </>
@@ -100,7 +100,7 @@ export const InviteOverviewBase = (props: InviteOverviewBaseProps) => {
                 {isUsable ? (
                     <Details {...props} />
                 ) : (
-                    <Button variant="secondary" width="fill" href={view.loginHref}>
+                    <Button intent="neutral" width="fill" href={view.loginHref}>
                         {view.goSignInLabel}
                     </Button>
                 )}

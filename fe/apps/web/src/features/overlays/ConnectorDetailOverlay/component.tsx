@@ -119,7 +119,7 @@ const bodyOf = (props: ConnectorDetailOverlayBaseProps, entry: DetailEntry) => {
             )}
             {detail.canManage ? (
                 <div>
-                    <Button variant="primary" onPress={() => props.on.add(provider)}>
+                    <Button intent="commit" onPress={() => props.on.add(provider)}>
                         {detail.words.add}
                     </Button>
                 </div>

@@ -39,7 +39,7 @@ export const ChatbotGapsBase = (props: ChatbotGapsBaseProps) => {
                     {
                         id: "dismiss",
                         label: row.dismissLabel,
-                        variant: "ghost" as const,
+                        intent: "neutral" as const,
                         onPress: () => props.on.dismiss(row.id),
                     },
                 ],

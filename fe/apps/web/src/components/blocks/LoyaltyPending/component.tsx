@@ -1,12 +1,14 @@
-import { Badge, Button, EmptyNotice, ListItem, SurfaceListCard, Text, Textarea } from "@starci/grammar/common"
 import {
-    CHIPS_CLASS_NAME,
-    FORM_CLASS_NAME,
-    QUOTE_CLASS_NAME,
-    ROW_ACTIONS_CLASS_NAME,
-    ROW_CLASS_NAME,
-    ROW_MAIN_CLASS_NAME,
-} from "./classNames"
+    Badge,
+    Button,
+    EmptyNotice,
+    ListRow,
+    SurfaceCard,
+    SurfaceListCard,
+    Text,
+    Textarea,
+} from "@starci/grammar/common"
+import { FORM_CLASS_NAME, QUOTE_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames"
 
 /** One decision waiting for a person. */
 export interface LoyaltyPendingRow {
@@ -55,41 +57,55 @@ export const LoyaltyPendingBase = (props: LoyaltyPendingBaseProps) => {
     return (
         <SurfaceListCard ariaLabel={label} empty={<EmptyNotice message={emptyTitle} description={emptyBody} />}>
             {props.props.rows.map((row) => (
-                <ListItem key={row.id} className={ROW_CLASS_NAME}>
-                    {renderPendingDraft({ row, props, isPending })}
-                    {row.canAct ? (
-                        <div className={ROW_ACTIONS_CLASS_NAME}>
-                            <Button
-                                variant="primary"
-                                size="sm"
-                                isPending={row.isApproving}
-                                isDisabled={isPending}
-                                onPress={() => props.on.approve(row.id)}
-                            >
-                                {props.props.approve}
-                            </Button>
-                            {row.canEditDraft ? (
+                <ListRow
+                    key={row.id}
+                    title={row.customer === "" ? row.actionLabel : row.customer}
+                    description={row.age}
+                    badges={
+                        row.customer === "" ? null : (
+                            <Badge tone="warning" isDot>
+                                {row.actionLabel}
+                            </Badge>
+                        )
+                    }
+                    actions={
+                        row.canAct ? (
+                            <div className={ROW_ACTIONS_CLASS_NAME}>
                                 <Button
-                                    variant="outline"
+                                    intent="alternative"
                                     size="sm"
+                                    isPending={row.isApproving}
                                     isDisabled={isPending}
-                                    onPress={() => props.on.toggleEdit(row.id)}
+                                    onPress={() => props.on.approve(row.id)}
                                 >
-                                    {row.isEditing ? props.props.editDone : props.props.edit}
+                                    {props.props.approve}
                                 </Button>
-                            ) : null}
-                            <Button
-                                variant="danger-soft"
-                                size="sm"
-                                isPending={row.isRejecting}
-                                isDisabled={isPending}
-                                onPress={() => props.on.reject(row.id)}
-                            >
-                                {props.props.reject}
-                            </Button>
-                        </div>
-                    ) : null}
-                </ListItem>
+                                {row.canEditDraft ? (
+                                    <Button
+                                        intent="neutral"
+                                        size="sm"
+                                        isDisabled={isPending}
+                                        onPress={() => props.on.toggleEdit(row.id)}
+                                    >
+                                        {row.isEditing ? props.props.editDone : props.props.edit}
+                                    </Button>
+                                ) : null}
+                                <Button
+                                    intent="destructive"
+                                    step="entry"
+                                    size="sm"
+                                    isPending={row.isRejecting}
+                                    isDisabled={isPending}
+                                    onPress={() => props.on.reject(row.id)}
+                                >
+                                    {props.props.reject}
+                                </Button>
+                            </div>
+                        ) : null
+                    }
+                >
+                    {renderPendingDraft({ row, props, isPending })}
+                </ListRow>
             ))}
         </SurfaceListCard>
     )
@@ -104,15 +120,6 @@ interface RenderPendingDraftContext {
 /** Builds the RowMain section from the current view. */
 const renderPendingDraft = ({ row, props, isPending }: RenderPendingDraftContext) => (
     <div className={ROW_MAIN_CLASS_NAME}>
-        <div className={CHIPS_CLASS_NAME}>
-            <Badge tone="warning" isDot>
-                {row.actionLabel}
-            </Badge>
-            <Text as="span" size="xs" tone="muted">
-                {row.age}
-            </Text>
-        </div>
-        {row.customer === "" ? null : <Text weight="semibold">{row.customer}</Text>}
         {row.summary === "" ? null : <Text size="sm">{row.summary}</Text>}
         {row.reason === "" ? null : (
             <Text size="xs" tone="muted">
@@ -125,20 +132,21 @@ const renderPendingDraft = ({ row, props, isPending }: RenderPendingDraftContext
             </Text>
         )}
         {row.draft !== "" && !row.isEditing ? (
-            <div className={QUOTE_CLASS_NAME}>
-                <Text size="xs" tone="muted" weight="medium">
-                    {props.props.draftLabel}
-                </Text>
-                <Text as="p" size="sm">
-                    {row.draft}
-                </Text>
-            </div>
+            <SurfaceCard ariaLabel={props.props.draftLabel}>
+                <div className={QUOTE_CLASS_NAME}>
+                    <Text size="xs" tone="muted" weight="medium">
+                        {props.props.draftLabel}
+                    </Text>
+                    <Text as="p" size="sm">
+                        {row.draft}
+                    </Text>
+                </div>
+            </SurfaceCard>
         ) : null}
         {row.canAct && row.isEditing && row.canEditDraft ? (
             <div className={FORM_CLASS_NAME}>
                 <Textarea
                     label={props.props.draftLabel}
-                    variant="secondary"
                     description={props.props.draftHint}
                     rows={5}
                     value={row.draft}

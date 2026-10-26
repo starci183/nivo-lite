@@ -25,16 +25,11 @@ const Decision = (props: ThreadApprovalCardProps) => {
     if (!card.isPending) return <Badge tone={card.decidedTone}>{card.decidedLine}</Badge>
     return (
         <div className={ACTIONS_CLASS_NAME}>
-            <Button
-                variant="primary"
-                size="sm"
-                isPending={props.isBusy}
-                onPress={() => props.onApprove(card.messageId)}
-            >
+            <Button intent="commit" size="sm" isPending={props.isBusy} onPress={() => props.onApprove(card.messageId)}>
                 {props.labels.approve}
             </Button>
             <Button
-                variant="secondary"
+                intent="alternative"
                 size="sm"
                 isDisabled={props.isBusy}
                 onPress={() => props.onReject(card.messageId)}
@@ -49,11 +44,7 @@ const Decision = (props: ThreadApprovalCardProps) => {
 export const ThreadApprovalCard = (props: ThreadApprovalCardProps) => {
     const { card } = props
     return (
-        <SurfaceCard
-            label={props.labels.cardLabel}
-            depth="nested"
-            {...(card.isPending ? { state: "pending" as const } : {})}
-        >
+        <SurfaceCard label={props.labels.cardLabel} {...(card.isPending ? { state: "pending" as const } : {})}>
             <div className={CARD_CLASS_NAME}>
                 <Text weight="semibold">{card.title}</Text>
                 <Text size="sm" tone="muted">

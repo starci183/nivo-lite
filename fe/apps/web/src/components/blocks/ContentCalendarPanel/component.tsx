@@ -107,7 +107,7 @@ export const ContentCalendarPanelBase = (props: ContentCalendarPanelBaseProps) =
                             }
                             badges={<ContentStatusBadge tone={i.tone} label={i.statusLabel} />}
                             actions={
-                                <Button variant="outline" size="sm" onPress={() => props.on.open(i.id)}>
+                                <Button intent="neutral" size="sm" onPress={() => props.on.open(i.id)}>
                                     {t("queueOpen")}
                                 </Button>
                             }

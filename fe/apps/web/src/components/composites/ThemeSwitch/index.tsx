@@ -9,12 +9,12 @@ type ThemeSwitchProps = {
     readonly onChange: (isDark: boolean) => void
 }
 
-/** The light/dark switch: the grammar switch, large, with the sun on its thumb and the moon once dark is selected. */
+/** The light/dark switch: the grammar switch, large (`lg`), with the sun on its thumb and the moon once dark is selected. */
 export const ThemeSwitch = (props: ThemeSwitchProps) => (
     <Switch
         label={props.label}
         isLabelHidden
-        size="control"
+        size="lg"
         isSelected={props.isDark}
         onSelectedChange={props.onChange}
         thumbIcon={nivoIconSource("light", "leading")}

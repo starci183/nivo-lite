@@ -132,7 +132,7 @@ const ConnectedWebhooks = (props: DevelopersWebhooksProps) => (
         {...(props.canManage
             ? {
                   labelEnd: (
-                      <Button variant="ghost" onPress={props.onAdd}>
+                      <Button intent="neutral" onPress={props.onAdd}>
                           {props.view.addLabel}
                       </Button>
                   ),
@@ -147,7 +147,7 @@ const ConnectedWebhooks = (props: DevelopersWebhooksProps) => (
                 {...(props.canManage
                     ? {
                           actions: (
-                              <Button variant="outline" onPress={() => props.onEdit(row.id)}>
+                              <Button intent="neutral" onPress={() => props.onEdit(row.id)}>
                                   {props.view.editLabel}
                               </Button>
                           ),
@@ -170,7 +170,7 @@ const AvailableWebhook = (props: Pick<DevelopersWebhooksProps, "canManage" | "vi
             {...(props.canManage
                 ? {
                       actions: (
-                          <Button variant="outline" onPress={props.onAdd}>
+                          <Button intent="neutral" onPress={props.onAdd}>
                               {props.view.connectLabel}
                           </Button>
                       ),

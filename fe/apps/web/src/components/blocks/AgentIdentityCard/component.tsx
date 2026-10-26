@@ -41,7 +41,6 @@ export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
                         id="module-name"
                         name="name"
                         label={props.props.nameLabel}
-                        variant="secondary"
                         hint={props.props.nameHint}
                         value={props.props.name}
                         isSkeleton={props.props.isLoading}
@@ -55,7 +54,7 @@ export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
             </Text>
             <div className={ACTIONS}>
                 <Button
-                    variant="secondary"
+                    intent="neutral"
                     isSkeleton={props.props.isLoading}
                     isPending={props.props.isPending}
                     isDisabled={!props.props.canSave}

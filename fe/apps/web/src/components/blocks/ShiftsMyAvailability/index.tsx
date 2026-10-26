@@ -67,7 +67,7 @@ export const ShiftsMyAvailability = () => {
                 switchLabel: t(form.available ? "canWork" : "cannotWork"),
                 switchOn: form.available,
                 submitLabel: t("sendAvail"),
-                submitVariant: "primary",
+                submitIntent: "commit",
                 isBusy,
                 canSubmit: true,
                 rows: mine.availability.slice(0, LIST_LIMIT).map((row) => ({

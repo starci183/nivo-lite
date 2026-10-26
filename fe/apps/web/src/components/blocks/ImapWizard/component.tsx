@@ -141,7 +141,7 @@ const ImapAccountStep = (props: ImapAccountStepProps) => (
         {props.view.starttls === null ? null : <Alert tone="cautionary" title={props.view.starttls} />}
         <div>
             <Button
-                variant="outline"
+                intent="neutral"
                 isPending={props.isPending}
                 isDisabled={!props.view.canTest}
                 onPress={props.onTest}
@@ -189,7 +189,6 @@ export const ImapWizardBase = (props: ImapWizardBaseProps) => {
                         {text.scheduleHint}
                     </Text>
                     <RadioGroup
-                        variant="secondary"
                         label={text.scheduleLabel}
                         isLabelHidden
                         value={view.schedule.value}
@@ -221,7 +220,6 @@ const ImapFoldersStep = ({ props: view, on }: ImapWizardBaseProps) => {
                 {text.foldersHint}
             </Text>
             <CheckboxGroup
-                variant="secondary"
                 label={text.foldersTitle}
                 isLabelHidden
                 options={view.folders.options}
@@ -240,7 +238,6 @@ const ImapFoldersStep = ({ props: view, on }: ImapWizardBaseProps) => {
                 {text.sinceHint}
             </Text>
             <RadioGroup
-                variant="secondary"
                 label={text.sinceTitle}
                 isLabelHidden
                 value={view.folders.since}

@@ -45,7 +45,6 @@ export const HiringAvailabilityBase = (props: HiringAvailabilityBaseProps) => {
                     <>
                         <Select
                             label={say("availMember")}
-                            variant="secondary"
                             options={members}
                             value={who}
                             onValueChange={(id) => on.member(id ?? who)}
@@ -57,7 +56,6 @@ export const HiringAvailabilityBase = (props: HiringAvailabilityBaseProps) => {
                                     id={`av-${day.weekday}`}
                                     name={`av_${day.weekday}`}
                                     label={day.label}
-                                    variant="secondary"
                                     placeholder={say("availPlaceholder")}
                                     isError={day.isInvalid}
                                     errorMessage={day.isInvalid ? say("availInvalid") : undefined}
@@ -72,7 +70,7 @@ export const HiringAvailabilityBase = (props: HiringAvailabilityBaseProps) => {
                         {notice === null ? null : <Alert tone="affirmative" title={notice} />}
                         <div className={ACTIONS_CLASS_NAME}>
                             <Button
-                                variant="secondary"
+                                intent="neutral"
                                 isPending={isBusy}
                                 isDisabled={isBusy || !canSave}
                                 onPress={on.save}

@@ -23,7 +23,7 @@ type LoyaltyCategoryCardProps = {
 export const LoyaltyCategoryCard = (props: LoyaltyCategoryCardProps) => {
     const { category } = props
     return (
-        <SurfaceCard depth="nested" ariaLabel={props.ariaLabel}>
+        <SurfaceCard ariaLabel={props.ariaLabel}>
             <div className={FORM_CLASS_NAME}>
                 <div className={FIELD_TRIPLE_CLASS_NAME}>
                     <LoyaltyField
@@ -51,7 +51,8 @@ export const LoyaltyCategoryCard = (props: LoyaltyCategoryCardProps) => {
                 {props.canRemove ? (
                     <div>
                         <Button
-                            variant="danger-soft"
+                            intent="destructive"
+                            step="entry"
                             size="sm"
                             isDisabled={props.isPending}
                             onPress={() => props.onRemove(category.uid)}

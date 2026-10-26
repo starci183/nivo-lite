@@ -7,7 +7,7 @@ import {
     EmptyNotice,
     Input,
     List,
-    ListItem,
+    ListRow,
     NumberField,
     SectionHeader,
     Select,
@@ -15,14 +15,7 @@ import {
     Switch,
     Text,
 } from "@starci/grammar/common"
-import { ShiftsLine } from "@/components/composites/ShiftsLine"
-import {
-    BLOCK_CLASS_NAME,
-    FORM_GRID_CLASS_NAME,
-    LIST_CLASS_NAME,
-    LIST_ITEM_CLASS_NAME,
-    ROW_CLASS_NAME,
-} from "./classNames"
+import { BLOCK_CLASS_NAME, FORM_GRID_CLASS_NAME, ROW_CLASS_NAME } from "./classNames"
 
 /** What is typed in the staff form. */
 export interface StaffForm {
@@ -112,7 +105,6 @@ export const ShiftsStaffBase = (props: ShiftsStaffBaseProps) => (
             <div className={FORM_GRID_CLASS_NAME}>
                 {renderStaffWorkLimits(props)}
                 <Input
-                    variant="secondary"
                     id="shifts-staff-phone"
                     name="phone"
                     label={props.props.labels.phone}
@@ -120,7 +112,6 @@ export const ShiftsStaffBase = (props: ShiftsStaffBaseProps) => (
                     onValueChange={(value) => props.on.text("phone", value)}
                 />
                 <Input
-                    variant="secondary"
                     id="shifts-staff-telegram"
                     name="telegram"
                     label={props.props.labels.telegram}
@@ -128,7 +119,6 @@ export const ShiftsStaffBase = (props: ShiftsStaffBaseProps) => (
                     onValueChange={(value) => props.on.text("telegramChatId", value)}
                 />
                 <Input
-                    variant="secondary"
                     id="shifts-staff-zalo"
                     name="zalo"
                     label={props.props.labels.zalo}
@@ -136,7 +126,6 @@ export const ShiftsStaffBase = (props: ShiftsStaffBaseProps) => (
                     onValueChange={(value) => props.on.text("zaloUserId", value)}
                 />
                 <Select
-                    variant="secondary"
                     label={props.props.labels.link}
                     name="link"
                     value={props.props.form.staffRowId ?? props.props.noLinkId}
@@ -145,7 +134,6 @@ export const ShiftsStaffBase = (props: ShiftsStaffBaseProps) => (
                 />
             </div>
             <CheckboxGroup
-                variant="secondary"
                 label={props.props.labels.positions}
                 orientation="horizontal"
                 options={props.props.positionOptions}
@@ -160,7 +148,7 @@ export const ShiftsStaffBase = (props: ShiftsStaffBaseProps) => (
 const renderStaffActions = ({ props }: RenderStaffActionsInput) => (
     <div className={ROW_CLASS_NAME}>
         <Button
-            variant="primary"
+            intent="commit"
             isPending={props.props.isBusy}
             isDisabled={!props.props.canSave}
             onPress={props.on.save}
@@ -169,7 +157,7 @@ const renderStaffActions = ({ props }: RenderStaffActionsInput) => (
         </Button>
         {props.props.form.id === null ? null : (
             <>
-                <Button variant="ghost" onPress={props.on.cancel}>
+                <Button intent="neutral" onPress={props.on.cancel}>
                     {props.props.cancelLabel}
                 </Button>
                 <Switch
@@ -184,14 +172,18 @@ const renderStaffActions = ({ props }: RenderStaffActionsInput) => (
 )
 
 const renderStaffList = ({ props }: RenderStaffListInput) => (
-    <List label={props.props.title} className={LIST_CLASS_NAME}>
+    <List label={props.props.title}>
         {props.props.people.map((person) => (
-            <ListItem key={person.id} className={LIST_ITEM_CLASS_NAME}>
-                <ShiftsLine title={person.title} notes={person.notes} />
-                <Button size="sm" variant="outline" onPress={() => props.on.edit(person.id)}>
-                    {props.props.editLabel}
-                </Button>
-            </ListItem>
+            <ListRow
+                key={person.id}
+                title={person.title}
+                description={person.notes.filter((note) => note !== "").join(" · ")}
+                actions={
+                    <Button size="sm" intent="neutral" onPress={() => props.on.edit(person.id)}>
+                        {props.props.editLabel}
+                    </Button>
+                }
+            />
         ))}
     </List>
 )
@@ -199,7 +191,6 @@ const renderStaffList = ({ props }: RenderStaffListInput) => (
 const renderStaffWorkLimits = (props: ShiftsStaffBaseProps) => (
     <>
         <Input
-            variant="secondary"
             id="shifts-staff-name"
             name="name"
             label={props.props.labels.name}
@@ -207,7 +198,6 @@ const renderStaffWorkLimits = (props: ShiftsStaffBaseProps) => (
             onValueChange={(value) => props.on.text("name", value)}
         />
         <NumberField
-            variant="secondary"
             label={props.props.labels.wage}
             name="wage"
             value={props.props.form.wage}
@@ -216,7 +206,6 @@ const renderStaffWorkLimits = (props: ShiftsStaffBaseProps) => (
             onValueChange={(value) => props.on.number("wage", value)}
         />
         <NumberField
-            variant="secondary"
             label={props.props.labels.maxWeek}
             name="maxWeek"
             value={props.props.form.maxWeek}
@@ -225,7 +214,6 @@ const renderStaffWorkLimits = (props: ShiftsStaffBaseProps) => (
             onValueChange={(value) => props.on.number("maxWeek", value)}
         />
         <NumberField
-            variant="secondary"
             label={props.props.labels.maxDay}
             name="maxDay"
             value={props.props.form.maxDay}
@@ -234,7 +222,6 @@ const renderStaffWorkLimits = (props: ShiftsStaffBaseProps) => (
             onValueChange={(value) => props.on.number("maxDay", value)}
         />
         <NumberField
-            variant="secondary"
             label={props.props.labels.minRest}
             name="rest"
             value={props.props.form.minRest}

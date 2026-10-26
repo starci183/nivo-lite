@@ -61,7 +61,6 @@ export const ShiftsRulesBase = (props: ShiftsRulesBaseProps) => (
                 {props.props.fields.map((field) => (
                     <NumberField
                         key={field.id}
-                        variant="secondary"
                         label={field.label}
                         name={`rule-${field.id}`}
                         value={field.value}
@@ -85,7 +84,6 @@ export const ShiftsRulesBase = (props: ShiftsRulesBaseProps) => (
                             day.ends.map((end) => (
                                 <Select
                                     key={end.id}
-                                    variant="secondary"
                                     label={end.label}
                                     isLabelHidden
                                     name={`${end.id}-${day.id}`}
@@ -103,7 +101,7 @@ export const ShiftsRulesBase = (props: ShiftsRulesBaseProps) => (
                 ))}
             </div>
             <div className={ROW_CLASS_NAME}>
-                <Button variant="primary" isPending={props.props.isBusy} onPress={props.on.save}>
+                <Button intent="commit" isPending={props.props.isBusy} onPress={props.on.save}>
                     {props.props.saveLabel}
                 </Button>
                 <Badge tone={props.props.reminderOn ? "success" : "neutral"}>{props.props.reminderLabel}</Badge>

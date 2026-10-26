@@ -1,5 +1,4 @@
-import { Button, EmptyNotice, ListItem, SurfaceListCard, Text } from "@starci/grammar/common"
-import { MAIN_CLASS, ROW_CLASS } from "./classNames"
+import { Button, EmptyNotice, ListRow, SurfaceListCard } from "@starci/grammar/common"
 
 /** Props for {@link BookingWaitlistBase}. */
 export interface BookingWaitlistBaseProps {
@@ -23,22 +22,22 @@ export const BookingWaitlistBase = (props: BookingWaitlistBaseProps) => (
         empty={<EmptyNotice message={props.props.emptyTitle} description={props.props.emptyBody} />}
     >
         {props.props.rows.map((row) => (
-            <ListItem key={row.id} className={ROW_CLASS}>
-                <div className={MAIN_CLASS}>
-                    <Text weight="semibold">{row.title}</Text>
-                    <Text size="sm" tone="muted">
-                        {row.detail}
-                    </Text>
-                </div>
-                <Button
-                    size="sm"
-                    variant="outline"
-                    isDisabled={props.props.isPending}
-                    onPress={() => props.on.remove(row.id)}
-                >
-                    {props.props.removeLabel}
-                </Button>
-            </ListItem>
+            <ListRow
+                key={row.id}
+                title={row.title}
+                description={row.detail}
+                actions={
+                    <Button
+                        size="sm"
+                        intent="destructive"
+                        step="entry"
+                        isDisabled={props.props.isPending}
+                        onPress={() => props.on.remove(row.id)}
+                    >
+                        {props.props.removeLabel}
+                    </Button>
+                }
+            />
         ))}
     </SurfaceListCard>
 )

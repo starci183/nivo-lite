@@ -76,7 +76,7 @@ export const SalesOrdersBase = (props: SalesOrdersBaseProps) => {
                 )}
                 {p.hasNextPage || p.paginationFailure !== null ? (
                     <Button
-                        variant="secondary"
+                        intent="neutral"
                         size="sm"
                         isPending={p.isLoadingMore}
                         isDisabled={p.isLoadingMore}

@@ -46,10 +46,10 @@ type FormDrawerFooterProps = Pick<
 /** Footer identity stays stable while fields and validation change. */
 const FormDrawerFooter = (props: FormDrawerFooterProps) => (
     <>
-        <Button variant="primary" isPending={props.isPending} isDisabled={!props.canSave} onPress={props.onSubmit}>
+        <Button intent="commit" isPending={props.isPending} isDisabled={!props.canSave} onPress={props.onSubmit}>
             {props.saveLabel}
         </Button>
-        <Button variant="ghost" onPress={props.onClose}>
+        <Button intent="neutral" onPress={props.onClose}>
             {props.cancelLabel}
         </Button>
     </>

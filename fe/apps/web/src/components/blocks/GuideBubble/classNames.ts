@@ -11,7 +11,7 @@ export const LINKS_CLASS = "flex flex-wrap gap-2"
 /** Suggested first questions. */
 export const SUGGEST_CLASS = "flex shrink-0 flex-wrap gap-2"
 /** The ask form band. */
-export const FOOT_CLASS = "flex shrink-0 flex-col gap-2 border-t border-separator pt-3"
+export const FOOT_CLASS = "flex shrink-0 flex-col gap-2 pt-3"
 /** The input and its send button. */
 export const ASK_ROW_CLASS = "flex items-end gap-2"
 /** The input takes the room the button leaves. */

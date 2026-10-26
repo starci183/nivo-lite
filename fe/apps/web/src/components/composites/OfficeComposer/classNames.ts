@@ -1,5 +1,8 @@
-/** The composer: the card's closing band. */
-export const COMPOSER_CLASS_NAME = "flex shrink-0 flex-col gap-2 border-t border-separator px-4 pt-3 pb-4"
+/** The composer: the closing band of the card; a Divider opens it. */
+export const COMPOSER_CLASS_NAME = "flex shrink-0 flex-col"
+
+/** The inset body of the composer band. */
+export const COMPOSER_BODY_CLASS_NAME = "flex flex-col gap-2 px-4 pt-3 pb-4"
 
 /** Quick prompt chips: one row that scrolls sideways. */
 export const CHIPS_CLASS_NAME = "flex gap-2 overflow-x-auto pb-1"

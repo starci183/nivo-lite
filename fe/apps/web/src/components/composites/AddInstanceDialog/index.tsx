@@ -36,11 +36,11 @@ export const AddInstanceDialog = (props: AddInstanceDialogProps) => (
         isDismissable={!props.props.isPending}
         footer={
             <>
-                <Button variant="outline" isDisabled={props.props.isPending} onPress={props.on.close}>
+                <Button intent="neutral" isDisabled={props.props.isPending} onPress={props.on.close}>
                     {props.props.closeLabel}
                 </Button>
                 <Button
-                    variant="primary"
+                    intent="commit"
                     isPending={props.props.isPending}
                     isDisabled={!props.props.canCreate}
                     onPress={props.on.create}
@@ -56,7 +56,6 @@ export const AddInstanceDialog = (props: AddInstanceDialogProps) => (
                 name="name"
                 label={props.props.nameLabel}
                 hint={props.props.nameHint}
-                variant="secondary"
                 isRequired
                 isDisabled={props.props.isPending}
                 value={props.props.name}

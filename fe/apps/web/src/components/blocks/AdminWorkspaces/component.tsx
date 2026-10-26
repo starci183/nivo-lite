@@ -142,7 +142,7 @@ const renderWorkspaceFilters = (props: AdminWorkspacesViewProps) => (
                     placeholder={props.props.searchPlaceholder}
                     defaultValue={props.props.query}
                 />
-                <Button type="submit" variant="secondary">
+                <Button type="submit" intent="neutral">
                     {props.props.searchSubmit}
                 </Button>
             </div>
@@ -176,7 +176,7 @@ const renderWorkspaceCell = (row: AdminWorkspaceRowView, columnId: string, props
         case "workspace":
             return (
                 <div className={CELL_STACK_CLASS_NAME}>
-                    <Button size="sm" variant="ghost" href={row.href}>
+                    <Button size="sm" intent="neutral" href={row.href}>
                         {row.name}
                     </Button>
                     {row.needsAttention ? <Badge tone="warning">{props.props.attentionLabel}</Badge> : null}

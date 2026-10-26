@@ -8,7 +8,7 @@ export interface RowNote {
 export interface RowPrimary {
     readonly id: "continue" | "reconnectGoogle" | "check" | "sync" | "sendTest"
     readonly label: string
-    readonly variant: "secondary" | "outline"
+    readonly intent: "alternative" | "neutral"
     readonly isPending: boolean
 }
 

@@ -39,7 +39,7 @@ const AdminWorkspaceOverviewView = (props: AdminWorkspaceOverviewViewProps) => (
             title={props.props.title}
             description={props.props.description}
             action={
-                <Button variant="ghost" href={ADMIN_ROUTES.workspaces}>
+                <Button intent="neutral" href={ADMIN_ROUTES.workspaces}>
                     {props.props.allWorkspacesLabel}
                 </Button>
             }

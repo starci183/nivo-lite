@@ -28,11 +28,11 @@ export const HiringCvSection = (props: HiringCvSectionProps) => {
                 <>
                     <div className={ACTIONS_CLASS_NAME}>
                         {canPreview ? (
-                            <Button variant="secondary" size="sm" onPress={props.on.toggle}>
+                            <Button intent="neutral" size="sm" onPress={props.on.toggle}>
                                 {say(isPreviewing ? "candCvHide" : "candCvPreview")}
                             </Button>
                         ) : null}
-                        <Button variant="tertiary" size="sm" href={url} target="_blank" rel="noreferrer">
+                        <Button intent="dismiss" size="sm" href={url} target="_blank" rel="noreferrer">
                             {openLabel}
                         </Button>
                     </div>

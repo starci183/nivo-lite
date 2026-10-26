@@ -30,7 +30,7 @@ export const PromoChatbotCardBase = (props: PromoChatbotCardBaseProps) => {
                 )}
             </div>
             <div className={PROMO_ACTIONS}>
-                <Button variant="outline" size="sm" href={props.props.actionHref}>
+                <Button intent="neutral" size="sm" href={props.props.actionHref}>
                     {props.props.actionLabel}
                 </Button>
                 <CloseButton label={props.props.dismissLabel} size="sm" onPress={props.on.dismiss} />
@@ -40,7 +40,7 @@ export const PromoChatbotCardBase = (props: PromoChatbotCardBaseProps) => {
     if (props.props.variant === "card") {
         return (
             <div role="note">
-                <SurfaceCard depth="nested">{content}</SurfaceCard>
+                <SurfaceCard>{content}</SurfaceCard>
             </div>
         )
     }

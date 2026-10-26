@@ -119,7 +119,7 @@ export const KnowledgeAddBase = (props: KnowledgeAddBaseProps) =>
         </Text>
     ) : (
         <>
-            <Button variant="primary" onPress={props.on.open}>
+            <Button intent="commit" onPress={props.on.open}>
                 {props.props.buttonLabel}
             </Button>
             <KnowledgeAddDrawer {...props} />

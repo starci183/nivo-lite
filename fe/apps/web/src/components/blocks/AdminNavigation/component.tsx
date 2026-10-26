@@ -20,7 +20,7 @@ export interface AdminNavigationBaseProps {
 export const AdminNavigationBase = (props: AdminNavigationBaseProps) => (
     <NavLandmark label={props.props.label} layout="bar">
         {props.props.items.map((item) => (
-            <Button key={item.id} size="sm" variant={item.isCurrent ? "secondary" : "ghost"} href={item.href}>
+            <Button key={item.id} size="sm" intent={item.isCurrent ? "alternative" : "neutral"} href={item.href}>
                 {item.label}
             </Button>
         ))}

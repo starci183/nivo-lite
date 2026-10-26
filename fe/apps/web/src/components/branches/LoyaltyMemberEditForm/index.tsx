@@ -53,7 +53,6 @@ export const LoyaltyMemberEditForm = (props: LoyaltyMemberEditFormProps) => (
             />
             <Textarea
                 label={props.noteLabel}
-                variant="secondary"
                 rows={2}
                 maxLength={props.noteMax}
                 value={props.note}
@@ -61,7 +60,7 @@ export const LoyaltyMemberEditForm = (props: LoyaltyMemberEditFormProps) => (
                 onValueChange={props.onNote}
             />
             <div>
-                <Button type="submit" variant="secondary" isPending={props.isPending}>
+                <Button type="submit" intent="neutral" isPending={props.isPending}>
                     {props.saveLabel}
                 </Button>
             </div>

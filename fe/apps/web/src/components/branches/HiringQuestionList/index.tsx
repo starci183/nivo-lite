@@ -37,7 +37,7 @@ export const HiringQuestionList = (props: HiringQuestionListProps) => {
             ))}
             {canAdd ? (
                 <div className={ACTIONS_CLASS_NAME}>
-                    <Button variant="secondary" size="sm" onPress={onAdd}>
+                    <Button intent="neutral" size="sm" onPress={onAdd}>
                         {say("qAdd")}
                     </Button>
                 </div>

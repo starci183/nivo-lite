@@ -45,7 +45,7 @@ export const InventoryRecipesBase = (props: InventoryRecipesBaseProps) => {
         <div className={STACK_CLASS_NAME}>
             {p.addLabel === null ? null : (
                 <div>
-                    <Button variant="primary" size="sm" isDisabled={p.addDisabled} onPress={on.add}>
+                    <Button intent="commit" size="sm" isDisabled={p.addDisabled} onPress={on.add}>
                         {p.addLabel}
                     </Button>
                 </div>
@@ -61,7 +61,7 @@ export const InventoryRecipesBase = (props: InventoryRecipesBaseProps) => {
                         description={row.detail}
                         actions={
                             p.editLabel === null ? undefined : (
-                                <Button variant="outline" size="sm" onPress={() => on.edit(row.id)}>
+                                <Button intent="neutral" size="sm" onPress={() => on.edit(row.id)}>
                                     {p.editLabel}
                                 </Button>
                             )

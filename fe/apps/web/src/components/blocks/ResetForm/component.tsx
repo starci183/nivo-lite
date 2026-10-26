@@ -43,7 +43,7 @@ export const ResetFormBase = (props: ResetFormBaseProps) => {
         return (
             <AuthPanel label={view.expiredTitle} title={view.expiredTitle} text={view.expiredText}>
                 <div className={RESET_ACTIONS_CLASS_NAME}>
-                    <Button variant="primary" width="fill" href={view.newLinkHref}>
+                    <Button intent="commit" width="fill" href={view.newLinkHref}>
                         {view.newLinkLabel}
                     </Button>
                     <div className={RESET_CENTER_CLASS_NAME}>

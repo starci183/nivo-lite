@@ -96,14 +96,19 @@ const actionsOf = ({ props, on }: ZaloWizardBaseProps): ReadonlyArray<WizardActi
     if (props.step === "authorize") {
         const label = props.isAuthorized ? text.reauthorize : text.authorize
         const go = nextAction(label, on.authorize, { isPending: props.isPending })
-        const proceed: WizardAction = { id: "proceed", label: text.next, variant: "outline", onPress: () => on.go(3) }
+        const proceed: WizardAction = {
+            id: "proceed",
+            label: text.next,
+            intent: "alternative",
+            onPress: () => on.go(3),
+        }
         return props.isAuthorized ? [go, proceed, back] : [go, back]
     }
     if (props.step === "verify") {
         const checkLater: WizardAction = {
             id: "checkLater",
             label: text.checkLater,
-            variant: "outline",
+            intent: "dismiss",
             onPress: () => on.go(4),
         }
         return [props.received === null ? checkLater : nextAction(text.next, () => on.go(4)), back]
@@ -120,7 +125,6 @@ const appFieldsOf = (props: ZaloWizardBaseProps) => {
                 id="zalo-name"
                 name="name"
                 label={view.text.fieldName}
-                variant="secondary"
                 hint={view.text.fieldNameHint}
                 isDisabled={locked}
                 value={view.fields.name}
@@ -130,7 +134,6 @@ const appFieldsOf = (props: ZaloWizardBaseProps) => {
                 id="zalo-appId"
                 name="appId"
                 label={view.text.fieldAppId}
-                variant="secondary"
                 hint={view.text.fieldAppIdHint}
                 isDisabled={locked}
                 value={view.fields.appId}
@@ -140,7 +143,6 @@ const appFieldsOf = (props: ZaloWizardBaseProps) => {
                 id="zalo-appSecret"
                 name="appSecret"
                 label={view.text.fieldAppSecret}
-                variant="secondary"
                 kind="password"
                 isDisabled={locked}
                 value={view.fields.appSecret}
@@ -162,7 +164,7 @@ export const ZaloWizardBase = (props: ZaloWizardBaseProps) => {
     }
     const providerLink = (
         <div className={classNames.buttons}>
-            <Button variant="outline" href={view.providerHref} target="_blank" rel="noreferrer">
+            <Button intent="neutral" href={view.providerHref} target="_blank" rel="noreferrer">
                 {view.text.openProvider}
             </Button>
         </div>

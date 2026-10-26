@@ -99,7 +99,6 @@ export const BookingResourcesBase = (props: BookingResourcesBaseProps) => {
                                         id={`booking-resource-hours-${day.day}`}
                                         name={`hours${day.day}`}
                                         label={day.label}
-                                        variant="secondary"
                                         {...(p.form?.hoursPlaceholder === undefined
                                             ? {}
                                             : { placeholder: p.form.hoursPlaceholder })}
@@ -109,7 +108,7 @@ export const BookingResourcesBase = (props: BookingResourcesBaseProps) => {
                                 ))}
                             </div>
                             <div>
-                                <Button size="sm" variant="primary" isPending={p.isPending} onPress={on.saveHours}>
+                                <Button size="sm" intent="commit" isPending={p.isPending} onPress={on.saveHours}>
                                     {p.form.saveHoursLabel}
                                 </Button>
                             </div>
@@ -137,7 +136,6 @@ const renderResourceForm = (p: BookingResourcesBaseProps["props"], on: BookingRe
                         autoFocus
                         name="name"
                         label={p.form.nameLabel}
-                        variant="secondary"
                         isRequired
                         value={p.form.fields.name}
                         onValueChange={(name) => on.change({ name })}
@@ -146,13 +144,11 @@ const renderResourceForm = (p: BookingResourcesBaseProps["props"], on: BookingRe
                         id="booking-resource-kind"
                         name="kind"
                         label={p.form.kindLabel}
-                        variant="secondary"
                         value={p.form.fields.kind}
                         onValueChange={(kind) => on.change({ kind })}
                     />
                     <NumberField
                         label={p.form.capacityLabel}
-                        variant="secondary"
                         minValue={1}
                         step={1}
                         value={p.form.fields.capacity}
@@ -161,7 +157,6 @@ const renderResourceForm = (p: BookingResourcesBaseProps["props"], on: BookingRe
                     {p.form.staffOptions.length > 1 ? (
                         <Select
                             label={p.form.staffLabel}
-                            variant="secondary"
                             options={p.form.staffOptions}
                             value={p.form.fields.staffId}
                             onValueChange={(staffId) => on.change({ staffId: staffId ?? "none" })}

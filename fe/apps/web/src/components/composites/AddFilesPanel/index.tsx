@@ -1,11 +1,5 @@
-import { Badge, Button, FileDropzone, Input, ListItem, SurfaceListCard, Text } from "@starci/grammar/common"
-import {
-    ITEM_CLASS_NAME,
-    ITEM_TEXT_CLASS_NAME,
-    LINK_FIELD_CLASS_NAME,
-    LINK_ROW_CLASS_NAME,
-    PANEL_CLASS_NAME,
-} from "./classNames"
+import { Badge, Button, FileDropzone, Input, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
+import { LINK_FIELD_CLASS_NAME, LINK_ROW_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
 
 /** One link input. */
 export interface LinkRowView {
@@ -74,7 +68,6 @@ export const AddFilesPanel = (props: AddFilesPanelProps) => (
                         id={`knowledge-add-${link.id}`}
                         name={link.id}
                         label={link.label}
-                        variant="secondary"
                         placeholder={props.linkPlaceholder}
                         value={link.value}
                         errorMessage={link.error}
@@ -84,12 +77,17 @@ export const AddFilesPanel = (props: AddFilesPanelProps) => (
                         onBlur={() => props.onCheckLink(link.id)}
                     />
                 </div>
-                <Button variant="ghost" isDisabled={props.isBusy} onPress={() => props.onRemoveLink(link.id)}>
+                <Button
+                    intent="destructive"
+                    step="entry"
+                    isDisabled={props.isBusy}
+                    onPress={() => props.onRemoveLink(link.id)}
+                >
                     {props.linkRemoveLabel}
                 </Button>
             </div>
         ))}
-        <Button variant="outline" isDisabled={props.isBusy} onPress={props.onAddLink}>
+        <Button intent="neutral" isDisabled={props.isBusy} onPress={props.onAddLink}>
             {props.addLinkLabel}
         </Button>
         {props.note === undefined ? null : (
@@ -100,22 +98,19 @@ export const AddFilesPanel = (props: AddFilesPanelProps) => (
         {props.queue.length === 0 ? null : (
             <SurfaceListCard ariaLabel={props.queueTitle} isLoading={false} empty={null}>
                 {props.queue.map((item) => (
-                    <ListItem key={item.id} className={ITEM_CLASS_NAME}>
-                        <div className={ITEM_TEXT_CLASS_NAME}>
-                            <Text weight="semibold" overflow="truncate">
-                                {item.name}
-                            </Text>
-                            <Text size="xs" tone="muted" overflow="truncate">
-                                {item.error ?? item.detail}
-                            </Text>
-                        </div>
-                        <Badge tone={item.statusTone}>{item.statusLabel}</Badge>
-                        {item.canRemove ? (
-                            <Button variant="ghost" onPress={() => props.onRemoveItem(item.id)}>
-                                {props.removeLabel}
-                            </Button>
-                        ) : null}
-                    </ListItem>
+                    <ListRow
+                        key={item.id}
+                        title={item.name}
+                        description={item.error ?? item.detail}
+                        badges={<Badge tone={item.statusTone}>{item.statusLabel}</Badge>}
+                        actions={
+                            item.canRemove ? (
+                                <Button intent="destructive" step="entry" onPress={() => props.onRemoveItem(item.id)}>
+                                    {props.removeLabel}
+                                </Button>
+                            ) : null
+                        }
+                    />
                 ))}
             </SurfaceListCard>
         )}

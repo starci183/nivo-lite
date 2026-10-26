@@ -1,6 +1,7 @@
 import {
     Breadcrumbs,
     Button,
+    Divider,
     EmptyNotice,
     PageContainer,
     SectionHeader,
@@ -48,7 +49,7 @@ const NO_ROWS: ReadonlyArray<ThreadRowView> = []
 const Rail = (props: WorkThreadBoardBaseProps) => {
     const rail = props.props.rail
     return (
-        <SurfaceCard label={rail.title} frame="bounded">
+        <SurfaceCard label={rail.title}>
             <SlotView slot={rail.slot} placeholder={NO_ROWS} labels={rail.slotLabels} onRetry={props.on.retry}>
                 {(rows, isSkeleton) => (
                     <ThreadRail
@@ -77,7 +78,7 @@ const Rail = (props: WorkThreadBoardBaseProps) => {
                         </Text>
                     )}
                     <Button
-                        variant="secondary"
+                        intent="neutral"
                         size="sm"
                         isPending={rail.isLoadingMore}
                         isDisabled={rail.isLoadingMore}
@@ -95,7 +96,7 @@ const Rail = (props: WorkThreadBoardBaseProps) => {
 const Thread = (props: WorkThreadBoardBaseProps) => {
     const thread = props.props.thread
     return (
-        <SurfaceCard label={props.props.title} frame="frameless">
+        <SurfaceCard label={props.props.title}>
             <div className={THREAD_CLASS_NAME}>
                 <SlotView
                     slot={thread.slot}
@@ -111,6 +112,7 @@ const Thread = (props: WorkThreadBoardBaseProps) => {
                                     {feed.subtitle}
                                 </Text>
                             </div>
+                            <Divider semantics="presentation" />
                             <ThreadFeed
                                 label={thread.feedLabel}
                                 messages={feed.messages}
@@ -149,7 +151,7 @@ const Thread = (props: WorkThreadBoardBaseProps) => {
 const Chain = (props: WorkThreadBoardBaseProps) => {
     const chain = props.props.chain
     return (
-        <SurfaceCard label={chain.title} frame="bounded">
+        <SurfaceCard label={chain.title}>
             <SlotView slot={chain.slot} placeholder={SKELETON_CHAIN} labels={chain.slotLabels} onRetry={props.on.retry}>
                 {(view, isSkeleton) => <ThreadChainPanel view={view} labels={chain.labels} isSkeleton={isSkeleton} />}
             </SlotView>
@@ -162,7 +164,7 @@ const Chain = (props: WorkThreadBoardBaseProps) => {
 type NoThreadProps = { readonly title: string; readonly message: string }
 
 const NoThread = (props: NoThreadProps) => (
-    <SurfaceCard label={props.title} frame="frameless">
+    <SurfaceCard label={props.title}>
         <div className={THREAD_CLASS_NAME}>
             <EmptyNotice message={props.message} />
         </div>

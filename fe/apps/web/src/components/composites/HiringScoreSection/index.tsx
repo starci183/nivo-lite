@@ -55,7 +55,7 @@ export const HiringScoreSection = (props: HiringScoreSectionProps) => {
                         <Badge tone={score.tone}>{score.label}</Badge>
                     </div>
                     {score.summary === null ? null : (
-                        <SurfaceCard depth="nested" ariaLabel={say("candSummary")}>
+                        <SurfaceCard ariaLabel={say("candSummary")}>
                             <div className={PRE_WRAP_CLASS_NAME}>
                                 <Text as="p" size="sm">
                                     {score.summary}
@@ -84,13 +84,7 @@ export const HiringScoreSection = (props: HiringScoreSectionProps) => {
                 </>
             )}
             <div className={ACTIONS_CLASS_NAME}>
-                <Button
-                    variant="secondary"
-                    size="sm"
-                    isPending={isBusy}
-                    isDisabled={isBusy}
-                    onPress={props.on.rescreen}
-                >
+                <Button intent="neutral" size="sm" isPending={isBusy} isDisabled={isBusy} onPress={props.on.rescreen}>
                     {say("candRescreen")}
                 </Button>
             </div>

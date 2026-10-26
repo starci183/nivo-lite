@@ -1,5 +1,5 @@
-import { Button, List, ListItem, Text } from "@starci/grammar/common"
-import { ACTIONS_CLASS, MAIN_CLASS, ROW_CLASS } from "./classNames"
+import { Button, List, ListRow, Text } from "@starci/grammar/common"
+import { ACTIONS_CLASS } from "./classNames"
 
 /** What the list of a setup region draws and reports. */
 type BookingCatalogListProps = {
@@ -22,34 +22,34 @@ export const BookingCatalogList = (props: BookingCatalogListProps) =>
     ) : (
         <List label={props.label}>
             {props.rows.map((row) => (
-                <ListItem key={row.id} className={ROW_CLASS}>
-                    <div className={MAIN_CLASS}>
-                        <Text weight="semibold">{row.title}</Text>
-                        <Text size="sm" tone="muted">
-                            {row.detail}
-                        </Text>
-                    </div>
-                    <div className={ACTIONS_CLASS}>
-                        {props.editLabel === undefined ? null : (
+                <ListRow
+                    key={row.id}
+                    title={row.title}
+                    description={row.detail}
+                    actions={
+                        <div className={ACTIONS_CLASS}>
+                            {props.editLabel === undefined ? null : (
+                                <Button
+                                    size="sm"
+                                    intent="neutral"
+                                    isDisabled={props.isPending}
+                                    onPress={() => props.onEdit(row.id)}
+                                >
+                                    {props.editLabel}
+                                </Button>
+                            )}
                             <Button
                                 size="sm"
-                                variant="outline"
+                                intent="destructive"
+                                step="entry"
                                 isDisabled={props.isPending}
-                                onPress={() => props.onEdit(row.id)}
+                                onPress={() => props.onRemove(row.id)}
                             >
-                                {props.editLabel}
+                                {props.removeLabel}
                             </Button>
-                        )}
-                        <Button
-                            size="sm"
-                            variant="danger-soft"
-                            isDisabled={props.isPending}
-                            onPress={() => props.onRemove(row.id)}
-                        >
-                            {props.removeLabel}
-                        </Button>
-                    </div>
-                </ListItem>
+                        </div>
+                    }
+                />
             ))}
         </List>
     )

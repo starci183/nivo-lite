@@ -83,13 +83,13 @@ export const InventoryNewPoDrawer = (props: InventoryNewPoDrawerProps) => {
                     </div>
                 ))}
                 <div>
-                    <Button variant="ghost" size="sm" onPress={on.addLine}>
+                    <Button intent="neutral" size="sm" onPress={on.addLine}>
                         {say("newPoAddLine")}
                     </Button>
                 </div>
                 <InventoryNotices error={p.error} />
                 <div>
-                    <Button variant="primary" isPending={p.isPending} onPress={on.create}>
+                    <Button intent="commit" isPending={p.isPending} onPress={on.create}>
                         {say("newPoCreate")}
                     </Button>
                 </div>

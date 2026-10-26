@@ -24,7 +24,7 @@ export const AgentSyncCardBase = (props: AgentSyncCardBaseProps) => (
                     {props.props.lineText}
                 </Badge>
                 <Button
-                    variant="secondary"
+                    intent="neutral"
                     size="sm"
                     isPending={props.props.isQueuing}
                     isDisabled={props.props.isResyncDisabled}

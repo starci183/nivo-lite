@@ -3,21 +3,13 @@ import {
     Button,
     EmptyNotice,
     Input,
-    ListItem,
+    ListRow,
     SectionHeader,
     Select,
     SurfaceCard,
     SurfaceListCard,
 } from "@starci/grammar/common"
-import { ShiftsLine } from "@/components/composites/ShiftsLine"
-import {
-    ACTIONS_CLASS_NAME,
-    FIELD_ACTION_CLASS_NAME,
-    FORM_GRID_CLASS_NAME,
-    ROW_CLASS_NAME,
-    SECTION_CLASS_NAME,
-    SPLIT_CLASS_NAME,
-} from "./classNames"
+import { ACTIONS_CLASS_NAME, FIELD_ACTION_CLASS_NAME, FORM_GRID_CLASS_NAME, SECTION_CLASS_NAME } from "./classNames"
 
 /** The swap form of the one shift being swapped; `shiftId` is `null` when none is open. */
 export interface SwapForm {
@@ -76,32 +68,34 @@ export const ShiftsMyShiftsBase = (props: ShiftsMyShiftsBaseProps) =>
                 empty={<EmptyNotice message={props.props.emptyTitle} description={props.props.emptyBody} />}
             >
                 {props.props.shifts.map((shift) => (
-                    <ListItem key={shift.id} className={ROW_CLASS_NAME}>
-                        <div className={SPLIT_CLASS_NAME}>
-                            <ShiftsLine title={shift.title} notes={shift.notes} />
+                    <ListRow
+                        key={shift.id}
+                        title={shift.title}
+                        description={shift.notes.filter((note) => note !== "").join(" · ")}
+                        badges={shift.isCheckedIn ? <Badge tone="success">{props.props.checkedInLabel}</Badge> : null}
+                        actions={
                             <div className={ACTIONS_CLASS_NAME}>
-                                {shift.isCheckedIn ? <Badge tone="success">{props.props.checkedInLabel}</Badge> : null}
                                 {shift.canCheckIn && !shift.isCheckedIn ? (
                                     <Button
                                         size="sm"
-                                        variant="primary"
+                                        intent="alternative"
                                         isPending={shift.isBusy}
                                         onPress={() => props.on.checkIn(shift.id)}
                                     >
                                         {props.props.checkInLabel}
                                     </Button>
                                 ) : null}
-                                <Button size="sm" variant="outline" onPress={() => props.on.toggleSwap(shift.id)}>
+                                <Button size="sm" intent="neutral" onPress={() => props.on.toggleSwap(shift.id)}>
                                     {props.props.askSwapLabel}
                                 </Button>
                             </div>
-                        </div>
+                        }
+                    >
                         {props.props.swap.shiftId === shift.id ? (
                             <div className={FORM_GRID_CLASS_NAME}>
                                 <Select
                                     label={props.props.swapWithLabel}
                                     name={`swap-${shift.id}`}
-                                    variant="secondary"
                                     value={props.props.swap.toStaffId === "" ? null : props.props.swap.toStaffId}
                                     placeholder={props.props.pickPersonLabel}
                                     options={props.props.swapOptions}
@@ -111,13 +105,12 @@ export const ShiftsMyShiftsBase = (props: ShiftsMyShiftsBaseProps) =>
                                     id={`swap-why-${shift.id}`}
                                     name="reason"
                                     label={props.props.reasonLabel}
-                                    variant="secondary"
                                     value={props.props.swap.reason}
                                     onValueChange={props.on.reason}
                                 />
                                 <div className={FIELD_ACTION_CLASS_NAME}>
                                     <Button
-                                        variant="primary"
+                                        intent="alternative"
                                         isPending={shift.isBusy}
                                         isDisabled={props.props.swap.toStaffId === ""}
                                         onPress={() => props.on.send(shift.id)}
@@ -127,7 +120,7 @@ export const ShiftsMyShiftsBase = (props: ShiftsMyShiftsBaseProps) =>
                                 </div>
                             </div>
                         ) : null}
-                    </ListItem>
+                    </ListRow>
                 ))}
             </SurfaceListCard>
         </div>

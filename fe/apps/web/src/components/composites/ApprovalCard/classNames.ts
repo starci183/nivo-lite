@@ -13,15 +13,7 @@ export const APPROVAL_CARD_BAND_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "
 export const APPROVAL_CARD_BAND_DIVIDED_CLASS_NAME = cn("flex", "min-w-0", "flex-col", "gap-3", "px-4", "pt-3", "pb-4")
 
 /** The quoted draft: recessed neutral band (SURFACE-3) with the soft notice corner (RADIUS-5 case-2). */
-export const APPROVAL_CARD_QUOTE_CLASS_NAME = cn(
-    "min-w-0",
-    "rounded-xl",
-    "bg-surface-secondary",
-    "text-foreground",
-    "px-4",
-    "py-3",
-    "whitespace-pre-wrap",
-)
+export const APPROVAL_CARD_QUOTE_CLASS_NAME = cn("min-w-0", "whitespace-pre-wrap")
 
 /** Row that holds the footer facts and the open-lead link. */
 export const APPROVAL_CARD_META_ROW_CLASS_NAME = cn("flex", "flex-wrap", "items-center", "justify-between", "gap-2")

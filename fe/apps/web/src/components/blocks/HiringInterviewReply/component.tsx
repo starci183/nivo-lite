@@ -51,7 +51,7 @@ export const HiringInterviewReplyBase = (props: HiringInterviewReplyBaseProps) =
                         {slots.map((slot) => (
                             <Button
                                 key={slot.start}
-                                variant="secondary"
+                                intent="neutral"
                                 width="fill"
                                 isDisabled={isBusy}
                                 isPending={isBusy}
@@ -60,7 +60,7 @@ export const HiringInterviewReplyBase = (props: HiringInterviewReplyBaseProps) =
                                 {slot.label}
                             </Button>
                         ))}
-                        <Button variant="ghost" width="fill" isDisabled={isBusy} onPress={() => on.pick(null)}>
+                        <Button intent="neutral" width="fill" isDisabled={isBusy} onPress={() => on.pick(null)}>
                             {say("replyNoFit")}
                         </Button>
                     </div>

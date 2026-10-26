@@ -38,7 +38,7 @@ export const ContentCadenceCardBase = (props: ContentCadenceCardBaseProps) => {
     return (
         <ContentSettingsCard title={t("settingsCadence")} description={t("settingsCadenceBody")}>
             {props.props.rows.map((row) => (
-                <SurfaceCard key={row.channel} depth="nested" ariaLabel={row.label}>
+                <SurfaceCard key={row.channel} ariaLabel={row.label}>
                     <div className={FORM_CLASS_NAME}>
                         <Switch
                             label={`${t("cadenceOn")}: ${row.label}`}
@@ -49,7 +49,6 @@ export const ContentCadenceCardBase = (props: ContentCadenceCardBaseProps) => {
                         {row.on ? (
                             <>
                                 <NumberField
-                                    variant="secondary"
                                     label={t("cadencePerWeek")}
                                     value={row.perWeek}
                                     minValue={1}
@@ -61,7 +60,6 @@ export const ContentCadenceCardBase = (props: ContentCadenceCardBaseProps) => {
                                     id={`cad-time-${row.channel}`}
                                     name={`cad-time-${row.channel}`}
                                     label={t("cadenceTime")}
-                                    variant="secondary"
                                     value={row.time}
                                     hint={t("addTimeHint")}
                                     isDisabled={locked}
@@ -70,7 +68,6 @@ export const ContentCadenceCardBase = (props: ContentCadenceCardBaseProps) => {
                                 <CheckboxGroup
                                     label={t("cadenceDays")}
                                     orientation="horizontal"
-                                    variant="secondary"
                                     isDisabled={locked}
                                     options={props.props.dayNames.map((d, k) => ({
                                         value: String(k + 1),
@@ -88,16 +85,10 @@ export const ContentCadenceCardBase = (props: ContentCadenceCardBaseProps) => {
             ))}
             <ContentCommandNote note={props.props.note} closeLabel={t("close")} onDismiss={props.on.dismissNote} />
             <div className={ACTIONS_CLASS_NAME}>
-                <Button variant="secondary" size="sm" onPress={props.on.preset} isDisabled={locked}>
+                <Button intent="alternative" size="sm" onPress={props.on.preset} isDisabled={locked}>
                     {t("cadencePreset")}
                 </Button>
-                <Button
-                    variant="primary"
-                    size="sm"
-                    isPending={isPending}
-                    isDisabled={!canManage}
-                    onPress={props.on.save}
-                >
+                <Button intent="commit" size="sm" isPending={isPending} isDisabled={!canManage} onPress={props.on.save}>
                     {t("cadenceSave")}
                 </Button>
             </div>

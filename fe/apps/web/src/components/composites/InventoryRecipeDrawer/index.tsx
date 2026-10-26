@@ -86,23 +86,23 @@ export const InventoryRecipeDrawer = (props: InventoryRecipeDrawerProps) => {
                             onPick={(value) => on.item(index, value)}
                             onQty={(value) => on.qty(index, value)}
                         />
-                        <Button variant="ghost" size="sm" onPress={() => on.removeLine(index)}>
+                        <Button intent="destructive" step="entry" size="sm" onPress={() => on.removeLine(index)}>
                             {say("recipeRemoveLine")}
                         </Button>
                     </div>
                 ))}
                 <div>
-                    <Button variant="ghost" size="sm" onPress={on.addLine}>
+                    <Button intent="neutral" size="sm" onPress={on.addLine}>
                         {say("recipeAddLine")}
                     </Button>
                 </div>
                 <InventoryNotices error={p.error} />
                 <div className={ACTIONS_CLASS_NAME}>
-                    <Button variant="primary" isPending={p.isPending} onPress={on.save}>
+                    <Button intent="commit" isPending={p.isPending} onPress={on.save}>
                         {say("save")}
                     </Button>
                     {p.editing === null ? null : (
-                        <Button variant="danger-soft" isDisabled={p.isPending} onPress={on.remove}>
+                        <Button intent="destructive" step="entry" isDisabled={p.isPending} onPress={on.remove}>
                             {say("recipeDelete")}
                         </Button>
                     )}

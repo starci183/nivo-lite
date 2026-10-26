@@ -35,12 +35,11 @@ export const WorkspaceJoinBase = (props: WorkspaceJoinBaseProps) => (
                                     name="link"
                                     label={props.props.linkLabel}
                                     placeholder={props.props.placeholder}
-                                    variant="secondary"
                                     value={props.props.value}
                                     onValueChange={props.on.setValue}
                                 />
                             </div>
-                            <Button type="submit" variant="outline" isDisabled={props.props.value.trim() === ""}>
+                            <Button type="submit" intent="neutral" isDisabled={props.props.value.trim() === ""}>
                                 {props.props.openLabel}
                             </Button>
                         </div>

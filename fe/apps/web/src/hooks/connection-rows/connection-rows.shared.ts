@@ -80,18 +80,18 @@ export const primaryOf = (c: Connection, canManage: boolean, busy: RowBusy, t: R
         return {
             id: "reconnectGoogle",
             label: t("googleReconnect"),
-            variant: "secondary",
+            intent: "alternative",
             isPending: busy === "google",
         }
     }
     if (settled && (c.provider === "telegram" || reconnects)) {
-        return { id: "check", label: t("check"), variant: "outline", isPending: busy === "check" }
+        return { id: "check", label: t("check"), intent: "neutral", isPending: busy === "check" }
     }
     if (canManage && settled && isDataConnector(c.provider) && c.provider !== "csv_import") {
-        return { id: "sync", label: t("syncNow"), variant: "outline", isPending: busy === "sync" }
+        return { id: "sync", label: t("syncNow"), intent: "neutral", isPending: busy === "sync" }
     }
     if (settled && c.provider === "webhook") {
-        return { id: "sendTest", label: t("webhookSendTest"), variant: "outline", isPending: busy === "test" }
+        return { id: "sendTest", label: t("webhookSendTest"), intent: "neutral", isPending: busy === "test" }
     }
     return null
 }
@@ -164,5 +164,10 @@ const reopenPrimaryOf = (c: Connection, canManage: boolean, t: RowTranslate): Ro
     const reopens = c.status === "pending" || (broken && reconnects)
     if (!canManage || !canReopen(c.provider) || !reopens) return null
     const reconnectLabel = c.provider === "zalo_oa" ? "zaloReauthorize" : "metaReconnect"
-    return { id: "continue", label: broken ? t(reconnectLabel) : t("continue"), variant: "secondary", isPending: false }
+    return {
+        id: "continue",
+        label: broken ? t(reconnectLabel) : t("continue"),
+        intent: "alternative",
+        isPending: false,
+    }
 }

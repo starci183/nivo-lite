@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Region, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import { Alert, Badge, Button, Divider, Region, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 import { ACTIONS_CLASS_NAME, ESCALATION_CLASS_NAME, QUESTION_CLASS_NAME } from "./classNames"
 
 /** The waiting question the AI handed to a person, with the draft answer and how the last attempt went. */
@@ -24,6 +24,7 @@ interface ChatbotEscalationFormProps {
 /** The recessed band of the customer pane where a person answers a question the AI could not. */
 export const ChatbotEscalationForm = (props: ChatbotEscalationFormProps) => (
     <Region label={props.title}>
+        <Divider semantics="presentation" />
         <div className={ESCALATION_CLASS_NAME}>
             <div className={ACTIONS_CLASS_NAME}>
                 <Badge tone="warning" isDot>
@@ -34,7 +35,7 @@ export const ChatbotEscalationForm = (props: ChatbotEscalationFormProps) => (
                 <Text size="xs" tone="muted">
                     {props.askedLabel}
                 </Text>
-                <SurfaceCard depth="nested" ariaLabel={props.askedLabel}>
+                <SurfaceCard ariaLabel={props.askedLabel}>
                     <Text size="sm">{props.question}</Text>
                 </SurfaceCard>
                 {props.assigned === null ? null : (
@@ -45,7 +46,6 @@ export const ChatbotEscalationForm = (props: ChatbotEscalationFormProps) => (
             </div>
             <Textarea
                 label={props.draftLabel}
-                variant="secondary"
                 description={props.draftHint}
                 rows={4}
                 isDisabled={props.isAnswering}
@@ -57,14 +57,14 @@ export const ChatbotEscalationForm = (props: ChatbotEscalationFormProps) => (
             )}
             <div className={ACTIONS_CLASS_NAME}>
                 <Button
-                    variant="primary"
+                    intent="commit"
                     isPending={props.isAnswering}
                     isDisabled={props.isAnswering || props.draft.trim().length === 0}
                     onPress={props.onSendAnswer}
                 >
                     {props.sendLabel}
                 </Button>
-                <Button variant="ghost" isDisabled={props.isAnswering} onPress={props.onDeclineAnswer}>
+                <Button intent="alternative" isDisabled={props.isAnswering} onPress={props.onDeclineAnswer}>
                     {props.declineLabel}
                 </Button>
             </div>

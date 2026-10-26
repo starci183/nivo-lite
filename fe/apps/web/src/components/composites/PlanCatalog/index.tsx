@@ -111,7 +111,6 @@ export const PlanCatalog = (props: PlanCatalogProps) => {
                                     {card.tier ? (
                                         <Select
                                             label={card.tier.label}
-                                            variant="secondary"
                                             options={card.tier.options}
                                             value={card.tier.value}
                                             onValueChange={(value) => {
@@ -122,7 +121,6 @@ export const PlanCatalog = (props: PlanCatalogProps) => {
                                     {card.seats ? (
                                         <NumberField
                                             label={card.seats.label}
-                                            variant="secondary"
                                             value={card.seats.value}
                                             minValue={1}
                                             maxValue={card.seats.max}
@@ -167,7 +165,7 @@ const renderPlanCatalogPrice = (card: Pick<PlanCardView, "isPriceLoading" | "pri
 /** Renders the PlanCatalog contact action section. */
 const renderPlanCatalogContactAction = (card: Pick<PlanCardView, "action">) => (
     <div>
-        <Button variant="secondary" href={card.action.href} target="_blank" rel="noopener noreferrer">
+        <Button intent="neutral" href={card.action.href} target="_blank" rel="noopener noreferrer">
             {card.action.label}
         </Button>
     </div>
@@ -177,7 +175,7 @@ const renderPlanCatalogContactAction = (card: Pick<PlanCardView, "action">) => (
 const renderPlanCatalogCheckoutAction = (card: Pick<PlanCardView, "action" | "id">, props: PlanCatalogProps) => (
     <div>
         <Button
-            variant="primary"
+            intent="commit"
             isPending={card.action.isPending}
             isDisabled={card.action.isDisabled}
             onPress={() => props.on.choose(card.id)}

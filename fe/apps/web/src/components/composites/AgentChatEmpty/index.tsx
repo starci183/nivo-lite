@@ -51,7 +51,6 @@ export const AgentChatEmpty = (props: AgentChatEmptyProps) => (
                     id="agent-chat-visitor"
                     name="visitor"
                     label={props.visitorLabel}
-                    variant="secondary"
                     value={props.visitorName}
                     onValueChange={props.onVisitorName}
                 />
@@ -61,7 +60,7 @@ export const AgentChatEmpty = (props: AgentChatEmptyProps) => (
                 {props.prompts.map((prompt) => (
                     <Button
                         key={prompt}
-                        variant="outline"
+                        intent="neutral"
                         size="sm"
                         isDisabled={props.arePromptsDisabled}
                         onPress={() => props.onPrompt(prompt)}
@@ -71,7 +70,7 @@ export const AgentChatEmpty = (props: AgentChatEmptyProps) => (
                 ))}
             </div>
         )}
-        <Button variant="primary" isPending={props.isStarting} onPress={props.onStart}>
+        <Button intent="commit" isPending={props.isStarting} onPress={props.onStart}>
             {props.startLabel}
         </Button>
         {props.steps.length === 0 ? null : (

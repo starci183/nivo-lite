@@ -65,7 +65,7 @@ const actionsOf = ({ props, on }: TelegramWizardBaseProps): ReadonlyArray<Wizard
         const retry: WizardAction = {
             id: "retry",
             label: text.retry,
-            variant: "outline",
+            intent: "alternative",
             isDisabled: props.isChecking,
             onPress: on.retry,
         }
@@ -88,7 +88,7 @@ export const TelegramWizardBase = (props: TelegramWizardBaseProps) => {
             {view.step === "bot" ? (
                 <>
                     <div className={classNames.buttons}>
-                        <Button variant="outline" href={view.providerHref} target="_blank" rel="noreferrer">
+                        <Button intent="neutral" href={view.providerHref} target="_blank" rel="noreferrer">
                             {view.text.openProvider}
                         </Button>
                     </div>
@@ -106,7 +106,6 @@ export const TelegramWizardBase = (props: TelegramWizardBaseProps) => {
                         id="tg-name"
                         name="name"
                         label={view.text.fieldName}
-                        variant="secondary"
                         hint={view.text.fieldNameHint}
                         isDisabled={view.isPending}
                         value={view.form.name}
@@ -116,7 +115,6 @@ export const TelegramWizardBase = (props: TelegramWizardBaseProps) => {
                         id="tg-token"
                         name="token"
                         label={view.text.fieldToken}
-                        variant="secondary"
                         kind="password"
                         hint={view.text.tokenHint}
                         isDisabled={view.isPending}

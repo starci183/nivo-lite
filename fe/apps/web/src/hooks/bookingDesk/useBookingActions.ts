@@ -14,7 +14,7 @@ import {
 import { matchesSwrKey } from "@/modules/utils"
 import { useGraphQLWithToast } from "@/modules/toast"
 import type { BookingAction } from "@/modules/types"
-import { NOTICE_OF_ACTION } from "./bookingDesk.shared"
+import { NOTICE_OF_ACTION } from "@/modules/booking-desk"
 import type { DeskNotice } from "./bookingDesk.shared"
 
 /** The owner's commands on bookings; every answer becomes a toast and revalidates every cached board. */

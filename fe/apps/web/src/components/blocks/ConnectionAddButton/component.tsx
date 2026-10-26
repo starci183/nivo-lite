@@ -4,7 +4,7 @@ import { Button } from "@starci/grammar/common"
 export interface ConnectionAddButtonBaseProps {
     readonly props: {
         readonly label: string
-        readonly variant: "ghost" | "outline" | "primary"
+        readonly intent: "neutral" | "alternative"
     }
     readonly on: {
         readonly press: () => void
@@ -13,7 +13,7 @@ export interface ConnectionAddButtonBaseProps {
 
 /** The add or connect button. */
 export const ConnectionAddButtonBase = (props: ConnectionAddButtonBaseProps) => (
-    <Button variant={props.props.variant} onPress={props.on.press}>
+    <Button intent={props.props.intent} onPress={props.on.press}>
         {props.props.label}
     </Button>
 )

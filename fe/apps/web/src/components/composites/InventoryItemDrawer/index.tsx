@@ -36,7 +36,6 @@ export const InventoryItemDrawer = (props: InventoryItemDrawerProps) => {
             name={name}
             label={label}
             {...(hint === undefined ? {} : { hint })}
-            variant="secondary"
             value={p.values[name]}
             onValueChange={(value) => on.field(name, value)}
         />
@@ -79,11 +78,11 @@ export const InventoryItemDrawer = (props: InventoryItemDrawerProps) => {
                 {p.editing === null ? text("openingQty", "inv-open", say("itemOpening")) : null}
                 <InventoryNotices error={p.error} />
                 <div className={ACTIONS_CLASS_NAME}>
-                    <Button variant="primary" isPending={p.isPending} onPress={on.save}>
+                    <Button intent="commit" isPending={p.isPending} onPress={on.save}>
                         {say("save")}
                     </Button>
                     {p.active === null ? null : (
-                        <Button variant="outline" isDisabled={p.isPending} onPress={on.toggleActive}>
+                        <Button intent="neutral" isDisabled={p.isPending} onPress={on.toggleActive}>
                             {p.active ? say("itemStop") : say("itemResume")}
                         </Button>
                     )}

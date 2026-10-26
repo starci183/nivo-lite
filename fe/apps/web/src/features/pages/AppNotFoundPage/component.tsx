@@ -16,7 +16,7 @@ export const AppNotFoundPageBase = (props: AppNotFoundPageBaseProps) => (
         <SurfaceCard ariaLabel={props.props.title}>
             <Heading level={1}>{props.props.title}</Heading>
             <Text tone="muted">{props.props.text}</Text>
-            <Button variant="secondary" href={props.props.homeHref}>
+            <Button intent="neutral" href={props.props.homeHref}>
                 {props.props.homeLabel}
             </Button>
         </SurfaceCard>

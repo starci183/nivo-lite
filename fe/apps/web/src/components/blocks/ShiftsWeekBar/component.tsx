@@ -51,28 +51,48 @@ export interface ShiftsWeekBarBaseProps {
     }
 }
 
+/** What the waiting publish decision draws. */
+type WaitingDecisionProps = ShiftsWeekBarBaseProps & {
+    readonly waiting: NonNullable<ShiftsWeekBarBaseProps["props"]["waiting"]>
+}
+
+/** The publish decision that waits for an owner: approve it or decline it. */
+const WaitingDecision = (props: WaitingDecisionProps) => (
+    <div className={PANEL_CLASS_NAME}>
+        <Alert tone="informative" title={props.waiting.title} description={props.waiting.description} />
+        <div className={NAV_CLASS_NAME}>
+            <Button intent="commit" size="sm" isPending={props.props.isDeciding} onPress={props.on.approve}>
+                {props.waiting.approveLabel}
+            </Button>
+            <Button intent="alternative" size="sm" isDisabled={props.props.isDeciding} onPress={props.on.decline}>
+                {props.waiting.declineLabel}
+            </Button>
+        </div>
+    </div>
+)
+
 /** Draws week navigation, the schedule status, the propose and publish buttons and the waiting publish decision. */
 export const ShiftsWeekBarBase = (props: ShiftsWeekBarBaseProps) => (
     <div className={PANEL_CLASS_NAME}>
         <div className={BAR_CLASS_NAME}>
             <div className={NAV_CLASS_NAME}>
-                <Button variant="outline" size="sm" isDisabled={!props.props.isIdle} onPress={props.on.previous}>
+                <Button intent="neutral" size="sm" isDisabled={!props.props.isIdle} onPress={props.on.previous}>
                     {props.props.prevLabel}
                 </Button>
                 <Text size="md" weight="semibold">
                     {props.props.weekLabel}
                 </Text>
-                <Button variant="outline" size="sm" isDisabled={!props.props.isIdle} onPress={props.on.next}>
+                <Button intent="neutral" size="sm" isDisabled={!props.props.isIdle} onPress={props.on.next}>
                     {props.props.nextLabel}
                 </Button>
-                <Button variant="ghost" size="sm" isDisabled={!props.props.isIdle} onPress={props.on.today}>
+                <Button intent="neutral" size="sm" isDisabled={!props.props.isIdle} onPress={props.on.today}>
                     {props.props.todayLabel}
                 </Button>
                 <Badge tone={props.props.status.tone}>{props.props.status.label}</Badge>
             </div>
             <div className={ACTIONS_CLASS_NAME}>
                 <Button
-                    variant={props.props.isDraft ? "outline" : "primary"}
+                    intent={props.props.canPublish ? "alternative" : "commit"}
                     isPending={props.props.isProposing}
                     isDisabled={!props.props.isIdle && !props.props.isProposing}
                     onPress={props.on.propose}
@@ -81,7 +101,7 @@ export const ShiftsWeekBarBase = (props: ShiftsWeekBarBaseProps) => (
                 </Button>
                 {props.props.canPublish ? (
                     <Button
-                        variant="primary"
+                        intent="commit"
                         isPending={props.props.isPublishing}
                         isDisabled={!props.props.isIdle && !props.props.isPublishing}
                         onPress={props.on.publish}
@@ -96,23 +116,7 @@ export const ShiftsWeekBarBase = (props: ShiftsWeekBarBaseProps) => (
                 {props.props.progress}
             </Text>
         )}
-        {props.props.waiting === null ? null : (
-            <div className={PANEL_CLASS_NAME}>
-                <Alert
-                    tone="informative"
-                    title={props.props.waiting.title}
-                    description={props.props.waiting.description}
-                />
-                <div className={NAV_CLASS_NAME}>
-                    <Button variant="primary" size="sm" isPending={props.props.isDeciding} onPress={props.on.approve}>
-                        {props.props.waiting.approveLabel}
-                    </Button>
-                    <Button variant="outline" size="sm" isDisabled={props.props.isDeciding} onPress={props.on.decline}>
-                        {props.props.waiting.declineLabel}
-                    </Button>
-                </div>
-            </div>
-        )}
+        {props.props.waiting === null ? null : <WaitingDecision {...props} waiting={props.props.waiting} />}
         {props.props.empty === null ? null : (
             <EmptyNotice message={props.props.empty.title} description={props.props.empty.body} />
         )}

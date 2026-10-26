@@ -49,7 +49,6 @@ const AdjustForm = (props: AccountingAdjustmentProps) => {
                     id="wb-adj-note"
                     name="note"
                     label={form.noteLabel}
-                    variant="secondary"
                     rows={3}
                     value={form.note}
                     isRequired
@@ -61,7 +60,6 @@ const AdjustForm = (props: AccountingAdjustmentProps) => {
                     id="wb-adj-amount"
                     name="amount"
                     label={form.amountLabel}
-                    variant="secondary"
                     value={form.amount}
                     isDisabled={form.isSaving}
                     hint={form.amountHint}
@@ -99,7 +97,7 @@ export const AccountingAdjustment = (props: AccountingAdjustmentProps) => {
     if (drawer.adjustMode === "form") return <AdjustForm props={drawer} on={props.on} />
     return (
         <div className={FORM_ACTIONS_CLASS_NAME}>
-            <Button variant="secondary" onPress={props.on.startAdjust}>
+            <Button intent="neutral" onPress={props.on.startAdjust}>
                 {drawer.openLabel}
             </Button>
         </div>

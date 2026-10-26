@@ -55,7 +55,7 @@ export const ShiftsQuickImportBase = (props: ShiftsQuickImportBaseProps) => (
                 ))}
                 <div className={ROW_CLASS_NAME}>
                     <Button
-                        variant="primary"
+                        intent="commit"
                         isPending={props.props.isBusy}
                         isDisabled={!props.props.canCreate}
                         onPress={props.on.create}

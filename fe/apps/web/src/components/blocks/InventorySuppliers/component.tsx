@@ -53,7 +53,7 @@ export const InventorySuppliersBase = (props: InventorySuppliersBaseProps) => {
         <div className={STACK_CLASS_NAME}>
             {p.addLabel === null ? null : (
                 <div>
-                    <Button variant="primary" size="sm" onPress={on.add}>
+                    <Button intent="commit" size="sm" onPress={on.add}>
                         {p.addLabel}
                     </Button>
                 </div>
@@ -70,7 +70,7 @@ export const InventorySuppliersBase = (props: InventorySuppliersBaseProps) => {
                         badges={<Badge tone="neutral">{row.channelLabel}</Badge>}
                         actions={
                             p.editLabel === null ? undefined : (
-                                <Button variant="outline" size="sm" onPress={() => on.edit(row.id)}>
+                                <Button intent="neutral" size="sm" onPress={() => on.edit(row.id)}>
                                     {p.editLabel}
                                 </Button>
                             )
@@ -93,12 +93,11 @@ export const InventorySuppliersBase = (props: InventorySuppliersBaseProps) => {
                                 id="loc-name"
                                 name="location"
                                 label={p.locationLabel}
-                                variant="secondary"
                                 value={p.locationName}
                                 onValueChange={on.locationName}
                             />
                             <Button
-                                variant="outline"
+                                intent="neutral"
                                 size="sm"
                                 isPending={p.isPending}
                                 isDisabled={p.locationName.trim() === ""}

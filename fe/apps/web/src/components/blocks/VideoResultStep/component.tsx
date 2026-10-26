@@ -102,7 +102,7 @@ const approvalOf = (props: VideoResultStepBaseProps) => {
                 <div className={RESULT_ROW}>
                     {props.props.showApprove ? (
                         <Button
-                            variant="primary"
+                            intent="commit"
                             isPending={props.props.approving}
                             isDisabled={props.props.approveDisabled}
                             onPress={props.on.approve}
@@ -111,13 +111,13 @@ const approvalOf = (props: VideoResultStepBaseProps) => {
                         </Button>
                     ) : null}
                     {props.props.downloadUrl === null ? null : (
-                        <Button variant="primary" href={props.props.downloadUrl} download>
+                        <Button intent="alternative" href={props.props.downloadUrl} download>
                             {props.props.downloadLabel}
                         </Button>
                     )}
                     {props.props.showShare ? (
                         <Button
-                            variant="secondary"
+                            intent="alternative"
                             isPending={props.props.sharing}
                             isDisabled={!props.props.canEdit}
                             onPress={props.on.share}
@@ -127,7 +127,7 @@ const approvalOf = (props: VideoResultStepBaseProps) => {
                     ) : null}
                     {props.props.showPosted ? (
                         <Button
-                            variant="outline"
+                            intent="neutral"
                             isPending={props.props.posting}
                             isDisabled={!props.props.canEdit}
                             onPress={props.on.posted}
@@ -138,14 +138,14 @@ const approvalOf = (props: VideoResultStepBaseProps) => {
                 </div>
                 <div className={RESULT_ROW} aria-label={props.props.soonLabel}>
                     <Button
-                        variant="outline"
+                        intent="neutral"
                         isDisabled
                         endContent={<Badge tone="warning">{props.props.soonLabel}</Badge>}
                     >
                         {props.props.tikTokLabel}
                     </Button>
                     <Button
-                        variant="outline"
+                        intent="neutral"
                         isDisabled
                         endContent={<Badge tone="warning">{props.props.soonLabel}</Badge>}
                     >
@@ -182,7 +182,7 @@ export const VideoResultStepBase = (props: VideoResultStepBaseProps) => (
         {approvalOf(props)}
         <div className={RESULT_FOOTER}>
             <div className={RESULT_COPY}>
-                <Button variant="ghost" isDisabled={!props.props.canEdit} onPress={props.on.edit}>
+                <Button intent="neutral" isDisabled={!props.props.canEdit} onPress={props.on.edit}>
                     {props.props.editLabel}
                 </Button>
                 {props.props.lockedNote === null ? null : (
@@ -191,7 +191,7 @@ export const VideoResultStepBase = (props: VideoResultStepBaseProps) => (
                     </Text>
                 )}
             </div>
-            <Button variant="ghost" isDisabled={props.props.rerenderDisabled} onPress={props.on.rerender}>
+            <Button intent="neutral" isDisabled={props.props.rerenderDisabled} onPress={props.on.rerender}>
                 {props.props.rerenderLabel}
             </Button>
         </div>

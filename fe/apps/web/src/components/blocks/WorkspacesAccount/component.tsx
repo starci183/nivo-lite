@@ -16,7 +16,7 @@ export const WorkspacesAccountBase = (props: WorkspacesAccountBaseProps) => (
         placement="bottom end"
         entries={props.props.entries}
         trigger={
-            <Button variant="ghost" size="sm" startContent={<PersonAvatar name={props.props.email} size="sm" />}>
+            <Button intent="neutral" size="sm" startContent={<PersonAvatar name={props.props.email} size="sm" />}>
                 <Text as="span" size="sm" overflow="truncate">
                     {props.props.email}
                 </Text>

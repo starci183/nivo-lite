@@ -32,7 +32,7 @@ export const OverviewGovSummary = (props: OverviewGovSummaryProps) => {
                     </Text>
                     <div className={DEPT_GRID_CLASS_NAME}>
                         {tiles.map(({ department, action }) => (
-                            <SurfaceCard key={department.id} depth="nested" wholeAction={action}>
+                            <SurfaceCard key={department.id} wholeAction={action}>
                                 <div className={TILE_COPY_CLASS_NAME}>
                                     <Text weight="semibold">{department.name}</Text>
                                     <Text size="sm">{department.done}</Text>

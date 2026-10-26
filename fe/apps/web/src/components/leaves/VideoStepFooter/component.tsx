@@ -16,7 +16,7 @@ export interface VideoStepFooterBaseProps {
 /** Draws the footer of a wizard step: the way back, an optional note and the one primary action. */
 export const VideoStepFooterBase = (props: VideoStepFooterBaseProps) => (
     <div className={FOOTER_ROW}>
-        <Button variant="ghost" isDisabled={props.props.pending} onPress={props.on.back}>
+        <Button intent="neutral" isDisabled={props.props.pending} onPress={props.on.back}>
             {props.props.backLabel}
         </Button>
         <div className={FOOTER_END}>
@@ -26,7 +26,7 @@ export const VideoStepFooterBase = (props: VideoStepFooterBaseProps) => (
                 </Text>
             )}
             <Button
-                variant="primary"
+                intent="commit"
                 isPending={props.props.pending}
                 isDisabled={props.props.nextDisabled}
                 onPress={props.on.next}

@@ -31,7 +31,6 @@ export const LoyaltyRewards = () => {
     const format = useFormatter()
     const actions = useLoyaltyRewardActions()
     const [editing, setEditing] = useState<Editing | null>(null)
-    const [askingId, setAskingId] = useState<string | null>(null)
     const target = editing === null ? null : (board.rewards.find((reward) => reward.id === editing.id) ?? null)
     const form = useLoyaltyRewardForm(rewardValuesOf(target))
     const money = (value: number) =>
@@ -66,7 +65,6 @@ export const LoyaltyRewards = () => {
                 kindLabel,
                 costLine,
                 factsLine,
-                askingId,
                 editing,
                 target,
                 form,
@@ -80,9 +78,7 @@ export const LoyaltyRewards = () => {
                     if (reward === undefined) return
                     actions.save(rewardToggleInputOf(reward, active), () => undefined)
                 },
-                ask: setAskingId,
-                confirmRemove: (id) => actions.remove(id, () => setAskingId(null)),
-                cancelAsk: () => setAskingId(null),
+                confirmRemove: (id) => actions.remove(id, () => undefined),
                 change: (field, value) =>
                     form.setValue(field, maskRewardField(field, value), { shouldValidate: form.formState.isSubmitted }),
                 setActive: (active) => form.setValue("active", active),
@@ -101,7 +97,6 @@ interface BuildLoyaltyRewardsViewContext {
     readonly kindLabel: (reward: (typeof EMPTY_LOYALTY_BOARD)["rewards"][number]) => string
     readonly costLine: (reward: (typeof EMPTY_LOYALTY_BOARD)["rewards"][number]) => string
     readonly factsLine: (reward: (typeof EMPTY_LOYALTY_BOARD)["rewards"][number]) => string
-    readonly askingId: string | null
     readonly editing: Editing | null
     readonly target: (typeof EMPTY_LOYALTY_BOARD)["rewards"][number] | null
     readonly form: ReturnType<typeof useLoyaltyRewardForm>
@@ -114,7 +109,6 @@ const buildLoyaltyRewardsView = ({
     kindLabel,
     costLine,
     factsLine,
-    askingId,
     editing,
     target,
     form,
@@ -143,7 +137,6 @@ const buildLoyaltyRewardsView = ({
             cost: costLine(reward),
             facts: factsLine(reward),
             note: reward.note,
-            isConfirming: askingId === reward.id,
         })),
         ...(editing === null
             ? {}

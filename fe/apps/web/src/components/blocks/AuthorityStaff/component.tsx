@@ -1,7 +1,7 @@
 import { Badge, Button, List, ListRow, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { FIELDS_CLASS, STAFF_LIST_CLASS } from "./classNames"
+import { FIELDS_CLASS } from "./classNames"
 
 /** One staff member as the list draws it. */
 export interface StaffRowView {
@@ -46,7 +46,7 @@ export const AuthorityStaffBase = (props: AuthorityStaffBaseProps) => {
                     onRetry={props.on.retry}
                 >
                     {(rows, isSkeleton) => (
-                        <List label={view.title} className={STAFF_LIST_CLASS}>
+                        <List label={view.title}>
                             {rows.map((row) => (
                                 <ListRow
                                     key={row.id}
@@ -56,7 +56,7 @@ export const AuthorityStaffBase = (props: AuthorityStaffBaseProps) => {
                                     badges={row.hasAccount ? <Badge tone="accent">{view.hasAccountLabel}</Badge> : null}
                                     actions={
                                         row.inviteHref === null ? null : (
-                                            <Button variant="secondary" href={row.inviteHref}>
+                                            <Button intent="neutral" href={row.inviteHref}>
                                                 {view.inviteLabel}
                                             </Button>
                                         )

@@ -31,7 +31,7 @@ export const AuthoritySection = (props: AuthoritySectionProps) => (
             {props.children}
             <div className={SAVE_ROW_CLASS}>
                 <Button
-                    variant="primary"
+                    intent="commit"
                     isPending={props.section.isPending}
                     isSkeleton={props.isSkeleton}
                     onPress={props.onSave}

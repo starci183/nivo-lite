@@ -144,7 +144,7 @@ export const LeadsBoardBase = (props: LeadsBoardBaseProps) => {
             )}
             {p.pagination.hasNextPage || p.pagination.failure !== null ? (
                 <Button
-                    variant="secondary"
+                    intent="neutral"
                     size="sm"
                     isPending={p.pagination.isLoading}
                     isDisabled={p.pagination.isLoading}

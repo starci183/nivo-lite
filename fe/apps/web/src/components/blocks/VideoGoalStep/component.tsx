@@ -53,7 +53,6 @@ export const VideoGoalStepBase = (props: VideoGoalStepBaseProps) => (
                 <RadioGroup
                     label={props.props.heading}
                     isLabelHidden
-                    variant="secondary"
                     value={props.props.goal}
                     isDisabled={props.props.disabled}
                     options={props.props.goals}
@@ -78,14 +77,13 @@ export const VideoGoalStepBase = (props: VideoGoalStepBaseProps) => (
                     name="title"
                     label={props.props.titleLabel}
                     hint={props.props.titleHint}
-                    variant="secondary"
                     value={props.props.title}
                     isDisabled={props.props.disabled}
                     onValueChange={props.on.title}
                 />
                 <div className={GOAL_FOOTER}>
                     <Button
-                        variant="primary"
+                        intent="commit"
                         isPending={props.props.pending}
                         isDisabled={props.props.disabled}
                         onPress={props.on.next}

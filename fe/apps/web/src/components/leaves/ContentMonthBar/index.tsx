@@ -16,14 +16,14 @@ interface ContentMonthBarProps {
 /** Previous month, the month title, next month and "today". */
 export const ContentMonthBar = (props: ContentMonthBarProps) => (
     <div className={TOOLBAR_CLASS_NAME}>
-        <Button variant="outline" size="sm" onPress={() => props.onShift(-1)}>
+        <Button intent="neutral" size="sm" onPress={() => props.onShift(-1)}>
             {props.t("prevMonth")}
         </Button>
         <Text weight="semibold">{props.title}</Text>
-        <Button variant="outline" size="sm" onPress={() => props.onShift(1)}>
+        <Button intent="neutral" size="sm" onPress={() => props.onShift(1)}>
             {props.t("nextMonth")}
         </Button>
-        <Button variant="ghost" size="sm" onPress={props.onToday}>
+        <Button intent="neutral" size="sm" onPress={props.onToday}>
             {props.t("today")}
         </Button>
     </div>

@@ -31,7 +31,6 @@ export const ContentEditorPublish = (props: ContentEditorPublishProps) => (
             return (
                 <SurfaceCard
                     key={step.channel}
-                    depth="nested"
                     label={step.label}
                     headingLevel={4}
                     labelEnd={
@@ -46,19 +45,21 @@ export const ContentEditorPublish = (props: ContentEditorPublishProps) => (
                                 {props.t("zaloNote")}
                             </Text>
                         ) : null}
-                        <div className={QUOTE_CLASS_NAME}>
-                            <Text as="p" size="sm">
-                                {step.text}
-                            </Text>
-                        </div>
+                        <SurfaceCard>
+                            <div className={QUOTE_CLASS_NAME}>
+                                <Text as="p" size="sm">
+                                    {step.text}
+                                </Text>
+                            </div>
+                        </SurfaceCard>
                         <div className={ACTIONS_CLASS_NAME}>
-                            <Button variant="outline" size="sm" onPress={() => props.onCopy(step.channel)}>
+                            <Button intent="neutral" size="sm" onPress={() => props.onCopy(step.channel)}>
                                 {props.t("copy")}
                             </Button>
                             {props.files.map((file) => (
                                 <Button
                                     key={file.key}
-                                    variant="outline"
+                                    intent="neutral"
                                     size="sm"
                                     href={file.url}
                                     target="_blank"
@@ -94,7 +95,6 @@ const renderContentEditorPublishProofFields = (
             id={`ce-url-${step.channel}`}
             name={`url-${step.channel}`}
             label={props.t("postedLink")}
-            variant="secondary"
             value={proof?.url ?? ""}
             hint={props.t("postedLinkHint")}
             isDisabled={props.isPending}
@@ -104,14 +104,13 @@ const renderContentEditorPublishProofFields = (
             id={`ce-how-${step.channel}`}
             name={`how-${step.channel}`}
             label={props.t("postedHow")}
-            variant="secondary"
             value={proof?.how ?? ""}
             isDisabled={props.isPending}
             onValueChange={(v) => props.onProof(step.channel, { how: v })}
         />
         <div>
             <Button
-                variant="primary"
+                intent="commit"
                 size="sm"
                 isPending={props.busy === `posted-${step.channel}`}
                 isDisabled={props.isPending}

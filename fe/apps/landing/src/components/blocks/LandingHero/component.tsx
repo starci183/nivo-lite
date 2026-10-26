@@ -78,10 +78,10 @@ export const LandingHeroBase = (props: LandingHeroBaseProps) => (
                             <Text tone="muted">{props.props.lead}</Text>
                         </div>
                         <div className={HERO_ACTIONS}>
-                            <Button variant="primary" size="lg" width="fill" href={props.props.ctaHref}>
+                            <Button intent="commit" size="lg" width="fill" href={props.props.ctaHref}>
                                 {props.props.ctaLabel}
                             </Button>
-                            <Button variant="secondary" size="lg" width="fill" href={props.props.secondaryHref}>
+                            <Button intent="alternative" size="lg" width="fill" href={props.props.secondaryHref}>
                                 {props.props.secondaryLabel}
                             </Button>
                         </div>

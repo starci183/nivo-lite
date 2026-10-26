@@ -64,7 +64,7 @@ export const HiringOnboardingBase = (props: HiringOnboardingBaseProps) => {
                                 <Badge tone="accent">{say("onbHasStaff")}</Badge>
                             ) : (
                                 <Button
-                                    variant="secondary"
+                                    intent="neutral"
                                     size="sm"
                                     isDisabled={isBusy}
                                     onPress={() => on.linkStaff(person.id)}
@@ -87,7 +87,6 @@ export const HiringOnboardingBase = (props: HiringOnboardingBaseProps) => {
                                 <Checkbox
                                     key={step.id}
                                     label={step.title}
-                                    variant="secondary"
                                     isSelected={step.isDone}
                                     isDisabled={isBusy}
                                     onSelectedChange={(done) => on.toggle(step.id, done)}

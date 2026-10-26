@@ -5,6 +5,7 @@ import {
     HorizontalScrollRegion,
     List,
     ListItem,
+    ListRow,
     SurfaceCard,
     SurfaceListCard,
     Text,
@@ -18,9 +19,8 @@ import { InventoryPoDrawer, type InventoryPoDrawerProps } from "@/components/com
 import {
     ACTIONS_CLASS_NAME,
     BOARD_CLASS_NAME,
-    CHIPS_CLASS_NAME,
+    DETAIL_CLASS_NAME,
     LANE_CLASS_NAME,
-    LANE_ROW_CLASS_NAME,
     STACK_CLASS_NAME,
 } from "./classNames"
 
@@ -93,7 +93,7 @@ export const InventoryOrdersBase = (props: InventoryOrdersBaseProps) => {
         <div className={STACK_CLASS_NAME}>
             <div className={ACTIONS_CLASS_NAME}>
                 {p.createLabel === null ? null : (
-                    <Button variant="primary" size="sm" onPress={on.create}>
+                    <Button intent="commit" size="sm" onPress={on.create}>
                         {p.createLabel}
                     </Button>
                 )}
@@ -157,30 +157,32 @@ const renderHorizontalScrollRegion = (props: InventoryOrdersBaseProps) => {
                     <ListItem key={lane.status} className={LANE_CLASS_NAME}>
                         <SurfaceListCard label={lane.label} headingLevel={3} fact={lane.count}>
                             {lane.cards.map((card) => (
-                                <ListItem key={card.id} className={LANE_ROW_CLASS_NAME}>
-                                    <div className={CHIPS_CLASS_NAME}>
-                                        <Text weight="semibold" size="sm">
-                                            {card.poNo}
-                                        </Text>
+                                <ListRow
+                                    key={card.id}
+                                    title={card.poNo}
+                                    description={card.supplier}
+                                    badges={
                                         <Badge tone={card.statusTone} isDot>
                                             {card.statusLabel}
                                         </Badge>
-                                    </div>
-                                    <Text size="sm">{card.supplier}</Text>
-                                    <Text size="xs" tone="muted">
-                                        {card.facts}
-                                    </Text>
-                                    {card.copyNote === null ? null : (
-                                        <Text size="xs" tone="muted">
-                                            {card.copyNote}
-                                        </Text>
-                                    )}
-                                    <div>
-                                        <Button variant="outline" size="sm" onPress={() => on.open(card.id)}>
+                                    }
+                                    actions={
+                                        <Button intent="neutral" size="sm" onPress={() => on.open(card.id)}>
                                             {p.openLabel}
                                         </Button>
+                                    }
+                                >
+                                    <div className={DETAIL_CLASS_NAME}>
+                                        <Text size="xs" tone="muted">
+                                            {card.facts}
+                                        </Text>
+                                        {card.copyNote === null ? null : (
+                                            <Text size="xs" tone="muted">
+                                                {card.copyNote}
+                                            </Text>
+                                        )}
                                     </div>
-                                </ListItem>
+                                </ListRow>
                             ))}
                         </SurfaceListCard>
                     </ListItem>

@@ -40,7 +40,6 @@ export const BookingPlacementDialog = (props: BookingPlacementDialogProps) => {
                         {adding ? <BookingCustomerFields {...props} /> : null}
                         <DateField
                             label={labels.date}
-                            variant="secondary"
                             isRequired
                             value={parseDate(fields.date)}
                             onValueChange={(value) => {
@@ -49,7 +48,6 @@ export const BookingPlacementDialog = (props: BookingPlacementDialogProps) => {
                         />
                         <TimeField
                             label={labels.time}
-                            variant="secondary"
                             granularity="minute"
                             hourCycle={24}
                             value={parseTime(fields.time)}
@@ -59,7 +57,6 @@ export const BookingPlacementDialog = (props: BookingPlacementDialogProps) => {
                         />
                         <Select
                             label={labels.resource}
-                            variant="secondary"
                             options={props.resourceOptions}
                             value={fields.resourceId === "" ? AUTO_RESOURCE : fields.resourceId}
                             onValueChange={(resourceId) =>
@@ -73,7 +70,6 @@ export const BookingPlacementDialog = (props: BookingPlacementDialogProps) => {
                     {props.refusal === undefined ? null : <Alert tone="negative" title={props.refusal} />}
                     {props.canForce || fields.force ? (
                         <Checkbox
-                            variant="secondary"
                             label={labels.force}
                             isSelected={fields.force}
                             onSelectedChange={(force) => props.onChange({ force })}
@@ -94,7 +90,6 @@ const renderBookingPlacementDialogPartyFields = (
     <>
         <NumberField
             label={labels.party}
-            variant="secondary"
             minValue={1}
             maxValue={20}
             step={1}
@@ -105,7 +100,6 @@ const renderBookingPlacementDialogPartyFields = (
             id="booking-place-note"
             name="note"
             label={labels.note}
-            variant="secondary"
             placeholder={labels.notePlaceholder}
             value={fields.note}
             onValueChange={(note) => props.onChange({ note })}
@@ -121,12 +115,12 @@ const renderBookingPlacementDialogFooter = (
     fields: NonNullable<BookingPlacementDialogProps["fields"]>,
 ) => (
     <>
-        <Button size="sm" variant="outline" isDisabled={props.isPending} onPress={props.onClose}>
+        <Button size="sm" intent="neutral" isDisabled={props.isPending} onPress={props.onClose}>
             {labels.cancel}
         </Button>
         <Button
             size="sm"
-            variant="primary"
+            intent="commit"
             isPending={props.isPending}
             isDisabled={props.isPending || (adding && (fields.name.trim() === "" || fields.serviceId === ""))}
             onPress={props.onSubmit}

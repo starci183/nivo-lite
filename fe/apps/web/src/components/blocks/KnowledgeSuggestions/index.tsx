@@ -32,7 +32,7 @@ export const KnowledgeSuggestions = () => {
             {
                 id: "hide",
                 label: t("suggestDismiss"),
-                variant: "ghost",
+                intent: "neutral",
                 onPress: () => commands.decide(item.key, "dismissed"),
             },
         ],

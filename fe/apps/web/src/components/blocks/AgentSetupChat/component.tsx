@@ -201,7 +201,7 @@ const Composer = (props: ChatPartProps) => (
                     />
                 </div>
                 <Button
-                    variant="primary"
+                    intent="commit"
                     isPending={props.content.isSending}
                     isDisabled={props.isSkeleton || props.content.text.trim().length === 0}
                     onPress={props.on.send}

@@ -25,7 +25,7 @@ export interface VideoEditorStepperBaseProps {
 export const VideoEditorStepperBase = (props: VideoEditorStepperBaseProps) => (
     <div className={STEPPER_PAGE}>
         <div className={STEPPER_BACK}>
-            <Button variant="ghost" size="sm" href={props.props.libraryHref}>
+            <Button intent="neutral" size="sm" href={props.props.libraryHref}>
                 {props.props.toLibrary}
             </Button>
         </div>

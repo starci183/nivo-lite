@@ -31,10 +31,10 @@ export const PromoWelcomeBand = (props: PromoWelcomeBandProps) => (
             </div>
             <Text>{props.text}</Text>
             <div className={WELCOME_ACTIONS}>
-                <Button variant="secondary" href={props.testHref}>
+                <Button intent="neutral" href={props.testHref}>
                     {props.testLabel}
                 </Button>
-                <Button variant="ghost" href={props.officeHref}>
+                <Button intent="neutral" href={props.officeHref}>
                     {props.officeLabel}
                 </Button>
             </div>

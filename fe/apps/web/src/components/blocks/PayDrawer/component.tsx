@@ -60,7 +60,7 @@ export const PayDrawerBase = (props: PayDrawerBaseProps) => {
             closeLabel={props.props.closeLabel}
             placement="right"
             footer={
-                <Button variant="secondary" onPress={props.on.close}>
+                <Button intent="neutral" onPress={props.on.close}>
                     {props.props.closeLabel}
                 </Button>
             }
@@ -125,7 +125,7 @@ const PaymentContent = (props: PayDrawerBaseProps) => {
                     <Alert tone="negative" title={props.props.errorTitle} description={props.props.regenerateError} />
                 ) : null}
                 <div>
-                    <Button variant="secondary" isPending={props.state.isRegenerating} onPress={props.on.regenerate}>
+                    <Button intent="neutral" isPending={props.state.isRegenerating} onPress={props.on.regenerate}>
                         {props.props.regenerateLabel}
                     </Button>
                 </div>
@@ -160,7 +160,6 @@ const PaymentContent = (props: PayDrawerBaseProps) => {
                         id={detail.id}
                         name={detail.id}
                         label={detail.label}
-                        variant="secondary"
                         value={detail.value}
                         isReadOnly
                         isCopyable

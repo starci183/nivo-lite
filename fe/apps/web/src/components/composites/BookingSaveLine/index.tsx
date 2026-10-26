@@ -11,7 +11,7 @@ type BookingSaveLineProps = {
 export const BookingSaveLine = (props: BookingSaveLineProps) => (
     <>
         <div>
-            <Button type="submit" variant="primary" size="sm" isPending={props.isPending}>
+            <Button type="submit" intent="commit" size="sm" isPending={props.isPending}>
                 {props.label}
             </Button>
         </div>

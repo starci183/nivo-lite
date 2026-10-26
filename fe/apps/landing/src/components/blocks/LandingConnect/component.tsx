@@ -49,7 +49,7 @@ export const LandingConnectBase = (props: LandingConnectBaseProps) => (
                         title={props.props.title}
                         description={props.props.lead}
                     />
-                    <Button variant="primary" size="lg" href={props.props.ctaHref}>
+                    <Button intent="commit" size="lg" href={props.props.ctaHref}>
                         {props.props.ctaLabel}
                     </Button>
                 </div>

@@ -1,13 +1,5 @@
-import { Alert, AlertDialog, Badge, Button, Input, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common"
-import {
-    ACTIONS_CLASS,
-    FIELD_GROW_CLASS,
-    FORM_ROW_CLASS,
-    KEY_LIST_CLASS,
-    KEY_MAIN_CLASS,
-    KEY_ROW_CLASS,
-    STACK_CLASS,
-} from "./classNames"
+import { Alert, AlertDialog, Badge, Button, Input, List, ListRow, SurfaceCard, Text } from "@starci/grammar/common"
+import { FIELD_GROW_CLASS, FORM_ROW_CLASS, STACK_CLASS } from "./classNames"
 
 /** One key row, already in the reader's words. */
 export interface ApiKeyRowView {
@@ -78,7 +70,6 @@ export const ApiKeysSectionBase = (props: ApiKeysSectionBaseProps) => (
                         id="api-key-name"
                         name="keyName"
                         label={props.props.nameLabel}
-                        variant="secondary"
                         placeholder={props.props.nameHint}
                         isDisabled={props.props.isCreating}
                         value={props.props.nameValue}
@@ -86,7 +77,7 @@ export const ApiKeysSectionBase = (props: ApiKeysSectionBaseProps) => (
                     />
                 </div>
                 <Button
-                    variant="primary"
+                    intent="commit"
                     isPending={props.props.isCreating}
                     isDisabled={props.props.isCreateDisabled}
                     onPress={props.on.create}
@@ -96,14 +87,13 @@ export const ApiKeysSectionBase = (props: ApiKeysSectionBaseProps) => (
             </div>
             {props.props.createError === undefined ? null : <Alert tone="negative" title={props.props.createError} />}
             {props.props.fresh === undefined ? null : (
-                <SurfaceCard depth="nested" label={props.props.fresh.title} headingLevel={3}>
+                <SurfaceCard label={props.props.fresh.title} headingLevel={3}>
                     <div className={STACK_CLASS}>
                         <Alert tone="cautionary" title={props.props.fresh.warning} />
                         <Input
                             id="api-key-fresh"
                             name="apiKey"
                             label={props.props.fresh.title}
-                            variant="secondary"
                             value={props.props.fresh.value}
                             isReadOnly
                             isCopyable
@@ -111,7 +101,7 @@ export const ApiKeysSectionBase = (props: ApiKeysSectionBaseProps) => (
                             copiedLabel={props.props.fresh.copiedLabel}
                         />
                         <div>
-                            <Button variant="outline" onPress={props.on.dismissFresh}>
+                            <Button intent="neutral" onPress={props.on.dismissFresh}>
                                 {props.props.fresh.doneLabel}
                             </Button>
                         </div>
@@ -145,29 +135,25 @@ export const ApiKeysSectionBase = (props: ApiKeysSectionBaseProps) => (
 
 /** Draws the List section of the ApiKeysSection view. */
 const renderApiKeysList = (props: ApiKeysSectionBaseProps) => (
-    <List className={KEY_LIST_CLASS} label={props.props.title}>
+    <List label={props.props.title}>
         {props.props.items.map((item) => (
-            <ListItem key={item.id} className={KEY_ROW_CLASS}>
-                <div className={KEY_MAIN_CLASS}>
-                    <Text weight="semibold">{item.name}</Text>
-                    <Text size="sm" tone="muted">
-                        {item.prefixText}
-                    </Text>
-                    <Text size="xs" tone="muted">
-                        {item.datesText}
-                    </Text>
-                </div>
-                <div className={ACTIONS_CLASS}>
+            <ListRow
+                key={item.id}
+                title={item.name}
+                description={`${item.prefixText} · ${item.datesText}`}
+                badges={
                     <Badge isDot tone={item.isRevoked ? "neutral" : "success"}>
                         {item.statusLabel}
                     </Badge>
-                    {item.isRevoked ? null : (
-                        <Button variant="danger-soft" onPress={() => props.on.askRevoke(item.id)}>
+                }
+                actions={
+                    item.isRevoked ? undefined : (
+                        <Button intent="destructive" step="entry" onPress={() => props.on.askRevoke(item.id)}>
                             {props.props.revokeLabel}
                         </Button>
-                    )}
-                </div>
-            </ListItem>
+                    )
+                }
+            />
         ))}
     </List>
 )

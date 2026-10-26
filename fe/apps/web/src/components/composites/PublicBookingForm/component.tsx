@@ -34,7 +34,7 @@ const PublicBookingAlternatives = ({ alternatives, label, onPick }: PublicBookin
                     <Button
                         key={alternative.value}
                         size="sm"
-                        variant="outline"
+                        intent="neutral"
                         onPress={() => onPick(alternative.value, alternative.date)}
                     >
                         {alternative.label}
@@ -60,7 +60,6 @@ const PublicBookingTimes = ({ times, labels, fields, on }: PublicBookingTimesPro
         <RadioGroup
             label={labels.pickTime}
             name="start"
-            variant="secondary"
             orientation="horizontal"
             options={times.map((time) => ({ value: time.value, label: time.label }))}
             value={fields.start === "" ? null : fields.start}
@@ -128,7 +127,7 @@ export const PublicBookingForm = (props: PublicBookingFormProps) => {
 
                 <Button
                     type="submit"
-                    variant="primary"
+                    intent="commit"
                     size="lg"
                     width="fill"
                     isPending={p.isBusy}
@@ -160,7 +159,6 @@ const BookingServiceFields = (props: PublicBookingFormProps) => {
                 <RadioGroup
                     label={p.labels.step1}
                     name="service"
-                    variant="secondary"
                     options={p.services.map((service) => ({
                         value: service.value,
                         label: service.label,

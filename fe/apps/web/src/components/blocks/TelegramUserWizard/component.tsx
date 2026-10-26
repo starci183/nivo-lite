@@ -123,7 +123,7 @@ const loginActionsOf = ({ props, on }: TelegramUserWizardBaseProps): ReadonlyArr
     const cancel: WizardAction = {
         id: "cancel",
         label: text.cancelLogin,
-        variant: "ghost",
+        intent: "dismiss",
         isDisabled: isPending,
         onPress: on.cancelLogin,
     }
@@ -137,7 +137,7 @@ const loginActionsOf = ({ props, on }: TelegramUserWizardBaseProps): ReadonlyArr
         const resend: WizardAction = {
             id: "resend",
             label: text.resend,
-            variant: "outline",
+            intent: "alternative",
             isDisabled: isPending,
             onPress: on.resend,
         }
@@ -156,7 +156,12 @@ const actionsOf = (view: TelegramUserWizardBaseProps): ReadonlyArray<WizardActio
     if (props.index === 1) return loginActionsOf(view)
     if (props.index === 2) {
         const goOn = nextAction(text.next, () => on.go(3), { isDisabled: !props.hasPicks || props.chatsLoading })
-        const retry: WizardAction = { id: "retry", label: text.chatsRetry, variant: "outline", onPress: on.reloadChats }
+        const retry: WizardAction = {
+            id: "retry",
+            label: text.chatsRetry,
+            intent: "alternative",
+            onPress: on.reloadChats,
+        }
         return props.chatsFailed ? [goOn, retry, close] : [goOn, close]
     }
     if (props.index === 3)
@@ -172,7 +177,6 @@ const ConsentStep = ({ props, on }: TelegramUserWizardBaseProps) => (
                 id="tgu-name"
                 name="name"
                 label={props.text.nameLabel}
-                variant="secondary"
                 hint={props.text.nameHint}
                 isDisabled={props.isPending}
                 value={props.consent.name}
@@ -186,7 +190,6 @@ const ConsentStep = ({ props, on }: TelegramUserWizardBaseProps) => (
         <Text size="sm">{props.text.consent2}</Text>
         <Text size="sm">{props.text.consent3}</Text>
         <CheckboxGroup
-            variant="secondary"
             label={props.text.consentTitle}
             isLabelHidden
             options={[{ value: "yes", label: props.text.consentLabel }]}

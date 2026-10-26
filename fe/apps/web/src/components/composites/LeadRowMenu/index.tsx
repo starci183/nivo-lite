@@ -26,6 +26,7 @@ export const LeadRowMenu = (props: LeadRowMenuProps) => {
             entries={props.canPropose ? [open, office, propose] : [open, office]}
             trigger={
                 <IconButton
+                    intent="neutral"
                     source={nivoIconSource("more", "leading")}
                     label={props.moreLabel}
                     isDisabled={props.isDisabled}

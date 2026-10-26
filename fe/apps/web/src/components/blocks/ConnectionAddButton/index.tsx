@@ -20,7 +20,7 @@ export const ConnectionAddButton = (props: ConnectionAddButtonProps) => {
         <ConnectionAddButtonBase
             props={{
                 label: props.kind === "add" ? t("add") : t("connect"),
-                variant: props.kind === "add" ? "ghost" : "outline",
+                intent: props.kind === "add" ? "neutral" : "alternative",
             }}
             on={{ press: () => overlays.openWizard(props.provider) }}
         />

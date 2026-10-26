@@ -40,7 +40,6 @@ export const AddNotePanel = (props: AddNotePanelProps) => (
             id="knowledge-add-title"
             name="title"
             label={props.titleLabel}
-            variant="secondary"
             hint={props.titleHint}
             value={props.title}
             errorMessage={props.titleError}
@@ -53,7 +52,6 @@ export const AddNotePanel = (props: AddNotePanelProps) => (
                 id="knowledge-add-content"
                 name="content"
                 label={props.contentLabel}
-                variant="secondary"
                 rows={8}
                 maxLength={120000}
                 description={props.contentHint}
@@ -71,7 +69,6 @@ export const AddNotePanel = (props: AddNotePanelProps) => (
                             id={`knowledge-add-q-${pair.id}`}
                             name={`q-${pair.id}`}
                             label={props.questionLabel}
-                            variant="secondary"
                             value={pair.q}
                             isDisabled={props.isBusy}
                             onValueChange={(value) => props.onPair(pair.id, "q", value)}
@@ -80,7 +77,6 @@ export const AddNotePanel = (props: AddNotePanelProps) => (
                             id={`knowledge-add-a-${pair.id}`}
                             name={`a-${pair.id}`}
                             label={props.answerLabel}
-                            variant="secondary"
                             rows={3}
                             value={pair.a}
                             isDisabled={props.isBusy}
@@ -88,7 +84,8 @@ export const AddNotePanel = (props: AddNotePanelProps) => (
                         />
                         {props.pairs !== undefined && props.pairs.length > 1 ? (
                             <Button
-                                variant="ghost"
+                                intent="destructive"
+                                step="entry"
                                 isDisabled={props.isBusy}
                                 onPress={() => props.onRemovePair(pair.id)}
                             >
@@ -97,7 +94,7 @@ export const AddNotePanel = (props: AddNotePanelProps) => (
                         ) : null}
                     </div>
                 ))}
-                <Button variant="outline" isDisabled={props.isBusy} onPress={props.onAddPair}>
+                <Button intent="neutral" isDisabled={props.isBusy} onPress={props.onAddPair}>
                     {props.addLabel}
                 </Button>
                 {props.contentError === undefined ? null : <Alert tone="negative" title={props.contentError} />}

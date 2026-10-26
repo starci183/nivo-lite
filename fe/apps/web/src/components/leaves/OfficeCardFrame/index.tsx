@@ -44,7 +44,6 @@ export const OfficeCardFrame = (props: OfficeCardFrameProps) => {
                 footer={
                     <div className={CARD_CLASS_NAME}>
                         <SurfaceCard
-                            depth="nested"
                             ariaLabel={props.identity?.title ?? props.label ?? ""}
                             {...(isHighlight === undefined ? {} : { isHighlight })}
                         >

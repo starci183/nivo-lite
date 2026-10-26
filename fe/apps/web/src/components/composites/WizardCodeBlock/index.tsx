@@ -25,7 +25,7 @@ export const WizardCodeBlock = (props: WizardCodeBlockProps) => {
             code={props.code}
             label={props.label}
             action={
-                <Button variant="outline" size="sm" onPress={() => void copy()}>
+                <Button intent="neutral" size="sm" onPress={() => void copy()}>
                     {copied ? props.copiedLabel : props.copyLabel}
                 </Button>
             }

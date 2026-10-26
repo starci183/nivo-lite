@@ -59,7 +59,7 @@ export const LeadGenCommentList = (props: LeadGenCommentListProps) => {
                             row.isEditing ? null : (
                                 <div className={ACTIONS_CLASS_NAME}>
                                     <Button
-                                        variant="outline"
+                                        intent="neutral"
                                         size="sm"
                                         isDisabled={props.isApproving}
                                         onPress={() => props.onEdit(row.id)}
@@ -67,7 +67,7 @@ export const LeadGenCommentList = (props: LeadGenCommentListProps) => {
                                         {props.editLabel}
                                     </Button>
                                     <Button
-                                        variant="primary"
+                                        intent="alternative"
                                         size="sm"
                                         isPending={isBusy}
                                         isDisabled={props.isApproving || !row.draft}
@@ -101,7 +101,6 @@ const renderLeadGenCommentListComment = (
             <>
                 <Textarea
                     label={props.draftLabel}
-                    variant="secondary"
                     rows={3}
                     value={row.draftValue}
                     isDisabled={props.isApproving}
@@ -109,7 +108,7 @@ const renderLeadGenCommentListComment = (
                 />
                 <div className={ACTIONS_CLASS_NAME}>
                     <Button
-                        variant="outline"
+                        intent="neutral"
                         size="sm"
                         isDisabled={props.isApproving}
                         onPress={() => props.onCancel(row.id)}
@@ -117,7 +116,7 @@ const renderLeadGenCommentListComment = (
                         {props.cancelLabel}
                     </Button>
                     <Button
-                        variant="primary"
+                        intent="commit"
                         size="sm"
                         isPending={isBusy}
                         isDisabled={props.isApproving || !row.draftValue.trim()}
@@ -138,7 +137,7 @@ const renderLeadGenCommentListComment = (
                     {row.error}
                 </Text>
                 {isBusy ? (
-                    <Button variant="outline" size="sm" onPress={props.onRetry}>
+                    <Button intent="neutral" size="sm" onPress={props.onRetry}>
                         {props.retryLabel}
                     </Button>
                 ) : null}

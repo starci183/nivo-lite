@@ -53,7 +53,7 @@ const Summary = (props: Pick<ThreadChainPanelProps, "view">) => {
 const Completion = (props: Pick<ThreadChainPanelProps, "view" | "labels">) => {
     if (!props.view.isComplete) return null
     return (
-        <SurfaceCard label={props.labels.completeTitle} depth="nested" state="affirmative">
+        <SurfaceCard label={props.labels.completeTitle} state="affirmative">
             <Text size="sm" tone="muted">
                 {props.labels.completeHint}
             </Text>

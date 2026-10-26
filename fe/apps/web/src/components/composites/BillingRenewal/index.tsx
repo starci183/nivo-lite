@@ -11,7 +11,7 @@ interface BillingRenewalProps {
 export const BillingRenewal = (props: BillingRenewalProps) => (
     <div className={RENEW_CLASS_NAME}>
         <Button
-            variant="primary"
+            intent="commit"
             isPending={props.state.isRequesting}
             isDisabled={props.state.isRequesting}
             onPress={props.on.renew}

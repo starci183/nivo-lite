@@ -64,10 +64,10 @@ const Head = (props: HeadProps) => (
         )}
         {props.view.canWrite ? (
             <div className={ACTIONS_CLASS_NAME}>
-                <Button variant="outline" isPending={props.view.isBusy} onPress={props.on.reindex}>
+                <Button intent="neutral" isPending={props.view.isBusy} onPress={props.on.reindex}>
                     {props.view.reindexLabel}
                 </Button>
-                <Button variant="outline" isPending={props.view.isBusy} onPress={props.on.toggleVisibility}>
+                <Button intent="neutral" isPending={props.view.isBusy} onPress={props.on.toggleVisibility}>
                     {props.view.visibilityActionLabel}
                 </Button>
                 <AlertDialog
@@ -78,7 +78,7 @@ const Head = (props: HeadProps) => (
                     onConfirm={props.on.remove}
                     isConfirmPending={props.view.isBusy}
                     trigger={
-                        <Button variant="ghost" isPending={props.view.isBusy}>
+                        <Button intent="destructive" step="entry" isPending={props.view.isBusy}>
                             {props.view.deleteLabel}
                         </Button>
                     }

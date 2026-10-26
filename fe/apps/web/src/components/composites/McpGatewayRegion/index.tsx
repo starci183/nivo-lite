@@ -81,7 +81,7 @@ const RowActions = (props: RowActionsProps) =>
                 <Button
                     key={action.id}
                     size="sm"
-                    variant="secondary"
+                    intent="neutral"
                     isPending={action.isPending}
                     isDisabled={action.isDisabled}
                     onPress={action.onPress}

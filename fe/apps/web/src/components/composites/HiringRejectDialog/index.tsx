@@ -37,13 +37,7 @@ export const HiringRejectDialog = (props: HiringRejectDialogProps) => {
         >
             <div className={FORM_CLASS_NAME}>
                 {error === null ? null : <Alert tone="negative" title={say("rejectFailed")} description={error} />}
-                <Textarea
-                    label={say("rejectReason")}
-                    variant="secondary"
-                    rows={3}
-                    value={reason}
-                    onValueChange={on.reason}
-                />
+                <Textarea label={say("rejectReason")} rows={3} value={reason} onValueChange={on.reason} />
                 <Text size="sm" tone="muted">
                     {say("rejectKept")}
                 </Text>
@@ -58,10 +52,10 @@ const HiringRejectDialogFooter = (props: HiringRejectDialogProps) => {
     const { on } = props
     return (
         <>
-            <Button variant="tertiary" onPress={on.close}>
+            <Button intent="dismiss" onPress={on.close}>
                 {say("cancel")}
             </Button>
-            <Button variant="danger" isPending={isBusy} isDisabled={isBusy || !canConfirm} onPress={on.confirm}>
+            <Button intent="commit" isPending={isBusy} isDisabled={isBusy || !canConfirm} onPress={on.confirm}>
                 {say("rejectConfirm")}
             </Button>
         </>

@@ -126,7 +126,7 @@ const scenesOf = (props: VideoScriptStepBaseProps) => {
                             <Badge tone={scene.roleTone}>{scene.roleLabel}</Badge>
                             <Button
                                 size="sm"
-                                variant="ghost"
+                                intent="neutral"
                                 isDisabled={props.props.locked || !scene.canMoveUp}
                                 onPress={() => props.on.move(index, -1)}
                             >
@@ -134,7 +134,7 @@ const scenesOf = (props: VideoScriptStepBaseProps) => {
                             </Button>
                             <Button
                                 size="sm"
-                                variant="ghost"
+                                intent="neutral"
                                 isDisabled={props.props.locked || !scene.canMoveDown}
                                 onPress={() => props.on.move(index, 1)}
                             >
@@ -142,7 +142,8 @@ const scenesOf = (props: VideoScriptStepBaseProps) => {
                             </Button>
                             <Button
                                 size="sm"
-                                variant="danger-soft"
+                                intent="destructive"
+                                step="entry"
                                 isDisabled={props.props.locked || !scene.canRemove}
                                 onPress={() => props.on.remove(index)}
                             >
@@ -154,7 +155,6 @@ const scenesOf = (props: VideoScriptStepBaseProps) => {
                     <div className={SCRIPT_STACK}>
                         <Textarea
                             label={props.props.captionLabel}
-                            variant="secondary"
                             rows={2}
                             maxLength={160}
                             value={scene.caption}
@@ -163,7 +163,6 @@ const scenesOf = (props: VideoScriptStepBaseProps) => {
                         />
                         <Textarea
                             label={props.props.voiceLabel}
-                            variant="secondary"
                             rows={3}
                             maxLength={420}
                             value={scene.voiceover}
@@ -177,7 +176,6 @@ const scenesOf = (props: VideoScriptStepBaseProps) => {
                         )}
                         <Select
                             label={props.props.mediaLabel}
-                            variant="secondary"
                             value={scene.media}
                             options={props.props.mediaOptions}
                             isDisabled={props.props.locked}
@@ -211,7 +209,7 @@ export const VideoScriptStepBase = (props: VideoScriptStepBaseProps) => (
                 ) : null}
                 <div className={SCRIPT_ROW}>
                     <Button
-                        variant={props.props.hasScenes ? "secondary" : "primary"}
+                        intent={props.props.hasScenes ? "alternative" : "commit"}
                         isPending={props.props.writing}
                         isDisabled={!props.props.canEdit}
                         onPress={props.on.write}
@@ -230,7 +228,7 @@ export const VideoScriptStepBase = (props: VideoScriptStepBaseProps) => (
         {scenesOf(props)}
         {props.props.canEdit ? (
             <div className={SCRIPT_ROW}>
-                <Button variant="outline" isDisabled={props.props.locked || !props.props.canAdd} onPress={props.on.add}>
+                <Button intent="neutral" isDisabled={props.props.locked || !props.props.canAdd} onPress={props.on.add}>
                     {props.props.addLabel}
                 </Button>
             </div>

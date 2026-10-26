@@ -149,7 +149,7 @@ const actionsOf = ({ props, on }: OpenApiWizardBaseProps): ReadonlyArray<WizardA
         const test: WizardAction = {
             id: "test",
             label: text.testButton,
-            variant: "outline",
+            intent: "alternative",
             isPending: props.isTesting,
             isDisabled: isPending || !props.canTest,
             onPress: on.runTest,
@@ -171,7 +171,6 @@ const SourceStep = ({ props, on }: OpenApiWizardBaseProps) => (
             id="oa-name"
             name="name"
             label={props.text.name}
-            variant="secondary"
             hint={props.text.nameHint}
             isDisabled={props.isPending}
             value={props.source.name}
@@ -181,7 +180,6 @@ const SourceStep = ({ props, on }: OpenApiWizardBaseProps) => (
             id="oa-url"
             name="specUrl"
             label={props.text.specUrl}
-            variant="secondary"
             hint={props.text.specUrlHint}
             isDisabled={props.isPending}
             value={props.source.specUrl}
@@ -190,7 +188,6 @@ const SourceStep = ({ props, on }: OpenApiWizardBaseProps) => (
         <Textarea
             id="oa-text"
             label={props.text.specText}
-            variant="secondary"
             description={props.text.specTextHint}
             rows={6}
             isDisabled={props.isPending}
@@ -208,7 +205,6 @@ const ScheduleStep = ({ props, on }: OpenApiWizardBaseProps) => (
         </Text>
         <Select
             label={props.text.schedule}
-            variant="secondary"
             isDisabled={!props.schedule.hasPulls}
             options={props.schedule.options}
             value={props.schedule.value}

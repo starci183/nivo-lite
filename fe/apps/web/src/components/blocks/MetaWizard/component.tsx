@@ -113,7 +113,6 @@ const PickStepBody = (props: MetaWizardBaseProps) => {
     if (view.pages.length > 0) {
         return (
             <RadioGroup
-                variant="secondary"
                 label={text.pickBody}
                 isLabelHidden
                 isDisabled={view.isPending}
@@ -142,12 +141,13 @@ export const MetaWizardBase = (props: MetaWizardBaseProps) => {
             {
                 id: "login",
                 label: view.hasConnection ? text.reconnect : text.connect,
-                variant: "primary" as const,
+                intent: "alternative" as const,
+                isNext: true as const,
                 onPress: on.login,
                 isPending: view.isPending,
             },
             ...(view.pages.length > 0 || view.chosen !== null
-                ? [{ id: "next", label: text.next, variant: "outline" as const, onPress: () => on.go(1) }]
+                ? [{ id: "next", label: text.next, intent: "alternative" as const, onPress: () => on.go(1) }]
                 : []),
             closeAction(text.close, on.close),
         ],
@@ -211,13 +211,13 @@ interface ButtonRowProps {
 const ButtonRow = (props: ButtonRowProps) => (
     <WizardFooter
         actions={[
-            { id: "run", label: props.run, variant: "outline", onPress: props.onRun, isDisabled: props.isDisabled },
+            { id: "run", label: props.run, intent: "alternative", onPress: props.onRun, isDisabled: props.isDisabled },
             ...(props.canRepair
                 ? [
                       {
                           id: "repair",
                           label: props.repair,
-                          variant: "outline" as const,
+                          intent: "alternative" as const,
                           onPress: props.onRepair,
                           isDisabled: props.isDisabled,
                       },

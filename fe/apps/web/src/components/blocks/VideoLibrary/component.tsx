@@ -104,13 +104,13 @@ export const VideoLibraryBase = (props: VideoLibraryBaseProps) => (
                                     </Text>
                                 </div>
                                 <div className={LIBRARY_ROW}>
-                                    <Button size="sm" variant="outline" href={entry.href}>
+                                    <Button size="sm" intent="neutral" href={entry.href}>
                                         {props.props.openLabel}
                                     </Button>
                                     {props.props.canEdit ? (
                                         <Button
                                             size="sm"
-                                            variant="secondary"
+                                            intent="neutral"
                                             isDisabled={props.props.busy}
                                             onPress={() => props.on.duplicate(entry.id)}
                                         >
@@ -120,7 +120,7 @@ export const VideoLibraryBase = (props: VideoLibraryBaseProps) => (
                                     {props.props.canEdit ? (
                                         <Button
                                             size="sm"
-                                            variant="ghost"
+                                            intent="neutral"
                                             isDisabled={props.props.busy || entry.archiveDisabled}
                                             onPress={() => props.on.archive(entry.id)}
                                         >

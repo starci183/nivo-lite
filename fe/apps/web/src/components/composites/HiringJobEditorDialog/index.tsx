@@ -61,7 +61,6 @@ export const HiringJobEditorDialog = (props: HiringJobEditorDialogProps) => {
                     onNumber={on.number}
                 />
                 <Textarea
-                    variant="secondary"
                     label={say("jobDescription")}
                     rows={4}
                     maxLength={6000}
@@ -80,7 +79,6 @@ export const HiringJobEditorDialog = (props: HiringJobEditorDialogProps) => {
                     onRemove={on.removeQuestion}
                 />
                 <CheckboxGroup
-                    variant="secondary"
                     label={say("jobChannels")}
                     orientation="horizontal"
                     options={props.props.channelOptions.map((option) => ({ value: option.id, label: option.label }))}
@@ -101,10 +99,10 @@ const renderHiringJobEditorDialogFooter = (
     save: () => void,
 ) => (
     <>
-        <Button variant="tertiary" onPress={close}>
+        <Button intent="dismiss" onPress={close}>
             {say("cancel")}
         </Button>
-        <Button variant="primary" isPending={isBusy} isDisabled={isBusy || !canSave} onPress={save}>
+        <Button intent="commit" isPending={isBusy} isDisabled={isBusy || !canSave} onPress={save}>
             {say("jobEditorSave")}
         </Button>
     </>

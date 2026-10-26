@@ -80,7 +80,7 @@ const Hero = ({ props }: PartProps) => (
             <SectionHeader eyebrow={props.heroEyebrow} title={props.heroTitle} description={props.subline} />
             <div className={HERO_ROW}>
                 {/* Grammar gap: a primary Button on the ink band is accent on accent; secondary until an on-ink primary ships. */}
-                <Button variant="secondary" href={props.ctaHref}>
+                <Button intent="neutral" href={props.ctaHref}>
                     {props.cta}
                 </Button>
                 <div className={HERO_COUNTDOWN} role="timer" aria-label={props.countdownAria}>

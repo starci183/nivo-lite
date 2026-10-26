@@ -163,7 +163,7 @@ const renderOutcomeFields = ({ l, view, on, p }: RenderOutcomeFieldsContext) => 
             />
             {p.error === null ? null : <Alert title={l.failTitle} description={p.error} tone="negative" />}
             <Button
-                variant="primary"
+                intent="commit"
                 isPending={p.isPending}
                 isDisabled={p.evidenceText.trim().length === 0}
                 onPress={on.submit}

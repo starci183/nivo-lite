@@ -10,21 +10,14 @@ import {
     Dialog,
     EmptyNotice,
     HorizontalScrollRegion,
-    ListItem,
+    ListRow,
     SegmentedControl,
     SurfaceListCard,
     Text,
     TextAction,
     Textarea,
 } from "@starci/grammar/common"
-import {
-    BOARD_CLASS_NAME,
-    CHIPS_CLASS_NAME,
-    DEAL_ROW_CLASS_NAME,
-    FORM_CLASS_NAME,
-    LANE_CLASS_NAME,
-    ROW_ACTIONS_CLASS_NAME,
-} from "./classNames"
+import { BOARD_CLASS_NAME, DETAIL_CLASS_NAME, FORM_CLASS_NAME, LANE_CLASS_NAME } from "./classNames"
 
 /** One deal card, every word already resolved. */
 export interface DealView {
@@ -103,11 +96,11 @@ export const SalesPipelineBase = (props: SalesPipelineBaseProps) => {
                 closeLabel={p.cancelLabel}
                 footer={
                     <>
-                        <Button variant="tertiary" onPress={on.close}>
+                        <Button intent="dismiss" onPress={on.close}>
                             {p.cancelLabel}
                         </Button>
                         <Button
-                            variant={dialog?.isDanger ? "danger" : "primary"}
+                            intent="commit"
                             isPending={p.isPending}
                             isDisabled={(dialog?.isIncomplete ?? true) || p.isPending}
                             onPress={on.confirm}
@@ -131,7 +124,6 @@ export const SalesPipelineBase = (props: SalesPipelineBaseProps) => {
                                 label={dialog.reasonLabel}
                                 description={dialog.reasonHint}
                                 isRequired={dialog.reasonRequired}
-                                variant="secondary"
                                 rows={3}
                                 value={dialog.reason}
                                 isDisabled={p.isPending}
@@ -173,40 +165,38 @@ const renderPipelineLanes = ({ p, on }: RenderPipelineLanesInput) => (
                         }
                     >
                         {lane.deals.map((deal) => (
-                            <ListItem key={deal.leadId} className={DEAL_ROW_CLASS_NAME}>
-                                <TextAction href={deal.href}>{deal.customer}</TextAction>
-                                {deal.company === "" ? null : (
-                                    <Text size="xs" tone="muted">
-                                        {deal.company}
-                                    </Text>
-                                )}
-                                <div className={CHIPS_CLASS_NAME}>
-                                    <Text as="span" size="sm" weight="semibold">
-                                        {deal.value}
-                                    </Text>
-                                    {deal.source === null ? null : <Badge tone="neutral">{deal.source}</Badge>}
-                                </div>
-                                <Text
-                                    size="sm"
-                                    {...(deal.isClosed ? { tone: "muted" as const } : {})}
-                                    overflow="clamp-2"
-                                >
-                                    {deal.nextLine}
-                                </Text>
-                                <Text size="xs" tone="muted">
-                                    {deal.facts}
-                                </Text>
-                                <div className={ROW_ACTIONS_CLASS_NAME}>
+                            <ListRow
+                                key={deal.leadId}
+                                title={<TextAction href={deal.href}>{deal.customer}</TextAction>}
+                                description={deal.company === "" ? null : deal.company}
+                                badges={deal.source === null ? null : <Badge tone="neutral">{deal.source}</Badge>}
+                                actions={
                                     <Button
-                                        variant="tertiary"
+                                        intent="dismiss"
                                         size="sm"
                                         isDisabled={p.isPending}
                                         onPress={() => on.move(deal.leadId)}
                                     >
                                         {p.moveLabel}
                                     </Button>
+                                }
+                            >
+                                <div className={DETAIL_CLASS_NAME}>
+                                    <Text size="sm" weight="semibold">
+                                        {deal.value}
+                                    </Text>
+                                    <Text
+                                        size="sm"
+                                        {...(deal.isClosed ? { tone: "muted" as const } : {})}
+                                        overflow="clamp-2"
+                                    >
+                                        {deal.nextLine}
+                                    </Text>
+                                    <Text size="xs" tone="muted">
+                                        {deal.facts}
+                                    </Text>
                                 </div>
-                            </ListItem>
+                            </ListRow>
                         ))}
                     </SurfaceListCard>
                 </div>

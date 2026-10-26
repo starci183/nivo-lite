@@ -18,19 +18,17 @@ export const HiringQuestionFields = (props: HiringQuestionFieldsProps) => {
     const { say, index, question, typeOptions, onPatch } = props
     const id = question.id
     return (
-        <SurfaceCard depth="nested" ariaLabel={say("qNumber", { n: index + 1 })}>
+        <SurfaceCard ariaLabel={say("qNumber", { n: index + 1 })}>
             <div className={FIELDS_CLASS_NAME}>
                 <Input
                     id={`job-q-${id}`}
                     name={`q_${id}`}
                     label={say("qNumber", { n: index + 1 })}
-                    variant="secondary"
                     value={question.text}
                     onValueChange={(text) => onPatch({ text })}
                 />
                 <div className={GRID_CLASS_NAME}>
                     <Select
-                        variant="secondary"
                         label={say("qType")}
                         options={typeOptions}
                         value={question.type}
@@ -38,7 +36,6 @@ export const HiringQuestionFields = (props: HiringQuestionFieldsProps) => {
                     />
                     {question.type === "yesno" ? (
                         <Select
-                            variant="secondary"
                             label={say("qExpect")}
                             options={[
                                 { id: "", label: say("qExpectNone") },
@@ -54,7 +51,6 @@ export const HiringQuestionFields = (props: HiringQuestionFieldsProps) => {
                             id={`job-qe-${id}`}
                             name={`qe_${id}`}
                             label={say("qExpectNumber")}
-                            variant="secondary"
                             value={question.expect}
                             onValueChange={(expect) => onPatch({ expect })}
                         />
@@ -64,7 +60,6 @@ export const HiringQuestionFields = (props: HiringQuestionFieldsProps) => {
                             id={`job-qc-${id}`}
                             name={`qc_${id}`}
                             label={say("qChoices")}
-                            variant="secondary"
                             value={question.choices}
                             onValueChange={(choices) => onPatch({ choices })}
                         />
@@ -75,7 +70,6 @@ export const HiringQuestionFields = (props: HiringQuestionFieldsProps) => {
                         id={`job-qx-${id}`}
                         name={`qx_${id}`}
                         label={say("qExpectChoices")}
-                        variant="secondary"
                         value={question.expect}
                         onValueChange={(expect) => onPatch({ expect })}
                     />
@@ -86,7 +80,7 @@ export const HiringQuestionFields = (props: HiringQuestionFieldsProps) => {
                         isSelected={question.required}
                         onSelectedChange={(required) => onPatch({ required })}
                     />
-                    <Button variant="ghost" size="sm" onPress={props.onRemove}>
+                    <Button intent="alternative" size="sm" onPress={props.onRemove}>
                         {say("qRemove")}
                     </Button>
                 </div>

@@ -1,11 +1,5 @@
-import { Badge, Button, Input, List, ListItem, Select, SurfaceCard, Switch, Text } from "@starci/grammar/common"
-import {
-    BLOCK_CLASS_NAME,
-    FORM_GRID_CLASS_NAME,
-    LIST_CLASS_NAME,
-    LIST_ITEM_CLASS_NAME,
-    ROW_CLASS_NAME,
-} from "./classNames"
+import { Badge, Button, Input, List, ListRow, Select, SurfaceCard, Switch, Text } from "@starci/grammar/common"
+import { BLOCK_CLASS_NAME, FORM_GRID_CLASS_NAME, ROW_CLASS_NAME } from "./classNames"
 
 /** One field of the form: a select (it has options) or a text input (it has none). */
 interface ShiftsFieldView {
@@ -32,7 +26,7 @@ export interface ShiftsFormView {
     readonly switchLabel: string | null
     readonly switchOn: boolean
     readonly submitLabel: string
-    readonly submitVariant: "primary" | "outline"
+    readonly submitIntent: "commit" | "neutral"
     readonly isBusy: boolean
     readonly canSubmit: boolean
     readonly rows: ReadonlyArray<ShiftsFormRowView>
@@ -61,7 +55,6 @@ export const ShiftsFormCard = (props: ShiftsFormCardProps) => (
                             id={`shifts-field-${field.id}`}
                             name={field.id}
                             label={field.label}
-                            variant="secondary"
                             value={field.value}
                             onValueChange={(value) => props.onField(field.id, value)}
                         />
@@ -70,7 +63,6 @@ export const ShiftsFormCard = (props: ShiftsFormCardProps) => (
                             key={field.id}
                             label={field.label}
                             name={field.id}
-                            variant="secondary"
                             value={field.value === "" ? null : field.value}
                             options={field.options}
                             onValueChange={(value) => props.onField(field.id, value ?? "")}
@@ -88,7 +80,7 @@ export const ShiftsFormCard = (props: ShiftsFormCardProps) => (
                     />
                 )}
                 <Button
-                    variant={props.submitVariant}
+                    intent={props.submitIntent}
                     isPending={props.isBusy}
                     isDisabled={!props.canSubmit}
                     onPress={props.onSubmit}
@@ -97,17 +89,20 @@ export const ShiftsFormCard = (props: ShiftsFormCardProps) => (
                 </Button>
             </div>
             {props.rows.length === 0 ? null : (
-                <List label={props.title} className={LIST_CLASS_NAME}>
+                <List label={props.title}>
                     {props.rows.map((row) => (
-                        <ListItem key={row.id} className={LIST_ITEM_CLASS_NAME}>
-                            <Text size="sm">{row.text}</Text>
-                            {row.badge === null ? null : <Badge tone={row.badge.tone}>{row.badge.label}</Badge>}
-                            {row.actionLabel === null ? null : (
-                                <Button size="sm" variant="ghost" onPress={() => props.onRowAction?.(row.id)}>
-                                    {row.actionLabel}
-                                </Button>
-                            )}
-                        </ListItem>
+                        <ListRow
+                            key={row.id}
+                            title={row.text}
+                            badges={row.badge === null ? null : <Badge tone={row.badge.tone}>{row.badge.label}</Badge>}
+                            actions={
+                                row.actionLabel === null ? null : (
+                                    <Button size="sm" intent="neutral" onPress={() => props.onRowAction?.(row.id)}>
+                                        {row.actionLabel}
+                                    </Button>
+                                )
+                            }
+                        />
                     ))}
                 </List>
             )}

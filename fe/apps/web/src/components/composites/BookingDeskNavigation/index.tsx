@@ -27,13 +27,13 @@ interface BookingDeskNavigationProps {
 /** Draws the week controls and cancellation filter. */
 export const BookingDeskNavigation = (props: BookingDeskNavigationProps) => (
     <div className={TOOLBAR_CLASS}>
-        <Button size="sm" variant="outline" isDisabled={props.isPending} onPress={props.on.prev}>
+        <Button size="sm" intent="neutral" isDisabled={props.isPending} onPress={props.on.prev}>
             {props.props.prevLabel}
         </Button>
-        <Button size="sm" variant="outline" isDisabled={props.isPending} onPress={props.on.thisWeek}>
+        <Button size="sm" intent="neutral" isDisabled={props.isPending} onPress={props.on.thisWeek}>
             {props.props.thisWeekLabel}
         </Button>
-        <Button size="sm" variant="outline" isDisabled={props.isPending} onPress={props.on.next}>
+        <Button size="sm" intent="neutral" isDisabled={props.isPending} onPress={props.on.next}>
             {props.props.nextLabel}
         </Button>
         <DateField

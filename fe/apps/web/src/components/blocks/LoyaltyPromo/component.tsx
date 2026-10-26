@@ -1,8 +1,28 @@
 import { LoyaltyCampaignMessage } from "@/components/composites/LoyaltyCampaignMessage"
 import { LoyaltyCampaignSegment } from "@/components/composites/LoyaltyCampaignSegment"
-import { Alert, Badge, EmptyNotice, ListItem, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Alert, Badge, EmptyNotice, ListRow, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
-import { BODY_CLASS_NAME, CHIPS_CLASS_NAME, QUOTE_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames"
+import { BODY_CLASS_NAME } from "./classNames"
+
+/** What a quoted draft shows: its label and its text. */
+interface DraftQuoteProps {
+    readonly label: string
+    readonly draft: string
+}
+
+/** A drafted message quoted inside its row or result: a nested Grammar surface with its label and text. */
+const DraftQuote = (props: DraftQuoteProps) => (
+    <SurfaceCard>
+        <div className={BODY_CLASS_NAME}>
+            <Text size="xs" tone="muted" weight="medium">
+                {props.label}
+            </Text>
+            <Text as="p" size="sm">
+                {props.draft}
+            </Text>
+        </div>
+    </SurfaceCard>
+)
 
 /** One line of the live count under the segment. */
 export interface LoyaltyPromoPreviewLine {
@@ -107,32 +127,14 @@ export const LoyaltyPromoBase = (props: LoyaltyPromoBaseProps) => {
                 empty={<EmptyNotice message={copy.campaignsEmptyTitle} description={copy.campaignsEmptyBody} />}
             >
                 {props.props.rows.map((row) => (
-                    <ListItem key={row.id} className={ROW_CLASS_NAME}>
-                        <div className={ROW_MAIN_CLASS_NAME}>
-                            <div className={CHIPS_CLASS_NAME}>
-                                <Text as="span" weight="semibold">
-                                    {row.name}
-                                </Text>
-                                <Badge tone={row.statusTone}>{row.statusLabel}</Badge>
-                            </div>
-                            <Text size="sm" tone="muted">
-                                {row.counts}
-                            </Text>
-                            <Text size="xs" tone="muted">
-                                {row.meta}
-                            </Text>
-                            {row.draft === "" ? null : (
-                                <div className={QUOTE_CLASS_NAME}>
-                                    <Text size="xs" tone="muted" weight="medium">
-                                        {copy.draftLabel}
-                                    </Text>
-                                    <Text as="p" size="sm">
-                                        {row.draft}
-                                    </Text>
-                                </div>
-                            )}
-                        </div>
-                    </ListItem>
+                    <ListRow
+                        key={row.id}
+                        title={row.name}
+                        description={`${row.counts} · ${row.meta}`}
+                        badges={<Badge tone={row.statusTone}>{row.statusLabel}</Badge>}
+                    >
+                        {row.draft === "" ? null : <DraftQuote label={copy.draftLabel} draft={row.draft} />}
+                    </ListRow>
                 ))}
             </SurfaceListCard>
         </>
@@ -150,7 +152,7 @@ const renderPromotionBuilder = (props: LoyaltyPromoBaseProps) => {
                 </Text>
                 <LoyaltyCampaignSegment {...props} />
 
-                <SurfaceCard depth="nested">
+                <SurfaceCard>
                     <div className={BODY_CLASS_NAME} aria-live="polite">
                         {props.props.previewLines.map((line) => (
                             <Text
@@ -172,7 +174,7 @@ const renderPromotionBuilder = (props: LoyaltyPromoBaseProps) => {
                         <Alert title={copy.failedTitle} description={failure} tone="negative" />
                     )}
                     {result === undefined ? null : (
-                        <SurfaceCard depth="nested">
+                        <SurfaceCard>
                             <div className={BODY_CLASS_NAME}>
                                 <Text weight="semibold">{result.title}</Text>
                                 <Text size="sm">{result.recipients}</Text>
@@ -181,14 +183,7 @@ const renderPromotionBuilder = (props: LoyaltyPromoBaseProps) => {
                                         {result.time}
                                     </Text>
                                 )}
-                                <div className={QUOTE_CLASS_NAME}>
-                                    <Text size="xs" tone="muted" weight="medium">
-                                        {copy.draftLabel}
-                                    </Text>
-                                    <Text as="p" size="sm">
-                                        {result.draft}
-                                    </Text>
-                                </div>
+                                <DraftQuote label={copy.draftLabel} draft={result.draft} />
                             </div>
                         </SurfaceCard>
                     )}

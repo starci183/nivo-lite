@@ -52,7 +52,6 @@ export const StepForm = (props: StepFormProps) => {
                         id="responsibility-title"
                         name="title"
                         label={labels.title}
-                        variant="secondary"
                         value={form.title}
                         onValueChange={(value) => on.change("title", value)}
                         isRequired
@@ -80,10 +79,10 @@ export const StepForm = (props: StepFormProps) => {
                     <Alert title={labels.saveFailTitle} description={form.error} tone="negative" />
                 )}
                 <div className={ACTIONS_CLASS_NAME}>
-                    <Button variant="ghost" onPress={on.close} isDisabled={props.isPending}>
+                    <Button intent="neutral" onPress={on.close} isDisabled={props.isPending}>
                         {labels.cancel}
                     </Button>
-                    <Button variant="secondary" type="submit" isPending={props.isPending}>
+                    <Button intent="neutral" type="submit" isPending={props.isPending}>
                         {form.submitLabel}
                     </Button>
                 </div>

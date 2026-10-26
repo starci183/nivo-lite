@@ -2,6 +2,7 @@ import {
     Avatar,
     Button,
     DescriptionList,
+    Divider,
     Heading,
     IconButton,
     Region,
@@ -75,14 +76,22 @@ export interface ChatbotSidePanelProps {
 /** The right pane of the inbox: customer, who is replying (take over / hand back), the waiting escalation and the lead. */
 export const ChatbotSidePanel = (props: ChatbotSidePanelProps) => {
     const closeButton = (
-        <IconButton source={nivoIconSource("close", "leading")} label={props.closeLabel} onPress={props.onClose} />
+        <IconButton
+            intent="dismiss"
+            source={nivoIconSource("close", "leading")}
+            label={props.closeLabel}
+            onPress={props.onClose}
+        />
     )
     if (!props.hasThread) {
         return (
-            <div className={HEAD_CLASS_NAME}>
-                <div className={HEAD_TEXT_CLASS_NAME} />
-                <div className={UNTIL_DOCKED_CLASS_NAME}>{closeButton}</div>
-            </div>
+            <>
+                <div className={HEAD_CLASS_NAME}>
+                    <div className={HEAD_TEXT_CLASS_NAME} />
+                    <div className={UNTIL_DOCKED_CLASS_NAME}>{closeButton}</div>
+                </div>
+                <Divider semantics="presentation" />
+            </>
         )
     }
     const escalation = props.escalation
@@ -95,6 +104,7 @@ export const ChatbotSidePanel = (props: ChatbotSidePanelProps) => {
                 </div>
                 <div className={UNTIL_DOCKED_CLASS_NAME}>{closeButton}</div>
             </div>
+            <Divider semantics="presentation" />
             <div className={SIDE_SECTION_CLASS_NAME}>
                 <div className={CUSTOMER_HEAD_CLASS_NAME}>
                     <Avatar name={props.customerName} size="lg" isDecorative />
@@ -108,6 +118,7 @@ export const ChatbotSidePanel = (props: ChatbotSidePanelProps) => {
                     </div>
                 </div>
             </div>
+            <Divider semantics="presentation" />
             {escalation === null ? null : (
                 <ChatbotEscalationForm
                     {...escalation}
@@ -129,13 +140,14 @@ export const ChatbotSidePanel = (props: ChatbotSidePanelProps) => {
                             <Text weight="semibold">{props.lead.name}</Text>
                             <DescriptionList layout="columns" items={props.lead.facts} />
                             <div className={ACTIONS_CLASS_NAME}>
-                                <Button variant="outline" size="sm" href={props.lead.openHref}>
+                                <Button intent="neutral" size="sm" href={props.lead.openHref}>
                                     {props.lead.openLabel}
                                 </Button>
                             </div>
                         </>
                     )}
                 </div>
+                <Divider semantics="presentation" />
             </Region>
         </>
     )
@@ -152,7 +164,7 @@ const renderChatbotSidePanelHandling = (
             <Text size="sm">{handling.text}</Text>
             <div className={ACTIONS_CLASS_NAME}>
                 <Button
-                    variant="outline"
+                    intent="neutral"
                     isPending={handling.isBusy}
                     isDisabled={handling.isBusy}
                     onPress={props.onToggleHandling}
@@ -166,5 +178,6 @@ const renderChatbotSidePanelHandling = (
                 </Text>
             )}
         </div>
+        <Divider semantics="presentation" />
     </Region>
 )
