@@ -19,7 +19,7 @@
     "@nivo-lite/i18n": "*",
     "@nivo-lite/offer": "*",
     "@reduxjs/toolkit": "2.11.2",
-    "@starci/grammar": "0.12.8",
+    "@starci/grammar": "0.12.9",
     "@starci/heroicons": "0.3.4",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.117.2",
