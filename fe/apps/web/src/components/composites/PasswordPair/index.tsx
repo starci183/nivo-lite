@@ -28,7 +28,6 @@ export const PasswordPair = (props: PasswordPairProps) => (
             hint={props.hint}
             revealLabel={props.showLabel}
             hideLabel={props.hideLabel}
-            variant="secondary"
             isRequired
             isDisabled={props.isDisabled}
             value={props.password}
@@ -43,7 +42,6 @@ export const PasswordPair = (props: PasswordPairProps) => (
             label={props.confirmLabel}
             revealLabel={props.showLabel}
             hideLabel={props.hideLabel}
-            variant="secondary"
             isRequired
             isDisabled={props.isDisabled}
             value={props.confirm}
