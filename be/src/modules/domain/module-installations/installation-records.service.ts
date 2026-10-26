@@ -46,6 +46,12 @@ const RECORD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
 const isUniqueViolation = (cause: unknown): boolean =>
     typeof cause === "object" && cause !== null && "code" in cause && cause.code === UNIQUE_VIOLATION
 
+/** The status a switch leaves: paused when off; when on, live, or waiting for a connection a required role still lacks. */
+const liveStatusOf = (live: boolean, waitingForConnection: boolean): InstallationStatus => {
+    if (!live) return "paused"
+    return waitingForConnection ? "needs_connection" : "live"
+}
+
 /** What a write on an installation did: it changed the row, found no such row, or hit a unique index. */
 export type InstallationWrite = "done" | "missing" | "taken"
 
@@ -152,9 +158,14 @@ export class InstallationRecordsService {
         return this.write(SET_OPERATING_MODE, [installationId, workspaceId, mode])
     }
 
-    /** Switches the agent live or paused. */
-    setLive(workspaceId: string, installationId: string, live: boolean): Promise<InstallationWrite> {
-        return this.write(SET_LIVE, [installationId, workspaceId, live, live ? "live" : "paused"])
+    /** Switches the agent live or paused; a live agent still waiting for a required connection is recorded as `needs_connection`. */
+    setLive(
+        workspaceId: string,
+        installationId: string,
+        live: boolean,
+        waitingForConnection: boolean,
+    ): Promise<InstallationWrite> {
+        return this.write(SET_LIVE, [installationId, workspaceId, live, liveStatusOf(live, waitingForConnection)])
     }
 
     /** Replaces the settings of an installation. */
@@ -178,7 +189,7 @@ export class InstallationRecordsService {
 
     /**
      * Moves an installation by whether the connections its module requires are ready: ready or live without them waits for a
-     * connection (`needs_connection`), waiting with them is live again; any other status is left as it is. Answers the new
+     * connection (`needs_connection`), waiting with them is live again when the owner had switched it on, else ready; any other status is left as it is. Answers the new
      * status, or null when nothing moved.
      */
     async settleConnection(

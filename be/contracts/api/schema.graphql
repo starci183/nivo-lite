@@ -4832,6 +4832,7 @@ type ModuleInstallationType {
   createdAt: String!
   id: ID!
   isMulti: Boolean!
+  lifecycle: String!
   liveEnabled: Boolean!
   moduleKey: String!
   name: String!

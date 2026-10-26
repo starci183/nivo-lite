@@ -20,6 +20,9 @@ import {
     installationRecordOf as recordOf,
 } from "@tests/fixtures/builders/module-install.builder"
 
+/** What the readiness mock adds to a record. */
+const VIEWED = { connectionNeeds: [], lifecycle: "ready" } as const
+
 const requestOf = builder<InstallRequest>({
     workspaceId: "ws-1",
     moduleKey: "chatbot",
@@ -40,7 +43,8 @@ const build = async () => {
     const events = mock<EventsService>()
     const sync = mock<AgentSyncService>()
     const readiness = mock<ModuleReadinessService>()
-    readiness.withNeeds.mockImplementation((record) => Promise.resolve({ ...record, connectionNeeds: [] }))
+    readiness.needsOf.mockResolvedValue([])
+    readiness.withNeeds.mockImplementation((record) => Promise.resolve({ ...record, ...VIEWED }))
     const moduleRef = await Test.createTestingModule({
         providers: [
             ModuleInstallService,
@@ -201,7 +205,7 @@ describe("ModuleInstallService > rename", () => {
 
         await expect(service.rename("u1", "ws-1", "inst-1", " Lobby ")).resolves.toEqual({
             ...recordOf({ name: "Lobby" }),
-            connectionNeeds: [],
+            ...VIEWED,
         })
         expect(installations.rename).toHaveBeenCalledWith("ws-1", "inst-1", "Lobby")
     })
@@ -235,9 +239,19 @@ describe("ModuleInstallService > setLive", () => {
 
         await expect(service.setLive("u1", "ws-1", "inst-1", true)).resolves.toEqual({
             ...recordOf({ liveEnabled: true }),
-            connectionNeeds: [],
+            ...VIEWED,
         })
         expect(agents.setStatus).toHaveBeenCalledWith("u1", "ws-1", "agent-1", true)
+        expect(installations.setLive).toHaveBeenCalledWith("ws-1", "inst-1", true, false)
+    })
+
+    it("records needs_connection, not live, when a required connection is missing", async () => {
+        const { service, installations, readiness } = await build()
+        installations.find.mockResolvedValue(recordOf())
+        readiness.needsOf.mockResolvedValue([{ role: "invoice.list", providers: ["misa"] }])
+        installations.setLive.mockResolvedValue("done")
+        await service.setLive("u1", "ws-1", "inst-1", true)
+        expect(installations.setLive).toHaveBeenCalledWith("ws-1", "inst-1", true, true)
     })
 })
 
@@ -266,7 +280,7 @@ describe("ModuleInstallService > renameAgent", () => {
 
         await expect(service.renameAgent("u1", "ws-1", "inst-1", " Mai ")).resolves.toEqual({
             ...recordOf(),
-            connectionNeeds: [],
+            ...VIEWED,
         })
         expect(identity.rename).toHaveBeenCalledWith("u1", "ws-1", "agent-1", "Mai")
         expect(sync.requestNow).toHaveBeenCalledWith({
@@ -330,7 +344,7 @@ describe("ModuleInstallService > reads", () => {
         const { service, installations, members } = await build()
         installations.list.mockResolvedValue([recordOf()])
 
-        await expect(service.list("u1", "ws-1")).resolves.toEqual([{ ...recordOf(), connectionNeeds: [] }])
+        await expect(service.list("u1", "ws-1")).resolves.toEqual([{ ...recordOf(), ...VIEWED }])
         expect(members.require).toHaveBeenCalledWith("u1", "ws-1")
     })
 
@@ -438,7 +452,7 @@ describe("ModuleInstallService lifecycle and reads", () => {
 
         await expect(service.setOperatingMode("u1", "ws-1", "inst-1", "autopilot")).resolves.toEqual({
             ...updated,
-            connectionNeeds: [],
+            ...VIEWED,
         })
         expect(members.require).toHaveBeenCalledWith("u1", "ws-1", ["owner", "manager"])
         expect(installations.setOperatingMode).toHaveBeenCalledWith("ws-1", "inst-1", "autopilot")
@@ -453,9 +467,9 @@ describe("ModuleInstallService lifecycle and reads", () => {
 
         await expect(service.setLive("u1", "ws-1", "inst-1", false)).resolves.toEqual({
             ...paused,
-            connectionNeeds: [],
+            ...VIEWED,
         })
-        expect(installations.setLive).toHaveBeenCalledWith("ws-1", "inst-1", false)
+        expect(installations.setLive).toHaveBeenCalledWith("ws-1", "inst-1", false, false)
         expect(agents.setStatus).not.toHaveBeenCalled()
         expect(installations.find).toHaveBeenCalledTimes(2)
     })

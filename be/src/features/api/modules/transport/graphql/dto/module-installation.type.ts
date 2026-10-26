@@ -45,6 +45,13 @@ export class ModuleInstallationType {
     @Field()
     status!: string
 
+    /**
+     * What the product may say, derived from the facts: `needs_setup` (no applied version), `needs_connection`, `paused`, `ready`
+     * (applied, not switched on) or `running` (applied, connected and switched on). Show "running" only for `running`.
+     */
+    @Field()
+    lifecycle!: string
+
     /** `assist` or `autopilot`. */
     @Field()
     operatingMode!: string

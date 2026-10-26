@@ -17,7 +17,7 @@ export const runtimeInstallationOf = (settings: Installation["settings"] = {}): 
     agentId: "a1",
     operatingMode: "assist",
     settings,
-    activeContextVersionId: null,
+    activeContextVersionId: "version-1",
 })
 
 /** The customer turn the runtime specs answer. */

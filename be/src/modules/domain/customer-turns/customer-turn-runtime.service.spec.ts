@@ -423,6 +423,14 @@ describe("CustomerTurnRuntimeService readiness", () => {
         expect(gateway.runTurn).toHaveBeenCalledTimes(runs)
     })
 
+    it("does not answer for an installation with no applied context version, whatever its status says", async () => {
+        const { runtime, installations, readiness, gateway } = await build()
+        installations.ofAgent.mockResolvedValue({ ...installationOf(), activeContextVersionId: null })
+        readiness.settle.mockResolvedValueOnce("live")
+        await expect(runtime.propose(turn)).resolves.toBe("installation_not_running")
+        expect(gateway.runTurn).not.toHaveBeenCalled()
+    })
+
     it("asks no readiness for an agent without an installation", async () => {
         const { runtime, readiness } = await build()
         await runtime.propose(turn)

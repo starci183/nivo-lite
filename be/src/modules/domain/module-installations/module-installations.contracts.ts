@@ -4,6 +4,13 @@
  */
 export type InstallationStatus = "installing" | "setup" | "ready" | "live" | "paused" | "needs_connection"
 
+/**
+ * What the product may say about an installation, derived from the facts and never stored: `needs_setup` (no applied context version,
+ * whatever the stored status says), `needs_connection` (applied, a required connection is missing), `paused` (the owner's stop), `ready`
+ * (applied and connected, not switched on yet) and `running` (applied, connected and switched on). Only `running` may be shown as running.
+ */
+export type InstallationLifecycle = "needs_setup" | "needs_connection" | "paused" | "ready" | "running"
+
 /** The status a connection check left an installation in, or null when it did not change it. */
 export type OptionalInstallationStatus = InstallationStatus | null
 

@@ -97,6 +97,7 @@ export class CustomerTurnRuntimeService implements ChatTurnRuntime {
         const installation = await this.installations.ofAgent(workspaceId, conversation.agent.id)
         const status = installation === null ? null : await this.readiness.settle(workspaceId, installation.id)
         if (status !== null && !RUNNING.has(status)) return status === NEEDS_CONNECTION ? NEEDS_CONNECTION : NOT_RUNNING
+        if (installation !== null && installation.activeContextVersionId === null) return NOT_RUNNING
         const timeoutMs = replyTimeoutSec(installation?.settings ?? null) * 1000
         const token = this.access.open(turn, timeoutMs)
         const answered = await this.guarded(turn, installation, timeoutMs, token)

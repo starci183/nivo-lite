@@ -7,6 +7,7 @@ import { ContextNotesModule } from "@modules/domain/module-context-notes"
 import { ModuleSetupSessionsModule } from "@modules/domain/module-setup-sessions"
 import { ModuleSetupWritesModule } from "@modules/domain/module-setup-writes"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./modules.module-definition"
+import { AgentActivationService } from "./agent-activation.service"
 import { InstallationDirectoryService } from "./installation-directory.service"
 import { ModuleInstallService } from "./module-install.service"
 import { ModuleReadinessService } from "./module-readiness.service"
@@ -41,7 +42,7 @@ export class ModulesModule extends ConfigurableModuleClass {
         const providers =
             options.setupOnly === true
                 ? setup
-                : [...setup, ModuleInstallService, SetupTurnService, WorkspaceSetupService]
+                : [...setup, AgentActivationService, ModuleInstallService, SetupTurnService, WorkspaceSetupService]
         const tables = [
             ModuleInstallationsModule.register({}),
             ModuleContextVersionsModule.register({}),

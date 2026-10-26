@@ -130,12 +130,15 @@ export const SET_OPERATING_MODE = sql`
         RETURNING id)
     SELECT id FROM changed`
 
-/** Switches the agent live or paused ($1 id, $2 workspace, $3 live, $4 status). */
+/**
+ * Switches the agent live or paused ($1 id, $2 workspace, $3 live, $4 status). Going live needs an applied context version: the
+ * guard lives in the statement, so no caller can switch on an agent that has nothing confirmed to run on.
+ */
 export const SET_LIVE = sql`
     WITH changed AS (
         UPDATE public.module_installations
         SET live_enabled = $3, status = $4
-        WHERE id = $1 AND workspace_id = $2
+        WHERE id = $1 AND workspace_id = $2 AND (NOT $3::boolean OR active_context_version_id IS NOT NULL)
         RETURNING id)
     SELECT id FROM changed`
 
@@ -150,12 +153,13 @@ export const SAVE_SETTINGS = sql`
 
 /**
  * Moves an installation by the readiness of its connections ($1 installation, $2 workspace, $3 ready): ready or live without them
- * waits for a connection; waiting with them is live again. Any other status is left as it is. Answers the new status when it moved.
+ * waits for a connection; waiting with them returns to what it was before: live when the owner had switched it on, else ready. Any
+ * other status is left as it is. Answers the new status when it moved.
  */
 export const SETTLE_CONNECTION = sql`
     WITH settled AS (
         UPDATE public.module_installations
-        SET status = CASE WHEN $3::boolean THEN 'live' ELSE 'needs_connection' END
+        SET status = CASE WHEN NOT $3::boolean THEN 'needs_connection' WHEN live_enabled THEN 'live' ELSE 'ready' END
         WHERE id = $1 AND workspace_id = $2
           AND ((NOT $3::boolean AND status IN ('ready', 'live')) OR ($3::boolean AND status = 'needs_connection'))
         RETURNING status)

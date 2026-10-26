@@ -1,5 +1,5 @@
 import type { CapabilityRole } from "@modules/domain/mcp-gateway"
-import type { InstallationRecord } from "@modules/domain/module-installations"
+import type { InstallationLifecycle, InstallationRecord } from "@modules/domain/module-installations"
 
 /** A text in both product languages. */
 export interface Bilingual {
@@ -249,4 +249,6 @@ export interface ConnectionNeed {
 export interface InstallationView extends InstallationRecord {
     /** The missing required roles, each with its possible providers. */
     readonly connectionNeeds: ReadonlyArray<ConnectionNeed>
+    /** What the product may say about the installation, derived from the facts (see InstallationLifecycle). */
+    readonly lifecycle: InstallationLifecycle
 }

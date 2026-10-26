@@ -143,7 +143,10 @@ export class ModuleInstallService {
         return this.viewOf(workspaceId, installationId)
     }
 
-    /** Switches an agent live (it acts on channels) or paused (it stays silent); going live needs an applied context version. */
+    /**
+     * Switches an agent live (it acts on channels) or paused (it stays silent); going live needs an applied context version. Going live
+     * with a required connection missing records `needs_connection`, not `live`: the agent runs once the connection is there.
+     */
     async setLive(
         principalId: string,
         workspaceId: string,
@@ -155,7 +158,8 @@ export class ModuleInstallService {
         if (live && current.activeContextVersionId === null) {
             throw new ModulesError({ code: ModulesErrorCode.NeedsVersion })
         }
-        expectWritten(await this.installations.setLive(workspaceId, installationId, live))
+        const waiting = live && (await this.readiness.needsOf(workspaceId, current.moduleKey)).length > 0
+        expectWritten(await this.installations.setLive(workspaceId, installationId, live, waiting))
         if (current.agentId !== null) await this.agents.setStatus(principalId, workspaceId, current.agentId, live)
         return this.viewOf(workspaceId, installationId)
     }
