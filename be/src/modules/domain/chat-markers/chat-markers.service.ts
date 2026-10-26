@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-activity"
 import { isOfficeRoomKey } from "@modules/domain/messages"
 import { OfficeReadMarkersService } from "@modules/domain/office-rooms"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -25,6 +26,7 @@ export class ChatMarkersService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
         private readonly roomReads: OfficeReadMarkersService,
+        private readonly activity: ChatActivityService,
     ) {}
 
     /** The same target admission used by receipt writes and typing broadcasts. */
@@ -74,6 +76,7 @@ export class ChatMarkersService {
     ): Promise<void> {
         const params = await this.receiptParams(principalId, workspaceId, target, messageId)
         await this.entityManager.query(MARK_CHAT_DELIVERED, params)
+        await this.activity.receipt(workspaceId, chatActivityTarget(target))
     }
 
     /** Acknowledges a displayed message; a read cursor also proves delivery and preserves room read compatibility. */
@@ -84,6 +87,8 @@ export class ChatMarkersService {
             if (target.conversationId === null)
                 await this.roomReads.advance(workspaceId, params[1], target.room ?? "", params[4], manager)
         })
+        await this.activity.receipt(workspaceId, chatActivityTarget(target))
+        await this.activity.unread(workspaceId, chatActivityTarget(target), params[1])
     }
 
     /** Changes only the proven caller's preference for this target. */
@@ -96,6 +101,7 @@ export class ChatMarkersService {
             target.conversationId,
             muted,
         ])
+        await this.activity.unread(workspaceId, chatActivityTarget(target), member.userId)
     }
 
     private async receiptParams(

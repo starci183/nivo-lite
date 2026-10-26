@@ -1,5 +1,6 @@
-import { mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { ChatActivityService } from "@modules/domain/chat-activity"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentMessagesService } from "./agent-messages.service"
 import { AgentMessagesErrorCode } from "./errors/agent-messages.error"
@@ -35,10 +36,15 @@ const build = async (answers: Record<string, ReadonlyArray<unknown>> = {}) => {
             ...answers,
         }).map(([text, rows]): [string, unknown] => [text, rows]),
     })
+    const activity = mock<ChatActivityService>()
     const moduleRef = await Test.createTestingModule({
-        providers: [AgentMessagesService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
+        providers: [
+            AgentMessagesService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: ChatActivityService, useValue: activity },
+        ],
     }).compile()
-    return { service: moduleRef.get(AgentMessagesService), em }
+    return { service: moduleRef.get(AgentMessagesService), em, activity }
 }
 
 describe("AgentMessagesService listForConversations", () => {
@@ -99,10 +105,12 @@ describe("AgentMessagesService listChat", () => {
 })
 describe("AgentMessagesService storeHuman and storeHumanMessage", () => {
     it("leaves automated human-labelled replies without an account identity", async () => {
-        const { service } = await build()
+        const { service, activity } = await build()
         const inside = mockEntityManager({ query: [INSERT_HUMAN_MESSAGE, [{ id: "human-1" }]] })
 
         await expect(service.storeHuman("ws-1", "conv-1", "Welcome", "Mai", inside)).resolves.toBe("human-1")
+
+        expect(activity.message.mock.calls).toEqual([["ws-1", "conversation:conv-1", null, inside]])
 
         expect(inside.query).toHaveBeenCalledWith(INSERT_HUMAN_MESSAGE, [
             null,
@@ -115,10 +123,12 @@ describe("AgentMessagesService storeHuman and storeHumanMessage", () => {
     })
 
     it("writes a person's reply through the caller's transaction", async () => {
-        const { service, em } = await build()
+        const { service, em, activity } = await build()
         const inside = mockEntityManager({ query: [INSERT_HUMAN_MESSAGE, [{ id: "human-1" }]] })
 
         await expect(service.storeHuman("ws-1", "conv-1", "Welcome", "Mai", inside, "user-1")).resolves.toBe("human-1")
+
+        expect(activity.message.mock.calls).toEqual([["ws-1", "conversation:conv-1", "user-1", inside]])
 
         expect(inside.query).toHaveBeenCalledWith(INSERT_HUMAN_MESSAGE, [
             null,
@@ -132,13 +142,15 @@ describe("AgentMessagesService storeHuman and storeHumanMessage", () => {
     })
 
     it("uses the primary manager for a new reply and reuses an approved message id on retry", async () => {
-        const { service, em } = await build({ [INSERT_HUMAN_MESSAGE]: [{ id: "human-1" }] })
+        const { service, em, activity } = await build({ [INSERT_HUMAN_MESSAGE]: [{ id: "human-1" }] })
         const inside = mockEntityManager({ query: [INSERT_HUMAN_MESSAGE, []] })
 
         await expect(service.storeHumanMessage("ws-1", "conv-1", "Welcome", "Mai")).resolves.toBe("human-1")
         await expect(
             service.storeHumanMessage("ws-1", "conv-1", "Approved", "Mai", inside, "approved-1"),
         ).resolves.toBe("approved-1")
+
+        expect(activity.message.mock.calls).toEqual([["ws-1", "conversation:conv-1", null, em]])
 
         expect(em.query).toHaveBeenCalledWith(INSERT_HUMAN_MESSAGE, [null, "ws-1", "conv-1", "Welcome", "Mai", null])
         expect(inside.query).toHaveBeenCalledWith(INSERT_HUMAN_MESSAGE, [
@@ -169,12 +181,14 @@ describe("AgentMessagesService storeAgentMessage", () => {
         await expect(missing.service.storeAgentMessage("ws-1", "conv-1", "Welcome")).rejects.toMatchObject({
             code: AgentMessagesErrorCode.NotStored,
         })
+        expect(stored.activity.message.mock.calls).toEqual([["ws-1", "conversation:conv-1", null, stored.em]])
+        expect(missing.activity.message).not.toHaveBeenCalled()
         expect(stored.em.query).toHaveBeenCalledWith(INSERT_GREETING_MESSAGE, ["ws-1", "conv-1", "Welcome"])
     })
 })
 describe("AgentMessagesService storeCustomer and storeGreeting", () => {
     it("store through the given transaction and answer the message id", async () => {
-        const { service } = await build()
+        const { service, activity } = await build()
         const inside = mockEntityManager({
             query: [
                 [INSERT_CUSTOMER_MESSAGE, [{ id: "m-1" }]],
@@ -187,6 +201,11 @@ describe("AgentMessagesService storeCustomer and storeGreeting", () => {
         await expect(service.storeGreeting("ws-1", "conv-1", "Welcome", inside)).resolves.toBe("g-1")
         expect(inside.query).toHaveBeenCalledWith(INSERT_CUSTOMER_MESSAGE, ["ws-1", "conv-1", "Hello", null])
         expect(inside.query).toHaveBeenCalledWith(INSERT_CUSTOMER_MESSAGE, ["ws-1", "conv-1", "Test", "user-1"])
+        expect(activity.message.mock.calls).toEqual([
+            ["ws-1", "conversation:conv-1", null, inside],
+            ["ws-1", "conversation:conv-1", "user-1", inside],
+            ["ws-1", "conversation:conv-1", null, inside],
+        ])
     })
 
     it("fail loudly when the insert answers no row", async () => {
@@ -200,13 +219,14 @@ describe("AgentMessagesService storeCustomer and storeGreeting", () => {
 })
 describe("AgentMessagesService storeReply", () => {
     it("stores a new reply and answers it as not yet sent", async () => {
-        const { service, em } = await build()
+        const { service, em, activity } = await build()
 
         await expect(service.storeReply("ws-1", "conv-1", "Tea is 50k", "msg-1")).resolves.toEqual({
             id: "reply-1",
             body: "Tea is 50k",
             sent: false,
         })
+        expect(activity.message.mock.calls).toEqual([["ws-1", "conversation:conv-1", null, em]])
         expect(em.query).toHaveBeenCalledWith(INSERT_AGENT_REPLY, ["ws-1", "conv-1", "Tea is 50k", "msg-1"])
     })
 
@@ -225,6 +245,7 @@ describe("AgentMessagesService storeReply", () => {
             body: "Old",
             sent: false,
         })
+        expect(pending.activity.message).not.toHaveBeenCalled()
         await expect(sent.service.storeReply("ws-1", "conv-1", "New", "msg-1")).resolves.toEqual({
             id: "r-0",
             body: "Old",
@@ -251,11 +272,12 @@ describe("AgentMessagesService replyExists", () => {
 })
 describe("AgentMessagesService storeLine", () => {
     it("writes a system line", async () => {
-        const { service, em } = await build()
+        const { service, em, activity } = await build()
 
         await service.storeLine("ws-1", "conv-1", "Lead handed over")
 
         expect(em.query).toHaveBeenCalledWith(INSERT_SYSTEM_LINE, ["ws-1", "conv-1", "Lead handed over"])
+        expect(activity.message.mock.calls).toEqual([["ws-1", "conversation:conv-1", null, em]])
     })
 
     it("uses the supplied transaction to write a system line", async () => {

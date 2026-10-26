@@ -4,14 +4,18 @@ import { TypeOrmModule, getDataSourceToken } from "@nestjs/typeorm"
 import type { DataSource } from "typeorm"
 import { DATABASE_OPTIONS } from "./database.port"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./database.module-definition"
+import { AfterCommitClient } from "./after-commit.client"
 import { MigrationRunnerService } from "./migration-runner.service"
 import { PRIMARY_CONNECTION } from "./primary.connection"
-import { PRIMARY_ENTITY_MANAGER, RATE_LIMIT_STORE } from "./primary.decorators"
+import { AFTER_COMMIT, PRIMARY_ENTITY_MANAGER, RATE_LIMIT_STORE } from "./primary.decorators"
 import { PostgresRateLimitStoreClient } from "./postgres-rate-limit-store.client"
 import { SeedRunnerService } from "./seed-runner.service"
 
 /** The token each declared connection provides its shared EntityManager under. */
 type EntityManagerToken = typeof PRIMARY_ENTITY_MANAGER
+
+/** Token of the provider that subscribes the after-commit capability to the primary connection. */
+const AFTER_COMMIT_SUBSCRIPTION: unique symbol = Symbol("platform.database.after-commit-subscription")
 
 const ENTITY_MANAGER_TOKENS: ReadonlyMap<string, EntityManagerToken> = new Map<string, EntityManagerToken>([
     [PRIMARY_CONNECTION, PRIMARY_ENTITY_MANAGER],
@@ -37,6 +41,19 @@ export class DatabaseModule extends ConfigurableModuleClass {
                       },
                   ]
         })
+        const afterCommit = [
+            { provide: AFTER_COMMIT, useExisting: AfterCommitClient },
+            AfterCommitClient,
+            {
+                provide: AFTER_COMMIT_SUBSCRIPTION,
+                inject: [getDataSourceToken(PRIMARY_CONNECTION), AfterCommitClient],
+                useFactory: (source: DataSource, client: AfterCommitClient) =>
+                    source.subscribers.push({
+                        afterTransactionCommit: (event) => client.commit(event.manager),
+                        afterTransactionRollback: (event) => client.rollback(event.manager),
+                    }),
+            },
+        ]
         return {
             ...base,
             imports: [
@@ -59,12 +76,14 @@ export class DatabaseModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 ...managers,
                 { provide: RATE_LIMIT_STORE, useClass: PostgresRateLimitStoreClient },
+                ...afterCommit,
                 MigrationRunnerService,
                 SeedRunnerService,
             ],
             exports: [
                 DATABASE_OPTIONS,
                 RATE_LIMIT_STORE,
+                AFTER_COMMIT,
                 ...managers.map((manager) => manager.provide),
                 MigrationRunnerService,
                 SeedRunnerService,

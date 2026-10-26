@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-activity"
 import { isOfficeRoomKey, OfficeCardsService } from "@modules/domain/messages"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
@@ -70,6 +71,7 @@ export class OfficeRoomsService {
         private readonly members: WorkspaceMembersService,
         private readonly cards: OfficeCardsService,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
+        private readonly activity: ChatActivityService,
     ) {}
 
     /** The rooms the caller sees; a workspace without department rooms answers the Office room alone. */
@@ -120,6 +122,7 @@ export class OfficeRoomsService {
         const rows = await this.entityManager.query<Array<unknown>>(mark, [workspaceId, member.userId, id])
         if (rows.length === 0)
             throw new OfficeRoomsError({ code: OfficeRoomsErrorCode.ConversationInvalid, params: { id } })
+        await this.activity.unread(workspaceId, `${kind}:${id}`, member.userId)
     }
 
     /** Marks a room (null = the Office room) read by the caller up to now. */
@@ -128,6 +131,9 @@ export class OfficeRoomsService {
         if (room !== null && !isOfficeRoomKey(room))
             throw new OfficeRoomsError({ code: OfficeRoomsErrorCode.RoomInvalid, params: { room } })
         await this.entityManager.query(MARK_ROOM_READ, [workspaceId, member.userId, room ?? OFFICE_READ_KEY])
+        const target = chatActivityTarget({ room, conversationId: null })
+        await this.activity.receipt(workspaceId, target)
+        await this.activity.unread(workspaceId, target, member.userId)
     }
 
     /** Opens the six department rooms of the workspace and seats its active agents; running it again changes nothing. */
