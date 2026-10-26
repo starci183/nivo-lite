@@ -48,14 +48,7 @@ export const API_EVENTS = sql`SELECT kind, actor, summary, evidence, lead_id FRO
 WHERE workspace_id = $1::uuid ORDER BY created_at, id`
 
 /** Removes only the messages and publications created by one isolated workspace. */
-export const CLEAN_API_PUBLICATIONS = sql`WITH api AS (
-    DELETE FROM pgmq.q_public_api WHERE message->'payload'->>'workspaceId' = $1
-), knowledge AS (
-    DELETE FROM pgmq.q_knowledge WHERE message->'payload'->>'workspaceId' = $1
-), automation AS (
-    DELETE FROM pgmq.q_automation WHERE message->'payload'->>'workspaceId' = $1
-)
-DELETE FROM public.job_outbox WHERE payload->>'workspaceId' = $1`
+export const CLEAN_API_PUBLICATIONS = sql`DELETE FROM public.job_outbox WHERE payload->>'workspaceId' = $1`
 
 /** Removes only receipts owned by this workspace's API or manual inputs before their domain rows disappear. */
 export const CLEAN_API_INBOX = sql`DELETE FROM public.inbox
