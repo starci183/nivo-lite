@@ -98,7 +98,6 @@ export const InventorySuppliersBase = (props: InventorySuppliersBaseProps) => {
                             />
                             <Button
                                 intent="neutral"
-                                size="sm"
                                 isPending={p.isPending}
                                 isDisabled={p.locationName.trim() === ""}
                                 onPress={on.addLocation}

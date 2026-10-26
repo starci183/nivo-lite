@@ -51,7 +51,7 @@ const Welcome = (props: WorkspacesOverviewBaseProps) => (
                 currentStepId="s0"
                 steps={props.props.welcomeSteps.map((label, index) => ({ id: `s${index}`, label }))}
             />
-            <Button intent="commit" size="lg" href={APP_ROUTES.workspaceNew}>
+            <Button intent="commit" href={APP_ROUTES.workspaceNew}>
                 {props.props.createFirstLabel}
             </Button>
         </div>
@@ -82,7 +82,7 @@ export const WorkspacesOverviewBase = (props: WorkspacesOverviewBaseProps) => (
             description={props.props.description}
             action={
                 props.props.status === "ready" ? (
-                    <Button intent="commit" size="lg" href={APP_ROUTES.workspaceNew}>
+                    <Button intent="commit" href={APP_ROUTES.workspaceNew}>
                         {props.props.createLabel}
                     </Button>
                 ) : undefined

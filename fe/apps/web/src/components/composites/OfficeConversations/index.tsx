@@ -182,6 +182,7 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
                 <ListBox
                     label={text("listLabel")}
                     selectionMode="single"
+                    selectionIndicator="none"
                     selectedIds={[list.selectedRoom]}
                     onAction={open}
                     onSelectionChange={(ids) => {

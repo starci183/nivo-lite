@@ -80,7 +80,7 @@ export const HiringQuestionFields = (props: HiringQuestionFieldsProps) => {
                         isSelected={question.required}
                         onSelectedChange={(required) => onPatch({ required })}
                     />
-                    <Button intent="alternative" size="sm" onPress={props.onRemove}>
+                    <Button intent="alternative" onPress={props.onRemove}>
                         {say("qRemove")}
                     </Button>
                 </div>

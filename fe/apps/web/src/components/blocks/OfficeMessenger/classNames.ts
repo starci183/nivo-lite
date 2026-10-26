@@ -1,8 +1,5 @@
-/** The row of column cards; each column is its own Grammar surface, so no app border separates them. */
-export const BODY_CLASS_NAME = "flex h-full min-h-0 min-w-0 gap-3"
-
-/** The list column's content edge inside its card. */
-export const LIST_BODY_CLASS_NAME = "flex min-h-0 flex-1 flex-col px-4"
+/** The columns inside the one joined surface: they touch, with no gap; each column pads its own content rows, never a separator. */
+export const BODY_CLASS_NAME = "flex h-full min-h-0 min-w-0"
 
 /** The left column: full width on phones, a fixed width beside the thread from md; it owns the panel content edge. */
 export const LIST_COLUMN_CLASS_NAME = "flex w-full min-w-0 shrink-0 flex-col md:w-72 xl:w-80"
@@ -42,3 +39,6 @@ export const WIDE_ONLY_CLASS_NAME = "hidden sm:inline"
 
 /** The tasks view scrolls in the centre column. */
 export const TASKS_CLASS_NAME = "min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
+
+/** The vertical hairline between two columns, from md up; on a phone only one column shows. */
+export const DIVIDER_CLASS_NAME = "hidden shrink-0 md:flex"

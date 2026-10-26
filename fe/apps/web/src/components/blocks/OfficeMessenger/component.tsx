@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import {
     Button,
     Divider,
@@ -6,6 +7,7 @@ import {
     Heading,
     IconButton,
     IconTile,
+    Region,
     SurfaceCard,
     Text,
 } from "@starci/grammar/common"
@@ -25,13 +27,13 @@ import type {
 } from "@/modules/types"
 import {
     BODY_CLASS_NAME,
+    DIVIDER_CLASS_NAME,
     HEAD_ACTIONS_CLASS_NAME,
     HEAD_AVATAR_CLASS_NAME,
     HEAD_CLASS_NAME,
     HEAD_TEXT_CLASS_NAME,
     HEAD_TITLE_CLASS_NAME,
     INFO_COLUMN_CLASS_NAME,
-    LIST_BODY_CLASS_NAME,
     LIST_COLUMN_CLASS_NAME,
     LIST_COLUMN_HIDDEN_CLASS_NAME,
     PHONE_ONLY_CLASS_NAME,
@@ -86,73 +88,52 @@ export interface OfficeMessengerBaseProps {
 
 /**
  * Office as a messenger: the conversation list on the left, the team thread with its composer pinned at the bottom, and a collapsible
- * info panel on the right (a drawer on narrow screens). Each column uses its own Grammar card surface.
+ * info panel on the right (a drawer on narrow screens). The columns are regions of ONE joined Grammar surface.
  */
 export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
     const view = props.props
     const on = props.on
     const { text } = view
-    const isTasks = view.centre === "tasks"
     const infoPanel = <MessengerInfoPanel {...props} />
 
     return (
         <>
             <FillViewport minHeight="md" bottomInset="none">
-                <div className={BODY_CLASS_NAME}>
-                    <div className={view.phoneView === "list" ? LIST_COLUMN_CLASS_NAME : LIST_COLUMN_HIDDEN_CLASS_NAME}>
-                        <SurfaceCard ariaLabel={text("listLabel")} composition="joined" height="fill">
-                            <div className={LIST_BODY_CLASS_NAME}>
-                                <OfficeConversations
-                                    props={{ list: view.list, isLoading: view.isLoading, text }}
-                                    on={{
-                                        openGroup: on.openGroup,
-                                        openAgent: on.openAgent,
-                                        openCustomer: on.openCustomer,
-                                    }}
-                                />
-                            </div>
-                        </SurfaceCard>
-                    </div>
-                    <div
-                        className={
-                            view.phoneView === "thread" ? THREAD_COLUMN_CLASS_NAME : THREAD_COLUMN_HIDDEN_CLASS_NAME
-                        }
-                    >
-                        <SurfaceCard ariaLabel={text("messengerLabel")} composition="joined" height="fill">
+                <SurfaceCard ariaLabel={text("messengerLabel")} composition="joined" height="fill">
+                    <div className={BODY_CLASS_NAME}>
+                        <Region
+                            label={text("listLabel")}
+                            className={
+                                view.phoneView === "list" ? LIST_COLUMN_CLASS_NAME : LIST_COLUMN_HIDDEN_CLASS_NAME
+                            }
+                        >
+                            <OfficeConversations
+                                props={{ list: view.list, isLoading: view.isLoading, text }}
+                                on={{
+                                    openGroup: on.openGroup,
+                                    openAgent: on.openAgent,
+                                    openCustomer: on.openCustomer,
+                                }}
+                            />
+                        </Region>
+                        <div className={DIVIDER_CLASS_NAME}>
+                            <Divider orientation="vertical" semantics="presentation" />
+                        </div>
+                        <Region
+                            label={text("messengerLabel")}
+                            className={
+                                view.phoneView === "thread" ? THREAD_COLUMN_CLASS_NAME : THREAD_COLUMN_HIDDEN_CLASS_NAME
+                            }
+                        >
                             <OfficeMessengerHeader {...props} />
                             <Divider semantics="presentation" />
-                            {isTasks ? (
-                                <div className={TASKS_CLASS_NAME}>
-                                    <OfficeTasks props={{ tasks: view.tasks, text }} on={{ openLeads: on.openLeads }} />
-                                </div>
-                            ) : (
-                                <>
-                                    <OfficeThread
-                                        props={view.thread}
-                                        on={{
-                                            decideApproval: on.decideApproval,
-                                            decideWork: on.decideWork,
-                                            decideCard: on.decideCard,
-                                            sendCommand: on.sendCommand,
-                                            cancelCommand: on.cancelCommand,
-                                            reply: on.reply,
-                                            loadEarlier: on.loadEarlier,
-                                            retry: on.retry,
-                                        }}
-                                    />
-                                    <OfficeComposer props={view.composer} on={{ change: on.change, send: on.send }} />
-                                </>
-                            )}
-                        </SurfaceCard>
+                            <MessengerCentre {...props} />
+                        </Region>
+                        {view.isInfoDocked && view.isInfoOpen ? (
+                            <InfoColumn label={text("infoTitle")}>{infoPanel}</InfoColumn>
+                        ) : null}
                     </div>
-                    {view.isInfoDocked && view.isInfoOpen ? (
-                        <div className={INFO_COLUMN_CLASS_NAME}>
-                            <SurfaceCard ariaLabel={text("infoTitle")} composition="joined" height="fill">
-                                {infoPanel}
-                            </SurfaceCard>
-                        </div>
-                    ) : null}
-                </div>
+                </SurfaceCard>
             </FillViewport>
             {view.isInfoDocked ? null : (
                 <Drawer
@@ -168,6 +149,55 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
         </>
     )
 }
+
+/** The centre column body: the tasks view, or the thread with its composer. */
+const MessengerCentre = (props: OfficeMessengerBaseProps) => {
+    const view = props.props
+    const on = props.on
+    const { text } = view
+    const isTasks = view.centre === "tasks"
+    return (
+        <>
+            {isTasks ? (
+                <div className={TASKS_CLASS_NAME}>
+                    <OfficeTasks props={{ tasks: view.tasks, text }} on={{ openLeads: on.openLeads }} />
+                </div>
+            ) : (
+                <>
+                    <OfficeThread
+                        props={view.thread}
+                        on={{
+                            decideApproval: on.decideApproval,
+                            decideWork: on.decideWork,
+                            decideCard: on.decideCard,
+                            sendCommand: on.sendCommand,
+                            cancelCommand: on.cancelCommand,
+                            reply: on.reply,
+                            loadEarlier: on.loadEarlier,
+                            retry: on.retry,
+                        }}
+                    />
+                    <OfficeComposer props={view.composer} on={{ change: on.change, send: on.send }} />
+                </>
+            )}
+        </>
+    )
+}
+
+/** What the docked info column draws. */
+type InfoColumnProps = { readonly label: string; readonly children: ReactNode }
+
+/** The docked info column with the hairline that divides it from the thread. */
+const InfoColumn = (props: InfoColumnProps) => (
+    <>
+        <div className={DIVIDER_CLASS_NAME}>
+            <Divider orientation="vertical" semantics="presentation" />
+        </div>
+        <Region label={props.label} className={INFO_COLUMN_CLASS_NAME}>
+            {props.children}
+        </Region>
+    </>
+)
 
 /** Renders the OfficeMessengerHeader section. */
 const OfficeMessengerHeader = (props: OfficeMessengerBaseProps) => {

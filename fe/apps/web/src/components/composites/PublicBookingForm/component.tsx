@@ -125,14 +125,7 @@ export const PublicBookingForm = (props: PublicBookingFormProps) => {
                     </div>
                 )}
 
-                <Button
-                    type="submit"
-                    intent="commit"
-                    size="lg"
-                    width="fill"
-                    isPending={p.isBusy}
-                    isDisabled={p.isBusy || !ready}
-                >
+                <Button type="submit" intent="commit" width="fill" isPending={p.isBusy} isDisabled={p.isBusy || !ready}>
                     {p.labels.submit}
                 </Button>
                 <Text size="xs" tone="muted">

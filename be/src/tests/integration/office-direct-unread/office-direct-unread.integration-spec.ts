@@ -5,6 +5,7 @@ import {
 } from "../../fixtures/builders/office-direct-unread.builder"
 import { CLEAN_USERS } from "../../fixtures/persistence/office-chain.sql"
 import {
+    CLEAN_AGENT_CHAT,
     CLEAN_AGENTS,
     CLEAN_LEADS,
     CLEAN_MEMBERS,
@@ -17,12 +18,17 @@ import { OfficeRoomMembersProofModule } from "../../world/office-room-members-pr
 import { useTestWorld } from "../../world/use-test-world"
 
 const world = useTestWorld({ modules: [OfficeRoomMembersProofModule.register()] })
+/** The newest line a row previews, as the caller draws it. */
+const lastLine = (authorId?: string | null): unknown =>
+    expect.objectContaining({ body: "line from Owner Person", ...(authorId === undefined ? {} : { authorId }) })
+
 const identity = officeDirectUnreadIdentity(() => world.id())
 
 beforeAll(async () => {
     world.cleanup(async () => {
         const workspaces = [identity.workspaceId, identity.foreignWorkspaceId]
         await world.db.primary.query(CLEAN_MESSAGES, [workspaces])
+        await world.db.primary.query(CLEAN_AGENT_CHAT, [workspaces])
         await world.db.primary.query(CLEAN_READS, [workspaces])
         await world.db.primary.query(CLEAN_AGENTS, [[...identity.agentIds]])
         await world.db.primary.query(CLEAN_LEADS, [[...identity.leadIds]])
@@ -41,9 +47,18 @@ describe("direct conversation unread over PostgreSQL", () => {
 
         expect(unread).toEqual({
             agents: [
-                { id: identity.agentIds[0], unread: 3 },
+                // Three counted lines; the newest line is the caller's own, still drawn as the row's preview.
+                {
+                    id: identity.agentIds[0],
+                    unread: 3,
+                    last: lastLine(null),
+                },
                 // The chatbot line and the homonym account count; the renamed own line (account id) and the legacy own line (name) do not.
-                { id: identity.agentIds[1], unread: 2 },
+                {
+                    id: identity.agentIds[1],
+                    unread: 2,
+                    last: lastLine(identity.foreignUserId),
+                },
             ],
             leads: [{ id: identity.leadIds[0], unread: 2 }],
         })
@@ -52,14 +67,28 @@ describe("direct conversation unread over PostgreSQL", () => {
         expect(unread.leads.map((entry) => entry.id)).not.toContain(identity.leadIds[1])
         expect(unread.leads.map((entry) => entry.id)).not.toContain(identity.leadIds[2])
     })
+})
 
+describe("direct conversation read markers over PostgreSQL", () => {
     it("marks an agent conversation read and clears its badge only", async () => {
         const rooms = world.resolve(OfficeRoomsService)
         await rooms.markConversationRead(identity.ownerId, identity.workspaceId, "agent", identity.agentIds[0])
 
         const unread = await rooms.unread(identity.ownerId, identity.workspaceId)
         expect(unread).toEqual({
-            agents: [{ id: identity.agentIds[1], unread: 2 }],
+            // A read conversation keeps its newest line for the row's preview and shows no badge.
+            agents: [
+                {
+                    id: identity.agentIds[0],
+                    unread: 0,
+                    last: lastLine(),
+                },
+                {
+                    id: identity.agentIds[1],
+                    unread: 2,
+                    last: lastLine(),
+                },
+            ],
             leads: [{ id: identity.leadIds[0], unread: 2 }],
         })
         expect(
@@ -72,7 +101,18 @@ describe("direct conversation unread over PostgreSQL", () => {
         await rooms.markConversationRead(identity.ownerId, identity.workspaceId, "lead", identity.leadIds[0])
 
         expect(await rooms.unread(identity.ownerId, identity.workspaceId)).toEqual({
-            agents: [{ id: identity.agentIds[1], unread: 2 }],
+            agents: [
+                {
+                    id: identity.agentIds[0],
+                    unread: 0,
+                    last: lastLine(),
+                },
+                {
+                    id: identity.agentIds[1],
+                    unread: 2,
+                    last: lastLine(),
+                },
+            ],
             leads: [],
         })
         expect(await world.db.primary.query(MARKERS_OF, [identity.workspaceId, `lead:${identity.leadIds[0]}`])).toEqual(

@@ -11,7 +11,10 @@ import { parsePrimaryDatabaseConfig, PRIMARY_ENTITY_MANAGER } from "@modules/pla
 import { ClockModule } from "@modules/platform/clock"
 import { HttpModule } from "@modules/platform/http"
 import { LoggingModule } from "@modules/platform/logging"
+import { RealtimeModule } from "@modules/platform/realtime"
+import { RetryModule } from "@modules/platform/retry"
 import { eachInOrder } from "@modules/platform/primitives"
+import { CHAT_ACTIVITY_PROOF_MODULES } from "./chat-activity-proof.module"
 import type { WorldDatabase, WorldSandbox } from "./test-world.contracts"
 
 /** One hex group per run (process and monotonic clock), so the ids of two runs never meet in the database a proof writes to. */
@@ -68,6 +71,9 @@ export const createLiteWorld = (modules: ReadonlyArray<DynamicModule>, sandbox?:
                     ClockModule.register({ isGlobal: true }),
                     HttpModule.register({ isGlobal: true }),
                     LoggingModule.register({ isGlobal: true }),
+                    RetryModule.register({ isGlobal: true }),
+                    RealtimeModule.register({ hub: "memory", isGlobal: true }),
+                    ...CHAT_ACTIVITY_PROOF_MODULES,
                     ...modules,
                 ],
             }).compile()

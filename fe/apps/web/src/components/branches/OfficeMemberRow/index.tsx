@@ -1,5 +1,6 @@
-import { Badge, Button, Text, TextAction } from "@starci/grammar/common"
+import { Badge, IconButton, ItemActions, Text, TextAction, Tooltip } from "@starci/grammar/common"
 import type { ReactNode } from "react"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeMemberRowView } from "@/modules/types"
 import {
     ACTIONS_CLASS_NAME,
@@ -67,22 +68,30 @@ export const OfficeMemberRow = (props: OfficeMemberRowProps) => (
                 )}
             </div>
             {props.member.mention === null && props.member.chatHref === null ? null : (
-                <div className={ACTIONS_CLASS_NAME}>
-                    {props.member.mention === null ? null : (
-                        <Button
-                            intent="alternative"
-                            size="sm"
-                            onPress={() => props.onMention(props.member.mention ?? "")}
-                        >
-                            {props.mentionLabel}
-                        </Button>
-                    )}
-                    {props.member.chatHref === null ? null : (
-                        <Button intent="alternative" size="sm" href={props.member.chatHref}>
-                            {props.chatLabel}
-                        </Button>
-                    )}
-                </div>
+                <ItemActions>
+                    <div className={ACTIONS_CLASS_NAME}>
+                        {props.member.mention === null ? null : (
+                            <Tooltip content={props.mentionLabel}>
+                                <IconButton
+                                    intent="neutral"
+                                    source={nivoIconSource("mention", "leading")}
+                                    label={props.mentionLabel}
+                                    onPress={() => props.onMention(props.member.mention ?? "")}
+                                />
+                            </Tooltip>
+                        )}
+                        {props.member.chatHref === null ? null : (
+                            <Tooltip content={props.chatLabel}>
+                                <IconButton
+                                    intent="neutral"
+                                    source={nivoIconSource("chat", "leading")}
+                                    label={props.chatLabel}
+                                    href={props.member.chatHref}
+                                />
+                            </Tooltip>
+                        )}
+                    </div>
+                </ItemActions>
             )}
         </div>
     </div>

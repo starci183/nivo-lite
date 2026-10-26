@@ -41,18 +41,23 @@ export class DatabaseModule extends ConfigurableModuleClass {
                       },
                   ]
         })
+        const hasPrimary = options.connections.some((connection) => connection.name === PRIMARY_CONNECTION)
         const afterCommit = [
             { provide: AFTER_COMMIT, useExisting: AfterCommitClient },
             AfterCommitClient,
-            {
-                provide: AFTER_COMMIT_SUBSCRIPTION,
-                inject: [getDataSourceToken(PRIMARY_CONNECTION), AfterCommitClient],
-                useFactory: (source: DataSource, client: AfterCommitClient) =>
-                    source.subscribers.push({
-                        afterTransactionCommit: (event) => client.commit(event.manager),
-                        afterTransactionRollback: (event) => client.rollback(event.manager),
-                    }),
-            },
+            ...(hasPrimary
+                ? [
+                      {
+                          provide: AFTER_COMMIT_SUBSCRIPTION,
+                          inject: [getDataSourceToken(PRIMARY_CONNECTION), AfterCommitClient],
+                          useFactory: (source: DataSource, client: AfterCommitClient) =>
+                              source.subscribers.push({
+                                  afterTransactionCommit: (event) => client.commit(event.manager),
+                                  afterTransactionRollback: (event) => client.rollback(event.manager),
+                              }),
+                      },
+                  ]
+                : []),
         ]
         return {
             ...base,

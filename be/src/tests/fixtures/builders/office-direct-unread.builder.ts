@@ -9,6 +9,8 @@ export interface OfficeDirectUnreadIdentity {
     readonly ownerId: string
     /** Two home agents, then a foreign agent. */
     readonly agentIds: readonly [string, string, string]
+    /** The member test conversation of each of the three agents. */
+    readonly conversationIds: readonly [string, string, string]
     /** Two home leads, then a foreign lead. */
     readonly leadIds: readonly [string, string, string]
     /** The foreign caller. */
@@ -21,6 +23,7 @@ export const officeDirectUnreadIdentity = (next: () => string): OfficeDirectUnre
     foreignWorkspaceId: next(),
     ownerId: next(),
     agentIds: [next(), next(), next()],
+    conversationIds: [next(), next(), next()],
     leadIds: [next(), next(), next()],
     foreignUserId: next(),
 })
@@ -128,6 +131,71 @@ const linesOf = (
     ),
 ]
 
+type Tx = EntityManager
+
+/** The two owners, their workspaces and the names the proof gives their seats. */
+const persistPeople = async (tx: Tx, identity: OfficeDirectUnreadIdentity): Promise<void> => {
+    await tx.insert("auth.users", { id: identity.ownerId })
+    await tx.insert("auth.users", { id: identity.foreignUserId })
+    await tx.insert("public.workspaces", { id: identity.workspaceId, owner_id: identity.ownerId, name: "Unread proof" })
+    await tx.insert("public.workspaces", {
+        id: identity.foreignWorkspaceId,
+        owner_id: identity.foreignUserId,
+        name: "Foreign unread proof",
+    })
+    // The workspace trigger already seats each owner; the proof only names them.
+    await tx.update(
+        "public.workspace_members",
+        { workspace_id: identity.workspaceId, user_id: identity.ownerId },
+        { display_name: OFFICE_DIRECT_OWNER },
+    )
+    await tx.update(
+        "public.workspace_members",
+        { workspace_id: identity.foreignWorkspaceId, user_id: identity.foreignUserId },
+        { display_name: "Foreign Person" },
+    )
+}
+
+/** The agents, their member test conversations and the leads of both workspaces. */
+const persistParties = async (tx: Tx, identity: OfficeDirectUnreadIdentity): Promise<void> => {
+    const workspaceOf = (index: number): string => (index === 2 ? identity.foreignWorkspaceId : identity.workspaceId)
+    await eachInOrder(identity.agentIds, (id, index) =>
+        tx.insert("public.agents", agentOf(id, workspaceOf(index), `Agent ${index + 1}`)),
+    )
+    // An agent's direct conversation is the member test chat it answers: one 'test' conversation per agent holds its lines.
+    await eachInOrder(identity.agentIds, (id, index) =>
+        tx.insert("public.agent_conversations", {
+            id: identity.conversationIds[index],
+            workspace_id: workspaceOf(index),
+            agent_id: id,
+            kind: "test",
+        }),
+    )
+    await eachInOrder(identity.leadIds, (id, index) =>
+        tx.insert("public.leads", leadOf(id, workspaceOf(index), `Lead ${index + 1}`)),
+    )
+}
+
+/** Writes one line: an agent's lines into its test conversation, a lead's lines into the Office messages. */
+const persistLine = (
+    tx: Tx,
+    identity: OfficeDirectUnreadIdentity,
+    row: ReturnType<typeof lineOf>,
+): Promise<unknown> => {
+    const index = identity.agentIds.findIndex((id) => id === row.agent_id)
+    if (index < 0) return tx.insert("public.messages", row)
+    return tx.insert("public.agent_messages", {
+        workspace_id: row.workspace_id,
+        conversation_id: identity.conversationIds[index],
+        role: row.author_kind === "human" ? "user" : "agent",
+        body: row.body,
+        created_at: row.created_at,
+        author_kind: row.author_kind === "human" ? "human" : "ai",
+        author_name: row.author_name,
+        author_user_id: row.author_user_id,
+    })
+}
+
 /**
  * Persists the caller's seat, the agents and leads of two workspaces and their lines. The first agent holds three
  * foreign-authored lines plus one written by the caller; the second agent the identity story above (two counted lines); the
@@ -138,49 +206,14 @@ export const persistOfficeDirectUnread = (
     identity: OfficeDirectUnreadIdentity,
 ): Promise<void> =>
     manager.transaction(async (tx) => {
-        await tx.insert("auth.users", { id: identity.ownerId })
-        await tx.insert("auth.users", { id: identity.foreignUserId })
-        await tx.insert("public.workspaces", {
-            id: identity.workspaceId,
-            owner_id: identity.ownerId,
-            name: "Unread proof",
-        })
-        await tx.insert("public.workspaces", {
-            id: identity.foreignWorkspaceId,
-            owner_id: identity.foreignUserId,
-            name: "Foreign unread proof",
-        })
-        // The workspace trigger already seats each owner; the proof only names them.
-        await tx.update(
-            "public.workspace_members",
-            { workspace_id: identity.workspaceId, user_id: identity.ownerId },
-            { display_name: OFFICE_DIRECT_OWNER },
-        )
-        await tx.update(
-            "public.workspace_members",
-            { workspace_id: identity.foreignWorkspaceId, user_id: identity.foreignUserId },
-            { display_name: "Foreign Person" },
-        )
-        await eachInOrder(identity.agentIds, (id, index) =>
-            tx.insert(
-                "public.agents",
-                agentOf(id, index === 2 ? identity.foreignWorkspaceId : identity.workspaceId, `Agent ${index + 1}`),
-            ),
-        )
-        await eachInOrder(identity.leadIds, (id, index) =>
-            tx.insert(
-                "public.leads",
-                leadOf(id, index === 2 ? identity.foreignWorkspaceId : identity.workspaceId, `Lead ${index + 1}`),
-            ),
-        )
-        await eachInOrder(
-            [
-                ...linesOf(identity.workspaceId, identity.agentIds[0], null, 3, 1),
-                ...identityLinesOf(identity),
-                ...linesOf(identity.workspaceId, null, identity.leadIds[0], 2, 1),
-                ...linesOf(identity.foreignWorkspaceId, identity.agentIds[2], null, 4, 0),
-                ...linesOf(identity.foreignWorkspaceId, null, identity.leadIds[2], 4, 0),
-            ],
-            (row) => tx.insert("public.messages", row),
-        )
+        await persistPeople(tx, identity)
+        await persistParties(tx, identity)
+        const lines = [
+            ...linesOf(identity.workspaceId, identity.agentIds[0], null, 3, 1),
+            ...identityLinesOf(identity),
+            ...linesOf(identity.workspaceId, null, identity.leadIds[0], 2, 1),
+            ...linesOf(identity.foreignWorkspaceId, identity.agentIds[2], null, 4, 0),
+            ...linesOf(identity.foreignWorkspaceId, null, identity.leadIds[2], 4, 0),
+        ]
+        await eachInOrder(lines, (row) => persistLine(tx, identity, row))
     })

@@ -12,6 +12,7 @@ import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } fr
 import { WORKSPACE_MEMBERS_ERROR_KINDS, WORKSPACE_MEMBERS_MESSAGES } from "@modules/domain/workspace-members"
 import { refuseSupabaseSessions } from "@modules/integrations/supabase"
 import type { VerifySupabaseAccessToken } from "@modules/integrations/supabase"
+import { ChatTypingSseModule } from "@features/realtime/chat-typing"
 import { ClockModule } from "@modules/platform/clock"
 import { Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -20,11 +21,13 @@ import { I18nModule } from "@modules/platform/i18n"
 import { HTTP_SECURITY_ERROR_KINDS, HTTP_SECURITY_MESSAGES, HttpSecurityModule } from "@modules/platform/http-security"
 import { LoggingModule } from "@modules/platform/logging"
 import { ok } from "@modules/platform/primitives"
+import { RetryModule } from "@modules/platform/retry"
 import * as realtimeContract from "@modules/platform/realtime"
 import { RealtimeModule } from "@modules/platform/realtime"
 import type { ChatMarkersIdentity } from "../fixtures/builders/chat-markers.builder"
 import { ChatMarkersProofModule } from "./chat-markers-proof.module"
 import type { LiteWorld } from "./lite-world.service"
+import { CHAT_ACTIVITY_PROOF_MODULES } from "./chat-activity-proof.module"
 import { redisProofOptions } from "./redis-capabilities.options"
 import { openTypingStream } from "./realtime-stream-proof.service"
 import type { TypingStreamClient, TypingStreamOptions } from "./realtime-stream-proof.service"
@@ -43,20 +46,12 @@ interface TypingTopicContract {
     chatTypingTopic(recipientId: string, workspaceId: string, target: ChatTarget): ProofTopic
 }
 
-interface DoorRegistrar {
-    register(options: Record<never, never>): DynamicModule
-}
-
 interface RetryRegistration {
     readonly isGlobal: boolean
 }
 
 interface RetryRegistrar {
     register(options: RetryRegistration): DynamicModule
-}
-
-interface TypingDoorContract {
-    readonly ChatTypingSseModule: DoorRegistrar
 }
 
 interface RetryContract {
@@ -76,18 +71,6 @@ const isTopicContract = (value: unknown): value is TypingTopicContract =>
     value !== null &&
     "chatTypingTopic" in value &&
     typeof value.chatTypingTopic === "function"
-
-const isDoorContract = (value: unknown): value is TypingDoorContract => {
-    if (typeof value !== "object" || value === null || !("ChatTypingSseModule" in value)) return false
-    const door = value.ChatTypingSseModule
-    return typeof door === "function" && "register" in door && typeof door.register === "function"
-}
-
-const isRetryContract = (value: unknown): value is RetryContract => {
-    if (typeof value !== "object" || value === null || !("RetryModule" in value)) return false
-    const retry = value.RetryModule
-    return typeof retry === "function" && "register" in retry && typeof retry.register === "function"
-}
 
 const isHub = (value: unknown): value is ProofHub =>
     typeof value === "object" &&
@@ -122,20 +105,18 @@ const verifierFor = (identity: ChatMarkersIdentity): VerifySupabaseAccessToken =
 }
 
 /** The hub, topic, door and retry contracts, each asserted present so an absent lane fails by name. */
-const loadContracts = async () => {
+const loadContracts = () => {
     assert(
         "REALTIME_HUB" in realtimeContract && typeof realtimeContract.REALTIME_HUB === "symbol",
         "SSE contract implementation absent: @modules/platform/realtime must export REALTIME_HUB (hub lane)",
     )
     assert(isTopicContract(typingContract), "SSE contract implementation absent: chatTypingTopic (transport lane)")
-    // A variable contract path postpones resolution until runtime, without manufacturing a production module or loosening tsc.
-    const doorPath = "@features/realtime/chat-typing"
-    const door: unknown = await import(doorPath)
-    assert(isDoorContract(door), "SSE contract implementation absent: ChatTypingSseModule.register (transport lane)")
-    const retryPath = "@modules/platform/retry"
-    const retry: unknown = await import(retryPath)
-    assert(isRetryContract(retry), "SSE contract implementation absent: RetryModule.register (hub lane)")
-    return { hubToken: realtimeContract.REALTIME_HUB, topicOf: typingContract.chatTypingTopic, door, retry }
+    return {
+        hubToken: realtimeContract.REALTIME_HUB,
+        topicOf: typingContract.chatTypingTopic,
+        door: { ChatTypingSseModule },
+        retry: { RetryModule },
+    }
 }
 
 /** The platform capabilities every replica registers, with the production i18n and error mapping. */
@@ -171,9 +152,10 @@ const platformModules = (retry: RetryContract): Array<DynamicModule> => [
     }),
 ]
 
-/** An independently composed API replica with the actual Redis hub, typing publisher and SSE door. */
-export const startTypingReplica = async (world: LiteWorld, identity: ChatMarkersIdentity, prefix: string) => {
-    const contracts = await loadContracts()
+type Contracts = ReturnType<typeof loadContracts>
+
+/** The testing module of one replica: real hub over the shared Redis, typing publisher, SSE door and default-deny guard. */
+const compileReplica = (world: LiteWorld, identity: ChatMarkersIdentity, prefix: string, contracts: Contracts) => {
     const redis = redisProofOptions(prefix)
     const options: RedisHubOptions = {
         hub: "redis",
@@ -182,12 +164,13 @@ export const startTypingReplica = async (world: LiteWorld, identity: ChatMarkers
         prefix,
         isGlobal: true,
     }
-    const moduleRef = await Test.createTestingModule({
+    return Test.createTestingModule({
         imports: [
             TypingProofDatabaseModule.register(world.db.primary),
             ...platformModules(contracts.retry),
             IdentityModule.register({ isGlobal: true, verifyAccessToken: verifierFor(identity) }),
             RealtimeModule.register(options),
+            ...CHAT_ACTIVITY_PROOF_MODULES,
             ChatTypingModule.register({ isGlobal: true }),
             contracts.door.ChatTypingSseModule.register({}),
         ],
@@ -196,6 +179,12 @@ export const startTypingReplica = async (world: LiteWorld, identity: ChatMarkers
             { provide: APP_FILTER, useClass: ErrorsFilter },
         ],
     }).compile()
+}
+
+/** An independently composed API replica with the actual Redis hub, typing publisher and SSE door. */
+export const startTypingReplica = async (world: LiteWorld, identity: ChatMarkersIdentity, prefix: string) => {
+    const contracts = loadContracts()
+    const moduleRef = await compileReplica(world, identity, prefix, contracts)
     const app = moduleRef.createNestApplication({ logger: false })
     const streams = new Set<TypingStreamClient>()
     try {

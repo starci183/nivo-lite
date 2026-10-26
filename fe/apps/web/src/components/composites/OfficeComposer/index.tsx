@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react"
-import { Button, Divider, Fieldset, Icon, Text, Textarea } from "@starci/grammar/common"
+import { Button, Divider, Fieldset, Icon, IconButton, Text, Textarea, Tooltip } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeComposerProps } from "@/modules/types"
 import {
@@ -76,14 +76,15 @@ export const OfficeComposer = (props: OfficeComposerProps) => {
             <div className={COMPOSER_BODY_CLASS_NAME}>
                 <QuickPrompts view={view} prompts={prompts} onPrompt={onPrompt} />
                 <div className={ROW_CLASS_NAME}>
-                    <Button
-                        intent="neutral"
-                        aria-label={text("mentionButton")}
-                        isDisabled={view.isLoading}
-                        onPress={onAt}
-                    >
-                        @
-                    </Button>
+                    <Tooltip content={text("mentionButton")}>
+                        <IconButton
+                            intent="neutral"
+                            source={nivoIconSource("mention", "leading")}
+                            label={text("mentionButton")}
+                            isDisabled={view.isLoading}
+                            onPress={onAt}
+                        />
+                    </Tooltip>
                     <div ref={hostRef} className={FIELD_CLASS_NAME}>
                         <Textarea
                             label={text("composerLabel")}

@@ -120,7 +120,7 @@ export const OfficeInfoPanel = (props: OfficeInfoPanelProps) => {
                     <Text size="sm" tone="muted">
                         {info.tasksSummary}
                     </Text>
-                    <Button intent="alternative" size="sm" width="fill" onPress={props.on.openTasks}>
+                    <Button intent="neutral" size="sm" width="fill" onPress={props.on.openTasks}>
                         {text("tasksOpen")}
                     </Button>
                 </Region>
@@ -151,7 +151,7 @@ const renderOfficeInfoPanelMembers = (
                 onMention={props.on.mention}
             />
         ))}
-        <Button intent="alternative" size="sm" width="fill" href={info.addAgentHref}>
+        <Button intent="neutral" size="sm" width="fill" href={info.addAgentHref}>
             {text("addAgent")}
         </Button>
     </Region>
