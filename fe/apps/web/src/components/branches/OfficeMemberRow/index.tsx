@@ -6,6 +6,7 @@ import {
     ACTIONS_CLASS_NAME,
     CHIP_CLASS_NAME,
     CONTENT_CLASS_NAME,
+    DETAIL_LINE_CLASS_NAME,
     NAME_CLASS_NAME,
     NAME_LINE_CLASS_NAME,
     ROW_CLASS_NAME,
@@ -40,6 +41,8 @@ export const OfficeMemberRow = (props: OfficeMemberRowProps) => (
                             <Badge tone="accent">{props.youLabel}</Badge>
                         </div>
                     ) : null}
+                </div>
+                <div className={DETAIL_LINE_CLASS_NAME}>
                     {props.member.presence === null ? null : (
                         <div className={CHIP_CLASS_NAME}>
                             <Badge tone="success" isDot>
@@ -47,10 +50,10 @@ export const OfficeMemberRow = (props: OfficeMemberRowProps) => (
                             </Badge>
                         </div>
                     )}
+                    <Text size="sm" tone="muted" overflow="truncate">
+                        {props.member.detail}
+                    </Text>
                 </div>
-                <Text size="sm" tone="muted" overflow="truncate">
-                    {props.member.detail}
-                </Text>
                 {props.member.seen === null ? null : (
                     <Text size="xs" tone="muted" overflow="truncate">
                         {props.member.seen}

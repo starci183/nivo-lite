@@ -18,3 +18,6 @@ export const CHIP_CLASS_NAME = "shrink-0"
 
 /** A member's quick actions, side by side at the end of the row. */
 export const ACTIONS_CLASS_NAME = "flex shrink-0 items-center gap-1"
+
+/** The detail line: the presence badge keeps its own width on the line, the detail truncates after it. */
+export const DETAIL_LINE_CLASS_NAME = "flex min-w-0 items-center gap-2"
