@@ -28,6 +28,7 @@ import { billingModules } from "./compose/billing"
 import { webhooksModules } from "./compose/webhooks"
 import { loyaltyModules } from "./compose/loyalty"
 import { apiModules } from "./compose/api"
+import { realtimeModules } from "./compose/realtime"
 
 @Module({})
 /** Every capability is registered once and the four guards run in a fixed order. */
@@ -61,6 +62,7 @@ export class AppModule {
                 ...webhooksModules(),
                 ...loyaltyModules(options),
                 ...apiModules(),
+                ...realtimeModules(),
             ],
             providers: [
                 ...authenticationProviders(verifyAccessToken),

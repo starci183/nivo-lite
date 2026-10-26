@@ -80,6 +80,7 @@ const options = {
     dataSources: { allowPrivateHosts: false },
     telegramUser: { app: null },
     platformAdmin: { admins: [] },
+    realtime: { hub: "memory" as const },
     queue: {
         enabled: false,
         redisHost: "redis.invalid",

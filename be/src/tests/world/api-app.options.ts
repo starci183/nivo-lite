@@ -70,6 +70,7 @@ const localApiOptions = (): ApiOptions => ({
         channelTokenKey: TOKEN_KEY,
     },
     ...providerOptions(),
+    realtime: { hub: "memory" as const },
     queue: {
         enabled: false,
         redisHost: "redis.invalid",
