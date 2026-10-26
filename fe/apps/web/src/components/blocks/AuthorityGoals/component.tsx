@@ -43,7 +43,6 @@ export const AuthorityGoalsBase = (props: AuthorityGoalsBaseProps) => {
                 <AuthoritySection section={view.section} isSkeleton={isSkeleton} onSave={props.on.save}>
                     <div className={GOALS_GRID_CLASS}>
                         <NumberField
-                            variant="secondary"
                             isSkeleton={isSkeleton}
                             label={view.revenueLabel}
                             description={view.revenueHint}
@@ -54,7 +53,6 @@ export const AuthorityGoalsBase = (props: AuthorityGoalsBaseProps) => {
                             onValueChange={props.on.revenue}
                         />
                         <NumberField
-                            variant="secondary"
                             isSkeleton={isSkeleton}
                             label={view.customersLabel}
                             minValue={0}
@@ -64,7 +62,6 @@ export const AuthorityGoalsBase = (props: AuthorityGoalsBaseProps) => {
                             onValueChange={props.on.customers}
                         />
                         <NumberField
-                            variant="secondary"
                             isSkeleton={isSkeleton}
                             label={view.replyLabel}
                             minValue={1}
@@ -75,7 +72,6 @@ export const AuthorityGoalsBase = (props: AuthorityGoalsBaseProps) => {
                         />
                     </div>
                     <Textarea
-                        variant="secondary"
                         isSkeleton={isSkeleton}
                         label={view.noteLabel}
                         description={view.noteHint}

@@ -28,7 +28,6 @@ export const OpenApiToolsStep = (props: OpenApiToolsStepProps) => (
             id="oa-tool-search"
             name="toolSearch"
             label={props.text.search}
-            variant="secondary"
             value={props.query}
             onValueChange={props.onQuery}
         />
@@ -37,7 +36,6 @@ export const OpenApiToolsStep = (props: OpenApiToolsStepProps) => (
         ) : (
             <div className={classNames.list}>
                 <CheckboxGroup
-                    variant="secondary"
                     label={props.text.label}
                     isLabelHidden
                     isDisabled={props.isDisabled}
