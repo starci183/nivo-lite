@@ -4,6 +4,7 @@ import type { FencedProcessor } from "@modules/platform/jobs"
 import type {
     CutoverClaim,
     CutoverFunctions,
+    CutoverQueueList,
     CutoverQueues,
     CutoverRow,
 } from "../../fixtures/persistence/queue-cutover.rows"
@@ -64,13 +65,17 @@ const expectLateWork = async (world: LiteWorld, original: ReadonlyArray<CutoverC
     expect(ordered(adopted.map((row) => row.job_key))).toEqual(ordered(raw))
 }
 
-/** The contract migration drops the legacy functions only now, keeps every identity and still takes work from a producer that already switched. */
+/** The contract migration drops the legacy functions and every pgmq job queue: a late legacy send is refused, a producer on the outbox still lands its work and the event bus stays. */
 const expectContracted = async (world: LiteWorld): Promise<void> => {
     const before = await rowsOf(world)
     expect(await world.db.primary.query<Array<CutoverFunctions>>(statements.CUTOVER_FUNCTIONS)).toEqual([
         { legacy_read: null, legacy_ack: null },
     ])
-    await world.db.primary.query(statements.CONTRACT_CUTOVER_SEND)
+    await expect(world.db.primary.query(statements.CONTRACT_CUTOVER_SEND)).rejects.toThrow()
+    expect(await world.db.primary.query<Array<CutoverQueueList>>(statements.PGMQ_AFTER_CONTRACT)).toEqual([
+        { queues: ["cutover_bus_events"] },
+    ])
+    await world.db.primary.query(statements.CONTRACT_ENQUEUE)
     const after = await rowsOf(world)
     expect(after).toHaveLength(11)
     expect(after.find((row) => row.proof === "late-contract")).toMatchObject({ state: "queued", sent_at: null })
@@ -146,6 +151,8 @@ describe("Queue pgmq to BullMQ cutover (private local Supabase and Redis)", () =
                 current_step: "preserved-checkpoint",
             }),
         ])
-        expect(await queuesOf(world)).toEqual([{ pending: 0, archived: 2, event_bus: 1 }])
+        expect(await world.db.primary.query<Array<CutoverQueueList>>(statements.PGMQ_AFTER_CONTRACT)).toEqual([
+            { queues: ["cutover_bus_events"] },
+        ])
     }, 90000)
 })

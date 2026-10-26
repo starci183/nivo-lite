@@ -1,7 +1,7 @@
 import { isIP } from "node:net"
 import { ConnectionPool, NVarChar } from "mssql"
 import { createConnection } from "mysql2/promise"
-import { Client } from "pg"
+import { openPostgresSession } from "@modules/platform/database"
 import type { DatabaseSession, DatabaseTarget, DatabaseTlsOptions } from "./database-session.contracts"
 import { toRows } from "./database-values.policy"
 
@@ -19,40 +19,22 @@ const tlsOf = (target: DatabaseTarget): DatabaseTlsOptions => ({
     ...(isIP(target.host) ? {} : { servername: target.host }),
 })
 
-/** Opens a read only PostgreSQL session to the resolved address. */
+/** Opens a read only PostgreSQL session to the resolved address through the platform database client. */
 export const openPostgres = async (target: DatabaseTarget, address: string): Promise<DatabaseSession> => {
-    const client = new Client({
+    const session = await openPostgresSession({
         host: address,
         port: target.port,
         user: target.user,
         password: target.password,
         database: target.database,
         ssl: target.ssl ? tlsOf(target) : false,
-        connectionTimeoutMillis: DATABASE_CONNECT_MS,
-        statement_timeout: DATABASE_QUERY_MS,
-        query_timeout: DATABASE_QUERY_MS,
-        options: "-c default_transaction_read_only=on",
+        connectMs: DATABASE_CONNECT_MS,
+        queryMs: DATABASE_QUERY_MS,
     })
-    client.on("error", () => undefined)
-    await client.connect()
-    try {
-        await client.query("SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY")
-    } catch (error) {
-        await client.end().then(
-            () => undefined,
-            () => undefined,
-        )
-        throw error
-    }
     return {
         engine: "postgres",
-        query: async (sql, params) =>
-            toRows((await client.query(sql, params === undefined ? undefined : [...params])).rows),
-        close: () =>
-            client.end().then(
-                () => undefined,
-                () => undefined,
-            ),
+        query: async (sql, params) => toRows(await session.query(sql, params)),
+        close: () => session.close(),
     }
 }
 

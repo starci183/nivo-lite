@@ -45,3 +45,9 @@ export interface CutoverFunctions {
     /** The legacy acknowledgement, or null once dropped. */
     readonly legacy_ack: string | null
 }
+
+/** The pgmq queue names that remain once the contract migration dropped every job queue. */
+export interface CutoverQueueList {
+    /** The queue names pgmq still holds, sorted. */
+    readonly queues: Array<string>
+}

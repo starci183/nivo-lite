@@ -61,6 +61,14 @@ export const LATE_CUTOVER_SEND = sql`
 export const CONTRACT_CUTOVER_SEND = sql`
     SELECT pgmq.send('content_tick', '{"name":"content_tick","payload":{"proof":"late-contract"}}')
 `
+/** A producer that switched to the outbox still lands its work once the pgmq job queue is gone. */
+export const CONTRACT_ENQUEUE = sql`
+    SELECT public.job_enqueue(NULL, 'content_tick', 'content_tick', '{"proof":"late-contract"}'::jsonb, 'cutover:late-contract')
+`
+/** The pgmq queues that remain once the contract migration dropped every job queue: the event bus only. */
+export const PGMQ_AFTER_CONTRACT = sql`
+    SELECT coalesce(array_agg(queue_name ORDER BY queue_name), '{}'::text[]) AS queues FROM pgmq.list_queues()
+`
 export const LEGACY_CUTOVER_MARKER = sql`
     UPDATE public.job_outbox SET msg_id = 999999, sent_at = now() WHERE payload->>'proof' = 'late'
 `

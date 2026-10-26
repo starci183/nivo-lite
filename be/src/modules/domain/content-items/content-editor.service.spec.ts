@@ -433,9 +433,9 @@ describe("ContentEditorService behavior", () => {
 
 describe("ContentEditorService behavior", () => {
     it.each([
-        ["skip", "idea", "skipped", false],
-        ["reopen", "approved", "draft", true],
-    ] as const)("records the %s transition", async (kind, status, next, reopen) => {
+        ["drop an idea aside", "skip", "idea", "skipped", false],
+        ["bring an approved item back", "reopen", "approved", "draft", true],
+    ] as const)("records the transition that would %s", async (_label, kind, status, next, reopen) => {
         const { service, entityManager } = await build()
         entityManager.query.mockResolvedValueOnce([row({ status })]).mockResolvedValueOnce([])
         await expect(service.transition("user-1", "workspace-1", "item-1", kind)).resolves.toEqual({ id: "item-1" })

@@ -275,6 +275,44 @@ BEGIN
   END LOOP;
 END $$;
 
+-- Every drained job queue leaves pgmq: the broker of a job queue is BullMQ on Redis, so the empty pgmq
+-- table and its late-send redirect go away with it. The event-bus queues are not in this list and stay.
+SELECT pgmq.drop_queue('accounting_desk');
+SELECT pgmq.drop_queue('agents');
+SELECT pgmq.drop_queue('automation');
+SELECT pgmq.drop_queue('bank_credit_received');
+SELECT pgmq.drop_queue('booking_status');
+SELECT pgmq.drop_queue('chat_turn');
+SELECT pgmq.drop_queue('connection_commands');
+SELECT pgmq.drop_queue('connection_health');
+SELECT pgmq.drop_queue('content_tick');
+SELECT pgmq.drop_queue('data_sync');
+SELECT pgmq.drop_queue('decisions');
+SELECT pgmq.drop_queue('hiring_tick');
+SELECT pgmq.drop_queue('inventory_order');
+SELECT pgmq.drop_queue('inventory_replenish');
+SELECT pgmq.drop_queue('invite_command');
+SELECT pgmq.drop_queue('knowledge');
+SELECT pgmq.drop_queue('lead_actions');
+SELECT pgmq.drop_queue('lead_gen');
+SELECT pgmq.drop_queue('marketing_tick');
+SELECT pgmq.drop_queue('meta_inbound');
+SELECT pgmq.drop_queue('n8n');
+SELECT pgmq.drop_queue('payment_order_requested');
+SELECT pgmq.drop_queue('public_api');
+SELECT pgmq.drop_queue('render_request');
+SELECT pgmq.drop_queue('shifts_alerts');
+SELECT pgmq.drop_queue('video_render');
+SELECT pgmq.drop_queue('zalo_authorization');
+SELECT pgmq.drop_queue('zalo_refresh');
+SELECT pgmq.drop_queue('zalo_wizard');
+SELECT pgmq.drop_queue('meta-delivery');
+SELECT pgmq.drop_queue('telegram-delivery');
+SELECT pgmq.drop_queue('zalo-delivery');
+SELECT pgmq.drop_queue('sepay-delivery');
+SELECT pgmq.drop_queue('vietcombank-delivery');
+SELECT pgmq.drop_queue('bank-feed-delivery');
+
 -- The cutover has drained live pgmq job tables before this contract step; event-bus pgmq functions stay.
 DROP FUNCTION public.job_read(text, integer, integer, integer);
 DROP FUNCTION public.job_touch(text, bigint, integer);

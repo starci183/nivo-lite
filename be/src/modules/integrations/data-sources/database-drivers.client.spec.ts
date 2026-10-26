@@ -1,11 +1,12 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import type { MockOf } from "@starci/jest-preset"
 import mssql from "mssql"
 import type { ConnectionPool, IRecordSet, IResult, Request } from "mssql"
 import mysql from "mysql2/promise"
 import type { Connection, RowDataPacket } from "mysql2/promise"
-import pg from "pg"
-import type { Client, QueryResult } from "pg"
+import * as platformDatabase from "@modules/platform/database"
+import type { PostgresSession } from "@modules/platform/database"
 import type { DatabaseTarget } from "./database-session.contracts"
 import { DATABASE_CONNECT_MS, DATABASE_QUERY_MS, openMssql, openMysql, openPostgres } from "./database-drivers.client"
 
@@ -34,13 +35,10 @@ const buildSubject = async () => {
 
 const registerDatabaseDrivers = () => {
     beforeEach(() => {
-        Object.assign(mockPg, new DriverControl())
         Object.assign(mockMysql, new DriverControl())
         Object.assign(mockMssql, new DriverControl())
-        mockPgClients.length = 0
         mockMysqlClients.length = 0
         mockMssqlPools.length = 0
-        pgSpy.mockImplementation(pgClientOf)
         mysqlSpy.mockImplementation(mysqlConnectionOf)
         mssqlSpy.mockImplementation(mssqlPoolOf)
     })
@@ -50,60 +48,48 @@ const registerDatabaseDrivers = () => {
     })
 
     describe("openPostgres", () => {
-        it("connects read only, with the host name as the TLS server name", async () => {
+        it("opens the platform session with the resolved target and answers its rows", async () => {
             const subject = await buildSubject()
+            const session = postgresSessionOf()
+            const open = jest.spyOn(platformDatabase, "openPostgresSession").mockResolvedValue(session)
 
-            const session = await subject.openPostgres(target(), "203.0.113.5")
-            const client = mockPgClients[0]
+            const opened = await subject.openPostgres(target(), "203.0.113.5")
 
-            expect(client?.config).toMatchObject({
+            expect(open).toHaveBeenCalledWith({
                 host: "203.0.113.5",
                 port: 5432,
                 user: "nivo",
                 password: "secret",
                 database: "shop",
-                connectionTimeoutMillis: DATABASE_CONNECT_MS,
-                statement_timeout: DATABASE_QUERY_MS,
-                query_timeout: DATABASE_QUERY_MS,
-                options: "-c default_transaction_read_only=on",
                 ssl: { rejectUnauthorized: false, servername: "db.example" },
+                connectMs: DATABASE_CONNECT_MS,
+                queryMs: DATABASE_QUERY_MS,
             })
-            client?.listeners.get("error")?.()
-            await expect(session.query("select 1", ["a"])).resolves.toEqual([{ id: "1" }])
-            await expect(session.query("select 2")).resolves.toEqual([{ id: "1" }])
-            expect(client?.queries[1]).toEqual({ sql: "select 1", params: ["a"] })
-            expect(client?.queries[2]).toEqual({ sql: "select 2", params: undefined })
-            await session.close()
+            await expect(opened.query("select 1", ["a"])).resolves.toEqual([{ id: "1" }])
+            await expect(opened.query("select 2")).resolves.toEqual([{ id: "1" }])
+            expect(session.query).toHaveBeenNthCalledWith(1, "select 1", ["a"])
+            expect(session.query).toHaveBeenNthCalledWith(2, "select 2", undefined)
+            await opened.close()
+            expect(session.close).toHaveBeenCalledTimes(1)
         })
 
-        it("skips the server name for an address and for a clear-text connection", async () => {
+        it("sends no server name for an address and no TLS options for a clear-text target", async () => {
             const subject = await buildSubject()
+            const open = jest.spyOn(platformDatabase, "openPostgresSession").mockResolvedValue(postgresSessionOf())
 
             await subject.openPostgres(target({ host: "203.0.113.5", ssl: true }), "203.0.113.5")
             await subject.openPostgres(target({ ssl: false }), "203.0.113.5")
 
-            expect(mockPgClients[0]?.config).toHaveProperty("ssl", { rejectUnauthorized: false })
-            expect(mockPgClients[1]?.config).toHaveProperty("ssl", false)
+            expect(open).toHaveBeenNthCalledWith(1, expect.objectContaining({ ssl: { rejectUnauthorized: false } }))
+            expect(open).toHaveBeenNthCalledWith(2, expect.objectContaining({ ssl: false }))
         })
 
-        it("closes the connection when the read-only setting is refused, even if closing fails", async () => {
+        it("propagates a session open refusal", async () => {
             const subject = await buildSubject()
-
             const refused = new Error("readonly")
-            mockPg.setError = refused
+            jest.spyOn(platformDatabase, "openPostgresSession").mockRejectedValue(refused)
+
             await expect(subject.openPostgres(target(), "203.0.113.5")).rejects.toBe(refused)
-
-            mockPg.endError = new Error("end")
-            await expect(subject.openPostgres(target(), "203.0.113.5")).rejects.toBe(refused)
-        })
-
-        it("swallows a failure while closing a live session", async () => {
-            const subject = await buildSubject()
-
-            const session = await subject.openPostgres(target(), "203.0.113.5")
-            mockPg.endError = new Error("end")
-
-            await expect(session.close()).resolves.toBeUndefined()
         })
     })
 }
@@ -231,15 +217,8 @@ class DriverControl {
 
 const ROW = { id: "1" }
 
-const mockPg = new DriverControl()
 const mockMysql = new DriverControl()
 const mockMssql = new DriverControl()
-
-interface PgOpened {
-    readonly config: unknown
-    readonly queries: Array<QueryCall>
-    readonly listeners: Map<string, (...args: Array<never>) => void>
-}
 
 interface MysqlOpened {
     readonly config: unknown
@@ -256,36 +235,15 @@ interface MssqlOpened {
     closed: boolean
 }
 
-const mockPgClients: Array<PgOpened> = []
 const mockMysqlClients: Array<MysqlOpened> = []
 const mockMssqlPools: Array<MssqlOpened> = []
 
-const pgResult = (): QueryResult => ({ rows: [{ ...ROW }], command: "SELECT", rowCount: 1, oid: 0, fields: [] })
-
-/** A pg client over the control of the running test. */
-const pgClientOf = (config?: unknown): Client => {
-    const control = mockPg
-    const opened: PgOpened = { config, queries: [], listeners: new Map() }
-    mockPgClients.push(opened)
-    const client = mock<Client>()
-    client.on.mockImplementation((event, listener) => {
-        opened.listeners.set(event, listener)
-        return client
-    })
-    jest.mocked<() => Promise<Client>>(client.connect).mockImplementation(() =>
-        control.connectError === undefined ? Promise.resolve(client) : Promise.reject(control.connectError),
-    )
-    jest.mocked<(sql: string, params?: Array<unknown>) => Promise<QueryResult>>(client.query).mockImplementation(
-        (sql, params) => {
-            opened.queries.push({ sql, params })
-            if (sql.startsWith("SET SESSION") && control.setError !== undefined) return Promise.reject(control.setError)
-            return Promise.resolve(pgResult())
-        },
-    )
-    jest.mocked<() => Promise<void>>(client.end).mockImplementation(() =>
-        control.endError === undefined ? Promise.resolve() : Promise.reject(control.endError),
-    )
-    return client
+/** A platform postgres session over the control of the running test. */
+const postgresSessionOf = (): MockOf<PostgresSession> => {
+    const session = mock<PostgresSession>()
+    session.query.mockResolvedValue([{ ...ROW }])
+    session.close.mockResolvedValue(undefined)
+    return session
 }
 
 /** A mysql connection over the control of the running test. */
@@ -363,7 +321,6 @@ const mssqlPoolOf = (config: unknown): ConnectionPool => {
     return pool
 }
 
-const pgSpy = jest.spyOn(pg, "Client")
 const mysqlSpy = jest.spyOn(mysql, "createConnection")
 const mssqlSpy = jest.spyOn(mssql, "ConnectionPool")
 
