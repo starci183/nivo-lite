@@ -91,7 +91,6 @@ const TaskFields = (props: AgentProfileHeadBaseProps) => {
             {view.hasTask ? (
                 <>
                     <NumberField
-                        variant="secondary"
                         label={view.amountLabel}
                         minValue={0}
                         value={view.amount}
@@ -99,7 +98,6 @@ const TaskFields = (props: AgentProfileHeadBaseProps) => {
                         onValueChange={props.on.amount}
                     />
                     <NumberField
-                        variant="secondary"
                         label={view.valueLabel}
                         minValue={0}
                         step={1_000}
@@ -143,7 +141,7 @@ export const AgentProfileHeadBase = (props: AgentProfileHeadBaseProps) => {
                 </div>
                 <div className={ACTION_CLASS}>
                     <Button
-                        variant="primary"
+                        intent="alternative"
                         isSkeleton={view.isLoading}
                         isDisabled={!view.canAssign}
                         onPress={props.on.toggle}
@@ -174,7 +172,7 @@ export const AgentProfileHeadBase = (props: AgentProfileHeadBaseProps) => {
                                 {view.composer.hint}
                             </Text>
                             <Button
-                                variant="primary"
+                                intent="commit"
                                 isPending={view.composer.isPending}
                                 isDisabled={!view.composer.canSend}
                                 onPress={props.on.send}
