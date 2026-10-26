@@ -19,6 +19,7 @@ const query1: TypedDocumentNode<QueryChatMarkerStateResponse, InputVariables<Que
                 seenByCount
                 seenBy {
                     avatarSeed
+                    avatarUrl
                     id
                     name
                 }

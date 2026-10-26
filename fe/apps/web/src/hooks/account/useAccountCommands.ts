@@ -2,19 +2,17 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { mutate } from "swr"
 import {
-    QUERY_MY_ACCOUNT_SWR_KEY,
-    QUERY_MY_WORKSPACES_SWR_KEY,
     useMutateRevokeSessionSwr,
     useMutateUpdateProfileSwr,
+    useQueryMyAccountSwr,
+    useQueryMyWorkspacesSwr,
 } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { matchesSwrKey } from "@/modules/utils"
 
 /**
  * The account writes that go through the back end, each toasted (the failure with the server-localized message):
- * `saveProfile` saves the display name (the account and the workspaces are revalidated), `revokeSession` signs one other device
+ * `saveProfile` saves the display name (the viewer's account and workspaces are revalidated), `revokeSession` signs one other device
  * out (the device list is revalidated). Each answers whether it worked.
  */
 export const useAccountCommands = () => {
@@ -22,17 +20,16 @@ export const useAccountCommands = () => {
     const runGraphQL = useGraphQLWithToast()
     const profile = useMutateUpdateProfileSwr()
     const session = useMutateRevokeSessionSwr()
+    const { mutate: refreshAccount } = useQueryMyAccountSwr()
+    const { mutate: refreshWorkspaces } = useQueryMyWorkspacesSwr()
     const saveProfile = useCallback(
         async (name: string): Promise<boolean> => {
             const saved = await runGraphQL(() => profile.trigger({ name }), { successMessage: t("profileSaved") })
             if (saved === undefined) return false
-            await Promise.all([
-                mutate(matchesSwrKey(QUERY_MY_ACCOUNT_SWR_KEY)),
-                mutate(matchesSwrKey(QUERY_MY_WORKSPACES_SWR_KEY)),
-            ])
+            await Promise.all([refreshAccount(), refreshWorkspaces()])
             return true
         },
-        [runGraphQL, profile, t],
+        [runGraphQL, profile, refreshAccount, refreshWorkspaces, t],
     )
     const revokeSession = useCallback(
         async (sessionId: string): Promise<boolean> => {
@@ -40,10 +37,10 @@ export const useAccountCommands = () => {
                 successMessage: t("sessionRevoked"),
             })
             if (revoked === undefined) return false
-            await mutate(matchesSwrKey(QUERY_MY_ACCOUNT_SWR_KEY))
+            await refreshAccount()
             return true
         },
-        [runGraphQL, session, t],
+        [runGraphQL, session, refreshAccount, t],
     )
     return { saveProfile, isSaving: profile.isMutating, revokeSession, isRevoking: session.isMutating }
 }

@@ -105,7 +105,14 @@ describe("ChatMarkersService state", () => {
         const lastOwnMessage = {
             id: "message",
             status: "seen",
-            seenBy: [{ id: "reader", name: "Reader", avatarSeed: "reader" }],
+            seenBy: [
+                {
+                    id: "reader",
+                    name: "Reader",
+                    avatarSeed: "reader",
+                    avatarUrl: "https://cdn.example.test/reader.png",
+                },
+            ],
             seenByCount: 4,
         }
         const em = mockEntityManager({

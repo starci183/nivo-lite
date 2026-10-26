@@ -3,6 +3,7 @@ import { ChatMarkersService } from "@modules/domain/chat-markers"
 import type { ChatTarget } from "@modules/domain/chat-markers"
 import { TeamChatService } from "@modules/domain/messages"
 import { OfficeRoomsService } from "@modules/domain/office-rooms"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { eachInOrder } from "@modules/platform/primitives"
 import {
     chatMarkersIdentity,
@@ -24,6 +25,7 @@ import {
     UPDATE_CHAT_MARKER_STATE,
 } from "../../fixtures/persistence/chat-markers.sql"
 import { CLEAN_USERS } from "../../fixtures/persistence/office-chain.sql"
+import { WRITE_UPLOADED_AVATAR } from "../../fixtures/persistence/profile-avatars.sql"
 import { CLEAN_WORKSPACE } from "../../fixtures/persistence/proof.sql"
 import { withBackendRole } from "../../world/backend-role-proof.service"
 import { ChatMarkersProofModule } from "../../world/chat-markers-proof.module"
@@ -267,14 +269,16 @@ it.each([OFFICE, SALES])(
     },
 )
 
-it("bounds reader avatars at three while counting all active readers and using their current workspace names", async () => {
+it("bounds reader avatars at three while using current names and uploaded pictures in receipts and the member directory", async () => {
     const identity = await seed()
     const id = world.id()
+    const avatarUrl = "https://cdn.example.test/reader.png"
     await persistOfficeMarkerLine(world.db.primary, identity, "sales", ownLine(identity, id))
     await eachInOrder(identity.readerIds, async (userId) => {
         await world.db.primary.query(INSERT_LEGACY_ROOM_READ, [identity.workspaceId, userId, "sales", FIRST])
     })
     await world.db.primary.query(RENAME_CHAT_READER, [identity.workspaceId, identity.readerIds[0], "Renamed reader"])
+    await world.db.primary.query(WRITE_UPLOADED_AVATAR, [identity.readerIds[0], avatarUrl])
 
     await expect(service().state(identity.ownerId, identity.workspaceId, SALES)).resolves.toEqual({
         muted: false,
@@ -282,13 +286,20 @@ it("bounds reader avatars at three while counting all active readers and using t
             id,
             status: "seen",
             seenBy: [
-                { id: identity.readerIds[0], name: "Renamed reader", avatarSeed: identity.readerIds[0] },
-                { id: identity.readerIds[1], name: "Reader 2", avatarSeed: identity.readerIds[1] },
-                { id: identity.readerIds[2], name: "Reader 3", avatarSeed: identity.readerIds[2] },
+                { id: identity.readerIds[0], name: "Renamed reader", avatarSeed: identity.readerIds[0], avatarUrl },
+                { id: identity.readerIds[1], name: "Reader 2", avatarSeed: identity.readerIds[1], avatarUrl: null },
+                { id: identity.readerIds[2], name: "Reader 3", avatarSeed: identity.readerIds[2], avatarUrl: null },
             ],
             seenByCount: 4,
         },
     })
+    await expect(
+        world.resolve(WorkspaceMembersService).list(identity.readerIds[1], identity.workspaceId),
+    ).resolves.toEqual(
+        expect.arrayContaining([
+            expect.objectContaining({ userId: identity.readerIds[0], avatarUrl, email: "", lastSignInAt: null }),
+        ]),
+    )
 })
 it.each([0, 1] as const)(
     "uses message cursors for test/customer conversation %p without future acknowledgement or regression",

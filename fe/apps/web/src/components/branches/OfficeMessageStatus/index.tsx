@@ -19,7 +19,7 @@ const ICONS: Readonly<Record<OfficeMessageStatusKind, IconName>> = {
     seen: "messageSeen",
 }
 
-/** Under my last message: sent (check), delivered (double check), seen (accent double check and the readers' initials). */
+/** Under my last message: sent, delivered, or seen with the readers' pictures and generated-avatar fallbacks. */
 export const OfficeMessageStatus = (props: OfficeMessageStatusProps) => {
     const { status, text } = props
     return (
@@ -37,7 +37,12 @@ export const OfficeMessageStatus = (props: OfficeMessageStatusProps) => {
                     label={status.label}
                     size="sm"
                     max={READERS_SHOWN}
-                    items={status.readers.map((reader) => ({ id: reader.id, name: reader.name, seed: reader.id }))}
+                    items={status.readers.map((reader) => ({
+                        id: reader.id,
+                        name: reader.name,
+                        seed: reader.id,
+                        ...(reader.avatarUrl === null ? {} : { src: reader.avatarUrl }),
+                    }))}
                     overflowLabel={(n) => text("readersOverflow", { n })}
                 />
             )}

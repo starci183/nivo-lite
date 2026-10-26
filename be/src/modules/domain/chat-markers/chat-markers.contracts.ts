@@ -14,6 +14,8 @@ export interface ChatSeenMember {
     readonly name: string
     /** Stable initials-avatar seed: the account id. */
     readonly avatarSeed: string
+    /** The uploaded profile picture, else the provider picture; null draws the generated avatar. */
+    readonly avatarUrl: string | null
 }
 
 /** The persisted state beneath the caller's newest authored message in this target. */

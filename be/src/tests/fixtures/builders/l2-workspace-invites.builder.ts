@@ -37,6 +37,7 @@ export const actorOf = builder<WorkspaceMember>({
 /** Shared L2 service proof fixture. */
 export const listingOf = builder<MemberListing>({
     ...actorOf(),
+    avatarUrl: null,
     email: "chu@example.test",
     lastSignInAt: null,
 })

@@ -14,7 +14,7 @@ export type OfficeAvatarView =
           /** The picture the owner gave the agent, or null. */
           readonly src: string | null
       }
-    | { readonly kind: "person"; readonly name: string }
+    | { readonly kind: "person"; readonly name: string; readonly src?: string | null }
 
 /** One piece of a message body: plain text or an @mention. */
 export interface OfficeBodyPart {
@@ -62,6 +62,7 @@ export type OfficeMessageStatusKind = "sent" | "delivered" | "seen"
 export interface OfficeSeenReaderView {
     readonly id: string
     readonly name: string
+    readonly avatarUrl: string | null
 }
 
 /** The status under my last line: its words and, once seen, who read it. */

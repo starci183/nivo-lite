@@ -21,6 +21,8 @@ export interface WorkspaceMember {
 
 /** A member as the team page lists them. */
 export interface MemberListing extends WorkspaceMember {
+    /** The profile picture visible to workspace members, or null for the generated avatar. */
+    readonly avatarUrl: string | null
     /** The account email; blank when the viewer is staff. */
     readonly email: string
     /** The last sign-in, ISO 8601; null when unknown or the viewer is staff. */

@@ -12,6 +12,7 @@ type Document = TypedDocumentNode<QueryWorkspaceMembersResponse, Record<string, 
 const query1: Document = gql`
     query WorkspaceMembers {
         workspaceMembers {
+            avatarUrl
             displayName
             email
             lastSignInAt

@@ -7,6 +7,7 @@ const TASK_STATUSES: ReadonlyArray<OfficeTask["status"]> = ["open", "waiting_app
 interface MemberWire {
     readonly userId: string
     readonly displayName: string
+    readonly avatarUrl?: string | null
     readonly role: string
     readonly status: string
     readonly staffId?: string | null
@@ -20,6 +21,7 @@ export const toOfficePeople = (rows: ReadonlyArray<MemberWire>): ReadonlyArray<O
         .map((row) => ({
             userId: row.userId,
             name: row.displayName,
+            avatarUrl: row.avatarUrl ?? null,
             role: ROLES.find((role) => role === row.role) ?? "staff",
             staffId: row.staffId ?? null,
             lastSeen: row.lastSignInAt ?? null,
