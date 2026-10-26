@@ -13,6 +13,13 @@ export const LIST_ROOMS = sql`
                  AND m.created_at > COALESCE(rd.last_read_at, '-infinity'::timestamptz)
                  AND m.author_user_id IS DISTINCT FROM $2
                  AND NOT (m.author_user_id IS NULL AND m.author_kind = 'human' AND m.author_name = $3)))::int AS unread,
+           COALESCE((
+               SELECT array_agg(DISTINCT m.body) FROM public.messages m
+               WHERE m.workspace_id = r.workspace_id AND m.room = r.key
+                 AND m.created_at > COALESCE(rd.last_read_at, '-infinity'::timestamptz)
+                 AND m.author_user_id IS DISTINCT FROM $2
+                 AND NOT (m.author_user_id IS NULL AND m.author_kind = 'human' AND m.author_name = $3)
+                 AND strpos(m.body, '@') > 0), '{}'::text[]) AS unread_mention_bodies,
            last.body AS last_body, last.author_name AS last_author, to_json(last.created_at) #>> '{}' AS last_at,
            COALESCE((SELECT array_agg(rm.agent_id::text ORDER BY rm.created_at) FROM public.office_rooms_members rm
                      WHERE rm.room_id = r.id AND rm.agent_id IS NOT NULL), '{}'::text[]) AS agent_ids,
@@ -49,6 +56,13 @@ export const OFFICE_ROOM_SUMMARY = sql`
                  AND m.created_at > COALESCE((SELECT last_read_at FROM read_marker LIMIT 1), '-infinity'::timestamptz)
                  AND m.author_user_id IS DISTINCT FROM $2
                  AND NOT (m.author_user_id IS NULL AND m.author_kind = 'human' AND m.author_name = $3)))::int AS unread,
+           COALESCE((
+               SELECT array_agg(DISTINCT m.body) FROM public.messages m
+               WHERE m.workspace_id = $1
+                 AND m.created_at > COALESCE((SELECT last_read_at FROM read_marker LIMIT 1), '-infinity'::timestamptz)
+                 AND m.author_user_id IS DISTINCT FROM $2
+                 AND NOT (m.author_user_id IS NULL AND m.author_kind = 'human' AND m.author_name = $3)
+                 AND strpos(m.body, '@') > 0), '{}'::text[]) AS unread_mention_bodies,
            (SELECT body FROM newest LIMIT 1) AS last_body,
            (SELECT author_name FROM newest LIMIT 1) AS last_author,
            (SELECT to_json(created_at) #>> '{}' FROM newest LIMIT 1) AS last_at

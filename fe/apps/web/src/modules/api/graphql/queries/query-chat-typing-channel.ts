@@ -9,6 +9,9 @@ export type QueryChatTypingChannelRequest = WireInput<ChatTypingChannelQueryVari
 
 type QueryChatTypingChannelResponse = ChatTypingChannelQuery
 
+/** The authorized private typing channel the `chatTypingChannel` query answers with. */
+export type QueryChatTypingChannelResult = QueryChatTypingChannelResponse["chatTypingChannel"]
+
 const query1: TypedDocumentNode<QueryChatTypingChannelResponse, InputVariables<QueryChatTypingChannelRequest>> = gql`
     query ChatTypingChannel($input: ChatTypingTargetInput!) {
         chatTypingChannel(input: $input) {

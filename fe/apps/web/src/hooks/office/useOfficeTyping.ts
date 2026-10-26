@@ -16,41 +16,53 @@ interface LastSent {
     readonly at: number
 }
 
+type SignalMap = ReadonlyMap<string, ReadonlyArray<TypingSignal>>
+
+/** The map with one more signal recorded for a room. */
+const withSignalIn = (current: SignalMap, key: string, signal: Parameters<typeof withTypingSignal>[1]): SignalMap =>
+    new Map(current).set(key, withTypingSignal(current.get(key) ?? [], signal))
+
+/** The map without the signals whose deadline has passed. */
+const withoutLapsed = (current: SignalMap): SignalMap =>
+    new Map([...current].map(([key, entries]) => [key, entries.filter((entry) => entry.expiresAt > Date.now())]))
+
 /**
- * Who else is typing in one Hub room (null = the Office room), over the private broadcast channel the back end names, and the
- * command that tells the others this person types. A signal lapses at its own deadline even when the stop never arrives.
+ * Who else is typing in each listed Hub room, over its authorized private broadcast channel, and the command that tells the
+ * others this person types in the open room. A signal lapses at its own deadline even when the stop never arrives.
  */
-export const useOfficeTyping = (room: string | null) => {
+export const useOfficeTyping = (room: string | null, keys: ReadonlyArray<string | null>) => {
     const me = useMember()
-    const channel = useQueryChatTypingChannelSwr(chatTargetOf(room))
+    const channels = useQueryChatTypingChannelSwr(keys.map(chatTargetOf))
     const { trigger } = useMutateSetChatTypingSwr()
-    const [signals, setSignals] = useState<ReadonlyArray<TypingSignal>>([])
+    const [signals, setSignals] = useState<SignalMap>(new Map())
     const lastSent = useRef<LastSent | null>(null)
     const myId = me?.userId ?? null
-    const topic = channel.data?.topic
-    const event = channel.data?.event
-    const isPrivate = channel.data?.private === true
+    const answers = channels.data
 
     useEffect(() => {
-        if (topic === undefined || event === undefined || !isPrivate) return undefined
-        const leave = joinPrivateBroadcast(topic, event, (payload) => {
-            const signal = typingSignalOf(payload)
-            if (signal === null || signal.id === myId) return
-            setSignals((current) => withTypingSignal(current, signal))
+        if (answers === undefined) return undefined
+        const leaves = answers.flatMap(({ request, channel }) => {
+            if (channel?.private !== true) return []
+            const key = request.room ?? ""
+            return [
+                joinPrivateBroadcast(channel.topic, channel.event, (payload) => {
+                    const signal = typingSignalOf(payload)
+                    if (signal === null || signal.id === myId) return
+                    setSignals((current) => withSignalIn(current, key, signal))
+                }),
+            ]
         })
         return () => {
-            leave()
-            setSignals([])
+            leaves.forEach((leave) => leave())
+            setSignals(new Map())
         }
-    }, [topic, event, isPrivate, myId])
+    }, [answers, myId])
 
     useEffect(() => {
-        if (signals.length === 0) return undefined
-        const next = Math.min(...signals.map((entry) => entry.expiresAt))
-        const timer = setTimeout(
-            () => setSignals((current) => current.filter((entry) => entry.expiresAt > Date.now())),
-            Math.max(0, next - Date.now()) + 50,
-        )
+        const active = [...signals.values()].flat()
+        if (active.length === 0) return undefined
+        const next = Math.min(...active.map((entry) => entry.expiresAt))
+        const timer = setTimeout(() => setSignals(withoutLapsed), Math.max(0, next - Date.now()) + 50)
         return () => clearTimeout(timer)
     }, [signals])
 
@@ -66,11 +78,11 @@ export const useOfficeTyping = (room: string | null) => {
                 void trigger({ target: chatTargetOf(room), typing: true }, { throwOnError: false })
             } else if (!isTyping && previous !== null) {
                 lastSent.current = null
-                void trigger({ target: chatTargetOf(room), typing: false }, { throwOnError: false })
+                void trigger({ target: chatTargetOf(previous.room), typing: false }, { throwOnError: false })
             }
         },
         [room, trigger],
     )
 
-    return { names: signals.map((entry) => entry.name), onDraft }
+    return { names: (signals.get(room ?? "") ?? []).map((entry) => entry.name), byRoom: signals, onDraft }
 }

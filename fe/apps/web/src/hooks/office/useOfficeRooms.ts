@@ -10,8 +10,9 @@ import {
 } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { OFFICE_POLL_MS, toOfficeRoom } from "@/modules/office"
-import type { OfficeChannelWire, OfficeConversationUnread, OfficeRoom } from "@/modules/office"
+import type { OfficeChannelWire, OfficeConversationUnread, OfficeMentionViewer, OfficeRoom } from "@/modules/office"
 import { useOfficeMarkers } from "./useOfficeMarkers"
+import { useOfficeTyping } from "./useOfficeTyping"
 
 const LIVE = { refreshInterval: OFFICE_POLL_MS }
 
@@ -22,12 +23,16 @@ const unreadOf = (entries: ReadonlyArray<{ readonly id: string; readonly unread:
  * The Hub rooms and the direct conversations with the caller's unread counts, and the workspace channels the room panel
  * lists. `markRead` records that the person read a room, `markConversationRead` that they read an agent's or a customer's
  * conversation (opening it); the room on screen never shows a badge. Each room also carries the caller's side of it: the mute
- * and whether my last line was read (`markers`), and `isTypingHere` says someone types in the room on screen.
+ * and whether my last line was read (`markers`), and who types in each room.
  */
-export const useOfficeRooms = (selected: string | null, isTypingHere = false) => {
+export const useOfficeRooms = (selected: string | null, viewer: OfficeMentionViewer) => {
     const rooms = useQueryOfficeRoomsSwr(LIVE)
     const unread = useQueryOfficeConversationUnreadSwr(LIVE)
     const { markers, setMute } = useOfficeMarkers((rooms.data ?? []).map((room) => room.key ?? null))
+    const peers = useOfficeTyping(
+        selected,
+        (rooms.data ?? []).map((room) => room.key ?? null),
+    )
     const connections = useQueryConnectionsSwr()
     const markRoom = useMutateMarkOfficeRoomReadSwr()
     const markConversation = useMutateMarkOfficeConversationReadSwr()
@@ -38,7 +43,7 @@ export const useOfficeRooms = (selected: string | null, isTypingHere = false) =>
     const { mutate: mutateUnread } = unread
     const list: ReadonlyArray<OfficeRoom> = (
         rooms.data?.map((row) =>
-            toOfficeRoom(row, markers.get(row.key ?? ""), isTypingHere && (row.key ?? null) === selected),
+            toOfficeRoom(row, markers.get(row.key ?? ""), (peers.byRoom.get(row.key ?? "")?.length ?? 0) > 0, viewer),
         ) ?? []
     ).map((room) => (room.key === selected ? { ...room, unread: 0 } : room))
     const conversationUnread: OfficeConversationUnread = useMemo(
@@ -66,5 +71,14 @@ export const useOfficeRooms = (selected: string | null, isTypingHere = false) =>
         status: connection.status,
         agentIds: connection.agentIds,
     }))
-    return { rooms: list, channels, unread: conversationUnread, markers, markRead, markConversationRead, setMute }
+    return {
+        rooms: list,
+        channels,
+        unread: conversationUnread,
+        markers,
+        markRead,
+        markConversationRead,
+        setMute,
+        peers,
+    }
 }

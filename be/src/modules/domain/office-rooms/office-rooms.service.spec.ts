@@ -36,6 +36,7 @@ const roomOf = builder<RoomRow>({
     name: "Marketing",
     position: 3,
     unread: 1,
+    unread_mention_bodies: ["Please review @linh"],
     last_body: "Content is ready",
     last_author: "AI Marketing",
     last_at: "2026-10-20T02:42:00+00:00",
@@ -93,7 +94,13 @@ const officeOf = (summary: Record<string, unknown>) => ({
 
 describe("OfficeRoomsService.rooms", () => {
     it("answers the Office room first, then the department rooms, read as the caller", async () => {
-        const summary = { unread: 3, last_body: "hi", last_author: "An", last_at: "2026-10-20T02:00:00+00:00" }
+        const summary = {
+            unread: 3,
+            unread_mention_bodies: ["Earlier request for @Mai Linh", "Please review @linh"],
+            last_body: "hi",
+            last_author: "An",
+            last_at: "2026-10-20T02:00:00+00:00",
+        }
         const em = mockEntityManager({
             query: [
                 [OFFICE_ROOM_SUMMARY, [summary]],
@@ -139,7 +146,7 @@ describe("OfficeRoomsService.rooms", () => {
         const { service } = await build(em)
 
         await expect(service.rooms("u-1", "ws-1")).resolves.toEqual([
-            officeOf({ unread: 0, last_body: null, last_author: null, last_at: null }),
+            officeOf({ unread: 0, unread_mention_bodies: [], last_body: null, last_author: null, last_at: null }),
         ])
     })
 })

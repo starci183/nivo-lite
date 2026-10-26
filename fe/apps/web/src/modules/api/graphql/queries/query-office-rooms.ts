@@ -13,6 +13,7 @@ const query1: TypedDocumentNode<QueryOfficeRoomsResponse, Record<string, never>>
             name
             position
             unread
+            unread_mention_bodies
             last_body
             last_author
             last_at

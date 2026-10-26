@@ -11,6 +11,7 @@ export { acceptsCommands, bodyPartsOf, mentionsOf, mergeMessages } from "./offic
 export { chatTargetOf, typingSignalOf, withReceipt, withTypingSignal } from "./office.chat-state"
 export type { ChatMarkerWire, TypingSignal } from "./office.chat-state"
 export { staffHandlesOf } from "./office.handles"
+export type { OfficeMentionViewer } from "./office.conversation-state"
 export { infoViewOf } from "./office.info-view"
 export { officeListTimeOf, officeListViewOf, mentionOptionsOf, taskViewsOf } from "./office.list-view"
 export { approvalCardAnchor, exceptionCardAnchor } from "./office.message-view"

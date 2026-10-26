@@ -28,6 +28,8 @@ export interface ConversationUnreadRow {
 export interface RoomSummaryRow {
     /** Lines the caller has not read, at most 99. */
     unread: number
+    /** Distinct incoming unread bodies containing @, independent of the badge's count cap. */
+    unread_mention_bodies: Array<string>
     /** The newest line's text. */
     last_body: string | null
     /** The newest line's author. */

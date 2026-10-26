@@ -46,6 +46,8 @@ export interface RoomView {
     readonly position: number
     /** Lines the caller has not read, at most 99. */
     readonly unread: number
+    /** Distinct incoming unread bodies containing @, for matching the caller's handle or display name. */
+    readonly unread_mention_bodies: ReadonlyArray<string>
     /** The newest line's text. */
     readonly last_body: string | null
     /** The newest line's author. */
