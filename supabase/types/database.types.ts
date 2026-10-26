@@ -1,4 +1,4 @@
-// migrations-sha256: 3108ee56ce3d1fa194d9321cd8de9ed46cff2dd52e25ef692aa63a7ada1e1b05
+// migrations-sha256: dc35d673006cbabe0b03a35061f52edede074f15b6f48eaf60291a4f04e452b4
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -3459,6 +3459,19 @@ isOneToOne: false
                   }
                   Update: {
                     "created_at"?: string,"id"?: string,"payload"?: NonNullable<Json>,"queue"?: string,"sent_at"?: string | null
+                  }
+                  Relationships: [
+
+                  ]
+                },"realtime_events": {
+                  Row: {
+                    "created_at": string,"event_id": string | null,"payload": NonNullable<Json>,"seq": number,"topic": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"event_id"?: string | null,"payload": NonNullable<Json>,"seq"?: never,"topic": string
+                  }
+                  Update: {
+                    "created_at"?: string,"event_id"?: string | null,"payload"?: NonNullable<Json>,"seq"?: never,"topic"?: string
                   }
                   Relationships: [
 
