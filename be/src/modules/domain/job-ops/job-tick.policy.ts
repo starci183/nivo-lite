@@ -6,6 +6,7 @@ import { CONTENT_TICK_QUEUE } from "@modules/queues/content-tick"
 import { DATA_SYNC_QUEUE } from "@modules/queues/data-sync"
 import { DECISIONS_QUEUE, DecisionsJob } from "@modules/queues/decisions"
 import { MARKETING_TICK_QUEUE } from "@modules/queues/marketing-tick"
+import { REALTIME_RETENTION_QUEUE } from "@modules/queues/realtime-retention"
 import { SHIFTS_QUEUE, SHIFTS_TICK_JOB } from "@modules/queues/shifts"
 import { ZALO_REFRESH_QUEUE } from "@modules/queues/zalo-refresh"
 
@@ -41,6 +42,12 @@ export const JOB_TICKS: Readonly<Record<string, JobTick>> = {
     "data-sync-tick": { queue: DATA_SYNC_QUEUE, job: DATA_SYNC_QUEUE, payload: { tick: true }, minutes: 1 },
     "decisions-drain-work": { queue: DECISIONS_QUEUE, job: DecisionsJob.DrainWork, payload: {}, minutes: 1 },
     "marketing-tick": { queue: MARKETING_TICK_QUEUE, job: MARKETING_TICK_QUEUE, payload: {}, minutes: 15 },
+    "realtime-retention-tick": {
+        queue: REALTIME_RETENTION_QUEUE,
+        job: REALTIME_RETENTION_QUEUE,
+        payload: { tick: true },
+        minutes: 1,
+    },
     "shifts-tick": { queue: SHIFTS_QUEUE, job: SHIFTS_TICK_JOB, payload: { kind: "tick" }, minutes: 1 },
     "zalo-refresh-tick": {
         queue: ZALO_REFRESH_QUEUE,

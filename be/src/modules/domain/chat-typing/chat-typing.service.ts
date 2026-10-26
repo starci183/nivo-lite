@@ -3,9 +3,10 @@ import { ChatMarkersService } from "@modules/domain/chat-markers"
 import type { ChatTarget } from "@modules/domain/chat-markers"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectRealtimePublisher } from "@modules/platform/realtime"
-import type { RealtimePublisher } from "@modules/platform/realtime"
-import type { ChatTypingChannel, ChatTypingSignal } from "./chat-typing.contracts"
+import { InjectRealtimeHub } from "@modules/platform/realtime"
+import type { RealtimeHub } from "@modules/platform/realtime"
+import type { ChatTypingChannel, ChatTypingFrame, ChatTypingSignal } from "./chat-typing.contracts"
+import { chatTypingTopic } from "./chat-typing.policy"
 
 /** Signals are transient UI hints; a lost stop event must disappear quickly. */
 const TYPING_TTL_MS = 5000
@@ -25,7 +26,7 @@ const channelOf = (workspaceId: string, target: ChatTarget): ChatTypingChannel =
 export class ChatTypingService {
     constructor(
         private readonly markers: ChatMarkersService,
-        @InjectRealtimePublisher() private readonly realtime: RealtimePublisher,
+        @InjectRealtimeHub() private readonly hub: RealtimeHub,
         @InjectClock() private readonly clock: Clock,
     ) {}
 
@@ -35,7 +36,7 @@ export class ChatTypingService {
         return channelOf(workspaceId, target)
     }
 
-    /** Broadcasts the admitted member's identity; the client cannot impersonate another account. */
+    /** Publishes the admitted member's identity to the typing topic of every other admitted member; the client cannot impersonate another account. */
     async set(
         principalId: string,
         workspaceId: string,
@@ -43,15 +44,28 @@ export class ChatTypingService {
         typing: boolean,
     ): Promise<ChatTypingSignal> {
         const member = await this.markers.requireTarget(principalId, workspaceId, target)
-        const channel = channelOf(workspaceId, target)
+        const now = this.clock.now()
         const signal: ChatTypingSignal = {
             id: member.userId,
             name: member.displayName,
             avatarSeed: member.userId,
             typing,
-            expiresAt: new Date(this.clock.now().getTime() + (typing ? TYPING_TTL_MS : 0)).toISOString(),
+            expiresAt: new Date(now.getTime() + (typing ? TYPING_TTL_MS : 0)).toISOString(),
         }
-        await this.realtime.publishPrivate({ topic: channel.topic, event: channel.event, payload: { ...signal } })
+        const at = now.toISOString()
+        const frame: ChatTypingFrame = {
+            id: `${member.userId}:${at}`,
+            actorId: member.userId,
+            actorName: member.displayName,
+            state: typing ? "start" : "stop",
+            at,
+        }
+        const recipients = await this.markers.memberIds(principalId, workspaceId, target)
+        await Promise.all(
+            recipients
+                .filter((recipientId) => recipientId !== member.userId)
+                .map((recipientId) => this.hub.publish(chatTypingTopic(recipientId, workspaceId, target), frame)),
+        )
         return signal
     }
 }

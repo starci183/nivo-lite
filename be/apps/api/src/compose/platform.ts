@@ -20,7 +20,8 @@ import { CqrsModule } from "@modules/platform/cqrs"
 import { HttpSecurityModule } from "@modules/platform/http-security"
 import { DatabaseModule, PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QueueModule } from "@modules/platform/queue"
-import { RealtimeModule } from "@modules/platform/realtime"
+import { RetryModule } from "@modules/platform/retry"
+import { REALTIME_ERROR_KINDS, RealtimeModule, withConnection } from "@modules/platform/realtime"
 import { API_SCHEDULERS } from "./schedulers"
 import { JobsModule } from "@modules/platform/jobs"
 import { JobOpsModule } from "@modules/domain/job-ops"
@@ -37,12 +38,22 @@ export const platformModules = (options: ApiOptions): Array<DynamicModule> => [
     }),
     ErrorsModule.register({
         isGlobal: true,
-        kinds: [...API_ERROR_KINDS_1, ...API_ERROR_KINDS_2, ...API_ERROR_KINDS_3, ...API_ERROR_KINDS_4],
+        kinds: [
+            ...API_ERROR_KINDS_1,
+            ...API_ERROR_KINDS_2,
+            ...API_ERROR_KINDS_3,
+            ...API_ERROR_KINDS_4,
+            REALTIME_ERROR_KINDS,
+        ],
     }),
     CqrsModule.register({ isGlobal: true }),
     HttpSecurityModule.register({ isGlobal: true, ...options.httpSecurity }),
     DatabaseModule.register({ isGlobal: true, connections: [options.database], typeParsers: appPgTypes }),
-    RealtimeModule.register({ isGlobal: true }),
+    RetryModule.register({ isGlobal: true }),
+    RealtimeModule.register({
+        isGlobal: true,
+        ...withConnection(options.realtime, PRIMARY_ENTITY_MANAGER, options.database.url),
+    }),
     AppErrorsModule.register({ isGlobal: true }),
     QueueModule.register({ isGlobal: true, schedulers: API_SCHEDULERS, ...options.queue }),
     JobsModule.register({ isGlobal: true, connection: PRIMARY_ENTITY_MANAGER, ...options.jobs }),

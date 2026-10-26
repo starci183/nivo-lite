@@ -11,6 +11,7 @@ import {
     CHAT_MARKER_STATE,
     CHAT_MESSAGE_CURSOR,
     CHAT_TARGET_MEMBER,
+    CHAT_TARGET_MEMBER_IDS,
     MARK_CHAT_DELIVERED,
     MARK_CHAT_READ,
     SET_CHAT_MUTED,
@@ -263,5 +264,31 @@ describe("ChatMarkersService mute", () => {
             target.conversationId,
             muted,
         ])
+    })
+})
+
+describe("ChatMarkersService memberIds", () => {
+    it("lists the admitted accounts only after the caller itself is admitted", async () => {
+        const em = mockEntityManager({
+            query: [
+                [CHAT_TARGET_MEMBER, [{ allowed: true }]],
+                [CHAT_TARGET_MEMBER_IDS, [{ user_id: "a" }, { user_id: "b" }]],
+            ],
+        })
+        const { service } = await build(em)
+
+        await expect(service.memberIds("principal", "workspace", SALES)).resolves.toEqual(["a", "b"])
+
+        expect(em.query).toHaveBeenCalledWith(CHAT_TARGET_MEMBER_IDS, ["workspace", "sales", null])
+    })
+
+    it("refuses a caller the target does not admit, without listing anyone", async () => {
+        const em = mockEntityManager({ query: [CHAT_TARGET_MEMBER, [{ allowed: false }]] })
+        const { service } = await build(em)
+
+        await expect(service.memberIds("principal", "workspace", OFFICE)).rejects.toMatchObject({
+            code: "CHAT_MARKERS_TARGET_NOT_FOUND",
+        })
+        expect(em.query).not.toHaveBeenCalledWith(CHAT_TARGET_MEMBER_IDS, expect.anything())
     })
 })

@@ -3,8 +3,8 @@ import { builder, FakeClock, mock } from "@starci/jest-preset"
 import { ChatMarkersService } from "@modules/domain/chat-markers"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
-import { REALTIME_PUBLISHER } from "@modules/platform/realtime"
-import type { RealtimePublisher } from "@modules/platform/realtime"
+import { REALTIME_HUB } from "@modules/platform/realtime"
+import type { RealtimeHub } from "@modules/platform/realtime"
 import { ChatTypingService } from "./chat-typing.service"
 
 const memberOf = builder<WorkspaceMember>({
@@ -20,15 +20,18 @@ const OFFICE = { room: null, conversationId: null }
 const NOW = "2026-10-25T03:00:00.000Z"
 
 const build = async () => {
-    const markers = mock<ChatMarkersService>({ requireTarget: jest.fn().mockResolvedValue(memberOf()) })
-    const realtime = mock<RealtimePublisher>({ publishPrivate: jest.fn().mockResolvedValue(undefined) })
+    const markers = mock<ChatMarkersService>({
+        requireTarget: jest.fn().mockResolvedValue(memberOf()),
+        memberIds: jest.fn().mockResolvedValue(["user-1", "user-2", "user-3"]),
+    })
+    const realtime = mock<RealtimeHub>({ publish: jest.fn().mockResolvedValue(undefined) })
     const clock = new FakeClock(NOW)
     const now = jest.spyOn(clock, "now")
     const container = await Test.createTestingModule({
         providers: [
             ChatTypingService,
             { provide: ChatMarkersService, useValue: markers },
-            { provide: REALTIME_PUBLISHER, useValue: realtime },
+            { provide: REALTIME_HUB, useValue: realtime },
             { provide: CLOCK, useValue: clock },
         ],
     }).compile()
@@ -46,7 +49,7 @@ describe("ChatTypingService.channel", () => {
             ttlMs: 5000,
         })
         expect(markers.requireTarget).toHaveBeenCalledWith("principal", "WORKSPACE-1", OFFICE)
-        expect(realtime.publishPrivate).not.toHaveBeenCalled()
+        expect(realtime.publish).not.toHaveBeenCalled()
     })
 
     it("uses distinct department and conversation topics and canonicalizes UUID case", async () => {
@@ -76,7 +79,7 @@ describe("ChatTypingService.channel", () => {
         markers.requireTarget.mockRejectedValue(refusal)
 
         await expect(service.channel("principal", "workspace-1", OFFICE)).rejects.toBe(refusal)
-        expect(realtime.publishPrivate).not.toHaveBeenCalled()
+        expect(realtime.publish).not.toHaveBeenCalled()
     })
 })
 
@@ -93,11 +96,17 @@ describe("ChatTypingService.set", () => {
 
         await expect(service.set("principal", "workspace-1", OFFICE, true)).resolves.toEqual(signal)
         expect(markers.requireTarget).toHaveBeenCalledWith("principal", "workspace-1", OFFICE)
-        expect(realtime.publishPrivate).toHaveBeenCalledWith({
-            topic: "chat-typing:workspace-1:room:office",
-            event: "typing",
-            payload: signal,
-        })
+        const frame = { id: `user-1:${NOW}`, actorId: "user-1", actorName: "Mai Linh", state: "start", at: NOW }
+        expect(markers.memberIds).toHaveBeenCalledWith("principal", "workspace-1", OFFICE)
+        expect(realtime.publish).toHaveBeenCalledTimes(2)
+        expect(realtime.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ name: "chat-typing:user-2:workspace-1:room:office" }),
+            frame,
+        )
+        expect(realtime.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ name: "chat-typing:user-3:workspace-1:room:office" }),
+            frame,
+        )
     })
 
     it("expires a stop signal immediately and targets only its conversation", async () => {
@@ -113,11 +122,10 @@ describe("ChatTypingService.set", () => {
         await expect(
             service.set("principal", "workspace-1", { room: null, conversationId: "c-1" }, false),
         ).resolves.toEqual(signal)
-        expect(realtime.publishPrivate).toHaveBeenCalledWith({
-            topic: "chat-typing:workspace-1:conversation:c-1",
-            event: "typing",
-            payload: signal,
-        })
+        expect(realtime.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ name: "chat-typing:user-2:workspace-1:conversation:c-1" }),
+            { id: `user-1:${NOW}`, actorId: "user-1", actorName: "Mai Linh", state: "stop", at: NOW },
+        )
     })
 
     it("does not publish when membership or target validation fails", async () => {
@@ -126,14 +134,14 @@ describe("ChatTypingService.set", () => {
         markers.requireTarget.mockRejectedValue(refusal)
 
         await expect(service.set("principal", "workspace-1", OFFICE, true)).rejects.toBe(refusal)
-        expect(realtime.publishPrivate).not.toHaveBeenCalled()
+        expect(realtime.publish).not.toHaveBeenCalled()
         expect(now).not.toHaveBeenCalled()
     })
 
     it("propagates a failed publish instead of acknowledging an unsent signal", async () => {
         const { service, realtime } = await build()
         const failure = new Error("realtime unavailable")
-        realtime.publishPrivate.mockRejectedValue(failure)
+        realtime.publish.mockRejectedValue(failure)
 
         await expect(service.set("principal", "workspace-1", OFFICE, true)).rejects.toBe(failure)
     })

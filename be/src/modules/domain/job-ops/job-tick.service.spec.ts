@@ -18,6 +18,7 @@ const EXPECTED = [
     ["data-sync-tick", "data_sync", "data_sync", { tick: true }, 1],
     ["decisions-drain-work", "decisions", "decisions.drain-work", {}, 1],
     ["marketing-tick", "marketing_tick", "marketing_tick", {}, 15],
+    ["realtime-retention-tick", "realtime_retention", "realtime_retention", { tick: true }, 1],
     ["shifts-tick", "shifts_alerts", "shifts.tick", { kind: "tick" }, 1],
     ["zalo-refresh-tick", "zalo_refresh", "zalo_refresh", { withinMs: 25_200_000 }, 360],
 ] as const

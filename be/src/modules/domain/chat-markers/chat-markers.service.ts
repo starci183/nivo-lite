@@ -7,11 +7,12 @@ import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { ChatMarkerState, ChatTarget } from "./chat-markers.contracts"
 import { ChatMarkersError, ChatMarkersErrorCode } from "./errors/chat-markers.error"
-import type { ChatCursorRow, ChatStateRow, ChatTargetRow } from "./persistence/chat-markers.rows"
+import type { ChatCursorRow, ChatStateRow, ChatTargetMemberRow, ChatTargetRow } from "./persistence/chat-markers.rows"
 import {
     CHAT_MARKER_STATE,
     CHAT_MESSAGE_CURSOR,
     CHAT_TARGET_MEMBER,
+    CHAT_TARGET_MEMBER_IDS,
     MARK_CHAT_DELIVERED,
     MARK_CHAT_READ,
     SET_CHAT_MUTED,
@@ -39,6 +40,17 @@ export class ChatMarkersService {
         ])
         if (row?.allowed !== true) throw new ChatMarkersError({ code: ChatMarkersErrorCode.TargetNotFound })
         return member
+    }
+
+    /** The ids of every active account admitted to the target, after proving the caller is one of them. */
+    async memberIds(principalId: string, workspaceId: string, target: ChatTarget): Promise<Array<string>> {
+        await this.requireTarget(principalId, workspaceId, target)
+        const rows = await this.entityManager.query<Array<ChatTargetMemberRow>>(CHAT_TARGET_MEMBER_IDS, [
+            workspaceId,
+            target.room,
+            target.conversationId,
+        ])
+        return rows.map((row) => row.user_id)
     }
 
     /** The preference and receipt beneath this account's newest authored message. */
