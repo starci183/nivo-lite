@@ -1,3 +1,5 @@
+"use client"
+
 import { useSWRConfig } from "swr"
 import useSWRSubscription from "swr/subscription"
 import { useViewerKeyId, useWorkspaceKey } from "@/hooks/workspaceKey"

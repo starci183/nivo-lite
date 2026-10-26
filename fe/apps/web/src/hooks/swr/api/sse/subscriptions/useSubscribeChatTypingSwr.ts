@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect, useRef } from "react"
 import { useSWRConfig } from "swr"
 import useSWRSubscription from "swr/subscription"

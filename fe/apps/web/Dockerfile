@@ -14,7 +14,10 @@ FROM node:22.14.0-alpine3.21 AS manifests
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY fe fe
-RUN find fe -type f ! -name package.json -delete
+# The install stages hold manifests only, so a workspace `prepare` (it builds dist from sources) has nothing to compile; npm runs it for workspace
+# links even under --ignore-scripts. Drop it from these throwaway manifest copies; the build stages copy the sources and manifests back.
+RUN find fe -type f ! -name package.json -delete \
+ && find fe -name package.json -exec node -e "const fs=require('fs');const f=process.argv[1];const p=JSON.parse(fs.readFileSync(f,'utf8'));if(p.scripts&&p.scripts.prepare){delete p.scripts.prepare;fs.writeFileSync(f,JSON.stringify(p,null,2))}" {} \;
 
 FROM node:22.14.0-alpine3.21 AS build
 WORKDIR /app
