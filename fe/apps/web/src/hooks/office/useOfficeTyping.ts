@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useMember } from "@/hooks/member"
-import { useMutateSetChatTypingSwr, useQueryChatTypingChannelSwr } from "@/hooks/swr"
-import { joinPrivateBroadcast } from "@/modules/auth"
+import { useMutateSetChatTypingSwr, useSubscribeChatTypingSwr } from "@/hooks/swr"
 import { chatTargetOf, typingSignalOf, withTypingSignal } from "@/modules/office"
 import type { TypingSignal } from "@/modules/office"
 
@@ -17,32 +16,26 @@ interface LastSent {
 }
 
 /**
- * Who else is typing in one Hub room (null = the Office room), over the private broadcast channel the back end names, and the
+ * Who else is typing in one Hub room (null = the Office room), over the back end typing event stream, and the
  * command that tells the others this person types. A signal lapses at its own deadline even when the stop never arrives.
  */
 export const useOfficeTyping = (room: string | null) => {
     const me = useMember()
-    const channel = useQueryChatTypingChannelSwr(chatTargetOf(room))
     const { trigger } = useMutateSetChatTypingSwr()
     const [signals, setSignals] = useState<ReadonlyArray<TypingSignal>>([])
     const lastSent = useRef<LastSent | null>(null)
     const myId = me?.userId ?? null
-    const topic = channel.data?.topic
-    const event = channel.data?.event
-    const isPrivate = channel.data?.private === true
-
-    useEffect(() => {
-        if (topic === undefined || event === undefined || !isPrivate) return undefined
-        const leave = joinPrivateBroadcast(topic, event, (payload) => {
+    const onPush = useCallback(
+        (payload: unknown) => {
             const signal = typingSignalOf(payload)
             if (signal === null || signal.id === myId) return
             setSignals((current) => withTypingSignal(current, signal))
-        })
-        return () => {
-            leave()
-            setSignals([])
-        }
-    }, [topic, event, isPrivate, myId])
+        },
+        [myId],
+    )
+    useSubscribeChatTypingSwr(chatTargetOf(room), onPush)
+
+    useEffect(() => () => setSignals([]), [room, myId])
 
     useEffect(() => {
         if (signals.length === 0) return undefined
