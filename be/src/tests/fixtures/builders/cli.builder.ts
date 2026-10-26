@@ -70,7 +70,13 @@ const resourceDoubles = (): ReadonlyMap<string, unknown> => {
     return new Map<string, unknown>([
         [
             "primaryDataSource",
-            { manager, isInitialized: true, query: refuseWiringOperation, createQueryRunner: refuseWiringOperation },
+            {
+                manager,
+                isInitialized: true,
+                subscribers: [],
+                query: refuseWiringOperation,
+                createQueryRunner: refuseWiringOperation,
+            },
         ],
         ["platform.database.primary-entity-manager", manager],
         ["platform.http.client", { request: refuseWiringOperation }],

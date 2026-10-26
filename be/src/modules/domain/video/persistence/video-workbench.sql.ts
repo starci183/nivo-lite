@@ -26,4 +26,4 @@ count(*) FILTER (WHERE status='approved')::int AS approved,
 count(*) FILTER (WHERE status='published' AND published_at >= now()-interval '30 days')::int AS "published30",
 (SELECT COALESCE(sum(ceil(cost_usd / public.credit_usd_value())),0)::int FROM public.ai_usage_events WHERE workspace_id=$1 AND module='video'
 AND created_at>=now()-interval '30 days') AS "credits30"
-FROM public.video_projects WHERE workspace_id=$1`
+FROM public.video_projects WHERE workspace_id=$1 LIMIT 1`

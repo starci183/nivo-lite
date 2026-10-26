@@ -7,7 +7,7 @@ INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 VALUES ('avatars_public', 'avatars_public', true, 2097152, ARRAY['image/png', 'image/jpeg', 'image/webp'])
 ON CONFLICT (id) DO NOTHING;
 
-CREATE POLICY objects_avatars_public_read ON storage.objects AS PERMISSIVE FOR SELECT TO anon, authenticated
+CREATE POLICY objects_public_read ON storage.objects AS PERMISSIVE FOR SELECT TO anon, authenticated
     USING (bucket_id = 'avatars_public');
 
 -- A person's uploaded picture is kept under its own metadata key (nivo_avatar_url): Auth rewrites avatar_url from the provider

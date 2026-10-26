@@ -74,6 +74,7 @@ const resourceOverrides = (): Array<{ token: InjectionToken; value: unknown }> =
             value: {
                 manager,
                 isInitialized: true,
+                subscribers: [],
                 query: refuseWiringOperation,
                 createQueryRunner: refuseWiringOperation,
             },

@@ -86,7 +86,7 @@ describe("the avatars bucket over PostgreSQL", () => {
             },
         ])
         await expect(world.db.primary.query(READ_AVATARS_POLICIES)).resolves.toEqual([
-            { policyname: "objects_avatars_public_read", cmd: "SELECT", roles: ["anon", "authenticated"] },
+            { policyname: "objects_public_read", cmd: "SELECT", roles: ["anon", "authenticated"] },
         ])
     })
 

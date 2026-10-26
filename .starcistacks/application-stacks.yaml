@@ -117,6 +117,9 @@ jobs:
   marketing-tick:
     schedule: "*/15 * * * *"
     command: node be/dist/apps/cli/src/main.js jobs tick marketing-tick
+  realtime-retention-tick:
+    schedule: "* * * * *"
+    command: node be/dist/apps/cli/src/main.js jobs tick realtime-retention-tick
   shifts-tick:
     schedule: "*/1 * * * *"
     command: node be/dist/apps/cli/src/main.js jobs tick shifts-tick

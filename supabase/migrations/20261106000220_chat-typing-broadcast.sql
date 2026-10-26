@@ -36,7 +36,7 @@ $$;
 REVOKE ALL ON FUNCTION be_access.chat_typing_topic_member(text, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION be_access.chat_typing_topic_member(text, uuid) TO authenticated;
 
-CREATE POLICY chat_typing_receive ON realtime.messages
+CREATE POLICY messages_authenticated_select ON realtime.messages
 FOR SELECT TO authenticated
 USING (
     extension = 'broadcast'
