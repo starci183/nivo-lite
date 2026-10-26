@@ -39,7 +39,6 @@ export const LoyaltyCampaignSegment = (props: LoyaltyCampaignSegmentProps) => {
                 label={copy.tiers}
                 description={copy.tiersHint}
                 orientation="horizontal"
-                variant="secondary"
                 options={[...props.props.tierOptions]}
                 value={[...values.tiers]}
                 isDisabled={props.props.isBusy}
@@ -50,7 +49,6 @@ export const LoyaltyCampaignSegment = (props: LoyaltyCampaignSegmentProps) => {
                     id="seg-inactive"
                     name="inactive"
                     label={copy.inactive}
-                    variant="secondary"
                     hint={copy.inactiveHint}
                     placeholder="45"
                     value={values.inactive}
@@ -61,7 +59,6 @@ export const LoyaltyCampaignSegment = (props: LoyaltyCampaignSegmentProps) => {
                     id="seg-spend"
                     name="spend"
                     label={copy.spend}
-                    variant="secondary"
                     hint={copy.spendHint}
                     placeholder="1000000"
                     value={values.spend}
@@ -72,7 +69,6 @@ export const LoyaltyCampaignSegment = (props: LoyaltyCampaignSegmentProps) => {
             <div className={CHECKS_CLASS_NAME}>
                 <Checkbox
                     label={copy.birthday}
-                    variant="secondary"
                     isSelected={values.birthday}
                     isDisabled={props.props.isBusy}
                     onSelectedChange={on.setBirthday}

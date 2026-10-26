@@ -6,14 +6,13 @@ export const AUTH_LOCALE_CLASS_NAME = cn("flex", "justify-end", "px-4", "py-3", 
 export const AUTH_BRAND_PANE_CLASS_NAME = cn("p-6", "lg:p-8")
 /** Brand card body under the edge-to-edge art band of the joined card: the band owns no inset, the body takes the outer-edge inset (PADDING-4) and stacks pitch then details (GAP-5). */
 export const AUTH_BRAND_STACK_CLASS_NAME = cn("flex", "flex-col", "gap-6", "p-4")
-/** SURFACE-6 case-1: decorative accent band with one aria-hidden mascot and no copy; shown from lg only so the form stays in the first phone screen. */
+/** SURFACE-6 case-1: decorative band with one aria-hidden mascot and no copy; shown from lg only so the form stays in the first phone screen. */
 export const AUTH_ART_BAND_CLASS_NAME = cn(
     "relative",
     "isolate",
     "hidden",
     "min-h-32",
     "overflow-hidden",
-    "bg-accent",
     "lg:block",
     "lg:min-h-56",
 )

@@ -1,5 +1,13 @@
 import { useState } from "react"
-import { Breadcrumbs, FillViewport, Region, SurfaceCard, Tabs, type BreadcrumbItem } from "@starci/grammar/common"
+import {
+    Breadcrumbs,
+    Divider,
+    FillViewport,
+    Region,
+    SurfaceCard,
+    Tabs,
+    type BreadcrumbItem,
+} from "@starci/grammar/common"
 
 import { AgentChatComposer, type AgentChatComposerProps } from "@/components/composites/AgentChatComposer"
 
@@ -194,17 +202,20 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
                                 onToggleList={() => setIsListOpen((open) => !open)}
                             />
                             {view.channelTabs === null ? null : (
-                                <div className={CHANNEL_BAR_CLASS_NAME}>
-                                    <Tabs
-                                        variant="secondary"
-                                        label={view.channelTabs.label}
-                                        selectedKey={view.channelTabs.selectedKey}
-                                        items={[...view.channelTabs.items]}
-                                        onSelect={(key) => props.on.tab(key === "customer" ? "customer" : "test")}
-                                        inset="none"
-                                        labelVisibility="always"
-                                    />
-                                </div>
+                                <>
+                                    <div className={CHANNEL_BAR_CLASS_NAME}>
+                                        <Tabs
+                                            variant="secondary"
+                                            label={view.channelTabs.label}
+                                            selectedKey={view.channelTabs.selectedKey}
+                                            items={[...view.channelTabs.items]}
+                                            onSelect={(key) => props.on.tab(key === "customer" ? "customer" : "test")}
+                                            inset="none"
+                                            labelVisibility="always"
+                                        />
+                                    </div>
+                                    <Divider semantics="presentation" />
+                                </>
                             )}
                             <Thread {...props} />
                             <AgentChatComposer
