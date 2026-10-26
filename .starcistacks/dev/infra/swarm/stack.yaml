@@ -32,6 +32,8 @@ services:
       QUEUE_REDIS_HOST: nivo-redis
       QUEUE_REDIS_PORT: "6379"
       QUEUE_REDIS_PREFIX: nivo
+      REALTIME_HUB: redis
+      REALTIME_REDIS_PREFIX: nivo-realtime
     extra_hosts:
       - host.docker.internal:host-gateway
     healthcheck:
