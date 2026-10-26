@@ -62,12 +62,13 @@ export const AgentProfileIdentityBase = (props: AgentProfileIdentityBaseProps) =
                             isRequired
                             isDisabled={view.isSaving}
                             isSkeleton={view.isLoading}
+                            isError={view.nameError !== undefined}
+                            errorMessage={view.nameError}
                             value={view.name}
                             onValueChange={props.on.setName}
                         />
                         <FormActions
                             failTitle={view.failTitle}
-                            error={view.nameError}
                             submitLabel={view.saveLabel}
                             isPending={view.isSaving}
                             isSkeleton={view.isLoading}
