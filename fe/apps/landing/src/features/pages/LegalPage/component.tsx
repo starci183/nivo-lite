@@ -1,7 +1,10 @@
-import { Alert, PageContainer, SectionHeader, WorkspaceShell } from "@starci/grammar/common"
+import { Alert, PageContainer, SectionHeader } from "@starci/grammar/common"
 import { LandingFooter } from "@/components/blocks/LandingFooter"
-import { LandingNav } from "@/components/blocks/LandingNav"
+import { LandingNavActions } from "@/components/blocks/LandingNavActions"
+import { LandingNavBrand } from "@/components/blocks/LandingNavBrand"
+import { LandingNavLinks } from "@/components/blocks/LandingNavLinks"
 import { LegalSectionView } from "@/components/composites/LegalSectionView"
+import { SiteShell } from "@/components/composites/SiteShell"
 import { LEGAL_MAIN, LEGAL_STACK } from "./classNames"
 
 /** One block of the document, as plain words. */
@@ -36,30 +39,31 @@ interface LegalPageBaseProps {
 
 /** A public legal document on the landing chrome. The wording is a draft until the owner and a lawyer approve it. */
 export const LegalPageBase = (props: LegalPageBaseProps) => (
-    <WorkspaceShell
-        header={<LandingNav anchorBase="/" />}
-        primaryLabel={props.props.mainLabel}
-        primary={
-            <div className={LEGAL_MAIN}>
-                <PageContainer measure="reading">
-                    <div className={LEGAL_STACK}>
-                        <Alert tone="cautionary" title={props.props.draft} />
-                        <SectionHeader level={1} title={props.props.title} description={props.props.intro} />
-                        {props.props.sections.map((section) => (
-                            <LegalSectionView
-                                key={section.id}
-                                id={section.id}
-                                title={section.title}
-                                paragraphs={section.paragraphs}
-                                items={section.items}
-                                afterItems={section.afterItems}
-                                limitedUse={section.hasLimitedUse ? props.props.limitedUse : null}
-                            />
-                        ))}
-                    </div>
-                </PageContainer>
-                <LandingFooter anchorBase="/" />
-            </div>
-        }
-    />
+    <SiteShell
+        mainLabel={props.props.mainLabel}
+        brand={<LandingNavBrand />}
+        navigation={<LandingNavLinks anchorBase="/" />}
+        actions={<LandingNavActions />}
+    >
+        <div className={LEGAL_MAIN}>
+            <PageContainer measure="reading">
+                <div className={LEGAL_STACK}>
+                    <Alert tone="cautionary" title={props.props.draft} />
+                    <SectionHeader level={1} title={props.props.title} description={props.props.intro} />
+                    {props.props.sections.map((section) => (
+                        <LegalSectionView
+                            key={section.id}
+                            id={section.id}
+                            title={section.title}
+                            paragraphs={section.paragraphs}
+                            items={section.items}
+                            afterItems={section.afterItems}
+                            limitedUse={section.hasLimitedUse ? props.props.limitedUse : null}
+                        />
+                    ))}
+                </div>
+            </PageContainer>
+            <LandingFooter anchorBase="/" />
+        </div>
+    </SiteShell>
 )
