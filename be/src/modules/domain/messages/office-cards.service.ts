@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-activity"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -28,6 +29,7 @@ export class OfficeCardsService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectAgentDirectory() private readonly agents: AgentDirectory,
         @InjectLogger() private readonly logger: Logger,
+        private readonly activity: ChatActivityService,
     ) {}
 
     /**
@@ -59,7 +61,7 @@ export class OfficeCardsService {
             line.room,
             null,
         ])
-        return row ?? { id: "", room: line.room }
+        return this.announced(ctx.workspaceId, row, line.room, this.entityManager)
     }
 
     /** Validates the payload against the card contract and stores the line; a broken payload is refused with its reason. */
@@ -83,6 +85,22 @@ export class OfficeCardsService {
             line.room,
             JSON.stringify(parsed.card),
         ])
-        return row ?? { id: "", room: line.room }
+        return this.announced(ctx.workspaceId, row, line.room, manager)
+    }
+
+    private async announced(
+        workspaceId: string,
+        row: PostedCard | undefined,
+        room: OptionalRoom,
+        manager: EntityManager,
+    ): Promise<PostedCard> {
+        const posted = row ?? { id: "", room }
+        await this.activity.message(
+            workspaceId,
+            chatActivityTarget({ room: posted.room, conversationId: null }),
+            null,
+            manager,
+        )
+        return posted
     }
 }

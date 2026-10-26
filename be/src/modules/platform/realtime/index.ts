@@ -1,4 +1,4 @@
 export { RealtimeModule } from "./realtime.module"
 export { RealtimeService } from "./realtime.service"
-export { REALTIME_PUBLISHER, InjectRealtimePublisher } from "./realtime.decorators"
-export type { RealtimePublisher } from "./realtime.port"
+export { REALTIME_HUB, REALTIME_PUBLISHER, InjectRealtimeHub, InjectRealtimePublisher } from "./realtime.decorators"
+export type { RealtimeHub, RealtimePublisher, RealtimeTopic, RealtimeTransaction } from "./realtime.port"

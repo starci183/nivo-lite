@@ -9,6 +9,7 @@ import { McpGatewayModule } from "@modules/domain/mcp-gateway"
 import { InboundEventsModule } from "@modules/domain/inbound-events"
 import { AgentConversationsModule } from "@modules/domain/agent-conversations"
 import { AgentMessagesModule } from "@modules/domain/agent-messages"
+import { ChatActivityModule } from "@modules/domain/chat-activity"
 import { ChatMarkersModule } from "@modules/domain/chat-markers"
 import { ChatTypingModule } from "@modules/domain/chat-typing"
 import { ChannelsModule } from "@modules/domain/channels"
@@ -29,6 +30,7 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
     MailModule.register({ isGlobal: true, ...options.mail }),
     ConnectionSecretsModule.register({ isGlobal: true, ...options.connectionSecrets }),
     AgentConversationsModule.register({ isGlobal: true }),
+    ChatActivityModule.register({ isGlobal: true }),
     AgentMessagesModule.register({ isGlobal: true }),
     ChatMarkersModule.register({ isGlobal: true }),
     ChatTypingModule.register({ isGlobal: true }),

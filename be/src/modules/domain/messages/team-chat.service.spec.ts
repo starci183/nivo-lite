@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { ChatActivityService } from "@modules/domain/chat-activity"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -35,21 +36,23 @@ const build = async (line: PostedMessage = posted()) => {
     const entityManager = mockEntityManager({ query: [INSERT_HUMAN_MESSAGE, [line]] })
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(member())
+    const activity = mock<ChatActivityService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             TeamChatService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: WorkspaceMembersService, useValue: members },
+            { provide: ChatActivityService, useValue: activity },
         ],
     }).compile()
-    return { service: moduleRef.get(TeamChatService), entityManager, members }
+    return { service: moduleRef.get(TeamChatService), entityManager, members, activity }
 }
 
 describe("TeamChatService", () => {
     describe("postHuman", () => {
         it("posts the trimmed line as the member, including a staff row", async () => {
             const line = posted()
-            const { service, entityManager, members } = await build(line)
+            const { service, entityManager, members, activity } = await build(line)
 
             await expect(service.postHuman("user-1", "ws-1", "  Hello team  ")).resolves.toEqual(line)
 
@@ -57,6 +60,7 @@ describe("TeamChatService", () => {
             expect(entityManager.query.mock.calls).toEqual([
                 [INSERT_HUMAN_MESSAGE, ["ws-1", "Minh", "staff-1", "Hello team", null, "user-1"]],
             ])
+            expect(activity.message.mock.calls).toEqual([["ws-1", "room:office", "user-1"]])
         })
 
         it("posts as the owner when the member has no staff row", async () => {
@@ -75,9 +79,11 @@ describe("TeamChatService", () => {
 
         it("posts in a Hub room", async () => {
             const line = posted({ room: "marketing" })
-            const { service, entityManager } = await build(line)
+            const { service, entityManager, activity } = await build(line)
 
             await expect(service.postHuman("user-1", "ws-1", "Hello team", "marketing")).resolves.toEqual(line)
+
+            expect(activity.message.mock.calls).toEqual([["ws-1", "room:marketing", "user-1"]])
 
             expect(entityManager.query.mock.calls).toEqual([
                 [INSERT_HUMAN_MESSAGE, ["ws-1", "Minh", "staff-1", "Hello team", "marketing", "user-1"]],
@@ -85,13 +91,14 @@ describe("TeamChatService", () => {
         })
 
         it("refuses a room that is not a Hub room", async () => {
-            const { service, entityManager } = await build()
+            const { service, entityManager, activity } = await build()
 
             await expect(service.postHuman("user-1", "ws-1", "Hello", "lobby")).rejects.toMatchObject({
                 code: MessagesErrorCode.RoomInvalid,
                 params: { room: "lobby" },
             })
             expect(entityManager.query).not.toHaveBeenCalled()
+            expect(activity.message).not.toHaveBeenCalled()
         })
 
         it("does not write a line when membership is refused", async () => {

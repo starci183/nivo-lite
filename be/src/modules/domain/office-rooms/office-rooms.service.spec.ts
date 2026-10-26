@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { ChatActivityService } from "@modules/domain/chat-activity"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { OfficeCardsService } from "@modules/domain/messages"
@@ -64,6 +65,7 @@ const agentPreviewOf = builder<RoomMemberPreviewRow>({
 
 const build = async (entityManager: MockEntityManager) => {
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(member()) })
+    const activity = mock<ChatActivityService>()
     const cards = mock<OfficeCardsService>({ post: jest.fn().mockResolvedValue({ id: "m-1", room: null }) })
     const catalog = mock<MessageCatalog>({
         get: jest.fn((key: string, params: Readonly<Record<string, string>>) => `[${key}]${params.names ?? ""}`),
@@ -75,9 +77,10 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: WorkspaceMembersService, useValue: members },
             { provide: OfficeCardsService, useValue: cards },
             { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: ChatActivityService, useValue: activity },
         ],
     }).compile()
-    return { service: moduleRef.get(OfficeRoomsService), members, cards }
+    return { service: moduleRef.get(OfficeRoomsService), members, cards, activity }
 }
 
 const officeOf = (summary: Record<string, unknown>) => ({
@@ -185,31 +188,35 @@ describe("OfficeRoomsService.rooms member previews", () => {
 describe("OfficeRoomsService.markRead", () => {
     it("marks a department room read", async () => {
         const em = mockEntityManager({ query: [MARK_ROOM_READ, []] })
-        const { service } = await build(em)
+        const { service, activity } = await build(em)
 
         await service.markRead("u-1", "ws-1", "sales")
 
         expect(em.query).toHaveBeenCalledWith(MARK_ROOM_READ, ["ws-1", "u-1", "sales"])
+        expect(activity.receipt.mock.calls).toEqual([["ws-1", "room:sales"]])
+        expect(activity.unread.mock.calls).toEqual([["ws-1", "room:sales", "u-1"]])
     })
 
     it("marks the Office room read under the empty key", async () => {
         const em = mockEntityManager({ query: [MARK_ROOM_READ, []] })
-        const { service } = await build(em)
+        const { service, activity } = await build(em)
 
         await service.markRead("u-1", "ws-1", null)
 
         expect(em.query).toHaveBeenCalledWith(MARK_ROOM_READ, ["ws-1", "u-1", ""])
+        expect(activity.receipt.mock.calls).toEqual([["ws-1", "room:office"]])
     })
 
     it("refuses a room that is not a Hub room", async () => {
         const em = mockEntityManager()
-        const { service } = await build(em)
+        const { service, activity } = await build(em)
 
         await expect(service.markRead("u-1", "ws-1", "lobby")).rejects.toMatchObject({
             code: OfficeRoomsErrorCode.RoomInvalid,
             params: { room: "lobby" },
         })
         expect(em.query).not.toHaveBeenCalled()
+        expect(activity.receipt).not.toHaveBeenCalled()
     })
 })
 
@@ -271,11 +278,12 @@ describe("OfficeRoomsService.unread", () => {
 describe("OfficeRoomsService.markConversationRead", () => {
     it("marks an agent conversation read under the agent scope", async () => {
         const em = mockEntityManager({ query: [[MARK_AGENT_READ, [{ marked: null }]]] })
-        const { service } = await build(em)
+        const { service, activity } = await build(em)
 
         await service.markConversationRead("u-1", "ws-1", "agent", "a-1")
 
         expect(em.query).toHaveBeenCalledWith(MARK_AGENT_READ, ["ws-1", "u-1", "a-1"])
+        expect(activity.unread.mock.calls).toEqual([["ws-1", "agent:a-1", "u-1"]])
     })
 
     it("marks a customer conversation read under the lead scope", async () => {
@@ -300,12 +308,13 @@ describe("OfficeRoomsService.markConversationRead", () => {
 
     it("refuses a conversation id that names no agent or lead of the workspace", async () => {
         const em = mockEntityManager({ query: [[MARK_AGENT_READ, []]] })
-        const { service } = await build(em)
+        const { service, activity } = await build(em)
 
         await expect(service.markConversationRead("u-1", "ws-1", "agent", "foreign")).rejects.toMatchObject({
             code: OfficeRoomsErrorCode.ConversationInvalid,
             params: { id: "foreign" },
         })
+        expect(activity.unread).not.toHaveBeenCalled()
     })
 
     it("does not mark anything when workspace membership is refused", async () => {

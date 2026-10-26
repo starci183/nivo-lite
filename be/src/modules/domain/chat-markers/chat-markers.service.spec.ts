@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { ChatActivityService } from "@modules/domain/chat-activity"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -33,15 +34,17 @@ const build = async (em: MockEntityManager) => {
     const tx = fakeTransaction(em)
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(member()) })
     const roomReads = mock<OfficeReadMarkersService>({ advance: jest.fn().mockResolvedValue(undefined) })
+    const activity = mock<ChatActivityService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChatMarkersService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: OfficeReadMarkersService, useValue: roomReads },
+            { provide: ChatActivityService, useValue: activity },
         ],
     }).compile()
-    return { service: moduleRef.get(ChatMarkersService), members, roomReads, tx }
+    return { service: moduleRef.get(ChatMarkersService), members, roomReads, tx, activity }
 }
 
 describe("ChatMarkersService admission", () => {
@@ -140,6 +143,9 @@ describe("ChatMarkersService state", () => {
     })
 })
 
+const activityNameOf = (target: ChatTarget): string =>
+    target.conversationId === null ? `room:${target.room ?? "office"}` : `conversation:${target.conversationId}`
+
 const receiptQuery = (statement: string): Array<[string, Array<object>]> => [
     [CHAT_TARGET_MEMBER, [{ allowed: true }]],
     [CHAT_MESSAGE_CURSOR, [{ created_at: PERSISTED_AT }]],
@@ -168,11 +174,13 @@ describe("ChatMarkersService delivered receipts", () => {
         "writes the resolved fetched cursor for delivered in $target without a transaction",
         async ({ target }) => {
             const em = mockEntityManager({ query: receiptQuery(MARK_CHAT_DELIVERED) })
-            const { service, roomReads, tx } = await build(em)
+            const { service, roomReads, tx, activity } = await build(em)
 
             await service.markDelivered("principal", "workspace", target, "fetched")
 
             expectResolvedCursorWrite(em, target, MARK_CHAT_DELIVERED)
+            expect(activity.receipt.mock.calls).toEqual([["workspace", activityNameOf(target)]])
+            expect(activity.unread).not.toHaveBeenCalled()
             expect(tx.outcomes).toEqual([])
             expect(roomReads.advance).not.toHaveBeenCalled()
         },
@@ -185,11 +193,12 @@ describe("ChatMarkersService delivered receipts", () => {
                 [CHAT_MESSAGE_CURSOR, []],
             ],
         })
-        const { service } = await build(em)
+        const { service, activity } = await build(em)
 
         await expect(service.markDelivered("principal", "workspace", SALES, "foreign")).rejects.toMatchObject({
             code: "CHAT_MARKERS_MESSAGE_NOT_FOUND",
         })
+        expect(activity.receipt).not.toHaveBeenCalled()
 
         expect(em.query).toHaveBeenCalledTimes(2)
     })
@@ -200,11 +209,13 @@ describe("ChatMarkersService read receipts", () => {
         "commits the resolved fetched cursor for read in $target",
         async ({ target }) => {
             const em = mockEntityManager({ query: receiptQuery(MARK_CHAT_READ) })
-            const { service, roomReads, tx } = await build(em)
+            const { service, roomReads, tx, activity } = await build(em)
 
             await service.markRead("principal", "workspace", target, "fetched")
 
             expectResolvedCursorWrite(em, target, MARK_CHAT_READ)
+            expect(activity.receipt.mock.calls).toEqual([["workspace", activityNameOf(target)]])
+            expect(activity.unread.mock.calls).toEqual([["workspace", activityNameOf(target), "member"]])
             expect(tx.outcomes).toEqual(["commit"])
             if (target.conversationId === null) {
                 expect(roomReads.advance).toHaveBeenCalledWith(
@@ -221,7 +232,7 @@ describe("ChatMarkersService read receipts", () => {
 
     it("rolls back the precise receipt when the room owner cannot advance its compatible read marker", async () => {
         const em = mockEntityManager({ query: receiptQuery(MARK_CHAT_READ) })
-        const { service, roomReads, tx } = await build(em)
+        const { service, roomReads, tx, activity } = await build(em)
         const failure = new Error("Room cursor write failed")
         roomReads.advance.mockRejectedValue(failure)
 
@@ -230,6 +241,8 @@ describe("ChatMarkersService read receipts", () => {
         expect(tx.outcomes).toEqual(["rollback"])
         expect(tx.committedWrites).toEqual([])
         expect(tx.rolledBackWrites).toHaveLength(1)
+        expect(activity.receipt).not.toHaveBeenCalled()
+        expect(activity.unread).not.toHaveBeenCalled()
     })
 })
 

@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-activity"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
@@ -42,7 +43,10 @@ import {
 @Injectable()
 /** The messages of a conversation between a customer and an agent; the only writer of agent_messages. */
 export class AgentMessagesService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly activity: ChatActivityService,
+    ) {}
 
     /** The messages customers wrote per Vietnam day and channel from `from` (inclusive) to `to` (exclusive), oldest first. */
     async customerMessagesPerDay(
@@ -108,7 +112,7 @@ export class AgentMessagesService {
         manager: EntityManager,
         authorUserId: AuthorUserId = null,
     ): Promise<string> {
-        return this.required(
+        const id = this.required(
             await manager.query<Array<MessageIdRow>>(INSERT_CUSTOMER_MESSAGE, [
                 workspaceId,
                 conversationId,
@@ -116,6 +120,8 @@ export class AgentMessagesService {
                 authorUserId,
             ]),
         )
+        await this.announce(workspaceId, conversationId, authorUserId, manager)
+        return id
     }
 
     /** Stores the greeting the agent opens a visit with and answers the message id. */
@@ -125,9 +131,11 @@ export class AgentMessagesService {
         body: string,
         manager: EntityManager,
     ): Promise<string> {
-        return this.required(
+        const id = this.required(
             await manager.query<Array<MessageIdRow>>(INSERT_GREETING_MESSAGE, [workspaceId, conversationId, body]),
         )
+        await this.announce(workspaceId, conversationId, null, manager)
+        return id
     }
 
     /** Stores the agent's reply to a customer message exactly once; a second attempt answers the reply the first one stored. */
@@ -145,7 +153,10 @@ export class AgentMessagesService {
                 inReplyTo,
             ])
         )[0]
-        if (inserted !== undefined) return { id: inserted.id, body, sent: false }
+        if (inserted !== undefined) {
+            await this.announce(workspaceId, conversationId, null, this.entityManager)
+            return { id: inserted.id, body, sent: false }
+        }
         const existing = (
             await this.entityManager.query<Array<StoredMessageRow>>(FIND_AGENT_REPLY, [conversationId, inReplyTo])
         )[0]
@@ -164,13 +175,15 @@ export class AgentMessagesService {
 
     /** Stores a message the company sends on its own (not a reply to a customer message) and answers its id. */
     async storeAgentMessage(workspaceId: string, conversationId: string, body: string): Promise<string> {
-        return this.required(
+        const id = this.required(
             await this.entityManager.query<Array<MessageIdRow>>(INSERT_GREETING_MESSAGE, [
                 workspaceId,
                 conversationId,
                 body,
             ]),
         )
+        await this.announce(workspaceId, conversationId, null, this.entityManager)
+        return id
     }
 
     /** Stores a member's reply in the caller's transaction; an approval's stable id reuses the same message on retry. */
@@ -192,7 +205,9 @@ export class AgentMessagesService {
             authorUserId,
         ])
         if (rows[0] === undefined && approvedItemId !== null) return approvedItemId
-        return this.required(rows)
+        const id = this.required(rows)
+        await this.announce(workspaceId, conversationId, authorUserId, manager)
+        return id
     }
 
     /** Writes a line the workbench shows between the messages; it is never sent to the customer. */
@@ -203,6 +218,7 @@ export class AgentMessagesService {
         manager: EntityManager = this.entityManager,
     ): Promise<void> {
         await manager.query(INSERT_SYSTEM_LINE, [workspaceId, conversationId, body])
+        await this.announce(workspaceId, conversationId, null, manager)
     }
 
     /** One stored message of a conversation, or a refusal when it is not there. */
@@ -235,6 +251,20 @@ export class AgentMessagesService {
             delivered ? "sent" : "failed",
             delivered ? null : (error ?? "delivery_failed"),
         ])
+    }
+
+    private announce(
+        workspaceId: string,
+        conversationId: string,
+        authorUserId: AuthorUserId,
+        manager: EntityManager,
+    ): Promise<void> {
+        return this.activity.message(
+            workspaceId,
+            chatActivityTarget({ room: null, conversationId }),
+            authorUserId,
+            manager,
+        )
     }
 
     private required(rows: ReadonlyArray<MessageIdRow>): string {

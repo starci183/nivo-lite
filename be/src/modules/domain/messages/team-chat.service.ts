@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-activity"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { MessagesError, MessagesErrorCode } from "./errors/messages.error"
@@ -14,6 +15,7 @@ export class TeamChatService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
+        private readonly activity: ChatActivityService,
     ) {}
 
     /** Posts the line as the caller in a room (null = the Office room) and answers the stored line; any member may speak. */
@@ -33,6 +35,11 @@ export class TeamChatService {
             target,
             member.userId,
         ])
+        await this.activity.message(
+            workspaceId,
+            chatActivityTarget({ room: target, conversationId: null }),
+            member.userId,
+        )
         return row
     }
 

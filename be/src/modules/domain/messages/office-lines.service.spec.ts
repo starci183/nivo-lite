@@ -1,6 +1,7 @@
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { ChatActivityService } from "@modules/domain/chat-activity"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { MessagesScope, OfficeLineInput, OptionalAgentIdentity } from "./office-lines.contracts"
 import { AGENT_DIRECTORY } from "./office-lines.decorators"
@@ -14,23 +15,27 @@ const lineOf = builder<OfficeLineInput>({ body: "Followed up", lead_id: "lead-1"
 
 const build = async (entityManager: MockEntityManager, agent: OptionalAgentIdentity) => {
     const directory = mock<AgentDirectory>({ agentOfDepartment: jest.fn().mockResolvedValue(agent) })
+    const activity = mock<ChatActivityService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             OfficeLinesService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: AGENT_DIRECTORY, useValue: directory },
+            { provide: ChatActivityService, useValue: activity },
         ],
     }).compile()
-    return { service: moduleRef.get(OfficeLinesService), directory }
+    return { service: moduleRef.get(OfficeLinesService), directory, activity }
 }
 
 describe("OfficeLinesService", () => {
     it("keeps the command mirror in the caller's transaction", async () => {
         const primary = mockEntityManager()
         const tx = mockEntityManager({ query: [INSERT_MESSAGE, []] })
-        const { service, directory } = await build(primary, null)
+        const { service, directory, activity } = await build(primary, null)
 
         await service.post(ctx, lineOf({ command: true }), tx)
+
+        expect(activity.message.mock.calls).toEqual([["ws-1", "room:office", null, tx]])
 
         expect(primary.query).not.toHaveBeenCalled()
         expect(directory.agentOfDepartment).not.toHaveBeenCalled()
@@ -47,9 +52,11 @@ describe("OfficeLinesService", () => {
 
     it("speaks as the department's agent when it is installed", async () => {
         const em = mockEntityManager({ query: [INSERT_MESSAGE, []] })
-        const { service, directory } = await build(em, { id: "agent-1", name: "Sales Agent" })
+        const { service, directory, activity } = await build(em, { id: "agent-1", name: "Sales Agent" })
 
         await expect(service.post(ctx, lineOf({ dept: "sales", installation_id: "inst-1" }))).resolves.toBeUndefined()
+
+        expect(activity.message.mock.calls).toEqual([["ws-1", "room:office", null, em]])
 
         expect(directory.agentOfDepartment).toHaveBeenCalledWith("ws-1", "sales", "inst-1")
         expect(em.query.mock.calls).toEqual([

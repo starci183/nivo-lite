@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-activity"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { MessagesScope, OfficeLineInput, OptionalAgentIdentity } from "./office-lines.contracts"
 import { InjectAgentDirectory } from "./office-lines.decorators"
@@ -17,6 +18,7 @@ export class OfficeLinesService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectAgentDirectory() private readonly agents: AgentDirectory,
+        private readonly activity: ChatActivityService,
     ) {}
 
     /**
@@ -38,6 +40,12 @@ export class OfficeLinesService {
             line.lead_id,
             line.work_item_id,
         ])
+        await this.activity.message(
+            ctx.workspaceId,
+            chatActivityTarget({ room: null, conversationId: null }),
+            null,
+            manager,
+        )
     }
 
     private speaker(ctx: MessagesScope, line: OfficeLineInput): Promise<OptionalAgentIdentity> {
