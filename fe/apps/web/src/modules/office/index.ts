@@ -4,6 +4,7 @@ export {
     DECIDED_WORK_STATUSES,
     OFFICE_PAGE_SIZE,
     OFFICE_POLL_MS,
+    OFFICE_SAFETY_POLL_MS,
     OPEN_WORK_LIMIT,
     OPEN_WORK_STATUSES,
 } from "./office.consts"

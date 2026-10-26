@@ -1,0 +1,62 @@
+import { useSWRConfig } from "swr"
+import useSWRSubscription from "swr/subscription"
+import { useWorkspaceKey } from "@/hooks/workspaceKey"
+import { streamOfficeActivity } from "@/modules/api/sse/office/stream-office-activity"
+import type { OfficeActivityKind, OfficeActivityPush } from "@/modules/api/sse/office/stream-office-activity"
+import { useAppSelector } from "@/redux"
+import { QUERY_CHAT_MARKER_STATE_SWR_KEY } from "../../graphql/queries/useQueryChatMarkerStateSwr"
+import { QUERY_OFFICE_CONVERSATION_UNREAD_SWR_KEY } from "../../graphql/queries/useQueryOfficeConversationUnreadSwr"
+import { QUERY_OFFICE_MESSAGES_SWR_KEY } from "../../graphql/queries/useQueryOfficeMessagesSwr"
+import { QUERY_OFFICE_ROOMS_SWR_KEY } from "../../graphql/queries/useQueryOfficeRoomsSwr"
+
+/** The SWR key of the office-activity stream; the full key carries the workspace and the signed-in reader, the identity of the stream. */
+export const SUBSCRIBE_OFFICE_ACTIVITY_SWR_KEY = "SUBSCRIBE_OFFICE_ACTIVITY_SWR"
+
+/** The key of the stream; null while nobody is signed in or no workspace is active. */
+type OfficeActivityStreamKey = readonly [string, string, string] | null
+
+/** The reads each kind of notification makes stale. */
+const STALE_READS: Readonly<Record<OfficeActivityKind, ReadonlyArray<string>>> = {
+    message: [QUERY_OFFICE_MESSAGES_SWR_KEY, QUERY_OFFICE_ROOMS_SWR_KEY, QUERY_OFFICE_CONVERSATION_UNREAD_SWR_KEY],
+    receipt: [QUERY_OFFICE_MESSAGES_SWR_KEY, QUERY_CHAT_MARKER_STATE_SWR_KEY],
+    unread: [QUERY_OFFICE_ROOMS_SWR_KEY, QUERY_OFFICE_CONVERSATION_UNREAD_SWR_KEY],
+}
+
+/** Every office read, for the snapshot a (re)connect takes. */
+const ALL_READS: ReadonlyArray<string> = [
+    QUERY_OFFICE_MESSAGES_SWR_KEY,
+    QUERY_OFFICE_ROOMS_SWR_KEY,
+    QUERY_OFFICE_CONVERSATION_UNREAD_SWR_KEY,
+    QUERY_CHAT_MARKER_STATE_SWR_KEY,
+]
+
+/**
+ * The notifications the back end pushes for the signed-in reader's Office (new lines, receipts, unread changes). Nobody signed in
+ * or no workspace, no stream. The stream opens with the first reader of the key and closes with the last. Each frame revalidates
+ * the office reads of the active workspace it makes stale, and each (re)open revalidates all of them once, which closes the gap
+ * since the last frame. A refused or broken attempt is the hook's error until the next frame.
+ */
+export const useSubscribeOfficeActivitySwr = () => {
+    const userId = useAppSelector((state) => state.session.session?.userId)
+    const { mutate } = useSWRConfig()
+    const key = useWorkspaceKey(SUBSCRIBE_OFFICE_ACTIVITY_SWR_KEY, [userId ?? null], userId !== undefined)
+    return useSWRSubscription<OfficeActivityPush, Error, OfficeActivityStreamKey>(
+        key as OfficeActivityStreamKey,
+        ([, workspaceId], { next }) => {
+            const controller = new AbortController()
+            const revalidate = (names: ReadonlyArray<string>): void => {
+                void mutate((read) => Array.isArray(read) && read[1] === workspaceId && names.includes(String(read[0])))
+            }
+            void streamOfficeActivity({
+                signal: controller.signal,
+                onOpen: () => revalidate(ALL_READS),
+                onPush: (push) => {
+                    next(null, push)
+                    revalidate(STALE_READS[push.kind])
+                },
+                report: (line) => next(new Error(line)),
+            })
+            return () => controller.abort()
+        },
+    )
+}

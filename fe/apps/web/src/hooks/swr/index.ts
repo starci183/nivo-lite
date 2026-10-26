@@ -20,6 +20,7 @@ export { QUERY_LEAD_GEN_WORKBENCH_SWR_KEY, QUERY_LEAD_JOURNEY_SWR_KEY, QUERY_LEA
 export { QUERY_LOYALTY_BOARD_SWR_KEY, QUERY_LOYALTY_MEMBER_SWR_KEY, QUERY_LOYALTY_PROGRAM_SWR_KEY } from "./api"
 export { QUERY_MODULE_INSTALLATIONS_SWR_KEY, QUERY_MY_ACCOUNT_SWR_KEY, QUERY_MY_WORKSPACES_SWR_KEY } from "./api"
 export { useQueryChatMarkerStateSwr, useQueryChatTypingChannelSwr } from "./api"
+export { useSubscribeOfficeActivitySwr } from "./api"
 export { useMutateMarkChatDeliveredSwr, useMutateMarkChatReadSwr, useMutateSetChatMutedSwr } from "./api"
 export { useMutateSetChatTypingSwr } from "./api"
 export { QUERY_OFFICE_COMMAND_CANDIDATES_SWR_KEY } from "./api"
