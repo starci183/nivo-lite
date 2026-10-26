@@ -65,7 +65,7 @@ export const CHAT_MARKER_STATE = sql`
               LEFT JOIN public.chat_markers exact ON exact.workspace_id = rd.workspace_id
                   AND exact.user_id = rd.user_id AND exact.conversation_id IS NULL AND exact.room = rd.room
               WHERE rd.workspace_id = $1::uuid AND rd.user_id = wm.user_id
-                AND (rd.room = '' OR rd.room = own.room)
+                AND rd.room = COALESCE($3::text, '')
                 AND (rd.last_read_at > own.created_at OR (rd.last_read_at = own.created_at
                      AND (exact.read_at IS DISTINCT FROM rd.last_read_at OR exact.read_message_id >= own.id))))
           ELSE EXISTS (
@@ -77,7 +77,7 @@ export const CHAT_MARKER_STATE = sql`
         JOIN public.workspace_members wm ON wm.workspace_id = s.workspace_id AND wm.user_id = s.user_id AND wm.status = 'active'
         CROSS JOIN own_message own
         WHERE s.workspace_id = $1::uuid AND s.user_id <> $2::uuid
-          AND s.target_key = ANY(CASE WHEN $4::uuid IS NULL THEN ARRAY['', own.room] ELSE ARRAY[$4::uuid::text] END)
+          AND s.target_key = COALESCE($4::uuid::text, $3::text, '')
           AND (s.delivered_at, s.delivered_message_id) >= (own.created_at, own.id)
         LIMIT 1
     )

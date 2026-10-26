@@ -15,7 +15,7 @@ export const OfficeMessenger = () => {
     const [room, setRoom] = useState<string | null>(null)
     const frame = useOfficeFrame()
     const jump = useOfficeJump()
-    const office = useOfficeMessenger(jump.focusedId, room)
+    const office = useOfficeMessenger(jump.focusedId, room, frame.isThreadVisible)
     const { text } = office
     const isLoading = office.slot.isLoading === true
     const { onMention, onSend, onChange } = composerCommands(draft, setDraft, setFocusKey, office, frame)
@@ -65,7 +65,7 @@ export const OfficeMessenger = () => {
                 toggleMute: () => void office.setMuted(!office.isMuted),
                 infoOpenChange: frame.setInfoOpen,
                 showChat: frame.showChat,
-                openGroup: roomOpener(setRoom, frame, office),
+                openGroup: roomOpener(setRoom, frame),
                 openAgent: (id) => openDirect("agent", id),
                 openCustomer: (id) => openDirect("lead", id),
                 jumpApproval: jump.jumpApproval,
@@ -104,18 +104,12 @@ const cardDecider =
             })
     }
 
-/** Opens a Hub room ("office" is the Office room) and marks it read. */
+/** Opens a Hub room ("office" is the Office room); its fetched visible thread acknowledges the read. */
 const roomOpener =
-    (
-        setRoom: Dispatch<SetStateAction<string | null>>,
-        frame: ReturnType<typeof useOfficeFrame>,
-        office: ReturnType<typeof useOfficeMessenger>,
-    ) =>
-    (id: string) => {
+    (setRoom: Dispatch<SetStateAction<string | null>>, frame: ReturnType<typeof useOfficeFrame>) => (id: string) => {
         const room = id === "office" ? null : id
         setRoom(room)
         frame.showThread()
-        void office.markRead(room)
     }
 
 /** Opens an agent's or a customer's direct conversation and marks it read on the way. */

@@ -2,6 +2,7 @@ import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { ChatMarkersService } from "@modules/domain/chat-markers"
 import type { ChatTarget } from "@modules/domain/chat-markers"
 import { TeamChatService } from "@modules/domain/messages"
+import { OfficeRoomsService } from "@modules/domain/office-rooms"
 import { eachInOrder } from "@modules/platform/primitives"
 import {
     chatMarkersIdentity,
@@ -26,9 +27,12 @@ import { CLEAN_USERS } from "../../fixtures/persistence/office-chain.sql"
 import { CLEAN_WORKSPACE } from "../../fixtures/persistence/proof.sql"
 import { withBackendRole } from "../../world/backend-role-proof.service"
 import { ChatMarkersProofModule } from "../../world/chat-markers-proof.module"
+import { OfficeRoomMembersProofModule } from "../../world/office-room-members-proof.module"
 import { useTestWorld } from "../../world/use-test-world"
 
-const world = useTestWorld({ modules: [ChatMarkersProofModule.register()] })
+const world = useTestWorld({
+    modules: [ChatMarkersProofModule.register(), OfficeRoomMembersProofModule.register()],
+})
 const OFFICE: ChatTarget = { room: null, conversationId: null }
 const SALES: ChatTarget = { room: "sales", conversationId: null }
 const MARKETING: ChatTarget = { room: "marketing", conversationId: null }
@@ -153,27 +157,86 @@ it("selects the latest own message by stable account id despite name collisions 
     })
 })
 
-it("keeps department acknowledgements scoped and lets aggregate Office delivery/read cover fetched department messages", async () => {
+it("keeps aggregate Office acknowledgements separate from department receipts and unread counts", async () => {
     const identity = await seed()
     const salesId = world.id()
     const marketingId = world.id()
     await persistOfficeMarkerLine(world.db.primary, identity, "sales", ownLine(identity, salesId))
-    await service().markDelivered(identity.readerIds[0], identity.workspaceId, SALES, salesId)
-    await expect(service().state(identity.ownerId, identity.workspaceId, OFFICE)).resolves.toMatchObject({
-        lastOwnMessage: { id: salesId, status: "delivered" },
-    })
     await persistOfficeMarkerLine(world.db.primary, identity, "marketing", ownLine(identity, marketingId, SECOND))
+    const reader = identity.readerIds[0]
+    const unread = async () =>
+        (await world.resolve(OfficeRoomsService).rooms(reader, identity.workspaceId)).map(({ key, unread }) => ({
+            key,
+            unread,
+        }))
+    const allUnread = [
+        { key: null, unread: 2 },
+        { key: "marketing", unread: 1 },
+        { key: "sales", unread: 1 },
+    ]
+    await expect(unread()).resolves.toEqual(allUnread)
+    await service().markDelivered(reader, identity.workspaceId, OFFICE, marketingId)
     await expect(service().state(identity.ownerId, identity.workspaceId, OFFICE)).resolves.toMatchObject({
-        lastOwnMessage: { id: marketingId, status: "sent" },
+        lastOwnMessage: { id: marketingId, status: "delivered", seenByCount: 0 },
     })
-    await service().markDelivered(identity.readerIds[1], identity.workspaceId, OFFICE, marketingId)
+    await expect(unread()).resolves.toEqual(allUnread)
     await expect(service().state(identity.ownerId, identity.workspaceId, SALES)).resolves.toMatchObject({
-        lastOwnMessage: { id: salesId, status: "delivered" },
+        lastOwnMessage: { id: salesId, status: "sent", seenByCount: 0 },
     })
-    await service().markRead(identity.readerIds[1], identity.workspaceId, OFFICE, marketingId)
+    await service().markRead(reader, identity.workspaceId, OFFICE, marketingId)
+    await expect(service().state(identity.ownerId, identity.workspaceId, OFFICE)).resolves.toMatchObject({
+        lastOwnMessage: { id: marketingId, status: "seen", seenByCount: 1 },
+    })
     await expect(service().state(identity.ownerId, identity.workspaceId, SALES)).resolves.toMatchObject({
-        lastOwnMessage: { id: salesId, status: "seen" },
+        lastOwnMessage: { id: salesId, status: "sent", seenByCount: 0 },
     })
+    await expect(service().state(identity.ownerId, identity.workspaceId, MARKETING)).resolves.toMatchObject({
+        lastOwnMessage: { id: marketingId, status: "sent", seenByCount: 0 },
+    })
+    await expect(unread()).resolves.toEqual([
+        { key: null, unread: 0 },
+        { key: "marketing", unread: 1 },
+        { key: "sales", unread: 1 },
+    ])
+    await service().markDelivered(reader, identity.workspaceId, SALES, salesId)
+    await expect(service().state(identity.ownerId, identity.workspaceId, SALES)).resolves.toMatchObject({
+        lastOwnMessage: { id: salesId, status: "delivered", seenByCount: 0 },
+    })
+    await expect(unread()).resolves.toEqual([
+        { key: null, unread: 0 },
+        { key: "marketing", unread: 1 },
+        { key: "sales", unread: 1 },
+    ])
+    await service().markRead(reader, identity.workspaceId, SALES, salesId)
+    await expect(service().state(identity.ownerId, identity.workspaceId, SALES)).resolves.toMatchObject({
+        lastOwnMessage: { id: salesId, status: "seen", seenByCount: 1 },
+    })
+    await expect(unread()).resolves.toEqual([
+        { key: null, unread: 0 },
+        { key: "marketing", unread: 1 },
+        { key: "sales", unread: 0 },
+    ])
+})
+
+it("does not acknowledge the aggregate Office target when a department is delivered or read", async () => {
+    const identity = await seed()
+    const id = world.id()
+    const reader = identity.readerIds[0]
+    await persistOfficeMarkerLine(world.db.primary, identity, "sales", ownLine(identity, id))
+    await service().markDelivered(reader, identity.workspaceId, SALES, id)
+    await expect(service().state(identity.ownerId, identity.workspaceId, OFFICE)).resolves.toMatchObject({
+        lastOwnMessage: { id, status: "sent", seenByCount: 0 },
+    })
+    await service().markRead(reader, identity.workspaceId, SALES, id)
+    await expect(service().state(identity.ownerId, identity.workspaceId, OFFICE)).resolves.toMatchObject({
+        lastOwnMessage: { id, status: "sent", seenByCount: 0 },
+    })
+    const rooms = await world.resolve(OfficeRoomsService).rooms(reader, identity.workspaceId)
+    expect(rooms.map(({ key, unread }) => ({ key, unread }))).toEqual([
+        { key: null, unread: 1 },
+        { key: "marketing", unread: 0 },
+        { key: "sales", unread: 0 },
+    ])
 })
 
 it.each([OFFICE, SALES])(

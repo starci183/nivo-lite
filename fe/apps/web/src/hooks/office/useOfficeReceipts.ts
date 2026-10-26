@@ -4,49 +4,69 @@ import { useCallback, useEffect, useRef } from "react"
 import { useMutateMarkChatDeliveredSwr, useMutateMarkChatReadSwr } from "@/hooks/swr"
 import { chatTargetOf } from "@/modules/office"
 
-/** The newest line this client fetched, and the lines already acknowledged. */
+/** The newest fetched line retains its room so a room switch cannot acknowledge the previous thread. */
 interface ReceiptMemory {
-    fetched: string | null
+    fetched: { readonly room: string | null; readonly id: string } | null
     delivered: string | null
     read: string | null
 }
 
 /**
- * Tells the back end which line this client fetched (delivered) and, while the tab is visible, which line it shows (read) for one
- * Hub room (null = the Office room). `onFetched` takes the newest fetched line id after each read of the thread; each line is
- * acknowledged once. The receipts are best effort: a failed one waits for the next line instead of raising a message.
+ * Acknowledges fetched lines independently of visibility. A read additionally requires the thread on screen in the visible,
+ * focused document. Focus and frame changes can mark an already fetched line read without waiting for another poll.
  */
-export const useOfficeReceipts = (room: string | null) => {
+export const useOfficeReceipts = (room: string | null, isThreadVisible: boolean, onRead: () => void) => {
     const { trigger: deliver } = useMutateMarkChatDeliveredSwr()
     const { trigger: read } = useMutateMarkChatReadSwr()
     const memory = useRef<ReceiptMemory>({ fetched: null, delivered: null, read: null })
 
     const acknowledge = useCallback(() => {
-        const id = memory.current.fetched
-        if (id === null) return
-        const key = `${room ?? ""}|${id}`
-        const request = { ...chatTargetOf(room), messageId: id }
+        const fetched = memory.current.fetched
+        if (fetched?.room !== room) return
+        const key = `${room ?? ""}|${fetched.id}`
+        const request = { ...chatTargetOf(room), messageId: fetched.id }
         if (memory.current.delivered !== key) {
             memory.current.delivered = key
-            void deliver(request, { throwOnError: false })
+            void deliver(request, {
+                throwOnError: false,
+                onError: () => {
+                    if (memory.current.delivered === key) memory.current.delivered = null
+                },
+            })
         }
-        if (document.visibilityState === "visible" && memory.current.read !== key) {
+        if (
+            isThreadVisible &&
+            document.visibilityState === "visible" &&
+            document.hasFocus() &&
+            memory.current.read !== key
+        ) {
             memory.current.read = key
-            void read(request, { throwOnError: false })
+            void read(request, {
+                throwOnError: false,
+                onSuccess: onRead,
+                onError: () => {
+                    if (memory.current.read === key) memory.current.read = null
+                },
+            })
         }
-    }, [room, deliver, read])
+    }, [room, isThreadVisible, deliver, read, onRead])
 
     const onFetched = useCallback(
         (lastMessageId: string | null) => {
-            memory.current.fetched = lastMessageId
+            memory.current.fetched = lastMessageId === null ? null : { room, id: lastMessageId }
             acknowledge()
         },
-        [acknowledge],
+        [room, acknowledge],
     )
 
     useEffect(() => {
+        acknowledge()
         document.addEventListener("visibilitychange", acknowledge)
-        return () => document.removeEventListener("visibilitychange", acknowledge)
+        window.addEventListener("focus", acknowledge)
+        return () => {
+            document.removeEventListener("visibilitychange", acknowledge)
+            window.removeEventListener("focus", acknowledge)
+        }
     }, [acknowledge])
 
     return { onFetched }
