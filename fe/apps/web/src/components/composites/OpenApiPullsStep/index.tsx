@@ -60,7 +60,6 @@ const PullSettings = (props: PullSettingsProps) => {
         <div className={classNames.nested}>
             <Select
                 label={text.entity}
-                variant="secondary"
                 isDisabled={isDisabled}
                 options={step.entityOptions}
                 value={row.pull.entity}
@@ -70,7 +69,6 @@ const PullSettings = (props: PullSettingsProps) => {
                 id={`oa-path-${row.id}`}
                 name="itemsPath"
                 label={text.itemsPath}
-                variant="secondary"
                 hint={text.itemsPathHint}
                 isDisabled={isDisabled}
                 value={row.pull.itemsPath}
@@ -80,7 +78,6 @@ const PullSettings = (props: PullSettingsProps) => {
                 id={`oa-id-${row.id}`}
                 name="idField"
                 label={text.idField}
-                variant="secondary"
                 isDisabled={isDisabled}
                 value={row.pull.idField}
                 onValueChange={patch("idField")}
@@ -89,7 +86,6 @@ const PullSettings = (props: PullSettingsProps) => {
                 id={`oa-title-${row.id}`}
                 name="titleField"
                 label={text.titleField}
-                variant="secondary"
                 isDisabled={isDisabled}
                 value={row.pull.titleField}
                 onValueChange={patch("titleField")}
@@ -99,7 +95,6 @@ const PullSettings = (props: PullSettingsProps) => {
                     id={`oa-q-${row.id}`}
                     name="fixedQuery"
                     label={text.fixedQuery}
-                    variant="secondary"
                     hint={row.fixedQueryHint}
                     isDisabled={isDisabled}
                     value={row.pull.fixedQuery}
@@ -127,7 +122,6 @@ export const OpenApiPullsStep = (props: OpenApiPullsStepProps) => {
                 id="oa-pull-search"
                 name="pullSearch"
                 label={props.text.search}
-                variant="secondary"
                 value={props.query}
                 onValueChange={props.onQuery}
             />
