@@ -33,6 +33,8 @@ turns every granted key into one versioned Swarm secret (see the production READ
 | `QUEUE_REDIS_HOST` | stack environment | `nivo-redis`, the one Redis service on the private `agents` network. |
 | `QUEUE_REDIS_PORT` | stack environment | `6379`. |
 | `QUEUE_REDIS_PREFIX` | stack environment | `nivo`, the key prefix of every queue in the broker. |
+| `REALTIME_HUB` | stack environment | `redis`, the shared realtime hub (replay stream plus Pub/Sub) so any api replica serves any stream. |
+| `REALTIME_REDIS_PREFIX` | stack environment | `nivo-realtime`, the prefix of the hub's channel and stream keys; it shares the `nivo-redis` server under a prefix of its own. The hub declares no secret: with no `REALTIME_REDIS_URL` it connects to `QUEUE_REDIS_HOST`, `QUEUE_REDIS_PORT` and the sealed `QUEUE_REDIS_PASSWORD`. |
 
 ## api: optional capabilities
 
