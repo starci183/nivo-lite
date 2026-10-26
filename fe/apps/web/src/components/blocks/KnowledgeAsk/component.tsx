@@ -50,7 +50,6 @@ export const KnowledgeAskBase = (props: KnowledgeAskBaseProps) => {
                         id="knowledge-ask-question"
                         name="question"
                         label={panel.questionLabel}
-                        variant="secondary"
                         rows={2}
                         maxLength={500}
                         placeholder={panel.placeholder}
