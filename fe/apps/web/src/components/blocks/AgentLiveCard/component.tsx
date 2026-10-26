@@ -1,5 +1,5 @@
 import { Badge, SurfaceCard, Switch, Text } from "@starci/grammar/common"
-import { STACK } from "./classNames"
+import { STACK, SWITCH_ROW } from "./classNames"
 
 /** Copy and state of the live card. */
 export interface AgentLiveCardBaseProps {
@@ -17,18 +17,22 @@ export interface AgentLiveCardBaseProps {
     readonly on: { readonly live: (on: boolean) => void }
 }
 
-/** Draws the live card: the switch, the status badge and what it needs before it can go live. */
+/** Draws the live card: the switch with its label kept readable beside it even while the switch is off-limits, the status badge and what it needs before it can go live. */
 export const AgentLiveCardBase = (props: AgentLiveCardBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
         <div className={STACK}>
-            <Switch
-                name="live"
-                label={props.props.switchLabel}
-                isSelected={props.props.isLive}
-                isSkeleton={props.props.isLoading}
-                isDisabled={props.props.isDisabled}
-                onSelectedChange={props.on.live}
-            />
+            <div className={SWITCH_ROW}>
+                <Switch
+                    name="live"
+                    label={props.props.switchLabel}
+                    isLabelHidden
+                    isSelected={props.props.isLive}
+                    isSkeleton={props.props.isLoading}
+                    isDisabled={props.props.isDisabled}
+                    onSelectedChange={props.on.live}
+                />
+                <Text weight="medium">{props.props.switchLabel}</Text>
+            </div>
             <Badge isDot isSkeleton={props.props.isLoading} tone={props.props.isLive ? "success" : "neutral"}>
                 {props.props.statusLabel}
             </Badge>

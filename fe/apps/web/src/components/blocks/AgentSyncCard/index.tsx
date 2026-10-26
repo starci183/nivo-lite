@@ -4,6 +4,15 @@ import { useLocale, useTranslations } from "next-intl"
 import { useAgentRights, useAgentSync } from "@/hooks/agentSettings"
 import { AgentSyncCardBase } from "./component"
 
+/** The failures of a sync the words name; any other code reads as the generic line, never as the raw code. */
+const SYNC_REASON_KEYS: Readonly<Record<string, string>> = {
+    WORKSPACE_UNAVAILABLE: "syncReasonWorkspaceUnavailable",
+}
+
+/** The words for a sync failure code. */
+const reasonKeyOf = (code: string | null): string =>
+    Object.entries(SYNC_REASON_KEYS).find(([known]) => code?.endsWith(known) === true)?.[1] ?? "syncReasonUnknown"
+
 /** The installation whose OpenClaw copy the card follows. */
 type AgentSyncCardProps = {
     readonly installationId: string
@@ -22,7 +31,7 @@ export const AgentSyncCard = (props: AgentSyncCardProps) => {
         if (status.state === "syncing") return { text: t("syncing"), tone: "neutral" as const }
         if (status.state === "none") return { text: t("syncNone"), tone: "warning" as const }
         if (status.state === "error") {
-            return { text: t("syncError", { reason: status.error ?? "?" }), tone: "danger" as const }
+            return { text: t("syncError", { reason: t(reasonKeyOf(status.error)) }), tone: "danger" as const }
         }
         if (status.syncedVersion !== status.activeVersion) {
             return {

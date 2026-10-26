@@ -98,8 +98,12 @@ const waitsForOf = (agent: OfficeAgent, words: OfficeWords): string | null =>
               .join(" · ")
 
 /** The status line of an agent that is not on duty: waiting for a connection, or paused. */
-const offDutyOf = (agent: OfficeAgent, words: OfficeWords): string =>
-    agent.waitsFor === null ? words.t("paused") : words.t("waitingConnection")
+const offDutyOf = (agent: OfficeAgent, words: OfficeWords): string => {
+    if (agent.waitsFor !== null) return words.t("waitingConnection")
+    if (agent.lifecycle === "needs_setup") return words.t("offNeedsSetup")
+    if (agent.lifecycle === "ready") return words.t("offReady")
+    return words.t("paused")
+}
 
 const agentMemberOf = (agent: OfficeAgent, words: OfficeWords): OfficeMemberRowView => ({
     id: agent.id,
