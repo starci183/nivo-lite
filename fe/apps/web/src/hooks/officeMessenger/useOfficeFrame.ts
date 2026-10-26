@@ -3,6 +3,7 @@
 import { useCallback, useReducer, useSyncExternalStore } from "react"
 
 const WIDE_INFO_QUERY = "(min-width: 80rem)"
+const SIDE_BY_SIDE_QUERY = "(min-width: 48rem)"
 
 const subscribeWide = (notify: () => void): (() => void) => {
     const query = window.matchMedia(WIDE_INFO_QUERY)
@@ -13,6 +14,14 @@ const subscribeWide = (notify: () => void): (() => void) => {
 const readWide = (): boolean => window.matchMedia(WIDE_INFO_QUERY).matches
 
 const readWideOnServer = (): boolean => false
+
+const subscribeSideBySide = (notify: () => void): (() => void) => {
+    const query = window.matchMedia(SIDE_BY_SIDE_QUERY)
+    query.addEventListener("change", notify)
+    return () => query.removeEventListener("change", notify)
+}
+
+const readSideBySide = (): boolean => window.matchMedia(SIDE_BY_SIDE_QUERY).matches
 
 /** The columns of the messenger: which one a phone shows, the centre view, and the info panel an owner opened or closed by hand. */
 interface FrameState {
@@ -41,10 +50,12 @@ const reduce = (state: FrameState, action: FrameAction): FrameState => {
 export const useOfficeFrame = () => {
     const [state, dispatch] = useReducer(reduce, { phoneView: "thread", centre: "chat", info: null })
     const isInfoDocked = useSyncExternalStore(subscribeWide, readWide, readWideOnServer)
+    const isSideBySide = useSyncExternalStore(subscribeSideBySide, readSideBySide, readWideOnServer)
     const isInfoOpen = state.info ?? isInfoDocked
     return {
         phoneView: state.phoneView,
         centre: state.centre,
+        isThreadVisible: state.centre === "chat" && (isSideBySide || state.phoneView === "thread"),
         isInfoDocked,
         isInfoOpen,
         showThread: useCallback(() => dispatch({ type: "thread" }), []),

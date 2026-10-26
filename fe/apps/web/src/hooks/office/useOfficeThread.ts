@@ -5,7 +5,7 @@ import { useQueryOfficeMessagesSwr } from "@/hooks/swr"
 import { OFFICE_PAGE_SIZE, OFFICE_POLL_MS, mergeMessages, toOfficeMessage } from "@/modules/office"
 import type { OfficeMessage } from "@/modules/office"
 import type { DataSlot } from "@/modules/types"
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 /** The cursor of the earliest line read so far. */
 interface ThreadCursor {
@@ -22,7 +22,7 @@ interface EarlierPages {
 
 /**
  * The thread of one Hub room (null = the Office room, every line): the newest page, read again every few seconds, and the earlier
- * pages the person asked for in that room. `onFetched` hears the newest line id after each read of the newest page.
+ * pages the person asked for in that room. Polling continues in hidden tabs for delivery; `onFetched` hears the newest fetched id.
  */
 export const useOfficeThread = (
     room: string | null,
@@ -38,9 +38,15 @@ export const useOfficeThread = (
         { limit: OFFICE_PAGE_SIZE, room },
         {
             refreshInterval: OFFICE_POLL_MS,
-            onSuccess: (page) => onFetched(mergeMessages([page.messages.map(toOfficeMessage)]).at(-1)?.id ?? null),
+            refreshWhenHidden: true,
         },
     )
+    const fetched = latest.data
+    const isValidating = latest.isValidating
+    useEffect(() => {
+        if (!isValidating && fetched !== undefined)
+            onFetched(mergeMessages([fetched.messages.map(toOfficeMessage)]).at(-1)?.id ?? null)
+    }, [fetched, isValidating, onFetched])
     const [pages, setPages] = useState<EarlierPages>({ room, lines: [], cursor: undefined })
     const current: EarlierPages = pages.room === room ? pages : { room, lines: [], cursor: undefined }
     const page = latest.earlier

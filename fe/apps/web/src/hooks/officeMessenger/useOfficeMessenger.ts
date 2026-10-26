@@ -83,12 +83,12 @@ const useSendLine = (
 }
 
 /** The whole Office messenger for one Hub room (null = the Office room): its data, its words and its commands. */
-export const useOfficeMessenger = (focusedId: string | null, roomKey: string | null) => {
+export const useOfficeMessenger = (focusedId: string | null, roomKey: string | null, isThreadVisible: boolean) => {
     const words = useOfficeWords()
-    const receipts = useOfficeReceipts(roomKey)
-    const thread = useOfficeThread(roomKey, receipts.onFetched)
     const peers = useOfficeTyping(roomKey)
     const hub = useOfficeRooms(roomKey, peers.names.length > 0)
+    const receipts = useOfficeReceipts(roomKey, isThreadVisible, hub.refreshRooms)
+    const thread = useOfficeThread(roomKey, receipts.onFetched)
     const fullBoard = useOfficeBoard()
     const sender = useOfficeSend()
     const decisions = useOfficeDecisions()
@@ -149,7 +149,6 @@ export const useOfficeMessenger = (focusedId: string | null, roomKey: string | n
         chatbotHandle: board.agents.find((agent) => agent.module === "chatbot" && agent.isActive)?.handle ?? null,
         text: words.t,
         send,
-        markRead: hub.markRead,
         markConversationRead: hub.markConversationRead,
     }
 }
