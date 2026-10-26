@@ -6,7 +6,7 @@ export const SHIFTS = {
     order: 40,
     icon: "review",
     glyph: "moduleShifts",
-    mascot: "/images/promo/mascot-night.png",
+    mascot: "/images/agents/shifts.png",
     category: "operations",
     status: "early",
     audience: "internal",

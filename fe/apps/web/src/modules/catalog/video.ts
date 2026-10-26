@@ -6,7 +6,7 @@ export const VIDEO = {
     order: 80,
     icon: "apps",
     glyph: "moduleVideo",
-    mascot: "/images/promo/mascot-celebrate.png",
+    mascot: "/images/agents/video.png",
     category: "marketing",
     status: "early",
     audience: "internal",

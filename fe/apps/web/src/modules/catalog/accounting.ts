@@ -6,7 +6,7 @@ export const ACCOUNTING = {
     order: 30,
     icon: "wallet",
     glyph: "moduleAccounting",
-    mascot: "/images/promo/mascot-checklist.png",
+    mascot: "/images/agents/accounting.png",
     category: "finance",
     status: "stable",
     audience: "internal",

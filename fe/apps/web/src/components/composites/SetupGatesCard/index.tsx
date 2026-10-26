@@ -1,58 +1,28 @@
-import { Alert, Badge, Button, List, ListRow, Meter, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
-import { GATE_ACTIONS, GATE_BODY, STACK } from "./classNames"
-import { SetupGatesCardEvidence } from "./component"
-
-type GateTone = "neutral" | "warning" | "success"
-
-/** One gate of the checklist in the reader language. */
-type SetupGate = {
-    readonly key: string
-    readonly label: string
-    readonly hint: string
-    readonly status: string
-    readonly statusLabel: string
-    readonly statusTone: GateTone
-    readonly evidence: string
-}
-
-/** The checklist, its progress, the apply command and what the last actions said. */
-type SetupGatesCardProps = {
-    readonly title: string
-    readonly progressLabel: string
-    readonly confirmed: number
-    readonly total: number
-    readonly gates: ReadonlyArray<SetupGate>
-    readonly isLoading: boolean
-    /** The key of the gate being edited; empty when none. */
-    readonly editing: string
-    readonly editText: string
-    readonly evidencePlaceholder: string
-    readonly isGating: boolean
-    readonly gateFailureTitle: string
-    readonly gateFailure: string
-    readonly confirmLabel: string
-    readonly unconfirmLabel: string
-    readonly editLabel: string
-    readonly editSaveLabel: string
-    readonly editCancelLabel: string
-    readonly applyLabel: string
-    readonly isApplying: boolean
-    readonly canApply: boolean
-    readonly applyHint: string
-    readonly applyTone: "idle" | "applied" | "refused"
-    readonly applyTitle: string
-    readonly applyText: string
-    readonly onEditText: (value: string) => void
-    readonly onGate: (gateKey: string, action: "confirm" | "reopen" | "edit", evidence?: string) => void
-    readonly onStartEdit: (gateKey: string, evidence: string) => void
-    readonly onStopEdit: () => void
-    readonly onApply: () => void
-}
+import { Fragment } from "react"
+import {
+    Alert,
+    Badge,
+    Button,
+    Divider,
+    Heading,
+    IconButton,
+    List,
+    ListRow,
+    Meter,
+    Region,
+    Text,
+    Tooltip,
+} from "@starci/grammar/common"
+import { nivoIconSource } from "@/components/leaves/Icon"
+import { GATE_BODY, GATE_ROW, SECTION, STACK } from "./classNames"
+import { renderSetupGatesCardEdit, renderSetupGatesCardEvidence } from "./gateBody"
+import type { SetupGatesCardProps } from "./types"
 
 /** The gates the owner must confirm before the draft can be applied, with their evidence and the apply command. */
 export const SetupGatesCard = (props: SetupGatesCardProps) => (
-    <SurfaceCard label={props.title} headingLevel={2}>
-        <div className={STACK}>
+    <Region label={props.title}>
+        <div className={SECTION}>
+            <Heading level={2}>{props.title}</Heading>
             <Meter
                 label={props.progressLabel}
                 value={props.confirmed}
@@ -63,28 +33,47 @@ export const SetupGatesCard = (props: SetupGatesCardProps) => (
             {props.gateFailure === "" ? null : (
                 <Alert title={props.gateFailureTitle} description={props.gateFailure} tone="negative" />
             )}
-            <List label={props.title}>
-                {props.gates.map((gate) => (
-                    <ListRow
-                        key={gate.key}
-                        title={gate.label}
-                        badges={
-                            <Badge isDot isSkeleton={props.isLoading} tone={gate.statusTone}>
-                                {gate.statusLabel}
-                            </Badge>
-                        }
-                    >
-                        <div className={GATE_BODY}>
-                            {props.editing === gate.key
-                                ? renderSetupGatesCardEdit(gate, props)
-                                : renderSetupGatesCardEvidence(gate, props)}
-                        </div>
-                    </ListRow>
-                ))}
-            </List>
+        </div>
+        <List label={props.title}>
+            {props.gates.map((gate) => (
+                <Fragment key={gate.key}>
+                    <Divider semantics="presentation" />
+                    <div className={GATE_ROW}>
+                        <ListRow
+                            title={gate.label}
+                            badges={
+                                <Badge isDot isSkeleton={props.isLoading} tone={gate.statusTone}>
+                                    {gate.statusLabel}
+                                </Badge>
+                            }
+                            actions={
+                                props.isLoading || props.editing === gate.key ? undefined : (
+                                    <Tooltip content={props.editLabel}>
+                                        <IconButton
+                                            source={nivoIconSource("edit", "leading")}
+                                            label={props.editLabel}
+                                            intent="neutral"
+                                            onPress={() => props.onStartEdit(gate.key, gate.evidence)}
+                                        />
+                                    </Tooltip>
+                                )
+                            }
+                        >
+                            <div className={GATE_BODY}>
+                                {props.editing === gate.key
+                                    ? renderSetupGatesCardEdit(gate, props)
+                                    : renderSetupGatesCardEvidence(gate, props)}
+                            </div>
+                        </ListRow>
+                    </div>
+                </Fragment>
+            ))}
+        </List>
+        <Divider semantics="presentation" />
+        <div className={SECTION}>
             <div className={STACK}>
                 <Button
-                    intent="commit"
+                    intent="alternative"
                     isSkeleton={props.isLoading}
                     isPending={props.isApplying}
                     isDisabled={!props.canApply}
@@ -104,73 +93,5 @@ export const SetupGatesCard = (props: SetupGatesCardProps) => (
                 )}
             </div>
         </div>
-    </SurfaceCard>
-)
-
-/** Renders the SetupGatesCard evidence section. */
-const renderSetupGatesCardEvidence = (
-    gate: Pick<SetupGate, "hint" | "evidence" | "status" | "key">,
-    props: SetupGatesCardProps,
-) => (
-    <>
-        <SetupGatesCardEvidence hint={gate.hint} evidence={gate.evidence} isWaiting={props.isLoading} />
-        {props.isLoading ? null : (
-            <div className={GATE_ACTIONS}>
-                {gate.status === "proposed" ? (
-                    <Button
-                        intent="neutral"
-                        size="sm"
-                        isPending={props.isGating}
-                        onPress={() => props.onGate(gate.key, "confirm")}
-                    >
-                        {props.confirmLabel}
-                    </Button>
-                ) : null}
-                {gate.status === "confirmed" ? (
-                    <Button
-                        intent="neutral"
-                        size="sm"
-                        isPending={props.isGating}
-                        onPress={() => props.onGate(gate.key, "reopen")}
-                    >
-                        {props.unconfirmLabel}
-                    </Button>
-                ) : null}
-                <Button intent="neutral" size="sm" onPress={() => props.onStartEdit(gate.key, gate.evidence)}>
-                    {props.editLabel}
-                </Button>
-            </div>
-        )}
-    </>
-)
-
-/** Renders the SetupGatesCard edit section. */
-const renderSetupGatesCardEdit = (gate: Pick<SetupGate, "key" | "label" | "hint">, props: SetupGatesCardProps) => (
-    <>
-        <Textarea
-            name={`gate-${gate.key}`}
-            label={gate.label}
-            isLabelHidden
-            description={gate.hint}
-            rows={3}
-            maxLength={800}
-            placeholder={props.evidencePlaceholder}
-            value={props.editText}
-            onValueChange={props.onEditText}
-        />
-        <div className={GATE_ACTIONS}>
-            <Button
-                intent="commit"
-                size="sm"
-                isPending={props.isGating}
-                isDisabled={props.editText.trim().length === 0}
-                onPress={() => props.onGate(gate.key, "edit", props.editText)}
-            >
-                {props.editSaveLabel}
-            </Button>
-            <Button intent="neutral" size="sm" onPress={props.onStopEdit}>
-                {props.editCancelLabel}
-            </Button>
-        </div>
-    </>
+    </Region>
 )

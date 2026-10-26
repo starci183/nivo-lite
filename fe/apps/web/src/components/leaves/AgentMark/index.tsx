@@ -13,7 +13,9 @@ type AgentMarkProps = {
     readonly seed?: string | undefined
     /** The picture the owner gave the agent. */
     readonly src?: string | null | undefined
-    readonly size?: "xs" | "sm" | "md" | "lg" | undefined
+    /** The agent is not known yet: the avatar draws as a waiting shape. */
+    readonly isSkeleton?: boolean | undefined
+    readonly size?: "xs" | "sm" | "md" | "lg" | "control" | undefined
 }
 
 /** The grammar publishes no 24px avatar: `xs` takes its smallest plate. */
@@ -22,6 +24,7 @@ const AVATAR_SIZE: Record<NonNullable<AgentMarkProps["size"]>, AvatarSize> = {
     sm: "sm",
     md: "md",
     lg: "lg",
+    control: "control",
 }
 
 /** An AI agent as a person-like Grammar avatar: its picture, else the generated avatar of its seed. The bot badge is Grammar's. */
@@ -32,5 +35,6 @@ export const AgentMark = (props: AgentMarkProps) => (
         seed={props.seed ?? props.label}
         {...(props.src ? { src: props.src } : {})}
         size={AVATAR_SIZE[props.size ?? "md"]}
+        isSkeleton={props.isSkeleton === true}
     />
 )

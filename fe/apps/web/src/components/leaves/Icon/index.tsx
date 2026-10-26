@@ -74,6 +74,8 @@ const ICON_SOURCES = {
     more: cuts(Outline.EllipsisHorizontalIcon, Solid.EllipsisHorizontalIcon),
     trigger: cuts(Outline.BoltIcon, Solid.BoltIcon),
     disclosure: cuts(Outline.ChevronRightIcon, Solid.ChevronRightIcon),
+    edit: cuts(Outline.PencilSquareIcon, Solid.PencilSquareIcon),
+    add: cuts(Outline.PlusIcon, Solid.PlusIcon),
     retry: cuts(Outline.ArrowPathIcon, Solid.ArrowPathIcon),
     send: cuts(Outline.PaperAirplaneIcon, Solid.PaperAirplaneIcon),
     home: cuts(Outline.HomeIcon, Solid.HomeIcon),

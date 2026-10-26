@@ -1,4 +1,4 @@
-import { Alert } from "@starci/grammar/common"
+import { Alert, Divider } from "@starci/grammar/common"
 import { SetupDraftCard } from "@/components/composites/SetupDraftCard"
 import { SetupGatesCard } from "@/components/composites/SetupGatesCard"
 import { SetupKnowledgeCard } from "@/components/composites/SetupKnowledgeCard"
@@ -6,7 +6,7 @@ import { SetupVersionsCard } from "@/components/composites/SetupVersionsCard"
 import { SlotView } from "@/components/composites/SlotView"
 import type { SetupSideView } from "@/hooks/setupSide"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { SIDE } from "./classNames"
+import { ALERT, SIDE } from "./classNames"
 
 /** The side column as a slot, and the commands of the checklist. */
 export interface AgentSetupSideBaseProps {
@@ -37,18 +37,19 @@ export const AgentSetupSideBase = (props: AgentSetupSideBaseProps) => (
         {(view) => (
             <div className={SIDE}>
                 {view.unmet === null ? null : (
-                    <Alert
-                        title={view.unmet.title}
-                        description={view.unmet.body}
-                        tone="cautionary"
-                        appearance="soft"
-                        action={{
-                            label: view.unmet.actionLabel,
-                            onAction: () => props.on.open(view.unmet?.href ?? ""),
-                        }}
-                    />
+                    <div className={ALERT}>
+                        <Alert
+                            title={view.unmet.title}
+                            description={view.unmet.body}
+                            tone="cautionary"
+                            appearance="soft"
+                            action={{
+                                label: view.unmet.actionLabel,
+                                onAction: () => props.on.open(view.unmet?.href ?? ""),
+                            }}
+                        />
+                    </div>
                 )}
-                <SetupDraftCard {...view.draft} />
                 <SetupGatesCard
                     {...view.gates}
                     gateFailureTitle=""
@@ -59,7 +60,11 @@ export const AgentSetupSideBase = (props: AgentSetupSideBaseProps) => (
                     onStopEdit={props.on.stopEdit}
                     onApply={props.on.apply}
                 />
+                <Divider semantics="presentation" />
+                <SetupDraftCard {...view.draft} />
+                <Divider semantics="presentation" />
                 <SetupKnowledgeCard {...view.knowledge} />
+                <Divider semantics="presentation" />
                 <SetupVersionsCard {...view.versions} />
             </div>
         )}

@@ -6,7 +6,7 @@ export const BOOKING = {
     order: 50,
     icon: "saved",
     glyph: "moduleBooking",
-    mascot: "/images/promo/mascot-point.png",
+    mascot: "/images/agents/booking.png",
     category: "operations",
     status: "early",
     audience: "customer",

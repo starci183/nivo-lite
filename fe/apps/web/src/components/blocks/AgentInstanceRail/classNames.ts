@@ -1,19 +1,13 @@
 import { cn } from "@heroui/react"
 
-/** The module switcher: a horizontal strip on narrow widths, a sticky column from lg. */
-export const RAIL = cn(
-    "flex",
-    "min-w-0",
-    "gap-2",
-    "overflow-x-auto",
-    "lg:sticky",
-    "lg:top-0",
-    "lg:flex-col",
-    "lg:overflow-visible",
-)
+/** The rail column: head, the scrolling list, the add action at the foot. */
+export const RAIL = cn("flex", "min-h-0", "min-w-0", "flex-1", "flex-col")
 
-/** The link back to the whole catalogue, shown from lg. */
-export const RAIL_HEAD = cn("hidden", "lg:block")
+/** The title of the rail; padding goes on the content, the dividers stay full width. */
+export const RAIL_HEAD = cn("w-full", "px-4", "py-3", "text-start")
 
-/** The name and the status of one agent in the rail. */
-export const RAIL_COPY = cn("flex", "min-w-0", "flex-col", "items-start", "gap-1")
+/** The list of agents scrolls between the head and the foot. */
+export const RAIL_LIST = cn("flex", "min-h-0", "flex-1", "flex-col", "overflow-y-auto", "p-2")
+
+/** The add action at the foot. */
+export const RAIL_FOOT = cn("p-4")

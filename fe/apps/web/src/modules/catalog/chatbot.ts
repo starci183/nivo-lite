@@ -6,7 +6,7 @@ export const CHATBOT = {
     order: 10,
     icon: "support",
     glyph: "moduleChatbot",
-    mascot: "/images/promo/mascot-chat.png",
+    mascot: "/images/agents/chatbot.png",
     category: "sales_customer",
     status: "stable",
     audience: "customer",

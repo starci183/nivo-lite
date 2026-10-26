@@ -1,30 +1,28 @@
+import type { ReactNode } from "react"
 import {
     EmptyNotice,
     Heading,
+    HorizontalScrollRegion,
     Region,
     SearchField,
     SegmentedControl,
-    Select,
     SurfaceCard,
     Text,
 } from "@starci/grammar/common"
 import { AgentCatalogCard, type AgentCatalogCardProps } from "@/components/composites/AgentCatalogCard"
-
+import { AgentTeamCard, type AgentTeamCardProps } from "@/components/composites/AgentTeamCard"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import {
-    CATEGORY,
-    GRID,
-    REGIONS,
-    TOOLBAR,
-    TOOLBAR_META,
-    TOOLBAR_ROW,
-    TOOLBAR_SEARCH,
-    TOOLBAR_SELECT,
-} from "./classNames"
+import { GRID, REGIONS, SECTION, SECTION_HEAD, TOOLBAR, TOOLBAR_SEARCH } from "./classNames"
 
-/** One card of the catalogue with the key the handlers name it by. */
-export interface AgentCatalogBoardCard {
+/** One installed agent of the first section with the key the card is listed by. */
+export interface AgentCatalogTeamEntry {
+    readonly key: string
+    readonly card: AgentTeamCardProps
+}
+
+/** One role card of the second section with the key the handlers name it by. */
+export interface AgentCatalogRoleEntry {
     readonly key: string
     readonly card: Omit<AgentCatalogCardProps, "onInstall" | "isInstalling" | "isBlocked">
 }
@@ -32,22 +30,19 @@ export interface AgentCatalogBoardCard {
 /** Copy, state and commands of the agent catalogue. */
 export interface AgentCatalogBaseProps {
     readonly props: {
+        readonly yoursTitle: string
+        readonly yoursEmptyTitle: string
+        readonly yoursEmptyHint: string
+        readonly team: ReadonlyArray<AgentCatalogTeamEntry>
+        readonly addTitle: string
         readonly searchLabel: string
         readonly searchPlaceholder: string
         readonly clearLabel: string
         readonly query: string
         readonly categoryLabel: string
-        readonly categoryOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
+        readonly categoryOptions: ReadonlyArray<{ readonly value: string; readonly label: string }>
         readonly category: string
-        readonly statusLabel: string
-        readonly statusOptions: ReadonlyArray<{ readonly value: string; readonly label: string }>
-        readonly status: string
-        readonly resultCount: string
-        readonly groups: ReadonlyArray<{
-            readonly key: string
-            readonly label: string
-            readonly cards: ReadonlyArray<AgentCatalogBoardCard>
-        }>
+        readonly roles: ReadonlyArray<AgentCatalogRoleEntry>
         readonly emptyTitle: string
         readonly emptyHint: string
         readonly emptyAction: string | undefined
@@ -58,19 +53,97 @@ export interface AgentCatalogBaseProps {
     }
     readonly on: {
         readonly query: (value: string) => void
-        readonly category: (value: string | null) => void
-        readonly status: (value: string) => void
+        readonly category: (value: string) => void
         readonly clear: () => void
         readonly retry: () => void
         readonly install: (key: string) => void
     }
 }
 
-/** Draws the catalogue: toolbar, the categories with their cards, or the empty notice when nothing matches. */
-export const AgentCatalogBase = (props: AgentCatalogBaseProps) => (
-    <div className={REGIONS}>
-        <div className={TOOLBAR}>
-            <div className={TOOLBAR_ROW}>
+/** The cards a loading section draws. */
+const SKELETON_KEYS = ["a", "b", "c"] as const
+
+/** The words of a waiting team card. */
+const SKELETON_TEAM_CARD: AgentTeamCardProps = {
+    name: "...",
+    seed: "...",
+    roleName: "...",
+    statusLabel: "...",
+    statusTone: "neutral",
+    href: "#",
+    isLoading: true,
+}
+
+/** The catalogue with the section that draws itself from the loading state. */
+type CatalogSlotProps = AgentCatalogBaseProps & { readonly children: (isSkeleton: boolean) => ReactNode }
+
+/** What an empty section says, and the optional way out. */
+type CatalogEmptyProps = {
+    readonly title: string
+    readonly hint: string
+    readonly action?: { readonly label: string; readonly onAction: () => void }
+}
+
+/** The notice of a section with nothing to show. */
+const CatalogEmpty = (props: CatalogEmptyProps) => (
+    <SurfaceCard ariaLabel={props.title}>
+        <EmptyNotice
+            message={props.title}
+            description={props.hint}
+            {...(props.action === undefined
+                ? {}
+                : { actionLabel: props.action.label, onAction: props.action.onAction })}
+        />
+    </SurfaceCard>
+)
+
+/** The loading, error and forbidden states of the catalogue data around a section; the section draws itself from `isSkeleton`. */
+const CatalogSlot = (props: CatalogSlotProps) => (
+    <SlotView slot={props.props.slot} placeholder={false} labels={props.props.slotLabels} onRetry={props.on.retry}>
+        {(_, isSkeleton) => props.children(isSkeleton)}
+    </SlotView>
+)
+
+/** The installed agents as compact cards. */
+const Team = (props: AgentCatalogBaseProps) => (
+    <Region label={props.props.yoursTitle}>
+        <div className={SECTION}>
+            <div className={SECTION_HEAD}>
+                <Heading level={2}>{props.props.yoursTitle}</Heading>
+                <Text size="sm" tone="muted" isSkeleton={props.props.isLoading}>
+                    {String(props.props.team.length)}
+                </Text>
+            </div>
+            <CatalogSlot {...props}>
+                {(isSkeleton) => (
+                    <>
+                        {props.props.team.length === 0 && !isSkeleton ? (
+                            <CatalogEmpty title={props.props.yoursEmptyTitle} hint={props.props.yoursEmptyHint} />
+                        ) : null}
+                        <div className={GRID}>
+                            {isSkeleton && props.props.team.length === 0
+                                ? SKELETON_KEYS.map((key) => <AgentTeamCard key={key} {...SKELETON_TEAM_CARD} />)
+                                : props.props.team.map((entry) => <AgentTeamCard key={entry.key} {...entry.card} />)}
+                        </div>
+                    </>
+                )}
+            </CatalogSlot>
+        </div>
+    </Region>
+)
+
+/** Adds the clear action only when its localized label is available. */
+const emptyActionOf = (props: AgentCatalogBaseProps) =>
+    props.props.emptyAction === undefined
+        ? {}
+        : { action: { label: props.props.emptyAction, onAction: props.on.clear } }
+
+/** The roles that can still be added: search, one group filter, the cards. */
+const Roles = (props: AgentCatalogBaseProps) => (
+    <Region label={props.props.addTitle}>
+        <div className={SECTION}>
+            <Heading level={2}>{props.props.addTitle}</Heading>
+            <div className={TOOLBAR}>
                 <div className={TOOLBAR_SEARCH}>
                     <SearchField
                         label={props.props.searchLabel}
@@ -82,8 +155,8 @@ export const AgentCatalogBase = (props: AgentCatalogBaseProps) => (
                         isSkeleton={props.props.isLoading}
                     />
                 </div>
-                <div className={TOOLBAR_SELECT}>
-                    <Select
+                <HorizontalScrollRegion>
+                    <SegmentedControl
                         label={props.props.categoryLabel}
                         isLabelHidden
                         isSkeleton={props.props.isLoading}
@@ -91,58 +164,40 @@ export const AgentCatalogBase = (props: AgentCatalogBaseProps) => (
                         value={props.props.category}
                         onValueChange={props.on.category}
                     />
-                </div>
+                </HorizontalScrollRegion>
             </div>
-            <div className={TOOLBAR_META}>
-                <SegmentedControl
-                    label={props.props.statusLabel}
-                    isLabelHidden
-                    isSkeleton={props.props.isLoading}
-                    options={props.props.statusOptions}
-                    value={props.props.status}
-                    onValueChange={props.on.status}
-                />
-                <Text size="sm" tone="muted" live="polite" isSkeleton={props.props.isLoading}>
-                    {props.props.resultCount}
-                </Text>
-            </div>
-        </div>
-        <SlotView slot={props.props.slot} placeholder={false} labels={props.props.slotLabels} onRetry={props.on.retry}>
-            {(_, isSkeleton) => (
-                <>
-                    {props.props.groups.length === 0 && !isSkeleton ? (
-                        <SurfaceCard ariaLabel={props.props.emptyTitle}>
-                            <EmptyNotice
-                                message={props.props.emptyTitle}
-                                description={props.props.emptyHint}
-                                {...catalogEmptyActionOf(props)}
+            <CatalogSlot {...props}>
+                {(isSkeleton) => (
+                    <>
+                        {props.props.roles.length === 0 && !isSkeleton ? (
+                            <CatalogEmpty
+                                title={props.props.emptyTitle}
+                                hint={props.props.emptyHint}
+                                {...emptyActionOf(props)}
                             />
-                        </SurfaceCard>
-                    ) : null}
-                    {props.props.groups.map((group) => (
-                        <Region key={group.key} label={group.label}>
-                            <div className={CATEGORY}>
-                                <Heading level={2}>{group.label}</Heading>
-                                <div className={GRID}>
-                                    {group.cards.map((entry) => (
-                                        <AgentCatalogCard
-                                            key={entry.key}
-                                            {...entry.card}
-                                            isInstalling={props.props.busyKey === entry.key}
-                                            isBlocked={props.props.busyKey !== null}
-                                            onInstall={() => props.on.install(entry.key)}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        </Region>
-                    ))}
-                </>
-            )}
-        </SlotView>
-    </div>
+                        ) : null}
+                        <div className={GRID}>
+                            {props.props.roles.map((entry) => (
+                                <AgentCatalogCard
+                                    key={entry.key}
+                                    {...entry.card}
+                                    isInstalling={props.props.busyKey === entry.key}
+                                    isBlocked={props.props.busyKey !== null}
+                                    onInstall={() => props.on.install(entry.key)}
+                                />
+                            ))}
+                        </div>
+                    </>
+                )}
+            </CatalogSlot>
+        </div>
+    </Region>
 )
 
-/** Adds the clear action only when its localized label is available. */
-const catalogEmptyActionOf = (props: AgentCatalogBaseProps) =>
-    props.props.emptyAction === undefined ? {} : { actionLabel: props.props.emptyAction, onAction: props.on.clear }
+/** Draws the catalogue: the installed agents, then the roles that can be added. */
+export const AgentCatalogBase = (props: AgentCatalogBaseProps) => (
+    <div className={REGIONS}>
+        <Team {...props} />
+        <Roles {...props} />
+    </div>
+)

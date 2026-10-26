@@ -1,10 +1,11 @@
 import type { ReactNode } from "react"
-import { PageContainer, PrimaryRailLayout } from "@starci/grammar/common"
+import { Divider, FillViewport, PageContainer, SurfaceCard } from "@starci/grammar/common"
+import { AgentInstanceCrumbs } from "@/components/blocks/AgentInstanceCrumbs"
 import { AgentInstanceHeader } from "@/components/blocks/AgentInstanceHeader"
 import { AgentInstanceRail } from "@/components/blocks/AgentInstanceRail"
 import { AgentTabs } from "@/components/blocks/AgentTabs"
 import type { ModuleKey } from "@/modules/catalog"
-import { MAIN } from "./classNames"
+import { BODY, FRAME, MAIN, RAIL_COLUMN, SEPARATOR, STACK } from "./classNames"
 
 /** What the layout supplies: the type and the instance of the url. */
 export interface AgentInstanceLayoutBaseProps {
@@ -13,22 +14,33 @@ export interface AgentInstanceLayoutBaseProps {
     readonly children?: ReactNode
 }
 
-/** Draws the frame of an agent instance: the installed agents on the left, its header and tabs, and the routed tab below. */
+/** Draws the frame of an agent instance: one joined surface, the installed agents on the left, then its header, tabs and the routed tab. */
 export const AgentInstanceLayoutBase = (props: AgentInstanceLayoutBaseProps) => (
     <PageContainer measure="product">
-        <PrimaryRailLayout
-            railPosition="leading"
-            railWidth="compact"
-            align="start"
-            collapsedOrder="rail-first"
-            rail={<AgentInstanceRail installationId={props.props.installationId} />}
-            primary={
-                <div className={MAIN}>
-                    <AgentInstanceHeader module={props.props.module} installationId={props.props.installationId} />
-                    <AgentTabs module={props.props.module} installationId={props.props.installationId} />
-                    {props.children}
-                </div>
-            }
-        />
+        <div className={STACK}>
+            <AgentInstanceCrumbs module={props.props.module} installationId={props.props.installationId} />
+            <FillViewport minHeight="md" bottomInset="page">
+                <SurfaceCard ariaLabel={props.props.installationId} composition="joined" height="fill">
+                    <div className={FRAME}>
+                        <div className={RAIL_COLUMN}>
+                            <AgentInstanceRail installationId={props.props.installationId} />
+                        </div>
+                        <div className={SEPARATOR}>
+                            <Divider semantics="presentation" />
+                        </div>
+                        <div className={MAIN}>
+                            <AgentInstanceHeader
+                                module={props.props.module}
+                                installationId={props.props.installationId}
+                            />
+                            <Divider semantics="presentation" />
+                            <AgentTabs module={props.props.module} installationId={props.props.installationId} />
+                            <Divider semantics="presentation" />
+                            <div className={BODY}>{props.children}</div>
+                        </div>
+                    </div>
+                </SurfaceCard>
+            </FillViewport>
+        </div>
     </PageContainer>
 )
