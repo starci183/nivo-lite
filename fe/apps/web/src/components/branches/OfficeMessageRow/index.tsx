@@ -57,12 +57,12 @@ export const OfficeMessageRow = (props: OfficeMessageRowProps) => {
                     {message.copyText}
                 </Text>
                 {message.workHref === null ? null : (
-                    <Button variant="ghost" size="sm" href={message.workHref}>
+                    <Button intent="neutral" size="sm" href={message.workHref}>
                         {props.text("cmdOpenWork")}
                     </Button>
                 )}
                 {message.leadHref === null ? null : (
-                    <Button variant="ghost" size="sm" href={message.leadHref}>
+                    <Button intent="neutral" size="sm" href={message.leadHref}>
                         {message.leadLabel}
                     </Button>
                 )}
@@ -81,16 +81,16 @@ export const OfficeMessageRow = (props: OfficeMessageRowProps) => {
             status={message.isAi ? <Badge tone="neutral">{props.text("aiBadge")}</Badge> : undefined}
             actions={
                 <ButtonGroup label={`${message.author ?? ""} ${message.time}`}>
-                    <Button variant="secondary" size="sm" onPress={onCopy}>
+                    <Button intent="neutral" size="sm" onPress={onCopy}>
                         {isCopied ? props.text("copied") : props.text("copyText")}
                     </Button>
                     {message.leadHref === null ? null : (
-                        <Button variant="secondary" size="sm" href={message.leadHref}>
+                        <Button intent="neutral" size="sm" href={message.leadHref}>
                             {message.leadLabel}
                         </Button>
                     )}
                     {replyHandle === null ? null : (
-                        <Button variant="secondary" size="sm" onPress={() => props.onReply(replyHandle)}>
+                        <Button intent="neutral" size="sm" onPress={() => props.onReply(replyHandle)}>
                             {props.text("reply")}
                         </Button>
                     )}
