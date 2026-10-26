@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
-import { Badge, Button, ButtonGroup, ChatBubble, Text } from "@starci/grammar/common"
+import { Badge, Button, ChatBubble, IconButton, Text, Tooltip } from "@starci/grammar/common"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import type { OfficeBodyPart, OfficeMessageView, OfficeText } from "@/modules/types"
 import { AVATAR_SLOT_CLASS_NAME, NOTICE_CLASS_NAME, rowClassNameOf } from "./classNames"
 
@@ -32,6 +33,44 @@ const Body = (props: BodyProps) => (
             ),
         )}
     </Text>
+)
+
+/** What the hover toolbar of a bubble holds: copy, reply and the lead link. */
+type MessageActionsProps = {
+    readonly message: OfficeMessageView
+    readonly text: OfficeText
+    readonly isCopied: boolean
+    readonly onCopy: () => void
+    readonly onReply: (handle: string) => void
+}
+
+/** The hover toolbar of a bubble: icon actions with tooltips, and the lead link when the message has one. */
+const MessageActions = ({ message, text, isCopied, onCopy, onReply }: MessageActionsProps) => (
+    <>
+        <Tooltip content={isCopied ? text("copied") : text("copyText")}>
+            <IconButton
+                intent="neutral"
+                source={nivoIconSource(isCopied ? "copied" : "copy", "leading")}
+                label={isCopied ? text("copied") : text("copyText")}
+                onPress={onCopy}
+            />
+        </Tooltip>
+        {message.replyHandle === null ? null : (
+            <Tooltip content={text("reply")}>
+                <IconButton
+                    intent="neutral"
+                    source={nivoIconSource("reply", "leading")}
+                    label={text("reply")}
+                    onPress={() => onReply(message.replyHandle ?? "")}
+                />
+            </Tooltip>
+        )}
+        {message.leadHref === null ? null : (
+            <Button intent="neutral" size="sm" href={message.leadHref}>
+                {message.leadLabel}
+            </Button>
+        )}
+    </>
 )
 
 /** One chat line: a bubble of a person, an agent or me, or a centred notice for a system line. */
@@ -72,7 +111,6 @@ export const OfficeMessageRow = (props: OfficeMessageRowProps) => {
         )
     }
 
-    const replyHandle = message.replyHandle
     const bubble = (
         <ChatBubble
             side={message.side}
@@ -83,21 +121,13 @@ export const OfficeMessageRow = (props: OfficeMessageRowProps) => {
             status={message.isAi ? <Badge tone="neutral">{props.text("aiBadge")}</Badge> : undefined}
             footer={props.status}
             actions={
-                <ButtonGroup label={`${message.author ?? ""} ${message.time}`}>
-                    <Button intent="neutral" size="sm" onPress={onCopy}>
-                        {isCopied ? props.text("copied") : props.text("copyText")}
-                    </Button>
-                    {message.leadHref === null ? null : (
-                        <Button intent="neutral" size="sm" href={message.leadHref}>
-                            {message.leadLabel}
-                        </Button>
-                    )}
-                    {replyHandle === null ? null : (
-                        <Button intent="neutral" size="sm" onPress={() => props.onReply(replyHandle)}>
-                            {props.text("reply")}
-                        </Button>
-                    )}
-                </ButtonGroup>
+                <MessageActions
+                    message={message}
+                    text={props.text}
+                    isCopied={isCopied}
+                    onCopy={onCopy}
+                    onReply={props.onReply}
+                />
             }
         >
             <Body parts={message.parts} />

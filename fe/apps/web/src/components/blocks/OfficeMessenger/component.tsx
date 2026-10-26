@@ -6,6 +6,7 @@ import {
     Heading,
     IconButton,
     IconTile,
+    Region,
     SurfaceCard,
     Text,
 } from "@starci/grammar/common"
@@ -31,7 +32,6 @@ import {
     HEAD_TEXT_CLASS_NAME,
     HEAD_TITLE_CLASS_NAME,
     INFO_COLUMN_CLASS_NAME,
-    LIST_BODY_CLASS_NAME,
     LIST_COLUMN_CLASS_NAME,
     LIST_COLUMN_HIDDEN_CLASS_NAME,
     PHONE_ONLY_CLASS_NAME,
@@ -86,7 +86,7 @@ export interface OfficeMessengerBaseProps {
 
 /**
  * Office as a messenger: the conversation list on the left, the team thread with its composer pinned at the bottom, and a collapsible
- * info panel on the right (a drawer on narrow screens). Each column uses its own Grammar card surface.
+ * info panel on the right (a drawer on narrow screens). The columns are regions of ONE joined Grammar surface.
  */
 export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
     const view = props.props
@@ -98,27 +98,29 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
     return (
         <>
             <FillViewport minHeight="md" bottomInset="none">
-                <div className={BODY_CLASS_NAME}>
-                    <div className={view.phoneView === "list" ? LIST_COLUMN_CLASS_NAME : LIST_COLUMN_HIDDEN_CLASS_NAME}>
-                        <SurfaceCard ariaLabel={text("listLabel")} composition="joined" height="fill">
-                            <div className={LIST_BODY_CLASS_NAME}>
-                                <OfficeConversations
-                                    props={{ list: view.list, isLoading: view.isLoading, text }}
-                                    on={{
-                                        openGroup: on.openGroup,
-                                        openAgent: on.openAgent,
-                                        openCustomer: on.openCustomer,
-                                    }}
-                                />
-                            </div>
-                        </SurfaceCard>
-                    </div>
-                    <div
-                        className={
-                            view.phoneView === "thread" ? THREAD_COLUMN_CLASS_NAME : THREAD_COLUMN_HIDDEN_CLASS_NAME
-                        }
-                    >
-                        <SurfaceCard ariaLabel={text("messengerLabel")} composition="joined" height="fill">
+                <SurfaceCard ariaLabel={text("messengerLabel")} composition="joined" height="fill">
+                    <div className={BODY_CLASS_NAME}>
+                        <Region
+                            label={text("listLabel")}
+                            className={
+                                view.phoneView === "list" ? LIST_COLUMN_CLASS_NAME : LIST_COLUMN_HIDDEN_CLASS_NAME
+                            }
+                        >
+                            <OfficeConversations
+                                props={{ list: view.list, isLoading: view.isLoading, text }}
+                                on={{
+                                    openGroup: on.openGroup,
+                                    openAgent: on.openAgent,
+                                    openCustomer: on.openCustomer,
+                                }}
+                            />
+                        </Region>
+                        <Region
+                            label={text("messengerLabel")}
+                            className={
+                                view.phoneView === "thread" ? THREAD_COLUMN_CLASS_NAME : THREAD_COLUMN_HIDDEN_CLASS_NAME
+                            }
+                        >
                             <OfficeMessengerHeader {...props} />
                             <Divider semantics="presentation" />
                             {isTasks ? (
@@ -143,16 +145,14 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
                                     <OfficeComposer props={view.composer} on={{ change: on.change, send: on.send }} />
                                 </>
                             )}
-                        </SurfaceCard>
-                    </div>
-                    {view.isInfoDocked && view.isInfoOpen ? (
-                        <div className={INFO_COLUMN_CLASS_NAME}>
-                            <SurfaceCard ariaLabel={text("infoTitle")} composition="joined" height="fill">
+                        </Region>
+                        {view.isInfoDocked && view.isInfoOpen ? (
+                            <Region label={text("infoTitle")} className={INFO_COLUMN_CLASS_NAME}>
                                 {infoPanel}
-                            </SurfaceCard>
-                        </div>
-                    ) : null}
-                </div>
+                            </Region>
+                        ) : null}
+                    </div>
+                </SurfaceCard>
             </FillViewport>
             {view.isInfoDocked ? null : (
                 <Drawer
