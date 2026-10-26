@@ -2,6 +2,8 @@ export { DatabaseModule } from "./database.module"
 export { MigrationRunnerService } from "./migration-runner.service"
 export { SeedRunnerService } from "./seed-runner.service"
 export { sql } from "./database.sql"
+export { openPostgresSession } from "./postgres-session.client"
+export type { PostgresSession, PostgresSessionTarget, PostgresTlsOptions } from "./postgres-session.contracts"
 export { DATABASE_ERROR_KINDS } from "./errors/database.error"
 export { parsePrimaryDatabaseConfig } from "./primary.config"
 export {
