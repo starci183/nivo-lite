@@ -21,6 +21,7 @@ const SPOTLIGHT = [
 const WAIT_MS = 5000
 const SHOW_MS = 2600
 const LOOK_MS = 150
+const LOOKS = Math.ceil(WAIT_MS / LOOK_MS)
 
 /** The target waiting for the next page to show it. */
 let queuedTarget: string | null = null
@@ -43,7 +44,7 @@ export const useGuideSpotlight = (pathname: string): ((target: string | undefine
     useEffect(() => {
         const target = takeQueued()
         if (target === null) return undefined
-        const started = Date.now()
+        let left = LOOKS
         let timer: ReturnType<typeof setTimeout> | undefined
         let outlined: HTMLElement | null = null
         const look = () => {
@@ -56,7 +57,8 @@ export const useGuideSpotlight = (pathname: string): ((target: string | undefine
                 timer = setTimeout(() => element.classList.remove(...SPOTLIGHT), SHOW_MS)
                 return
             }
-            if (Date.now() - started < WAIT_MS) timer = setTimeout(look, LOOK_MS)
+            left -= 1
+            if (left > 0) timer = setTimeout(look, LOOK_MS)
         }
         look()
         return () => {

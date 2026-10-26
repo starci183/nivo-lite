@@ -1,5 +1,4 @@
-import { Badge, EmptyNotice, ListItem, SurfaceListCard, Text } from "@starci/grammar/common"
-import { COPY, ROW } from "./classNames"
+import { Badge, EmptyNotice, ListRow, SurfaceListCard } from "@starci/grammar/common"
 
 /** The applied versions of the setup in the reader language. */
 type SetupVersionsCardProps = {
@@ -26,21 +25,18 @@ export const SetupVersionsCard = (props: SetupVersionsCardProps) => (
         {props.versions.length === 0
             ? null
             : props.versions.map((version) => (
-                  <ListItem key={version.id} className={ROW}>
-                      <div className={COPY}>
-                          <Text weight="semibold" size="sm">
-                              {version.line}
-                          </Text>
-                          <Text size="xs" tone="muted">
-                              {version.detail}
-                          </Text>
-                      </div>
-                      {version.isActive ? (
-                          <Badge isDot tone="success">
-                              {props.inUseLabel}
-                          </Badge>
-                      ) : null}
-                  </ListItem>
+                  <ListRow
+                      key={version.id}
+                      title={version.line}
+                      description={version.detail}
+                      badges={
+                          version.isActive ? (
+                              <Badge isDot tone="success">
+                                  {props.inUseLabel}
+                              </Badge>
+                          ) : undefined
+                      }
+                  />
               ))}
     </SurfaceListCard>
 )

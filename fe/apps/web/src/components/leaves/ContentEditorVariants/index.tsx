@@ -39,7 +39,6 @@ export const ContentEditorVariants = (props: ContentEditorVariantsProps) => (
         />
         <div className={FIELDS_CLASS_NAME}>
             <Textarea
-                variant="secondary"
                 label={props.t("variantFor", { channel: props.open.label })}
                 rows={9}
                 value={props.open.text}
@@ -52,7 +51,6 @@ export const ContentEditorVariants = (props: ContentEditorVariantsProps) => (
                     id={`ce-tags-${props.open.id}`}
                     name={`tags-${props.open.id}`}
                     label={props.t("fieldHashtags")}
-                    variant="secondary"
                     value={props.open.tags}
                     hint={props.t("fieldHashtagsHint")}
                     isDisabled={!props.isEditable}
@@ -60,7 +58,6 @@ export const ContentEditorVariants = (props: ContentEditorVariantsProps) => (
                 />
             ) : null}
             <Textarea
-                variant="secondary"
                 label={props.t("fieldNote")}
                 rows={2}
                 value={props.open.note}

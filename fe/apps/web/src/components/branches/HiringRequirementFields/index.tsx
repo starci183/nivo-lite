@@ -15,7 +15,6 @@ export const HiringRequirementFields = (props: HiringRequirementFieldsProps) => 
     return (
         <div className={GRID_CLASS_NAME}>
             <Textarea
-                variant="secondary"
                 label={say("jobSkills")}
                 description={say("jobSkillsHint")}
                 rows={3}
@@ -23,7 +22,6 @@ export const HiringRequirementFields = (props: HiringRequirementFieldsProps) => 
                 onValueChange={(skills) => onText("skills", skills)}
             />
             <Textarea
-                variant="secondary"
                 label={say("jobAvailability")}
                 description={say("jobAvailabilityHint")}
                 rows={3}
@@ -31,7 +29,6 @@ export const HiringRequirementFields = (props: HiringRequirementFieldsProps) => 
                 onValueChange={(availability) => onText("availability", availability)}
             />
             <Textarea
-                variant="secondary"
                 label={say("jobMustHave")}
                 description={say("jobMustHaveHint")}
                 rows={3}
@@ -39,7 +36,6 @@ export const HiringRequirementFields = (props: HiringRequirementFieldsProps) => 
                 onValueChange={(mustHave) => onText("mustHave", mustHave)}
             />
             <Textarea
-                variant="secondary"
                 label={say("jobNiceToHave")}
                 description={say("jobNiceToHaveHint")}
                 rows={3}
@@ -47,7 +43,6 @@ export const HiringRequirementFields = (props: HiringRequirementFieldsProps) => 
                 onValueChange={(niceToHave) => onText("niceToHave", niceToHave)}
             />
             <NumberField
-                variant="secondary"
                 label={say("jobYears")}
                 minValue={0}
                 maxValue={50}
@@ -59,7 +54,6 @@ export const HiringRequirementFields = (props: HiringRequirementFieldsProps) => 
                 id="job-exp-note"
                 name="experience_note"
                 label={say("jobExperienceNote")}
-                variant="secondary"
                 value={values.experienceNote}
                 onValueChange={(note) => onText("experienceNote", note)}
             />
