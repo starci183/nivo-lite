@@ -1,5 +1,5 @@
 import { purposeFor } from "@/hooks/connection-access"
-import { fill, guideKey, tokenValue, VERIFY, verifyKey } from "@/hooks/connection-guides"
+import { guideKey, placeholdersOf, tokenValue, VERIFY, verifyKey } from "@/hooks/connection-guides"
 import type { GuideContext, GuideStepDef, Token } from "@/hooks/connection-guides"
 import type {
     AgentChoice,
@@ -51,7 +51,7 @@ export const guideScreensOf = (build: GuideBuild, t: CatalogReader, tw: CatalogR
         fields: step.items.map((item, index): GuideField => {
             const id = `${slug(step.id)}-${index}`
             const part = (name: "label" | "option" | "hint" | "text"): string =>
-                t(guideKey(build.provider, step.id, index, name))
+                t(guideKey(build.provider, step.id, index, name), placeholdersOf(build.ctx))
             if (item.kind === "copy") {
                 const draft = build.drafts[item.token]
                 return {
@@ -81,7 +81,7 @@ export const guideScreensOf = (build: GuideBuild, t: CatalogReader, tw: CatalogR
                     kind: "choose",
                     id,
                     label: part("label"),
-                    option: fill(part("option"), build.ctx),
+                    option: part("option"),
                     hint: tw("guideChooseHint", { brand: build.brand }),
                 }
             }
@@ -102,7 +102,9 @@ export const verifyHelpOf = (
     if (def === undefined) return undefined
     return {
         intro: t(verifyKey(provider, environment, null)),
-        steps: Array.from({ length: def.steps }, (_, index) => fill(t(verifyKey(provider, environment, index)), ctx)),
+        steps: Array.from({ length: def.steps }, (_, index) =>
+            t(verifyKey(provider, environment, index), placeholdersOf(ctx)),
+        ),
     }
 }
 

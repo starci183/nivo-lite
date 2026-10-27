@@ -91,9 +91,15 @@ export const guideKey = (
 export const verifyKey = (provider: Provider, environment: Environment, index: number | null): string =>
     index === null ? `verify_${provider}_${environment}_intro` : `verify_${provider}_${environment}_${index}`
 
-/** Replace {name} {bank} {account} in a guide or help string. */
-export const fill = (text: string, ctx: Pick<GuideContext, "bank" | "account" | "name">): string =>
-    text.replace(/\{(bank|account|name)\}/g, (_, key: "bank" | "account" | "name") => ctx[key])
+/**
+ * The values of the {name} {bank} {account} placeholders of a guide or help string, handed to the catalog reader:
+ * a catalog message read without the values of its placeholders fails to format and shows its raw key.
+ */
+export const placeholdersOf = (ctx: Pick<GuideContext, "bank" | "account" | "name">): Record<string, string> => ({
+    name: ctx.name,
+    bank: ctx.bank,
+    account: ctx.account,
+})
 
 /** The value a copy line shows. */
 export const tokenValue = (token: Token, ctx: GuideContext): string => {

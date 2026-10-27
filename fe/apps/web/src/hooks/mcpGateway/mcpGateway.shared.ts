@@ -52,6 +52,24 @@ const STATUS_TONE: ReadonlyMap<string, McpTone> = new Map([
 ])
 const SCOPES: ReadonlySet<string> = new Set(["read", "write"])
 
+/** The catalog key of a tool id (`sepay.transactions.list` reads `tool_sepay-transactions-list`). */
+const toolKeyOf = (id: string): string => `tool_${id.replaceAll(".", "-")}`
+
+/** The status words of a connector: the catalog word of a known status, else the status as the gateway named it. */
+const statusOf = (t: McpTranslator, status: string): string =>
+    t.has(`status_${status}`) ? t(`status_${status}`) : status
+
+/**
+ * What a tool does, in the reader locale: the catalog text of a native tool, keyed by its id; a remote tool shows the description its
+ * server sent. The description the gateway sends stays the one the agents read.
+ */
+const toolDescriptionOf = (t: McpTranslator, id: string, description: string): string =>
+    t.has(toolKeyOf(id)) ? t(toolKeyOf(id)) : description
+
+/** The title of a connector: the catalog name of a native connector, else the name it was registered with. */
+const connectorTitleOf = (t: McpTranslator, key: string, name: string): string =>
+    t.has(`connector_${key}`) ? t(`connector_${key}`) : name
+
 /** A time the gateway recorded, short date and time in the reader locale. */
 const stampOf = (format: McpFormatter, iso: string): string =>
     format.dateTime(new Date(iso), { dateStyle: "short", timeStyle: "short" })
@@ -64,7 +82,9 @@ const toolRowsOf = (t: McpTranslator, connector: McpConnectorType): ReadonlyArra
     connector.tools.map((tool) => ({
         id: tool.name,
         title: tool.name,
-        description: [scopeOf(t, tool.scope), tool.description].filter(Boolean).join(" · "),
+        description: [scopeOf(t, tool.scope), toolDescriptionOf(t, tool.name, tool.description)]
+            .filter(Boolean)
+            .join(" · "),
         badges: [
             tool.approved
                 ? { label: t("toolApproved"), tone: "success" }
@@ -150,10 +170,10 @@ export const connectorRowsOf = (
 ): ReadonlyArray<McpConnectorRowView> =>
     connectors.map((connector) => ({
         id: connector.key,
-        title: connector.name,
+        title: connectorTitleOf(t, connector.key, connector.name),
         description: `${connector.key}.* · ${timesOf(t, format, connector)}`,
         badges: [
-            { label: connector.status, tone: STATUS_TONE.get(connector.status) ?? "neutral" },
+            { label: statusOf(t, connector.status), tone: STATUS_TONE.get(connector.status) ?? "neutral" },
             { label: connector.kind === "native" ? t("native") : t("remote"), tone: "accent" },
             {
                 label: t("tools", { count: connector.tools.length, version: connector.contractVersion }),
@@ -162,5 +182,8 @@ export const connectorRowsOf = (
             ...credentialBadgesOf(t, connector),
         ],
         actions: actionsOf(t, connector, commands, openCredential),
-        tools: { label: t("toolsOf", { name: connector.name }), rows: toolRowsOf(t, connector) },
+        tools: {
+            label: t("toolsOf", { name: connectorTitleOf(t, connector.key, connector.name) }),
+            rows: toolRowsOf(t, connector),
+        },
     }))

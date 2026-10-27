@@ -37,7 +37,7 @@ const textOf = (
     fieldAppId: tc("fieldAppId"),
     fieldAppIdHint: tw("zaloAppHint"),
     fieldAppSecret: tc("fieldAppSecret"),
-    createdLocked: tw("createdLocked"),
+    createdLocked: tw("createdLocked", { next: tw("next") }),
     saveOaSecret: tw("zaloSaveOaSecret"),
     oaSecretSaved: tw("zaloOaSecretSaved"),
     needSecret: tw("zaloNeedSecret"),
