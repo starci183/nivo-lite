@@ -5,7 +5,9 @@ import type {
     OfficeJumpRowView,
     OfficeMemberRowView,
     OfficePinRowView,
+    OfficeWaitingRowView,
 } from "@/modules/types"
+import { isDecisionWork, waitingOf } from "./office.helpers"
 import type { OfficeAgent, OfficeApproval, OfficePerson, OfficeStaff, OfficeTask, OfficeWork } from "./office.types"
 import { NIVO_AVATAR, agentAvatarOf, avatarOfAgentId, departmentAgentOf, leadNameOf } from "./office.words"
 import type { OfficeContext, OfficeWords } from "./office.words"
@@ -34,6 +36,23 @@ const workJumpOf = (work: OfficeWork, words: OfficeWords, context: OfficeContext
         subtitle: work.reason === null ? words.g("status_failed") : words.g(`reason_${work.reason}`),
         avatar: agent === null ? NIVO_AVATAR : agentAvatarOf(agent),
     }
+}
+
+/** The rows of "Cần bạn duyệt" in the order the header chip counts and jumps them (oldest first). */
+const waitingRowsOf = (
+    pending: ReadonlyArray<OfficeApproval>,
+    openWork: ReadonlyArray<OfficeWork>,
+    words: OfficeWords,
+    context: OfficeContext,
+): ReadonlyArray<OfficeWaitingRowView> => {
+    const approvals = new Map(pending.map((approval) => [approval.id, approval]))
+    const works = new Map(openWork.map((work) => [work.id, work]))
+    return waitingOf(pending, openWork).flatMap((waiting): ReadonlyArray<OfficeWaitingRowView> => {
+        const approval = waiting.kind === "approval" ? approvals.get(waiting.id) : undefined
+        if (approval !== undefined) return [{ ...approvalJumpOf(approval, words, context), target: "approval" }]
+        const work = waiting.kind === "exception" ? works.get(waiting.id) : undefined
+        return work === undefined ? [] : [{ ...workJumpOf(work, words, context), target: "exception" }]
+    })
 }
 
 const seenOf = (person: OfficePerson, words: OfficeWords, context: OfficeContext): string => {
@@ -155,8 +174,8 @@ export const infoViewOf = (
         cards: room.cards,
         channels: room.channels,
         pins: room.pins,
-        approvals: pending.map((approval) => approvalJumpOf(approval, words, context)),
-        exceptions: openWork.map((work) => workJumpOf(work, words, context)),
+        approvals: waitingRowsOf(pending, openWork, words, context),
+        exceptions: openWork.filter((work) => !isDecisionWork(work)).map((work) => workJumpOf(work, words, context)),
         members: [
             ...people.map((person) =>
                 personRowOf(

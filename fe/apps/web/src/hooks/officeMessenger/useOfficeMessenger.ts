@@ -22,29 +22,15 @@ import {
     roomOf,
     roomWorksOf,
     staffHandlesOf,
+    waitingOf,
     withReceipt,
 } from "@/modules/office"
-import type { OfficeRoom } from "@/modules/office"
+import type { OfficeRoom, OfficeWaiting } from "@/modules/office"
 import { useOfficePanels } from "./useOfficePanels"
 import { useOfficeThreadView } from "./useOfficeThreadView"
 
-/** Where the header chip jumps: the oldest thing that waits for a person. */
-interface FirstJump {
-    readonly kind: "approval" | "exception"
-    readonly id: string
-}
-
-interface Waiting {
-    readonly id: string
-    readonly createdAt: string
-}
-
-const firstJumpOf = (approval: Waiting | undefined, exception: Waiting | undefined): FirstJump | null => {
-    if (approval !== undefined && (exception === undefined || approval.createdAt <= exception.createdAt)) {
-        return { kind: "approval", id: approval.id }
-    }
-    return exception === undefined ? null : { kind: "exception", id: exception.id }
-}
+/** Where the header chip jumps: the oldest thing that waits for a person's decision; none when nothing waits. */
+const firstJumpOf = (waiting: ReadonlyArray<OfficeWaiting>): OfficeWaiting | null => waiting[0] ?? null
 
 /** The board scoped to a room: the approvals of its agents and the exceptions of their departments. */
 const scopedBoard = (full: OfficeBoard, current: OfficeRoom | null): OfficeBoard => ({
@@ -111,8 +97,10 @@ export const useOfficeMessenger = (focusedId: string | null, roomKey: string | n
         () => (fetched === undefined ? undefined : withReceipt(fetched, marker)),
         [fetched, marker],
     )
-    const pendingCards = (messages ?? []).filter((line) => line.card !== null && line.cardState === "pending").length
-    const waitingCount = board.pending.length + board.exceptions.length + pendingCards
+    // One definition for the header chip and the "Cần bạn duyệt" column: approval cards and work items waiting for a decision.
+    // A pending result card names one of them, so it is not counted again; a failed item is an exception, not a decision.
+    const waiting = useMemo(() => waitingOf(board.pending, board.exceptions), [board.pending, board.exceptions])
+    const waitingCount = waiting.length
     const items = useOfficeThreadView(messages, board, words, focusedId, decisions.alreadyIds, sender.outbox.length > 0)
     const panelRoom = useMemo(
         () => ({
@@ -129,7 +117,6 @@ export const useOfficeMessenger = (focusedId: string | null, roomKey: string | n
 
     const send = useSendLine(board.agents, sender, roomKey)
 
-    const oldestPending = [...board.pending].sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0]
     return {
         slot: thread.slot,
         items,
@@ -138,7 +125,7 @@ export const useOfficeMessenger = (focusedId: string | null, roomKey: string | n
         decisions,
         panels,
         waitingCount,
-        firstJump: firstJumpOf(oldestPending, board.exceptions[0]),
+        firstJump: firstJumpOf(waiting),
         taskCount: board.tasks.length,
         memberCount: panels.info.members.length,
         agentCount: roomAgents.length,

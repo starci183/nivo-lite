@@ -349,6 +349,11 @@ export interface OfficeJumpRowView {
     readonly avatar: OfficeAvatarView
 }
 
+/** A row of "Cần bạn duyệt": an approval card or a work item waiting for a decision, and the card in the thread it jumps to. */
+export interface OfficeWaitingRowView extends OfficeJumpRowView {
+    readonly target: "approval" | "exception"
+}
+
 /** A member row of the info panel. */
 export interface OfficeMemberRowView {
     readonly id: string
@@ -368,7 +373,9 @@ export interface OfficeMemberRowView {
 
 /** The right column. */
 export interface OfficeInfoView {
-    readonly approvals: ReadonlyArray<OfficeJumpRowView>
+    /** Everything that waits for a person's decision, oldest first: the approval cards and the work items waiting for a decision. */
+    readonly approvals: ReadonlyArray<OfficeWaitingRowView>
+    /** The work items that failed and need a look, not a decision. */
     readonly exceptions: ReadonlyArray<OfficeJumpRowView>
     readonly members: ReadonlyArray<OfficeMemberRowView>
     /** Pending result cards of the room, jumping to their card. */
