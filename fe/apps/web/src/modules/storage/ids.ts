@@ -4,6 +4,8 @@ export enum StorageId {
     ActiveWorkspaceId = "NIVO_ACTIVE_WORKSPACE_ID",
     /** Which console rails each person collapsed, by person id. */
     RailCollapsed = "NIVO_RAIL_COLLAPSED",
+    /** Which notices the reader closed, one record keyed by notice. */
+    Dismissed = "NIVO_DISMISSED",
 }
 
 /** The cookie that remembers the active workspace for the server-rendered console pages, which still read it until they move to GraphQL. */
