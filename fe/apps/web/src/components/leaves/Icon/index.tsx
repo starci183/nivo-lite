@@ -120,6 +120,9 @@ const ICON_SOURCES = {
     messageSent: cuts(Outline.CheckIcon, Solid.CheckIcon),
     messageDelivered: cuts(Outline.CheckCircleIcon, Outline.CheckCircleIcon),
     messageSeen: cuts(Outline.CheckIcon, Solid.CheckIcon),
+    failure: cuts(Outline.XCircleIcon, Solid.XCircleIcon),
+    warning: cuts(Outline.ExclamationTriangleIcon, Solid.ExclamationTriangleIcon),
+    info: cuts(Outline.InformationCircleIcon, Solid.InformationCircleIcon),
 } satisfies Record<string, GlyphCuts>
 
 /** What an icon MEANS on these screens. The glyph that draws it is this file business. */
