@@ -1,14 +1,5 @@
-import type { useFormatter, useLocale, useTranslations } from "next-intl"
-import type {
-    useQueryBillingWorkspaceSwr,
-    useQueryPaymentOrdersSwr,
-    useQueryBillingPlanSwr,
-    useQueryBillingReviewTransactionsSwr,
-} from "@/hooks/swr"
-import type { useRequestPaymentOrder } from "@/hooks/billing"
-import type { useUsageCard, UsageCardView } from "@/hooks/usageCard"
+import type { UsageCardView } from "@/hooks/usageCard"
 import {
-    Alert,
     Badge,
     Button,
     DescriptionList,
@@ -19,19 +10,28 @@ import {
     Text,
 } from "@starci/grammar/common"
 import { BillingHistoryList, type BillingHistoryRow } from "@/components/composites/BillingHistoryList"
-
 import { BillingRenewal } from "@/components/composites/BillingRenewal"
+import { SlotView } from "@/components/composites/SlotView"
 import { UsageCard } from "@/components/composites/UsageCard"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 
 import { ACTIONS_CLASS_NAME, PAGE_CLASS_NAME, SECTION_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
-type BillingTone = "success" | "warning" | "danger" | "neutral"
+/** The tone a billing status badge takes. */
+export type BillingTone = "success" | "warning" | "danger" | "neutral"
 
-/** Settled billing copy, display values and feature interactions. */
+/** The current plan card, worded and ready to draw. */
+export interface BillingPlanView {
+    readonly planName: string
+    readonly status: string
+    readonly statusTone: BillingTone
+    readonly paidUntil: string
+    readonly canRenew: boolean
+}
+
+/** Settled billing copy, region slots and feature interactions. */
 export interface BillingOverviewBaseProps {
     readonly state: {
-        readonly phase: "loading" | "error" | "ready"
-        readonly canRenew: boolean
         readonly isRenewing: boolean
         readonly usage: UsageCardView["state"]
     }
@@ -40,29 +40,29 @@ export interface BillingOverviewBaseProps {
         readonly description: string
         readonly backLabel: string
         readonly backHref: string
-        readonly loading: string
-        readonly errorTitle: string
-        readonly errorDescription: string
         readonly planLabel: string
-        readonly planName: string
         readonly statusLabel: string
-        readonly status: string
-        readonly statusTone: BillingTone
         readonly paidUntilLabel: string
-        readonly paidUntil: string
         readonly renewalLabel: string
         readonly renewalHint: string
+        readonly plan: DataSlot<BillingPlanView>
+        readonly planSlotLabels: SlotLabels
         readonly usage: UsageCardView["props"]
         readonly historyTitle: string
         readonly historyEmpty: string
-        readonly orders: ReadonlyArray<BillingHistoryRow>
+        readonly orders: DataSlot<ReadonlyArray<BillingHistoryRow>>
+        readonly ordersSlotLabels: SlotLabels
         readonly reviewTitle: string
         readonly reviewDescription: string
         readonly reviewEmpty: string
-        readonly review: ReadonlyArray<BillingHistoryRow>
+        readonly review: DataSlot<ReadonlyArray<BillingHistoryRow>>
+        readonly reviewSlotLabels: SlotLabels
     }
     readonly on: {
         readonly renew: () => void
+        readonly retryPlan: () => void
+        readonly retryOrders: () => void
+        readonly retryReview: () => void
         readonly openCredits: () => void
         readonly formatUsageDay: (value: unknown) => string
         readonly formatUsageCredits: (value: unknown) => string
@@ -70,70 +70,90 @@ export interface BillingOverviewBaseProps {
     }
 }
 
-/** Draws billing from settled display values and interactions. */
-export const BillingOverviewBase = (props: BillingOverviewBaseProps) => {
-    if (props.state.phase === "error")
-        return (
-            <PageContainer measure="product">
-                <Alert tone="negative" title={props.props.errorTitle} description={props.props.errorDescription} />
-            </PageContainer>
-        )
-    if (props.state.phase === "loading")
-        return (
-            <PageContainer measure="product">
-                <SectionHeader level={1} title={props.props.title} />
-                <Text tone="muted">{props.props.loading}</Text>
-            </PageContainer>
-        )
-    return (
-        <PageContainer measure="product">
-            <div className={PAGE_CLASS_NAME}>
-                <div>
-                    <Button intent="neutral" size="sm" href={props.props.backHref}>
-                        {props.props.backLabel}
-                    </Button>
-                </div>
-                <SectionHeader level={1} title={props.props.title} description={props.props.description} />
-                {renderCurrentBillingPlan(props)}
-                <UsageCard
-                    state={props.state.usage}
-                    props={props.props.usage}
-                    on={{
-                        openCredits: props.on.openCredits,
-                        formatDay: props.on.formatUsageDay,
-                        formatCredits: props.on.formatUsageCredits,
-                        minimumBarSize: props.on.minimumUsageBarSize,
-                    }}
-                />
-                <BillingHistoryList
-                    props={{
-                        title: props.props.historyTitle,
-                        empty: props.props.historyEmpty,
-                        rows: props.props.orders,
-                    }}
-                />
-                <Region labelledBy="billing-review-title" className={SECTION_CLASS_NAME}>
-                    <SectionHeader
-                        id="billing-review-title"
-                        level={2}
-                        title={props.props.reviewTitle}
-                        description={props.props.reviewDescription}
-                    />
-                    <BillingHistoryList
-                        props={{
-                            ariaLabel: props.props.reviewTitle,
-                            empty: props.props.reviewEmpty,
-                            rows: props.props.review,
-                        }}
-                    />
-                </Region>
-            </div>
-        </PageContainer>
-    )
+/** What the plan card draws while its read is in flight. */
+const PLAN_PLACEHOLDER: BillingPlanView = {
+    planName: "…",
+    status: "…",
+    statusTone: "neutral",
+    paidUntil: "…",
+    canRenew: false,
 }
 
+/** What a history region draws while its read is in flight. */
+const ROWS_PLACEHOLDER: ReadonlyArray<BillingHistoryRow> = [
+    { id: "placeholder-1", title: "…", detail: "…" },
+    { id: "placeholder-2", title: "…", detail: "…" },
+]
+
+/** Draws billing from settled display values, region slots and interactions. */
+export const BillingOverviewBase = (props: BillingOverviewBaseProps) => (
+    <PageContainer measure="product">
+        <div className={PAGE_CLASS_NAME}>
+            <div>
+                <Button intent="neutral" size="sm" href={props.props.backHref}>
+                    {props.props.backLabel}
+                </Button>
+            </div>
+            <SectionHeader level={1} title={props.props.title} description={props.props.description} />
+            <SlotView
+                slot={props.props.plan}
+                placeholder={PLAN_PLACEHOLDER}
+                labels={props.props.planSlotLabels}
+                forbidden="notice"
+                onRetry={props.on.retryPlan}
+            >
+                {(plan) => renderCurrentBillingPlan(props, plan)}
+            </SlotView>
+            <UsageCard
+                state={props.state.usage}
+                props={props.props.usage}
+                on={{
+                    openCredits: props.on.openCredits,
+                    formatDay: props.on.formatUsageDay,
+                    formatCredits: props.on.formatUsageCredits,
+                    minimumBarSize: props.on.minimumUsageBarSize,
+                }}
+            />
+            <SlotView
+                slot={props.props.orders}
+                placeholder={ROWS_PLACEHOLDER}
+                labels={props.props.ordersSlotLabels}
+                forbidden="hide"
+                onRetry={props.on.retryOrders}
+            >
+                {(orders) => (
+                    <BillingHistoryList
+                        props={{ title: props.props.historyTitle, empty: props.props.historyEmpty, rows: orders }}
+                    />
+                )}
+            </SlotView>
+            <Region labelledBy="billing-review-title" className={SECTION_CLASS_NAME}>
+                <SectionHeader
+                    id="billing-review-title"
+                    level={2}
+                    title={props.props.reviewTitle}
+                    description={props.props.reviewDescription}
+                />
+                <SlotView
+                    slot={props.props.review}
+                    placeholder={ROWS_PLACEHOLDER}
+                    labels={props.props.reviewSlotLabels}
+                    forbidden="hide"
+                    onRetry={props.on.retryReview}
+                >
+                    {(review) => (
+                        <BillingHistoryList
+                            props={{ ariaLabel: props.props.reviewTitle, empty: props.props.reviewEmpty, rows: review }}
+                        />
+                    )}
+                </SlotView>
+            </Region>
+        </div>
+    </PageContainer>
+)
+
 /** Draws the SurfaceCard section of the BillingOverview view. */
-const renderCurrentBillingPlan = (props: BillingOverviewBaseProps) => (
+const renderCurrentBillingPlan = (props: BillingOverviewBaseProps, plan: BillingPlanView) => (
     <SurfaceCard label={props.props.planLabel} headingLevel={2}>
         <div className={STACK_CLASS_NAME}>
             <DescriptionList
@@ -143,25 +163,25 @@ const renderCurrentBillingPlan = (props: BillingOverviewBaseProps) => (
                     {
                         id: "plan",
                         term: props.props.planLabel,
-                        description: <Text weight="semibold">{props.props.planName}</Text>,
+                        description: <Text weight="semibold">{plan.planName}</Text>,
                     },
                     {
                         id: "status",
                         term: props.props.statusLabel,
                         description: (
-                            <Badge tone={props.props.statusTone} isDot>
-                                {props.props.status}
+                            <Badge tone={plan.statusTone} isDot>
+                                {plan.status}
                             </Badge>
                         ),
                     },
                     {
                         id: "paidUntil",
                         term: props.props.paidUntilLabel,
-                        description: <Text weight="semibold">{props.props.paidUntil}</Text>,
+                        description: <Text weight="semibold">{plan.paidUntil}</Text>,
                     },
                 ]}
             />
-            {props.state.canRenew ? (
+            {plan.canRenew ? (
                 <div className={ACTIONS_CLASS_NAME}>
                     <BillingRenewal
                         state={{ isRequesting: props.state.isRenewing }}
@@ -176,96 +196,3 @@ const renderCurrentBillingPlan = (props: BillingOverviewBaseProps) => (
         </div>
     </SurfaceCard>
 )
-
-/** Inputs owned by this display/state mapping. */
-interface BillingOverviewStateInput {
-    readonly workspace: ReturnType<typeof useQueryBillingWorkspaceSwr>
-    readonly orders: ReturnType<typeof useQueryPaymentOrdersSwr>
-    readonly plan: ReturnType<typeof useQueryBillingPlanSwr>
-    readonly review: ReturnType<typeof useQueryBillingReviewTransactionsSwr>
-    readonly phase: BillingOverviewBaseProps["state"]["phase"]
-    readonly error: unknown
-    readonly format: ReturnType<typeof useFormatter>
-    readonly t: ReturnType<typeof useTranslations<"billing">>
-    readonly locale: ReturnType<typeof useLocale>
-    readonly renewal: ReturnType<typeof useRequestPaymentOrder>
-    readonly usage: ReturnType<typeof useUsageCard>
-    readonly timeZone: string
-}
-
-/** Derives the billing display values and localized history labels. */
-export const buildBillingOverviewState = ({
-    workspace,
-    orders,
-    plan,
-    review,
-    phase,
-    error,
-    format,
-    t,
-    locale,
-    renewal,
-    usage,
-    timeZone,
-}: BillingOverviewStateInput) => {
-    const money = (amount: number) =>
-        format.number(amount, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
-    const stamp = (value: string) =>
-        format.dateTime(new Date(value), { dateStyle: "medium", timeStyle: "short", timeZone })
-    const statusLabels: Record<string, string> = {
-        pending_payment: t("statusPending_payment"),
-        active: t("statusActive"),
-        past_due: t("statusPast_due"),
-        cancelled: t("statusCancelled"),
-    }
-    const orderLabels: Record<string, string> = {
-        pending: t("orderPending"),
-        paid: t("orderPaid"),
-        expired: t("orderExpired"),
-        cancelled: t("orderCancelled"),
-    }
-    const reviewLabels: Record<string, string> = {
-        underpaid: t("reviewUnderpaid"),
-        expired: t("reviewExpired"),
-        unmatched: t("reviewUnmatched"),
-    }
-    let planName = t("noPlan")
-    if (plan.data) planName = locale === "vi" ? plan.data.nameVi : plan.data.nameEn
-    const paidUntil = workspace.data?.paidUntil
-    return {
-        phase,
-        plan,
-        renewal,
-        usage,
-        t,
-        error,
-        planName,
-        statusLabels,
-        workspace,
-        statusTones,
-        paidUntil,
-        format,
-        orders,
-        money,
-        stamp,
-        orderLabels,
-        orderTones,
-        review,
-        reviewLabels,
-    }
-}
-
-/** Display tones for workspace and order billing states. */
-const statusTones: Record<string, BillingOverviewBaseProps["props"]["statusTone"]> = {
-    active: "success",
-    pending_payment: "warning",
-    past_due: "danger",
-    cancelled: "neutral",
-}
-
-const orderTones: Record<string, BillingOverviewBaseProps["props"]["statusTone"]> = {
-    paid: "success",
-    pending: "warning",
-    expired: "neutral",
-    cancelled: "neutral",
-}
