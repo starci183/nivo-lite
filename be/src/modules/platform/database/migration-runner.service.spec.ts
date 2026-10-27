@@ -1,6 +1,7 @@
 import childProcess, { ChildProcess } from "node:child_process"
 import { Test } from "@nestjs/testing"
 import { MigrationRunnerService } from "./migration-runner.service"
+import { DatabaseError, DatabaseErrorCode } from "./errors/database.error"
 
 const PLATFORM = Object.getOwnPropertyDescriptor(process, "platform")
 
@@ -38,12 +39,16 @@ describe("MigrationRunnerService", () => {
         expect(spawn).toHaveBeenCalledWith("npm.cmd", ["run", "db:push"], { stdio: "inherit" })
     })
 
-    it("fails with the exit status of a wrapper that exits non-zero", async () => {
+    it("fails with a database error and exit status when a wrapper exits non-zero", async () => {
         const { running, child } = await start("linux")
 
         child.emit("exit", 1)
 
-        await expect(running).rejects.toThrow("db:push exited 1")
+        await expect(running).rejects.toMatchObject({
+            code: DatabaseErrorCode.MigrationFailed,
+            params: { status: 1 },
+        })
+        await expect(running).rejects.toBeInstanceOf(DatabaseError)
     })
 
     it("fails when the wrapper ends without an exit status", async () => {
@@ -51,7 +56,10 @@ describe("MigrationRunnerService", () => {
 
         child.emit("exit", null)
 
-        await expect(running).rejects.toThrow("db:push exited without a status")
+        await expect(running).rejects.toMatchObject({
+            code: DatabaseErrorCode.MigrationFailed,
+            params: { status: "without a status" },
+        })
     })
 
     it("fails when the wrapper cannot be started", async () => {
@@ -60,6 +68,7 @@ describe("MigrationRunnerService", () => {
 
         child.emit("error", failure)
 
-        await expect(running).rejects.toBe(failure)
+        await expect(running).rejects.toMatchObject({ code: DatabaseErrorCode.MigrationFailed })
+        await expect(running).rejects.toHaveProperty("cause", failure)
     })
 })
