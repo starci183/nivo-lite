@@ -46,6 +46,8 @@ const invoiceOf = builder<InvoiceViewRow>({
     issued_at: "2026-10-12T11:00:00.000Z",
     due_at: null,
     paid_at: null,
+    contract_id: null,
+    period_ends_on: null,
     created_at: "2026-10-12T11:00:00.000Z",
 })
 

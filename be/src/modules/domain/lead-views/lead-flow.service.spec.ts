@@ -95,6 +95,8 @@ const INVOICE: InvoiceViewRow = {
     due_at: null,
     issued_at: "2026-10-12T00:00:00.000Z",
     paid_at: null,
+    contract_id: null,
+    period_ends_on: null,
     created_at: "2026-10-12T00:00:00.000Z",
 }
 

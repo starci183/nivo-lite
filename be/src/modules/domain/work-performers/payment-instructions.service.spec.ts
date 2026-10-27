@@ -54,6 +54,8 @@ const invoiceOf = builder<InvoiceRow>({
     status: "issued",
     issued_by: "Lan",
     paid_at: null,
+    contract_id: null,
+    period_ends_on: null,
 })
 
 const lead: LeadRecordRow = {

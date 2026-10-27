@@ -4,7 +4,7 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { InvoicesErrorCode } from "./errors/invoices.error"
-import type { NewInvoice } from "./invoices.contracts"
+import type { NewInvoice, NewRenewalInvoice } from "./invoices.contracts"
 import { InvoicesService } from "./invoices.service"
 import type {
     InvoiceAccountingRow,
@@ -15,10 +15,12 @@ import type {
 import type { InvoiceViewRow } from "./persistence/invoice-views.rows"
 import { LIST_LEAD_INVOICES, LIST_WORKBENCH_INVOICES } from "./persistence/invoice-views.sql"
 import {
+    FIND_CONTRACT_PERIOD_INVOICE,
     FIND_INVOICE,
     FIND_INVOICE_OF_ORDER,
     FIND_LATEST_LEAD_INVOICE,
     INSERT_INVOICE,
+    INSERT_RENEWAL_INVOICE,
     LAST_INVOICE_NUMBER,
     LIST_ACCOUNTING_INVOICES,
     LIST_ISSUED_INVOICES,
@@ -37,6 +39,8 @@ const INVOICE: InvoiceRow = {
     status: "issued",
     issued_by: null,
     paid_at: null,
+    contract_id: null,
+    period_ends_on: null,
 }
 const NOW = "2026-10-13T10:00:00.000Z"
 const DUE_AT = "2026-10-28T10:00:00.000Z"
@@ -46,6 +50,26 @@ const INPUT: NewInvoice = {
     leadId: "l1",
     amountVnd: 50_000,
     issuedBy: "Lan",
+}
+const CONTRACT = "c1"
+const PERIOD = "2026-11-30"
+const RENEWAL: InvoiceRow = {
+    ...INVOICE,
+    id: "inv-r1",
+    order_id: null,
+    invoice_no: "INV-202610-0043",
+    amount_vnd: 900_000,
+    issued_by: null,
+    contract_id: CONTRACT,
+    period_ends_on: PERIOD,
+}
+const RENEWAL_INPUT: NewRenewalInvoice = {
+    workspaceId: WS,
+    contractId: CONTRACT,
+    leadId: "l1",
+    amountVnd: 900_000,
+    periodEndsOn: PERIOD,
+    issuedBy: null,
 }
 const VIEW: InvoiceViewRow = { ...INVOICE, due_at: DUE_AT, issued_at: NOW, created_at: NOW }
 
@@ -308,5 +332,161 @@ describe("InvoicesService", () => {
             code: InvoicesErrorCode.NotFound,
         })
         expect(em.query).toHaveBeenCalledWith(MARK_INVOICE_PAID, [WS, "missing", NOW])
+    })
+})
+
+describe("InvoicesService renewals", () => {
+    it("issues a renewal invoice for a contract period with the next number, no order and the term due date", async () => {
+        const em = mockEntityManager({
+            query: [
+                [FIND_CONTRACT_PERIOD_INVOICE, []],
+                [LAST_INVOICE_NUMBER, [{ invoice_no: "INV-202610-0042" }]],
+                [INSERT_RENEWAL_INVOICE, [RENEWAL]],
+            ],
+        })
+        const service = await build(em)
+
+        await expect(service.issueRenewal(RENEWAL_INPUT)).resolves.toEqual({ invoice: RENEWAL, created: true })
+        expect(em.query.mock.calls).toEqual([
+            [FIND_CONTRACT_PERIOD_INVOICE, [WS, CONTRACT, PERIOD]],
+            [LAST_INVOICE_NUMBER, [WS, "INV-202610-"]],
+            [INSERT_RENEWAL_INVOICE, [WS, CONTRACT, PERIOD, "l1", "INV-202610-0043", 900_000, DUE_AT, null, NOW]],
+        ])
+    })
+
+    it("answers the existing renewal invoice of the period without issuing another", async () => {
+        const em = mockEntityManager({ query: [FIND_CONTRACT_PERIOD_INVOICE, [RENEWAL]] })
+        const service = await build(em)
+
+        await expect(service.issueRenewal(RENEWAL_INPUT)).resolves.toEqual({ invoice: RENEWAL, created: false })
+        expect(em.query.mock.calls).toEqual([[FIND_CONTRACT_PERIOD_INVOICE, [WS, CONTRACT, PERIOD]]])
+    })
+
+    it("issues a new invoice for the next period of the same contract", async () => {
+        const next = { ...RENEWAL, id: "inv-r2", invoice_no: "INV-202610-0044", period_ends_on: "2026-12-31" }
+        const em = mockEntityManager({
+            query: [
+                [FIND_CONTRACT_PERIOD_INVOICE, []],
+                [LAST_INVOICE_NUMBER, [{ invoice_no: "INV-202610-0043" }]],
+                [INSERT_RENEWAL_INVOICE, [next]],
+            ],
+        })
+        const service = await build(em)
+
+        await expect(service.issueRenewal({ ...RENEWAL_INPUT, periodEndsOn: "2026-12-31" })).resolves.toEqual({
+            invoice: next,
+            created: true,
+        })
+        expect(em.query.mock.calls).toEqual([
+            [FIND_CONTRACT_PERIOD_INVOICE, [WS, CONTRACT, "2026-12-31"]],
+            [LAST_INVOICE_NUMBER, [WS, "INV-202610-"]],
+            [INSERT_RENEWAL_INVOICE, [WS, CONTRACT, "2026-12-31", "l1", "INV-202610-0044", 900_000, DUE_AT, null, NOW]],
+        ])
+    })
+})
+
+describe("InvoicesService renewals", () => {
+    it("tries the following number when only the number clashed", async () => {
+        const created = { ...RENEWAL, invoice_no: "INV-202610-0002" }
+        const em = mockEntityManager({
+            query: [
+                [FIND_CONTRACT_PERIOD_INVOICE, []],
+                [LAST_INVOICE_NUMBER, []],
+                [INSERT_RENEWAL_INVOICE, []],
+                [FIND_CONTRACT_PERIOD_INVOICE, []],
+                [INSERT_RENEWAL_INVOICE, [created]],
+            ],
+        })
+        const service = await build(em)
+
+        await expect(service.issueRenewal(RENEWAL_INPUT)).resolves.toEqual({ invoice: created, created: true })
+        expect(em.query.mock.calls).toEqual([
+            [FIND_CONTRACT_PERIOD_INVOICE, [WS, CONTRACT, PERIOD]],
+            [LAST_INVOICE_NUMBER, [WS, "INV-202610-"]],
+            [INSERT_RENEWAL_INVOICE, [WS, CONTRACT, PERIOD, "l1", "INV-202610-0001", 900_000, DUE_AT, null, NOW]],
+            [FIND_CONTRACT_PERIOD_INVOICE, [WS, CONTRACT, PERIOD]],
+            [INSERT_RENEWAL_INVOICE, [WS, CONTRACT, PERIOD, "l1", "INV-202610-0002", 900_000, DUE_AT, null, NOW]],
+        ])
+    })
+
+    it("answers the renewal a concurrent issuer wrote after the insert conflicted", async () => {
+        const em = mockEntityManager({
+            query: [
+                [FIND_CONTRACT_PERIOD_INVOICE, []],
+                [LAST_INVOICE_NUMBER, []],
+                [INSERT_RENEWAL_INVOICE, []],
+                [FIND_CONTRACT_PERIOD_INVOICE, [RENEWAL]],
+            ],
+        })
+        const service = await build(em)
+
+        await expect(service.issueRenewal(RENEWAL_INPUT)).resolves.toEqual({ invoice: RENEWAL, created: false })
+        expect(em.query).toHaveBeenCalledTimes(4)
+    })
+
+    it("gives up a renewal after four taken numbers", async () => {
+        const em = mockEntityManager({
+            query: [
+                [FIND_CONTRACT_PERIOD_INVOICE, []],
+                [LAST_INVOICE_NUMBER, []],
+                [INSERT_RENEWAL_INVOICE, []],
+            ],
+        })
+        const service = await build(em)
+
+        await expect(service.issueRenewal(RENEWAL_INPUT)).rejects.toMatchObject({
+            code: InvoicesErrorCode.NotNumbered,
+        })
+        expect(em.query.mock.calls.filter(([statement]) => statement === INSERT_RENEWAL_INVOICE)).toHaveLength(4)
+    })
+})
+
+describe("InvoicesService renewals", () => {
+    it("reads the renewal invoice of a contract period, or null when it has none", async () => {
+        const em = mockEntityManager({
+            query: [
+                [FIND_CONTRACT_PERIOD_INVOICE, [RENEWAL]],
+                [FIND_CONTRACT_PERIOD_INVOICE, []],
+            ],
+        })
+        const service = await build(em)
+
+        await expect(service.forContractPeriod(WS, CONTRACT, PERIOD)).resolves.toEqual(RENEWAL)
+        await expect(service.forContractPeriod(WS, CONTRACT, "2026-12-31")).resolves.toBeNull()
+        expect(em.query.mock.calls).toEqual([
+            [FIND_CONTRACT_PERIOD_INVOICE, [WS, CONTRACT, PERIOD]],
+            [FIND_CONTRACT_PERIOD_INVOICE, [WS, CONTRACT, "2026-12-31"]],
+        ])
+    })
+
+    it("carries the contract and period through find and markPaid", async () => {
+        const paid = { ...RENEWAL, status: "paid", paid_at: NOW }
+        const em = mockEntityManager({
+            query: [
+                [FIND_INVOICE, [RENEWAL]],
+                [MARK_INVOICE_PAID, [paid]],
+            ],
+        })
+        const service = await build(em)
+
+        await expect(service.find(WS, "inv-r1")).resolves.toMatchObject({ contract_id: CONTRACT, period_ends_on: PERIOD })
+        await expect(service.markPaid(WS, "inv-r1")).resolves.toMatchObject({
+            contract_id: CONTRACT,
+            period_ends_on: PERIOD,
+            status: "paid",
+        })
+    })
+
+    it.each([
+        FIND_INVOICE,
+        FIND_INVOICE_OF_ORDER,
+        FIND_LATEST_LEAD_INVOICE,
+        FIND_CONTRACT_PERIOD_INVOICE,
+        INSERT_INVOICE,
+        INSERT_RENEWAL_INVOICE,
+        MARK_INVOICE_PAID,
+    ])("selects the contract and its period in invoice statement %#", (statement) => {
+        expect(String(statement)).toContain("contract_id")
+        expect(String(statement)).toContain("period_ends_on::text AS period_ends_on")
     })
 })

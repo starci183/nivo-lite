@@ -18,6 +18,10 @@ export interface InvoiceRow {
     readonly issued_by: string | null
     /** When it was paid, ISO text. */
     readonly paid_at: string | null
+    /** The contract a renewal invoice renews, or null for any other invoice. */
+    readonly contract_id: string | null
+    /** The contract end date a renewal invoice renews, `YYYY-MM-DD`, or null for any other invoice. */
+    readonly period_ends_on: string | null
 }
 
 /** The highest invoice number of a month. */

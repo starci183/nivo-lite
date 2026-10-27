@@ -87,6 +87,8 @@ const invoiceOf = builder<InvoiceRow>({
     status: "issued",
     issued_by: "Mai",
     paid_at: null,
+    contract_id: null,
+    period_ends_on: null,
 })
 
 const proposalOf = (amount: number | undefined, fields: Proposal["fields"] = {}): Proposal => ({

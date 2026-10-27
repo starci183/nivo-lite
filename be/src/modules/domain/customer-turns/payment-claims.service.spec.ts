@@ -24,6 +24,8 @@ const invoice: InvoiceRow = {
     status: "issued",
     issued_by: null,
     paid_at: null,
+    contract_id: null,
+    period_ends_on: null,
 }
 const claim = { inboundEventId: "e2", claim: "da chuyen khoan", channelLabel: "Telegram", conversationId: "c1" }
 

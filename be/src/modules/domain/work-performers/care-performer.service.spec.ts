@@ -71,6 +71,8 @@ const invoiceOf = builder<InvoiceRow>({
     status: "paid",
     issued_by: "Lan",
     paid_at: "2026-10-12T09:00:00.000Z",
+    contract_id: null,
+    period_ends_on: null,
 })
 
 const transactionOf = builder<Transaction>({

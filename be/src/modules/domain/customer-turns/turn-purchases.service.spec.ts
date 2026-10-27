@@ -68,6 +68,8 @@ const invoice: InvoiceRow = {
     status: "issued",
     issued_by: null,
     paid_at: null,
+    contract_id: null,
+    period_ends_on: null,
 }
 
 const build = async (openOrders: ReadonlyArray<object> = [], created = true) => {

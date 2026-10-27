@@ -114,6 +114,8 @@ const invoiceOf = builder<InvoiceAccountingRow>({
     status: "paid",
     issued_by: "Lan",
     paid_at: "2026-10-14T11:00:00Z",
+    contract_id: null,
+    period_ends_on: null,
     issued_at: "2026-10-12T10:00:00Z",
     due_at: "2026-10-15T10:00:00Z",
     created_at: "2026-10-12T09:00:00Z",

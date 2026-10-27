@@ -96,6 +96,8 @@ const RECORDS: LeadFlowRecords = {
             issued_by: "An",
             issued_at: "2026-10-12T02:00:00.000Z",
             paid_at: "2026-10-12T03:00:00.000Z",
+            contract_id: null,
+            period_ends_on: null,
             created_at: "2026-10-12T02:00:00.000Z",
         },
     ],

@@ -25,6 +25,8 @@ export const invoice = (patch: Partial<InvoiceAccountingRow> = {}): InvoiceAccou
     status: "issued",
     issued_by: null,
     paid_at: null,
+    contract_id: null,
+    period_ends_on: null,
     issued_at: ISSUED,
     due_at: null,
     created_at: CREATED,
