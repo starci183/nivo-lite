@@ -12,10 +12,6 @@
       "types": "./dist/proxy.d.ts",
       "default": "./dist/proxy.js"
     },
-    "./locale-switch": {
-      "types": "./dist/locale-switch.d.ts",
-      "default": "./dist/locale-switch.js"
-    },
     "./request": {
       "types": "./dist/request.d.ts",
       "default": "./dist/request.js"
