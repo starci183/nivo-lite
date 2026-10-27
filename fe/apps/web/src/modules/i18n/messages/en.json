@@ -6280,6 +6280,7 @@
     "contractImportShowing": "Showing the first {n} rows.",
     "contractImportRow": "Row {row}",
     "contractImportConfirm": "Import {n} contracts",
+    "contractImportConfirmIdle": "Import contracts",
     "contractImportDone": "Imported {created} contracts, skipped {skipped}",
     "contractImportProblemCustomerMissing": "No customer name",
     "contractImportProblemEndsOnMissing": "No end date",

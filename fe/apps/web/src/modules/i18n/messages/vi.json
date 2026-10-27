@@ -6285,6 +6285,7 @@
     "contractImportShowing": "Đang hiện {n} dòng đầu.",
     "contractImportRow": "Dòng {row}",
     "contractImportConfirm": "Nhập {n} hợp đồng",
+    "contractImportConfirmIdle": "Nhập hợp đồng",
     "contractImportDone": "Đã nhập {created} hợp đồng, bỏ qua {skipped}",
     "contractImportProblemCustomerMissing": "Thiếu tên khách",
     "contractImportProblemEndsOnMissing": "Thiếu ngày kết thúc",
