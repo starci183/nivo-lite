@@ -1,105 +1,29 @@
-import { builder, mock } from "@starci/jest-preset"
+import { mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AutomationBusinessEventsService } from "@modules/domain/automations"
+import { ContractsService } from "@modules/domain/contracts"
 import { DecisionsErrorCode, EvidenceService } from "@modules/domain/decisions"
-import type { Proposal, WorkContext, WorkItem } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
-import type { OptionalInboundEvent } from "@modules/domain/inbound-events"
 import { InvoicesService } from "@modules/domain/invoices"
-import type { InvoiceRow } from "@modules/domain/invoices"
 import { LeadRecordsService } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
 import { TransactionsService } from "@modules/domain/transactions"
-import type { OptionalTransaction } from "@modules/domain/transactions"
 import { WorkItemsService } from "@modules/domain/work-items"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { PerformerKitService } from "./performer-kit.service"
 import { ReconcilePaymentPerformerService } from "./reconcile-payment-performer.service"
-
-type IssuedInvoice = Awaited<ReturnType<InvoicesService["listIssued"]>>[number]
-
-const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
-
-const itemOf = builder<WorkItem>({
-    id: "item-1",
-    workspace_id: "ws-1",
-    department: "accounting",
-    action: "reconcile_payment",
-    subject_type: "transaction",
-    subject_id: "tx-1",
-    lead_id: null,
-    inbound_event_id: null,
-    parent_id: null,
-    chain_id: "item-1",
-    depth: 0,
-    status: "queued",
-    decided_path: null,
-    reason: null,
-    reasons: [],
-    missing_fields: [],
-    proposal: { summary: "Payment", fields: {} },
-    result: null,
-    error: null,
-    evidence_state: "pending",
-    assigned_staff_id: null,
-    execution_id: null,
-    created_at: "2026-10-12T09:00:00.000Z",
-    updated_at: "2026-10-12T09:00:00.000Z",
-    completed_at: null,
-    installation_id: null,
-})
-
-const transactionOf = builder<NonNullable<OptionalTransaction>>({
-    id: "tx-1",
-    workspace_id: "ws-1",
-    inbound_event_id: null,
-    amount_vnd: 450000,
-    reference: "INV-1 Lan",
-    payer: "Lan",
-    invoice_id: null,
-    status: "unmatched",
-})
-
-const invoiceOf = builder<InvoiceRow>({
-    id: "inv-1",
-    workspace_id: "ws-1",
-    order_id: "ord-1",
-    lead_id: "lead-1",
-    invoice_no: "INV-1",
-    amount_vnd: 450000,
-    status: "paid",
-    issued_by: "Mai",
-    paid_at: "2026-10-12T10:00:00.000Z",
-    contract_id: null,
-    period_ends_on: null,
-})
-
-const issuedOf = builder<IssuedInvoice>({
-    ...invoiceOf({ status: "issued", paid_at: null }),
-    order_no: "SO-1",
-    contact_name: "Lan",
-})
-
-const eventOf = builder<NonNullable<OptionalInboundEvent>>({
-    id: "ev-1",
-    workspace_id: "ws-1",
-    channel: "bank",
-    kind: "payment",
-    sender_name: null,
-    sender_contact: null,
-    body: "CK chuyen tien",
-    amount_vnd: 300000,
-    external_ref: null,
-    event_id: "sepay:123",
-    lead_id: null,
-    status: "new",
-})
-
-const proposalOf = builder<Proposal>({
-    summary: "Payment",
-    amount_vnd: 450000,
-    fields: { reference: "INV-1 Lan", match: "matchedByCodeAmount" },
-    candidates: [{ id: "inv-1", label: "INV-1", amount_vnd: 450000 }],
-})
+import { WorkPerformersLogEvent } from "./work-performers.log-events"
+import {
+    ctx,
+    eventOf,
+    invoiceOf,
+    issuedOf,
+    itemOf,
+    proposalOf,
+    renewedContract,
+    transactionOf,
+} from "@tests/fixtures/builders/reconcile-payment-performer.builder"
 
 const build = async () => {
     const kit = mock<PerformerKitService>()
@@ -130,6 +54,8 @@ const build = async () => {
     const evidence = mock<EvidenceService>()
     const leads = mock<LeadRecordsService>()
     const events = mock<AutomationBusinessEventsService>()
+    const contracts = mock<ContractsService>()
+    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ReconcilePaymentPerformerService,
@@ -142,6 +68,8 @@ const build = async () => {
             { provide: EvidenceService, useValue: evidence },
             { provide: LeadRecordsService, useValue: leads },
             { provide: AutomationBusinessEventsService, useValue: events },
+            { provide: ContractsService, useValue: contracts },
+            { provide: LOGGER, useValue: logger },
         ],
     }).compile()
     return {
@@ -154,6 +82,8 @@ const build = async () => {
         evidence,
         leads,
         events,
+        contracts,
+        logger,
     }
 }
 
@@ -483,5 +413,82 @@ describe("ReconcilePaymentPerformerService onReject", () => {
         await service.onReject(ctx, itemOf({ subject_id: null }))
 
         expect(transactions.sendToReview).not.toHaveBeenCalled()
+    })
+})
+
+
+
+describe("ReconcilePaymentPerformerService perform", () => {
+    const renewal = invoiceOf({ contract_id: "contract-1", period_ends_on: "2027-01-01", invoice_no: "INV-202612-0001" })
+
+    it("moves the contract of a paid renewal invoice to its next term and records it", async () => {
+        const { service, invoices, contracts, evidence } = await build()
+        invoices.markPaid.mockResolvedValue(renewal)
+        contracts.extendForPaidRenewal.mockResolvedValue({
+            extended: true,
+            previousEndsOn: "2027-01-01",
+            contract: renewedContract,
+        })
+
+        await service.perform(ctx, itemOf(), proposalOf(), { name: "Mai" })
+
+        expect(contracts.extendForPaidRenewal).toHaveBeenCalledWith(
+            "ws-1",
+            "contract-1",
+            "2027-01-01",
+            "INV-202612-0001",
+        )
+        expect(evidence.log).toHaveBeenCalledWith(ctx, {
+            lead_id: "lead-1",
+            work_item_id: "item-1",
+            kind: "contract.renewed",
+            actor: "NIVO",
+            summary: "contractRenewed|INV-202612-0001|01/01/2028",
+            evidence: "2027-01-01 → 2028-01-01",
+        })
+    })
+
+    it("records nothing more when the renewal was already applied", async () => {
+        const { service, invoices, contracts, evidence } = await build()
+        invoices.markPaid.mockResolvedValue(renewal)
+        contracts.extendForPaidRenewal.mockResolvedValue({
+            extended: false,
+            previousEndsOn: "2028-01-01",
+            contract: renewedContract,
+        })
+
+        await service.perform(ctx, itemOf(), proposalOf(), { name: "Mai" })
+
+        expect(evidence.log.mock.calls.map(([, entry]) => entry.kind)).not.toContain("contract.renewed")
+    })
+
+    it.each([
+        ["no contract", { contract_id: null, period_ends_on: "2027-01-01" }],
+        ["no renewed period", { contract_id: "contract-1", period_ends_on: null }],
+    ])("renews nothing for an invoice with %s", async (_name, change) => {
+        const { service, invoices, contracts } = await build()
+        invoices.markPaid.mockResolvedValue(invoiceOf(change))
+
+        await service.perform(ctx, itemOf(), proposalOf(), { name: "Mai" })
+
+        expect(contracts.extendForPaidRenewal).not.toHaveBeenCalled()
+    })
+
+    it("keeps the payment when the renewal fails and logs the failure", async () => {
+        const { service, invoices, contracts, logger, events } = await build()
+        invoices.markPaid.mockResolvedValue(renewal)
+        const cause = new Error("contracts down")
+        contracts.extendForPaidRenewal.mockRejectedValue(cause)
+
+        await expect(service.perform(ctx, itemOf(), proposalOf(), { name: "Mai" })).resolves.toMatchObject({
+            evidence: "verified",
+        })
+
+        expect(logger.error).toHaveBeenCalledWith(WorkPerformersLogEvent.ContractRenewalFailed, cause, {
+            workItemId: "item-1",
+            invoiceId: "inv-1",
+            contractId: "contract-1",
+        })
+        expect(events.publish).toHaveBeenCalled()
     })
 })

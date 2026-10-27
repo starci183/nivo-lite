@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common"
 import { ConfigurableModuleClass } from "./reconcile-bank-credit.module-definition"
-import { HoldForOwnerCheckStep } from "./steps/hold-for-owner-check.step"
+import { SettleBankCreditStep } from "./steps/settle-bank-credit.step"
 
-@Module({ providers: [HoldForOwnerCheckStep], exports: [HoldForOwnerCheckStep] })
+@Module({ providers: [SettleBankCreditStep], exports: [SettleBankCreditStep] })
 /** The application of the reconcile-bank-credit job: its step; the queue transport module imports it. */
 export class ReconcileBankCreditModule extends ConfigurableModuleClass {}

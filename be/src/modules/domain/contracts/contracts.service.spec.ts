@@ -10,7 +10,14 @@ import type { MessageCatalog, RequestLocale } from "@modules/platform/i18n"
 import type { SaveContractParams } from "./contracts.contracts"
 import { ContractsService } from "./contracts.service"
 import { ContractsErrorCode } from "./errors/contracts.error"
-import { ATTACH_CONTRACT_LEAD, INSERT_CONTRACT, LIST_CONTRACTS, UPDATE_CONTRACT } from "./persistence/contracts.sql"
+import {
+    ATTACH_CONTRACT_LEAD,
+    EXTEND_CONTRACT_TERM,
+    INSERT_CONTRACT,
+    LIST_CONTRACTS,
+    LOCK_CONTRACT,
+    UPDATE_CONTRACT,
+} from "./persistence/contracts.sql"
 
 const paramsOf = builder<SaveContractParams>({
     workspaceId: "ws-1",
@@ -218,6 +225,131 @@ describe("ContractsService", () => {
             ])
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
             expect(em.query).toHaveBeenCalledWith(LIST_CONTRACTS, ["ws-1"])
+        })
+    })
+})
+
+const CURRENT = { ...ROW, starts_on: "2026-01-01", ends_on: "2027-01-01", note: "VIP" }
+const RENEWED = { ...CURRENT, starts_on: "2027-01-01", ends_on: "2028-01-01", note: "VIP\ncontracts.renewalNote" }
+const RESULT_2028 = {
+    id: "contract-1",
+    leadId: "lead-1",
+    customerName: "Anh Minh",
+    plan: "Monthly",
+    startsOn: "2027-01-01",
+    endsOn: "2028-01-01",
+    amountVnd: 5_000_000,
+    status: "active",
+    note: "VIP\ncontracts.renewalNote",
+}
+
+describe("ContractsService", () => {
+    describe("extendForPaidRenewal", () => {
+
+        it("moves a contract still ending on the paid period to its next term and logs it in the same transaction", async () => {
+            const tx = fakeTransaction(
+                mockEntityManager({
+                    query: [
+                        [LOCK_CONTRACT, [CURRENT]],
+                        [EXTEND_CONTRACT_TERM, [RENEWED]],
+                    ],
+                }),
+            )
+            const { contracts, events, members } = await build(tx.em)
+
+            await expect(
+                contracts.extendForPaidRenewal("ws-1", "contract-1", "2027-01-01", "INV-202612-0001"),
+            ).resolves.toEqual({
+                extended: true,
+                previousEndsOn: "2027-01-01",
+                contract: RESULT_2028,
+            })
+
+            expect(tx.em.query).toHaveBeenCalledWith(LOCK_CONTRACT, ["ws-1", "contract-1"])
+            expect(tx.em.query).toHaveBeenCalledWith(EXTEND_CONTRACT_TERM, [
+                "ws-1",
+                "contract-1",
+                "2027-01-01",
+                "2027-01-01",
+                "2028-01-01",
+                "VIP\ncontracts.renewalNote:{\"until\":\"01/01/2028\",\"no\":\"INV-202612-0001\"}",
+            ])
+            expect(events.record).toHaveBeenCalledWith(
+                {
+                    workspaceId: "ws-1",
+                    leadId: "lead-1",
+                    kind: "contract.updated",
+                    actor: "NIVO",
+                    summary:
+                        "contracts.renewed:{\"customer\":\"Anh Minh\",\"until\":\"01/01/2028\",\"no\":\"INV-202612-0001\"}",
+                    evidence: "2027-01-01 → 2028-01-01",
+                },
+                expect.anything(),
+            )
+            expect(isTransactionManager(events.record.mock.calls[0]?.[1])).toBe(true)
+            expect(members.require).not.toHaveBeenCalled()
+        })
+
+    })
+})
+
+describe("ContractsService", () => {
+    describe("extendForPaidRenewal", () => {
+        it("re-activates an ended contract", async () => {
+            const tx = fakeTransaction(
+                mockEntityManager({
+                    query: [
+                        [LOCK_CONTRACT, [{ ...CURRENT, status: "ended" }]],
+                        [EXTEND_CONTRACT_TERM, [RENEWED]],
+                    ],
+                }),
+            )
+            const { contracts } = await build(tx.em)
+
+            await expect(
+                contracts.extendForPaidRenewal("ws-1", "contract-1", "2027-01-01", "INV-1"),
+            ).resolves.toMatchObject({ extended: true, contract: { status: "active" } })
+        })
+
+        it.each([
+            ["the contract moved to another term", { ends_on: "2028-01-01" }, "2028-01-01"],
+            ["the contract was cancelled", { status: "cancelled" }, "2027-01-01"],
+        ])("changes nothing when %s", async (_name, change, previousEndsOn) => {
+            const tx = fakeTransaction(mockEntityManager({ query: [LOCK_CONTRACT, [{ ...CURRENT, ...change }]] }))
+            const { contracts, events } = await build(tx.em)
+
+            await expect(
+                contracts.extendForPaidRenewal("ws-1", "contract-1", "2027-01-01", "INV-1"),
+            ).resolves.toMatchObject({ extended: false, previousEndsOn })
+
+            expect(tx.em.query).not.toHaveBeenCalledWith(EXTEND_CONTRACT_TERM, expect.anything())
+            expect(events.record).not.toHaveBeenCalled()
+        })
+
+        it("changes nothing when the guarded write finds the term already moved", async () => {
+            const tx = fakeTransaction(
+                mockEntityManager({
+                    query: [
+                        [LOCK_CONTRACT, [CURRENT]],
+                        [EXTEND_CONTRACT_TERM, []],
+                    ],
+                }),
+            )
+            const { contracts, events } = await build(tx.em)
+
+            await expect(
+                contracts.extendForPaidRenewal("ws-1", "contract-1", "2027-01-01", "INV-1"),
+            ).resolves.toMatchObject({ extended: false, contract: { endsOn: "2027-01-01" } })
+            expect(events.record).not.toHaveBeenCalled()
+        })
+
+        it("refuses a contract the workspace does not have", async () => {
+            const tx = fakeTransaction(mockEntityManager({ query: [LOCK_CONTRACT, []] }))
+            const { contracts } = await build(tx.em)
+
+            await expect(
+                contracts.extendForPaidRenewal("ws-1", "contract-9", "2027-01-01", "INV-1"),
+            ).rejects.toMatchObject({ code: ContractsErrorCode.NotFound, params: { id: "contract-9" } })
         })
     })
 })

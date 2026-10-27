@@ -392,15 +392,6 @@ describe("BankFeedService booked credit details", () => {
         expect(tx.rollbacks).toBe(1)
     })
 })
-describe("BankFeedService owner check", () => {
-    it("holds only valid bank credit payloads for owner review", async () => {
-        const { feed, inbound } = await build()
-        await feed.holdForOwnerCheck({ workspaceId: "ws-1", inboundEventId: "event-1", amountVnd: 5 })
-        await feed.holdForOwnerCheck({ orderId: "order-1" })
-        expect(inbound.holdForOwnerCheck).toHaveBeenCalledTimes(1)
-        expect(inbound.holdForOwnerCheck).toHaveBeenCalledWith("event-1")
-    })
-})
 const TEST_STATE: Stub = [SELECT_CONNECTION_STATE, [{ name: "Test", environment: "test" }]]
 const NO_AGENT: Stub = [SELECT_BOUND_ACCOUNTING_AGENT, []]
 describe("BankFeedService debits", () => {

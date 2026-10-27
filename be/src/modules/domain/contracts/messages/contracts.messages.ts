@@ -12,6 +12,8 @@ export const CONTRACTS_MESSAGES: MessageBundle = {
         "errors.CONTRACTS_AMOUNT_INVALID": "Giá trị phải từ 0 trở lên.",
         "contracts.created": "{{who}} thêm hợp đồng cho {{customer}}",
         "contracts.updated": "{{who}} cập nhật hợp đồng của {{customer}}",
+        "contracts.renewed": "Hợp đồng của {{customer}} được gia hạn đến {{until}} theo hóa đơn {{no}} đã thanh toán",
+        "contracts.renewalNote": "Gia hạn đến {{until}} theo hóa đơn {{no}}",
     },
     en: {
         "errors.CONTRACTS_LEAD_NOT_FOUND": "That lead no longer exists.",
@@ -23,5 +25,7 @@ export const CONTRACTS_MESSAGES: MessageBundle = {
         "errors.CONTRACTS_AMOUNT_INVALID": "The amount must be zero or more.",
         "contracts.created": "{{who}} added a contract for {{customer}}",
         "contracts.updated": "{{who}} updated the contract for {{customer}}",
+        "contracts.renewed": "The contract for {{customer}} was renewed until {{until}} by paid invoice {{no}}",
+        "contracts.renewalNote": "Renewed until {{until}} by invoice {{no}}",
     },
 }

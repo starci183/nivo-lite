@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { AutomationBusinessEventsService } from "@modules/domain/automations"
+import { ContractsService, displayDayOf } from "@modules/domain/contracts"
 import { DecisionsError, DecisionsErrorCode, EvidenceService } from "@modules/domain/decisions"
 import type {
     Performed,
@@ -19,13 +20,19 @@ import { OrdersService } from "@modules/domain/orders"
 import { TransactionsService } from "@modules/domain/transactions"
 import type { OptionalTransaction } from "@modules/domain/transactions"
 import { WorkItemsService } from "@modules/domain/work-items"
+import { InjectLogger } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { PerformerKitService } from "./performer-kit.service"
 import { leadHref, numberOf, textOf } from "./performer.policy"
 import { bankNameOf, candidateOf, claimKeyOf, matchPayment } from "./payment-match.policy"
 import type { MatchableInvoice } from "./payment-match.policy"
+import { WorkPerformersLogEvent } from "./work-performers.log-events"
 
 /** How many of the newest issued invoices a payment is matched against. */
 const ISSUED_WINDOW = 50
+
+/** The text a payment is matched on: its reference and the body of the input it came from. */
+const contentOf = (reference: string | null, event: OptionalInboundEvent): string => `${reference ?? ""} ${event?.body ?? ""}`
 
 @Injectable()
 /**
@@ -43,7 +50,21 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
         private readonly evidence: EvidenceService,
         private readonly leads: LeadRecordsService,
         private readonly events: AutomationBusinessEventsService,
+        private readonly contracts: ContractsService,
+        @InjectLogger() private readonly logger: Logger,
     ) {}
+
+    /**
+     * Whether a recorded bank credit settles one invoice beyond doubt: its transfer content names exactly one of the newest issued
+     * invoices and the amount is that invoice's, judged on the same pool and text the work item's own preparation uses. A credit
+     * that is not on record, or carries no amount, is never clear.
+     */
+    async clearlyMatches(ctx: WorkContext, inboundEventId: string): Promise<boolean> {
+        const event = await this.inbound.find(ctx.workspaceId, inboundEventId)
+        if (event?.amount_vnd === null || event?.amount_vnd === undefined) return false
+        const issued = await this.matchables(ctx)
+        return matchPayment(issued, contentOf(event.external_ref, event), event.amount_vnd).clear
+    }
 
     /** Records the payment as unmatched when it has no transaction yet, and offers the invoices it may settle. */
     async prepare(ctx: WorkContext, item: WorkItem): Promise<Prepared> {
@@ -51,7 +72,7 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
         const transaction = await this.transactionOf(ctx, item, event)
         const amount = event?.amount_vnd ?? transaction.amount_vnd
         const issued = await this.matchables(ctx)
-        const match = matchPayment(issued, `${transaction.reference ?? ""} ${event?.body ?? ""}`, amount)
+        const match = matchPayment(issued, contentOf(transaction.reference, event), amount)
         const bank = event === null ? null : bankNameOf(event.channel, event.event_id)
         const payer =
             textOf(transaction.payer) === "" ? this.kit.text(ctx, "reconcileUnknownPayer") : textOf(transaction.payer)
@@ -101,6 +122,7 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
         if (invoice.order_id !== null) await this.orders.markPaid(ctx.workspaceId, invoice.order_id)
         if (item.inbound_event_id !== null)
             await this.inbound.mark(ctx.workspaceId, item.inbound_event_id, null, invoice.lead_id)
+        await this.renewContract(ctx, item, invoice)
         const matched = this.kit.text(ctx, "paymentMatched", {
             amount: this.kit.money(ctx, proposal.amount_vnd ?? null),
             no: invoice.invoice_no,
@@ -156,6 +178,41 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
             },
             `payment.received:${invoice.id}`,
         )
+    }
+
+    /**
+     * A paid renewal invoice moves its contract to the next term and says so in the evidence log. The payment stands whatever
+     * happens here: a renewal that fails is logged for the operators, and one already applied (or for a term that moved) changes
+     * nothing.
+     */
+    private async renewContract(ctx: WorkContext, item: WorkItem, invoice: InvoiceRow): Promise<void> {
+        if (invoice.contract_id === null || invoice.period_ends_on === null) return
+        try {
+            const renewal = await this.contracts.extendForPaidRenewal(
+                ctx.workspaceId,
+                invoice.contract_id,
+                invoice.period_ends_on,
+                invoice.invoice_no,
+            )
+            if (!renewal.extended) return
+            await this.evidence.log(ctx, {
+                lead_id: invoice.lead_id,
+                work_item_id: item.id,
+                kind: "contract.renewed",
+                actor: "NIVO",
+                summary: this.kit.text(ctx, "contractRenewed", {
+                    no: invoice.invoice_no,
+                    until: displayDayOf(renewal.contract.endsOn),
+                }),
+                evidence: `${renewal.previousEndsOn} → ${renewal.contract.endsOn}`,
+            })
+        } catch (cause) {
+            this.logger.error(WorkPerformersLogEvent.ContractRenewalFailed, cause, {
+                workItemId: item.id,
+                invoiceId: invoice.id,
+                contractId: invoice.contract_id,
+            })
+        }
     }
 
     /** A rejected payment goes back to the owner's review list. */
