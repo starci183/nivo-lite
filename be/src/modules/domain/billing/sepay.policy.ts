@@ -1,3 +1,4 @@
+import { vietQrUrl } from "@modules/domain/channel-connections"
 import type { SepayPayload } from "./billing.contracts"
 import type { BankAccountOptions } from "./billing.options"
 import { sameText } from "./channel-secret.policy"
@@ -27,16 +28,8 @@ export const isValidApiKey = (header: string | undefined, expected: string | und
 }
 
 /** SePay's VietQR image for one transfer: https://qr.sepay.vn/img?acc=...&bank=...&amount=...&des=... */
-export const qrImageUrl = (account: BankAccountOptions, amount: number, orderCode: string): string => {
-    const query = new URLSearchParams({
-        acc: account.account,
-        bank: account.bank,
-        amount: String(amount),
-        des: orderCode,
-        template: "compact",
-    })
-    return `https://qr.sepay.vn/img?${query.toString()}`
-}
+export const qrImageUrl = (account: BankAccountOptions, amount: number, orderCode: string): string =>
+    vietQrUrl({ accountNumber: account.account, bankCode: account.bank }, amount, orderCode)
 
 /** The fields of a SePay delivery that NIVO reads; the whole body is kept as the stored payload. A delivery without a safe integer id is invalid. */
 export const sepayPayloadOf = (body: JsonObject): SepayPayload => {

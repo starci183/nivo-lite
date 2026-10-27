@@ -1,6 +1,9 @@
 import { NullAsAbsent } from "@modules/platform/graphql"
 import { Field, ID, InputType } from "@nestjs/graphql"
-import { IsOptional, IsString, IsUUID, MaxLength, MinLength } from "class-validator"
+import { IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength } from "class-validator"
+
+/** Blank, or 6 to 20 digits once spaces are removed. */
+const ACCOUNT_NUMBER = /^\s*(?:(?:\d\s*){6,20})?$/u
 
 @InputType()
 /** The bounded arguments of updateMoneyConnection. */
@@ -30,10 +33,11 @@ export class UpdateMoneyConnectionInput {
     @MaxLength(40)
     bankCode!: string
 
-    /** A new account number; blank keeps the stored one. */
+    /** A new full account number, 6 to 20 digits; blank keeps the stored one. */
     @Field(() => String)
     @IsString()
     @MaxLength(60)
+    @Matches(ACCOUNT_NUMBER)
     accountNumber!: string
 
     /** The account holder. */

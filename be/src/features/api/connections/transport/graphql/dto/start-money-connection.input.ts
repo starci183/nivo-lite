@@ -1,5 +1,8 @@
 import { Field, InputType } from "@nestjs/graphql"
-import { IsString, MaxLength, MinLength } from "class-validator"
+import { IsString, Matches, MaxLength, MinLength } from "class-validator"
+
+/** Blank, or 6 to 20 digits once spaces are removed. */
+const ACCOUNT_NUMBER = /^\s*(?:(?:\d\s*){6,20})?$/u
 
 @InputType()
 /** The bounded arguments of startMoneyConnection. */
@@ -29,10 +32,11 @@ export class StartMoneyConnectionInput {
     @MaxLength(40)
     bankCode!: string
 
-    /** The account number (bank feeds). */
+    /** The full account number, 6 to 20 digits (required by bank feeds; blank for payOS). */
     @Field(() => String)
     @IsString()
     @MaxLength(60)
+    @Matches(ACCOUNT_NUMBER)
     accountNumber!: string
 
     /** The account holder (bank feeds). */

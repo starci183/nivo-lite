@@ -123,7 +123,6 @@ describe("ChannelConnectionsService connectTelegram", () => {
         })
     })
 })
-
 describe("ChannelConnectionsService startMoneyConnection", () => {
     const input = {
         provider: "sepay",
@@ -143,6 +142,7 @@ describe("ChannelConnectionsService startMoneyConnection", () => {
             environment: "test",
             meta: { bank_code: "VCB", account_masked: "\u2022\u2022\u2022\u2022 7890", account_holder: "LAN" },
         })
+        expect(created?.meta.account_number).toBe("1234567890")
         expect(created?.secret.plain).toMatch(/^nivo_[0-9a-f]{64}$/u)
         expect(created?.secret.webhookSecret).toMatch(/^[0-9a-f]{64}$/u)
         expect(view).toMatchObject({
@@ -172,6 +172,7 @@ describe("ChannelConnectionsService startMoneyConnection", () => {
     it.each([
         [{ provider: "stripe" }, ChannelConnectionsErrorCode.ProviderUnsupported],
         [{ accountNumber: "12ab" }, ChannelConnectionsErrorCode.AccountInvalid],
+        [{ accountNumber: undefined }, ChannelConnectionsErrorCode.AccountInvalid],
         [{ bankCode: " " }, ChannelConnectionsErrorCode.BankFieldsMissing],
         [{ holder: "" }, ChannelConnectionsErrorCode.BankFieldsMissing],
     ] as const)("refuses invalid money input %j", async (invalid, code) => {
@@ -179,17 +180,17 @@ describe("ChannelConnectionsService startMoneyConnection", () => {
         await expect(service.startMoneyConnection(actor, { ...input, ...invalid })).rejects.toMatchObject({ code })
     })
 })
-
 describe("ChannelConnectionsService updateMoneyConnection", () => {
     const input = { environment: "live", name: "Renamed", bankCode: "tcb", accountNumber: "", holder: "mai" }
-    it("keeps the stored account when the number is blank and the key when none is typed", async () => {
+    it.each(["", undefined])("keeps the stored account when the number is %j, and the key", async (accountNumber) => {
         const { service, connections } = await build()
+        connections.get.mockResolvedValue(record({ meta: { ...record().meta, account_number: "991234" } }))
         connections.readSecret.mockResolvedValue({ plain: "nivo_aaaaaaaaaaaaaaaa", webhookSecret: "h" })
-        const view = await service.updateMoneyConnection(actor, "c1", input)
+        const view = await service.updateMoneyConnection(actor, "c1", { ...input, accountNumber })
         expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", {
             name: "Renamed",
             environment: "live",
-            meta: { bank_code: "TCB", account_masked: "\u2022\u2022\u2022\u2022 1234", account_holder: "MAI" },
+            meta: { ...record().meta, bank_code: "TCB", account_number: "991234", account_holder: "MAI" },
         })
         expect(connections.writeSecret).not.toHaveBeenCalled()
         expect(view.apiKey).toBe("nivo_aaaaaaaaaaaaaaaa")
@@ -202,16 +203,13 @@ describe("ChannelConnectionsService updateMoneyConnection", () => {
             accountNumber: "9999 8888",
             apiKey: " new_key_new_key_new ",
         })
-        expect(connections.writeSecret).toHaveBeenCalledWith(
-            "c1",
-            "new_key_new_key_new",
-            expect.stringMatching(/^[0-9a-f]{64}$/u),
-        )
+        expect(connections.writeSecret).toHaveBeenCalledWith("c1", "new_key_new_key_new", matching(/^[0-9a-f]{64}$/u))
         expect(connections.patch).toHaveBeenCalledWith(
             "ws-1",
             "c1",
             objectLike({ meta: objectLike({ account_masked: "\u2022\u2022\u2022\u2022 8888" }) }),
         )
+        expect(connections.patch.mock.calls[0]?.[2].meta?.account_number).toBe("99998888")
     })
     it("treats a missing secret as an empty key and refuses a malformed one", async () => {
         const { service, connections } = await build()

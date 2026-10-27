@@ -31,11 +31,11 @@ import type {
 import {
     chooseEnvironment,
     clean,
+    accountFacts,
     isAccountNumber,
     isMoneyProvider,
     isSepayKey,
     isTelegramToken,
-    maskAccount,
     moneyRules,
     squeeze,
 } from "./money-provider.policy"
@@ -124,7 +124,7 @@ export class ChannelConnectionsService {
         const name = this.requireName(input.name)
         const meta: Record<string, string> = {}
         if (rules.needsBank) {
-            const account = squeeze(input.accountNumber)
+            const account = squeeze(input.accountNumber ?? "")
             if (!isAccountNumber(account)) {
                 throw new ChannelConnectionsError({ code: ChannelConnectionsErrorCode.AccountInvalid })
             }
@@ -133,7 +133,7 @@ export class ChannelConnectionsService {
             if (!bankCode || !holder) {
                 throw new ChannelConnectionsError({ code: ChannelConnectionsErrorCode.BankFieldsMissing })
             }
-            Object.assign(meta, { bank_code: bankCode, account_masked: maskAccount(account), account_holder: holder })
+            Object.assign(meta, { bank_code: bankCode, account_holder: holder }, accountFacts(account))
         }
         const apiKey = input.provider === "sepay" ? `nivo_${randomSecret()}` : ""
         const id = await this.connections.create({
@@ -154,7 +154,7 @@ export class ChannelConnectionsService {
 
     /**
      * Edits a bank or payment feed after it was created: environment, name, bank account and, for SePay, the API key (NIVO's
-     * generated one or one the owner typed into SePay). A blank account number keeps the stored one.
+     * generated one or one the owner typed into SePay). A blank or omitted account number keeps the stored one.
      */
     async updateMoneyConnection(
         actor: ConnectionActor,
@@ -176,15 +176,11 @@ export class ChannelConnectionsService {
             if (!bankCode || !holder) {
                 throw new ChannelConnectionsError({ code: ChannelConnectionsErrorCode.BankFieldsMissing })
             }
-            const account = squeeze(input.accountNumber)
+            const account = squeeze(input.accountNumber ?? "")
             if (account && !isAccountNumber(account)) {
                 throw new ChannelConnectionsError({ code: ChannelConnectionsErrorCode.AccountInvalid })
             }
-            Object.assign(
-                meta,
-                { bank_code: bankCode, account_holder: holder },
-                account ? { account_masked: maskAccount(account) } : {},
-            )
+            Object.assign(meta, { bank_code: bankCode, account_holder: holder }, account ? accountFacts(account) : {})
         }
         let apiKey = ""
         if (current.provider === "sepay") {

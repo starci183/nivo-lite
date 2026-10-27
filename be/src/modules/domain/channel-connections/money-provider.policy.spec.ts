@@ -6,6 +6,7 @@ import {
     moneyRules,
     chooseEnvironment,
     maskAccount,
+    accountFacts,
     squeeze,
     isAccountNumber,
     isSepayKey,
@@ -20,6 +21,7 @@ type Subject = Pick<
     | "moneyRules"
     | "chooseEnvironment"
     | "maskAccount"
+    | "accountFacts"
     | "squeeze"
     | "isAccountNumber"
     | "isSepayKey"
@@ -38,6 +40,7 @@ const buildSubject = async () => {
                     moneyRules,
                     chooseEnvironment,
                     maskAccount,
+                    accountFacts,
                     squeeze,
                     isAccountNumber,
                     isSepayKey,
@@ -60,5 +63,30 @@ describe("isZaloAppId", () => {
         expect(subject.isZaloAppId("12345")).toBe(false)
         expect(subject.isZaloAppId("1".repeat(31))).toBe(false)
         expect(subject.isZaloAppId("app123456")).toBe(false)
+    })
+})
+
+describe("accountFacts", () => {
+    it("stores the full account number next to its masked form", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.accountFacts("0123456789")).toEqual({
+            account_masked: subject.maskAccount("0123456789"),
+            account_number: "0123456789",
+        })
+        expect(subject.accountFacts("0123456789").account_masked).toMatch(/ 6789$/u)
+    })
+})
+
+describe("isAccountNumber", () => {
+    it("accepts 6 to 20 digits only", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.isAccountNumber("123456")).toBe(true)
+        expect(subject.isAccountNumber("1".repeat(20))).toBe(true)
+        expect(subject.isAccountNumber("12345")).toBe(false)
+        expect(subject.isAccountNumber("1".repeat(21))).toBe(false)
+        expect(subject.isAccountNumber("12 3456")).toBe(false)
+        expect(subject.isAccountNumber("12345a")).toBe(false)
     })
 })

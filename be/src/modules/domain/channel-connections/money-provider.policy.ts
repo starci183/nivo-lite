@@ -40,6 +40,12 @@ const MASK = "••••"
 /** The account number as it is shown and stored in the public facts: its last four digits behind a mask. */
 export const maskAccount = (account: string): string => `${MASK} ${account.slice(-4)}`
 
+/** The public facts a bank feed stores for an account number: the masked form people see and the full number a VietQR needs. */
+export const accountFacts = (account: string): Readonly<Record<"account_masked" | "account_number", string>> => ({
+    account_masked: maskAccount(account),
+    account_number: account,
+})
+
 const ACCOUNT = /^\d{6,20}$/u
 const SEPAY_KEY = /^[A-Za-z0-9_-]{16,128}$/u
 const TELEGRAM_TOKEN = /^\d{5,}:[A-Za-z0-9_-]{30,}$/u
