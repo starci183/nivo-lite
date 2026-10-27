@@ -64,6 +64,7 @@ export const RECEIPT_DOMAIN_MODULES: ReadonlyArray<DynamicModule> = [
         isGlobal: true,
         oauthBase: "http://127.0.0.1:1",
         apiBase: "http://127.0.0.1:1",
+        businessBase: "http://127.0.0.1:1",
         timeoutMs: 100,
     }),
     ZaloInboxModule.register({ isGlobal: true }),

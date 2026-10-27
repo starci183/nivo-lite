@@ -1,23 +1,14 @@
-import type { ComponentProps } from "react"
 import { AccountingLedger } from "@/components/composites/AccountingLedger"
-import type { AccountingLedgerView } from "@/components/composites/AccountingLedger"
-import { PanelPending } from "@/components/composites/PanelPending"
-import type { PanelPendingProps } from "@/components/composites/PanelPending"
+import type { AccountingLedgerOn, AccountingLedgerView } from "@/components/composites/AccountingLedger"
+import { SlotView } from "@/components/composites/SlotView"
+import type { AccountingPanelBaseProps } from "@/modules/types"
 
-/** Props for {@link AccountingLedgerPanelBase}. */
-export interface AccountingLedgerPanelBaseProps {
-    readonly props: {
-        /** The panel once the read model is read; null while it is not. */
-        readonly view: AccountingLedgerView | null
-        readonly pending: PanelPendingProps
-    }
-    readonly on: ComponentProps<typeof AccountingLedger>["on"]
-}
+/** Props for {@link AccountingLedgerPanelBase}: the panel's read status, its placeholder of the same shape and what it does. */
+export type AccountingLedgerPanelBaseProps = AccountingPanelBaseProps<AccountingLedgerView, AccountingLedgerOn>
 
-/** Draws the ledger: its entries, the entry drawer and adjustments; its skeleton or failure while the read model is not there. */
-export const AccountingLedgerPanelBase = (props: AccountingLedgerPanelBaseProps) =>
-    props.props.view === null ? (
-        <PanelPending {...props.props.pending} />
-    ) : (
-        <AccountingLedger props={props.props.view} on={props.on} />
-    )
+/** Draws the ledger: its entries, the entry drawer and adjustments; its skeleton or read failure comes from the slot. */
+export const AccountingLedgerPanelBase = (props: AccountingLedgerPanelBaseProps) => (
+    <SlotView {...props.props} onRetry={props.on.retry}>
+        {(view, isSkeleton) => <AccountingLedger props={view} on={props.on} isSkeleton={isSkeleton} />}
+    </SlotView>
+)

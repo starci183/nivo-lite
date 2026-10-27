@@ -48,7 +48,7 @@ export const SalesShipDrawer = (props: SalesShipDrawerProps) => {
                 id="ship-carrier"
                 name="carrier"
                 label={p.carrierLabel}
-                hint={p.carrierHint}
+                description={p.carrierHint}
                 value={p.carrier}
                 onValueChange={on.carrier}
                 isRequired

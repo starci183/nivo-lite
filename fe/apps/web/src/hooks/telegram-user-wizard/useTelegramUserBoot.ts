@@ -15,40 +15,50 @@ export interface TelegramBoot {
     readonly error: string | null
     /** Where the wizard starts. */
     readonly initial: TelegramInitial
+    /** Reads the server and the saved state again. */
+    readonly retry: () => void
 }
+
+/** The boot without its retry: the answer the two reads give. */
+type BootAnswer = Omit<TelegramBoot, "retry">
 
 /** Is the server set up for personal Telegram, and is this a resumed login or an edit? Answers once both reads are fresh. */
 export const useTelegramUserBoot = (resumeId: string | undefined): TelegramBoot => {
     const ready = useQueryTelegramUserReadySwr(FRESH)
     const setup = useQueryLoadTelegramUserSetupSwr(resumeId, FRESH)
-    if (ready.isLoading || ready.isValidating) return { status: "loading", error: null, initial: BLANK_INITIAL }
-    if (!ready.data?.configured) {
-        return { status: "unconfigured", error: null, initial: BLANK_INITIAL }
+    const retry = () => {
+        void ready.mutate()
+        void setup.mutate()
     }
-    if (resumeId === undefined) return { status: "ready", error: null, initial: BLANK_INITIAL }
-    if (setup.isLoading || setup.isValidating) return { status: "loading", error: null, initial: BLANK_INITIAL }
-    const state = setup.data
-    if (state === undefined) {
-        const message = setup.error instanceof Error ? setup.error.message : null
-        return { status: "failed", error: message, initial: BLANK_INITIAL }
-    }
-    const done = state.stage === "ready"
-    return {
-        status: "ready",
-        error: null,
-        initial: {
-            name: state.name,
-            consent: state.consent,
-            everyMinutes: state.everyMinutes ?? null,
-            picked: (state.config?.chats ?? []).map((chat) => ({
-                id: chat.id,
-                title: chat.title,
-                kind: chatKindOf(chat.kind),
-            })),
-            sinceDays: sinceDaysOf(state.config?.sinceDays ?? 7),
-            stage: state.stage === "password" ? "password" : "code",
-            index: done ? 2 : 1,
-            editing: done,
-        },
-    }
+    const answer = ((): BootAnswer => {
+        if (ready.isLoading || ready.isValidating) return { status: "loading", error: null, initial: BLANK_INITIAL }
+        if (!ready.data?.configured) return { status: "unconfigured", error: null, initial: BLANK_INITIAL }
+        if (resumeId === undefined) return { status: "ready", error: null, initial: BLANK_INITIAL }
+        if (setup.isLoading || setup.isValidating) return { status: "loading", error: null, initial: BLANK_INITIAL }
+        const state = setup.data
+        if (state === undefined) {
+            const message = setup.error instanceof Error ? setup.error.message : null
+            return { status: "failed", error: message, initial: BLANK_INITIAL }
+        }
+        const done = state.stage === "ready"
+        return {
+            status: "ready",
+            error: null,
+            initial: {
+                name: state.name,
+                consent: state.consent,
+                everyMinutes: state.everyMinutes ?? null,
+                picked: (state.config?.chats ?? []).map((chat) => ({
+                    id: chat.id,
+                    title: chat.title,
+                    kind: chatKindOf(chat.kind),
+                })),
+                sinceDays: sinceDaysOf(state.config?.sinceDays ?? 7),
+                stage: state.stage === "password" ? "password" : "code",
+                index: done ? 2 : 1,
+                editing: done,
+            },
+        }
+    })()
+    return { ...answer, retry }
 }

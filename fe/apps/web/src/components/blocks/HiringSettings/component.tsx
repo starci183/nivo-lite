@@ -1,6 +1,6 @@
 import { Alert, Button, Heading, Input, NumberField, SurfaceCard, Switch, Textarea } from "@starci/grammar/common"
-import type { FieldOf, HiringSay } from "@/hooks/hiring"
 import type { SettingsValues } from "@/hooks/hiringSettings"
+import type { FieldOf, HiringSay } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** What the connected block settled for the settings card. */
@@ -38,7 +38,7 @@ export const HiringSettingsBase = (props: HiringSettingsBaseProps) => {
                         label={say("setSlug")}
                         value={values.publicSlug}
                         onValueChange={(slug) => on.text("publicSlug", slug)}
-                        hint={slugHint}
+                        description={slugHint}
                     />
                     <NumberField
                         label={say("setRetention")}

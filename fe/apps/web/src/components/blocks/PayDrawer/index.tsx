@@ -3,6 +3,7 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { useCreditsPayDrawer, useCreditsPaymentState } from "@/hooks/credits"
 import { PayDrawerBase } from "./component"
+import type { PayDrawerShape } from "./component"
 
 const clock = (ms: number) => {
     const seconds = Math.max(0, Math.floor(ms / 1000))
@@ -22,10 +23,10 @@ export const PayDrawer = () => {
         })
     const { phase, left } = useCreditsPaymentState(drawer.workspaceId, drawer.order, drawer.onPaid)
     const { title, paidDescription } = paymentCopy(drawer, formatter, t)
-    let view: "paid" | "loading" | "expired" | "awaiting" = "awaiting"
-    if (phase === "paid") view = "paid"
-    else if (!drawer.order && drawer.isRegenerating) view = "loading"
-    else if (phase === "expired" || !drawer.order) view = "expired"
+    let shape: PayDrawerShape = "awaiting"
+    const isWaiting = phase !== "paid" && !drawer.order && drawer.isRegenerating
+    if (phase === "paid") shape = "paid"
+    else if (phase === "expired" || !drawer.order) shape = "expired"
 
     let proration: string | null = null
     if (
@@ -41,16 +42,16 @@ export const PayDrawer = () => {
         })
     }
 
+    if (drawer.target === null) return null
+
     return (
         <PayDrawerBase
-            state={{
-                isOpen: drawer.target !== null,
-                view,
+            shape={shape}
+            props={{
+                isWaiting,
                 isRegenerating: drawer.isRegenerating,
                 isBankConfigured: Boolean(drawer.bank.account && drawer.bank.bank),
                 hasOrder: drawer.order !== null,
-            }}
-            props={{
                 title,
                 description: t("payText"),
                 closeLabel: t("close"),

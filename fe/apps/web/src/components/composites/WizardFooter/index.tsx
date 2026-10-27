@@ -15,28 +15,36 @@ export type WizardAction = {
 /** What the footer of a wizard step draws. */
 type WizardFooterProps = {
     readonly actions: ReadonlyArray<WizardAction>
+    /** The buttons are drawn but cannot be pressed while the step is a placeholder. */
+    readonly isSkeleton?: boolean
 }
 
 /** The flags a wizard action may carry onto its button. */
-const flagsOf = (action: WizardAction) => ({
+const flagsOf = (action: WizardAction, isSkeleton: boolean) => ({
     ...(action.isPending === undefined ? {} : { isPending: action.isPending }),
-    ...(action.isDisabled === undefined ? {} : { isDisabled: action.isDisabled }),
+    ...(action.isDisabled === undefined && !isSkeleton ? {} : { isDisabled: isSkeleton || action.isDisabled === true }),
 })
 
 /** The buttons of a wizard step: the commit first when the step has a way forward, then the others in the order given. */
 export const WizardFooter = (props: WizardFooterProps) => {
     const next = props.actions.find((action) => action.isNext)
+    const isSkeleton = props.isSkeleton === true
     return (
         <>
             {next === undefined ? null : (
-                <Button intent="commit" {...flagsOf(next)} onPress={next.onPress}>
+                <Button intent="commit" {...flagsOf(next, isSkeleton)} onPress={next.onPress}>
                     {next.label}
                 </Button>
             )}
             {props.actions
                 .filter((action) => !action.isNext)
                 .map((action) => (
-                    <Button key={action.id} intent={action.intent} {...flagsOf(action)} onPress={action.onPress}>
+                    <Button
+                        key={action.id}
+                        intent={action.intent}
+                        {...flagsOf(action, isSkeleton)}
+                        onPress={action.onPress}
+                    >
                         {action.label}
                     </Button>
                 ))}

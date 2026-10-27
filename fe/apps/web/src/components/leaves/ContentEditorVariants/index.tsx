@@ -1,5 +1,5 @@
 import { Input, Tabs, Textarea } from "@starci/grammar/common"
-import type { ContentT } from "@/hooks/content"
+import type { ContentT } from "@/modules/types"
 import { FIELDS_CLASS_NAME } from "./classNames"
 
 /** The text of the channel that is open. */
@@ -52,7 +52,7 @@ export const ContentEditorVariants = (props: ContentEditorVariantsProps) => (
                     name={`tags-${props.open.id}`}
                     label={props.t("fieldHashtags")}
                     value={props.open.tags}
-                    hint={props.t("fieldHashtagsHint")}
+                    description={props.t("fieldHashtagsHint")}
                     isDisabled={!props.isEditable}
                     onValueChange={props.onTags}
                 />

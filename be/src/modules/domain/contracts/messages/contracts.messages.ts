@@ -14,6 +14,8 @@ export const CONTRACTS_MESSAGES: MessageBundle = {
         "contracts.updated": "{{who}} cập nhật hợp đồng của {{customer}}",
         "contracts.renewed": "Hợp đồng của {{customer}} được gia hạn đến {{until}} theo hóa đơn {{no}} đã thanh toán",
         "contracts.renewalNote": "Gia hạn đến {{until}} theo hóa đơn {{no}}",
+        "contracts.linkChannel": "Dữ liệu khách hàng",
+        "contracts.linkNeed": "Gia hạn {{plan}}",
     },
     en: {
         "errors.CONTRACTS_LEAD_NOT_FOUND": "That lead no longer exists.",
@@ -27,5 +29,7 @@ export const CONTRACTS_MESSAGES: MessageBundle = {
         "contracts.updated": "{{who}} updated the contract for {{customer}}",
         "contracts.renewed": "The contract for {{customer}} was renewed until {{until}} by paid invoice {{no}}",
         "contracts.renewalNote": "Renewed until {{until}} by invoice {{no}}",
+        "contracts.linkChannel": "Customer data",
+        "contracts.linkNeed": "Renew {{plan}}",
     },
 }

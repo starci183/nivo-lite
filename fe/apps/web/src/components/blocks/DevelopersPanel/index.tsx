@@ -5,6 +5,7 @@ import { PROVIDER_LOGO, providerKey } from "@/hooks/connection-providers"
 import { sortRows, statusKey, statusTone, useConnectionOverlays } from "@/hooks/connections"
 import { useDeveloperWebhooks } from "@/hooks/developers"
 import { isManager, useMember } from "@/hooks/member"
+import { useSlotLabels } from "@/hooks/slot"
 import { DevelopersPanelBase } from "./component"
 
 /** The connected "Advanced" page body: the member's role decides page or 403, the outgoing webhooks come from the back end GraphQL API. */
@@ -13,11 +14,12 @@ export const DevelopersPanel = () => {
     const member = useMember()
     const tc = useTranslations("connections")
     const { webhooks, canManage } = useDeveloperWebhooks()
+    const slotLabels = useSlotLabels()
     const overlays = useConnectionOverlays()
     return (
         <DevelopersPanelBase
-            state={{
-                isAllowed: isManager(member),
+            props={{
+                isForbidden: !isManager(member),
                 webhooks: sortRows(webhooks).map((connection) => ({
                     id: connection.id,
                     name: connection.name,
@@ -35,8 +37,6 @@ export const DevelopersPanel = () => {
                     connectLabel: tc("connect"),
                     editLabel: tc("edit"),
                 },
-            }}
-            props={{
                 crumbLabel: t("crumbLabel"),
                 crumbHome: t("crumbHome"),
                 eyebrow: t("eyebrow"),
@@ -45,9 +45,7 @@ export const DevelopersPanel = () => {
                 backLabel: t("backToAutomations"),
                 eventsTitle: t("eventsTitle"),
                 eventsBody: t("eventsBody"),
-                forbiddenTitle: t("forbiddenTitle"),
-                forbiddenBody: t("forbiddenBody"),
-                forbiddenBack: t("forbiddenBack"),
+                slotLabels: { ...slotLabels(t("title")), forbidden: t("forbiddenBody") },
             }}
             on={{
                 add: () => overlays.openWizard("webhook"),

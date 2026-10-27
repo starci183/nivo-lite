@@ -10,11 +10,14 @@ export const COMPOSER_ROW = "flex min-w-0 items-end gap-3"
 /** The field takes the remaining width. */
 export const COMPOSER_FIELD = "min-w-0 flex-1"
 
-/** Messages stacked in the conversation scroll owner. */
-export const THREAD = "flex min-w-0 flex-col gap-3 p-4"
+/** Messages stacked in the conversation scroll owner; only vertical inset, so a day divider reaches both surface edges. */
+export const THREAD = "flex min-w-0 flex-col gap-3 py-4"
+
+/** A content band of the thread: the horizontal inset the divider between bands does not take. */
+export const THREAD_BAND = "flex min-w-0 flex-col gap-3 px-4"
 
 /** The line that tells NIVO is answering. */
-export const SENDING = "flex min-w-0 justify-start"
+export const SENDING = "flex min-w-0 justify-start px-4"
 
 /** Confirm cards under the reply of NIVO. */
 export const WRITES = "flex min-w-0 flex-col gap-3"

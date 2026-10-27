@@ -41,10 +41,13 @@ interface AccountingOverviewProps {
     readonly on: {
         readonly selectPeriod: (key: string) => void
     }
+    /** The panel is drawn from placeholders: its leaves draw as skeleton. */
+    readonly isSkeleton: boolean
 }
 
 /** The lines under one figure. */
 interface MeasureMetaProps {
+    readonly isSkeleton: boolean
     readonly hint: string
     readonly lines: ReadonlyArray<string>
     readonly actionLabel: string | null
@@ -54,16 +57,16 @@ interface MeasureMetaProps {
 /** The lines under one figure: what it counts and where it comes from. */
 const MeasureMeta = (props: MeasureMetaProps) => (
     <div className={MEASURE_META_CLASS_NAME}>
-        <Text size="xs" tone="muted">
+        <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
             {props.hint}
         </Text>
         {props.lines.map((line) => (
-            <Text key={line} size="xs" tone="muted">
+            <Text key={line} size="xs" tone="muted" isSkeleton={props.isSkeleton}>
                 {line}
             </Text>
         ))}
         {props.actionLabel !== null && props.actionHref !== null ? (
-            <TextAction size="xs" href={props.actionHref}>
+            <TextAction size="xs" href={props.actionHref} isSkeleton={props.isSkeleton}>
                 {props.actionLabel}
             </TextAction>
         ) : null}
@@ -71,62 +74,77 @@ const MeasureMeta = (props: MeasureMetaProps) => (
 )
 
 /** Period selector, four honest measures and the weekly trend. */
-export const AccountingOverview = (props: AccountingOverviewProps) => (
-    <div className={PANEL_CLASS_NAME}>
-        <AccountingSectionHead
-            title={props.props.title}
-            intro={props.props.intro}
-            choiceLabel={props.props.periodLabel}
-            choices={props.props.periodItems}
-            selectedChoice={props.props.selectedPeriod}
-            onChoose={props.on.selectPeriod}
-        >
-            <SurfaceCard ariaLabel={props.props.title}>
-                <DescriptionList
-                    layout="stat-strip"
-                    isDivided
-                    items={props.props.measures.map((measure) => ({
-                        id: measure.id,
-                        term: measure.term,
-                        description: measure.value,
-                        meta: (
-                            <MeasureMeta
-                                hint={measure.hint}
-                                lines={measure.lines}
-                                actionLabel={measure.actionLabel}
-                                actionHref={measure.actionHref}
-                            />
-                        ),
-                    }))}
+export const AccountingOverview = (props: AccountingOverviewProps) => {
+    const isSkeleton = props.isSkeleton
+    return (
+        <div className={PANEL_CLASS_NAME}>
+            <AccountingSectionHead
+                title={props.props.title}
+                intro={props.props.intro}
+                choiceLabel={props.props.periodLabel}
+                choices={props.props.periodItems}
+                selectedChoice={props.props.selectedPeriod}
+                onChoose={props.on.selectPeriod}
+                isSkeleton={isSkeleton}
+            >
+                <SurfaceCard ariaLabel={props.props.title}>
+                    <DescriptionList
+                        layout="stat-strip"
+                        isDivided
+                        isLoading={isSkeleton}
+                        items={props.props.measures.map((measure) => ({
+                            id: measure.id,
+                            term: measure.term,
+                            description: measure.value,
+                            meta: (
+                                <MeasureMeta
+                                    hint={measure.hint}
+                                    lines={measure.lines}
+                                    actionLabel={measure.actionLabel}
+                                    actionHref={measure.actionHref}
+                                    isSkeleton={isSkeleton}
+                                />
+                            ),
+                        }))}
+                    />
+                </SurfaceCard>
+                {props.props.excludedNote === null ? null : (
+                    <Text size="xs" tone="muted" isSkeleton={isSkeleton}>
+                        {props.props.excludedNote}
+                    </Text>
+                )}
+            </AccountingSectionHead>
+            <AccountingBlock label={props.props.trendTitle}>
+                <SectionHeader
+                    level={2}
+                    title={props.props.trendTitle}
+                    description={props.props.trendIntro}
+                    isSkeleton={isSkeleton}
                 />
-            </SurfaceCard>
-            {props.props.excludedNote === null ? null : (
-                <Text size="xs" tone="muted">
-                    {props.props.excludedNote}
+                <SurfaceCard ariaLabel={props.props.trendTitle}>
+                    <div className={WEEKS_CLASS_NAME}>
+                        {props.props.weeks.map((week) => (
+                            <Meter
+                                key={week.id}
+                                label={week.label}
+                                value={week.total}
+                                maxValue={props.props.weekMax}
+                                valueLabel={week.reading}
+                                isSkeleton={isSkeleton}
+                            />
+                        ))}
+                    </div>
+                </SurfaceCard>
+                <Text size="xs" tone="muted" isSkeleton={isSkeleton}>
+                    {props.props.trendSource}
                 </Text>
-            )}
-        </AccountingSectionHead>
-        <AccountingBlock label={props.props.trendTitle}>
-            <SectionHeader level={2} title={props.props.trendTitle} description={props.props.trendIntro} />
-            <SurfaceCard ariaLabel={props.props.trendTitle}>
-                <div className={WEEKS_CLASS_NAME}>
-                    {props.props.weeks.map((week) => (
-                        <Meter
-                            key={week.id}
-                            label={week.label}
-                            value={week.total}
-                            maxValue={props.props.weekMax}
-                            valueLabel={week.reading}
-                        />
-                    ))}
-                </div>
-            </SurfaceCard>
-            <Text size="xs" tone="muted">
-                {props.props.trendSource}
-            </Text>
-        </AccountingBlock>
-    </div>
-)
+            </AccountingBlock>
+        </div>
+    )
+}
 
 /** The settled atoms of the AccountingOverview surface. */
 export type AccountingOverviewView = AccountingOverviewProps["props"]
+
+/** What the overview does, handed in by its panel. */
+export type AccountingOverviewOn = AccountingOverviewProps["on"]

@@ -25,7 +25,8 @@ import {
     SEARCH_FORM_CLASS_NAME,
     STACK_CLASS_NAME,
 } from "./classNames"
-import { AdminLoadState, type AdminLoad } from "@/components/composites/AdminLoadState"
+import { SlotBoundView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** One filter chip of the list. */
 interface FilterView {
@@ -35,7 +36,7 @@ interface FilterView {
 }
 
 /** Copy, filters and rows the workspaces page supplies. */
-interface AdminWorkspacesViewProps {
+export interface AdminWorkspacesViewProps {
     readonly props: {
         readonly eyebrow: string
         readonly title: string
@@ -73,8 +74,11 @@ interface AdminWorkspacesViewProps {
     }
 }
 
+/** The workspaces page with the skeleton flag the slot hands down. */
+type AdminWorkspacesDrawProps = AdminWorkspacesViewProps & { readonly isSkeleton: boolean }
+
 /** Draws the workspace list: search, filter chips and one table row per customer business. */
-const AdminWorkspacesView = (props: AdminWorkspacesViewProps) => {
+const AdminWorkspacesView = (props: AdminWorkspacesDrawProps) => {
     const { columns } = props.props
     const columnList: ReadonlyArray<DataTableColumn> = [
         { id: "workspace", label: columns.workspace, isRowHeader: true },
@@ -90,7 +94,8 @@ const AdminWorkspacesView = (props: AdminWorkspacesViewProps) => {
         { id: "waiting", label: columns.waiting, align: "end" },
     ]
 
-    const renderCell = (row: AdminWorkspaceRowView, columnId: string) => renderWorkspaceCell(row, columnId, props)
+    const renderCell = (row: AdminWorkspaceRowView, columnId: string) =>
+        renderWorkspaceCell(row, columnId, props, props.isSkeleton)
 
     return (
         <>
@@ -99,10 +104,16 @@ const AdminWorkspacesView = (props: AdminWorkspacesViewProps) => {
                 eyebrow={props.props.eyebrow}
                 title={props.props.title}
                 description={props.props.description}
+                isSkeleton={props.isSkeleton}
             />
-            {renderWorkspaceFilters(props)}
+            {renderWorkspaceFilters(props, props.isSkeleton)}
             <Region labelledBy="admin-workspaces-shown" className={STACK_CLASS_NAME}>
-                <SectionHeader id="admin-workspaces-shown" level={2} title={props.props.shownTitle} />
+                <SectionHeader
+                    id="admin-workspaces-shown"
+                    level={2}
+                    title={props.props.shownTitle}
+                    isSkeleton={props.isSkeleton}
+                />
                 <DataTable
                     label={props.props.tableLabel}
                     columns={columnList}
@@ -115,23 +126,27 @@ const AdminWorkspacesView = (props: AdminWorkspacesViewProps) => {
     )
 }
 
-/** The workspace read and, once it arrived, the view it draws. */
+/** The workspace read as a slot, its same-shape placeholder, and the words of its states. */
 export interface AdminWorkspacesBaseProps {
     readonly props: {
-        readonly load: AdminLoad
-        readonly view: AdminWorkspacesViewProps["props"] | undefined
+        readonly slot: DataSlot<AdminWorkspacesViewProps["props"]>
+        readonly placeholder: AdminWorkspacesViewProps["props"]
+        readonly slotLabels: SlotLabels
+    }
+    readonly on: {
+        readonly retry: () => void
     }
 }
 
-/** Draws the loading state, the failure or the finished view of the connected read. */
+/** Draws the finished list, or the same list as a skeleton, the failure with its retry, or the empty notice. */
 export const AdminWorkspacesBase = (props: AdminWorkspacesBaseProps) => (
-    <AdminLoadState {...props.props.load}>
-        {props.props.view === undefined ? null : <AdminWorkspacesView props={props.props.view} />}
-    </AdminLoadState>
+    <SlotBoundView from={props.props} onRetry={props.on.retry}>
+        {(view, isSkeleton) => <AdminWorkspacesView props={view} isSkeleton={isSkeleton} />}
+    </SlotBoundView>
 )
 
 /** Draws the div section of the AdminWorkspaces view. */
-const renderWorkspaceFilters = (props: AdminWorkspacesViewProps) => (
+const renderWorkspaceFilters = (props: AdminWorkspacesViewProps, isSkeleton: boolean) => (
     <div className={FILTERS_CLASS_NAME}>
         <Form label={props.props.searchLabel} action={ADMIN_ROUTES.workspaces} method="get">
             <div className={SEARCH_FORM_CLASS_NAME}>
@@ -141,8 +156,9 @@ const renderWorkspaceFilters = (props: AdminWorkspacesViewProps) => (
                     label={props.props.searchField}
                     placeholder={props.props.searchPlaceholder}
                     defaultValue={props.props.query}
+                    isSkeleton={isSkeleton}
                 />
-                <Button type="submit" intent="neutral">
+                <Button type="submit" intent="neutral" isSkeleton={isSkeleton}>
                     {props.props.searchSubmit}
                 </Button>
             </div>
@@ -154,6 +170,7 @@ const renderWorkspaceFilters = (props: AdminWorkspacesViewProps) => (
                         appearance="choice"
                         size="sm"
                         isCurrent={props.props.filter === filter.id}
+                        isSkeleton={isSkeleton}
                         href={filter.href}
                     >
                         {filter.label}
@@ -164,49 +181,71 @@ const renderWorkspaceFilters = (props: AdminWorkspacesViewProps) => (
     </div>
 )
 
+/** The columns that draw one plain value, by column identity. */
+const TEXT_CELLS: Readonly<Record<string, (row: AdminWorkspaceRowView) => string | number>> = {
+    owner: (row) => row.ownerEmail,
+    plan: (row) => row.plan,
+    created: (row) => row.created,
+    members: (row) => row.members,
+    lastMessage: (row) => row.lastMessage,
+    messages: (row) => row.messages7d,
+}
+
 /** Draws a workspace table cell from its column identity. */
-const renderWorkspaceCell = (row: AdminWorkspaceRowView, columnId: string, props: AdminWorkspacesViewProps) => {
+const renderWorkspaceCell = (
+    row: AdminWorkspaceRowView,
+    columnId: string,
+    props: AdminWorkspacesViewProps,
+    isSkeleton: boolean,
+) => {
     const none = (
-        <Text size="sm" tone="muted">
+        <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
             {props.props.noneLabel}
         </Text>
     )
+
+    const text = TEXT_CELLS[columnId]
+    if (text !== undefined) {
+        return (
+            <Text size="sm" isSkeleton={isSkeleton}>
+                {text(row)}
+            </Text>
+        )
+    }
 
     switch (columnId) {
         case "workspace":
             return (
                 <div className={CELL_STACK_CLASS_NAME}>
-                    <Button size="sm" intent="neutral" href={row.href}>
+                    <Button size="sm" intent="neutral" href={row.href} isSkeleton={isSkeleton}>
                         {row.name}
                     </Button>
-                    {row.needsAttention ? <Badge tone="warning">{props.props.attentionLabel}</Badge> : null}
+                    {row.needsAttention ? (
+                        <Badge tone="warning" isSkeleton={isSkeleton}>
+                            {props.props.attentionLabel}
+                        </Badge>
+                    ) : null}
                 </div>
             )
-        case "owner":
-            return <Text size="sm">{row.ownerEmail}</Text>
         case "billing":
             return (
                 <div className={CELL_STACK_CLASS_NAME}>
-                    <Badge tone={row.statusTone}>{row.status}</Badge>
+                    <Badge tone={row.statusTone} isSkeleton={isSkeleton}>
+                        {row.status}
+                    </Badge>
                     {row.paidUntil === null ? null : (
-                        <Text size="xs" tone="muted">
+                        <Text size="xs" tone="muted" isSkeleton={isSkeleton}>
                             {row.paidUntil}
                         </Text>
                     )}
                 </div>
             )
-        case "plan":
-            return <Text size="sm">{row.plan}</Text>
-        case "created":
-            return <Text size="sm">{row.created}</Text>
-        case "members":
-            return <Text size="sm">{row.members}</Text>
         case "modules":
             return row.modules.length === 0 ? (
                 none
             ) : (
                 <div className={BADGE_WRAP_CLASS_NAME}>
-                    <AdminBadges badges={row.modules} />
+                    <AdminBadges badges={row.modules} isSkeleton={isSkeleton} />
                 </div>
             )
         case "connections":
@@ -215,20 +254,20 @@ const renderWorkspaceCell = (row: AdminWorkspaceRowView, columnId: string, props
             ) : (
                 <div className={CELL_STACK_CLASS_NAME}>
                     <div className={BADGE_WRAP_CLASS_NAME}>
-                        <AdminBadges badges={row.connections} />
+                        <AdminBadges badges={row.connections} isSkeleton={isSkeleton} />
                     </div>
-                    <AdminBadges badges={row.connectionWarnings} />
+                    <AdminBadges badges={row.connectionWarnings} isSkeleton={isSkeleton} />
                 </div>
             )
-        case "lastMessage":
-            return <Text size="sm">{row.lastMessage}</Text>
-        case "messages":
-            return <Text size="sm">{row.messages7d}</Text>
         default:
             return row.openDecisions > 0 ? (
-                <Badge tone="warning">{row.openDecisions}</Badge>
+                <Badge tone="warning" isSkeleton={isSkeleton}>
+                    {row.openDecisions}
+                </Badge>
             ) : (
-                <Text size="sm">{0}</Text>
+                <Text size="sm" isSkeleton={isSkeleton}>
+                    {0}
+                </Text>
             )
     }
 }

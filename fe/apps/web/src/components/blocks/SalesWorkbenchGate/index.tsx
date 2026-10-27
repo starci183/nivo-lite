@@ -1,6 +1,8 @@
 "use client"
 
 import type { ReactNode } from "react"
+import { useTranslations } from "next-intl"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { useSalesWorkbench } from "@/hooks/salesworkbench"
 import { SalesWorkbenchGateBase } from "./component"
 
@@ -12,14 +14,20 @@ interface SalesWorkbenchGateProps {
     readonly placeholder: string
 }
 
-/** Lets a Sales area render once the Sales workbench is read; a skeleton meanwhile (the ribbon tells when the read failed). */
+/** Lets a Sales area render once the Sales workbench is read; a skeleton meanwhile and a retry when the read failed. */
 export const SalesWorkbenchGate = (props: SalesWorkbenchGateProps) => {
+    const t = useTranslations("workbenchSales")
+    const slotLabels = useSlotLabels()
     const workbench = useSalesWorkbench()
-    const state = workbench.isFailed ? "hidden" : "pending"
     return (
         <SalesWorkbenchGateBase
-            state={{ content: props.children }}
-            props={{ state: workbench.data === null ? state : "ready", placeholder: props.placeholder }}
+            shape={{ content: props.children }}
+            props={{
+                slot: mapSlot(workbench.slot, () => true),
+                slotLabels: slotLabels(t("loadFailedTitle")),
+                placeholder: props.placeholder,
+            }}
+            on={{ retry: workbench.retry }}
         />
     )
 }

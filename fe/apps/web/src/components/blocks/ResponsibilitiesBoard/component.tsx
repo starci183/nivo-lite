@@ -13,8 +13,7 @@ import type { BreadcrumbItem } from "@starci/grammar/common"
 import { OwnerGroupList } from "@/components/composites/OwnerGroupList"
 import type { OwnerGroupListLabels } from "@/components/composites/OwnerGroupList"
 import { SlotView } from "@/components/composites/SlotView"
-import type { OwnerGroupView } from "@/hooks/responsibilities"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import type { DataSlot, OwnerGroupView, ResponsibilityRowView, SlotLabels } from "@/modules/types"
 import {
     BOARD_CLASS,
     FILTERS_CLASS,
@@ -66,12 +65,9 @@ export interface ResponsibilitiesBoardBaseProps {
         readonly listTitle: string
         readonly count: string
         readonly verifiedLabel: string
-        readonly slot: DataSlot<boolean>
+        readonly slot: DataSlot<ReadonlyArray<OwnerGroupView>>
         readonly slotLabels: SlotLabels
-        readonly groups: ReadonlyArray<OwnerGroupView>
         readonly groupLabels: OwnerGroupListLabels
-        readonly emptyMessage: string
-        readonly emptyDescription: string
         readonly draftingId: string | null
         readonly copiedId: string | null
     }
@@ -88,6 +84,39 @@ export interface ResponsibilitiesBoardBaseProps {
         readonly retry: () => void
     }
 }
+
+/** Fake rows of the same shape: the skeleton reuses the ready tree. */
+const PLACEHOLDER_ROW: ResponsibilityRowView = {
+    id: "placeholder-row",
+    leadId: "placeholder-lead",
+    customer: "…",
+    title: "…",
+    nextAction: "…",
+    dueLabel: "…",
+    dueAt: null,
+    createdAt: "",
+    isOverdue: false,
+    isDueToday: false,
+    isDueThisWeek: false,
+    status: "open",
+    statusLabel: "…",
+    ownerKey: "placeholder-owner",
+    ownerName: "…",
+    ownerKind: "human",
+    ownerHandle: null,
+}
+
+/** What the owner groups draw while their read is in flight: one owner with two rows. */
+const OWNER_GROUPS_PLACEHOLDER: ReadonlyArray<OwnerGroupView> = [
+    {
+        key: "placeholder-owner",
+        name: "…",
+        kind: "human",
+        handle: null,
+        glyph: "moduleChatbot",
+        rows: [PLACEHOLDER_ROW, { ...PLACEHOLDER_ROW, id: "placeholder-row-2" }],
+    },
+]
 
 /** Draws the responsibility board: filter cards, status tabs with counts, search and sort over the owner-grouped rows. */
 export const ResponsibilitiesBoardBase = (props: ResponsibilitiesBoardBaseProps) => {
@@ -143,14 +172,17 @@ export const ResponsibilitiesBoardBase = (props: ResponsibilitiesBoardBaseProps)
                             {view.verifiedLabel}
                         </Text>
                     </div>
-                    <SlotView slot={view.slot} placeholder={false} labels={view.slotLabels} onRetry={props.on.retry}>
-                        {(_, isSkeleton) => (
+                    <SlotView
+                        slot={view.slot}
+                        placeholder={OWNER_GROUPS_PLACEHOLDER}
+                        labels={view.slotLabels}
+                        onRetry={props.on.retry}
+                    >
+                        {(groups, isSkeleton) => (
                             <OwnerGroupList
-                                isLoading={isSkeleton}
-                                groups={view.groups}
+                                isSkeleton={isSkeleton}
+                                groups={groups}
                                 labels={view.groupLabels}
-                                emptyMessage={view.emptyMessage}
-                                emptyDescription={view.emptyDescription}
                                 draftingId={view.draftingId}
                                 copiedId={view.copiedId}
                                 onDraft={props.on.draft}

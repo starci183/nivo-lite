@@ -1,7 +1,8 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { agentChoicesOf } from "@/hooks/connection-wizard"
+import { agentChoicesOf, resumeSlotOfLoading } from "@/hooks/connection-wizard"
+import { useSlotLabels } from "@/hooks/slot"
 import {
     DB_ENGINES,
     DB_ENTITIES,
@@ -35,12 +36,14 @@ export const DatabaseWizard = (props: DatabaseWizardProps) => {
     const t = useTranslations("connectorDatabase")
     const tw = useTranslations("connectionWizard")
     const format = useFormatter()
+    const slotLabelsOf = useSlotLabels()
     const wizard = useDatabaseWizard({ resumeId: props.resumeId, onClose: props.onClose })
     const { on } = wizard
     return (
         <DatabaseWizardBase
             props={{
-                loading: wizard.isLoading ? t("loading") : null,
+                resume: resumeSlotOfLoading(wizard.isLoading),
+                slotLabels: slotLabelsOf(""),
                 title: t("title"),
                 stepLabel: tw("stepOf", { n: wizard.index + 1, total: DB_STEPS.length }),
                 steps: [t("stepConnect"), t("stepTables"), t("stepSchedule"), t("stepAgent")],

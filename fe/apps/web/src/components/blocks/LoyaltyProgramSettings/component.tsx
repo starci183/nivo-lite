@@ -1,31 +1,32 @@
 import { LoyaltyTierCard } from "@/components/composites/LoyaltyTierCard"
 import { LoyaltyCategoryCard } from "@/components/composites/LoyaltyCategoryCard"
-import type { useTranslations } from "next-intl"
-import type { useLoyaltyProgramForm } from "@/hooks/rhf"
 import { LoyaltyTierRules } from "@/components/composites/LoyaltyTierRules"
 import { LoyaltyEarningRules } from "@/components/composites/LoyaltyEarningRules"
-import { Alert, Button, Form, Input, SurfaceCard, Switch, Text } from "@starci/grammar/common"
+import { Button, Form, Input, Switch, Text } from "@starci/grammar/common"
+import { SlotView } from "@/components/composites/SlotView"
 import { LoyaltyBirthdaySection } from "@/components/composites/LoyaltyBirthdaySection"
 import { LoyaltyPromoSection } from "@/components/composites/LoyaltyPromoSection"
 import { LoyaltyField } from "@/components/leaves/LoyaltyField"
 import { LoyaltySettingsSection } from "@/components/leaves/LoyaltySettingsSection"
-import type { ProgramValues } from "@/hooks/loyaltyProgram"
+import { ACTIONS_CLASS_NAME, FIELD_PAIR_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 import type {
     CategoryTextField,
+    DataSlot,
+    ProgramCopy,
     ProgramSwitchField,
     ProgramTextField,
+    ProgramValues,
+    SlotLabels,
+    TierErrorView,
     TierTextField,
-} from "@/hooks/loyaltyProgramFields"
-import { ACTIONS_CLASS_NAME, FIELD_PAIR_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
-import type { ProgramCopy, TierErrorView } from "@/modules/types"
+} from "@/modules/types"
 
 /** Props for {@link LoyaltyProgramSettingsBase}. */
 export interface LoyaltyProgramSettingsBaseProps {
     readonly props: {
-        readonly status: "loading" | "failed" | "ready"
-        readonly loadingText: string
-        readonly failedTitle: string
-        readonly failedDescription?: string
+        /** The programme read: the form draws from `values`, which are blank until it lands. */
+        readonly slot: DataSlot<true>
+        readonly slotLabels: SlotLabels
         readonly canEdit: boolean
         readonly isPending: boolean
         readonly copy: ProgramCopy
@@ -53,29 +54,27 @@ export interface LoyaltyProgramSettingsBaseProps {
         readonly removeCategory: (uid: string) => void
         readonly addCategory: () => void
         readonly submit: () => void
+        readonly retry: () => void
     }
 }
 
 /** Draws the whole loyalty programme in one form with one save: earn rules, tiers, expiry, birthday, promotion limits and the public page. */
 export const LoyaltyProgramSettingsBase = (props: LoyaltyProgramSettingsBaseProps) => {
     const { props: p, on } = props
-    const { copy, values } = p
-    const off = !p.canEdit || p.isPending
-    if (p.status === "failed")
-        return (
-            <SurfaceCard ariaLabel={p.failedTitle}>
-                <Alert title={p.failedTitle} description={p.failedDescription} tone="negative" />
-            </SurfaceCard>
-        )
-    if (p.status === "loading")
-        return (
-            <SurfaceCard ariaLabel={p.loadingText}>
-                <Text size="sm" tone="muted" live="polite">
-                    {p.loadingText}
-                </Text>
-            </SurfaceCard>
-        )
-    return renderSettingsForm({ copy, p, on, props, values, off })
+    return (
+        <SlotView slot={p.slot} placeholder labels={p.slotLabels} onRetry={on.retry}>
+            {(_ready, isSkeleton) =>
+                renderSettingsForm({
+                    copy: p.copy,
+                    p,
+                    on,
+                    props,
+                    values: p.values,
+                    off: !p.canEdit || p.isPending || isSkeleton,
+                })
+            }
+        </SlotView>
+    )
 }
 
 /** Inputs needed to build the publicTitle section. */
@@ -159,9 +158,9 @@ const renderSettingsForm = ({ copy, p, on, props, values, off }: RenderSettingsF
                     {copy.readOnlyNote}
                 </Text>
             )}
-            {renderEarningRules(props)}
+            {renderEarningRules(props, off)}
 
-            {renderTierRules(props)}
+            {renderTierRules(props, off)}
 
             {renderPointsExpiry({ copy, values, off, on })}
 
@@ -213,24 +212,10 @@ const renderSettingsForm = ({ copy, p, on, props, values, off }: RenderSettingsF
     </Form>
 )
 
-/** Inputs needed to build the LoyaltyProgramSettingsContent section. */
-export interface BuildProgramCopyContext {
-    readonly t: ReturnType<typeof useTranslations<"loyalty">>
-}
-
-/** Inputs needed to build the LoyaltyProgramSettingsContent section. */
-export interface BuildProgramCommandsContext {
-    readonly form: ReturnType<typeof useLoyaltyProgramForm>
-    readonly touch: { shouldDirty: boolean; shouldValidate: boolean }
-    readonly values: import("@/hooks/loyaltyProgram").ProgramValues
-    readonly submit: (e?: React.BaseSyntheticEvent) => Promise<void>
-}
-
 /** Draws the category earning cards with their section controls. */
-const renderEarningRules = (props: LoyaltyProgramSettingsBaseProps) => {
+const renderEarningRules = (props: LoyaltyProgramSettingsBaseProps, off: boolean) => {
     const { props: p, on } = props
     const { copy, values } = p
-    const off = !p.canEdit || p.isPending
     return (
         <LoyaltyEarningRules {...props}>
             {values.categories.map((category) => (
@@ -254,10 +239,9 @@ const renderEarningRules = (props: LoyaltyProgramSettingsBaseProps) => {
 }
 
 /** Draws the membership tier cards with their section controls. */
-const renderTierRules = (props: LoyaltyProgramSettingsBaseProps) => {
+const renderTierRules = (props: LoyaltyProgramSettingsBaseProps, off: boolean) => {
     const { props: p, on } = props
     const { copy, values } = p
-    const off = !p.canEdit || p.isPending
     return (
         <LoyaltyTierRules {...props}>
             {values.tiers.map((tier, position) => (

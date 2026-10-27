@@ -8,5 +8,12 @@ import { toPublicInterview } from "./hiringPublic.shared"
 export const usePublicHiringInterview = (token: string) => {
     const read = useQueryPublicHiringInterviewSwr({ token })
     const view = useMemo(() => (read.data === undefined ? undefined : toPublicInterview(read.data)), [read.data])
-    return { view, isLoading: read.isLoading, isMissing: read.error !== undefined }
+    return {
+        view,
+        isLoading: read.isLoading,
+        isMissing: read.error !== undefined,
+        reload: () => {
+            void read.mutate()
+        },
+    }
 }

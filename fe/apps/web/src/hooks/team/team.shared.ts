@@ -6,6 +6,7 @@ import {
     QUERY_WORKSPACE_MEMBERS_SWR_KEY,
     QUERY_WORKSPACE_STAFF_SWR_KEY,
 } from "@/hooks/swr"
+import type { DataSlot } from "@/modules/types"
 
 /** One member as the back end lists them. */
 interface MemberListing {
@@ -167,4 +168,13 @@ const TEAM_KEYS: ReadonlySet<string> = new Set([
 /** Revalidates the members, the invitations and the staff rows after a change to the team. */
 export const refreshTeam = async (): Promise<void> => {
     await mutate((key) => Array.isArray(key) && typeof key[0] === "string" && TEAM_KEYS.has(key[0]))
+}
+
+/** The loading flag and failure message of the team reads. */
+type TeamReadStatus = { readonly isLoading: boolean; readonly error: string | undefined }
+
+/** The team as one slot of what a block draws from it: a failed read shows as such, a read in flight as loading, else the items. */
+export const teamSlotOf = <T>(state: TeamReadStatus, items: T): DataSlot<T> => {
+    if (state.error !== undefined) return { isError: true }
+    return state.isLoading ? { isLoading: true } : { items }
 }

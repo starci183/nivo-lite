@@ -60,8 +60,8 @@ export const AgentConnectionAccess = (props: AgentConnectionAccessProps) => {
             props={{
                 title: t("grantTitle"),
                 hint: t("grantHint"),
-                slot: mapSlot(slot, (items) => ({ rows: rowsOf(items) })),
-                placeholder: { rows: PLACEHOLDER },
+                slot: mapSlot(slot, rowsOf),
+                placeholder: PLACEHOLDER,
                 slotLabels: slotLabels(t("grantEmpty")),
                 manageLabel: t("grantManage"),
                 manageHref: AUTOMATION_ROUTES.connections,

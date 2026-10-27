@@ -7,16 +7,18 @@ type TransferDetail = {
     readonly value: string
 }
 
-/** Settled transfer presentation, payment phase, and actions supplied by the connected drawer. */
+/** The three drawn shapes of the transfer drawer. */
+export type PayDrawerShape = "paid" | "expired" | "awaiting"
+
+/** Settled transfer presentation, drawn shape, and actions supplied by the connected drawer; it is mounted only while open. */
 type PayDrawerBaseProps = {
-    readonly state: {
-        readonly isOpen: boolean
-        readonly view: "paid" | "loading" | "expired" | "awaiting"
+    readonly shape: PayDrawerShape
+    readonly props: {
+        /** True while the order is being made: the drawer shows the waiting notice. */
+        readonly isWaiting: boolean
         readonly isRegenerating: boolean
         readonly isBankConfigured: boolean
         readonly hasOrder: boolean
-    }
-    readonly props: {
         readonly title: string
         readonly description: string
         readonly closeLabel: string
@@ -53,7 +55,7 @@ export const PayDrawerBase = (props: PayDrawerBaseProps) => {
         <Drawer
             title={props.props.title}
             description={props.props.description}
-            isOpen={props.state.isOpen}
+            isOpen
             onOpenChange={(open) => {
                 if (!open) props.on.close()
             }}
@@ -71,7 +73,7 @@ export const PayDrawerBase = (props: PayDrawerBaseProps) => {
 }
 
 /** Renders the PaymentQr section. */
-type PaymentQrProps = Pick<PayDrawerBaseProps, "props" | "state">
+type PaymentQrProps = Pick<PayDrawerBaseProps, "props">
 
 const PaymentQr = (props: PaymentQrProps) => {
     return (
@@ -79,7 +81,7 @@ const PaymentQr = (props: PaymentQrProps) => {
             <Text size="sm" weight="medium">
                 {props.props.scanLabel}
             </Text>
-            {props.state.isBankConfigured ? (
+            {props.props.isBankConfigured ? (
                 <div className={QR_CLASS_NAME}>
                     <MediaFrame aspect="square" fit="contain">
                         <Image
@@ -107,14 +109,14 @@ const PaymentQr = (props: PaymentQrProps) => {
 /** Selects the settlement notice or the awaiting transfer details. */
 const PaymentContent = (props: PayDrawerBaseProps) => {
     let content
-    if (props.state.view === "paid") {
-        content = <Alert tone="affirmative" title={props.props.paidTitle} description={props.props.paidDescription} />
-    } else if (props.state.view === "loading") {
+    if (props.props.isWaiting) {
         content = <Alert tone="pending" title={props.props.waitingLabel} urgency="polite" />
-    } else if (props.state.view === "expired") {
+    } else if (props.shape === "paid") {
+        content = <Alert tone="affirmative" title={props.props.paidTitle} description={props.props.paidDescription} />
+    } else if (props.shape === "expired") {
         content = (
             <div className={PAY_CLASS_NAME}>
-                {props.state.hasOrder ? (
+                {props.props.hasOrder ? (
                     <Alert
                         tone="cautionary"
                         title={props.props.expiredTitle}
@@ -125,7 +127,7 @@ const PaymentContent = (props: PayDrawerBaseProps) => {
                     <Alert tone="negative" title={props.props.errorTitle} description={props.props.regenerateError} />
                 ) : null}
                 <div>
-                    <Button intent="neutral" isPending={props.state.isRegenerating} onPress={props.on.regenerate}>
+                    <Button intent="neutral" isPending={props.props.isRegenerating} onPress={props.on.regenerate}>
                         {props.props.regenerateLabel}
                     </Button>
                 </div>

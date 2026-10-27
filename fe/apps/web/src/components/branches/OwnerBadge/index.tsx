@@ -15,6 +15,8 @@ type OwnerBadgeProps = {
     readonly glyph: ModuleIconName
     /** The words under the name: the role of the owner. */
     readonly role: string
+    /** The owner is drawn from the placeholder while the read is in flight. */
+    readonly isSkeleton?: boolean
 }
 
 /** The owner identity in a section header: an avatar for people, a module tile for agents, with name and role. */
@@ -31,10 +33,10 @@ export const OwnerBadge = (props: OwnerBadgeProps) => (
             <PersonAvatar name={props.name} size="md" />
         )}
         <div className={OWNER_TEXT_CLASS}>
-            <Text weight="semibold" overflow="truncate">
+            <Text weight="semibold" overflow="truncate" isSkeleton={props.isSkeleton ?? false}>
                 {props.name}
             </Text>
-            <Text size="sm" tone="muted" overflow="truncate">
+            <Text size="sm" tone="muted" overflow="truncate" isSkeleton={props.isSkeleton ?? false}>
                 {props.role}
             </Text>
         </div>

@@ -5,8 +5,8 @@ import { useHiringFormat, useHiringSay } from "@/hooks/hiring"
 import { CV_ACCEPT, useHiringApply, usePublicHiringJob } from "@/hooks/hiringPublic"
 import type { PublicJobView } from "@/hooks/hiringPublic"
 import { useHiringApplyForm } from "@/hooks/rhf"
+import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { HiringApplyFormBase } from "./component"
-import type { HiringApplyFormBaseProps } from "./component"
 
 /** The workspace slug and the job slug of the public link. */
 interface HiringApplyFormProps {
@@ -14,49 +14,55 @@ interface HiringApplyFormProps {
     readonly job: string
 }
 
-type ApplyState = HiringApplyFormBaseProps["props"]["state"]
+type HiringTranslator = ReturnType<typeof useTranslations<"hiring">>
 
-/** Where the read of the job stands. */
-const stateOf = (isMissing: boolean, hasJob: boolean): ApplyState => {
-    if (isMissing) return "missing"
-    return hasJob ? "ready" : "loading"
-}
+/** What the candidate reads once the application is in; null while none was sent. */
+const doneTextOf = (t: HiringTranslator, done: ReturnType<typeof useHiringApply>["done"]): string | null =>
+    done === null
+        ? null
+        : [t(done.duplicate ? "applyDuplicate" : "applyDone"), done.cvSkipped ? t("applyCvSkipped") : ""]
+              .filter((part) => part !== "")
+              .join(" ")
+
+/** The experience line of the job post; null when the job asks for none. */
+const experienceTextOf = (
+    t: HiringTranslator,
+    requirements: PublicJobView["requirements"] | undefined,
+): string | null =>
+    requirements === undefined || (requirements.experienceYears === null && requirements.experienceNote === "")
+        ? null
+        : [
+              requirements.experienceYears === null
+                  ? ""
+                  : t("applyExperienceYears", { n: requirements.experienceYears }),
+              requirements.experienceNote,
+          ]
+              .filter((part) => part !== "")
+              .join(" ")
 
 /** The connected public job page: reads the job without a session, and sends the application (CV first) through the back end GraphQL API. */
 export const HiringApplyForm = (props: HiringApplyFormProps) => {
     const t = useTranslations("hiring")
     const say = useHiringSay()
     const format = useHiringFormat()
+    const slotLabels = useSlotLabels()
     const read = usePublicHiringJob(props.ws, props.job)
     const form = useHiringApplyForm()
     const apply = useHiringApply(form, read.view, props)
     const job: PublicJobView | undefined = read.view
     const requirements = job?.requirements
-    const doneText =
-        apply.done === null
-            ? null
-            : [
-                  t(apply.done.duplicate ? "applyDuplicate" : "applyDone"),
-                  apply.done.cvSkipped ? t("applyCvSkipped") : "",
-              ]
-                  .filter((part) => part !== "")
-                  .join(" ")
-    const experience =
-        requirements === undefined || (requirements.experienceYears === null && requirements.experienceNote === "")
-            ? null
-            : [
-                  requirements.experienceYears === null
-                      ? ""
-                      : t("applyExperienceYears", { n: requirements.experienceYears }),
-                  requirements.experienceNote,
-              ]
-                  .filter((part) => part !== "")
-                  .join(" ")
+    const doneText = doneTextOf(t, apply.done)
+    const experience = experienceTextOf(t, requirements)
     return (
         <HiringApplyFormBase
             props={{
                 say,
-                state: stateOf(read.isMissing, job !== undefined),
+                slot: slotOfSwr({
+                    data: job === undefined ? undefined : (true as const),
+                    error: read.isMissing ? say("applyMissing") : undefined,
+                    isLoading: read.isLoading,
+                }),
+                slotLabels: { ...slotLabels(say("applyMissing")), error: say("applyMissing") },
                 post: {
                     company: job?.company ?? "",
                     title: job?.title ?? "",
@@ -86,7 +92,7 @@ export const HiringApplyForm = (props: HiringApplyFormProps) => {
                 cvError: apply.cvError,
                 canSubmit: apply.canSubmit,
                 isBusy: apply.isPending,
-                isFailed: apply.isFailed,
+                failure: apply.isFailed ? say("applyFailed") : null,
                 doneText,
             }}
             on={{
@@ -96,6 +102,7 @@ export const HiringApplyForm = (props: HiringApplyFormProps) => {
                 answer: apply.setAnswer,
                 cv: apply.setCv,
                 submit: apply.submit,
+                retry: read.reload,
             }}
         />
     )

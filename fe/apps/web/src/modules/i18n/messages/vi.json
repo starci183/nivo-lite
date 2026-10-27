@@ -3874,6 +3874,7 @@
     "tab_performance": "Hiệu quả",
     "tab_settings": "Cài đặt",
     "noVersion": "Chưa áp dụng bản nào",
+    "versionInUse": "Đang dùng bản {version}",
     "displayName": "Tên hiển thị",
     "displayNameHint": "Tên nhóm của bạn thấy trong Office và trên thẻ.",
     "saveName": "Lưu tên",

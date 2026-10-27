@@ -8,23 +8,11 @@ import { useRevalidateLeadViews } from "@/hooks/leads"
 import { useMutateImportContractsSwr, useQueryPreviewContractImportSwr } from "@/hooks/swr"
 import type { ContractImportPreview } from "@/hooks/swr"
 import { toast } from "@/modules/toast"
+import { CONTRACT_IMPORT_FIELDS } from "./salescontracts.shared"
+import type { ContractImportField } from "./salescontracts.shared"
 
 /** Where the contract rows come from. */
 export type ContractImportSource = "file" | "paste"
-
-/** The contract fields a column can fill, in the order the dialog lists them. */
-export const CONTRACT_IMPORT_FIELDS = [
-    "customerName",
-    "plan",
-    "startsOn",
-    "endsOn",
-    "amountVnd",
-    "status",
-    "note",
-] as const
-
-/** One contract field a column can fill. */
-export type ContractImportField = (typeof CONTRACT_IMPORT_FIELDS)[number]
 
 /** Which column fills each field; null leaves it empty. */
 export type ContractImportMapping = Readonly<Record<ContractImportField, string | null>>
@@ -148,9 +136,10 @@ export const useContractImport = (onDone: (message: string) => void) => {
             void runPreview({ ...state, sheet: value }, null)
         },
         preview: () => void runPreview({ ...state, preview: null }, null),
-        column: (field: ContractImportField, column: string | null) => {
+        column: (field: string, column: string | null) => {
             if (state.mapping === null) return
-            void runPreview(state, { ...state.mapping, [field]: column })
+            const known = CONTRACT_IMPORT_FIELDS.find((candidate) => candidate === field) ?? "customerName"
+            void runPreview(state, { ...state.mapping, [known]: column })
         },
         runImport: () => void runImport(),
     }

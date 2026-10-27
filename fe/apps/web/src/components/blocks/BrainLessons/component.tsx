@@ -1,6 +1,11 @@
 import { Button, Disclosure, Form, Input, Select, Textarea } from "@starci/grammar/common"
-import { KnowledgeRows } from "@/components/composites/KnowledgeRows"
-import type { KnowledgeRowsProps } from "@/components/composites/KnowledgeRows"
+import {
+    KNOWLEDGE_ROWS_PLACEHOLDER,
+    KnowledgeRowList,
+    KnowledgeRowsSection,
+} from "@/components/composites/KnowledgeRows"
+import type { KnowledgeListView } from "@/components/composites/KnowledgeRows"
+import { SlotView } from "@/components/composites/SlotView"
 import { FORM_CLASS_NAME, MINE_CLASS_NAME } from "./classNames"
 
 /** The words and values of the part that studies corrections and writes a lesson by hand. */
@@ -24,7 +29,7 @@ interface WriteView {
 /** The list and the writing part the connected lessons supply. */
 export interface BrainLessonsBaseProps {
     readonly props: {
-        readonly list: KnowledgeRowsProps
+        readonly list: KnowledgeListView
         /** Owners and managers only; nothing is drawn for it while undefined. */
         readonly write?: WriteView | undefined
     }
@@ -35,6 +40,7 @@ export interface BrainLessonsBaseProps {
         readonly setLessonWhen: (value: string) => void
         readonly mine: () => void
         readonly save: () => void
+        readonly retry: () => void
     }
 }
 
@@ -101,9 +107,29 @@ const WritePart = (props: WritePartProps) => (
 )
 
 /** Draws how each agent should work: the lessons in use, the proposed ones to approve, and what lets the owner add more. */
-export const BrainLessonsBase = (props: BrainLessonsBaseProps) => (
-    <KnowledgeRows
-        {...props.props.list}
-        before={props.props.write === undefined ? null : <WritePart view={props.props.write} on={props.on} />}
-    />
-)
+export const BrainLessonsBase = (props: BrainLessonsBaseProps) => {
+    const list = props.props.list
+    return (
+        <KnowledgeRowsSection
+            section={list.section}
+            isPending={list.isPending}
+            before={props.props.write === undefined ? null : <WritePart view={props.props.write} on={props.on} />}
+        >
+            <SlotView
+                slot={list.slot}
+                placeholder={KNOWLEDGE_ROWS_PLACEHOLDER}
+                labels={list.slotLabels}
+                onRetry={props.on.retry}
+            >
+                {(rows, isSkeleton) => (
+                    <KnowledgeRowList
+                        label={list.label}
+                        rows={rows}
+                        isPending={list.isPending}
+                        isSkeleton={isSkeleton}
+                    />
+                )}
+            </SlotView>
+        </KnowledgeRowsSection>
+    )
+}

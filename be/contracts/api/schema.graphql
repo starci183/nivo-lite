@@ -4224,6 +4224,12 @@ type LessonMiningStatusType {
   status: String!
 }
 
+type LinkContractCustomersType {
+  created: Int!
+  linked: Int!
+  unmatched: [UnmatchedContractType!]!
+}
+
 type LinkStaffType {
   staffId: ID!
 }
@@ -5068,6 +5074,7 @@ type Mutation {
   importInventoryPaste(input: ImportInventoryPasteInput!): ImportPasteType!
   installModule(input: InstallModuleInput!): ModuleInstallResultType!
   keepCurrentBrainFact(input: KeepCurrentBrainFactInput!): Int!
+  linkContractCustomers: LinkContractCustomersType!
   linkHiringStaff(input: HiringCandidateRefInput!): LinkStaffType!
   maintainBrain: Boolean!
   markBookingNoShow(input: MarkBookingNoShowInput!): MarkBookingNoShowType!
@@ -8127,6 +8134,12 @@ type TrustType {
   autoSend: Boolean!
   offered: Boolean!
   streak: Int!
+}
+
+type UnmatchedContractType {
+  contractId: ID!
+  customerName: String!
+  reason: String!
 }
 
 input UpdateAuthorityInput {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useBookingBoard } from "@/hooks/bookingBoard"
+import { useSlotLabels } from "@/hooks/slot"
 import { useFormatter, useTranslations } from "next-intl"
 import { useTransition } from "react"
 import { useMutateRemoveBookingWaitlistEntrySwr } from "@/hooks/swr"
@@ -9,7 +10,8 @@ import { BookingWaitlistBase } from "./component"
 
 /** The connected waiting list: customers who wait for a free time, removable one by one. */
 export const BookingWaitlist = () => {
-    const { board } = useBookingBoard()
+    const { board, slot, reload } = useBookingBoard()
+    const slotLabels = useSlotLabels()
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
     const persist = useBookingSetupSave()
@@ -35,6 +37,8 @@ export const BookingWaitlist = () => {
     return (
         <BookingWaitlistBase
             props={{
+                slot,
+                slotLabels: slotLabels(t("loadFailedTitle")),
                 label: t("waitLabel"),
                 emptyTitle: t("waitEmptyTitle"),
                 emptyBody: t("waitEmptyBody"),
@@ -51,9 +55,10 @@ export const BookingWaitlist = () => {
                         t(item.status === "notified" ? "waitNotified" : "waitWaiting"),
                     ].join(" · "),
                 })),
-                isPending,
+                isPending: isPending || slot.isLoading === true,
             }}
             on={{
+                retry: reload,
                 remove: (id) =>
                     startTransition(async () => {
                         const answer = await persist(() => remove.trigger({ id }))

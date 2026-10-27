@@ -1,8 +1,8 @@
-import { EmptyNotice, Region, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Region, SurfaceListCard, Text } from "@starci/grammar/common"
 import { OwnerBadge } from "@/components/branches/OwnerBadge"
 import { ResponsibilityLine } from "@/components/branches/ResponsibilityLine"
 import type { ResponsibilityRowLabels } from "@/components/branches/ResponsibilityLine"
-import type { OwnerGroupView } from "@/hooks/responsibilities"
+import type { OwnerGroupView } from "@/modules/types"
 import { GROUPS_CLASS, SECTION_HEAD_CLASS } from "./classNames"
 
 /** The words of the owner groups. */
@@ -21,12 +21,8 @@ export interface OwnerGroupListLabels {
 type OwnerGroupListProps = {
     readonly groups: ReadonlyArray<OwnerGroupView>
     readonly labels: OwnerGroupListLabels
-    readonly emptyMessage: string
-    readonly emptyDescription: string
-    /** The action of the empty notice; with none it only explains. */
-    readonly emptyAction?: { readonly label: string; readonly onAction: () => void }
-    /** The collection is loading: one list card of skeleton rows. */
-    readonly isLoading: boolean
+    /** The groups are placeholders while the read is in flight: the same tree draws as a skeleton. */
+    readonly isSkeleton: boolean
     readonly draftingId: string | null
     readonly copiedId: string | null
     readonly onDraft: (responsibilityId: string) => void
@@ -38,24 +34,9 @@ const roleOf = (group: OwnerGroupView, labels: OwnerGroupListLabels): string => 
     return group.handle === null ? labels.ownerAgent : labels.ownerAgentHandle(group.handle)
 }
 
-/** Responsibilities grouped by owner: a header per owner, then one card per responsibility, or an empty notice. */
+/** Responsibilities grouped by owner: a header per owner, then one card per responsibility. */
 export const OwnerGroupList = (props: OwnerGroupListProps) => {
     const { labels } = props
-    if (props.isLoading) return <SurfaceListCard ariaLabel={labels.groupAria} isLoading />
-    if (props.groups.length === 0) {
-        return (
-            <SurfaceCard ariaLabel={labels.groupAria}>
-                <EmptyNotice
-                    message={props.emptyMessage}
-                    description={props.emptyDescription}
-                    actionVariant="secondary"
-                    {...(props.emptyAction === undefined
-                        ? {}
-                        : { actionLabel: props.emptyAction.label, onAction: props.emptyAction.onAction })}
-                />
-            </SurfaceCard>
-        )
-    }
     return (
         <div className={GROUPS_CLASS}>
             {props.groups.map((group) => (
@@ -67,8 +48,9 @@ export const OwnerGroupList = (props: OwnerGroupListProps) => {
                             handle={group.handle}
                             glyph={group.glyph}
                             role={roleOf(group, labels)}
+                            isSkeleton={props.isSkeleton}
                         />
-                        <Text size="sm" tone="muted">
+                        <Text size="sm" tone="muted" isSkeleton={props.isSkeleton}>
                             {labels.count(group.rows.length)}
                         </Text>
                     </div>
@@ -78,6 +60,7 @@ export const OwnerGroupList = (props: OwnerGroupListProps) => {
                                 key={row.id}
                                 row={row}
                                 labels={labels.row}
+                                isSkeleton={props.isSkeleton}
                                 isDrafting={props.draftingId === row.id}
                                 isCopied={props.copiedId === row.id}
                                 onDraft={props.onDraft}

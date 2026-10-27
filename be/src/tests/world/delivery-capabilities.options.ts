@@ -104,6 +104,7 @@ const platformModules = (tokenKey: Secret): Array<DynamicModule> => [
         isGlobal: true,
         oauthBase: "http://localhost",
         apiBase: "http://localhost",
+        businessBase: "http://localhost",
         timeoutMs: 1000,
     }),
     MetaModule.register({

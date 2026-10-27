@@ -28,7 +28,7 @@ export const SetupGatesCard = (props: SetupGatesCardProps) => (
                 value={props.confirmed}
                 minValue={0}
                 maxValue={props.total}
-                isSkeleton={props.isLoading}
+                isSkeleton={props.isSkeleton}
             />
             {props.gateFailure === "" ? null : (
                 <Alert title={props.gateFailureTitle} description={props.gateFailure} tone="negative" />
@@ -42,12 +42,12 @@ export const SetupGatesCard = (props: SetupGatesCardProps) => (
                         <ListRow
                             title={gate.label}
                             badges={
-                                <Badge isDot isSkeleton={props.isLoading} tone={gate.statusTone}>
+                                <Badge isDot isSkeleton={props.isSkeleton} tone={gate.statusTone}>
                                     {gate.statusLabel}
                                 </Badge>
                             }
                             actions={
-                                props.isLoading || props.editing === gate.key ? undefined : (
+                                props.editing === gate.key ? undefined : (
                                     <Tooltip content={props.editLabel}>
                                         <IconButton
                                             source={nivoIconSource("edit", "leading")}
@@ -74,14 +74,14 @@ export const SetupGatesCard = (props: SetupGatesCardProps) => (
             <div className={STACK}>
                 <Button
                     intent="alternative"
-                    isSkeleton={props.isLoading}
+                    isSkeleton={props.isSkeleton}
                     isPending={props.isApplying}
                     isDisabled={!props.canApply}
                     onPress={props.onApply}
                 >
                     {props.applyLabel}
                 </Button>
-                <Text size="xs" tone="muted" isSkeleton={props.isLoading}>
+                <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
                     {props.applyHint}
                 </Text>
                 {props.applyTone === "idle" ? null : (

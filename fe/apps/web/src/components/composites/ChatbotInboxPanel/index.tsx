@@ -29,6 +29,8 @@ interface ChatbotInboxPanelProps {
     readonly thread: ReactNode
     /** The customer pane; drawn only while a conversation is selected. */
     readonly side: ReactNode
+    /** The inbox is not read yet: no pick-a-conversation notice is drawn in the thread pane. */
+    readonly isSkeleton?: boolean
 }
 
 /** The Chatbot inbox layout: the conversation list, the open thread and the customer pane inside one joined card. */
@@ -50,7 +52,9 @@ export const ChatbotInboxPanel = (props: ChatbotInboxPanelProps) => {
                                 props.thread
                             ) : (
                                 <div className={CENTER_CLASS_NAME}>
-                                    <EmptyNotice message={props.pickTitle} description={props.pickBody} />
+                                    {props.isSkeleton === true ? null : (
+                                        <EmptyNotice message={props.pickTitle} description={props.pickBody} />
+                                    )}
                                 </div>
                             )}
                         </div>

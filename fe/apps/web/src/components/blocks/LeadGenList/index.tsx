@@ -3,6 +3,7 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { useLeadGenWorkbench } from "@/hooks/leadgen"
 import { handoffsViewOf, leadsViewOf, sourcesViewOf } from "@/hooks/leadgenView"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { LeadGenWorkbenchData } from "@/modules/types"
 import { LeadGenListBase } from "./component"
 
@@ -23,10 +24,29 @@ const TAB_KEYS: Readonly<Record<LeadGenListKind, string>> = {
     handoffs: "tabHandoffs",
 }
 
+/** The workbench with nothing in it: the list view of it keeps the words and has no rows. */
+const EMPTY_WORKBENCH: LeadGenWorkbenchData = {
+    metrics: {
+        newToday: 0,
+        hotWaiting: 0,
+        firstReplyP50Min: null,
+        firstReplySample: 0,
+        conversionWindowDays: 0,
+        conversionLeads: 0,
+        conversionWon: 0,
+    },
+    leads: [],
+    leadsHidden: 0,
+    sources: [],
+    comments: [],
+    handoffs: [],
+}
+
 /** The connected prospects, sources or Sales handoffs of one Lead Gen instance. */
 export const LeadGenList = (props: LeadGenListProps) => {
     const t = useTranslations("workbenchLeadGen")
     const format = useFormatter()
+    const slotLabels = useSlotLabels()
     const workbench = useLeadGenWorkbench(props.installationId)
     const viewOf = (data: LeadGenWorkbenchData) => {
         if (props.kind === "leads") return leadsViewOf(t, format, data.leads, data.leadsHidden)
@@ -36,9 +56,11 @@ export const LeadGenList = (props: LeadGenListProps) => {
     return (
         <LeadGenListBase
             props={{
-                list: workbench.data === undefined ? null : viewOf(workbench.data),
-                pending: { label: t(TAB_KEYS[props.kind]), failure: workbench.failure, onRetry: workbench.retry },
+                slot: mapSlot(workbench.slot, viewOf),
+                placeholder: viewOf(EMPTY_WORKBENCH),
+                labels: slotLabels(t(TAB_KEYS[props.kind])),
             }}
+            on={{ retry: workbench.retry }}
         />
     )
 }

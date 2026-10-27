@@ -1,4 +1,4 @@
-export { NO_STAFF, ROLE_KEYS, canManageMember, isTeamManager, roleChoices } from "./team.shared"
+export { NO_STAFF, ROLE_KEYS, canManageMember, isTeamManager, roleChoices, teamSlotOf } from "./team.shared"
 export type { InviteSentView, TeamMemberView } from "./team.shared"
 export { useCopyInviteLink } from "./useCopyInviteLink"
 export { useInviteCommands } from "./useInviteCommands"

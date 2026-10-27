@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
-import { navigation } from "@/modules/i18n"
 import { workspacesPath } from "@/modules/routes"
+import { NoAccessPageBase } from "./component"
 
 /** What the route passes through: the query of the old no-access URL. */
 interface NoAccessPageProps {
@@ -17,9 +17,12 @@ export const noAccessMetadata = async (): Promise<Metadata> => {
 /** Old entry point: everything about "no workspace yet" or "disabled" now lives on /workspaces. */
 export const NoAccessPage = async (props: NoAccessPageProps) => {
     const { reason } = await props.searchParams
-    navigation.redirect({
-        href: workspacesPath(reason === "disabled" ? "disabled" : "none"),
-        locale: await getLocale(),
-    })
-    return null
+    return (
+        <NoAccessPageBase
+            props={{
+                href: workspacesPath(reason === "disabled" ? "disabled" : "none"),
+                locale: await getLocale(),
+            }}
+        />
+    )
 }

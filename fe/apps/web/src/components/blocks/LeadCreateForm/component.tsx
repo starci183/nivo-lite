@@ -117,7 +117,7 @@ const LeadContactFields = (props: LeadCreateFormBaseProps) => {
                 id="lead-contact"
                 name="contact_name"
                 label={p.contactLabel}
-                hint={p.contactHint}
+                description={p.contactHint}
                 isRequired
                 isDisabled={p.isPending}
                 value={p.values.contact_name}
@@ -129,7 +129,7 @@ const LeadContactFields = (props: LeadCreateFormBaseProps) => {
                 id="lead-company"
                 name="company"
                 label={p.companyLabel}
-                hint={p.companyHint}
+                description={p.companyHint}
                 isRequired
                 isDisabled={p.isPending}
                 value={p.values.company}

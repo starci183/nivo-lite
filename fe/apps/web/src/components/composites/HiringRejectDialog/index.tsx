@@ -1,5 +1,5 @@
 import { Alert, Button, Dialog, Text, Textarea } from "@starci/grammar/common"
-import type { HiringSay } from "@/hooks/hiring"
+import type { HiringSay } from "@/modules/types"
 import { FORM_CLASS_NAME } from "./classNames"
 
 /** The words and state of the reject dialog. */

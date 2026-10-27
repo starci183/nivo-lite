@@ -2,6 +2,7 @@
 
 import { useQueryMcpCallLogSwr, useQueryMcpConnectorsSwr, useQueryMcpToolGrantsSwr } from "@/hooks/swr"
 import { useFormatter, useTranslations } from "next-intl"
+import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { connectorRowsOf } from "./mcpGateway.shared"
 import type { McpBadgeView, McpFormatter, McpTone, McpToolRowView, McpTranslator } from "./mcpGateway.shared"
 import { useMcpConnectorCommands } from "./useMcpConnectorCommands"
@@ -23,6 +24,9 @@ const OUTCOME_TONE: ReadonlyMap<string, McpTone> = new Map([
     ["ok", "success"],
     ["approval", "warning"],
 ])
+
+/** The first read error of the three, typed as unknown as SWR types it `any`. */
+const firstError = (...errors: ReadonlyArray<unknown>): unknown => errors.find((error) => error !== undefined)
 
 /** A neutral badge. */
 const plain = (label: string): McpBadgeView => ({ label, tone: "neutral" })
@@ -78,43 +82,48 @@ const logRowsOf = (
 export const useMcpGatewayView = (enabled: boolean) => {
     const t = useTranslations("mcpGateway")
     const format = useFormatter()
+    const slotLabelsOf = useSlotLabels()
     const connectors = useQueryMcpConnectorsSwr(enabled)
     const grants = useQueryMcpToolGrantsSwr(enabled)
     const log = useQueryMcpCallLogSwr(LOG_LIMIT, enabled)
     const reload = () => connectors.mutate()
     const commands = useMcpConnectorCommands(reload)
     const forms = useMcpConnectorForms(reload, connectors.data ?? [])
+    const cards = {
+        cards: [
+            {
+                label: t("connectors"),
+                emptyMessage: t("connectorsEmpty"),
+                emptyDescription: t("connectorsEmptyHint"),
+                rows: connectorRowsOf(t, format, connectors.data ?? [], commands, forms.openCredential),
+            },
+            {
+                label: t("grants"),
+                emptyMessage: t("grantsEmpty"),
+                emptyDescription: t("grantsEmptyHint"),
+                rows: grantRowsOf(t, format, grants.data ?? []),
+            },
+            {
+                label: t("log"),
+                emptyMessage: t("logEmpty"),
+                emptyDescription: t("logEmptyHint"),
+                rows: logRowsOf(t, format, log.data ?? []),
+            },
+        ],
+    }
+    const reads = {
+        data: connectors.data === undefined || grants.data === undefined || log.data === undefined ? undefined : cards,
+        error: firstError(connectors.error, grants.error, log.error),
+        isLoading: connectors.isLoading || grants.isLoading || log.isLoading,
+    }
     return {
         /** The region is drawn for a manager once the page is ready, and only then is anything read. */
         isShown: enabled,
         label: t("label"),
-        isLoading: connectors.isLoading || grants.isLoading || log.isLoading,
-        isFailed: connectors.error !== undefined || grants.error !== undefined || log.error !== undefined,
-        view: {
-            cards: [
-                {
-                    label: t("connectors"),
-                    emptyMessage: t("connectorsEmpty"),
-                    emptyDescription: t("connectorsEmptyHint"),
-                    rows: connectorRowsOf(t, format, connectors.data ?? [], commands, forms.openCredential),
-                },
-                {
-                    label: t("grants"),
-                    emptyMessage: t("grantsEmpty"),
-                    emptyDescription: t("grantsEmptyHint"),
-                    rows: grantRowsOf(t, format, grants.data ?? []),
-                },
-                {
-                    label: t("log"),
-                    emptyMessage: t("logEmpty"),
-                    emptyDescription: t("logEmptyHint"),
-                    rows: logRowsOf(t, format, log.data ?? []),
-                },
-            ],
-        },
+        slot: slotOfSwr(reads),
+        labels: { ...slotLabelsOf(t("connectorsEmpty")), error: t("failedTitle"), retry: t("retry") },
         forms: forms.view,
         on: forms.on,
-        failure: { title: t("failedTitle"), description: t("failedBody"), retryLabel: t("retry") },
         onRetry: () => {
             void connectors.mutate()
             void grants.mutate()

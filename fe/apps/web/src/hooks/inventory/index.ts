@@ -15,8 +15,6 @@ export {
     type ItemFormField,
     type ItemFormValues,
     type StockFilter,
-    type SupplierFormField,
-    type SupplierFormValues,
 } from "./inventory.shared"
 export { useAdjustDrawer } from "./useAdjustDrawer"
 export { useDrawer } from "./useDrawer"

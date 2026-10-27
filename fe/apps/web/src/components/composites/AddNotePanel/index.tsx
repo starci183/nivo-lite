@@ -40,7 +40,7 @@ export const AddNotePanel = (props: AddNotePanelProps) => (
             id="knowledge-add-title"
             name="title"
             label={props.titleLabel}
-            hint={props.titleHint}
+            description={props.titleHint}
             value={props.title}
             errorMessage={props.titleError}
             isError={props.titleError !== undefined}

@@ -1,6 +1,5 @@
 "use client"
 
-import type { SignupFormProps, SignupFormControllerInput } from "./component"
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
 import {
@@ -15,6 +14,30 @@ import { useSignupForm } from "@/hooks/rhf"
 import { navigation } from "@/modules/i18n"
 import { loginPath } from "@/modules/routes"
 import { SignupFormBase } from "./component"
+
+/** What the sign-up page tells the card. */
+type SignupFormProps = {
+    /** The destination after the account exists (an invite page); already sanitised. */
+    readonly next?: string | undefined
+    readonly invited: boolean
+    readonly initialEmail?: string | undefined
+}
+
+/** Values and commands the sign-up controller consumes. */
+type SignupFormControllerInput = {
+    readonly props: SignupFormProps
+    readonly auth: ReturnType<typeof authActionsOf>
+    readonly t: ReturnType<typeof useTranslations<"auth">>
+    readonly router: ReturnType<typeof navigation.useRouter>
+    readonly form: ReturnType<typeof useSignupForm>
+    readonly failure: string | undefined
+    readonly setFailure: React.Dispatch<React.SetStateAction<string | undefined>>
+    readonly sentTo: string | null
+    readonly setSentTo: React.Dispatch<React.SetStateAction<string | null>>
+    readonly isPending: ReturnType<typeof useTransition>[0]
+    readonly startTransition: ReturnType<typeof useTransition>[1]
+    readonly resending: ReturnType<typeof useResendEmail>
+}
 
 const createSignupFormController = (input: SignupFormControllerInput) => {
     const { props, auth, t, router, form, setFailure, setSentTo, startTransition, resending } = input
@@ -47,8 +70,6 @@ const createSignupFormController = (input: SignupFormControllerInput) => {
     const loginHref = loginPath(props.next)
     return { ...input, set, submit, fields, errors, loginHref }
 }
-
-/** What the sign-up page tells the card. */
 
 /** Sign-up: name, e-mail, password with a strength hint, then the "check your email" screen. */
 export const SignupForm = (props: SignupFormProps) => {
@@ -93,7 +114,7 @@ const createSignupFormView = (
 
     const { t, failure, sentTo, setSentTo, resending, set, submit, fields, errors, loginHref, isPending } = context
     return {
-        state: sentTo === null ? "form" : "sent",
+        shape: sentTo === null ? "form" : "sent",
         props: {
             title: t("signUpTitle"),
             text: props.invited ? t("signUpInviteText") : t("signUpText"),

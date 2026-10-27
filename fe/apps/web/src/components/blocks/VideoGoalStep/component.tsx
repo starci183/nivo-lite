@@ -76,7 +76,7 @@ export const VideoGoalStepBase = (props: VideoGoalStepBaseProps) => (
                     id="video-title"
                     name="title"
                     label={props.props.titleLabel}
-                    hint={props.props.titleHint}
+                    description={props.props.titleHint}
                     value={props.props.title}
                     isDisabled={props.props.disabled}
                     onValueChange={props.on.title}

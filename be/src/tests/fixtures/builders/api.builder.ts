@@ -24,10 +24,6 @@ const wiringSettings = {
         schema: "public",
     },
     supabase: { url: "https://supabase.invalid", serviceRoleKey: new Secret("wiring-fixture") },
-    llm: {
-        embedding: { apiKey: null, baseUrl: "https://llm.invalid", model: "wiring-embedding" },
-        chat: { apiKey: null, baseUrl: "https://llm.invalid", model: "wiring-chat" },
-    },
     channelConnections: {
         channelTokenKey: new Secret("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="),
         siteUrl: "https://site.invalid",
@@ -47,7 +43,19 @@ const options = {
     },
     database: wiringSettings.database,
     supabase: wiringSettings.supabase,
-    llm: wiringSettings.llm,
+    aiPool: {
+        chat: [
+            { id: "deepseek", baseUrl: "https://llm.invalid", keys: [], model: "wiring-chat", smartModel: null },
+            { id: "openrouter", baseUrl: "https://llm.invalid", keys: [], model: "wiring-chat", smartModel: null },
+        ],
+        embedding: {
+            id: "embeddings",
+            baseUrl: "https://llm.invalid",
+            keys: [],
+            model: "wiring-embedding",
+            smartModel: null,
+        },
+    },
     documents: {
         driveBase: "https://drive.invalid",
         oauthBase: null,
@@ -70,12 +78,17 @@ const options = {
         manageAgents: false,
         toolSecret: null,
     },
-    deepseek: { jsonRetries: 1 },
+    deepseek: { jsonRetries: 1, poolTimeoutMs: 1000 },
     connectionSecrets: { tokenKey: wiringSettings.channelConnections.channelTokenKey },
     loyaltyOtps: { pepper: new Secret("wiring-fixture") },
     channels: { siteUrl: "https://site.invalid" },
     telegram: { apiBase: "https://telegram.invalid", timeoutMs: 1000 },
-    zalo: { oauthBase: "https://zalo.invalid", apiBase: "https://zalo.invalid", timeoutMs: 1000 },
+    zalo: {
+        oauthBase: "https://zalo.invalid",
+        apiBase: "https://zalo.invalid",
+        businessBase: "https://zalo.invalid",
+        timeoutMs: 1000,
+    },
     mail: { allowPrivateHosts: false, platform: null, helloName: "wiring.invalid" },
     dataSources: { allowPrivateHosts: false },
     telegramUser: { app: null },

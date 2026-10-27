@@ -8,7 +8,7 @@ type TileIconSignal = "none" | "active" | "attention"
 /** What the console tile mark draws. */
 type TileIconProps = {
     readonly props: { readonly icon: IconName; readonly signal?: TileIconSignal }
-    readonly isLoading?: boolean
+    readonly isSkeleton?: boolean
 }
 
 const TONES: Record<TileIconSignal, IconTileTone> = { none: "accent", active: "success", attention: "warning" }
@@ -19,6 +19,6 @@ export const TileIcon = (props: TileIconProps) => (
         source={nivoIconSource(props.props.icon, "leading")}
         tone={TONES[props.props.signal ?? "none"]}
         size="md"
-        {...(props.isLoading === undefined ? {} : { isSkeleton: props.isLoading })}
+        isSkeleton={props.isSkeleton ?? false}
     />
 )

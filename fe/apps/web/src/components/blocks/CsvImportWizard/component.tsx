@@ -2,15 +2,15 @@ import { Alert, Button, FileDropzone, Input, RadioGroup, Select, Text, Textarea 
 import { CsvImportDocs } from "@/components/composites/CsvImportDocs"
 import { CsvImportGrid } from "@/components/composites/CsvImportGrid"
 import type { CsvImportGridView } from "@/components/composites/CsvImportGrid"
-import { CsvImportGate } from "@/components/composites/CsvImportGate"
 import { CsvImportMap } from "@/components/composites/CsvImportMap"
 import type { CsvImportMapView, CsvMapColumn } from "@/components/composites/CsvImportMap"
 import { CsvImportRun } from "@/components/composites/CsvImportRun"
+import { SlotView } from "@/components/composites/SlotView"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
 import { backAction, closeAction, nextAction, WizardFooter } from "@/components/composites/WizardFooter"
 import type { WizardAction } from "@/components/composites/WizardFooter"
-import { WizardFrame } from "@/components/composites/WizardFrame"
-import type { AgentStepView, WizardNote } from "@/modules/types"
+import { frameOf, WizardFrame } from "@/components/composites/WizardFrame"
+import type { AgentStepView, DataSlot, SlotLabels, WizardNote, WizardResume } from "@/modules/types"
 import { csvImportWizardClassNames as classNames } from "./classNames"
 
 /** One option of a select. */
@@ -58,8 +58,10 @@ const NAME_MIN = 2
 /** Copy, state and commands of the import wizard. */
 export interface CsvImportWizardBaseProps {
     readonly props: {
-        /** Shown instead of the wizard until the saved import it resumes is known: the loading line, or why it failed. */
-        readonly gate: { readonly message: string; readonly failure: string | null } | null
+        /** The saved import a resumed wizard reads back; a new one is ready at once. */
+        readonly resume: DataSlot<WizardResume>
+        /** The sentences of the resume read; its error is why the saved import could not load. */
+        readonly slotLabels: SlotLabels
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
@@ -146,7 +148,7 @@ const SourceStep = ({ props, on }: CsvImportWizardBaseProps) => (
                 id="csv-name"
                 name="name"
                 label={props.text.fieldName}
-                hint={props.text.fieldNameHint}
+                description={props.text.fieldNameHint}
                 isDisabled={props.isPending}
                 value={props.form.name}
                 onValueChange={on.name}
@@ -190,7 +192,7 @@ const SheetStep = ({ props, on }: CsvImportWizardBaseProps) => (
         id="csv-link"
         name="link"
         label={props.text.linkSheetLabel}
-        hint={props.text.linkSheetHint}
+        description={props.text.linkSheetHint}
         placeholder={props.text.linkSheetPlaceholder}
         isDisabled={props.isPending}
         value={props.link}
@@ -252,36 +254,32 @@ const StepBody = (base: CsvImportWizardBaseProps) => {
     return <WizardAgentStep {...props.agentStep} isDisabled={props.isPending} onChange={on.agents} />
 }
 
+/** The wizard a new import starts with: the placeholder drawn while a saved one is read. */
+const RESUME_PLACEHOLDER: WizardResume = { isResumed: false }
+
 /**
  * The import wizard in the shared frame: name, kind of rows and source; the data (file, Google Sheets link, typed or pasted table,
  * documents); the column mapping with a preview; the import; the agents that may read it.
  */
 export const CsvImportWizardBase = (props: CsvImportWizardBaseProps) => {
     const { props: view } = props
-    if (view.gate !== null)
-        return (
-            <CsvImportGate
-                message={view.gate.message}
-                failure={view.gate.failure}
-                closeLabel={view.text.close}
-                onClose={props.on.close}
-            />
-        )
     return (
-        <WizardFrame
-            title={view.title}
-            stepLabel={view.stepLabel}
-            steps={view.steps}
-            index={view.index}
-            footer={<WizardFooter actions={actionsOf(props)} />}
-        >
-            {view.resumeLine === null ? null : (
-                <Text size="sm" tone="muted">
-                    {view.resumeLine}
-                </Text>
+        <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels}>
+            {(_resume, isSkeleton) => (
+                <WizardFrame
+                    {...frameOf(view)}
+                    isSkeleton={isSkeleton}
+                    footer={<WizardFooter actions={actionsOf(props)} isSkeleton={isSkeleton} />}
+                >
+                    {view.resumeLine === null ? null : (
+                        <Text size="sm" tone="muted">
+                            {view.resumeLine}
+                        </Text>
+                    )}
+                    <StepBody {...props} />
+                    {view.note === null ? null : <Alert tone={view.note.tone} title={view.note.text} />}
+                </WizardFrame>
             )}
-            <StepBody {...props} />
-            {view.note === null ? null : <Alert tone={view.note.tone} title={view.note.text} />}
-        </WizardFrame>
+        </SlotView>
     )
 }

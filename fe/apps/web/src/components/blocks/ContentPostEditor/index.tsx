@@ -27,8 +27,8 @@ import {
     useRequestContentDraft,
     type ChannelWarning,
     type ContentChannel,
-    type ContentT,
 } from "@/hooks/content"
+import type { ContentT } from "@/modules/types"
 import { useContentEditorForm } from "@/hooks/rhf"
 import { ContentPostEditorBase } from "./component"
 

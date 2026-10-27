@@ -46,3 +46,42 @@ export type LlmEmbeddingResult = LlmEmbedding | null
 
 /** What a chat completion yields: the answer, or null when none could be made (no key, a provider failure, an empty answer). */
 export type LlmCompletionResult = LlmCompletion | null
+
+/** One message of a pooled chat call. */
+export interface LlmPoolMessage {
+    /** Who speaks. */
+    readonly role: "system" | "user" | "assistant"
+    /** What is said. */
+    readonly content: string
+}
+
+/** One chat call through the AI pool. */
+export interface LlmPoolChatRequest {
+    /** The prompt. */
+    readonly messages: ReadonlyArray<LlmPoolMessage>
+    /** True asks for one JSON object. */
+    readonly json: boolean
+    /** The whole call in milliseconds. */
+    readonly timeoutMs: number
+}
+
+/** One embeddings call through the AI pool. */
+export interface LlmPoolEmbedRequest {
+    /** The texts, in order. */
+    readonly input: ReadonlyArray<string>
+    /** The vector size asked for. */
+    readonly dimensions: number
+    /** The whole call in milliseconds. */
+    readonly timeoutMs: number
+}
+
+/** The vectors the pool answered, in the order of the texts, before their count and size are checked. */
+export interface LlmPoolEmbedding {
+    /** One vector per answered text. */
+    readonly vectors: ReadonlyArray<ReadonlyArray<number>>
+    /** What the provider reported. */
+    readonly usage: LlmUsage
+}
+
+/** The pool's vectors, or null when nothing answered. */
+export type LlmPoolEmbeddingResult = LlmPoolEmbedding | null

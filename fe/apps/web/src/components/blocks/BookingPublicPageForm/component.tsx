@@ -1,11 +1,16 @@
 import { Checkbox, Form, Input, Link, Text } from "@starci/grammar/common"
 import { BookingSaveLine } from "@/components/composites/BookingSaveLine"
 import { BookingSetupSection } from "@/components/composites/BookingSetupSection"
+import { SlotView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import { STACK_CLASS } from "./classNames"
 
 /** Props for {@link BookingPublicPageFormBase}. */
 export interface BookingPublicPageFormBaseProps {
     readonly props: {
+        /** The booking board read behind the block. */
+        readonly slot: DataSlot<true>
+        readonly slotLabels: SlotLabels
         readonly title: string
         readonly hint: string
         readonly enabledLabel: string
@@ -22,6 +27,7 @@ export interface BookingPublicPageFormBaseProps {
         readonly notice?: { readonly tone: "affirmative" | "negative"; readonly text: string }
     }
     readonly on: {
+        readonly retry: () => void
         readonly toggleEnabled: (value: boolean) => void
         readonly changeSlug: (value: string) => void
         readonly changeNote: (value: string) => void
@@ -30,7 +36,7 @@ export interface BookingPublicPageFormBaseProps {
 }
 
 /** Draws the form that switches the public booking page on and names its address and note. */
-export const BookingPublicPageFormBase = (props: BookingPublicPageFormBaseProps) => {
+const BookingPublicPageFormBody = (props: BookingPublicPageFormBaseProps) => {
     const { props: p, on } = props
     return (
         <BookingSetupSection title={p.title} hint={p.hint}>
@@ -71,3 +77,10 @@ export const BookingPublicPageFormBase = (props: BookingPublicPageFormBaseProps)
         </BookingSetupSection>
     )
 }
+
+/** Draws the block once the booking board is read; until then the same form draws, its controls resting. */
+export const BookingPublicPageFormBase = (props: BookingPublicPageFormBaseProps) => (
+    <SlotView slot={props.props.slot} placeholder labels={props.props.slotLabels} onRetry={props.on.retry}>
+        {() => <BookingPublicPageFormBody {...props} />}
+    </SlotView>
+)

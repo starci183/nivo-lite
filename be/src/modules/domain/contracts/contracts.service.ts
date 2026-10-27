@@ -6,8 +6,9 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog, InjectRequestLocale } from "@modules/platform/i18n"
 import type { MessageCatalog, RequestLocale } from "@modules/platform/i18n"
 import { NOTE_MAX, checkContract } from "./contract.policy"
+import { ContractLinkService } from "./contract-link.service"
 import { appendNoteLine, displayDayOf, nextTermOf } from "./contract-term.policy"
-import type { ContractResult, PaidRenewal, SaveContractParams } from "./contracts.contracts"
+import type { ContractResult, LinkedCustomers, PaidRenewal, SaveContractParams } from "./contracts.contracts"
 import { ContractsError, ContractsErrorCode } from "./errors/contracts.error"
 import type { ContractsRow } from "./persistence/contracts.rows"
 import {
@@ -50,6 +51,7 @@ export class ContractsService {
         @InjectRequestLocale() private readonly requestLocale: RequestLocale,
         private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
+        private readonly links: ContractLinkService,
     ) {}
 
     /** Lists recurring contracts after proving the caller belongs to their workspace. */
@@ -62,6 +64,20 @@ export class ContractsService {
     /** Links a customer to a contract that was typed in by name only, on the system's behalf; a contract that has a lead keeps it. */
     async attachLead(workspaceId: string, contractId: string, leadId: string): Promise<void> {
         await this.entityManager.query(ATTACH_CONTRACT_LEAD, [workspaceId, contractId, leadId])
+    }
+
+    /**
+     * Links every contract of the workspace to a lead the renewal can reach, on the system's behalf (after an import, or asked
+     * for); ContractLinkService owns the matching.
+     */
+    linkCustomers(workspaceId: string): Promise<LinkedCustomers> {
+        return this.links.linkCustomers(workspaceId)
+    }
+
+    /** Links the contracts of the workspace to their customers after proving the caller belongs to it. */
+    async linkCustomersFor(userId: string, workspaceId: string): Promise<LinkedCustomers> {
+        await this.members.require(userId, workspaceId)
+        return this.links.linkCustomers(workspaceId)
     }
 
     /**

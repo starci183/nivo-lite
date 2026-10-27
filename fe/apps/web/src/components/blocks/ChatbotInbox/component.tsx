@@ -8,7 +8,8 @@ import { ChatbotSidePanel, type ChatbotSidePanelProps } from "@/components/compo
 
 import { ChatbotThreadView, type ChatbotThreadViewProps } from "@/components/composites/ChatbotThreadView"
 
-import { PanelPending, type PanelPendingProps } from "@/components/composites/PanelPending"
+import { SlotView } from "@/components/composites/SlotView"
+import type { SlotPanelProps } from "@/modules/types"
 
 type ListWords = Omit<ChatbotConversationListProps, "onQuery" | "onFilter" | "onSelect">
 type ThreadWords = Omit<ChatbotThreadViewProps, "onBack" | "onToggleInfo" | "onDraft" | "onSend">
@@ -18,7 +19,7 @@ type SideWords = Omit<
 >
 
 /** The resolved words, rows and panes of the inbox. */
-interface ChatbotInboxView {
+export interface ChatbotInboxView {
     readonly title: string
     readonly actionFailedTitle: string
     readonly actionError: string | null
@@ -35,11 +36,8 @@ interface ChatbotInboxView {
 
 /** Props for {@link ChatbotInboxBase}. */
 export interface ChatbotInboxBaseProps {
-    readonly props: {
-        /** The inbox once its snapshot is read; null while it is not. */
-        readonly inbox: ChatbotInboxView | null
-        readonly pending: PanelPendingProps
-    }
+    /** The placeholder is the inbox with no conversations: its words stay real while the panes draw as skeleton. */
+    readonly props: SlotPanelProps<ChatbotInboxView>
     readonly on: {
         readonly query: (query: string) => void
         readonly filter: (filter: string) => void
@@ -52,47 +50,57 @@ export interface ChatbotInboxBaseProps {
         readonly escalationDraft: (draft: string) => void
         readonly sendAnswer: () => void
         readonly declineAnswer: () => void
+        readonly reload: () => void
     }
 }
 
 /** Draws the inbox of one Chatbot instance: the conversation list, the open thread and the customer side panel. */
 export const ChatbotInboxBase = (props: ChatbotInboxBaseProps) => {
-    const inbox = props.props.inbox
-    const on = props.on
-    if (inbox === null) return <PanelPending {...props.props.pending} />
+    const { props: p, on } = props
     return (
-        <ChatbotInboxPanel
-            title={inbox.title}
-            actionFailedTitle={inbox.actionFailedTitle}
-            actionError={inbox.actionError}
-            pane={inbox.pane}
-            hasSelection={inbox.hasSelection}
-            pickTitle={inbox.pickTitle}
-            pickBody={inbox.pickBody}
-            sideLabel={inbox.sideLabel}
-            isInfoOpen={inbox.isInfoOpen}
-            list={
-                <ChatbotConversationList {...inbox.list} onQuery={on.query} onFilter={on.filter} onSelect={on.select} />
-            }
-            thread={
-                <ChatbotThreadView
-                    {...inbox.thread}
-                    onBack={on.back}
-                    onToggleInfo={on.toggleInfo}
-                    onDraft={on.draft}
-                    onSend={on.send}
+        <SlotView slot={p.slot} placeholder={p.placeholder} labels={p.labels} onRetry={on.reload}>
+            {(inbox, isSkeleton) => (
+                <ChatbotInboxPanel
+                    title={inbox.title}
+                    actionFailedTitle={inbox.actionFailedTitle}
+                    actionError={inbox.actionError}
+                    pane={inbox.pane}
+                    hasSelection={inbox.hasSelection}
+                    pickTitle={inbox.pickTitle}
+                    pickBody={inbox.pickBody}
+                    sideLabel={inbox.sideLabel}
+                    isInfoOpen={inbox.isInfoOpen}
+                    isSkeleton={isSkeleton}
+                    list={
+                        <ChatbotConversationList
+                            {...inbox.list}
+                            isSkeleton={isSkeleton}
+                            onQuery={on.query}
+                            onFilter={on.filter}
+                            onSelect={on.select}
+                        />
+                    }
+                    thread={
+                        <ChatbotThreadView
+                            {...inbox.thread}
+                            onBack={on.back}
+                            onToggleInfo={on.toggleInfo}
+                            onDraft={on.draft}
+                            onSend={on.send}
+                        />
+                    }
+                    side={
+                        <ChatbotSidePanel
+                            {...inbox.side}
+                            onClose={on.toggleInfo}
+                            onToggleHandling={on.toggleHandling}
+                            onEscalationDraft={on.escalationDraft}
+                            onSendAnswer={on.sendAnswer}
+                            onDeclineAnswer={on.declineAnswer}
+                        />
+                    }
                 />
-            }
-            side={
-                <ChatbotSidePanel
-                    {...inbox.side}
-                    onClose={on.toggleInfo}
-                    onToggleHandling={on.toggleHandling}
-                    onEscalationDraft={on.escalationDraft}
-                    onSendAnswer={on.sendAnswer}
-                    onDeclineAnswer={on.declineAnswer}
-                />
-            }
-        />
+            )}
+        </SlotView>
     )
 }

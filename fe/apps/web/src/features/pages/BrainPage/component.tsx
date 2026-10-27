@@ -12,7 +12,6 @@ import { KnowledgeAsk } from "@/components/blocks/KnowledgeAsk"
 import { KnowledgeLibrary } from "@/components/blocks/KnowledgeLibrary"
 import { KnowledgeSuggestions } from "@/components/blocks/KnowledgeSuggestions"
 import { PageHeading } from "@/components/composites/PageHeading"
-import type { AddPreset } from "@/hooks/knowledge"
 import { BRAIN_PANEL_PREFIX } from "@/modules/brain"
 import type { ModuleKey } from "@/modules/catalog"
 import type { BrainTab } from "@/modules/routes"
@@ -23,6 +22,12 @@ import {
     SOURCES_MAIN_CLASS_NAME,
     SOURCES_SIDE_CLASS_NAME,
 } from "./classNames"
+
+/** The idea the add drawer was opened from: the topic to write about and who may read it. */
+export interface AddPresetView {
+    readonly topic: string
+    readonly visibility?: "public" | "internal"
+}
 
 /** Copy and values the Second Brain page supplies. */
 export interface BrainPageBaseProps {
@@ -46,7 +51,7 @@ export interface BrainPageBaseProps {
         /** Whether the address asks for the add drawer to be open, and what it was opened from. */
         readonly isAddOpen: boolean
         readonly addKey: string
-        readonly addPreset: AddPreset | null
+        readonly addPreset: AddPresetView | null
     }
 }
 

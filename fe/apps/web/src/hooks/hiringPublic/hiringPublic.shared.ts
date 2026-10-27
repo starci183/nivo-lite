@@ -8,6 +8,7 @@ import type {
     PublicSlotType,
 } from "@/hooks/swr"
 import { supabaseUrl } from "@/modules/config"
+import type { ApplyValues, PublicQuestionView } from "@/modules/types"
 
 /** The largest CV the apply form takes, in bytes. */
 export const CV_MAX_BYTES = 5 * 1024 * 1024
@@ -17,15 +18,6 @@ export const CV_ACCEPT = ".pdf,.doc,.docx,.jpg,.jpeg,.png"
 
 /** The private storage bucket CV files are kept in. */
 const CV_BUCKET = "hiring"
-
-/** One question of a public job. */
-export interface PublicQuestionView {
-    readonly id: string
-    readonly text: string
-    readonly type: string
-    readonly required: boolean
-    readonly choices: ReadonlyArray<string>
-}
 
 /** A job as the candidate sees it on the public page. */
 export interface PublicJobView {
@@ -158,18 +150,6 @@ export const cvUploadUrl = (path: string, token: string): string =>
     token.startsWith("http")
         ? token
         : `${supabaseUrl()}/storage/v1/object/upload/sign/${CV_BUCKET}/${path}?token=${token}`
-
-/** The values of the apply form. */
-export interface ApplyValues {
-    name: string
-    phone: string
-    email: string
-    availability: Array<string>
-    availabilityText: string
-    answers: Record<string, string>
-    consent: boolean
-    website: string
-}
 
 /** The empty apply form. */
 export const applyDefaults = (): ApplyValues => ({

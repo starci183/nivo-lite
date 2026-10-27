@@ -26,7 +26,7 @@ export const SmtpAccountStep = (props: SmtpAccountStepProps) => {
                     id="smtp-from-name"
                     name="fromName"
                     label={text.fieldFromName}
-                    hint={text.fieldFromNameHint}
+                    description={text.fieldFromNameHint}
                     isDisabled={locked}
                     value={account.values.fromName}
                     onValueChange={(v) => props.onField("fromName", v)}
@@ -35,7 +35,7 @@ export const SmtpAccountStep = (props: SmtpAccountStepProps) => {
                     id="smtp-from-email"
                     name="fromEmail"
                     label={text.fieldFromEmail}
-                    hint={text.fieldFromEmailHint}
+                    description={text.fieldFromEmailHint}
                     isDisabled={locked}
                     value={account.values.fromEmail}
                     onValueChange={(v) => props.onField("fromEmail", v)}
@@ -44,7 +44,7 @@ export const SmtpAccountStep = (props: SmtpAccountStepProps) => {
                     id="smtp-reply-to"
                     name="replyTo"
                     label={text.fieldReplyTo}
-                    hint={text.fieldReplyToHint}
+                    description={text.fieldReplyToHint}
                     isDisabled={locked}
                     value={account.values.replyTo}
                     onValueChange={(v) => props.onField("replyTo", v)}
@@ -55,7 +55,7 @@ export const SmtpAccountStep = (props: SmtpAccountStepProps) => {
                         id="smtp-user"
                         name="user"
                         label={text.fieldUser}
-                        hint={text.fieldUserHint}
+                        description={text.fieldUserHint}
                         isDisabled={locked}
                         value={account.values.user}
                         onValueChange={(v) => props.onField("user", v)}
@@ -125,7 +125,7 @@ const renderSmtpAccountStepPassword = (
         name="password"
         label={account.passwordLabel}
         kind="password"
-        hint={account.passwordHint}
+        description={account.passwordHint}
         isDisabled={locked}
         value={props.isLocked ? "" : account.values.password}
         onValueChange={(v) => props.onField("password", v)}

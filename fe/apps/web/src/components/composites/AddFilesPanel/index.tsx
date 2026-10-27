@@ -96,7 +96,7 @@ export const AddFilesPanel = (props: AddFilesPanelProps) => (
             </Text>
         )}
         {props.queue.length === 0 ? null : (
-            <SurfaceListCard ariaLabel={props.queueTitle} isLoading={false} empty={null}>
+            <SurfaceListCard ariaLabel={props.queueTitle} empty={null}>
                 {props.queue.map((item) => (
                     <ListRow
                         key={item.id}

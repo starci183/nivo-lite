@@ -1,5 +1,5 @@
 import { Button } from "@starci/grammar/common"
-import type { HiringSay } from "@/hooks/hiring"
+import type { HiringSay } from "@/modules/types"
 
 /** The words and state of the footer of a request dialog. */
 interface HiringDialogFooterProps {

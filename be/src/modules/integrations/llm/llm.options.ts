@@ -1,19 +1,7 @@
-import type { Secret } from "@modules/platform/config"
+import type { InjectionToken } from "@nestjs/common"
 
-/** One OpenAI-compatible endpoint: where it is, which model to ask and the key to ask it with. */
-export interface LlmEndpoint {
-    /** The key; absent when the deployment has none (the capability then answers nothing and callers fall back). */
-    readonly apiKey: Secret | null
-    /** The base URL, without a trailing slash. */
-    readonly baseUrl: string
-    /** The model asked. */
-    readonly model: string
-}
-
-/** The language-model capability: embeddings for search and chat completions for reading facts out of documents. */
-export interface LlmOptions {
-    /** The embeddings endpoint. */
-    readonly embedding: LlmEndpoint
-    /** The chat-completions endpoint. */
-    readonly chat: LlmEndpoint
+/** What the model port needs at registration: the provider of the AI pool it calls through. */
+export interface LlmWiring {
+    /** Provider of the `LlmPool` port (the AI pool client). */
+    readonly pool: InjectionToken
 }

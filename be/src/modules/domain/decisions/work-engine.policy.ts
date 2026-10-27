@@ -1,6 +1,7 @@
 import type { Locale } from "@modules/platform/i18n"
 import type { GateVerdict, Proposal, ProposalFieldValue, ReasonCode, WorkEdits } from "./decisions.contracts"
-import type { MergedProposal, OutboundAccess } from "./work-engine.contracts"
+import { isDomainError } from "@modules/platform/errors"
+import type { FailureTextLookup, MergedProposal, OutboundAccess } from "./work-engine.contracts"
 
 /** The longest error text kept on a failed item. */
 export const MAX_ERROR_LENGTH = 500
@@ -97,9 +98,27 @@ export const reviewedByPerson = (proposal: Proposal): Proposal => {
     return { ...proposal, outcome: "clear", ...(unsure ? { confidence: 1 } : {}) }
 }
 
-/** The text of a failure, cut to what an item keeps. */
-export const failureText = (cause: unknown): string => {
-    const text = cause instanceof Error ? cause.message : String(cause)
+/** A machine code such as `AI_GENERATIONS_FAILED`: what an error message is when nobody turned it into words. */
+const CODE_SHAPE = /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+$/
+/** A placeholder the catalog left in a sentence because the error carried no value for it. */
+const UNFILLED = /\{\{\w+\}\}/
+
+/** The catalog sentence of a code; a code without a sentence, or whose sentence still misses a value, reads as the plain failure. */
+const codeText = (code: string, params: Readonly<Record<string, string | number>>, say: FailureTextLookup): string => {
+    const key = `errors.${code}`
+    const text = say(key, params).trim()
+    if (text === "" || text === key || UNFILLED.test(text)) return say("engine.failedUnknown", {})
+    return text
+}
+
+/**
+ * The text of a failure as the owner reads it, cut to what an item keeps. A code never reaches a person: a capability error, or
+ * a message that is only a code, becomes the sentence of its `errors.<CODE>` entry; any other message is kept as written.
+ */
+export const failureText = (cause: unknown, say: FailureTextLookup): string => {
+    if (isDomainError(cause)) return codeText(cause.code, cause.params, say).slice(0, MAX_ERROR_LENGTH)
+    const raw = cause instanceof Error ? cause.message : String(cause)
+    const text = CODE_SHAPE.test(raw.trim()) ? codeText(raw.trim(), {}, say) : raw
     return text.slice(0, MAX_ERROR_LENGTH)
 }
 

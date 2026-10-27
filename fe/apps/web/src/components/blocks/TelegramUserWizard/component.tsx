@@ -1,13 +1,12 @@
-import type { AgentOption, AgentStepView } from "@/modules/types"
-import type { useTranslations } from "next-intl"
-import type { useTelegramUserWizard } from "@/hooks/telegram-user-wizard"
+import type { AgentStepView, DataSlot, SlotLabels } from "@/modules/types"
 import { Alert, CheckboxGroup, Input, SegmentedControl, Text } from "@starci/grammar/common"
+import { SlotView } from "@/components/composites/SlotView"
 import { TelegramUserChats } from "@/components/composites/TelegramUserChats"
 import { TelegramUserLogin } from "@/components/composites/TelegramUserLogin"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
 import { backAction, closeAction, nextAction, WizardFooter } from "@/components/composites/WizardFooter"
 import type { WizardAction } from "@/components/composites/WizardFooter"
-import { WizardFrame } from "@/components/composites/WizardFrame"
+import { frameOf, WizardFrame } from "@/components/composites/WizardFrame"
 import { telegramUserWizardClassNames as classNames } from "./classNames"
 
 /** A field of the personal Telegram login, also its stage. */
@@ -19,8 +18,38 @@ type ChatOption = {
     readonly description: string
     readonly isDisabled: boolean
 }
-/** What the frame reads before the steps can start. */
-type BootBodyProps = Pick<TelegramUserWizardBaseProps, "props">
+/** What the wizard knows once the server answered: whether personal Telegram is set up on it. */
+type TelegramReady = { readonly isConfigured: boolean }
+/** The chat picker as the step draws it. */
+type ChatsView = {
+    readonly options: ReadonlyArray<ChatOption>
+    readonly value: ReadonlyArray<string>
+    readonly query: string
+    readonly sinceDays: string
+    readonly text: Readonly<
+        Record<"hint" | "search" | "placeholder" | "count" | "empty" | "label" | "since" | "since7" | "since30", string>
+    >
+}
+/** The wizard as the first reads leave it before they are known: the placeholder drawn meanwhile. */
+const READY_PLACEHOLDER: TelegramReady = { isConfigured: true }
+/** The picker drawn while the dialogs are read: no chat yet, the same controls. */
+const CHATS_PLACEHOLDER: ChatsView = {
+    options: [],
+    value: [],
+    query: "",
+    sinceDays: "7",
+    text: {
+        hint: "",
+        search: "",
+        placeholder: "",
+        count: "",
+        empty: "",
+        label: "",
+        since: "",
+        since7: "",
+        since30: "",
+    },
+}
 
 /** Copy, state and commands of the personal Telegram wizard. */
 export interface TelegramUserWizardBaseProps {
@@ -29,9 +58,9 @@ export interface TelegramUserWizardBaseProps {
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
         readonly index: number
-        /** Reading the server first; unconfigured: no Telegram app credentials; failed: the saved state could not be read. */
-        readonly status: "loading" | "unconfigured" | "failed" | "ready"
-        readonly bootError: string | null
+        /** The first reads: the server and the saved state. Not configured means no Telegram app credentials. */
+        readonly boot: DataSlot<TelegramReady>
+        readonly bootLabels: SlotLabels
         readonly isPending: boolean
         readonly error: string | null
         readonly consent: { readonly name: string; readonly isChecked: boolean }
@@ -47,21 +76,13 @@ export interface TelegramUserWizardBaseProps {
                 >
             >
         }
-        readonly chats: {
-            readonly options: ReadonlyArray<ChatOption>
-            readonly value: ReadonlyArray<string>
-            readonly query: string
-            readonly sinceDays: string
-            readonly text: Readonly<
-                Record<
-                    "hint" | "search" | "placeholder" | "count" | "empty" | "label" | "since" | "since7" | "since30",
-                    string
-                >
-            >
-        }
-        readonly chatsLoading: boolean
-        readonly chatsFailed: boolean
-        readonly hasPicks: boolean
+        /** The dialogs of the account, read once the owner is signed in. */
+        readonly chats: DataSlot<ChatsView>
+        readonly chatsLabels: SlotLabels
+        /** The owner can go on from the chat step: something is picked and the list is in. */
+        readonly canGoOn: boolean
+        /** The chat list failed, so the footer offers to read it again. */
+        readonly canRetryChats: boolean
         readonly every: string
         readonly agentStep: AgentStepView
         readonly text: Readonly<
@@ -77,8 +98,6 @@ export interface TelegramUserWizardBaseProps {
                 | "cancelLogin"
                 | "signIn"
                 | "chatsRetry"
-                | "chatsLoading"
-                | "loading"
                 | "notConfiguredTitle"
                 | "notConfiguredBody"
                 | "nameLabel"
@@ -98,6 +117,7 @@ export interface TelegramUserWizardBaseProps {
         >
     }
     readonly on: {
+        readonly retry: () => void
         readonly go: (to: number) => void
         readonly close: () => void
         readonly field: (field: "name" | "phone" | "code" | "password", value: string) => void
@@ -146,23 +166,22 @@ const loginActionsOf = ({ props, on }: TelegramUserWizardBaseProps): ReadonlyArr
     return [nextAction(text.signIn, on.confirmPassword, { isPending, isDisabled: !valid.password }), cancel]
 }
 
-const actionsOf = (view: TelegramUserWizardBaseProps): ReadonlyArray<WizardAction> => {
+const actionsOf = (view: TelegramUserWizardBaseProps, ready: TelegramReady): ReadonlyArray<WizardAction> => {
     const { props, on } = view
     const { text, isPending } = props
     const close = closeAction(text.close, on.close)
-    if (props.status === "loading") return []
-    if (props.status !== "ready") return [nextAction(text.close, on.close)]
+    if (!ready.isConfigured) return [nextAction(text.close, on.close)]
     if (props.index === 0) return [nextAction(text.next, () => on.go(1), { isDisabled: !props.valid.consent }), close]
     if (props.index === 1) return loginActionsOf(view)
     if (props.index === 2) {
-        const goOn = nextAction(text.next, () => on.go(3), { isDisabled: !props.hasPicks || props.chatsLoading })
+        const goOn = nextAction(text.next, () => on.go(3), { isDisabled: !props.canGoOn })
         const retry: WizardAction = {
             id: "retry",
             label: text.chatsRetry,
             intent: "alternative",
             onPress: on.reloadChats,
         }
-        return props.chatsFailed ? [goOn, retry, close] : [goOn, close]
+        return props.canRetryChats ? [goOn, retry, close] : [goOn, close]
     }
     if (props.index === 3)
         return [nextAction(text.save, on.save, { isPending }), backAction(text.back, isPending, () => on.go(2))]
@@ -177,7 +196,7 @@ const ConsentStep = ({ props, on }: TelegramUserWizardBaseProps) => (
                 id="tgu-name"
                 name="name"
                 label={props.text.nameLabel}
-                hint={props.text.nameHint}
+                description={props.text.nameHint}
                 isDisabled={props.isPending}
                 value={props.consent.name}
                 onValueChange={(value) => on.field("name", value)}
@@ -219,82 +238,55 @@ const ScheduleStep = ({ props, on }: TelegramUserWizardBaseProps) => (
     </>
 )
 
-/** What the frame shows before the steps can start: the server is being read, is not set up, or the saved state failed. */
-const BootBody = ({ props }: BootBodyProps) => {
-    if (props.status === "loading") {
-        return (
-            <Text size="sm" live="polite">
-                {props.text.loading}
-            </Text>
-        )
-    }
-    if (props.status === "unconfigured") {
-        return (
-            <Alert tone="negative" title={props.text.notConfiguredTitle} description={props.text.notConfiguredBody} />
-        )
-    }
-    return props.bootError === null ? null : <Alert tone="negative" title={props.bootError} />
-}
+/** The chat step: the picker over the account's dialogs, read through its own slot. */
+const ChatsStep = ({ props, on }: TelegramUserWizardBaseProps) => (
+    <SlotView slot={props.chats} placeholder={CHATS_PLACEHOLDER} labels={props.chatsLabels} onRetry={on.reloadChats}>
+        {(chats, isSkeleton) => (
+            <TelegramUserChats
+                {...chats}
+                isDisabled={props.isPending || isSkeleton}
+                onQuery={on.chatQuery}
+                onChange={on.chats}
+                onSince={on.since}
+            />
+        )}
+    </SlotView>
+)
 
 /** The steps once the server state is known: consent, phone login, chat picks, schedule, agents. */
 const StepBody = (view: TelegramUserWizardBaseProps) => {
     const { props, on } = view
     if (props.index === 0) return <ConsentStep {...view} />
     if (props.index === 1) return <TelegramUserLogin {...props.login} isDisabled={props.isPending} onField={on.field} />
-    if (props.index === 2 && props.chatsLoading) {
-        return (
-            <Text size="sm" live="polite">
-                {props.text.chatsLoading}
-            </Text>
-        )
-    }
-    if (props.index === 2) {
-        return (
-            <TelegramUserChats
-                {...props.chats}
-                isDisabled={props.isPending}
-                onQuery={on.chatQuery}
-                onChange={on.chats}
-                onSince={on.since}
-            />
-        )
-    }
+    if (props.index === 2) return <ChatsStep {...view} />
     if (props.index === 3) return <ScheduleStep {...view} />
     return <WizardAgentStep {...props.agentStep} isDisabled={props.isPending} onChange={on.agents} />
 }
 
+/** The footer of a step: no button while the first reads are on their way. */
+const footerOf = (props: TelegramUserWizardBaseProps, ready: TelegramReady, isSkeleton: boolean) => (
+    <WizardFooter actions={isSkeleton ? [] : actionsOf(props, ready)} isSkeleton={isSkeleton} />
+)
+
 /** Setup of a personal Telegram connection (owner only) in the shared wizard frame: consent, phone login, chat picks, schedule, agents. */
 export const TelegramUserWizardBase = (props: TelegramUserWizardBaseProps) => {
-    const { props: view } = props
+    const { props: view, on } = props
     return (
-        <WizardFrame
-            title={view.title}
-            stepLabel={view.stepLabel}
-            steps={view.steps}
-            index={view.index}
-            footer={<WizardFooter actions={actionsOf(props)} />}
-        >
-            {view.status === "ready" ? <StepBody {...props} /> : <BootBody props={view} />}
-            {view.status === "ready" && view.error !== null ? <Alert tone="negative" title={view.error} /> : null}
-        </WizardFrame>
+        <SlotView slot={view.boot} placeholder={READY_PLACEHOLDER} labels={view.bootLabels} onRetry={on.retry}>
+            {(ready, isSkeleton) => (
+                <WizardFrame {...frameOf(view)} isSkeleton={isSkeleton} footer={footerOf(props, ready, isSkeleton)}>
+                    {ready.isConfigured ? (
+                        <StepBody {...props} />
+                    ) : (
+                        <Alert
+                            tone="negative"
+                            title={view.text.notConfiguredTitle}
+                            description={view.text.notConfiguredBody}
+                        />
+                    )}
+                    {ready.isConfigured && view.error !== null ? <Alert tone="negative" title={view.error} /> : null}
+                </WizardFrame>
+            )}
+        </SlotView>
     )
-}
-
-/** State values and commands consumed by the connected surface. */
-export interface TelegramUserWizardProps {
-    /** Workspace agents (any module): every agent may be given read access to a data source. */
-    readonly agents: ReadonlyArray<AgentOption>
-    /** Continue or edit this existing connection instead of creating a new one. */
-    readonly resumeId?: string
-    /** `changed` is true when something was saved, so the list refreshes. */
-    readonly onClose: (changed: boolean) => void
-}
-
-/** State values and commands consumed by the connected surface. */
-export type TelegramUserWizardControllerInput = {
-    readonly props: TelegramUserWizardProps
-    readonly t: ReturnType<typeof useTranslations<"connectorTelegramUser">>
-    readonly tw: ReturnType<typeof useTranslations<"connectionWizard">>
-    readonly tc: ReturnType<typeof useTranslations<"connections">>
-    readonly wizard: ReturnType<typeof useTelegramUserWizard>
 }

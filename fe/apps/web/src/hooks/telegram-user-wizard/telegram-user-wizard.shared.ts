@@ -1,8 +1,33 @@
 import type { useTelegramUserForm } from "@/hooks/rhf"
+import type { DataSlot } from "@/modules/types"
 import type { useTelegramUserBoot } from "./useTelegramUserBoot"
 import type { useTelegramUserLogin } from "./useTelegramUserLogin"
 import type { useTelegramUserPicks } from "./useTelegramUserPicks"
 import type { TelegramUserStep, TelegramUserField } from "./useTelegramUserWizard"
+
+/** What the wizard knows once the server answered: whether personal Telegram is set up on it. */
+interface TelegramReady {
+    readonly isConfigured: boolean
+}
+
+/** The slot of the wizard's first reads: loading, failed, or ready (set up, or not set up on this server). */
+const bootSlotOf = (status: "loading" | "unconfigured" | "failed" | "ready"): DataSlot<TelegramReady> => {
+    if (status === "loading") return { isLoading: true }
+    if (status === "failed") return { isError: true }
+    return { items: { isConfigured: status === "ready" } }
+}
+
+/** The status of the chat list read. */
+interface ChatsRead {
+    readonly loading: boolean
+    readonly failed: boolean
+}
+
+/** The slot of the chat list: loading while the dialogs are read, failed when they could not be, else the picker. */
+export const chatsSlotOf = <T>(read: ChatsRead, picker: T): DataSlot<T> => {
+    if (read.loading) return { isLoading: true }
+    return read.failed ? { isError: true } : { items: picker }
+}
 
 /** What kind of chat a dialog is. */
 export type ChatKind = "user" | "group" | "channel"
@@ -100,7 +125,7 @@ export const viewOf = ({
     setError,
 }: TelegramUserWizardViewInput) => {
     return {
-        status: step.started ? "ready" : boot.status,
+        boot: bootSlotOf(step.started ? "ready" : boot.status),
         bootError: boot.error,
         index,
         login,
@@ -127,6 +152,7 @@ export const viewOf = ({
             save,
             finish,
             field,
+            retry: boot.retry,
             close: () => onClose(false),
             consent: (on: boolean) => forms.consent.setValue("consent", on, { shouldValidate: true }),
             reloadChats: () => {

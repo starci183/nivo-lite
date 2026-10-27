@@ -3,10 +3,8 @@ import { Button, Heading, Select, Text } from "@starci/grammar/common"
 
 import { LoyaltyField } from "@/components/leaves/LoyaltyField"
 import { LoyaltySettingsSection } from "@/components/leaves/LoyaltySettingsSection"
-import type { ProgramValues } from "@/hooks/loyaltyProgram"
-import type { ProgramTextField } from "@/hooks/loyaltyProgramFields"
 import { FIELD_TRIPLE_CLASS_NAME } from "./classNames"
-import type { ProgramCopy } from "@/modules/types"
+import type { ProgramCopy, ProgramTextField, ProgramValues } from "@/modules/types"
 /** Inputs and commands for the LoyaltyEarningRules presentation. */
 interface LoyaltyEarningRulesProps {
     readonly children: ReactNode

@@ -38,7 +38,7 @@ export const LoyaltyCampaignMessage = (props: LoyaltyCampaignMessageProps) => {
                 id="promo-name"
                 name="name"
                 label={copy.name}
-                hint={copy.nameHint}
+                description={copy.nameHint}
                 value={values.name}
                 isDisabled={props.props.isBusy}
                 onValueChange={on.setName}

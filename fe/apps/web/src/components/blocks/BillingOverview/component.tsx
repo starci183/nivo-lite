@@ -1,4 +1,4 @@
-import type { UsageCardView } from "@/hooks/usageCard"
+import type { ComponentProps } from "react"
 import {
     Badge,
     Button,
@@ -13,29 +13,19 @@ import { BillingHistoryList, type BillingHistoryRow } from "@/components/composi
 import { BillingRenewal } from "@/components/composites/BillingRenewal"
 import { SlotView } from "@/components/composites/SlotView"
 import { UsageCard } from "@/components/composites/UsageCard"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import type { BillingPlanView, DataSlot, SlotLabels } from "@/modules/types"
 
 import { ACTIONS_CLASS_NAME, PAGE_CLASS_NAME, SECTION_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
-/** The tone a billing status badge takes. */
-export type BillingTone = "success" | "warning" | "danger" | "neutral"
-
-/** The current plan card, worded and ready to draw. */
-export interface BillingPlanView {
-    readonly planName: string
-    readonly status: string
-    readonly statusTone: BillingTone
-    readonly paidUntil: string
-    readonly canRenew: boolean
-}
+/** What the usage card takes, read from the card itself. */
+type UsageCardProps = ComponentProps<typeof UsageCard>
 
 /** Settled billing copy, region slots and feature interactions. */
 export interface BillingOverviewBaseProps {
-    readonly state: {
-        readonly isRenewing: boolean
-        readonly usage: UsageCardView["state"]
-    }
     readonly props: {
+        /** The renewal order is being requested: the renew button is pending. */
+        readonly isRenewing: boolean
+        readonly usageState: UsageCardProps["state"]
         readonly title: string
         readonly description: string
         readonly backLabel: string
@@ -47,7 +37,7 @@ export interface BillingOverviewBaseProps {
         readonly renewalHint: string
         readonly plan: DataSlot<BillingPlanView>
         readonly planSlotLabels: SlotLabels
-        readonly usage: UsageCardView["props"]
+        readonly usage: UsageCardProps["props"]
         readonly historyTitle: string
         readonly historyEmpty: string
         readonly orders: DataSlot<ReadonlyArray<BillingHistoryRow>>
@@ -105,7 +95,7 @@ export const BillingOverviewBase = (props: BillingOverviewBaseProps) => (
                 {(plan) => renderCurrentBillingPlan(props, plan)}
             </SlotView>
             <UsageCard
-                state={props.state.usage}
+                state={props.props.usageState}
                 props={props.props.usage}
                 on={{
                     openCredits: props.on.openCredits,
@@ -184,8 +174,7 @@ const renderCurrentBillingPlan = (props: BillingOverviewBaseProps, plan: Billing
             {plan.canRenew ? (
                 <div className={ACTIONS_CLASS_NAME}>
                     <BillingRenewal
-                        state={{ isRequesting: props.state.isRenewing }}
-                        props={{ label: props.props.renewalLabel }}
+                        props={{ label: props.props.renewalLabel, isPending: props.props.isRenewing }}
                         on={{ renew: props.on.renew }}
                     />
                     <Text size="sm" tone="muted">

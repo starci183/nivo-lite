@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { allAgentIds, resumeNoteOf, useAdoptOnce } from "@/hooks/connection-wizard"
+import { allAgentIds, resumeNoteOf, resumeSlotOf, useAdoptOnce } from "@/hooks/connection-wizard"
 import { zaloWizardOf } from "@/hooks/connection-wire"
 import { useFirstEvent, useSetConnectionAgents } from "@/hooks/connections"
 import { useQueryZaloConnectionSwr } from "@/hooks/swr"
@@ -72,11 +72,14 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
         conn,
         note: resumeNoteOf(note, resume.error),
         isPending,
-        isLoading: input.resumeId !== undefined && resume.data === undefined && resume.error === undefined,
+        resume: resumeSlotOf(input.resumeId, resume),
         firstEvent,
         agentIds,
         canSaveSecret: canSaveOaSecret(conn, fields),
         on: {
+            retry: () => {
+                void resume.mutate()
+            },
             go,
             create,
             saveSecret,

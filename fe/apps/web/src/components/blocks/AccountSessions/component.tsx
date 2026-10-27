@@ -1,6 +1,8 @@
-import { Alert, Badge, Button, ListRow, Region, SectionHeader, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Badge, Button, ListRow, Region, SectionHeader, SurfaceListCard, Text } from "@starci/grammar/common"
 import { FormNotice } from "@/components/composites/FormNotice"
+import { SlotView } from "@/components/composites/SlotView"
 import type { SessionRowView } from "@/hooks/account"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, SECTION_CLASS_NAME } from "./classNames"
 
 /** Copy, rows and state the connected sessions section supplies. */
@@ -13,14 +15,12 @@ export interface AccountSessionsBaseProps {
         readonly signOutThisLabel: string
         readonly signOutOthersLabel: string
         readonly noOthersLabel: string
-        readonly failedTitle: string
         readonly failTitle: string
-        readonly rows: ReadonlyArray<SessionRowView>
-        /** True when the device list could not be read. */
-        readonly isFailed: boolean
-        readonly isSkeleton: boolean
-        /** True when another device is signed in (also while the rows load, so the action keeps its place). */
-        readonly hasOthers: boolean
+        /** The signed-in devices once they arrived. */
+        readonly slot: DataSlot<ReadonlyArray<SessionRowView>>
+        /** Two devices, the current one and another: the skeleton keeps the sign-out action in its place. */
+        readonly placeholder: ReadonlyArray<SessionRowView>
+        readonly labels: SlotLabels
         /** The row being signed out, `this` for the current device, or `others` while every other device is. */
         readonly busy?: string | undefined
         readonly error?: string
@@ -30,8 +30,35 @@ export interface AccountSessionsBaseProps {
         readonly revoke: (id: string) => void
         readonly signOutOthers: () => void
         readonly signOutThis: () => void
+        readonly retry: () => void
     }
 }
+
+/** What the sign-out-others action needs. */
+type OthersActionProps = {
+    readonly base: AccountSessionsBaseProps
+    readonly hasOthers: boolean
+    readonly isSkeleton: boolean
+}
+
+/** Draws the sign-out-others button, or the note that no other device is signed in. */
+const OthersAction = (props: OthersActionProps) =>
+    props.hasOthers ? (
+        <Button
+            isSkeleton={props.isSkeleton}
+            intent="destructive"
+            step="entry"
+            isPending={props.base.props.busy === "others"}
+            isDisabled={props.base.props.busy !== undefined}
+            onPress={props.base.on.signOutOthers}
+        >
+            {props.base.props.signOutOthersLabel}
+        </Button>
+    ) : (
+        <Text size="sm" tone="muted">
+            {props.base.props.noOthersLabel}
+        </Text>
+    )
 
 /** Draws the signed-in devices and their sign-out actions. */
 export const AccountSessionsBase = (props: AccountSessionsBaseProps) => {
@@ -44,64 +71,67 @@ export const AccountSessionsBase = (props: AccountSessionsBaseProps) => {
                 title={props.props.title}
                 description={props.props.hint}
             />
-            {props.props.isFailed ? <Alert tone="negative" title={props.props.failedTitle} /> : null}
-            <SurfaceListCard ariaLabel={props.props.title} isLoading={props.props.isSkeleton}>
-                {props.props.rows.map((row) => (
-                    <ListRow
-                        key={row.id}
-                        title={row.device}
-                        description={row.facts}
-                        badges={
-                            row.isCurrent ? (
-                                <Badge tone="accent" isDot>
-                                    {props.props.currentLabel}
-                                </Badge>
-                            ) : null
-                        }
-                        actions={
-                            row.isCurrent ? (
-                                <Button
-                                    intent="neutral"
-                                    isPending={props.props.busy === "this"}
-                                    isDisabled={isBusy}
-                                    onPress={props.on.signOutThis}
-                                >
-                                    {props.props.signOutThisLabel}
-                                </Button>
-                            ) : (
-                                <Button
-                                    intent="destructive"
-                                    step="entry"
-                                    isPending={props.props.busy === row.id}
-                                    isDisabled={isBusy}
-                                    onPress={() => props.on.revoke(row.id)}
-                                >
-                                    {props.props.signOutLabel}
-                                </Button>
-                            )
-                        }
-                    />
-                ))}
-            </SurfaceListCard>
-            <FormNotice failTitle={props.props.failTitle} error={props.props.error} done={props.props.done} />
-            <div className={ACTIONS_CLASS_NAME}>
-                {props.props.hasOthers ? (
-                    <Button
-                        isSkeleton={props.props.isSkeleton}
-                        intent="destructive"
-                        step="entry"
-                        isPending={props.props.busy === "others"}
-                        isDisabled={isBusy}
-                        onPress={props.on.signOutOthers}
-                    >
-                        {props.props.signOutOthersLabel}
-                    </Button>
-                ) : (
-                    <Text size="sm" tone="muted">
-                        {props.props.noOthersLabel}
-                    </Text>
+            <SlotView
+                slot={props.props.slot}
+                placeholder={props.props.placeholder}
+                labels={props.props.labels}
+                onRetry={props.on.retry}
+            >
+                {(rows, isSkeleton) => (
+                    <>
+                        <SurfaceListCard ariaLabel={props.props.title} isLoading={isSkeleton}>
+                            {rows.map((row) => (
+                                <ListRow
+                                    key={row.id}
+                                    title={row.device}
+                                    description={row.facts}
+                                    badges={
+                                        row.isCurrent ? (
+                                            <Badge tone="accent" isDot>
+                                                {props.props.currentLabel}
+                                            </Badge>
+                                        ) : null
+                                    }
+                                    actions={
+                                        row.isCurrent ? (
+                                            <Button
+                                                intent="neutral"
+                                                isPending={props.props.busy === "this"}
+                                                isDisabled={isBusy}
+                                                onPress={props.on.signOutThis}
+                                            >
+                                                {props.props.signOutThisLabel}
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                intent="destructive"
+                                                step="entry"
+                                                isPending={props.props.busy === row.id}
+                                                isDisabled={isBusy}
+                                                onPress={() => props.on.revoke(row.id)}
+                                            >
+                                                {props.props.signOutLabel}
+                                            </Button>
+                                        )
+                                    }
+                                />
+                            ))}
+                        </SurfaceListCard>
+                        <FormNotice
+                            failTitle={props.props.failTitle}
+                            error={props.props.error}
+                            done={props.props.done}
+                        />
+                        <div className={ACTIONS_CLASS_NAME}>
+                            <OthersAction
+                                base={props}
+                                hasOthers={rows.some((row) => !row.isCurrent)}
+                                isSkeleton={isSkeleton}
+                            />
+                        </div>
+                    </>
                 )}
-            </div>
+            </SlotView>
         </Region>
     )
 }

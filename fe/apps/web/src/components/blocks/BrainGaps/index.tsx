@@ -2,6 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useBrainBoard, useBrainCommand } from "@/hooks/brain"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { brainTabHref } from "@/modules/routes"
 import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
 import type { BrainGap } from "@/modules/types"
@@ -19,6 +20,7 @@ export const BrainGaps = (props: BrainGapsProps) => {
     const format = useFormatter()
     const command = useBrainCommand()
     const board = useBrainBoard()
+    const slotLabels = useSlotLabels()
     const rowOf = (gap: BrainGap): KnowledgeRowView => {
         const when = format.dateTime(new Date(gap.lastSeenAt), { dateStyle: "medium" })
         return {
@@ -52,12 +54,15 @@ export const BrainGaps = (props: BrainGapsProps) => {
                         failTitle: t("loadFailed"),
                     },
                     label: t("gapsTitle"),
-                    rows: (props.gaps ?? board.gaps).map(rowOf),
-                    isLoading: props.gaps === undefined && board.isLoading,
                     isPending: command.isPending,
-                    emptyTitle: t("gapsEmpty"),
+                    slot:
+                        props.gaps === undefined
+                            ? mapSlot(board.slot, (brain) => brain.gaps.map(rowOf))
+                            : { items: props.gaps.map(rowOf) },
+                    slotLabels: slotLabels(t("gapsEmpty")),
                 },
             }}
+            on={{ retry: board.reload }}
         />
     )
 }

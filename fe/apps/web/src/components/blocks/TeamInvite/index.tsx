@@ -1,14 +1,30 @@
 "use client"
 
-import type { TeamInviteControllerInput } from "./component"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { NO_STAFF, ROLE_KEYS, isTeamManager, useInviteCommands, useTeam } from "@/hooks/team"
+import { NO_STAFF, ROLE_KEYS, isTeamManager, teamSlotOf, useInviteCommands, useTeam } from "@/hooks/team"
 import type { InviteSentView } from "@/hooks/team"
 import { useInviteForm } from "@/hooks/rhf"
 import { useIndividualPlan } from "@/hooks/billing"
 import { useMember } from "@/hooks/member"
+import { useSlotLabels } from "@/hooks/slot"
 import { TeamInviteBase } from "./component"
+
+/** State values and commands consumed by the connected surface. */
+type TeamInviteControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"team">>
+    readonly member: ReturnType<typeof useMember>
+    readonly isIndividual: ReturnType<typeof useIndividualPlan>
+    readonly isAllowed: boolean
+    readonly team: ReturnType<typeof useTeam>
+    readonly slotLabels: ReturnType<typeof useSlotLabels>
+    readonly commands: ReturnType<typeof useInviteCommands>
+    readonly form: ReturnType<typeof useInviteForm>
+    readonly sent: InviteSentView | undefined
+    readonly setSent: React.Dispatch<React.SetStateAction<InviteSentView | undefined>>
+    readonly isCopied: boolean
+    readonly setCopied: React.Dispatch<React.SetStateAction<boolean>>
+}
 
 const createTeamInviteState = (input: TeamInviteControllerInput) => {
     const { t, commands, form, setSent, setCopied } = input
@@ -40,7 +56,8 @@ export const TeamInvite = () => {
     const member = useMember()
     const isIndividual = useIndividualPlan(member?.workspaceId)
     const isAllowed = member !== null && isTeamManager(member.role) && !isIndividual
-    const { views, isLoading } = useTeam(member?.workspaceId ?? "", isAllowed)
+    const slotLabels = useSlotLabels()
+    const team = useTeam(member?.workspaceId ?? "", isAllowed)
     const commands = useInviteCommands()
     const form = useInviteForm()
     const [sent, setSent] = useState<InviteSentView>()
@@ -50,8 +67,8 @@ export const TeamInvite = () => {
         member,
         isIndividual,
         isAllowed,
-        views,
-        isLoading,
+        team,
+        slotLabels,
         commands,
         form,
         sent,
@@ -67,7 +84,7 @@ export const TeamInvite = () => {
 const createTeamInviteView = (
     context: ReturnType<typeof createTeamInviteState>,
 ): React.ComponentProps<typeof TeamInviteBase> => {
-    const { t, views, isLoading, commands, form, sent, setCopied, submit, sentText, isCopied } = context
+    const { t, team, slotLabels, commands, form, sent, setCopied, submit, sentText, isCopied } = context
     return {
         props: {
             title: t("formTitle"),
@@ -82,18 +99,19 @@ const createTeamInviteView = (
                 { id: "staff", label: t(ROLE_KEYS.staff) },
                 { id: "manager", label: t(ROLE_KEYS.manager) },
             ],
-            staffOptions: [
-                { id: NO_STAFF, label: t("staffNone") },
-                ...views.staffChoices.map((staff) => ({
-                    id: staff.id,
-                    label: staff.role === "" ? staff.name : t("staffOption", { name: staff.name, role: staff.role }),
-                })),
-            ],
             email: form.watch("email"),
             role: form.watch("role"),
             staffId: form.watch("staffId"),
             isPending: commands.isPending,
-            isSkeleton: isLoading,
+            slot: teamSlotOf(team, [
+                { id: NO_STAFF, label: t("staffNone") },
+                ...team.views.staffChoices.map((staff) => ({
+                    id: staff.id,
+                    label: staff.role === "" ? staff.name : t("staffOption", { name: staff.name, role: staff.role }),
+                })),
+            ]),
+            placeholder: [{ id: NO_STAFF, label: "-" }],
+            slotLabels: slotLabels(t("staffNone")),
             error: form.formState.errors.email?.message,
             sent:
                 sent === undefined
@@ -108,6 +126,7 @@ const createTeamInviteView = (
                       },
         },
         on: {
+            retry: team.reload,
             setEmail: (value) => form.setValue("email", value, { shouldValidate: form.formState.isSubmitted }),
             setRole: (value) => {
                 if (value === "manager" || value === "staff") form.setValue("role", value)

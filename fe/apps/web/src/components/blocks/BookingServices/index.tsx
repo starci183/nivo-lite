@@ -1,6 +1,7 @@
 "use client"
 
 import { useBookingBoard } from "@/hooks/bookingBoard"
+import { useSlotLabels } from "@/hooks/slot"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { useMutateRemoveBookingServiceSwr, useMutateSaveBookingServiceSwr } from "@/hooks/swr"
@@ -87,7 +88,8 @@ const buildBookingServicesState = ({
 
 /** Draws the connected view from its current state. */
 export const BookingServices = () => {
-    const { board } = useBookingBoard()
+    const { board, slot, reload } = useBookingBoard()
+    const slotLabels = useSlotLabels()
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
     const persist = useBookingSetupSave()
@@ -111,14 +113,23 @@ export const BookingServices = () => {
         format,
         isPending,
     })
-
-    return <BookingServicesBase props={bookingServicesProps(connected)} on={bookingServicesOn(connected)} />
+    return (
+        <BookingServicesBase
+            props={{
+                ...bookingServicesProps(connected),
+                isPending: connected.isPending || slot.isLoading === true,
+                slot,
+                slotLabels: slotLabels(t("loadFailedTitle")),
+            }}
+            on={{ ...bookingServicesOn(connected), retry: reload }}
+        />
+    )
 }
 
 /** Builds the props supplied to BookingServicesBase. */
 const bookingServicesProps = (
     connected: NonNullable<ReturnType<typeof buildBookingServicesState>>,
-): Parameters<typeof BookingServicesBase>[0]["props"] => {
+): Omit<Parameters<typeof BookingServicesBase>[0]["props"], "slot" | "slotLabels"> => {
     const { t, board, format, draft, removing, isPending } = connected
     return {
         title: t("servicesTitle"),
@@ -170,7 +181,7 @@ const bookingServicesProps = (
 /** Builds the on supplied to BookingServicesBase. */
 const bookingServicesOn = (
     connected: NonNullable<ReturnType<typeof buildBookingServicesState>>,
-): Parameters<typeof BookingServicesBase>[0]["on"] => {
+): Omit<Parameters<typeof BookingServicesBase>[0]["on"], "retry"> => {
     const { setDraft, board, setRemoveId, draft, save, remove } = connected
     return {
         add: () => setDraft({ id: null, fields: BLANK_SERVICE_FIELDS }),

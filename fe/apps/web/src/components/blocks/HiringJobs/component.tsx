@@ -14,8 +14,7 @@ import { HiringJobAdDialog, type HiringJobAdDialogProps } from "@/components/com
 
 import { HiringJobEditorDialog, type HiringJobEditorDialogProps } from "@/components/composites/HiringJobEditorDialog"
 
-import type { FieldOf, HiringSay } from "@/hooks/hiring"
-import type { HiringJobValues, HiringQuestionValues } from "@/hooks/hiringJobs"
+import type { FieldOf, HiringJobValues, HiringQuestionValues, HiringSay } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, FACTS_CLASS_NAME, HEAD_CLASS_NAME } from "./classNames"
 
 /** One job row, every word already resolved. */

@@ -7,7 +7,45 @@ import type { ModuleKey } from "@/hooks/installations"
 import { isManager, useMember } from "@/hooks/member"
 import { useAddInstanceForm } from "@/hooks/rhf"
 import { AGENTS_ROUTE, APP_ROUTES } from "@/modules/routes"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { AgentInstancesBase } from "./component"
+import type { InstanceRowView } from "./component"
+
+const PLACEHOLDER: ReadonlyArray<InstanceRowView> = [
+    {
+        id: "-",
+        title: "-",
+        description: "-",
+        statusLabel: "-",
+        statusTone: "neutral",
+        needs: { lines: [], linkLabel: "-", href: "#" },
+        openHref: "#",
+    },
+]
+
+type InstanceListRow = ReturnType<typeof useInstanceList>["rows"][number]
+
+/** One installed agent as the row the list draws: its channels and version in the description, its status and what it still needs. */
+const toRowView = (
+    row: InstanceListRow,
+    t: ReturnType<typeof useTranslations<"modulesCore">>,
+    needs: ReturnType<typeof useConnectionNeedsCopy>,
+): InstanceRowView => ({
+    id: row.id,
+    title: row.name,
+    description: [
+        row.channels.length > 0 ? t("instanceChannels", { list: row.channels.join(", ") }) : t("instanceNoChannels"),
+        row.activeVersion === null ? t("noVersion") : t("versionInUse", { version: row.activeVersion }),
+    ].join(" · "),
+    statusLabel: t(`status_${row.status}`),
+    statusTone: row.statusTone,
+    needs: {
+        lines: needs.linesOf(row.connectionNeeds),
+        linkLabel: needs.linkLabel,
+        href: needs.href,
+    },
+    openHref: row.openHref,
+})
 
 /** What the type page hands the block: the type of the url, the query to carry on and whether the list was asked for. */
 interface AgentInstancesProps {
@@ -24,6 +62,7 @@ export const AgentInstances = (props: AgentInstancesProps) => {
     const list = useInstanceList(props.module, props.query, props.showList ? "list" : "page")
     const { add, isAdding } = useAddInstance()
     const needs = useConnectionNeedsCopy()
+    const slotLabels = useSlotLabels()
     const [isOpen, setOpen] = useState(false)
     const form = useAddInstanceForm(list.defaultName, list.names)
     const submit = form.handleSubmit(async (values) => {
@@ -48,22 +87,10 @@ export const AgentInstances = (props: AgentInstancesProps) => {
                         : null,
                 listLabel: t("instancesListLabel", { type: list.typeShort }),
                 openLabel: t("openModule"),
-                rows: list.rows.map((row) => ({
-                    id: row.id,
-                    title: row.name,
-                    description: [
-                        row.channels.length > 0
-                            ? t("instanceChannels", { list: row.channels.join(", ") })
-                            : t("instanceNoChannels"),
-                        row.activeVersion === null ? t("noVersion") : t("versionInUse", { version: row.activeVersion }),
-                    ].join(" · "),
-                    statusLabel: t(`status_${row.status}`),
-                    statusTone: row.statusTone,
-                    needs: { lines: needs.linesOf(row.connectionNeeds), linkLabel: needs.linkLabel, href: needs.href },
-                    openHref: row.openHref,
-                })),
-                isLoading: list.slot.isLoading === true,
-                error: list.slot.isError === true ? t("loadFailed") : undefined,
+                slot: mapSlot(list.slot, () => list.rows.map((row) => toRowView(row, t, needs))),
+                placeholder: PLACEHOLDER,
+                slotLabels: { ...slotLabels(t("yoursEmptyTitle")), error: t("loadFailed") },
+                isAddDisabled: list.slot.isLoading === true,
                 dialog: isOpen
                     ? {
                           props: {

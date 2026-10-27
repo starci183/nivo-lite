@@ -1,8 +1,4 @@
 import { nivoIconSource } from "@/components/leaves/Icon"
-import type { useTranslations } from "next-intl"
-import type { useLeadActions, CurrentStepView } from "@/hooks/leads"
-import type { useSlotLabels } from "@/hooks/slot"
-import type { useLeadStepForm, LeadStepValues } from "@/hooks/rhf"
 
 import type * as React from "react"
 import type { DateValue } from "@internationalized/date"
@@ -13,7 +9,8 @@ import { StepForm, type StepFormLabels, type StepFormView } from "@/components/c
 
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import type { BadgeTone } from "@starci/grammar/common"
+import type { DataSlot, ModuleIconName, SlotLabels } from "@/modules/types"
 import {
     ACTIONS_CLASS_NAME,
     BODY_CLASS_NAME,
@@ -47,9 +44,24 @@ export interface ResponsibilityLabels {
     readonly slot: SlotLabels
 }
 
+/** The step being worked on, every word already resolved. */
+export interface StepView {
+    readonly title: string
+    readonly statusLabel: string
+    readonly statusTone: BadgeTone
+    readonly nextAction: string
+    readonly ownerName: string
+    readonly ownerKindText: string
+    readonly due: { readonly date: string; readonly relative: string; readonly isOverdue: boolean } | null
+    readonly isDone: boolean
+    readonly isAgent: boolean
+    /** The semantic Icon name used when the owner is an agent. */
+    readonly agentGlyph: ModuleIconName
+}
+
 /** What the panel shows about one lead: its current step, or none yet. */
 export interface ResponsibilityView {
-    readonly current: CurrentStepView | null
+    readonly current: StepView | null
 }
 
 /** The words and state of the responsibility panel. */
@@ -135,7 +147,7 @@ export const LeadResponsibilityBase = (props: LeadResponsibilityBaseProps) => {
 /** Inputs needed to build the accountableLabel section. */
 interface RenderStepOwnerContext {
     readonly l: ResponsibilityLabels
-    readonly current: CurrentStepView
+    readonly current: StepView
     readonly isSkeleton: boolean
 }
 /** Builds the accountableLabel section from the current view. */
@@ -195,7 +207,7 @@ const renderStepOwner = ({ l, current, isSkeleton }: RenderStepOwnerContext) => 
 /** Inputs needed to build the Body section. */
 interface RenderCurrentStepContext {
     readonly isSkeleton: boolean
-    readonly current: CurrentStepView
+    readonly current: StepView
     readonly l: ResponsibilityLabels
     readonly form: React.JSX.Element | null
     readonly on: LeadResponsibilityBaseProps["on"]
@@ -244,37 +256,3 @@ const renderCurrentStep = ({ isSkeleton, current, l, form, on }: RenderCurrentSt
         )}
     </div>
 )
-
-/** The lead the panel acts on and the workspace it belongs to; a null detail draws the loading card. */
-export interface LeadResponsibilityProps {
-    readonly leadId?: string
-}
-
-/** The supported next-step editing action. */
-export type Mode = "reassign" | "add" | "due"
-
-/** Inputs needed to build the LeadResponsibilityContent section. */
-export interface BuildResponsibilityPanelViewContext {
-    readonly slot: DataSlot<ResponsibilityView>
-    readonly form: StepFormView | null
-    readonly proposeError: string | null
-    readonly actions: ReturnType<typeof useLeadActions>
-    readonly isPending: boolean
-    readonly t: ReturnType<typeof useTranslations<"lead">>
-    readonly slotLabels: ReturnType<typeof useSlotLabels>
-}
-
-/** Inputs needed to build the LeadResponsibilityContent section. */
-export interface BuildStepFormViewContext {
-    readonly mode: Mode
-    readonly formLabels: Readonly<Record<Mode, string>>
-    readonly fields: LeadStepValues
-    readonly t: ReturnType<typeof useTranslations<"lead">>
-    readonly agents: readonly import("@/modules/types").AgentRecord[]
-    readonly submitLabels: Readonly<Record<Mode, string>>
-    readonly error: string | null
-    readonly rhf: ReturnType<typeof useLeadStepForm>
-}
-
-/** The form value representing a human owner. */
-export const HUMAN = "human"

@@ -3,13 +3,11 @@
 import { useTranslations } from "next-intl"
 import { useChangePassword } from "@/hooks/account"
 import { usePasswordForm } from "@/hooks/rhf"
-import { useQueryMyAccountSwr } from "@/hooks/swr"
 import { AccountPasswordBase } from "./component"
 
 /** The connected password card: checks the current password, then sets the new one through Auth (outcome toasted). */
 export const AccountPassword = () => {
     const t = useTranslations("account")
-    const { isLoading } = useQueryMyAccountSwr()
     const { change, isPending, error } = useChangePassword()
     const form = usePasswordForm()
 
@@ -35,7 +33,6 @@ export const AccountPassword = () => {
                 next: form.watch("next"),
                 confirm: form.watch("confirm"),
                 isPending,
-                isLoading,
                 error: errors.current?.message ?? errors.next?.message ?? errors.confirm?.message ?? error,
             }}
             on={{

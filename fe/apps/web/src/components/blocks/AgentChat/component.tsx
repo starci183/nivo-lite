@@ -55,8 +55,8 @@ export interface AgentChatViewProps {
     readonly crumbLabel: string
     readonly crumbs: ReadonlyArray<BreadcrumbItem>
     readonly pageLabel: string
-    /** The agent is loading: the frame, the labels and the composer stay, names and rows are skeletons. */
-    readonly isLoading: boolean
+    /** The agent is not in yet: the new-conversation control waits while the frame, labels and composer stay. */
+    readonly isStartDisabled: boolean
     readonly glyph: ModuleIconName
     readonly module: string
     readonly railTitle: string
@@ -112,7 +112,7 @@ const Rail = (props: RailProps) => (
         <AgentChatRailHead
             title={props.props.railTitle}
             newLabel={props.props.newLabel}
-            isDisabled={props.props.isLoading}
+            isDisabled={props.props.isStartDisabled}
             isStarting={props.props.isStarting}
             onStart={props.on.start}
         />

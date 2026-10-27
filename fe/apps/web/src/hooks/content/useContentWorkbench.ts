@@ -35,5 +35,8 @@ export const useContentWorkbench = () => {
         data,
         error: readError(workbench) ?? readError(configuration),
         isLoading: workbench.isLoading || configuration.isLoading,
+        reload: () => {
+            void Promise.allSettled([workbench.mutate(), configuration.mutate()])
+        },
     }
 }

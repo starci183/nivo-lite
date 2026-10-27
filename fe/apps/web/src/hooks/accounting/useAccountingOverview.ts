@@ -42,22 +42,14 @@ const unmatchedOf = (
               actionLabel: t("openConnections"),
               actionHref: CONSOLE_ROUTES.connections,
           }
-        : measureOf(
-              t,
-              format,
-              "Unmatched",
-              measure,
-              "countPayments",
-              t("mUnmatchedSource", { source: creditsSource }),
-          )
+        : measureOf(t, format, "Unmatched", measure, "countPayments", t("mUnmatchedSource", { source: creditsSource }))
 
 /** The Period overview tab: the period choice lives here, the drawing in the pure half. */
-export const useAccountingOverview = (data: AccountingWorkbenchData | undefined) => {
+export const useAccountingOverview = (data: AccountingWorkbenchData) => {
     const t = useTranslations("workbenchAccounting")
     const format = useFormatter()
     const [periodKey, setPeriodKey] = useState<AccountingPeriodKey>("this")
     const actions = { selectPeriod: (key: string) => setPeriodKey(key === "last" ? "last" : "this") }
-    if (!data) return { props: null, on: actions }
     const period = data.periods[periodKey]
     const waitingTotal = data.waiting.count
 

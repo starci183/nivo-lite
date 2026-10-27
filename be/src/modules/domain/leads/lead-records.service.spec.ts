@@ -13,6 +13,7 @@ import {
     HAND_OVER_LEAD_NEED,
     INSERT_LEAD,
     MATCH_LEAD,
+    MATCH_LEADS_BY_CONTACT,
     MARK_LEAD_WON,
     PATCH_PUBLIC_LEAD,
     REPLACE_LEAD_CONTEXT,
@@ -36,6 +37,7 @@ const build = async (rows: ReadonlyArray<LeadRecordRow> = [ROW]) => {
         query: [
             [FIND_LEAD, rows],
             [MATCH_LEAD, rows],
+            [MATCH_LEADS_BY_CONTACT, rows],
             [INSERT_LEAD, rows],
             [FIND_LEAD_NAMES, [{ id: "lead-1", contact_name: "An" }]],
             [HAND_OVER_LEAD_NEED, []],
@@ -278,6 +280,48 @@ describe("LeadRecordsService public API transaction", () => {
         await expect(records.applyPublicStage("ws-1", "lead-1", "won", manager)).resolves.toEqual(expected)
 
         expect(manager.query).toHaveBeenCalledWith(APPLY_PUBLIC_LEAD_STAGE, ["ws-1", "lead-1", "won"])
+        expect(em.query).not.toHaveBeenCalled()
+    })
+})
+
+describe("LeadRecordsService for the contract link", () => {
+    it("answers every lead holding the phone or the email", async () => {
+        const { records, em } = await build()
+
+        await expect(records.matchAllByContact("ws-1", { phone: "84912000701", email: "an@acme.vn" })).resolves.toEqual(
+            [ROW],
+        )
+
+        expect(em.query).toHaveBeenCalledWith(MATCH_LEADS_BY_CONTACT, ["ws-1", "84912000701", "an@acme.vn"])
+    })
+
+    it("answers no lead for a customer without a contact and asks nothing", async () => {
+        const { records, em } = await build()
+
+        await expect(records.matchAllByContact("ws-1", { phone: null, email: null })).resolves.toEqual([])
+
+        expect(em.query).not.toHaveBeenCalled()
+    })
+
+    it("captures, classifies and fills a customer in the caller's transaction", async () => {
+        const { records, em } = await build()
+        const caller = mockEntityManager({
+            query: [
+                [INSERT_LEAD, [ROW]],
+                [APPLY_CLASSIFICATION, []],
+                [FILL_LEAD_CONTACT, []],
+            ],
+        })
+        const lead = { workspaceId: "ws-1", contactName: "An", company: "ACME", channel: "Zalo", need: "price" }
+
+        await records.capture({ ...lead, phone: "84912000701", email: null }, caller)
+        await records.classify(
+            { workspaceId: "ws-1", leadId: "lead-1", stage: "qualified", contextSummary: null },
+            caller,
+        )
+        await records.fillContact({ workspaceId: "ws-1", leadId: "lead-1", phone: null, email: "an@acme.vn" }, caller)
+
+        expect(caller.query).toHaveBeenCalledTimes(3)
         expect(em.query).not.toHaveBeenCalled()
     })
 })

@@ -1,6 +1,7 @@
-import { linesOf, type FieldOf } from "@/hooks/hiring"
+import { linesOf } from "@/hooks/hiring"
 import type { JobQuestionView, JobView } from "@/hooks/hiringWire"
 import type { HiringJobQuestionRequest, SaveHiringJobRequest } from "@/hooks/swr"
+import type { HiringJobValues, HiringQuestionValues } from "@/modules/types"
 
 /** The answer kinds a question can ask for. */
 export const QUESTION_TYPES: ReadonlyArray<string> = ["text", "yesno", "number", "choice"]
@@ -16,44 +17,6 @@ export const APPLY_CHANNELS: ReadonlyArray<string> = ["page", "chat"]
 
 /** A job asks at most this many questions. */
 export const MAX_QUESTIONS = 12
-
-/** One question in the editor: the choices and the expected answer are the text the owner types. */
-export interface HiringQuestionValues {
-    id: string
-    text: string
-    type: string
-    required: boolean
-    choices: string
-    expect: string
-}
-
-/** The values of the job editor form. */
-export interface HiringJobValues {
-    title: string
-    position: string
-    employmentType: string
-    schedule: string
-    payMin: number | null
-    payMax: number | null
-    payUnit: string
-    location: string
-    headcount: number
-    description: string
-    skills: string
-    years: number | null
-    experienceNote: string
-    availability: string
-    mustHave: string
-    niceToHave: string
-    questions: Array<HiringQuestionValues>
-    channels: Array<string>
-}
-
-/** The text and numeric changes shared by the basic and requirement job fields. */
-export interface HiringJobFieldCommands {
-    readonly onText: (name: FieldOf<HiringJobValues, string>, value: string) => void
-    readonly onNumber: (name: FieldOf<HiringJobValues, number | null>, value: number | null) => void
-}
 
 /** A new question id: short, unique enough within one job. */
 export const newQuestionId = (): string => `q${Date.now().toString(36).slice(-5)}`

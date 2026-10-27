@@ -1,5 +1,5 @@
 import { Alert, Badge, SurfaceCard, Text } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotBoundView } from "@/components/composites/SlotView"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { COPY_CLASS, PERSON_CLASS, STACK_CLASS } from "./classNames"
@@ -29,12 +29,7 @@ export interface AgentProfileOwnerBaseProps {
 /** Draws who answers for the agent, with the fallback and a notice when the owner is gone. */
 export const AgentProfileOwnerBase = (props: AgentProfileOwnerBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
-        <SlotView
-            slot={props.props.slot}
-            placeholder={props.props.placeholder}
-            labels={props.props.slotLabels}
-            onRetry={props.on.retry}
-        >
+        <SlotBoundView from={props.props} onRetry={props.on.retry}>
             {(owner, isSkeleton) => (
                 <div className={STACK_CLASS}>
                     <div className={PERSON_CLASS}>
@@ -61,6 +56,6 @@ export const AgentProfileOwnerBase = (props: AgentProfileOwnerBaseProps) => (
                     )}
                 </div>
             )}
-        </SlotView>
+        </SlotBoundView>
     </SurfaceCard>
 )

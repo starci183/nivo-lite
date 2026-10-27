@@ -18,13 +18,15 @@ interface AccountingSectionHeadProps {
     readonly selectedChoice: string
     readonly onChoose: (id: string) => void
     readonly children: ReactNode
+    /** The section is a placeholder: its heading draws as skeleton. */
+    readonly isSkeleton: boolean
 }
 
 /** The heading line of a section: title and intro, with the choice that changes what the section shows, then its content. */
 export const AccountingSectionHead = (props: AccountingSectionHeadProps) => (
     <AccountingBlock label={props.title}>
         <div className={HEAD_CLASS_NAME}>
-            <SectionHeader level={2} title={props.title} description={props.intro} />
+            <SectionHeader level={2} title={props.title} description={props.intro} isSkeleton={props.isSkeleton} />
             <Tabs
                 variant="secondary"
                 label={props.choiceLabel}

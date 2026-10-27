@@ -16,7 +16,6 @@ export interface AccountPasswordBaseProps {
         readonly next: string
         readonly confirm: string
         readonly isPending: boolean
-        readonly isLoading: boolean
         readonly error?: string | undefined
         readonly done?: string
     }
@@ -43,7 +42,6 @@ export const AccountPasswordBase = (props: AccountPasswordBaseProps) => (
                     label={props.props.currentLabel}
                     isRequired
                     isDisabled={props.props.isPending}
-                    isSkeleton={props.props.isLoading}
                     value={props.props.current}
                     onValueChange={props.on.setCurrent}
                 />
@@ -54,7 +52,6 @@ export const AccountPasswordBase = (props: AccountPasswordBaseProps) => (
                     label={props.props.newLabel}
                     isRequired
                     isDisabled={props.props.isPending}
-                    isSkeleton={props.props.isLoading}
                     value={props.props.next}
                     onValueChange={props.on.setNext}
                 />
@@ -65,7 +62,6 @@ export const AccountPasswordBase = (props: AccountPasswordBaseProps) => (
                     label={props.props.confirmLabel}
                     isRequired
                     isDisabled={props.props.isPending}
-                    isSkeleton={props.props.isLoading}
                     value={props.props.confirm}
                     onValueChange={props.on.setConfirm}
                 />
@@ -75,7 +71,7 @@ export const AccountPasswordBase = (props: AccountPasswordBaseProps) => (
                     done={props.props.done}
                     submitLabel={props.props.submitLabel}
                     isPending={props.props.isPending}
-                    isSkeleton={props.props.isLoading}
+                    isSkeleton={false}
                 />
             </div>
         </Form>

@@ -1,14 +1,15 @@
 import { OfficeExceptionFields, BASIS_MIN_CHARS } from "@/components/leaves/OfficeExceptionFields"
-import { useState } from "react"
-import type { Dispatch, SetStateAction } from "react"
 import { Button, Text } from "@starci/grammar/common"
-import type { OfficeExceptionView, OfficeText, OfficeWorkDecision } from "@/modules/types"
+import type { OfficeCardDraft, OfficeExceptionView, OfficeText, OfficeWorkDecision } from "@/modules/types"
 import { ACTIONS_CLASS_NAME } from "./classNames"
 
 /** What the owner's controls of an exception draw. */
 type OfficeExceptionFormProps = {
     readonly item: OfficeExceptionView
     readonly text: OfficeText
+    /** What the owner typed on this exception, kept by the thread's block. */
+    readonly draft: OfficeCardDraft
+    readonly onEdit: (key: string, patch: Partial<OfficeCardDraft>) => void
     readonly isBusy: boolean
     readonly onDecide: (id: string, choice: OfficeWorkDecision) => void
 }
@@ -40,12 +41,11 @@ const amountOf = (item: OfficeExceptionView, isEditing: boolean, amount: string,
 /** The owner's controls on an open exception: the missing inputs, the choice, the basis, and approve / edit / reject. */
 export const OfficeExceptionForm = (props: OfficeExceptionFormProps) => {
     const { item, text } = props
-    const [isEditing, setIsEditing] = useState(false)
-    const [values, setValues] = useState<Values>({})
-    const [draft, setDraft] = useState(item.draft ?? "")
-    const [amount, setAmount] = useState(item.amount === null ? "" : String(item.amount))
-    const [candidateId, setCandidateId] = useState<string | null>(null)
-    const [basis, setBasis] = useState("")
+    const { isEditing, values, candidateId, basis } = props.draft
+    const draft = props.draft.text ?? item.draft ?? ""
+    const amount = props.draft.amount ?? (item.amount === null ? "" : String(item.amount))
+    const edit = (patch: Partial<OfficeCardDraft>) => props.onEdit(item.key, patch)
+    const setIsEditing = (value: boolean) => edit({ isEditing: value })
     const isFailed = item.status === "failed"
     const basisLength = basis.trim().replace(/\s+/g, " ").length
     const isBasisMissing = item.isReconcile && basisLength < BASIS_MIN_CHARS
@@ -82,11 +82,11 @@ export const OfficeExceptionForm = (props: OfficeExceptionFormProps) => {
                 basisLength={basisLength}
                 isBasisMissing={isBasisMissing}
                 isFailed={isFailed}
-                onDraft={setDraft}
-                onAmount={setAmount}
-                onValues={setValues}
-                onCandidate={setCandidateId}
-                onBasis={setBasis}
+                onDraft={(value) => edit({ text: value })}
+                onAmount={(value) => edit({ amount: value })}
+                onValues={(update) => edit({ values: update(values) })}
+                onCandidate={(value) => edit({ candidateId: value })}
+                onBasis={(value) => edit({ basis: value })}
             />
             {isOtherIncomplete || isBasisMissing ? (
                 <Text size="xs" tone="muted">
@@ -127,7 +127,7 @@ type OfficeExceptionActionsInput = {
     readonly isEditing: boolean
     readonly text: NonNullable<OfficeExceptionFormProps["text"]>
     readonly item: NonNullable<OfficeExceptionFormProps["item"]>
-    readonly setIsEditing: Dispatch<SetStateAction<boolean>>
+    readonly setIsEditing: (value: boolean) => void
 }
 
 const renderOfficeExceptionFormActions = ({
@@ -154,7 +154,7 @@ const renderOfficeExceptionFormActions = ({
             </Button>
         )}
         {isFailed || item.isReconcile || (item.draft === null && item.amount === null) ? null : (
-            <Button intent="neutral" isDisabled={isLocked} onPress={() => setIsEditing((value) => !value)}>
+            <Button intent="neutral" isDisabled={isLocked} onPress={() => setIsEditing(!isEditing)}>
                 {isEditing ? text("exceptionCancelEdit") : text("exceptionEditContinue")}
             </Button>
         )}

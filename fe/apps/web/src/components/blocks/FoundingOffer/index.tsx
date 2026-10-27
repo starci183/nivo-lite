@@ -27,7 +27,7 @@ export const FoundingOffer = (props: FoundingOfferProps) => {
     const conditions = t("conditions", { cap, date })
     return (
         <FoundingOfferBase
-            state={variant}
+            shape={variant}
             props={{
                 name,
                 ctaHref: props.ctaHref ?? offer.ctaHref,

@@ -1,5 +1,6 @@
-/** A social channel a post can be written for. */
-export type ContentChannel = "facebook" | "zalo" | "tiktok" | "instagram"
+import type { ContentChannel, Pillar } from "@/modules/types"
+
+export type { ContentChannel, Pillar }
 
 /** Every channel, in display order. */
 export const CONTENT_CHANNELS: ReadonlyArray<ContentChannel> = ["facebook", "zalo", "tiktok", "instagram"]
@@ -32,17 +33,6 @@ export interface ChannelRule {
     readonly short: string
     readonly max_chars: number
     readonly hashtags: { readonly min: number; readonly max: number }
-}
-
-/** A content theme of a workspace. */
-export interface Pillar {
-    readonly id: string
-    readonly workspace_id: string
-    readonly name: string
-    readonly description: string
-    readonly weight: number
-    readonly sort: number
-    readonly active: boolean
 }
 
 /** How often one channel is posted to. */

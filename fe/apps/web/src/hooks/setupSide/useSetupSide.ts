@@ -4,15 +4,13 @@ import { LOADING_SESSION, useSetupGates, useSetupKnowledge, useSetupState, useSe
 import { setupProgressOf } from "@/modules/setup-view"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { useSetupRequirements } from "@/hooks/setupRequirements"
-import { mapSlot } from "@/hooks/slot"
 import { MODULE_KEYS, isModuleKey } from "@/modules/catalog"
 import { gateEntry, gateHint, gateLabel } from "@/modules/installations"
 import type { ContextVersion, SetupSession } from "@/modules/installations"
 import { KNOWLEDGE_ROUTES, brainTabHref } from "@/modules/routes"
-import type { DataSlot } from "@/modules/types"
+import type { DataSlot, SetupSideKnowledge, SetupSideVersions, SetupSideView } from "@/modules/types"
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { setupRequirementsNoticeOf } from "./setupSide.shared"
-import type { SetupSideView } from "./setupSide.shared"
 
 const GATE_TONE = { missing: "neutral", proposed: "warning", confirmed: "success" } as const
 const NO_VERSIONS: ReadonlyArray<ContextVersion> = []
@@ -31,7 +29,11 @@ export const useSetupSide = (module: string, installationId: string) => {
     const versionsSlot = useSetupVersions(installationId)
     const unmet = useSetupRequirements(moduleKey)
     const counts = useSetupKnowledge(moduleKey)
-    const isLoading = slot.items === undefined || catalog.slot.items === undefined
+    const isLoading =
+        slot.items === undefined ||
+        catalog.slot.items === undefined ||
+        counts === null ||
+        versionsSlot.isLoading === true
     const session = slot.items?.session ?? LOADING_SESSION
     const gatesState = useSetupGates(session.id, installationId)
     const versions = versionsSlot.items?.versions ?? NO_VERSIONS
@@ -50,7 +52,6 @@ export const useSetupSide = (module: string, installationId: string) => {
             emptyText: t("draftEmpty"),
             factsTitle: t("factsTitle"),
             facts: session.draft.facts,
-            isLoading,
         },
         gates: {
             title: t("gatesTitle"),
@@ -58,7 +59,6 @@ export const useSetupSide = (module: string, installationId: string) => {
             confirmed: progress.confirmed,
             total: progress.total,
             gates: (catalog.modules[moduleKey]?.gates ?? []).map(gateViewMapper(session, locale, t)),
-            isLoading,
             editing: gatesState.editing,
             editText: gatesState.editText,
             evidencePlaceholder: t("evidencePlaceholder"),
@@ -74,10 +74,9 @@ export const useSetupSide = (module: string, installationId: string) => {
                 gatesState.applyNote.tone === "applied" ? t("applied", { version: gatesState.applyNote.version }) : "",
         },
         knowledge: knowledgeOf(t, business, counts, moduleKey),
-        versions: versionsOf(t, versions, format, activeVersionId, versionsSlot),
+        versions: versionsOf(t, versions, format, activeVersionId),
     }
-    const sideSlot: DataSlot<SetupSideView> =
-        slot.items === undefined ? mapSlot(slot, () => view) : mapSlot(catalog.slot, () => view)
+    const sideSlot = sideSlotOf(view, [slot, catalog.slot], isLoading)
     return {
         slot: sideSlot,
         placeholder: view,
@@ -96,6 +95,17 @@ export const useSetupSide = (module: string, installationId: string) => {
     }
 }
 
+/** The side column as one slot: a failed or forbidden read shows as such, any read still in flight as loading, else the view. */
+const sideSlotOf = (
+    view: SetupSideView,
+    reads: ReadonlyArray<DataSlot<unknown>>,
+    isLoading: boolean,
+): DataSlot<SetupSideView> => {
+    if (reads.some((read) => read.isForbidden === true)) return { isForbidden: true }
+    if (reads.some((read) => read.isError === true)) return { isError: true }
+    return isLoading ? { isLoading: true } : { items: view }
+}
+
 /** Resolves the gates labels for the current locale. */
 const gatesLabelsOf = (t: ReturnType<typeof useTranslations<"moduleSetup">>) => ({
     confirmLabel: t("confirm"),
@@ -110,7 +120,7 @@ const knowledgeOf = (
     business: number,
     counts: ReturnType<typeof useSetupKnowledge>,
     moduleKey: string,
-): import("@/hooks/setupSide/setupSide.shared").SetupSideKnowledge => {
+): SetupSideKnowledge => {
     return {
         title: t("k_cardTitle"),
         businessLine: t("k_cardBusiness", { count: business }),
@@ -120,7 +130,6 @@ const knowledgeOf = (
         knowledgeLabel: t("k_cardLink"),
         nivoHref: KNOWLEDGE_ROUTES.nivo,
         nivoLabel: t("k_nivoLink"),
-        isLoading: counts === null,
     }
 }
 
@@ -152,8 +161,7 @@ const versionsOf = (
     versions: readonly ContextVersion[],
     format: ReturnType<typeof useFormatter>,
     activeVersionId: string | null,
-    versionsSlot: ReturnType<typeof useSetupVersions>,
-): import("@/hooks/setupSide/setupSide.shared").SetupSideVersions => {
+): SetupSideVersions => {
     return {
         title: t("versionsTitle"),
         emptyText: t("versionsEmpty"),
@@ -167,6 +175,5 @@ const versionsOf = (
             })} · ${t("versionFacts", { count: version.snapshot.facts.length })}`,
             isActive: version.id === activeVersionId,
         })),
-        isLoading: versionsSlot.items === undefined,
     }
 }

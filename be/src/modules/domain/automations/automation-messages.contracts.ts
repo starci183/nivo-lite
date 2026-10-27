@@ -46,3 +46,13 @@ export interface BareReply {
     /** Unique per occurrence. */
     readonly dedupe: string
 }
+
+/** A customer message as written, and who wrote it. */
+export interface WrittenMessage {
+    /** The text, before any fixed tail. */
+    readonly text: string
+    /** True when the model adapted the approved wording. */
+    readonly generated: boolean
+    /** True when the model was asked but did not answer, so the filled wording stands in; the owner sees it marked. */
+    readonly fallback: boolean
+}

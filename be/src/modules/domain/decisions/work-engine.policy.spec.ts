@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
+import { AiGenerationsError, AiGenerationsErrorCode } from "@modules/domain/ai-generations"
 import type { GateVerdict, Proposal } from "./decisions.contracts"
 import {
     MAX_ERROR_LENGTH,
@@ -216,13 +217,23 @@ describe("work engine policy", () => {
             expect(subject.reviewedByPerson(proposalOf({ confidence: 1 })).confidence).toBe(1)
         })
     })
+})
 
+describe("work engine policy failure text", () => {
     describe("failureText", () => {
+        const CATALOG: Readonly<Record<string, string>> = {
+            "errors.AI_GENERATIONS_FAILED": "{{message}}",
+            "errors.WORK_PERFORMERS_SUBJECT_MISSING": "This work is not tied to a customer.",
+            "engine.failedUnknown": "NIVO could not finish this step.",
+        }
+        const say = (key: string, params: Readonly<Record<string, string | number>>): string =>
+            (CATALOG[key] ?? key).replace(/\{\{(\w+)\}\}/g, (whole, name: string) => String(params[name] ?? whole))
+
         it("takes the message of an error and cuts it", async () => {
             const subject = await build()
 
-            expect(subject.failureText(new RangeError("boom"))).toBe("boom")
-            expect(subject.failureText(new RangeError("x".repeat(MAX_ERROR_LENGTH + 10)))).toHaveLength(
+            expect(subject.failureText(new RangeError("boom"), say)).toBe("boom")
+            expect(subject.failureText(new RangeError("x".repeat(MAX_ERROR_LENGTH + 10)), say)).toHaveLength(
                 MAX_ERROR_LENGTH,
             )
         })
@@ -230,10 +241,36 @@ describe("work engine policy", () => {
         it("writes any other thrown value as text", async () => {
             const subject = await build()
 
-            expect(subject.failureText("nope")).toBe("nope")
+            expect(subject.failureText("nope", say)).toBe("nope")
+        })
+
+        it("turns a capability error into its sentence, filled with its values", async () => {
+            const subject = await build()
+            const busy = new AiGenerationsError({
+                code: AiGenerationsErrorCode.GenerationFailed,
+                params: { reason: "error", message: "NIVO is busy, try again." },
+            })
+
+            expect(subject.failureText(busy, say)).toBe("NIVO is busy, try again.")
+            expect(subject.failureText(new RangeError("WORK_PERFORMERS_SUBJECT_MISSING"), say)).toBe(
+                "This work is not tied to a customer.",
+            )
+        })
+
+        it("never shows a code: one without a sentence, or a sentence missing its value, reads as the plain failure", async () => {
+            const subject = await build()
+            const bare = new AiGenerationsError({ code: AiGenerationsErrorCode.GenerationFailed })
+
+            expect(subject.failureText(bare, say)).toBe("NIVO could not finish this step.")
+            expect(subject.failureText("AI_GENERATIONS_FAILED", say)).toBe("NIVO could not finish this step.")
+            expect(subject.failureText(new RangeError("SOME_UNKNOWN_CODE"), say)).toBe(
+                "NIVO could not finish this step.",
+            )
         })
     })
+})
 
+describe("work engine policy money", () => {
     describe("formatVnd", () => {
         it("formats in the language of the reader", async () => {
             const subject = await build()

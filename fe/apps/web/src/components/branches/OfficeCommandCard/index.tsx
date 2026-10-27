@@ -29,7 +29,7 @@ const STATUS_KEYS = { pending: "cmdPending", sent: "cmdSentBadge", cancelled: "c
  */
 export const OfficeCommandCard = (props: OfficeCommandCardProps) => {
     const { command, text } = props
-    const isLoading = command === null
+    const isSkeleton = command === null
     const status = command?.status ?? "pending"
     const rows = [
         { id: "agent", term: text("cmdRowAgent"), description: <Text weight="medium">{props.agent}</Text> },
@@ -51,30 +51,30 @@ export const OfficeCommandCard = (props: OfficeCommandCardProps) => {
             avatar={props.avatar}
             label={text("cmdCardLabel", { agent: props.agent })}
             head={
-                <Text as="p" isSkeleton={isLoading}>
+                <Text as="p" isSkeleton={isSkeleton}>
                     {props.ask}
                 </Text>
             }
         >
             <div>
-                <Badge tone={STATUS_TONES[status]} isDot isSkeleton={isLoading}>
+                <Badge tone={STATUS_TONES[status]} isDot isSkeleton={isSkeleton}>
                     {text(STATUS_KEYS[status])}
                 </Badge>
             </div>
-            <DescriptionList layout="columns" isDivided isLoading={isLoading} items={rows} />
-            <Text size="xs" tone="muted" isSkeleton={isLoading} live="polite">
+            <DescriptionList layout="columns" isDivided isLoading={isSkeleton} items={rows} />
+            <Text size="xs" tone="muted" isSkeleton={isSkeleton} live="polite">
                 {command?.note ?? text("cmdGateNote", { agent: props.agent })}
             </Text>
             {command?.detail === undefined || command.detail === null ? null : (
                 <Alert tone="negative" title={text("cmdFailed")} description={command.detail} />
             )}
-            {isLoading || status === "pending" ? (
+            {isSkeleton || status === "pending" ? (
                 <div className={ACTIONS_CLASS_NAME}>
                     <Button
                         intent="neutral"
                         size="sm"
-                        isSkeleton={isLoading}
-                        isDisabled={isLoading || props.isBusy}
+                        isSkeleton={isSkeleton}
+                        isDisabled={isSkeleton || props.isBusy}
                         onPress={() => command !== null && props.onCancel(command.id)}
                     >
                         {text("cmdCancel")}
@@ -82,9 +82,9 @@ export const OfficeCommandCard = (props: OfficeCommandCardProps) => {
                     <Button
                         intent="commit"
                         size="sm"
-                        isSkeleton={isLoading}
+                        isSkeleton={isSkeleton}
                         isPending={props.isBusy}
-                        isDisabled={isLoading || props.isBusy}
+                        isDisabled={isSkeleton || props.isBusy}
                         onPress={() => command !== null && props.onSend(command.id)}
                     >
                         {text("cmdSend")}

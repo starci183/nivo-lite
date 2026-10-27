@@ -26,6 +26,8 @@ interface AccountingRecordListProps {
     readonly emptyBody: string
     readonly records: ReadonlyArray<AccountingRecord>
     readonly onOpen?: ((id: string) => void) | undefined
+    /** The rows are placeholders: drawn as the ready rows, with skeleton leaves. */
+    readonly isSkeleton: boolean
 }
 
 /** A collection of money records as rows: name, supporting line, status marks, amount and footnote. */
@@ -41,14 +43,17 @@ export const AccountingRecordList = (props: AccountingRecordListProps) => (
                     props.onOpen === undefined ? (
                         record.title
                     ) : (
-                        <TextAction onPress={() => props.onOpen?.(record.id)}>{record.title}</TextAction>
+                        <TextAction isSkeleton={props.isSkeleton} onPress={() => props.onOpen?.(record.id)}>
+                            {record.title}
+                        </TextAction>
                     )
                 }
+                isSkeleton={props.isSkeleton}
                 description={record.description}
                 badges={
                     <>
                         {record.badges.map((badge) => (
-                            <Badge key={badge.id} tone={badge.tone} isDot={badge.isDot}>
+                            <Badge key={badge.id} tone={badge.tone} isDot={badge.isDot} isSkeleton={props.isSkeleton}>
                                 {badge.label}
                             </Badge>
                         ))}
@@ -56,8 +61,10 @@ export const AccountingRecordList = (props: AccountingRecordListProps) => (
                 }
             >
                 <div className={ROW_FACTS_CLASS_NAME}>
-                    <Text weight="semibold">{record.amount}</Text>
-                    <Text size="xs" tone="muted">
+                    <Text weight="semibold" isSkeleton={props.isSkeleton}>
+                        {record.amount}
+                    </Text>
+                    <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
                         {record.footnote}
                     </Text>
                 </div>

@@ -1,47 +1,38 @@
 import type { ReactNode } from "react"
-import {
-    Button,
-    Divider,
-    Drawer,
-    FillViewport,
-    Heading,
-    IconButton,
-    IconTile,
-    Region,
-    SurfaceCard,
-    Text,
-} from "@starci/grammar/common"
+import { Divider, Drawer, FillViewport, Region, SurfaceCard } from "@starci/grammar/common"
+import { SlotView } from "@/components/composites/SlotView"
 import { OfficeComposer } from "@/components/composites/OfficeComposer"
 import { OfficeConversations } from "@/components/composites/OfficeConversations"
+import { OfficeHeader } from "@/components/composites/OfficeHeader"
 import { OfficeInfoPanel } from "@/components/composites/OfficeInfoPanel"
 import { OfficeTasks } from "@/components/composites/OfficeTasks"
 import { OfficeThread } from "@/components/composites/OfficeThread"
-import { Icon, nivoIconSource } from "@/components/leaves/Icon"
 import type {
+    DataSlot,
     OfficeInfoView,
     OfficeListView,
     OfficeTaskView,
     OfficeText,
     OfficeComposerProps,
     OfficeThreadProps,
+    SlotLabels,
 } from "@/modules/types"
 import {
     BODY_CLASS_NAME,
     DIVIDER_CLASS_NAME,
-    HEAD_ACTIONS_CLASS_NAME,
-    HEAD_AVATAR_CLASS_NAME,
-    HEAD_CLASS_NAME,
-    HEAD_TEXT_CLASS_NAME,
-    HEAD_TITLE_CLASS_NAME,
     INFO_COLUMN_CLASS_NAME,
     LIST_COLUMN_CLASS_NAME,
     LIST_COLUMN_HIDDEN_CLASS_NAME,
-    PHONE_ONLY_CLASS_NAME,
     TASKS_CLASS_NAME,
     THREAD_COLUMN_CLASS_NAME,
     THREAD_COLUMN_HIDDEN_CLASS_NAME,
-    WIDE_ONLY_CLASS_NAME,
 } from "./classNames"
+
+/** What the thread draws once its messages are in. */
+export type OfficeMessengerThread = Omit<OfficeThreadProps["props"], "isSkeleton">
+
+/** What the composer draws once the room is in. */
+export type OfficeMessengerComposer = Omit<OfficeComposerProps["props"], "isSkeleton">
 
 /** What the messenger frame draws: the frame state and the data of each column. */
 export interface OfficeMessengerBaseProps {
@@ -49,7 +40,6 @@ export interface OfficeMessengerBaseProps {
         readonly text: OfficeText
         readonly phoneView: "list" | "thread"
         readonly centre: "chat" | "tasks"
-        readonly isLoading: boolean
         readonly isInfoOpen: boolean
         readonly isInfoDocked: boolean
         /** I muted this conversation: the list shows a dot instead of the count. */
@@ -59,14 +49,20 @@ export interface OfficeMessengerBaseProps {
         readonly subtitle: string
         /** The words of the "needs approval" chip, or none when nothing waits. */
         readonly chip: string | null
-        readonly list: OfficeListView
-        readonly thread: OfficeThreadProps["props"]
-        readonly composer: OfficeComposerProps["props"]
+        /** The list, the thread and the composer are three slots: all wait for the room, only the thread can fail. */
+        readonly listSlot: DataSlot<OfficeListView>
+        readonly listPlaceholder: OfficeListView
+        readonly threadSlot: DataSlot<OfficeMessengerThread>
+        readonly threadPlaceholder: OfficeMessengerThread
+        readonly composerSlot: DataSlot<OfficeMessengerComposer>
+        readonly composerPlaceholder: OfficeMessengerComposer
+        readonly slotLabels: SlotLabels
         readonly tasks: ReadonlyArray<OfficeTaskView>
         readonly info: OfficeInfoView
     }
     readonly on: OfficeThreadProps["on"] &
         OfficeComposerProps["on"] & {
+            readonly retry: () => void
             readonly back: () => void
             readonly chip: () => void
             readonly toggleInfo: () => void
@@ -107,14 +103,18 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
                                 view.phoneView === "list" ? LIST_COLUMN_CLASS_NAME : LIST_COLUMN_HIDDEN_CLASS_NAME
                             }
                         >
-                            <OfficeConversations
-                                props={{ list: view.list, isLoading: view.isLoading, text }}
-                                on={{
-                                    openGroup: on.openGroup,
-                                    openAgent: on.openAgent,
-                                    openCustomer: on.openCustomer,
-                                }}
-                            />
+                            <SlotView slot={view.listSlot} placeholder={view.listPlaceholder} labels={view.slotLabels}>
+                                {(list, isSkeleton) => (
+                                    <OfficeConversations
+                                        props={{ list, isSkeleton, text }}
+                                        on={{
+                                            openGroup: on.openGroup,
+                                            openAgent: on.openAgent,
+                                            openCustomer: on.openCustomer,
+                                        }}
+                                    />
+                                )}
+                            </SlotView>
                         </Region>
                         <div className={DIVIDER_CLASS_NAME}>
                             <Divider orientation="vertical" semantics="presentation" />
@@ -125,7 +125,24 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
                                 view.phoneView === "thread" ? THREAD_COLUMN_CLASS_NAME : THREAD_COLUMN_HIDDEN_CLASS_NAME
                             }
                         >
-                            <OfficeMessengerHeader {...props} />
+                            <OfficeHeader
+                                props={{
+                                    text,
+                                    centre: view.centre,
+                                    title: view.title,
+                                    subtitle: view.subtitle,
+                                    chip: view.chip,
+                                    isMuted: view.isMuted,
+                                    isInfoOpen: view.isInfoOpen,
+                                }}
+                                on={{
+                                    back: on.back,
+                                    chip: on.chip,
+                                    toggleMute: on.toggleMute,
+                                    toggleInfo: on.toggleInfo,
+                                    showChat: on.showChat,
+                                }}
+                            />
                             <Divider semantics="presentation" />
                             <MessengerCentre {...props} />
                         </Region>
@@ -164,20 +181,37 @@ const MessengerCentre = (props: OfficeMessengerBaseProps) => {
                 </div>
             ) : (
                 <>
-                    <OfficeThread
-                        props={view.thread}
-                        on={{
-                            decideApproval: on.decideApproval,
-                            decideWork: on.decideWork,
-                            decideCard: on.decideCard,
-                            sendCommand: on.sendCommand,
-                            cancelCommand: on.cancelCommand,
-                            reply: on.reply,
-                            loadEarlier: on.loadEarlier,
-                            retry: on.retry,
-                        }}
-                    />
-                    <OfficeComposer props={view.composer} on={{ change: on.change, send: on.send }} />
+                    <SlotView
+                        slot={view.threadSlot}
+                        placeholder={view.threadPlaceholder}
+                        labels={view.slotLabels}
+                        onRetry={on.retry}
+                    >
+                        {(thread, isSkeleton) => (
+                            <OfficeThread
+                                props={{ ...thread, isSkeleton }}
+                                on={{
+                                    decideApproval: on.decideApproval,
+                                    decideWork: on.decideWork,
+                                    decideCard: on.decideCard,
+                                    sendCommand: on.sendCommand,
+                                    cancelCommand: on.cancelCommand,
+                                    reply: on.reply,
+                                    loadEarlier: on.loadEarlier,
+                                    editCard: on.editCard,
+                                    copy: on.copy,
+                                }}
+                            />
+                        )}
+                    </SlotView>
+                    <SlotView slot={view.composerSlot} placeholder={view.composerPlaceholder} labels={view.slotLabels}>
+                        {(composer, isSkeleton) => (
+                            <OfficeComposer
+                                props={{ ...composer, isSkeleton }}
+                                on={{ change: on.change, send: on.send }}
+                            />
+                        )}
+                    </SlotView>
                 </>
             )}
         </>
@@ -198,70 +232,6 @@ const InfoColumn = (props: InfoColumnProps) => (
         </Region>
     </>
 )
-
-/** Renders the OfficeMessengerHeader section. */
-const OfficeMessengerHeader = (props: OfficeMessengerBaseProps) => {
-    const view = props.props
-    const on = props.on
-    const { text } = view
-    const isTasks = view.centre === "tasks"
-    return (
-        <div className={HEAD_CLASS_NAME}>
-            <div className={PHONE_ONLY_CLASS_NAME}>
-                <IconButton
-                    intent="dismiss"
-                    source={nivoIconSource("back", "leading")}
-                    label={text("back")}
-                    onPress={on.back}
-                />
-            </div>
-            <div className={HEAD_AVATAR_CLASS_NAME}>
-                <IconTile source={nivoIconSource("community", "leading")} tone="neutral" />
-            </div>
-            <div className={HEAD_TEXT_CLASS_NAME}>
-                <div className={HEAD_TITLE_CLASS_NAME}>
-                    <Heading level={1}>{isTasks ? text("tasksTitle") : view.title}</Heading>
-                    {!isTasks && view.isMuted ? (
-                        <Icon props={{ name: "muted", usage: "leading", ariaLabel: text("mutedChat") }} />
-                    ) : null}
-                </div>
-                {isTasks ? null : (
-                    <Text size="sm" tone="muted" overflow="truncate" isSkeleton={view.isLoading}>
-                        {view.subtitle}
-                    </Text>
-                )}
-            </div>
-            <div className={HEAD_ACTIONS_CLASS_NAME}>
-                {isTasks ? (
-                    <div className={WIDE_ONLY_CLASS_NAME}>
-                        <Button intent="dismiss" size="sm" onPress={on.showChat}>
-                            {text("tasksBack")}
-                        </Button>
-                    </div>
-                ) : null}
-                {!isTasks && view.chip !== null ? (
-                    <Button intent="neutral" size="sm" onPress={on.chip}>
-                        {view.chip}
-                    </Button>
-                ) : null}
-                <IconButton
-                    intent="neutral"
-                    source={nivoIconSource(view.isMuted ? "muted" : "unmuted", "leading")}
-                    label={view.isMuted ? text("unmuteChat") : text("muteChat")}
-                    isActive={view.isMuted}
-                    onPress={on.toggleMute}
-                />
-                <IconButton
-                    intent="neutral"
-                    source={nivoIconSource("sidebar", "leading")}
-                    label={view.isInfoOpen ? text("infoClose") : text("infoOpen")}
-                    isActive={view.isInfoOpen}
-                    onPress={on.toggleInfo}
-                />
-            </div>
-        </div>
-    )
-}
 
 /** Connects the shared info panel used by the dock and drawer. */
 const MessengerInfoPanel = (props: OfficeMessengerBaseProps) => {

@@ -97,7 +97,7 @@ export const useOfficeMessenger = (focusedId: string | null, roomKey: string | n
         () => (fetched === undefined ? undefined : withReceipt(fetched, marker)),
         [fetched, marker],
     )
-    // One definition for the header chip and the "Cần bạn duyệt" column: approval cards and work items waiting for a decision.
+    // One definition for the header chip and the "Needs your approval" column: approval cards and work items waiting for a decision.
     // A pending result card names one of them, so it is not counted again; a failed item is an exception, not a decision.
     const waiting = useMemo(() => waitingOf(board.pending, board.exceptions), [board.pending, board.exceptions])
     const waitingCount = waiting.length

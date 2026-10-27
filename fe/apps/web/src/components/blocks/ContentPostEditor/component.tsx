@@ -6,18 +6,8 @@ import type { LinkRow } from "@/components/leaves/ContentEditorLinks"
 import type { PublishProof } from "@/components/leaves/ContentEditorPublish"
 import type { OpenVariant } from "@/components/leaves/ContentEditorVariants"
 import { ContentStatusBadge } from "@/components/leaves/ContentStatusBadge"
-import type {
-    ContentItem,
-    ContentNote,
-    ContentT,
-    ItemTransition,
-    DownloadFile,
-    HistoryRow,
-    MediaTile,
-    Pillar,
-    PublishStep,
-    EditorForm,
-} from "@/hooks/content"
+import type { ContentItem, ContentNote, ItemTransition, EditorForm } from "@/hooks/content"
+import type { ContentT, DownloadFile, HistoryRow, MediaTile, Pillar, PublishStep } from "@/modules/types"
 import { DESCRIPTION_CLASS_NAME, FOOTER_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** What the post editor draws. */

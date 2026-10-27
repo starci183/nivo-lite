@@ -38,7 +38,7 @@ const workJumpOf = (work: OfficeWork, words: OfficeWords, context: OfficeContext
     }
 }
 
-/** The rows of "Cần bạn duyệt" in the order the header chip counts and jumps them (oldest first). */
+/** The rows of "Needs your approval" in the order the header chip counts and jumps them (oldest first). */
 const waitingRowsOf = (
     pending: ReadonlyArray<OfficeApproval>,
     openWork: ReadonlyArray<OfficeWork>,

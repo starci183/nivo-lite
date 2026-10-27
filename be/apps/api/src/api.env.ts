@@ -21,7 +21,7 @@ import { parsePlatformAdminConfig } from "@modules/domain/platform-admin"
 import { parseWorkspaceInvitesConfig } from "@modules/domain/workspace-invites"
 import { parseWorkspacesConfig } from "@modules/domain/workspaces"
 import { parseDocumentsConfig } from "@modules/integrations/documents"
-import { parseLlmConfig } from "@modules/integrations/llm"
+import { parseAiPoolConfig } from "@modules/integrations/ai-pool"
 import { parseN8nConfig } from "@modules/integrations/n8n"
 import { parseDeepseekConfig } from "@modules/integrations/deepseek"
 import { parseOpenclawConfig } from "@modules/integrations/openclaw"
@@ -46,8 +46,8 @@ export interface ApiOptions {
     readonly database: ReturnType<typeof parsePrimaryDatabaseConfig>
     /** Supabase Auth, Storage and token-verification configuration. */
     readonly supabase: ReturnType<typeof parseSupabaseConfig>
-    /** The embeddings and chat models, and the keys that reach them. */
-    readonly llm: ReturnType<typeof parseLlmConfig>
+    /** The AI pool: the DeepSeek and OpenRouter chat keys and the embeddings endpoint. */
+    readonly aiPool: ReturnType<typeof parseAiPoolConfig>
     /** The Google Drive reader and the readers of office files and PDFs. */
     readonly documents: ReturnType<typeof parseDocumentsConfig>
     /** Whether a person with no workspace may create a free one. */
@@ -116,7 +116,7 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     httpSecurity: { ...parseHttpSecurityConfig(env), webhooks: {} },
     database: parsePrimaryDatabaseConfig(env),
     supabase: parseSupabaseConfig(env),
-    llm: parseLlmConfig(env),
+    aiPool: parseAiPoolConfig(env),
     documents: parseDocumentsConfig(env),
     platformAdmin: parsePlatformAdminConfig(env),
     workspaces: parseWorkspacesConfig(env),

@@ -38,3 +38,27 @@ export const SlotView = <T,>(props: SlotViewProps<T>) => {
     }
     return <>{props.children(items, false)}</>
 }
+
+/** Props for SlotBoundView. */
+type SlotBoundViewProps<T> = {
+    /** What a block carries together: the slot, its same-shape placeholder and the words of its states. */
+    readonly from: {
+        readonly slot: DataSlot<T>
+        readonly placeholder: T
+        readonly slotLabels: SlotLabels
+    }
+    readonly onRetry?: () => void
+    readonly children: (data: T, isSkeleton: boolean) => ReactNode
+}
+
+/** SlotView for a block whose props carry `slot`, `placeholder` and `slotLabels` together. */
+export const SlotBoundView = <T,>(props: SlotBoundViewProps<T>) => (
+    <SlotView
+        slot={props.from.slot}
+        placeholder={props.from.placeholder}
+        labels={props.from.slotLabels}
+        {...(props.onRetry === undefined ? {} : { onRetry: props.onRetry })}
+    >
+        {props.children}
+    </SlotView>
+)

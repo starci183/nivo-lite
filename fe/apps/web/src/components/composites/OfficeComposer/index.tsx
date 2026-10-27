@@ -53,7 +53,7 @@ const QuickPrompts = (props: QuickPromptsProps) => (
                     key={prompt}
                     intent="neutral"
                     size="sm"
-                    isDisabled={props.view.isLoading}
+                    isDisabled={props.view.isSkeleton}
                     onPress={() => props.onPrompt(prompt)}
                 >
                     {prompt}
@@ -97,7 +97,7 @@ export const OfficeComposer = (props: OfficeComposerProps) => {
                             intent="neutral"
                             source={nivoIconSource("mention", "leading")}
                             label={text("mentionButton")}
-                            isDisabled={view.isLoading}
+                            isDisabled={view.isSkeleton}
                             onPress={onAt}
                         />
                     </Tooltip>
@@ -107,7 +107,7 @@ export const OfficeComposer = (props: OfficeComposerProps) => {
                             isLabelHidden
                             placeholder={text("composerPlaceholder")}
                             rows={1}
-                            isSkeleton={view.isLoading}
+                            isSkeleton={view.isSkeleton}
                             value={view.draft}
                             onValueChange={props.on.change}
                             onSubmitShortcut={props.on.send}
@@ -117,7 +117,7 @@ export const OfficeComposer = (props: OfficeComposerProps) => {
                     <Button
                         intent="commit"
                         isPending={view.isSending}
-                        isDisabled={view.isLoading || view.draft.trim().length === 0}
+                        isDisabled={view.isSkeleton || view.draft.trim().length === 0}
                         onPress={props.on.send}
                         startContent={<Icon source={nivoIconSource("send", "leading")} usage="leading" />}
                     >

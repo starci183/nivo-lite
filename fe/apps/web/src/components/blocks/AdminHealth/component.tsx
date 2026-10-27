@@ -2,11 +2,11 @@ import { SectionHeader } from "@starci/grammar/common"
 import { AdminRowsCard } from "@/components/composites/AdminRowsCard"
 import type { AdminCardView } from "@/hooks/admin"
 import { GRID_CLASS_NAME } from "./classNames"
-import { AdminLoadState } from "@/components/composites/AdminLoadState"
-import type { AdminLoad } from "@/components/composites/AdminLoadState"
+import { SlotBoundView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** Copy and cards the platform health page supplies. */
-interface AdminHealthViewProps {
+export interface AdminHealthViewProps {
     readonly props: {
         readonly eyebrow: string
         readonly title: string
@@ -15,34 +15,42 @@ interface AdminHealthViewProps {
     }
 }
 
+/** The health page with the skeleton flag the slot hands down. */
+type AdminHealthDrawProps = AdminHealthViewProps & { readonly isSkeleton: boolean }
+
 /** Draws the platform health page: sign-ups, billing, application errors and console activity as list cards. */
-const AdminHealthView = (props: AdminHealthViewProps) => (
+const AdminHealthView = (props: AdminHealthDrawProps) => (
     <>
         <SectionHeader
             level={1}
             eyebrow={props.props.eyebrow}
             title={props.props.title}
             description={props.props.description}
+            isSkeleton={props.isSkeleton}
         />
         <div className={GRID_CLASS_NAME}>
             {props.props.cards.map((card) => (
-                <AdminRowsCard key={card.id} card={card} />
+                <AdminRowsCard key={card.id} card={card} isSkeleton={props.isSkeleton} />
             ))}
         </div>
     </>
 )
 
-/** The workspace read and, once it arrived, the view it draws. */
+/** The health read as a slot, its same-shape placeholder, and the words of its states. */
 export interface AdminHealthBaseProps {
     readonly props: {
-        readonly load: AdminLoad
-        readonly view: AdminHealthViewProps["props"] | undefined
+        readonly slot: DataSlot<AdminHealthViewProps["props"]>
+        readonly placeholder: AdminHealthViewProps["props"]
+        readonly slotLabels: SlotLabels
+    }
+    readonly on: {
+        readonly retry: () => void
     }
 }
 
-/** Draws the loading state, the failure or the finished view of the connected read. */
+/** Draws the finished health view, or the same view as a skeleton, the failure with its retry, or the empty notice. */
 export const AdminHealthBase = (props: AdminHealthBaseProps) => (
-    <AdminLoadState {...props.props.load}>
-        {props.props.view === undefined ? null : <AdminHealthView props={props.props.view} />}
-    </AdminLoadState>
+    <SlotBoundView from={props.props} onRetry={props.on.retry}>
+        {(view, isSkeleton) => <AdminHealthView props={view} isSkeleton={isSkeleton} />}
+    </SlotBoundView>
 )

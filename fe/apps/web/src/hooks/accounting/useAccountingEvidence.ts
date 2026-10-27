@@ -11,7 +11,7 @@ import { useWatch } from "react-hook-form"
 import { useRecordManualEvidence } from "./useRecordManualEvidence"
 
 /** The Evidence tab: credits, invoices and orders without an invoice, plus the manual evidence form. */
-export const useAccountingEvidence = (data: AccountingWorkbenchData | undefined) => {
+export const useAccountingEvidence = (data: AccountingWorkbenchData) => {
     const t = useTranslations("workbenchAccounting")
     const format = useFormatter()
     const [isFormOpen, setIsFormOpen] = useState(false)
@@ -50,7 +50,6 @@ export const useAccountingEvidence = (data: AccountingWorkbenchData | undefined)
             void submitForm()
         },
     }
-    if (!data) return { props: null, on: actions }
     return {
         props: {
             creditsTitle: t("creditsTitle"),

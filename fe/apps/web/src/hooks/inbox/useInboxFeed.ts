@@ -3,9 +3,8 @@
 import { useFormatter, useNow, useTranslations } from "next-intl"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
-import { errorMessage } from "./inbox.shared"
+import { mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useQueryInboundEventsSwr } from "@/hooks/swr"
-import { readError } from "@/hooks/workspaceread"
 
 /** The tone each input status wears; a status that is not listed is neutral. */
 const STATUS_TONES = {
@@ -21,15 +20,14 @@ const toneOf = (status: string): "neutral" | "success" | "warning" | "danger" =>
 }
 
 /** The inbox feed of the active workspace, every row already in the words of the reader. */
-export const useInboxFeed = (isWaiting: boolean) => {
+export const useInboxFeed = () => {
     const t = useTranslations("inbox")
     const g = useTranslations("governance")
     const format = useFormatter()
     const now = useNow({ updateInterval: 60_000 })
     const { activeWorkspaceId } = useActiveWorkspace()
-    const swrRead = useQueryInboundEventsSwr(isWaiting ? undefined : activeWorkspaceId)
-    const { data, isLoading, mutate } = swrRead
-    const error = readError(swrRead)
+    const swrRead = useQueryInboundEventsSwr(activeWorkspaceId)
+    const { mutate } = swrRead
     const ago = (iso: string): string => {
         const minutes = Math.max(0, Math.round((now.getTime() - new Date(iso).getTime()) / 60_000))
         if (minutes < 1) return t("justNow")
@@ -37,7 +35,7 @@ export const useInboxFeed = (isWaiting: boolean) => {
         if (minutes < 60 * 24) return t("hoursAgo", { n: Math.floor(minutes / 60) })
         return t("daysAgo", { n: Math.floor(minutes / 1440) })
     }
-    const rows = (data ?? []).map((event) => {
+    const rowOf = (event: NonNullable<typeof swrRead.data>[number]) => {
         const meta = [
             { key: "from", text: t("fromLine", { name: event.senderName ?? t("unnamed") }), strong: false },
             ...(event.senderContact == null ? [] : [{ key: "contact", text: event.senderContact, strong: false }]),
@@ -75,11 +73,9 @@ export const useInboxFeed = (isWaiting: boolean) => {
             lead: event.leadId == null ? null : { href: leadHref(event.leadId), label: t("openLead") },
             office: event.status === "needs_decision" ? { href: CONSOLE_ROUTES.chat, label: t("openOffice") } : null,
         }
-    })
+    }
     return {
-        rows,
-        isLoading: isWaiting || isLoading,
-        error: errorMessage(error, t("loadFailBody")),
+        slot: mapSlot(slotOfSwr(swrRead), (events) => events.map(rowOf)),
         refresh: () => void mutate(),
     }
 }

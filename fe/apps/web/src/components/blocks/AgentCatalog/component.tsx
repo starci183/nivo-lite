@@ -1,4 +1,3 @@
-import type { ReactNode } from "react"
 import {
     EmptyNotice,
     Heading,
@@ -18,13 +17,19 @@ import { GRID, REGIONS, SECTION, SECTION_HEAD, TOOLBAR, TOOLBAR_SEARCH } from ".
 /** One installed agent of the first section with the key the card is listed by. */
 export interface AgentCatalogTeamEntry {
     readonly key: string
-    readonly card: AgentTeamCardProps
+    readonly card: Omit<AgentTeamCardProps, "isSkeleton">
 }
 
 /** One role card of the second section with the key the handlers name it by. */
 export interface AgentCatalogRoleEntry {
     readonly key: string
-    readonly card: Omit<AgentCatalogCardProps, "onInstall" | "isInstalling" | "isBlocked">
+    readonly card: Omit<AgentCatalogCardProps, "onInstall" | "isInstalling" | "isBlocked" | "isSkeleton">
+}
+
+/** What the catalogue lists once the installations arrived: the installed agents and the roles that match the filters. */
+export interface AgentCatalogData {
+    readonly team: ReadonlyArray<AgentCatalogTeamEntry>
+    readonly roles: ReadonlyArray<AgentCatalogRoleEntry>
 }
 
 /** Copy, state and commands of the agent catalogue. */
@@ -33,7 +38,6 @@ export interface AgentCatalogBaseProps {
         readonly yoursTitle: string
         readonly yoursEmptyTitle: string
         readonly yoursEmptyHint: string
-        readonly team: ReadonlyArray<AgentCatalogTeamEntry>
         readonly addTitle: string
         readonly searchLabel: string
         readonly searchPlaceholder: string
@@ -42,14 +46,14 @@ export interface AgentCatalogBaseProps {
         readonly categoryLabel: string
         readonly categoryOptions: ReadonlyArray<{ readonly value: string; readonly label: string }>
         readonly category: string
-        readonly roles: ReadonlyArray<AgentCatalogRoleEntry>
         readonly emptyTitle: string
         readonly emptyHint: string
         readonly emptyAction: string | undefined
-        readonly slot: DataSlot<boolean>
+        readonly slot: DataSlot<AgentCatalogData>
+        /** Fake entries of the same shape: the skeleton reuses the ready tree. */
+        readonly placeholder: AgentCatalogData
         readonly slotLabels: SlotLabels
         readonly busyKey: string | null
-        readonly isLoading: boolean
     }
     readonly on: {
         readonly query: (value: string) => void
@@ -59,24 +63,6 @@ export interface AgentCatalogBaseProps {
         readonly install: (key: string) => void
     }
 }
-
-/** The cards a loading section draws. */
-const SKELETON_KEYS = ["a", "b", "c"] as const
-
-/** The words of a waiting team card. */
-const SKELETON_TEAM_CARD: AgentTeamCardProps = {
-    name: "...",
-    seed: "...",
-    avatarUrl: null,
-    roleName: "...",
-    statusLabel: "...",
-    statusTone: "neutral",
-    href: "#",
-    isLoading: true,
-}
-
-/** The catalogue with the section that draws itself from the loading state. */
-type CatalogSlotProps = AgentCatalogBaseProps & { readonly children: (isSkeleton: boolean) => ReactNode }
 
 /** What an empty section says, and the optional way out. */
 type CatalogEmptyProps = {
@@ -98,37 +84,35 @@ const CatalogEmpty = (props: CatalogEmptyProps) => (
     </SurfaceCard>
 )
 
-/** The loading, error and forbidden states of the catalogue data around a section; the section draws itself from `isSkeleton`. */
-const CatalogSlot = (props: CatalogSlotProps) => (
-    <SlotView slot={props.props.slot} placeholder={false} labels={props.props.slotLabels} onRetry={props.on.retry}>
-        {(_, isSkeleton) => props.children(isSkeleton)}
-    </SlotView>
-)
-
 /** The installed agents as compact cards. */
 const Team = (props: AgentCatalogBaseProps) => (
     <Region label={props.props.yoursTitle}>
         <div className={SECTION}>
-            <div className={SECTION_HEAD}>
-                <Heading level={2}>{props.props.yoursTitle}</Heading>
-                <Text size="sm" tone="muted" isSkeleton={props.props.isLoading}>
-                    {String(props.props.team.length)}
-                </Text>
-            </div>
-            <CatalogSlot {...props}>
-                {(isSkeleton) => (
+            <SlotView
+                slot={props.props.slot}
+                placeholder={props.props.placeholder}
+                labels={props.props.slotLabels}
+                onRetry={props.on.retry}
+            >
+                {(data, isSkeleton) => (
                     <>
-                        {props.props.team.length === 0 && !isSkeleton ? (
+                        <div className={SECTION_HEAD}>
+                            <Heading level={2}>{props.props.yoursTitle}</Heading>
+                            <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
+                                {String(data.team.length)}
+                            </Text>
+                        </div>
+                        {data.team.length === 0 ? (
                             <CatalogEmpty title={props.props.yoursEmptyTitle} hint={props.props.yoursEmptyHint} />
                         ) : null}
                         <div className={GRID}>
-                            {isSkeleton && props.props.team.length === 0
-                                ? SKELETON_KEYS.map((key) => <AgentTeamCard key={key} {...SKELETON_TEAM_CARD} />)
-                                : props.props.team.map((entry) => <AgentTeamCard key={entry.key} {...entry.card} />)}
+                            {data.team.map((entry) => (
+                                <AgentTeamCard key={entry.key} {...entry.card} isSkeleton={isSkeleton} />
+                            ))}
                         </div>
                     </>
                 )}
-            </CatalogSlot>
+            </SlotView>
         </div>
     </Region>
 )
@@ -144,33 +128,38 @@ const Roles = (props: AgentCatalogBaseProps) => (
     <Region label={props.props.addTitle}>
         <div className={SECTION}>
             <Heading level={2}>{props.props.addTitle}</Heading>
-            <div className={TOOLBAR}>
-                <div className={TOOLBAR_SEARCH}>
-                    <SearchField
-                        label={props.props.searchLabel}
-                        isLabelHidden
-                        placeholder={props.props.searchPlaceholder}
-                        clearLabel={props.props.clearLabel}
-                        value={props.props.query}
-                        onValueChange={props.on.query}
-                        isSkeleton={props.props.isLoading}
-                    />
-                </div>
-                <HorizontalScrollRegion>
-                    <SegmentedControl
-                        label={props.props.categoryLabel}
-                        isLabelHidden
-                        isSkeleton={props.props.isLoading}
-                        options={props.props.categoryOptions}
-                        value={props.props.category}
-                        onValueChange={props.on.category}
-                    />
-                </HorizontalScrollRegion>
-            </div>
-            <CatalogSlot {...props}>
-                {(isSkeleton) => (
+            <SlotView
+                slot={props.props.slot}
+                placeholder={props.props.placeholder}
+                labels={props.props.slotLabels}
+                onRetry={props.on.retry}
+            >
+                {(data, isSkeleton) => (
                     <>
-                        {props.props.roles.length === 0 && !isSkeleton ? (
+                        <div className={TOOLBAR}>
+                            <div className={TOOLBAR_SEARCH}>
+                                <SearchField
+                                    label={props.props.searchLabel}
+                                    isLabelHidden
+                                    placeholder={props.props.searchPlaceholder}
+                                    clearLabel={props.props.clearLabel}
+                                    value={props.props.query}
+                                    onValueChange={props.on.query}
+                                    isSkeleton={isSkeleton}
+                                />
+                            </div>
+                            <HorizontalScrollRegion>
+                                <SegmentedControl
+                                    label={props.props.categoryLabel}
+                                    isLabelHidden
+                                    isSkeleton={isSkeleton}
+                                    options={props.props.categoryOptions}
+                                    value={props.props.category}
+                                    onValueChange={props.on.category}
+                                />
+                            </HorizontalScrollRegion>
+                        </div>
+                        {data.roles.length === 0 ? (
                             <CatalogEmpty
                                 title={props.props.emptyTitle}
                                 hint={props.props.emptyHint}
@@ -178,10 +167,11 @@ const Roles = (props: AgentCatalogBaseProps) => (
                             />
                         ) : null}
                         <div className={GRID}>
-                            {props.props.roles.map((entry) => (
+                            {data.roles.map((entry) => (
                                 <AgentCatalogCard
                                     key={entry.key}
                                     {...entry.card}
+                                    isSkeleton={isSkeleton}
                                     isInstalling={props.props.busyKey === entry.key}
                                     isBlocked={props.props.busyKey !== null}
                                     onInstall={() => props.on.install(entry.key)}
@@ -190,7 +180,7 @@ const Roles = (props: AgentCatalogBaseProps) => (
                         </div>
                     </>
                 )}
-            </CatalogSlot>
+            </SlotView>
         </div>
     </Region>
 )

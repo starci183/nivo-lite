@@ -1,5 +1,6 @@
 import { digitsOnly, parseDigits } from "@/hooks/loyalty"
 import type { LoyaltyRewardType } from "@/hooks/swr"
+import type { RewardFormValues, RewardTextField } from "@/modules/types"
 
 /** The kinds of reward the catalogue offers. */
 export const REWARD_KINDS: ReadonlyArray<string> = ["voucher", "item", "percent"]
@@ -12,20 +13,6 @@ export const REWARD_NAME_MAX = 80
 
 /** The longest note shown to the customer. */
 export const REWARD_NOTE_MAX = 200
-
-/** The values of the reward form: numbers are typed as digits and parsed on save. */
-export interface RewardFormValues {
-    name: string
-    kind: string
-    cost: string
-    value: string
-    percent: string
-    stock: string
-    limit: string
-    minTier: string
-    note: string
-    active: boolean
-}
 
 /** A blank form: a new voucher. */
 const BLANK_REWARD: RewardFormValues = {
@@ -57,9 +44,6 @@ export const rewardValuesOf = (reward: LoyaltyRewardType | null): RewardFormValu
               note: reward.note,
               active: reward.active,
           }
-
-/** The string fields of the form: what a typed value is masked for. */
-export type RewardTextField = "name" | "kind" | "cost" | "value" | "percent" | "stock" | "limit" | "minTier" | "note"
 
 /** A typed value masked for its field: names and notes are cut to their limits, numbers keep only digits. */
 export const maskRewardField = (field: RewardTextField, value: string): string => {

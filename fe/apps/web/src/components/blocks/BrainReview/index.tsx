@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl"
 import { FACT_SOURCE_KEY, adviceFor, reviewBoardOf, useBrainBoard, useBrainCommand, useLessonDesk } from "@/hooks/brain"
 import type { ReviewConflict, ReviewSingle } from "@/hooks/brain"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { KnowledgeRowView, RowActionView, RowPartView } from "@/components/composites/KnowledgeRows"
 import type { BrainFact, BrainLesson } from "@/modules/types"
 import { BrainReviewBase } from "./component"
@@ -87,6 +88,7 @@ export const BrainReview = () => {
     const t = useTranslations("brain")
     const command = useBrainCommand()
     const board = useBrainBoard()
+    const slotLabels = useSlotLabels()
 
     const desk = useLessonDesk("")
     const connected = buildBrainReviewState(board, t, command)
@@ -124,18 +126,17 @@ export const BrainReview = () => {
                         failTitle: t("loadFailed"),
                     },
                     label: t("tabReview"),
-                    rows: [
+                    isPending: command.isPending || desk.isPending,
+                    slot: mapSlot(board.slot, () => [
                         ...plan.groups.map(groupRow),
                         ...plan.singles.map(singleRow),
                         ...plan.retires.map(retireRow),
                         ...board.lessons.filter((lesson) => lesson.status === "proposed").map(lessonRow),
-                    ],
-                    isLoading: board.isLoading,
-                    isPending: command.isPending || desk.isPending,
-                    emptyTitle: t("reviewEmptyTitle"),
-                    emptyBody: t("reviewEmptyBody"),
+                    ]),
+                    slotLabels: slotLabels(t("reviewEmptyTitle")),
                 },
             }}
+            on={{ retry: board.reload }}
         />
     )
 }

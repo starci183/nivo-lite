@@ -3,10 +3,15 @@ import type { ContractResult } from "@modules/domain/contracts"
 import type { Proposal, WorkContext, WorkItem } from "@modules/domain/decisions"
 import type { OptionalInboundEvent } from "@modules/domain/inbound-events"
 import type { InvoiceRow, InvoicesService } from "@modules/domain/invoices"
+import type { LeadRecordsService } from "@modules/domain/leads"
+import type { OptionalOrder } from "@modules/domain/orders"
 import type { OptionalTransaction } from "@modules/domain/transactions"
 
 /** One issued invoice as the invoices capability lists it. */
 export type IssuedInvoice = Awaited<ReturnType<InvoicesService["listIssued"]>>[number]
+
+/** One lead as the lead records capability finds it. */
+type LeadRecord = NonNullable<Awaited<ReturnType<LeadRecordsService["find"]>>>
 
 /** The context of every reconcile case. */
 export const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
@@ -73,6 +78,38 @@ export const issuedOf = builder<IssuedInvoice>({
     ...invoiceOf({ status: "issued", paid_at: null }),
     order_no: "SO-1",
     contact_name: "Lan",
+})
+
+/** The known customer of a paid invoice. */
+export const leadOf = builder<LeadRecord>({
+    id: "lead-1",
+    workspace_id: "ws-1",
+    contact_name: "Mai",
+    company: "Tea",
+    channel: "Zalo",
+    need: "Tea",
+    stage: "won",
+    context_summary: null,
+    phone: null,
+    email: null,
+})
+
+/** The paid order of an invoice. */
+export const orderOf = builder<NonNullable<OptionalOrder>>({
+    id: "ord-1",
+    workspace_id: "ws-1",
+    lead_id: "lead-1",
+    inbound_event_id: null,
+    order_no: "SO-9",
+    items: "Tea",
+    amount_vnd: 450000,
+    status: "paid",
+    confirmed_by: "Lan",
+    confirmed_at: null,
+    created_at: "2026-10-12T09:00:00.000Z",
+    shipped_at: null,
+    carrier: null,
+    tracking_code: null,
 })
 
 /** A recorded bank credit. */

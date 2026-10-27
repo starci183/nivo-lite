@@ -1,4 +1,3 @@
-import { useState } from "react"
 import type { ReactNode } from "react"
 import { Badge, Text } from "@starci/grammar/common"
 import { OfficeCardActions } from "@/components/leaves/OfficeCardActions"
@@ -6,7 +5,7 @@ import { OfficeCardBody } from "@/components/leaves/OfficeCardBody"
 import { OfficeCardDetails } from "@/components/leaves/OfficeCardDetails"
 import { OfficeCardMedia } from "@/components/leaves/OfficeCardMedia"
 import { OfficeCardFrame } from "@/components/leaves/OfficeCardFrame"
-import type { OfficeResultCardView, OfficeText } from "@/modules/types"
+import type { OfficeCardDraft, OfficeResultCardView, OfficeText } from "@/modules/types"
 import { STATUS_CLASS_NAME, TEXT_CLASS_NAME } from "./classNames"
 
 /** What one agent result card draws. */
@@ -14,6 +13,9 @@ type OfficeResultCardProps = {
     readonly card: OfficeResultCardView
     readonly avatar: ReactNode
     readonly text: OfficeText
+    /** What the owner edited on this card, kept by the thread's block. */
+    readonly draft: OfficeCardDraft
+    readonly onEdit: (key: string, patch: Partial<OfficeCardDraft>) => void
     /** True while the decision the card names is being saved. */
     readonly isBusy: boolean
     readonly onDecide: (
@@ -40,13 +42,14 @@ const TONES = {
  */
 export const OfficeResultCard = (props: OfficeResultCardProps) => {
     const { card, text } = props
-    const [isEditing, setIsEditing] = useState(false)
-    const [draft, setDraft] = useState(card.body ?? "")
+    const { isEditing } = props.draft
+    const draft = props.draft.text ?? card.body ?? ""
+    const edit = (patch: Partial<OfficeCardDraft>) => props.onEdit(card.key, patch)
     const decide = (decision: "approved" | "rejected") => {
         if (card.refKind === null || card.refId === null) return
         const edited = decision === "approved" && isEditing && draft.trim() !== card.body ? draft.trim() : null
         props.onDecide(card.refKind, card.refId, decision, edited)
-        setIsEditing(false)
+        edit({ isEditing: false })
     }
     return (
         <OfficeCardFrame
@@ -76,7 +79,7 @@ export const OfficeResultCard = (props: OfficeResultCardProps) => {
                 text={text}
                 isEditing={isEditing}
                 draft={draft}
-                setDraft={setDraft}
+                setDraft={(value) => edit({ text: value })}
                 isBusy={props.isBusy}
             />
             <OfficeCardMedia card={card} />
@@ -86,7 +89,7 @@ export const OfficeResultCard = (props: OfficeResultCardProps) => {
                 text={text}
                 isBusy={props.isBusy}
                 isEditing={isEditing}
-                setIsEditing={setIsEditing}
+                setIsEditing={(value) => edit({ isEditing: value })}
                 decide={decide}
             />
         </OfficeCardFrame>

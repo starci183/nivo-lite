@@ -1,8 +1,7 @@
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
-import { ConnectionWizardOverlay } from "@/features/overlays/ConnectionWizardOverlay"
-import { ConnectionsOverlayHost, ConnectorDetailOverlay } from "@/features/overlays/ConnectorDetailOverlay"
 import { URL_PARAMS } from "@/hooks/connections"
+import { ConnectionsPageBase } from "./component"
 
 /** The query string of the request, awaited by the route. */
 type ConnectionsPageProps = {
@@ -23,15 +22,5 @@ export const connectionsMetadata = async (): Promise<Metadata> => {
 export const ConnectionsPage = async (props: ConnectionsPageProps) => {
     const params = (await props.searchParams) ?? {}
     const tab = params[URL_PARAMS.tab]
-    return (
-        <ConnectionsOverlayHost
-            tab={typeof tab === "string" ? tab : undefined}
-            candidate={
-                <>
-                    <ConnectionWizardOverlay />
-                    <ConnectorDetailOverlay />
-                </>
-            }
-        />
-    )
+    return <ConnectionsPageBase props={{ tab: typeof tab === "string" ? tab : undefined }} />
 }

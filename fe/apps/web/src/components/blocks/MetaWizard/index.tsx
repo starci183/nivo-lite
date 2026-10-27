@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf } from "@/hooks/connection-wizard"
+import { useSlotLabels } from "@/hooks/slot"
 import { META_STEPS, metaCheckLines, useMetaWizard } from "@/hooks/meta-wizard"
 import type { AgentOption } from "@/modules/types"
 import { MetaWizardBase } from "./component"
@@ -30,6 +31,7 @@ export const MetaWizard = (props: MetaWizardProps) => {
     const tw = useTranslations("connectionWizard")
     const tc = useTranslations("connections")
     const tm = useTranslations("metaWizard")
+    const slotLabelsOf = useSlotLabels()
     const wizard = useMetaWizard({
         resumeId: props.resumeId,
         returned: props.returned,
@@ -53,7 +55,8 @@ export const MetaWizard = (props: MetaWizardProps) => {
                 steps,
                 index: wizard.index,
                 step: wizard.step,
-                waiting: wizard.isLoading ? tm("working") : null,
+                resume: wizard.resume,
+                slotLabels: slotLabelsOf(""),
                 pages: (conn === null ? [] : conn.pages).map((page) => ({
                     value: page.id,
                     label: page.name,

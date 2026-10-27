@@ -106,7 +106,7 @@ export const TelegramWizardBase = (props: TelegramWizardBaseProps) => {
                         id="tg-name"
                         name="name"
                         label={view.text.fieldName}
-                        hint={view.text.fieldNameHint}
+                        description={view.text.fieldNameHint}
                         isDisabled={view.isPending}
                         value={view.form.name}
                         onValueChange={on.name}
@@ -116,7 +116,7 @@ export const TelegramWizardBase = (props: TelegramWizardBaseProps) => {
                         name="token"
                         label={view.text.fieldToken}
                         kind="password"
-                        hint={view.text.tokenHint}
+                        description={view.text.tokenHint}
                         isDisabled={view.isPending}
                         value={view.form.token}
                         onValueChange={on.token}

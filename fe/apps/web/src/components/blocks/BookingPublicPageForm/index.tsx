@@ -1,6 +1,7 @@
 "use client"
 
 import { useBookingBoard } from "@/hooks/bookingBoard"
+import { useSlotLabels } from "@/hooks/slot"
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { useMutateSaveBookingPublicPageSwr } from "@/hooks/swr"
@@ -16,10 +17,11 @@ interface Edits {
 
 /** The connected public page form: the switch, the address and the note of the booking page of the shop. */
 export const BookingPublicPageForm = () => {
-    const { board } = useBookingBoard()
     const t = useTranslations("workbenchBooking")
     const persist = useBookingSetupSave()
     const savePage = useMutateSaveBookingPublicPageSwr()
+    const slotLabels = useSlotLabels()
+    const { board, slot, reload } = useBookingBoard()
     const settings = board.settings
     const [edits, setEdits] = useState<Edits>({})
     const enabled = edits.enabled ?? settings.publicEnabled
@@ -34,6 +36,8 @@ export const BookingPublicPageForm = () => {
     return (
         <BookingPublicPageFormBase
             props={{
+                slot,
+                slotLabels: slotLabels(t("loadFailedTitle")),
                 title: t("pageTitle"),
                 hint: t("pageHint"),
                 enabledLabel: t("pageEnabled"),
@@ -48,9 +52,10 @@ export const BookingPublicPageForm = () => {
                     ? { link: { label: t("pageLink"), href: `/b/${settings.publicSlug}`, hint: t("pageLinkHint") } }
                     : {}),
                 saveLabel: t("pageSave"),
-                isPending,
+                isPending: isPending || slot.isLoading === true,
             }}
             on={{
+                retry: reload,
                 toggleEnabled: (value) => setEdits({ ...edits, enabled: value }),
                 changeSlug: (value) => setEdits({ ...edits, slug: value }),
                 changeNote: (value) => setEdits({ ...edits, note: value }),

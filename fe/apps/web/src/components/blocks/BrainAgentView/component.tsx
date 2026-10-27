@@ -1,5 +1,7 @@
-import { Avatar, DataTable, EmptyNotice, IncludedMark, SurfaceCard, Text } from "@starci/grammar/common"
+import { Avatar, DataTable, IncludedMark, SurfaceCard, Text } from "@starci/grammar/common"
 import type { DataTableRow } from "@starci/grammar/common"
+import { SlotView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import { CELL_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
 /** One audience of the matrix: the customer, or an installed agent by its human name. */
@@ -24,6 +26,21 @@ export interface LaneView {
     readonly cells: Readonly<Record<string, CellView>>
 }
 
+/** The matrix as its slot carries it: who reads, and what each reads of every kind of knowledge. */
+export interface MatrixView {
+    readonly audiences: ReadonlyArray<AudienceView>
+    readonly lanes: ReadonlyArray<LaneView>
+}
+
+/** A matrix of the same shape as a ready one: the customer and an agent against four kinds of knowledge. */
+const MATRIX_PLACEHOLDER: MatrixView = {
+    audiences: [
+        { id: "customer", kind: "customer", name: "-", avatarUrl: undefined },
+        { id: "agent", kind: "agent", name: "-", avatarUrl: undefined },
+    ],
+    lanes: ["a", "b", "c", "d"].map((id) => ({ id, label: "-", cells: {} })),
+}
+
 /** Copy and values the connected matrix supplies. */
 export interface BrainAgentViewBaseProps {
     readonly props: {
@@ -33,11 +50,10 @@ export interface BrainAgentViewBaseProps {
         readonly laneLabel: string
         readonly whoLabel: string
         readonly openLabel: string
-        readonly emptyTitle: string
-        readonly audiences: ReadonlyArray<AudienceView>
-        readonly lanes: ReadonlyArray<LaneView>
-        readonly isLoading: boolean
+        readonly matrix: DataSlot<MatrixView>
+        readonly slotLabels: SlotLabels
     }
+    readonly on: { readonly retry: () => void }
 }
 
 /** One row of the table: the audiences' identities, or a kind of knowledge. */
@@ -47,15 +63,22 @@ interface MatrixRow extends DataTableRow {
 
 const IDENTITY_ROW_ID = "identity"
 
-/** Draws what each audience (the customer and every installed agent) reads of the shared knowledge: a mark or a dash per cell. */
-export const BrainAgentViewBase = (props: BrainAgentViewBaseProps) => {
-    const view = props.props
+/** What the table of one matrix draws. */
+interface MatrixTableProps {
+    readonly view: BrainAgentViewBaseProps["props"]
+    readonly matrix: MatrixView
+    readonly isSkeleton: boolean
+}
+
+/** Draws the table of one matrix: the identities of the audiences, then a mark or a dash per cell. */
+const MatrixTable = (props: MatrixTableProps) => {
+    const { view, matrix } = props
     const rows: ReadonlyArray<MatrixRow> = [
         { id: IDENTITY_ROW_ID, lane: null },
-        ...view.lanes.map((lane) => ({ id: lane.id, lane })),
+        ...matrix.lanes.map((lane) => ({ id: lane.id, lane })),
     ]
     const renderCell = (row: MatrixRow, columnId: string) => {
-        const audience = view.audiences.find((one) => one.id === columnId)
+        const audience = matrix.audiences.find((one) => one.id === columnId)
         if (row.lane === null) {
             if (audience === undefined) return <Text tone="muted">{view.whoLabel}</Text>
             return (
@@ -78,23 +101,36 @@ export const BrainAgentViewBase = (props: BrainAgentViewBaseProps) => {
         )
     }
     return (
-        <SurfaceCard label={view.title} headingLevel={2}>
-            <div className={STACK_CLASS_NAME}>
-                <Text size="sm" tone="muted">
-                    {view.hint}
-                </Text>
-                <DataTable
-                    label={view.tableLabel}
-                    columns={[
-                        { id: "lane", label: view.laneLabel, isRowHeader: true },
-                        ...view.audiences.map((audience) => ({ id: audience.id, label: audience.name })),
-                    ]}
-                    rows={rows}
-                    renderCell={renderCell}
-                    isLoading={view.isLoading}
-                    emptyContent={<EmptyNotice message={view.emptyTitle} />}
-                />
-            </div>
-        </SurfaceCard>
+        <DataTable
+            label={view.tableLabel}
+            columns={[
+                { id: "lane", label: view.laneLabel, isRowHeader: true },
+                ...matrix.audiences.map((audience) => ({ id: audience.id, label: audience.name })),
+            ]}
+            rows={rows}
+            renderCell={renderCell}
+            isLoading={props.isSkeleton}
+            loadingRows={rows.length}
+            emptyContent={null}
+        />
     )
 }
+
+/** Draws what each audience (the customer and every installed agent) reads of the shared knowledge: a mark or a dash per cell. */
+export const BrainAgentViewBase = (props: BrainAgentViewBaseProps) => (
+    <SurfaceCard label={props.props.title} headingLevel={2}>
+        <div className={STACK_CLASS_NAME}>
+            <Text size="sm" tone="muted">
+                {props.props.hint}
+            </Text>
+            <SlotView
+                slot={props.props.matrix}
+                placeholder={MATRIX_PLACEHOLDER}
+                labels={props.props.slotLabels}
+                onRetry={props.on.retry}
+            >
+                {(matrix, isSkeleton) => <MatrixTable view={props.props} matrix={matrix} isSkeleton={isSkeleton} />}
+            </SlotView>
+        </div>
+    </SurfaceCard>
+)

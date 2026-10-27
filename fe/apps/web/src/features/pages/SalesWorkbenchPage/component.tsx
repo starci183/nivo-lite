@@ -9,7 +9,9 @@ import { SalesHandoffs } from "@/components/blocks/SalesHandoffs"
 import { SalesOrders } from "@/components/blocks/SalesOrders"
 import { SalesPipeline } from "@/components/blocks/SalesPipeline"
 import { SalesWorkbenchGate } from "@/components/blocks/SalesWorkbenchGate"
-import type { SalesTab } from "@/hooks/sales"
+
+/** The six Sales areas, by tab id. */
+type SalesTab = "attention" | "pipeline" | "decisions" | "handoff" | "contracts" | "activity"
 
 /** The resolved route state and the tab names of the Sales workbench. */
 interface SalesWorkbenchPageBaseProps {

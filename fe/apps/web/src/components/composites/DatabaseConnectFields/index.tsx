@@ -51,7 +51,7 @@ export const DatabaseConnectFields = (props: DatabaseConnectFieldsProps) => {
                     id="db-name"
                     name="name"
                     label={view.text.name}
-                    hint={view.text.nameHint}
+                    description={view.text.nameHint}
                     isDisabled={view.isDisabled}
                     value={view.values.name}
                     onValueChange={on.field("name")}
@@ -67,7 +67,7 @@ export const DatabaseConnectFields = (props: DatabaseConnectFieldsProps) => {
                     id="db-host"
                     name="host"
                     label={view.text.host}
-                    hint={view.text.hostHint}
+                    description={view.text.hostHint}
                     isDisabled={view.isDisabled}
                     value={view.values.host}
                     onValueChange={on.field("host")}
@@ -124,7 +124,7 @@ const renderDatabaseConnectFieldsPassword = (
         label={view.text.password}
         isDisabled={view.isDisabled}
         value={view.values.password}
-        hint={view.passwordHint}
+        description={view.passwordHint}
         onValueChange={on.field("password")}
     />
 )

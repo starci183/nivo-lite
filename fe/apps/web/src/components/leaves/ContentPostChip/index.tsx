@@ -1,5 +1,5 @@
 import { Button, Text } from "@starci/grammar/common"
-import type { PostView } from "@/hooks/content"
+import type { PostView } from "@/modules/types"
 import { chipClassName } from "./classNames"
 
 /** Props of {@link ContentPostChip}. */

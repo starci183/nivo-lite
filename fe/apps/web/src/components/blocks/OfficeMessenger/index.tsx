@@ -2,10 +2,20 @@
 
 import { useState } from "react"
 import type { Dispatch, SetStateAction } from "react"
-import { useOfficeFrame, useOfficeJump, useOfficeMessenger } from "@/hooks/officeMessenger"
+import {
+    officeSubtitle,
+    officeThreadProps,
+    roomSlotOf,
+    useOfficeCardDrafts,
+    useOfficeFrame,
+    useOfficeJump,
+    useOfficeMessenger,
+} from "@/hooks/officeMessenger"
+import { useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, agentChatHref, leadHref } from "@/modules/routes"
 import { OfficeMessengerBase } from "./component"
+import type { OfficeMessengerComposer } from "./component"
 
 /** The Office: the team messenger. Its data is read in the browser; the draft lives here, the frame and the jumps in their hooks. */
 export const OfficeMessenger = () => {
@@ -17,34 +27,39 @@ export const OfficeMessenger = () => {
     const jump = useOfficeJump()
     const office = useOfficeMessenger(jump.focusedId, room, frame.isThreadVisible)
     const { text } = office
-    const isLoading = office.slot.isLoading === true
+    const drafts = useOfficeCardDrafts()
+    const slotLabels = useSlotLabels()
     const { onMention, onSend, onChange } = composerCommands(draft, setDraft, setFocusKey, office, frame)
     const openDirect = directOpener(office, router)
     const onChip = chipOpener(office, jump)
+    const thread = officeThreadProps(office, drafts)
+    const composer: OfficeMessengerComposer = {
+        draft,
+        mentions: office.panels.mentions,
+        chatbotHandle: office.chatbotHandle,
+        isSending: office.sender.isSending,
+        focusKey,
+        text,
+    }
     return (
         <OfficeMessengerBase
             props={{
                 text,
                 phoneView: frame.phoneView,
                 centre: frame.centre,
-                isLoading,
                 isInfoOpen: frame.isInfoOpen,
                 isInfoDocked: frame.isInfoDocked,
                 isMuted: office.isMuted,
                 title: office.roomTitle ?? text("title"),
                 subtitle: officeSubtitle(office),
                 chip: office.firstJump === null ? null : text("needsApprovalChip", { n: office.waitingCount }),
-                list: office.panels.list,
-                thread: officeThreadProps(office),
-                composer: {
-                    draft,
-                    mentions: office.panels.mentions,
-                    chatbotHandle: office.chatbotHandle,
-                    isSending: office.sender.isSending,
-                    isLoading,
-                    focusKey,
-                    text,
-                },
+                listSlot: roomSlotOf(office.slot, office.panels.list),
+                listPlaceholder: { ...office.panels.list, conversations: [] },
+                threadSlot: roomSlotOf(office.slot, thread),
+                threadPlaceholder: { ...thread, items: [], outbox: [], reading: null, typing: "", hasEarlier: false },
+                composerSlot: { isLoading: office.slot.isLoading, items: composer },
+                composerPlaceholder: composer,
+                slotLabels: slotLabels(text("emptyMessage")),
                 tasks: office.panels.tasks,
                 info: office.panels.info,
             }}
@@ -56,6 +71,8 @@ export const OfficeMessenger = () => {
                 cancelCommand: (id) => void office.decisions.cancelCommand(id),
                 reply: onMention,
                 loadEarlier: office.thread.loadEarlier,
+                editCard: drafts.editCard,
+                copy: drafts.copy,
                 retry: office.thread.reload,
                 change: onChange,
                 send: onSend,
@@ -120,33 +137,6 @@ const directOpener =
         router.push(kind === "agent" ? agentChatHref(id) : leadHref(id))
     }
 
-/** Resolves the loaded thread state and sender activity. */
-const officeThreadProps = (office: ReturnType<typeof useOfficeMessenger>) => {
-    const { text } = office
-    const isLoading = office.slot.isLoading === true
-    const threadState = (): "loading" | "error" | "ready" => {
-        if (office.slot.isError === true) return "error"
-        return isLoading ? "loading" : "ready"
-    }
-    return {
-        state: threadState(),
-        items: office.items,
-        outbox: office.sender.outbox,
-        reading: office.reading,
-        typing: typingOf(office),
-        busyId: office.decisions.busyId,
-        hasEarlier: office.thread.hasEarlier,
-        isLoadingEarlier: office.thread.isLoadingEarlier,
-        text,
-    }
-}
-
-/** Who types now: the people typing in the room, else the agents the sender called; empty when nobody does. */
-const typingOf = (office: ReturnType<typeof useOfficeMessenger>): string => {
-    const names = office.peersTyping.length > 0 ? office.peersTyping.join(", ") : office.sender.typing
-    return names === null ? "" : office.text("typing", { name: names })
-}
-
 /** Owns the composer draft and restores a message when sending fails. */
 const composerCommands = (
     draft: string,
@@ -178,16 +168,4 @@ const composerCommands = (
     }
 
     return { onMention, onSend, onChange }
-}
-
-/** Resolves the member and agent count beneath the thread title: counts only, so it stays one short line. */
-const officeSubtitle = (office: ReturnType<typeof useOfficeMessenger>): string => {
-    const { text } = office
-    if (office.roomTitle !== null) {
-        const members = text("memberCount", { n: office.memberCount })
-        return office.onDutyCount === 0 ? members : `${members} · ${text("roomOnDuty", { n: office.onDutyCount })}`
-    }
-    if (office.memberCount === 1) return text("memberCountOne")
-    if (office.agentCount > 0) return text("memberCountAgents", { n: office.memberCount, agents: office.agentCount })
-    return text("memberCount", { n: office.memberCount })
 }

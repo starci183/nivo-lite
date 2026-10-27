@@ -52,10 +52,22 @@ export interface ChatbotConversationListProps {
     readonly emptyListBody: string
     readonly emptyFilter: string
     readonly selectedId: string | null
+    /** The conversations are not read yet: the pane draws skeleton rows. */
+    readonly isSkeleton?: boolean
     readonly onQuery: (query: string) => void
     readonly onFilter: (filter: string) => void
     readonly onSelect: (id: string) => void
 }
+
+/** Three rows of a conversation with no words: the skeleton draws the same boxes as a loaded row. */
+const SKELETON_ITEMS: ReadonlyArray<ChatbotListItem> = ["a", "b", "c"].map((id) => ({
+    id,
+    name: "x".repeat(16),
+    preview: "x".repeat(32),
+    time: "x".repeat(5),
+    channel: "",
+    chips: [],
+}))
 
 /** The left pane of the inbox: search, filters and the conversation rows. */
 export const ChatbotConversationList = (props: ChatbotConversationListProps) => (
@@ -86,7 +98,7 @@ export const ChatbotConversationList = (props: ChatbotConversationListProps) => 
                 />
             </HorizontalScrollRegion>
         </div>
-        {props.items.length === 0 ? (
+        {props.items.length === 0 && props.isSkeleton !== true ? (
             <div className={CENTER_CLASS_NAME}>
                 {props.hasConversations ? (
                     <EmptyNotice message={props.emptyFilter} />
@@ -105,21 +117,25 @@ export const ChatbotConversationList = (props: ChatbotConversationListProps) => 
                         const id = ids[0] ?? props.selectedId
                         if (id !== null) props.onSelect(id)
                     }}
-                    items={props.items.map((item) => ({
+                    items={(props.isSkeleton === true ? SKELETON_ITEMS : props.items).map((item) => ({
                         id: item.id,
                         label: item.name,
-                        leading: <Avatar name={item.name} size="md" isDecorative />,
+                        leading: (
+                            <Avatar name={item.name} size="md" isDecorative isSkeleton={props.isSkeleton === true} />
+                        ),
                         trailing: (
-                            <Text size="xs" tone="muted">
+                            <Text size="xs" tone="muted" isSkeleton={props.isSkeleton === true}>
                                 {item.time}
                             </Text>
                         ),
                         description: (
                             <>
-                                <Text size="sm" tone="muted" overflow="truncate">
+                                <Text size="sm" tone="muted" overflow="truncate" isSkeleton={props.isSkeleton === true}>
                                     {item.preview}
                                 </Text>
-                                <ChatbotChips channel={item.channel} chips={item.chips} />
+                                {props.isSkeleton === true ? null : (
+                                    <ChatbotChips channel={item.channel} chips={item.chips} />
+                                )}
                             </>
                         ),
                     }))}

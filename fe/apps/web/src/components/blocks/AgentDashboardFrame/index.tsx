@@ -68,7 +68,7 @@ export const AgentDashboardFrame = (props: AgentDashboardFrameProps) => {
 
     return (
         <AgentDashboardFrameBase
-            state={{
+            shape={{
                 command: props.command ?? null,
                 ribbon: props.ribbon ?? null,
                 waiting: props.waiting ?? null,
@@ -76,8 +76,10 @@ export const AgentDashboardFrame = (props: AgentDashboardFrameProps) => {
                 panel: props.tabs.find((tab) => tab.id === selected)?.content ?? null,
             }}
             props={{
-                ...frame.head,
-                ...frame.view,
+                head: frame.head,
+                headPlaceholder: frame.headPlaceholder,
+                headLabels: frame.headLabels,
+                ...frame.regions,
                 hasPlaceholder: props.isLoading === true,
                 tabsLabel: frame.tabsLabel,
                 tabs: props.tabs.map((tab) => ({ id: tab.id, label: frame.tabLabel(tab, props.waitingTab) })),

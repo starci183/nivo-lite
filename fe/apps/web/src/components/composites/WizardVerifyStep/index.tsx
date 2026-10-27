@@ -1,4 +1,4 @@
-import { Alert, LeadingNumber, List, ListItem, Spinner, Text } from "@starci/grammar/common"
+import { Alert, LeadingNumber, List, ListItem, Text } from "@starci/grammar/common"
 import type { VerifyHelpView } from "@/modules/types"
 import { wizardVerifyStepClassNames as classNames } from "./classNames"
 
@@ -33,7 +33,7 @@ export const WizardVerifyStep = (props: WizardVerifyStepProps) => (
             </div>
         )}
         {props.received === null ? (
-            <Text size="sm" weight="medium" startContent={<Spinner size="sm" label={props.waiting} />}>
+            <Text size="sm" weight="medium" live="polite">
                 {props.waiting}
             </Text>
         ) : (

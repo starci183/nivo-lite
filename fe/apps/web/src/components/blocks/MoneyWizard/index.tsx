@@ -1,5 +1,6 @@
 "use client"
 
+import { useSlotLabels } from "@/hooks/slot"
 import { useBankName } from "@/hooks/banks"
 import { useFormatter, useTranslations } from "next-intl"
 import { GUIDES } from "@/hooks/connection-guides"
@@ -27,6 +28,7 @@ export const MoneyWizard = (props: MoneyWizardProps) => {
     const tc = useTranslations("connections")
     const format = useFormatter()
     const copy = useCopyLabels()
+    const slotLabelsOf = useSlotLabels()
     const wizard = useMoneyWizard({
         provider: props.provider,
         resumeId: props.resumeId,
@@ -50,7 +52,8 @@ export const MoneyWizard = (props: MoneyWizardProps) => {
                 ],
                 index: wizard.index,
                 step: wizard.step,
-                waiting: wizard.isLoading ? tw("verifyWaiting") : null,
+                resume: wizard.resume,
+                slotLabels: slotLabelsOf(""),
                 earlyAccess: def.earlyAccess === true,
                 environments: def.environments.map((environment) => ({
                     value: environment,

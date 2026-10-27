@@ -1,13 +1,13 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import type { FieldOf } from "@/hooks/hiring"
 import { useState } from "react"
 import type { UseFormReturn } from "react-hook-form"
 import { useMutateApplyToHiringJobSwr, useMutateCreateHiringCvUploadSwr, usePutPresignedSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { CV_MAX_BYTES, NO_PUBLIC_JOB, answerGroups, availabilityOf, cvUploadUrl } from "./hiringPublic.shared"
-import type { ApplyValues, PublicJobView } from "./hiringPublic.shared"
+import type { ApplyValues, FieldOf } from "@/modules/types"
+import type { PublicJobView } from "./hiringPublic.shared"
 
 /** The workspace slug and the job slug of the public link. */
 interface ApplyTarget {

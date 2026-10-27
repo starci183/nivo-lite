@@ -14,7 +14,7 @@ export type AgentTeamCardProps = {
     readonly statusTone: BadgeTone
     readonly href: string
     /** The agent is not known yet: the lines are skeletons. */
-    readonly isLoading: boolean
+    readonly isSkeleton: boolean
 }
 
 /** One installed agent as a person of the team: avatar with the bot badge, name, "role - status", a chevron; the whole card opens the agent. */
@@ -23,14 +23,14 @@ export const AgentTeamCard = (props: AgentTeamCardProps) => (
         <div className={ROW}>
             <AgentMark label={props.name} seed={props.seed} src={props.avatarUrl} size="md" />
             <div className={COPY}>
-                <Text weight="semibold" overflow="truncate" isSkeleton={props.isLoading}>
+                <Text weight="semibold" overflow="truncate" isSkeleton={props.isSkeleton}>
                     {props.name}
                 </Text>
                 <div className={META}>
-                    <Text size="sm" tone="muted" overflow="truncate" isSkeleton={props.isLoading}>
+                    <Text size="sm" tone="muted" overflow="truncate" isSkeleton={props.isSkeleton}>
                         {props.roleName}
                     </Text>
-                    <Badge isDot tone={props.statusTone} isSkeleton={props.isLoading}>
+                    <Badge isDot tone={props.statusTone} isSkeleton={props.isSkeleton}>
                         {props.statusLabel}
                     </Badge>
                 </div>

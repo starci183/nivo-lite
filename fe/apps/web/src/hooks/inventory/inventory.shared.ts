@@ -131,22 +131,6 @@ export interface ItemFormValues {
 /** The field names the item form changes one at a time. */
 export type ItemFormField = keyof ItemFormValues
 
-/** The fields of the supplier form, as typed. */
-export interface SupplierFormValues {
-    readonly name: string
-    readonly contactName: string
-    readonly email: string
-    readonly phone: string
-    readonly zalo: string
-    readonly channel: string
-    readonly leadTime: string
-    readonly terms: string
-    readonly note: string
-}
-
-/** The field names the supplier form changes one at a time. */
-export type SupplierFormField = keyof SupplierFormValues
-
 /** Data and formatting needed for an item summary. */
 interface StockDetailInput {
     readonly board: Pick<InventoryWorkbenchData, "locations" | "suppliers">

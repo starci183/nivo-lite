@@ -1,4 +1,3 @@
-export { parseLlmConfig } from "./llm.config"
 export type { LlmUsage } from "./llm.contracts"
 export { InjectLlm, LLM } from "./llm.decorators"
 export { LlmModule } from "./llm.module"

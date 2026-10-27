@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { slotOfSwr } from "@/hooks/slot"
 import { useQueryLeadGenWorkbenchSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 
@@ -11,6 +12,8 @@ export const useLeadGenWorkbench = (installationId: string | null) => {
     const query = useQueryLeadGenWorkbenchSwr(activeWorkspaceId, installationId)
     return {
         data: query.data,
+        /** The read as a slot: items once read, loading while in flight, error when it failed. */
+        slot: slotOfSwr(query),
         /** The words of a panel that could not be read; null while the read stands. */
         failure:
             query.error === undefined

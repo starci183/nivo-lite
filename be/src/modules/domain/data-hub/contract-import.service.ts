@@ -58,7 +58,8 @@ export class ContractImportService {
     /**
      * Saves every row the mapping reads as a valid contract through ContractsService.saveContract; a row with a problem, a
      * contract the workspace already has (same customer, plan and last day) or one the contracts capability refuses is
-     * skipped with its reason.
+     * skipped with its reason. The contracts are then linked to their data-hub customers (ContractsService.linkCustomers), so the
+     * renewal can reach them.
      */
     async importContracts(request: ContractImportRequest): Promise<ContractImportResult> {
         const existing = await this.existingKeys(request)
@@ -98,7 +99,7 @@ export class ContractImportService {
                 skipped.push({ row: row.row, reason: error.code })
             }
         })
-        return { created, skipped }
+        return { created, skipped, customers: await this.contracts.linkCustomers(request.workspaceId) }
     }
 
     /** The keys of the contracts the workspace holds; listing them also proves the caller belongs to the workspace. */

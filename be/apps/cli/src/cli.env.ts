@@ -1,4 +1,4 @@
-import { parseLlmConfig } from "@modules/integrations/llm"
+import { parseAiPoolConfig } from "@modules/integrations/ai-pool"
 import { parseChannelProvisioningConfig } from "@modules/domain/channel-provisioning"
 import { parseWorkspaceSeedConfig } from "@modules/domain/workspace-seed"
 import { parseMcpGatewayConfig } from "@modules/domain/mcp-gateway"
@@ -23,8 +23,8 @@ export interface CliAppOptions {
     readonly n8nHost: ReturnType<typeof parseN8nHostConfig>
     /** Supabase Auth administration, used by the demo-workspace seed. */
     readonly supabase: ReturnType<typeof parseSupabaseConfig>
-    /** The model provider the base knowledge is embedded with. */
-    readonly llm: ReturnType<typeof parseLlmConfig>
+    /** The AI pool the base knowledge is embedded with. */
+    readonly aiPool: ReturnType<typeof parseAiPoolConfig>
     /** The credential key and the site addresses channels are connected with. */
     readonly channelConnections: ReturnType<typeof parseConnectionsConfig>
     /** The provider addresses the channel set-up calls. */
@@ -48,7 +48,7 @@ export const readCliEnv = (env: EnvSource): CliAppOptions => ({
     connections: [parsePrimaryDatabaseConfig(env)],
     n8nHost: parseN8nHostConfig(env),
     supabase: parseSupabaseConfig(env),
-    llm: parseLlmConfig(env),
+    aiPool: parseAiPoolConfig(env),
     channelConnections: parseConnectionsConfig(env),
     channelSetup: parseChannelSetupConfig(env),
     channelProvisioning: parseChannelProvisioningConfig(env, (line) => {

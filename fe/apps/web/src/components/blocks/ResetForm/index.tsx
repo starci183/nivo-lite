@@ -47,7 +47,7 @@ export const ResetForm = (props: ResetFormProps) => {
 
     return (
         <ResetFormBase
-            state={props.expired || failure?.expired === true || (user === null && !isDone) ? "expired" : "form"}
+            shape={props.expired || failure?.expired === true || (user === null && !isDone) ? "expired" : "form"}
             props={{
                 title: t("resetTitle"),
                 text: t("resetText"),

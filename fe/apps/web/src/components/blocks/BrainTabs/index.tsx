@@ -12,13 +12,12 @@ interface BrainTabsProps {
     readonly selected: BrainTab
 }
 
-/** The connected tabs: the selected one lives in the address, and the tabs that hold a count carry it once it is known. */
+/** The connected tabs: the selected one lives in the address, and the tabs that hold a count carry it once it is known (a count of zero is no label). */
 export const BrainTabs = (props: BrainTabsProps) => {
     const t = useTranslations("secondBrain")
     const router = navigation.useRouter()
-    const { figures, canDecide, isLoading } = useBrainStats()
+    const { figures, canDecide } = useBrainStats()
     const labelOf = (tab: BrainTab): string => {
-        if (isLoading) return t(`tab_${tab}`)
         if (tab === "review" && figures.waiting > 0) return t("tab_review_count", { n: figures.waiting })
         return tab === "gaps" && figures.gaps > 0 ? t("tab_gaps_count", { n: figures.gaps }) : t(`tab_${tab}`)
     }

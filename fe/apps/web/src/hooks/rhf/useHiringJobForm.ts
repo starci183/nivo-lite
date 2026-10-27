@@ -6,7 +6,7 @@ import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { JOB_TITLE_MIN, jobDefaults } from "@/hooks/hiringJobs"
-import type { HiringJobValues } from "@/hooks/hiringJobs"
+import type { HiringJobValues } from "@/modules/types"
 import type { JobView } from "@/hooks/hiringWire"
 
 /**

@@ -5,6 +5,8 @@ export {
     allAgentIds,
     guideScreensOf,
     resumeNoteOf,
+    resumeSlotOf,
+    resumeSlotOfLoading,
     verifyHelpOf,
 } from "./connection-wizard.shared"
 export type { CatalogReader } from "./connection-wizard.shared"

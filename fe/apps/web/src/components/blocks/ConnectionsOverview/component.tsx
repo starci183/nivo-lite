@@ -1,6 +1,6 @@
-import { Region, SectionHeader, SurfaceListCard } from "@starci/grammar/common"
+import { Alert, EmptyNotice, Region, SectionHeader, SurfaceListCard } from "@starci/grammar/common"
 import type { ComponentType } from "react"
-import type { AgentOption, Connection, Provider } from "@/modules/types"
+import type { AgentOption, Connection, DataSlot, Provider, SlotLabels } from "@/modules/types"
 import { connectionsPageClassNames as classNames } from "./classNames"
 
 /** One connection of a provider list with the names of the agents bound to it. */
@@ -32,35 +32,39 @@ export interface PageWords {
     readonly crumbLabel: string
     readonly crumbHome: string
     readonly homeHref: string
-    readonly summary: string
     readonly ownerOnly: string
     readonly emptyTitle: string
     readonly emptyHint: string
     readonly automationsLink: string
     readonly automationsHref: string
-    readonly loadFailed: string
-    readonly forbiddenTitle: string
-    readonly forbiddenBody: string
-    readonly forbiddenBack: string
-    readonly forbiddenHref: string
 }
 
-/** What the overview draws: its words, the signed-in viewer and what the feature host loaded. */
+/** What the board draws once the workspace reads are in. */
+export interface ConnectionsBoard {
+    readonly view: "connected" | "library"
+    readonly ownerEmail: string
+    readonly canManage: boolean
+    readonly localOnly: boolean
+    readonly items: ReadonlyArray<Connection>
+    readonly agents: ReadonlyArray<AgentOption>
+    readonly agentNames: Readonly<Record<string, string>>
+    readonly liveCount: number
+    readonly attention: { readonly first: Connection; readonly count: number } | null
+    readonly groups: ReadonlyArray<PageGroup>
+}
+
+/** What the overview draws: its words, and the board the workspace reads fill. */
 export interface ConnectionsOverviewProps {
     readonly props: {
-        /** `loading`: the data is on its way; `ready`: the board; `forbidden`: staff see a friendly 403; `failed`: the data did not load. */
-        readonly mode: "loading" | "ready" | "forbidden" | "failed"
         readonly words: PageWords
-        readonly view: "connected" | "library"
-        readonly ownerEmail: string
-        readonly canManage: boolean
-        readonly localOnly: boolean
-        readonly items: ReadonlyArray<Connection>
-        readonly agents: ReadonlyArray<AgentOption>
-        readonly agentNames: Readonly<Record<string, string>>
-        readonly liveCount: number
-        readonly attention: { readonly first: Connection; readonly count: number } | null
-        readonly groups: ReadonlyArray<PageGroup>
+        /** The summary line under the heading; null until the workspace reads are in. */
+        readonly summary: string | null
+        /** The board of connections: loading, failed, forbidden to staff, or ready. */
+        readonly board: DataSlot<ConnectionsBoard>
+        readonly slotLabels: SlotLabels
+    }
+    readonly on: {
+        readonly retry: () => void
     }
     readonly renderAddButton: ComponentType<{ readonly provider: Provider; readonly kind: "add" | "connect" }>
     readonly renderAttention: ComponentType<{
@@ -82,9 +86,11 @@ export interface ConnectionsOverviewProps {
 
 /** The provider lists receive the client blocks registered by the feature host. */
 interface ConnectionsListsProps {
-    readonly props: ConnectionsOverviewProps["props"]
+    readonly props: ConnectionsBoard
     readonly renderAddButton: ConnectionsOverviewProps["renderAddButton"]
     readonly renderRow: ConnectionsOverviewProps["renderRow"]
+    /** The cards are drawn as placeholders while the workspace reads are on their way. */
+    readonly isSkeleton: boolean
 }
 
 /** Provider cards and their connection rows, using the blocks supplied by the feature host. */
@@ -95,6 +101,8 @@ export const ConnectionsLists = (props: ConnectionsListsProps) =>
             {group.cards.map((card) => (
                 <div key={card.provider} data-guide={`connections.${card.provider}`}>
                     <SurfaceListCard
+                        isLoading={props.isSkeleton}
+                        loadingRows={2}
                         label={card.title}
                         headingLevel={3}
                         fact={card.fact}
@@ -118,3 +126,60 @@ export const ConnectionsLists = (props: ConnectionsListsProps) =>
             ))}
         </Region>
     ))
+
+/** The board drawn while the workspace reads are on their way: the same list with no connection in it yet. */
+export const BOARD_PLACEHOLDER: ConnectionsBoard = {
+    view: "connected",
+    ownerEmail: "",
+    canManage: false,
+    localOnly: false,
+    items: [],
+    agents: [],
+    agentNames: {},
+    liveCount: 1,
+    attention: null,
+    groups: [
+        {
+            id: "placeholder",
+            title: "",
+            count: 0,
+            cards: [{ provider: "sepay", title: "", fact: "", rows: [] }],
+        },
+    ],
+}
+
+/** The overview, the board it draws and whether that board is a placeholder. */
+interface BoardBodyProps extends ConnectionsOverviewProps {
+    readonly board: ConnectionsBoard
+    readonly isSkeleton: boolean
+}
+
+/** The first card of the board that needs the owner, then the tabs and the lists of the chosen view. */
+export const BoardBody = (props: BoardBodyProps) => {
+    const { board } = props
+    return (
+        <>
+            {board.attention === null ? null : (
+                <props.renderAttention
+                    connection={board.attention.first}
+                    count={board.attention.count}
+                    canManage={board.canManage}
+                />
+            )}
+            {board.canManage ? null : <Alert tone="informative" title={props.props.words.ownerOnly} />}
+            <props.renderViewTabs selected={board.view} liveCount={board.liveCount} />
+            {board.view === "library" ? <props.renderLibrary items={board.items} /> : null}
+            {board.view === "connected" && board.liveCount === 0 ? (
+                <EmptyNotice message={props.props.words.emptyTitle} description={props.props.words.emptyHint} />
+            ) : null}
+            {board.view === "connected" ? (
+                <ConnectionsLists
+                    props={board}
+                    renderAddButton={props.renderAddButton}
+                    renderRow={props.renderRow}
+                    isSkeleton={props.isSkeleton}
+                />
+            ) : null}
+        </>
+    )
+}

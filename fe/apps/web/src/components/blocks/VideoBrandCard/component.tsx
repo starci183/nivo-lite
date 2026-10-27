@@ -110,7 +110,7 @@ export const VideoBrandCardBase = (props: VideoBrandCardBaseProps) => {
                         id="video-primary"
                         name="primary"
                         label={props.props.primaryLabel}
-                        hint={props.props.colorHint}
+                        description={props.props.colorHint}
                         value={props.props.primary}
                         isDisabled={off}
                         onValueChange={props.on.primary}
@@ -119,7 +119,7 @@ export const VideoBrandCardBase = (props: VideoBrandCardBaseProps) => {
                         id="video-secondary"
                         name="secondary"
                         label={props.props.secondaryLabel}
-                        hint={props.props.colorHint}
+                        description={props.props.colorHint}
                         value={props.props.secondary}
                         isDisabled={off}
                         onValueChange={props.on.secondary}

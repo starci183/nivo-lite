@@ -5,20 +5,6 @@ import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import type { AgentOption, Connection, ConnectorGlyph, Provider } from "@/modules/types"
 import { connectorDetailClassNames as classNames } from "./classNames"
 
-/** What decides which face of the Connections overview and its overlays can mount. */
-interface ModeInput {
-    readonly isLoading: boolean
-    readonly manager: boolean
-    readonly failed: boolean
-}
-
-/** Loading and access take priority over the result of the workspace reads. */
-export const detailModeOf = (input: ModeInput): "loading" | "ready" | "forbidden" | "failed" => {
-    if (input.isLoading) return "loading"
-    if (!input.manager) return "forbidden"
-    return input.failed ? "failed" : "ready"
-}
-
 /** One connection of the connector with the names of the agents bound to it. */
 export interface DetailRow {
     readonly connection: Connection

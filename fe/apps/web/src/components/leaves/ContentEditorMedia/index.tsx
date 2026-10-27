@@ -9,7 +9,7 @@ import {
     TextAction,
     Video,
 } from "@starci/grammar/common"
-import type { ContentT, MediaTile } from "@/hooks/content"
+import type { ContentT, MediaTile } from "@/modules/types"
 import { MEDIA_GRID_CLASS_NAME, MEDIA_TILE_CLASS_NAME, TOOLS_CLASS_NAME } from "./classNames"
 
 /** Props of {@link ContentEditorMedia}. */

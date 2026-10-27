@@ -51,3 +51,32 @@ export const EXTEND_CONTRACT_TERM = sql`WITH changed AS (
 SELECT id, lead_id, customer_name, plan, to_char(starts_on, 'YYYY-MM-DD') AS starts_on,
     to_char(ends_on, 'YYYY-MM-DD') AS ends_on, amount_vnd::float8 AS amount_vnd, status, note
 FROM changed`
+
+/** Serialises the customer links of one workspace, so two runs never capture the same customer twice ($1 workspace). */
+export const LOCK_CONTRACT_LINKING = sql`SELECT pg_advisory_xact_lock(hashtext('contracts.link:' || $1::text))`
+
+/** The contracts of a workspace with the contact of their lead, for the customer link ($1 workspace). */
+export const LIST_CONTRACTS_TO_LINK = sql`SELECT c.id, c.lead_id, c.customer_name, c.plan, c.note,
+    l.phone AS lead_phone, l.email AS lead_email
+FROM public.contracts c
+LEFT JOIN public.leads l ON l.workspace_id = c.workspace_id AND l.id = c.lead_id
+WHERE c.workspace_id = $1::uuid
+ORDER BY c.created_at ASC, c.id ASC
+LIMIT 2000`
+
+/** The customer records the data hub synced for a workspace, newest first, with their source name ($1 workspace). */
+export const LIST_CUSTOMER_RECORDS = sql`SELECT r.external_id, r.title, r.data, s.name AS source
+FROM public.data_records r
+LEFT JOIN public.connections s ON s.workspace_id = r.workspace_id AND s.id = r.connection_id
+WHERE r.workspace_id = $1::uuid AND r.entity = 'customer'
+ORDER BY r.synced_at DESC, r.id ASC
+LIMIT 5000`
+
+/** Moves one contract of the workspace to a lead of the workspace, only while it still links to the lead it was read with ($1 workspace, $2 contract, $3 lead read or null, $4 new lead). */
+export const RELINK_CONTRACT_LEAD = sql`WITH changed AS (
+    UPDATE public.contracts SET lead_id = $4::uuid, updated_at = now()
+    WHERE workspace_id = $1::uuid AND id = $2::uuid AND lead_id IS NOT DISTINCT FROM $3::uuid
+      AND EXISTS (SELECT 1 FROM public.leads WHERE workspace_id = $1::uuid AND id = $4::uuid)
+    RETURNING id
+)
+SELECT id FROM changed`

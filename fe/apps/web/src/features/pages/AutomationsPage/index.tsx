@@ -1,9 +1,7 @@
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
-import { AutomationsBoard } from "@/components/blocks/AutomationsBoard"
-import { AutomationsHeading } from "@/components/blocks/AutomationsHeading"
-import { AutomationsPageLayout } from "@/components/composites/AutomationsPageLayout"
 import { AUTOMATION_ROUTES } from "@/modules/routes"
+import { AutomationsPageBase } from "./component"
 
 /** The document title of the page. */
 export const automationsMetadata = async (): Promise<Metadata> => {
@@ -24,11 +22,8 @@ interface AutomationsPageProps {
 export const AutomationsPage = async (props: AutomationsPageProps) => {
     const t = await getTranslations("automations")
     return (
-        <AutomationsPageLayout
-            heading={<AutomationsHeading />}
-            board={<AutomationsBoard layout="page" {...(props.focus === undefined ? {} : { focus: props.focus })} />}
-            advancedLabel={t("advanced")}
-            advancedHref={AUTOMATION_ROUTES.developers}
+        <AutomationsPageBase
+            props={{ focus: props.focus, advancedLabel: t("advanced"), advancedHref: AUTOMATION_ROUTES.developers }}
         />
     )
 }

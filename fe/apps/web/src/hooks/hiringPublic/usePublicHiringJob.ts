@@ -8,5 +8,12 @@ import { toPublicJob } from "./hiringPublic.shared"
 export const usePublicHiringJob = (ws: string, job: string) => {
     const read = useQueryPublicHiringJobSwr({ ws, job })
     const view = useMemo(() => (read.data === undefined ? undefined : toPublicJob(read.data)), [read.data])
-    return { view, isLoading: read.isLoading, isMissing: read.error !== undefined }
+    return {
+        view,
+        isLoading: read.isLoading,
+        isMissing: read.error !== undefined,
+        reload: () => {
+            void read.mutate()
+        },
+    }
 }

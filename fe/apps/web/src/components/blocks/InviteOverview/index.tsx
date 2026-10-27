@@ -24,8 +24,10 @@ export const InviteOverview = (props: InviteOverviewProps) => {
     const [isSwitching, startSwitch] = useTransition()
     return (
         <InviteOverviewBase
+            shape={view.state === "loading" ? "ready" : view.state}
             props={{
                 view,
+                isSkeleton: view.state === "loading",
                 acceptLabel: t("accept"),
                 switchLabel: t("switchAccount"),
                 isAccepting,

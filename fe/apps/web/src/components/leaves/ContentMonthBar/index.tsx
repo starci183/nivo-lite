@@ -1,5 +1,5 @@
 import { Button, Text } from "@starci/grammar/common"
-import type { ContentT } from "@/hooks/content"
+import type { ContentT } from "@/modules/types"
 import { TOOLBAR_CLASS_NAME } from "./classNames"
 
 /** Props of {@link ContentMonthBar}. */

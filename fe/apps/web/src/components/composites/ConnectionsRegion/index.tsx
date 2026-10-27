@@ -1,7 +1,5 @@
 import { Badge, EmptyNotice, ListRow, SurfaceListCard, TextAction } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
-import { RegionState } from "@/components/branches/RegionState"
-import type { RegionFailure } from "@/components/branches/RegionState"
 
 /** What the connections region shows once read. */
 interface ConnectionsView {
@@ -19,52 +17,39 @@ interface ConnectionsView {
     readonly emptyDescription: string
 }
 
-/** Copy and state of the connections region. */
+/** Copy and view of the connections region; `isSkeleton` draws the same card with blank geometry while the data is read. */
 export interface ConnectionsRegionProps {
     readonly label: string
-    readonly isLoading: boolean
-    readonly isFailed: boolean
     readonly view: ConnectionsView
-    readonly failure: RegionFailure
-    readonly onRetry: () => void
+    readonly isSkeleton: boolean
 }
 
 /** The connections bound to an agent, their status and what the agent may do through each. */
 export const ConnectionsRegion = (props: ConnectionsRegionProps) => (
-    <RegionState
+    <SurfaceListCard
         label={props.label}
-        isLoading={props.isLoading}
-        isFailed={props.isFailed}
-        view={props.view}
-        failure={props.failure}
-        onRetry={props.onRetry}
+        labelEnd={
+            <TextAction size="sm" href={props.view.manageHref} isSkeleton={props.isSkeleton}>
+                {props.view.manageLabel}
+            </TextAction>
+        }
+        empty={<EmptyNotice message={props.view.emptyMessage} description={props.view.emptyDescription} />}
     >
-        {(view) => (
-            <SurfaceListCard
-                label={props.label}
-                labelEnd={
-                    <TextAction size="sm" href={view.manageHref}>
-                        {view.manageLabel}
-                    </TextAction>
+        {props.view.rows.map((row) => (
+            <ListRow
+                key={row.id}
+                isSkeleton={props.isSkeleton}
+                title={row.name}
+                description={row.description}
+                badges={
+                    <>
+                        <Badge tone={row.statusTone} isDot>
+                            {row.statusLabel}
+                        </Badge>
+                        <Badge tone="neutral">{row.accessLabel}</Badge>
+                    </>
                 }
-                empty={<EmptyNotice message={view.emptyMessage} description={view.emptyDescription} />}
-            >
-                {view.rows.map((row) => (
-                    <ListRow
-                        key={row.id}
-                        title={row.name}
-                        description={row.description}
-                        badges={
-                            <>
-                                <Badge tone={row.statusTone} isDot>
-                                    {row.statusLabel}
-                                </Badge>
-                                <Badge tone="neutral">{row.accessLabel}</Badge>
-                            </>
-                        }
-                    />
-                ))}
-            </SurfaceListCard>
-        )}
-    </RegionState>
+            />
+        ))}
+    </SurfaceListCard>
 )

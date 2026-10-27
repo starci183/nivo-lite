@@ -17,7 +17,6 @@ export const CreditsHistorySkeleton = () => {
             props={{
                 title: t("paymentsTitle"),
                 loading: t("loading"),
-                rows: [],
                 slot: { isLoading: true, isError: false, items: [] },
                 labels: {
                     empty: t("paymentsEmpty"),

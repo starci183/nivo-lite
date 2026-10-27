@@ -1,4 +1,5 @@
 export type { AccountingLineageItem } from "@/modules/utils"
+export { accountingQuestionsPlaceholderOf } from "@/modules/utils"
 export { accountingFiguresOf } from "./accounting.shared"
 export { useAccountingQuestions } from "./useAccountingQuestions"
 export { useAccountingOverview } from "./useAccountingOverview"

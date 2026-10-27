@@ -12,7 +12,22 @@ import {
     SurfaceListCard,
     Text,
 } from "@starci/grammar/common"
+import { SlotView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import { CARD_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
+
+/** The drawn shapes of the public points check, in the order the visitor meets them. */
+export const LOYALTY_CHECK_SHAPES = ["phone", "code", "result"] as const
+/** One drawing per step of the points check. */
+export type LoyaltyCheckShape = (typeof LOYALTY_CHECK_SHAPES)[number]
+
+/** What the shop page tells the check: the lead line under the title. */
+export interface LoyaltyCheckShop {
+    readonly lead: string
+}
+
+/** Fake data of the same shape: the skeleton reuses the ready tree. */
+const SHOP_PLACEHOLDER: LoyaltyCheckShop = { lead: "" }
 
 /** One reward the shop lists. */
 export interface LoyaltyCheckReward {
@@ -40,13 +55,11 @@ export interface LoyaltyCheckResult {
 
 /** Props for {@link LoyaltyCheckFormBase}. */
 export interface LoyaltyCheckFormBaseProps {
+    readonly shape: LoyaltyCheckShape
     readonly props: {
-        readonly status: "loading" | "missing" | "ready"
-        readonly step: "phone" | "code" | "result"
+        readonly slot: DataSlot<LoyaltyCheckShop>
+        readonly slotLabels: SlotLabels
         readonly title: string
-        readonly lead: string
-        readonly unavailable: string
-        readonly loadingText: string
         readonly phone: {
             readonly label: string
             readonly placeholder: string
@@ -72,66 +85,77 @@ export interface LoyaltyCheckFormBaseProps {
         readonly sendCode: () => void
         readonly check: () => void
         readonly back: () => void
+        readonly retry: () => void
     }
 }
 
-/** Draws the public points check: phone, then the code sent to the customer's own chat, then their points. Shows nothing about a number before the code is right. */
-export const LoyaltyCheckFormBase = (props: LoyaltyCheckFormBaseProps) => {
-    const { status, step, title, result, error, isBusy } = props.props
+/** Props of the drawn tree once the shop is known (or its placeholder). */
+interface CheckBodyProps extends LoyaltyCheckFormBaseProps {
+    readonly lead: string
+    readonly isSkeleton: boolean
+}
+
+const CheckPhone = (props: CheckBodyProps) => {
+    const { title, isBusy } = props.props
     const on = props.on
-    if (status === "loading")
-        return (
-            <SurfaceCard ariaLabel={title}>
-                <Text tone="muted" live="polite">
-                    {props.props.loadingText}
-                </Text>
-            </SurfaceCard>
-        )
-    if (status === "missing")
-        return (
-            <SurfaceCard ariaLabel={title}>
-                <EmptyNotice message={props.props.unavailable} />
-            </SurfaceCard>
-        )
-    if (step === "result" && result !== undefined) return renderGreeting(props)
+    return (
+        <>
+            <Text tone="muted" isSkeleton={props.isSkeleton}>
+                {props.lead}
+            </Text>
+            <Form label={title} onSubmit={on.sendCode} isPending={isBusy}>
+                <div className={FORM_CLASS_NAME}>
+                    <Input
+                        id="loyalty-phone"
+                        name="phone"
+                        label={props.props.phone.label}
+                        placeholder={props.props.phone.placeholder}
+                        isRequired
+                        isDisabled={isBusy}
+                        isSkeleton={props.isSkeleton}
+                        value={props.props.phone.value}
+                        onValueChange={on.setPhone}
+                    />
+                    <Button intent="commit" width="fill" type="submit" isPending={isBusy} isSkeleton={props.isSkeleton}>
+                        {props.props.phone.send}
+                    </Button>
+                </div>
+            </Form>
+        </>
+    )
+}
+
+/** Draws the step the visitor is on: the phone number, the code, or the points once the code is right. */
+const CheckStep = (props: CheckBodyProps) => {
+    const { title, error } = props.props
+    if (props.shape === "result") return renderGreeting(props)
     return (
         <SurfaceCard ariaLabel={title}>
             <div className={CARD_CLASS_NAME}>
-                <Heading level={1} scale="standard">
+                <Heading level={1} scale="standard" isSkeleton={props.isSkeleton}>
                     {title}
                 </Heading>
-                {step === "phone" ? (
-                    <>
-                        <Text tone="muted">{props.props.lead}</Text>
-                        <Form label={title} onSubmit={on.sendCode} isPending={isBusy}>
-                            <div className={FORM_CLASS_NAME}>
-                                <Input
-                                    id="loyalty-phone"
-                                    name="phone"
-                                    label={props.props.phone.label}
-                                    placeholder={props.props.phone.placeholder}
-                                    isRequired
-                                    isDisabled={isBusy}
-                                    value={props.props.phone.value}
-                                    onValueChange={on.setPhone}
-                                />
-                                <Button intent="commit" width="fill" type="submit" isPending={isBusy}>
-                                    {props.props.phone.send}
-                                </Button>
-                            </div>
-                        </Form>
-                    </>
-                ) : (
-                    renderVerificationCode(props)
-                )}
+                {props.shape === "phone" ? <CheckPhone {...props} /> : renderVerificationCode(props)}
                 {error === undefined ? null : <Alert tone="negative" title={error} />}
             </div>
         </SurfaceCard>
     )
 }
 
+/** Draws the public points check: phone, then the code sent to the customer's own chat, then their points. Shows nothing about a number before the code is right. */
+export const LoyaltyCheckFormBase = (props: LoyaltyCheckFormBaseProps) => (
+    <SlotView
+        slot={props.props.slot}
+        placeholder={SHOP_PLACEHOLDER}
+        labels={props.props.slotLabels}
+        onRetry={props.on.retry}
+    >
+        {(shop, isSkeleton) => <CheckStep {...props} shape={props.shape} lead={shop.lead} isSkeleton={isSkeleton} />}
+    </SlotView>
+)
+
 /** Draws the greeting section of the current view. */
-const renderGreeting = (props: LoyaltyCheckFormBaseProps) => {
+const renderGreeting = (props: Pick<LoyaltyCheckFormBaseProps, "props" | "on">) => {
     const { result } = props.props
     const on = props.on
     if (result === undefined) return null
@@ -181,7 +205,7 @@ const renderGreeting = (props: LoyaltyCheckFormBaseProps) => {
 }
 
 /** Draws the LoyaltyCheckFormContent section of the current view. */
-const renderVerificationCode = (props: LoyaltyCheckFormBaseProps) => {
+const renderVerificationCode = (props: Pick<LoyaltyCheckFormBaseProps, "props" | "on">) => {
     const { isBusy } = props.props
     const on = props.on
     return (

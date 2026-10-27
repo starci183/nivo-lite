@@ -3,11 +3,12 @@ import { DatabaseConnectFields } from "@/components/composites/DatabaseConnectFi
 import type { DatabaseConnectFieldsProps } from "@/components/composites/DatabaseConnectFields"
 import { DatabaseTableMapper } from "@/components/composites/DatabaseTableMapper"
 import type { DatabaseTableMapperProps } from "@/components/composites/DatabaseTableMapper"
+import { SlotView } from "@/components/composites/SlotView"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
 import { backAction, closeAction, nextAction, WizardFooter } from "@/components/composites/WizardFooter"
 import type { WizardAction } from "@/components/composites/WizardFooter"
-import { WizardFrame } from "@/components/composites/WizardFrame"
-import type { AgentStepView, WizardNote } from "@/modules/types"
+import { frameOf, WizardFrame } from "@/components/composites/WizardFrame"
+import type { AgentStepView, DataSlot, SlotLabels, WizardNote, WizardResume } from "@/modules/types"
 
 /** One option of a radio or checkbox list. */
 interface DatabaseChoice {
@@ -52,8 +53,9 @@ interface DatabaseTablesView {
 /** Copy, state and commands of the database wizard. */
 export interface DatabaseWizardBaseProps {
     readonly props: {
-        /** The loading sentence while the saved connection is read; null once the steps can show. */
-        readonly loading: string | null
+        /** The saved connection a resumed wizard reads back; a new one is ready at once. */
+        readonly resume: DataSlot<WizardResume>
+        readonly slotLabels: SlotLabels
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
@@ -182,46 +184,48 @@ const DatabaseTablesStep = (props: DatabaseTablesStepProps) => (
     </>
 )
 
+/** The wizard a new connection starts with: the placeholder drawn while a saved one is read. */
+const RESUME_PLACEHOLDER: WizardResume = { isResumed: false }
+
+/** The note under the step, when there is one. */
+const noteOf = (note: WizardNote | null) => (note === null ? null : <Alert tone={note.tone} title={note.text} />)
+
 /** A business database in the shared wizard frame: connect and list the tables, map them, schedule the sync, attach the agents. */
 export const DatabaseWizardBase = (props: DatabaseWizardBaseProps) => {
     const { props: view, on } = props
-    if (view.loading !== null)
-        return (
-            <Text size="sm" tone="muted" live="polite">
-                {view.loading}
-            </Text>
-        )
     return (
-        <WizardFrame
-            title={view.title}
-            stepLabel={view.stepLabel}
-            steps={view.steps}
-            index={view.index}
-            footer={<WizardFooter actions={actionsOf(props)} />}
-        >
-            {view.step === "connect" ? <DatabaseConnectFields {...view.connect} /> : null}
-            {view.step === "tables" && view.tables !== null ? (
-                <DatabaseTablesStep view={view.tables} isPending={view.isPending} on={on} />
-            ) : null}
-            {view.step === "schedule" ? (
-                <>
-                    <Text size="sm" tone="muted">
-                        {view.schedule.hint}
-                    </Text>
-                    <RadioGroup
-                        label={view.schedule.label}
-                        isLabelHidden
-                        isDisabled={view.isPending}
-                        value={view.schedule.value}
-                        onValueChange={on.schedule}
-                        options={view.schedule.options}
-                    />
-                </>
-            ) : null}
-            {view.step === "agent" ? (
-                <WizardAgentStep {...view.agentStep} isDisabled={view.isPending} onChange={on.agents} />
-            ) : null}
-            {view.note === null ? null : <Alert tone={view.note.tone} title={view.note.text} />}
-        </WizardFrame>
+        <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels}>
+            {(_resume, isSkeleton) => (
+                <WizardFrame
+                    {...frameOf(view)}
+                    isSkeleton={isSkeleton}
+                    footer={<WizardFooter actions={actionsOf(props)} isSkeleton={isSkeleton} />}
+                >
+                    {view.step === "connect" ? <DatabaseConnectFields {...view.connect} /> : null}
+                    {view.step === "tables" && view.tables !== null ? (
+                        <DatabaseTablesStep view={view.tables} isPending={view.isPending} on={on} />
+                    ) : null}
+                    {view.step === "schedule" ? (
+                        <>
+                            <Text size="sm" tone="muted">
+                                {view.schedule.hint}
+                            </Text>
+                            <RadioGroup
+                                label={view.schedule.label}
+                                isLabelHidden
+                                isDisabled={view.isPending}
+                                value={view.schedule.value}
+                                onValueChange={on.schedule}
+                                options={view.schedule.options}
+                            />
+                        </>
+                    ) : null}
+                    {view.step === "agent" ? (
+                        <WizardAgentStep {...view.agentStep} isDisabled={view.isPending} onChange={on.agents} />
+                    ) : null}
+                    {noteOf(view.note)}
+                </WizardFrame>
+            )}
+        </SlotView>
     )
 }

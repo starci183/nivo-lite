@@ -1,3 +1,4 @@
+import { slotOfSwr } from "@/hooks/slot"
 import { useQueryBookingBoardSwr } from "@/hooks/swr"
 import { toBookingBoard, EMPTY_BOOKING_BOARD } from "./bookingBoard.shared"
 import { readError } from "@/hooks/workspaceread"
@@ -10,6 +11,15 @@ export const useBookingBoard = () => {
     return {
         board: data === undefined ? EMPTY_BOOKING_BOARD : toBookingBoard(data),
         isLoaded: data !== undefined,
+        /** The read as a slot, for a block that draws the board through SlotView. */
+        slot: slotOfSwr({
+            data: data === undefined ? undefined : (true as const),
+            error,
+            isLoading: swrRead.isLoading,
+        }),
         isFailed: error !== undefined,
+        reload: () => {
+            void swrRead.mutate()
+        },
     }
 }

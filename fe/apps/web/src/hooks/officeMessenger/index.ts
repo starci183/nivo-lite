@@ -1,3 +1,5 @@
 export { useOfficeFrame } from "./useOfficeFrame"
 export { useOfficeJump } from "./useOfficeJump"
 export { useOfficeMessenger } from "./useOfficeMessenger"
+export { useOfficeCardDrafts } from "./useOfficeCardDrafts"
+export { officeSubtitle, officeThreadProps, roomSlotOf } from "./officeMessenger.shared"

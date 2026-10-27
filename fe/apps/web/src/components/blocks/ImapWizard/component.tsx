@@ -1,6 +1,5 @@
-import type { useFormatter, useTranslations } from "next-intl"
-import type { useImapWizard } from "@/hooks/imap-wizard"
-import type { AgentOption, AgentStepView } from "@/modules/types"
+import type { AgentStepView, DataSlot, SlotLabels, WizardResume } from "@/modules/types"
+import { SlotView } from "@/components/composites/SlotView"
 import { Alert, Button, CheckboxGroup, RadioGroup, Text } from "@starci/grammar/common"
 import { ImapAccountFields, type ImapAccountFieldsProps } from "@/components/composites/ImapAccountFields"
 
@@ -13,7 +12,7 @@ import {
     type WizardAction,
 } from "@/components/composites/WizardFooter"
 
-import { WizardFrame } from "@/components/composites/WizardFrame"
+import { frameOf, WizardFrame } from "@/components/composites/WizardFrame"
 
 /** One option of a radio or checkbox list. */
 interface ImapChoice {
@@ -39,10 +38,9 @@ interface ImapAccountView {
 /** Copy, state and commands of the mailbox (IMAP) wizard. */
 export interface ImapWizardBaseProps {
     readonly props: {
-        /** The loading sentence while the saved mailbox is read; null once it is. */
-        readonly loading: string | null
-        /** The back end message when the saved mailbox could not be read; null otherwise. */
-        readonly loadError: string | null
+        /** The saved mailbox a resumed wizard reads back; a new one is ready at once. */
+        readonly resume: DataSlot<WizardResume>
+        readonly slotLabels: SlotLabels
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
@@ -158,53 +156,56 @@ const ImapAccountStep = (props: ImapAccountStepProps) => (
     </>
 )
 
+/** The wizard a new mailbox starts with: the placeholder drawn while a saved one is read. */
+const RESUME_PLACEHOLDER: WizardResume = { isResumed: false }
+
 /** The mailbox (IMAP, read only) in the shared wizard frame: sign in and test, folders and period, schedule, attach the agents. */
 export const ImapWizardBase = (props: ImapWizardBaseProps) => {
     const { props: view, on } = props
     const { text } = view
-    if (view.loading !== null) return <Text tone="muted">{view.loading}</Text>
-    if (view.loadError !== null) return <Alert tone="negative" title={view.loadError} />
     return (
-        <WizardFrame
-            title={view.title}
-            stepLabel={view.stepLabel}
-            steps={view.steps}
-            index={view.index}
-            footer={<WizardFooter actions={actionsOf(props)} />}
-        >
-            {view.step === "account" ? (
-                <ImapAccountStep
-                    view={view.account}
-                    intro={text.intro}
-                    imapOn={text.imapOn}
-                    test={text.test}
-                    isPending={view.isPending}
-                    onTest={on.test}
-                />
-            ) : null}
-            {view.step === "folders" ? <ImapFoldersStep {...props} /> : null}
-            {view.step === "schedule" ? (
-                <>
-                    <Text size="sm" tone="muted">
-                        {text.scheduleHint}
-                    </Text>
-                    <RadioGroup
-                        label={text.scheduleLabel}
-                        isLabelHidden
-                        value={view.schedule.value}
-                        onValueChange={on.schedule}
-                        options={view.schedule.options}
-                    />
-                </>
-            ) : null}
-            {view.step === "agent" ? (
-                <>
-                    <Alert tone="affirmative" title={text.saved} />
-                    <WizardAgentStep {...view.agentStep} isDisabled={view.isPending} onChange={on.agents} />
-                </>
-            ) : null}
-            {view.error === null ? null : <Alert tone="negative" title={view.error} />}
-        </WizardFrame>
+        <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels}>
+            {(_resume, isSkeleton) => (
+                <WizardFrame
+                    {...frameOf(view)}
+                    isSkeleton={isSkeleton}
+                    footer={<WizardFooter actions={actionsOf(props)} isSkeleton={isSkeleton} />}
+                >
+                    {view.step === "account" ? (
+                        <ImapAccountStep
+                            view={view.account}
+                            intro={text.intro}
+                            imapOn={text.imapOn}
+                            test={text.test}
+                            isPending={view.isPending}
+                            onTest={on.test}
+                        />
+                    ) : null}
+                    {view.step === "folders" ? <ImapFoldersStep {...props} /> : null}
+                    {view.step === "schedule" ? (
+                        <>
+                            <Text size="sm" tone="muted">
+                                {text.scheduleHint}
+                            </Text>
+                            <RadioGroup
+                                label={text.scheduleLabel}
+                                isLabelHidden
+                                value={view.schedule.value}
+                                onValueChange={on.schedule}
+                                options={view.schedule.options}
+                            />
+                        </>
+                    ) : null}
+                    {view.step === "agent" ? (
+                        <>
+                            <Alert tone="affirmative" title={text.saved} />
+                            <WizardAgentStep {...view.agentStep} isDisabled={view.isPending} onChange={on.agents} />
+                        </>
+                    ) : null}
+                    {view.error === null ? null : <Alert tone="negative" title={view.error} />}
+                </WizardFrame>
+            )}
+        </SlotView>
     )
 }
 
@@ -246,41 +247,4 @@ const ImapFoldersStep = ({ props: view, on }: ImapWizardBaseProps) => {
             />
         </>
     )
-}
-
-/** What the board hands the mailbox wizard. */
-export interface ImapWizardProps {
-    /** Workspace agents (any module): every agent may be given read access to the mailbox. */
-    readonly agents: ReadonlyArray<AgentOption>
-    /** Continue or edit this existing mailbox instead of creating a new one. */
-    readonly resumeId?: string
-    /** `changed` is true when something was saved, so the list should refresh. */
-    readonly onClose: (changed: boolean) => void
-}
-
-/** Inputs needed to build the ImapWizardContent section. */
-export interface BuildMailboxAccountViewContext {
-    readonly values: ReturnType<typeof useImapWizard>["values"]
-    readonly savedId: ReturnType<typeof useImapWizard>["savedId"]
-    readonly preset: ReturnType<typeof useImapWizard>["preset"]
-    readonly t: ReturnType<typeof useTranslations<"connectorImap">>
-    readonly isCustom: boolean
-    readonly isPending: ReturnType<typeof useImapWizard>["isPending"]
-    readonly wizard: ReturnType<typeof useImapWizard>
-    readonly format: ReturnType<typeof useFormatter>
-}
-
-/** Inputs needed to build the ImapWizardContent section. */
-export interface BuildImapWizardViewContext {
-    readonly wizard: ReturnType<typeof useImapWizard>
-    readonly t: ReturnType<typeof useTranslations<"connectorImap">>
-    readonly tc: ReturnType<typeof useTranslations<"connections">>
-    readonly tw: ReturnType<typeof useTranslations<"connectionWizard">>
-    readonly values: ReturnType<typeof useImapWizard>["values"]
-    readonly savedId: ReturnType<typeof useImapWizard>["savedId"]
-    readonly preset: ReturnType<typeof useImapWizard>["preset"]
-    readonly isCustom: boolean
-    readonly isPending: ReturnType<typeof useImapWizard>["isPending"]
-    readonly format: ReturnType<typeof useFormatter>
-    readonly props: ImapWizardProps
 }

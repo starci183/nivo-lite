@@ -1,7 +1,7 @@
 import { Alert, Dialog, Input, NumberField, SegmentedControl, Select } from "@starci/grammar/common"
 import { HiringDialogFooter } from "@/components/branches/HiringDialogFooter"
-import type { FieldOf, HiringSay } from "@/hooks/hiring"
 import type { InterviewValues, RequestOutcomeView } from "@/hooks/hiringCandidate"
+import type { FieldOf, HiringSay } from "@/modules/types"
 import { FORM_CLASS_NAME } from "./classNames"
 
 /** One option of a choice field. */

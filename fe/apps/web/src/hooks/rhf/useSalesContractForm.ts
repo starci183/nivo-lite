@@ -6,14 +6,28 @@ import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { parseAmount } from "@/hooks/sales"
-import { CONTRACT_STATUS_KEYS, contractFormOf } from "@/hooks/salescontracts"
-import type { ContractForm } from "@/hooks/salescontracts"
+import type { SalesContractStatus } from "@/modules/types"
+
+/** What a person has typed into the contract form. */
+export interface ContractForm {
+    readonly leadId: string
+    readonly customerName: string
+    readonly plan: string
+    readonly startsOn: string
+    readonly endsOn: string
+    readonly amount: string
+    readonly status: SalesContractStatus
+    readonly note: string
+}
+
+/** The statuses the form accepts, in the order its error lists them. */
+const STATUSES = ["active", "ended", "cancelled"] as const satisfies ReadonlyArray<SalesContractStatus>
 
 /** Accepts an ISO calendar day and rejects dates outside the calendar. */
 const isContractDay = (value: string): boolean => z.iso.date().safeParse(value).success
 
-/** Validates recurring contract values before the GraphQL save runs. */
-export const useSalesContractForm = (today: string) => {
+/** Validates recurring contract values before the GraphQL save runs; `defaultValues` is the form of a new contract. */
+export const useSalesContractForm = (defaultValues: ContractForm) => {
     const t = useTranslations("workbenchSales")
     const schema = useMemo(
         () =>
@@ -36,8 +50,8 @@ export const useSalesContractForm = (today: string) => {
                         const amount = parseAmount(value)
                         return /^[\d.,\s]+$/u.test(value) && amount !== null && Number.isSafeInteger(amount)
                     }, t("errContractAmount")),
-                    status: z.enum(["active", "ended", "cancelled"], {
-                        error: t("errContractStatus", { list: CONTRACT_STATUS_KEYS.join(", ") }),
+                    status: z.enum(STATUSES, {
+                        error: t("errContractStatus", { list: STATUSES.join(", ") }),
                     }),
                     note: z
                         .string()
@@ -59,7 +73,7 @@ export const useSalesContractForm = (today: string) => {
 
     return useForm<ContractForm>({
         resolver: zodResolver(schema),
-        defaultValues: contractFormOf(null, today),
+        defaultValues,
         mode: "onSubmit",
     })
 }

@@ -3,8 +3,9 @@
 import { useTranslations } from "next-intl"
 import { useBrainBoard, useLessonDesk } from "@/hooks/brain"
 import type { MineOutcome } from "@/hooks/brain"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
-import type { BrainLesson } from "@/modules/types"
+import type { BrainLesson, SlotLabels } from "@/modules/types"
 import { BrainLessonsBase } from "./component"
 
 const STATUS_TONE: Readonly<Record<BrainLesson["status"], "success" | "warning" | "neutral">> = {
@@ -65,13 +66,14 @@ const buildBrainLessonsState = (
 export const BrainLessons = () => {
     const t = useTranslations("brain")
     const board = useBrainBoard()
+    const slotLabels = useSlotLabels()
     const desk = useLessonDesk(board.lenses[0]?.module ?? "")
 
     const connected = buildBrainLessonsState(t, board, desk)
 
     return (
         <BrainLessonsBase
-            props={brainLessonsProps(connected)}
+            props={brainLessonsProps(connected, slotLabels(t("lessonsEmpty")))}
             on={{
                 setAgent: desk.setAgent,
                 setLessonTitle: desk.setTitle,
@@ -79,6 +81,7 @@ export const BrainLessons = () => {
                 setLessonWhen: desk.setWhen,
                 mine: desk.mine,
                 save: desk.save,
+                retry: board.reload,
             }}
         />
     )
@@ -87,6 +90,7 @@ export const BrainLessons = () => {
 /** Builds the props supplied to BrainLessonsBase. */
 const brainLessonsProps = (
     connected: NonNullable<ReturnType<typeof buildBrainLessonsState>>,
+    slotLabels: SlotLabels,
 ): Parameters<typeof BrainLessonsBase>[0]["props"] => {
     const { t, desk, noticeOf, board, rowOf } = connected
     return {
@@ -99,10 +103,9 @@ const brainLessonsProps = (
                 notice: desk.mined === null ? undefined : noticeOf(desk.mined),
             },
             label: t("tabLessons"),
-            rows: board.lessons.filter((lesson) => lesson.status !== "proposed").map(rowOf),
-            isLoading: board.isLoading,
             isPending: desk.isPending,
-            emptyTitle: t("lessonsEmpty"),
+            slot: mapSlot(board.slot, () => board.lessons.filter((lesson) => lesson.status !== "proposed").map(rowOf)),
+            slotLabels,
         },
         write: board.canWrite
             ? {

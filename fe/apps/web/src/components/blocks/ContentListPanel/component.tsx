@@ -1,7 +1,7 @@
 import { EmptyNotice, ListBox, SurfaceCard, TagGroup } from "@starci/grammar/common"
 import { ContentPostFacts } from "@/components/leaves/ContentPostFacts"
 import { ContentStatusBadge } from "@/components/leaves/ContentStatusBadge"
-import type { ContentT, PostView } from "@/hooks/content"
+import type { ContentT, PostView } from "@/modules/types"
 import { PANEL_CLASS_NAME } from "./classNames"
 
 /** What the list panel draws. */

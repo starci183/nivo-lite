@@ -3,6 +3,7 @@
 import { useMemo } from "react"
 import { isNotFoundFailure } from "@/modules/failure"
 import { useQueryKnowledgeSourceSwr } from "@/hooks/swr"
+import { slotOfSwr } from "@/hooks/slot"
 import { toDocumentPassage, toKnowledgeDocumentDetail } from "@/modules/documents"
 import type { DocumentPassage, KnowledgeDocumentDetail } from "@/modules/types"
 import { readError } from "@/hooks/workspaceread"
@@ -28,5 +29,7 @@ export const useKnowledgeSource = (id: string | undefined) => {
                   },
         [data],
     )
-    return { detail, error, isLoading, isMissing: error !== undefined && isNotFoundFailure(error) }
+    const slot = slotOfSwr({ data: detail, error: swrRead.error, isLoading })
+    const reload = () => void swrRead.mutate()
+    return { detail, error, isLoading, slot, reload, isMissing: error !== undefined && isNotFoundFailure(error) }
 }

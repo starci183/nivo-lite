@@ -13,3 +13,10 @@ export type SlotLabels = {
     readonly error: string
     readonly retry: string
 }
+
+/** What a pure block takes to draw one slot: the slot, a same-shape placeholder for its skeleton and the words of its status. */
+export type SlotPanelProps<T> = {
+    readonly slot: DataSlot<T>
+    readonly placeholder: T
+    readonly labels: SlotLabels
+}

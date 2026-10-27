@@ -13,6 +13,8 @@ import { BookingAddButton } from "@/components/composites/BookingAddButton"
 import { BookingCatalogList } from "@/components/composites/BookingCatalogList"
 import { BookingRemoveDialog } from "@/components/composites/BookingRemoveDialog"
 import { BookingSetupSection } from "@/components/composites/BookingSetupSection"
+import { SlotView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import { GRID_CLASS, STACK_CLASS } from "./classNames"
 
 /** The fields of the resource form. */
@@ -27,6 +29,9 @@ export interface ResourceFields {
 /** Props for {@link BookingResourcesBase}. */
 export interface BookingResourcesBaseProps {
     readonly props: {
+        /** The booking board read behind the block. */
+        readonly slot: DataSlot<true>
+        readonly slotLabels: SlotLabels
         readonly title: string
         readonly hint: string
         readonly list: {
@@ -65,6 +70,7 @@ export interface BookingResourcesBaseProps {
         readonly notice?: { readonly tone: "affirmative" | "negative"; readonly text: string }
     }
     readonly on: {
+        readonly retry: () => void
         readonly add: () => void
         readonly edit: (id: string) => void
         readonly ask: (id: string) => void
@@ -79,7 +85,7 @@ export interface BookingResourcesBaseProps {
 }
 
 /** Draws the people and rooms of the shop: the list, the form of the one being edited and its weekly hours. */
-export const BookingResourcesBase = (props: BookingResourcesBaseProps) => {
+const BookingResourcesBody = (props: BookingResourcesBaseProps) => {
     const { props: p, on } = props
     return (
         <BookingSetupSection title={p.title} hint={p.hint}>
@@ -260,3 +266,10 @@ export const buildBookingResourcesState = (context: ResourceContext) => {
     }
     return { ...context, weekdayName, removing, save, saveHours }
 }
+
+/** Draws the block once the booking board is read; until then the same form draws, its controls resting. */
+export const BookingResourcesBase = (props: BookingResourcesBaseProps) => (
+    <SlotView slot={props.props.slot} placeholder labels={props.props.slotLabels} onRetry={props.on.retry}>
+        {() => <BookingResourcesBody {...props} />}
+    </SlotView>
+)

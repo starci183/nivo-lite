@@ -90,7 +90,7 @@ const FieldView = (props: FieldViewProps) => {
             id={field.id}
             name={field.key}
             label={field.label}
-            hint={field.description}
+            description={field.description}
             value={field.value}
             isDisabled={isBusy}
             onValueChange={(value) =>

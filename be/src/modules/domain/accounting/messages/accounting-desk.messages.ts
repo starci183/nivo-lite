@@ -129,3 +129,39 @@ export const kindText = (kind: ObligationKind | "supplier_payment"): string => K
 
 /** The badge of a receivable payment that is not exact. */
 export const receivableMatchText = (match: string): string => RECEIVABLE_MATCH_TEXT.get(match) ?? match
+
+/**
+ * The renewal-to-cash lines of the daily report and of the accounting desk, in the house bullet format ("• Nhãn: giá trị", one
+ * item per "   - " line). Amounts and days come in already formatted.
+ */
+export const RENEWAL_COPY = {
+    heading: "Gia hạn và thu tiền:",
+    fieldIssued: "HĐ gia hạn đã phát hành",
+    fieldPaid: "Tiền gia hạn đã khớp",
+    fieldUnpaid: "HĐ chờ thu sắp đến hạn",
+    fieldExpiring: "HĐ sắp hết hạn chưa có HĐ gia hạn",
+    fieldUnmatched: "Tiền vào chưa khớp",
+    tally: (count: number, total: string): string => `${count} · ${total}`,
+    issued: (count: number, total: string): string => `• Hóa đơn gia hạn đã phát hành: ${count} (tổng ${total})`,
+    issuedNone: "• Hóa đơn gia hạn đã phát hành: không có",
+    paid: (count: number, total: string): string => `• Tiền gia hạn đã về và khớp: ${count} (tổng ${total})`,
+    paidNone: "• Tiền gia hạn đã về và khớp: không có",
+    extended: (endsOn: string): string => `gia hạn hợp đồng đến ${endsOn}`,
+    notExtended: (endsOn: string): string => `hợp đồng chưa được gia hạn (hết hạn ${endsOn})`,
+    unpaid: (count: number, total: string, days: number): string =>
+        `• Hóa đơn chờ thu, đến hạn trong ${days} ngày: ${count} (tổng ${total})`,
+    unpaidNone: (days: number): string => `• Hóa đơn chờ thu, đến hạn trong ${days} ngày: không có`,
+    dueOn: (day: string): string => `hạn ${day}`,
+    overdueSince: (day: string): string => `quá hạn từ ${day}`,
+    expiring: (count: number, days: number): string =>
+        `• Hợp đồng hết hạn trong ${days} ngày chưa có hóa đơn gia hạn: ${count}`,
+    expiringNone: (days: number): string => `• Hợp đồng hết hạn trong ${days} ngày chưa có hóa đơn gia hạn: không có`,
+    endsOn: (day: string): string => `hết hạn ${day}`,
+    unmatched: (count: number, total: string): string =>
+        `• Tiền vào chưa khớp, cần bạn quyết: ${count} (tổng ${total})`,
+    unmatchedNone: "• Tiền vào chưa khớp, cần bạn quyết: không có",
+    memo: (memo: string): string => `"${memo}"`,
+    from: (sender: string): string => `từ ${sender}`,
+    item: (parts: ReadonlyArray<string>): string => `   - ${parts.filter((part) => part !== "").join(" · ")}`,
+    more: (count: number): string => `   - và ${count} mục khác`,
+} as const

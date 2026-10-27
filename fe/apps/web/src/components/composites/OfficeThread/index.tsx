@@ -12,9 +12,12 @@ import {
     renderOfficeThreadException,
     renderOfficeThreadReading,
 } from "./renderCards"
-import { BODY_CLASS_NAME, DAY_CLASS_NAME, SCROLL_CLASS_NAME, TYPING_CLASS_NAME } from "./classNames"
+import { BAND_CLASS_NAME, BODY_CLASS_NAME, DAY_CLASS_NAME, SCROLL_CLASS_NAME, TYPING_CLASS_NAME } from "./classNames"
 
 const STICK_PX = 80
+
+/** A thread item that sits in an inset band: every kind but the day divider. */
+type OfficeThreadBandItem = Exclude<OfficeThreadProps["props"]["items"][number], { readonly kind: "day" }>
 
 /** The thread: day dividers, lines, approval, exception and command cards, the unsent lines, pinned to the newest. */
 export const OfficeThread = (props: OfficeThreadProps) => {
@@ -48,84 +51,104 @@ export const OfficeThread = (props: OfficeThreadProps) => {
             aria-label={text("conversationLabel")}
         >
             <div className={BODY_CLASS_NAME}>
-                {view.state === "loading" ? <ChatBubbleSkeletons count={3} hasAvatar /> : null}
-                {view.state === "error" ? (
-                    <EmptyNotice
-                        message={text("loadFailed")}
-                        actionLabel={text("retry")}
-                        actionVariant="secondary"
-                        onAction={props.on.retry}
-                    />
+                {view.isSkeleton ? (
+                    <div className={BAND_CLASS_NAME}>
+                        <ChatBubbleSkeletons count={3} hasAvatar />
+                    </div>
                 ) : null}
-                {view.state === "ready" && view.hasEarlier ? (
-                    <Button intent="neutral" size="sm" isPending={view.isLoadingEarlier} onPress={props.on.loadEarlier}>
-                        {text("loadEarlier")}
-                    </Button>
+                {!view.isSkeleton && view.hasEarlier ? (
+                    <div className={BAND_CLASS_NAME}>
+                        <Button
+                            intent="neutral"
+                            size="sm"
+                            isPending={view.isLoadingEarlier}
+                            onPress={props.on.loadEarlier}
+                        >
+                            {text("loadEarlier")}
+                        </Button>
+                    </div>
                 ) : null}
-                {view.state === "ready" && view.items.length === 0 ? (
-                    <EmptyNotice message={text("emptyMessage")} description={text("emptyMessageHint")} />
+                {!view.isSkeleton && view.items.length === 0 ? (
+                    <div className={BAND_CLASS_NAME}>
+                        <EmptyNotice message={text("emptyMessage")} description={text("emptyMessageHint")} />
+                    </div>
                 ) : null}
                 {renderOfficeThreadItems(props)}
                 {view.outbox.map((line) => (
-                    <OfficeOutboxBubble key={line.id} line={line} text={text} />
+                    <div key={line.id} className={BAND_CLASS_NAME}>
+                        <OfficeOutboxBubble line={line} text={text} />
+                    </div>
                 ))}
-                {view.reading === null ? null : renderOfficeThreadReading(view.reading, text, props)}
-                <div className={TYPING_CLASS_NAME}>
-                    {view.typing === "" ? null : (
-                        <Text size="sm" tone="muted" live="polite">
-                            {view.typing}
-                        </Text>
-                    )}
+                {view.reading === null ? null : (
+                    <div className={BAND_CLASS_NAME}>{renderOfficeThreadReading(view.reading, text, props)}</div>
+                )}
+                <div className={BAND_CLASS_NAME}>
+                    <div className={TYPING_CLASS_NAME}>
+                        {view.typing === "" ? null : (
+                            <Text size="sm" tone="muted" live="polite">
+                                {view.typing}
+                            </Text>
+                        )}
+                    </div>
                 </div>
             </div>
         </VerticalScrollRegion>
     )
 }
 
-/** Renders settled thread items and their decision cards. */
-const renderOfficeThreadItems = (props: OfficeThreadProps) => {
+/** Renders settled thread items: a day divider spans the column, every other item sits in an inset band. */
+const renderOfficeThreadItems = (props: OfficeThreadProps) =>
+    props.props.isSkeleton
+        ? null
+        : props.props.items.map((item) =>
+              item.kind === "day" ? (
+                  <div key={item.key} className={DAY_CLASS_NAME}>
+                      <Divider label={item.label} />
+                  </div>
+              ) : (
+                  <div key={item.key} className={BAND_CLASS_NAME}>
+                      {renderOfficeThreadItem(item, props)}
+                  </div>
+              ),
+          )
+
+/** Renders one settled, non-day thread item or its decision card. */
+const renderOfficeThreadItem = (item: OfficeThreadBandItem, props: OfficeThreadProps) => {
     const view = props.props
     const { text } = view
-    return view.state === "ready"
-        ? view.items.map((item) => {
-              if (item.kind === "day") {
-                  return (
-                      <div key={item.key} className={DAY_CLASS_NAME}>
-                          <Divider label={item.label} />
-                      </div>
-                  )
-              }
-              if (item.kind === "approval") {
-                  return renderOfficeThreadApproval(item, text, view, props)
-              }
-              if (item.kind === "exception") {
-                  return renderOfficeThreadException(item, text, view, props)
-              }
-              if (item.kind === "command") {
-                  return renderOfficeThreadCommand(item, text, view, props)
-              }
-              if (item.kind === "card") {
-                  return (
-                      <OfficeResultCard
-                          key={item.key}
-                          card={item}
-                          avatar={<OfficeAvatar avatar={item.avatar} size="sm" />}
-                          text={text}
-                          isBusy={item.refId !== null && view.busyId === item.refId}
-                          onDecide={props.on.decideCard}
-                      />
-                  )
-              }
-              return (
-                  <OfficeMessageRow
-                      key={item.key}
-                      message={item}
-                      avatar={item.avatar === null ? null : <OfficeAvatar avatar={item.avatar} size="sm" />}
-                      text={text}
-                      status={item.status === null ? null : <OfficeMessageStatus status={item.status} text={text} />}
-                      onReply={props.on.reply}
-                  />
-              )
-          })
-        : null
+    if (item.kind === "approval") {
+        return renderOfficeThreadApproval(item, text, view, props)
+    }
+    if (item.kind === "exception") {
+        return renderOfficeThreadException(item, text, view, props)
+    }
+    if (item.kind === "command") {
+        return renderOfficeThreadCommand(item, text, view, props)
+    }
+    if (item.kind === "card") {
+        return (
+            <OfficeResultCard
+                key={item.key}
+                card={item}
+                avatar={<OfficeAvatar avatar={item.avatar} size="sm" />}
+                text={text}
+                draft={view.draftOf(item.key)}
+                onEdit={props.on.editCard}
+                isBusy={item.refId !== null && view.busyId === item.refId}
+                onDecide={props.on.decideCard}
+            />
+        )
+    }
+    return (
+        <OfficeMessageRow
+            key={item.key}
+            message={item}
+            avatar={item.avatar === null ? null : <OfficeAvatar avatar={item.avatar} size="sm" />}
+            text={text}
+            status={item.status === null ? null : <OfficeMessageStatus status={item.status} text={text} />}
+            isCopied={view.copiedKey === item.key}
+            onReply={props.on.reply}
+            onCopy={props.on.copy}
+        />
+    )
 }

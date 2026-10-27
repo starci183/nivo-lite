@@ -2,6 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { SCOPE_KEY, SCOPE_TONE, FACT_SOURCE_KEY, TYPE_KEY, useBrainBoard, useBrainCommand } from "@/hooks/brain"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { brainTabHref } from "@/modules/routes"
 import type { BrainFact } from "@/modules/types"
 import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
@@ -13,6 +14,7 @@ export const BrainFacts = () => {
     const format = useFormatter()
     const command = useBrainCommand()
     const board = useBrainBoard()
+    const slotLabels = useSlotLabels()
     const dayOf = (iso: string): string => format.dateTime(new Date(iso), { dateStyle: "medium" })
     const shown = board.facts.filter(
         (fact) => (fact.status === "active" || fact.status === "scheduled") && fact.proposalKind === "set",
@@ -62,12 +64,12 @@ export const BrainFacts = () => {
                             : undefined,
                     },
                     label: t("tabFacts"),
-                    rows: shown.map(rowOf),
-                    isLoading: board.isLoading,
                     isPending: command.isPending,
-                    emptyTitle: t("factsEmpty"),
+                    slot: mapSlot(board.slot, () => shown.map(rowOf)),
+                    slotLabels: slotLabels(t("factsEmpty")),
                 },
             }}
+            on={{ retry: board.reload }}
         />
     )
 }

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 import { useQueryKnowledgeSourcesSwr } from "@/hooks/swr"
+import { slotOfSwr } from "@/hooks/slot"
 import { toKnowledgeDocument } from "@/modules/documents"
 import type { ModuleKey } from "@/modules/catalog"
 import { readError } from "@/hooks/workspaceread"
@@ -15,5 +16,7 @@ export const useKnowledgeSources = (module?: ModuleKey | "all") => {
     const { data, isLoading } = swrRead
     const error = readError(swrRead)
     const sources = useMemo(() => (data === undefined ? undefined : data.map(toKnowledgeDocument)), [data])
-    return { sources, error, isLoading }
+    const slot = slotOfSwr({ data: sources, error: swrRead.error, isLoading })
+    const reload = () => void swrRead.mutate()
+    return { sources, error, isLoading, slot, reload }
 }

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import type { UseFormReturn } from "react-hook-form"
 import { useHiringRun } from "@/hooks/hiring"
-import type { FieldOf } from "@/hooks/hiring"
+import type { FieldOf } from "@/modules/types"
 import { useMutateRequestHiringOfferSwr } from "@/hooks/swr"
 import type { OfferValues, RequestOutcomeView } from "./hiringCandidate.shared"
 

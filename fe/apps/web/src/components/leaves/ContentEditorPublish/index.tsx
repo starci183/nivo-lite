@@ -1,5 +1,5 @@
 import { Button, Input, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
-import type { ContentT, DownloadFile, PublishStep } from "@/hooks/content"
+import type { ContentT, DownloadFile, PublishStep } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, QUOTE_CLASS_NAME, STEP_CLASS_NAME } from "./classNames"
 
 /** The proof typed for one channel. */
@@ -96,7 +96,7 @@ const renderContentEditorPublishProofFields = (
             name={`url-${step.channel}`}
             label={props.t("postedLink")}
             value={proof?.url ?? ""}
-            hint={props.t("postedLinkHint")}
+            description={props.t("postedLinkHint")}
             isDisabled={props.isPending}
             onValueChange={(v) => props.onProof(step.channel, { url: v })}
         />

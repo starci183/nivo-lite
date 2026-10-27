@@ -1,6 +1,6 @@
 import type { useTranslations } from "next-intl"
 import { PROVIDER_GROUPS, isProvider, providerKey } from "@/hooks/connection-providers"
-import type { Connection, ConnectionStatus, Provider, ProviderGroupId } from "@/modules/types"
+import type { Connection, ConnectionStatus, DataSlot, Provider, ProviderGroupId } from "@/modules/types"
 
 /** The catalog key of a provider group heading. */
 export const GROUP_TITLE_KEY: Readonly<Record<ProviderGroupId, string>> = {
@@ -157,4 +157,19 @@ export const connectionGroups = (
                 }
             }),
     })).filter((group) => group.cards.length > 0)
+}
+
+/** What decides the status of a board: the workspace reads and, when the board is for managers, the viewer's role. */
+interface BoardRead {
+    readonly isLoading: boolean
+    /** False when the viewer may not see the board; true when the board has no role gate. */
+    readonly isManager: boolean
+    readonly isFailed: boolean
+}
+
+/** Loading and access take priority over the result of the workspace reads. */
+export const boardSlotOf = <T>(read: BoardRead, board: T): DataSlot<T> => {
+    if (read.isLoading) return { isLoading: true }
+    if (!read.isManager) return { isForbidden: true }
+    return read.isFailed ? { isError: true } : { items: board }
 }

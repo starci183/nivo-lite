@@ -1,6 +1,6 @@
 import { Button, DataTable, type DataTableCellInteraction, EmptyNotice, Text } from "@starci/grammar/common"
 import { ContentPostChip } from "@/components/leaves/ContentPostChip"
-import type { ContentT, PostView } from "@/hooks/content"
+import type { ContentT, PostView } from "@/modules/types"
 import { CELL_CLASS_NAME, POST_CLASS_NAME } from "./classNames"
 
 /** The most chips one day shows before "+n more". */

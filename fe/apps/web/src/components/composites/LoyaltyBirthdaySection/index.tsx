@@ -1,7 +1,7 @@
 import { Select, Switch } from "@starci/grammar/common"
 import { LoyaltySettingsSection } from "@/components/leaves/LoyaltySettingsSection"
 import { LoyaltyField } from "@/components/leaves/LoyaltyField"
-import type { ProgramTextField } from "@/hooks/loyaltyProgramFields"
+import type { ProgramTextField } from "@/modules/types"
 import { FIELD_PAIR_CLASS_NAME } from "./classNames"
 
 /** What the birthday section of the programme settings draws and reports. */

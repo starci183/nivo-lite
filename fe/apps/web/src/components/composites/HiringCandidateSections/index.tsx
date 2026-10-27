@@ -1,6 +1,6 @@
 import { Button, Heading, Text, Textarea } from "@starci/grammar/common"
-import type { HiringSay } from "@/hooks/hiring"
 import type { CandidateDialog } from "@/hooks/hiringCandidate"
+import type { HiringSay } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, PAIR_CLASS_NAME, EVENTS_CLASS_NAME } from "./classNames"
 
 /** A resolved answer, appointment, offer or timeline entry. */

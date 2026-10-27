@@ -48,8 +48,6 @@ export interface ConnectionLibraryBaseProps {
         readonly emptyMessage: string
         readonly emptyHint: string
         readonly cards: ReadonlyArray<LibraryCard>
-        /** STATE-8: the catalog is known, the workspace counts are not - each badge and action is a skeleton. */
-        readonly isLoading: boolean
     }
     readonly on: {
         readonly text: (value: string) => void
@@ -129,20 +127,11 @@ const renderConnectionCards = (props: ConnectionLibraryBaseProps) => (
                         </Text>
                         <div className={classNames.cardFoot}>
                             {card.badge === null ? null : (
-                                <Badge
-                                    tone={card.badge.tone}
-                                    isDot={card.badge.isDot}
-                                    isSkeleton={props.props.isLoading}
-                                >
+                                <Badge tone={card.badge.tone} isDot={card.badge.isDot}>
                                     {card.badge.label}
                                 </Badge>
                             )}
-                            <Button
-                                intent="neutral"
-                                size="sm"
-                                isSkeleton={props.props.isLoading}
-                                onPress={() => props.on.open(card.id)}
-                            >
+                            <Button intent="neutral" size="sm" onPress={() => props.on.open(card.id)}>
                                 {card.actionLabel}
                             </Button>
                         </div>

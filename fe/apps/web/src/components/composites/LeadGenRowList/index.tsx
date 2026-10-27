@@ -25,6 +25,8 @@ export interface LeadGenRowListProps {
     readonly rows: ReadonlyArray<LeadGenRow>
     /** A muted line under the list, such as how many more rows there are. */
     readonly hiddenText: string | null
+    /** The rows are not read yet: the card draws its skeleton rows. */
+    readonly isSkeleton?: boolean
 }
 
 /** A list of Lead Gen rows with their badges; the name opens the lead when the row has a destination. */
@@ -32,6 +34,7 @@ export const LeadGenRowList = (props: LeadGenRowListProps) => (
     <>
         <SurfaceListCard
             ariaLabel={props.label}
+            isLoading={props.isSkeleton === true}
             empty={<EmptyNotice message={props.emptyTitle} description={props.emptyBody} />}
         >
             {props.rows.map((row) => (

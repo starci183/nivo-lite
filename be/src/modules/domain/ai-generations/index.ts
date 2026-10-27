@@ -1,4 +1,4 @@
-export { AI_GENERATIONS_ERROR_KINDS, AiGenerationsError } from "./errors/ai-generations.error"
+export { AI_GENERATIONS_ERROR_KINDS, AiGenerationsError, AiGenerationsErrorCode } from "./errors/ai-generations.error"
 export { AI_GENERATIONS_MESSAGES } from "./messages/ai-generations.messages"
 export { AI_GENERATIONS_POLL_MS } from "./ai-generations.options"
 export { AiGenerationsModule } from "./ai-generations.module"

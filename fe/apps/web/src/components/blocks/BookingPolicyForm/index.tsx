@@ -1,6 +1,7 @@
 "use client"
 
 import { useBookingBoard } from "@/hooks/bookingBoard"
+import { useSlotLabels } from "@/hooks/slot"
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { useMutateSaveBookingPolicySwr } from "@/hooks/swr"
@@ -26,7 +27,8 @@ type Edits = Partial<Numbers & { address: string; autoConfirm: boolean; handoffO
 
 /** The connected policy form: saves the cancellation, deposit and slot rules of the workspace. */
 export const BookingPolicyForm = () => {
-    const { board } = useBookingBoard()
+    const { board, slot, reload } = useBookingBoard()
+    const slotLabels = useSlotLabels()
     const t = useTranslations("workbenchBooking")
     const persist = useBookingSetupSave()
     const savePolicy = useMutateSaveBookingPolicySwr()
@@ -67,6 +69,8 @@ export const BookingPolicyForm = () => {
     return (
         <BookingPolicyFormBase
             props={{
+                slot,
+                slotLabels: slotLabels(t("loadFailedTitle")),
                 title: t("policyTitle"),
                 hint: t("policyHint"),
                 rules: RULES.map(([id, key]) => ({ id, label: t(key), value: numbers[id] })),
@@ -77,9 +81,10 @@ export const BookingPolicyForm = () => {
                 handoffLabel: t("policyHandoff"),
                 handoff,
                 saveLabel: t("policySave"),
-                isPending,
+                isPending: isPending || slot.isLoading === true,
             }}
             on={{
+                retry: reload,
                 changeRule: (id, value) => setEdits({ ...edits, [id]: Number.isFinite(value) ? value : 0 }),
                 changeAddress: (value) => setEdits({ ...edits, address: value }),
                 toggleAutoConfirm: (value) => setEdits({ ...edits, autoConfirm: value }),

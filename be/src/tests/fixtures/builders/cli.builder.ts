@@ -23,9 +23,18 @@ const wiringSettings = {
         schema: "public",
     },
     supabase: { url: "https://supabase.invalid", serviceRoleKey: new Secret("wiring-fixture") },
-    llm: {
-        embedding: { apiKey: null, baseUrl: "https://llm.invalid", model: "wiring-embedding" },
-        chat: { apiKey: null, baseUrl: "https://llm.invalid", model: "wiring-chat" },
+    aiPool: {
+        chat: [
+            { id: "deepseek", baseUrl: "https://llm.invalid", keys: [], model: "wiring-chat", smartModel: null },
+            { id: "openrouter", baseUrl: "https://llm.invalid", keys: [], model: "wiring-chat", smartModel: null },
+        ],
+        embedding: {
+            id: "embeddings",
+            baseUrl: "https://llm.invalid",
+            keys: [],
+            model: "wiring-embedding",
+            smartModel: null,
+        },
     },
     channelConnections: {
         channelTokenKey: new Secret("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="),
@@ -38,7 +47,7 @@ const wiringSettings = {
 const options = {
     connections: [wiringSettings.database],
     supabase: wiringSettings.supabase,
-    llm: wiringSettings.llm,
+    aiPool: wiringSettings.aiPool,
     channelConnections: wiringSettings.channelConnections,
     channelSetup: wiringSettings.channelSetup,
     n8nHost: { host: undefined, user: "wiring", sshKey: undefined, knownHosts: undefined, container: "wiring" },

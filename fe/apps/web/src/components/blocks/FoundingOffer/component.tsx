@@ -13,9 +13,14 @@ import {
 } from "@starci/grammar/common"
 import { HERO_COPY, HERO_COUNTDOWN, HERO_ROW, PILL_WRAP, STRIP } from "./classNames"
 
+/** The campaign presentations, in the order the owner approved them. */
+export const FOUNDING_OFFER_SHAPES = ["hero", "strip", "inline", "pill"] as const
+/** One drawing per campaign presentation. */
+export type FoundingOfferShape = (typeof FOUNDING_OFFER_SHAPES)[number]
+
 /** Every sentence of the campaign, resolved by the connected block. */
 export interface FoundingOfferBaseProps {
-    readonly state: "hero" | "strip" | "inline" | "pill"
+    readonly shape: FoundingOfferShape
     readonly props: {
         readonly name: string
         readonly ctaHref: string
@@ -109,9 +114,14 @@ const Hero = ({ props }: PartProps) => (
 
 /** Draws one of the four Founding 50 campaign presentations from resolved copy. */
 export const FoundingOfferBase = (props: FoundingOfferBaseProps) => {
-    if (props.state === "pill") return <Pill props={props.props} on={props.on} />
-    if (props.state === "strip") return <Strip props={props.props} on={props.on} />
-    if (props.state === "inline")
-        return <Alert tone="informative" title={props.props.inlineTitle} description={props.props.inlineText} />
-    return <Hero props={props.props} on={props.on} />
+    switch (props.shape) {
+        case "pill":
+            return <Pill props={props.props} on={props.on} />
+        case "strip":
+            return <Strip props={props.props} on={props.on} />
+        case "inline":
+            return <Alert tone="informative" title={props.props.inlineTitle} description={props.props.inlineText} />
+        case "hero":
+            return <Hero props={props.props} on={props.on} />
+    }
 }

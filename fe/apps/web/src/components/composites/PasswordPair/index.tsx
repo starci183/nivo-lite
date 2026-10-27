@@ -25,7 +25,7 @@ export const PasswordPair = (props: PasswordPairProps) => (
             name="password"
             kind="newPassword"
             label={props.passwordLabel}
-            hint={props.hint}
+            description={props.hint}
             revealLabel={props.showLabel}
             hideLabel={props.hideLabel}
             isRequired

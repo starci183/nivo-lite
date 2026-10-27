@@ -7,14 +7,16 @@ import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
 import { useQueryAuthUserSwr } from "@/hooks/auth"
 import {
     moneyProviderOf,
+    boardSlotOf,
     useConnectionOverlays,
     useConnectionsData,
     useConnectionsRefresh,
     wizardTargetOf,
 } from "@/hooks/connections"
-import type { AgentOption, Connection } from "@/modules/types"
+import { useSlotLabels } from "@/hooks/slot"
+import type { AgentOption, Connection, DataSlot } from "@/modules/types"
 import { ConnectionWizardOverlayBase } from "./component"
-import type { WizardTargetView } from "./component"
+import type { WizardBoard, WizardTargetView } from "./component"
 
 /**
  * What a page that already read the workspace may hand the wizard drawer. A route that mounts the drawer on its own passes nothing:
@@ -38,6 +40,7 @@ export const ConnectionWizardOverlay = (props: ConnectionWizardOverlayProps) => 
     const params = useSearchParams()
     const overlays = useConnectionOverlays()
     const data = useConnectionsData()
+    const slotLabelsOf = useSlotLabels()
     const user = useQueryAuthUserSwr()
     const items = props.items ?? data.items
     const agents = props.agents ?? data.activeAgents
@@ -50,6 +53,18 @@ export const ConnectionWizardOverlay = (props: ConnectionWizardOverlayProps) => 
         target === null || def?.module === null
             ? []
             : agents.filter((agent) => purposeFor(agent.module, target.provider) !== null)
+    const board: WizardBoard = {
+        agents,
+        eligible,
+        hasDefaultSender: items.some(
+            (item) => item.provider === found?.provider && item.status === "connected" && item.isDefault,
+        ),
+    }
+    const hasOwnRead = props.items === undefined || props.agents === undefined
+    const slot: DataSlot<WizardBoard> = boardSlotOf(
+        { isLoading: hasOwnRead && data.isLoading, isManager: true, isFailed: hasOwnRead && data.failed },
+        board,
+    )
     const close = (changed: boolean) => {
         overlays.closeWizard()
         if (changed) void refreshConnections()
@@ -61,13 +76,10 @@ export const ConnectionWizardOverlay = (props: ConnectionWizardOverlayProps) => 
                 closeLabel: t("close"),
                 ownerEmail: props.ownerEmail ?? user.data?.email ?? "",
                 target,
-                agents,
-                eligible,
-                hasDefaultSender: items.some(
-                    (item) => item.provider === found?.provider && item.status === "connected" && item.isDefault,
-                ),
+                board: slot,
+                slotLabels: slotLabelsOf(""),
             }}
-            on={{ close }}
+            on={{ close, retry: data.retry }}
         />
     )
 }

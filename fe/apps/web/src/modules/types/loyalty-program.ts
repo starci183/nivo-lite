@@ -63,3 +63,70 @@ export interface TierErrorView {
     readonly name?: string | undefined
     readonly minSpend?: string | undefined
 }
+
+/** One tier as typed in the form: numbers stay text until the programme is saved. */
+export interface TierValues {
+    uid: string
+    key: string
+    name: string
+    minSpend: string
+    multiplier: string
+    winback: string
+    benefit: string
+}
+
+/** One earn rule for a category as typed in the form. */
+export interface CategoryValues {
+    uid: string
+    match: string
+    rate: string
+    label: string
+}
+
+/** The whole programme as the form holds it. */
+export interface ProgramValues {
+    name: string
+    enabled: boolean
+    perThousand: string
+    perVisit: string
+    minOrder: string
+    trigger: string
+    categories: CategoryValues[]
+    tiers: TierValues[]
+    expiryMonths: string
+    warnDays: string
+    birthdayOn: boolean
+    birthdayPoints: string
+    birthdayReward: string
+    birthdayNote: string
+    maxPerMonth: string
+    hourFrom: string
+    hourTo: string
+    batch: string
+}
+
+/** The text fields of the programme form that sit at its top level. */
+export type ProgramTextField =
+    | "name"
+    | "perThousand"
+    | "perVisit"
+    | "minOrder"
+    | "trigger"
+    | "expiryMonths"
+    | "warnDays"
+    | "birthdayPoints"
+    | "birthdayReward"
+    | "birthdayNote"
+    | "maxPerMonth"
+    | "hourFrom"
+    | "hourTo"
+    | "batch"
+
+/** The switches of the programme form. */
+export type ProgramSwitchField = "enabled" | "birthdayOn"
+
+/** The text fields of one tier a manager types into. */
+export type TierTextField = "name" | "minSpend" | "multiplier" | "winback" | "benefit"
+
+/** The text fields of one category rule. */
+export type CategoryTextField = "match" | "rate" | "label"

@@ -1,9 +1,8 @@
-import type { ModuleIconName } from "@/modules/types"
+import type { ModuleIconName, OwnerGroupView, ResponsibilityRowView, RowStatus } from "@/modules/types"
 import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
 import { dayOffset, dueText } from "./days"
 
-/** Where a responsibility stands. */
-export type RowStatus = "open" | "waiting_approval" | "done"
+export type { OwnerGroupView, ResponsibilityRowView, RowStatus }
 
 /** The statuses, in the order the tabs show them. */
 export const ROW_STATUSES: ReadonlyArray<RowStatus> = ["open", "waiting_approval", "done"]
@@ -39,38 +38,6 @@ export type RespKey =
 
 /** Translator for the responsibilities catalog (next-intl on the client, the request-free one on the server). */
 export type RespT = (key: RespKey, vars?: Record<string, string | number>) => string
-
-/** One responsibility, resolved for display. */
-export interface ResponsibilityRowView {
-    readonly id: string
-    readonly leadId: string
-    readonly customer: string
-    readonly title: string
-    readonly nextAction: string
-    readonly dueLabel: string | null
-    readonly dueAt: string | null
-    readonly createdAt: string
-    readonly isOverdue: boolean
-    readonly isDueToday: boolean
-    readonly isDueThisWeek: boolean
-    readonly status: RowStatus
-    readonly statusLabel: string
-    readonly ownerKey: string
-    readonly ownerName: string
-    readonly ownerKind: "human" | "agent"
-    readonly ownerHandle: string | null
-}
-
-/** The owners that hold rows, in display order. */
-export interface OwnerGroupView {
-    readonly key: string
-    readonly name: string
-    readonly kind: "human" | "agent"
-    readonly handle: string | null
-    /** Semantic Icon name of the glyph an agent owner is drawn with. */
-    readonly glyph: ModuleIconName
-    readonly rows: ReadonlyArray<ResponsibilityRowView>
-}
 
 /** Status wording shared by the badge and the tabs. */
 const statusLabel = (t: RespT, status: RowStatus): string => {

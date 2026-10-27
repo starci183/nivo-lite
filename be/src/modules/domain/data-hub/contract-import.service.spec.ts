@@ -47,8 +47,19 @@ const request: ContractImportRequest = {
     workspaceId: "ws-1",
     userId: "user-1",
     text: "pasted",
-    mapping: { customerName: "Kh\u00e1ch h\u00e0ng", plan: "G\u00f3i", endsOn: "Ng\u00e0y h\u1ebft h\u1ea1n", amountVnd: "Gi\u00e1 tr\u1ecb" },
+    mapping: {
+        customerName: "Kh\u00e1ch h\u00e0ng",
+        plan: "G\u00f3i",
+        endsOn: "Ng\u00e0y h\u1ebft h\u1ea1n",
+        amountVnd: "Gi\u00e1 tr\u1ecb",
+    },
     acceptLanguage: "vi",
+}
+
+const LINKED = {
+    linked: 2,
+    created: 1,
+    unmatched: [{ contractId: "new", customerName: "C\u00f4 Hoa", reason: "noCustomer" as const }],
 }
 
 const build = async () => {
@@ -58,8 +69,13 @@ const build = async () => {
     contracts.saveContract.mockImplementation((params) =>
         Promise.resolve({ ...existing, id: "new", customerName: params.customerName }),
     )
+    contracts.linkCustomers.mockResolvedValue(LINKED)
     table.readText.mockReturnValue(source)
-    table.readFile.mockResolvedValue({ ...source, sheets: ["H\u1ee3p \u0111\u1ed3ng"], sheet: "H\u1ee3p \u0111\u1ed3ng" })
+    table.readFile.mockResolvedValue({
+        ...source,
+        sheets: ["H\u1ee3p \u0111\u1ed3ng"],
+        sheet: "H\u1ee3p \u0111\u1ed3ng",
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             ContractImportService,
@@ -114,7 +130,11 @@ describe("ContractImportService.preview", () => {
                 mapping: { customerName: "G\u00f3i", endsOn: "Ng\u00e0y h\u1ebft h\u1ea1n" },
             })
 
-            expect(table.readFile).toHaveBeenCalledWith("hop-dong.xlsx", expect.any(Uint8Array), "H\u1ee3p \u0111\u1ed3ng")
+            expect(table.readFile).toHaveBeenCalledWith(
+                "hop-dong.xlsx",
+                expect.any(Uint8Array),
+                "H\u1ee3p \u0111\u1ed3ng",
+            )
             expect(preview.sheet).toBe("H\u1ee3p \u0111\u1ed3ng")
             expect(preview.mapping.customerName).toBe("G\u00f3i")
             expect(preview.rows[0]?.customerName).toBe("Hosting")
@@ -141,7 +161,7 @@ describe("ContractImportService.preview", () => {
 
 describe("ContractImportService.importContracts", () => {
     {
-        it("saves each valid row through the contracts capability and skips the rest with a reason", async () => {
+        it("saves each valid row through the contracts capability, skips the rest with a reason and links the customers", async () => {
             const { service, contracts } = await build()
 
             await expect(service.importContracts(request)).resolves.toEqual({
@@ -150,7 +170,12 @@ describe("ContractImportService.importContracts", () => {
                     { row: 3, reason: "endsOnMissing" },
                     { row: 5, reason: "duplicate" },
                 ],
+                customers: LINKED,
             })
+            expect(contracts.linkCustomers).toHaveBeenCalledWith("ws-1")
+            expect(contracts.linkCustomers.mock.invocationCallOrder[0]).toBeGreaterThan(
+                contracts.saveContract.mock.invocationCallOrder[1] ?? Number.MAX_SAFE_INTEGER,
+            )
             expect(contracts.saveContract).toHaveBeenCalledTimes(2)
             expect(contracts.saveContract).toHaveBeenCalledWith({
                 workspaceId: "ws-1",
@@ -186,6 +211,7 @@ describe("ContractImportService.importContracts", () => {
             contracts.saveContract.mockRejectedValueOnce(new Error("database down"))
 
             await expect(service.importContracts(request)).rejects.toThrow("database down")
+            expect(contracts.linkCustomers).not.toHaveBeenCalled()
         })
     }
 })
@@ -196,7 +222,10 @@ describe("ContractImportService.importContracts refusals", () => {
             const { service, contracts } = await build()
 
             await expect(
-                service.importContracts({ ...request, mapping: { customerName: "Kh\u00e1ch h\u00e0ng", endsOn: "Gone" } }),
+                service.importContracts({
+                    ...request,
+                    mapping: { customerName: "Kh\u00e1ch h\u00e0ng", endsOn: "Gone" },
+                }),
             ).rejects.toEqual(invalidWith(CONTRACT_IMPORT_COPY.chooseColumns))
             expect(contracts.saveContract).not.toHaveBeenCalled()
         })

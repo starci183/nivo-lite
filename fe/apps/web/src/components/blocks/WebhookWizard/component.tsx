@@ -112,7 +112,7 @@ const addressOf = (props: WebhookWizardBaseProps) => {
                             name="url"
                             label={view.text.fieldUrl}
                             placeholder={view.text.urlPlaceholder}
-                            hint={view.text.urlHint}
+                            description={view.text.urlHint}
                             isDisabled={view.isPending}
                             value={view.form.url}
                             onValueChange={on.url}

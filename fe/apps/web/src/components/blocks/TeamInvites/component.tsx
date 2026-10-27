@@ -1,11 +1,9 @@
-import type { useTranslations, useFormatter } from "next-intl"
-import type { useMember } from "@/hooks/member"
-import type { useIndividualPlan } from "@/hooks/billing"
-import type { useTeam, useInviteCommands, useCopyInviteLink } from "@/hooks/team"
-import { Badge, Button, EmptyNotice, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
+import { Badge, Button, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
 import { InviteLink } from "@/components/composites/InviteLink"
 import { TeamSection } from "@/components/composites/TeamSection"
+import { SlotView } from "@/components/composites/SlotView"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, DETAIL_CLASS_NAME } from "./classNames"
 
 /** The link just issued for a row. */
@@ -32,20 +30,19 @@ export interface TeamInvitesBaseProps {
     readonly props: {
         readonly title: string
         readonly description: string
-        readonly emptyLabel: string
-        readonly failTitle: string
         readonly resendLabel: string
         readonly copyLabel: string
         readonly copiedLabel: string
         readonly revokeLabel: string
         readonly rotateNote: string
-        readonly rows: ReadonlyArray<InviteRowView>
-        /** The invitations are loading: the heading stays, the list is skeleton rows. */
-        readonly isSkeleton: boolean
-        readonly error?: string
+        /** The heading stays; the list is the slot of the rows. */
+        readonly slot: DataSlot<ReadonlyArray<InviteRowView>>
+        readonly placeholder: ReadonlyArray<InviteRowView>
+        readonly slotLabels: SlotLabels
         readonly notice?: string
     }
     readonly on: {
+        readonly retry: () => void
         readonly resend: (id: string) => void
         readonly copyLink: (id: string) => void
         readonly revoke: (id: string) => void
@@ -55,72 +52,82 @@ export interface TeamInvitesBaseProps {
 
 /** Draws the pending invitations with expiry, resend, copy link and revoke. */
 export const TeamInvitesBase = (props: TeamInvitesBaseProps) => (
-    <TeamSection
-        id="team-invites-title"
-        title={props.props.title}
-        description={props.props.description}
-        failTitle={props.props.failTitle}
-        error={props.props.error}
-    >
+    <TeamSection id="team-invites-title" title={props.props.title} description={props.props.description}>
         {props.props.notice === undefined ? null : (
             <Text size="sm" live="polite">
                 {props.props.notice}
             </Text>
         )}
-        <SurfaceListCard
-            ariaLabel={props.props.title}
-            isLoading={props.props.isSkeleton}
-            empty={<EmptyNotice message={props.props.emptyLabel} />}
-        >
-            {props.props.rows.map((row) => (
-                <ListRow
-                    key={row.id}
-                    leading={<PersonAvatar name={row.email} size="md" />}
-                    title={row.email}
-                    description={row.expiry}
-                    badges={<Badge tone={row.isExpired ? "warning" : "accent"}>{row.roleLabel}</Badge>}
-                    actions={
-                        <div className={ACTIONS_CLASS_NAME}>
-                            <Button intent="neutral" isPending={row.isBusy} onPress={() => props.on.resend(row.id)}>
-                                {props.props.resendLabel}
-                            </Button>
-                            <Button intent="neutral" isPending={row.isBusy} onPress={() => props.on.copyLink(row.id)}>
-                                {props.props.copyLabel}
-                            </Button>
-                            <Button
-                                intent="destructive"
-                                step="entry"
-                                isPending={row.isBusy}
-                                onPress={() => props.on.revoke(row.id)}
+        <SurfaceListCard ariaLabel={props.props.title}>
+            <SlotView
+                slot={props.props.slot}
+                placeholder={props.props.placeholder}
+                labels={props.props.slotLabels}
+                onRetry={props.on.retry}
+            >
+                {(rows, isSkeleton) => (
+                    <>
+                        {rows.map((row) => (
+                            <ListRow
+                                key={row.id}
+                                isSkeleton={isSkeleton}
+                                leading={<PersonAvatar name={row.email} size="md" />}
+                                title={row.email}
+                                description={row.expiry}
+                                badges={<Badge tone={row.isExpired ? "warning" : "accent"}>{row.roleLabel}</Badge>}
+                                actions={
+                                    <div className={ACTIONS_CLASS_NAME}>
+                                        <Button
+                                            intent="neutral"
+                                            isPending={row.isBusy}
+                                            onPress={() => props.on.resend(row.id)}
+                                        >
+                                            {props.props.resendLabel}
+                                        </Button>
+                                        <Button
+                                            intent="neutral"
+                                            isPending={row.isBusy}
+                                            onPress={() => props.on.copyLink(row.id)}
+                                        >
+                                            {props.props.copyLabel}
+                                        </Button>
+                                        <Button
+                                            intent="destructive"
+                                            step="entry"
+                                            isPending={row.isBusy}
+                                            onPress={() => props.on.revoke(row.id)}
+                                        >
+                                            {props.props.revokeLabel}
+                                        </Button>
+                                    </div>
+                                }
                             >
-                                {props.props.revokeLabel}
-                            </Button>
-                        </div>
-                    }
-                >
-                    {row.staffNote === undefined && row.link === undefined ? null : (
-                        <div className={DETAIL_CLASS_NAME}>
-                            {row.staffNote === undefined ? null : (
-                                <Text size="xs" tone="muted" overflow="truncate">
-                                    {row.staffNote}
-                                </Text>
-                            )}
-                            {row.link === undefined ? null : (
-                                <InviteLink
-                                    id={`invite-link-${row.id}`}
-                                    label={row.link.label}
-                                    link={row.link.value}
-                                    copyLabel={props.props.copyLabel}
-                                    copiedLabel={props.props.copiedLabel}
-                                    note={props.props.rotateNote}
-                                    isCopied={row.link.isCopied}
-                                    onCopy={props.on.linkCopied}
-                                />
-                            )}
-                        </div>
-                    )}
-                </ListRow>
-            ))}
+                                {row.staffNote === undefined && row.link === undefined ? null : (
+                                    <div className={DETAIL_CLASS_NAME}>
+                                        {row.staffNote === undefined ? null : (
+                                            <Text size="xs" tone="muted" overflow="truncate">
+                                                {row.staffNote}
+                                            </Text>
+                                        )}
+                                        {row.link === undefined ? null : (
+                                            <InviteLink
+                                                id={`invite-link-${row.id}`}
+                                                label={row.link.label}
+                                                link={row.link.value}
+                                                copyLabel={props.props.copyLabel}
+                                                copiedLabel={props.props.copiedLabel}
+                                                note={props.props.rotateNote}
+                                                isCopied={row.link.isCopied}
+                                                onCopy={props.on.linkCopied}
+                                            />
+                                        )}
+                                    </div>
+                                )}
+                            </ListRow>
+                        ))}
+                    </>
+                )}
+            </SlotView>
         </SurfaceListCard>
     </TeamSection>
 )
@@ -131,21 +138,4 @@ export interface Shown {
     readonly email: string
     readonly link: string
     readonly isCopied: boolean
-}
-
-/** State values and commands consumed by the connected surface. */
-export type TeamInvitesControllerInput = {
-    readonly t: ReturnType<typeof useTranslations<"team">>
-    readonly format: ReturnType<typeof useFormatter>
-    readonly member: ReturnType<typeof useMember>
-    readonly isIndividual: ReturnType<typeof useIndividualPlan>
-    readonly isAllowed: boolean
-    readonly views: ReturnType<typeof useTeam>["views"]
-    readonly isLoading: ReturnType<typeof useTeam>["isLoading"]
-    readonly commands: ReturnType<typeof useInviteCommands>
-    readonly copyToClipboard: ReturnType<typeof useCopyInviteLink>
-    readonly busyId: string | undefined
-    readonly setBusyId: React.Dispatch<React.SetStateAction<string | undefined>>
-    readonly shown: Shown | undefined
-    readonly setShown: React.Dispatch<React.SetStateAction<Shown | undefined>>
 }

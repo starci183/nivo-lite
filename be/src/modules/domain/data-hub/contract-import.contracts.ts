@@ -1,3 +1,4 @@
+import type { LinkedCustomers } from "@modules/domain/contracts"
 import type { CsvUploadedFile } from "./csv-import.contracts"
 
 /** The contract fields a column can fill. */
@@ -114,4 +115,9 @@ export interface ContractImportResult {
     readonly created: number
     /** The rows left out, each with its reason. */
     readonly skipped: ReadonlyArray<ContractImportSkip>
+    /**
+     * What linking the contracts to their customers did right after the save: how many reach a lead now, how many leads were
+     * created and which contracts still reach nobody.
+     */
+    readonly customers: LinkedCustomers
 }

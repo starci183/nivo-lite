@@ -1,8 +1,7 @@
-import { useState } from "react"
 import type { ReactNode } from "react"
 import { Badge, Button, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 import { OfficeCardFrame } from "@/components/leaves/OfficeCardFrame"
-import type { OfficeApprovalView, OfficeText } from "@/modules/types"
+import type { OfficeApprovalView, OfficeCardDraft, OfficeText } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, LINK_CLASS_NAME, QUOTE_CLASS_NAME, STATUS_CLASS_NAME, TEXT_CLASS_NAME } from "./classNames"
 
 /** What one approval request draws. */
@@ -10,6 +9,9 @@ type OfficeApprovalCardProps = {
     readonly approval: OfficeApprovalView
     readonly avatar: ReactNode
     readonly text: OfficeText
+    /** What the owner edited on this card, kept by the thread's block. */
+    readonly draft: OfficeCardDraft
+    readonly onEdit: (key: string, patch: Partial<OfficeCardDraft>) => void
     /** True while this request is being decided. */
     readonly isBusy: boolean
     readonly onDecide: (id: string, decision: "approved" | "rejected", editedDraft: string | null) => void
@@ -25,9 +27,9 @@ const TONES = { waiting: "warning", approved: "success", rejected: "danger" } as
  */
 export const OfficeApprovalCard = (props: OfficeApprovalCardProps) => {
     const { approval, text } = props
-    const [isEditing, setIsEditing] = useState(false)
-    const [isExpanded, setIsExpanded] = useState(false)
-    const [editText, setEditText] = useState(approval.draft)
+    const { isEditing, isExpanded } = props.draft
+    const editText = props.draft.text ?? approval.draft
+    const edit = (patch: Partial<OfficeCardDraft>) => props.onEdit(approval.key, patch)
     const isWaiting = approval.status === "waiting"
     const isLong = approval.draft.length > PREVIEW_CHARS
     const shown =
@@ -36,13 +38,10 @@ export const OfficeApprovalCard = (props: OfficeApprovalCardProps) => {
 
     const onApprove = () => {
         props.onDecide(approval.id, "approved", isEditing && trimmed !== approval.draft ? trimmed : null)
-        setIsEditing(false)
+        edit({ isEditing: false })
     }
 
-    const onToggleEdit = () => {
-        setEditText(approval.draft)
-        setIsEditing((value) => !value)
-    }
+    const onToggleEdit = () => edit({ text: null, isEditing: !isEditing })
 
     return (
         <OfficeCardFrame
@@ -68,7 +67,7 @@ export const OfficeApprovalCard = (props: OfficeApprovalCardProps) => {
                     rows={6}
                     value={editText}
                     isDisabled={props.isBusy}
-                    onValueChange={setEditText}
+                    onValueChange={(value) => edit({ text: value })}
                 />
             ) : (
                 <SurfaceCard ariaLabel={approval.title === "" ? text("draftLabel") : approval.title}>
@@ -81,7 +80,7 @@ export const OfficeApprovalCard = (props: OfficeApprovalCardProps) => {
             )}
             {!isWaiting && isLong ? (
                 <div>
-                    <Button intent="neutral" size="sm" onPress={() => setIsExpanded((value) => !value)}>
+                    <Button intent="neutral" size="sm" onPress={() => edit({ isExpanded: !isExpanded })}>
                         {isExpanded ? text("showLess") : text("showMore")}
                     </Button>
                 </div>

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 import { useQueryNivoKnowledgeSwr } from "@/hooks/swr"
+import { slotOfSwr } from "@/hooks/slot"
 import { toNivoEntry } from "@/modules/documents"
 import { readError } from "@/hooks/workspaceread"
 
@@ -11,5 +12,7 @@ export const useNivoKnowledge = () => {
     const { data, isLoading } = swrRead
     const error = readError(swrRead)
     const items = useMemo(() => (data === undefined ? undefined : data.map(toNivoEntry)), [data])
-    return { items, error, isLoading }
+    const slot = slotOfSwr({ data: items, error: swrRead.error, isLoading })
+    const reload = () => void swrRead.mutate()
+    return { items, error, isLoading, slot, reload }
 }

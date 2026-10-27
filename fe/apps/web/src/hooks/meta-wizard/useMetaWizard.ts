@@ -1,7 +1,7 @@
 "use client"
 
 import { metaWizardOf } from "@/hooks/connection-wire"
-import { allAgentIds, resumeNoteOf, useAdoptOnce } from "@/hooks/connection-wizard"
+import { allAgentIds, resumeNoteOf, resumeSlotOf, useAdoptOnce } from "@/hooks/connection-wizard"
 import { useFirstEvent, useSetConnectionAgents } from "@/hooks/connections"
 import { useQueryMetaConnectionSwr } from "@/hooks/swr"
 import type { AgentOption, MetaCheck, MetaWizardConnection, WizardNote } from "@/modules/types"
@@ -80,9 +80,12 @@ export const useMetaWizard = (input: MetaWizardInput) => {
         note: resumeNoteOf(note, resume.error),
         isPending,
         isChecking,
-        isLoading: input.resumeId !== undefined && resume.data === undefined && resume.error === undefined,
+        resume: resumeSlotOf(input.resumeId, resume),
         firstEvent,
         on: {
+            retry: () => {
+                void resume.mutate()
+            },
             go,
             login,
             choose,

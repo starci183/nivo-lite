@@ -16,7 +16,7 @@ export const InboxLoadingPage = async () => {
             eyebrow={t("eyebrow")}
             title={t("title")}
             description={t("description")}
-            feed={<InboxFeed isLoading />}
+            feed={<InboxFeed />}
         />
     )
 }

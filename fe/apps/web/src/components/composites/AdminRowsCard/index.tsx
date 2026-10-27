@@ -6,18 +6,21 @@ import { ROW_META_CLASS_NAME } from "./classNames"
 /** What a list card of the console draws. */
 type AdminRowsCardProps = {
     readonly card: AdminCardView
+    /** Draws the same card as a skeleton while the read is on its way. */
+    readonly isSkeleton?: boolean | undefined
 }
 
 /** What one row of the card draws. */
 type RowProps = {
     readonly row: AdminRowView
+    readonly isSkeleton: boolean
 }
 
 const Row = (props: RowProps) => (
     <ListRow
         title={
             props.row.isMuted ? (
-                <Text size="sm" tone="muted">
+                <Text size="sm" tone="muted" isSkeleton={props.isSkeleton}>
                     {props.row.title}
                 </Text>
             ) : (
@@ -25,17 +28,18 @@ const Row = (props: RowProps) => (
             )
         }
         description={props.row.lines.length === 0 ? null : props.row.lines.join(" · ")}
-        badges={<AdminBadges badges={props.row.badges} />}
+        badges={<AdminBadges badges={props.row.badges} isSkeleton={props.isSkeleton} />}
+        isSkeleton={props.isSkeleton}
         actions={
             props.row.link === undefined && props.row.note === undefined ? null : (
                 <div className={ROW_META_CLASS_NAME}>
                     {props.row.link === undefined ? null : (
-                        <Button size="sm" intent="neutral" href={props.row.link.href}>
+                        <Button size="sm" intent="neutral" href={props.row.link.href} isSkeleton={props.isSkeleton}>
                             {props.row.link.label}
                         </Button>
                     )}
                     {props.row.note === undefined ? null : (
-                        <Text size="xs" tone="muted">
+                        <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
                             {props.row.note}
                         </Text>
                     )}
@@ -44,7 +48,7 @@ const Row = (props: RowProps) => (
         }
     >
         {props.row.mono === undefined ? null : (
-            <Text size="xs">
+            <Text size="xs" isSkeleton={props.isSkeleton}>
                 <code>{props.row.mono}</code>
             </Text>
         )}
@@ -60,14 +64,14 @@ export const AdminRowsCard = (props: AdminRowsCardProps) => (
         labelEnd={
             props.card.labelBadges.length === 0 ? undefined : (
                 <div className={ROW_META_CLASS_NAME}>
-                    <AdminBadges badges={props.card.labelBadges} />
+                    <AdminBadges badges={props.card.labelBadges} isSkeleton={props.isSkeleton === true} />
                 </div>
             )
         }
         empty={<EmptyNotice message={props.card.emptyMessage} />}
     >
         {props.card.rows.map((row) => (
-            <Row key={row.id} row={row} />
+            <Row key={row.id} row={row} isSkeleton={props.isSkeleton === true} />
         ))}
     </SurfaceListCard>
 )

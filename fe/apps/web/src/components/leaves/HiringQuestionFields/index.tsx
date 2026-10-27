@@ -1,6 +1,5 @@
 import { Button, Input, Select, SurfaceCard, Switch } from "@starci/grammar/common"
-import type { HiringSay } from "@/hooks/hiring"
-import type { HiringQuestionValues } from "@/hooks/hiringJobs"
+import type { HiringQuestionValues, HiringSay } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, FIELDS_CLASS_NAME, GRID_CLASS_NAME } from "./classNames"
 
 /** One question of the job editor and the way to change or remove it. */

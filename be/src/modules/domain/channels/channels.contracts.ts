@@ -87,6 +87,32 @@ export interface PersonMessage {
     readonly text: string
 }
 
+/** The facts of a renewal notice, the values a ZNS renewal template is filled with. */
+export interface RenewalNoticeFields {
+    /** The customer's name as the invoice names them. */
+    readonly customerName: string
+    /** The plan or service being renewed. */
+    readonly plan: string
+    /** The day the current term ends, ISO `YYYY-MM-DD`; ZNS receives it as `dd/MM/yyyy`. */
+    readonly endDate: string
+    /** The amount to pay, in whole dong. */
+    readonly amount: number
+    /** The bank transfer content that matches the payment to the invoice. */
+    readonly transferContent: string
+    /** The invoice number, e.g. INV-202610-0001. */
+    readonly invoiceNumber: string
+}
+
+/** A structured renewal notice riding with the text: what lets Zalo reach the customer by ZNS when the chat window is closed. */
+export interface RenewalNotification {
+    /** The kind of notice; it picks the workspace's ZNS template. */
+    readonly kind: "renewal"
+    /** The customer's phone from the lead or customer record, in any common Vietnamese form, or null when there is none. */
+    readonly phone: string | null
+    /** The values of the template. */
+    readonly fields: RenewalNoticeFields
+}
+
 /** One reply to push to the customer's own channel. */
 export interface DeliveryRequest {
     /** The conversation the reply belongs to. */
@@ -95,7 +121,18 @@ export interface DeliveryRequest {
     readonly messageId: string
     /** The text to send. */
     readonly text: string
+    /** The structured notice behind the text, when there is one: on Zalo it allows the ZNS fallback outside the 48-hour window. */
+    readonly notification?: RenewalNotification
 }
+
+/** Which Zalo route carried a delivered message. */
+export type DeliveryRoute = "consultation" | "zns"
+
+/**
+ * A fact about a delivery worth telling the owner: the QR image did not follow the text (the link in the text still works), or why a
+ * closed Zalo window could not fall back to ZNS.
+ */
+export type DeliveryNote = "qr_image_failed" | "zns_not_configured" | "zns_no_phone"
 
 /** The outcome of a delivery: whether the channel accepted it and, if not, why. */
 export interface DeliveryResult {
@@ -103,7 +140,38 @@ export interface DeliveryResult {
     readonly delivered: boolean
     /** Why a Zalo message was not delivered; null otherwise. */
     readonly failure: ZaloFailure | null
+    /** The Zalo route that carried it, when it went over Zalo. */
+    readonly via?: DeliveryRoute
+    /** A fact worth showing next to the verdict, when there is one. */
+    readonly note?: DeliveryNote
 }
+
+/** The parameter names a workspace's ZNS renewal template declares, per field; an empty name leaves that field out. */
+export interface ZnsRenewalParams {
+    /** The parameter of the customer's name. */
+    readonly customerName: string
+    /** The parameter of the plan. */
+    readonly plan: string
+    /** The parameter of the term's end date. */
+    readonly endDate: string
+    /** The parameter of the amount. */
+    readonly amount: string
+    /** The parameter of the transfer content. */
+    readonly transferContent: string
+    /** The parameter of the invoice number. */
+    readonly invoiceNumber: string
+}
+
+/** The ZNS renewal template a Zalo OA connection uses outside the 48-hour window. */
+export interface ZnsRenewalSettings {
+    /** The approved ZNS template id; empty when none is configured. */
+    readonly templateId: string
+    /** The parameter names of the template. */
+    readonly params: ZnsRenewalParams
+}
+
+/** The ZNS renewal settings of a connection, or null when no template is configured. */
+export type OptionalZnsRenewal = ZnsRenewalSettings | null
 
 /** Sends a reply on channels this capability does not own (Facebook, Instagram); the owner registers it once at start. */
 export interface ChannelSender {

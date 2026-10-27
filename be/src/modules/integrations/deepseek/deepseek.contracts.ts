@@ -320,3 +320,75 @@ export interface ProposedCommand {
     /** The other required keys taken from the message. */
     readonly fields: Readonly<Record<string, string | number>>
 }
+
+/** One chat call through the AI pool. */
+export interface PooledRequest {
+    /** The prompt. */
+    readonly messages: ReadonlyArray<ChatMessage>
+    /** True asks for one JSON object. */
+    readonly json: boolean
+    /** The whole call in milliseconds. */
+    readonly timeoutMs: number
+}
+
+/** What the pool reports about one call; a field is null when the provider did not say. */
+export interface PooledUsage {
+    /** Tokens of the request. */
+    readonly promptTokens: number | null
+    /** Tokens of the answer. */
+    readonly completionTokens: number | null
+    /** Tokens of both. */
+    readonly totalTokens: number | null
+    /** The cost in US dollars, when the provider reports it. */
+    readonly costUsd: number | null
+}
+
+/** One answer of the pool. */
+export interface PooledAnswer {
+    /** The trimmed text; never empty. */
+    readonly text: string
+    /** The model that answered. */
+    readonly model: string
+    /** What the provider reported. */
+    readonly usage: PooledUsage
+}
+
+/** A pooled answer, or null when no lane answered. */
+export type PooledAnswerResult = PooledAnswer | null
+
+/** What a metered run cost, in the meter's own shape. */
+export interface MeteredRun {
+    /** Prompt tokens. */
+    readonly prompt_tokens: number
+    /** Completion tokens. */
+    readonly completion_tokens: number
+    /** Prompt tokens served from a cache; the pool does not report them. */
+    readonly cached_tokens: number
+    /** The provider cost. */
+    readonly cost: number
+    /** Who served the run. */
+    readonly model: string | null
+}
+
+/** One pooled generation as the meter books it. */
+export interface MeterEntry {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The usage kind. */
+    readonly kind: string
+    /** The usage module. */
+    readonly module: string
+    /** What the run cost. */
+    readonly usage: MeteredRun | null
+    /** The length of the generated text. */
+    readonly completionChars: number
+}
+
+/** The sentence a workspace over its allowance is shown. */
+export interface QuotaNotice {
+    /** The sentence, in the asked language. */
+    readonly message: string
+}
+
+/** A quota notice, or null when the workspace is within its allowance. */
+export type OptionalQuotaNotice = QuotaNotice | null

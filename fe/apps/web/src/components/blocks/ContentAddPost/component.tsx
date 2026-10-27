@@ -1,6 +1,7 @@
 import { Button, CheckboxGroup, Dialog, Input, Select } from "@starci/grammar/common"
 import { ContentCommandNote } from "@/components/composites/ContentSettingsCard"
-import type { ContentChannel, ContentNote, ContentT } from "@/hooks/content"
+import type { ContentChannel, ContentNote } from "@/hooks/content"
+import type { ContentT } from "@/modules/types"
 import { FORM_CLASS_NAME } from "./classNames"
 
 /** What the add-a-post command draws. */
@@ -89,7 +90,7 @@ const renderNewPostFields = (
                 name="date"
                 label={t("addDate")}
                 value={props.props.date}
-                hint={t("addDateHint")}
+                description={t("addDateHint")}
                 isDisabled={isPending}
                 onValueChange={props.on.date}
             />
@@ -98,7 +99,7 @@ const renderNewPostFields = (
                 name="time"
                 label={t("addTime")}
                 value={props.props.time}
-                hint={t("addTimeHint")}
+                description={t("addTimeHint")}
                 isDisabled={isPending}
                 onValueChange={props.on.time}
             />

@@ -17,7 +17,7 @@ export type AgentCatalogCardProps = {
     readonly stateLabel: string
     readonly isInstalled: boolean
     /** The data is not known yet: the state badge and the actions are skeletons. */
-    readonly isLoading: boolean
+    readonly isSkeleton: boolean
     /** Where the installed agent of this role opens; null when none is installed. */
     readonly openHref: string | null
     readonly detailsLabel: string
@@ -40,7 +40,7 @@ type DetailsProps = Pick<
     | "points"
     | "isEarly"
     | "earlyHint"
-    | "isLoading"
+    | "isSkeleton"
     | "openHref"
     | "detailsLabel"
     | "detailsPointsTitle"
@@ -49,16 +49,9 @@ type DetailsProps = Pick<
 
 /** The "view details" action: the installed agent when there is one, else a dialog with everything the role does. */
 const Details = (props: DetailsProps) => {
-    if (props.isLoading) {
-        return (
-            <Button intent="neutral" isSkeleton>
-                {props.detailsLabel}
-            </Button>
-        )
-    }
     if (props.openHref !== null) {
         return (
-            <Button intent="neutral" href={props.openHref}>
+            <Button intent="neutral" href={props.openHref} isSkeleton={props.isSkeleton}>
                 {props.detailsLabel}
             </Button>
         )
@@ -69,7 +62,11 @@ const Details = (props: DetailsProps) => {
             title={props.name}
             description={props.description}
             closeLabel={props.closeLabel}
-            trigger={<Button intent="neutral">{props.detailsLabel}</Button>}
+            trigger={
+                <Button intent="neutral" isSkeleton={props.isSkeleton}>
+                    {props.detailsLabel}
+                </Button>
+            }
         >
             <div className={DETAIL}>
                 <Heading level={3}>{props.detailsPointsTitle}</Heading>
@@ -101,7 +98,7 @@ export const AgentCatalogCard = (props: AgentCatalogCardProps) => (
                 <Heading level={3}>{props.name}</Heading>
                 <div className={BADGES}>
                     {props.isEarly ? <Badge tone="accent">{props.earlyLabel}</Badge> : null}
-                    <Badge isDot isSkeleton={props.isLoading} tone={props.isInstalled ? "success" : "neutral"}>
+                    <Badge isDot isSkeleton={props.isSkeleton} tone={props.isInstalled ? "success" : "neutral"}>
                         {props.stateLabel}
                     </Badge>
                 </div>
@@ -119,14 +116,10 @@ export const AgentCatalogCard = (props: AgentCatalogCardProps) => (
                 ))}
             </List>
             <div className={FOOT}>
-                {props.isLoading ? (
-                    <Button intent="alternative" isSkeleton>
-                        {props.installLabel}
-                    </Button>
-                ) : null}
-                {!props.isLoading && props.canInstall ? (
+                {props.canInstall ? (
                     <Button
                         intent="alternative"
+                        isSkeleton={props.isSkeleton}
                         isPending={props.isInstalling}
                         isDisabled={props.isBlocked}
                         onPress={props.onInstall}
@@ -140,7 +133,7 @@ export const AgentCatalogCard = (props: AgentCatalogCardProps) => (
                     points={props.points}
                     isEarly={props.isEarly}
                     earlyHint={props.earlyHint}
-                    isLoading={props.isLoading}
+                    isSkeleton={props.isSkeleton}
                     openHref={props.openHref}
                     detailsLabel={props.detailsLabel}
                     detailsPointsTitle={props.detailsPointsTitle}

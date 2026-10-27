@@ -12,7 +12,7 @@ type SetupVersionsCardProps = {
         readonly detail: string
         readonly isActive: boolean
     }>
-    readonly isLoading: boolean
+    readonly isSkeleton: boolean
 }
 
 /** The immutable versions applied so far, the one in use marked. */
@@ -25,7 +25,7 @@ export const SetupVersionsCard = (props: SetupVersionsCardProps) => (
             {props.versions.map((version) => (
                 <div key={version.id} className={ROW}>
                     <ListRow
-                        isSkeleton={props.isLoading}
+                        isSkeleton={props.isSkeleton}
                         title={version.line}
                         description={version.detail}
                         badges={

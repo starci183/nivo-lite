@@ -62,5 +62,15 @@ export const useAgentIdentity = (agentId: string) => {
         await refresh()
     }, [agentId, name, rename, runGraphQL, refresh, t])
 
-    return { agent, name, setName: setDraft, isNameInvalid, saveName, isSaving: rename.isMutating, avatar }
+    return {
+        agent,
+        slot,
+        reload,
+        name,
+        setName: setDraft,
+        isNameInvalid,
+        saveName,
+        isSaving: rename.isMutating,
+        avatar,
+    }
 }

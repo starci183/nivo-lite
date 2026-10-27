@@ -1,3 +1,4 @@
+import type { DataSlot, SlotLabels } from "./slot"
 import type { FlowStaff, FlowWorkItemView } from "./flow"
 
 /**
@@ -159,4 +160,14 @@ export interface AccountingWorkbenchData {
     /** False until the accounting_adjustments migration is applied: the correction form is then withheld. */
     readonly adjustmentsReady: boolean
     readonly excludedTest: number
+}
+
+/** The pure half of one connected Accounting tab: its read status, the same panel over fake data of the same shape, and what it does. */
+export interface AccountingPanelBaseProps<View, On> {
+    readonly props: {
+        readonly slot: DataSlot<View>
+        readonly labels: SlotLabels
+        readonly placeholder: View
+    }
+    readonly on: On & { readonly retry: () => void }
 }

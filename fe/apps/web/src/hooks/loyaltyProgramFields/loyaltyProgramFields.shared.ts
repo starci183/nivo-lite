@@ -1,28 +1,4 @@
-/** The text fields of the programme form that sit at its top level. */
-export type ProgramTextField =
-    | "name"
-    | "perThousand"
-    | "perVisit"
-    | "minOrder"
-    | "trigger"
-    | "expiryMonths"
-    | "warnDays"
-    | "birthdayPoints"
-    | "birthdayReward"
-    | "birthdayNote"
-    | "maxPerMonth"
-    | "hourFrom"
-    | "hourTo"
-    | "batch"
-
-/** The switches of the programme form. */
-export type ProgramSwitchField = "enabled" | "birthdayOn"
-
-/** The text fields of one tier a manager types into. */
-export type TierTextField = "name" | "minSpend" | "multiplier" | "winback" | "benefit"
-
-/** The text fields of one category rule. */
-export type CategoryTextField = "match" | "rate" | "label"
+import type { CategoryTextField, ProgramTextField, TierTextField } from "@/modules/types"
 
 const decimal = (value: string): string => value.replace(/[^\d.,]/g, "").slice(0, 8)
 const whole = (value: string, max = 12): string => value.replace(/[^\d]/g, "").slice(0, max)

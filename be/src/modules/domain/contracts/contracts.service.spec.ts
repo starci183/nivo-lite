@@ -7,6 +7,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG, REQUEST_LOCALE } from "@modules/platform/i18n"
 import type { MessageCatalog, RequestLocale } from "@modules/platform/i18n"
+import { ContractLinkService } from "./contract-link.service"
 import type { SaveContractParams } from "./contracts.contracts"
 import { ContractsService } from "./contracts.service"
 import { ContractsErrorCode } from "./errors/contracts.error"
@@ -64,6 +65,8 @@ const build = async (entityManager: MockEntityManager) => {
     })
     const events = mock<EventsService>()
     events.record.mockResolvedValue(undefined)
+    const links = mock<ContractLinkService>()
+    links.linkCustomers.mockResolvedValue({ linked: 1, created: 0, unmatched: [] })
     const moduleRef = await Test.createTestingModule({
         providers: [
             ContractsService,
@@ -72,9 +75,10 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: REQUEST_LOCALE, useValue: requestLocale },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: EventsService, useValue: events },
+            { provide: ContractLinkService, useValue: links },
         ],
     }).compile()
-    return { members, contracts: moduleRef.get(ContractsService), events, requestLocale }
+    return { members, contracts: moduleRef.get(ContractsService), events, requestLocale, links }
 }
 
 describe("ContractsService", () => {
@@ -350,6 +354,30 @@ describe("ContractsService", () => {
             await expect(
                 contracts.extendForPaidRenewal("ws-1", "contract-9", "2027-01-01", "INV-1"),
             ).rejects.toMatchObject({ code: ContractsErrorCode.NotFound, params: { id: "contract-9" } })
+        })
+    })
+})
+
+describe("ContractsService", () => {
+    describe("linkCustomers", () => {
+        it("links the contracts on the system's behalf without asking for a member", async () => {
+            const { contracts, links, members } = await build(mockEntityManager())
+
+            await expect(contracts.linkCustomers("ws-1")).resolves.toEqual({ linked: 1, created: 0, unmatched: [] })
+
+            expect(links.linkCustomers).toHaveBeenCalledWith("ws-1")
+            expect(members.require).not.toHaveBeenCalled()
+        })
+
+        it("proves the caller belongs to the workspace before linking for them", async () => {
+            const { contracts, links, members } = await build(mockEntityManager())
+            members.require.mockRejectedValueOnce(new Error("not a member"))
+
+            await expect(contracts.linkCustomersFor("user-9", "ws-1")).rejects.toThrow("not a member")
+            expect(links.linkCustomers).not.toHaveBeenCalled()
+
+            await expect(contracts.linkCustomersFor("user-1", "ws-1")).resolves.toMatchObject({ linked: 1 })
+            expect(members.require).toHaveBeenLastCalledWith("user-1", "ws-1")
         })
     })
 })

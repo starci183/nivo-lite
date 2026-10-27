@@ -12,7 +12,7 @@ import { ContentMonthGrid, type GridCell } from "@/components/branches/ContentMo
 import { ContentMonthBar } from "@/components/leaves/ContentMonthBar"
 import { ContentPostFacts } from "@/components/leaves/ContentPostFacts"
 import { ContentStatusBadge } from "@/components/leaves/ContentStatusBadge"
-import type { ContentT, PostView } from "@/hooks/content"
+import type { ContentT, PostView } from "@/modules/types"
 import { AGENDA_CLASS_NAME, GRID_WRAP_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
 
 /** What the calendar panel draws. */

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useKnowledgeIdeas, useLibraryCommands } from "@/hooks/knowledge"
+import { loadingSlot, useSlotLabels } from "@/hooks/slot"
 import type { KnowledgeRowView } from "@/components/composites/KnowledgeRows"
 import { brainTabHref } from "@/modules/routes"
 import type { IdeaDecision } from "@/modules/types"
@@ -67,6 +68,7 @@ export const KnowledgeSuggestions = () => {
     const t = useTranslations("knowledge")
     const commands = useLibraryCommands()
     const ideas = useKnowledgeIdeas()
+    const slotLabels = useSlotLabels()
     const [isExpanded, setIsExpanded] = useState(false)
     const decidedLabelOf = (item: SuggestionItem): string | undefined => {
         if (item.state === undefined) return undefined
@@ -94,10 +96,11 @@ export const KnowledgeSuggestions = () => {
                         failTitle: t("detailFailed"),
                     },
                     label: t("suggestTitle"),
-                    rows: (isExpanded ? ideas.open : ideas.open.slice(0, VISIBLE_IDEAS)).map(openRow),
-                    isLoading: ideas.isLoading,
                     isPending: commands.isPending,
-                    emptyTitle: t("suggestAllDone"),
+                    slot: ideas.isLoading
+                        ? loadingSlot<ReadonlyArray<KnowledgeRowView>>()
+                        : { items: (isExpanded ? ideas.open : ideas.open.slice(0, VISIBLE_IDEAS)).map(openRow) },
+                    slotLabels: slotLabels(t("suggestAllDone")),
                 },
                 more:
                     ideas.open.length > VISIBLE_IDEAS
@@ -113,9 +116,7 @@ export const KnowledgeSuggestions = () => {
                         : {
                               label: t("suggestSkipped"),
                               rows: ideas.skipped.map(skippedRow),
-                              isLoading: false,
                               isPending: commands.isPending,
-                              emptyTitle: t("suggestAllDone"),
                           },
             }}
             on={{ toggleMore: () => setIsExpanded((now) => !now) }}

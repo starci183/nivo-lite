@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { applyDefaults } from "@/hooks/hiringPublic"
-import type { ApplyValues } from "@/hooks/hiringPublic"
+import type { ApplyValues } from "@/modules/types"
 
 const schema = z.object({
     name: z.string().trim().min(1),

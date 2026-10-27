@@ -1,5 +1,5 @@
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
-import type { SupplierFormField } from "@/hooks/inventory"
+import type { SupplierFormField } from "@/modules/types"
 import { InventorySupplierDrawer } from "@/components/composites/InventorySupplierDrawer"
 import type { InventorySupplierDrawerProps } from "@/components/composites/InventorySupplierDrawer"
 import { Badge, Button, EmptyNotice, Input, ListRow, SurfaceCard, SurfaceListCard, Text } from "@starci/grammar/common"

@@ -9,31 +9,31 @@ export const renderSetupGatesCardEvidence = (
     props: SetupGatesCardProps,
 ) => (
     <>
-        <SetupGatesCardEvidence hint={gate.hint} evidence={gate.evidence} isWaiting={props.isLoading} />
-        {props.isLoading ? null : (
-            <div className={GATE_ACTIONS}>
-                {gate.status === "proposed" ? (
-                    <Button
-                        intent="neutral"
-                        size="sm"
-                        isPending={props.isGating}
-                        onPress={() => props.onGate(gate.key, "confirm")}
-                    >
-                        {props.confirmLabel}
-                    </Button>
-                ) : null}
-                {gate.status === "confirmed" ? (
-                    <Button
-                        intent="neutral"
-                        size="sm"
-                        isPending={props.isGating}
-                        onPress={() => props.onGate(gate.key, "reopen")}
-                    >
-                        {props.unconfirmLabel}
-                    </Button>
-                ) : null}
-            </div>
-        )}
+        <SetupGatesCardEvidence hint={gate.hint} evidence={gate.evidence} isWaiting={props.isSkeleton} />
+        <div className={GATE_ACTIONS}>
+            {gate.status === "proposed" ? (
+                <Button
+                    intent="neutral"
+                    size="sm"
+                    isSkeleton={props.isSkeleton}
+                    isPending={props.isGating}
+                    onPress={() => props.onGate(gate.key, "confirm")}
+                >
+                    {props.confirmLabel}
+                </Button>
+            ) : null}
+            {gate.status === "confirmed" ? (
+                <Button
+                    intent="neutral"
+                    size="sm"
+                    isSkeleton={props.isSkeleton}
+                    isPending={props.isGating}
+                    onPress={() => props.onGate(gate.key, "reopen")}
+                >
+                    {props.unconfirmLabel}
+                </Button>
+            ) : null}
+        </div>
     </>
 )
 

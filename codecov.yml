@@ -167,6 +167,7 @@ component_management:
         - "be/src/modules/domain/workspaces/**"
         - "be/src/modules/domain/zalo-inbox/**"
         - "be/src/modules/domain/zalo-wizard-drafts/**"
+        - "be/src/modules/integrations/ai-pool/**"
         - "be/src/modules/integrations/channel-setup/**"
         - "be/src/modules/integrations/deepseek/**"
         - "be/src/modules/integrations/documents/**"

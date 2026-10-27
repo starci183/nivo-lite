@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { useSlotLabels } from "@/hooks/slot"
 import { GUIDES } from "@/hooks/connection-guides"
 import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf, EMPTY_GUIDE_CONTEXT, guideScreensOf, useCopyLabels } from "@/hooks/connection-wizard"
@@ -53,6 +54,7 @@ export const ZaloWizard = (props: ZaloWizardProps) => {
     const tw = useTranslations("connectionWizard")
     const tc = useTranslations("connections")
     const copy = useCopyLabels()
+    const slotLabelsOf = useSlotLabels()
     const wizard = useZaloWizard({
         resumeId: props.resumeId,
         returned: props.returned,
@@ -84,7 +86,8 @@ export const ZaloWizard = (props: ZaloWizardProps) => {
                 ],
                 index: wizard.index,
                 step: wizard.step,
-                waiting: wizard.isLoading ? tw("verifyWaiting") : null,
+                resume: wizard.resume,
+                slotLabels: slotLabelsOf(""),
                 providerHref: def.dashboard.live ?? "",
                 appScreens: guideScreensOf({ ...base, steps: steps.slice(0, 1), ctx: EMPTY_GUIDE_CONTEXT }, tc, tw),
                 followScreens: guideScreensOf(

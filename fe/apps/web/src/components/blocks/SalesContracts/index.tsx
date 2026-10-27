@@ -2,104 +2,59 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
-import { useSalesContractForm } from "@/hooks/rhf"
-import { parseAmount, useSalesActions, vietnamDay } from "@/hooks/sales"
+import { vietnamDay } from "@/hooks/sales"
+import { contractImportEvents, createContractImportDialog } from "@/components/composites/ContractImportDialog"
 import {
+    type ContractImport,
     CONTRACT_IMPORT_FIELDS,
-    CONTRACT_STATUS_KEYS,
     CONTRACT_TONES,
-    NO_LEAD,
-    contractDateOf,
-    contractDaysLeft,
-    contractFormOf,
     contractStatusOf,
     isoDayText,
+    useContractDrawer,
     useContractImport,
+    useContractRows,
 } from "@/hooks/salescontracts"
 import { useSalesWorkbench } from "@/hooks/salesworkbench"
-import type { SalesContract } from "@/modules/types"
-import {
-    NO_IMPORT_COLUMN,
-    SalesContractsBase,
-    createContractDrawer,
-    createContractImportDialog,
-    createSalesContractsState,
-    type SalesContractsControllerInput,
-} from "./component"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
+import { SalesContractsBase } from "./component"
 
-const createSalesContractsActions = (input: SalesContractsControllerInput) => {
-    const context = createSalesContractsState(input, {
-        contractDaysLeft,
-        isoDayText,
-        contractTones: CONTRACT_TONES,
-        contractFormOf,
-    })
-    const { t, actions, leads, editing, isOpen, setNote, form, values, close } = context
-
-    const submit = form.handleSubmit(async (submitted) => {
-        if (!isOpen || actions.isMutating) return
-        const result = await actions.saveContract({
-            contractId: editing?.id ?? null,
-            leadId: submitted.leadId === NO_LEAD ? null : submitted.leadId,
-            customerName: submitted.customerName,
-            plan: submitted.plan,
-            startsOn: submitted.startsOn,
-            endsOn: submitted.endsOn,
-            amountVnd: parseAmount(submitted.amount),
-            status: submitted.status,
-            note: submitted.note,
-        })
-        if (result === undefined) return
-        setNote(t("contractSaved"))
-        close()
-    })
-    const pickLead = (value: string) => {
-        if (!isOpen) return
-        const lead = leads.find((candidate) => candidate.id === value)
-        const named = value !== NO_LEAD && value !== "" && !values.customerName.trim()
-        form.setValue("leadId", value || NO_LEAD, { shouldValidate: form.formState.isSubmitted })
-        if (named)
-            form.setValue("customerName", lead?.name.split(" · ")[0] ?? "", {
-                shouldValidate: form.formState.isSubmitted,
-            })
+/** The import dialog commands under the names the contracts surface hands them on. */
+const importEventsOf = (importer: ContractImport) => {
+    const on = contractImportEvents(importer)
+    return {
+        importSource: on.source,
+        importFile: on.file,
+        importPaste: on.paste,
+        importPreview: on.preview,
+        importSheet: on.sheet,
+        importColumn: on.column,
+        importConfirm: on.confirm,
+        importClose: on.close,
     }
-    return { ...context, submit, pickLead }
 }
 
-/** The contracts surface: which contract the drawer edits, its form values, the save and the note after it live here, the drawing in the pure half. */
+/** One blank row: the skeleton draws the same list as the ready one. */
+const PLACEHOLDER_ROW = {
+    id: "placeholder",
+    title: "-",
+    description: "-",
+    statusLabel: "-",
+    statusTone: "neutral",
+    when: null,
+} as const
+
+/** The contracts surface: the slot of the contracts, which contract the drawer edits, its form, the save and the note after it live here; the drawing in the pure half. */
 export const SalesContracts = () => {
     const t = useTranslations("workbenchSales")
     const format = useFormatter()
-    const actions = useSalesActions()
-    const { data, nowIso } = useSalesWorkbench()
-    const contracts = data?.contracts ?? []
-    const leads = data?.leadOptions ?? []
-    const [editing, setEditing] = useState<SalesContract | null>(null)
-    const [isOpen, setOpen] = useState(false)
+    const slotLabels = useSlotLabels()
+    const { data, nowIso, slot, retry } = useSalesWorkbench()
     const [note, setNote] = useState("")
     const today = vietnamDay(nowIso)
-    const form = useSalesContractForm(today)
+    const rowOf = useContractRows(today)
     const importer = useContractImport(setNote)
-    const context = createSalesContractsActions({
-        t,
-        format,
-        actions,
-        data,
-        nowIso,
-        contracts,
-        leads,
-        editing,
-        setEditing,
-        isOpen,
-        setOpen,
-        note,
-        setNote,
-        today,
-        form,
-    })
-    const { itemOf, open, close, submit, pickLead } = context
+    const editor = useContractDrawer({ leads: data?.leadOptions ?? [], today, setNote })
 
-    if (data === null) return null
     return (
         <SalesContractsBase
             props={{
@@ -108,15 +63,11 @@ export const SalesContracts = () => {
                 addLabel: t("contractAdd"),
                 importLabel: t("contractImport"),
                 editLabel: t("contractEdit"),
-                emptyTitle: t("contractsEmptyTitle"),
-                emptyBody: t("contractsEmptyBody"),
                 note,
-                rows: contracts.map(itemOf),
-                drawer: createContractDrawer(context, {
-                    noLead: NO_LEAD,
-                    statusKeys: CONTRACT_STATUS_KEYS,
-                    dateOf: contractDateOf,
-                }),
+                rows: mapSlot(slot, (workbench) => workbench.contracts.map(rowOf)),
+                rowsPlaceholder: [PLACEHOLDER_ROW],
+                rowsLabels: slotLabels(t("contractsEmptyTitle")),
+                drawer: editor.drawer,
                 importDialog: createContractImportDialog({ t, format }, importer, {
                     fields: CONTRACT_IMPORT_FIELDS,
                     isoDayText,
@@ -125,37 +76,13 @@ export const SalesContracts = () => {
                 }),
             }}
             on={{
-                add: () => open(null),
+                retry,
+                add: () => editor.open(null),
                 openImport: importer.open,
-                importing: {
-                    source: importer.source,
-                    file: importer.file,
-                    paste: importer.paste,
-                    preview: importer.preview,
-                    sheet: importer.sheet,
-                    column: (field, column) =>
-                        importer.column(
-                            CONTRACT_IMPORT_FIELDS.find((known) => known === field) ?? "customerName",
-                            column === NO_IMPORT_COLUMN ? null : column,
-                        ),
-                    confirm: importer.runImport,
-                    close: importer.close,
-                },
-                edit: (contractId) => open(contracts.find((contract) => contract.id === contractId) ?? null),
-                lead: pickLead,
-                customer: (value) =>
-                    form.setValue("customerName", value, { shouldValidate: form.formState.isSubmitted }),
-                plan: (value) => form.setValue("plan", value, { shouldValidate: form.formState.isSubmitted }),
-                start: (value) =>
-                    form.setValue("startsOn", value?.toString() ?? "", { shouldValidate: form.formState.isSubmitted }),
-                end: (value) =>
-                    form.setValue("endsOn", value?.toString() ?? "", { shouldValidate: form.formState.isSubmitted }),
-                amount: (value) => form.setValue("amount", value, { shouldValidate: form.formState.isSubmitted }),
-                status: (value) =>
-                    form.setValue("status", contractStatusOf(value), { shouldValidate: form.formState.isSubmitted }),
-                note: (value) => form.setValue("note", value, { shouldValidate: form.formState.isSubmitted }),
-                submit: () => void submit(),
-                close,
+                ...importEventsOf(importer),
+                edit: (contractId) =>
+                    editor.open(data?.contracts.find((contract) => contract.id === contractId) ?? null),
+                ...editor.on,
             }}
         />
     )

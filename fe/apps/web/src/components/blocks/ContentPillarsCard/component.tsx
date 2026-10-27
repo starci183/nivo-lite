@@ -1,5 +1,6 @@
 import { Button, Input, NumberField, Switch } from "@starci/grammar/common"
-import type { ContentNote, ContentT } from "@/hooks/content"
+import type { ContentNote } from "@/hooks/content"
+import type { ContentT } from "@/modules/types"
 import { ContentCommandNote, ContentSettingsCard } from "@/components/composites/ContentSettingsCard"
 import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 

@@ -2,24 +2,23 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useMemo } from "react"
+import { mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useQueryMyAccountSwr } from "@/hooks/swr"
+import type { DataSlot } from "@/modules/types"
 import { parseUserAgent } from "./account.shared"
 import type { SessionRowView } from "./account.shared"
-import { readError } from "@/hooks/workspaceread"
 
 const JUST_NOW_MS = 60_000
 
 /** The devices signed in to the account, current one first, formatted for the locale. */
 export const useAccountSessions = (): {
-    readonly rows: ReadonlyArray<SessionRowView>
-    readonly isFailed: boolean
-    readonly isLoading: boolean
+    readonly slot: DataSlot<ReadonlyArray<SessionRowView>>
+    readonly reload: () => void
 } => {
     const t = useTranslations("account")
     const format = useFormatter()
     const swrRead = useQueryMyAccountSwr()
-    const { data, isLoading } = swrRead
-    const error = readError(swrRead)
+    const { data } = swrRead
     const rows = useMemo((): ReadonlyArray<SessionRowView> => {
         const now = new Date()
         const when = (iso: string | null | undefined): string => {
@@ -48,5 +47,8 @@ export const useAccountSessions = (): {
                 }
             })
     }, [data, format, t])
-    return { rows, isFailed: error !== undefined, isLoading }
+    return {
+        slot: mapSlot(slotOfSwr(swrRead), () => rows),
+        reload: () => void swrRead.mutate(),
+    }
 }

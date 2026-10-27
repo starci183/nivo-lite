@@ -56,11 +56,16 @@ export interface KnowledgeRowView {
 }
 
 /** What the card of rows draws. */
-export interface RowsProps {
+export interface KnowledgeRowListProps {
     readonly label: string
     readonly rows: ReadonlyArray<KnowledgeRowView>
-    readonly isLoading: boolean
     readonly isPending: boolean
+    /** The rows are a placeholder of the same shape: each draws as inert geometry. */
+    readonly isSkeleton?: boolean
+}
+
+/** What the card of rows draws when it also words its own empty sentence. */
+export interface RowsProps extends KnowledgeRowListProps {
     readonly emptyTitle: string
     readonly emptyBody?: string
 }
@@ -75,6 +80,7 @@ interface ActionListProps {
 interface RowProps {
     readonly row: KnowledgeRowView
     readonly isPending: boolean
+    readonly isSkeleton: boolean
 }
 
 interface ItemButtonProps {
@@ -142,6 +148,7 @@ export const ActionList = (props: ActionListProps) =>
 /** One row: the title with its lines, the badges, the actions and the parts that have their own. */
 const Row = (props: RowProps) => (
     <ListRow
+        isSkeleton={props.isSkeleton}
         title={
             props.row.href === undefined ? (
                 props.row.title
@@ -184,11 +191,20 @@ const Row = (props: RowProps) => (
     </ListRow>
 )
 
+/** The rows of a list as a card; what shows while there are none is the caller's (a region's status view). */
+export const KnowledgeRowList = (props: KnowledgeRowListProps) => (
+    <SurfaceListCard ariaLabel={props.label} empty={null}>
+        {props.rows.map((row) => (
+            <Row key={row.id} row={row} isPending={props.isPending} isSkeleton={props.isSkeleton ?? false} />
+        ))}
+    </SurfaceListCard>
+)
+
 /** The list itself: a card of rows, or the notice that shows while there are none. */
 export const Rows = (props: RowsProps) => (
     <SurfaceListCard
         ariaLabel={props.label}
-        isLoading={props.isLoading}
+        isLoading={props.isSkeleton ?? false}
         empty={
             <EmptyNotice
                 message={props.emptyTitle}
@@ -197,7 +213,7 @@ export const Rows = (props: RowsProps) => (
         }
     >
         {props.rows.map((row) => (
-            <Row key={row.id} row={row} isPending={props.isPending} />
+            <Row key={row.id} row={row} isPending={props.isPending} isSkeleton={props.isSkeleton ?? false} />
         ))}
     </SurfaceListCard>
 )

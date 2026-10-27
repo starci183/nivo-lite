@@ -62,7 +62,7 @@ const AdjustForm = (props: AccountingAdjustmentProps) => {
                     label={form.amountLabel}
                     value={form.amount}
                     isDisabled={form.isSaving}
-                    hint={form.amountHint}
+                    description={form.amountHint}
                     onValueChange={props.on.changeAmount}
                 />
                 {form.error === null ? null : <Alert tone="negative" title={form.error} />}

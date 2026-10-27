@@ -1,4 +1,5 @@
-import { Alert, RadioGroup, Spinner, Text } from "@starci/grammar/common"
+import { Alert, RadioGroup, Text } from "@starci/grammar/common"
+import { SlotView } from "@/components/composites/SlotView"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
 import {
     backAction,
@@ -8,8 +9,8 @@ import {
     type WizardAction,
 } from "@/components/composites/WizardFooter"
 
-import { WizardFrame } from "@/components/composites/WizardFrame"
-import type { AgentStepView, WizardNote } from "@/modules/types"
+import { frameOf, WizardFrame } from "@/components/composites/WizardFrame"
+import type { AgentStepView, DataSlot, SlotLabels, WizardNote, WizardResume } from "@/modules/types"
 import { metaWizardClassNames as classNames } from "./classNames"
 
 /** One option of the Page list. */
@@ -27,8 +28,9 @@ export interface MetaWizardBaseProps {
         readonly steps: ReadonlyArray<string>
         readonly index: number
         readonly step: "connect" | "pick" | "agent" | "test"
-        /** The sentence shown while an unfinished connection is read back; null once it is. */
-        readonly waiting: string | null
+        /** The stored connection a resumed wizard reads back; a new one is ready at once. */
+        readonly resume: DataSlot<WizardResume>
+        readonly slotLabels: SlotLabels
         /** The Pages waiting for the choice. */
         readonly pages: ReadonlyArray<MetaPageChoice>
         readonly pageId: string
@@ -81,6 +83,7 @@ export interface MetaWizardBaseProps {
         >
     }
     readonly on: {
+        readonly retry: () => void
         readonly go: (to: number) => void
         readonly login: () => void
         readonly choose: () => void
@@ -92,6 +95,9 @@ export interface MetaWizardBaseProps {
         readonly agents: (ids: ReadonlyArray<string>) => void
     }
 }
+
+/** The wizard a new connection starts with: the placeholder drawn while a stored one is read. */
+const RESUME_PLACEHOLDER: WizardResume = { isResumed: false }
 
 /** The save or next action of the Page step: save when Pages are listed, continue when one is already chosen. */
 const pickStepActions = (
@@ -155,45 +161,40 @@ export const MetaWizardBase = (props: MetaWizardBaseProps) => {
         agent: [nextAction(text.next, on.saveAgents, { isPending: view.isPending }), back],
         test: [nextAction(text.done, on.done), back],
     }[view.step]
-    if (view.waiting !== null) {
-        return (
-            <Text size="sm" tone="muted" live="polite">
-                {view.waiting}
-            </Text>
-        )
-    }
     return (
-        <WizardFrame
-            title={view.title}
-            stepLabel={view.stepLabel}
-            steps={view.steps}
-            index={view.index}
-            footer={<WizardFooter actions={actions} />}
-        >
-            {view.step === "connect" ? (
-                <div className={classNames.copy}>
-                    <Text size="sm">{text.connectBody}</Text>
-                    <Text size="sm" tone="muted">
-                        {text.connectScopes}
-                    </Text>
-                    <Alert tone="informative" title={text.devNote} />
-                </div>
-            ) : null}
-            {view.step === "pick" ? (
-                <>
-                    <Text size="sm">{text.pickBody}</Text>
-                    <PickStepBody props={view} on={on} />
-                </>
-            ) : null}
-            {view.step === "agent" ? (
-                <>
-                    {view.chosen === null ? null : <Alert tone="affirmative" title={text.pickSaved} />}
-                    <WizardAgentStep {...view.agentStep} isDisabled={view.isPending} onChange={on.agents} />
-                </>
-            ) : null}
-            {view.step === "test" ? <MetaTestStep {...props} /> : null}
-            {view.note === null ? null : <Alert tone={view.note.tone} title={view.note.text} />}
-        </WizardFrame>
+        <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels} onRetry={on.retry}>
+            {(_resume, isSkeleton) => (
+                <WizardFrame
+                    {...frameOf(view)}
+                    isSkeleton={isSkeleton}
+                    footer={<WizardFooter actions={actions} isSkeleton={isSkeleton} />}
+                >
+                    {view.step === "connect" ? (
+                        <div className={classNames.copy}>
+                            <Text size="sm">{text.connectBody}</Text>
+                            <Text size="sm" tone="muted">
+                                {text.connectScopes}
+                            </Text>
+                            <Alert tone="informative" title={text.devNote} />
+                        </div>
+                    ) : null}
+                    {view.step === "pick" ? (
+                        <>
+                            <Text size="sm">{text.pickBody}</Text>
+                            <PickStepBody props={view} on={on} />
+                        </>
+                    ) : null}
+                    {view.step === "agent" ? (
+                        <>
+                            {view.chosen === null ? null : <Alert tone="affirmative" title={text.pickSaved} />}
+                            <WizardAgentStep {...view.agentStep} isDisabled={view.isPending} onChange={on.agents} />
+                        </>
+                    ) : null}
+                    {view.step === "test" ? <MetaTestStep {...props} /> : null}
+                    {view.note === null ? null : <Alert tone={view.note.tone} title={view.note.text} />}
+                </WizardFrame>
+            )}
+        </SlotView>
     )
 }
 
@@ -250,7 +251,7 @@ const MetaTestStep = (props: MetaWizardBaseProps) => {
                 </div>
             )}
             {view.isChecking ? (
-                <Text size="sm" weight="medium" startContent={<Spinner size="sm" label={text.testWorking} />}>
+                <Text size="sm" weight="medium" live="polite">
                     {text.testWorking}
                 </Text>
             ) : null}
@@ -266,7 +267,7 @@ const MetaTestStep = (props: MetaWizardBaseProps) => {
             </div>
             {view.received === null ? (
                 <>
-                    <Text size="sm" weight="medium" startContent={<Spinner size="sm" label={text.testWaiting} />}>
+                    <Text size="sm" weight="medium" live="polite">
                         {text.testWaiting}
                     </Text>
                     <Text size="xs" tone="muted">

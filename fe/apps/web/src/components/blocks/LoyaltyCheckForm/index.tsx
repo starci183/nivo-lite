@@ -3,6 +3,7 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { digitsOnly } from "@/hooks/loyalty"
 import { errorKeyOf, usePublicLoyalty } from "@/hooks/publicLoyalty"
+import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { useQueryPublicLoyaltyPageSwr } from "@/hooks/swr"
 import { LoyaltyCheckFormBase } from "./component"
 import type { LoyaltyCheckResult } from "./component"
@@ -21,10 +22,7 @@ export const LoyaltyCheckForm = (props: LoyaltyCheckFormProps) => {
     const money = (value: number) =>
         format.number(value, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
 
-    let status: "loading" | "missing" | "ready" = "ready"
-    if (page.error !== undefined) status = "missing"
-    else if (page.data === undefined) status = "loading"
-
+    const slotLabels = useSlotLabels()
     let result: LoyaltyCheckResult | undefined
     const { points } = check
     if (check.step === "result" && points !== null) {
@@ -34,13 +32,15 @@ export const LoyaltyCheckForm = (props: LoyaltyCheckFormProps) => {
 
     return (
         <LoyaltyCheckFormBase
+            shape={check.step}
             props={{
-                status,
-                step: check.step,
+                slot: slotOfSwr({
+                    data: page.data === undefined ? undefined : { lead: t("lead", { shop: page.data.shop }) },
+                    error: page.error,
+                    isLoading: page.isLoading,
+                }),
+                slotLabels: { ...slotLabels(t("unavailable")), error: t("unavailable") },
                 title: t("title"),
-                lead: t("lead", { shop: page.data?.shop ?? "" }),
-                unavailable: t("unavailable"),
-                loadingText: t("busy"),
                 phone: {
                     label: t("phoneLabel"),
                     placeholder: t("phonePlaceholder"),
@@ -66,6 +66,9 @@ export const LoyaltyCheckForm = (props: LoyaltyCheckFormProps) => {
                 sendCode: () => void check.sendCode(),
                 check: () => void check.check(),
                 back: check.back,
+                retry: () => {
+                    void page.mutate()
+                },
             }}
         />
     )

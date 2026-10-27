@@ -4,7 +4,10 @@ import type { AccountingQuestionCardView, AccountingQuestionsView } from "@/modu
 import { CARDS_CLASS_NAME, GROUP_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
 
 /** Atom-only question groups and addressed decision actions. */
-type AccountingQuestionsProps = AccountingQuestionsView
+type AccountingQuestionsProps = AccountingQuestionsView & {
+    /** The groups are placeholders: their leaves draw as skeleton. */
+    readonly isSkeleton: boolean
+}
 
 /** Displays the settled question groups and binds addressed actions to each pure card. */
 export const AccountingQuestions = (props: AccountingQuestionsProps) => {
@@ -34,7 +37,7 @@ export const AccountingQuestions = (props: AccountingQuestionsProps) => {
     }))
     return (
         <div className={PANEL_CLASS_NAME}>
-            <Text size="sm" tone="muted">
+            <Text size="sm" tone="muted" isSkeleton={props.isSkeleton}>
                 {props.props.intro}
             </Text>
             {groups.map((group) => (
@@ -45,10 +48,16 @@ export const AccountingQuestions = (props: AccountingQuestionsProps) => {
                             title={group.title}
                             count={group.items.length}
                             description={group.hint}
+                            isSkeleton={props.isSkeleton}
                         />
                         <div className={CARDS_CLASS_NAME}>
                             {group.rows.map((row) => (
-                                <AccountingQuestionCard key={row.props.id} props={row.props} on={row.on} />
+                                <AccountingQuestionCard
+                                    key={row.props.id}
+                                    props={row.props}
+                                    on={row.on}
+                                    isSkeleton={props.isSkeleton}
+                                />
                             ))}
                         </div>
                     </div>

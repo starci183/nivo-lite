@@ -1,15 +1,18 @@
 import { purposeFor } from "@/hooks/connection-access"
+import { mapSlot, slotOfSwr } from "@/hooks/slot"
 import { guideKey, placeholdersOf, tokenValue, VERIFY, verifyKey } from "@/hooks/connection-guides"
 import type { GuideContext, GuideStepDef, Token } from "@/hooks/connection-guides"
 import type {
     AgentChoice,
     AgentOption,
+    DataSlot,
     Environment,
     GuideField,
     GuideScreen,
     Provider,
     VerifyHelpView,
     WizardNote,
+    WizardResume,
 } from "@/modules/types"
 
 /** A catalog reader as the wizards pass it around: a key and the values of its placeholders. */
@@ -136,4 +139,23 @@ export const allAgentIds = (agents: ReadonlyArray<AgentOption>): ReadonlyArray<s
 export const resumeNoteOf = (note: WizardNote | null, resumeError: unknown): WizardNote | null => {
     if (note !== null) return note
     return resumeError instanceof Error ? { tone: "negative", text: resumeError.message } : null
+}
+
+/** The read of the stored connection a wizard resumes, as SWR gives it. */
+type ResumeRead = {
+    readonly data: unknown
+    readonly error: unknown
+    readonly isLoading: boolean
+}
+
+/** The slot of a wizard whose saved connection is a plain read: ready at once for a new one, loading while the stored one is on its way. */
+export const resumeSlotOfLoading = (isLoading: boolean, failure: string | null = null): DataSlot<WizardResume> => {
+    if (isLoading) return { isLoading: true }
+    return failure === null ? { items: { isResumed: true } } : { isError: true }
+}
+
+/** The slot of a wizard's resume read: a new connection resumes nothing, so it is ready at once; a resumed one waits for its read. */
+export const resumeSlotOf = (resumeId: string | undefined, read: ResumeRead): DataSlot<WizardResume> => {
+    if (resumeId === undefined) return { items: { isResumed: false } }
+    return mapSlot(slotOfSwr(read), () => ({ isResumed: true }))
 }

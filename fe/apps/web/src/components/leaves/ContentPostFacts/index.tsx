@@ -1,5 +1,5 @@
 import { Badge, Text } from "@starci/grammar/common"
-import type { PostView } from "@/hooks/content"
+import type { PostView } from "@/modules/types"
 import { CHIPS_CLASS_NAME, FACTS_CLASS_NAME } from "./classNames"
 
 /** Props of {@link ContentPostFacts}. */

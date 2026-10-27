@@ -1,18 +1,9 @@
-import {
-    Alert,
-    Badge,
-    Button,
-    Dialog,
-    FileDropzone,
-    ListRow,
-    RadioGroup,
-    Select,
-    SurfaceListCard,
-    Text,
-    Textarea,
-} from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
+import { Alert, Button, Dialog, RadioGroup } from "@starci/grammar/common"
 import { contractImportDialogClassNames as classNames } from "./classNames"
+import { ColumnPickers, FileSource, PasteSource, PreviewRows } from "./component"
+import type { ContractImportRowView } from "./component"
+
+export { contractImportEvents, createContractImportDialog } from "./component"
 
 /** One option of a select or a radio group. */
 interface ContractImportOption {
@@ -21,20 +12,10 @@ interface ContractImportOption {
 }
 
 /** One column picker: the contract field and the column chosen for it. */
-export interface ContractImportColumnView {
+interface ContractImportColumnView {
     readonly field: string
     readonly label: string
     readonly column: string
-}
-
-/** One previewed row, every word already resolved. */
-export interface ContractImportRowView {
-    readonly id: string
-    readonly title: string
-    readonly description: string
-    readonly statusLabel: string
-    readonly statusTone: BadgeTone
-    readonly problems: ReadonlyArray<{ readonly label: string; readonly tone: BadgeTone }>
 }
 
 /** The words and state of the bulk contract import dialog. */
@@ -115,121 +96,28 @@ export const ContractImportDialog = (props: ContractImportDialogProps) => {
                 {p.source === "paste" ? <PasteSource {...props} /> : <FileSource {...props} />}
                 {p.error === null ? null : <Alert tone="negative" title={p.error} />}
                 {p.columns === null ? null : <ColumnPickers {...props} />}
-                {p.summary === null ? null : <PreviewRows {...props} />}
+                {p.summary === null ? null : <PreviewRows props={p} />}
             </div>
         </Dialog>
     )
 }
 
-const FileSource = ({ props: p, on }: ContractImportDialogProps) => (
-    <>
-        <FileDropzone
-            label={p.text.fileLabel}
-            accept=".csv,.xlsx"
-            prompt={p.text.filePrompt}
-            isDisabled={p.isPreviewing || p.isImporting}
-            hideFileList
-            onFilesChange={on.file}
-        />
-        {p.fileName === null ? null : <Text size="sm">{p.fileName}</Text>}
-        {p.sheets === null ? null : (
-            <Select
-                label={p.text.sheet}
-                isDisabled={p.isPreviewing || p.isImporting}
-                value={p.sheet}
-                options={p.sheets}
-                onValueChange={on.sheet}
-            />
-        )}
-    </>
-)
-
-const PasteSource = ({ props: p, on }: ContractImportDialogProps) => (
-    <>
-        <Textarea
-            label={p.text.pasteLabel}
-            description={p.text.pasteHint}
-            rows={5}
-            isDisabled={p.isPreviewing || p.isImporting}
-            value={p.paste}
-            onValueChange={on.paste}
-        />
-        <div className={classNames.actions}>
-            <Button
-                intent="neutral"
-                size="sm"
-                isPending={p.isPreviewing}
-                isDisabled={p.isImporting || !p.paste.trim()}
-                onPress={on.preview}
-            >
-                {p.text.preview}
-            </Button>
-        </div>
-    </>
-)
-
-const ColumnPickers = ({ props: p, on }: ContractImportDialogProps) => (
-    <>
-        <Text size="sm" weight="semibold">
-            {p.text.mapping}
-        </Text>
-        <div className={classNames.columns}>
-            {(p.columns ?? []).map((column) => (
-                <Select
-                    key={column.field}
-                    label={column.label}
-                    isDisabled={p.isPreviewing || p.isImporting}
-                    value={column.column}
-                    options={p.columnOptions}
-                    onValueChange={(value) => on.column(column.field, value)}
-                />
-            ))}
-        </div>
-    </>
-)
-
-const PreviewRows = ({ props: p }: ContractImportDialogProps) => (
-    <>
-        <Text size="sm" weight="medium" live="polite">
-            {p.summary}
-        </Text>
-        <SurfaceListCard ariaLabel={p.text.preview}>
-            {p.rows.map((row) => (
-                <ListRow
-                    key={row.id}
-                    title={row.title}
-                    description={row.description}
-                    badges={
-                        <>
-                            <Badge tone={row.statusTone} isDot>
-                                {row.statusLabel}
-                            </Badge>
-                            {row.problems.map((problem) => (
-                                <Badge key={problem.label} tone={problem.tone}>
-                                    {problem.label}
-                                </Badge>
-                            ))}
-                        </>
-                    }
-                />
-            ))}
-        </SurfaceListCard>
-    </>
-)
-
 /** Keeps the dialog footer component stable as its fields change. */
-const ContractImportDialogFooter = ({ props: p, on }: ContractImportDialogProps) => (
-    <>
-        <Button intent="dismiss" onPress={on.close}>
-            {p.text.cancel}
-        </Button>
-        <Button
-            intent="commit"
-            isPending={p.isImporting}
-            isDisabled={p.isImporting || p.isPreviewing || !p.canConfirm}
-            onPress={on.confirm}
-        >
-            {p.confirmLabel}
-        </Button>
-    </>
-)
+const ContractImportDialogFooter = (props: ContractImportDialogProps) => {
+    const { props: p, on } = props
+    return (
+        <>
+            <Button intent="dismiss" onPress={on.close}>
+                {p.text.cancel}
+            </Button>
+            <Button
+                intent="commit"
+                isPending={p.isImporting}
+                isDisabled={p.isImporting || p.isPreviewing || !p.canConfirm}
+                onPress={on.confirm}
+            >
+                {p.confirmLabel}
+            </Button>
+        </>
+    )
+}

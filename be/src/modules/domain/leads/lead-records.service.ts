@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import type { ContactParts } from "./contact.policy"
 import { LeadsError, LeadsErrorCode } from "./errors/leads.error"
 import type {
     ContactFill,
@@ -21,6 +22,7 @@ import {
     INSERT_LEAD,
     MARK_LEAD_WON,
     MATCH_LEAD,
+    MATCH_LEADS_BY_CONTACT,
     REPLACE_LEAD_CONTEXT,
     PATCH_PUBLIC_LEAD,
     APPLY_PUBLIC_LEAD_STAGE,
@@ -61,9 +63,22 @@ export class LeadRecordsService {
         return rows[0] ?? null
     }
 
-    /** Captures a new customer. */
-    async capture(lead: NewLead): Promise<LeadRecordRow> {
-        const rows = await this.entityManager.query<Array<LeadRecordRow>>(INSERT_LEAD, [
+    /**
+     * Every lead of the workspace that holds the phone or the email, the phone matches first, then the oldest; used to link a
+     * customer known by contact (a contract) to the lead a conversation already reached, never to a second copy.
+     */
+    matchAllByContact(
+        workspaceId: string,
+        contact: ContactParts,
+        manager: EntityManager = this.entityManager,
+    ): Promise<Array<LeadRecordRow>> {
+        if (contact.phone === null && contact.email === null) return Promise.resolve([])
+        return manager.query<Array<LeadRecordRow>>(MATCH_LEADS_BY_CONTACT, [workspaceId, contact.phone, contact.email])
+    }
+
+    /** Captures a new customer, in the caller's transaction when one is given. */
+    async capture(lead: NewLead, manager: EntityManager = this.entityManager): Promise<LeadRecordRow> {
+        const rows = await manager.query<Array<LeadRecordRow>>(INSERT_LEAD, [
             lead.workspaceId,
             lead.contactName,
             lead.company,
@@ -78,13 +93,13 @@ export class LeadRecordsService {
     }
 
     /** Adds the phone or the email the lead was missing; one it already has is kept. */
-    async fillContact(fill: ContactFill): Promise<void> {
-        await this.entityManager.query(FILL_LEAD_CONTACT, [fill.workspaceId, fill.leadId, fill.phone, fill.email])
+    async fillContact(fill: ContactFill, manager: EntityManager = this.entityManager): Promise<void> {
+        await manager.query(FILL_LEAD_CONTACT, [fill.workspaceId, fill.leadId, fill.phone, fill.email])
     }
 
     /** Stores what the sales AI learned: the stage of an open deal and a context brief the lead did not have. */
-    async classify(classification: LeadClassification): Promise<void> {
-        await this.entityManager.query(APPLY_CLASSIFICATION, [
+    async classify(classification: LeadClassification, manager: EntityManager = this.entityManager): Promise<void> {
+        await manager.query(APPLY_CLASSIFICATION, [
             classification.workspaceId,
             classification.leadId,
             classification.stage,

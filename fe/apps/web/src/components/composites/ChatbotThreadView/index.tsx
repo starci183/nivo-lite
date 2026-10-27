@@ -18,6 +18,7 @@ import {
     HEAD_CLASS_NAME,
     HEAD_TEXT_CLASS_NAME,
     PHONE_ONLY_CLASS_NAME,
+    THREAD_BAND_CLASS_NAME,
     THREAD_SCROLL_CLASS_NAME,
 } from "./classNames"
 
@@ -145,32 +146,33 @@ const renderChatbotThreadViewEntries = (
         {props.entries.map((entry) => {
             if (entry.kind !== "bubble") return <Divider key={entry.id} label={entry.text} />
             return (
-                <ChatBubble
-                    key={entry.id}
-                    side={entry.side}
-                    author={entry.author}
-                    meta={entry.meta}
-                    status={entry.aiMark === null ? undefined : <Badge tone="neutral">{entry.aiMark}</Badge>}
-                    avatar={
-                        entry.avatarName === null ? undefined : (
-                            <Avatar name={entry.avatarName} size="sm" isDecorative />
-                        )
-                    }
-                    footer={
-                        entry.deliveryText === null ? undefined : (
-                            <Text
-                                size="xs"
-                                weight="medium"
-                                tone={entry.deliveryTone === "accent" ? "accent" : "muted"}
-                                live="polite"
-                            >
-                                {entry.deliveryText}
-                            </Text>
-                        )
-                    }
-                >
-                    {entry.text}
-                </ChatBubble>
+                <div key={entry.id} className={THREAD_BAND_CLASS_NAME}>
+                    <ChatBubble
+                        side={entry.side}
+                        author={entry.author}
+                        meta={entry.meta}
+                        status={entry.aiMark === null ? undefined : <Badge tone="neutral">{entry.aiMark}</Badge>}
+                        avatar={
+                            entry.avatarName === null ? undefined : (
+                                <Avatar name={entry.avatarName} size="sm" isDecorative />
+                            )
+                        }
+                        footer={
+                            entry.deliveryText === null ? undefined : (
+                                <Text
+                                    size="xs"
+                                    weight="medium"
+                                    tone={entry.deliveryTone === "accent" ? "accent" : "muted"}
+                                    live="polite"
+                                >
+                                    {entry.deliveryText}
+                                </Text>
+                            )
+                        }
+                    >
+                        {entry.text}
+                    </ChatBubble>
+                </div>
             )
         })}
         <div ref={endRef} />

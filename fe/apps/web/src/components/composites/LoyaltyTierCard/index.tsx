@@ -1,7 +1,6 @@
 import { Button, SurfaceCard } from "@starci/grammar/common"
 import { LoyaltyField } from "@/components/leaves/LoyaltyField"
-import type { TierTextField } from "@/hooks/loyaltyProgramFields"
-import type { TierValues } from "@/hooks/loyaltyProgram"
+import type { TierTextField, TierValues } from "@/modules/types"
 import { FIELD_PAIR_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** What one tier card of the programme settings draws and reports. */

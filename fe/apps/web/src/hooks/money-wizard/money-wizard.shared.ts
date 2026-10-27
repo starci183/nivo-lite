@@ -1,7 +1,7 @@
 import { VN_BANK_CODES } from "@/hooks/banks"
 import type { GuideContext } from "@/hooks/connection-guides"
 import type { PROVIDERS } from "@/hooks/connection-providers"
-import { resumeNoteOf } from "@/hooks/connection-wizard"
+import { resumeNoteOf, resumeSlotOf } from "@/hooks/connection-wizard"
 import type { useFirstEvent } from "@/hooks/connections"
 import type { useQueryMoneyConnectionSwr } from "@/hooks/swr"
 import type { Environment, MoneyProvider, WizardConnection, WizardNote } from "@/modules/types"
@@ -149,7 +149,7 @@ export const viewOf = ({
     return {
         index: nav.index,
         step,
-        isLoading: input.resumeId !== undefined && resume.data === undefined && resume.error === undefined,
+        resume: resumeSlotOf(input.resumeId, resume),
         form,
         conn,
         follow,
@@ -163,6 +163,9 @@ export const viewOf = ({
         flags,
         context: moneyContextOf(form, conn),
         on: {
+            retry: () => {
+                void resume.mutate()
+            },
             go,
             create,
             followDone,

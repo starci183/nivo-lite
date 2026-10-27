@@ -81,7 +81,7 @@ export const SalesContractDrawer = (props: SalesContractDrawerProps) => {
                 id="contract-plan"
                 name="plan"
                 label={p.planLabel}
-                hint={p.planHint}
+                description={p.planHint}
                 value={p.plan}
                 onValueChange={on.plan}
             />

@@ -10,7 +10,7 @@ import {
     Text,
 } from "@starci/grammar/common"
 import { LoyaltyRewardForm } from "@/components/composites/LoyaltyRewardForm"
-import type { RewardTextField } from "@/hooks/loyaltyRewards"
+import type { RewardTextField } from "@/modules/types"
 import type { LoyaltyRewardFormProps } from "@/components/composites/LoyaltyRewardForm"
 import { CHIPS_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames"
 

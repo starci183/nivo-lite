@@ -1,5 +1,6 @@
 import { Alert, SectionHeader, SurfaceCard, Switch } from "@starci/grammar/common"
-import type { ContentNote, ContentT } from "@/hooks/content"
+import type { ContentNote } from "@/hooks/content"
+import type { ContentT } from "@/modules/types"
 import { FORM_CLASS_NAME } from "./classNames"
 
 /** One automation switch. */

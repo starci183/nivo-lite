@@ -22,13 +22,13 @@ const adjustModeOf = (
 }
 
 /** The Ledger tab: the filter, the open line and the correction form live here, the drawing in the pure half. */
-export const useAccountingLedger = (data: AccountingWorkbenchData | undefined) => {
+export const useAccountingLedger = (data: AccountingWorkbenchData) => {
     const t = useTranslations("workbenchAccounting")
     const format = useFormatter()
     const [filter, setFilter] = useState<LedgerFilter>("all")
     const [openId, setOpenId] = useState<string | null>(null)
     const [isAdjusting, setIsAdjusting] = useState(false)
-    const open = data?.ledger.find((entry) => entry.id === openId) ?? null
+    const open = data.ledger.find((entry) => entry.id === openId) ?? null
     const closeDrawer = () => {
         setIsAdjusting(false)
         setOpenId(null)
@@ -65,7 +65,6 @@ export const useAccountingLedger = (data: AccountingWorkbenchData | undefined) =
         changeAmount: (amount: string) => form.setValue("amount", amount, { shouldValidate: true }),
         submitAdjust: submit,
     }
-    if (!data) return { props: null, on: actions }
     const openKind = open === null ? "" : t(`kind_${open.kind}`)
     const rows = data.ledger.filter((entry) => filter === "all" || entry.kind === filter)
     return {

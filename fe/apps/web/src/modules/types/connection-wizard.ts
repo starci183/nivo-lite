@@ -3,6 +3,11 @@ import type { ConnectionStatus, Environment, FirstEvent, Provider } from "./conn
 /** The tone of a one-line note in a wizard step. */
 export type NoteTone = "affirmative" | "negative" | "informative"
 
+/** What a wizard knows once the connection it resumes is read: whether it continues a stored one. */
+export interface WizardResume {
+    readonly isResumed: boolean
+}
+
 /** A sentence under a wizard step, already in the reader's language. */
 export interface WizardNote {
     readonly tone: NoteTone

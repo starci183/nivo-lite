@@ -16,6 +16,7 @@ import {
 } from "@/hooks/knowledge"
 import type { AgentModule } from "@/hooks/knowledge"
 import { useBrainBoard } from "@/hooks/brain"
+import { loadingSlot, mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref, knowledgeSourceHref } from "@/modules/routes"
 import type { KnowledgeRowView, RowActionView } from "@/components/composites/KnowledgeRows"
@@ -95,7 +96,8 @@ export const KnowledgeLibrary = (props: KnowledgeLibraryProps) => {
     const router = navigation.useRouter()
     const commands = useLibraryCommands()
     const member = useWorkspaceMember()
-    const { sources, isLoading } = useKnowledgeSources()
+    const { sources, slot, reload } = useKnowledgeSources()
+    const slotLabels = useSlotLabels()
     const board = useBrainBoard()
     const shown = (sources ?? []).filter((source) => props.module === "all" || source.module === props.module)
     const factsOf = (source: KnowledgeDocument): number =>
@@ -141,11 +143,12 @@ export const KnowledgeLibrary = (props: KnowledgeLibraryProps) => {
                         failTitle: t("detailFailed"),
                     },
                     label: t("listTitle"),
-                    rows: shown.map(rowOf),
-                    isLoading: isLoading || member.isLoading || board.isLoading || sources === undefined,
                     isPending: commands.retrying.size > 0,
-                    emptyTitle: t("emptyTitle"),
-                    emptyBody: t("emptyBody"),
+                    slot:
+                        member.isLoading || board.slot.isLoading
+                            ? loadingSlot<ReadonlyArray<KnowledgeRowView>>()
+                            : mapSlot(slot, () => shown.map(rowOf)),
+                    slotLabels: slotLabels(t("emptyTitle")),
                 },
                 filterLabel: t("filterModule"),
                 selectPlaceholder: t("selectPlaceholder"),
@@ -155,7 +158,7 @@ export const KnowledgeLibrary = (props: KnowledgeLibraryProps) => {
                 ],
                 filter: props.module,
             }}
-            on={{ setFilter: filterTo }}
+            on={{ setFilter: filterTo, retry: reload }}
         />
     )
 }

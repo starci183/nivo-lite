@@ -35,6 +35,14 @@ interface ChatbotInboxViewInput {
     readonly escalation: ChatbotEscalation | null
 }
 
+/** The overview before it is read: no conversations, so the panes keep their words and draw no rows. */
+const EMPTY_OVERVIEW: ChatbotOverview = {
+    workspaceId: "",
+    nowIso: new Date(0).toISOString(),
+    conversations: [],
+    metrics: { today: 0, waiting: 0, p50FirstResponseMin: null, sample: 0, leadsCaptured7d: 0 },
+}
+
 /** Builds inbox panes and controls while retaining the list filter. */
 export const useChatbotInboxView = ({
     actionError,
@@ -62,7 +70,6 @@ export const useChatbotInboxView = ({
     const t = useTranslations("workbenchChatbot")
     const format = useFormatter()
     const { filters, visible, setQuery, setFilter } = useChatbotInboxFilters(overview)
-    if (overview === undefined) return null
 
     return {
         props: propsOf({
@@ -73,7 +80,7 @@ export const useChatbotInboxView = ({
             selectedId,
             format,
             visible,
-            overview,
+            overview: overview ?? EMPTY_OVERVIEW,
             filters,
             thread,
             threadQuery,

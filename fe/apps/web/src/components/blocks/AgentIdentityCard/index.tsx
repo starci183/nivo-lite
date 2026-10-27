@@ -10,7 +10,9 @@ import {
     useAgentRights,
     useSaveAgentName,
 } from "@/hooks/agentSettings"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { AgentIdentityCardBase } from "./component"
+import type { IdentityView } from "./component"
 
 /** The agent the card names: the instance of the url, and the glyph of its type. */
 type AgentIdentityCardProps = {
@@ -19,11 +21,23 @@ type AgentIdentityCardProps = {
     readonly glyph: ModuleIconName
 }
 
+const PLACEHOLDER: IdentityView = {
+    markLabel: "-",
+    nameLabel: "-",
+    nameHint: "-",
+    name: "-",
+    maxLength: 1,
+    line: "-",
+    saveLabel: "-",
+    canSave: false,
+}
+
 /** The connected name card: one name field for the agent (and its instance), saved on its own. */
 export const AgentIdentityCard = (props: AgentIdentityCardProps) => {
     const t = useTranslations("modulesCore")
+    const slotLabels = useSlotLabels()
     const { canEdit } = useAgentRights()
-    const { slot } = useAgentInstallation(props.installationId, props.module)
+    const { slot, reload } = useAgentInstallation(props.installationId, props.module)
     const agent = slot.items
     const isInstance = agent?.isMulti === true
     const saved = (isInstance ? agent?.name : agent?.agentName) ?? ""
@@ -40,19 +54,22 @@ export const AgentIdentityCard = (props: AgentIdentityCardProps) => {
                 title: t("agentTitle"),
                 glyph: props.glyph,
                 module: props.module,
-                markLabel: agent?.agentName ?? "",
-                nameLabel: t(isInstance ? "instanceNameTitle" : "displayName"),
-                nameHint: t(isInstance ? "instanceNameSettingsHint" : "displayNameHint"),
-                name,
-                maxLength: isInstance ? INSTANCE_NAME_MAX : AGENT_NAME_MAX,
-                line: t("agentLine", { handle: agent?.agentHandle ?? "" }),
-                saveLabel: t(isInstance ? "saveInstanceName" : "saveName"),
-                canSave: canEdit && name.trim().length >= minLength && name.trim() !== saved,
                 isDisabled: !canEdit || isSaving,
                 isPending: isSaving,
-                isLoading: slot.items === undefined,
+                slot: mapSlot(slot, (installation): IdentityView => ({
+                    markLabel: installation.agentName,
+                    nameLabel: t(isInstance ? "instanceNameTitle" : "displayName"),
+                    nameHint: t(isInstance ? "instanceNameSettingsHint" : "displayNameHint"),
+                    name,
+                    maxLength: isInstance ? INSTANCE_NAME_MAX : AGENT_NAME_MAX,
+                    line: t("agentLine", { handle: installation.agentHandle }),
+                    saveLabel: t(isInstance ? "saveInstanceName" : "saveName"),
+                    canSave: canEdit && name.trim().length >= minLength && name.trim() !== saved,
+                })),
+                placeholder: PLACEHOLDER,
+                slotLabels: slotLabels(t("agentTitle")),
             }}
-            on={{ name: setDraft, save: () => void saveName() }}
+            on={{ name: setDraft, save: () => void saveName(), retry: reload }}
         />
     )
 }

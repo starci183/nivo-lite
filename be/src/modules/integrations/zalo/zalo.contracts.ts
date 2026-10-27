@@ -40,7 +40,34 @@ export interface ZaloEvent {
 
 /** Why a consultation message could not be delivered, in terms the workbench can show. */
 export type ZaloFailure =
-    "zalo_window_expired" | "zalo_unfollowed" | "zalo_night_hours" | "zalo_token" | "zalo_not_connected" | "zalo_error"
+    | "zalo_window_expired"
+    | "zalo_unfollowed"
+    | "zalo_night_hours"
+    | "zalo_token"
+    | "zalo_not_connected"
+    | "zalo_recipient"
+    | "zalo_template"
+    | "zalo_quota"
+    | "zalo_not_permitted"
+    | "zalo_error"
+
+/** One Zalo Notification Service (ZNS) message: an approved template filled for one phone. */
+export interface ZnsMessage {
+    /** The recipient's phone in the international form without a plus, e.g. 84912345678. */
+    readonly phone: string
+    /** The id of the approved ZNS template. */
+    readonly templateId: string
+    /** The template parameters by the names the template declares. */
+    readonly templateData: Readonly<Record<string, string | number>>
+    /** The sender's own id for the message, echoed back by Zalo; at most 48 characters. */
+    readonly trackingId: string
+}
+
+/** What Zalo answered for a sent ZNS message. */
+export interface ZnsReceipt {
+    /** Zalo's id of the message, or an empty text when it gave none. */
+    readonly messageId: string
+}
 
 /** One OA article to create. */
 export interface ZaloArticle {

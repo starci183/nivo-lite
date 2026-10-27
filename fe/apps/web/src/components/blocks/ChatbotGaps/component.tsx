@@ -1,10 +1,42 @@
-import { KnowledgeRows } from "@/components/composites/KnowledgeRows"
-import type { ChatbotGapsView } from "@/hooks/chatbot"
+import {
+    Badge,
+    Button,
+    ListRow,
+    Region,
+    SectionHeader,
+    SurfaceListCard,
+    TextAction,
+    Text,
+} from "@starci/grammar/common"
+import { SlotView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
+
+/** One unanswered question, already worded. */
+interface GapRowView {
+    readonly id: string
+    readonly title: string
+    readonly line: string
+    readonly badges: ReadonlyArray<{ readonly label: string; readonly tone: "neutral" | "warning" }>
+    readonly answerLabel: string
+    readonly answerHref: string
+    readonly dismissLabel: string
+}
+
+const GAPS_PLACEHOLDER: ReadonlyArray<GapRowView> = [
+    { id: "loading", title: "", line: "", badges: [], answerLabel: "", answerHref: "", dismissLabel: "" },
+]
 
 /** Props for {@link ChatbotGapsBase}. */
 export interface ChatbotGapsBaseProps {
-    /** The card of a manager; null for a member who may not fill gaps (nothing is drawn). */
-    readonly props: { readonly view: ChatbotGapsView | null }
+    readonly props: {
+        readonly id: string
+        readonly title: string
+        readonly description: string
+        readonly slot: DataSlot<ReadonlyArray<GapRowView>>
+        readonly slotLabels: SlotLabels
+        /** A dismissal is in flight. */
+        readonly isPending: boolean
+    }
     readonly on: {
         readonly reload: () => void
         readonly dismiss: (id: string) => void
@@ -13,37 +45,46 @@ export interface ChatbotGapsBaseProps {
 
 /** Draws the questions the Chatbot could not answer, each with the brain link that answers it and a dismiss. */
 export const ChatbotGapsBase = (props: ChatbotGapsBaseProps) => {
-    const view = props.props.view
-    if (view === null) return null
+    const p = props.props
     return (
-        <KnowledgeRows
-            section={{
-                id: view.id,
-                title: view.title,
-                description: view.description,
-                failTitle: view.failTitle,
-                error: view.errorText ?? undefined,
-                action: view.hasError ? { id: "reload", label: view.reloadLabel, onPress: props.on.reload } : undefined,
-            }}
-            label={view.title}
-            isLoading={view.isLoading}
-            isPending={view.isPending}
-            emptyTitle={view.emptyTitle}
-            rows={view.rows.map((row) => ({
-                id: row.id,
-                title: row.title,
-                lines: [row.line],
-                badges: row.badges,
-                actions: [
-                    { id: "answer", label: row.answerLabel, href: row.answerHref },
-                    {
-                        id: "dismiss",
-                        label: row.dismissLabel,
-                        intent: "neutral" as const,
-                        onPress: () => props.on.dismiss(row.id),
-                    },
-                ],
-            }))}
-        />
+        <Region labelledBy={p.id}>
+            <SectionHeader id={p.id} level={2} title={p.title} description={p.description} />
+            <SlotView slot={p.slot} placeholder={GAPS_PLACEHOLDER} labels={p.slotLabels} onRetry={props.on.reload}>
+                {(rows, isSkeleton) => (
+                    <SurfaceListCard ariaLabel={p.title} isLoading={isSkeleton}>
+                        {rows.map((row) => (
+                            <ListRow
+                                key={row.id}
+                                title={row.title}
+                                description={row.line}
+                                badges={
+                                    <>
+                                        {row.badges.map((badge) => (
+                                            <Badge key={badge.label} tone={badge.tone}>
+                                                {badge.label}
+                                            </Badge>
+                                        ))}
+                                    </>
+                                }
+                                actions={
+                                    <>
+                                        <Text>
+                                            <TextAction href={row.answerHref}>{row.answerLabel}</TextAction>
+                                        </Text>
+                                        <Button
+                                            intent="neutral"
+                                            isPending={p.isPending}
+                                            onPress={() => props.on.dismiss(row.id)}
+                                        >
+                                            {row.dismissLabel}
+                                        </Button>
+                                    </>
+                                }
+                            />
+                        ))}
+                    </SurfaceListCard>
+                )}
+            </SlotView>
+        </Region>
     )
 }

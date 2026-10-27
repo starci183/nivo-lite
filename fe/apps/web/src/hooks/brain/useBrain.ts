@@ -2,12 +2,13 @@
 
 import { useMemo } from "react"
 import { useQueryBrainSwr } from "@/hooks/swr"
+import { slotOfSwr } from "@/hooks/slot"
 import { toBrainExtraction, toBrainFact, toBrainGap, toBrainLens, toBrainLesson } from "@/modules/brain"
 import type { BrainExtraction, BrainFact, BrainGap, BrainLens, BrainLesson } from "@/modules/types"
 import { readError } from "@/hooks/workspaceread"
 
 /** The shared Second Brain of the active workspace, in the shape the blocks know. */
-interface BrainView {
+export interface BrainView {
     readonly facts: ReadonlyArray<BrainFact>
     readonly lessons: ReadonlyArray<BrainLesson>
     readonly gaps: ReadonlyArray<BrainGap>
@@ -35,5 +36,7 @@ export const useBrain = () => {
                   },
         [data],
     )
-    return { brain, error, isLoading }
+    const slot = slotOfSwr({ data: brain, error: swrRead.error, isLoading })
+    const reload = () => void swrRead.mutate()
+    return { brain, error, isLoading, slot, reload }
 }

@@ -1,5 +1,7 @@
+import { PageContainer } from "@starci/grammar/common"
 import { KnowledgeFrame } from "@/components/blocks/KnowledgeFrame"
 import { KnowledgeSourcePanel } from "@/components/blocks/KnowledgeSourcePanel"
+import { PAGE_CLASS_NAME } from "./classNames"
 
 /** Copy and values the document page supplies. */
 export interface KnowledgeSourcePageBaseProps {
@@ -23,8 +25,11 @@ export interface KnowledgeSourcePageBaseProps {
 export const KnowledgeSourcePageBase = (props: KnowledgeSourcePageBaseProps) => {
     const { sourceId, ...frame } = props.props
     return (
-        <KnowledgeFrame {...frame}>
-            <KnowledgeSourcePanel sourceId={sourceId} />
-        </KnowledgeFrame>
+        <PageContainer measure="product">
+            <div className={PAGE_CLASS_NAME}>
+                <KnowledgeFrame {...frame} />
+                <KnowledgeSourcePanel sourceId={sourceId} />
+            </div>
+        </PageContainer>
     )
 }

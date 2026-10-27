@@ -17,5 +17,9 @@ export const useConnectionsData = () => {
         activeAgents: active,
         isLoading: connectionsQuery.isLoading || agentsQuery.isLoading,
         failed: connectionsQuery.error !== undefined || agentsQuery.error !== undefined,
+        retry: () => {
+            void connectionsQuery.mutate()
+            void agentsQuery.mutate()
+        },
     }
 }

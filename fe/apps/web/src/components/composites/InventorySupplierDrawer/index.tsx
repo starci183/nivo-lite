@@ -1,7 +1,6 @@
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
-import type { SupplierFormValues, SupplierFormField } from "@/hooks/inventory"
 import { Button, Drawer, Input, SegmentedControl, Textarea } from "@starci/grammar/common"
-import type { InventorySay } from "@/modules/types"
+import type { InventorySay, SupplierFormField, SupplierFormValues } from "@/modules/types"
 import { FORM_CLASS_NAME, FORM_GRID_CLASS_NAME } from "./classNames"
 
 /** The words and state of the supplier drawer. */

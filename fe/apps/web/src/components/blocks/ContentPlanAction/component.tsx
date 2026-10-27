@@ -5,7 +5,8 @@ import {
     renderContentCommandProgress,
 } from "@/components/composites/ContentSettingsCard"
 import { SlotView } from "@/components/composites/SlotView"
-import type { ContentNote, ContentT } from "@/hooks/content"
+import type { ContentNote } from "@/hooks/content"
+import type { ContentT } from "@/modules/types"
 import { FORM_CLASS_NAME } from "./classNames"
 
 /** What the plan command draws. */

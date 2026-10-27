@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 import { useAgentLenses } from "@/hooks/brain"
 import type { AgentLens } from "@/hooks/brain"
 import { isAgentModule, useAskKnowledge } from "@/hooks/knowledge"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { RetrievedPassage } from "@/hooks/knowledge"
 import { knowledgeSourceHref } from "@/modules/routes"
 
@@ -65,7 +66,8 @@ const identityOf = (t: Translate, agent: AgentLens | undefined, audience: string
 /** The connected "ask as an agent" panel: asks the back end what an agent would retrieve through its own view, and cites where it read it. */
 export const KnowledgeAsk = () => {
     const t = useTranslations("knowledge")
-    const { lenses, isLoading } = useAgentLenses()
+    const slotLabels = useSlotLabels()
+    const { lenses, slot, reload } = useAgentLenses()
     const agents = (lenses ?? []).filter((lens) => lens.kind === "agent")
     const ask = useAskKnowledge(agents)
     return (
@@ -77,27 +79,28 @@ export const KnowledgeAsk = () => {
                 questionLabel: t("askQuestion"),
                 agentLabel: t("askModule"),
                 selectPlaceholder: t("selectPlaceholder"),
-                agentOptions: agents.map((lens) => ({ id: lens.id, label: lens.name ?? "" })),
+                agents: mapSlot(slot, (all) =>
+                    all
+                        .filter((lens) => lens.kind === "agent")
+                        .map((lens) => ({ id: lens.id, label: lens.name ?? "" })),
+                ),
+                agentsLabels: slotLabels(t("askNoAgents")),
                 audienceLabel: t("askAudience"),
                 audienceOptions: audienceOptionsOf(t),
                 submitLabel: ask.isPending ? t("asking") : t("askButton"),
                 failTitle: t("askFailed"),
-                noAgents: t("askNoAgents"),
                 question: ask.question,
                 agent: identityOf(t, ask.agent, ask.audience),
                 audience: ask.audience,
                 canPickAudience: ask.canPickAudience,
                 isPending: ask.isPending,
-                isSkeleton: isLoading || lenses === undefined,
                 results:
                     ask.results === null
                         ? undefined
                         : {
                               label: t("askTitle"),
-                              isLoading: false,
-                              isPending: false,
-                              emptyTitle: t("askEmpty"),
-                              rows: ask.results.map((passage) => passageRowOf(t, passage)),
+                              slot: { items: ask.results.map((passage) => passageRowOf(t, passage)) },
+                              slotLabels: slotLabels(t("askEmpty")),
                           },
                 error: ask.error ?? undefined,
             }}
@@ -106,6 +109,7 @@ export const KnowledgeAsk = () => {
                 setAgent: ask.setAgent,
                 setAudience: ask.setAudience,
                 ask: ask.ask,
+                retry: reload,
             }}
         />
     )

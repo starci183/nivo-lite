@@ -1,8 +1,11 @@
 /** The scroll region that holds the messages. */
 export const SCROLL_CLASS_NAME = "min-h-0 flex-1 overflow-y-auto overscroll-contain"
 
-/** The message column inside the scroll region. */
-export const BODY_CLASS_NAME = "mx-auto flex w-full max-w-4xl flex-col gap-1 px-3 py-4 sm:px-6"
+/** The message column inside the scroll region: vertical inset only, so a day divider reaches both column edges. */
+export const BODY_CLASS_NAME = "mx-auto flex w-full max-w-4xl flex-col gap-1 py-4"
+
+/** One content band of the column: the horizontal inset the day dividers between bands do not take. */
+export const BAND_CLASS_NAME = "flex min-w-0 flex-col px-3 sm:px-6"
 
 /** Air around the labelled day divider. */
 export const DAY_CLASS_NAME = "py-3"

@@ -14,7 +14,6 @@ const ALL = "all"
 /** The leads of the workspace as the page read them, and the search the page was opened with. */
 interface LeadsBoardProps {
     readonly initialQuery: string
-    readonly isLoading?: boolean
 }
 
 const STAGE_IDS: ReadonlySet<string> = new Set(STAGE_ORDER)
@@ -52,9 +51,7 @@ export const LeadsBoard = (props: LeadsBoardProps) => {
         canPropose: lead.owner_name === null,
         failure: failureOf(lead.id),
     })
-    const slot = mapSlot(props.isLoading ? { isLoading: true } : data.slot, (leads) =>
-        leadBoardViewOf(leads, { query, stage, rowOf, t }),
-    )
+    const slot = mapSlot(data.slot, (leads) => leadBoardViewOf(leads, { query, stage, rowOf, t }))
 
     const propose = (leadId: string) => {
         setFailure(null)

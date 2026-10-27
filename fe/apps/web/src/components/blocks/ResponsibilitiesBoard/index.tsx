@@ -24,11 +24,11 @@ interface ResponsibilitiesBoardProps {
     readonly initial: InitialFilters
 }
 
-const EMPTY_KEYS: Record<RowStatus | "all", { message: string; description: string }> = {
-    all: { message: "emptyAll", description: "emptyAllDesc" },
-    open: { message: "emptyOpen", description: "emptyAllDesc" },
-    waiting_approval: { message: "emptyWaiting", description: "emptyWaitingDesc" },
-    done: { message: "emptyDone", description: "emptyDoneDesc" },
+const EMPTY_KEYS: Record<RowStatus | "all", string> = {
+    all: "emptyAll",
+    open: "emptyOpen",
+    waiting_approval: "emptyWaiting",
+    done: "emptyDone",
 }
 
 const DUE_KEYS: Record<DueKey, string> = {
@@ -55,9 +55,7 @@ export const ResponsibilitiesBoard = (props: ResponsibilitiesBoardProps) => {
     const filters = useResponsibilityFilters(rows, props.initial)
     const groups = useOwnerGroups()
     const verified = format.dateTime(new Date(), { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })
-    const empty = filters.isFiltered
-        ? { message: t("emptyFiltered"), description: t("emptyFilteredDesc") }
-        : { message: t(EMPTY_KEYS[filters.status].message), description: t(EMPTY_KEYS[filters.status].description) }
+    const emptyMessage = filters.isFiltered ? t("emptyFiltered") : t(EMPTY_KEYS[filters.status])
     const countOf = (key: RowStatus | "all"): string => (slot.isLoading ? "" : ` (${filters.counts[key]})`)
     return (
         <ResponsibilitiesBoardBase
@@ -97,12 +95,9 @@ export const ResponsibilitiesBoard = (props: ResponsibilitiesBoardProps) => {
                 listTitle: t("byOwner"),
                 count: slot.isLoading ? "" : String(filters.visibleCount),
                 verifiedLabel: t("verified", { time: verified }),
-                slot: mapSlot(slot, () => true),
-                slotLabels: slotLabels(empty.message),
-                groups: filters.groups,
+                slot: mapSlot(slot, () => filters.groups),
+                slotLabels: slotLabels(emptyMessage),
                 groupLabels: groups.labels,
-                emptyMessage: empty.message,
-                emptyDescription: empty.description,
                 draftingId: groups.draftingId,
                 copiedId: groups.copiedId,
             }}

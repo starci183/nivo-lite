@@ -1,27 +1,23 @@
-import { FakeClock, mock } from "@starci/jest-preset"
+import { mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { ConversationTarget } from "@modules/domain/agent-conversations"
 import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { AgentConversationsErrorCode } from "@modules/domain/agent-conversations"
-import { AgentMessagesErrorCode } from "@modules/domain/agent-messages"
 import { ConnectionSecretsErrorCode } from "@modules/domain/connection-secrets"
 import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
 import { TELEGRAM } from "@modules/integrations/telegram"
 import type { TelegramClient } from "@modules/integrations/telegram"
-import { ZALO, ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
+import { ZALO } from "@modules/integrations/zalo"
 import type { ZaloClient } from "@modules/integrations/zalo"
-import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ChannelDeliveryService } from "./channel-delivery.service"
-import type { ChannelSenderRegistry } from "./channels.contracts"
+import type { ChannelSenderRegistry, DeliveryRequest } from "./channels.contracts"
 import { CHANNEL_SENDER_REGISTRY } from "./channels.decorators"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
-
-const NOW = Date.parse("2026-10-12T10:00:00.000Z")
-const HOUR = 3_600_000
+import { ZaloDeliveryService } from "./zalo-delivery.service"
 
 const target = (patch: Partial<ConversationTarget> = {}): ConversationTarget => ({
     id: "conv-1",
@@ -34,31 +30,25 @@ const target = (patch: Partial<ConversationTarget> = {}): ConversationTarget => 
 
 const refusedToken = { kind: "refused" as const, code: ConnectionSecretsErrorCode.NotFound }
 
-const build = async (found: ConversationTarget | null = target(), lastCustomerAt: number | null = null) => {
+const build = async (found: ConversationTarget | null = target()) => {
     const conversations = mock<AgentConversationsService>()
     conversations.targetOf.mockResolvedValue(
         found === null ? { kind: "refused", code: AgentConversationsErrorCode.NotFound } : { kind: "ok", value: found },
     )
     const messages = mock<AgentMessagesService>()
     messages.markDelivery.mockResolvedValue(undefined)
-    messages.lastCustomerAt.mockResolvedValue(
-        lastCustomerAt === null
-            ? { kind: "refused", code: AgentMessagesErrorCode.NotFound }
-            : { kind: "ok", value: new Date(lastCustomerAt) },
-    )
     const telegram = mock<TelegramClient>()
     telegram.sendMessage.mockResolvedValue(undefined)
     telegram.sendTyping.mockResolvedValue(true)
     const zalo = mock<ZaloClient>()
-    zalo.sendCsText.mockResolvedValue(undefined)
     const logger = mock<Logger>()
     const secrets = mock<ConnectionSecretsService>()
     const credentials = mock<ZaloCredentialsService>()
     const senders = mock<ChannelSenderRegistry>()
+    const zaloDelivery = mock<ZaloDeliveryService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChannelDeliveryService,
-            { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: TELEGRAM, useValue: telegram },
             { provide: ZALO, useValue: zalo },
             { provide: CHANNEL_SENDER_REGISTRY, useValue: senders },
@@ -67,6 +57,7 @@ const build = async (found: ConversationTarget | null = target(), lastCustomerAt
             { provide: AgentMessagesService, useValue: messages },
             { provide: ConnectionSecretsService, useValue: secrets },
             { provide: ZaloCredentialsService, useValue: credentials },
+            { provide: ZaloDeliveryService, useValue: zaloDelivery },
         ],
     }).compile()
     return {
@@ -78,10 +69,11 @@ const build = async (found: ConversationTarget | null = target(), lastCustomerAt
         secrets,
         credentials,
         senders,
+        zaloDelivery,
     }
 }
 
-const request = { conversationId: "conv-1", messageId: "msg-1", text: "Hello" }
+const request: DeliveryRequest = { conversationId: "conv-1", messageId: "msg-1", text: "Hello" }
 const zaloTarget = (patch: Partial<ConversationTarget> = {}) =>
     target({ channel: "zalo", externalId: "user-1", ...patch })
 
@@ -197,104 +189,45 @@ describe("ChannelDeliveryService", () => {
 
 describe("ChannelDeliveryService", () => {
     describe("zalo", () => {
-        const inside = NOW - 2 * HOUR
-
-        it("sends a consultation text inside the free window and marks the message sent", async () => {
-            const { service, zalo, credentials, messages } = await build(zaloTarget(), inside)
-            credentials.accessToken.mockResolvedValue("access-1")
-
-            await expect(service.deliver(request)).resolves.toEqual({ delivered: true, failure: null })
-
-            expect(zalo.sendCsText).toHaveBeenCalledWith("access-1", "user-1", "Hello")
-            expect(messages.markDelivery).toHaveBeenCalledWith("msg-1", true, undefined)
-        })
-
-        it("sends when the customer has not written yet", async () => {
-            const { service, credentials } = await build(zaloTarget(), null)
-            credentials.accessToken.mockResolvedValue("access-1")
-
-            await expect(service.deliver(request)).resolves.toEqual({ delivered: true, failure: null })
-        })
-
-        it("refuses outside the 48-hour window without calling Zalo, and writes the reason on the message", async () => {
-            const { service, zalo, messages } = await build(zaloTarget(), NOW - 49 * HOUR)
+        it("hands the reply to the Zalo route with the customer's id and writes its verdict on the message", async () => {
+            const { service, zaloDelivery, messages } = await build(zaloTarget({ externalId: "user-1:1730000000" }))
+            zaloDelivery.send.mockResolvedValue({
+                delivered: false,
+                failure: "zalo_window_expired",
+                note: "zns_no_phone",
+            })
 
             await expect(service.deliver(request)).resolves.toEqual({
                 delivered: false,
                 failure: "zalo_window_expired",
+                note: "zns_no_phone",
             })
 
-            expect(zalo.sendCsText).not.toHaveBeenCalled()
+            expect(zaloDelivery.send).toHaveBeenCalledWith(
+                zaloTarget({ externalId: "user-1:1730000000" }),
+                "user-1",
+                request,
+            )
             expect(messages.markDelivery).toHaveBeenCalledWith("msg-1", false, "zalo_window_expired")
         })
 
-        it("says not connected when the conversation has no connection or no customer id", async () => {
-            const none = await build(zaloTarget({ connectionId: null }))
-            const anonymous = await build(zaloTarget({ externalId: null }))
+        it("hands no customer id when the conversation has none, and marks a delivery sent", async () => {
+            const { service, zaloDelivery, messages } = await build(zaloTarget({ externalId: null }))
+            zaloDelivery.send.mockResolvedValue({ delivered: true, failure: null, via: "zns" })
 
-            await expect(none.service.deliver(request)).resolves.toEqual({
-                delivered: false,
-                failure: "zalo_not_connected",
-            })
-            await expect(anonymous.service.deliver(request)).resolves.toEqual({
-                delivered: false,
-                failure: "zalo_not_connected",
-            })
-        })
+            await expect(service.deliver(request)).resolves.toEqual({ delivered: true, failure: null, via: "zns" })
 
-        it("renews the token once when Zalo rejects it and sends again with the new one", async () => {
-            const { service, zalo, credentials } = await build(zaloTarget(), inside)
-            credentials.accessToken.mockResolvedValueOnce("access-1")
-            credentials.accessToken.mockResolvedValueOnce("access-2")
-            zalo.sendCsText.mockRejectedValueOnce(
-                new ZaloError({
-                    code: ZaloErrorCode.Rejected,
-                    params: { path: "/v3.0/oa/message/cs", reason: "x", zaloCode: -216 },
-                }),
-            )
-
-            await expect(service.deliver(request)).resolves.toEqual({ delivered: true, failure: null })
-
-            expect(credentials.accessToken).toHaveBeenNthCalledWith(2, "c-1", { stale: "access-1" })
-            expect(zalo.sendCsText).toHaveBeenLastCalledWith("access-2", "user-1", "Hello")
-        })
-    })
-})
-
-describe("ChannelDeliveryService", () => {
-    describe("zalo", () => {
-        const inside = NOW - 2 * HOUR
-
-        it("classifies any other refusal for the workbench and logs it", async () => {
-            const { service, zalo, credentials, logger } = await build(zaloTarget(), inside)
-            credentials.accessToken.mockResolvedValue("access-1")
-            zalo.sendCsText.mockRejectedValue(
-                new ZaloError({
-                    code: ZaloErrorCode.Rejected,
-                    params: { path: "/v3.0/oa/message/cs", reason: "x", zaloCode: -213 },
-                }),
-            )
-
-            await expect(service.deliver(request)).resolves.toEqual({ delivered: false, failure: "zalo_unfollowed" })
-            expect(logger.error).toHaveBeenCalledWith("channels.delivery.failed", expect.anything(), {
-                conversationId: "conv-1",
-                channel: "zalo",
-            })
+            expect(zaloDelivery.send).toHaveBeenCalledWith(zaloTarget({ externalId: null }), null, request)
+            expect(messages.markDelivery).toHaveBeenCalledWith("msg-1", true, undefined)
         })
 
         it("lets the caller retry when another worker is renewing the token", async () => {
-            const { service, credentials } = await build(zaloTarget(), inside)
+            const { service, zaloDelivery, messages } = await build(zaloTarget())
             const busy = new ChannelsError({ code: ChannelsErrorCode.ZaloRefreshBusy })
-            credentials.accessToken.mockRejectedValue(busy)
+            zaloDelivery.send.mockRejectedValue(busy)
 
             await expect(service.deliver(request)).rejects.toBe(busy)
-        })
-
-        it("treats a connection that is gone as a failure of the generic kind", async () => {
-            const { service, credentials } = await build(zaloTarget(), inside)
-            credentials.accessToken.mockRejectedValue(new ChannelsError({ code: ChannelsErrorCode.ConnectionNotFound }))
-
-            await expect(service.deliver(request)).resolves.toEqual({ delivered: false, failure: "zalo_error" })
+            expect(messages.markDelivery).not.toHaveBeenCalled()
         })
     })
 })
@@ -328,12 +261,14 @@ describe("ChannelDeliveryService", () => {
         })
 
         it("sends a Zalo user through the OA without a conversation window", async () => {
-            const { service, zalo, credentials } = await build()
-            credentials.accessToken.mockResolvedValue("access-1")
+            const { service, zaloDelivery } = await build()
+            zaloDelivery.sendText.mockResolvedValue(undefined)
 
-            await service.sendToPerson({ ...person, provider: "zalo_oa", recipientId: "user-1" })
+            await expect(
+                service.sendToPerson({ ...person, provider: "zalo_oa", recipientId: "user-1" }),
+            ).resolves.toBeUndefined()
 
-            expect(zalo.sendCsText).toHaveBeenCalledWith("access-1", "user-1", "Shift starts")
+            expect(zaloDelivery.sendText).toHaveBeenCalledWith("c-1", "user-1", "Shift starts")
         })
     })
 

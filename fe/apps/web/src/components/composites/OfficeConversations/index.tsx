@@ -134,7 +134,7 @@ const itemsOf = (rows: ReadonlyArray<OfficeConversationRowView>, text: OfficeTex
 
 /** The left column: the panel title, search, the filter tabs and one conversation list, newest first. */
 export const OfficeConversations = (props: OfficeConversationsProps) => {
-    const { list, text, isLoading } = props.props
+    const { list, text, isSkeleton } = props.props
     const [query, setQuery] = useState("")
     const [filter, setFilter] = useState<FilterId>("all")
     const q = query.trim()
@@ -189,7 +189,7 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
                         const id = ids[0]
                         if (id !== undefined) open(id)
                     }}
-                    isLoading={isLoading}
+                    isLoading={isSkeleton}
                     loadingRows={6}
                     emptyContent={emptyContentOf(q, filter, text)}
                     items={itemsOf(rows, text)}

@@ -20,7 +20,7 @@
     "@nivo-lite/offer": "*",
     "@reduxjs/toolkit": "2.11.2",
     "@starci/event-stream": "0.1.0",
-    "@starci/grammar": "0.12.13",
+    "@starci/grammar": "0.14.0",
     "@starci/heroicons": "0.3.4",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.117.2",

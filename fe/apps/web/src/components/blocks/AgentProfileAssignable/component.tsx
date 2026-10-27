@@ -1,5 +1,5 @@
 import { DescriptionList, SurfaceCard, Text } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotBoundView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { STACK_CLASS } from "./classNames"
 
@@ -29,14 +29,9 @@ export const AgentProfileAssignableBase = (props: AgentProfileAssignableBaseProp
             <Text size="sm" tone="muted">
                 {props.props.description}
             </Text>
-            <SlotView
-                slot={props.props.slot}
-                placeholder={props.props.placeholder}
-                labels={props.props.slotLabels}
-                onRetry={props.on.retry}
-            >
+            <SlotBoundView from={props.props} onRetry={props.on.retry}>
                 {(rows, isSkeleton) => <DescriptionList layout="stacked" isLoading={isSkeleton} items={rows} />}
-            </SlotView>
+            </SlotBoundView>
         </div>
     </SurfaceCard>
 )

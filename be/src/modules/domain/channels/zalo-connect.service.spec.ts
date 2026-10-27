@@ -414,3 +414,83 @@ describe("ZaloConnectService", () => {
         )
     })
 })
+
+const znsSettings = {
+    templateId: "246810",
+    params: {
+        customerName: "customer_name",
+        plan: "",
+        endDate: "end_date",
+        amount: "amount",
+        transferContent: "",
+        invoiceNumber: "invoice_no",
+    },
+}
+
+const znsMeta = {
+    app_id: "123456",
+    zns_renewal_template_id: "246810",
+    zns_renewal_param_customer_name: "customer_name",
+    zns_renewal_param_end_date: "end_date",
+    zns_renewal_param_amount: "amount",
+    zns_renewal_param_invoice_number: "invoice_no",
+}
+
+describe("ZaloConnectService", () => {
+    describe("saveZnsRenewal", () => {
+        it("stores the template and parameter names on the connection meta and answers them (owner)", async () => {
+            const { service, connections } = await build()
+
+            await expect(service.saveZnsRenewal(actor, "c-1", znsSettings)).resolves.toEqual(znsSettings)
+
+            expect(connections.authorize.mock.calls).toEqual([[actor, ["owner"]]])
+            expect(connections.patch.mock.calls).toEqual([["ws-1", "c-1", { meta: znsMeta }]])
+        })
+
+        it("turns the fallback off with an empty template id", async () => {
+            const { service, connections } = await build()
+            connections.get.mockResolvedValue(connection({ meta: znsMeta }))
+
+            await expect(service.saveZnsRenewal(actor, "c-1", { ...znsSettings, templateId: "" })).resolves.toBeNull()
+
+            expect(connections.patch.mock.calls[0]?.[2].meta).not.toHaveProperty("zns_renewal_template_id")
+        })
+
+        it("refuses a template id that is not a number before reading the connection", async () => {
+            const { service, connections } = await build()
+
+            await expect(
+                service.saveZnsRenewal(actor, "c-1", { ...znsSettings, templateId: "renewal" }),
+            ).rejects.toMatchObject({ code: ConnectionsErrorCode.CommandInvalid, params: { field: "templateId" } })
+
+            expect(connections.get).not.toHaveBeenCalled()
+            expect(connections.patch).not.toHaveBeenCalled()
+        })
+
+        it("refuses a connection of another provider", async () => {
+            const { service, connections } = await build()
+            connections.get.mockResolvedValue(connection({ provider: "telegram" }))
+
+            await expect(service.saveZnsRenewal(actor, "c-1", znsSettings)).rejects.toMatchObject({
+                code: ConnectionsErrorCode.NotFound,
+            })
+            expect(connections.patch).not.toHaveBeenCalled()
+        })
+    })
+
+    describe("znsRenewal", () => {
+        it("answers the stored template (owner or manager)", async () => {
+            const { service, connections } = await build()
+            connections.get.mockResolvedValue(connection({ meta: znsMeta }))
+
+            await expect(service.znsRenewal(actor, "c-1")).resolves.toEqual(znsSettings)
+            expect(connections.authorize.mock.calls).toEqual([[actor, ["owner", "manager"]]])
+        })
+
+        it("answers null when none is configured", async () => {
+            const { service } = await build()
+
+            await expect(service.znsRenewal(actor, "c-1")).resolves.toBeNull()
+        })
+    })
+})

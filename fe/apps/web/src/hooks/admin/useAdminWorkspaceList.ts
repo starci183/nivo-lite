@@ -10,5 +10,5 @@ export const useAdminWorkspaceList = (filter: AdminWorkspaceFilter, query: strin
     const swrRead = useQueryAdminWorkspacesSwr({ filter, query })
     const { data, isLoading } = swrRead
     const error = readError(swrRead)
-    return { list: data, isLoading, failure: adminFailureOf(error) }
+    return { list: data, isLoading, failure: adminFailureOf(error), reload: () => void swrRead.mutate() }
 }

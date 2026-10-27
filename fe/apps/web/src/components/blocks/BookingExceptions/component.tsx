@@ -3,6 +3,8 @@ import { Checkbox, DateField, Form, Input, Select, TimeField } from "@starci/gra
 import { BookingCatalogList } from "@/components/composites/BookingCatalogList"
 import { BookingSaveLine } from "@/components/composites/BookingSaveLine"
 import { BookingSetupSection } from "@/components/composites/BookingSetupSection"
+import { SlotView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import { GRID_CLASS, STACK_CLASS } from "./classNames"
 
 /** The fields of the exception form. */
@@ -18,6 +20,9 @@ export interface ExceptionFields {
 /** Props for {@link BookingExceptionsBase}. */
 export interface BookingExceptionsBaseProps {
     readonly props: {
+        /** The booking board read behind the block. */
+        readonly slot: DataSlot<true>
+        readonly slotLabels: SlotLabels
         readonly title: string
         readonly hint: string
         readonly rows: ReadonlyArray<{ readonly id: string; readonly title: string; readonly detail: string }>
@@ -36,6 +41,7 @@ export interface BookingExceptionsBaseProps {
         readonly notice?: { readonly tone: "affirmative" | "negative"; readonly text: string }
     }
     readonly on: {
+        readonly retry: () => void
         readonly change: (patch: Partial<ExceptionFields>) => void
         readonly add: () => void
         readonly remove: (id: string) => void
@@ -43,7 +49,7 @@ export interface BookingExceptionsBaseProps {
 }
 
 /** Draws the days off and special opening hours: the list of those set and the form that adds one. */
-export const BookingExceptionsBase = (props: BookingExceptionsBaseProps) => {
+const BookingExceptionsBody = (props: BookingExceptionsBaseProps) => {
     const { props: p, on } = props
     return (
         <BookingSetupSection title={p.title} hint={p.hint}>
@@ -65,7 +71,6 @@ export const BookingExceptionsBase = (props: BookingExceptionsBaseProps) => {
 
 /** Draws the div section of the BookingExceptions view. */
 const renderExceptionFields = (p: BookingExceptionsBaseProps["props"], on: BookingExceptionsBaseProps["on"]) => {
-    if (p.notice === undefined) return null
     return (
         <div className={STACK_CLASS}>
             <div className={GRID_CLASS}>
@@ -119,7 +124,18 @@ const renderExceptionFields = (p: BookingExceptionsBaseProps["props"], on: Booki
                     />
                 </div>
             )}
-            <BookingSaveLine label={p.addLabel} isPending={p.isPending} notice={p.notice} />
+            <BookingSaveLine
+                label={p.addLabel}
+                isPending={p.isPending}
+                {...(p.notice === undefined ? {} : { notice: p.notice })}
+            />
         </div>
     )
 }
+
+/** Draws the block once the booking board is read; until then the same form draws, its controls resting. */
+export const BookingExceptionsBase = (props: BookingExceptionsBaseProps) => (
+    <SlotView slot={props.props.slot} placeholder labels={props.props.slotLabels} onRetry={props.on.retry}>
+        {() => <BookingExceptionsBody {...props} />}
+    </SlotView>
+)

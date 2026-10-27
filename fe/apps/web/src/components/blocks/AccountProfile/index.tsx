@@ -5,6 +5,7 @@ import { useAccountAvatar, useAccountCommands } from "@/hooks/account"
 import { useAvatarEditorView } from "@/hooks/avatar"
 import { useMember } from "@/hooks/member"
 import { useProfileForm } from "@/hooks/rhf"
+import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { useQueryMyAccountSwr } from "@/hooks/swr"
 import { AccountProfileBase } from "./component"
 
@@ -15,7 +16,9 @@ import { AccountProfileBase } from "./component"
 export const AccountProfile = () => {
     const t = useTranslations("account")
     const member = useMember()
-    const { data, isLoading } = useQueryMyAccountSwr()
+    const slotLabels = useSlotLabels()
+    const read = useQueryMyAccountSwr()
+    const { data } = read
     const { saveProfile, isSaving } = useAccountCommands()
     const avatar = useAccountAvatar()
     const editor = useAvatarEditorView(
@@ -41,10 +44,12 @@ export const AccountProfile = () => {
                 failTitle: t("failTitle"),
                 name: form.watch("name"),
                 isPending: isSaving,
-                isLoading,
+                slot: mapSlot(slotOfSwr(read), () => true as const),
+                labels: slotLabels(t("loadFailed")),
                 error: form.formState.errors.name?.message,
             }}
             on={{
+                retry: () => void read.mutate(),
                 pick: (files) => void avatar.choose(files),
                 remove: () => void avatar.remove(),
                 setName: (value) => form.setValue("name", value, { shouldValidate: form.formState.isSubmitted }),

@@ -10,7 +10,9 @@ import {
     Textarea,
 } from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
+import { SlotView } from "@/components/composites/SlotView"
 import { AgentMark } from "@/components/leaves/AgentMark"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import {
     ACTION_CLASS,
     CHIPS_CLASS,
@@ -21,28 +23,34 @@ import {
     TASK_CLASS,
 } from "./classNames"
 
-/** Copy and state of the heading of an agent profile. */
+/** What the heading shows once the agent arrived, every word resolved. */
+export interface ProfileHeadView {
+    readonly crumbs: ReadonlyArray<BreadcrumbItem>
+    readonly title: string
+    /** The @handle and the module the agent works for. */
+    readonly description: string
+    /** The agent id: the generated avatar of an agent without a picture. */
+    readonly seed: string
+    /** The picture the owner gave the agent, or null. */
+    readonly picture: string | null
+    readonly chips: ReadonlyArray<{ readonly id: string; readonly label: string; readonly tone: BadgeTone }>
+    /** False while the agent is paused: nobody can hand it work. */
+    readonly canAssign: boolean
+    readonly composerTitle: string
+    readonly mention: string
+}
+
+/** Copy and slot of the heading of an agent profile. */
 export interface AgentProfileHeadBaseProps {
     readonly props: {
         readonly crumbLabel: string
-        readonly crumbs: ReadonlyArray<BreadcrumbItem>
         readonly eyebrow: string
-        readonly title: string
-        /** The @handle and the module the agent works for. */
-        readonly description: string
-        /** The agent id: the generated avatar of an agent without a picture. */
-        readonly seed: string
-        /** The picture the owner gave the agent, or null. */
-        readonly picture: string | null
-        readonly chips: ReadonlyArray<{ readonly id: string; readonly label: string; readonly tone: BadgeTone }>
-        readonly isLoading: boolean
         readonly assignLabel: string
-        /** False while the agent is paused: nobody can hand it work. */
-        readonly canAssign: boolean
+        readonly slot: DataSlot<ProfileHeadView>
+        readonly placeholder: ProfileHeadView
+        readonly slotLabels: SlotLabels
         readonly composer: {
             readonly isOpen: boolean
-            readonly title: string
-            readonly mention: string
             readonly label: string
             readonly placeholder: string
             readonly hint: string
@@ -67,6 +75,7 @@ export interface AgentProfileHeadBaseProps {
         }
     }
     readonly on: {
+        readonly retry: () => void
         readonly toggle: () => void
         readonly change: (text: string) => void
         readonly send: () => void
@@ -123,62 +132,78 @@ const TaskFields = (props: AgentProfileHeadBaseProps) => {
 export const AgentProfileHeadBase = (props: AgentProfileHeadBaseProps) => {
     const view = props.props
     return (
-        <div className={HEAD_CLASS}>
-            <Breadcrumbs label={view.crumbLabel} items={view.crumbs} />
-            <SectionHeader level={1} eyebrow={view.eyebrow} title={view.title} description={view.description} />
-            <div className={IDENTITY_CLASS}>
-                <AgentMark label={view.title} seed={view.seed} src={view.picture} size="lg" />
-                <div className={CHIPS_CLASS}>
-                    {view.chips.map((chip) => (
-                        <Badge key={chip.id} tone={chip.tone}>
-                            {chip.label}
-                        </Badge>
-                    ))}
-                </div>
-                <div className={ACTION_CLASS}>
-                    <Button
-                        intent="alternative"
-                        isSkeleton={view.isLoading}
-                        isDisabled={!view.canAssign}
-                        onPress={props.on.toggle}
-                    >
-                        {view.assignLabel}
-                    </Button>
-                </div>
-            </div>
-            {view.composer.isOpen ? (
-                <SurfaceCard label={view.composer.title} headingLevel={2}>
-                    <div className={COMPOSER_CLASS}>
-                        <Textarea
-                            id="agent-assign-text"
-                            name="text"
-                            label={view.composer.label}
-                            placeholder={view.composer.placeholder}
-                            value={view.composer.text}
-                            rows={3}
-                            maxLength={view.composer.maxLength}
-                            isDisabled={view.composer.isPending}
-                            onValueChange={props.on.change}
-                            onSubmitShortcut={props.on.send}
+        <SlotView slot={view.slot} placeholder={view.placeholder} labels={view.slotLabels} onRetry={props.on.retry}>
+            {(head, isSkeleton) => (
+                <div className={HEAD_CLASS}>
+                    <Breadcrumbs label={view.crumbLabel} items={head.crumbs} />
+                    <SectionHeader
+                        level={1}
+                        eyebrow={view.eyebrow}
+                        title={head.title}
+                        description={head.description}
+                        isSkeleton={isSkeleton}
+                    />
+                    <div className={IDENTITY_CLASS}>
+                        <AgentMark
+                            label={head.title}
+                            seed={head.seed}
+                            src={head.picture}
+                            size="lg"
+                            isSkeleton={isSkeleton}
                         />
-                        <TaskFields {...props} />
-                        <div className={COMPOSER_FOOT_CLASS}>
-                            <Badge tone="accent">{view.composer.mention}</Badge>
-                            <Text size="sm" tone="muted">
-                                {view.composer.hint}
-                            </Text>
+                        <div className={CHIPS_CLASS}>
+                            {head.chips.map((chip) => (
+                                <Badge key={chip.id} tone={chip.tone} isSkeleton={isSkeleton}>
+                                    {chip.label}
+                                </Badge>
+                            ))}
+                        </div>
+                        <div className={ACTION_CLASS}>
                             <Button
-                                intent="commit"
-                                isPending={view.composer.isPending}
-                                isDisabled={!view.composer.canSend}
-                                onPress={props.on.send}
+                                intent="alternative"
+                                isSkeleton={isSkeleton}
+                                isDisabled={!head.canAssign}
+                                onPress={props.on.toggle}
                             >
-                                {view.composer.sendLabel}
+                                {view.assignLabel}
                             </Button>
                         </div>
                     </div>
-                </SurfaceCard>
-            ) : null}
-        </div>
+                    {view.composer.isOpen ? (
+                        <SurfaceCard label={head.composerTitle} headingLevel={2}>
+                            <div className={COMPOSER_CLASS}>
+                                <Textarea
+                                    id="agent-assign-text"
+                                    name="text"
+                                    label={view.composer.label}
+                                    placeholder={view.composer.placeholder}
+                                    value={view.composer.text}
+                                    rows={3}
+                                    maxLength={view.composer.maxLength}
+                                    isDisabled={view.composer.isPending}
+                                    onValueChange={props.on.change}
+                                    onSubmitShortcut={props.on.send}
+                                />
+                                <TaskFields {...props} />
+                                <div className={COMPOSER_FOOT_CLASS}>
+                                    <Badge tone="accent">{head.mention}</Badge>
+                                    <Text size="sm" tone="muted">
+                                        {view.composer.hint}
+                                    </Text>
+                                    <Button
+                                        intent="commit"
+                                        isPending={view.composer.isPending}
+                                        isDisabled={!view.composer.canSend}
+                                        onPress={props.on.send}
+                                    >
+                                        {view.composer.sendLabel}
+                                    </Button>
+                                </div>
+                            </div>
+                        </SurfaceCard>
+                    ) : null}
+                </div>
+            )}
+        </SlotView>
     )
 }

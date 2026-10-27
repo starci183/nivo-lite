@@ -9,5 +9,5 @@ export const useAdminHealthPage = () => {
     const swrRead = useQueryAdminHealthSwr()
     const { data, isLoading } = swrRead
     const error = readError(swrRead)
-    return { health: data, isLoading, failure: adminFailureOf(error) }
+    return { health: data, isLoading, failure: adminFailureOf(error), reload: () => void swrRead.mutate() }
 }

@@ -1,4 +1,5 @@
 import { Alert, Badge, Button, Input, RadioGroup, Select, Text } from "@starci/grammar/common"
+import { SlotView } from "@/components/composites/SlotView"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
 import {
     backAction,
@@ -8,10 +9,19 @@ import {
     type WizardAction,
 } from "@/components/composites/WizardFooter"
 
-import { WizardFrame } from "@/components/composites/WizardFrame"
+import { frameOf, WizardFrame } from "@/components/composites/WizardFrame"
 import { WizardGuideView } from "@/components/composites/WizardGuideView"
 import { WizardVerifyStep } from "@/components/composites/WizardVerifyStep"
-import type { AgentStepView, CopyLabels, GuideScreen, VerifyHelpView, WizardNote } from "@/modules/types"
+import type {
+    AgentStepView,
+    CopyLabels,
+    DataSlot,
+    GuideScreen,
+    SlotLabels,
+    VerifyHelpView,
+    WizardNote,
+    WizardResume,
+} from "@/modules/types"
 import { moneyWizardClassNames as classNames } from "./classNames"
 
 /** Copy, state and commands of the bank and payment wizard. */
@@ -22,8 +32,9 @@ export interface MoneyWizardBaseProps {
         readonly steps: ReadonlyArray<string>
         readonly index: number
         readonly step: "env" | "account" | "follow" | "verify" | "agent"
-        /** The sentence shown while an unfinished connection is read back; null once it is. */
-        readonly waiting: string | null
+        /** The stored connection a resumed wizard reads back; a new one is ready at once. */
+        readonly resume: DataSlot<WizardResume>
+        readonly slotLabels: SlotLabels
         readonly earlyAccess: boolean
         readonly environments: ReadonlyArray<{
             readonly value: string
@@ -82,6 +93,7 @@ export interface MoneyWizardBaseProps {
         >
     }
     readonly on: {
+        readonly retry: () => void
         readonly go: (to: number) => void
         readonly create: () => void
         readonly followDone: () => void
@@ -98,6 +110,9 @@ export interface MoneyWizardBaseProps {
         readonly agents: (ids: ReadonlyArray<string>) => void
     }
 }
+
+/** The wizard a new connection starts with: the placeholder drawn while a stored one is read. */
+const RESUME_PLACEHOLDER: WizardResume = { isResumed: false }
 
 const actionsOf = ({ props, on }: MoneyWizardBaseProps): ReadonlyArray<WizardAction> => {
     const { text } = props
@@ -125,15 +140,16 @@ const actionsOf = ({ props, on }: MoneyWizardBaseProps): ReadonlyArray<WizardAct
     return [nextAction(text.done, on.finish, { isPending: props.isPending }), back]
 }
 
-const accountOf = ({ props, on }: MoneyWizardBaseProps) => (
+const accountOf = ({ props, on }: MoneyWizardBaseProps, isSkeleton: boolean) => (
     <>
         <div className={classNames.fields}>
             <Input
                 id="w-name"
                 name="name"
                 label={props.text.fieldName}
-                hint={props.text.fieldNameHint}
+                description={props.text.fieldNameHint}
                 isDisabled={props.isPending}
+                isSkeleton={isSkeleton}
                 value={props.form.name}
                 onValueChange={on.name}
             />
@@ -153,7 +169,7 @@ const accountOf = ({ props, on }: MoneyWizardBaseProps) => (
                         label={props.text.fieldAccount}
                         isDisabled={props.isPending}
                         value={props.form.account}
-                        hint={props.accountHint}
+                        description={props.accountHint}
                         onValueChange={on.account}
                     />
                     <Input
@@ -178,45 +194,28 @@ const accountOf = ({ props, on }: MoneyWizardBaseProps) => (
 /** The bank or payment provider (SePay, payOS, Casso) in the shared wizard frame, one screen per step. */
 export const MoneyWizardBase = (props: MoneyWizardBaseProps) => {
     const { props: view, on } = props
-    if (view.waiting !== null) {
-        return (
-            <Text size="sm" tone="muted" live="polite">
-                {view.waiting}
-            </Text>
-        )
-    }
     return (
-        <WizardFrame
-            title={view.title}
-            stepLabel={view.stepLabel}
-            steps={view.steps}
-            index={view.index}
-            footer={<WizardFooter actions={actionsOf(props)} />}
-        >
-            {view.earlyAccess ? (
-                <Alert tone="cautionary" title={view.text.earlyAccess} description={view.text.earlyAccessNote} />
-            ) : null}
-            {view.step === "env" ? <MoneyEnvironmentStep {...props} /> : null}
-            {view.step === "account" ? accountOf(props) : null}
-            {view.step === "follow" ? moneyFollowStepOf(props) : null}
-            {view.step === "verify" ? (
-                <WizardVerifyStep
-                    help={view.verifyHelp}
-                    received={view.received}
-                    waiting={view.text.verifyWaiting}
-                    failed={view.hasCheckFailed ? view.text.verifyError : null}
-                />
-            ) : null}
-            {view.step === "agent" ? (
-                <WizardAgentStep {...view.agentStep} isDisabled={view.isPending} onChange={on.agents} />
-            ) : null}
-            {view.note === null ? null : <Alert tone={view.note.tone} title={view.note.text} />}
-        </WizardFrame>
+        <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels} onRetry={on.retry}>
+            {(_resume, isSkeleton) => (
+                <WizardFrame
+                    {...frameOf(view)}
+                    isSkeleton={isSkeleton}
+                    footer={<WizardFooter actions={actionsOf(props)} isSkeleton={isSkeleton} />}
+                >
+                    <MoneyStepBody {...props} isSkeleton={isSkeleton} />
+                </WizardFrame>
+            )}
+        </SlotView>
     )
 }
 
+/** The wizard and whether its resume read is still on its way. */
+interface MoneyEnvironmentStepProps extends MoneyWizardBaseProps {
+    readonly isSkeleton: boolean
+}
+
 /** Renders the environment choices and their availability notices. */
-const MoneyEnvironmentStep = (props: MoneyWizardBaseProps) => {
+const MoneyEnvironmentStep = (props: MoneyEnvironmentStepProps) => {
     const { props: view, on } = props
     return (
         <>
@@ -228,7 +227,7 @@ const MoneyEnvironmentStep = (props: MoneyWizardBaseProps) => {
             <RadioGroup
                 label={view.steps[0] ?? ""}
                 isLabelHidden
-                isDisabled={view.isPending}
+                isDisabled={view.isPending || props.isSkeleton}
                 value={view.environment}
                 onValueChange={(value) => on.environment(value === "test" ? "test" : "live")}
                 options={[...view.environments]}
@@ -268,3 +267,31 @@ const moneyFollowStepOf = ({ props: view, on }: MoneyWizardBaseProps) => (
         )}
     </>
 )
+
+/** Draws the step the wizard is on, with the note under it. */
+const MoneyStepBody = (props: MoneyEnvironmentStepProps) => {
+    const { props: view, on } = props
+    const { isSkeleton } = props
+    return (
+        <>
+            {view.earlyAccess ? (
+                <Alert tone="cautionary" title={view.text.earlyAccess} description={view.text.earlyAccessNote} />
+            ) : null}
+            {view.step === "env" ? <MoneyEnvironmentStep {...props} isSkeleton={isSkeleton} /> : null}
+            {view.step === "account" ? accountOf(props, isSkeleton) : null}
+            {view.step === "follow" ? moneyFollowStepOf(props) : null}
+            {view.step === "verify" ? (
+                <WizardVerifyStep
+                    help={view.verifyHelp}
+                    received={view.received}
+                    waiting={view.text.verifyWaiting}
+                    failed={view.hasCheckFailed ? view.text.verifyError : null}
+                />
+            ) : null}
+            {view.step === "agent" ? (
+                <WizardAgentStep {...view.agentStep} isDisabled={view.isPending} onChange={on.agents} />
+            ) : null}
+            {view.note === null ? null : <Alert tone={view.note.tone} title={view.note.text} />}
+        </>
+    )
+}

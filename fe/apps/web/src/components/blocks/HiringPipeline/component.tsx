@@ -14,7 +14,7 @@ import {
 import type { BadgeTone } from "@starci/grammar/common"
 import { HiringRejectDialog } from "@/components/composites/HiringRejectDialog"
 import type { HiringRejectDialogProps } from "@/components/composites/HiringRejectDialog"
-import type { HiringSay } from "@/hooks/hiring"
+import type { HiringSay } from "@/modules/types"
 import {
     ACTIONS_CLASS_NAME,
     BOARD_CLASS_NAME,

@@ -3,8 +3,7 @@ import { HiringJobFields } from "@/components/leaves/HiringJobFields"
 import type { HiringJobFieldsProps } from "@/components/leaves/HiringJobFields"
 import { HiringRequirementFields } from "@/components/branches/HiringRequirementFields"
 import { HiringQuestionList } from "@/components/branches/HiringQuestionList"
-import type { FieldOf, HiringSay } from "@/hooks/hiring"
-import type { HiringJobValues, HiringQuestionValues } from "@/hooks/hiringJobs"
+import type { FieldOf, HiringJobValues, HiringQuestionValues, HiringSay } from "@/modules/types"
 import { FORM_CLASS_NAME } from "./classNames"
 
 /** The words, values and state of the job editor dialog. */

@@ -1,7 +1,7 @@
 import { Alert, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
 import type { ReactNode } from "react"
-import type { ContentNote, ContentT } from "@/hooks/content"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import type { ContentNote } from "@/hooks/content"
+import type { ContentT, DataSlot, SlotLabels } from "@/modules/types"
 import { FORM_CLASS_NAME } from "./classNames"
 
 const COMMAND_SLOT_LABELS: SlotLabels = { empty: "", forbidden: "", error: "", retry: "" }

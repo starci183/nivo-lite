@@ -7,5 +7,4 @@ export {
     rewardToggleInputOf,
     rewardValuesOf,
 } from "./loyaltyRewards.shared"
-export type { RewardFormValues, RewardTextField } from "./loyaltyRewards.shared"
 export { useLoyaltyRewardActions } from "./useLoyaltyRewardActions"

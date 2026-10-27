@@ -1,35 +1,40 @@
 import { LeadGenCommentList } from "@/components/composites/LeadGenCommentList"
 import type { LeadGenCommentListData } from "@/components/composites/LeadGenCommentList"
-import { PanelPending } from "@/components/composites/PanelPending"
-import type { PanelPendingProps } from "@/components/composites/PanelPending"
+import { SlotView } from "@/components/composites/SlotView"
+import type { SlotPanelProps } from "@/modules/types"
 
 /** Props for {@link LeadGenCommentsBase}. */
 export interface LeadGenCommentsBaseProps {
-    readonly props: {
-        /** The comments once the workbench is read; null while it is not. */
-        readonly comments: LeadGenCommentListData | null
-        readonly pending: PanelPendingProps
-    }
+    /** The placeholder is the tab with no rows: its words stay real while the rows draw as skeleton. */
+    readonly props: SlotPanelProps<LeadGenCommentListData>
     readonly on: {
         readonly edit: (id: string) => void
         readonly cancel: (id: string) => void
         readonly draft: (id: string, value: string) => void
         readonly approve: (id: string, edited: boolean) => void
+        /** Retries the approval status read of a row. */
         readonly retry: () => void
+        /** Reads the whole panel again after it failed. */
+        readonly reload: () => void
     }
 }
 
-/** Draws the public comments waiting for a person, or the skeleton or failure of the panel while it is not read. */
-export const LeadGenCommentsBase = (props: LeadGenCommentsBaseProps) =>
-    props.props.comments === null ? (
-        <PanelPending {...props.props.pending} />
-    ) : (
-        <LeadGenCommentList
-            {...props.props.comments}
-            onEdit={props.on.edit}
-            onCancel={props.on.cancel}
-            onDraft={props.on.draft}
-            onApprove={props.on.approve}
-            onRetry={props.on.retry}
-        />
+/** Draws the public comments waiting for a person; the status of the read goes through SlotView. */
+export const LeadGenCommentsBase = (props: LeadGenCommentsBaseProps) => {
+    const { props: p, on } = props
+    return (
+        <SlotView slot={p.slot} placeholder={p.placeholder} labels={p.labels} onRetry={on.reload}>
+            {(comments, isSkeleton) => (
+                <LeadGenCommentList
+                    {...comments}
+                    isSkeleton={isSkeleton}
+                    onEdit={on.edit}
+                    onCancel={on.cancel}
+                    onDraft={on.draft}
+                    onApprove={on.approve}
+                    onRetry={on.retry}
+                />
+            )}
+        </SlotView>
     )
+}

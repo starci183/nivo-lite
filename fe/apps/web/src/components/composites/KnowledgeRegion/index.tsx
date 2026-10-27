@@ -1,6 +1,4 @@
 import { Badge, EmptyNotice, ListRow, SurfaceListCard, Text, TextAction } from "@starci/grammar/common"
-import { RegionState } from "@/components/branches/RegionState"
-import type { RegionFailure } from "@/components/branches/RegionState"
 import { LABEL_END_CLASS_NAME } from "./classNames"
 
 /** The open knowledge gaps of the agent. */
@@ -33,74 +31,62 @@ interface KnowledgeView {
     readonly gaps: GapsView | null
 }
 
-/** Copy and state of the knowledge region. */
+/** Copy and view of the knowledge region; `isSkeleton` draws the same cards with blank geometry while the data is read. */
 export interface KnowledgeRegionProps {
     readonly label: string
-    readonly isLoading: boolean
-    readonly isFailed: boolean
     readonly view: KnowledgeView
-    readonly failure: RegionFailure
-    readonly onRetry: () => void
+    readonly isSkeleton: boolean
 }
 
 /** What the agent can read (its lens, public and internal) and, when the data exists, the questions it could not answer. */
-export const KnowledgeRegion = (props: KnowledgeRegionProps) => (
-    <RegionState
-        label={props.label}
-        isLoading={props.isLoading}
-        isFailed={props.isFailed}
-        view={props.view}
-        failure={props.failure}
-        onRetry={props.onRetry}
-    >
-        {(view) => (
-            <>
+export const KnowledgeRegion = (props: KnowledgeRegionProps) => {
+    const { view, isSkeleton } = props
+    return (
+        <>
+            <SurfaceListCard
+                label={props.label}
+                labelEnd={
+                    <TextAction size="sm" href={view.openHref} isSkeleton={isSkeleton}>
+                        {view.openLabel}
+                    </TextAction>
+                }
+                footer={
+                    <Text size="sm" tone="muted" isSkeleton={isSkeleton}>
+                        {view.footer}
+                    </Text>
+                }
+            >
+                <ListRow isSkeleton={isSkeleton} title={view.publicTitle} description={view.publicDescription} />
+                <ListRow isSkeleton={isSkeleton} title={view.internalTitle} description={view.internalDescription} />
+            </SurfaceListCard>
+            {view.gaps === null ? null : (
                 <SurfaceListCard
-                    label={props.label}
+                    label={view.gaps.label}
                     labelEnd={
-                        <TextAction size="sm" href={view.openHref}>
-                            {view.openLabel}
-                        </TextAction>
+                        view.gaps.count === null ? undefined : (
+                            <div className={LABEL_END_CLASS_NAME}>
+                                <Badge tone="warning" isDot isSkeleton={isSkeleton}>
+                                    {view.gaps.count}
+                                </Badge>
+                                <TextAction size="sm" href={view.gaps.openHref} isSkeleton={isSkeleton}>
+                                    {view.gaps.openLabel}
+                                </TextAction>
+                            </div>
+                        )
                     }
-                    footer={
-                        <Text size="sm" tone="muted">
-                            {view.footer}
-                        </Text>
-                    }
+                    empty={<EmptyNotice message={view.gaps.emptyMessage} description={view.gaps.emptyDescription} />}
                 >
-                    <ListRow title={view.publicTitle} description={view.publicDescription} />
-                    <ListRow title={view.internalTitle} description={view.internalDescription} />
+                    {view.gaps.rows.map((row) => (
+                        <ListRow
+                            key={row.id}
+                            isSkeleton={isSkeleton}
+                            title={row.title}
+                            description={row.description}
+                            badges={<Badge tone="warning">{row.asked}</Badge>}
+                        />
+                    ))}
                 </SurfaceListCard>
-                {view.gaps === null ? null : (
-                    <SurfaceListCard
-                        label={view.gaps.label}
-                        labelEnd={
-                            view.gaps.count === null ? undefined : (
-                                <div className={LABEL_END_CLASS_NAME}>
-                                    <Badge tone="warning" isDot>
-                                        {view.gaps.count}
-                                    </Badge>
-                                    <TextAction size="sm" href={view.gaps.openHref}>
-                                        {view.gaps.openLabel}
-                                    </TextAction>
-                                </div>
-                            )
-                        }
-                        empty={
-                            <EmptyNotice message={view.gaps.emptyMessage} description={view.gaps.emptyDescription} />
-                        }
-                    >
-                        {view.gaps.rows.map((row) => (
-                            <ListRow
-                                key={row.id}
-                                title={row.title}
-                                description={row.description}
-                                badges={<Badge tone="warning">{row.asked}</Badge>}
-                            />
-                        ))}
-                    </SurfaceListCard>
-                )}
-            </>
-        )}
-    </RegionState>
-)
+            )}
+        </>
+    )
+}

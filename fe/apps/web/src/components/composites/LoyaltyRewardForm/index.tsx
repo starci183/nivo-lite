@@ -1,5 +1,5 @@
 import { Button, Form, Input, Select, Switch, Textarea } from "@starci/grammar/common"
-import type { RewardFormValues, RewardTextField } from "@/hooks/loyaltyRewards"
+import type { RewardFormValues, RewardTextField } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, FIELD_PAIR_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** What the add and edit form of one reward draws and reports. */
@@ -55,7 +55,7 @@ export const LoyaltyRewardForm = (props: LoyaltyRewardFormProps) => (
                     id="reward-stock"
                     name="stock"
                     label={props.stockLabel}
-                    hint={props.stockHint}
+                    description={props.stockHint}
                     value={props.values.stock}
                     isDisabled={props.isPending}
                     onValueChange={(value) => props.onChange("stock", value)}
@@ -64,7 +64,7 @@ export const LoyaltyRewardForm = (props: LoyaltyRewardFormProps) => (
                     id="reward-limit"
                     name="limit"
                     label={props.limitLabel}
-                    hint={props.limitHint}
+                    description={props.limitHint}
                     value={props.values.limit}
                     isDisabled={props.isPending}
                     onValueChange={(value) => props.onChange("limit", value)}
@@ -115,7 +115,7 @@ const renderLoyaltyRewardFormValueFields = (
             id="reward-value"
             name="value"
             label={props.valueLabel}
-            hint={props.valueHint}
+            description={props.valueHint}
             value={props.values.value}
             isDisabled={props.isPending}
             onValueChange={(value) => props.onChange("value", value)}

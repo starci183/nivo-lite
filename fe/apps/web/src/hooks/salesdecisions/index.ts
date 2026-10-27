@@ -1,2 +1,2 @@
-export { EMPTY_TYPED, editsOf, fieldKey } from "./salesdecisions.shared"
-export type { TypedDecisionValues } from "./salesdecisions.shared"
+export { decidedSalesRow, editsOf, pendingSalesRow } from "./salesdecisions.shared"
+export type { SalesDecisionsControllerInput } from "./salesdecisions.shared"

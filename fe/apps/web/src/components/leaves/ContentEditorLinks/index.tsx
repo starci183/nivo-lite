@@ -1,5 +1,5 @@
 import { Button, Input, SectionHeader } from "@starci/grammar/common"
-import type { ContentT } from "@/hooks/content"
+import type { ContentT } from "@/modules/types"
 import { LINKS_CLASS_NAME, LINK_ROW_CLASS_NAME } from "./classNames"
 
 /** One link row of the editor. */

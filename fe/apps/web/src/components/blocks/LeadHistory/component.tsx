@@ -60,15 +60,17 @@ export const LeadHistoryBase = (props: LeadHistoryBaseProps) => {
                             id="history-title"
                             level={2}
                             title={l.title}
-                            meta={isSkeleton ? undefined : view.meta}
+                            meta={view.meta}
+                            isSkeleton={isSkeleton}
                         />
-                        {isSkeleton ? <Timeline label={l.title} items={[]} isLoading loadingRows={3} /> : null}
                         {!isSkeleton && view.entries.length === 0 ? (
                             <EmptyNotice message={l.emptyTitle} description={l.emptyHint} />
                         ) : null}
-                        {!isSkeleton && view.entries.length > 0 ? (
+                        {isSkeleton || view.entries.length > 0 ? (
                             <Timeline
                                 label={l.timelineLabel}
+                                isLoading={isSkeleton}
+                                loadingRows={3}
                                 items={view.entries.map((entry) => ({
                                     id: entry.id,
                                     title: entry.actor,

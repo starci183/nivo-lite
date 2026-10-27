@@ -286,12 +286,31 @@ describe("AutomationMessagesService composeAndSend a message the model adapts to
         expect(gate.submit).toHaveBeenNthCalledWith(2, expect.objectContaining({ draft: "Chao An tu Tiem Hoa" }))
     })
 
-    it("fills the wording when the model answers nothing", async () => {
+    it("fills the wording when the model answers nothing, and marks it as written from the template", async () => {
         const { service, gate } = await build()
 
-        await service.composeAndSend(perCase, composition())
+        const result = await service.composeAndSend(perCase, composition())
 
-        expect(gate.submit).toHaveBeenCalledWith(expect.objectContaining({ draft: "Chao An tu Tiem Hoa" }))
+        expect(gate.submit).toHaveBeenCalledWith(
+            expect.objectContaining({
+                draft: "Chao An tu Tiem Hoa",
+                summary: 'fallback.summary{"summary":"Cam on"}',
+            }),
+        )
+        expect(result.steps[0]).toMatchObject({ label: "step.fallback{}", message: "Chao An tu Tiem Hoa" })
+    })
+
+    it("does not mark a rewrite it discarded, nor a fixed wording, as the model failing", async () => {
+        const { service, gate, text } = await build()
+        text.generate.mockResolvedValueOnce("Chao {ten_khach} con thieu")
+
+        const discarded = await service.composeAndSend(perCase, composition())
+        const fixed = await service.composeAndSend(context(), composition())
+
+        expect(discarded.steps[0]).toMatchObject({ label: "step.filled{}" })
+        expect(fixed.steps[0]).toMatchObject({ label: "step.filled{}" })
+        expect(gate.submit).toHaveBeenCalledWith(expect.objectContaining({ summary: "Cam on" }))
+        expect(gate.submit).not.toHaveBeenCalledWith(expect.objectContaining({ summary: textLike("fallback") }))
     })
 })
 describe("AutomationMessagesService composeAndSend with payment details that must stay exact", () => {
@@ -330,6 +349,23 @@ describe("AutomationMessagesService composeAndSend with payment details that mus
             2,
             expect.objectContaining({ draft: `Chao An, ban quet ${link} nhe` }),
         )
+    })
+
+    it("keeps the payment tail word for word after the template when the model does not answer", async () => {
+        const { service, gate } = await build()
+        const tail = ["Hoa don: INV-202611-0003", "So tien: 1.500.000 d", "Quet ma QR: https://qr.sepay.vn/img"].join(
+            "\n",
+        )
+
+        const result = await service.composeAndSend(
+            perCase,
+            composition({ fixedTail: tail, keepExact: ["INV-202611-0003"] }),
+        )
+
+        const draft = ["Chao An tu Tiem Hoa", "", tail].join("\n")
+        expect(gate.submit).toHaveBeenCalledWith(expect.objectContaining({ draft }))
+        expect(result.steps[0]).toMatchObject({ label: "step.fallback{}", message: draft })
+        expect(result.steps[1]).toMatchObject({ label: "step.sent{}", message: draft })
     })
 
     it("leaves the text alone when the tail is blank", async () => {

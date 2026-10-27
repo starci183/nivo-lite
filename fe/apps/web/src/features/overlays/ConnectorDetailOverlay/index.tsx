@@ -8,9 +8,9 @@ import { ConnectionAttention } from "@/components/blocks/ConnectionAttention"
 import { ConnectionLibrary } from "@/components/blocks/ConnectionLibrary"
 import { ConnectionRow } from "@/components/blocks/ConnectionRow"
 import { ConnectionsOverview, OverlayHost } from "@/components/blocks/ConnectionsOverview"
+import type { ConnectionsBoard } from "@/components/blocks/ConnectionsOverview"
 import { ConnectionViewTabs } from "@/components/blocks/ConnectionViewTabs"
-import { McpConnectorForms } from "@/components/composites/McpConnectorForms"
-import { McpGatewayRegion } from "@/components/composites/McpGatewayRegion"
+import { McpGatewaySection } from "@/components/blocks/McpGatewaySection"
 import { useQueryAuthUserSwr } from "@/hooks/auth"
 import { catalogKey, entryById } from "@/hooks/connection-catalog"
 import { PROVIDER_LOGO } from "@/hooks/connection-providers"
@@ -23,13 +23,14 @@ import {
     URL_PARAMS,
     useConnectionOverlays,
     useConnectionsData,
+    useConnectionsRole,
     connectionGroups,
+    boardSlotOf,
 } from "@/hooks/connections"
-import { useMcpGatewayView } from "@/hooks/mcpGateway"
-import { useActiveWorkspace, useWorkspaceCards } from "@/hooks/workspaces"
 import { webSiteOrigin } from "@/modules/config"
+import { useSlotLabels } from "@/hooks/slot"
 import type { AgentOption, Connection } from "@/modules/types"
-import { ConnectorDetailOverlayBase, detailRowsOf, detailModeOf } from "./component"
+import { ConnectorDetailOverlayBase, detailRowsOf } from "./component"
 import type { DetailEntry } from "./component"
 
 /** Workspace inputs supplied by a caller, or read by the drawer when its server page registers it without inputs. */
@@ -44,12 +45,13 @@ type ConnectorDetailOverlayProps = {
     readonly canManage?: boolean
 }
 
-const STATUS_KEYS = { official: "statusOfficial", early: "statusEarly", soon: "statusSoon" } as const
 const renderAddButton = (props: ComponentProps<typeof ConnectionAddButton>) => <ConnectionAddButton {...props} />
 const renderAttention = (props: ComponentProps<typeof ConnectionAttention>) => <ConnectionAttention {...props} />
 const renderLibrary = (props: ComponentProps<typeof ConnectionLibrary>) => <ConnectionLibrary {...props} />
 const renderRow = (props: ComponentProps<typeof ConnectionRow>) => <ConnectionRow {...props} />
 const renderViewTabs = (props: ComponentProps<typeof ConnectionViewTabs>) => <ConnectionViewTabs {...props} />
+const RenderGateway = (props: ComponentProps<typeof McpGatewaySection>) => <McpGatewaySection {...props} />
+const STATUS_KEYS = { official: "statusOfficial", early: "statusEarly", soon: "statusSoon" } as const
 
 /** The server page registers the URL-selected drawers as rendered nodes. */
 interface ConnectionsOverlayHostProps {
@@ -60,79 +62,70 @@ interface ConnectionsOverlayHostProps {
 /** Mount the connection drawers only when the overview has a readable, loaded workspace. */
 export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
     const t = useTranslations("connections")
-    const { activeWorkspaceId } = useActiveWorkspace()
-    const workspaces = useWorkspaceCards()
+    const slotLabelsOf = useSlotLabels()
+    const { role, isLoading: isRoleLoading } = useConnectionsRole()
     const user = useQueryAuthUserSwr()
     const data = useConnectionsData()
-    const role = workspaces.cards.find((card) => card.id === activeWorkspaceId)?.role
     const manager = role === "owner" || role === "manager"
-    const items = data.items
-    const agentNames = data.agentNames
-    const live = liveConnections(items)
-    const attention = attentionConnections(items)
+    const live = liveConnections(data.items)
+    const attention = attentionConnections(data.items)
     const first = attention[0]
     const showsLibrary = props.tab === "library" || (props.tab !== "connected" && live.length === 0)
-    const groups = connectionGroups(items, agentNames, t)
-    const isLoading = workspaces.status === "loading" || (manager && data.isLoading)
-    const mode = detailModeOf({ isLoading, manager, failed: data.failed })
-    const gateway = useMcpGatewayView(mode === "ready" && manager)
+    const groups = connectionGroups(data.items, data.agentNames, t)
+    const summaryOf =
+        attention.length > 0
+            ? t("summary", { live: live.length, attention: attention.length })
+            : t("summaryCalm", { live: live.length })
+    const board: ConnectionsBoard = {
+        view: showsLibrary ? "library" : "connected",
+        ownerEmail: user.data?.email ?? "",
+        canManage: role === "owner",
+        localOnly: isLocalOnly(webSiteOrigin()),
+        items: data.items,
+        agents: data.activeAgents,
+        agentNames: data.agentNames,
+        liveCount: live.length,
+        attention: first === undefined ? null : { first, count: attention.length },
+        groups,
+    }
+    const slot = boardSlotOf(
+        {
+            isLoading: isRoleLoading || (manager && data.isLoading),
+            isManager: manager,
+            isFailed: data.failed,
+        },
+        board,
+    )
+    const isReady = slot.items !== undefined
     return (
         <>
             <ConnectionsOverview
                 props={{
-                    mode,
                     words: {
                         title: t("title"),
                         description: t("description"),
                         crumbLabel: t("crumbLabel"),
                         crumbHome: t("crumbHome"),
                         homeHref: CONNECTION_ROUTES.dashboard,
-                        summary:
-                            attention.length > 0
-                                ? t("summary", { live: live.length, attention: attention.length })
-                                : t("summaryCalm", { live: live.length }),
                         ownerOnly: t("ownerOnly"),
                         emptyTitle: t("connectedEmpty"),
                         emptyHint: t("connectedEmptyHint"),
                         automationsLink: t("automationsLink"),
                         automationsHref: CONNECTION_ROUTES.automations,
-                        loadFailed: t("loadFailed"),
-                        forbiddenTitle: t("forbiddenTitle"),
-                        forbiddenBody: t("forbiddenBody"),
-                        forbiddenBack: t("forbiddenBack"),
-                        forbiddenHref: CONNECTION_ROUTES.chat,
                     },
-                    view: showsLibrary ? "library" : "connected",
-                    ownerEmail: user.data?.email ?? "",
-                    canManage: role === "owner",
-                    localOnly: isLocalOnly(webSiteOrigin()),
-                    items,
-                    agents: data.activeAgents,
-                    agentNames,
-                    liveCount: live.length,
-                    attention: first === undefined ? null : { first, count: attention.length },
-                    groups,
+                    summary: isReady ? summaryOf : null,
+                    board: slot,
+                    slotLabels: slotLabelsOf(t("connectedEmpty")),
                 }}
+                on={{ retry: data.retry }}
                 renderAddButton={renderAddButton}
                 renderAttention={renderAttention}
                 renderLibrary={renderLibrary}
                 renderRow={renderRow}
                 renderViewTabs={renderViewTabs}
             />
-            {gateway.isShown && (
-                <McpGatewayRegion
-                    label={gateway.label}
-                    isLoading={gateway.isLoading}
-                    isFailed={gateway.isFailed}
-                    view={gateway.view}
-                    failure={gateway.failure}
-                    onRetry={gateway.onRetry}
-                />
-            )}
-            {gateway.isShown && !gateway.isLoading && !gateway.isFailed && (
-                <McpConnectorForms props={gateway.forms} on={gateway.on} />
-            )}
-            <OverlayHost active={mode === "ready"} candidate={props.candidate} />
+            <RenderGateway isEnabled={isReady && manager} />
+            <OverlayHost active={isReady} candidate={props.candidate} />
         </>
     )
 }
@@ -144,12 +137,9 @@ export const ConnectorDetailOverlay = (props: ConnectorDetailOverlayProps) => {
     const overlays = useConnectionOverlays()
     const data = useConnectionsData()
     const user = useQueryAuthUserSwr()
-    const { activeWorkspaceId } = useActiveWorkspace()
-    const workspaces = useWorkspaceCards()
-    const role = workspaces.cards.find((card) => card.id === activeWorkspaceId)?.role
+    const { role } = useConnectionsRole()
     const items = props.items ?? data.items
     const agentNames = props.agentNames ?? data.agentNames
-
     const id = params.get(URL_PARAMS.detail)
     const found = id === null ? undefined : entryById(id)
     const provider = found?.provider
@@ -171,7 +161,6 @@ export const ConnectorDetailOverlay = (props: ConnectorDetailOverlayProps) => {
                   ...(logo === undefined ? {} : { logo }),
                   ...(provider === undefined ? {} : { provider }),
               }
-
     return (
         <ConnectorDetailOverlayBase
             props={{

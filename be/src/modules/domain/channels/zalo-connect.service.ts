@@ -6,11 +6,12 @@ import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connecti
 import { isZaloRefusal } from "@modules/integrations/zalo"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import type { ZaloAuthorization, ZaloReturn } from "./channels.contracts"
+import type { OptionalZnsRenewal, ZaloAuthorization, ZaloReturn, ZnsRenewalSettings } from "./channels.contracts"
 import { ChannelsLogEvent } from "./channels.log-events"
 import { ChannelsError } from "./errors/channels.error"
 import { ZALO_AUTHORIZATION_FAILED_REASON } from "./messages/channels.messages"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
+import { invalidZnsField, withZnsRenewal, znsRenewalOf } from "./zns-renewal.policy"
 
 const OWNER = ["owner"] as const
 const MANAGER = ["owner", "manager"] as const
@@ -109,6 +110,30 @@ export class ZaloConnectService {
                 throw cause
             })
         return this.viewOf(await this.connections.get(actor.workspaceId, connectionId))
+    }
+
+    /**
+     * Stores the ZNS renewal template the connection falls back to outside the 48-hour chat window (owner): the template id and the
+     * parameter names, as non-secret facts of the connection. An empty template id turns the fallback off.
+     */
+    async saveZnsRenewal(
+        actor: ConnectionActor,
+        connectionId: string,
+        settings: ZnsRenewalSettings,
+    ): Promise<OptionalZnsRenewal> {
+        await this.connections.authorize(actor, OWNER)
+        const field = invalidZnsField(settings)
+        if (field !== null) invalid(field)
+        const connection = await this.zaloOf(actor, connectionId)
+        const meta = withZnsRenewal(connection.meta, settings)
+        await this.connections.patch(actor.workspaceId, connection.id, { meta })
+        return znsRenewalOf(meta)
+    }
+
+    /** The ZNS renewal template of the connection, or null when none is configured (owner or manager). */
+    async znsRenewal(actor: ConnectionActor, connectionId: string): Promise<OptionalZnsRenewal> {
+        await this.connections.authorize(actor, MANAGER)
+        return znsRenewalOf((await this.zaloOf(actor, connectionId)).meta)
     }
 
     private async zaloOf(actor: ConnectionActor, connectionId: string): Promise<ConnectionRecord> {

@@ -8,4 +8,11 @@ export { CHANNELS_MESSAGES } from "./messages/channels.messages"
 export { ZaloCredentialsService } from "./zalo-credentials.service"
 export { ZaloConnectService } from "./zalo-connect.service"
 export { ZaloWizardService } from "./zalo-wizard.service"
-export type { ChannelSender, ChannelSenderRegistry, ZaloAuthorization } from "./channels.contracts"
+export type {
+    ChannelSender,
+    ChannelSenderRegistry,
+    DeliveryRequest,
+    DeliveryResult,
+    RenewalNotification,
+    ZaloAuthorization,
+} from "./channels.contracts"

@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useAccountCommands, useAccountSessions, useSignOutOthers } from "@/hooks/account"
 import { authActionsOf } from "@/hooks/auth"
+import { useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { APP_ROUTES } from "@/modules/routes"
 import { AccountSessionsBase } from "./component"
@@ -13,7 +14,8 @@ export const AccountSessions = () => {
     const auth = authActionsOf()
     const t = useTranslations("account")
     const router = navigation.useRouter()
-    const { rows, isFailed, isLoading } = useAccountSessions()
+    const slotLabels = useSlotLabels()
+    const { slot, reload } = useAccountSessions()
     const { revokeSession } = useAccountCommands()
     const others = useSignOutOthers()
     const [busy, setBusy] = useState<string>()
@@ -34,15 +36,17 @@ export const AccountSessions = () => {
                 signOutThisLabel: t("signOutThis"),
                 signOutOthersLabel: t("signOutOthers"),
                 noOthersLabel: t("noOthers"),
-                failedTitle: t("sessionsFailed"),
                 failTitle: t("failTitle"),
-                rows,
-                isFailed,
-                isSkeleton: isLoading,
-                hasOthers: isLoading || rows.some((row) => !row.isCurrent),
+                slot,
+                placeholder: [
+                    { id: "current", device: t("deviceUnknown"), facts: t("deviceUnknown"), isCurrent: true },
+                    { id: "other", device: t("deviceUnknown"), facts: t("deviceUnknown"), isCurrent: false },
+                ],
+                labels: slotLabels(t("sessionsFailed")),
                 busy,
             }}
             on={{
+                retry: reload,
                 revoke: (id) => void run(id, () => revokeSession(id)),
                 signOutOthers: () => void run("others", others.run),
                 signOutThis: () =>

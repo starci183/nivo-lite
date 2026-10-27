@@ -1,7 +1,5 @@
 import { Badge, Button, ButtonGroup, EmptyNotice, List, ListRow, SurfaceListCard } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
-import { RegionState } from "@/components/branches/RegionState"
-import type { RegionFailure } from "@/components/branches/RegionState"
 
 /** One badge of a gateway row. */
 interface McpGatewayBadge {
@@ -36,14 +34,15 @@ interface McpGatewayCard {
     readonly emptyDescription: string
 }
 
-/** Copy and state of the MCP gateway region. */
+/** What the gateway region draws once its reads are in. */
+interface McpGatewayView {
+    readonly cards: ReadonlyArray<McpGatewayCard>
+}
+
+/** The cards of the MCP gateway region; `isSkeleton` draws them as placeholders. */
 interface McpGatewayRegionProps {
-    readonly label: string
-    readonly isLoading: boolean
-    readonly isFailed: boolean
-    readonly view: { readonly cards: ReadonlyArray<McpGatewayCard> }
-    readonly failure: RegionFailure
-    readonly onRetry: () => void
+    readonly view: McpGatewayView
+    readonly isSkeleton: boolean
 }
 
 /** The badges a row draws. */
@@ -120,28 +119,18 @@ const GatewayRow = (props: GatewayRowProps) => (
  * and the masked audit log.
  */
 export const McpGatewayRegion = (props: McpGatewayRegionProps) => (
-    <RegionState
-        label={props.label}
-        isLoading={props.isLoading}
-        isFailed={props.isFailed}
-        view={props.view}
-        failure={props.failure}
-        onRetry={props.onRetry}
-    >
-        {(view) => (
-            <>
-                {view.cards.map((card) => (
-                    <SurfaceListCard
-                        key={card.label}
-                        label={card.label}
-                        empty={<EmptyNotice message={card.emptyMessage} description={card.emptyDescription} />}
-                    >
-                        {card.rows.map((row) => (
-                            <GatewayRow key={row.id} row={row} />
-                        ))}
-                    </SurfaceListCard>
+    <>
+        {props.view.cards.map((card) => (
+            <SurfaceListCard
+                key={card.label}
+                label={card.label}
+                isLoading={props.isSkeleton}
+                empty={<EmptyNotice message={card.emptyMessage} description={card.emptyDescription} />}
+            >
+                {card.rows.map((row) => (
+                    <GatewayRow key={row.id} row={row} />
                 ))}
-            </>
-        )}
-    </RegionState>
+            </SurfaceListCard>
+        ))}
+    </>
 )

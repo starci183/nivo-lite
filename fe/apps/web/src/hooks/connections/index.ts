@@ -1,5 +1,6 @@
 export {
     attentionConnections,
+    boardSlotOf,
     connectionGroups,
     CONNECTION_ROUTES,
     isLocalOnly,
@@ -22,5 +23,6 @@ export { useFirstEvent } from "./useFirstEvent"
 export { useQueryZaloReturnSwr } from "@/hooks/swr"
 export type { ZaloReturnInput } from "./useReturnZaloAuthorization"
 export { useConnectionsData } from "./useConnectionsData"
+export { useConnectionsRole } from "./useConnectionsRole"
 
 export type { AgentWish } from "./useSetConnectionAgents"

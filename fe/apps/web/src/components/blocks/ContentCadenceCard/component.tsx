@@ -1,5 +1,6 @@
 import { Button, CheckboxGroup, Input, NumberField, SurfaceCard, Switch } from "@starci/grammar/common"
-import type { ContentChannel, ContentNote, ContentT } from "@/hooks/content"
+import type { ContentChannel, ContentNote } from "@/hooks/content"
+import type { ContentT } from "@/modules/types"
 import { ContentCommandNote, ContentSettingsCard } from "@/components/composites/ContentSettingsCard"
 import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
@@ -61,7 +62,7 @@ export const ContentCadenceCardBase = (props: ContentCadenceCardBaseProps) => {
                                     name={`cad-time-${row.channel}`}
                                     label={t("cadenceTime")}
                                     value={row.time}
-                                    hint={t("addTimeHint")}
+                                    description={t("addTimeHint")}
                                     isDisabled={locked}
                                     onValueChange={(v) => props.on.change(row.channel, { time: v })}
                                 />

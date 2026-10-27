@@ -43,7 +43,7 @@ export const ForgotForm = (props: ForgotFormProps) => {
 
     return (
         <ForgotFormBase
-            state={sentTo === null ? "form" : "sent"}
+            shape={sentTo === null ? "form" : "sent"}
             props={{
                 title: t("forgotTitle"),
                 text: t("forgotText"),

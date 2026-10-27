@@ -395,3 +395,93 @@ export interface GatewayPayable {
     /** The issue date, `YYYY-MM-DD`. */
     readonly issuedOn: string
 }
+
+/** The window the renewal-to-cash story is read over: an instant range and the day the horizon counts from. */
+export interface RenewalWindow {
+    /** The first instant, inclusive. */
+    readonly from: Date
+    /** The last instant, exclusive. */
+    readonly to: Date
+    /** The day the horizon counts from, `YYYY-MM-DD` (Vietnam). */
+    readonly day: string
+}
+
+/** One invoice of the renewal story. */
+export interface RenewalInvoice {
+    /** The invoice number, e.g. `INV-202610-0001`. */
+    readonly invoiceNo: string
+    /** The amount, VND. */
+    readonly amountVnd: number
+    /** The customer, or an empty text when unknown. */
+    readonly customer: string
+}
+
+/** A renewal invoice paid and matched, with the contract's end date now. */
+export interface RenewalPaid extends RenewalInvoice {
+    /** The contract's end date now, `YYYY-MM-DD`. */
+    readonly endsOn: string
+    /** True when the payment extended the contract past the billed period. */
+    readonly extended: boolean
+}
+
+/** An invoice still unpaid, with its due day. */
+export interface RenewalUnpaid extends RenewalInvoice {
+    /** The due day, `YYYY-MM-DD` (Vietnam). */
+    readonly dueOn: string
+}
+
+/** An active contract ending soon with no renewal invoice yet. */
+export interface RenewalExpiring {
+    /** The customer. */
+    readonly customer: string
+    /** The plan, or an empty text. */
+    readonly plan: string
+    /** The end date, `YYYY-MM-DD`. */
+    readonly endsOn: string
+}
+
+/** A payment received that is not matched to an invoice and waits for a decision. */
+export interface RenewalUnmatched {
+    /** The amount, VND. */
+    readonly amountVnd: number
+    /** The payer, or an empty text. */
+    readonly sender: string
+    /** The transfer content, or an empty text. */
+    readonly memo: string
+}
+
+/** A counted part of the story: how many, their total, and the first few. */
+export interface RenewalTally<Item> {
+    /** How many there are in all. */
+    readonly count: number
+    /** Their total, VND. */
+    readonly totalVnd: number
+    /** The first few, in the order the report lists them. */
+    readonly items: ReadonlyArray<Item>
+}
+
+/** The renewal-to-cash story of a window: issued, paid and matched, still unpaid, expiring without an invoice, unmatched money. */
+export interface RenewalCashStory {
+    /** The day the horizon counts from, `YYYY-MM-DD`. */
+    readonly day: string
+    /** The last day of the horizon, `YYYY-MM-DD`. */
+    readonly horizonDay: string
+    /** The renewal invoices issued in the window. */
+    readonly issued: RenewalTally<RenewalInvoice>
+    /** The renewal payments received and matched in the window. */
+    readonly paid: RenewalTally<RenewalPaid>
+    /** The invoices still unpaid that fall due by the horizon (overdue ones included). */
+    readonly unpaid: RenewalTally<RenewalUnpaid>
+    /** The active contracts ending by the horizon with no renewal invoice yet. */
+    readonly expiring: RenewalTally<RenewalExpiring>
+    /** The money received but not matched, waiting for a decision. */
+    readonly unmatched: RenewalTally<RenewalUnmatched>
+}
+
+/** The renewal-to-cash story and its report lines, as the daily report and the accounting desk print them. */
+export interface RenewalCashReport {
+    /** The figures. */
+    readonly story: RenewalCashStory
+    /** The report lines, Vietnamese, in the house bullet format. */
+    readonly lines: ReadonlyArray<string>
+}

@@ -12,7 +12,7 @@ type SetupKnowledgeCardProps = {
     readonly nivoHref: string
     readonly nivoLabel: string
     /** The counts are skeletons until the sources are read. */
-    readonly isLoading: boolean
+    readonly isSkeleton: boolean
 }
 
 /** Draws the knowledge this module runs on: the sources of the business, and where to add more. */
@@ -22,7 +22,7 @@ export const SetupKnowledgeCard = (props: SetupKnowledgeCardProps) => (
             <Heading level={2}>{props.title}</Heading>
             <List label={props.title} className={COUNTS}>
                 <ListItem>
-                    <Text size="sm" isSkeleton={props.isLoading}>
+                    <Text size="sm" isSkeleton={props.isSkeleton}>
                         {props.businessLine}
                         {props.publicLine === "" ? null : (
                             <Text as="span" size="sm" tone="muted">

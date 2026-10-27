@@ -33,7 +33,7 @@ export const AgentReplyCardBase = (props: AgentReplyCardBaseProps) => (
                 id="reply-timeout"
                 name="reply-timeout"
                 label={props.props.timeoutLabel}
-                hint={props.props.timeoutHint}
+                description={props.props.timeoutHint}
                 value={props.props.timeout}
                 isDisabled={props.props.isPending}
                 onValueChange={props.on.timeout}
@@ -52,7 +52,7 @@ export const AgentReplyCardBase = (props: AgentReplyCardBaseProps) => (
                 id="holding-message"
                 name="holding-message"
                 label={props.props.holdingLabel}
-                hint={props.props.holdingHint}
+                description={props.props.holdingHint}
                 placeholder={props.props.holdingPlaceholder}
                 value={props.props.holding}
                 isDisabled={props.props.isPending}

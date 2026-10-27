@@ -1,21 +1,22 @@
-import type { ReactElement } from "react"
-import {
-    Alert,
-    Button,
-    Heading,
-    Image,
-    SectionHeader,
-    Skeleton,
-    Stepper,
-    SurfaceCard,
-    Text,
-} from "@starci/grammar/common"
-import type { WorkspacesStatus } from "@/hooks/workspaces"
+import { Alert, Button, Heading, Image, SectionHeader, Stepper, SurfaceCard, Text } from "@starci/grammar/common"
+import { SlotView } from "@/components/composites/SlotView"
 import { APP_ROUTES } from "@/modules/routes"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import { STACK_CLASS_NAME, WELCOME_COPY_CLASS_NAME } from "./classNames"
+
+/** The workspaces overview shapes, in the order the owner approved them. */
+export const WORKSPACES_OVERVIEW_SHAPES = ["welcome", "list"] as const
+/** One drawing per shape: the first-run welcome of a person with no workspace, or the page of one who has some. */
+export type WorkspacesOverviewShape = (typeof WORKSPACES_OVERVIEW_SHAPES)[number]
+
+/** What the list read answers: how many workspaces the person can open. */
+export interface WorkspacesCount {
+    readonly count: number
+}
 
 /** Copy and values the connected workspaces overview supplies. */
 export interface WorkspacesOverviewBaseProps {
+    readonly shape: WorkspacesOverviewShape
     readonly props: {
         readonly title: string
         readonly description: string
@@ -27,53 +28,49 @@ export interface WorkspacesOverviewBaseProps {
         readonly welcomeSteps: ReadonlyArray<string>
         /** The notice about why the person landed here; none draws nothing. */
         readonly reason?: string | undefined
-        /** The failure of loading the list (already localized by the back end); none draws nothing. */
-        readonly error?: string | undefined
-        /** Where the list stands: loading, failed, empty or ready. */
-        readonly status: WorkspacesStatus
-        readonly loadFailedTitle: string
+        /** The person has workspaces: the header offers to create another. */
+        readonly canCreate: boolean
+        readonly slot: DataSlot<WorkspacesCount>
+        readonly slotLabels: SlotLabels
     }
+    readonly on: { readonly retry: () => void }
 }
 
-/** Draws the first-run welcome card. */
-const Welcome = (props: WorkspacesOverviewBaseProps) => (
+/** What the list draws while its read is in flight: the first-run card, in skeleton. */
+const COUNT_PLACEHOLDER: WorkspacesCount = { count: 0 }
+
+/** What the welcome card draws from: the words of the overview, and whether they are placeholders. */
+type WelcomeProps = Pick<WorkspacesOverviewBaseProps, "props"> & { readonly isSkeleton: boolean }
+
+/** Draws the first-run welcome card; in skeleton its words rest as shapes. */
+const Welcome = (props: WelcomeProps) => (
     <SurfaceCard
         ariaLabel={props.props.welcomeTitle}
         treatment="ink"
         artwork={<Image src="/images/entry/workspace-welcome.png" alt="" aspect="square" fit="contain" plate="none" />}
     >
         <div className={WELCOME_COPY_CLASS_NAME}>
-            <Heading level={2}>{props.props.welcomeTitle}</Heading>
-            <Text tone="muted">{props.props.welcomeText}</Text>
+            <Heading level={2} isSkeleton={props.isSkeleton}>
+                {props.props.welcomeTitle}
+            </Heading>
+            <Text tone="muted" isSkeleton={props.isSkeleton}>
+                {props.props.welcomeText}
+            </Text>
             <Stepper
                 label={props.props.welcomeStepsLabel}
                 orientation="vertical"
                 currentStepId="s0"
+                isLoading={props.isSkeleton}
                 steps={props.props.welcomeSteps.map((label, index) => ({ id: `s${index}`, label }))}
             />
-            <Button intent="commit" href={APP_ROUTES.workspaceNew}>
+            <Button intent="commit" href={APP_ROUTES.workspaceNew} isSkeleton={props.isSkeleton}>
                 {props.props.createFirstLabel}
             </Button>
         </div>
     </SurfaceCard>
 )
 
-/** Draws the placeholder while the list loads. */
-const Loading = (props: WorkspacesOverviewBaseProps) => (
-    <SurfaceCard ariaLabel={props.props.title} composition="joined">
-        <Skeleton shape="text" lines={3} />
-    </SurfaceCard>
-)
-
-/** The body of each list status; a failed list draws only the alert above it. */
-const BODY: Readonly<Record<WorkspacesStatus, (props: WorkspacesOverviewBaseProps) => ReactElement | null>> = {
-    loading: Loading,
-    error: () => null,
-    empty: Welcome,
-    ready: () => null,
-}
-
-/** Draws the workspaces overview: every workspace the person can open, the first-run welcome when there is none, and the way to join by link. */
+/** Draws the workspaces overview: the header, the way to create one, and the first-run welcome when there is none. */
 export const WorkspacesOverviewBase = (props: WorkspacesOverviewBaseProps) => (
     <div className={STACK_CLASS_NAME}>
         <SectionHeader
@@ -81,7 +78,7 @@ export const WorkspacesOverviewBase = (props: WorkspacesOverviewBaseProps) => (
             title={props.props.title}
             description={props.props.description}
             action={
-                props.props.status === "ready" ? (
+                props.props.canCreate ? (
                     <Button intent="commit" href={APP_ROUTES.workspaceNew}>
                         {props.props.createLabel}
                     </Button>
@@ -89,9 +86,15 @@ export const WorkspacesOverviewBase = (props: WorkspacesOverviewBaseProps) => (
             }
         />
         {props.props.reason === undefined ? null : <Alert tone="cautionary" title={props.props.reason} />}
-        {props.props.error === undefined ? null : (
-            <Alert tone="negative" title={props.props.loadFailedTitle} description={props.props.error} />
-        )}
-        {BODY[props.props.status](props)}
+        <SlotView
+            slot={props.props.slot}
+            placeholder={COUNT_PLACEHOLDER}
+            labels={props.props.slotLabels}
+            onRetry={props.on.retry}
+        >
+            {(_, isSkeleton) =>
+                props.shape === "welcome" || isSkeleton ? <Welcome props={props.props} isSkeleton={isSkeleton} /> : null
+            }
+        </SlotView>
     </div>
 )

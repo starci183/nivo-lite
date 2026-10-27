@@ -49,7 +49,7 @@ export interface OfficeWaiting {
 
 /**
  * Everything that waits for a person's decision, oldest first: the pending approval cards and the open work items waiting for a
- * decision. The header chip counts it and the "Cần bạn duyệt" column lists it, so both read one definition; a failed work item is
+ * decision. The header chip counts it and the "Needs your approval" column lists it, so both read one definition; a failed work item is
  * an exception, not a decision.
  */
 export const waitingOf = (

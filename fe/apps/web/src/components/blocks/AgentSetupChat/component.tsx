@@ -8,7 +8,6 @@ import {
     FileDropzone,
     Form,
     Heading,
-    Spinner,
     Text,
     Textarea,
 } from "@starci/grammar/common"
@@ -26,7 +25,7 @@ import type {
     SlotLabels,
 } from "@/modules/types"
 
-import { CHAT_BAND, COMPOSER, COMPOSER_FIELD, COMPOSER_ROW, SENDING, THREAD, WRITES } from "./classNames"
+import { CHAT_BAND, COMPOSER, COMPOSER_FIELD, COMPOSER_ROW, SENDING, THREAD, THREAD_BAND, WRITES } from "./classNames"
 
 /** One message of the chat with the confirm cards that sit under it. */
 export interface AgentSetupMessage {
@@ -127,44 +126,58 @@ const BrandCards = (props: BrandCardsProps) => {
 
 const Conversation = (props: ChatPartProps) => (
     <div className={THREAD} aria-live="polite">
-        {props.isSkeleton ? <ChatBubbleSkeletons count={3} /> : null}
+        {props.isSkeleton ? (
+            <div className={THREAD_BAND}>
+                <ChatBubbleSkeletons count={3} />
+            </div>
+        ) : null}
         {props.content.groups.every((group) => group.messages.length === 0) && !props.isSkeleton ? (
-            <EmptyNotice message={props.content.emptyTitle} description={props.content.emptyBody} />
+            <div className={THREAD_BAND}>
+                <EmptyNotice message={props.content.emptyTitle} description={props.content.emptyBody} />
+            </div>
         ) : null}
         {props.content.groups.map((group) => (
             <Fragment key={group.id}>
-                {group.messages.map((message) => (
-                    <ChatBubble
-                        key={message.id}
-                        side={message.isOwner ? "outgoing" : "incoming"}
-                        author={message.author}
-                        footer={
-                            message.cards.length > 0 ? (
-                                <div className={WRITES}>
-                                    {message.cards.map((card) => (
-                                        <SetupWriteCard
-                                            key={card.id}
-                                            write={card}
-                                            words={props.content.words}
-                                            isBusy={props.content.decidingId === card.id}
-                                            onDecide={props.on.decide}
-                                            instance={props.content.instance}
-                                        />
-                                    ))}
-                                </div>
-                            ) : undefined
-                        }
-                    >
-                        {message.body}
-                    </ChatBubble>
-                ))}
+                {group.messages.length === 0 ? null : (
+                    <div className={THREAD_BAND}>
+                        {group.messages.map((message) => (
+                            <ChatBubble
+                                key={message.id}
+                                side={message.isOwner ? "outgoing" : "incoming"}
+                                author={message.author}
+                                footer={
+                                    message.cards.length > 0 ? (
+                                        <div className={WRITES}>
+                                            {message.cards.map((card) => (
+                                                <SetupWriteCard
+                                                    key={card.id}
+                                                    write={card}
+                                                    words={props.content.words}
+                                                    isBusy={props.content.decidingId === card.id}
+                                                    onDecide={props.on.decide}
+                                                    instance={props.content.instance}
+                                                />
+                                            ))}
+                                        </div>
+                                    ) : undefined
+                                }
+                            >
+                                {message.body}
+                            </ChatBubble>
+                        ))}
+                    </div>
+                )}
                 {group.divider === "" ? null : <Divider label={group.divider} />}
             </Fragment>
         ))}
-        <BrandCards content={props.content} on={props.on} />
+        {(props.content.brand?.cards.length ?? 0) > 0 ? (
+            <div className={THREAD_BAND}>
+                <BrandCards content={props.content} on={props.on} />
+            </div>
+        ) : null}
         {props.content.isSending || props.content.brand?.isReading === true ? (
             <div className={SENDING}>
-                <Text size="sm" tone="muted" startContent={<Spinner size="sm" label={sendingOf(props.content)} />}>
+                <Text size="sm" tone="muted" live="polite">
                     {sendingOf(props.content)}
                 </Text>
             </div>

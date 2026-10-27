@@ -1,9 +1,10 @@
 "use client"
 
-import type { ImapWizardProps, BuildMailboxAccountViewContext, BuildImapWizardViewContext } from "./component"
 import { useFormatter, useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
-import { agentChoicesOf } from "@/hooks/connection-wizard"
+import { agentChoicesOf, resumeSlotOfLoading } from "@/hooks/connection-wizard"
+import { useSlotLabels } from "@/hooks/slot"
+import type { AgentOption, SlotLabels } from "@/modules/types"
 import {
     IMAP_EVERY,
     IMAP_GUIDE_KEY,
@@ -16,6 +17,36 @@ import {
 } from "@/hooks/imap-wizard"
 import { ImapWizardBase } from "./component"
 
+/** What the board hands the mailbox wizard. */
+interface ImapWizardProps {
+    /** Workspace agents (any module): every agent may be given read access to the mailbox. */
+    readonly agents: ReadonlyArray<AgentOption>
+    /** Continue or edit this existing mailbox instead of creating a new one. */
+    readonly resumeId?: string
+    /** `changed` is true when something was saved, so the list should refresh. */
+    readonly onClose: (changed: boolean) => void
+}
+
+/** Inputs needed to build the ImapWizardContent section. */
+interface BuildMailboxAccountViewContext {
+    readonly values: ReturnType<typeof useImapWizard>["values"]
+    readonly savedId: ReturnType<typeof useImapWizard>["savedId"]
+    readonly preset: ReturnType<typeof useImapWizard>["preset"]
+    readonly t: ReturnType<typeof useTranslations<"connectorImap">>
+    readonly isCustom: boolean
+    readonly isPending: ReturnType<typeof useImapWizard>["isPending"]
+    readonly wizard: ReturnType<typeof useImapWizard>
+    readonly format: ReturnType<typeof useFormatter>
+}
+
+/** Inputs needed to build the whole view: the account inputs plus the page copy and the board props. */
+interface BuildImapWizardViewContext extends BuildMailboxAccountViewContext {
+    readonly tc: ReturnType<typeof useTranslations<"connections">>
+    readonly tw: ReturnType<typeof useTranslations<"connectionWizard">>
+    readonly props: ImapWizardProps
+    readonly slotLabelsOf: (empty: string) => SlotLabels
+}
+
 /**
  * The mailbox (IMAP, read only) wizard, owner only: reads the saved mailbox when resuming, then sign in with a test that lists the
  * folders, folders and how far back the first sync reads, how often to sync (the mailbox is saved here), attach agents. A blank
@@ -26,24 +57,14 @@ export const ImapWizard = (props: ImapWizardProps) => {
     const tw = useTranslations("connectionWizard")
     const tc = useTranslations("connections")
     const format = useFormatter()
+    const slotLabelsOf = useSlotLabels()
     const wizard = useImapWizard({ resumeId: props.resumeId, onClose: props.onClose })
     const { values, preset, savedId, isPending } = wizard
     const isCustom = preset === "other"
+    const context = { wizard, t, tc, tw, values, savedId, preset, isCustom, isPending, format, props, slotLabelsOf }
     return (
         <ImapWizardBase
-            props={buildImapWizardView({
-                wizard,
-                t,
-                tc,
-                tw,
-                values,
-                savedId,
-                preset,
-                isCustom,
-                isPending,
-                format,
-                props,
-            })}
+            props={buildImapWizardView(context)}
             on={{
                 go: wizard.go,
                 test: wizard.check,
@@ -117,10 +138,11 @@ const buildImapWizardView = ({
     isPending,
     format,
     props,
+    slotLabelsOf,
 }: BuildImapWizardViewContext) =>
     ({
-        loading: wizard.loading ? t("loading") : null,
-        loadError: wizard.loadError,
+        resume: resumeSlotOfLoading(wizard.loading, wizard.loadError),
+        slotLabels: { ...slotLabelsOf(""), ...(wizard.loadError === null ? {} : { error: wizard.loadError }) },
         title: tc(providerKey("imap", "title")),
         stepLabel: tw("stepOf", { n: wizard.index + 1, total: IMAP_STEPS.length }),
         steps: [t("stepAccount"), t("stepFolders"), t("stepSchedule"), t("stepAgent")],

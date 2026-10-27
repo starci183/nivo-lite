@@ -9,7 +9,7 @@ type TeamSectionProps = {
     readonly title: string
     readonly description?: string | undefined
     /** Title of the negative alert. */
-    readonly failTitle: string
+    readonly failTitle?: string | undefined
     /** The failure text; nothing is drawn for it while undefined. */
     readonly error?: string | undefined
     readonly children: ReactNode
@@ -19,7 +19,9 @@ type TeamSectionProps = {
 export const TeamSection = (props: TeamSectionProps) => (
     <Region labelledBy={props.id} className={SECTION_CLASS_NAME}>
         <SectionHeader id={props.id} level={2} title={props.title} description={props.description} />
-        {props.error === undefined ? null : <Alert tone="negative" title={props.failTitle} description={props.error} />}
+        {props.error === undefined || props.failTitle === undefined ? null : (
+            <Alert tone="negative" title={props.failTitle} description={props.error} />
+        )}
         {props.children}
     </Region>
 )

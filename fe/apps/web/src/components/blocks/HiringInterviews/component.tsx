@@ -1,5 +1,5 @@
 import { Alert, Badge, Button, EmptyNotice, Heading, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
-import type { HiringSay } from "@/hooks/hiring"
+import type { HiringSay } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, HEAD_CLASS_NAME, LINES_CLASS_NAME, WEEK_CLASS_NAME } from "./classNames"
 
 /** What the commands of an interview need to know. */

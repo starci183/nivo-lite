@@ -207,3 +207,6 @@ export interface DecisionPayload {
     /** Any value the decision carries (work item, action, department, outcome, decider, lead, summary). */
     readonly [name: string]: unknown
 }
+
+/** Display text of a catalog key with its placeholders filled, in the language of the reader. */
+export type FailureTextLookup = (key: string, params: Readonly<Record<string, string | number>>) => string

@@ -20,6 +20,14 @@ WHERE workspace_id = $1::uuid
 ORDER BY CASE WHEN phone = $2::text THEN 0 WHEN email = $3::text THEN 1 ELSE 2 END, created_at
 LIMIT 1`
 
+/** The leads holding a phone or an email, the phone matches first, then the oldest ($1 workspace, $2 phone or null, $3 email or null). */
+export const MATCH_LEADS_BY_CONTACT = sql`SELECT id, workspace_id, contact_name, company, channel, need, stage, context_summary, phone, email
+FROM public.leads
+WHERE workspace_id = $1::uuid
+  AND (($2::text IS NOT NULL AND phone = $2::text) OR ($3::text IS NOT NULL AND email = $3::text))
+ORDER BY CASE WHEN phone = $2::text THEN 0 ELSE 1 END, created_at, id
+LIMIT 20`
+
 /** Captures a customer ($1 workspace, $2 name, $3 company, $4 channel, $5 need, $6 phone, $7 email). */
 export const INSERT_LEAD = sql`INSERT INTO public.leads (workspace_id, contact_name, company, channel, need, phone, email)
 VALUES ($1::uuid, $2, $3, $4, $5, $6, $7)

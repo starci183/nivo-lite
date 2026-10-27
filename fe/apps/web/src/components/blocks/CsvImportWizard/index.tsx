@@ -1,9 +1,10 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { agentChoicesOf } from "@/hooks/connection-wizard"
+import { agentChoicesOf, resumeSlotOfLoading } from "@/hooks/connection-wizard"
 import { MAX_GRID_ROWS, NO_COLUMN, useCsvImportCopy, useCsvImportWizard } from "@/hooks/csv-import-wizard"
-import type { AgentOption } from "@/modules/types"
+import { useSlotLabels } from "@/hooks/slot"
+import type { AgentOption, SlotLabels } from "@/modules/types"
 import { CsvImportWizardBase } from "./component"
 
 /** What the board hands the import wizard. */
@@ -32,6 +33,7 @@ const buildCsvImportWizardState = (
     tw: ReturnType<typeof useTranslations<"connectionWizard">>,
     props: CsvImportWizardProps,
     format: ReturnType<typeof useFormatter>,
+    slotLabelsOf: (empty: string) => SlotLabels,
 ) => {
     const { preview, mapping, result, grid, saved, form } = wizard
     const headerOptions = (preview?.headers ?? []).map((header) => ({ id: header, label: header }))
@@ -60,6 +62,7 @@ const buildCsvImportWizardState = (
         headerOptions,
         kindList,
         result,
+        slotLabelsOf,
     }
 }
 
@@ -69,9 +72,10 @@ export const CsvImportWizard = (props: CsvImportWizardProps) => {
     const tw = useTranslations("connectionWizard")
     const format = useFormatter()
     const copy = useCsvImportCopy()
+    const slotLabelsOf = useSlotLabels()
     const wizard = useCsvImportWizard(props)
 
-    const connected = buildCsvImportWizardState(wizard, copy, t, tw, props, format)
+    const connected = buildCsvImportWizardState(wizard, copy, t, tw, props, format, slotLabelsOf)
 
     return <CsvImportWizardBase props={csvImportWizardProps(connected)} on={wizard.on} />
 }
@@ -80,10 +84,10 @@ export const CsvImportWizard = (props: CsvImportWizardProps) => {
 const csvImportWizardProps = (
     connected: NonNullable<ReturnType<typeof buildCsvImportWizardState>>,
 ): Parameters<typeof CsvImportWizardBase>[0]["props"] => {
-    const { wizard, t, tw, copy, saved, props, form, linkCount, format, preview, result } = connected
+    const { wizard, t, tw, copy, saved, props, form, linkCount, format, preview, result, slotLabelsOf } = connected
     return {
-        gate:
-            wizard.isLoading || wizard.loadError !== null ? { message: t("loading"), failure: wizard.loadError } : null,
+        resume: resumeSlotOfLoading(wizard.isLoading, wizard.loadError),
+        slotLabels: { ...slotLabelsOf(""), ...(wizard.loadError === null ? {} : { error: wizard.loadError }) },
         title: t("title"),
         stepLabel: tw("stepOf", { n: wizard.index + 1, total: wizard.steps.length }),
         steps: wizard.steps.map((step) => copy.steps[step]),

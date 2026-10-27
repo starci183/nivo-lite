@@ -7,9 +7,10 @@ import { DoneRegion } from "@/components/composites/DoneRegion"
 import type { DoneRegionProps } from "@/components/composites/DoneRegion"
 import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
 import type { KnowledgeRegionProps } from "@/components/composites/KnowledgeRegion"
-import type { RegionFailure } from "@/components/branches/RegionState"
+import { SlotView } from "@/components/composites/SlotView"
 import { WaitingRegion } from "@/components/composites/WaitingRegion"
 import type { WaitingRegionProps } from "@/components/composites/WaitingRegion"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import {
     COMMAND_CLASS_NAME,
     FRAME_CLASS_NAME,
@@ -27,45 +28,69 @@ interface AgentDashboardTabView {
 
 const tabPanelId = (id: string): string => `agent-dashboard-panel-${id}`
 
-/** The module's own pieces the frame places: its page command, its gaps card and the content of the open area. */
+/** The module own pieces the frame places: its page command, its gaps card and the content of the open area. */
 interface AgentDashboardFrameSlots {
-    /** The module's own page command under the heading; null for none. */
+    /** The page command of the module under the heading; null for none. */
     readonly command: ReactNode
-    /** The module's own figures block (the ribbon under the heading); null for none. */
+    /** The figures block of the module (the ribbon under the heading); null for none. */
     readonly ribbon: ReactNode
-    /** The module's own waiting card in place of the built-in one; null draws the dashboard's waiting region. */
+    /** The waiting card of the module in place of the built-in one; null draws the dashboard waiting region. */
     readonly waiting: ReactNode
-    /** The module's own gaps card after the regions; null for none. */
+    /** The gaps card of the module after the regions; null for none. */
     readonly gaps: ReactNode
     /** The content of the open area; null shows the skeleton card while `hasPlaceholder`. */
     readonly panel: ReactNode
 }
 
-/** Copy and state of the shared page anatomy of an agent workbench. */
+/** What the heading shows once the agent is read. */
+export interface AgentDashboardHeadView {
+    readonly title: string
+    readonly mode: { readonly label: string; readonly tone: BadgeTone } | null
+    /** The default page command, "Talk to the agent"; null while there is no agent or a module brings its own. */
+    readonly chat: { readonly label: string; readonly href: string } | null
+}
+
+/** One region of the dashboard: its card label, its slot, the same-shape placeholder and the words of its status. */
+interface RegionSlot<V> {
+    readonly label: string
+    readonly slot: DataSlot<V>
+    readonly placeholder: V
+    readonly labels: SlotLabels
+}
+
+/** What a region needs to be drawn through SlotView. */
+interface RegionProps<V> {
+    readonly region: RegionSlot<V>
+    readonly onRetry: () => void
+    readonly children: (view: V, isSkeleton: boolean) => ReactNode
+}
+
+/** One region drawn through SlotView: loading draws the placeholder as a skeleton, failing says so with a retry. */
+const Region = <V,>(props: RegionProps<V>) => (
+    <SlotView
+        slot={props.region.slot}
+        placeholder={props.region.placeholder}
+        labels={props.region.labels}
+        onRetry={props.onRetry}
+    >
+        {props.children}
+    </SlotView>
+)
+
+/** Copy, slots and data of the shared page anatomy of an agent workbench. */
 export interface AgentDashboardFrameBaseProps {
-    readonly state: AgentDashboardFrameSlots
+    readonly shape: AgentDashboardFrameSlots
     readonly props: {
-        readonly title: string
-        /** The agent is not known yet: the heading and the regions are skeletons. */
-        readonly isHeadLoading: boolean
-        /** The module's own tab content is not known yet: a tab without content shows a skeleton card. */
+        /** The heading: a skeleton until the agent is read. */
+        readonly head: DataSlot<AgentDashboardHeadView>
+        readonly headPlaceholder: AgentDashboardHeadView
+        readonly headLabels: SlotLabels
+        /** The own tab content of the module is not known yet: a tab without content shows a skeleton card. */
         readonly hasPlaceholder: boolean
-        readonly mode: { readonly label: string; readonly tone: BadgeTone } | null
-        /** The default page command, "Talk to the agent"; null while there is no agent or a module brings its own. */
-        readonly chat: { readonly label: string; readonly href: string } | null
-        readonly failure: RegionFailure
-        readonly waiting: WaitingRegionProps["view"]
-        readonly waitingFailed: boolean
-        readonly waitingLabel: string
-        readonly done: DoneRegionProps["view"]
-        readonly doneFailed: boolean
-        readonly doneLabel: string
-        readonly connections: ConnectionsRegionProps["view"]
-        readonly connectionsFailed: boolean
-        readonly connectionsLabel: string
-        readonly knowledge: KnowledgeRegionProps["view"]
-        readonly knowledgeFailed: boolean
-        readonly knowledgeLabel: string
+        readonly waiting: RegionSlot<WaitingRegionProps["view"]>
+        readonly done: RegionSlot<DoneRegionProps["view"]>
+        readonly connections: RegionSlot<ConnectionsRegionProps["view"]>
+        readonly knowledge: RegionSlot<KnowledgeRegionProps["view"]>
         readonly tabsLabel: string
         readonly tabs: ReadonlyArray<AgentDashboardTabView>
         readonly selectedTab: string
@@ -76,51 +101,57 @@ export interface AgentDashboardFrameBaseProps {
     }
 }
 
-/** Draws the anatomy of an agent workbench: header, ribbon, what waits, what was done, connections, knowledge and the module's areas. */
+/** Draws the heading of the workbench: the name of the agent, its mode and the default command. */
+const renderDashboardHead = (view: AgentDashboardFrameBaseProps["props"]) => (
+    <div className={HEAD_CLASS_NAME}>
+        <SlotView slot={view.head} placeholder={view.headPlaceholder} labels={view.headLabels}>
+            {(head, isSkeleton) => (
+                <SectionHeader
+                    level={2}
+                    title={head.title}
+                    isSkeleton={isSkeleton}
+                    meta={
+                        head.mode === null ? undefined : (
+                            <Badge tone={head.mode.tone} isDot>
+                                {head.mode.label}
+                            </Badge>
+                        )
+                    }
+                    action={
+                        head.chat === null ? undefined : (
+                            <Button intent="commit" href={head.chat.href}>
+                                {head.chat.label}
+                            </Button>
+                        )
+                    }
+                />
+            )}
+        </SlotView>
+    </div>
+)
+
+/** Draws the anatomy of an agent workbench: header, ribbon, what waits, what was done, connections, knowledge and the areas of the module. */
 export const AgentDashboardFrameBase = (props: AgentDashboardFrameBaseProps) => {
     const view = props.props
     const hasStrip = view.tabs.length > 1
     const active = view.tabs.find((tab) => tab.id === view.selectedTab)
     return (
         <div className={FRAME_CLASS_NAME}>
-            <div className={HEAD_CLASS_NAME}>
-                <SectionHeader
-                    level={2}
-                    title={view.title}
-                    isSkeleton={view.isHeadLoading}
-                    meta={
-                        view.mode === null ? undefined : (
-                            <Badge tone={view.mode.tone} isDot>
-                                {view.mode.label}
-                            </Badge>
-                        )
-                    }
-                    action={
-                        view.chat === null ? undefined : (
-                            <Button intent="commit" href={view.chat.href}>
-                                {view.chat.label}
-                            </Button>
-                        )
-                    }
-                />
-            </div>
-            {props.state.command === null ? null : <div className={COMMAND_CLASS_NAME}>{props.state.command}</div>}
+            {renderDashboardHead(view)}
+            {props.shape.command === null ? null : <div className={COMMAND_CLASS_NAME}>{props.shape.command}</div>}
 
-            {props.state.ribbon}
+            {props.shape.ribbon}
 
-            {props.state.waiting ?? (
-                <WaitingRegion
-                    label={view.waitingLabel}
-                    isLoading={view.isHeadLoading}
-                    isFailed={view.waitingFailed}
-                    view={view.waiting}
-                    failure={view.failure}
-                    onRetry={props.on.retry}
-                />
+            {props.shape.waiting ?? (
+                <Region region={view.waiting} onRetry={props.on.retry}>
+                    {(waiting, isSkeleton) => (
+                        <WaitingRegion label={view.waiting.label} view={waiting} isSkeleton={isSkeleton} />
+                    )}
+                </Region>
             )}
 
             {renderDashboardRegions(view, props)}
-            {props.state.gaps}
+            {props.shape.gaps}
 
             {hasStrip ? (
                 <Tabs
@@ -139,7 +170,7 @@ export const AgentDashboardFrameBase = (props: AgentDashboardFrameBaseProps) => 
                 role={hasStrip ? "tabpanel" : undefined}
                 id={hasStrip ? tabPanelId(view.selectedTab) : undefined}
             >
-                {props.state.panel ??
+                {props.shape.panel ??
                     (view.hasPlaceholder ? (
                         <SurfaceListCard ariaLabel={active?.label ?? view.tabsLabel} isLoading />
                     ) : null)}
@@ -152,31 +183,20 @@ export const AgentDashboardFrameBase = (props: AgentDashboardFrameBaseProps) => 
 const renderDashboardRegions = (view: AgentDashboardFrameBaseProps["props"], props: AgentDashboardFrameBaseProps) => {
     return (
         <div className={SIDE_GRID_CLASS_NAME}>
-            <DoneRegion
-                label={view.doneLabel}
-                isLoading={view.isHeadLoading}
-                isFailed={view.doneFailed}
-                view={view.done}
-                failure={view.failure}
-                onRetry={props.on.retry}
-            />
-            <ConnectionsRegion
-                label={view.connectionsLabel}
-                isLoading={view.isHeadLoading}
-                isFailed={view.connectionsFailed}
-                view={view.connections}
-                failure={view.failure}
-                onRetry={props.on.retry}
-            />
+            <Region region={view.done} onRetry={props.on.retry}>
+                {(done, isSkeleton) => <DoneRegion label={view.done.label} view={done} isSkeleton={isSkeleton} />}
+            </Region>
+            <Region region={view.connections} onRetry={props.on.retry}>
+                {(connections, isSkeleton) => (
+                    <ConnectionsRegion label={view.connections.label} view={connections} isSkeleton={isSkeleton} />
+                )}
+            </Region>
             <div className={SIDE_COLUMN_CLASS_NAME}>
-                <KnowledgeRegion
-                    label={view.knowledgeLabel}
-                    isLoading={view.isHeadLoading}
-                    isFailed={view.knowledgeFailed}
-                    view={view.knowledge}
-                    failure={view.failure}
-                    onRetry={props.on.retry}
-                />
+                <Region region={view.knowledge} onRetry={props.on.retry}>
+                    {(knowledge, isSkeleton) => (
+                        <KnowledgeRegion label={view.knowledge.label} view={knowledge} isSkeleton={isSkeleton} />
+                    )}
+                </Region>
             </div>
         </div>
     )

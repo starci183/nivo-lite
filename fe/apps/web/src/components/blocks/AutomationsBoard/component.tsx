@@ -1,7 +1,7 @@
 import { Alert, EmptyNotice, PrimaryRailLayout } from "@starci/grammar/common"
 import { AutomationsForbidden } from "@/components/composites/AutomationsForbidden"
 import { AutomationAccountPicker } from "@/components/composites/AutomationAccountPicker"
-import { AutomationCard, AutomationCardSkeleton } from "@/components/composites/AutomationCard"
+import { AutomationCard } from "@/components/composites/AutomationCard"
 import { AutomationDetailFrame } from "@/components/composites/AutomationDetailFrame"
 import { AutomationFilters } from "@/components/composites/AutomationFilters"
 import { AutomationGate } from "@/components/composites/AutomationGate"
@@ -10,10 +10,8 @@ import { AutomationMessage } from "@/components/composites/AutomationMessage"
 import { AutomationRuns } from "@/components/composites/AutomationRuns"
 import { AutomationSettings } from "@/components/composites/AutomationSettings"
 import { SlotView } from "@/components/composites/SlotView"
-import type { AutomationsBoardView, DataSlot, SlotLabels } from "@/modules/types"
+import type { AutomationsBoardView, CardView, DataSlot, SlotLabels } from "@/modules/types"
 import { SECTIONS_CLASS, SOLO_CLASS, collectionClass } from "./classNames"
-
-const SKELETONS = [0, 1, 2]
 
 /** The words that belong to no data. */
 export interface AutomationsBoardLabels {
@@ -65,11 +63,29 @@ export interface AutomationsBoardBaseProps {
     }
 }
 
-const PLACEHOLDER: AutomationsBoardView = {
+/** The cards a loading board draws in place of the real ones. */
+const PLACEHOLDER_KEYS = ["a", "b", "c"] as const
+
+/** Fake board of the same shape as the ready one: the skeleton reuses the ready tree, three cards wide. */
+const placeholderOf = (labels: AutomationsBoardLabels): AutomationsBoardView => ({
     filters: { label: "", items: [], selectedId: "" },
-    cards: [],
+    cards: PLACEHOLDER_KEYS.map((key): CardView => ({
+        dataKey: key,
+        name: labels.loading,
+        description: labels.loading,
+        triggerLine: labels.loading,
+        statusLabel: labels.status,
+        statusTone: "neutral",
+        icon: "payment",
+        selectLabel: labels.select,
+        switchLabel: labels.loading,
+        switchName: key,
+        isSelected: false,
+        isEnabled: false,
+        isSwitchDisabled: true,
+    })),
     hidden: { title: "", restoreLabel: "", items: [] },
-}
+})
 
 /** The cards, their filters, the detail and the hidden list. Shared by the automations page and the module settings card. */
 export const AutomationsBoardBase = (props: AutomationsBoardBaseProps) => {
@@ -89,7 +105,7 @@ export const AutomationsBoardBase = (props: AutomationsBoardBaseProps) => {
         )
     if (notice?.kind === "failed") return <Alert tone="negative" title={notice.title} />
     return (
-        <SlotView slot={slot} placeholder={PLACEHOLDER} labels={labels.slot}>
+        <SlotView slot={slot} placeholder={placeholderOf(labels)} labels={labels.slot}>
             {(view, isSkeleton) => renderAutomationsBoardView(view, isSkeleton, props)}
         </SlotView>
     )
@@ -101,11 +117,11 @@ const renderAutomationsBoardView = (
     isSkeleton: boolean,
     props: AutomationsBoardBaseProps,
 ) => {
-    const { layout, labels } = props.props
+    const { layout } = props.props
     const { on } = props
     const isNested = layout === "module"
 
-    const collection = renderAutomationCards(isNested, view, isSkeleton, labels, on)
+    const collection = renderAutomationCards(isNested, view, isSkeleton, on)
     const { detail: open } = view
     const detail = renderAutomationDetail(open, on)
     return (
@@ -146,26 +162,16 @@ const renderAutomationCards = (
     isNested: boolean,
     view: AutomationsBoardView,
     isSkeleton: boolean,
-    labels: AutomationsBoardBaseProps["props"]["labels"],
     on: AutomationsBoardBaseProps["on"],
 ) => {
     return (
         <div className={collectionClass(isNested, view.detail !== undefined)} aria-busy={isSkeleton || undefined}>
-            {isSkeleton
-                ? SKELETONS.map((index) => (
-                      <AutomationCardSkeleton
-                          key={index}
-                          loadingLabel={labels.loading}
-                          statusLabel={labels.status}
-                          selectLabel={labels.select}
-                      />
-                  ))
-                : null}
             {view.emptyText === undefined ? null : <EmptyNotice message={view.emptyText} />}
             {view.cards.map((card) => (
                 <AutomationCard
                     key={card.dataKey}
                     {...card}
+                    isSkeleton={isSkeleton}
                     onSelect={() => on.select(card.dataKey)}
                     onToggle={(next) => on.toggle(card.dataKey, next)}
                 >

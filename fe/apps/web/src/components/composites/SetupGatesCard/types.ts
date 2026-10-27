@@ -19,7 +19,7 @@ export type SetupGatesCardProps = {
     readonly confirmed: number
     readonly total: number
     readonly gates: ReadonlyArray<SetupGate>
-    readonly isLoading: boolean
+    readonly isSkeleton: boolean
     /** The key of the gate being edited; empty when none. */
     readonly editing: string
     readonly editText: string

@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { leadGenFiguresOf, useLeadGenWorkbench } from "@/hooks/leadgen"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { LeadGenMetrics } from "@/modules/types"
 import { LeadGenFiguresBase } from "./component"
 
@@ -26,17 +27,17 @@ interface LeadGenFiguresProps {
 export const LeadGenFigures = (props: LeadGenFiguresProps) => {
     const t = useTranslations("workbenchLeadGen")
     const frame = useTranslations("agentDashboard")
+    const slotLabels = useSlotLabels()
     const workbench = useLeadGenWorkbench(props.installationId)
     return (
         <LeadGenFiguresBase
             props={{
                 label: frame("ribbonAria"),
-                isLoading: workbench.data === undefined,
-                isFailed: workbench.failure !== null,
-                failedTitle: t("loadFailedTitle"),
-                failedBody: t("loadFailedBody"),
-                items: leadGenFiguresOf(workbench.data?.metrics ?? PENDING_METRICS, t),
+                slot: mapSlot(workbench.slot, (data) => leadGenFiguresOf(data.metrics, t)),
+                placeholder: leadGenFiguresOf(PENDING_METRICS, t),
+                labels: slotLabels(t("loadFailedTitle")),
             }}
+            on={{ retry: workbench.retry }}
         />
     )
 }

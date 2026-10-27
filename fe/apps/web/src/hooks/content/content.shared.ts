@@ -15,6 +15,7 @@ import {
     type MediaRef,
     type SignedUrls,
 } from "@/modules/content"
+import type { ContentT, DownloadFile, HistoryRow, MediaTile, PostView, PublishStep, QuoteView } from "@/modules/types"
 
 export {
     CHANNEL_RULES,
@@ -52,9 +53,6 @@ export type {
     SignedUrls,
 } from "@/modules/content"
 
-/** The translator of the content catalog, as the drawings receive it. */
-export type ContentT = (key: string, values?: Record<string, string | number>) => string
-
 const STATUS_TONE: Readonly<Record<ContentStatus, BadgeTone>> = {
     idea: "neutral",
     draft: "accent",
@@ -62,22 +60,6 @@ const STATUS_TONE: Readonly<Record<ContentStatus, BadgeTone>> = {
     approved: "success",
     published: "success",
     skipped: "neutral",
-}
-
-/** A post ready to draw: every word and format is already resolved. */
-export interface PostView {
-    readonly id: string
-    readonly title: string
-    readonly time: string
-    readonly when: string
-    readonly brief: string | null
-    readonly statusLabel: string
-    readonly tone: BadgeTone
-    readonly isSkipped: boolean
-    /** Whether the post can still change date. */
-    readonly canMove: boolean
-    readonly channels: ReadonlyArray<string>
-    readonly pillar: string | null
 }
 
 /** Resolves the words and formats of a post for the lists, the agenda and the calendar. */
@@ -99,15 +81,6 @@ export const postView = (t: ContentT, item: ContentItem, pillarNames: Readonly<R
 export const channelOptions = (t: ContentT): ReadonlyArray<{ readonly value: string; readonly label: string }> =>
     CHANNEL_RULES.map((rule) => ({ value: rule.key, label: channelLabel(t, rule.key) }))
 
-/** A picture or video of a post ready to draw. */
-export interface MediaTile {
-    readonly key: string
-    readonly name: string
-    readonly kind: "image" | "video" | "text"
-    readonly url: string | null
-    readonly isSuggested: boolean
-}
-
 /** Resolves how a media reference is shown. */
 export const mediaTile = (media: MediaRef, urls: Readonly<Record<string, SignedUrls>>): MediaTile => {
     const key = media.kind === "video_render" ? `video:${media.id}` : (media.path ?? "")
@@ -115,13 +88,6 @@ export const mediaTile = (media: MediaRef, urls: Readonly<Record<string, SignedU
     const shown = media.kind === "video_render" ? "video" : "image"
     const isShowable = url !== null && (media.kind === "video_render" || isImagePath(media.path))
     return { key, name: media.name, kind: isShowable ? shown : "text", url, isSuggested: media.suggested === true }
-}
-
-/** A file the member can download to post by hand. */
-export interface DownloadFile {
-    readonly key: string
-    readonly name: string
-    readonly url: string
 }
 
 /** The downloadable files of a post. */
@@ -134,16 +100,6 @@ export const downloadFiles = (
         const found = urls[key]
         return found === undefined ? [] : [{ key, name: m.name, url: found.download }]
     })
-
-/** The "post it by hand" step of one channel of an approved post. */
-export interface PublishStep {
-    readonly channel: ContentChannel
-    readonly label: string
-    readonly text: string
-    /** Who posted it when, and the proof, or null while it is not marked. */
-    readonly doneText: string | null
-    readonly isZalo: boolean
-}
 
 /** The steps of an approved or published post, one per channel. */
 export const publishSteps = (t: ContentT, item: ContentItem): Array<PublishStep> =>
@@ -161,26 +117,11 @@ export const publishSteps = (t: ContentT, item: ContentItem): Array<PublishStep>
         }
     })
 
-/** One line of the history of a post. */
-export interface HistoryRow {
-    readonly id: string
-    readonly text: string
-    readonly at: string
-    readonly timeLabel: string
-}
-
 /** The history of a post, newest first. */
 export const historyRows = (evidence: ReadonlyArray<EvidenceLine>): Array<HistoryRow> =>
     [...evidence]
         .reverse()
         .map((e, i) => ({ id: `${e.at}-${i}`, text: e.text, at: e.at, timeLabel: dateTimeText(e.at) }))
-
-/** The text of one channel of a waiting post. */
-export interface QuoteView {
-    readonly channel: string
-    readonly label: string
-    readonly text: string
-}
 
 /** The text of each channel as it will be posted. */
 export const quotes = (t: ContentT, item: ContentItem): Array<QuoteView> =>

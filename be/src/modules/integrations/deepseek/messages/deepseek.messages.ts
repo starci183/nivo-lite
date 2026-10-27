@@ -14,6 +14,8 @@ const ORDER_MONEY = '"1,5 triệu" = 1500000.'
 export const DEEPSEEK_MESSAGES: MessageBundle = {
     vi: {
         "errors.DEEPSEEK_JSON_NOT_RETURNED": "Mô hình không trả về JSON.",
+        "errors.DEEPSEEK_UNAVAILABLE": "Dịch vụ AI đang bận hoặc chưa được cấu hình. Vui lòng thử lại sau.",
+        "errors.DEEPSEEK_QUOTA_BLOCKED": "{{message}}",
         "prompts.urgencyLabels": URGENCY_LABELS,
         "prompts.careExample": CARE_EXAMPLE,
         "prompts.careAddress": CARE_ADDRESS,
@@ -24,6 +26,8 @@ export const DEEPSEEK_MESSAGES: MessageBundle = {
     },
     en: {
         "errors.DEEPSEEK_JSON_NOT_RETURNED": "The model did not return JSON.",
+        "errors.DEEPSEEK_UNAVAILABLE": "The AI service is busy or not configured. Please try again later.",
+        "errors.DEEPSEEK_QUOTA_BLOCKED": "{{message}}",
         "prompts.urgencyLabels": URGENCY_LABELS,
         "prompts.careExample": CARE_EXAMPLE,
         "prompts.careAddress": CARE_ADDRESS,

@@ -34,7 +34,7 @@ export const WorkspaceCreateBase = (props: WorkspaceCreateBaseProps) => {
                         id="workspace-name"
                         name="name"
                         label={form.nameLabel}
-                        hint={form.nameHint}
+                        description={form.nameHint}
                         isRequired
                         isDisabled={form.isPending}
                         value={form.name}

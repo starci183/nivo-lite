@@ -13,7 +13,25 @@ type WizardFrameProps = {
     readonly children: ReactNode
     /** The step's buttons: one filled primary, the rest outline or ghost. */
     readonly footer: ReactNode
+    /** The frame is drawn as a placeholder while the stored connection is read. */
+    readonly isSkeleton?: boolean
 }
+
+/** The four fields every wizard view carries for its frame. */
+interface WizardFrameHead {
+    readonly title: string
+    readonly stepLabel: string
+    readonly steps: ReadonlyArray<string>
+    readonly index: number
+}
+
+/** The frame fields of a wizard view, to spread onto the frame. */
+export const frameOf = (view: WizardFrameHead): WizardFrameHead => ({
+    title: view.title,
+    stepLabel: view.stepLabel,
+    steps: view.steps,
+    index: view.index,
+})
 
 /**
  * The one frame every connection wizard shares, inside the Connections drawer: the step count, the step's name and a Grammar Progress
@@ -23,11 +41,14 @@ export const WizardFrame = (props: WizardFrameProps) => (
     <Region label={props.title}>
         <div className={classNames.wizard}>
             <div className={classNames.header}>
-                <Text size="xs" tone="muted">
+                <Text size="xs" tone="muted" isSkeleton={props.isSkeleton === true}>
                     {props.stepLabel}
                 </Text>
-                <Heading level={3}>{props.steps[props.index]}</Heading>
+                <Heading level={3} isSkeleton={props.isSkeleton === true}>
+                    {props.steps[props.index]}
+                </Heading>
                 <Progress
+                    isSkeleton={props.isSkeleton === true}
                     label={props.stepLabel}
                     steps={{ total: props.steps.length, completed: props.index + 1 }}
                     valueText={props.stepLabel}

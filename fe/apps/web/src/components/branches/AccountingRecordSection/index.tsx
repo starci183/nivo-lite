@@ -35,13 +35,15 @@ interface AccountingRecordSectionProps {
     /** Content between the heading and the list, such as a form. */
     readonly children?: ReactNode
     readonly onOpen?: (id: string) => void
+    /** The section is a placeholder: its leaves draw as skeleton. */
+    readonly isSkeleton: boolean
 }
 
 /** A region with a heading, an optional action and form, the record list and a closing note. */
 export const AccountingRecordSection = (props: AccountingRecordSectionProps) => (
     <AccountingBlock label={props.title}>
         <div className={HEAD_CLASS_NAME}>
-            <SectionHeader level={2} title={props.title} description={props.intro} />
+            <SectionHeader level={2} title={props.title} description={props.intro} isSkeleton={props.isSkeleton} />
             {props.action}
         </div>
         {props.children}
@@ -51,9 +53,10 @@ export const AccountingRecordSection = (props: AccountingRecordSectionProps) => 
             emptyBody={props.emptyBody}
             records={props.records}
             onOpen={props.onOpen}
+            isSkeleton={props.isSkeleton}
         />
         {props.note === undefined ? null : (
-            <Text size="xs" tone="muted">
+            <Text size="xs" tone="muted" isSkeleton={props.isSkeleton}>
                 {props.note}
             </Text>
         )}

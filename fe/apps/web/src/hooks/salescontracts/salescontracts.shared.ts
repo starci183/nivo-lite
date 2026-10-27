@@ -1,5 +1,6 @@
 import { parseDate } from "@internationalized/date"
 import type { BadgeTone } from "@starci/grammar/common"
+import type { ContractForm } from "@/hooks/rhf"
 import type { SalesContract, SalesContractStatus } from "@/modules/types"
 
 const DAY = 86_400_000
@@ -31,18 +32,6 @@ export const isoDayText = (iso: string): string =>
 /** The option of a contract form that links it to no lead. */
 export const NO_LEAD = "none"
 
-/** What a person has typed into the contract form. */
-export interface ContractForm {
-    readonly leadId: string
-    readonly customerName: string
-    readonly plan: string
-    readonly startsOn: string
-    readonly endsOn: string
-    readonly amount: string
-    readonly status: SalesContractStatus
-    readonly note: string
-}
-
 /** The stored YYYY-MM-DD as a date value; an empty or malformed text is no date. */
 export const contractDateOf = (text: string) => {
     try {
@@ -67,3 +56,17 @@ export const contractFormOf = (editing: SalesContract | null, today: string): Co
     status: editing?.status ?? "active",
     note: editing?.note ?? "",
 })
+
+/** The contract fields a column can fill, in the order the dialog lists them. */
+export const CONTRACT_IMPORT_FIELDS = [
+    "customerName",
+    "plan",
+    "startsOn",
+    "endsOn",
+    "amountVnd",
+    "status",
+    "note",
+] as const
+
+/** One contract field a column can fill. */
+export type ContractImportField = (typeof CONTRACT_IMPORT_FIELDS)[number]

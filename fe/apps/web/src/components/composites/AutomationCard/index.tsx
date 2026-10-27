@@ -68,6 +68,8 @@ type AutomationCardProps = {
     readonly dataKey: string
     readonly onSelect: () => void
     readonly onToggle: (next: boolean) => void
+    /** The collection is not known yet: the same card draws its leaves as skeletons. */
+    readonly isSkeleton?: boolean
     /** Extra controls under the card text (the Google account picker of a Sheets automation). */
     readonly children?: ReactNode
 }
@@ -80,22 +82,29 @@ export const AutomationCard = (props: AutomationCardProps) => (
     <SurfaceCard ariaLabel={props.name} isHighlight={props.isSelected}>
         <div className={CARD_STACK_CLASS} data-automation={props.dataKey}>
             <div className={CARD_TOP_CLASS}>
-                <IconTile source={nivoIconSource(ICONS[props.icon] ?? "apps", "leading")} tone="neutral" />
+                <IconTile
+                    source={nivoIconSource(ICONS[props.icon] ?? "apps", "leading")}
+                    tone="neutral"
+                    isSkeleton={props.isSkeleton === true}
+                />
                 <div className={CARD_TEXT_CLASS}>
-                    <Text weight="semibold">{props.name}</Text>
+                    <Text weight="semibold" isSkeleton={props.isSkeleton === true}>
+                        {props.name}
+                    </Text>
                     <div className={ACTIONS_CLASS}>
-                        <Badge isDot tone={props.statusTone}>
+                        <Badge isDot tone={props.statusTone} isSkeleton={props.isSkeleton === true}>
                             {props.statusLabel}
                         </Badge>
                     </div>
                 </div>
             </div>
-            <Text size="sm" tone="muted">
+            <Text size="sm" tone="muted" isSkeleton={props.isSkeleton === true}>
                 {props.description}
             </Text>
             <Text
                 size="xs"
                 tone="muted"
+                isSkeleton={props.isSkeleton === true}
                 startContent={<Icon source={nivoIconSource("trigger", "chip")} usage="chip" />}
             >
                 {props.triggerLine}
@@ -120,7 +129,13 @@ export const AutomationCard = (props: AutomationCardProps) => (
             )}
             {props.children}
             <div className={CARD_FOOT_CLASS}>
-                <TextAction appearance="disclosure" size="sm" isCurrent={props.isSelected} onPress={props.onSelect}>
+                <TextAction
+                    appearance="disclosure"
+                    size="sm"
+                    isCurrent={props.isSelected}
+                    isSkeleton={props.isSkeleton === true}
+                    onPress={props.onSelect}
+                >
                     {props.selectLabel}
                 </TextAction>
                 <Switch
@@ -128,47 +143,9 @@ export const AutomationCard = (props: AutomationCardProps) => (
                     label={props.switchLabel}
                     isSelected={props.isEnabled}
                     isDisabled={props.isSwitchDisabled}
+                    isSkeleton={props.isSkeleton === true}
                     onSelectedChange={props.onToggle}
                 />
-            </div>
-        </div>
-    </SurfaceCard>
-)
-
-/** What one skeleton card shows. */
-type AutomationCardSkeletonProps = {
-    readonly loadingLabel: string
-    readonly statusLabel: string
-    readonly selectLabel: string
-}
-
-/** One automation card while the collection loads: the resolved card's anatomy as inert geometry. */
-export const AutomationCardSkeleton = (props: AutomationCardSkeletonProps) => (
-    <SurfaceCard ariaLabel={props.loadingLabel}>
-        <div className={CARD_STACK_CLASS} aria-busy="true">
-            <div className={CARD_TOP_CLASS}>
-                <IconTile source={nivoIconSource("trigger", "leading")} tone="neutral" isSkeleton />
-                <div className={CARD_TEXT_CLASS}>
-                    <Text weight="semibold" isSkeleton>
-                        {props.loadingLabel}
-                    </Text>
-                    <div className={ACTIONS_CLASS}>
-                        <Badge isDot tone="neutral" isSkeleton>
-                            {props.statusLabel}
-                        </Badge>
-                    </div>
-                </div>
-            </div>
-            <Text size="sm" tone="muted" isSkeleton>
-                {props.loadingLabel}
-            </Text>
-            <Text size="xs" tone="muted" isSkeleton>
-                {props.loadingLabel}
-            </Text>
-            <div className={CARD_FOOT_CLASS}>
-                <TextAction appearance="disclosure" size="sm" isSkeleton>
-                    {props.selectLabel}
-                </TextAction>
             </div>
         </div>
     </SurfaceCard>

@@ -1,8 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import type { SupplierView } from "@/modules/types"
-import type { SupplierFormField, SupplierFormValues } from "./inventory.shared"
+import type { SupplierFormField, SupplierFormValues, SupplierView } from "@/modules/types"
 import type { InventoryCommandSet } from "@/hooks/inventoryCommands"
 import { useDrawer } from "./useDrawer"
 import { useInventoryRun } from "./useInventoryRun"

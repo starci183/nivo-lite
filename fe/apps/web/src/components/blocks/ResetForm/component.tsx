@@ -4,9 +4,12 @@ import { AuthPanel } from "../../composites/AuthPanel"
 import { PasswordPair } from "../../composites/PasswordPair"
 import { RESET_ACTIONS_CLASS_NAME, RESET_CENTER_CLASS_NAME } from "./classNames"
 
-/** The words and state of the reset-password card, resolved by the connected block. */
+/** The two drawn shapes of the reset-password card: the form, or the expired-link screen. */
+export type ResetFormShape = "form" | "expired"
+
+/** The words and shape of the reset-password card, resolved by the connected block. */
 export interface ResetFormBaseProps {
-    readonly state: "form" | "expired"
+    readonly shape: ResetFormShape
     readonly props: {
         readonly title: string
         readonly text: string
@@ -39,7 +42,7 @@ export interface ResetFormBaseProps {
 /** Draws the new-password card, or the "link expired" state with a way to request another. */
 export const ResetFormBase = (props: ResetFormBaseProps) => {
     const view = props.props
-    if (props.state === "expired") {
+    if (props.shape === "expired") {
         return (
             <AuthPanel label={view.expiredTitle} title={view.expiredTitle} text={view.expiredText}>
                 <div className={RESET_ACTIONS_CLASS_NAME}>

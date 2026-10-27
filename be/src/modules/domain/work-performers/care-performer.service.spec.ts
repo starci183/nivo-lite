@@ -8,12 +8,16 @@ import { LeadRecordsService } from "@modules/domain/leads"
 import type { LeadRecordRow } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
 import { TransactionsService } from "@modules/domain/transactions"
+import { AiGenerationsError, AiGenerationsErrorCode } from "@modules/domain/ai-generations"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { CarePerformerService } from "./care-performer.service"
 import { CustomerDeliveryService } from "./customer-delivery.service"
 import { WorkPerformersErrorCode } from "./errors/work-performers.error"
 import { PerformerKitService } from "./performer-kit.service"
 import { PROMPT_WRITER } from "./work-performers.decorators"
 import type { PromptWriter } from "./work-performers.port"
+import { WorkPerformersLogEvent } from "./work-performers.log-events"
 
 type Transaction = NonNullable<Awaited<ReturnType<TransactionsService["find"]>>>
 
@@ -109,6 +113,7 @@ const build = async () => {
     writer.draftCare.mockResolvedValue("Thank you")
     const delivery = mock<CustomerDeliveryService>()
     delivery.contactOf.mockResolvedValue("84901234567")
+    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             CarePerformerService,
@@ -119,9 +124,10 @@ const build = async () => {
             { provide: OrdersService, useValue: orders },
             { provide: PROMPT_WRITER, useValue: writer },
             { provide: CustomerDeliveryService, useValue: delivery },
+            { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { service: moduleRef.get(CarePerformerService), transactions, invoices, orders, writer, delivery }
+    return { service: moduleRef.get(CarePerformerService), transactions, invoices, orders, writer, delivery, logger }
 }
 
 describe("CarePerformerService prepare", () => {
@@ -182,7 +188,51 @@ describe("CarePerformerService prepare", () => {
         expect(invoices.find).toHaveBeenCalledWith("ws-1", "inv-9")
         expect(writer.draftCare.mock.calls[0]?.[2]).toBe("")
     })
+})
 
+describe("CarePerformerService prepare when the model does not answer", () => {
+    it("thanks with the filled template, marked, when the model fails, and the work goes on to the gate", async () => {
+        const { service, invoices, writer, logger } = await build()
+        invoices.find.mockResolvedValue(invoiceOf({ order_id: null }))
+        const failure = new AiGenerationsError({ code: AiGenerationsErrorCode.GenerationFailed })
+        writer.draftCare.mockRejectedValue(failure)
+        const item = itemOf({ subject_type: "invoice", subject_id: "inv-1", proposal: { summary: "s", fields: {} } })
+
+        const prepared = await service.prepare(ctx, item)
+
+        const paid = `INV-1 · ${formatVnd(450000, "en")}`
+        expect(prepared).toEqual({
+            proposal: {
+                summary: "fallbackSummary|careSummary|Lan",
+                draft: `careFallback|Lan|${paid}`,
+                fields: { customer: "Lan", contact: "84901234567" },
+            },
+        })
+        expect(JSON.stringify(prepared)).not.toContain(AiGenerationsErrorCode.GenerationFailed)
+        expect(logger.warn).toHaveBeenCalledWith(WorkPerformersLogEvent.CareDraftFallback, {
+            workItemId: "item-1",
+            cause: failure,
+        })
+    })
+
+    it("falls back on a timeout or an empty answer, without a payment line when none is known", async () => {
+        const { service, invoices, writer } = await build()
+        invoices.find.mockResolvedValue(null)
+        writer.draftCare.mockRejectedValueOnce(new RangeError("timeout")).mockResolvedValueOnce("  ")
+        const item = itemOf({ subject_type: "invoice", subject_id: "inv-9" })
+
+        const timedOut = await service.prepare(ctx, item)
+        const empty = await service.prepare(ctx, item)
+
+        expect(timedOut.proposal.draft).toBe("careFallbackPlain|Lan|")
+        expect(empty.proposal).toMatchObject({
+            draft: "careFallbackPlain|Lan|",
+            summary: "fallbackSummary|careSummary|Lan",
+        })
+    })
+})
+
+describe("CarePerformerService prepare without a customer", () => {
     it("refuses an item without a customer", async () => {
         const { service } = await build()
 

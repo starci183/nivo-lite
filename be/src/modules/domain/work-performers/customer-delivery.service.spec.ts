@@ -4,6 +4,7 @@ import { AgentConversationsErrorCode, AgentConversationsService } from "@modules
 import type { ConversationTarget } from "@modules/domain/agent-conversations"
 import { AgentMessagesErrorCode, AgentMessagesService } from "@modules/domain/agent-messages"
 import { ChannelDeliveryService } from "@modules/domain/channels"
+import type { RenewalNotification } from "@modules/domain/channels"
 import { EvidenceService } from "@modules/domain/decisions"
 import type { WorkContext, WorkItem } from "@modules/domain/decisions"
 import { CustomerDeliveryService } from "./customer-delivery.service"
@@ -235,6 +236,128 @@ describe("CustomerDeliveryService sendAndLog", () => {
             actor: "Mai",
             summary: "recordedNoConversation|zalo",
             evidence: "Hello",
+        })
+    })
+})
+
+const renewal: RenewalNotification = {
+    kind: "renewal",
+    phone: "0912345678",
+    fields: {
+        customerName: "Lan",
+        plan: "Pro",
+        endDate: "2026-11-27",
+        amount: 1_500_000,
+        transferContent: "INV2026100001",
+        invoiceNumber: "INV-202610-0001",
+    },
+}
+
+const onZalo = async () => {
+    const built = await build()
+    built.conversations.latestOfLead.mockResolvedValue(conversationOf("zalo"))
+    built.conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("zalo") })
+    return built
+}
+
+describe("CustomerDeliveryService toCustomer on Zalo", () => {
+    it("passes the notice to the channel and reports a consultation message", async () => {
+        const { service, channels } = await onZalo()
+        channels.deliver.mockResolvedValue({ delivered: true, failure: null, via: "consultation" })
+
+        await expect(service.toCustomer(ctx, customer, "Hello", renewal)).resolves.toEqual({
+            summary: "deliveredZalo|Lan",
+            real: true,
+        })
+        expect(channels.deliver).toHaveBeenCalledWith({
+            conversationId: "conv-1",
+            messageId: "msg-1",
+            text: "Hello",
+            notification: renewal,
+        })
+    })
+
+    it("reports a ZNS notification outside the window", async () => {
+        const { service, channels } = await onZalo()
+        channels.deliver.mockResolvedValue({ delivered: true, failure: null, via: "zns" })
+
+        await expect(service.toCustomer(ctx, customer, "Hello", renewal)).resolves.toEqual({
+            summary: "deliveredZaloZns|Lan",
+            real: true,
+        })
+    })
+
+    it("reports a text whose QR image did not follow", async () => {
+        const { service, channels } = await onZalo()
+        channels.deliver.mockResolvedValue({
+            delivered: true,
+            failure: null,
+            via: "consultation",
+            note: "qr_image_failed",
+        })
+
+        await expect(service.toCustomer(ctx, customer, "Hello")).resolves.toEqual({
+            summary: "deliveredZaloNoQr|Lan",
+            real: true,
+        })
+    })
+
+    it("explains a refusal with its reason and the missing ZNS condition", async () => {
+        const { service, channels } = await onZalo()
+        channels.deliver.mockResolvedValue({
+            delivered: false,
+            failure: "zalo_window_expired",
+            note: "zns_not_configured",
+        })
+
+        await expect(service.toCustomer(ctx, customer, "Hello", renewal)).resolves.toEqual({
+            summary: "zaloFailed|Lan|zaloFailure.zalo_window_expired zaloNote.zns_not_configured",
+            real: false,
+        })
+    })
+
+    it("names a generic failure when the channel gave no reason or the conversation could not be read", async () => {
+        const { service, channels, conversations } = await onZalo()
+        channels.deliver.mockResolvedValue({ delivered: false, failure: null })
+
+        await expect(service.toCustomer(ctx, customer, "Hello")).resolves.toEqual({
+            summary: "zaloFailed|Lan|zaloFailure.zalo_error",
+            real: false,
+        })
+
+        conversations.targetOf.mockResolvedValue({ kind: "refused", code: AgentConversationsErrorCode.NotFound })
+        await expect(service.toCustomer(ctx, customer, "Hello")).resolves.toEqual({
+            summary: "zaloFailed|Lan|zaloFailure.zalo_error",
+            real: false,
+        })
+    })
+})
+
+describe("CustomerDeliveryService notices in a conversation", () => {
+    it("passes the notice with a pushed agent message", async () => {
+        const { service, channels } = await onZalo()
+
+        await expect(service.inConversation("ws-1", "conv-1", "Hello", renewal)).resolves.toBe(true)
+        expect(channels.deliver).toHaveBeenCalledWith({
+            conversationId: "conv-1",
+            messageId: "msg-1",
+            text: "Hello",
+            notification: renewal,
+        })
+    })
+
+    it("passes the notice with an approved answer", async () => {
+        const { service, channels, messages } = await onZalo()
+        messages.find.mockResolvedValue(storedOf(null))
+
+        await expect(service.approvedInConversation("ws-1", "conv-1", "Hello", "Mai", "item-1", renewal)).resolves.toBe(
+            true,
+        )
+        expect(channels.deliver).toHaveBeenCalledWith({
+            conversationId: "conv-1",
+            messageId: "msg-1",
+            text: "Hello",
+            notification: renewal,
         })
     })
 })

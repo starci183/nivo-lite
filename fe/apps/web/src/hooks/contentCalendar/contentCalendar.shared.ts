@@ -6,9 +6,9 @@ import {
     postView,
     vietnamClock,
     vnDateKey,
-    type PostView,
     type useContentData,
 } from "@/hooks/content"
+import type { PostView } from "@/modules/types"
 
 const inMonth = (iso: string | null, y: number, m: number): boolean => {
     if (iso === null) return false

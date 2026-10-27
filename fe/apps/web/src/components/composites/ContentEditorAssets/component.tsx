@@ -13,12 +13,9 @@ import type {
     MediaRef,
     EditorForm,
     ItemTransition,
-    ContentT,
     ContentItem,
-    MediaTile,
-    PublishStep,
-    DownloadFile,
 } from "@/hooks/content"
+import type { ContentT, DownloadFile, MediaTile, PublishStep } from "@/modules/types"
 import type { Dispatch, SetStateAction } from "react"
 import type { useContentEditorForm } from "@/hooks/rhf"
 import { ContentEditorLinks, type LinkRow } from "@/components/leaves/ContentEditorLinks"

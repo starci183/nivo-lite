@@ -17,18 +17,13 @@ export interface AgentConnectionAccessRow {
     readonly isDisconnected: boolean
 }
 
-/** The connections the card lists. */
-export interface AgentConnectionAccessList {
-    readonly rows: ReadonlyArray<AgentConnectionAccessRow>
-}
-
 /** Copy and state of the connection access card of an agent. */
 export interface AgentConnectionAccessBaseProps {
     readonly props: {
         readonly title: string
         readonly hint: string
-        readonly slot: DataSlot<AgentConnectionAccessList>
-        readonly placeholder: AgentConnectionAccessList
+        readonly slot: DataSlot<ReadonlyArray<AgentConnectionAccessRow>>
+        readonly placeholder: ReadonlyArray<AgentConnectionAccessRow>
         readonly slotLabels: SlotLabels
         readonly manageLabel: string
         readonly manageHref: string
@@ -50,12 +45,9 @@ export const AgentConnectionAccessBase = (props: AgentConnectionAccessBaseProps)
                 {props.props.hint}
             </Text>
             <SlotView slot={props.props.slot} placeholder={props.props.placeholder} labels={props.props.slotLabels}>
-                {(list, isSkeleton) => (
+                {(rows, isSkeleton) => (
                     <>
-                        {list.rows.length === 0 && !isSkeleton ? (
-                            <Text size="sm">{props.props.slotLabels.empty}</Text>
-                        ) : null}
-                        {list.rows.map((row) => (
+                        {rows.map((row) => (
                             <div key={row.id} className={ACTIONS}>
                                 <Select
                                     label={row.label}

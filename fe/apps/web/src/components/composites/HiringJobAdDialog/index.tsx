@@ -1,6 +1,6 @@
 import { Alert, Button, Dialog, EmptyNotice, Heading, SurfaceCard, Text } from "@starci/grammar/common"
-import type { HiringSay } from "@/hooks/hiring"
 import type { AdView } from "@/hooks/hiringWire"
+import type { HiringSay } from "@/modules/types"
 import { AD_CLASS_NAME, GRID_CLASS_NAME, HEAD_CLASS_NAME, PRE_WRAP_CLASS_NAME } from "./classNames"
 
 /** The kinds of ad the dialog shows, in display order. */

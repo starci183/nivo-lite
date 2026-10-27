@@ -1,11 +1,6 @@
 import type { BadgeTone } from "@starci/grammar/common"
 import type { HiringWorkbenchData } from "@/hooks/hiringWire"
 
-/** The names of the fields of a form whose value is of one kind (every string field, every number field...). */
-export type FieldOf<Values, Kind> = {
-    [Name in keyof Values]: Values[Name] extends Kind ? Name : never
-}[keyof Values]
-
 /** The lanes of the pipeline board: rejected closes it (withdrawn candidates sit outside the board). */
 export const PIPELINE_STAGES: ReadonlyArray<string> = [
     "applied",
@@ -80,9 +75,6 @@ export const linesOf = (text: string): Array<string> =>
         .split("\n")
         .map((line) => line.trim())
         .filter((line) => line !== "")
-
-/** Resolves a word of the `hiring` catalog; the connected block hands it to its drawing half. */
-export type HiringSay = (key: string, values?: Record<string, string | number>) => string
 
 /** The candidate a record id (`?focus=`) leads to: a candidate, or an offer or interview of one, or the work item behind them. */
 export const focusedCandidateId = (board: HiringWorkbenchData, focus: string | null): string | null => {

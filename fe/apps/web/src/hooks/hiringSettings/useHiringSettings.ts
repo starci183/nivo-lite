@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import type { UseFormReturn } from "react-hook-form"
 import { useHiringRun } from "@/hooks/hiring"
-import type { FieldOf } from "@/hooks/hiring"
+import type { FieldOf } from "@/modules/types"
 import { useMutateSaveHiringSettingsSwr } from "@/hooks/swr"
 import { toSettingsInput } from "./hiringSettings.shared"
 import type { SettingsValues } from "./hiringSettings.shared"

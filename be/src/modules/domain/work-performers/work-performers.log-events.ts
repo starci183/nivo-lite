@@ -10,4 +10,6 @@ export enum WorkPerformersLogEvent {
     ContractRenewalFailed = "work_performers.contract_renewal_failed",
     /** A booking reminder could not be sent; its row is marked failed. */
     ReminderFailed = "work_performers.reminder_failed",
+    /** The model could not write the thank-you after a payment; the filled template goes through the gate instead. */
+    CareDraftFallback = "work_performers.care_draft_fallback",
 }

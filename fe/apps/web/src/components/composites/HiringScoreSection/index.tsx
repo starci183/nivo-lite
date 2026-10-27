@@ -1,6 +1,6 @@
 import { Badge, Button, Heading, List, ListItem, SurfaceCard, Text } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
-import type { HiringSay } from "@/hooks/hiring"
+import type { HiringSay } from "@/modules/types"
 import {
     ACTIONS_CLASS_NAME,
     PAIR_CLASS_NAME,

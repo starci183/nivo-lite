@@ -60,3 +60,29 @@ export interface PaidRenewal {
     /** The last day of the contract before the renewal, YYYY-MM-DD. */
     readonly previousEndsOn: string
 }
+
+/** Why a contract could not be linked to a reachable customer. */
+export type UnmatchedReason = "noCustomer" | "noContact" | "ambiguous"
+
+/** A contract the customer link left without a phone or an email to reach the customer by. */
+export interface UnmatchedContract {
+    /** The contract id. */
+    readonly contractId: string
+    /** The customer name the contract carries. */
+    readonly customerName: string
+    /**
+     * `noCustomer` when no customer record has its name or code, `noContact` when the record has no phone and no email,
+     * `ambiguous` when several records with that name hold different contacts.
+     */
+    readonly reason: UnmatchedReason
+}
+
+/** What linking the contracts of a workspace to their customers did. */
+export interface LinkedCustomers {
+    /** How many contracts moved to a reachable lead, or whose lead gained the customer's phone or email. */
+    readonly linked: number
+    /** How many leads were created for customers the workspace did not have as a lead yet. */
+    readonly created: number
+    /** The contracts still without a way to reach the customer, each with its reason. */
+    readonly unmatched: ReadonlyArray<UnmatchedContract>
+}

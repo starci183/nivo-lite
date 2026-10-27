@@ -1,7 +1,6 @@
 import { Button, SurfaceCard } from "@starci/grammar/common"
 import { LoyaltyField } from "@/components/leaves/LoyaltyField"
-import type { CategoryTextField } from "@/hooks/loyaltyProgramFields"
-import type { CategoryValues } from "@/hooks/loyaltyProgram"
+import type { CategoryTextField, CategoryValues } from "@/modules/types"
 import { FIELD_TRIPLE_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** What one category rule card of the programme settings draws and reports. */

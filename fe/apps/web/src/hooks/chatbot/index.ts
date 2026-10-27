@@ -21,5 +21,4 @@ export {
 } from "./chatbot.shared"
 export { useChatbotActions } from "./useChatbotActions"
 export { useChatbotGaps } from "./useChatbotGaps"
-export type { ChatbotGapsView } from "./useChatbotGaps"
 export { useChatbotThread } from "./useChatbotThread"

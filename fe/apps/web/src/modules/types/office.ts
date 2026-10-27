@@ -349,7 +349,7 @@ export interface OfficeJumpRowView {
     readonly avatar: OfficeAvatarView
 }
 
-/** A row of "Cần bạn duyệt": an approval card or a work item waiting for a decision, and the card in the thread it jumps to. */
+/** A row of "Needs your approval": an approval card or a work item waiting for a decision, and the card in the thread it jumps to. */
 export interface OfficeWaitingRowView extends OfficeJumpRowView {
     readonly target: "approval" | "exception"
 }

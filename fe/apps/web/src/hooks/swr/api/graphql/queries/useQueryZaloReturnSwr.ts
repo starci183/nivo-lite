@@ -25,7 +25,7 @@ const ZALO_RETURN_SWR_KEY = "zalo-return"
 export const useQueryZaloReturnSwr = ({ code, oaId, state }: ZaloReturnInput) => {
     const router = navigation.useRouter()
     const { trigger } = useMutateReturnZaloAuthorizationSwr()
-    useSWR(
+    return useSWR(
         [ZALO_RETURN_SWR_KEY, code ?? "", oaId ?? "", state ?? ""],
         async () => {
             const authorizationState = state ?? ""

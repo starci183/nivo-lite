@@ -55,7 +55,7 @@ export const AddInstanceDialog = (props: AddInstanceDialogProps) => (
                 id="agent-instance-name"
                 name="name"
                 label={props.props.nameLabel}
-                hint={props.props.nameHint}
+                description={props.props.nameHint}
                 isRequired
                 isDisabled={props.props.isPending}
                 value={props.props.name}

@@ -12,6 +12,7 @@ import type {
     ConversationOrNone,
     LeadOrNone,
     NameOrNone,
+    WrittenMessage,
 } from "./automation-messages.contracts"
 import type { MessageVariables, TextParams } from "./automations.contracts"
 import { InjectAutomationGate, InjectAutomationOffice, InjectAutomationText } from "./automations.decorators"
@@ -21,6 +22,12 @@ import type { ConversationReadRow, LeadReadRow } from "./persistence/automations
 import { acceptableMessage, fillBody, stripQuotes, withTail } from "./policies/config.policy"
 import { CLASSIFY_SYSTEM, FEEDBACK_MAX, caseSystem, shopBlock } from "./policies/prompt.policy"
 import { NEUTRAL_VARIABLES } from "./words.contracts"
+
+/** The run step that says who wrote the message: the model, the template, or the template because the model did not answer. */
+const stepLabelOf = (written: WrittenMessage): string => {
+    if (written.generated) return "step.drafted"
+    return written.fallback ? "step.fallback" : "step.filled"
+}
 
 @Injectable()
 /**
@@ -107,7 +114,9 @@ export class AutomationMessagesService {
                 : { type: "lead", id: composition.lead.id },
             leadId: composition.lead.id,
             dedupeKey: `automation:${context.pipeline.id}:${composition.dedupe}`,
-            summary: composition.summary,
+            summary: body.fallback
+                ? this.say("fallback.summary", { summary: composition.summary })
+                : composition.summary,
             draft: written.text,
             fields: {
                 customer: composition.lead.contact_name,
@@ -126,7 +135,7 @@ export class AutomationMessagesService {
             })
         }
         const drafted: RunStep = {
-            label: this.say(written.generated ? "step.drafted" : "step.filled"),
+            label: this.say(stepLabelOf(written)),
             status: "done",
             message: written.text,
         }
@@ -228,19 +237,21 @@ export class AutomationMessagesService {
         variables: MessageVariables,
         caseNote: string,
         keepExact: ReadonlyArray<string>,
-    ): Promise<{ readonly text: string; readonly generated: boolean }> {
+    ): Promise<WrittenMessage> {
         const filled = fillBody(context.body, variables, this.neutral())
-        if (context.def.contentMode !== "ai_per_case") return { text: filled, generated: false }
+        if (context.def.contentMode !== "ai_per_case") return { text: filled, generated: false, fallback: false }
         const raw = await this.text.generate({
             workspaceId: context.workspaceId,
             purpose: "per_case",
             system: caseSystem(context.def),
             prompt: `${shopBlock(context.shop, "")}\n\nApproved message:\n${filled}\n\nCase: ${caseNote}`,
         })
-        const text = raw === null ? "" : stripQuotes(raw)
+        // The model did not answer (down, out of credit or out of time): the filled wording goes, marked as written from the template.
+        if (raw === null) return { text: filled, generated: false, fallback: true }
+        const text = stripQuotes(raw)
         return acceptableMessage(text) && keepExact.every((value) => text.includes(value))
-            ? { text, generated: true }
-            : { text: filled, generated: false }
+            ? { text, generated: true, fallback: false }
+            : { text: filled, generated: false, fallback: false }
     }
 
     private neutral(): Readonly<Record<string, string>> {

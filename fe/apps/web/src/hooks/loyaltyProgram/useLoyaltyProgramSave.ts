@@ -7,7 +7,7 @@ import { QUERY_LOYALTY_BOARD_SWR_KEY, QUERY_LOYALTY_PROGRAM_SWR_KEY, useMutateSa
 import { matchesSwrKey } from "@/modules/utils"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { programInputOf } from "./loyaltyProgram.shared"
-import type { ProgramValues } from "./loyaltyProgram.shared"
+import type { ProgramValues } from "@/modules/types"
 
 /** Saves the whole programme; the answer becomes a toast and the programme and the board are read again. */
 export const useLoyaltyProgramSave = () => {

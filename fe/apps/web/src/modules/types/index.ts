@@ -27,6 +27,7 @@ export type {
     AccountingQuestionGroup,
     AccountingSourceKind,
     AccountingWorkbenchData,
+    AccountingPanelBaseProps,
 } from "./accounting"
 export type {
     ChatbotChannel,
@@ -99,10 +100,11 @@ export type {
     WebhookView,
     WizardConnection,
     WizardNote,
+    WizardResume,
     ZaloWizardConnection,
 } from "./connection-wizard"
 export type { MetaCheck, MetaWizardConnection } from "./connection-wizard"
-export type { DataSlot, SlotLabels } from "./slot"
+export type { DataSlot, SlotLabels, SlotPanelProps } from "./slot"
 export type {
     InventorySay,
     InventoryTemplateChoice,
@@ -115,6 +117,8 @@ export type {
     RecipeView,
     StockStatus,
     SupplierChannel,
+    SupplierFormField,
+    SupplierFormValues,
     SupplierView,
 } from "./inventory"
 export type {
@@ -284,6 +288,7 @@ export type {
     OfficeWorkDecision,
 } from "./office"
 export type {
+    OfficeCardDraft,
     OfficeComposerProps,
     OfficeConversationsProps,
     OfficeInfoPanelProps,
@@ -319,7 +324,17 @@ export type {
     AccountingQuestionCardView,
     AccountingQuestionsView,
 } from "./accounting-question-card"
-export type { ProgramCopy, TierErrorView } from "./loyalty-program"
+export type {
+    CategoryTextField,
+    CategoryValues,
+    ProgramCopy,
+    ProgramSwitchField,
+    ProgramTextField,
+    ProgramValues,
+    TierErrorView,
+    TierTextField,
+    TierValues,
+} from "./loyalty-program"
 export type { GraphQLResponse } from "./outcome"
 
 export type { SetupWriteDraft } from "./setup-write-draft"
@@ -344,3 +359,37 @@ export type {
     WorkThreadBoardHandlers,
     WorkThreadBoardView,
 } from "./work-threads"
+export type { BillingPlanView, BillingRowView, BillingTone } from "./billing"
+export type { OwnerGroupView, ResponsibilityRowView, RowStatus } from "./responsibilities"
+export type {
+    SetupSideDraft,
+    SetupSideGate,
+    SetupSideGates,
+    SetupSideKnowledge,
+    SetupSideNotice,
+    SetupSideVersions,
+    SetupSideView,
+} from "./setupSide"
+export type {
+    ApplyValues,
+    FieldOf,
+    HiringJobFieldCommands,
+    HiringJobValues,
+    HiringQuestionValues,
+    HiringSay,
+    PublicQuestionView,
+} from "./hiring"
+export type { RewardFormValues, RewardTextField } from "./loyalty-rewards"
+export type {
+    ContentChannel,
+    ContentT,
+    DownloadFile,
+    HistoryRow,
+    MarketingReportView,
+    MediaTile,
+    Pillar,
+    PostView,
+    PublishStep,
+    QuoteView,
+} from "./content"
+export type { TypedDecisionValues } from "./sales-decision-typed"

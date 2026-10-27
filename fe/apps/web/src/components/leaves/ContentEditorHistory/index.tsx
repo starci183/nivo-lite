@@ -1,5 +1,5 @@
 import { SectionHeader, Text, Timeline } from "@starci/grammar/common"
-import type { ContentT, HistoryRow } from "@/hooks/content"
+import type { ContentT, HistoryRow } from "@/modules/types"
 
 /** Props of {@link ContentEditorHistory}. */
 interface ContentEditorHistoryProps {

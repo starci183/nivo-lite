@@ -25,3 +25,11 @@ export interface DeliveryContact {
     /** The email, or null. */
     readonly email: string | null
 }
+
+/** A thank-you after a payment and who wrote it. */
+export interface CareText {
+    /** The message. */
+    readonly text: string
+    /** True when the model wrote it; false when it is the filled template because the model did not answer. */
+    readonly drafted: boolean
+}

@@ -124,7 +124,7 @@ export const LeadOutcomeBase = (props: LeadOutcomeBaseProps) => {
                                 {view.evidenceNote}
                             </Text>
                         </div>
-                        {isSkeleton ? null : renderOutcomeFields({ l, view, on, p })}
+                        {renderOutcomeFields({ l, view, on, p, isSkeleton })}
                     </div>
                 )}
             </SlotView>
@@ -138,15 +138,17 @@ interface RenderOutcomeFieldsContext {
     readonly view: OutcomeView
     readonly on: LeadOutcomeBaseProps["on"]
     readonly p: LeadOutcomeBaseProps["props"]
+    readonly isSkeleton: boolean
 }
 /** Builds the LeadOutcomeContent section from the current view. */
-const renderOutcomeFields = ({ l, view, on, p }: RenderOutcomeFieldsContext) => (
+const renderOutcomeFields = ({ l, view, on, p, isSkeleton }: RenderOutcomeFieldsContext) => (
     <>
         <div className={FORM_STACK_CLASS_NAME}>
             <Select
                 label={l.stageLabel}
                 options={l.stageOptions}
                 value={view.stage}
+                isSkeleton={isSkeleton}
                 onValueChange={(value) => value && on.stage(value)}
             />
             {view.wonNote === null ? null : (
@@ -159,6 +161,7 @@ const renderOutcomeFields = ({ l, view, on, p }: RenderOutcomeFieldsContext) => 
                 description={l.evidenceHint}
                 rows={4}
                 value={p.evidenceText}
+                isSkeleton={isSkeleton}
                 onValueChange={on.evidence}
             />
             {p.error === null ? null : <Alert title={l.failTitle} description={p.error} tone="negative" />}
@@ -166,11 +169,19 @@ const renderOutcomeFields = ({ l, view, on, p }: RenderOutcomeFieldsContext) => 
                 intent="commit"
                 isPending={p.isPending}
                 isDisabled={p.evidenceText.trim().length === 0}
+                isSkeleton={isSkeleton}
                 onPress={on.submit}
             >
                 {l.recordLabel}
             </Button>
         </div>
+        {isSkeleton ? null : renderRecorded({ l, view })}
+    </>
+)
+
+/** The evidence already kept, or the notice that none is. */
+const renderRecorded = ({ l, view }: Pick<RenderOutcomeFieldsContext, "l" | "view">) => (
+    <>
         {view.recorded.length === 0 ? (
             <EmptyNotice message={l.noEvidenceTitle} description={l.noEvidenceHint} />
         ) : (

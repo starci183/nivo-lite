@@ -1,7 +1,6 @@
 import { Button, Heading, Text } from "@starci/grammar/common"
 import { HiringQuestionFields } from "@/components/leaves/HiringQuestionFields"
-import type { HiringSay } from "@/hooks/hiring"
-import type { HiringQuestionValues } from "@/hooks/hiringJobs"
+import type { HiringQuestionValues, HiringSay } from "@/modules/types"
 import { ACTIONS_CLASS_NAME } from "./classNames"
 
 /** The questions of a job and the ways to change the list. */

@@ -1,5 +1,7 @@
 import { Badge, Button, Divider, Icon, ListBox, NavLandmark, Text } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
+import { SlotView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { RAIL, RAIL_FOOT, RAIL_HEAD, RAIL_LIST } from "./classNames"
@@ -16,16 +18,16 @@ export interface AgentInstanceRailItem {
     readonly statusTone: BadgeTone
 }
 
-/** Copy and state of the switcher of the installed agents. */
+/** Copy and slot of the switcher of the installed agents. */
 export interface AgentInstanceRailBaseProps {
     readonly props: {
         readonly navLabel: string
         readonly title: string
         readonly addLabel: string
         readonly addHref: string
-        readonly items: ReadonlyArray<AgentInstanceRailItem>
-        /** The agents are not known yet: the list draws waiting rows. */
-        readonly isLoading: boolean
+        readonly slot: DataSlot<ReadonlyArray<AgentInstanceRailItem>>
+        readonly placeholder: ReadonlyArray<AgentInstanceRailItem>
+        readonly slotLabels: SlotLabels
     }
     readonly on: { readonly open: (id: string) => void }
 }
@@ -38,25 +40,29 @@ export const AgentInstanceRailBase = (props: AgentInstanceRailBaseProps) => (
         </div>
         <Divider semantics="presentation" />
         <div className={RAIL_LIST}>
-            <ListBox
-                label={props.props.title}
-                selectionMode="single"
-                selectionIndicator="none"
-                isLoading={props.props.isLoading}
-                loadingRows={3}
-                selectedIds={props.props.items.filter((item) => item.isCurrent).map((item) => item.id)}
-                onSelectionChange={(ids) => {
-                    const picked = ids[0]
-                    if (picked !== undefined) props.on.open(picked)
-                }}
-                items={props.props.items.map((item) => ({
-                    id: item.id,
-                    label: item.name,
-                    description: `${item.roleName} · ${item.statusLabel}`,
-                    leading: <AgentMark label={item.name} seed={item.seed} src={item.avatarUrl} size="md" />,
-                    trailing: <Badge isDot tone={item.statusTone} />,
-                }))}
-            />
+            <SlotView slot={props.props.slot} placeholder={props.props.placeholder} labels={props.props.slotLabels}>
+                {(items, isSkeleton) => (
+                    <ListBox
+                        label={props.props.title}
+                        selectionMode="single"
+                        selectionIndicator="none"
+                        isLoading={isSkeleton}
+                        loadingRows={3}
+                        selectedIds={items.filter((item) => item.isCurrent).map((item) => item.id)}
+                        onSelectionChange={(ids) => {
+                            const picked = ids[0]
+                            if (picked !== undefined) props.on.open(picked)
+                        }}
+                        items={items.map((item) => ({
+                            id: item.id,
+                            label: item.name,
+                            description: `${item.roleName} · ${item.statusLabel}`,
+                            leading: <AgentMark label={item.name} seed={item.seed} src={item.avatarUrl} size="md" />,
+                            trailing: <Badge isDot tone={item.statusTone} />,
+                        }))}
+                    />
+                )}
+            </SlotView>
         </div>
         <Divider semantics="presentation" />
         <div className={RAIL_FOOT}>

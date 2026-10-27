@@ -4,7 +4,21 @@ import { useTranslations } from "next-intl"
 import { ASSIGN_TEXT_MAX, profileChipsOf, useAgentProfile, useAssignComposer } from "@/hooks/agentProfile"
 import { useOfficeWords } from "@/hooks/office"
 import { AGENTS_ROUTE, CONSOLE_ROUTES } from "@/modules/routes"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { AgentProfileHeadBase } from "./component"
+import type { ProfileHeadView } from "./component"
+
+const PLACEHOLDER: ProfileHeadView = {
+    crumbs: [],
+    title: "-",
+    description: "-",
+    seed: "-",
+    picture: null,
+    chips: [],
+    canAssign: false,
+    composerTitle: "-",
+    mention: "-",
+}
 
 /** The agent whose profile heads the page. */
 type AgentProfileHeadProps = {
@@ -15,7 +29,8 @@ type AgentProfileHeadProps = {
 export const AgentProfileHead = (props: AgentProfileHeadProps) => {
     const t = useTranslations("agentProfile")
     const words = useOfficeWords()
-    const { slot } = useAgentProfile(props.agentId)
+    const slotLabels = useSlotLabels()
+    const { slot, reload } = useAgentProfile(props.agentId)
     const agent = slot.items
     const composer = useAssignComposer(props.agentId, agent?.rules.items ?? [])
     const name = agent?.name ?? ""
@@ -24,28 +39,31 @@ export const AgentProfileHead = (props: AgentProfileHeadProps) => {
         <AgentProfileHeadBase
             props={{
                 crumbLabel: t("crumbLabel"),
-                crumbs: [
-                    { id: "home", label: t("crumbHome"), href: CONSOLE_ROUTES.dashboard },
-                    { id: "agents", label: t("crumbAgents"), href: AGENTS_ROUTE },
-                    { id: "agent", label: name === "" ? t("title") : name },
-                ],
                 eyebrow: t("eyebrow"),
-                title: name === "" ? t("title") : name,
-                description: agent === undefined ? "" : `@${handle} · ${words.moduleName(agent.module)}`,
-                seed: props.agentId,
-                picture: agent?.avatarUrl ?? null,
-                chips: (agent === undefined ? [] : profileChipsOf(agent)).map((chip) => ({
-                    id: chip.id,
-                    label: chip.room === null ? t(`chip_${chip.id}`) : t("chip_room", { room: chip.room }),
-                    tone: chip.tone,
-                })),
-                isLoading: agent === undefined,
                 assignLabel: t("assignAction"),
-                canAssign: agent?.isActive === true,
+                slot: mapSlot(slot, (profile): ProfileHeadView => ({
+                    crumbs: [
+                        { id: "home", label: t("crumbHome"), href: CONSOLE_ROUTES.dashboard },
+                        { id: "agents", label: t("crumbAgents"), href: AGENTS_ROUTE },
+                        { id: "agent", label: name === "" ? t("title") : name },
+                    ],
+                    title: name === "" ? t("title") : name,
+                    description: `@${handle} · ${words.moduleName(profile.module)}`,
+                    seed: props.agentId,
+                    picture: profile.avatarUrl ?? null,
+                    chips: profileChipsOf(profile).map((chip) => ({
+                        id: chip.id,
+                        label: chip.room === null ? t(`chip_${chip.id}`) : t("chip_room", { room: chip.room }),
+                        tone: chip.tone,
+                    })),
+                    canAssign: profile.isActive,
+                    composerTitle: t("assignTitle", { name }),
+                    mention: `@${handle}`,
+                })),
+                placeholder: PLACEHOLDER,
+                slotLabels: slotLabels(t("title")),
                 composer: {
                     isOpen: composer.isOpen,
-                    title: t("assignTitle", { name }),
-                    mention: `@${handle}`,
                     label: t("assignLabel"),
                     placeholder: t("assignPlaceholder"),
                     hint: t("assignHint"),
@@ -68,6 +86,7 @@ export const AgentProfileHead = (props: AgentProfileHeadProps) => {
                 },
             }}
             on={{
+                retry: reload,
                 toggle: composer.toggle,
                 change: composer.setText,
                 send: composer.submit,

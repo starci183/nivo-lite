@@ -6,7 +6,7 @@ import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { parseDigits } from "@/hooks/loyalty"
-import type { RewardFormValues } from "@/hooks/loyaltyRewards"
+import type { RewardFormValues } from "@/modules/types"
 
 /** The reward form: a zod schema whose messages come from the `loyalty` catalog; `initial` is the reward it starts from. */
 export const useLoyaltyRewardForm = (initial: RewardFormValues) => {

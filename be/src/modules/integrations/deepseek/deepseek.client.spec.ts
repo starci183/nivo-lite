@@ -6,8 +6,8 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { DeepseekClient } from "./deepseek.client"
 import type { DeepseekScope } from "./deepseek.contracts"
-import { DEEPSEEK_OPTIONS, DEEPSEEK_TEXT_GENERATOR } from "./deepseek.decorators"
-import type { DeepseekTextGenerator } from "./deepseek.port"
+import { DEEPSEEK_METER, DEEPSEEK_OPTIONS, DEEPSEEK_POOL, DEEPSEEK_TEXT_GENERATOR } from "./deepseek.decorators"
+import type { DeepseekMeter, DeepseekPool, DeepseekTextGenerator } from "./deepseek.port"
 import { DeepseekErrorCode } from "./errors/deepseek.error"
 import { leadTurnPrompt } from "./lead-turn-prompt.policy"
 import type { LeadTurnInput } from "./lead-turn-prompt.policy"
@@ -16,20 +16,27 @@ const scope: DeepseekScope = { workspaceId: "ws-1", locale: "vi" }
 const lead = { contact_name: "Lan", company: "ACME", channel: "telegram", need: "A quote" }
 const agent = { name: "Mai", handle: "mai", role: "Chatbot", instructions: "Be kind" }
 
-const build = async (jsonRetries = 1) => {
+const build = async (jsonRetries = 1, pooled = false) => {
     const generator = mock<DeepseekTextGenerator>()
+    const pool = mock<DeepseekPool>()
+    pool.chatReady.mockReturnValue(pooled)
+    const meter = mock<DeepseekMeter>()
+    meter.blockedBy.mockResolvedValue(null)
+    meter.record.mockResolvedValue(undefined)
     const logger = mock<Logger>()
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             DeepseekClient,
-            { provide: DEEPSEEK_OPTIONS, useValue: { jsonRetries } },
+            { provide: DEEPSEEK_OPTIONS, useValue: { jsonRetries, poolTimeoutMs: 30_000 } },
             { provide: DEEPSEEK_TEXT_GENERATOR, useValue: generator },
+            { provide: DEEPSEEK_POOL, useValue: pool },
+            { provide: DEEPSEEK_METER, useValue: meter },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { client: moduleRef.get(DeepseekClient), generator, logger, catalog }
+    return { client: moduleRef.get(DeepseekClient), generator, pool, meter, logger, catalog }
 }
 
 describe("DeepseekClient", () => {
@@ -338,6 +345,93 @@ describe("DeepseekClient", () => {
                 code: DeepseekErrorCode.JsonNotReturned,
             })
             expect(generator.generate).toHaveBeenCalledTimes(1)
+        })
+    })
+})
+
+const POOL_USAGE = { promptTokens: 12, completionTokens: 5, totalTokens: 17, costUsd: 0.0002 }
+
+describe("DeepseekClient", () => {
+    describe("on the AI pool", () => {
+        it("keeps the OpenClaw door while the pool holds no chat key", async () => {
+            const { client, generator, pool, meter } = await build()
+            generator.generate.mockResolvedValue("- who")
+
+            await expect(client.summarizeContext(scope, lead, [])).resolves.toBe("- who")
+
+            expect(pool.chat).not.toHaveBeenCalled()
+            expect(meter.blockedBy).not.toHaveBeenCalled()
+        })
+
+        it("runs the prompt on the pool once it holds a key, within the pool timeout, and meters the answer", async () => {
+            const { client, generator, pool, meter } = await build(1, true)
+            pool.chat.mockResolvedValue({ text: "- who", model: "deepseek-chat", usage: POOL_USAGE })
+
+            await expect(client.summarizeContext(scope, lead, ["said hi"])).resolves.toBe("- who")
+
+            expect(generator.generate).not.toHaveBeenCalled()
+            expect(meter.blockedBy).toHaveBeenCalledWith("ws-1", "engine", "vi")
+            expect(pool.chat.mock.calls[0]?.[0]).toMatchObject({ json: false, timeoutMs: 30_000 })
+            expect(pool.chat.mock.calls[0]?.[0].messages[1]?.content).toContain("said hi")
+            expect(meter.record).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                kind: "engine",
+                module: "sales",
+                usage: {
+                    prompt_tokens: 12,
+                    completion_tokens: 5,
+                    cached_tokens: 0,
+                    cost: 0.0002,
+                    model: "deepseek-chat",
+                },
+                completionChars: 5,
+            })
+        })
+    })
+})
+
+describe("DeepseekClient", () => {
+    describe("on the AI pool, JSON and refusals", () => {
+        it("asks the pool for JSON on a JSON prompt and books unreported usage as zero", async () => {
+            const { client, pool, meter } = await build(1, true)
+            const none = { promptTokens: null, completionTokens: null, totalTokens: null, costUsd: null }
+            pool.chat.mockResolvedValue({
+                text: '{"name":"A","handle":"a","role":"r","instructions":"i"}',
+                model: "deepseek/deepseek-chat",
+                usage: none,
+            })
+
+            await expect(client.designModule(scope, "x")).resolves.toMatchObject({ name: "A" })
+
+            expect(pool.chat.mock.calls[0]?.[0].json).toBe(true)
+            expect(meter.record.mock.calls[0]?.[0].usage).toEqual({
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                cached_tokens: 0,
+                cost: 0,
+                model: "deepseek/deepseek-chat",
+            })
+        })
+
+        it("fails as unavailable when no lane of the pool answered, and meters nothing", async () => {
+            const { client, pool, meter } = await build(1, true)
+            pool.chat.mockResolvedValue(null)
+
+            await expect(client.draftCare(scope, lead, "note", "")).rejects.toMatchObject({
+                code: DeepseekErrorCode.Unavailable,
+            })
+            expect(meter.record).not.toHaveBeenCalled()
+        })
+
+        it("refuses a workspace over its allowance before calling the pool", async () => {
+            const { client, pool, meter } = await build(1, true)
+            meter.blockedBy.mockResolvedValue({ message: "Over the allowance" })
+
+            await expect(client.draftCare(scope, lead, "note", "")).rejects.toMatchObject({
+                code: DeepseekErrorCode.QuotaBlocked,
+                params: { message: "Over the allowance" },
+            })
+            expect(pool.chat).not.toHaveBeenCalled()
         })
     })
 })

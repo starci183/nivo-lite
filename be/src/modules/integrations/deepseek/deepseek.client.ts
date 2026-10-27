@@ -18,11 +18,17 @@ import type {
     OptionalAgentInput,
     ProposedCommand,
     ProposedResponsibility,
+    TextRequest,
 } from "./deepseek.contracts"
-import { InjectDeepseekOptions, InjectDeepseekTextGenerator } from "./deepseek.decorators"
+import {
+    InjectDeepseekMeter,
+    InjectDeepseekOptions,
+    InjectDeepseekPool,
+    InjectDeepseekTextGenerator,
+} from "./deepseek.decorators"
 import { DeepseekLogEvent } from "./deepseek.log-events"
 import type { DeepseekOptions } from "./deepseek.options"
-import type { DeepseekTextGenerator } from "./deepseek.port"
+import type { DeepseekMeter, DeepseekPool, DeepseekTextGenerator } from "./deepseek.port"
 import { DeepseekError, DeepseekErrorCode } from "./errors/deepseek.error"
 import { embeddedObject, isJsonRecord, unfenced } from "./json.mapper"
 import type { JsonRecord, OptionalJsonRecord } from "./json.mapper"
@@ -48,14 +54,17 @@ const JSON_AGAIN = "Answer again with ONLY the JSON object described above. No p
 
 @Injectable()
 /**
- * The prompt library of NIVO. OpenClaw is the only text-generating AI: this client talks to no model provider, it builds the prompts of
- * the app (summaries, lead classification, drafts, the authority chat) and runs each one through the text generator port, which the app
- * root binds to an `openclaw.generate` job. Every call names its workspace and language explicitly.
+ * The prompt library of NIVO. This client talks to no model provider itself: it builds the prompts of the app (summaries, lead
+ * classification, drafts, the authority chat) and runs each one through the AI pool once the pool holds a chat key (metered against
+ * the workspace allowance), and through the OpenClaw text generator port while it holds none. Every call names its workspace and
+ * language explicitly.
  */
 export class DeepseekClient {
     constructor(
         @InjectDeepseekOptions() private readonly options: DeepseekOptions,
         @InjectDeepseekTextGenerator() private readonly generator: DeepseekTextGenerator,
+        @InjectDeepseekPool() private readonly pool: DeepseekPool,
+        @InjectDeepseekMeter() private readonly meter: DeepseekMeter,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectLogger() private readonly logger: Logger,
     ) {}
@@ -284,23 +293,50 @@ Current rules: ${currentRules}`,
         return this.catalog.get(`prompts.${key}`, {}, locale)
     }
 
-    /** Every prompt goes through here: one generation for the workspace of the scope. */
+    /** Every prompt goes through here: one generation for the workspace of the scope, on the pool when it holds a key. */
     private complete(
         scope: DeepseekScope,
         messages: ReadonlyArray<ChatMessage>,
         json: boolean,
         meta: CallMeta,
     ): Promise<string> {
-        const kind = scope.kind ?? meta.kind
-        const module = scope.module ?? meta.module
-        return this.generator.generate({
+        const request: TextRequest = {
             workspaceId: scope.workspaceId,
             purpose: `${meta.module}:${meta.kind}`,
             messages,
             json,
-            kind,
-            module,
+            kind: scope.kind ?? meta.kind,
+            module: scope.module ?? meta.module,
+        }
+        return this.pool.chatReady() ? this.pooled(scope.locale, request) : this.generator.generate(request)
+    }
+
+    /** One prompt on the AI pool: refused when the workspace is over its allowance, metered once it answered. */
+    private async pooled(locale: Locale, request: TextRequest): Promise<string> {
+        const notice = await this.meter.blockedBy(request.workspaceId, request.kind, locale)
+        if (notice !== null) {
+            throw new DeepseekError({ code: DeepseekErrorCode.QuotaBlocked, params: { message: notice.message } })
+        }
+        const answer = await this.pool.chat({
+            messages: request.messages,
+            json: request.json,
+            timeoutMs: this.options.poolTimeoutMs,
         })
+        if (answer === null) throw new DeepseekError({ code: DeepseekErrorCode.Unavailable })
+        await this.meter.record({
+            workspaceId: request.workspaceId,
+            kind: request.kind,
+            module: request.module,
+            usage: {
+                prompt_tokens: answer.usage.promptTokens ?? 0,
+                completion_tokens: answer.usage.completionTokens ?? 0,
+                cached_tokens: 0,
+                cost: answer.usage.costUsd ?? 0,
+                model: answer.model,
+            },
+            completionChars: answer.text.length,
+        })
+        return answer.text
     }
 
     /** A JSON completion: some providers answer in prose, so it parses loosely and asks again as often as the options allow. */

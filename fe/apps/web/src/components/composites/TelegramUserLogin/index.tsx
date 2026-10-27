@@ -28,7 +28,7 @@ export const TelegramUserLogin = (props: TelegramUserLoginProps) => {
                     name="phone"
                     kind="tel"
                     label={text.phone}
-                    hint={text.phoneHint}
+                    description={text.phoneHint}
                     isDisabled={isDisabled}
                     value={values.phone}
                     onValueChange={(value) => onField("phone", value)}
@@ -46,7 +46,7 @@ export const TelegramUserLogin = (props: TelegramUserLoginProps) => {
                         name="code"
                         kind="code"
                         label={text.code}
-                        hint={text.codeHint}
+                        description={text.codeHint}
                         isDisabled={isDisabled}
                         value={values.code}
                         onValueChange={(value) => onField("code", value)}
@@ -63,7 +63,7 @@ export const TelegramUserLogin = (props: TelegramUserLoginProps) => {
                         name="password"
                         kind="password"
                         label={text.password}
-                        hint={text.passwordHint}
+                        description={text.passwordHint}
                         isDisabled={isDisabled}
                         value={values.password}
                         onValueChange={(value) => onField("password", value)}

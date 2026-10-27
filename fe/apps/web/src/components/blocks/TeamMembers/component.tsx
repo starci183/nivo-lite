@@ -1,25 +1,11 @@
-import type { useTranslations, useFormatter } from "next-intl"
-import type { useMember } from "@/hooks/member"
-import type { useTeam, useMemberCommands } from "@/hooks/team"
 import { AlertDialog, Badge, Button, DataTable, DropdownMenu, Text } from "@starci/grammar/common"
-import type { DataTableColumn, DataTableRow, DropdownMenuEntry } from "@starci/grammar/common"
+import type { DataTableColumn } from "@starci/grammar/common"
 import { TeamSection } from "@/components/composites/TeamSection"
+import { SlotView } from "@/components/composites/SlotView"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
+import type { DataSlot, SlotLabels } from "@/modules/types"
+import type { MemberRowView } from "./types"
 import { IDENTITY_CLASS_NAME, IDENTITY_TEXT_CLASS_NAME, NAME_LINE_CLASS_NAME } from "./classNames"
-
-/** One member, already worded for the person's language. */
-export interface MemberRowView extends DataTableRow {
-    readonly name: string
-    readonly email: string
-    readonly isYou: boolean
-    readonly staffNote?: string | undefined
-    readonly roleLabel: string
-    readonly isActive: boolean
-    readonly lastSignIn: string
-    readonly menuLabel: string
-    /** The actions the person may take on this member; none draws no menu. */
-    readonly entries: ReadonlyArray<DropdownMenuEntry>
-}
 
 /** The question asked before a remove or a disable. */
 interface ConfirmView {
@@ -33,21 +19,21 @@ export interface TeamMembersBaseProps {
     readonly props: {
         readonly title: string
         readonly description?: string | undefined
-        readonly failTitle: string
         readonly youLabel: string
         readonly activeLabel: string
         readonly disabledLabel: string
         readonly actionsLabel: string
         readonly cancelLabel: string
         readonly columns: ReadonlyArray<DataTableColumn>
-        readonly rows: ReadonlyArray<MemberRowView>
-        /** The members are loading: the heading and the column headers stay, the body is skeleton rows. */
-        readonly isSkeleton: boolean
+        /** The heading and the column headers stay; the body is the slot of the rows. */
+        readonly slot: DataSlot<ReadonlyArray<MemberRowView>>
+        readonly placeholder: ReadonlyArray<MemberRowView>
+        readonly slotLabels: SlotLabels
         readonly isPending: boolean
-        readonly error?: string
         readonly confirm?: ConfirmView | undefined
     }
     readonly on: {
+        readonly retry: () => void
         readonly cancelConfirm: () => void
         readonly confirm: () => void
     }
@@ -111,21 +97,24 @@ export const TeamMembersBase = (props: TeamMembersBaseProps) => {
 }
 
 const renderMembersSection = ({ props, renderCell }: RenderMembersSectionInput) => (
-    <TeamSection
-        id="team-members-title"
-        title={props.props.title}
-        description={props.props.description}
-        failTitle={props.props.failTitle}
-        error={props.props.error}
-    >
-        <DataTable
-            label={props.props.title}
-            columns={props.props.columns}
-            rows={props.props.rows}
-            renderCell={renderCell}
-            isLoading={props.props.isSkeleton}
-            emptyContent={null}
-        />
+    <TeamSection id="team-members-title" title={props.props.title} description={props.props.description}>
+        <SlotView
+            slot={props.props.slot}
+            placeholder={props.props.placeholder}
+            labels={props.props.slotLabels}
+            onRetry={props.on.retry}
+        >
+            {(rows, isSkeleton) => (
+                <DataTable
+                    label={props.props.title}
+                    columns={props.props.columns}
+                    rows={rows}
+                    renderCell={renderCell}
+                    isLoading={isSkeleton}
+                    emptyContent={null}
+                />
+            )}
+        </SlotView>
         <AlertDialog
             isOpen={props.props.confirm !== undefined}
             onOpenChange={(open) => {
@@ -146,24 +135,4 @@ const renderMembersSection = ({ props, renderCell }: RenderMembersSectionInput) 
 type RenderMembersSectionInput = {
     props: TeamMembersBaseProps
     renderCell: (row: MemberRowView, columnId: string) => React.ReactNode
-}
-/** State values and commands consumed by the connected surface. */
-export interface Asking {
-    readonly userId: string
-    readonly kind: "remove" | "disable"
-}
-
-/** State values and commands consumed by the connected surface. */
-export type TeamMembersControllerInput = {
-    readonly t: ReturnType<typeof useTranslations<"team">>
-    readonly format: ReturnType<typeof useFormatter>
-    readonly member: ReturnType<typeof useMember>
-    readonly selfRole: NonNullable<NonNullable<ReturnType<typeof useMember>>["role"]>
-    readonly selfId: NonNullable<NonNullable<ReturnType<typeof useMember>>["userId"]>
-    readonly isAllowed: boolean
-    readonly views: ReturnType<typeof useTeam>["views"]
-    readonly isLoading: ReturnType<typeof useTeam>["isLoading"]
-    readonly commands: ReturnType<typeof useMemberCommands>
-    readonly asking: Asking | undefined
-    readonly setAsking: React.Dispatch<React.SetStateAction<Asking | undefined>>
 }

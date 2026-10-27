@@ -2,10 +2,9 @@ import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { brainTabOf } from "@/modules/brain"
 import { DOCUMENT_IDEAS, moduleFilterOf } from "@/modules/documents"
-import type { AddPreset } from "@/hooks/knowledge"
 import { CONSOLE_ROUTES, KNOWLEDGE_ROUTES } from "@/modules/routes"
 import { BrainPageBase } from "./component"
-import type { BrainPageBaseProps } from "./component"
+import type { AddPresetView, BrainPageBaseProps } from "./component"
 
 /** The document title of the page. */
 export const brainMetadata = async (): Promise<Metadata> => {
@@ -53,7 +52,7 @@ const addOf = (
     if (add === undefined) return { isAddOpen: false, addKey: "base", addPreset: null }
     const idea = DOCUMENT_IDEAS.find((one) => one.key === add)
     if (idea === undefined) return { isAddOpen: true, addKey: "base", addPreset: null }
-    const preset: AddPreset = { topic: knowledge(`suggest_${idea.key}_topic`), visibility: idea.visibility }
+    const preset: AddPresetView = { topic: knowledge(`suggest_${idea.key}_topic`), visibility: idea.visibility }
     return { isAddOpen: true, addKey: add, addPreset: preset }
 }
 

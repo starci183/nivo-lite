@@ -1,6 +1,7 @@
 import { Button, Input, SectionHeader, SurfaceCard, Textarea } from "@starci/grammar/common"
 import { ContentCommandNote } from "@/components/composites/ContentSettingsCard"
-import type { ContentNote, ContentT } from "@/hooks/content"
+import type { ContentNote } from "@/hooks/content"
+import type { ContentT } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** What the brand voice card draws. */
@@ -60,7 +61,7 @@ export const ContentBrandCardBase = (props: ContentBrandCardBaseProps) => {
                     name="brand-tags"
                     label={t("brandHashtags")}
                     value={props.props.tags}
-                    hint={t("fieldHashtagsHint")}
+                    description={t("fieldHashtagsHint")}
                     isDisabled={locked}
                     onValueChange={props.on.tags}
                 />

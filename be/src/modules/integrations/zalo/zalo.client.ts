@@ -4,14 +4,21 @@ import type { HttpClient } from "@modules/platform/http"
 import { isRecord } from "@modules/platform/primitives"
 import { ZaloError, ZaloErrorCode } from "./errors/zalo.error"
 import { InjectZaloOptions } from "./zalo.decorators"
-import type { ZaloArticle, ZaloArticleStats, ZaloTokens } from "./zalo.contracts"
+import type { ZaloArticle, ZaloArticleStats, ZaloTokens, ZnsMessage, ZnsReceipt } from "./zalo.contracts"
 import type { ZaloOptions } from "./zalo.options"
+import { zaloErrorCodeOf } from "./zalo-failure.policy"
 import { challengeOf } from "./zalo-oauth.policy"
 
 /** Lifetime from the Zalo docs when the answer gives none: the access token lives 1 hour. */
 const ACCESS_FALLBACK_SECONDS = 3600
 
 const TOKEN_PATH = "/v4/oa/access_token"
+
+/** The OA v3 consultation message path: text and attachments alike. */
+const CS_PATH = "/v3.0/oa/message/cs"
+
+/** The ZNS template message path of the business host. */
+const ZNS_PATH = "/message/template"
 
 /** The most articles one list call reads (one Zalo page). */
 const ARTICLES_LIMIT = 50
@@ -80,10 +87,46 @@ export class ZaloClient {
 
     /** Sends a consultation (CS) text message to one user; a refusal is a ZaloError carrying Zalo's numeric error. */
     async sendCsText(accessToken: string, userId: string, text: string): Promise<void> {
-        await this.apiCall(accessToken, "POST", "/v3.0/oa/message/cs", {
+        await this.apiCall(accessToken, "POST", CS_PATH, {
             recipient: { user_id: userId },
             message: { text },
         })
+    }
+
+    /**
+     * Sends one image to a user as a consultation message: the OA v3 `media` template with a single image element that Zalo fetches from
+     * the public https url. The same window rules as a text apply.
+     */
+    async sendCsImage(accessToken: string, userId: string, imageUrl: string): Promise<void> {
+        await this.apiCall(accessToken, "POST", CS_PATH, {
+            recipient: { user_id: userId },
+            message: {
+                attachment: {
+                    type: "template",
+                    payload: { template_type: "media", elements: [{ media_type: "image", url: imageUrl }] },
+                },
+            },
+        })
+    }
+
+    /**
+     * Sends one Zalo Notification Service message: an approved template filled for a phone, authorised by the OA access token. It reaches
+     * the customer whether or not they wrote to the OA lately, and Zalo charges the OA for it. Answers Zalo's message id.
+     */
+    async sendZns(accessToken: string, message: ZnsMessage): Promise<ZnsReceipt> {
+        const data = await this.apiCall(
+            accessToken,
+            "POST",
+            ZNS_PATH,
+            {
+                phone: message.phone,
+                template_id: message.templateId,
+                template_data: message.templateData,
+                tracking_id: message.trackingId,
+            },
+            this.options.businessBase,
+        )
+        return { messageId: typeof data.msg_id === "string" ? data.msg_id : "" }
     }
 
     /** The customer's display name, or an empty text when Zalo does not say: the name only labels the conversation. */
@@ -186,11 +229,12 @@ export class ZaloClient {
         method: "GET" | "POST",
         path: string,
         body?: unknown,
+        base: string = this.options.apiBase,
     ): Promise<Record<string, unknown>> {
         const answer = await this.http
             .request({
                 method,
-                url: `${this.options.apiBase}${path}`,
+                url: `${base}${path}`,
                 headers: { access_token: accessToken },
                 ...(body === undefined ? {} : { body }),
                 timeoutMs: this.options.timeoutMs,
@@ -207,7 +251,7 @@ export class ZaloClient {
         const failure = answer.body.error
         if (typeof failure === "number" && failure !== 0) {
             throw new ZaloError({
-                code: ZaloErrorCode.Rejected,
+                code: zaloErrorCodeOf(failure),
                 params: { path, reason: this.reasonOf(answer.body, answer.status), zaloCode: failure },
             })
         }

@@ -1,8 +1,3 @@
-import type { useResendEmail, authActionsOf } from "@/hooks/auth"
-import type { useTranslations } from "next-intl"
-import type { navigation } from "@/modules/i18n"
-import type { useSignupForm } from "@/hooks/rhf"
-import type { useTransition } from "react"
 import { Input, Text, TextAction } from "@starci/grammar/common"
 import { AuthForm } from "../../composites/AuthForm"
 import { AuthPanel } from "../../composites/AuthPanel"
@@ -12,9 +7,13 @@ import { EmailField } from "../../composites/EmailField"
 import { PasswordPair } from "../../composites/PasswordPair"
 import { SIGNUP_CENTER_CLASS_NAME } from "./classNames"
 
-/** The words and state of the sign-up card, resolved by the connected block. */
+/** The two drawn shapes of the sign-up card: the form, or the "check your email" screen once the account exists. */
+export type SignupFormShape = "form" | "sent"
+
+/** The words and shape of the sign-up card, resolved by the connected block. */
 export interface SignupFormBaseProps {
-    readonly state: "form" | "sent"
+    readonly shape: SignupFormShape
+
     readonly props: {
         readonly title: string
         readonly text: string
@@ -55,7 +54,7 @@ export interface SignupFormBaseProps {
 /** Draws the sign-up card, or the "check your email" screen once the account exists. */
 export const SignupFormBase = (props: SignupFormBaseProps) => {
     const view = props.props
-    if (props.state === "sent") {
+    if (props.shape === "sent") {
         return (
             <AuthPanel label={view.sentTitle} title={view.sentTitle}>
                 <CheckEmail {...view.check} />
@@ -117,28 +116,4 @@ export const SignupFormBase = (props: SignupFormBaseProps) => {
             </AuthForm>
         </AuthPanel>
     )
-}
-
-/** State values and commands consumed by the connected surface. */
-export type SignupFormProps = {
-    /** The destination after the account exists (an invite page); already sanitised. */
-    readonly next?: string | undefined
-    readonly invited: boolean
-    readonly initialEmail?: string | undefined
-}
-
-/** State values and commands consumed by the connected surface. */
-export type SignupFormControllerInput = {
-    readonly props: SignupFormProps
-    readonly auth: ReturnType<typeof authActionsOf>
-    readonly t: ReturnType<typeof useTranslations<"auth">>
-    readonly router: ReturnType<typeof navigation.useRouter>
-    readonly form: ReturnType<typeof useSignupForm>
-    readonly failure: string | undefined
-    readonly setFailure: React.Dispatch<React.SetStateAction<string | undefined>>
-    readonly sentTo: string | null
-    readonly setSentTo: React.Dispatch<React.SetStateAction<string | null>>
-    readonly isPending: ReturnType<typeof useTransition>[0]
-    readonly startTransition: ReturnType<typeof useTransition>[1]
-    readonly resending: ReturnType<typeof useResendEmail>
 }

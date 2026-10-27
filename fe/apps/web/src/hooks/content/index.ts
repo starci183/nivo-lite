@@ -32,17 +32,9 @@ export type {
     ChannelWarning,
     ContentChannel,
     ContentItem,
-    ContentT,
     EditorForm,
-    DownloadFile,
-    HistoryRow,
     ItemTransition,
     MediaRef,
-    MediaTile,
-    Pillar,
-    PostView,
-    PublishStep,
-    QuoteView,
 } from "./content.shared"
 export { useContentCommand } from "./useContentCommand"
 export type { ContentNote } from "./useContentCommand"
@@ -65,4 +57,4 @@ export { useContentData } from "./useContentData"
 export { useContentFocusedItem } from "./useContentFocusedItem"
 export { useContentGate } from "./useContentGate"
 export { useMarketingReport } from "./useMarketingReport"
-export type { BrandKitText, BrandProposalCardView, MarketingReportView } from "@/modules/content"
+export type { BrandKitText, BrandProposalCardView } from "@/modules/content"

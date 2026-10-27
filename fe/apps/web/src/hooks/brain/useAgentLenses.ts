@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 import { useQueryAgentKnowledgeLensesSwr } from "@/hooks/swr"
+import { slotOfSwr } from "@/hooks/slot"
 import { toAgentLens } from "@/modules/brain"
 import type { AgentLens } from "@/modules/brain"
 import { readError } from "@/hooks/workspaceread"
@@ -12,5 +13,7 @@ export const useAgentLenses = () => {
     const { data, isLoading } = swrRead
     const error = readError(swrRead)
     const lenses = useMemo<ReadonlyArray<AgentLens> | undefined>(() => data?.map(toAgentLens), [data])
-    return { lenses, error, isLoading }
+    const slot = slotOfSwr({ data: lenses, error: swrRead.error, isLoading })
+    const reload = () => void swrRead.mutate()
+    return { lenses, error, isLoading, slot, reload }
 }

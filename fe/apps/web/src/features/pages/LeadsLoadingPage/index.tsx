@@ -7,7 +7,7 @@ export const LeadsLoadingPage = () => (
     <LeadsPageLayout
         heading={<LeadsHeading isFormOpen={false} />}
         form={null}
-        board={<LeadsBoard isLoading initialQuery="" />}
+        board={<LeadsBoard initialQuery="" />}
         promo={null}
     />
 )

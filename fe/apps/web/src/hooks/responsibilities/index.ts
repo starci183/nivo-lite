@@ -1,5 +1,5 @@
 export { ALL_OWNERS, DUES, ROW_STATUSES, rowDueOf, rowStatusOf } from "@/modules/responsibilities"
-export type { DueKey, OwnerGroupView, ResponsibilityRowView, RowStatus, SortKey } from "@/modules/responsibilities"
+export type { DueKey, RowStatus, SortKey } from "@/modules/responsibilities"
 export { useOwnerGroups } from "./useOwnerGroups"
 export { useResponsibilities } from "./useResponsibilities"
 export { useResponsibilityFilters } from "./useResponsibilityFilters"

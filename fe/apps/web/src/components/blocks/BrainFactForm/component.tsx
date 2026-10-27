@@ -161,7 +161,7 @@ const renderFactSubjectFields = (props: BrainFactFormBaseProps) => (
             id="brain-fact-subject"
             name="subject"
             label={props.props.subjectLabel}
-            hint={props.props.subjectHint}
+            description={props.props.subjectHint}
             isRequired
             value={props.props.subject}
             isDisabled={props.props.isPending}
@@ -171,7 +171,7 @@ const renderFactSubjectFields = (props: BrainFactFormBaseProps) => (
             id="brain-fact-attribute"
             name="attribute"
             label={props.props.attributeLabel}
-            hint={props.props.attributeHint}
+            description={props.props.attributeHint}
             isRequired
             value={props.props.attribute}
             isDisabled={props.props.isPending}

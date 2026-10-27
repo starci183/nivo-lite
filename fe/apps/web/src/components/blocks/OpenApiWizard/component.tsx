@@ -171,7 +171,7 @@ const SourceStep = ({ props, on }: OpenApiWizardBaseProps) => (
             id="oa-name"
             name="name"
             label={props.text.name}
-            hint={props.text.nameHint}
+            description={props.text.nameHint}
             isDisabled={props.isPending}
             value={props.source.name}
             onValueChange={on.name}
@@ -180,7 +180,7 @@ const SourceStep = ({ props, on }: OpenApiWizardBaseProps) => (
             id="oa-url"
             name="specUrl"
             label={props.text.specUrl}
-            hint={props.text.specUrlHint}
+            description={props.text.specUrlHint}
             isDisabled={props.isPending}
             value={props.source.specUrl}
             onValueChange={on.specUrl}

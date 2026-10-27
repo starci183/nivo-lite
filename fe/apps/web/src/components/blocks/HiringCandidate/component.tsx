@@ -1,5 +1,5 @@
 import type { useTranslations } from "next-intl"
-import type { reasonTone, scoreTone, useHiringFormat, FieldOf, HiringSay } from "@/hooks/hiring"
+import type { reasonTone, scoreTone, useHiringFormat } from "@/hooks/hiring"
 import type {
     isPreviewable,
     useHiringCandidate,
@@ -20,6 +20,7 @@ import { HiringRejectDialog, type HiringRejectDialogProps } from "@/components/c
 
 import { HiringScoreSection, type HiringScoreSectionProps } from "@/components/composites/HiringScoreSection"
 
+import type { FieldOf, HiringSay } from "@/modules/types"
 import { CHIPS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 import { HiringCandidateSections } from "@/components/composites/HiringCandidateSections"
 

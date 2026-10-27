@@ -1,5 +1,5 @@
 import { Button, ListRow, SurfaceCard, Text } from "@starci/grammar/common"
-import type { ContentT, PostView, QuoteView } from "@/hooks/content"
+import type { ContentT, PostView, QuoteView } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, QUOTE_CLASS_NAME } from "./classNames"
 
 /** Props of {@link ContentQueueCard}. */

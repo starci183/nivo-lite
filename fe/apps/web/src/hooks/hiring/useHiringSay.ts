@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import type { HiringSay } from "./hiring.shared"
+import type { HiringSay } from "@/modules/types"
 
 /** The `hiring` catalog as a plain function, for the drawing halves of the Hiring blocks. */
 export const useHiringSay = (): HiringSay => {

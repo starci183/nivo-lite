@@ -53,7 +53,7 @@ export const ImapAccountFields = (props: ImapAccountFieldsProps) => {
                 id="imap-name"
                 name="name"
                 label={view.text.name}
-                hint={view.text.nameHint}
+                description={view.text.nameHint}
                 isDisabled={view.isDisabled}
                 value={view.values.name}
                 onValueChange={on.field("name")}
@@ -78,7 +78,7 @@ export const ImapAccountFields = (props: ImapAccountFieldsProps) => {
                 id="imap-user"
                 name="user"
                 label={view.text.user}
-                hint={view.text.userHint}
+                description={view.text.userHint}
                 isDisabled={view.isDisabled}
                 value={view.values.user}
                 onValueChange={on.field("user")}
@@ -88,7 +88,7 @@ export const ImapAccountFields = (props: ImapAccountFieldsProps) => {
                 name="password"
                 kind="password"
                 label={view.text.password}
-                hint={view.passwordHint}
+                description={view.passwordHint}
                 isDisabled={view.isDisabled}
                 value={view.values.password}
                 onValueChange={on.field("password")}

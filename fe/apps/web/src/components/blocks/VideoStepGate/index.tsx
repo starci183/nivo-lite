@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react"
 import { useVideoStepGate, type VideoStepScope } from "@/hooks/video"
+import { VideoStepGateBase } from "./component"
 
 /** What the page tells the step gate. */
 interface VideoStepGateProps {
@@ -17,6 +18,6 @@ interface VideoStepGateProps {
 
 /** Lets the blocks below it render once the wizard is read and the video is on the step they belong to. */
 export const VideoStepGate = (props: VideoStepGateProps) => {
-    const ready = useVideoStepGate(props, props.scope)
-    return ready ? props.children : null
+    const isOpen = useVideoStepGate(props, props.scope)
+    return <VideoStepGateBase shape={{ content: props.children }} props={{ isOpen }} />
 }

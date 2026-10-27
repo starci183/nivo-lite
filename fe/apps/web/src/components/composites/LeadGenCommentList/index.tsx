@@ -29,6 +29,8 @@ export interface LeadGenCommentListData {
     readonly retryLabel: string
     readonly busyId: string | null
     readonly isApproving: boolean
+    /** The comments are not read yet: the card draws its skeleton rows. */
+    readonly isSkeleton?: boolean
 }
 
 /** What the comments tab draws and the actions it reports. */
@@ -45,6 +47,7 @@ export const LeadGenCommentList = (props: LeadGenCommentListProps) => {
     return (
         <SurfaceListCard
             ariaLabel={props.label}
+            isLoading={props.isSkeleton === true}
             empty={<EmptyNotice message={props.emptyTitle} description={props.emptyBody} />}
         >
             {props.rows.map((row) => {

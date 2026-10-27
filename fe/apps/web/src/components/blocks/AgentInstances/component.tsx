@@ -1,6 +1,8 @@
-import { Alert, Badge, Button, ListRow, PageContainer, SurfaceListCard } from "@starci/grammar/common"
+import { Badge, Button, ListRow, PageContainer, SurfaceListCard } from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
 import { PageHeading } from "@/components/composites/PageHeading"
+import { SlotView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import { ConnectionNeeds, type ConnectionNeedsProps } from "@/components/leaves/ConnectionNeeds"
 import { AddInstanceDialog } from "@/components/composites/AddInstanceDialog"
 import type { AddInstanceDialogProps } from "@/components/composites/AddInstanceDialog"
@@ -18,7 +20,7 @@ export interface InstanceRowView {
     readonly openHref: string
 }
 
-/** Copy and state of the instances of one agent type. */
+/** Copy and slot of the instances of one agent type. */
 export interface AgentInstancesBaseProps {
     readonly props: {
         readonly crumbLabel: string
@@ -30,10 +32,10 @@ export interface AgentInstancesBaseProps {
         readonly addLabel: string | null
         readonly listLabel: string
         readonly openLabel: string
-        readonly rows: ReadonlyArray<InstanceRowView>
-        readonly isLoading: boolean
-        /** Why the instances could not be read, or undefined. */
-        readonly error: string | undefined
+        readonly isAddDisabled: boolean
+        readonly slot: DataSlot<ReadonlyArray<InstanceRowView>>
+        readonly placeholder: ReadonlyArray<InstanceRowView>
+        readonly slotLabels: SlotLabels
         /** The open add dialog, or null. */
         readonly dialog: AddInstanceDialogProps | null
     }
@@ -53,38 +55,41 @@ export const AgentInstancesBase = (props: AgentInstancesBaseProps) => {
                     title={view.title}
                     description={view.description}
                 />
-                {view.error === undefined ? null : <Alert title={view.error} tone="negative" />}
                 <SurfaceListCard
                     label={view.listLabel}
                     headingLevel={2}
-                    isLoading={view.isLoading}
                     labelEnd={
                         view.addLabel === null ? undefined : (
-                            <Button intent="commit" size="sm" isDisabled={view.isLoading} onPress={props.on.add}>
+                            <Button intent="commit" size="sm" isDisabled={view.isAddDisabled} onPress={props.on.add}>
                                 {view.addLabel}
                             </Button>
                         )
                     }
                 >
-                    {view.rows.map((row) => (
-                        <ListRow
-                            key={row.id}
-                            title={row.title}
-                            description={row.description}
-                            badges={
-                                <Badge isDot tone={row.statusTone}>
-                                    {row.statusLabel}
-                                </Badge>
-                            }
-                            actions={
-                                <Button size="sm" intent="neutral" href={row.openHref}>
-                                    {view.openLabel}
-                                </Button>
-                            }
-                        >
-                            <ConnectionNeeds {...row.needs} />
-                        </ListRow>
-                    ))}
+                    <SlotView slot={view.slot} placeholder={view.placeholder} labels={view.slotLabels}>
+                        {(rows, isSkeleton) =>
+                            rows.map((row) => (
+                                <ListRow
+                                    key={row.id}
+                                    title={row.title}
+                                    description={row.description}
+                                    isSkeleton={isSkeleton}
+                                    badges={
+                                        <Badge isDot tone={row.statusTone} isSkeleton={isSkeleton}>
+                                            {row.statusLabel}
+                                        </Badge>
+                                    }
+                                    actions={
+                                        <Button size="sm" intent="neutral" href={row.openHref} isSkeleton={isSkeleton}>
+                                            {view.openLabel}
+                                        </Button>
+                                    }
+                                >
+                                    <ConnectionNeeds {...row.needs} />
+                                </ListRow>
+                            ))
+                        }
+                    </SlotView>
                 </SurfaceListCard>
                 {view.dialog === null ? null : <AddInstanceDialog props={view.dialog.props} on={view.dialog.on} />}
             </div>

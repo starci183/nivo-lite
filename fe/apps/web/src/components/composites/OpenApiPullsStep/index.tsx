@@ -69,7 +69,7 @@ const PullSettings = (props: PullSettingsProps) => {
                 id={`oa-path-${row.id}`}
                 name="itemsPath"
                 label={text.itemsPath}
-                hint={text.itemsPathHint}
+                description={text.itemsPathHint}
                 isDisabled={isDisabled}
                 value={row.pull.itemsPath}
                 onValueChange={patch("itemsPath")}
@@ -95,7 +95,7 @@ const PullSettings = (props: PullSettingsProps) => {
                     id={`oa-q-${row.id}`}
                     name="fixedQuery"
                     label={text.fixedQuery}
-                    hint={row.fixedQueryHint}
+                    description={row.fixedQueryHint}
                     isDisabled={isDisabled}
                     value={row.pull.fixedQuery}
                     onValueChange={patch("fixedQuery")}

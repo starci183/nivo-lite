@@ -44,7 +44,7 @@ export const AgentChat = (props: AgentChatProps) => {
                 crumbLabel: copy.crumbLabel,
                 crumbs: copy.crumbs,
                 pageLabel: t("pageLabel"),
-                isLoading: agent === undefined,
+                isStartDisabled: agent === undefined,
                 glyph,
                 module: moduleKey,
                 railTitle: t("railTitle"),

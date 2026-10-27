@@ -1,5 +1,3 @@
-import type { AddPreset, ModuleKey } from "@/hooks/knowledge"
-
 import { Drawer, SegmentedControl, Text } from "@starci/grammar/common"
 import { AddFilesPanel, type LinkRowView, type QueueRowView } from "@/components/composites/AddFilesPanel"
 
@@ -204,15 +202,3 @@ const KnowledgeAddDrawer = (props: KnowledgeAddBaseProps) => (
         </div>
     </Drawer>
 )
-
-/** Props for the connected add documents drawer. */
-export interface KnowledgeAddProps {
-    /** The words shown instead of the drop zone to members who may only read. */
-    readonly readOnlyNote: string
-    /** The agent the list of documents is filtered to; the drawer returns to it when it closes. */
-    readonly module: ModuleKey | "all"
-    /** Whether the address asks for the drawer to be open. */
-    readonly isOpen: boolean
-    /** The idea the drawer was opened from, or null. */
-    readonly preset: AddPreset | null
-}

@@ -12,6 +12,8 @@ export interface TeamState {
     readonly isLoading: boolean
     /** The first failure of the three reads, in the back end words. */
     readonly error: string | undefined
+    /** Reads the three again, after a failure. */
+    readonly reload: () => void
 }
 
 const EMPTY: TeamViews = { members: [], invites: [], staffChoices: [] }
@@ -35,5 +37,10 @@ export const useTeam = (workspaceId: string, enabled: boolean): TeamState => {
         views,
         isLoading: enabled && failure === undefined && (members.isLoading || invites.isLoading || staff.isLoading),
         error: failure?.message,
+        reload: () => {
+            void members.mutate()
+            void invites.mutate()
+            void staff.mutate()
+        },
     }
 }

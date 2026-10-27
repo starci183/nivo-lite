@@ -1,4 +1,6 @@
+import type { useTranslations } from "next-intl"
 import type { LoyaltyConfigType } from "@/hooks/swr"
+import type { CategoryValues, ProgramCopy, ProgramValues, TierValues } from "@/modules/types"
 
 /** The most earn rules for single categories a programme keeps. */
 export const MAX_CATEGORIES = 12
@@ -8,47 +10,6 @@ export const MAX_TIERS = 8
 
 /** A clock time as hh:mm. */
 export const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/
-
-/** One tier as typed in the form: numbers stay text until the programme is saved. */
-export interface TierValues {
-    uid: string
-    key: string
-    name: string
-    minSpend: string
-    multiplier: string
-    winback: string
-    benefit: string
-}
-
-/** One earn rule for a category as typed in the form. */
-export interface CategoryValues {
-    uid: string
-    match: string
-    rate: string
-    label: string
-}
-
-/** The whole programme as the form holds it. */
-export interface ProgramValues {
-    name: string
-    enabled: boolean
-    perThousand: string
-    perVisit: string
-    minOrder: string
-    trigger: string
-    categories: CategoryValues[]
-    tiers: TierValues[]
-    expiryMonths: string
-    warnDays: string
-    birthdayOn: boolean
-    birthdayPoints: string
-    birthdayReward: string
-    birthdayNote: string
-    maxPerMonth: string
-    hourFrom: string
-    hourTo: string
-    batch: string
-}
 
 /** What the form shows before the programme is loaded. */
 export const BLANK_PROGRAM: ProgramValues = {
@@ -168,3 +129,66 @@ export const programInputOf = (values: ProgramValues) => ({
         },
     },
 })
+
+/** The `loyalty` catalog's translator. */
+type Translator = ReturnType<typeof useTranslations<"loyalty">>
+
+/** Every label and hint of the programme form, resolved from the `loyalty` catalog. */
+export const programCopyOf = (t: Translator): ProgramCopy =>
+    ({
+        readOnlyNote: t("readOnlyNote"),
+        earnTitle: t("setEarnTitle"),
+        earnHint: t("setEarnHint"),
+        name: t("setName"),
+        perThousand: t("setPerThousand"),
+        perThousandHint: t("setPerThousandHint"),
+        perVisit: t("setPerVisit"),
+        minOrder: t("setMinOrder"),
+        minOrderHint: t("setMinOrderHint"),
+        trigger: t("setTrigger"),
+        triggerHint: t("setTriggerHint"),
+        categories: t("setCategories"),
+        categoriesHint: t("setCategoriesHint"),
+        catMatch: t("setCatMatch"),
+        catRate: t("setCatRate"),
+        catLabel: t("setCatLabel"),
+        addCategory: t("setAddCategory"),
+        remove: t("setRemove"),
+        tiersTitle: t("setTiersTitle"),
+        tiersHint: t("setTiersHint"),
+        tierName: t("setTierName"),
+        tierSpend: t("setTierSpend"),
+        tierFirst: t("setTierFirst"),
+        tierMult: t("setTierMult"),
+        tierMultHint: t("setTierMultHint"),
+        tierWinback: t("setTierWinback"),
+        tierWinbackHint: t("setTierWinbackHint"),
+        tierBenefit: t("setTierBenefit"),
+        addTier: t("setAddTier"),
+        expiryTitle: t("setExpiryTitle"),
+        expiryHint: t("setExpiryHint"),
+        expiryMonths: t("setExpiryMonths"),
+        expiryMonthsHint: t("setExpiryMonthsHint"),
+        warnDays: t("setWarnDays"),
+        warnDaysHint: t("setWarnDaysHint"),
+        birthdayTitle: t("setBirthdayTitle"),
+        birthdayOn: t("setBirthdayOn"),
+        birthdayPoints: t("setBirthdayPoints"),
+        birthdayReward: t("setBirthdayReward"),
+        birthdayNote: t("setBirthdayNote"),
+        birthdayNoteHint: t("setBirthdayNoteHint"),
+        promoTitle: t("setPromoTitle"),
+        promoHint: t("setPromoHint"),
+        maxPerMonth: t("setMaxPerMonth"),
+        batch: t("setBatch"),
+        batchHint: t("setBatchHint"),
+        hourFrom: t("setHourFrom"),
+        hourTo: t("setHourTo"),
+        publicTitle: t("setPublicTitle"),
+        publicHint: t("publicBody"),
+        publicOn: t("setPublicOn"),
+        publicLink: t("publicTitle"),
+        copy: t("copy"),
+        copied: t("copied"),
+        save: t("setSave"),
+    }) as const

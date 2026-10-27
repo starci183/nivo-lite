@@ -1,7 +1,6 @@
 import { Alert, Button, DescriptionList, Meter, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
-import type { MarketingReportView } from "@/hooks/content"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import type { DataSlot, MarketingReportView, SlotLabels } from "@/modules/types"
 import { BODY, DAYS, STACK } from "./classNames"
 
 /** The words of the Performance tab. */
@@ -75,7 +74,7 @@ const Report = (props: ReportProps) => {
             <SectionHeader
                 level={2}
                 title={words.title}
-                description={isSkeleton ? words.description : `${words.description} · ${view.period}`}
+                description={view.period === "" ? words.description : `${words.description} · ${view.period}`}
                 isSkeleton={isSkeleton}
                 action={
                     props.props.canPost ? (

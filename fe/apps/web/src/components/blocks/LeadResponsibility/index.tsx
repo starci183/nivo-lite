@@ -1,17 +1,7 @@
 "use client"
 
-import {
-    HUMAN,
-    type LeadResponsibilityProps,
-    type Mode,
-    type BuildResponsibilityPanelViewContext,
-    type BuildStepFormViewContext,
-    type LeadResponsibilityBaseProps,
-    LeadResponsibilityBase,
-    type ResponsibilityView,
-} from "./component"
+import { type LeadResponsibilityBaseProps, LeadResponsibilityBase, type ResponsibilityView } from "./component"
 
-import { parseDate } from "@internationalized/date"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import type { StepFormView } from "@/components/composites/StepForm"
@@ -27,8 +17,25 @@ import {
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { useLeadStepForm, type LeadStepValues } from "@/hooks/rhf"
 
+import { buildStepFormView, HUMAN, type Mode } from "./form"
 import { LEADS_ROUTES } from "@/modules/routes"
 import type { LeadJourney, ResponsibilityRecord, DataSlot } from "@/modules/types"
+
+/** The lead the panel acts on and the workspace it belongs to; a null detail draws the loading card. */
+interface LeadResponsibilityProps {
+    readonly leadId?: string
+}
+
+/** Inputs needed to build the LeadResponsibilityContent section. */
+interface BuildResponsibilityPanelViewContext {
+    readonly slot: DataSlot<ResponsibilityView>
+    readonly form: StepFormView | null
+    readonly proposeError: string | null
+    readonly actions: ReturnType<typeof useLeadActions>
+    readonly isPending: boolean
+    readonly t: ReturnType<typeof useTranslations<"lead">>
+    readonly slotLabels: ReturnType<typeof useSlotLabels>
+}
 
 const ownerIdOf = (step: ResponsibilityRecord | null): string =>
     step?.owner_kind === "agent" && step.owner_agent_id ? step.owner_agent_id : HUMAN
@@ -150,33 +157,4 @@ const buildResponsibilityPanelView = ({
         },
         slot: slotLabels(t("noOwner")),
     },
-})
-/** Builds the LeadResponsibilityContent section from the current view. */
-const buildStepFormView = ({
-    mode,
-    formLabels,
-    fields,
-    t,
-    agents,
-    submitLabels,
-    error,
-    rhf,
-}: BuildStepFormViewContext): StepFormView => ({
-    mode,
-    label: formLabels[mode],
-    title: fields.title,
-    owner: fields.owner,
-    nextAction: fields.nextAction,
-    due: fields.due === null ? null : parseDate(fields.due),
-    ownerOptions: [
-        { id: HUMAN, label: t("ownerYou") },
-        ...agents
-            .filter((agent) => agent.status === "active" || agent.id === fields.owner)
-            .map((agent) => ({
-                id: agent.id,
-                label: `${agent.name} (@${agent.handle.replace(/^@/, "")})`,
-            })),
-    ],
-    submitLabel: submitLabels[mode],
-    error: error ?? Object.values(rhf.formState.errors)[0]?.message ?? null,
 })

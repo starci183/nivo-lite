@@ -1,6 +1,7 @@
 "use client"
 
 import { useBookingBoard } from "@/hooks/bookingBoard"
+import { useSlotLabels } from "@/hooks/slot"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { useMutateRemoveBookingExceptionSwr, useMutateSaveBookingExceptionSwr } from "@/hooks/swr"
@@ -10,7 +11,8 @@ import type { ExceptionFields } from "./component"
 
 /** The connected days-off list: add a closing or special hours and remove the ones that no longer apply. */
 export const BookingExceptions = () => {
-    const { board } = useBookingBoard()
+    const { board, slot, reload } = useBookingBoard()
+    const slotLabels = useSlotLabels()
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
     const persist = useBookingSetupSave()
@@ -30,6 +32,8 @@ export const BookingExceptions = () => {
     return (
         <BookingExceptionsBase
             props={{
+                slot,
+                slotLabels: slotLabels(t("loadFailedTitle")),
                 title: t("exceptionsTitle"),
                 hint: t("exceptionsHint"),
                 rows: board.exceptions.map((row) => ({
@@ -57,9 +61,10 @@ export const BookingExceptions = () => {
                 startLabel: t("exceptionOpens"),
                 endLabel: t("exceptionCloses"),
                 addLabel: t("add"),
-                isPending,
+                isPending: isPending || slot.isLoading === true,
             }}
             on={{
+                retry: reload,
                 change: (patch) => setFields({ ...fields, ...patch }),
                 add: () =>
                     startTransition(async () => {

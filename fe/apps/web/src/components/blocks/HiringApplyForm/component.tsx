@@ -14,15 +14,17 @@ import {
 } from "@starci/grammar/common"
 import { HiringJobPost } from "@/components/composites/HiringJobPost"
 import type { HiringJobPostProps } from "@/components/composites/HiringJobPost"
-import type { FieldOf, HiringSay } from "@/hooks/hiring"
-import type { ApplyValues, PublicQuestionView } from "@/hooks/hiringPublic"
+import { SlotView } from "@/components/composites/SlotView"
+import type { ApplyValues, DataSlot, FieldOf, HiringSay, PublicQuestionView, SlotLabels } from "@/modules/types"
 import { CARD_CLASS_NAME, FOOT_CLASS_NAME, HONEYPOT_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
 /** What the connected block settled for the public job page. */
 export interface HiringApplyFormBaseProps {
     readonly props: {
         readonly say: HiringSay
-        readonly state: "loading" | "missing" | "ready"
+        /** The public job read: the page draws from the other fields, which are blank until it lands. */
+        readonly slot: DataSlot<true>
+        readonly slotLabels: SlotLabels
         readonly post: HiringJobPostProps["props"]
         readonly company: string
         readonly isOpen: boolean
@@ -34,7 +36,8 @@ export interface HiringApplyFormBaseProps {
         readonly cvError: string | undefined
         readonly canSubmit: boolean
         readonly isBusy: boolean
-        readonly isFailed: boolean
+        /** The words of the failed submission; null while none failed. */
+        readonly failure: string | null
         readonly doneText: string | null
     }
     readonly on: {
@@ -44,6 +47,7 @@ export interface HiringApplyFormBaseProps {
         readonly answer: (id: string, answer: string) => void
         readonly cv: (file: File | null) => void
         readonly submit: () => void
+        readonly retry: () => void
     }
 }
 
@@ -105,30 +109,32 @@ const questionField = (question: PublicQuestionView, props: HiringApplyFormBaseP
     )
 }
 
-/** Draws the public job page: the post, then the apply form (or a notice when the post takes no applications). */
-export const HiringApplyFormBase = (props: HiringApplyFormBaseProps) => {
+/** Props of the page body: the job (or its blank stand-in) and whether it is drawn as a skeleton. */
+interface ApplyBodyProps extends HiringApplyFormBaseProps {
+    readonly isSkeleton: boolean
+}
+
+/** The post and its apply card; while the job is read the form draws blank and disabled. */
+const ApplyBody = (props: ApplyBodyProps) => {
     const p = props.props
-    const { say, isBusy } = p
+    const { say } = p
     const { on } = props
-    if (p.state !== "ready") {
-        return (
-            <Alert
-                tone="cautionary"
-                title={say(p.state === "loading" ? "loading" : "applyMissing")}
-                description={p.state === "loading" ? undefined : say("applyMissingBody")}
-            />
-        )
-    }
+    const isBusy = p.isBusy || props.isSkeleton
+    const isOpen = p.isOpen || props.isSkeleton
     return (
         <div className={STACK_CLASS_NAME}>
             <HiringJobPost props={p.post} />
-            <SurfaceCard ariaLabel={say(p.isOpen ? "applyTitle" : "applyClosed")}>
+            <SurfaceCard ariaLabel={say(isOpen ? "applyTitle" : "applyClosed")}>
                 <div className={CARD_CLASS_NAME}>
-                    {p.isOpen ? null : <Heading level={2}>{say("applyClosed")}</Heading>}
-                    {p.isOpen ? <Heading level={2}>{say("applyTitle")}</Heading> : null}
-                    {p.isOpen ? null : <Text tone="muted">{say("applyClosedBody", { company: p.company })}</Text>}
-                    {p.isOpen && p.doneText !== null ? <Alert tone="affirmative" title={p.doneText} /> : null}
-                    {p.isOpen && p.doneText === null ? (
+                    {isOpen ? null : <Heading level={2}>{say("applyClosed")}</Heading>}
+                    {isOpen ? (
+                        <Heading level={2} isSkeleton={props.isSkeleton}>
+                            {say("applyTitle")}
+                        </Heading>
+                    ) : null}
+                    {isOpen ? null : <Text tone="muted">{say("applyClosedBody", { company: p.company })}</Text>}
+                    {isOpen && p.doneText !== null ? <Alert tone="affirmative" title={p.doneText} /> : null}
+                    {isOpen && p.doneText === null ? (
                         <Form
                             label={say("applyTitle")}
                             validationBehavior="aria"
@@ -150,6 +156,13 @@ export const HiringApplyFormBase = (props: HiringApplyFormBaseProps) => {
     )
 }
 
+/** Draws the public job page: the post, then the apply form (or a notice when the post takes no applications). */
+export const HiringApplyFormBase = (props: HiringApplyFormBaseProps) => (
+    <SlotView slot={props.props.slot} placeholder labels={props.props.slotLabels} onRetry={props.on.retry}>
+        {(_job, isSkeleton) => <ApplyBody {...props} isSkeleton={isSkeleton} />}
+    </SlotView>
+)
+
 /** Contact details and availability supplied with an application. */
 const ApplicantDetails = (props: HiringApplyFormBaseProps) => {
     const p = props.props
@@ -170,7 +183,7 @@ const ApplicantDetails = (props: HiringApplyFormBaseProps) => {
                 id="apply-phone"
                 name="phone"
                 label={say("applyPhone")}
-                hint={say("applyPhoneHint")}
+                description={say("applyPhoneHint")}
                 isRequired
                 isDisabled={isBusy}
                 value={values.phone}
@@ -247,7 +260,7 @@ const ApplicationSubmission = (props: HiringApplyFormBaseProps) => {
                 isDisabled={isBusy}
                 onSelectedChange={(consent) => on.flag("consent", consent)}
             />
-            {p.isFailed ? <Alert tone="negative" title={say("applyFailed")} /> : null}
+            {p.failure === null ? null : <Alert tone="negative" title={p.failure} />}
             <Button type="submit" intent="commit" isPending={isBusy} isDisabled={isBusy || !p.canSubmit}>
                 {say("applySubmit")}
             </Button>

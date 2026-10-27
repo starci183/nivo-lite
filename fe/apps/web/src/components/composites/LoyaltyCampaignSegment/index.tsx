@@ -49,7 +49,7 @@ export const LoyaltyCampaignSegment = (props: LoyaltyCampaignSegmentProps) => {
                     id="seg-inactive"
                     name="inactive"
                     label={copy.inactive}
-                    hint={copy.inactiveHint}
+                    description={copy.inactiveHint}
                     placeholder="45"
                     value={values.inactive}
                     isDisabled={props.props.isBusy}
@@ -59,7 +59,7 @@ export const LoyaltyCampaignSegment = (props: LoyaltyCampaignSegmentProps) => {
                     id="seg-spend"
                     name="spend"
                     label={copy.spend}
-                    hint={copy.spendHint}
+                    description={copy.spendHint}
                     placeholder="1000000"
                     value={values.spend}
                     isDisabled={props.props.isBusy}

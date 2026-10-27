@@ -2,15 +2,14 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useEffect, useState } from "react"
-import { splitBasis } from "@/hooks/decisions"
-import { canDecideItem, useMember } from "@/hooks/member"
+import { useMember } from "@/hooks/member"
 import { useSalesDecisionForm } from "@/hooks/rhf"
-import { ageParts, decisionAnchor, isStale, KNOWN_FIELDS, OUTCOME_TONES, useSalesActions } from "@/hooks/sales"
-import { editsOf, fieldKey } from "@/hooks/salesdecisions"
+import { decisionAnchor, KNOWN_FIELDS, useSalesActions } from "@/hooks/sales"
+import { decidedSalesRow, editsOf, pendingSalesRow } from "@/hooks/salesdecisions"
+import type { SalesDecisionsControllerInput } from "@/hooks/salesdecisions"
 import { useSalesWorkbench } from "@/hooks/salesworkbench"
 
-import { SalesDecisionsBase, pendingSalesRow, decidedSalesRow } from "./component"
-import type { SalesDecisionsControllerInput, SalesDecisionVocabulary } from "./component"
+import { SalesDecisionsBase } from "./component"
 
 /** The decision to highlight. */
 interface SalesDecisionsProps {
@@ -21,16 +20,6 @@ interface SalesDecisionsProps {
 type Decision = "approved" | "rejected"
 
 const FIELD_NAMES: ReadonlySet<string> = new Set(KNOWN_FIELDS)
-
-const decisionVocabulary: SalesDecisionVocabulary = {
-    ageParts,
-    decisionAnchor,
-    isStale,
-    canDecideItem,
-    fieldKey,
-    splitBasis,
-    outcomeTones: OUTCOME_TONES,
-}
 
 /** The decisions surface: the typed values, the edit toggles and the decisions themselves live here, the drawing in the pure half. */
 const createSalesDecisionsState = (input: SalesDecisionsControllerInput) => {
@@ -128,8 +117,8 @@ export const SalesDecisions = (props: SalesDecisionsProps) => {
                 decidedBody: t("decidedBody"),
                 decidedEmptyTitle: t("decidedEmptyTitle"),
                 decidedEmptyBody: t("decidedEmptyBody"),
-                pending: pending.map((item) => pendingSalesRow(item, context, decisionVocabulary)),
-                decided: decided.map((row) => decidedSalesRow(row, context, decisionVocabulary)),
+                pending: pending.map((item) => pendingSalesRow(item, context)),
+                decided: decided.map((row) => decidedSalesRow(row, context)),
                 rowLabels: {
                     draftLabel: t("draftLabel"),
                     waitingManager: t("waitingManager"),

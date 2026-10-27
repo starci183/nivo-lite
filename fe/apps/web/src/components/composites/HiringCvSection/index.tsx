@@ -1,5 +1,5 @@
 import { Button, Heading, Image, MediaFrame, Text } from "@starci/grammar/common"
-import type { HiringSay } from "@/hooks/hiring"
+import type { HiringSay } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, CV_FRAME_CLASS_NAME } from "./classNames"
 
 /** The words and state of the CV section. */

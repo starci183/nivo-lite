@@ -1,32 +1,23 @@
-import { DescriptionList, EmptyNotice, SurfaceCard } from "@starci/grammar/common"
 import type { DescriptionListStatItem } from "@starci/grammar/common"
-import { STACK_CLASS_NAME } from "./classNames"
+import { FiguresRibbon } from "@/components/composites/FiguresRibbon"
+import { SlotView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 
-/** What the connected block settled for the figures strip. */
+/** Props for {@link HiringFiguresBase}. */
 export interface HiringFiguresBaseProps {
+    readonly on: { readonly retry: () => void }
     readonly props: {
-        readonly state: "ready" | "loading" | "failed" | "forbidden"
-        readonly ariaLabel: string
-        readonly figures: ReadonlyArray<DescriptionListStatItem>
-        readonly noticeTitle: string
-        readonly noticeBody: string
+        readonly label: string
+        readonly slot: DataSlot<ReadonlyArray<DescriptionListStatItem>>
+        readonly labels: SlotLabels
+        /** The same figures with their values empty: the skeleton keeps the real terms. */
+        readonly placeholder: ReadonlyArray<DescriptionListStatItem>
     }
 }
 
 /** Draws the real Hiring figures (open roles, pipeline, interviews, offers), or the notice when the board cannot be read. */
-export const HiringFiguresBase = (props: HiringFiguresBaseProps) => {
-    const { state, ariaLabel, figures, noticeTitle, noticeBody } = props.props
-    return (
-        <div className={STACK_CLASS_NAME}>
-            {state === "failed" || state === "forbidden" ? (
-                <SurfaceCard ariaLabel={noticeTitle}>
-                    <EmptyNotice message={noticeTitle} description={noticeBody} />
-                </SurfaceCard>
-            ) : (
-                <SurfaceCard ariaLabel={ariaLabel}>
-                    <DescriptionList layout="stat-strip" isDivided isLoading={state === "loading"} items={figures} />
-                </SurfaceCard>
-            )}
-        </div>
-    )
-}
+export const HiringFiguresBase = (props: HiringFiguresBaseProps) => (
+    <SlotView {...props.props} forbidden="notice" onRetry={props.on.retry}>
+        {(items, isSkeleton) => <FiguresRibbon label={props.props.label} items={items} isSkeleton={isSkeleton} />}
+    </SlotView>
+)

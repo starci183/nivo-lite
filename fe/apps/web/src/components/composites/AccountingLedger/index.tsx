@@ -42,12 +42,15 @@ interface AccountingLedgerProps {
         readonly changeAmount: (value: string) => void
         readonly submitAdjust: () => void
     }
+    /** The panel is drawn from placeholders: its leaves draw as skeleton. */
+    readonly isSkeleton: boolean
 }
 
 /** The ledger derived from invoices and payments, with a drawer showing where each line came from. */
 export const AccountingLedger = (props: AccountingLedgerProps) => {
     const { props: data, on } = props
     const drawer = data.drawer
+    const isSkeleton = props.isSkeleton
     const sectionHead = {
         title: data.title,
         intro: data.intro,
@@ -55,6 +58,7 @@ export const AccountingLedger = (props: AccountingLedgerProps) => {
         choices: data.filterItems,
         selectedChoice: data.selectedFilter,
         onChoose: on.selectFilter,
+        isSkeleton,
     }
     return (
         <div className={PANEL_CLASS_NAME}>
@@ -65,8 +69,9 @@ export const AccountingLedger = (props: AccountingLedgerProps) => {
                     emptyBody={data.emptyBody}
                     records={data.records}
                     onOpen={on.openEntry}
+                    isSkeleton={isSkeleton}
                 />
-                <Text size="xs" tone="muted">
+                <Text size="xs" tone="muted" isSkeleton={isSkeleton}>
                     {data.foot}
                 </Text>
             </AccountingSectionHead>
@@ -125,3 +130,6 @@ export const AccountingLedger = (props: AccountingLedgerProps) => {
 
 /** The settled atoms of the AccountingLedger surface. */
 export type AccountingLedgerView = AccountingLedgerProps["props"]
+
+/** What the ledger does, handed in by its panel. */
+export type AccountingLedgerOn = AccountingLedgerProps["on"]

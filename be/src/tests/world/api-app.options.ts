@@ -26,17 +26,37 @@ const providerOptions = () => ({
         manageAgents: false,
         toolSecret: null,
     },
-    deepseek: { jsonRetries: 1 },
+    deepseek: { jsonRetries: 1, poolTimeoutMs: 1000 },
     connectionSecrets: { tokenKey: TOKEN_KEY },
     loyaltyOtps: { pepper: new Secret("world-proof") },
     channels: { siteUrl: SITE },
     telegram: { apiBase: "https://telegram.invalid", timeoutMs: 1000 },
-    zalo: { oauthBase: "https://zalo.invalid", apiBase: "https://zalo.invalid", timeoutMs: 1000 },
+    zalo: {
+        oauthBase: "https://zalo.invalid",
+        apiBase: "https://zalo.invalid",
+        businessBase: "https://zalo.invalid",
+        timeoutMs: 1000,
+    },
     mail: { allowPrivateHosts: false, platform: null, helloName: "world.invalid" },
     dataSources: { allowPrivateHosts: false },
     telegramUser: { app: null },
     platformAdmin: { admins: [] },
 })
+
+/** An AI pool with no keys: every provider sits out, so the api boots and its AI callers fall back without a provider call. */
+const keylessAiPool: ApiOptions["aiPool"] = {
+    chat: [
+        { id: "deepseek", baseUrl: "https://llm.invalid", keys: [], model: "world-chat", smartModel: null },
+        { id: "openrouter", baseUrl: "https://llm.invalid", keys: [], model: "world-chat", smartModel: null },
+    ],
+    embedding: {
+        id: "embeddings",
+        baseUrl: "https://llm.invalid",
+        keys: [],
+        model: "world-embedding",
+        smartModel: null,
+    },
+}
 
 /**
  * The api as it runs, over the local Supabase database the world points at (the global setup names it), with every provider set to
@@ -52,10 +72,7 @@ const localApiOptions = (): ApiOptions => ({
     },
     database: parsePrimaryDatabaseConfig(EnvSource.fromProcess()),
     supabase: { url: "https://supabase.invalid", serviceRoleKey: new Secret("world-proof") },
-    llm: {
-        embedding: { apiKey: null, baseUrl: "https://llm.invalid", model: "world-embedding" },
-        chat: { apiKey: null, baseUrl: "https://llm.invalid", model: "world-chat" },
-    },
+    aiPool: keylessAiPool,
     documents: {
         driveBase: "https://drive.invalid",
         oauthBase: null,

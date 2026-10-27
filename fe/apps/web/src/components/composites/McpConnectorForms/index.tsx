@@ -106,7 +106,7 @@ export const McpConnectorForms = (props: McpConnectorFormsProps) => {
                                 id="mcp-register-key"
                                 name="key"
                                 label={view.text.key}
-                                hint={view.text.keyHint}
+                                description={view.text.keyHint}
                                 isRequired
                                 isDisabled={view.isPending}
                                 value={view.values.key}
@@ -125,7 +125,7 @@ export const McpConnectorForms = (props: McpConnectorFormsProps) => {
                                 id="mcp-register-url"
                                 name="url"
                                 label={view.text.url}
-                                hint={view.text.urlHint}
+                                description={view.text.urlHint}
                                 isRequired
                                 isDisabled={view.isPending}
                                 value={view.values.url}
@@ -145,7 +145,7 @@ export const McpConnectorForms = (props: McpConnectorFormsProps) => {
                                 name="credential"
                                 kind="password"
                                 label={view.text.credential}
-                                hint={view.text.credentialHint}
+                                description={view.text.credentialHint}
                                 isDisabled={view.isPending}
                                 value={view.values.credential}
                                 onValueChange={props.on.registerField("credential")}

@@ -12,6 +12,7 @@ import { ThreadApprovalOutcomesService, ThreadAssignmentsService } from "@module
 import { ThreadWorkService } from "@modules/domain/thread-work"
 import { DecisionsModule } from "@modules/domain/decisions"
 import { OPENCLAW_RELOAD_SETTLE_MS, OpenclawAgentSyncModule } from "@modules/domain/openclaw-agent-sync"
+import { AiPoolClient } from "@modules/integrations/ai-pool"
 import { DeepseekModule } from "@modules/integrations/deepseek"
 import { OpenclawModule } from "@modules/integrations/openclaw"
 import { ContentGenerationCompletionService } from "@modules/domain/content-ai"
@@ -20,7 +21,13 @@ import type { ApiOptions } from "../api.options"
 /** The agents area of the API, in registration order. */
 export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
     OpenclawModule.register({ isGlobal: true, ...options.openclaw }),
-    DeepseekModule.register({ isGlobal: true, ...options.deepseek, generator: TextGeneratorService }),
+    DeepseekModule.register({
+        isGlobal: true,
+        ...options.deepseek,
+        generator: TextGeneratorService,
+        pool: AiPoolClient,
+        meter: UsageGateService,
+    }),
     AgentsModule.register({
         isGlobal: true,
         ports: {

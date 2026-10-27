@@ -3869,6 +3869,7 @@
     "tab_performance": "Performance",
     "tab_settings": "Settings",
     "noVersion": "No version applied yet",
+    "versionInUse": "Version {version} in use",
     "displayName": "Display name",
     "displayNameHint": "What your team sees in Office and on cards.",
     "saveName": "Save name",

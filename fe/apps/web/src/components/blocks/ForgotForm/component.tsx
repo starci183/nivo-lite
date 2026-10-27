@@ -6,9 +6,12 @@ import type { CheckEmailProps } from "../../composites/CheckEmail"
 import { EmailField } from "../../composites/EmailField"
 import { FORGOT_CENTER_CLASS_NAME } from "./classNames"
 
-/** The words and state of the forgot-password card, resolved by the connected block. */
+/** The two drawn shapes of the forgot-password card: the form, or the message once the request went out. */
+export type ForgotFormShape = "form" | "sent"
+
+/** The words and shape of the forgot-password card, resolved by the connected block. */
 export interface ForgotFormBaseProps {
-    readonly state: "form" | "sent"
+    readonly shape: ForgotFormShape
     readonly props: {
         readonly title: string
         readonly text: string
@@ -33,7 +36,7 @@ export interface ForgotFormBaseProps {
 /** Draws the forgot-password card, or the generic "if the account exists" message once the request went out. */
 export const ForgotFormBase = (props: ForgotFormBaseProps) => {
     const view = props.props
-    if (props.state === "sent") {
+    if (props.shape === "sent") {
         return (
             <AuthPanel label={view.sentTitle} title={view.sentTitle}>
                 <CheckEmail {...view.check} />

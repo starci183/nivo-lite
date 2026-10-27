@@ -20,6 +20,8 @@ import {
     invoiceOf,
     issuedOf,
     itemOf,
+    leadOf,
+    orderOf,
     proposalOf,
     renewedContract,
     transactionOf,
@@ -300,34 +302,8 @@ describe("ReconcilePaymentPerformerService perform", () => {
 describe("ReconcilePaymentPerformerService perform", () => {
     it("publishes the settled invoice with its known customer and order", async () => {
         const { service, leads, orders, events } = await build()
-        leads.find.mockResolvedValue({
-            id: "lead-1",
-            workspace_id: "ws-1",
-            contact_name: "Mai",
-            company: "Tea",
-            channel: "Zalo",
-            need: "Tea",
-            stage: "won",
-            context_summary: null,
-            phone: null,
-            email: null,
-        })
-        orders.find.mockResolvedValue({
-            id: "ord-1",
-            workspace_id: "ws-1",
-            lead_id: "lead-1",
-            inbound_event_id: null,
-            order_no: "SO-9",
-            items: "Tea",
-            amount_vnd: 450000,
-            status: "paid",
-            confirmed_by: "Lan",
-            confirmed_at: null,
-            created_at: "2026-10-12T09:00:00.000Z",
-            shipped_at: null,
-            carrier: null,
-            tracking_code: null,
-        })
+        leads.find.mockResolvedValue(leadOf())
+        orders.find.mockResolvedValue(orderOf())
 
         const performed = await service.perform(ctx, itemOf(), proposalOf(), { name: "Mai" })
 
@@ -416,10 +392,33 @@ describe("ReconcilePaymentPerformerService onReject", () => {
     })
 })
 
+describe("ReconcilePaymentPerformerService clearlyMatches", () => {
+    it.each([
+        [
+            "names one issued invoice of the same amount",
+            eventOf({ amount_vnd: 450000, external_ref: "INV1 thanh toan" }),
+            true,
+        ],
+        ["names no invoice", eventOf({ amount_vnd: 450000, external_ref: "chuyen tien", body: "CK" }), false],
+        ["names an invoice of another amount", eventOf({ amount_vnd: 400000, external_ref: "INV-1" }), false],
+        ["names two invoices", eventOf({ amount_vnd: 450000, external_ref: "INV-1 INV-2" }), false],
+        ["carries no amount", eventOf({ amount_vnd: null, external_ref: "INV-1" }), false],
+        ["is no longer on record", null, false],
+    ])("tells whether a bank credit that %s clearly matches", async (_name, event, clear) => {
+        const { service, inbound } = await build()
+        inbound.find.mockResolvedValue(event)
 
+        await expect(service.clearlyMatches(ctx, "ev-1")).resolves.toBe(clear)
+        expect(inbound.find).toHaveBeenCalledWith("ws-1", "ev-1")
+    })
+})
 
 describe("ReconcilePaymentPerformerService perform", () => {
-    const renewal = invoiceOf({ contract_id: "contract-1", period_ends_on: "2027-01-01", invoice_no: "INV-202612-0001" })
+    const renewal = invoiceOf({
+        contract_id: "contract-1",
+        period_ends_on: "2027-01-01",
+        invoice_no: "INV-202612-0001",
+    })
 
     it("moves the contract of a paid renewal invoice to its next term and records it", async () => {
         const { service, invoices, contracts, evidence } = await build()

@@ -5,7 +5,8 @@ import {
     renderContentCommandProgress,
 } from "@/components/composites/ContentSettingsCard"
 import { SlotView } from "@/components/composites/SlotView"
-import type { ContentChannel, ContentNote, ContentT } from "@/hooks/content"
+import type { ContentChannel, ContentNote } from "@/hooks/content"
+import type { ContentT } from "@/modules/types"
 import { FORM_CLASS_NAME } from "./classNames"
 
 /** What the quick idea command draws. */

@@ -1,6 +1,5 @@
 import { Input, NumberField, SegmentedControl, Select } from "@starci/grammar/common"
-import type { HiringSay } from "@/hooks/hiring"
-import type { HiringJobFieldCommands, HiringJobValues } from "@/hooks/hiringJobs"
+import type { HiringJobFieldCommands, HiringJobValues, HiringSay } from "@/modules/types"
 import { GRID_CLASS_NAME } from "./classNames"
 
 /** One employment or payment unit choice. */

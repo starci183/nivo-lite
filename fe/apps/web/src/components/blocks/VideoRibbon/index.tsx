@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { useVideoLibrary } from "@/hooks/video"
 import { VideoRibbonBase } from "./component"
 
@@ -8,17 +9,21 @@ import { VideoRibbonBase } from "./component"
 export const VideoRibbon = () => {
     const t = useTranslations("video")
     const frame = useTranslations("agentDashboard")
+    const slotLabels = useSlotLabels()
     const library = useVideoLibrary()
     return (
         <VideoRibbonBase
             props={{
                 label: frame("ribbonAria"),
-                isLoading: library.isLoading,
-                isFailed: library.figuresFailed,
-                failedTitle: t("loadFailedTitle"),
-                failedBody: t("loadFailedBody"),
-                items: library.figures,
+                slot: slotOfSwr({
+                    data: library.figuresFailed || library.isLoading ? undefined : library.figures,
+                    error: library.figuresFailed ? t("loadFailedBody") : undefined,
+                    isLoading: library.isLoading,
+                }),
+                labels: slotLabels(t("loadFailedTitle")),
+                placeholder: library.figures,
             }}
+            on={{ retry: library.reload }}
         />
     )
 }

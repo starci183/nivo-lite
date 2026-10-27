@@ -38,7 +38,7 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
                 id="oa-base"
                 name="baseUrl"
                 label={text.baseUrl}
-                hint={text.baseUrlHint}
+                description={text.baseUrlHint}
                 isDisabled={isDisabled}
                 value={values.baseUrl}
                 onValueChange={(value) => onField("baseUrl", value)}
@@ -54,7 +54,7 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
                     id="oa-auth-name"
                     name="authName"
                     label={text.authName}
-                    hint={text.authNameError}
+                    description={text.authNameError}
                     isDisabled={isDisabled}
                     value={values.authName}
                     onValueChange={(value) => onField("authName", value)}
@@ -66,7 +66,7 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
                     name="authValue"
                     label={text.authValue}
                     kind="password"
-                    hint={text.secretHint}
+                    description={text.secretHint}
                     isDisabled={isDisabled}
                     value={values.authValue}
                     onValueChange={(value) => onField("authValue", value)}
@@ -87,7 +87,7 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
                         name="authPass"
                         label={text.password}
                         kind="password"
-                        hint={text.secretHint}
+                        description={text.secretHint}
                         isDisabled={isDisabled}
                         value={values.authPassword}
                         onValueChange={(value) => onField("authPassword", value)}

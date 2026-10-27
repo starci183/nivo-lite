@@ -21,5 +21,8 @@ export const useHiringWorkbench = () => {
         isLoading,
         isFailed: error !== undefined,
         isForbidden: isForbiddenFailure(error),
+        reload: () => {
+            void swrRead.mutate()
+        },
     }
 }

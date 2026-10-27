@@ -26,5 +26,8 @@ export const useVideoLibrary = () => {
         media: references.media,
         figures: references.figures,
         figuresFailed: failed || references.figuresFailed,
+        reload: () => {
+            void Promise.allSettled([scope.mutate(), projectsQuery.mutate(), brandQuery.mutate()])
+        },
     }
 }

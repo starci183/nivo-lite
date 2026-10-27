@@ -6,9 +6,9 @@ import { useMemo } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { z } from "zod"
 import { parseAmount } from "@/hooks/sales"
-import { EMPTY_TYPED, fieldKey, type TypedDecisionValues } from "@/hooks/salesdecisions"
+import { EMPTY_TYPED, fieldKey } from "@/modules/utils"
 
-import type { SalesDecision } from "@/modules/types"
+import type { SalesDecision, TypedDecisionValues } from "@/modules/types"
 
 /** The typed edits of Sales cards, validated before an approval is queued. */
 export const useSalesDecisionForm = () => {

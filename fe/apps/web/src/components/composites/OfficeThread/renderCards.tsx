@@ -21,6 +21,8 @@ export const renderOfficeThreadException = (
             <OfficeExceptionForm
                 item={item}
                 text={text}
+                draft={view.draftOf(item.key)}
+                onEdit={props.on.editCard}
                 isBusy={view.busyId === item.id}
                 onDecide={props.on.decideWork}
             />
@@ -78,6 +80,8 @@ export const renderOfficeThreadApproval = (
         approval={item}
         avatar={<OfficeAvatar avatar={item.avatar} size="sm" />}
         text={text}
+        draft={view.draftOf(item.key)}
+        onEdit={props.on.editCard}
         isBusy={view.busyId === item.id}
         onDecide={props.on.decideApproval}
     />

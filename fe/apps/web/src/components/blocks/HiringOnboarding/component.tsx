@@ -1,5 +1,5 @@
 import { Alert, Badge, Button, Checkbox, EmptyNotice, Heading, Meter, SurfaceCard, Text } from "@starci/grammar/common"
-import type { HiringSay } from "@/hooks/hiring"
+import type { HiringSay } from "@/modules/types"
 import { CARD_CLASS_NAME, CHIPS_CLASS_NAME } from "./classNames"
 
 /** One hired person with the steps before the first day. */

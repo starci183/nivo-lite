@@ -11,7 +11,12 @@ import { challengeOf } from "./zalo-oauth.policy"
 /** A partial-object matcher, typed `unknown` so it flows into any slot. */
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 
-const options: ZaloOptions = { oauthBase: "https://oauth.test", apiBase: "https://api.test", timeoutMs: 5000 }
+const options: ZaloOptions = {
+    oauthBase: "https://oauth.test",
+    apiBase: "https://api.test",
+    businessBase: "https://business.test",
+    timeoutMs: 5000,
+}
 
 const build = async () => {
     const http = mock<HttpClient>()
@@ -128,13 +133,23 @@ describe("ZaloClient / sendCsText", () => {
         })
     })
 
-    it("carries the numeric error of a refusal Zalo answered with HTTP 200", async () => {
+    it("classifies a refusal Zalo answered with HTTP 200 and keeps its numeric error", async () => {
         const { client, http } = await build()
         http.request.mockResolvedValue({ status: 200, body: { error: -230, message: "window closed" } })
 
         await expect(client.sendCsText("access", "user-1", "Hello")).rejects.toMatchObject({
-            code: ZaloErrorCode.Rejected,
+            code: ZaloErrorCode.WindowClosed,
             params: { path: "/v3.0/oa/message/cs", reason: "window closed", zaloCode: -230 },
+        })
+    })
+
+    it("keeps a refusal with an unlisted numeric error a plain rejection", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({ status: 200, body: { error: -1, message: "odd" } })
+
+        await expect(client.sendCsText("access", "user-1", "Hello")).rejects.toMatchObject({
+            code: ZaloErrorCode.Rejected,
+            params: { zaloCode: -1 },
         })
     })
 
@@ -339,5 +354,107 @@ describe("ZaloClient / articles", () => {
         http.request.mockResolvedValueOnce({ status: 200, body: { error: 0, data: {} } })
 
         await expect(client.articles("access")).resolves.toEqual([])
+    })
+})
+
+describe("ZaloClient / sendCsImage", () => {
+    it("sends the image as a media template with one image element", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({ status: 200, body: { error: 0, data: { message_id: "m-2" } } })
+
+        await expect(
+            client.sendCsImage("access", "user-1", "https://qr.sepay.vn/img?acc=1&amount=5"),
+        ).resolves.toBeUndefined()
+
+        expect(http.request).toHaveBeenCalledWith({
+            method: "POST",
+            url: "https://api.test/v3.0/oa/message/cs",
+            headers: { access_token: "access" },
+            body: {
+                recipient: { user_id: "user-1" },
+                message: {
+                    attachment: {
+                        type: "template",
+                        payload: {
+                            template_type: "media",
+                            elements: [{ media_type: "image", url: "https://qr.sepay.vn/img?acc=1&amount=5" }],
+                        },
+                    },
+                },
+            },
+            timeoutMs: 5000,
+        })
+    })
+
+    it("classifies a refusal of the image", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({ status: 200, body: { error: -213, message: "not follower" } })
+
+        await expect(client.sendCsImage("access", "user-1", "https://qr.sepay.vn/img")).rejects.toMatchObject({
+            code: ZaloErrorCode.NotFollower,
+            params: { zaloCode: -213 },
+        })
+    })
+})
+
+describe("ZaloClient / sendZns", () => {
+    const message = {
+        phone: "84912345678",
+        templateId: "246810",
+        templateData: { customer_name: "Lan", amount: 1500000 },
+        trackingId: "msg-1",
+    }
+
+    it("posts the template to the business host with the OA token and answers the message id", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({ status: 200, body: { error: 0, message: "Success", data: { msg_id: "z-9" } } })
+
+        await expect(client.sendZns("access", message)).resolves.toEqual({ messageId: "z-9" })
+
+        expect(http.request).toHaveBeenCalledWith({
+            method: "POST",
+            url: "https://business.test/message/template",
+            headers: { access_token: "access" },
+            body: {
+                phone: "84912345678",
+                template_id: "246810",
+                template_data: { customer_name: "Lan", amount: 1500000 },
+                tracking_id: "msg-1",
+            },
+            timeoutMs: 5000,
+        })
+    })
+
+    it("answers an empty message id when Zalo gives none", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({ status: 200, body: { error: 0, data: {} } })
+
+        await expect(client.sendZns("access", message)).resolves.toEqual({ messageId: "" })
+    })
+
+    it.each([
+        [-108, ZaloErrorCode.RecipientUnreachable],
+        [-118, ZaloErrorCode.RecipientUnreachable],
+        [-109, ZaloErrorCode.TemplateRejected],
+        [-131, ZaloErrorCode.TemplateRejected],
+        [-115, ZaloErrorCode.QuotaExhausted],
+        [-117, ZaloErrorCode.NotPermitted],
+        [-124, ZaloErrorCode.TokenRejected],
+        [-999, ZaloErrorCode.Rejected],
+    ])("maps the ZNS error %s to %s", async (zaloCode, code) => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({ status: 200, body: { error: zaloCode, message: "no" } })
+
+        await expect(client.sendZns("access", message)).rejects.toMatchObject({
+            code,
+            params: { path: "/message/template", zaloCode },
+        })
+    })
+
+    it("maps a transport failure to unavailable", async () => {
+        const { client, http } = await build()
+        http.request.mockRejectedValue(new Error("down"))
+
+        await expect(client.sendZns("access", message)).rejects.toMatchObject({ code: ZaloErrorCode.Unavailable })
     })
 })

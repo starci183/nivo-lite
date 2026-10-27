@@ -1,6 +1,5 @@
 import { Input, NumberField, Textarea } from "@starci/grammar/common"
-import type { HiringSay } from "@/hooks/hiring"
-import type { HiringJobFieldCommands, HiringJobValues } from "@/hooks/hiringJobs"
+import type { HiringJobFieldCommands, HiringJobValues, HiringSay } from "@/modules/types"
 import { GRID_CLASS_NAME } from "./classNames"
 
 /** The words, values and changes of the requirement fields of a job. */

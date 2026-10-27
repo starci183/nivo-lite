@@ -14,5 +14,8 @@ export const useInventoryWorkbenchData = () => {
         data: data === undefined ? undefined : toInventoryWorkbenchData(data),
         error,
         isLoading,
+        reload: () => {
+            void swrRead.mutate()
+        },
     }
 }

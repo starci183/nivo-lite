@@ -1,4 +1,6 @@
 import { Badge, Breadcrumbs, Button, ListRow, SectionHeader, SurfaceListCard, TextAction } from "@starci/grammar/common"
+import { SlotView } from "@/components/composites/SlotView"
+import type { SlotLabels } from "@/modules/types"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import { APP_ROUTES } from "@/modules/routes"
 import { HEAD_CLASS, STACK_CLASS } from "./classNames"
@@ -44,14 +46,12 @@ const DevelopersWebhooks = (props: DevelopersWebhooksProps) => (
 
 /** Props for {@link DevelopersPanelBase}. */
 export interface DevelopersPanelBaseProps {
-    readonly state: {
-        /** Owner or manager: the page; staff: the friendly 403. */
-        readonly isAllowed: boolean
+    readonly props: {
+        /** True for staff: the forbidden notice replaces the page. */
+        readonly isForbidden: boolean
         readonly webhooks: ReadonlyArray<DevelopersWebhookRow>
         readonly canManageWebhooks: boolean
         readonly webhooksView: DevelopersWebhooksView
-    }
-    readonly props: {
         readonly crumbLabel: string
         readonly crumbHome: string
         readonly eyebrow: string
@@ -60,9 +60,8 @@ export interface DevelopersPanelBaseProps {
         readonly backLabel: string
         readonly eventsTitle: string
         readonly eventsBody: string
-        readonly forbiddenTitle: string
-        readonly forbiddenBody: string
-        readonly forbiddenBack: string
+        /** The words of the status notice; `forbidden` is what staff read. */
+        readonly slotLabels: SlotLabels
     }
     readonly on: {
         /** Opens the wizard of a new outgoing webhook. */
@@ -72,56 +71,49 @@ export interface DevelopersPanelBaseProps {
     }
 }
 
-/** Draws the head and the outgoing events of the "Advanced" page, or the friendly 403 staff see. */
-export const DevelopersPanelBase = (props: DevelopersPanelBaseProps) =>
-    props.state.isAllowed ? (
-        <>
-            <div className={HEAD_CLASS}>
-                <Breadcrumbs
-                    label={props.props.crumbLabel}
-                    items={[
-                        { id: "home", label: props.props.crumbHome, href: APP_ROUTES.dashboard },
-                        { id: "developers", label: props.props.title },
-                    ]}
-                />
-                <SectionHeader
-                    level={1}
-                    eyebrow={props.props.eyebrow}
-                    title={props.props.title}
-                    description={props.props.description}
-                />
-            </div>
-            <div>
-                <TextAction href={APP_ROUTES.automations} size="sm">
-                    {props.props.backLabel}
-                </TextAction>
-            </div>
-            <div className={STACK_CLASS}>
-                <SectionHeader level={2} title={props.props.eventsTitle} description={props.props.eventsBody} />
-                <DevelopersWebhooks
-                    rows={props.state.webhooks}
-                    canManage={props.state.canManageWebhooks}
-                    view={props.state.webhooksView}
-                    onAdd={props.on.add}
-                    onEdit={props.on.edit}
-                />
-            </div>
-        </>
-    ) : (
-        <>
-            <SectionHeader
-                level={1}
-                eyebrow={props.props.eyebrow}
-                title={props.props.forbiddenTitle}
-                description={props.props.forbiddenBody}
-            />
-            <div>
-                <TextAction href={APP_ROUTES.chat} size="sm">
-                    {props.props.forbiddenBack}
-                </TextAction>
-            </div>
-        </>
-    )
+/** Draws the head and the outgoing events of the "Advanced" page, or the forbidden notice staff see. */
+export const DevelopersPanelBase = (props: DevelopersPanelBaseProps) => (
+    <SlotView
+        slot={{ isForbidden: props.props.isForbidden, items: true }}
+        placeholder={true}
+        labels={props.props.slotLabels}
+    >
+        {() => (
+            <>
+                <div className={HEAD_CLASS}>
+                    <Breadcrumbs
+                        label={props.props.crumbLabel}
+                        items={[
+                            { id: "home", label: props.props.crumbHome, href: APP_ROUTES.dashboard },
+                            { id: "developers", label: props.props.title },
+                        ]}
+                    />
+                    <SectionHeader
+                        level={1}
+                        eyebrow={props.props.eyebrow}
+                        title={props.props.title}
+                        description={props.props.description}
+                    />
+                </div>
+                <div>
+                    <TextAction href={APP_ROUTES.automations} size="sm">
+                        {props.props.backLabel}
+                    </TextAction>
+                </div>
+                <div className={STACK_CLASS}>
+                    <SectionHeader level={2} title={props.props.eventsTitle} description={props.props.eventsBody} />
+                    <DevelopersWebhooks
+                        rows={props.props.webhooks}
+                        canManage={props.props.canManageWebhooks}
+                        view={props.props.webhooksView}
+                        onAdd={props.on.add}
+                        onEdit={props.on.edit}
+                    />
+                </div>
+            </>
+        )}
+    </SlotView>
+)
 
 /** Draws the connected outgoing webhook rows and their available actions. */
 const ConnectedWebhooks = (props: DevelopersWebhooksProps) => (

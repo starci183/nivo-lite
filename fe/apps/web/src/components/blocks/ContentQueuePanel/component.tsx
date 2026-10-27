@@ -2,7 +2,8 @@ import { Alert, Button, EmptyNotice, ListRow, SurfaceListCard } from "@starci/gr
 import { ContentChannelBadges } from "@/components/leaves/ContentChannelBadges"
 import { ContentPostFacts } from "@/components/leaves/ContentPostFacts"
 import { ContentQueueCard } from "@/components/leaves/ContentQueueCard"
-import type { ContentNote, ContentT, PostView, QuoteView } from "@/hooks/content"
+import type { ContentNote } from "@/hooks/content"
+import type { ContentT, PostView, QuoteView } from "@/modules/types"
 import { PANEL_CLASS_NAME } from "./classNames"
 
 /** A post waiting for the owner, with the text of each channel and whether a decision is open for it. */

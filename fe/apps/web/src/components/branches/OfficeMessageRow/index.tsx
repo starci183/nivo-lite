@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
 import { Badge, Button, ChatBubble, IconButton, Text, Tooltip } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
@@ -13,12 +12,13 @@ type OfficeMessageRowProps = {
     readonly text: OfficeText
     /** The status line under this bubble: the view carries one only for my last line, and only while nothing waits to send. */
     readonly status: ReactNode
+    /** True while this line's text shows as just copied. */
+    readonly isCopied: boolean
     readonly onReply: (handle: string) => void
+    readonly onCopy: (key: string, text: string) => void
 }
 
 type BodyProps = { readonly parts: ReadonlyArray<OfficeBodyPart> }
-
-const COPIED_MS = 1500
 
 /** The body with its @mentions highlighted. */
 const Body = (props: BodyProps) => (
@@ -81,20 +81,7 @@ const MessageActions = ({ message, text, isCopied, onCopy, onReply }: MessageAct
 /** One chat line: a bubble of a person, an agent or me, or a centred notice for a system line. */
 export const OfficeMessageRow = (props: OfficeMessageRowProps) => {
     const { message } = props
-    const [isCopied, setIsCopied] = useState(false)
-
-    useEffect(() => {
-        if (!isCopied) return undefined
-        const timer = window.setTimeout(() => setIsCopied(false), COPIED_MS)
-        return () => window.clearTimeout(timer)
-    }, [isCopied])
-
-    const onCopy = () => {
-        void navigator.clipboard
-            .writeText(message.copyText)
-            .then(() => setIsCopied(true))
-            .catch(() => setIsCopied(false))
-    }
+    const onCopy = () => props.onCopy(message.key, message.copyText)
 
     if (message.variant === "notice") {
         return (
@@ -129,7 +116,7 @@ export const OfficeMessageRow = (props: OfficeMessageRowProps) => {
                 <MessageActions
                     message={message}
                     text={props.text}
-                    isCopied={isCopied}
+                    isCopied={props.isCopied}
                     onCopy={onCopy}
                     onReply={props.onReply}
                 />

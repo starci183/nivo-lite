@@ -14,6 +14,12 @@ export enum ChannelsLogEvent {
     ZaloAuthorizationRefused = "channels.zalo.authorization-refused",
     /** The first save of renewed Zalo tokens failed and is tried once more. */
     ZaloSaveRetried = "channels.zalo.save-retried",
+    /** The Zalo text went out but the QR image that should follow it was refused; the link in the text still works. */
+    QrImageFailed = "channels.zalo.qr-image-failed",
+    /** The Zalo chat window is closed and the ZNS fallback could not be used; the reason rides in the fields. */
+    ZnsFallbackSkipped = "channels.zalo.zns-fallback-skipped",
+    /** A message outside the chat window went out as a ZNS template message. */
+    ZnsSent = "channels.zalo.zns-sent",
     /** A wizard step was refused for a reason the owner can act on; the connection id and the command ride in the fields. */
     ZaloWizardRefused = "channels.zalo.wizard-refused",
 }

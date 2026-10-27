@@ -24,8 +24,6 @@ import { ConnectionLibraryBase, type LibraryCard } from "./component"
 /** What the page hands the library. */
 type ConnectionLibraryProps = {
     readonly items: ReadonlyArray<Connection>
-    /** STATE-8: the catalog is known, the workspace connection counts are not. */
-    readonly isLoading?: boolean
 }
 
 type Audience = Exclude<ConnectorAudience, "any">
@@ -41,7 +39,6 @@ interface BuildConnectionLibraryStateInput {
     readonly locale: ReturnType<typeof useLocale>
     readonly category: ConnectorCategory | "all"
     readonly sort: "popular" | "name"
-    readonly isLoading: boolean
     readonly countOf: Map<string, number>
     readonly setText: import("react").Dispatch<import("react").SetStateAction<string>>
     readonly setSort: import("react").Dispatch<import("react").SetStateAction<"popular" | "name">>
@@ -58,7 +55,6 @@ const buildConnectionLibraryState = ({
     locale,
     category,
     sort,
-    isLoading,
     countOf,
     setText,
     setSort,
@@ -88,9 +84,7 @@ const buildConnectionLibraryState = ({
         .sort(sort === "name" ? byName : byPopularity)
     const cards: ReadonlyArray<LibraryCard> = shown.map(({ entry, name, blurb }) => {
         const count = entry.provider === undefined ? 0 : (countOf.get(entry.provider) ?? 0)
-        const badge =
-            catalogBadgeOf(entry, count, t) ??
-            (isLoading ? { tone: "neutral" as const, label: t("statusSoon"), isDot: false } : null)
+        const badge = catalogBadgeOf(entry, count, t)
         return {
             id: entry.id,
             name,
@@ -117,7 +111,6 @@ const buildConnectionLibraryState = ({
         perCategory,
         audience,
         cards,
-        isLoading,
     }
 }
 
@@ -139,7 +132,6 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
         locale,
         category,
         sort,
-        isLoading: props.isLoading ?? false,
         countOf,
         setText,
         setSort,
@@ -166,7 +158,7 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
 const connectionLibraryProps = (
     connected: NonNullable<ReturnType<typeof buildConnectionLibraryState>>,
 ): Parameters<typeof ConnectionLibraryBase>[0]["props"] => {
-    const { text, t, sort, category, searched, perCategory, audience, cards, isLoading } = connected
+    const { text, t, sort, category, searched, perCategory, audience, cards } = connected
     return {
         text,
         searchLabel: t("libSearch"),
@@ -192,6 +184,5 @@ const connectionLibraryProps = (
         emptyMessage: t("libEmpty"),
         emptyHint: t("libEmptyHint"),
         cards,
-        isLoading,
     }
 }

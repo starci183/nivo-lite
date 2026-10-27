@@ -1,6 +1,6 @@
 import { EmptyNotice, ListRow, Meter, SectionHeader, SurfaceListCard } from "@starci/grammar/common"
 import { ContentMonthBar } from "@/components/leaves/ContentMonthBar"
-import type { ContentT } from "@/hooks/content"
+import type { ContentT } from "@/modules/types"
 import { PANEL_CLASS_NAME } from "./classNames"
 
 /** One meter row of the balance. */

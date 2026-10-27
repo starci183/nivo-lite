@@ -1,17 +1,26 @@
 import { toast as heroToast } from "@heroui/react"
+import {
+    CheckCircleIcon,
+    ExclamationTriangleIcon,
+    InformationCircleIcon,
+    XCircleIcon,
+} from "@heroicons/react/24/outline"
 import { IconTile } from "@starci/grammar/common"
 import type { ReactNode } from "react"
-import { nivoIconSource } from "@/components/leaves/Icon"
 
 /** Options a status toast accepts: the HeroUI ones, minus the `variant` each status already implies. */
 type StatusToastOptions = Parameters<typeof heroToast.success>[1]
 
-/** Per-status indicator of the one icon set, injected so every app toast reads the same; a caller can override `options.indicator`. */
+/**
+ * Per-status indicator of the one icon set, injected so every app toast reads the same; a caller can override `options.indicator`.
+ * The glyphs are the ones the Icon leaf maps complete/failure/warning/info to: this module is a glyph owner (ICON-6), because it
+ * sits in the modules tier below every component it could ask.
+ */
 const INDICATOR: Record<"success" | "danger" | "warning" | "info", ReactNode> = {
-    success: <IconTile source={nivoIconSource("complete", "leading")} tone="success" size="sm" />,
-    danger: <IconTile source={nivoIconSource("failure", "leading")} tone="danger" size="sm" />,
-    warning: <IconTile source={nivoIconSource("warning", "leading")} tone="warning" size="sm" />,
-    info: <IconTile source={nivoIconSource("info", "leading")} tone="accent" size="sm" />,
+    success: <IconTile source={CheckCircleIcon} tone="success" size="sm" />,
+    danger: <IconTile source={XCircleIcon} tone="danger" size="sm" />,
+    warning: <IconTile source={ExclamationTriangleIcon} tone="warning" size="sm" />,
+    info: <IconTile source={InformationCircleIcon} tone="accent" size="sm" />,
 }
 
 /**

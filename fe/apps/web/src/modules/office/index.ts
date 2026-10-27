@@ -49,3 +49,4 @@ export { toOfficeApproval, toOfficeCandidate, toOfficeMessage, toOfficeWork } fr
 export { toOfficeAgents, toOfficeLead, toOfficePeople, toOfficeTask } from "./office.team"
 export { NIVO_AVATAR } from "./office.words"
 export type { OfficeContext, OfficeWords } from "./office.words"
+export { EMPTY_OFFICE_CARD_DRAFT } from "./office.drafts"

@@ -1,5 +1,7 @@
 import type { ReactNode } from "react"
 import { Drawer } from "@starci/grammar/common"
+import { SlotView } from "@/components/composites/SlotView"
+import { WizardFrame } from "@/components/composites/WizardFrame"
 import { CsvImportWizard } from "@/components/blocks/CsvImportWizard"
 import { DatabaseWizard } from "@/components/blocks/DatabaseWizard"
 import { GoogleWizard } from "@/components/blocks/GoogleWizard"
@@ -12,7 +14,7 @@ import { TelegramUserWizard } from "@/components/blocks/TelegramUserWizard"
 import { TelegramWizard } from "@/components/blocks/TelegramWizard"
 import { WebhookWizard } from "@/components/blocks/WebhookWizard"
 import { ZaloWizard } from "@/components/blocks/ZaloWizard"
-import type { AgentOption, Provider, ProviderKind } from "@/modules/types"
+import type { AgentOption, DataSlot, Provider, ProviderKind, SlotLabels } from "@/modules/types"
 
 /** The wizard the URL asks for. */
 export interface WizardTargetView {
@@ -26,6 +28,19 @@ export interface WizardTargetView {
     readonly money: "sepay" | "payos" | "casso" | null
 }
 
+/** What the wizards are offered once the workspace reads are in. */
+export interface WizardBoard {
+    /** Every workspace agent (the data wizards offer all of them). */
+    readonly agents: ReadonlyArray<AgentOption>
+    /** The agents whose module may use this provider. */
+    readonly eligible: ReadonlyArray<AgentOption>
+    /** The workspace already has a default SMTP sender. */
+    readonly hasDefaultSender: boolean
+}
+
+/** The board the drawer draws a placeholder for while the workspace reads are on their way. */
+const BOARD_PLACEHOLDER: WizardBoard = { agents: [], eligible: [], hasDefaultSender: false }
+
 /** The drawer and the wizard inside it. */
 export interface ConnectionWizardOverlayBaseProps {
     readonly props: {
@@ -33,14 +48,12 @@ export interface ConnectionWizardOverlayBaseProps {
         readonly closeLabel: string
         readonly ownerEmail: string
         readonly target: WizardTargetView | null
-        /** Every workspace agent (the data wizards offer all of them). */
-        readonly agents: ReadonlyArray<AgentOption>
-        /** The agents whose module may use this provider. */
-        readonly eligible: ReadonlyArray<AgentOption>
-        /** The workspace already has a default SMTP sender. */
-        readonly hasDefaultSender: boolean
+        /** The agents and sender the wizards are offered, read from the workspace. */
+        readonly board: DataSlot<WizardBoard>
+        readonly slotLabels: SlotLabels
     }
     readonly on: {
+        readonly retry: () => void
         /** `changed` is true when something may have been saved, so the page refreshes. */
         readonly close: (changed: boolean) => void
     }
@@ -80,12 +93,85 @@ const DataWizard = (props: DataWizardSwitchProps) => {
     )
 }
 
+/** What the wizard of one kind is handed: the open target, the board and the way out. */
+interface KindWizardProps {
+    readonly target: WizardTargetView
+    readonly board: WizardBoard
+    readonly ownerEmail: string
+    readonly onClose: (changed: boolean) => void
+}
+
+/** The wizard of each kind of provider; the key keeps a resumed connection apart from a new one. */
+const KIND_WIZARDS: Readonly<Record<ProviderKind, (props: KindWizardProps) => ReactNode>> = {
+    money: ({ target, board, onClose }) =>
+        target.money === null ? null : (
+            <MoneyWizard
+                key={target.resumeId ?? "new"}
+                provider={target.money}
+                resumeId={target.resumeId}
+                agents={board.eligible}
+                onClose={onClose}
+            />
+        ),
+    telegram: ({ board, onClose }) => <TelegramWizard agents={board.eligible} onClose={onClose} />,
+    data: ({ target, board, onClose }) => (
+        <DataWizard
+            key={target.resumeId ?? "new"}
+            provider={target.provider}
+            agents={board.agents}
+            {...(target.resumeId === undefined ? {} : { resumeId: target.resumeId })}
+            onClose={onClose}
+        />
+    ),
+    zalo: ({ target, board, onClose }) => (
+        <ZaloWizard
+            key={target.resumeId ?? "new"}
+            resumeId={target.resumeId}
+            returned={target.returned}
+            agents={board.eligible}
+            onClose={onClose}
+        />
+    ),
+    meta: ({ target, board, onClose }) => (
+        <MetaWizard
+            key={target.resumeId ?? "new"}
+            resumeId={target.resumeId}
+            returned={target.returned}
+            agents={board.eligible}
+            onClose={onClose}
+        />
+    ),
+    webhook: ({ onClose }) => <WebhookWizard onClose={onClose} />,
+    google: ({ onClose }) => <GoogleWizard onClose={onClose} />,
+    email: ({ board, ownerEmail, onClose }) => (
+        <SmtpWizard ownerEmail={ownerEmail} hasDefault={board.hasDefaultSender} onClose={onClose} />
+    ),
+}
+
+/** What the drawer body draws: the open wizard, and whether the workspace reads are still on their way. */
+interface WizardBodyProps {
+    readonly isSkeleton: boolean
+    readonly wizard: KindWizardProps | null
+}
+
+/** The wizard of the open target, or a placeholder frame while the workspace reads are on their way. */
+const WizardBody = (props: WizardBodyProps) => {
+    if (props.isSkeleton) {
+        return (
+            <WizardFrame title="" stepLabel="" steps={[""]} index={0} isSkeleton footer={null}>
+                {null}
+            </WizardFrame>
+        )
+    }
+    if (props.wizard === null) return null
+    return <>{KIND_WIZARDS[props.wizard.target.kind](props.wizard)}</>
+}
+
 /** The wizard drawer of every provider: one Drawer, one wizard chosen by the provider's kind. */
 export const ConnectionWizardOverlayBase = (props: ConnectionWizardOverlayBaseProps) => {
     const wizard = props.props
     const target = wizard.target
     const onClose = props.on.close
-    const resume = target?.resumeId === undefined ? {} : { resumeId: target.resumeId }
     return (
         <Drawer
             isOpen={target !== null}
@@ -96,48 +182,19 @@ export const ConnectionWizardOverlayBase = (props: ConnectionWizardOverlayBasePr
             closeLabel={wizard.closeLabel}
             placement="right"
         >
-            {target?.kind === "money" && target.money !== null ? (
-                <MoneyWizard
-                    key={target.resumeId ?? "new"}
-                    provider={target.money}
-                    resumeId={target.resumeId}
-                    agents={wizard.eligible}
-                    onClose={onClose}
-                />
-            ) : null}
-            {target?.kind === "telegram" ? <TelegramWizard agents={wizard.eligible} onClose={onClose} /> : null}
-            {target?.kind === "data" ? (
-                <DataWizard
-                    key={target.resumeId ?? "new"}
-                    provider={target.provider}
-                    agents={wizard.agents}
-                    {...resume}
-                    onClose={onClose}
-                />
-            ) : null}
-            {target?.kind === "zalo" ? (
-                <ZaloWizard
-                    key={target.resumeId ?? "new"}
-                    resumeId={target.resumeId}
-                    returned={target.returned}
-                    agents={wizard.eligible}
-                    onClose={onClose}
-                />
-            ) : null}
-            {target?.kind === "meta" ? (
-                <MetaWizard
-                    key={target.resumeId ?? "new"}
-                    resumeId={target.resumeId}
-                    returned={target.returned}
-                    agents={wizard.eligible}
-                    onClose={onClose}
-                />
-            ) : null}
-            {target?.kind === "webhook" ? <WebhookWizard onClose={onClose} /> : null}
-            {target?.kind === "google" ? <GoogleWizard onClose={onClose} /> : null}
-            {target?.kind === "email" ? (
-                <SmtpWizard ownerEmail={wizard.ownerEmail} hasDefault={wizard.hasDefaultSender} onClose={onClose} />
-            ) : null}
+            <SlotView
+                slot={wizard.board}
+                placeholder={BOARD_PLACEHOLDER}
+                labels={wizard.slotLabels}
+                onRetry={props.on.retry}
+            >
+                {(board, isSkeleton) => (
+                    <WizardBody
+                        isSkeleton={isSkeleton}
+                        wizard={target === null ? null : { target, board, ownerEmail: wizard.ownerEmail, onClose }}
+                    />
+                )}
+            </SlotView>
         </Drawer>
     )
 }

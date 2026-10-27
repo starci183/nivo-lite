@@ -274,7 +274,7 @@ export class WorkEngineService {
 
     /** Marks the item failed and tells the log, the Office and the inbound event; none of those can fail the failure. */
     private async fail(ctx: WorkContext, item: WorkItem, cause: unknown): Promise<WorkItem> {
-        const text = failureText(cause)
+        const text = failureText(cause, (key, params) => this.catalog.get(key, params, ctx.locale))
         const failed = await this.markFailed(item, text)
         await this.recorder.failed(ctx, item, text)
         return failed

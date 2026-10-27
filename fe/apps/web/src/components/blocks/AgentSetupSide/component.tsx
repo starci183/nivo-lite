@@ -4,8 +4,7 @@ import { SetupGatesCard } from "@/components/composites/SetupGatesCard"
 import { SetupKnowledgeCard } from "@/components/composites/SetupKnowledgeCard"
 import { SetupVersionsCard } from "@/components/composites/SetupVersionsCard"
 import { SlotView } from "@/components/composites/SlotView"
-import type { SetupSideView } from "@/hooks/setupSide"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import type { DataSlot, SetupSideView, SlotLabels } from "@/modules/types"
 import { ALERT, SIDE } from "./classNames"
 
 /** The side column as a slot, and the commands of the checklist. */
@@ -34,7 +33,7 @@ export const AgentSetupSideBase = (props: AgentSetupSideBaseProps) => (
         labels={props.props.slotLabels}
         onRetry={props.on.retry}
     >
-        {(view) => (
+        {(view, isSkeleton) => (
             <div className={SIDE}>
                 {view.unmet === null ? null : (
                     <div className={ALERT}>
@@ -52,6 +51,7 @@ export const AgentSetupSideBase = (props: AgentSetupSideBaseProps) => (
                 )}
                 <SetupGatesCard
                     {...view.gates}
+                    isSkeleton={isSkeleton}
                     gateFailureTitle=""
                     gateFailure=""
                     onEditText={props.on.editText}
@@ -61,11 +61,11 @@ export const AgentSetupSideBase = (props: AgentSetupSideBaseProps) => (
                     onApply={props.on.apply}
                 />
                 <Divider semantics="presentation" />
-                <SetupDraftCard {...view.draft} />
+                <SetupDraftCard {...view.draft} isSkeleton={isSkeleton} />
                 <Divider semantics="presentation" />
-                <SetupKnowledgeCard {...view.knowledge} />
+                <SetupKnowledgeCard {...view.knowledge} isSkeleton={isSkeleton} />
                 <Divider semantics="presentation" />
-                <SetupVersionsCard {...view.versions} />
+                <SetupVersionsCard {...view.versions} isSkeleton={isSkeleton} />
             </div>
         )}
     </SlotView>

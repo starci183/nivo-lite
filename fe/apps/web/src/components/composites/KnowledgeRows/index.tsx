@@ -1,13 +1,24 @@
 import type { ReactNode } from "react"
 import { Alert, Region, SectionHeader, Text } from "@starci/grammar/common"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import { HEAD_CLASS_NAME, SECTION_CLASS_NAME, TITLE_CLASS_NAME } from "./classNames"
-import { ActionList, Rows } from "./component"
-import type { RowActionView, RowsProps } from "./component"
+import { ActionList } from "./component"
+import type { KnowledgeRowView, RowActionView } from "./component"
 
-export type { KnowledgeRowView, RowActionView, RowPartView } from "./component"
+export { KnowledgeRowList } from "./component"
+export type { KnowledgeRowListProps, KnowledgeRowView, RowActionView, RowPartView } from "./component"
+
+/** Rows of the same shape as a ready list, drawn as geometry while a list is read: the loading tree of a block's list is the ready tree. */
+export const KNOWLEDGE_ROWS_PLACEHOLDER: ReadonlyArray<KnowledgeRowView> = [1, 2, 3].map((n) => ({
+    id: `placeholder-${n}`,
+    title: "-",
+    lines: ["-"],
+    badges: [{ label: "-", tone: "neutral" as const }],
+    actions: [{ id: "action", label: "-", intent: "neutral" as const }],
+}))
 
 /** The heading of a section and how its last command went. */
-interface SectionView {
+export interface SectionView {
     readonly id: string
     readonly title: string
     readonly description?: string
@@ -19,25 +30,41 @@ interface SectionView {
     readonly action?: RowActionView | undefined
 }
 
-/** What a list of the knowledge and brain pages draws. */
-export interface KnowledgeRowsProps extends RowsProps {
-    /** The heading around the list; the bare list when absent. */
-    readonly section?: SectionView
-    /** Content drawn between the heading and the list. */
-    readonly before?: ReactNode
-    /** Content drawn under the list. */
-    readonly after?: ReactNode
+/** What a block hands its list: the heading, the rows as one slot with the copy of its status, and whether a command is running. */
+export interface KnowledgeListView {
+    readonly section: SectionView
+    readonly label: string
+    readonly isPending: boolean
+    readonly slot: DataSlot<ReadonlyArray<KnowledgeRowView>>
+    readonly slotLabels: SlotLabels
 }
 
-/** A list of rows of the knowledge and brain pages, under a named heading with its failure alert and polite notice when a section is given. */
-export const KnowledgeRows = (props: KnowledgeRowsProps) => {
+/** What the frame of a list draws: the section around the rows, and the region's own status view in the rows' place. */
+interface KnowledgeRowsSectionProps {
+    readonly section: SectionView
+    readonly isPending: boolean
+    /** The heading is a placeholder of the same shape. */
+    readonly isSkeleton?: boolean
+    /** Content drawn between the heading and the list. */
+    readonly before?: ReactNode
+    /** The list, or the status view of the slot that reads it. */
+    readonly children: ReactNode
+}
+
+/** The frame of a list under a named heading with its failure alert and polite notice; the region's slot renders inside it. */
+export const KnowledgeRowsSection = (props: KnowledgeRowsSectionProps) => {
     const section = props.section
-    if (section === undefined) return <Rows {...props} />
     return (
         <Region labelledBy={section.id} className={SECTION_CLASS_NAME}>
             <div className={HEAD_CLASS_NAME}>
                 <div className={TITLE_CLASS_NAME}>
-                    <SectionHeader id={section.id} level={2} title={section.title} description={section.description} />
+                    <SectionHeader
+                        id={section.id}
+                        level={2}
+                        title={section.title}
+                        description={section.description}
+                        isSkeleton={props.isSkeleton ?? false}
+                    />
                 </div>
                 {section.action === undefined ? null : (
                     <ActionList items={[section.action]} isPending={props.isPending} />
@@ -52,8 +79,7 @@ export const KnowledgeRows = (props: KnowledgeRowsProps) => {
                 </Text>
             )}
             {props.before}
-            <Rows {...props} />
-            {props.after}
+            {props.children}
         </Region>
     )
 }

@@ -1,5 +1,5 @@
 import { Alert, Button, CheckboxGroup, Input, List, ListItem, Select, Text, Textarea } from "@starci/grammar/common"
-import type { ContentT, Pillar } from "@/hooks/content"
+import type { ContentT, Pillar } from "@/modules/types"
 
 /** Props of {@link ContentEditorDetails}. */
 interface ContentEditorDetailsProps {
@@ -70,7 +70,7 @@ export const ContentEditorDetails = (props: ContentEditorDetailsProps) => {
                 name="date"
                 label={t("fieldDate")}
                 value={props.date}
-                hint={t("addDateHint")}
+                description={t("addDateHint")}
                 isDisabled={props.isDateLocked}
                 onValueChange={props.onDate}
             />
@@ -79,7 +79,7 @@ export const ContentEditorDetails = (props: ContentEditorDetailsProps) => {
                 name="time"
                 label={t("fieldTime")}
                 value={props.time}
-                hint={t("addTimeHint")}
+                description={t("addTimeHint")}
                 isDisabled={props.isDateLocked}
                 onValueChange={props.onTime}
             />

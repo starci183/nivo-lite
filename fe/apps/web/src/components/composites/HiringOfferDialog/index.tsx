@@ -1,7 +1,7 @@
 import { Alert, Dialog, Input, Textarea } from "@starci/grammar/common"
 import { HiringDialogFooter } from "@/components/branches/HiringDialogFooter"
-import type { FieldOf, HiringSay } from "@/hooks/hiring"
 import type { OfferValues, RequestOutcomeView } from "@/hooks/hiringCandidate"
+import type { FieldOf, HiringSay } from "@/modules/types"
 import { FORM_CLASS_NAME, GRID_CLASS_NAME } from "./classNames"
 
 /** The words, values and state of the offer request dialog. */
@@ -78,7 +78,7 @@ const renderHiringOfferDialogFields = (
                     id="of-pay"
                     name="pay"
                     label={say("offerPay")}
-                    hint={say("offerPayExample")}
+                    description={say("offerPayExample")}
                     isRequired
                     value={values.pay}
                     onValueChange={(pay) => on.text("pay", pay)}

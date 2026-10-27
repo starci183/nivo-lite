@@ -1,5 +1,6 @@
 import type { DynamicModule } from "@nestjs/common"
 import { LeadsGraphqlModule } from "@features/api/leads"
+import { ContractsLinkGraphqlModule } from "@features/api/contracts-link"
 import { LeadQueriesGraphqlModule } from "@features/api/lead-queries"
 import { LeadActionsGraphqlModule } from "@features/api/lead-actions"
 import { SalesGraphqlModule } from "@features/api/sales"
@@ -18,6 +19,7 @@ import { ChatReplyModule } from "@modules/domain/chatreply"
 /** The sales area of the API, in registration order. */
 export const salesModules = (): Array<DynamicModule> => [
     LeadsGraphqlModule.register({}),
+    ContractsLinkGraphqlModule.register({}),
     LeadQueriesGraphqlModule.register({}),
     LeadActionsGraphqlModule.register({}),
     SalesGraphqlModule.register({}),

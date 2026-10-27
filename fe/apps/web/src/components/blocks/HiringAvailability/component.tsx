@@ -1,5 +1,5 @@
 import { Alert, Button, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
-import type { HiringSay } from "@/hooks/hiring"
+import type { HiringSay } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME, GRID_CLASS_NAME } from "./classNames"
 
 /** One weekday of the form. */

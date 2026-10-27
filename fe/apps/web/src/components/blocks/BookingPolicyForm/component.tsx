@@ -1,6 +1,8 @@
 import { Checkbox, Form, Input, NumberField } from "@starci/grammar/common"
 import { BookingSaveLine } from "@/components/composites/BookingSaveLine"
 import { BookingSetupSection } from "@/components/composites/BookingSetupSection"
+import { SlotView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import { GRID_CLASS, STACK_CLASS, WIDE_CLASS } from "./classNames"
 
 /** One numeric rule of the policy. */
@@ -13,6 +15,9 @@ export interface RuleView {
 /** Props for {@link BookingPolicyFormBase}. */
 export interface BookingPolicyFormBaseProps {
     readonly props: {
+        /** The booking board read behind the block. */
+        readonly slot: DataSlot<true>
+        readonly slotLabels: SlotLabels
         readonly title: string
         readonly hint: string
         readonly rules: ReadonlyArray<RuleView>
@@ -27,6 +32,7 @@ export interface BookingPolicyFormBaseProps {
         readonly notice?: { readonly tone: "affirmative" | "negative"; readonly text: string }
     }
     readonly on: {
+        readonly retry: () => void
         readonly changeRule: (id: string, value: number) => void
         readonly changeAddress: (value: string) => void
         readonly toggleAutoConfirm: (value: boolean) => void
@@ -36,7 +42,7 @@ export interface BookingPolicyFormBaseProps {
 }
 
 /** Draws the booking policy form: cancellation window, deposit, fees, slot rules and the two switches. */
-export const BookingPolicyFormBase = (props: BookingPolicyFormBaseProps) => {
+const BookingPolicyFormBody = (props: BookingPolicyFormBaseProps) => {
     const { props: p, on } = props
     return (
         <BookingSetupSection title={p.title} hint={p.hint}>
@@ -79,3 +85,10 @@ export const BookingPolicyFormBase = (props: BookingPolicyFormBaseProps) => {
         </BookingSetupSection>
     )
 }
+
+/** Draws the block once the booking board is read; until then the same form draws, its controls resting. */
+export const BookingPolicyFormBase = (props: BookingPolicyFormBaseProps) => (
+    <SlotView slot={props.props.slot} placeholder labels={props.props.slotLabels} onRetry={props.on.retry}>
+        {() => <BookingPolicyFormBody {...props} />}
+    </SlotView>
+)
