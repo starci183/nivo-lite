@@ -280,7 +280,7 @@ type ContractImportVocabulary = {
 /** One previewed row as the back end answers it. */
 type PreviewedRow = NonNullable<ContractImport["state"]["preview"]>["rows"][number]
 
-/** Resolves one previewed row: its number and customer, plan, days, amount, status and problems. */
+/** Resolves one previewed row: its number and customer, plan, the days it has (a missing one leaves no dangling dash), amount, status and problems. */
 const contractImportRowOf = (
     { t, format }: Pick<SalesContractsControllerInput, "t" | "format">,
     vocabulary: ContractImportVocabulary,
@@ -292,7 +292,10 @@ const contractImportRowOf = (
         title: `${t("contractImportRow", { row: row.row })} · ${row.customerName}`,
         description: [
             row.plan,
-            `${vocabulary.isoDayText(row.startsOn ?? "")} - ${vocabulary.isoDayText(row.endsOn ?? "")}`,
+            [row.startsOn, row.endsOn]
+                .filter((day): day is string => Boolean(day))
+                .map(vocabulary.isoDayText)
+                .join(" - "),
             row.amountVnd == null
                 ? ""
                 : format.number(row.amountVnd, { style: "currency", currency: "VND", maximumFractionDigits: 0 }),
@@ -368,7 +371,8 @@ export const createContractImportDialog = (
                       .filter(Boolean)
                       .join(" "),
         rows: (preview?.rows ?? []).map((row) => contractImportRowOf(input, vocabulary, row)),
-        confirmLabel: t("contractImportConfirm", { n: preview?.ready ?? 0 }),
+        confirmLabel:
+            preview === null ? t("contractImportConfirmIdle") : t("contractImportConfirm", { n: preview.ready }),
         canConfirm: preview !== null && preview.ready > 0,
         isPreviewing: importer.isPreviewing,
         isImporting: importer.isImporting,
