@@ -41,8 +41,8 @@ export interface StartMoneyInput {
     readonly name: string
     /** The bank code (bank feeds). */
     readonly bankCode: string
-    /** The account number (bank feeds). */
-    readonly accountNumber: string
+    /** The full account number, 6 to 20 digits once spaces are removed (required by bank feeds, ignored by payOS). */
+    readonly accountNumber?: string | undefined
     /** The account holder (bank feeds). */
     readonly holder: string
 }
@@ -55,8 +55,8 @@ export interface UpdateMoneyInput {
     readonly name: string
     /** The bank code (bank feeds). */
     readonly bankCode: string
-    /** A new account number; blank keeps the stored one. */
-    readonly accountNumber: string
+    /** A new account number, 6 to 20 digits; blank or omitted keeps the stored one. */
+    readonly accountNumber?: string | undefined
     /** The account holder (bank feeds). */
     readonly holder: string
     /** SePay: the API key NIVO generated or the one typed into SePay. */
@@ -162,3 +162,31 @@ export interface ConnectionCheck {
     /** The last delivery error the provider reported. */
     readonly lastError: string | null
 }
+
+/** The bank account a workspace is paid into, read from its own bank feed: enough to draw a VietQR for it. */
+export interface WorkspacePaymentAccount {
+    /** The full account number, digits only. */
+    readonly accountNumber: string
+    /** The short bank code as VietQR lists it. */
+    readonly bankCode: string
+    /** The account holder, or null when the feed has none. */
+    readonly holder: string | null
+    /** The feed the account comes from (sepay or casso). */
+    readonly provider: string
+}
+
+/** The account a VietQR is drawn for. */
+export interface VietQrAccount {
+    /** The full account number. */
+    readonly accountNumber: string
+    /** The short bank code as VietQR lists it. */
+    readonly bankCode: string
+    /** The account holder; the image does not print it. */
+    readonly holder?: string | null
+}
+
+/** A workspace payment account, or null when no bank feed of the workspace stores a full account number. */
+export type OptionalWorkspacePaymentAccount = WorkspacePaymentAccount | null
+
+/** An amount in VND for a VietQR, or null when the payer types it. */
+export type OptionalQrAmount = number | null
