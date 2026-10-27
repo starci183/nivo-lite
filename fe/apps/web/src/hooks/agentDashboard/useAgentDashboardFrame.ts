@@ -37,10 +37,13 @@ export const useAgentDashboardFrame = (input: AgentDashboardFrameInput) => {
     const connections = useAgentDashboardConnections(dashboard)
     const agent = dashboard.agent
 
-    const whenOf = (iso: string | null): string =>
-        iso === null
+    /** A row without a readable time shows no time: the formatter never sees an invalid date. */
+    const whenOf = (iso: string | null): string => {
+        const at = iso === null ? Number.NaN : Date.parse(iso)
+        return Number.isNaN(at)
             ? ""
-            : format.dateTime(new Date(iso), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+            : format.dateTime(new Date(at), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+    }
     const actionOf = (action: string): string => (g.has(`action_${action}`) ? g(`action_${action}`) : "")
     const rowOf = (item: DashboardRow) => ({
         id: item.id,

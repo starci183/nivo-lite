@@ -337,6 +337,16 @@ describe("WorkRecorderService", () => {
             expect(built.mark).not.toHaveBeenCalled()
         })
 
+        it("leaves the input alone when a later step of its chain fails", async () => {
+            const built = await build()
+
+            await built.service.failed(ctx, itemOf({ parent_id: "root-1", chain_id: "root-1", depth: 1 }), "boom")
+
+            expect(built.log).toHaveBeenCalledWith(ctx, expect.objectContaining({ kind: "work.failed" }))
+            expect(built.post).toHaveBeenCalledWith(ctx, expect.objectContaining({ work_item_id: "item-1" }))
+            expect(built.mark).not.toHaveBeenCalled()
+        })
+
         it("lets no line fail the failure", async () => {
             const built = await build()
             built.log.mockRejectedValue(new RangeError("log"))

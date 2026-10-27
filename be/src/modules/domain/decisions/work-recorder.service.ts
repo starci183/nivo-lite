@@ -142,7 +142,11 @@ export class WorkRecorderService {
         await this.announce(ctx, item, "rejected", by.name, item.proposal.summary)
     }
 
-    /** An item failed: the log, the Office and the inbound event hear of it, and none of them can fail the failure. */
+    /**
+     * An item failed: the log, the Office and the inbound event hear of it, and none of them can fail the failure. Only the work
+     * the input started marks the input failed: a later step of its chain (the care message after a reconciled credit, say)
+     * fails on its own work item and leaves the input where its own work put it.
+     */
     async failed(ctx: WorkContext, item: WorkItem, text: string): Promise<void> {
         const dept = await this.modules.nameOf(item.department, ctx.locale)
         const action = (await this.modules.actionOf(item.action))?.label[ctx.locale] ?? item.action
@@ -169,6 +173,7 @@ export class WorkRecorderService {
                 }),
             WorkEngineLogEvent.OfficeFailed,
         )
+        if (item.parent_id !== null) return
         await this.safely(() => this.markInbound(ctx, item, "failed", null), WorkEngineLogEvent.InboundStatusFailed)
     }
 

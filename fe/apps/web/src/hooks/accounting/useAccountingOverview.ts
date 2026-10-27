@@ -7,25 +7,23 @@ import { dayOf, moneyOf, monthOf, type AccountingFormat, type AccountingTranslat
 import { agentHref } from "@/modules/installations"
 import { CONSOLE_ROUTES } from "@/modules/routes"
 
-/** One money figure: the money, its count and where it comes from. */
+/** One money figure: the money, its count and where it comes from (the figure's own source line unless one is given). */
 const measureOf = (
     t: AccountingTranslator,
     format: AccountingFormat,
     id: string,
     measure: AccountingMeasure,
     unit: "countInvoices" | "countPayments",
-) => {
-    const source = t(`m${id}Source`)
-    return {
-        id,
-        term: t(`m${id}`),
-        value: moneyOf(format, measure.vnd),
-        hint: t(`m${id}Hint`),
-        lines: [t(unit, { n: measure.count }), `${t("sourceLabel")}: ${source}`],
-        actionLabel: null,
-        actionHref: null,
-    }
-}
+    source: string = t(`m${id}Source`),
+) => ({
+    id,
+    term: t(`m${id}`),
+    value: moneyOf(format, measure.vnd),
+    hint: t(`m${id}Hint`),
+    lines: [t(unit, { n: measure.count }), `${t("sourceLabel")}: ${source}`],
+    actionLabel: null,
+    actionHref: null,
+})
 
 /** Money in that is not matched comes from the payment connector: without one it says so and links to it, never 0. */
 const unmatchedOf = (
@@ -44,13 +42,14 @@ const unmatchedOf = (
               actionLabel: t("openConnections"),
               actionHref: CONSOLE_ROUTES.connections,
           }
-        : {
-              ...measureOf(t, format, "Unmatched", measure, "countPayments"),
-              lines: [
-                  t("countPayments", { n: measure.count }),
-                  `${t("sourceLabel")}: ${t("mUnmatchedSource", { source: creditsSource })}`,
-              ],
-          }
+        : measureOf(
+              t,
+              format,
+              "Unmatched",
+              measure,
+              "countPayments",
+              t("mUnmatchedSource", { source: creditsSource }),
+          )
 
 /** The Period overview tab: the period choice lives here, the drawing in the pure half. */
 export const useAccountingOverview = (data: AccountingWorkbenchData | undefined) => {

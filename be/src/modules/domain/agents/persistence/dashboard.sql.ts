@@ -4,7 +4,7 @@ import { sql } from "@modules/platform/database"
  * The oldest decisions of a department that wait for a person, test runs left out, with the total before the limit
  * ($1 workspace, $2 department, $3 instance or null for the whole department, $4 test-run pattern, $5 limit).
  */
-export const LIST_WAITING_ITEMS = sql`SELECT w.id, w.action, w.lead_id, w.created_at AS at, w.proposal->>'summary' AS summary,
+export const LIST_WAITING_ITEMS = sql`SELECT w.id, w.action, w.lead_id, to_json(w.created_at) #>> '{}' AS at, w.proposal->>'summary' AS summary,
     COALESCE(l.contact_name, w.proposal->'fields'->>'customer') AS customer, NULL::text AS result_href, count(*) OVER () AS total
 FROM public.work_items w
 LEFT JOIN public.leads l ON l.id = w.lead_id
@@ -18,7 +18,7 @@ LIMIT $5`
  * The latest work of a department finished by policy since an instant, test runs left out, with the total before the limit
  * ($1 workspace, $2 department, $3 instance or null, $4 test-run pattern, $5 since, $6 limit).
  */
-export const LIST_DONE_ITEMS = sql`SELECT w.id, w.action, w.lead_id, COALESCE(w.completed_at, w.updated_at) AS at,
+export const LIST_DONE_ITEMS = sql`SELECT w.id, w.action, w.lead_id, to_json(COALESCE(w.completed_at, w.updated_at)) #>> '{}' AS at,
     COALESCE(NULLIF(w.result->>'summary', ''), w.proposal->>'summary') AS summary,
     COALESCE(l.contact_name, w.proposal->'fields'->>'customer') AS customer, w.result->>'href' AS result_href, count(*) OVER () AS total
 FROM public.work_items w
