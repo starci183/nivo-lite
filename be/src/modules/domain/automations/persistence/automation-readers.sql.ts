@@ -49,8 +49,12 @@ export const SELECT_ORDER = sql`SELECT id, order_no, lead_id, shipped_at, carrie
 FROM public.orders WHERE workspace_id = $1 AND id = $2 LIMIT 1`
 
 /** One contract of a workspace ($1 workspace, $2 contract). */
-export const SELECT_CONTRACT = sql`SELECT id, customer_name, lead_id, plan, ends_on::text AS ends_on, status
+export const SELECT_CONTRACT = sql`SELECT id, customer_name, lead_id, plan, ends_on::text AS ends_on, amount_vnd::float8 AS amount_vnd, status
 FROM public.contracts WHERE workspace_id = $1 AND id = $2 LIMIT 1`
+
+/** When the customer last wrote in a conversation, the start of Zalo's 48-hour window ($1 conversation). */
+export const SELECT_LAST_CUSTOMER_MESSAGE = sql`SELECT created_at FROM public.agent_messages
+WHERE conversation_id = $1 AND role = 'user' ORDER BY created_at DESC LIMIT 1`
 
 /** The active contracts ending between two days, soonest first; bounded ($1 workspace, $2 first day, $3 last day). */
 export const SELECT_EXPIRING_CONTRACTS = sql`SELECT id, ends_on::text AS ends_on FROM public.contracts

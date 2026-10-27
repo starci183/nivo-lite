@@ -113,6 +113,21 @@ export const AUTOMATIONS_MESSAGES: MessageBundle = {
         "automations.renewal.officeLine":
             "Hợp đồng {{plan}} của {{name}} hết hạn ngày {{ends}}. NIVO đã soạn tin gia hạn và tạo việc theo dõi.",
         "automations.renewal.evidenceSummary": "Nhắc gia hạn hợp đồng {{plan}} của {{name}}",
+        "automations.renewal.invoiceIssued": "Đã lập hóa đơn gia hạn {{invoice}}",
+        "automations.renewal.invoiceReused": "Dùng lại hóa đơn gia hạn {{invoice}} đã lập cho kỳ này",
+        "automations.renewal.invoiceDetail": "{{amount}} · nội dung chuyển khoản {{content}}",
+        "automations.renewal.noAccount": "Tin gia hạn chưa có mã QR chuyển khoản",
+        "automations.renewal.noAccountDetail":
+            "Vào kết nối nhận tiền (SePay hoặc Casso) và nhập đủ số tài khoản ngân hàng để NIVO gửi kèm mã QR; tin lần này vẫn có số hóa đơn và số tiền.",
+        "automations.renewal.zaloWindow": "Zalo chưa cho gửi tin này",
+        "automations.renewal.zaloWindowDetail":
+            "Khách chưa nhắn Zalo OA trong 48 giờ: Zalo không cho gửi trước, cần khách nhắn lại hoặc dùng ZNS",
+        "automations.renewal.money": "{{amount}}đ",
+        "automations.renewal.pay.intro": "Để gia hạn, bạn chuyển khoản theo thông tin sau:",
+        "automations.renewal.pay.invoice": "Hóa đơn: {{invoice}}",
+        "automations.renewal.pay.amount": "Số tiền: {{amount}}",
+        "automations.renewal.pay.content": "Nội dung chuyển khoản: {{content}}",
+        "automations.renewal.pay.qr": "Quét mã QR để thanh toán: {{url}}",
         "automations.feedback.line":
             "@chủ shop: {{name}} phản hồi chưa hài lòng sau khi dùng dịch vụ: «{{text}}». Bạn xem lại và liên hệ giúp nhé.",
         "automations.feedback.actor": "Tự động hoá · Xin đánh giá",
@@ -226,6 +241,10 @@ export const AUTOMATIONS_MESSAGES: MessageBundle = {
         "automations.sample.ma_van_don": "GHN123456789",
         "automations.sample.ten_goi": "gói chăm sóc hằng tháng",
         "automations.sample.ngay_het_han": "31/10/2026",
+        "automations.sample.so_hoa_don": "INV-202611-0003",
+        "automations.sample.noi_dung_ck": "INV2026110003",
+        "automations.sample.link_qr":
+            "https://qr.sepay.vn/img?acc=0123456789&bank=VCB&amount=1620000&des=INV2026110003&template=compact",
     },
     en: {
         "errors.AUTOMATIONS_COMING_SOON": "This template is coming soon.",
@@ -341,6 +360,21 @@ export const AUTOMATIONS_MESSAGES: MessageBundle = {
         "automations.renewal.officeLine":
             "The {{plan}} contract of {{name}} ends on {{ends}}. NIVO wrote a renewal message and opened a follow-up.",
         "automations.renewal.evidenceSummary": "Renewal reminder for the {{plan}} contract of {{name}}",
+        "automations.renewal.invoiceIssued": "Issued the renewal invoice {{invoice}}",
+        "automations.renewal.invoiceReused": "Reused the renewal invoice {{invoice}} already issued for this period",
+        "automations.renewal.invoiceDetail": "{{amount}} · transfer content {{content}}",
+        "automations.renewal.noAccount": "The renewal message has no transfer QR code",
+        "automations.renewal.noAccountDetail":
+            "Open the money connection (SePay or Casso) and enter the full bank account number so NIVO can attach a QR code; this message still carries the invoice number and the amount.",
+        "automations.renewal.zaloWindow": "Zalo does not allow this message yet",
+        "automations.renewal.zaloWindowDetail":
+            "The customer has not messaged the Zalo OA in 48 hours: Zalo does not allow writing first, the customer must message again or use ZNS",
+        "automations.renewal.money": "{{amount}} VND",
+        "automations.renewal.pay.intro": "To renew, please transfer with these details:",
+        "automations.renewal.pay.invoice": "Invoice: {{invoice}}",
+        "automations.renewal.pay.amount": "Amount: {{amount}}",
+        "automations.renewal.pay.content": "Transfer content: {{content}}",
+        "automations.renewal.pay.qr": "Scan the QR code to pay: {{url}}",
         "automations.feedback.line":
             "@owner: {{name}} was not satisfied after using the service: «{{text}}». Please look into it and get in touch.",
         "automations.feedback.actor": "Automation · Ask for a review",
@@ -454,5 +488,9 @@ export const AUTOMATIONS_MESSAGES: MessageBundle = {
         "automations.sample.ma_van_don": "GHN123456789",
         "automations.sample.ten_goi": "the monthly care plan",
         "automations.sample.ngay_het_han": "31/10/2026",
+        "automations.sample.so_hoa_don": "INV-202611-0003",
+        "automations.sample.noi_dung_ck": "INV2026110003",
+        "automations.sample.link_qr":
+            "https://qr.sepay.vn/img?acc=0123456789&bank=VCB&amount=1620000&des=INV2026110003&template=compact",
     },
 }

@@ -42,4 +42,7 @@ export const SAMPLE_VARIABLES: ReadonlyArray<string> = [
     "ma_van_don",
     "ten_goi",
     "ngay_het_han",
+    "so_hoa_don",
+    "noi_dung_ck",
+    "link_qr",
 ]

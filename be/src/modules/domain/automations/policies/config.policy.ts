@@ -74,6 +74,12 @@ export const fillBody = (
         .replace(/[ \t]([.,!?])/g, "$1")
         .trim()
 
+/** A written message with a fixed tail after it, separated by a blank line; no tail leaves the message as it is. */
+export const withTail = (text: string, tail: string | undefined): string => {
+    const fixed = (tail ?? "").trim()
+    return fixed === "" ? text : `${text}\n\n${fixed}`
+}
+
 /** The reason a body is refused, or null when it is fine: too short, or a blank the template does not offer. */
 export const bodyProblem = (def: TemplateDefinition, body: string, minLength: number): string | null => {
     if (body.length < minLength) return "short"

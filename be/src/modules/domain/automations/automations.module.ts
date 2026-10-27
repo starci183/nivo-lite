@@ -6,6 +6,7 @@ import { AutomationEngineService } from "./automation-engine.service"
 import { AutomationExtensionsService } from "./automation-extensions.service"
 import { AutomationMessagesService } from "./automation-messages.service"
 import { AutomationOperationsExecutorsService } from "./automation-operations-executors.service"
+import { AutomationRenewalPaymentService } from "./automation-renewal-payment.service"
 import { AutomationScansService } from "./automation-scans.service"
 import { AutomationShopService } from "./automation-shop.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./automations.module-definition"
@@ -32,6 +33,7 @@ export class AutomationsModule extends ConfigurableModuleClass {
                 AutomationExtensionsService,
                 AutomationMessagesService,
                 AutomationCareExecutorsService,
+                AutomationRenewalPaymentService,
                 AutomationOperationsExecutorsService,
                 AutomationEngineService,
                 AutomationsService,

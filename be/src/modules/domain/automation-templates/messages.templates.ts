@@ -140,7 +140,16 @@ export const MESSAGES_TEMPLATES: ReadonlyArray<TemplateDefinition> = [
             translate("automationTemplates.contract_renewal.guardrails.0"),
             translate("automationTemplates.contract_renewal.guardrails.1"),
         ],
-        variables: ["ten_khach", "ten_shop", "ten_goi", "ngay_het_han"],
+        variables: [
+            "ten_khach",
+            "ten_shop",
+            "ten_goi",
+            "ngay_het_han",
+            "so_hoa_don",
+            "so_tien",
+            "noi_dung_ck",
+            "link_qr",
+        ],
         defaultBody: translate("automationTemplates.contract_renewal.defaultBody"),
         authority: {
             action: "send_follow_up",

@@ -5,6 +5,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { MockEntityManager } from "@starci/jest-preset"
 import type { RunResult } from "@modules/domain/automation-runs"
 import { AutomationMessagesService } from "./automation-messages.service"
+import { AutomationRenewalPaymentService } from "./automation-renewal-payment.service"
 import { AUTOMATION_OFFICE, AUTOMATION_OWNER_CHAT, AUTOMATION_RECORDS } from "./automations.decorators"
 import { AutomationOperationsExecutorsService } from "./automation-operations-executors.service"
 import type {
@@ -40,6 +41,7 @@ const CONTRACT = {
     lead_id: "l-1",
     plan: "Gold",
     ends_on: "2026-10-20",
+    amount_vnd: null,
     status: "active",
 }
 
@@ -76,6 +78,9 @@ const build = async (em: MockEntityManager = mockEntityManager(), useNullChat = 
     messages.conversationOf.mockResolvedValue(CONVERSATION)
     messages.composeAndSend.mockResolvedValue(SENT)
     messages.firstStaffName.mockResolvedValue("Lan")
+    const renewal = mock<AutomationRenewalPaymentService>()
+    renewal.paymentOf.mockResolvedValue(null)
+    renewal.zaloWindowSteps.mockResolvedValue([])
     const moduleRef = await Test.createTestingModule({
         providers: [
             AutomationOperationsExecutorsService,
@@ -85,10 +90,11 @@ const build = async (em: MockEntityManager = mockEntityManager(), useNullChat = 
             { provide: AUTOMATION_RECORDS, useValue: records },
             { provide: AUTOMATION_OWNER_CHAT, useValue: chat },
             { provide: AutomationMessagesService, useValue: messages },
+            { provide: AutomationRenewalPaymentService, useValue: renewal },
         ],
     }).compile()
     const service = moduleRef.get(AutomationOperationsExecutorsService)
-    return { office, records, chat, messages, run: runner(service.executors()) }
+    return { office, records, chat, messages, renewal, run: runner(service.executors()) }
 }
 
 describe("AutomationOperationsExecutorsService daily_report", () => {
@@ -376,5 +382,56 @@ describe("AutomationOperationsExecutorsService contract_renewal", () => {
         expect(ended.messages.skipped).toHaveBeenCalledWith("renewal.gone{}")
         expect(moved.messages.skipped).toHaveBeenCalledWith("renewal.moved{}")
         expect(noLead.messages.skipped).toHaveBeenCalledWith("renewal.noLead{}")
+    })
+})
+describe("AutomationOperationsExecutorsService contract_renewal with a payment", () => {
+    const PAYMENT = {
+        vars: { so_hoa_don: "INV-202611-0003", so_tien: "1.620.000d", noi_dung_ck: "INV2026110003", link_qr: "qr" },
+        fixedTail: "Hoa don: INV-202611-0003\nQR: qr",
+        keepExact: undefined,
+        steps: [{ label: "invoice", status: "done" as const }],
+        invoiceNo: "INV-202611-0003",
+    }
+
+    it("sends the payment lines as a fixed tail, reports the invoice first and names it in the evidence", async () => {
+        const { run, messages, renewal, office } = await build(
+            mockEntityManager({ query: [SELECT_CONTRACT, [CONTRACT]] }),
+        )
+        renewal.paymentOf.mockResolvedValue(PAYMENT)
+        const zalo = { label: "zalo", status: "skipped" as const }
+        renewal.zaloWindowSteps.mockResolvedValue([zalo])
+
+        const result = await run("contract_renewal", { ...context(), body: "Body" }, { contract_id: "c-1" })
+
+        expect(renewal.paymentOf).toHaveBeenCalledWith("ws-1", CONTRACT, "l-1", "Body")
+        expect(renewal.zaloWindowSteps).toHaveBeenCalledWith(CONVERSATION)
+        expect(messages.composeAndSend).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                vars: { ten_khach: "An", ten_goi: "Gold", ngay_het_han: "20/10/2026", ...PAYMENT.vars },
+                fixedTail: "Hoa don: INV-202611-0003\nQR: qr",
+                keepExact: undefined,
+            }),
+        )
+        expect(result.steps.map((step) => step.label)).toEqual(["invoice", "zalo", "sent", "renewal.taskStep{}"])
+        expect(office.logEvidence).toHaveBeenCalledWith(
+            "ws-1",
+            expect.objectContaining({ evidence: "c-1:2026-10-20:INV-202611-0003" }),
+        )
+    })
+
+    it("keeps the invoice step when the customer has no chat, so sales can quote it", async () => {
+        const { run, messages, renewal } = await build(mockEntityManager({ query: [SELECT_CONTRACT, [CONTRACT]] }))
+        renewal.paymentOf.mockResolvedValue(PAYMENT)
+        messages.conversationOf.mockResolvedValue(null)
+
+        const result = await run("contract_renewal", context(), { contract_id: "c-1" })
+
+        expect(renewal.zaloWindowSteps).not.toHaveBeenCalled()
+        expect(result.steps.map((step) => step.label)).toEqual([
+            "invoice",
+            "renewal.notMessaged{}",
+            "renewal.taskStep{}",
+        ])
     })
 })

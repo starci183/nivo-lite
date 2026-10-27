@@ -42,7 +42,7 @@ export const MESSAGES_TEMPLATE_MESSAGES: MessageBundle = {
         "automationTemplates.contract_renewal.guardrails.1":
             "Không bịa giá, giờ, địa chỉ hay chính sách chưa có trong thông tin cửa hàng.",
         "automationTemplates.contract_renewal.defaultBody":
-            "Chào {ten_khach}, hợp đồng {ten_goi} của bạn với {ten_shop} sẽ hết hạn vào {ngay_het_han}. Bạn có muốn gia hạn để tiếp tục không ạ?",
+            "Chào {ten_khach}, hợp đồng {ten_goi} của bạn với {ten_shop} sẽ hết hạn vào {ngay_het_han}. Bạn có muốn gia hạn để tiếp tục không ạ? Nếu cần hỗ trợ về thanh toán, bạn cứ nhắn lại mình nhé.",
         "automationTemplates.daily_report.name": "Báo cáo cuối ngày",
         "automationTemplates.daily_report.description":
             "Mỗi tối một bản tóm tắt: khách mới, đơn chốt, tiền về và việc đang chờ bạn quyết.",
@@ -124,7 +124,7 @@ export const MESSAGES_TEMPLATE_MESSAGES: MessageBundle = {
         "automationTemplates.contract_renewal.guardrails.1":
             "Never invent prices, hours, addresses or policies that are not in the shop information.",
         "automationTemplates.contract_renewal.defaultBody":
-            "Hi {ten_khach}, your contract {ten_goi} with {ten_shop} ends on {ngay_het_han}. Would you like to renew?",
+            "Hi {ten_khach}, your contract {ten_goi} with {ten_shop} ends on {ngay_het_han}. Would you like to renew? If you need any help with the payment, just reply here.",
         "automationTemplates.daily_report.name": "End-of-day report",
         "automationTemplates.daily_report.description":
             "Each evening a summary: new customers, deals won, money in and decisions waiting for you.",
