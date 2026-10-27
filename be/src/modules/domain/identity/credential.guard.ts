@@ -4,10 +4,9 @@ import type { CanActivate, ExecutionContext } from "@nestjs/common"
 import type { Reflector } from "@nestjs/core"
 import { InjectReflector } from "@modules/platform/composition"
 import { requestOf } from "@modules/platform/http-security"
-import type { CredentialAuthenticator, CredentialMetadata } from "./credential.contracts"
+import type { CredentialArgumentsInput, CredentialAuthenticator, CredentialMetadata } from "./credential.contracts"
 import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
 import { CREDENTIAL_KEY, InjectCredentialAuthenticator } from "./identity.decorators"
-import type { CredentialArgumentsInput } from "./types/credential-input.contracts"
 
 @Injectable()
 /** Authenticates marked doors as the third global guard; unmarked doors pass untouched. */
