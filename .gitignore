@@ -83,3 +83,6 @@ next-env.d.ts
 
 # Jest coverage output written next to the root by per-suite runs; generated, never tracked.
 coverage-*/
+
+# Local plaintext credentials never enter Git.
+secrets.env
