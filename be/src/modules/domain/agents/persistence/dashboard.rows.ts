@@ -6,7 +6,7 @@ export interface DashboardItemRow {
     action: string
     /** The lead, or null. */
     lead_id: string | null
-    /** When the item was raised (waiting) or finished (done). */
+    /** When the item was raised (waiting) or finished (done), ISO 8601 as the query writes it. */
     at: string
     /** The proposal or result summary, or null. */
     summary: string | null
