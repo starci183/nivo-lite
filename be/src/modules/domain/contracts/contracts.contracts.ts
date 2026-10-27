@@ -50,3 +50,13 @@ export interface ContractResult {
     /** A free note. */
     readonly note: string
 }
+
+/** What a paid renewal did to its contract. */
+export interface PaidRenewal {
+    /** True when the contract moved to its next term; false when it no longer ended on the renewed day or is cancelled. */
+    readonly extended: boolean
+    /** The contract as it stands afterwards. */
+    readonly contract: ContractResult
+    /** The last day of the contract before the renewal, YYYY-MM-DD. */
+    readonly previousEndsOn: string
+}

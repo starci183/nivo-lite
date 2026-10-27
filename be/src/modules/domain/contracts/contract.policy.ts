@@ -23,7 +23,8 @@ export interface ContractDraft {
 
 const CUSTOMER_MAX = 120
 const PLAN_MAX = 120
-const NOTE_MAX = 500
+/** The longest note a contract keeps. */
+export const NOTE_MAX = 500
 
 /** True for a real calendar day written YYYY-MM-DD. */
 export const isIsoDay = (value: string): boolean =>

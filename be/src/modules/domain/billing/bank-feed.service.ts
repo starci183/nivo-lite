@@ -18,7 +18,7 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { createHash } from "node:crypto"
 import { eachInOrder } from "@modules/platform/primitives"
-import { BankCreditQueue, isBankCreditPayload } from "@modules/queues/bank-credit"
+import { BankCreditQueue } from "@modules/queues/bank-credit"
 import type {
     RawBody,
     HeaderValue,
@@ -219,14 +219,6 @@ export class BankFeedService {
                 dedupeKey: `${BANK_FEED_DELIVERY_QUEUE}:${provider}:${deliveryId}`,
             })
         })
-    }
-
-    /**
-     * The effect of one reconcile-bank-credit job: until an accounting agent matches the credit to a payment record, the credit is
-     * held for the owner's check, never completed by itself. Any other payload changes nothing.
-     */
-    async holdForOwnerCheck(payload: object): Promise<void> {
-        if (isBankCreditPayload(payload)) await this.inbound.holdForOwnerCheck(payload.inboundEventId)
     }
 
     /**

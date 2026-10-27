@@ -34,3 +34,20 @@ FROM changed`
 export const ATTACH_CONTRACT_LEAD = sql`UPDATE public.contracts SET lead_id = $3::uuid, updated_at = now()
 WHERE workspace_id = $1::uuid AND id = $2::uuid AND lead_id IS NULL
   AND EXISTS (SELECT 1 FROM public.leads WHERE workspace_id = $1::uuid AND id = $3::uuid)`
+
+/** Locks one contract of the workspace for a renewal and answers it ($1 workspace, $2 contract). */
+export const LOCK_CONTRACT = sql`SELECT id, lead_id, customer_name, plan,
+    to_char(starts_on, 'YYYY-MM-DD') AS starts_on, to_char(ends_on, 'YYYY-MM-DD') AS ends_on,
+    amount_vnd::float8 AS amount_vnd, status, note
+FROM public.contracts WHERE workspace_id = $1::uuid AND id = $2::uuid LIMIT 1 FOR UPDATE`
+
+/** Moves one contract of the workspace to its next term and makes it active, only while it still ends on the renewed day ($1 workspace, $2 contract, $3 renewed end, $4 new start, $5 new end, $6 note). */
+export const EXTEND_CONTRACT_TERM = sql`WITH changed AS (
+    UPDATE public.contracts
+    SET starts_on = $4::date, ends_on = $5::date, status = 'active', note = $6::text, updated_at = now()
+    WHERE workspace_id = $1::uuid AND id = $2::uuid AND ends_on = $3::date AND status <> 'cancelled'
+    RETURNING id, lead_id, customer_name, plan, starts_on, ends_on, amount_vnd, status, note
+)
+SELECT id, lead_id, customer_name, plan, to_char(starts_on, 'YYYY-MM-DD') AS starts_on,
+    to_char(ends_on, 'YYYY-MM-DD') AS ends_on, amount_vnd::float8 AS amount_vnd, status, note
+FROM changed`
