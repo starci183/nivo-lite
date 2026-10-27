@@ -3,7 +3,7 @@ import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
 import { OfficeMemberRow } from "@/components/branches/OfficeMemberRow"
 import { OfficeRoomResources } from "@/components/branches/OfficeRoomResources"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import type { OfficeInfoPanelProps, OfficeJumpRowView } from "@/modules/types"
+import type { OfficeInfoPanelProps, OfficeJumpRowView, OfficeWaitingRowView } from "@/modules/types"
 import {
     BODY_CLASS_NAME,
     DRAWER_BODY_CLASS_NAME,
@@ -15,18 +15,18 @@ import {
     TITLE_CLASS_NAME,
 } from "./classNames"
 
-type JumpRowProps = {
-    readonly row: OfficeJumpRowView
+type JumpRowProps<Row extends OfficeJumpRowView> = {
+    readonly row: Row
     readonly jumpLabel: string
-    readonly onJump: (id: string) => void
+    readonly onJump: (row: Row) => void
 }
 
 /** One waiting thing as a compact card whose whole face jumps to it in the thread. */
-const JumpRow = (props: JumpRowProps) => (
+const JumpRow = <Row extends OfficeJumpRowView>(props: JumpRowProps<Row>) => (
     <SurfaceCard
         wholeAction={{
             kind: "button",
-            press: () => props.onJump(props.row.id),
+            press: () => props.onJump(props.row),
             label: `${props.jumpLabel}: ${props.row.title}`,
         }}
     >
@@ -44,16 +44,16 @@ const JumpRow = (props: JumpRowProps) => (
     </SurfaceCard>
 )
 
-type JumpListProps = {
+type JumpListProps<Row extends OfficeJumpRowView> = {
     readonly title: string
     readonly none: string
     readonly jumpLabel: string
-    readonly rows: ReadonlyArray<OfficeJumpRowView>
-    readonly onJump: (id: string) => void
+    readonly rows: ReadonlyArray<Row>
+    readonly onJump: (row: Row) => void
 }
 
 /** A list of waiting things; each row jumps to its card in the thread. */
-const JumpList = (props: JumpListProps) => (
+const JumpList = <Row extends OfficeJumpRowView>(props: JumpListProps<Row>) => (
     <Region label={props.title} className={SECTION_CLASS_NAME}>
         <div className={TITLE_CLASS_NAME}>
             <Text weight="semibold">{props.title}</Text>
@@ -96,14 +96,16 @@ export const OfficeInfoPanel = (props: OfficeInfoPanelProps) => {
                     none={text("pendingNone")}
                     jumpLabel={text("pendingJump")}
                     rows={info.approvals}
-                    onJump={props.on.jumpApproval}
+                    onJump={(row: OfficeWaitingRowView) =>
+                        row.target === "approval" ? props.on.jumpApproval(row.id) : props.on.jumpException(row.id)
+                    }
                 />
                 <JumpList
                     title={text("exceptionsTitle")}
                     none={text("exceptionsNone")}
                     jumpLabel={text("exceptionJump")}
                     rows={info.exceptions}
-                    onJump={props.on.jumpException}
+                    onJump={(row) => props.on.jumpException(row.id)}
                 />
                 {renderOfficeInfoPanelMembers(text, info, props)}
                 <OfficeRoomResources

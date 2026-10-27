@@ -260,6 +260,7 @@ export type {
     OfficeExceptionView,
     OfficeInfoView,
     OfficeJumpRowView,
+    OfficeWaitingRowView,
     OfficeListView,
     OfficeMemberRowView,
     OfficeMentionView,

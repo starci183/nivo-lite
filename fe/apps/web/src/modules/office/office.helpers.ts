@@ -1,7 +1,7 @@
 import type { ModuleIconName, OfficeBodyPart } from "@/modules/types"
 import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
-import { OPEN_WORK_STATUSES } from "./office.consts"
-import type { OfficeAuthorRef, OfficeMessage, OfficeViewer, OfficeWork } from "./office.types"
+import { DECISION_WORK_STATUS, OPEN_WORK_STATUSES } from "./office.consts"
+import type { OfficeApproval, OfficeAuthorRef, OfficeMessage, OfficeViewer, OfficeWork } from "./office.types"
 
 /** The glyph of a module's mark; an unknown module draws the chatbot glyph. */
 export const glyphOf = (module: string): ModuleIconName =>
@@ -36,6 +36,32 @@ export const isOwnAuthor = (author: OfficeAuthorRef, viewer: OfficeViewer): bool
 
 /** True while the work item still needs a person. */
 export const isOpenWork = (work: OfficeWork): boolean => OPEN_WORK_STATUSES.includes(work.status)
+
+/** True when the work item waits for a person's decision (not a failure to look at). */
+export const isDecisionWork = (work: OfficeWork): boolean => work.status === DECISION_WORK_STATUS
+
+/** One thing that waits for a person's decision, and the card of the thread it jumps to. */
+export interface OfficeWaiting {
+    readonly kind: "approval" | "exception"
+    readonly id: string
+    readonly createdAt: string
+}
+
+/**
+ * Everything that waits for a person's decision, oldest first: the pending approval cards and the open work items waiting for a
+ * decision. The header chip counts it and the "Cần bạn duyệt" column lists it, so both read one definition; a failed work item is
+ * an exception, not a decision.
+ */
+export const waitingOf = (
+    pending: ReadonlyArray<OfficeApproval>,
+    openWork: ReadonlyArray<OfficeWork>,
+): ReadonlyArray<OfficeWaiting> =>
+    [
+        ...pending.map((approval) => ({ kind: "approval" as const, id: approval.id, createdAt: approval.createdAt })),
+        ...openWork
+            .filter(isDecisionWork)
+            .map((work) => ({ kind: "exception" as const, id: work.id, createdAt: work.createdAt })),
+    ].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 
 /** The lines of two reads joined: the newest read wins on an id, oldest first. */
 export const mergeMessages = (groups: ReadonlyArray<ReadonlyArray<OfficeMessage>>): ReadonlyArray<OfficeMessage> => {

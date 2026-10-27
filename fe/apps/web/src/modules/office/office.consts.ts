@@ -10,6 +10,9 @@ export const COMMAND_LINE_AUTHOR = "NIVO Bus"
 /** The work items that wait for a person. */
 export const OPEN_WORK_STATUSES: ReadonlyArray<string> = ["waiting_decision", "failed"]
 
+/** The open work item that waits for a person's decision; the other open state (failed) is an exception to look at. */
+export const DECISION_WORK_STATUS = "waiting_decision"
+
 /** The work items a person already decided. */
 export const DECIDED_WORK_STATUSES: ReadonlyArray<string> = ["done", "rejected"]
 
