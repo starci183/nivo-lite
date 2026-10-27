@@ -294,6 +294,52 @@ describe("AutomationMessagesService composeAndSend a message the model adapts to
         expect(gate.submit).toHaveBeenCalledWith(expect.objectContaining({ draft: "Chao An tu Tiem Hoa" }))
     })
 })
+describe("AutomationMessagesService composeAndSend with payment details that must stay exact", () => {
+    const perCase = context({ def: buildTemplate({ contentMode: "ai_per_case" }) })
+    it("adds the fixed tail word for word after the model's text, out of the model's reach", async () => {
+        const { service, gate, text } = await build()
+        text.generate.mockResolvedValue("Chao An, gia han nhe")
+        const tail = "Hoa don: INV-202611-0003\nQuet ma QR: https://qr.sepay.vn/img?acc=1&des=INV2026110003"
+
+        const result = await service.composeAndSend(perCase, composition({ fixedTail: `  ${tail}\n` }))
+
+        const draft = `Chao An, gia han nhe\n\n${tail}`
+        expect(gate.submit).toHaveBeenCalledWith(expect.objectContaining({ draft }))
+        expect(text.generate.mock.calls[0]?.[0].prompt).not.toContain("INV")
+        expect(result.steps[0]).toMatchObject({ label: "step.drafted{}", message: draft })
+    })
+
+    it("discards a rewrite that changed a value the wording must keep, and keeps one that kept them", async () => {
+        const { service, gate, text } = await build()
+        const placed = context({ ...perCase, body: "Chao {ten_khach}, quet {link_qr}" })
+        const link = "https://qr.sepay.vn/img?des=INV2026110003"
+        text.generate.mockResolvedValueOnce("Chao An, quet https://qr.sepay.vn/img?des=INV2026110004")
+        text.generate.mockResolvedValueOnce(`Chao An, ban quet ${link} nhe`)
+
+        await service.composeAndSend(
+            placed,
+            composition({ vars: { ten_khach: "An", link_qr: link }, keepExact: [link] }),
+        )
+        await service.composeAndSend(
+            placed,
+            composition({ vars: { ten_khach: "An", link_qr: link }, keepExact: [link] }),
+        )
+
+        expect(gate.submit).toHaveBeenNthCalledWith(1, expect.objectContaining({ draft: `Chao An, quet ${link}` }))
+        expect(gate.submit).toHaveBeenNthCalledWith(
+            2,
+            expect.objectContaining({ draft: `Chao An, ban quet ${link} nhe` }),
+        )
+    })
+
+    it("leaves the text alone when the tail is blank", async () => {
+        const { service, gate } = await build()
+
+        await service.composeAndSend(context(), composition({ fixedTail: "  " }))
+
+        expect(gate.submit).toHaveBeenCalledWith(expect.objectContaining({ draft: "Chao An tu Tiem Hoa" }))
+    })
+})
 describe("AutomationMessagesService replyWithoutLead", () => {
     const reply = { conversationId: "cv-1", name: "Khach", dedupe: "after:cv-1" }
     it("sends the wording as a reply on the conversation", async () => {

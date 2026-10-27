@@ -5,6 +5,7 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { AutomationMessagesService } from "./automation-messages.service"
+import { AutomationRenewalPaymentService } from "./automation-renewal-payment.service"
 import type {
     AutomationOffice,
     AutomationOwnerChat,
@@ -45,6 +46,7 @@ export class AutomationOperationsExecutorsService {
         @InjectAutomationRecords() private readonly records: AutomationRecords,
         @InjectAutomationOwnerChat() private readonly ownerChat: AutomationOwnerChat,
         private readonly messages: AutomationMessagesService,
+        private readonly renewalPayment: AutomationRenewalPaymentService,
     ) {}
 
     /** The executors of the templates this service runs, by template key. */
@@ -143,7 +145,10 @@ export class AutomationOperationsExecutorsService {
         })
     }
 
-    /** Drafts a renewal message (the owner decides by default) and opens a follow-up for sales. */
+    /**
+     * Drafts a renewal message (the owner decides by default) and opens a follow-up for sales. A contract with an amount gets its
+     * renewal invoice for the period, and the message carries the invoice, the amount, the transfer content and a VietQR link.
+     */
     private async contractRenewal(context: ExecutorContext, payload: ExecutorPayload): Promise<RunResult> {
         const say = this.messages.say.bind(this.messages)
         const contractId = textOf(payload.contract_id)
@@ -160,7 +165,8 @@ export class AutomationOperationsExecutorsService {
         const leadId = contract.lead_id ?? (await this.createRenewalLead(context.workspaceId, contract, plan))
         const lead = await this.messages.lead(context.workspaceId, leadId)
         if (lead === null) return this.messages.skipped(say("renewal.noLead"))
-        const steps: Array<RunStep> = []
+        const payment = await this.renewalPayment.paymentOf(context.workspaceId, contract, lead.id, context.body)
+        const steps: Array<RunStep> = [...(payment?.steps ?? [])]
         let status: RunResult["status"] = "done"
         let evidence: string | null | undefined = null
         const conversation = await this.messages.conversationOf(context.workspaceId, lead.id)
@@ -171,6 +177,7 @@ export class AutomationOperationsExecutorsService {
                 detail: say("renewal.notMessagedDetail", { name: lead.contact_name }),
             })
         } else {
+            steps.push(...(await this.renewalPayment.zaloWindowSteps(conversation)))
             const sent = await this.messages.composeAndSend(context, {
                 action: "send_follow_up",
                 lead,
@@ -178,8 +185,10 @@ export class AutomationOperationsExecutorsService {
                 dedupe: `renew:${contract.id}:${contract.ends_on}`,
                 summary: say("renewal.summary", { name: lead.contact_name, plan, ends }),
                 caseNote: say("renewal.case", { plan, ends }),
-                vars: { ten_khach: lead.contact_name, ten_goi: plan, ngay_het_han: ends },
+                vars: { ten_khach: lead.contact_name, ten_goi: plan, ngay_het_han: ends, ...payment?.vars },
                 forceAsk: context.config.alwaysAsk !== false,
+                fixedTail: payment?.fixedTail,
+                keepExact: payment?.keepExact,
             })
             steps.push(...sent.steps)
             status = sent.status
@@ -216,7 +225,7 @@ export class AutomationOperationsExecutorsService {
             kind: "automation.contract_renewal",
             actor: this.messages.actorOf(context.def),
             summary: say("renewal.evidenceSummary", { plan, name: lead.contact_name }),
-            evidence: `${contract.id}:${contract.ends_on}`,
+            evidence: [contract.id, contract.ends_on, payment?.invoiceNo].filter(Boolean).join(":"),
         })
         return { status, steps, evidence }
     }

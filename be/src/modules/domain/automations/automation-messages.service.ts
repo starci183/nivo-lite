@@ -18,7 +18,7 @@ import { InjectAutomationGate, InjectAutomationOffice, InjectAutomationText } fr
 import { AutomationsError, AutomationsErrorCode } from "./errors/automations.error"
 import { SELECT_FIRST_STAFF, SELECT_LATEST_CONVERSATION, SELECT_LEAD } from "./persistence/automation-readers.sql"
 import type { ConversationReadRow, LeadReadRow } from "./persistence/automations.rows"
-import { acceptableMessage, fillBody, stripQuotes } from "./policies/config.policy"
+import { acceptableMessage, fillBody, stripQuotes, withTail } from "./policies/config.policy"
 import { CLASSIFY_SYSTEM, FEEDBACK_MAX, caseSystem, shopBlock } from "./policies/prompt.policy"
 import { NEUTRAL_VARIABLES } from "./words.contracts"
 
@@ -90,11 +90,13 @@ export class AutomationMessagesService {
      * puts it through the authority gate. The run result tells whether it left, waits for the owner or was refused.
      */
     async composeAndSend(context: ExecutorContext, composition: Composition): Promise<RunResult> {
-        const written = await this.writeMessage(
+        const body = await this.writeMessage(
             context,
             { ten_shop: context.shop.shop, gio_mo_cua: context.shop.hours, ...composition.vars },
             composition.caseNote,
+            composition.keepExact ?? [],
         )
+        const written = { ...body, text: withTail(body.text, composition.fixedTail) }
         const isReply = composition.action === "reply_customer"
         const outcome = await this.gate.submit({
             workspaceId: context.workspaceId,
@@ -225,6 +227,7 @@ export class AutomationMessagesService {
         context: ExecutorContext,
         variables: MessageVariables,
         caseNote: string,
+        keepExact: ReadonlyArray<string>,
     ): Promise<{ readonly text: string; readonly generated: boolean }> {
         const filled = fillBody(context.body, variables, this.neutral())
         if (context.def.contentMode !== "ai_per_case") return { text: filled, generated: false }
@@ -235,7 +238,9 @@ export class AutomationMessagesService {
             prompt: `${shopBlock(context.shop, "")}\n\nApproved message:\n${filled}\n\nCase: ${caseNote}`,
         })
         const text = raw === null ? "" : stripQuotes(raw)
-        return acceptableMessage(text) ? { text, generated: true } : { text: filled, generated: false }
+        return acceptableMessage(text) && keepExact.every((value) => text.includes(value))
+            ? { text, generated: true }
+            : { text: filled, generated: false }
     }
 
     private neutral(): Readonly<Record<string, string>> {

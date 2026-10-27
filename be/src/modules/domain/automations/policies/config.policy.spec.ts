@@ -11,6 +11,7 @@ import {
     placeholdersOf,
     resolveConfig,
     stripQuotes,
+    withTail,
 } from "./config.policy"
 
 const POLICY = Symbol("./config.policy")
@@ -25,6 +26,7 @@ type PolicySubject = {
     stripQuotes: typeof stripQuotes
     acceptableMessage: typeof acceptableMessage
     hasText: typeof hasText
+    withTail: typeof withTail
 }
 
 const buildSubject = async () => {
@@ -43,6 +45,7 @@ const buildSubject = async () => {
                     stripQuotes,
                     acceptableMessage,
                     hasText,
+                    withTail,
                 },
             },
         ],
@@ -256,5 +259,56 @@ describe("text helpers", () => {
         expect(subject.hasText("a")).toBe(true)
         expect(subject.hasText("")).toBe(false)
         expect(subject.hasText(null)).toBe(false)
+    })
+})
+
+describe("the payment blanks of the renewal message", () => {
+    const def = buildTemplate({
+        variables: [
+            "ten_khach",
+            "ten_shop",
+            "ten_goi",
+            "ngay_het_han",
+            "so_hoa_don",
+            "so_tien",
+            "noi_dung_ck",
+            "link_qr",
+        ],
+    })
+    const body = "Chao {ten_khach}, hoa don {so_hoa_don} {so_tien}, noi dung {noi_dung_ck}, QR {link_qr}"
+
+    it("accepts an owner's wording that places the invoice, the amount, the transfer content and the QR link", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.bodyProblem(def, body, 10)).toBeNull()
+        expect(subject.acceptableProposal(`${body} nhe`, def, body)).toBe(true)
+        expect(subject.acceptableProposal("Chao {ten_khach}, hoa don {so_hoa_don}", def, body)).toBe(false)
+    })
+
+    it("fills the payment blanks as given, the QR link included", async () => {
+        const subject = await buildSubject()
+        const link = "https://qr.sepay.vn/img?acc=0123&bank=VCB&amount=1620000&des=INV2026110003&template=compact"
+
+        const filled = subject.fillBody(
+            body,
+            {
+                ten_khach: "An",
+                so_hoa_don: "INV-202611-0003",
+                so_tien: "1.620.000 VND",
+                noi_dung_ck: "INV2026110003",
+                link_qr: link,
+            },
+            {},
+        )
+
+        expect(filled).toBe(`Chao An, hoa don INV-202611-0003 1.620.000 VND, noi dung INV2026110003, QR ${link}`)
+    })
+
+    it("puts a fixed tail after a blank line, trimmed, and leaves a text without one as it is", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.withTail("Chao An", "  Hoa don: INV-1\nQR: x \n")).toBe("Chao An\n\nHoa don: INV-1\nQR: x")
+        expect(subject.withTail("Chao An", undefined)).toBe("Chao An")
+        expect(subject.withTail("Chao An", " ")).toBe("Chao An")
     })
 })

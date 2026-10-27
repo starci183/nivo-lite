@@ -108,6 +108,14 @@ export interface ContractReadRow {
     readonly plan: string
     /** The end date, `yyyy-mm-dd`. */
     readonly ends_on: string
+    /** The renewal amount, VND, or null when the contract has none. */
+    readonly amount_vnd: number | null
     /** The status. */
     readonly status: string
+}
+
+/** The instant a customer last wrote in a conversation. */
+export interface LastCustomerMessageRow {
+    /** When it was written. */
+    readonly created_at: string | Date
 }

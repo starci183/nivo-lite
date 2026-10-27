@@ -28,6 +28,13 @@ export interface Composition {
     readonly vars: MessageVariables
     /** True when the owner must decide whatever the rule says. */
     readonly forceAsk: boolean
+    /**
+     * Text added after the written message word for word (payment details, a QR link): never filled and never shown to the model,
+     * so it reaches the owner and the customer exactly as built.
+     */
+    readonly fixedTail?: string | undefined
+    /** Values a model rewrite must keep word for word; a rewrite that drops one is discarded for the filled wording. */
+    readonly keepExact?: ReadonlyArray<string> | undefined
 }
 
 /** A reply to a conversation that has no lead yet. */

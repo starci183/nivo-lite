@@ -358,3 +358,17 @@ export interface CreatedLead {
     /** The email, or null. */
     readonly email: string | null
 }
+
+/** What a renewal message carries for payment: the invoice of the period and how to pay it. */
+export interface RenewalPayment {
+    /** The variables an owner's wording can place: `so_hoa_don`, `so_tien`, `noi_dung_ck`, `link_qr`. */
+    readonly vars: MessageVariables
+    /** The payment lines added after the message word for word, or none when the owner's wording places the QR link itself. */
+    readonly fixedTail: string | undefined
+    /** The values that must reach the customer unchanged when the owner's wording places them itself, else none. */
+    readonly keepExact: ReadonlyArray<string> | undefined
+    /** What the run reports: the invoice, and a missing bank account. */
+    readonly steps: ReadonlyArray<RunStep>
+    /** The invoice number. */
+    readonly invoiceNo: string
+}
