@@ -42,7 +42,7 @@
       "optionalSlots": ["repo.docs", "be.contract.graphql", "repo.i18n-dynamic-keys"]
     },
     "fe": {
-      "grammar": "starci",
+      "grammar": "core",
       "apps": [
         {
           "name": "web",
