@@ -5,6 +5,7 @@ import { useState } from "react"
 import { useSalesContractForm } from "@/hooks/rhf"
 import { parseAmount, useSalesActions, vietnamDay } from "@/hooks/sales"
 import {
+    CONTRACT_IMPORT_FIELDS,
     CONTRACT_STATUS_KEYS,
     CONTRACT_TONES,
     NO_LEAD,
@@ -13,12 +14,15 @@ import {
     contractFormOf,
     contractStatusOf,
     isoDayText,
+    useContractImport,
 } from "@/hooks/salescontracts"
 import { useSalesWorkbench } from "@/hooks/salesworkbench"
 import type { SalesContract } from "@/modules/types"
 import {
+    NO_IMPORT_COLUMN,
     SalesContractsBase,
     createContractDrawer,
+    createContractImportDialog,
     createSalesContractsState,
     type SalesContractsControllerInput,
 } from "./component"
@@ -75,6 +79,7 @@ export const SalesContracts = () => {
     const [note, setNote] = useState("")
     const today = vietnamDay(nowIso)
     const form = useSalesContractForm(today)
+    const importer = useContractImport(setNote)
     const context = createSalesContractsActions({
         t,
         format,
@@ -101,6 +106,7 @@ export const SalesContracts = () => {
                 label: t("tab_contracts"),
                 intro: t("contractsIntro"),
                 addLabel: t("contractAdd"),
+                importLabel: t("contractImport"),
                 editLabel: t("contractEdit"),
                 emptyTitle: t("contractsEmptyTitle"),
                 emptyBody: t("contractsEmptyBody"),
@@ -111,9 +117,30 @@ export const SalesContracts = () => {
                     statusKeys: CONTRACT_STATUS_KEYS,
                     dateOf: contractDateOf,
                 }),
+                importDialog: createContractImportDialog({ t, format }, importer, {
+                    fields: CONTRACT_IMPORT_FIELDS,
+                    isoDayText,
+                    contractTones: CONTRACT_TONES,
+                    statusOf: contractStatusOf,
+                }),
             }}
             on={{
                 add: () => open(null),
+                openImport: importer.open,
+                importing: {
+                    source: importer.source,
+                    file: importer.file,
+                    paste: importer.paste,
+                    preview: importer.preview,
+                    sheet: importer.sheet,
+                    column: (field, column) =>
+                        importer.column(
+                            CONTRACT_IMPORT_FIELDS.find((known) => known === field) ?? "customerName",
+                            column === NO_IMPORT_COLUMN ? null : column,
+                        ),
+                    confirm: importer.runImport,
+                    close: importer.close,
+                },
                 edit: (contractId) => open(contracts.find((contract) => contract.id === contractId) ?? null),
                 lead: pickLead,
                 customer: (value) =>

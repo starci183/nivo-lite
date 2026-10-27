@@ -2406,6 +2406,58 @@ type ContextVersionType {
   version: Int!
 }
 
+input ContractImportFileInput {
+  contentBase64: String! @inputBounds(maxLength: 14000000)
+  name: String! @inputBounds(maxLength: 255)
+}
+
+input ContractImportMappingInput {
+  amountVnd: String @inputBounds(maxLength: 200)
+  customerName: String @inputBounds(maxLength: 200)
+  endsOn: String @inputBounds(maxLength: 200)
+  note: String @inputBounds(maxLength: 200)
+  plan: String @inputBounds(maxLength: 200)
+  startsOn: String @inputBounds(maxLength: 200)
+  status: String @inputBounds(maxLength: 200)
+}
+
+type ContractImportMappingType {
+  amountVnd: String
+  customerName: String
+  endsOn: String
+  note: String
+  plan: String
+  startsOn: String
+  status: String
+}
+
+type ContractImportPreviewType {
+  headers: [String!]!
+  mapping: ContractImportMappingType!
+  ready: Int!
+  rows: [ContractImportRowType!]!
+  sheet: String!
+  sheets: [String!]!
+  total: Int!
+}
+
+type ContractImportRowType {
+  amountVnd: Float
+  customerName: String!
+  endsOn: String
+  note: String!
+  plan: String!
+  problems: [String!]!
+  row: Int!
+  startsOn: String
+  status: String!
+}
+
+type ContractImportSkipType {
+  reason: String!
+  row: Int!
+}
+
 input CreateAccountingAdjustmentInput {
   correctedAmount: Float @inputBounds(min: 0, max: 9007199254740991)
   note: String! @inputBounds(maxLength: 1000)
@@ -3495,6 +3547,18 @@ type ImapConnectionType {
 
 type ImapFoldersType {
   folders: [String!]!
+}
+
+input ImportContractsInput {
+  file: ContractImportFileInput
+  mapping: ContractImportMappingInput!
+  sheet: String @inputBounds(maxLength: 200)
+  text: String @inputBounds(maxLength: 10485760)
+}
+
+type ImportContractsType {
+  created: Int!
+  skipped: [ContractImportSkipType!]!
 }
 
 input ImportInventoryPasteInput {
@@ -5000,6 +5064,7 @@ type Mutation {
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
   handoffToAccounting(input: HandoffToAccountingInput!): SalesActionType!
   holdWorkItem(input: HoldWorkItemInput!): WorkItemType!
+  importContracts(input: ImportContractsInput!): ImportContractsType!
   importInventoryPaste(input: ImportInventoryPasteInput!): ImportPasteType!
   installModule(input: InstallModuleInput!): ModuleInstallResultType!
   keepCurrentBrainFact(input: KeepCurrentBrainFactInput!): Int!
@@ -5498,6 +5563,13 @@ input PostThreadMessageInput {
   threadId: ID! @inputBounds(maxLength: 36)
 }
 
+input PreviewContractImportInput {
+  file: ContractImportFileInput
+  mapping: ContractImportMappingInput
+  sheet: String @inputBounds(maxLength: 200)
+  text: String @inputBounds(maxLength: 10485760)
+}
+
 input PreviewCsvSourceInput {
   connectionId: ID @inputBounds(maxLength: 64)
   entity: String @inputBounds(maxLength: 30)
@@ -5926,6 +5998,7 @@ type Query {
   paymentOrder(input: PaymentOrderInput!): BillingPaymentOrderType
   paymentOrderRequestStatus(input: PaymentOrderRequestStatusInput!): PaymentOrderRequestStatusType
   paymentOrders: [BillingPaymentOrderType!]!
+  previewContractImport(input: PreviewContractImportInput!): ContractImportPreviewType!
   previewCsvSource(input: PreviewCsvSourceInput!): CsvPreviewType!
   previewDatabaseTable(input: PreviewDatabaseTableInput!): DatabasePreviewType!
   previewShiftsImport(input: PreviewShiftsImportInput!): PreviewShiftsImportType!

@@ -9,12 +9,15 @@ import type {
     CONTRACT_TONES,
     contractFormOf,
 } from "@/hooks/salescontracts"
+import type { ContractImport, ContractImportField } from "@/hooks/salescontracts"
 import type { useSalesWorkbench } from "@/hooks/salesworkbench"
 import type { SalesContract } from "@/modules/types"
 import { Badge, Button, EmptyNotice, ListRow, SurfaceListCard, Text } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
 import { SalesContractDrawer } from "@/components/composites/SalesContractDrawer"
 import type { SalesContractDrawerProps } from "@/components/composites/SalesContractDrawer"
+import { ContractImportDialog } from "@/components/composites/ContractImportDialog"
+import type { ContractImportDialogProps, ContractImportRowView } from "@/components/composites/ContractImportDialog"
 import { ACTIONS_CLASS_NAME } from "./classNames"
 
 /** One recurring contract, every word already resolved. */
@@ -33,6 +36,7 @@ export interface SalesContractsBaseProps {
         readonly label: string
         readonly intro: string
         readonly addLabel: string
+        readonly importLabel: string
         readonly editLabel: string
         readonly emptyTitle: string
         readonly emptyBody: string
@@ -40,10 +44,14 @@ export interface SalesContractsBaseProps {
         readonly rows: ReadonlyArray<ContractItemView>
         /** The contract drawer while it is open. */
         readonly drawer: SalesContractDrawerProps["props"] | null
+        /** The bulk import dialog while it is open. */
+        readonly importDialog: ContractImportDialogProps["props"] | null
     }
     readonly on: SalesContractDrawerProps["on"] & {
         readonly add: () => void
         readonly edit: (contractId: string) => void
+        readonly openImport: () => void
+        readonly importing: ContractImportDialogProps["on"]
     }
 }
 
@@ -58,6 +66,9 @@ export const SalesContractsBase = (props: SalesContractsBaseProps) => {
             <div className={ACTIONS_CLASS_NAME}>
                 <Button intent="commit" size="sm" onPress={on.add}>
                     {p.addLabel}
+                </Button>
+                <Button intent="neutral" size="sm" onPress={on.openImport}>
+                    {p.importLabel}
                 </Button>
             </div>
             <Text size="sm" weight="medium" live="polite">
@@ -89,6 +100,7 @@ export const SalesContractsBase = (props: SalesContractsBaseProps) => {
                 ))}
             </SurfaceListCard>
             {p.drawer === null ? null : <SalesContractDrawer props={p.drawer} on={on} />}
+            {p.importDialog === null ? null : <ContractImportDialog props={p.importDialog} on={on.importing} />}
         </>
     )
 }
@@ -229,4 +241,137 @@ export const createSalesContractsState = (
     }
     const close = () => setOpen(false)
     return { ...input, values, error, isPending, itemOf, open, close }
+}
+
+/** The select value that leaves a contract field without a column. */
+export const NO_IMPORT_COLUMN = "__none__"
+
+const FIELD_LABEL_KEYS = {
+    customerName: "contractCustomer",
+    plan: "contractPlan",
+    startsOn: "contractStart",
+    endsOn: "contractEnd",
+    amountVnd: "contractAmount",
+    status: "contractStatus",
+    note: "contractNote",
+} as const satisfies Record<ContractImportField, string>
+
+const PROBLEM_KEYS = {
+    customerMissing: "contractImportProblemCustomerMissing",
+    endsOnMissing: "contractImportProblemEndsOnMissing",
+    endsOnInvalid: "contractImportProblemEndsOnInvalid",
+    startsOnInvalid: "contractImportProblemStartsOnInvalid",
+    datesReversed: "contractImportProblemDatesReversed",
+    amountInvalid: "contractImportProblemAmountInvalid",
+    duplicate: "contractImportProblemDuplicate",
+    startsOnDerived: "contractImportProblemStartsOnDerived",
+} as const
+
+const isKnownProblem = (code: string): code is keyof typeof PROBLEM_KEYS => Object.hasOwn(PROBLEM_KEYS, code)
+
+/** Pure vocabulary the import dialog is drawn with. */
+type ContractImportVocabulary = {
+    readonly fields: ReadonlyArray<ContractImportField>
+    readonly isoDayText: typeof isoDayText
+    readonly contractTones: typeof CONTRACT_TONES
+    readonly statusOf: (value: string) => keyof typeof CONTRACT_TONES
+}
+
+/** One previewed row as the back end answers it. */
+type PreviewedRow = NonNullable<ContractImport["state"]["preview"]>["rows"][number]
+
+/** Resolves one previewed row: its number and customer, plan, days, amount, status and problems. */
+const contractImportRowOf = (
+    { t, format }: Pick<SalesContractsControllerInput, "t" | "format">,
+    vocabulary: ContractImportVocabulary,
+    row: PreviewedRow,
+): ContractImportRowView => {
+    const status = vocabulary.statusOf(row.status)
+    return {
+        id: String(row.row),
+        title: `${t("contractImportRow", { row: row.row })} · ${row.customerName}`,
+        description: [
+            row.plan,
+            `${vocabulary.isoDayText(row.startsOn ?? "")} - ${vocabulary.isoDayText(row.endsOn ?? "")}`,
+            row.amountVnd == null
+                ? ""
+                : format.number(row.amountVnd, { style: "currency", currency: "VND", maximumFractionDigits: 0 }),
+        ]
+            .filter(Boolean)
+            .join(" · "),
+        statusLabel: t(`contractStatus_${status}`),
+        statusTone: vocabulary.contractTones[status],
+        problems: row.problems.map((code) =>
+            isKnownProblem(code)
+                ? { label: t(PROBLEM_KEYS[code]), tone: code === "startsOnDerived" ? "warning" : "danger" }
+                : { label: t("contractImportProblemOther", { code }), tone: "danger" },
+        ),
+    }
+}
+
+/** Resolves the open import dialog from the import state: words, column pickers and the previewed rows. */
+export const createContractImportDialog = (
+    input: Pick<SalesContractsControllerInput, "t" | "format">,
+    importer: ContractImport,
+    vocabulary: ContractImportVocabulary,
+): ContractImportDialogProps["props"] | null => {
+    const { t } = input
+    const { state } = importer
+    if (!state.isOpen) return null
+    const { preview, mapping } = state
+    return {
+        text: {
+            title: t("contractImportTitle"),
+            intro: t("contractImportIntro"),
+            close: t("cancel"),
+            cancel: t("cancel"),
+            source: t("contractImportSource"),
+            fileLabel: t("contractImportFileLabel"),
+            filePrompt: t("contractImportFilePrompt"),
+            pasteLabel: t("contractImportPasteLabel"),
+            pasteHint: t("contractImportPasteHint"),
+            preview: t("contractImportPreview"),
+            sheet: t("contractImportSheet"),
+            mapping: t("contractImportMapping"),
+        },
+        source: state.source,
+        sourceOptions: [
+            { id: "file", label: t("contractImportSourceFile") },
+            { id: "paste", label: t("contractImportSourcePaste") },
+        ],
+        fileName: state.file?.name ?? null,
+        paste: state.paste,
+        sheets:
+            preview === null || preview.sheets.length < 2
+                ? null
+                : preview.sheets.map((sheet) => ({ id: sheet, label: sheet })),
+        sheet: preview?.sheet ?? "",
+        columns:
+            mapping === null
+                ? null
+                : vocabulary.fields.map((field) => ({
+                      field,
+                      label: t(FIELD_LABEL_KEYS[field]),
+                      column: mapping[field] ?? NO_IMPORT_COLUMN,
+                  })),
+        columnOptions: [
+            { id: NO_IMPORT_COLUMN, label: t("contractImportNoColumn") },
+            ...(preview?.headers ?? []).map((header) => ({ id: header, label: header })),
+        ],
+        summary:
+            preview === null
+                ? null
+                : [
+                      t("contractImportSummary", { total: preview.total, ready: preview.ready }),
+                      preview.total > preview.rows.length ? t("contractImportShowing", { n: preview.rows.length }) : "",
+                  ]
+                      .filter(Boolean)
+                      .join(" "),
+        rows: (preview?.rows ?? []).map((row) => contractImportRowOf(input, vocabulary, row)),
+        confirmLabel: t("contractImportConfirm", { n: preview?.ready ?? 0 }),
+        canConfirm: preview !== null && preview.ready > 0,
+        isPreviewing: importer.isPreviewing,
+        isImporting: importer.isImporting,
+        error: state.error,
+    }
 }

@@ -1,6 +1,7 @@
 export { DATA_HUB_ERROR_KINDS } from "./errors/data-hub.error"
 export { DATA_HUB_MESSAGES } from "./messages/data-hub.messages"
 export { DataHubModule } from "./data-hub.module"
+export { ContractImportService } from "./contract-import.service"
 export { CsvImportWizardService } from "./csv-import-wizard.service"
 export { DataHubService } from "./data-hub.service"
 export { DataSyncService } from "./data-sync.service"
@@ -38,3 +39,4 @@ export type {
     DatabaseTestDraft,
     SavedDatabase,
 } from "./database-config.contracts"
+export type { ContractImportField, ContractImportPreview, ContractImportResult } from "./contract-import.contracts"
