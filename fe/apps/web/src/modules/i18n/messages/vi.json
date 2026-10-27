@@ -898,7 +898,7 @@
     "fieldHolder": "Chủ tài khoản",
     "fieldName": "Tên kết nối",
     "fieldNameHint": "Nhãn chỉ bạn thấy, ví dụ VCB chính.",
-    "createdLocked": "Kết nối đã được tạo. Sửa ở đây sẽ được lưu khi bạn bấm Tiếp.",
+    "createdLocked": "Kết nối đã được tạo. Sửa ở đây sẽ được lưu khi bạn bấm {next}.",
     "accountKeep": "Để trống để giữ {account}.",
     "editSaved": "Đã lưu thay đổi. Hãy sửa giống vậy trên {brand}.",
     "openProvider": "Mở trang {brand}",
@@ -6857,7 +6857,15 @@
     "credentialHint": "Chỉ nhập một lần và được lưu mã hóa; không bao giờ hiển thị lại. Danh sách công cụ được đọc lại ngay.",
     "rotateHint": "Thông tin mới thay cho thông tin đã lưu (không bao giờ hiển thị). Danh sách công cụ được đọc lại ngay.",
     "credentialDone": "Đã lưu thông tin xác thực.",
-    "cancel": "Hủy"
+    "cancel": "Hủy",
+    "status_active": "đang hoạt động",
+    "status_degraded": "chập chờn",
+    "status_disabled": "đã tắt",
+    "connector_einvoice": "Hóa đơn điện tử (TT78)",
+    "tool_sepay-transactions-list": "Các khoản tiền vào tài khoản ngân hàng gần nhất của workspace: số tiền, mã tham chiếu, người chuyển, trạng thái; lọc theo trạng thái và thời điểm.",
+    "tool_sepay-transactions-debits": "Các khoản tiền ra gần nhất của workspace, ví dụ trả nhà cung cấp, cùng các trường và bộ lọc như tiền vào.",
+    "tool_einvoice-list": "Hóa đơn điện tử (XML TT78) nhận được trong hộp thư hóa đơn: người bán, số hóa đơn, ngày, tổng tiền.",
+    "tool_einvoice-get": "Một hóa đơn điện tử kèm các dòng hàng, theo mã mà einvoice.list trả về."
   },
   "workThreads": {
     "loadMore": "Tải thêm luồng việc",

@@ -111,7 +111,7 @@ const moneyWizardText = (tw: ReturnType<typeof useTranslations<"connectionWizard
         fieldBankPlaceholder: tw("fieldBankPlaceholder"),
         fieldAccount: tw("fieldAccount"),
         fieldHolder: tw("fieldHolder"),
-        createdLocked: tw("createdLocked"),
+        createdLocked: tw("createdLocked", { next: tw("next") }),
         verifyWaiting: tw("verifyWaiting"),
         verifyError: tw("verifyError"),
     }
