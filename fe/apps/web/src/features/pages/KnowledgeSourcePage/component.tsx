@@ -25,11 +25,13 @@ export interface KnowledgeSourcePageBaseProps {
 export const KnowledgeSourcePageBase = (props: KnowledgeSourcePageBaseProps) => {
     const { sourceId, ...frame } = props.props
     return (
-        <PageContainer measure="product">
-            <div className={PAGE_CLASS_NAME}>
-                <KnowledgeFrame {...frame} />
-                <KnowledgeSourcePanel sourceId={sourceId} />
-            </div>
-        </PageContainer>
+        <>
+            <KnowledgeFrame {...frame} />
+            <PageContainer measure="product">
+                <div className={PAGE_CLASS_NAME}>
+                    <KnowledgeSourcePanel sourceId={sourceId} />
+                </div>
+            </PageContainer>
+        </>
     )
 }

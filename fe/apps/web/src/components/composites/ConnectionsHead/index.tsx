@@ -1,5 +1,4 @@
-import { Breadcrumbs, Button, SectionHeader } from "@starci/grammar/common"
-import { connectionsHeadClassNames } from "./classNames"
+import { Button, PageHeader, Skeleton } from "@starci/grammar/common"
 
 /** The words of the Connections heading, resolved by the page. */
 type ConnectionsHeadProps = {
@@ -12,30 +11,27 @@ type ConnectionsHeadProps = {
     /** The primary command: opens the library, where a connector is chosen and its wizard opens. */
     readonly addLabel: string
     readonly addHref: string
-    /** The summary line; absent while the page loads (STATE-8: heading and trail are real, figures are not). */
+    /** The summary line; while it is absent the line draws as a placeholder (STATE-8: heading and trail are real, figures are not). */
     readonly meta?: string
 }
 
-/** The trail above the page heading and the heading itself: one heading block. */
+/** The Connections header band: trail, heading, summary and the add command. Place it outside the page PageContainer. */
 export const ConnectionsHead = (props: ConnectionsHeadProps) => (
-    <div className={connectionsHeadClassNames.head}>
-        <Breadcrumbs
-            label={props.crumbLabel}
-            items={[
+    <PageHeader
+        title={props.title}
+        description={props.description}
+        meta={props.meta ?? <Skeleton shape="text" />}
+        breadcrumbs={{
+            label: props.crumbLabel,
+            items: [
                 { id: "home", label: props.homeLabel, href: props.homeHref },
                 { id: "connections", label: props.title },
-            ]}
-        />
-        <SectionHeader
-            level={1}
-            title={props.title}
-            description={props.description}
-            action={
-                <Button intent="commit" href={props.addHref}>
-                    {props.addLabel}
-                </Button>
-            }
-            {...(props.meta === undefined ? {} : { meta: props.meta })}
-        />
-    </div>
+            ],
+        }}
+        actions={
+            <Button intent="commit" href={props.addHref}>
+                {props.addLabel}
+            </Button>
+        }
+    />
 )

@@ -24,15 +24,17 @@ export interface TeamPageBaseProps {
  * back end GraphQL API and draws only for an owner or a manager) and the notice staff see instead.
  */
 export const TeamPageBase = (props: TeamPageBaseProps) => (
-    <PageContainer measure="product">
-        <div className={PAGE_CLASS_NAME}>
-            <HomePageHeading {...props.props} />
-            <TeamTabs selected="members" />
-            <TeamForbidden />
-            <TeamMembers />
-            <TeamIndividualNotice />
-            <TeamInvites />
-            <TeamInvite />
-        </div>
-    </PageContainer>
+    <>
+        <HomePageHeading {...props.props} />
+        <PageContainer measure="product">
+            <div className={PAGE_CLASS_NAME}>
+                <TeamTabs selected="members" />
+                <TeamForbidden />
+                <TeamMembers />
+                <TeamIndividualNotice />
+                <TeamInvites />
+                <TeamInvite />
+            </div>
+        </PageContainer>
+    </>
 )

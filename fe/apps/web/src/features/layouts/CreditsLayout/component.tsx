@@ -16,17 +16,17 @@ interface CreditsLayoutBaseProps {
 
 /** Draws the static credits frame around independently connected slots. */
 export const CreditsLayoutBase = (props: CreditsLayoutBaseProps) => (
-    <PageContainer measure="product">
-        <div className={PAGE_CLASS_NAME}>
-            <PageHeading
-                crumbLabel={props.props.crumbLabel}
-                crumbs={props.props.crumbs}
-                title={props.props.title}
-                description={props.props.description}
-                actionLabel={props.props.history}
-                actionHref="#payments"
-            />
-            {props.children}
-        </div>
-    </PageContainer>
+    <>
+        <PageHeading
+            crumbLabel={props.props.crumbLabel}
+            crumbs={props.props.crumbs}
+            title={props.props.title}
+            description={props.props.description}
+            actionLabel={props.props.history}
+            actionHref="#payments"
+        />
+        <PageContainer measure="product">
+            <div className={PAGE_CLASS_NAME}>{props.children}</div>
+        </PageContainer>
+    </>
 )

@@ -46,53 +46,65 @@ export interface AgentInstancesBaseProps {
 export const AgentInstancesBase = (props: AgentInstancesBaseProps) => {
     const view = props.props
     return (
-        <PageContainer measure="product">
-            <div className={PAGE_CLASS_NAME}>
-                <PageHeading
-                    crumbLabel={view.crumbLabel}
-                    crumbs={view.crumbs}
-                    eyebrow={view.eyebrow}
-                    title={view.title}
-                    description={view.description}
-                />
-                <SurfaceListCard
-                    label={view.listLabel}
-                    headingLevel={2}
-                    labelEnd={
-                        view.addLabel === null ? undefined : (
-                            <Button intent="commit" size="sm" isDisabled={view.isAddDisabled} onPress={props.on.add}>
-                                {view.addLabel}
-                            </Button>
-                        )
-                    }
-                >
-                    <SlotView slot={view.slot} placeholder={view.placeholder} labels={view.slotLabels}>
-                        {(rows, isSkeleton) =>
-                            rows.map((row) => (
-                                <ListRow
-                                    key={row.id}
-                                    title={row.title}
-                                    description={row.description}
-                                    isSkeleton={isSkeleton}
-                                    badges={
-                                        <Badge isDot tone={row.statusTone} isSkeleton={isSkeleton}>
-                                            {row.statusLabel}
-                                        </Badge>
-                                    }
-                                    actions={
-                                        <Button size="sm" intent="neutral" href={row.openHref} isSkeleton={isSkeleton}>
-                                            {view.openLabel}
-                                        </Button>
-                                    }
+        <>
+            <PageHeading
+                crumbLabel={view.crumbLabel}
+                crumbs={view.crumbs}
+                eyebrow={view.eyebrow}
+                title={view.title}
+                description={view.description}
+            />
+            <PageContainer measure="product">
+                <div className={PAGE_CLASS_NAME}>
+                    <SurfaceListCard
+                        label={view.listLabel}
+                        headingLevel={2}
+                        labelEnd={
+                            view.addLabel === null ? undefined : (
+                                <Button
+                                    intent="commit"
+                                    size="sm"
+                                    isDisabled={view.isAddDisabled}
+                                    onPress={props.on.add}
                                 >
-                                    <ConnectionNeeds {...row.needs} />
-                                </ListRow>
-                            ))
+                                    {view.addLabel}
+                                </Button>
+                            )
                         }
-                    </SlotView>
-                </SurfaceListCard>
-                {view.dialog === null ? null : <AddInstanceDialog props={view.dialog.props} on={view.dialog.on} />}
-            </div>
-        </PageContainer>
+                    >
+                        <SlotView slot={view.slot} placeholder={view.placeholder} labels={view.slotLabels}>
+                            {(rows, isSkeleton) =>
+                                rows.map((row) => (
+                                    <ListRow
+                                        key={row.id}
+                                        title={row.title}
+                                        description={row.description}
+                                        isSkeleton={isSkeleton}
+                                        badges={
+                                            <Badge isDot tone={row.statusTone} isSkeleton={isSkeleton}>
+                                                {row.statusLabel}
+                                            </Badge>
+                                        }
+                                        actions={
+                                            <Button
+                                                size="sm"
+                                                intent="neutral"
+                                                href={row.openHref}
+                                                isSkeleton={isSkeleton}
+                                            >
+                                                {view.openLabel}
+                                            </Button>
+                                        }
+                                    >
+                                        <ConnectionNeeds {...row.needs} />
+                                    </ListRow>
+                                ))
+                            }
+                        </SlotView>
+                    </SurfaceListCard>
+                    {view.dialog === null ? null : <AddInstanceDialog props={view.dialog.props} on={view.dialog.on} />}
+                </div>
+            </PageContainer>
+        </>
     )
 }

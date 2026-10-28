@@ -1,6 +1,5 @@
-import { Breadcrumbs, SectionHeader } from "@starci/grammar/common"
+import { PageHeader } from "@starci/grammar/common"
 import { APP_ROUTES } from "@/modules/routes"
-import { HEAD_CLASS_NAME } from "./classNames"
 
 /** What the heading of a console page one level under the dashboard draws. */
 type HomePageHeadingProps = {
@@ -13,16 +12,18 @@ type HomePageHeadingProps = {
     readonly description: string
 }
 
-/** The trail (dashboard, then this page) over the level-1 heading of a console page. */
+/** The page header band (dashboard, then this page) of a console page. Place it outside the page PageContainer. */
 export const HomePageHeading = (props: HomePageHeadingProps) => (
-    <div className={HEAD_CLASS_NAME}>
-        <Breadcrumbs
-            label={props.crumbLabel}
-            items={[
+    <PageHeader
+        title={props.title}
+        description={props.description}
+        meta={props.eyebrow}
+        breadcrumbs={{
+            label: props.crumbLabel,
+            items: [
                 { id: "home", label: props.crumbHome, href: APP_ROUTES.dashboard },
                 { id: "current", label: props.title },
-            ]}
-        />
-        <SectionHeader level={1} eyebrow={props.eyebrow} title={props.title} description={props.description} />
-    </div>
+            ],
+        }}
+    />
 )

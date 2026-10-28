@@ -15,21 +15,23 @@ export type { ConnectionsBoard } from "./component"
 export const ConnectionsOverview = (props: ConnectionsOverviewProps) => {
     const { words, summary } = props.props
     return (
-        <PageContainer measure="product">
-            <div className={classNames.page}>
-                <ConnectionsHead
-                    crumbLabel={words.crumbLabel}
-                    homeLabel={words.crumbHome}
-                    homeHref={words.homeHref}
-                    title={words.title}
-                    addLabel={words.addLabel}
-                    addHref={words.addHref}
-                    description={words.description}
-                    {...(summary === null ? {} : { meta: summary })}
-                />
-                <ConnectionsBoardRegion overview={props} />
-            </div>
-        </PageContainer>
+        <>
+            <ConnectionsHead
+                crumbLabel={words.crumbLabel}
+                homeLabel={words.crumbHome}
+                homeHref={words.homeHref}
+                title={words.title}
+                addLabel={words.addLabel}
+                addHref={words.addHref}
+                description={words.description}
+                {...(summary === null ? {} : { meta: summary })}
+            />
+            <PageContainer measure="product">
+                <div className={classNames.page}>
+                    <ConnectionsBoardRegion overview={props} />
+                </div>
+            </PageContainer>
+        </>
     )
 }
 

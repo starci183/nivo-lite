@@ -24,22 +24,24 @@ export interface ConnectionsLoadingPageBaseProps {
  * connection list is a skeleton.
  */
 export const ConnectionsLoadingPageBase = (props: ConnectionsLoadingPageBaseProps) => (
-    <PageContainer measure="product">
-        <div className={classNames.page}>
-            <ConnectionsHead
-                crumbLabel={props.props.crumbLabel}
-                homeLabel={props.props.crumbHome}
-                homeHref={props.props.homeHref}
-                title={props.props.title}
-                description={props.props.description}
-                addLabel={props.props.addLabel}
-                addHref={props.props.addHref}
-            />
-            <ConnectionViewTabs selected="connected" />
-            <SurfaceListCard label={props.props.connectedLabel} headingLevel={2} isLoading />
-            <TextAction href={props.props.automationsHref} isSkeleton>
-                {props.props.automationsLink}
-            </TextAction>
-        </div>
-    </PageContainer>
+    <>
+        <ConnectionsHead
+            crumbLabel={props.props.crumbLabel}
+            homeLabel={props.props.crumbHome}
+            homeHref={props.props.homeHref}
+            title={props.props.title}
+            description={props.props.description}
+            addLabel={props.props.addLabel}
+            addHref={props.props.addHref}
+        />
+        <PageContainer measure="product">
+            <div className={classNames.page}>
+                <ConnectionViewTabs selected="connected" />
+                <SurfaceListCard label={props.props.connectedLabel} headingLevel={2} isLoading />
+                <TextAction href={props.props.automationsHref} isSkeleton>
+                    {props.props.automationsLink}
+                </TextAction>
+            </div>
+        </PageContainer>
+    </>
 )

@@ -108,22 +108,24 @@ const Panel = (props: BrainPageBaseProps) => {
 
 /** Draws the Second Brain: its pipeline, then the tab the address asks for (sources, review, facts, lessons, questions, what each agent sees). */
 export const BrainPageBase = (props: BrainPageBaseProps) => (
-    <PageContainer measure="product">
-        <div className={PAGE_CLASS_NAME}>
-            <PageHeading
-                crumbLabel={props.props.crumbLabel}
-                crumbs={[
-                    { id: "home", label: props.props.crumbHome, href: props.props.homeHref },
-                    { id: "brain", label: props.props.title },
-                ]}
-                title={props.props.title}
-                description={props.props.description}
-            />
-            <BrainPipeline />
-            <BrainTabs selected={props.props.tab} />
-            <div className={PANEL_CLASS_NAME} role="tabpanel" id={`${BRAIN_PANEL_PREFIX}${props.props.tab}`}>
-                <Panel {...props} />
+    <>
+        <PageHeading
+            crumbLabel={props.props.crumbLabel}
+            crumbs={[
+                { id: "home", label: props.props.crumbHome, href: props.props.homeHref },
+                { id: "brain", label: props.props.title },
+            ]}
+            title={props.props.title}
+            description={props.props.description}
+        />
+        <PageContainer measure="product">
+            <div className={PAGE_CLASS_NAME}>
+                <BrainPipeline />
+                <BrainTabs selected={props.props.tab} />
+                <div className={PANEL_CLASS_NAME} role="tabpanel" id={`${BRAIN_PANEL_PREFIX}${props.props.tab}`}>
+                    <Panel {...props} />
+                </div>
             </div>
-        </div>
-    </PageContainer>
+        </PageContainer>
+    </>
 )

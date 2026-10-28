@@ -17,11 +17,13 @@ export interface PermissionsPageBaseProps {
 
 /** Draws the Quyen screen: heading, the tabs shared with the team page, then the rule table with its drawer. */
 export const PermissionsPageBase = (props: PermissionsPageBaseProps) => (
-    <PageContainer measure="product">
-        <div className={PAGE_CLASS_NAME}>
-            <HomePageHeading {...props.props} />
-            <TeamTabs selected="permissions" />
-            <PermissionRules />
-        </div>
-    </PageContainer>
+    <>
+        <HomePageHeading {...props.props} />
+        <PageContainer measure="product">
+            <div className={PAGE_CLASS_NAME}>
+                <TeamTabs selected="permissions" />
+                <PermissionRules />
+            </div>
+        </PageContainer>
+    </>
 )
