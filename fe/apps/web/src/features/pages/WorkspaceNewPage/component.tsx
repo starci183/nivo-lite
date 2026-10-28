@@ -1,11 +1,10 @@
-import { SectionHeader } from "@starci/grammar/common"
+import { Page } from "@starci/grammar/common"
 import { BrandLogo } from "@/components/blocks/BrandLogo"
 import { LocaleSwitch } from "@/components/blocks/LocaleSwitch"
 import { WorkspaceCreate } from "@/components/blocks/WorkspaceCreate"
 import { WorkspacesAccount } from "@/components/blocks/WorkspacesAccount"
 import { WorkspacesFrame } from "@/components/composites/WorkspacesFrame"
 import { AUTH_ROUTES } from "@/modules/routes"
-import { STACK_CLASS_NAME } from "./classNames"
 
 /** Copy and values the new-workspace page supplies. */
 export interface WorkspaceNewPageBaseProps {
@@ -15,7 +14,7 @@ export interface WorkspaceNewPageBaseProps {
     }
 }
 
-/** Draws the new-workspace screen: a heading and the form that names the workspace. */
+/** Draws the new-workspace screen: one Page: the heading and the form that names the workspace. */
 export const WorkspaceNewPageBase = (props: WorkspaceNewPageBaseProps) => (
     <WorkspacesFrame
         homeHref={AUTH_ROUTES.workspaces}
@@ -24,9 +23,8 @@ export const WorkspaceNewPageBase = (props: WorkspaceNewPageBaseProps) => (
         localeSwitch={<LocaleSwitch />}
         account={<WorkspacesAccount />}
     >
-        <div className={STACK_CLASS_NAME}>
-            <SectionHeader level={1} title={props.props.title} description={props.props.description} />
+        <Page measure="reading" header={{ title: props.props.title, description: props.props.description }}>
             <WorkspaceCreate />
-        </div>
+        </Page>
     </WorkspacesFrame>
 )

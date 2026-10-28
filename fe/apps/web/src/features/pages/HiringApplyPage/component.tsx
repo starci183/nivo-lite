@@ -1,3 +1,4 @@
+import { Page } from "@starci/grammar/common"
 import { HiringApplyForm } from "@/components/blocks/HiringApplyForm"
 import { HiringPublicShell } from "@/components/composites/HiringPublicShell"
 
@@ -10,9 +11,11 @@ export interface HiringApplyPageBaseProps {
     }
 }
 
-/** Draws the public job page: the connected post and apply form in a reading column, centred in the shell. */
+/** Draws the public job page: the connected post and apply form in a reading column, inside one Page. */
 export const HiringApplyPageBase = (props: HiringApplyPageBaseProps) => (
     <HiringPublicShell label={props.props.label} foot={null}>
-        <HiringApplyForm ws={props.props.ws} job={props.props.job} />
+        <Page measure="reading">
+            <HiringApplyForm ws={props.props.ws} job={props.props.job} />
+        </Page>
     </HiringPublicShell>
 )
