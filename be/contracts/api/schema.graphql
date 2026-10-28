@@ -2578,6 +2578,14 @@ type CreatedApiKeyType {
   key: String!
 }
 
+type CreatedWebhookType {
+  events: [String!]!
+  host: String!
+  id: ID!
+  name: String!
+  signingSecret: String!
+}
+
 type CreditDailyUsageType {
   credits: Float!
   day: String!
@@ -5169,7 +5177,6 @@ type Mutation {
   retryKnowledgeSource(input: RetryKnowledgeSourceInput!): SourceRefType!
   returnZaloAuthorization(input: ReturnZaloAuthorizationInput!): ZaloWizardConnectionType!
   revealSepayKey(input: RevealSepayKeyInput!): SepayKeyType!
-  revealWebhookConnection(input: RevealWebhookConnectionInput!): WebhookViewType!
   revokeAgentConnection(input: RevokeAgentConnectionInput!): AgentAckType!
   revokeApiKey(input: RevokeApiKeyInput!): ApiKeyType!
   revokeInvite(input: InviteRefInput!): Boolean!
@@ -5217,6 +5224,7 @@ type Mutation {
   saveTelegramUserSetup(input: SaveTelegramUserSetupInput!): Boolean!
   saveVideoBrand(input: SaveVideoBrandInput!): VideoBrandType!
   saveZaloOaSecret(input: SaveZaloOaSecretInput!): ZaloWizardConnectionType!
+  saveZnsRenewal(input: SaveZnsRenewalInput!): ZnsRenewalType
   sendAgentChatMessage(input: SendAgentChatMessageInput!): QueuedAgentChatTurnType!
   sendAgentCommand(input: SendAgentCommandInput!): AgentCommandResultType!
   sendSmtpTest(input: SendSmtpTestInput!): SmtpTestResultType!
@@ -5254,7 +5262,7 @@ type Mutation {
   startMoneyConnection(input: StartMoneyConnectionInput!): WizardConnectionType!
   startSmtpConnection(input: StartSmtpConnectionInput!): SmtpConnectionType!
   startTelegramLogin(input: StartTelegramLoginInput!): TelegramLoginStartedType!
-  startWebhookConnection(input: StartWebhookConnectionInput!): WebhookViewType!
+  startWebhookConnection(input: StartWebhookConnectionInput!): CreatedWebhookType!
   startZaloConnection(input: StartZaloConnectionInput!): ZaloWizardConnectionType!
   stopFailedStep(input: StopFailedStepInput!): StopFailedStepType!
   submitContentForApproval(input: SubmitContentForApprovalInput!): SubmitContentForApprovalType!
@@ -6549,10 +6557,6 @@ input RevealSepayKeyInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
-input RevealWebhookConnectionInput {
-  connectionId: ID! @inputBounds(maxLength: 64)
-}
-
 input RevokeAgentConnectionInput {
   agentId: ID! @inputBounds(maxLength: 36)
   connectionId: ID! @inputBounds(maxLength: 36)
@@ -7221,6 +7225,17 @@ input SaveVideoBrandInput {
 input SaveZaloOaSecretInput {
   connectionId: ID! @inputBounds(maxLength: 64)
   oaSecret: String! @inputBounds(maxLength: 200)
+}
+
+input SaveZnsRenewalInput {
+  amount: String! @inputBounds(maxLength: 50)
+  connectionId: ID! @inputBounds(maxLength: 64)
+  customerName: String! @inputBounds(maxLength: 50)
+  endDate: String! @inputBounds(maxLength: 50)
+  invoiceNumber: String! @inputBounds(maxLength: 50)
+  plan: String! @inputBounds(maxLength: 50)
+  templateId: String! @inputBounds(maxLength: 20)
+  transferContent: String! @inputBounds(maxLength: 50)
 }
 
 type SavedContentRowsType {
@@ -8479,14 +8494,6 @@ type WebhookTestResultType {
   status: Int
 }
 
-type WebhookViewType {
-  events: [String!]!
-  host: String!
-  id: ID!
-  name: String!
-  signingSecret: String!
-}
-
 type WebsiteLeadStatsType {
   afterHoursCount: Int!
   avgWaitHours: Float
@@ -8706,6 +8713,7 @@ type ZaloPageType {
   sendBlock: String
   status: String!
   webhookUrl: String!
+  znsRenewal: ZnsRenewalType
 }
 
 type ZaloRecipientType {
@@ -8730,4 +8738,18 @@ type ZaloWizardConnectionType {
   oaSecretSaved: Boolean!
   status: String!
   webhookUrl: String!
+}
+
+type ZnsRenewalParamsType {
+  amount: String!
+  customerName: String!
+  endDate: String!
+  invoiceNumber: String!
+  plan: String!
+  transferContent: String!
+}
+
+type ZnsRenewalType {
+  params: ZnsRenewalParamsType!
+  templateId: String!
 }

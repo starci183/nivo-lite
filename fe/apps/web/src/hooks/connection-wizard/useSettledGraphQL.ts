@@ -2,11 +2,16 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
+import { graphQLErrorCode } from "@/modules/failure"
 import { useGraphQLWithToast } from "@/modules/toast"
 
-/** What a connection command settled with: its payload, or the back end message of why it failed (already in the reader's language). */
+/**
+ * What a connection command settled with: its payload, or the back end message of why it failed (already in the reader's language)
+ * with the capability code of the refusal when it had one.
+ */
 export type Settled<T> =
-    { readonly kind: "ok"; readonly value: T } | { readonly kind: "failed"; readonly message: string }
+    | { readonly kind: "ok"; readonly value: T }
+    | { readonly kind: "failed"; readonly message: string; readonly code?: string | undefined }
 
 /**
  * Runs one GraphQL mutation of the connections console through the toast helper. A success toasts `successMessage` when one is
@@ -19,12 +24,14 @@ export const useSettledGraphQL = () => {
     return useCallback(
         async <T>(action: () => Promise<T>, successMessage?: string): Promise<Settled<T>> => {
             let message = t("defaultError")
+            let code: string | undefined
             const value = await runGraphQL(
                 async () => {
                     try {
                         return await action()
                     } catch (error) {
                         if (error instanceof Error && error.message) message = error.message
+                        code = graphQLErrorCode(error)
                         throw error
                     }
                 },
@@ -32,7 +39,7 @@ export const useSettledGraphQL = () => {
                     ? { showSuccessToast: false, showErrorToast: false }
                     : { successMessage, showErrorToast: false },
             )
-            return value === undefined ? { kind: "failed", message } : { kind: "ok", value }
+            return value === undefined ? { kind: "failed", message, code } : { kind: "ok", value }
         },
         [runGraphQL, t],
     )

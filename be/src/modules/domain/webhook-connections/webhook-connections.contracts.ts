@@ -32,7 +32,13 @@ export interface WebhookView {
     readonly host: string
     /** The events it receives. */
     readonly events: ReadonlyArray<WebhookEvent>
-    /** The per-workspace signing secret to copy into the receiver. */
+    /** The last four characters of the per-workspace signing secret; the whole secret is shown once, at creation. */
+    readonly signingSecretLast4: string
+}
+
+/** A webhook connection just created: the signing secret is in this answer only. */
+export interface CreatedWebhook extends WebhookView {
+    /** The per-workspace signing secret to copy into the receiver, shown once. */
     readonly signingSecret: string
 }
 

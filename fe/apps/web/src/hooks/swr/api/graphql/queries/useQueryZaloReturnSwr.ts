@@ -1,7 +1,7 @@
 "use client"
 
 import { navigation } from "@/modules/i18n"
-import { isRefusedByBackend } from "@/modules/failure"
+import { graphQLErrorCode, isRefusedByBackend, zaloReturnVerdictOf } from "@/modules/failure"
 import useSWR from "swr"
 import { useMutateReturnZaloAuthorizationSwr } from "../mutations/useMutateReturnZaloAuthorizationSwr"
 
@@ -39,7 +39,7 @@ export const useQueryZaloReturnSwr = ({ code, oaId, state }: ZaloReturnInput) =>
                 return connectionsHref("ok", connection.id)
             } catch (error) {
                 return connectionsHref(
-                    isRefusedByBackend(error) ? "denied" : "failed",
+                    zaloReturnVerdictOf(graphQLErrorCode(error), isRefusedByBackend(error)),
                     authorizationState.split(".")[0],
                 )
             }

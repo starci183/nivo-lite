@@ -119,6 +119,7 @@ describe("ZaloPageService view", () => {
             access: { state: "valid", canRefresh: true },
             sendBlock: null,
             agentIds: ["agent-1"],
+            znsRenewal: null,
             recipients: [{ userId: "u-1", name: "An", lastMessageAt: "2026-10-28T09:00:00.000Z" }],
         })
         expect(page.checks.map((row) => [row.key, row.state])).toEqual([
@@ -304,6 +305,35 @@ describe("ZaloPageService sendTest", () => {
 
         await expect(service.sendTest(actor, "c-1", "u-1", "Hello")).rejects.toMatchObject({
             code: ChannelsErrorCode.ZaloRefreshBusy,
+        })
+    })
+})
+
+describe("ZaloPageService view of the ZNS renewal template", () => {
+    it("carries the ZNS renewal template stored on the connection so the owner can edit it", async () => {
+        const { service } = await build(
+            {},
+            {
+                meta: {
+                    app_id: "123456",
+                    zns_renewal_template_id: "345678",
+                    zns_renewal_param_customer_name: "customer_name",
+                },
+            },
+        )
+
+        const page = await service.view(actor, "c-1")
+
+        expect(page.znsRenewal).toEqual({
+            templateId: "345678",
+            params: {
+                customerName: "customer_name",
+                plan: "",
+                endDate: "",
+                amount: "",
+                transferContent: "",
+                invoiceNumber: "",
+            },
         })
     })
 })

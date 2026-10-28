@@ -68,3 +68,14 @@ export interface ZaloEventLineView {
     readonly outcomeTone: ZaloTone
     readonly detail: string
 }
+
+/** The ZNS renewal template of the connection as the owner edits it: the template id and the parameter name of each renewal field (empty leaves a field out). */
+export interface ZnsRenewalForm {
+    readonly templateId: string
+    readonly customerName: string
+    readonly plan: string
+    readonly endDate: string
+    readonly amount: string
+    readonly transferContent: string
+    readonly invoiceNumber: string
+}

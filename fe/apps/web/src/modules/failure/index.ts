@@ -5,3 +5,4 @@ export {
     isRefusedByBackend,
     isUnauthenticatedFailure,
 } from "./graphql"
+export { zaloFailureKeyOf, zaloReturnVerdictOf } from "./zalo"

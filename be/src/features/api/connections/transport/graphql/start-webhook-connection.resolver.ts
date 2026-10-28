@@ -6,7 +6,7 @@ import { InjectCommandBus } from "@modules/platform/cqrs"
 import type { Principal } from "@modules/platform/cqrs"
 import { StartWebhookConnectionCommand } from "../../application/start-webhook-connection.command"
 import { StartWebhookConnectionInput } from "./dto/start-webhook-connection.input"
-import { WebhookViewType } from "./dto/webhook-view.type"
+import { CreatedWebhookType } from "./dto/created-webhook.type"
 import { toStartWebhookConnectionRequest, toStartWebhookConnectionType } from "./start-webhook-connection.mapper"
 
 @Resolver()
@@ -15,12 +15,12 @@ export class StartWebhookConnectionResolver {
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
     /** Starts a webhook connection as pending. */
-    @Mutation(() => WebhookViewType, { name: "startWebhookConnection" })
+    @Mutation(() => CreatedWebhookType, { name: "startWebhookConnection" })
     async startWebhookConnection(
         @CurrentPrincipal() principal: Principal,
         @WorkspaceId() workspaceId: string,
         @Args("input") input: StartWebhookConnectionInput,
-    ): Promise<WebhookViewType> {
+    ): Promise<CreatedWebhookType> {
         const result = await this.commandBus.execute(
             new StartWebhookConnectionCommand({
                 request: toStartWebhookConnectionRequest(workspaceId, input),

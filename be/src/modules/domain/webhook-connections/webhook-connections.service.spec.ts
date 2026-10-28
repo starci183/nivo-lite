@@ -83,6 +83,7 @@ describe("WebhookConnectionsService start", () => {
             host: "receiver.test:8443",
             events: ["lead.created", "deal.won"],
             signingSecret: KEY,
+            signingSecretLast4: "b340",
         })
         expect(connections.authorize).toHaveBeenCalledWith(ACTOR, ["owner"])
         expect(delivery.resolveTarget).toHaveBeenCalledWith(TARGET, true)
@@ -111,6 +112,7 @@ describe("WebhookConnectionsService start", () => {
             host: "localhost:5678",
             events: ["lead.created", "deal.won"],
             signingSecret: KEY,
+            signingSecretLast4: "b340",
         })
         expect(delivery.resolveTarget).toHaveBeenCalledWith("http://localhost:5678/webhook", false)
         expect(connections.create).toHaveBeenCalledWith({
@@ -187,19 +189,19 @@ describe("WebhookConnectionsService start", () => {
     })
 })
 
-describe("WebhookConnectionsService reveal", () => {
-    it("returns the stored host and valid events with the workspace signing key", async () => {
+describe("WebhookConnectionsService view", () => {
+    it("returns the stored host and valid events with the signing key masked to its last four characters", async () => {
         const { service, connections } = await build()
         connections.get.mockResolvedValue(
             record({ meta: { host: "receiver.test:8443", events: "deal.won, lead.created,unknown,deal.won" } }),
         )
 
-        await expect(service.reveal(ACTOR, "c1")).resolves.toEqual({
+        await expect(service.view(ACTOR, "c1")).resolves.toEqual({
             id: "c1",
             name: "Lead feed",
             host: "receiver.test:8443",
             events: ["deal.won", "lead.created"],
-            signingSecret: KEY,
+            signingSecretLast4: "b340",
         })
         expect(connections.authorize).toHaveBeenCalledWith(ACTOR, ["owner"])
         expect(connections.get).toHaveBeenCalledWith("ws-1", "c1")
@@ -209,12 +211,12 @@ describe("WebhookConnectionsService reveal", () => {
         const { service, connections } = await build()
         connections.get.mockResolvedValue(record({ meta: {} }))
 
-        await expect(service.reveal(ACTOR, "c1")).resolves.toEqual({
+        await expect(service.view(ACTOR, "c1")).resolves.toEqual({
             id: "c1",
             name: "Lead feed",
             host: "",
             events: [],
-            signingSecret: KEY,
+            signingSecretLast4: "b340",
         })
     })
 
@@ -222,7 +224,7 @@ describe("WebhookConnectionsService reveal", () => {
         const { service, connections } = await build()
         connections.get.mockResolvedValue(record({ provider: "telegram" }))
 
-        await expect(service.reveal(ACTOR, "c1")).rejects.toEqual(
+        await expect(service.view(ACTOR, "c1")).rejects.toEqual(
             new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id: "c1" } }),
         )
     })
@@ -373,7 +375,7 @@ describe("WebhookConnectionsService finish", () => {
 })
 
 describe("WebhookConnectionsService", () => {
-    it.each(["start", "reveal", "updateEvents", "test", "finish"] as const)(
+    it.each(["start", "view", "updateEvents", "test", "finish"] as const)(
         "does not continue %s after authorization is refused",
         async (method) => {
             const { service, connections, delivery } = await build()
@@ -381,7 +383,7 @@ describe("WebhookConnectionsService", () => {
             connections.authorize.mockRejectedValue(failure)
             const attempt = {
                 start: () => service.start(ACTOR, INPUT),
-                reveal: () => service.reveal(ACTOR, "c1"),
+                view: () => service.view(ACTOR, "c1"),
                 updateEvents: () => service.updateEvents(ACTOR, "c1", ["lead.created"]),
                 test: () => service.test(ACTOR, "c1"),
                 finish: () => service.finish(ACTOR, "c1"),

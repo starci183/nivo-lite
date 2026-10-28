@@ -3,7 +3,7 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
 import { mutate as mutateCache } from "swr"
-import { useSettledGraphQL } from "@/hooks/connection-wizard"
+import { useSettledGraphQL, useZaloFailureLabel } from "@/hooks/connection-wizard"
 import { mapSlot } from "@/hooks/slot"
 import { QUERY_ZALO_CONNECTION_EVENTS_SWR_KEY, useMutateSendZaloTestMessageSwr } from "@/hooks/swr"
 import type { DataSlot, ZaloSendView } from "@/modules/types"
@@ -14,6 +14,7 @@ export const useZaloTestSend = (connectionId: string) => {
     const t = useTranslations("zaloConnection")
     const format = useFormatter()
     const settle = useSettledGraphQL()
+    const labelOf = useZaloFailureLabel()
     const { slot } = useZaloPage(connectionId)
     const { trigger, isMutating } = useMutateSendZaloTestMessageSwr()
     const [picked, setPicked] = useState("")
@@ -42,14 +43,15 @@ export const useZaloTestSend = (connectionId: string) => {
     const send = useCallback(async (): Promise<void> => {
         setNote({ text: "", isOk: false })
         const result = await settle(() => trigger({ connectionId, recipientId, text }))
-        if (result.kind !== "ok") return setNote({ text: result.message, isOk: false })
+        if (result.kind !== "ok") return setNote({ text: labelOf(result.code, result.message), isOk: false })
+        const reason = result.value.failure ?? ""
         await mutateCache((key) => Array.isArray(key) && key[0] === QUERY_ZALO_CONNECTION_EVENTS_SWR_KEY)
         setNote(
             result.value.sent
                 ? { text: t("testSent"), isOk: true }
-                : { text: t("testFailed", { reason: result.value.failure ?? "" }), isOk: false },
+                : { text: t("testFailed", { reason: labelOf(reason, reason) }), isOk: false },
         )
-    }, [settle, trigger, connectionId, recipientId, text, t])
+    }, [settle, labelOf, trigger, connectionId, recipientId, text, t])
 
     return {
         view,

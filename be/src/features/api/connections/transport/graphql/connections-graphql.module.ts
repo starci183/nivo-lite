@@ -19,7 +19,6 @@ import { GetZaloConnectionResolver } from "./get-zalo-connection.resolver"
 import { ListConnectionAgentsResolver } from "./list-connection-agents.resolver"
 import { ListConnectionsResolver } from "./list-connections.resolver"
 import { ReturnZaloAuthorizationResolver } from "./return-zalo-authorization.resolver"
-import { RevealWebhookConnectionResolver } from "./reveal-webhook-connection.resolver"
 import { SaveProviderKeysResolver } from "./save-provider-keys.resolver"
 import { SaveZaloOaSecretResolver } from "./save-zalo-oa-secret.resolver"
 import { SetAgentConnectionsResolver } from "./set-agent-connections.resolver"
@@ -58,7 +57,6 @@ import { WantConnectorResolver } from "./want-connector.resolver"
         ListConnectionAgentsResolver,
         ListConnectionsResolver,
         ReturnZaloAuthorizationResolver,
-        RevealWebhookConnectionResolver,
         SaveProviderKeysResolver,
         SaveZaloOaSecretResolver,
         SetAgentConnectionsResolver,

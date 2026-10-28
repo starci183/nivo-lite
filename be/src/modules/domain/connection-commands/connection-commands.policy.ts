@@ -150,7 +150,7 @@ export const COMMANDS: Readonly<Record<string, Runner>> = {
             url: textOf(i.url, "url", 2048),
             events: eventsOf(i),
         }),
-    "webhook.reveal": (s, a, i) => s.webhooks.reveal(a, connectionOf(i)),
+    "webhook.view": (s, a, i) => s.webhooks.view(a, connectionOf(i)),
     "webhook.events": (s, a, i) => s.webhooks.updateEvents(a, connectionOf(i), eventsOf(i)),
     "webhook.test": (s, a, i) => s.webhooks.test(a, connectionOf(i)),
     "webhook.finish": (s, a, i) => s.webhooks.finish(a, connectionOf(i)),

@@ -425,6 +425,7 @@ export type {
     ZaloSendView,
     ZaloTab,
     ZaloTone,
+    ZnsRenewalForm,
 } from "./zalo-connection"
 export type {
     SepayAccountForm,

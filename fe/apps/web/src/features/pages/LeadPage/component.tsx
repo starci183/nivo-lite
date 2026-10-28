@@ -1,4 +1,3 @@
-import { Page } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
 import { LeadContext } from "@/components/blocks/LeadContext"
 import { LeadExecution } from "@/components/blocks/LeadExecution"
@@ -6,6 +5,7 @@ import { LeadHeader } from "@/components/blocks/LeadHeader"
 import { LeadHeaderActions } from "@/components/blocks/LeadHeaderActions"
 import { LeadHistory } from "@/components/blocks/LeadHistory"
 import { LeadOutcome } from "@/components/blocks/LeadOutcome"
+import { LeadPageHead } from "@/components/blocks/LeadPageHead"
 import { LeadPreviousSteps } from "@/components/blocks/LeadPreviousSteps"
 import { LeadResponsibility } from "@/components/blocks/LeadResponsibility"
 import { LeadWorkFlow } from "@/components/blocks/LeadWorkFlow"
@@ -17,18 +17,20 @@ export interface LeadPageBaseProps {
     readonly props: {
         readonly leadId: string
         readonly crumbLabel: string
+        /** The trail up to the lead; the connected head adds the lead itself. */
         readonly crumbs: ReadonlyArray<BreadcrumbItem>
     }
 }
 
-/** Draws the lead page: the head (the trail, the lead's mark, name, stage and actions), the work panels and the rail, all connected to the lead's SWR query. */
+/** Draws the lead page: the connected head owns the `Page` (the trail ends with the lead's name), then the work panels and the rail, all connected to the lead's SWR query. */
 export const LeadPageBase = (props: LeadPageBaseProps) => {
     const leadId = props.props.leadId
     return (
-        <Page
-            measure="product"
-            header={{
-                breadcrumbs: { label: props.props.crumbLabel, items: props.props.crumbs },
+        <LeadPageHead
+            leadId={leadId}
+            crumbLabel={props.props.crumbLabel}
+            crumbs={props.props.crumbs}
+            slots={{
                 mark: <LeadHeader leadId={leadId} part="mark" />,
                 title: <LeadHeader leadId={leadId} part="title" />,
                 status: <LeadHeader leadId={leadId} part="status" />,
@@ -54,6 +56,6 @@ export const LeadPageBase = (props: LeadPageBaseProps) => {
                     </>
                 }
             />
-        </Page>
+        </LeadPageHead>
     )
 }

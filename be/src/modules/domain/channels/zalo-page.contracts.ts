@@ -1,3 +1,5 @@
+import type { OptionalZnsRenewal } from "./channels.contracts"
+
 /** Where the OA access token stands. */
 export type ZaloTokenState = "none" | "valid" | "renewable" | "expired"
 
@@ -78,6 +80,8 @@ export interface ZaloPageView {
     readonly sendBlock: ZaloSendBlock | null
     /** The agents that use the connection. */
     readonly agentIds: ReadonlyArray<string>
+    /** The ZNS renewal template the connection falls back to outside the 48-hour window, or null when none is configured. */
+    readonly znsRenewal: OptionalZnsRenewal
 }
 
 /** The kinds of line the live panel lists. */

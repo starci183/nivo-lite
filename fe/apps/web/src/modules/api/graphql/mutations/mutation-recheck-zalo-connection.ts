@@ -46,6 +46,17 @@ const mutation1: TypedDocumentNode<
             }
             sendBlock
             agentIds
+            znsRenewal {
+                templateId
+                params {
+                    customerName
+                    plan
+                    endDate
+                    amount
+                    transferContent
+                    invoiceNumber
+                }
+            }
         }
     }
 `

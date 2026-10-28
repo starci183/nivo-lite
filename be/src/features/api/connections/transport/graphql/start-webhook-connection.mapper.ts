@@ -1,7 +1,7 @@
 import type { StartWebhookConnectionRequest } from "../../application/start-webhook-connection.contracts"
-import type { WebhookView } from "@modules/domain/webhook-connections"
+import type { CreatedWebhook } from "@modules/domain/webhook-connections"
 import type { StartWebhookConnectionInput } from "./dto/start-webhook-connection.input"
-import type { WebhookViewType } from "./dto/webhook-view.type"
+import type { CreatedWebhookType } from "./dto/created-webhook.type"
 
 /** Maps the GraphQL arguments of startWebhookConnection to the request. */
 export const toStartWebhookConnectionRequest = (
@@ -15,4 +15,4 @@ export const toStartWebhookConnectionRequest = (
 })
 
 /** Maps the answer of startWebhookConnection to the GraphQL type. */
-export const toStartWebhookConnectionType = (result: WebhookView): WebhookViewType => result
+export const toStartWebhookConnectionType = (result: CreatedWebhook): CreatedWebhookType => result

@@ -5,6 +5,7 @@ import { ZaloConnectionFacts } from "@/components/blocks/ZaloConnectionFacts"
 import { ZaloConnectionHead } from "@/components/blocks/ZaloConnectionHead"
 import { ZaloConnectionPaste } from "@/components/blocks/ZaloConnectionPaste"
 import { ZaloConnectionTestSend } from "@/components/blocks/ZaloConnectionTestSend"
+import { ZaloConnectionZns } from "@/components/blocks/ZaloConnectionZns"
 import type { ZaloTab } from "@/modules/types"
 import { ASIDE, BODY, FRAME, MAIN } from "./classNames"
 
@@ -30,6 +31,7 @@ const Body = (props: ZaloConnectionPageBaseProps) => {
                 <>
                     <ZaloConnectionFacts connectionId={connectionId} kind="setup" />
                     <ZaloConnectionPaste connectionId={connectionId} />
+                    <ZaloConnectionZns connectionId={connectionId} />
                 </>
             )
         case "check":

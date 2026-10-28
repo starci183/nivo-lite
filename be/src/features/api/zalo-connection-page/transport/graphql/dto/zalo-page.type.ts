@@ -2,6 +2,7 @@ import { Field, ID, ObjectType } from "@nestjs/graphql"
 import { ZaloCheckType } from "./zalo-check.type"
 import { ZaloRecipientType } from "./zalo-recipient.type"
 import { ZaloAccessType } from "./zalo-access.type"
+import { ZnsRenewalType } from "./zns-renewal.type"
 
 @ObjectType()
 /** The page of one Zalo OA connection; every secret is masked to its last four characters. */
@@ -65,4 +66,8 @@ export class ZaloPageType {
     /** The agents that use the connection. */
     @Field(() => [ID])
     agentIds!: ReadonlyArray<string>
+
+    /** The ZNS renewal template used outside the 48-hour window, or null when none is configured. */
+    @Field(() => ZnsRenewalType, { nullable: true })
+    znsRenewal!: ZnsRenewalType | null
 }

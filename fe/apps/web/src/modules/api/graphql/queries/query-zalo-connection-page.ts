@@ -43,6 +43,17 @@ const query1: TypedDocumentNode<QueryZaloConnectionPageResponse, InputVariables<
             }
             sendBlock
             agentIds
+            znsRenewal {
+                templateId
+                params {
+                    customerName
+                    plan
+                    endDate
+                    amount
+                    transferContent
+                    invoiceNumber
+                }
+            }
         }
     }
 `
