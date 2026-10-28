@@ -16,11 +16,11 @@
     "@nivo-lite/i18n": "*",
     "@nivo-lite/offer": "*",
     "@starci/grammar": "0.15.8",
-    "@xyflow/react": "12.11.6",
-    "next": "16.4.2",
-    "next-intl": "4.13.6",
-    "react": "19.2.3",
-    "react-aria-components": "1.21.1",
-    "react-dom": "19.2.3"
+    "@xyflow/react": "12.12.0",
+    "next": "16.4.3",
+    "next-intl": "4.14.9",
+    "react": "19.3.1",
+    "react-aria-components": "1.22.1",
+    "react-dom": "19.3.1"
   }
 }
