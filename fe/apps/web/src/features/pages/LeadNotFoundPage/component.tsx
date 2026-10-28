@@ -1,4 +1,4 @@
-import { Button, EmptyNotice, PageContainer, SurfaceCard } from "@starci/grammar/common"
+import { Button, EmptyNotice, Page, SurfaceCard } from "@starci/grammar/common"
 
 /** The words of the lead-not-found page. */
 export interface LeadNotFoundPageBaseProps {
@@ -13,12 +13,12 @@ export interface LeadNotFoundPageBaseProps {
 
 /** Shown when the lead id does not exist: one notice and the way back to the list. */
 export const LeadNotFoundPageBase = (props: LeadNotFoundPageBaseProps) => (
-    <PageContainer measure="reading">
+    <Page measure="reading">
         <SurfaceCard ariaLabel={props.props.ariaLabel}>
             <EmptyNotice message={props.props.title} description={props.props.body} />
             <Button intent="neutral" href={props.props.backHref}>
                 {props.props.backLabel}
             </Button>
         </SurfaceCard>
-    </PageContainer>
+    </Page>
 )

@@ -8,5 +8,8 @@ export const overviewMetadata = async (): Promise<Metadata> => {
     return { title: t("crumbHome") }
 }
 
-/** The executive overview: a server shell that lays out connected regions, each reading its data in the browser. */
-export const OverviewPage = () => <OverviewPageBase />
+/** The executive overview: a server shell that resolves the eyebrow and lays out connected regions, each reading its data in the browser. */
+export const OverviewPage = async () => {
+    const t = await getTranslations("overview")
+    return <OverviewPageBase props={{ eyebrow: t("eyebrow") }} />
+}

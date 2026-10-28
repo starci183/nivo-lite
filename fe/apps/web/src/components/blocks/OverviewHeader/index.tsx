@@ -2,11 +2,19 @@
 
 import { useOverviewHeader } from "@/hooks/overview"
 import { OVERVIEW_HEADER_PLACEHOLDER, OverviewHeaderBase } from "./component"
+import type { OverviewHeaderPart } from "./component"
 
-/** The connected overview heading: the greeting, the time of the reading and the two actions; inert geometry until the dashboard is read. */
-export const OverviewHeader = () => {
+/** The slot of the page head to fill. */
+interface OverviewHeaderProps {
+    readonly part: OverviewHeaderPart
+}
+
+/** One connected slot of the overview page head; inert geometry until the dashboard is read. */
+export const OverviewHeader = (props: OverviewHeaderProps) => {
     const header = useOverviewHeader()
     return (
-        <OverviewHeaderBase props={{ ...(header ?? OVERVIEW_HEADER_PLACEHOLDER), isSkeleton: header === undefined }} />
+        <OverviewHeaderBase
+            props={{ ...(header ?? OVERVIEW_HEADER_PLACEHOLDER), part: props.part, isSkeleton: header === undefined }}
+        />
     )
 }

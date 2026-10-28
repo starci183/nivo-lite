@@ -18,7 +18,6 @@ export const useOverviewHeader = () => {
         const now = new Date()
         const pending = governanceFrom(dashboard.governance, dashboard.since7).pendingDecisions
         return {
-            eyebrow: t("eyebrow"),
             title: t(greetingOf(hourInZone(now)), { name: firstNameOf(displayName) }),
             description: t("description", { time: stampOf(format, now) }),
             openOfficeLabel: t("openOffice"),

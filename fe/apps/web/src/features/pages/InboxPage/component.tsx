@@ -1,5 +1,5 @@
+import { Page } from "@starci/grammar/common"
 import { InboxFeed } from "@/components/blocks/InboxFeed"
-import { InboxPageLayout } from "@/components/composites/InboxPageLayout"
 
 /** Copy the inbox page supplies. */
 export interface InboxPageBaseProps {
@@ -17,16 +17,22 @@ export interface InboxPageBaseProps {
 export const InboxPageBase = (props: InboxPageBaseProps) => {
     const p = props.props
     return (
-        <InboxPageLayout
-            crumbLabel={p.crumbLabel}
-            crumbs={[
-                { id: "home", label: p.crumbHomeLabel, href: p.crumbHomeHref },
-                { id: "inbox", label: p.title },
-            ]}
-            eyebrow={p.eyebrow}
-            title={p.title}
-            description={p.description}
-            feed={<InboxFeed />}
-        />
+        <Page
+            measure="product"
+            header={{
+                breadcrumbs: {
+                    label: p.crumbLabel,
+                    items: [
+                        { id: "home", label: p.crumbHomeLabel, href: p.crumbHomeHref },
+                        { id: "inbox", label: p.title },
+                    ],
+                },
+                meta: p.eyebrow,
+                title: p.title,
+                description: p.description,
+            }}
+        >
+            <InboxFeed />
+        </Page>
     )
 }

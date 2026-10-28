@@ -1,4 +1,4 @@
-import { Button, PageContainer, PageHeader, SearchField, Select, Tabs, Text, TextAction } from "@starci/grammar/common"
+import { Button, Page, SearchField, Select, Tabs, Text, TextAction } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
 import { OwnerGroupList } from "@/components/composites/OwnerGroupList"
 import type { OwnerGroupListLabels } from "@/components/composites/OwnerGroupList"
@@ -110,76 +110,75 @@ const OWNER_GROUPS_PLACEHOLDER: ReadonlyArray<OwnerGroupView> = [
 export const ResponsibilitiesBoardBase = (props: ResponsibilitiesBoardBaseProps) => {
     const view = props.props
     return (
-        <>
-            <PageHeader
-                measure="product"
-                breadcrumbs={{ label: view.crumbLabel, items: view.crumbs }}
-                title={view.title}
-                description={view.description}
-                actions={
+        <Page
+            measure="product"
+            header={{
+                breadcrumbs: { label: view.crumbLabel, items: view.crumbs },
+                title: view.title,
+                description: view.description,
+                actions: (
                     <Button intent="commit" href={view.newLeadHref}>
                         {view.newLeadLabel}
                     </Button>
-                }
-            />
-            <PageContainer measure="product">
-                <div className={PAGE_CLASS}>
-                    <div className={BOARD_CLASS}>
-                        {view.showFilters ? (
-                            <div className={FILTERS_CLASS}>
-                                <Select
-                                    label={view.ownerLabel}
-                                    options={view.owners}
-                                    value={view.owner}
-                                    onValueChange={props.on.owner}
-                                />
-                                <Select
-                                    label={view.dueLabel}
-                                    options={view.dues}
-                                    value={view.due}
-                                    onValueChange={props.on.due}
-                                />
-                                <div>
-                                    <TextAction onPress={props.on.clear} isDisabled={!view.isFiltered}>
-                                        {view.clearLabel}
-                                    </TextAction>
-                                </div>
+                ),
+            }}
+        >
+            <div className={PAGE_CLASS}>
+                <div className={BOARD_CLASS}>
+                    {view.showFilters ? (
+                        <div className={FILTERS_CLASS}>
+                            <Select
+                                label={view.ownerLabel}
+                                options={view.owners}
+                                value={view.owner}
+                                onValueChange={props.on.owner}
+                            />
+                            <Select
+                                label={view.dueLabel}
+                                options={view.dues}
+                                value={view.due}
+                                onValueChange={props.on.due}
+                            />
+                            <div>
+                                <TextAction onPress={props.on.clear} isDisabled={!view.isFiltered}>
+                                    {view.clearLabel}
+                                </TextAction>
                             </div>
-                        ) : null}
-                        <ResponsibilityToolbar {...props} />
-                        <div className={LIST_HEAD_CLASS}>
-                            <div className={LIST_TITLE_CLASS}>
-                                <Text weight="semibold">{view.listTitle}</Text>
-                                <Text size="sm" tone="muted">
-                                    {view.count}
-                                </Text>
-                            </div>
-                            <Text size="xs" tone="muted">
-                                {view.verifiedLabel}
+                        </div>
+                    ) : null}
+                    <ResponsibilityToolbar {...props} />
+                    <div className={LIST_HEAD_CLASS}>
+                        <div className={LIST_TITLE_CLASS}>
+                            <Text weight="semibold">{view.listTitle}</Text>
+                            <Text size="sm" tone="muted">
+                                {view.count}
                             </Text>
                         </div>
-                        <SlotView
-                            slot={view.slot}
-                            placeholder={OWNER_GROUPS_PLACEHOLDER}
-                            labels={view.slotLabels}
-                            onRetry={props.on.retry}
-                        >
-                            {(groups, isSkeleton) => (
-                                <OwnerGroupList
-                                    isSkeleton={isSkeleton}
-                                    groups={groups}
-                                    labels={view.groupLabels}
-                                    draftingId={view.draftingId}
-                                    copiedId={view.copiedId}
-                                    onDraft={props.on.draft}
-                                    onCopy={props.on.copy}
-                                />
-                            )}
-                        </SlotView>
+                        <Text size="xs" tone="muted">
+                            {view.verifiedLabel}
+                        </Text>
                     </div>
+                    <SlotView
+                        slot={view.slot}
+                        placeholder={OWNER_GROUPS_PLACEHOLDER}
+                        labels={view.slotLabels}
+                        onRetry={props.on.retry}
+                    >
+                        {(groups, isSkeleton) => (
+                            <OwnerGroupList
+                                isSkeleton={isSkeleton}
+                                groups={groups}
+                                labels={view.groupLabels}
+                                draftingId={view.draftingId}
+                                copiedId={view.copiedId}
+                                onDraft={props.on.draft}
+                                onCopy={props.on.copy}
+                            />
+                        )}
+                    </SlotView>
                 </div>
-            </PageContainer>
-        </>
+            </div>
+        </Page>
     )
 }
 

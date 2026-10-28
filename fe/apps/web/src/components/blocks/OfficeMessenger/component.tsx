@@ -1,9 +1,9 @@
 import type { ReactNode } from "react"
-import { Divider, Drawer, FillViewport, Region, SurfaceCard } from "@starci/grammar/common"
+import { Divider, Drawer, FillViewport, Page, Region, SurfaceCard } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { OfficeComposer } from "@/components/composites/OfficeComposer"
 import { OfficeConversations } from "@/components/composites/OfficeConversations"
-import { OfficeHeader } from "@/components/composites/OfficeHeader"
+import { OfficeHeaderContent } from "@/components/composites/OfficeHeader"
 import { OfficeInfoPanel } from "@/components/composites/OfficeInfoPanel"
 import { OfficeTasks } from "@/components/composites/OfficeTasks"
 import { OfficeThread } from "@/components/composites/OfficeThread"
@@ -92,8 +92,27 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
     const { text } = view
     const infoPanel = <MessengerInfoPanel {...props} />
 
+    const header = OfficeHeaderContent({
+        props: {
+            text,
+            centre: view.centre,
+            title: view.title,
+            subtitle: view.subtitle,
+            chip: view.chip,
+            isMuted: view.isMuted,
+            isInfoOpen: view.isInfoOpen,
+        },
+        on: {
+            back: on.back,
+            chip: on.chip,
+            toggleMute: on.toggleMute,
+            toggleInfo: on.toggleInfo,
+            showChat: on.showChat,
+        },
+    })
+
     return (
-        <>
+        <Page measure="full" header={header}>
             <FillViewport minHeight="md" bottomInset="none">
                 <SurfaceCard ariaLabel={text("messengerLabel")} composition="joined" height="fill">
                     <div className={BODY_CLASS_NAME}>
@@ -125,24 +144,6 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
                                 view.phoneView === "thread" ? THREAD_COLUMN_CLASS_NAME : THREAD_COLUMN_HIDDEN_CLASS_NAME
                             }
                         >
-                            <OfficeHeader
-                                props={{
-                                    text,
-                                    centre: view.centre,
-                                    title: view.title,
-                                    subtitle: view.subtitle,
-                                    chip: view.chip,
-                                    isMuted: view.isMuted,
-                                    isInfoOpen: view.isInfoOpen,
-                                }}
-                                on={{
-                                    back: on.back,
-                                    chip: on.chip,
-                                    toggleMute: on.toggleMute,
-                                    toggleInfo: on.toggleInfo,
-                                    showChat: on.showChat,
-                                }}
-                            />
                             <MessengerCentre {...props} />
                         </Region>
                         {view.isInfoDocked && view.isInfoOpen ? (
@@ -162,7 +163,7 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
                     {infoPanel}
                 </Drawer>
             )}
-        </>
+        </Page>
     )
 }
 
