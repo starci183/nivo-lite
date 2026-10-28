@@ -6,7 +6,7 @@
 // this script. It never touches the database the integration suites run on: it clones a pristine base database into a sandbox.
 //
 //   node scripts/integration/queue-cutover-sandbox.mjs create       clone the base, apply every migration before the cutover pair
-//   node scripts/integration/queue-cutover-sandbox.mjs apply <file> apply one migration file of supabase/migrations to the sandbox
+//   node scripts/integration/queue-cutover-sandbox.mjs apply <file> apply one migration file of db/migrations to the sandbox
 //   node scripts/integration/queue-cutover-sandbox.mjs drop         remove the sandbox
 //
 // Connection: PRIMARY_DB_URL (a local database of the private Supabase stack; any other host is refused).
@@ -19,7 +19,7 @@ import pg from "pg"
 
 const BASE = "nivo_proof_base"
 const SANDBOX = "nivo_v037_cutover"
-const MIGRATIONS = path.join("supabase", "migrations")
+const MIGRATIONS = path.join("db", "migrations")
 const CUTOVER_FROM = "20261104235900"
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"])
 

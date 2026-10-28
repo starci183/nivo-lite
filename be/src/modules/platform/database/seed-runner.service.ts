@@ -4,7 +4,7 @@ import type { EntityManager } from "typeorm"
 import type { SqlText } from "./database.sql"
 import { InjectPrimaryEntityManager } from "./primary.decorators"
 
-const SEED_FILE = "supabase/seed.sql"
+const SEED_FILE = "db/seed.sql"
 
 function assertSeedText(_text: string): asserts _text is SqlText {
     // The brand is compile-time only; this function's caller reads the tracked seed file verbatim.

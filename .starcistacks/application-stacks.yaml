@@ -1,8 +1,8 @@
 # NIVO (nivo-lite) application stack, schema starci/application-stacks@1.
 #
 # dev        docker-swarm: the local Supabase (supabase CLI) with the api, console and landing in containers.
-# production docker-swarm on ONE Ubuntu VPS (single-manager swarm: orchestration without manager failover). The Supabase Cloud project is the
-#            external datastore. Runbook: .starcistacks/production/README.md (the seven commands, the release flow, the cutover window).
+# production docker-swarm on ONE Ubuntu VPS (single-manager swarm: orchestration without manager failover). The database is the self-hosted
+#            nivo-postgres service of the stack (owner ruling 2026-10-29); the Supabase Cloud project (locked, exceed_egress_quota) is retired at cutover. Runbook: .starcistacks/production/README.md (the seven commands, the release flow, the cutover window).
 #
 # Facts the schema has no field for, stated here and in the production runbook so a reader of the manifest finds them:
 #   Secret custody   sealed members .starcistacks/production/secrets/<slug>.enc (sops, age recipient in .sops.yaml). The deploy decrypts them in
@@ -82,12 +82,24 @@ components:
     compose: infra/swarm/stack.yaml
     purpose: The BullMQ broker of the job queue (owner ruling 2026-11-05, the queue is BullMQ on Redis in both editions). Internal only on the private agents network as nivo-redis:6379, no published port. AOF with appendfsync everysec on the persisted named volume nivo-engine_redis-data; the PostgreSQL outbox relay republishes any committed row the broker loses, so no admitted job is lost on a Redis restart.
     required: true
+  nivo-postgres:
+    role: stateful
+    image: supabase/postgres:17.11.0.006@sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2
+    compose: infra/swarm/stack.yaml
+    purpose: The production PostgreSQL 17 (owner ruling 2026-10-29, self-hosted, production left Supabase cloud). Internal only on the private agents network as nivo-postgres:5432, no published port; the supabase/postgres image carries pg_cron, pg_net, pgmq, vector, unaccent and pgcrypto. The persisted named volume nivo-engine_postgres-data holds the data; the api and the mcp gateway connect as the least-privilege app_be role (PRIMARY_DB_URL).
+    required: true
+  nivo-postgres-backup:
+    role: stateful
+    image: alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507
+    compose: infra/swarm/stack.yaml
+    purpose: The daily age-encrypted pg_dump of nivo-postgres (02:00 Asia/Ho_Chi_Minh) onto the persisted volume nivo-engine_postgres-backups, 14 days of retention. Script infra/swarm/postgres/backup.sh as a Swarm config.
+    required: true
 backing:
   supabase:
     provider: supabase
     managed: true
 # Recurring work, every entry bound to its app-owned CLI command (R268). The keys are the pg_cron job names of the migrations
-# (supabase/migrations/20261105000000_queue-bullmq_contract_pgmq-drop.sql: each job is one job_enqueue to the outbox the relay publishes) and the schedule is the exact
+# (db/migrations/20261105000000_queue-bullmq_contract_pgmq-drop.sql: each job is one job_enqueue to the outbox the relay publishes) and the schedule is the exact
 # cron expression of the job. `cli jobs tick <id>` enqueues one tick by hand (replay of a missed tick).
 jobs:
   accounting-desk-morning:
@@ -178,7 +190,7 @@ environments:
         - The landing answers /health/live on http://landing.localhost.
     backup:
       - component: supabase
-        target: Local Supabase development data is disposable; `supabase db reset` rebuilds it from supabase/migrations and the seed.
+        target: Local Supabase development data is disposable; `supabase db reset` rebuilds it from db/migrations and the seed.
         retention: None; the repository migrations are the source, the local volume is recreated on demand.
         owner: Development operator
         restoreProof: .starcistacks/dev/infra/swarm/recovery/restore-proof.md
@@ -217,6 +229,11 @@ environments:
       nivo-redis:
         replicas: 1
         port: 6379
+      nivo-postgres:
+        replicas: 1
+        port: 5432
+      nivo-postgres-backup:
+        replicas: 1
     runbook: README.md
     # The ingress is the shared Traefik of the VPS, its own docker stack (deploy.ingress.name); this stack renders no ingress and publishes no port.
     ingress:
@@ -256,10 +273,15 @@ environments:
     # `starci app stack backup` (deploy.backup below) and copied off the VPS by the operator. Restore proofs: infra/swarm/recovery/restore-proof.md.
     backup:
       - component: supabase
-        target: Supabase Cloud managed backups of the project (database, auth and storage) plus the migration history in supabase/migrations.
+        target: Supabase Cloud managed backups of the project (database, auth and storage) plus the migration history in db/migrations.
         retention: Per the Supabase plan of the project (the operator confirms the window in the Supabase dashboard); the job queues live in the same database.
         owner: Production operator
         restoreProof: .starcistacks/production/infra/swarm/recovery/restore-proof.md
+      - component: nivo-postgres
+        target: Daily age-encrypted pg_dump (custom format) of nivo-postgres written by nivo-postgres-backup to the volume nivo-engine_postgres-backups (nivo-db-<UTC stamp>.dump.age plus a .sha256), encrypted to the project recipient of .sops.yaml. The operator copies the files off the VPS. The cloud data is not carried over (owner ruling 2026-10-29), production starts clean from db/bootstrap.sql and db/migrations; restore of a nightly file and the clean start are in infra/swarm/recovery/db-runbook.md.
+        retention: 14 days on the VPS (BACKUP_KEEP_DAYS in the stack); off-host retention is the operator's.
+        owner: Production operator
+        restoreProof: .starcistacks/production/infra/swarm/recovery/db-runbook.md
       - component: nivo-api
         target: The video-cache volume holds only re-renderable voiceover clips (no backup needed); the openclaw-data volume it mounts is covered by the openclaw record.
         retention: Not applicable for the cache; see the openclaw record.
@@ -305,6 +327,12 @@ environments:
         where: secrets/app-be-db
         recipientPolicy: SOPS/age to the project recipient in .sops.yaml; used once by the cutover owner scripts to set the app_be role password and build PRIMARY_DB_URL.
         keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine; never sent to GitHub or the VPS.
+      - name: postgres
+        runtimeName: nivo-custody-postgres-v1
+        version: 1
+        where: secrets/postgres
+        recipientPolicy: SOPS/age to the project recipient in .sops.yaml; keys POSTGRES_PASSWORD (the superuser of nivo-postgres, granted to nivo-postgres and nivo-postgres-backup) and APP_BE_DB_PASSWORD (the app_be login role the api's PRIMARY_DB_URL uses; the operator sets the role password from it and builds PRIMARY_DB_URL, never granted to a service). DECLARED, NOT YET SEALED, seal it with starci app secret set production postgres POSTGRES_PASSWORD (and APP_BE_DB_PASSWORD) before the first deploy that carries nivo-postgres.
+        keyCustody: The age identity is SOPS_AGE_KEY in the runtime .claude/secret.env on the owner machine and the GitHub environment secret SOPS_AGE_KEY of `production`.
       - name: ops
         runtimeName: nivo-custody-ops-v1
         version: 1
@@ -353,7 +381,7 @@ environments:
           app: landing
           buildArgs:
             values: {NEXT_PUBLIC_SITE_URL: "https://nivo.vn", NEXT_PUBLIC_APP_URL: "https://app.nivo.vn"}
-      volumes: [nivo-engine_openclaw-data, nivo-engine_video-cache, nivo-engine_n8n-data, nivo-engine_redis-data, nivo-edge_acme]
+      volumes: [nivo-engine_openclaw-data, nivo-engine_video-cache, nivo-engine_n8n-data, nivo-engine_redis-data, nivo-engine_postgres-data, nivo-engine_postgres-backups, nivo-edge_acme]
       secrets:
         grants:
           - service: nivo-api
@@ -375,6 +403,15 @@ environments:
             filePointers: true
             from:
               - {member: api, keys: [PRIMARY_DB_URL, CHANNEL_TOKEN_KEY], required: true}
+          # The database reads the sealed POSTGRES_PASSWORD as POSTGRES_PASSWORD_FILE (the image supports the _FILE form); the backup job reads the same
+          # file for pg_dump. app_be's password is not a service secret: the operator sets the role from APP_BE_DB_PASSWORD and seals PRIMARY_DB_URL.
+          - service: nivo-postgres
+            filePointers: true
+            from:
+              - {member: postgres, keys: [POSTGRES_PASSWORD], required: true}
+          - service: nivo-postgres-backup
+            from:
+              - {member: postgres, keys: [POSTGRES_PASSWORD], required: true}
           - service: nivo-openclaw
             from:
               - {member: stack, keys: [OPENCLAW_GATEWAY_TOKEN], required: true}
@@ -416,6 +453,7 @@ environments:
         - {name: openclaw-entrypoint, file: infra/swarm/openclaw/entrypoint.sh, env: NIVO_CFG_OPENCLAW_ENTRYPOINT}
         - {name: openclaw-init, file: infra/swarm/openclaw/openclaw-init.mjs, env: NIVO_CFG_OPENCLAW_INIT}
         - {name: openclaw-relay, file: infra/swarm/openclaw/openclaw-relay.mjs, env: NIVO_CFG_OPENCLAW_RELAY}
+        - {name: postgres-backup, file: infra/swarm/postgres/backup.sh, env: NIVO_CFG_POSTGRES_BACKUP}
       verify:
         http:
           - {name: api liveness, url: "https://api.nivo.vn/healthz", status: 200, json: {status: ok}, retry: true}
@@ -507,8 +545,8 @@ release:
     - {name: test, command: [npm, run, test], summary: jest}
 # Database history for `starci app db migrate` / `post-cutover` (the 24 restamped versions come from be/docs/runbooks/migration-restamp.md).
 database:
-  migrationsDir: supabase/migrations
-  archiveDir: supabase/migrations/_archive
+  migrationsDir: db/migrations
+  archiveDir: db/migrations/archive
   baseline: baseline
   # v0.2.1 cutover (owner decision 2026-10-17): production was reset and the whole chain 000000..000600 applied on an empty schema, so nothing is held
   # back. The pre-reset database lives only in the encrypted dump named in infra/swarm/recovery/db-backup-receipt-v0.2.1.md.

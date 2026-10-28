@@ -25,7 +25,7 @@ TypeScript everywhere, NestJS in `be/`, Next.js with next-intl in `fe/`, Supabas
 
 - `be/`: the API and the command line, the shared platform capabilities, verified identity admission, the privileged Supabase integrations, the queues and the back-end documentation (`be/docs`).
 - `fe/`: the web app; it reads and writes only through the API (`modules/api`: GraphQL queries and mutations behind `hooks/swr` wrappers, REST for uploads); Supabase is used for Auth alone.
-- `supabase/`: local configuration, forward-only SQL migrations, seed data and the generated database types.
+- `db/`: forward-only SQL migrations (`db/migrations`, archive in `db/migrations/archive`), the pre-baseline `db/bootstrap.sql`; `supabase/types/` keeps the generated database types until the harness slot moves.
 - `.starcistacks/`: value-free environment metadata and encrypted-secret custody only.
 - `.starciwork/`: the lite workspace record (`.starciwork/workspace.yaml`) and the brand references.
 - `scripts/`: the contract and type codegen (`scripts/codegen.mjs`).

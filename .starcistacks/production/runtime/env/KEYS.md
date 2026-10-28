@@ -17,7 +17,7 @@ turns every granted key into one versioned Swarm secret (see the production READ
 
 | Key | Where | Semantics |
 | --- | --- | --- |
-| `PRIMARY_DB_URL` | sealed `api` | The least-privilege `app_be` connection to the Supabase project (session pooler). |
+| `PRIMARY_DB_URL` | sealed `api` | The least-privilege `app_be` connection to the self-hosted PostgreSQL of the stack (`nivo-postgres:5432`, private network, RLS applies). |
 | `PRIMARY_DB_SCHEMA` | `api-public.conf` | The schema the primary connection is bound to (`public`). |
 | `SUPABASE_URL` | sealed `api` | The Supabase project origin. |
 | `SUPABASE_SERVICE_ROLE_KEY` | sealed `api` | Service-role key for Auth and Storage administration; the back end never forwards it. |
@@ -101,7 +101,8 @@ The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets co
 
 | Key | Member | Semantics |
 | --- | --- | --- |
-| `APP_BE_DB_PASSWORD` | `app-be-db` | Password of the `app_be` database role; the owner uses it to rebuild `PRIMARY_DB_URL`. |
+| `APP_BE_DB_PASSWORD` | `app-be-db` (legacy cloud role) and `postgres` | Password of the `app_be` database role; the owner uses it to set the role and rebuild `PRIMARY_DB_URL`. |
+| `POSTGRES_PASSWORD` | `postgres` (declared, not yet sealed) | Superuser password of `nivo-postgres` (`POSTGRES_PASSWORD_FILE`); also read by `nivo-postgres-backup` for pg_dump. Migrations use it through `DATABASE_URL` (shell only, see the README). |
 | `VPS_HOST` | `ops` | The manager account `starci app stack` verbs connect to from the owner machine. |
 | `VPS_USER` | `ops` | The manager account `starci app stack` verbs connect to from the owner machine. |
 | `DEMO_EMAIL` | `test-accounts` | Demo accounts of the post-deploy smoke tests. |

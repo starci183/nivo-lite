@@ -20,7 +20,7 @@ export const CONTRACT_MIGRATION = "20261105000000_queue-bullmq_contract_pgmq-dro
 
 /** A sandbox the proof can also migrate step by step. */
 export interface CutoverSandbox extends WorldSandbox {
-    /** Applies one migration file of supabase/migrations to the sandbox. */
+    /** Applies one migration file of db/migrations to the sandbox. */
     readonly apply: (migration: string) => Promise<void>
 }
 

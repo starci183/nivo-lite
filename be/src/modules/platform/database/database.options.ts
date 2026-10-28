@@ -4,7 +4,7 @@ import type { Secret } from "@modules/platform/config"
 export interface DatabaseConnectionConfig {
     /** The logical connection name declared in `hfs.json`. */
     readonly name: string
-    /** The Supabase PostgreSQL provider; schema changes remain under `supabase/migrations`. */
+    /** The Supabase PostgreSQL provider; schema changes remain under `db/migrations`. */
     readonly provider: "supabase"
     /** The dedicated least-privilege application role's connection URL. */
     readonly url: Secret

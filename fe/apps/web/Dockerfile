@@ -41,7 +41,7 @@ COPY turbo.json ./
 COPY scripts scripts
 COPY be/contracts be/contracts
 COPY supabase/types supabase/types
-COPY supabase/migrations supabase/migrations
+COPY db/migrations db/migrations
 COPY fe/tsconfig.json fe/tsconfig.json
 COPY fe/packages fe/packages
 COPY fe/apps/web fe/apps/web

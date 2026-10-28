@@ -17,6 +17,10 @@
 #                  AOF with appendfsync everysec on the persisted volume redis-data. PostgreSQL stays the durable record: the relay republishes any
 #                  committed outbox row Redis loses, so a broker restart can cost at most the last second of broker state, never an admitted job.
 #
+#   nivo-postgres  the PostgreSQL database (owner ruling 2026-10-29: production left Supabase cloud), on the private `agents` network
+#                  (nivo-postgres:5432, no published port) on the persisted volume postgres-data; the api and the mcp gateway connect as app_be
+#   nivo-postgres-backup  the daily age-encrypted pg_dump of nivo-postgres onto the persisted volume postgres-backups (14 days)
+#
 # Health signals: the container healthcheck is LIVENESS only (process-local /healthz; a Supabase outage never restarts the api). READINESS
 # (/readyz: the database answers) gates traffic at the shared ingress (Traefik health check in routes.yml) and the deploy acceptance, never a restart.
 # Stateful services update stop-first (one writer per volume); stateless ones start-first with rollback on failure.
@@ -264,6 +268,82 @@ services:
       rollback_config: { parallelism: 1, order: stop-first, monitor: 30s }
       restart_policy: { condition: any, delay: 5s }
 
+  # The database: the supabase/postgres image is plain PostgreSQL 17 with the extensions the migrations need (pg_cron, pg_net, pgmq, vector,
+  # unaccent, pgcrypto). Private `agents` network only (nivo-postgres:5432), no published port. shared_preload_libraries and cron.database_name are
+  # explicit, so pg_cron and pg_net load whatever the image default is. The superuser password is the sealed POSTGRES_PASSWORD of the `postgres`
+  # member (POSTGRES_PASSWORD_FILE pointer added by the override); the app_be password is set by the runbook (infra/swarm/recovery/db-runbook.md).
+  # Stateful: stop-first, one replica pinned to the manager with its single-host volume. stop_grace_period lets a fast shutdown checkpoint.
+  nivo-postgres:
+    image: supabase/postgres:17.11.0.006@sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2
+    command:
+      - postgres
+      - -D
+      - /etc/postgresql
+      - -c
+      - shared_preload_libraries=pg_stat_statements,pgaudit,plpgsql,plpgsql_check,pg_cron,pg_net,pgsodium,auto_explain,pg_tle,plan_filter,supabase_vault
+      - -c
+      - cron.database_name=postgres
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - max_connections=120
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [agents]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+    stop_grace_period: 60s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+    deploy:
+      replicas: 1
+      placement: { constraints: [node.role == manager] }
+      resources: { limits: { memory: 2G } }
+      update_config: { parallelism: 1, order: stop-first, failure_action: rollback, monitor: 60s, max_failure_ratio: 0 }
+      rollback_config: { parallelism: 1, order: stop-first, monitor: 60s }
+      restart_policy: { condition: any, delay: 5s }
+
+  # The daily backup, run as a scheduled job of the stack itself (a sleeping loop in an ops container): pg_dump -Fc of the database through the
+  # network, piped into age (project recipient of .sops.yaml), written to postgres-backups, files older than 14 days pruned. The script is the
+  # Swarm config postgres-backup (infra/swarm/postgres/backup.sh). Restore: infra/swarm/recovery/db-runbook.md.
+  nivo-postgres-backup:
+    image: alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507
+    command: ["sh", "/opt/nivo/backup.sh"]
+    environment:
+      PGHOST: nivo-postgres
+      PGUSER: postgres
+      PGDATABASE: postgres
+      BACKUP_DIR: /backups
+      BACKUP_KEEP_DAYS: "14"
+      BACKUP_AT_UTC: "19:00" # 02:00 Asia/Ho_Chi_Minh
+      AGE_RECIPIENT: age173qfq7f776syam9tpkyfej0h2jjt6rc4ha7r38ez40n5mn0lwyaqp9ejt7
+    configs:
+      - { source: postgres-backup, target: /opt/nivo/backup.sh, mode: 0555 }
+    volumes:
+      - postgres-backups:/backups
+    networks: [agents]
+    healthcheck:
+      test: ["CMD-SHELL", "find /tmp/backup-alive -mmin -2 | grep -q ."]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 180s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+    deploy:
+      replicas: 1
+      placement: { constraints: [node.role == manager] }
+      resources: { limits: { memory: 256M } }
+      update_config: { parallelism: 1, order: stop-first, failure_action: rollback, monitor: 30s, max_failure_ratio: 0 }
+      rollback_config: { parallelism: 1, order: stop-first, monitor: 30s }
+      restart_policy: { condition: any, delay: 30s }
+
 networks:
   # nivo-edge-swarm is the shared ingress overlay: created by `starci app stack ingress attach` (attachable), owned by the VPS and not by this stack,
   # so standalone containers of other products (namnivo-web, the Tayson and Academy services) and nivo's public services meet the ingress on it.
@@ -279,12 +359,15 @@ volumes:
   video-cache: { external: true, name: nivo-engine_video-cache }
   n8n-data: { external: true, name: nivo-engine_n8n-data }
   redis-data: { external: true, name: nivo-engine_redis-data }
+  postgres-data: { external: true, name: nivo-engine_postgres-data }
+  postgres-backups: { external: true, name: nivo-engine_postgres-backups }
 
 # Config objects are immutable and versioned by content: the provision step of `starci app stack deploy` creates `nivo-<name>-c<digest>` and the render passes the names in.
 configs:
   openclaw-entrypoint: { external: true, name: "${NIVO_CFG_OPENCLAW_ENTRYPOINT:?}" }
   openclaw-init: { external: true, name: "${NIVO_CFG_OPENCLAW_INIT:?}" }
   openclaw-relay: { external: true, name: "${NIVO_CFG_OPENCLAW_RELAY:?}" }
+  postgres-backup: { external: true, name: "${NIVO_CFG_POSTGRES_BACKUP:?}" }
 
 # Custody records, declaration only: one external stub per sealed member of .starcistacks/production/secrets, named by the runtimeName and version
 # of environments.production.secrets. No service is granted a stub and no such Swarm secret is ever created: the real Swarm secrets are one per
@@ -294,6 +377,7 @@ secrets:
   auth: { external: true, name: nivo-custody-auth-v1 }
   stack: { external: true, name: nivo-custody-stack-v1 }
   app-be-db: { external: true, name: nivo-custody-app-be-db-v1 }
+  postgres: { external: true, name: nivo-custody-postgres-v1 }
   ops: { external: true, name: nivo-custody-ops-v1 }
   test-accounts: { external: true, name: nivo-custody-test-accounts-v1 }
   ci-ssh-key: { external: true, name: nivo-custody-ci-ssh-key-v1 }
