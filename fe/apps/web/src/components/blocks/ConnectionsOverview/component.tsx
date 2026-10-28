@@ -28,19 +28,11 @@ export interface PageGroup {
 
 /** The words of the page, resolved by the connected feature host. */
 export interface PageWords {
-    readonly title: string
-    readonly description: string
-    readonly crumbLabel: string
-    readonly crumbHome: string
-    readonly homeHref: string
     readonly ownerOnly: string
     readonly emptyTitle: string
     readonly emptyHint: string
     readonly automationsLink: string
     readonly automationsHref: string
-    /** The primary command of the heading: "Add a connection". */
-    readonly addLabel: string
-    readonly addHref: string
 }
 
 /** What the board draws once the workspace reads are in. */
@@ -62,25 +54,16 @@ export interface ConnectionsBoard {
 export interface ConnectionsOverviewProps {
     readonly props: {
         readonly words: PageWords
-        /** The summary line under the heading; null until the workspace reads are in. */
-        readonly summary: string | null
         /** The board of connections: loading, failed, forbidden to staff, or ready. */
         readonly board: DataSlot<ConnectionsBoard>
         readonly slotLabels: SlotLabels
         /** The view the placeholder takes the shape of while the workspace reads are on their way. */
         readonly placeholderView: "connected" | "library"
-        /** The words of the Connected / Library tabs of the header. */
-        readonly tabs: {
-            readonly label: string
-            readonly connectedLabel: string
-            readonly libraryLabel: string
-        }
         /** The MCP gateway sections, drawn in the page body under the board (empty for staff). */
         readonly gateway: ReactNode
     }
     readonly on: {
         readonly retry: () => void
-        readonly selectTab: (tab: "connected" | "library") => void
     }
     readonly renderAddButton: ComponentType<{ readonly provider: Provider; readonly kind: "add" | "connect" }>
     readonly renderAttention: ComponentType<{

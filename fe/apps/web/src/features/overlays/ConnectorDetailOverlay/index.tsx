@@ -65,16 +65,11 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
     // The signed-in person only prefills the SMTP test recipient: the board never waits on it.
     const user = slotOfSwr(useQueryAuthUserSwr())
     const data = useConnectionsData()
-    const overlays = useConnectionOverlays()
     const manager = role === "owner" || role === "manager"
     const live = liveConnections(data.items)
     const attention = attentionConnections(data.items)
     const showsLibrary = props.tab === "library" || (props.tab !== "connected" && live.length === 0)
     const groups = connectionGroups(data.items, data.agentNames, t)
-    const summaryOf =
-        attention.length > 0
-            ? t("summary", { live: live.length, attention: attention.length })
-            : t("summaryCalm", { live: live.length })
     const board: ConnectionsBoard = {
         view: showsLibrary ? "library" : "connected",
         ownerEmail: user.items?.email ?? "",
@@ -106,27 +101,18 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
             <ConnectionsOverview
                 props={{
                     words: {
-                        title: t("title"),
-                        description: t("description"),
-                        crumbLabel: t("crumbLabel"),
-                        crumbHome: t("crumbHome"),
-                        homeHref: CONNECTION_ROUTES.dashboard,
                         ownerOnly: t("ownerOnly"),
                         emptyTitle: t("connectedEmpty"),
                         emptyHint: t("connectedEmptyHint"),
                         automationsLink: t("automationsLink"),
                         automationsHref: CONNECTION_ROUTES.automations,
-                        addLabel: t("add"),
-                        addHref: `${CONNECTION_ROUTES.connections}?${URL_PARAMS.tab}=library`,
                     },
-                    summary: isReady ? summaryOf : null,
                     board: slot,
                     slotLabels: slotLabelsOf(t("connectedEmpty")),
                     placeholderView: props.tab === "library" ? "library" : "connected",
-                    tabs: { label: t("title"), connectedLabel: t("tabConnected"), libraryLabel: t("tabLibrary") },
                     gateway: <RenderGateway isEnabled={isReady && manager} />,
                 }}
-                on={{ retry: data.retry, selectTab: overlays.setTab }}
+                on={{ retry: data.retry }}
                 renderAddButton={renderAddButton}
                 renderAttention={renderAttention}
                 renderLibrary={renderLibrary}
