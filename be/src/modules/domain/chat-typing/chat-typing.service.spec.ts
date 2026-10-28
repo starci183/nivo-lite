@@ -38,51 +38,6 @@ const build = async () => {
     return { service: container.get(ChatTypingService), markers, realtime, now }
 }
 
-describe("ChatTypingService.channel", () => {
-    it("describes the general Office's private channel only after target authorization", async () => {
-        const { service, markers, realtime } = await build()
-
-        await expect(service.channel("principal", "WORKSPACE-1", OFFICE)).resolves.toEqual({
-            topic: "chat-typing:workspace-1:room:office",
-            event: "typing",
-            private: true,
-            ttlMs: 5000,
-        })
-        expect(markers.requireTarget).toHaveBeenCalledWith("principal", "WORKSPACE-1", OFFICE)
-        expect(realtime.publish).not.toHaveBeenCalled()
-    })
-
-    it("uses distinct department and conversation topics and canonicalizes UUID case", async () => {
-        const { service } = await build()
-
-        await expect(
-            service.channel("principal", "workspace-1", { room: "sales", conversationId: null }),
-        ).resolves.toEqual({
-            topic: "chat-typing:workspace-1:room:sales",
-            event: "typing",
-            private: true,
-            ttlMs: 5000,
-        })
-        await expect(
-            service.channel("principal", "WORKSPACE-1", { room: null, conversationId: "CONVERSATION-1" }),
-        ).resolves.toEqual({
-            topic: "chat-typing:workspace-1:conversation:conversation-1",
-            event: "typing",
-            private: true,
-            ttlMs: 5000,
-        })
-    })
-
-    it("propagates target refusal without opening or publishing a channel", async () => {
-        const { service, markers, realtime } = await build()
-        const refusal = new Error("target not admitted")
-        markers.requireTarget.mockRejectedValue(refusal)
-
-        await expect(service.channel("principal", "workspace-1", OFFICE)).rejects.toBe(refusal)
-        expect(realtime.publish).not.toHaveBeenCalled()
-    })
-})
-
 describe("ChatTypingService.set", () => {
     it("authors the admitted account identity and gives a start signal a five-second deadline", async () => {
         const { service, markers, realtime } = await build()
@@ -126,6 +81,16 @@ describe("ChatTypingService.set", () => {
             expect.objectContaining({ name: "chat-typing:user-2:workspace-1:conversation:c-1" }),
             { id: `user-1:${NOW}`, actorId: "user-1", actorName: "Mai Linh", state: "stop", at: NOW },
         )
+    })
+
+    it("fans out only to the other admitted members, never to the sender or a non-member", async () => {
+        const { service, markers, realtime } = await build()
+        markers.memberIds.mockResolvedValue(["user-1", "user-2"])
+
+        await service.set("principal", "workspace-1", OFFICE, true)
+
+        const topics = realtime.publish.mock.calls.map(([topic]) => topic.name)
+        expect(topics).toEqual(["chat-typing:user-2:workspace-1:room:office"])
     })
 
     it("does not publish when membership or target validation fails", async () => {

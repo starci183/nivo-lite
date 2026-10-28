@@ -1,6 +1,6 @@
 import type { ChatTarget } from "@modules/domain/chat-markers"
 
-/** The workspace and target whose typing channel the caller requests. */
+/** The workspace and target whose typing hint the caller sets. */
 export interface ChatTypingRequest {
     /** The selected workspace; the domain proves active membership. */
     readonly workspaceId: string
