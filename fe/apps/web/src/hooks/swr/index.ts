@@ -363,7 +363,7 @@ export {
     useQueryZaloConnectionEventsSwr,
     useQueryZaloConnectionPageSwr,
 } from "./api"
-export { useMutateRecheckZaloConnectionSwr, useMutateSendZaloTestMessageSwr } from "./api"
+export { useMutateRecheckZaloConnectionSwr, useMutateSaveZnsRenewalSwr, useMutateSendZaloTestMessageSwr } from "./api"
 export { useQuerySepayConnectionEventsSwr, useQuerySepayConnectionSwr } from "./api"
 export { useMutateSetSepayEnvironmentSwr } from "./api"
 export { QUERY_SEPAY_CONNECTION_SWR_KEY } from "./api"

@@ -17,4 +17,6 @@ export type {
     DeliveryResult,
     RenewalNotification,
     ZaloAuthorization,
+    ZnsRenewalSettings,
+    OptionalZnsRenewal,
 } from "./channels.contracts"

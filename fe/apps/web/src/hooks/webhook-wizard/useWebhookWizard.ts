@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { WEBHOOK_EVENTS, WEBHOOK_STEPS } from "./webhook-wizard.shared"
+import { SECRET_STEP, WEBHOOK_EVENTS, WEBHOOK_STEPS } from "./webhook-wizard.shared"
 import type { WebhookTestVerdict, WebhookView } from "@/modules/types"
 
 import { useWebhookCommands } from "./useWebhookCommands"
@@ -64,6 +64,9 @@ export const useWebhookWizard = (input: WebhookWizardInput) => {
         on: {
             go: (to: number) => {
                 setError(null)
+                // The signing secret is shown once: leaving its step drops it from memory.
+                if (index === SECRET_STEP && to !== SECRET_STEP)
+                    setCreated((current) => (current === null ? current : { ...current, signingSecret: "" }))
                 setIndex(to)
             },
             save,

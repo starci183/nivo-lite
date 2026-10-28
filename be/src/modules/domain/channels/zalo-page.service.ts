@@ -30,6 +30,7 @@ import type { ZaloPageEvent, ZaloPageView, ZaloTestSendResult } from "./zalo-pag
 import { checksOf, eventsOf, maskTail, recipientsOf, sendBlockOf, tokenUsable, tokenViewOf } from "./zalo-page.policy"
 import { ZALO_FREE_WINDOW_MS } from "./zalo-delivery.service"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
+import { znsRenewalOf } from "./zns-renewal.policy"
 
 const MANAGER = ["owner", "manager"] as const
 const PROVIDER = "zalo_oa"
@@ -157,6 +158,7 @@ export class ZaloPageService {
             recipients,
             sendBlock: sendBlockOf(token, recipients.length),
             agentIds,
+            znsRenewal: znsRenewalOf(connection.meta),
         }
     }
 

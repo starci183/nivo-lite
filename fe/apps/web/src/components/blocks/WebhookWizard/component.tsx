@@ -43,6 +43,7 @@ export interface WebhookWizardBaseProps {
                 | "eventsLabel"
                 | "secretIntro"
                 | "secretLabel"
+                | "secretOnce"
                 | "n8nTitle"
                 | "n8nNote"
                 | "codeLabel"
@@ -148,6 +149,7 @@ export const WebhookWizardBase = (props: WebhookWizardBaseProps) => {
                     <Text size="sm" tone="muted">
                         {view.text.secretIntro}
                     </Text>
+                    <Alert tone="cautionary" title={view.text.secretOnce} />
                     <ConnectionCopyInput
                         id="webhook-signing-secret"
                         name="signingSecret"

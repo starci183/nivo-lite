@@ -127,7 +127,7 @@ const routes: ReadonlyArray<Route> = [
         ],
         call: (s) => s.webhooks.start,
     },
-    byConnection("webhook.reveal", (s) => s.webhooks.reveal),
+    byConnection("webhook.view", (s) => s.webhooks.view),
     {
         kind: "webhook.events",
         input: { connectionId: CONNECTION, events: ["order.created", "order.paid"] },

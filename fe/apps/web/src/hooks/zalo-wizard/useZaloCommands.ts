@@ -1,7 +1,7 @@
 "use client"
 
-import { useMemo } from "react"
-import { useSettledGraphQL } from "@/hooks/connection-wizard"
+import { useCallback, useMemo } from "react"
+import { useSettledGraphQL, useZaloFailureLabel } from "@/hooks/connection-wizard"
 import type { Settled } from "@/hooks/connection-wizard"
 import { zaloWizardOf } from "@/hooks/connection-wire"
 import { useConnectionsRefresh } from "@/hooks/connections"
@@ -19,7 +19,15 @@ export interface ZaloCommands {
 
 /** The Zalo wizard's mutations bound to the toast helper. */
 export const useZaloCommands = (): ZaloCommands => {
-    const settle = useSettledGraphQL()
+    const settleRaw = useSettledGraphQL()
+    const labelOf = useZaloFailureLabel()
+    const settle = useCallback(
+        async <T>(action: () => Promise<T>): Promise<Settled<T>> => {
+            const settled = await settleRaw(action)
+            return settled.kind === "ok" ? settled : { ...settled, message: labelOf(settled.code, settled.message) }
+        },
+        [settleRaw, labelOf],
+    )
     const refresh = useConnectionsRefresh()
     const { trigger: triggerStart } = useMutateStartZaloConnectionSwr()
     const { trigger: triggerSecret } = useMutateSaveZaloOaSecretSwr()

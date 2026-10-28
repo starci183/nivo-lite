@@ -1,8 +1,8 @@
 import { Field, ID, ObjectType } from "@nestjs/graphql"
 
 @ObjectType()
-/** The wizard view of a webhook connection. */
-export class WebhookViewType {
+/** A webhook connection just created: the signing secret is in this answer only. */
+export class CreatedWebhookType {
     /** The connection id. */
     @Field(() => ID)
     id!: string
@@ -19,7 +19,7 @@ export class WebhookViewType {
     @Field(() => [String])
     events!: ReadonlyArray<string>
 
-    /** The signing secret to copy into the receiver. */
+    /** The signing secret to copy into the receiver, shown once. */
     @Field(() => String)
     signingSecret!: string
 }

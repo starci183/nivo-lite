@@ -17,7 +17,6 @@ import { GetZaloConnectionHandler } from "./application/get-zalo-connection.hand
 import { ListConnectionAgentsHandler } from "./application/list-connection-agents.handler"
 import { ListConnectionsHandler } from "./application/list-connections.handler"
 import { ReturnZaloAuthorizationHandler } from "./application/return-zalo-authorization.handler"
-import { RevealWebhookConnectionHandler } from "./application/reveal-webhook-connection.handler"
 import { SaveProviderKeysHandler } from "./application/save-provider-keys.handler"
 import { SaveZaloOaSecretHandler } from "./application/save-zalo-oa-secret.handler"
 import { SetAgentConnectionsHandler } from "./application/set-agent-connections.handler"
@@ -56,7 +55,6 @@ import { ConfigurableModuleClass } from "./connections.module-definition"
         ListConnectionAgentsHandler,
         ListConnectionsHandler,
         ReturnZaloAuthorizationHandler,
-        RevealWebhookConnectionHandler,
         SaveProviderKeysHandler,
         SaveZaloOaSecretHandler,
         SetAgentConnectionsHandler,

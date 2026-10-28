@@ -15,7 +15,13 @@ import type { Ids } from "@modules/platform/ids"
 import { parseJsonText } from "@modules/platform/primitives"
 import type { Clock } from "@modules/platform/clock"
 import { WebhookConnectionsError, WebhookConnectionsErrorCode } from "./errors/webhook-connections.error"
-import type { StartWebhookInput, WebhookEvent, WebhookTestResult, WebhookView } from "./webhook-connections.contracts"
+import type {
+    CreatedWebhook,
+    StartWebhookInput,
+    WebhookEvent,
+    WebhookTestResult,
+    WebhookView,
+} from "./webhook-connections.contracts"
 import { InjectWebhookConnectionsOptions } from "./webhook-connections.decorators"
 import type { WebhookConnectionsOptions } from "./webhook-connections.options"
 import { eventsOf, pickEvents, signDelivery, workspaceSigningSecret } from "./webhook-signing.policy"
@@ -23,6 +29,10 @@ import { eventsOf, pickEvents, signDelivery, workspaceSigningSecret } from "./we
 const OWNER = ["owner"] as const
 const MANAGER = ["owner", "manager"] as const
 const SAMPLE_LEAD = "00000000-0000-0000-0000-000000000000"
+
+const LAST_FOUR = 4
+
+const lastFour = (secret: string): string => secret.slice(-LAST_FOUR)
 
 @Injectable()
 /**
@@ -39,8 +49,8 @@ export class WebhookConnectionsService {
         @InjectWebhookConnectionsOptions() private readonly options: WebhookConnectionsOptions,
     ) {}
 
-    /** Creates the connection as PENDING and returns the signing secret to copy. */
-    async start(actor: ConnectionActor, input: StartWebhookInput): Promise<WebhookView> {
+    /** Creates the connection as PENDING and returns the signing secret to copy: this answer is the only place it is shown whole. */
+    async start(actor: ConnectionActor, input: StartWebhookInput): Promise<CreatedWebhook> {
         await this.connections.authorize(actor, OWNER)
         const name = cleanConnectionName(input.name)
         if (name === null) throw new WebhookConnectionsError({ code: WebhookConnectionsErrorCode.NameInvalid })
@@ -57,11 +67,11 @@ export class WebhookConnectionsService {
             meta: { host: target.host, events: events.join(",") },
             secret: { plain: JSON.stringify({ url: target.toString() }), webhookSecret: randomSecret() },
         })
-        return { id, name, host: target.host, events, signingSecret }
+        return { id, name, host: target.host, events, signingSecret, signingSecretLast4: lastFour(signingSecret) }
     }
 
-    /** Shows the signing secret and the chosen events again. */
-    async reveal(actor: ConnectionActor, connectionId: string): Promise<WebhookView> {
+    /** Shows the host and the chosen events again, with the signing secret masked to its last four characters. */
+    async view(actor: ConnectionActor, connectionId: string): Promise<WebhookView> {
         await this.connections.authorize(actor, OWNER)
         const connection = await this.ownWebhook(actor, connectionId)
         return {
@@ -69,7 +79,7 @@ export class WebhookConnectionsService {
             name: connection.name,
             host: connection.meta.host ?? "",
             events: eventsOf(connection.meta),
-            signingSecret: this.requireSigning(actor.workspaceId),
+            signingSecretLast4: lastFour(this.requireSigning(actor.workspaceId)),
         }
     }
 

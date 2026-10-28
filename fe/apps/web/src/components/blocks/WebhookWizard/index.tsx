@@ -69,6 +69,7 @@ export const WebhookWizard = (props: WebhookWizardProps) => {
                     eventsLabel: t("eventsLabel"),
                     secretIntro: t("secretIntro"),
                     secretLabel: t("secretLabel"),
+                    secretOnce: t("secretOnce"),
                     n8nTitle: t("n8nTitle"),
                     n8nNote: t("n8nNote"),
                     codeLabel: t("codeLabel"),

@@ -23,7 +23,6 @@ export const LeadPage = async (props: LeadPageProps) => {
                 crumbs: [
                     { id: "home", label: t("crumbHome"), href: LEADS_ROUTES.dashboard },
                     { id: "leads", label: t("title"), href: LEADS_ROUTES.leads },
-                    { id: "lead", label: t("detailEyebrow") },
                 ],
             }}
         />

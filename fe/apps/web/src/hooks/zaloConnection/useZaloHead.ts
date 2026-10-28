@@ -2,7 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
-import { useSettledGraphQL } from "@/hooks/connection-wizard"
+import { useSettledGraphQL, useZaloFailureLabel } from "@/hooks/connection-wizard"
 import { mapSlot } from "@/hooks/slot"
 import { useMutateAuthorizeZaloSwr, useMutateDisconnectConnectionSwr } from "@/hooks/swr"
 import { navigation } from "@/modules/i18n"
@@ -19,6 +19,7 @@ export const useZaloHead = (connectionId: string) => {
     const format = useFormatter()
     const router = navigation.useRouter()
     const settle = useSettledGraphQL()
+    const labelOf = useZaloFailureLabel()
     const { trigger: triggerAuthorize } = useMutateAuthorizeZaloSwr()
     const { trigger: triggerDisconnect, isMutating } = useMutateDisconnectConnectionSwr()
     const { slot } = useZaloPage(connectionId)
@@ -40,17 +41,17 @@ export const useZaloHead = (connectionId: string) => {
     const reconnect = useCallback(async (): Promise<void> => {
         setNotice("")
         const result = await settle(() => triggerAuthorize({ connectionId }))
-        if (result.kind !== "ok") return setNotice(result.message)
+        if (result.kind !== "ok") return setNotice(labelOf(result.code, result.message))
         LocalStorage.set(StorageId.ZaloReturn, connectionId)
         window.location.assign(result.value.url)
-    }, [settle, triggerAuthorize, connectionId])
+    }, [settle, labelOf, triggerAuthorize, connectionId])
 
     const disconnect = useCallback(async (): Promise<void> => {
         setNotice("")
         const result = await settle(() => triggerDisconnect({ connectionId }), t("toastDisconnected"))
-        if (result.kind !== "ok") return setNotice(result.message)
+        if (result.kind !== "ok") return setNotice(labelOf(result.code, result.message))
         router.replace(CONSOLE_ROUTES.connections)
-    }, [settle, triggerDisconnect, connectionId, t, router])
+    }, [settle, labelOf, triggerDisconnect, connectionId, t, router])
 
     return { head, notice, reconnect, disconnect, isDisconnecting: isMutating }
 }

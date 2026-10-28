@@ -2,7 +2,7 @@
 
 import { useCallback } from "react"
 import { useMutateReturnZaloAuthorizationSwr } from "@/hooks/swr"
-import { isRefusedByBackend } from "@/modules/failure"
+import { graphQLErrorCode, isRefusedByBackend, zaloReturnVerdictOf } from "@/modules/failure"
 import { zaloConnectionHref } from "@/modules/routes"
 import { LocalStorage, StorageId } from "@/modules/storage"
 
@@ -48,7 +48,10 @@ export const useReturnZaloAuthorization = () => {
                 })
                 return connectionsHref("ok", connection.id)
             } catch (error) {
-                return connectionsHref(isRefusedByBackend(error) ? "denied" : "failed", state.split(".")[0])
+                return connectionsHref(
+                    zaloReturnVerdictOf(graphQLErrorCode(error), isRefusedByBackend(error)),
+                    state.split(".")[0],
+                )
             }
         },
         [trigger],
