@@ -7,5 +7,5 @@ export {
     ConnectionSecretsErrorCode,
 } from "./errors/connection-secrets.error"
 export { CONNECTION_SECRETS_MESSAGES } from "./messages/connection-secrets.messages"
-export { randomSecret, safeEqual } from "./secret-cipher.policy"
+export { openSecretWithBase64Key, randomSecret, safeEqual } from "./secret-cipher.policy"
 export type { ConnectionSecret, OptionalStoredSecret } from "./connection-secrets.contracts"

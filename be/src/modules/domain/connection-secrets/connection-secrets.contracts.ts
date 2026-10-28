@@ -23,3 +23,11 @@ export type OptionalStoredSecret = StoredSecret | null
 
 /** A sealed text, or null when there is none to prove the connection key against. */
 export type OptionalSealedText = string | null
+
+/** A sealed text split into the key version it names and its base64 body. */
+export interface VersionedSeal {
+    /** The key version label (`v1`, `v2`, ...). */
+    readonly version: string
+    /** The base64 of iv | tag | ciphertext. */
+    readonly body: string
+}
