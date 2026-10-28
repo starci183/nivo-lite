@@ -334,7 +334,6 @@
     "identitySave": "Save name",
     "identityNameSaved": "The agent is renamed.",
     "identityFailTitle": "Not saved",
-    "eyebrow": "Team",
     "crumbLabel": "Current location",
     "crumbHome": "Overview",
     "crumbAgents": "Team",
@@ -486,7 +485,6 @@
   "authority": {
     "crumbLabel": "Breadcrumb",
     "crumbHome": "Overview",
-    "eyebrow": "AUTHORITY",
     "title": "Grant authority",
     "description": "Tell NIVO what you want, how to speak for your business, and what it may do alone. Everything else, it asks you.",
     "saveLabel": "Save",
@@ -2015,7 +2013,6 @@
   "decisions": {
     "crumbLabel": "Breadcrumb",
     "crumbHome": "Overview",
-    "eyebrow": "DECISIONS",
     "title": "Decision history",
     "description": "Who decided, when, and what came of it. Routine work NIVO completed inside your authority is listed too.",
     "kindLabel": "Filter decisions",
@@ -2043,7 +2040,6 @@
   "developers": {
     "crumbLabel": "Breadcrumb",
     "crumbHome": "Overview",
-    "eyebrow": "Advanced",
     "title": "Advanced",
     "description": "Connect NIVO to n8n, Make, Zapier or your own tools. For owners and managers.",
     "forbiddenBody": "This page holds keys that open your shop's data. Ask your owner if you need it.",
@@ -2346,435 +2342,435 @@
     "office": {
       "title": "Office",
       "what": "The shared office: talk to your team and AI agents, approve what the AI proposes.",
-      "steps": {
-        "0": "Open Office",
-        "1": "Type @agent-name to call an agent",
-        "2": "Approve or edit the cards waiting for you"
-      },
-      "keywords": {
-        "0": "office",
-        "1": "van phong",
-        "2": "nhan tin noi bo",
-        "3": "chat noi bo",
-        "4": "duyet",
-        "5": "phe duyet",
-        "6": "cho duyet",
-        "7": "approve",
-        "8": "giao viec cho ai",
-        "9": "goi agent",
-        "10": "@nivo",
-        "11": "duyet viec",
-        "12": "approve work",
-        "13": "ai proposed"
-      }
+      "steps": [
+        "Open Office",
+        "Type @agent-name to call an agent",
+        "Approve or edit the cards waiting for you"
+      ],
+      "keywords": [
+        "office",
+        "van phong",
+        "nhan tin noi bo",
+        "chat noi bo",
+        "duyet",
+        "phe duyet",
+        "cho duyet",
+        "approve",
+        "giao viec cho ai",
+        "goi agent",
+        "@nivo",
+        "duyet viec",
+        "approve work",
+        "ai proposed"
+      ]
     },
     "overview": {
       "title": "Overview",
       "what": "The big picture: results, waiting work, exceptions to look at.",
-      "steps": {
-        "0": "Open Overview",
-        "1": "Read the result and waiting-work cards"
-      },
-      "keywords": {
-        "0": "tong quan",
-        "1": "dashboard",
-        "2": "bao cao",
-        "3": "ket qua",
-        "4": "doanh thu",
-        "5": "tinh hinh",
-        "6": "overview",
-        "7": "report"
-      }
+      "steps": [
+        "Open Overview",
+        "Read the result and waiting-work cards"
+      ],
+      "keywords": [
+        "tong quan",
+        "dashboard",
+        "bao cao",
+        "ket qua",
+        "doanh thu",
+        "tinh hinh",
+        "overview",
+        "report"
+      ]
     },
     "authority": {
       "title": "Authority",
       "what": "Set goals, policies, tone, and which actions the AI may do alone or must ask about.",
-      "steps": {
-        "0": "Open Authority",
-        "1": "Set each action to Auto, Ask me or Never",
-        "2": "Set an amount limit if needed",
-        "3": "Save"
-      },
-      "keywords": {
-        "0": "giao quyen",
-        "1": "quyen han",
-        "2": "tu dong lam",
-        "3": "hoi toi",
-        "4": "chinh sach",
-        "5": "giong van",
-        "6": "muc tieu",
-        "7": "gioi han tien",
-        "8": "authority",
-        "9": "policy"
-      }
+      "steps": [
+        "Open Authority",
+        "Set each action to Auto, Ask me or Never",
+        "Set an amount limit if needed",
+        "Save"
+      ],
+      "keywords": [
+        "giao quyen",
+        "quyen han",
+        "tu dong lam",
+        "hoi toi",
+        "chinh sach",
+        "giong van",
+        "muc tieu",
+        "gioi han tien",
+        "authority",
+        "policy"
+      ]
     },
     "inbox": {
       "title": "Inbox",
       "what": "Everything coming in: customer messages, orders, bank transactions, from every channel.",
-      "steps": {
-        "0": "Open Inbox",
-        "1": "Filter by channel or kind"
-      },
-      "keywords": {
-        "0": "dau vao",
-        "1": "inbox",
-        "2": "tin nhan den",
-        "3": "tin nhan khach",
-        "4": "giao dich den",
-        "5": "don moi",
-        "6": "hop thu"
-      }
+      "steps": [
+        "Open Inbox",
+        "Filter by channel or kind"
+      ],
+      "keywords": [
+        "dau vao",
+        "inbox",
+        "tin nhan den",
+        "tin nhan khach",
+        "giao dich den",
+        "don moi",
+        "hop thu"
+      ]
     },
     "leads": {
       "title": "Customers",
       "what": "Customers and sales leads, who owns each, and the next step.",
-      "steps": {
-        "0": "Open Customers",
-        "1": "Press New lead to add one",
-        "2": "Open a customer to see history and assign work"
-      },
-      "keywords": {
-        "0": "khach hang",
-        "1": "lead",
-        "2": "them khach",
-        "3": "danh sach khach",
-        "4": "co hoi ban hang",
-        "5": "customer",
-        "6": "crm",
-        "7": "new customer",
-        "8": "add a customer",
-        "9": "add customer"
-      }
+      "steps": [
+        "Open Customers",
+        "Press New lead to add one",
+        "Open a customer to see history and assign work"
+      ],
+      "keywords": [
+        "khach hang",
+        "lead",
+        "them khach",
+        "danh sach khach",
+        "co hoi ban hang",
+        "customer",
+        "crm",
+        "new customer",
+        "add a customer",
+        "add customer"
+      ]
     },
     "responsibilities": {
       "title": "Responsibilities",
       "what": "Who owns which piece of work, due dates and next steps.",
-      "steps": {
-        "0": "Open Responsibilities",
-        "1": "Filter by owner or status"
-      },
-      "keywords": {
-        "0": "trach nhiem",
-        "1": "ai lam gi",
-        "2": "viec cua ai",
-        "3": "han chot",
-        "4": "phu trach",
-        "5": "responsibility",
-        "6": "task"
-      }
+      "steps": [
+        "Open Responsibilities",
+        "Filter by owner or status"
+      ],
+      "keywords": [
+        "trach nhiem",
+        "ai lam gi",
+        "viec cua ai",
+        "han chot",
+        "phu trach",
+        "responsibility",
+        "task"
+      ]
     },
     "decisions": {
       "title": "Decisions",
       "what": "A log of every decision: done by the AI, approved or edited by a person, with reasons.",
-      "steps": {
-        "0": "Open Decisions",
-        "1": "Filter by department or decider"
-      },
-      "keywords": {
-        "0": "lich su quyet dinh",
-        "1": "quyet dinh",
-        "2": "nhat ky",
-        "3": "ai da duyet",
-        "4": "decision",
-        "5": "audit"
-      }
+      "steps": [
+        "Open Decisions",
+        "Filter by department or decider"
+      ],
+      "keywords": [
+        "lich su quyet dinh",
+        "quyet dinh",
+        "nhat ky",
+        "ai da duyet",
+        "decision",
+        "audit"
+      ]
     },
     "automations": {
       "title": "Automations",
       "what": "Workflows that run on a schedule or event: payment reminders, reports, customer care.",
-      "steps": {
-        "0": "Open Automations",
-        "1": "Pick a template or create one",
-        "2": "Turn it on"
-      },
-      "keywords": {
-        "0": "tu dong hoa",
-        "1": "tu dong",
-        "2": "quy trinh",
-        "3": "lich chay",
-        "4": "nhac no",
-        "5": "bao cao tu dong",
-        "6": "automation",
-        "7": "workflow",
-        "8": "n8n"
-      }
+      "steps": [
+        "Open Automations",
+        "Pick a template or create one",
+        "Turn it on"
+      ],
+      "keywords": [
+        "tu dong hoa",
+        "tu dong",
+        "quy trinh",
+        "lich chay",
+        "nhac no",
+        "bao cao tu dong",
+        "automation",
+        "workflow",
+        "n8n"
+      ]
     },
     "knowledge": {
       "title": "Knowledge",
       "what": "Teach the AI about your business: prices, policies, FAQs, documents, links.",
-      "steps": {
-        "0": "Open Knowledge",
-        "1": "Press Add source",
-        "2": "Paste text, upload a file or a link",
-        "3": "Save so the AI uses it"
-      },
-      "keywords": {
-        "0": "tri thuc",
-        "1": "kien thuc",
-        "2": "day ai",
-        "3": "bang gia",
-        "4": "price list",
-        "5": "teach the ai",
-        "6": "faq",
-        "7": "cau hoi thuong gap",
-        "8": "tai lieu",
-        "9": "knowledge"
-      }
+      "steps": [
+        "Open Knowledge",
+        "Press Add source",
+        "Paste text, upload a file or a link",
+        "Save so the AI uses it"
+      ],
+      "keywords": [
+        "tri thuc",
+        "kien thuc",
+        "day ai",
+        "bang gia",
+        "price list",
+        "teach the ai",
+        "faq",
+        "cau hoi thuong gap",
+        "tai lieu",
+        "knowledge"
+      ]
     },
     "brain": {
       "title": "Brain",
       "what": "What the business knows (prices, hours, policies, customers...) in one place; each agent reads its own view. Review proposals and conflicts here.",
-      "steps": {
-        "0": "Open Brain",
-        "1": "Check To review: apply or reject as NIVO suggests",
-        "2": "Facts tab: Add fact or New value"
-      },
-      "keywords": {
-        "0": "bo nao",
-        "1": "second brain",
-        "2": "su that",
-        "3": "mau thuan",
-        "4": "agent nho",
-        "5": "ghi nho",
-        "6": "doi gia",
-        "7": "gia moi",
-        "8": "agent biet gi",
-        "9": "bai hoc",
-        "10": "brain",
-        "11": "memory"
-      }
+      "steps": [
+        "Open Brain",
+        "Check To review: apply or reject as NIVO suggests",
+        "Facts tab: Add fact or New value"
+      ],
+      "keywords": [
+        "bo nao",
+        "second brain",
+        "su that",
+        "mau thuan",
+        "agent nho",
+        "ghi nho",
+        "doi gia",
+        "gia moi",
+        "agent biet gi",
+        "bai hoc",
+        "brain",
+        "memory"
+      ]
     },
     "modules": {
       "title": "Agents",
       "what": "Install and set up agents: Chatbot, Sales, Accounting, Booking, Inventory, Hiring…",
-      "steps": {
-        "0": "Open Agents",
-        "1": "Pick an agent and install it",
-        "2": "Follow the setup steps"
-      },
-      "keywords": {
-        "0": "module",
-        "1": "modules",
-        "2": "agents",
-        "3": "cai dat agent",
-        "4": "cai chatbot",
-        "5": "chatbot",
-        "6": "ban hang",
-        "7": "ke toan",
-        "8": "dat lich",
-        "9": "kho",
-        "10": "tuyen dung",
-        "11": "agent"
-      }
+      "steps": [
+        "Open Agents",
+        "Pick an agent and install it",
+        "Follow the setup steps"
+      ],
+      "keywords": [
+        "module",
+        "modules",
+        "agents",
+        "cai dat agent",
+        "cai chatbot",
+        "chatbot",
+        "ban hang",
+        "ke toan",
+        "dat lich",
+        "kho",
+        "tuyen dung",
+        "agent"
+      ]
     },
     "team": {
       "title": "Team",
       "what": "Invite people to the workspace and choose their role: Owner, Manager, Staff.",
-      "steps": {
-        "0": "Open Team",
-        "1": "Press Invite member",
-        "2": "Enter the email and role",
-        "3": "Send the invite or copy the link"
-      },
-      "keywords": {
-        "0": "doi ngu",
-        "1": "moi nhan vien",
-        "2": "them nhan vien",
-        "3": "moi thanh vien",
-        "4": "phan quyen",
-        "5": "vai tro",
-        "6": "team",
-        "7": "invite",
-        "8": "invite my staff",
-        "9": "add staff",
-        "10": "my staff"
-      }
+      "steps": [
+        "Open Team",
+        "Press Invite member",
+        "Enter the email and role",
+        "Send the invite or copy the link"
+      ],
+      "keywords": [
+        "doi ngu",
+        "moi nhan vien",
+        "them nhan vien",
+        "moi thanh vien",
+        "phan quyen",
+        "vai tro",
+        "team",
+        "invite",
+        "invite my staff",
+        "add staff",
+        "my staff"
+      ]
     },
     "connections": {
       "title": "Connections",
       "what": "Connect NIVO to your bank, Telegram, Zalo OA, email, Google Sheets, n8n.",
-      "steps": {
-        "0": "Open Connections",
-        "1": "Pick a service and press Add connection",
-        "2": "Follow the steps"
-      },
-      "keywords": {
-        "0": "ket noi",
-        "1": "tich hop",
-        "2": "connection",
-        "3": "integration"
-      }
+      "steps": [
+        "Open Connections",
+        "Pick a service and press Add connection",
+        "Follow the steps"
+      ],
+      "keywords": [
+        "ket noi",
+        "tich hop",
+        "connection",
+        "integration"
+      ]
     },
     "connections-sepay": {
       "title": "SePay bank feed",
       "what": "Money arriving in your bank account reaches the Accounting agent for matching.",
-      "steps": {
-        "0": "Open Connections › SePay › Add connection",
-        "1": "Start in Test mode, enter the bank and account",
-        "2": "Paste the webhook URL and API key into SePay's Webhook page",
-        "3": "Send a 2,000 VND test transfer from SePay to check the connection (test mode — nothing is booked)"
-      },
-      "keywords": {
-        "0": "sepay",
-        "1": "tien ve",
-        "2": "bao tien ve",
-        "3": "co tien ve",
-        "4": "tien vao",
-        "5": "nhan tien",
-        "6": "chuyen khoan",
-        "7": "ngan hang",
-        "8": "doi soat",
-        "9": "bank",
-        "10": "webhook ngan hang",
-        "11": "money arrives",
-        "12": "payment notification",
-        "13": "incoming money"
-      }
+      "steps": [
+        "Open Connections › SePay › Add connection",
+        "Start in Test mode, enter the bank and account",
+        "Paste the webhook URL and API key into SePay's Webhook page",
+        "Send a 2,000 VND test transfer from SePay to check the connection (test mode — nothing is booked)"
+      ],
+      "keywords": [
+        "sepay",
+        "tien ve",
+        "bao tien ve",
+        "co tien ve",
+        "tien vao",
+        "nhan tien",
+        "chuyen khoan",
+        "ngan hang",
+        "doi soat",
+        "bank",
+        "webhook ngan hang",
+        "money arrives",
+        "payment notification",
+        "incoming money"
+      ]
     },
     "connections-telegram": {
       "title": "Telegram bot",
       "what": "Customers message your Telegram bot and the Chatbot agent answers.",
-      "steps": {
-        "0": "Message /newbot to @BotFather for a token",
-        "1": "Open Connections › Telegram bot › Add connection",
-        "2": "Paste the token; NIVO registers the webhook",
-        "3": "Send the bot a test message"
-      },
-      "keywords": {
-        "0": "telegram",
-        "1": "bot telegram",
-        "2": "botfather",
-        "3": "token bot",
-        "4": "bot tra loi khach",
-        "5": "bot answer",
-        "6": "answer customers"
-      }
+      "steps": [
+        "Message /newbot to @BotFather for a token",
+        "Open Connections › Telegram bot › Add connection",
+        "Paste the token; NIVO registers the webhook",
+        "Send the bot a test message"
+      ],
+      "keywords": [
+        "telegram",
+        "bot telegram",
+        "botfather",
+        "token bot",
+        "bot tra loi khach",
+        "bot answer",
+        "answer customers"
+      ]
     },
     "connections-zalo_oa": {
       "title": "Zalo OA",
       "what": "Customers message your Zalo Official Account and the Chatbot agent answers.",
-      "steps": {
-        "0": "Create an app at developers.zalo.me for the App ID and secret",
-        "1": "Open Connections › Zalo OA › Add connection and paste them",
-        "2": "Paste the callback and webhook URLs into Zalo, enable message events",
-        "3": "Press Connect Zalo OA so the OA owner consents"
-      },
-      "keywords": {
-        "0": "zalo",
-        "1": "zalo oa",
-        "2": "official account",
-        "3": "oa"
-      }
+      "steps": [
+        "Create an app at developers.zalo.me for the App ID and secret",
+        "Open Connections › Zalo OA › Add connection and paste them",
+        "Paste the callback and webhook URLs into Zalo, enable message events",
+        "Press Connect Zalo OA so the OA owner consents"
+      ],
+      "keywords": [
+        "zalo",
+        "zalo oa",
+        "official account",
+        "oa"
+      ]
     },
     "connections-smtp": {
       "title": "Outgoing email",
       "what": "Send reports, receipts and reminders from your own shop email.",
-      "steps": {
-        "0": "Open Connections › Outgoing email › Add connection",
-        "1": "Enter the SMTP server or pick a provider",
-        "2": "Send a test email"
-      },
-      "keywords": {
-        "0": "email",
-        "1": "smtp",
-        "2": "gui email",
-        "3": "gmail",
-        "4": "thu dien tu"
-      }
+      "steps": [
+        "Open Connections › Outgoing email › Add connection",
+        "Enter the SMTP server or pick a provider",
+        "Send a test email"
+      ],
+      "keywords": [
+        "email",
+        "smtp",
+        "gui email",
+        "gmail",
+        "thu dien tu"
+      ]
     },
     "connections-google": {
       "title": "Google Sheets",
       "what": "NIVO records orders in your Google spreadsheet.",
-      "steps": {
-        "0": "Open Connections › Google (Sheets) › Add connection",
-        "1": "Sign in to Google and allow access",
-        "2": "Pick the spreadsheet"
-      },
-      "keywords": {
-        "0": "google sheet",
-        "1": "google sheets",
-        "2": "bang tinh",
-        "3": "excel",
-        "4": "spreadsheet"
-      }
+      "steps": [
+        "Open Connections › Google (Sheets) › Add connection",
+        "Sign in to Google and allow access",
+        "Pick the spreadsheet"
+      ],
+      "keywords": [
+        "google sheet",
+        "google sheets",
+        "bang tinh",
+        "excel",
+        "spreadsheet"
+      ]
     },
     "connections-webhook": {
       "title": "n8n / Webhook",
       "what": "Send events (new customer, order, payment) to n8n, Make or Zapier.",
-      "steps": {
-        "0": "Open Connections › n8n / Webhook › Add connection",
-        "1": "Paste the n8n webhook URL",
-        "2": "Pick events and send a test"
-      },
-      "keywords": {
-        "0": "n8n",
-        "1": "webhook",
-        "2": "zapier",
-        "3": "make.com",
-        "4": "make"
-      }
+      "steps": [
+        "Open Connections › n8n / Webhook › Add connection",
+        "Paste the n8n webhook URL",
+        "Pick events and send a test"
+      ],
+      "keywords": [
+        "n8n",
+        "webhook",
+        "zapier",
+        "make.com",
+        "make"
+      ]
     },
     "developers": {
       "title": "Developers (API)",
       "what": "Create API keys so other software can read and write NIVO data.",
-      "steps": {
-        "0": "Open Developers",
-        "1": "Name the key and create it",
-        "2": "Copy it now; it is shown once"
-      },
-      "keywords": {
-        "0": "api",
-        "1": "khoa api",
-        "2": "api key",
-        "3": "developer",
-        "4": "lap trinh"
-      }
+      "steps": [
+        "Open Developers",
+        "Name the key and create it",
+        "Copy it now; it is shown once"
+      ],
+      "keywords": [
+        "api",
+        "khoa api",
+        "api key",
+        "developer",
+        "lap trinh"
+      ]
     },
     "billing": {
       "title": "Credits and plan",
       "what": "AI credits used and left, top-ups, plan upgrades and payment history.",
-      "steps": {
-        "0": "Open Credits & plan",
-        "1": "Check this month's credits and the run-out forecast",
-        "2": "Buy a pack to top up, or upgrade the plan"
-      },
-      "keywords": {
-        "0": "thanh toan",
-        "1": "goi cuoc",
-        "2": "nang cap",
-        "3": "gia han",
-        "4": "hoa don nivo",
-        "5": "han muc ai",
-        "6": "billing",
-        "7": "plan",
-        "8": "upgrade",
-        "9": "credit",
-        "10": "nap them credit",
-        "11": "het credit",
-        "12": "top up",
-        "13": "topup"
-      }
+      "steps": [
+        "Open Credits & plan",
+        "Check this month's credits and the run-out forecast",
+        "Buy a pack to top up, or upgrade the plan"
+      ],
+      "keywords": [
+        "thanh toan",
+        "goi cuoc",
+        "nang cap",
+        "gia han",
+        "hoa don nivo",
+        "han muc ai",
+        "billing",
+        "plan",
+        "upgrade",
+        "credit",
+        "nap them credit",
+        "het credit",
+        "top up",
+        "topup"
+      ]
     },
     "account": {
       "title": "Your account",
       "what": "Change your name, email, password and sign out other devices.",
-      "steps": {
-        "0": "Open the avatar menu › Account",
-        "1": "Edit and save"
-      },
-      "keywords": {
-        "0": "tai khoan cua toi",
-        "1": "thong tin tai khoan",
-        "2": "doi mat khau",
-        "3": "mat khau",
-        "4": "ten hien thi",
-        "5": "dang xuat",
-        "6": "thiet bi dang nhap",
-        "7": "my account",
-        "8": "password",
-        "9": "change my password",
-        "10": "change password"
-      }
+      "steps": [
+        "Open the avatar menu › Account",
+        "Edit and save"
+      ],
+      "keywords": [
+        "tai khoan cua toi",
+        "thong tin tai khoan",
+        "doi mat khau",
+        "mat khau",
+        "ten hien thi",
+        "dang xuat",
+        "thiet bi dang nhap",
+        "my account",
+        "password",
+        "change my password",
+        "change password"
+      ]
     }
   },
   "inbox": {
@@ -3294,7 +3290,6 @@
     "loadedLeads": "Showing {count} loaded leads. Load more to search older leads.",
     "loadFailedLeads": "The leads could not be loaded. Try again.",
     "loadFailedLead": "This lead could not be loaded. Try again.",
-    "eyebrow": "PIPELINE",
     "title": "Leads",
     "description": "Every lead gets context, an owner and a next action the moment it arrives. Updated {time}.",
     "descriptionShort": "Every lead gets context, an owner and a next action the moment it arrives.",
@@ -4516,7 +4511,6 @@
     "yesterday": "Yesterday",
     "daysAgo": "{n} days ago",
     "pageTitle": "Responsibilities",
-    "eyebrow": "OVERVIEW",
     "pageDescription": "Every customer has one owner and one next action. Updated {time}.",
     "newLead": "New lead",
     "verified": "Verified {time}",
@@ -7138,9 +7132,6 @@
     "step_wait_live": "Wait for SePay to report the {account} transaction to NIVO.",
     "stepMarkerDone": "Done",
     "step_receive": "NIVO receives the transaction, checks the API Key and tells the Accounting agent",
-    "stepState_done": "Done",
-    "stepState_active": "In progress",
-    "stepState_pending": "Not yet",
     "pingSeenAt": "Saw the SePay test ping at {time}.",
     "receiveNoteTest": "In test mode nothing is booked.",
     "receiveNoteLive": "In live mode a real credit WILL be booked and matched to invoices.",

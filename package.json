@@ -50,11 +50,11 @@
   },
   "devDependencies": {
     "@nestjs/testing": "11.2.5",
-    "@starci/eslint-canon-be": "3.6.0",
-    "@starci/eslint-canon-fe": "9.4.0",
-    "@starci/eslint-grammar-core": "0.15.0",
-    "@starci/eslint-grammar-offset-pop": "0.15.0",
-    "@starci/hfs": "4.9.1",
+    "@starci/eslint-canon-be": "3.6.3",
+    "@starci/eslint-canon-fe": "9.4.3",
+    "@starci/eslint-grammar-core": "0.15.3",
+    "@starci/eslint-grammar-offset-pop": "0.15.3",
+    "@starci/hfs": "4.9.4",
     "@starci/jest-preset": "2.4.1",
     "@starci/prettier-config": "1.1.0",
     "@starci/stylelint-canon": "2.2.1",
@@ -76,7 +76,7 @@
     "jest": "29.7.0",
     "postcss-value-parser": "4.2.0",
     "prettier": "3.9.6",
-    "starci-harness": "1.1.0-alpha.1",
+    "starci-harness": "1.1.0-alpha.4",
     "stylelint": "17.15.0",
     "supabase": "2.119.0",
     "tailwindcss": "4.3.3",
@@ -142,7 +142,6 @@
       "zustand": "5.0.12"
     },
     "zod": "4.6.7",
-    "@graphql-tools/utils": "12.1.0",
-    "@starci/hfs": "4.9.1"
+    "@graphql-tools/utils": "12.1.0"
   }
 }
