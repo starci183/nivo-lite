@@ -37,7 +37,7 @@ describe("aiPoolOf", () => {
             })
             expect(options.chat[1]).toMatchObject({
                 baseUrl: "https://openrouter.ai/api/v1",
-                model: "deepseek/deepseek-chat",
+                model: "deepseek/deepseek-v4.1-flash",
             })
             expect(options.embedding).toMatchObject({
                 id: "embeddings",

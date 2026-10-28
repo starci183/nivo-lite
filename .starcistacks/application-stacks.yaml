@@ -411,7 +411,7 @@ environments:
             HTTP_SECURITY_ALLOWED_ORIGINS: "https://app.nivo.vn"
         nivo-openclaw:
           settings:
-            OPENCLAW_MODEL: {key: OPENCLAW_MODEL, default: openrouter/deepseek/deepseek-v4-flash}
+            OPENCLAW_MODEL: {key: OPENCLAW_MODEL, default: openrouter/deepseek/deepseek-v4.1-flash}
       configs:
         - {name: openclaw-entrypoint, file: infra/swarm/openclaw/entrypoint.sh, env: NIVO_CFG_OPENCLAW_ENTRYPOINT}
         - {name: openclaw-init, file: infra/swarm/openclaw/openclaw-init.mjs, env: NIVO_CFG_OPENCLAW_INIT}

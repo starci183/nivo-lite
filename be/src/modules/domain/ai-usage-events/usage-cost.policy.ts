@@ -11,6 +11,7 @@ export const CREDIT_USD_VALUE = 0.00113
 
 /** USD per 1M tokens, used only when the provider returns no cost. Approximate list prices, not a contract. */
 const PRICES: ReadonlyArray<{ readonly match: string; readonly in: number; readonly out: number }> = [
+    { match: "deepseek-v4.1-flash", in: 0.14, out: 0.42 },
     { match: "deepseek", in: 0.14, out: 0.28 },
     { match: "qwen3-embedding", in: 0.01, out: 0 },
     { match: "text-embedding-3-small", in: 0.02, out: 0 },

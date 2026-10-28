@@ -31,7 +31,7 @@ const KEYED: AiPoolOptions = {
             id: "openrouter",
             baseUrl: "https://openrouter.test/v1",
             keys: [{ alias: "openrouter-1", secret: new Secret("sk-or") }],
-            model: "deepseek/deepseek-chat",
+            model: "deepseek/deepseek-v4.1-flash",
             smartModel: null,
         },
     ],
@@ -52,7 +52,7 @@ const KEYLESS: AiPoolOptions = {
             id: "openrouter",
             baseUrl: "https://openrouter.test/v1",
             keys: [],
-            model: "deepseek/deepseek-chat",
+            model: "deepseek/deepseek-v4.1-flash",
             smartModel: null,
         },
     ],
@@ -172,7 +172,7 @@ describe("AiPoolClient", () => {
                 {
                     policy: {
                         model: "deepseek-chat",
-                        fallbacks: ["deepseek/deepseek-chat"],
+                        fallbacks: ["deepseek/deepseek-v4.1-flash"],
                         providers: ["deepseek", "openrouter"],
                         timeoutMs: 20_000,
                         deadlineMs: 20_000,
@@ -407,7 +407,7 @@ describe("AiPoolClient", () => {
     describe("telemetry of calls, breakers and keys", () => {
         it("logs a call that succeeded after more than one attempt as a fallback", async () => {
             const { handler, logger } = await subscribed()
-            const lane = { provider: "openrouter", key: "OPENROUTER_API_KEY", model: "deepseek/deepseek-chat" }
+            const lane = { provider: "openrouter", key: "OPENROUTER_API_KEY", model: "deepseek/deepseek-v4.1-flash" }
 
             handler("request")({ ...REQUEST, outcome: "success", attempts: 1 })
             handler("request")({ ...REQUEST, outcome: "failure", attempts: 3, errorClass: "no_candidate" })

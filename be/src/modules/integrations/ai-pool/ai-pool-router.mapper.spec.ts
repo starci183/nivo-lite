@@ -25,7 +25,7 @@ const optionsOf = (
     ({
         chat: [
             provider("deepseek", "deepseek-chat", deepseek, "deepseek-reasoner"),
-            provider("openrouter", "deepseek/deepseek-chat", openrouter),
+            provider("openrouter", "deepseek/deepseek-v4.1-flash", openrouter),
         ],
         embedding: provider("embeddings", "qwen/qwen3-embedding-8b", embedding),
     }) satisfies AiPoolOptions
@@ -73,7 +73,7 @@ describe("routerOptionsOf", () => {
         const router = subject.routerOptionsOf(optionsOf(["sk-a"], ["sk-or"], ["sk-or"]))
 
         expect(router?.providers.map((entry) => entry.id)).toEqual(["deepseek", "openrouter", "embeddings"])
-        expect(router?.providers[1]?.models).toEqual([{ id: "deepseek/deepseek-chat" }])
+        expect(router?.providers[1]?.models).toEqual([{ id: "deepseek/deepseek-v4.1-flash" }])
         expect(router?.providers[2]?.models).toEqual([{ id: "qwen/qwen3-embedding-8b", capabilities: ["embeddings"] }])
     })
 
@@ -90,9 +90,9 @@ describe("chatModelOrder and chatProviderIds", () => {
         const subject = await buildSubject()
         const both = optionsOf(["sk-a"], ["sk-or"], [])
 
-        expect(subject.chatModelOrder(both)).toEqual(["deepseek-chat", "deepseek/deepseek-chat"])
+        expect(subject.chatModelOrder(both)).toEqual(["deepseek-chat", "deepseek/deepseek-v4.1-flash"])
         expect(subject.chatProviderIds(both)).toEqual(["deepseek", "openrouter"])
-        expect(subject.chatModelOrder(optionsOf([], ["sk-or"], []))).toEqual(["deepseek/deepseek-chat"])
+        expect(subject.chatModelOrder(optionsOf([], ["sk-or"], []))).toEqual(["deepseek/deepseek-v4.1-flash"])
         expect(subject.chatModelOrder(optionsOf([], [], ["x"]))).toEqual([])
     })
 

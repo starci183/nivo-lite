@@ -5,7 +5,7 @@ const DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
 const DEEPSEEK_FAST_MODEL = "deepseek-chat"
 const DEEPSEEK_SMART_MODEL = "deepseek-reasoner"
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-const OPENROUTER_MODEL = "deepseek/deepseek-chat"
+const OPENROUTER_MODEL = "deepseek/deepseek-v4.1-flash"
 const EMBEDDING_MODEL = "qwen/qwen3-embedding-8b"
 
 /** An entry of `DEEPSEEK_API_KEYS` written like an environment name is a reference; anything else is the key itself. */
