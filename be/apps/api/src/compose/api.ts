@@ -24,6 +24,8 @@ import { GoogleConnectionsHttpModule } from "@features/api/google-connections"
 import { MetaConnectionsHttpModule } from "@features/api/meta-connections"
 import { MetaHttpModule } from "@features/webhooks/meta"
 import { ConnectionsGraphqlModule } from "@features/api/connections"
+import { SepayConnectionGraphqlModule } from "@features/api/sepay-connection"
+import { ZaloConnectionPageGraphqlModule } from "@features/api/zalo-connection-page"
 /** The api area of the API, in registration order. */
 export const apiModules = (): Array<DynamicModule> => [
     WorkspacesGraphqlModule.register({}),
@@ -35,6 +37,8 @@ export const apiModules = (): Array<DynamicModule> => [
     AccountGraphqlModule.register({}),
     ShellGraphqlModule.register({}),
     ConnectionsGraphqlModule.register({}),
+    SepayConnectionGraphqlModule.register({}),
+    ZaloConnectionPageGraphqlModule.register({}),
     DataHubGraphqlModule.register({}),
     InboxGraphqlModule.register({}),
     AgentChatGraphqlModule.register({}),

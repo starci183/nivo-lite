@@ -82,7 +82,7 @@ describe("PayosProofService", () => {
             },
         )
 
-        it.each([BillingErrorCode.CredentialUnreadable, BillingErrorCode.PlanNotFound])(
+        it.each([BillingErrorCode.Forbidden, BillingErrorCode.PlanNotFound])(
             "propagates an unrelated %s billing failure",
             async (code) => {
                 const { proof, payments } = await build()
