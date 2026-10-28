@@ -30,7 +30,7 @@ export const sepayPlaceholderOf = (words: SepayPlaceholderWords): SepayConnectio
     hasFullAccount: true,
     holder: words.holder,
     webhookUrl: "https://example.vn/api/connections/sepay/00000000",
-    apiKeyMasked: "2022".repeat(16),
+    apiKeyMasked: "•".repeat(16),
     pingSeenAt: null,
     transactionSeenAt: null,
     health: { lastWebhookAt: null, validCount: 0, totalCount: 0, duplicateCount: 0 },
