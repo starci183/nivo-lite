@@ -25,7 +25,8 @@ ALTER TABLE public.channel_connections_sepay_events ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.channel_connections_sepay_events FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT ON TABLE public.channel_connections_sepay_events TO app_be;
 
+-- The dedicated backend principal must be active, including through an inherited app_be role.
 CREATE POLICY channel_connections_sepay_events_app_be_insert ON public.channel_connections_sepay_events
-    FOR INSERT TO app_be WITH CHECK (true);
+    FOR INSERT TO app_be WITH CHECK (current_user = 'app_be');
 CREATE POLICY channel_connections_sepay_events_app_be_select ON public.channel_connections_sepay_events
-    FOR SELECT TO app_be USING (true);
+    FOR SELECT TO app_be USING (current_user = 'app_be');

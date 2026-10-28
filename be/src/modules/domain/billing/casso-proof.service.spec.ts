@@ -89,7 +89,7 @@ describe("CassoProofService", () => {
     })
 
     it.each([
-        new BillingError({ code: BillingErrorCode.CredentialUnreadable }),
+        new BillingError({ code: BillingErrorCode.Forbidden }),
         new Error("storage unavailable"),
         { code: BillingErrorCode.WebhookUnauthorized },
         null,

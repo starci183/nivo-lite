@@ -17,8 +17,6 @@ export enum BillingErrorCode {
     WebhookUnauthorized = "BILLING_WEBHOOK_UNAUTHORIZED",
     /** A webhook delivery body cannot be used. */
     WebhookInvalid = "BILLING_WEBHOOK_INVALID",
-    /** A stored connection credential cannot be decrypted. */
-    CredentialUnreadable = "BILLING_CREDENTIAL_UNREADABLE",
     /** The plan is no longer sold: only the workspaces that already have it keep it. */
     PlanNotListed = "BILLING_PLAN_NOT_LISTED",
     /** The plan is not sold for the billing cycle asked for. */
@@ -46,7 +44,6 @@ export const BILLING_ERROR_KINDS: Record<BillingErrorCode, ErrorKind> = {
     [BillingErrorCode.PlanCustom]: "conflict",
     [BillingErrorCode.WebhookUnauthorized]: "unauthenticated",
     [BillingErrorCode.WebhookInvalid]: "invalid",
-    [BillingErrorCode.CredentialUnreadable]: "internal",
     [BillingErrorCode.PlanNotListed]: "conflict",
     [BillingErrorCode.CycleUnavailable]: "invalid",
     [BillingErrorCode.TierUnknown]: "invalid",

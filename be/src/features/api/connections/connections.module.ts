@@ -13,20 +13,16 @@ import { GetConnectionFirstEventHandler } from "./application/get-connection-fir
 import { GetGoogleStateHandler } from "./application/get-google-state.handler"
 import { GetMetaConnectionHandler } from "./application/get-meta-connection.handler"
 import { GetMoneyConnectionHandler } from "./application/get-money-connection.handler"
-import { GetSepayConnectionHandler } from "./application/get-sepay-connection.handler"
 import { GetZaloConnectionHandler } from "./application/get-zalo-connection.handler"
 import { ListConnectionAgentsHandler } from "./application/list-connection-agents.handler"
-import { ListSepayEventsHandler } from "./application/list-sepay-events.handler"
 import { ListConnectionsHandler } from "./application/list-connections.handler"
 import { ReturnZaloAuthorizationHandler } from "./application/return-zalo-authorization.handler"
-import { RevealSepayKeyHandler } from "./application/reveal-sepay-key.handler"
 import { RevealWebhookConnectionHandler } from "./application/reveal-webhook-connection.handler"
 import { SaveProviderKeysHandler } from "./application/save-provider-keys.handler"
 import { SaveZaloOaSecretHandler } from "./application/save-zalo-oa-secret.handler"
 import { SetAgentConnectionsHandler } from "./application/set-agent-connections.handler"
 import { SetConnectionAgentsHandler } from "./application/set-connection-agents.handler"
 import { SetConnectionGrantHandler } from "./application/set-connection-grant.handler"
-import { SetSepayEnvironmentHandler } from "./application/set-sepay-environment.handler"
 import { StartMoneyConnectionHandler } from "./application/start-money-connection.handler"
 import { StartWebhookConnectionHandler } from "./application/start-webhook-connection.handler"
 import { StartZaloConnectionHandler } from "./application/start-zalo-connection.handler"
@@ -38,10 +34,6 @@ import { SendSmtpTestHandler } from "./application/send-smtp-test.handler"
 import { ChangeSmtpPasswordHandler } from "./application/change-smtp-password.handler"
 import { SetDefaultSmtpHandler } from "./application/set-default-smtp.handler"
 import { WantConnectorHandler } from "./application/want-connector.handler"
-import { GetZaloPageHandler } from "./application/get-zalo-page.handler"
-import { ListZaloEventsHandler } from "./application/list-zalo-events.handler"
-import { RecheckZaloConnectionHandler } from "./application/recheck-zalo-connection.handler"
-import { SendZaloTestHandler } from "./application/send-zalo-test.handler"
 import { ConfigurableModuleClass } from "./connections.module-definition"
 
 @Module({
@@ -60,20 +52,16 @@ import { ConfigurableModuleClass } from "./connections.module-definition"
         GetGoogleStateHandler,
         GetMetaConnectionHandler,
         GetMoneyConnectionHandler,
-        GetSepayConnectionHandler,
         GetZaloConnectionHandler,
         ListConnectionAgentsHandler,
         ListConnectionsHandler,
-        ListSepayEventsHandler,
         ReturnZaloAuthorizationHandler,
-        RevealSepayKeyHandler,
         RevealWebhookConnectionHandler,
         SaveProviderKeysHandler,
         SaveZaloOaSecretHandler,
         SetAgentConnectionsHandler,
         SetConnectionAgentsHandler,
         SetConnectionGrantHandler,
-        SetSepayEnvironmentHandler,
         StartMoneyConnectionHandler,
         StartWebhookConnectionHandler,
         StartZaloConnectionHandler,
@@ -85,10 +73,6 @@ import { ConfigurableModuleClass } from "./connections.module-definition"
         ChangeSmtpPasswordHandler,
         SetDefaultSmtpHandler,
         WantConnectorHandler,
-        GetZaloPageHandler,
-        ListZaloEventsHandler,
-        RecheckZaloConnectionHandler,
-        SendZaloTestHandler,
     ],
 })
 /** The connections feature: the handlers of its application. */
