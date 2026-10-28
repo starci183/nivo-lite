@@ -190,6 +190,40 @@ describe("FollowUpPerformerService prepare", () => {
     })
 })
 
+describe("FollowUpPerformerService perform a renewal", () => {
+    it("hands a renewal's notice to the delivery so Zalo can send it as ZNS outside the chat window", async () => {
+        const { service, delivery } = await build()
+        const proposal = proposalOf(
+            {
+                responsibility_id: "resp-1",
+                renewal_customer: "Lan",
+                renewal_phone: "0901234567",
+                renewal_plan: "Pro",
+                renewal_end_date: "2026-11-30",
+                renewal_amount_vnd: "990000",
+                renewal_transfer_content: "INV1",
+                renewal_invoice: "INV-1",
+            },
+            "Hi Lan",
+        )
+
+        await service.perform(ctx, itemOf(), proposal, { name: "Mai" })
+
+        expect(delivery.toCustomer).toHaveBeenCalledWith(ctx, leadOf(), "Hi Lan", {
+            kind: "renewal",
+            phone: "0901234567",
+            fields: {
+                customerName: "Lan",
+                plan: "Pro",
+                endDate: "2026-11-30",
+                amount: 990000,
+                transferContent: "INV1",
+                invoiceNumber: "INV-1",
+            },
+        })
+    })
+})
+
 describe("FollowUpPerformerService perform", () => {
     it("delivers the draft, approves the card and closes the responsibility", async () => {
         const { service, delivery, executions, responsibilities, evidence } = await build()

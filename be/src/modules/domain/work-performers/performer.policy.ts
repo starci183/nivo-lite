@@ -1,3 +1,4 @@
+import type { RenewalNotification } from "@modules/domain/channels"
 import type { ProposalFieldValue } from "@modules/domain/work-items"
 
 /** The stages of a lead the sales AI may move it to. */
@@ -28,3 +29,30 @@ export const historyLine = (summary: string, evidence: string | null): string =>
 
 /** The first of the texts that is not empty; an empty text when all are. */
 export const firstText = (texts: ReadonlyArray<string>): string => texts.find((text) => text !== "") ?? ""
+
+/**
+ * The ZNS renewal notice a proposal carries (the `renewal_*` fields the contract renewal automation puts through the gate), or
+ * undefined when the proposal is not a renewal or lacks a fact the template needs; the message then goes by chat only.
+ */
+export const renewalNoticeOf = (
+    fields: Readonly<Record<string, ProposalFieldValue>>,
+): RenewalNotification | undefined => {
+    const plan = textOf(fields.renewal_plan)
+    const endDate = textOf(fields.renewal_end_date)
+    const invoiceNumber = textOf(fields.renewal_invoice)
+    const amount = Number(textOf(fields.renewal_amount_vnd))
+    if (plan === "" || endDate === "" || invoiceNumber === "" || !Number.isFinite(amount) || amount <= 0)
+        return undefined
+    return {
+        kind: "renewal",
+        phone: textOf(fields.renewal_phone) || null,
+        fields: {
+            customerName: textOf(fields.renewal_customer),
+            plan,
+            endDate,
+            amount,
+            transferContent: textOf(fields.renewal_transfer_content),
+            invoiceNumber,
+        },
+    }
+}

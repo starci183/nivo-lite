@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { OptionalWorkPerformer, WorkPerformer } from "./decisions.contracts"
+import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import type { WorkPerformerRegistry } from "./work-performer.port"
 
 @Injectable()
@@ -12,8 +13,14 @@ export class WorkPerformersService implements WorkPerformerRegistry {
         this.performers.set(action, performer)
     }
 
-    /** The performer registered for an action, or null when the action only records the decision. */
+    /**
+     * The performer registered for an action, or null when the action only records the decision. A registry nobody filled means the
+     * registrars did not run, so no action may be closed as only recorded: that fails loudly instead of marking unsent work done.
+     */
     performerOf(action: string): OptionalWorkPerformer {
+        if (this.performers.size === 0) {
+            throw new DecisionsError({ code: DecisionsErrorCode.NoPerformer, params: { action } })
+        }
         return this.performers.get(action) ?? null
     }
 }

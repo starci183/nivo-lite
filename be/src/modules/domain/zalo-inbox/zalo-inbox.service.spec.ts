@@ -157,12 +157,18 @@ describe("ZaloInboxService consumer recovery", () => {
     })
 })
 
-describe("ZaloInboxService ignored events", () => {
-    it("acknowledges an unsupported event without claiming or processing it", async () => {
-        const { service, tx, conversations, outbox } = await build()
-        await service.acceptZaloDelivery(Buffer.from(JSON.stringify({ event_name: "follow" })), "c-1")
-        expect(tx.em.query).not.toHaveBeenCalled()
+describe("ZaloInboxService non-text events", () => {
+    it("claims a follow event under its own connection-scoped id and completes it without a conversation effect", async () => {
+        const { service, tx, conversations, write } = await build()
+        const follow = JSON.stringify({ event_name: "follow", timestamp: "1700", follower: { id: "user-9" } })
+        await service.acceptZaloDelivery(Buffer.from(follow), "c-1")
+        expect(tx.em.query.mock.calls[0]?.[1]?.[1]).toBe("c-1:follow:1700:user-9")
+        expect(write).toHaveBeenCalledWith(
+            expect.anything(),
+            ZALO_DELIVERY_QUEUE,
+            { deliveryId: "c-1:follow:1700:user-9" },
+            { dedupeKey: "zalo-delivery:c-1:follow:1700:user-9" },
+        )
         expect(conversations.acceptZalo).not.toHaveBeenCalled()
-        expect(outbox.jobs).toEqual([])
     })
 })

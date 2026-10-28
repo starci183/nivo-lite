@@ -1,4 +1,5 @@
 import type { LeadReadRow, ConversationReadRow } from "./persistence/automations.rows"
+import type { GateFields } from "./automation-ports.contracts"
 import type { MessageVariables } from "./automations.contracts"
 
 /** What a lookup of a lead answers when the id matches no lead of the workspace. */
@@ -35,6 +36,8 @@ export interface Composition {
     readonly fixedTail?: string | undefined
     /** Values a model rewrite must keep word for word; a rewrite that drops one is discarded for the filled wording. */
     readonly keepExact?: ReadonlyArray<string> | undefined
+    /** Facts that ride with the message through the gate to its performer (a renewal's notice for the ZNS route). */
+    readonly fields?: GateFields | undefined
 }
 
 /** A reply to a conversation that has no lead yet. */

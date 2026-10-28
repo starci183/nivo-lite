@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
 import type { WorkPerformerRegistry } from "@modules/domain/decisions"
+import { ContractsService } from "@modules/domain/contracts"
 import { LeadRecordsService } from "@modules/domain/leads"
 import { LeadFlowsError, LeadFlowsErrorCode } from "./errors/lead-flows.error"
 import { LeadFlowConversationService } from "./lead-flow-conversation.service"
@@ -64,6 +65,7 @@ const build = async (flow: LeadFlow = flowOf()) => {
     const turns = mock<LeadFlowTurnService>()
     turns.setup.mockResolvedValue({ questions: ["When?"], criteriaText: "", criteria: DEFAULT_CRITERIA })
     const leads = mock<LeadRecordsService>()
+    const contracts = mock<ContractsService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ScoreLeadPerformerService,
@@ -71,9 +73,20 @@ const build = async (flow: LeadFlow = flowOf()) => {
             { provide: LeadFlowKitService, useValue: kit },
             { provide: LeadFlowTurnService, useValue: turns },
             { provide: LeadRecordsService, useValue: leads },
+            { provide: ContractsService, useValue: contracts },
         ],
     }).compile()
-    return { performer: moduleRef.get(ScoreLeadPerformerService), registry, kit, store, meta, transcript, turns, leads }
+    return {
+        performer: moduleRef.get(ScoreLeadPerformerService),
+        registry,
+        kit,
+        store,
+        meta,
+        transcript,
+        turns,
+        leads,
+        contracts,
+    }
 }
 
 describe("ScoreLeadPerformerService", () => {
@@ -152,7 +165,7 @@ describe("ScoreLeadPerformerService", () => {
     it("stores the score and the answer to the pending question", async () => {
         const flow = flowOf({ pending_question: 0, state: "qualifying" })
         const answers = [{ i: 0, question: "When?", answer: "Next week", at: NOW }]
-        const { performer, kit, store, leads } = await build(flow)
+        const { performer, kit, store, leads, contracts } = await build(flow)
         store.patch.mockResolvedValue(flowOf({ answers }))
         const fields = {
             step: "follow_up",
@@ -174,6 +187,7 @@ describe("ScoreLeadPerformerService", () => {
             answers,
         })
         expect(leads.fillContact).not.toHaveBeenCalled()
+        expect(contracts.linkCustomers).not.toHaveBeenCalled()
         expect(kit.log).toHaveBeenCalledWith(
             ctx,
             flow,
@@ -230,7 +244,7 @@ describe("ScoreLeadPerformerService", () => {
         "fills contact without replacing identity: %s / %s / %s / %s / %s",
         async (contact, phone, email, lead_id, state, patch) => {
             const flow = flowOf({ phone, email, lead_id, state })
-            const { performer, store, leads } = await build(flow)
+            const { performer, store, leads, contracts } = await build(flow)
             const signals = { ...EMPTY_SIGNALS, contact }
             await expect(
                 performer.perform(ctx, itemOf(), {
@@ -245,14 +259,18 @@ describe("ScoreLeadPerformerService", () => {
                 scored_at: NOW,
                 ...patch,
             })
-            if (lead_id === null) expect(leads.fillContact).not.toHaveBeenCalled()
-            else
+            if (lead_id === null) {
+                expect(leads.fillContact).not.toHaveBeenCalled()
+                expect(contracts.linkCustomers).not.toHaveBeenCalled()
+            } else {
                 expect(leads.fillContact).toHaveBeenCalledWith({
                     workspaceId: "ws-1",
                     leadId: "lead-1",
                     phone: contact.includes("@") ? null : contact,
                     email: contact.includes("@") ? contact : null,
                 })
+                expect(contracts.linkCustomers).toHaveBeenCalledWith("ws-1")
+            }
         },
     )
     it.each([null, ""])("clears an unanswered question: %s", async (last_user_text) => {

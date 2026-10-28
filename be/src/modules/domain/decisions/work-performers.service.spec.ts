@@ -1,6 +1,7 @@
 import { mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import type { WorkPerformer } from "./decisions.contracts"
+import { DecisionsError } from "./errors/decisions.error"
 import { WorkPerformersService } from "./work-performers.service"
 
 const build = async () => {
@@ -20,8 +21,15 @@ describe("WorkPerformersService", () => {
 
     it("answers null for an action nobody registered", async () => {
         const service = await build()
+        service.add("send_quote", mock<WorkPerformer>())
 
         expect(service.performerOf("send_follow_up")).toBeNull()
+    })
+
+    it("fails loudly while no performer is registered, because the registrars did not run", async () => {
+        const service = await build()
+
+        expect(() => service.performerOf("send_follow_up")).toThrow(DecisionsError)
     })
 
     it("lets a later registration replace the earlier one", async () => {

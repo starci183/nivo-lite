@@ -86,6 +86,8 @@ export class AutomationRenewalPaymentService {
             keepExact: placed ? [invoice.invoice_no, content, link].filter((value) => value !== "") : undefined,
             steps,
             invoiceNo: invoice.invoice_no,
+            amountVnd,
+            transferContent: content,
         }
     }
 

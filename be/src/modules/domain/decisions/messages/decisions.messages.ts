@@ -29,6 +29,8 @@ export const DECISIONS_MESSAGES: MessageBundle = {
         "decision.basisNote": "Căn cứ: {{basis}}",
         "errors.DECISIONS_HOLD_NOTE_REQUIRED": "Cần ghi chú vì sao chưa đủ căn cứ.",
         "errors.DECISIONS_STAFF_NOT_FOUND": "Không tìm thấy nhân viên này.",
+        "errors.DECISIONS_NO_PERFORMER":
+            "Việc gửi cho khách ({{action}}) chưa có bước thực hiện, nên NIVO không ghi là đã xong.",
         "decision.holdEvidence": "Chưa đủ căn cứ, giữ lại: {{note}}",
         "decision.assigned": "→ {{name}}",
         "decision.unassigned": "→ —",
@@ -92,6 +94,8 @@ export const DECISIONS_MESSAGES: MessageBundle = {
         "decision.basisNote": "Basis: {{basis}}",
         "errors.DECISIONS_HOLD_NOTE_REQUIRED": "A note is required to keep this waiting.",
         "errors.DECISIONS_STAFF_NOT_FOUND": "That staff member was not found.",
+        "errors.DECISIONS_NO_PERFORMER":
+            "The customer message ({{action}}) has no step to perform it, so NIVO does not record it as done.",
         "decision.holdEvidence": "Not enough basis yet, still waiting: {{note}}",
         "decision.assigned": "→ {{name}}",
         "decision.unassigned": "→ —",

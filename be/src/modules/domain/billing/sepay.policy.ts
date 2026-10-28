@@ -47,3 +47,15 @@ export const sepayPayloadOf = (body: JsonObject): SepayPayload => {
         description: textOrNull(body.description),
     }
 }
+
+/**
+ * True for SePay's test ping: a delivery with no safe integer id that moves no money (no `in`/`out` transfer of a positive amount).
+ * It is acknowledged and traced as a ping, never settled; a delivery with money but no id stays invalid, so a real credit is not lost.
+ */
+export const isSepayPing = (body: JsonObject): boolean => {
+    const id = numberOf(body.id)
+    if (id !== undefined && Number.isSafeInteger(id)) return false
+    const amount = numberOf(body.transferAmount)
+    const moves = (body.transferType === "in" || body.transferType === "out") && amount !== undefined && amount > 0
+    return !moves
+}

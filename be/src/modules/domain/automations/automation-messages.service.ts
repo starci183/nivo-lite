@@ -122,6 +122,7 @@ export class AutomationMessagesService {
                 customer: composition.lead.contact_name,
                 contact: composition.lead.phone || composition.lead.email || "website",
                 ...(isReply ? { conversation_id: composition.conversationId, question: "" } : {}),
+                ...composition.fields,
             },
             forceAsk: composition.forceAsk,
             autoApprove: context.pipeline.auto_send && !composition.forceAsk,

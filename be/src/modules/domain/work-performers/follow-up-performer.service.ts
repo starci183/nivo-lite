@@ -19,7 +19,7 @@ import { WorkPerformersError, WorkPerformersErrorCode } from "./errors/work-perf
 import { InjectPromptWriter } from "./work-performers.decorators"
 import type { PromptWriter } from "./work-performers.port"
 import { PerformerKitService } from "./performer-kit.service"
-import { leadHref, textOf } from "./performer.policy"
+import { leadHref, renewalNoticeOf, textOf } from "./performer.policy"
 
 @Injectable()
 /**
@@ -72,7 +72,12 @@ export class FollowUpPerformerService implements WorkPerformer {
     async perform(ctx: WorkContext, item: WorkItem, proposal: Proposal, by: PerformedBy): Promise<Performed> {
         const lead = await this.leads.require(ctx.workspaceId, this.leadIdOf(item))
         const text = proposal.draft ?? proposal.summary
-        const sent = await this.delivery.toCustomer(ctx, lead, text)
+        // A renewal also carries its notice, so Zalo can send it as a ZNS template when the 48-hour chat window is closed.
+        const notice = renewalNoticeOf(proposal.fields)
+        const sent =
+            notice === undefined
+                ? await this.delivery.toCustomer(ctx, lead, text)
+                : await this.delivery.toCustomer(ctx, lead, text, notice)
         const responsibilityId =
             textOf(proposal.fields.responsibility_id) === ""
                 ? (await this.responsibilities.ensureFor(ctx, lead.id)).id

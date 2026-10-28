@@ -9,6 +9,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ConversationsService, readZaloEvent } from "@modules/domain/conversations"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { zaloDeliveryIdOf } from "./zalo-delivery-id.policy"
 import { COMPLETE_ZALO_INBOX, FIND_PENDING_ZALO_INBOX, INSERT_ZALO_INBOX } from "./persistence/zalo-inbox.sql"
 
 @Injectable()
@@ -21,12 +22,11 @@ export class ZaloInboxService {
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
     ) {}
 
-    /** A redelivered message is acknowledged without being processed again; an event that is not a customer text is acknowledged and dropped. */
+    /** A redelivered message is acknowledged without being processed again; every event type has its own id, so a follow event is claimed once and never overwrites another. */
     acceptZaloDelivery(rawBody: ZaloRawDelivery, connection: string): Promise<void> {
         return this.entityManager.transaction(async (manager) => {
             const payload = { connection, rawBody: rawBody?.toString("utf8") }
-            const inbound = readZaloEvent(rawBody)
-            const deliveryId = inbound.kind === "ok" ? `${payload.connection}:${inbound.value.messageId}` : ""
+            const deliveryId = rawBody === undefined ? "" : zaloDeliveryIdOf(connection, rawBody)
             if (
                 !(await this.inbox.claim("zalo", deliveryId, manager, {
                     insert: INSERT_ZALO_INBOX,

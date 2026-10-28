@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
+import { ContractsService } from "@modules/domain/contracts"
 import { InjectWorkPerformerRegistry } from "@modules/domain/decisions"
 import type {
     Performed,
@@ -72,6 +73,7 @@ export class ScoreLeadPerformerService implements WorkPerformer, OnModuleInit {
         private readonly kit: LeadFlowKitService,
         private readonly turns: LeadFlowTurnService,
         private readonly leads: LeadRecordsService,
+        private readonly contracts: ContractsService,
     ) {}
 
     /** Registers the performer with the work engine. */
@@ -150,13 +152,15 @@ export class ScoreLeadPerformerService implements WorkPerformer, OnModuleInit {
     }
 
     private async fillContact(ctx: WorkContext, flow: LeadFlow, contact: ReturnType<typeof contactIn>): Promise<void> {
-        if (flow.lead_id !== null && (contact.phone !== null || contact.email !== null))
-            await this.leads.fillContact({
-                workspaceId: ctx.workspaceId,
-                leadId: flow.lead_id,
-                phone: contact.phone,
-                email: contact.email,
-            })
+        if (flow.lead_id === null || (contact.phone === null && contact.email === null)) return
+        await this.leads.fillContact({
+            workspaceId: ctx.workspaceId,
+            leadId: flow.lead_id,
+            phone: contact.phone,
+            email: contact.email,
+        })
+        // The lead gained a contact, so a contract of this customer finds it for the renewal.
+        await this.contracts.linkCustomers(ctx.workspaceId)
     }
 
     /** One metered model call per turn; none when the turn already has its reading (a retried step) or carries no text to read. */

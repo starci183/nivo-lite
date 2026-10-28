@@ -33,6 +33,8 @@ export enum DecisionsErrorCode {
     HoldNoteRequired = "DECISIONS_HOLD_NOTE_REQUIRED",
     /** The staff member is not in this workspace. */
     StaffNotFound = "DECISIONS_STAFF_NOT_FOUND",
+    /** A message to a customer reached the engine with no performer registered: the registrar did not run, so nothing may be recorded as done. */
+    NoPerformer = "DECISIONS_NO_PERFORMER",
 }
 
 /** How each decisions code travels. */
@@ -52,6 +54,7 @@ export const DECISIONS_ERROR_KINDS: Record<DecisionsErrorCode, ErrorKind> = {
     [DecisionsErrorCode.BasisRequired]: "invalid",
     [DecisionsErrorCode.HoldNoteRequired]: "invalid",
     [DecisionsErrorCode.StaffNotFound]: "not-found",
+    [DecisionsErrorCode.NoPerformer]: "internal",
 }
 
 /** The one error class of the decisions capability. */

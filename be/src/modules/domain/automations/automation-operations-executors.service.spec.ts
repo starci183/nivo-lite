@@ -3,6 +3,8 @@ import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { DeskDailyService, renewalSectionOf } from "@modules/domain/accounting"
+import type { RenewalCashReport } from "@modules/domain/accounting"
 import type { RunResult } from "@modules/domain/automation-runs"
 import { AutomationMessagesService } from "./automation-messages.service"
 import { AutomationRenewalPaymentService } from "./automation-renewal-payment.service"
@@ -20,6 +22,7 @@ import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/buil
 import { SELECT_CONTRACT, SELECT_DAY_FIGURES, SELECT_ORDER } from "./persistence/automation-readers.sql"
 import type { LeadReadRow } from "./persistence/automations.rows"
 
+const RENEWAL_REPORT = mock<RenewalCashReport>({ lines: ["   - Renewal line"] })
 const textLike = (text: string): unknown => expect.stringContaining(text)
 
 const NOW = "2026-10-12T10:00:00.000Z"
@@ -81,6 +84,8 @@ const build = async (em: MockEntityManager = mockEntityManager(), useNullChat = 
     const renewal = mock<AutomationRenewalPaymentService>()
     renewal.paymentOf.mockResolvedValue(null)
     renewal.zaloWindowSteps.mockResolvedValue([])
+    const desk = mock<DeskDailyService>()
+    desk.renewalOfDay.mockResolvedValue(RENEWAL_REPORT)
     const moduleRef = await Test.createTestingModule({
         providers: [
             AutomationOperationsExecutorsService,
@@ -91,10 +96,11 @@ const build = async (em: MockEntityManager = mockEntityManager(), useNullChat = 
             { provide: AUTOMATION_OWNER_CHAT, useValue: chat },
             { provide: AutomationMessagesService, useValue: messages },
             { provide: AutomationRenewalPaymentService, useValue: renewal },
+            { provide: DeskDailyService, useValue: desk },
         ],
     }).compile()
     const service = moduleRef.get(AutomationOperationsExecutorsService)
-    return { office, records, chat, messages, renewal, run: runner(service.executors()) }
+    return { office, records, chat, messages, renewal, desk, run: runner(service.executors()) }
 }
 
 describe("AutomationOperationsExecutorsService daily_report", () => {
@@ -108,7 +114,7 @@ describe("AutomationOperationsExecutorsService daily_report", () => {
     }
     it("posts the day to Office with the deals, the money and what waits", async () => {
         const em = mockEntityManager({ query: [SELECT_DAY_FIGURES, [figures]] })
-        const { run, office } = await build(em)
+        const { run, office, desk } = await build(em)
 
         const result = await run("daily_report", context(), { day: "2026-10-11" })
 
@@ -123,7 +129,9 @@ describe("AutomationOperationsExecutorsService daily_report", () => {
             `   - ${"a".repeat(90)}`,
             "   - ",
             "   - c",
+            ...renewalSectionOf(RENEWAL_REPORT).split("\n"),
         ])
+        expect(desk.renewalOfDay).toHaveBeenCalledWith("ws-1", "2026-10-11")
         expect(result).toMatchObject({
             status: "done",
             steps: [{ label: "report.posted{}", status: "done", message: text }],
@@ -384,6 +392,43 @@ describe("AutomationOperationsExecutorsService contract_renewal", () => {
         expect(noLead.messages.skipped).toHaveBeenCalledWith("renewal.noLead{}")
     })
 })
+describe("AutomationOperationsExecutorsService contract_renewal links the customer", () => {
+    it("links the contracts to their customers before it makes a lead, and uses the lead the link found", async () => {
+        const unlinked = { ...CONTRACT, lead_id: null }
+        const { run, records } = await build(
+            mockEntityManager({
+                query: [
+                    [SELECT_CONTRACT, [unlinked]],
+                    [SELECT_CONTRACT, [unlinked]],
+                ],
+            }),
+        )
+        records.linkCustomers.mockResolvedValue(undefined)
+        await run("contract_renewal", context(), { contract_id: "c-1" })
+        expect(records.linkCustomers).toHaveBeenCalledWith("ws-1")
+        expect(records.linkCustomers.mock.invocationCallOrder[0]).toBeLessThan(
+            records.createLead.mock.invocationCallOrder[0] ?? 0,
+        )
+        const linked = await build(
+            mockEntityManager({
+                query: [
+                    [SELECT_CONTRACT, [unlinked]],
+                    [SELECT_CONTRACT, [{ ...unlinked, lead_id: "l-1" }]],
+                ],
+            }),
+        )
+        await linked.run("contract_renewal", context(), { contract_id: "c-1" })
+        expect(linked.records.linkCustomers).toHaveBeenCalledWith("ws-1")
+        expect(linked.records.createLead).not.toHaveBeenCalled()
+        expect(linked.messages.lead).toHaveBeenCalledWith("ws-1", "l-1")
+    })
+
+    it("does not link when the contract already has its lead", async () => {
+        const { run, records } = await build(mockEntityManager({ query: [SELECT_CONTRACT, [CONTRACT]] }))
+        await run("contract_renewal", context(), { contract_id: "c-1" })
+        expect(records.linkCustomers).not.toHaveBeenCalled()
+    })
+})
 describe("AutomationOperationsExecutorsService contract_renewal with a payment", () => {
     const PAYMENT = {
         vars: { so_hoa_don: "INV-202611-0003", so_tien: "1.620.000d", noi_dung_ck: "INV2026110003", link_qr: "qr" },
@@ -391,6 +436,8 @@ describe("AutomationOperationsExecutorsService contract_renewal with a payment",
         keepExact: undefined,
         steps: [{ label: "invoice", status: "done" as const }],
         invoiceNo: "INV-202611-0003",
+        amountVnd: 1620000,
+        transferContent: "INV2026110003",
     }
 
     it("sends the payment lines as a fixed tail, reports the invoice first and names it in the evidence", async () => {
