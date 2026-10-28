@@ -23,5 +23,6 @@ export const useInstanceTabs = (module: ModuleKey, installationId: string) => {
         const tab = ALL_TABS.find((entry) => entry === id)
         if (tab !== undefined) router.push(agentHref(module, installationId, tab))
     }
-    return { tabs, selected, open }
+    const hrefOf = (tab: AgentTab) => agentHref(module, installationId, tab)
+    return { tabs, selected, open, hrefOf }
 }
