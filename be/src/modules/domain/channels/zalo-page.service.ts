@@ -152,7 +152,7 @@ export class ZaloPageService {
             oaSecretMask: maskTail(secret?.oaSecret ?? ""),
             callbackUrl: this.credentials.callbackUrl(),
             webhookUrl: this.connections.webhookUrl(PROVIDER, connection.id),
-            token,
+            access: token,
             checks: checksOf({ appSaved, oaSecretSaved, token, inbox, lastReply }),
             recipients,
             sendBlock: sendBlockOf(token, recipients.length),

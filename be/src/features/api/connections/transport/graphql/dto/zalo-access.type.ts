@@ -2,7 +2,7 @@ import { Field, Int, ObjectType } from "@nestjs/graphql"
 
 @ObjectType()
 /** What the OA access token looks like to the owner; no token is ever returned. */
-export class ZaloTokenType {
+export class ZaloAccessType {
     /** none, valid, renewable or expired. */
     @Field(() => String)
     state!: string

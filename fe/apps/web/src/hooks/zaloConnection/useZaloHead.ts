@@ -25,14 +25,14 @@ export const useZaloHead = (connectionId: string) => {
     const [notice, setNotice] = useState("")
 
     const bannerOf = (page: ZaloPageData): string => {
-        if (page.token.state === "none") return t("bannerNone")
-        if (page.token.state !== "expired" || page.token.expiresAt === null) return ""
-        return t("bannerExpired", { ago: format.relativeTime(new Date(page.token.expiresAt), new Date()) })
+        if (page.access.state === "none") return t("bannerNone")
+        if (page.access.state !== "expired" || page.access.expiresAt === null) return ""
+        return t("bannerExpired", { ago: format.relativeTime(new Date(page.access.expiresAt), new Date()) })
     }
     const head: DataSlot<ZaloHeadView> = mapSlot(slot, (page) => ({
         name: page.name,
         chipLabel: page.healthy ? t("chipOk") : t("chipCheck"),
-        chipTone: chipToneOf(page.healthy, page.token.state, page.status),
+        chipTone: chipToneOf(page.healthy, page.access.state, page.status),
         facts: t("facts", { oaId: page.oaId === "" ? "-" : page.oaId, appId: page.appId === "" ? "-" : page.appId }),
         banner: bannerOf(page),
     }))

@@ -26,7 +26,7 @@ const mutation1: TypedDocumentNode<
             oaSecretMask
             callbackUrl
             webhookUrl
-            token {
+            access {
                 state
                 expiresAt
                 expiredMinutesAgo

@@ -23,7 +23,7 @@ const query1: TypedDocumentNode<QueryZaloConnectionPageResponse, InputVariables<
             oaSecretMask
             callbackUrl
             webhookUrl
-            token {
+            access {
                 state
                 expiresAt
                 expiredMinutesAgo

@@ -8,7 +8,7 @@ export type ZaloCheckState = "ok" | "fail" | "warn"
 export type ZaloCheckKey = "app" | "token" | "webhook" | "permissions"
 
 /** What the OA access token looks like to the owner; no token is ever returned. */
-export interface ZaloTokenView {
+export interface ZaloAccessView {
     /** Where it stands. */
     readonly state: ZaloTokenState
     /** When the access token ends, ISO 8601, or null before any authorization. */
@@ -69,7 +69,7 @@ export interface ZaloPageView {
     /** The webhook address to paste into Zalo. */
     readonly webhookUrl: string
     /** The access token. */
-    readonly token: ZaloTokenView
+    readonly access: ZaloAccessView
     /** The rows of the check list. */
     readonly checks: ReadonlyArray<ZaloCheckRow>
     /** The followers a test message can go to. */

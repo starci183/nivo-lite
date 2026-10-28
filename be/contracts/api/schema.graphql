@@ -3193,6 +3193,10 @@ input GetZaloConnectionInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
+input GetZaloPageInput {
+  connectionId: ID! @inputBounds(maxLength: 64)
+}
+
 type GoogleStateType {
   configured: Boolean!
 }
@@ -4276,6 +4280,10 @@ input ListWorkThreadsInput {
   leadId: ID = null @inputBounds(maxLength: 36)
 }
 
+input ListZaloEventsInput {
+  connectionId: ID! @inputBounds(maxLength: 64)
+}
+
 input LoadCsvImportInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
@@ -5099,6 +5107,7 @@ type Mutation {
   proposeShiftsWeek(input: ProposeShiftsWeekInput!): ProposeWeekType!
   reassignShiftsShift(input: ReassignShiftsShiftInput!): ReassignShiftsShiftType!
   receiveInventoryPo(input: ReceiveInventoryPoInput!): ReceivePoType!
+  recheckZaloConnection(input: RecheckZaloConnectionInput!): ZaloPageType!
   recordManualEvidence(input: RecordManualEvidenceInput!): ManualEvidenceType!
   recordOutcome(input: RecordOutcomeInput!): RecordOutcomeType!
   redeemLoyaltyReward(input: RedeemLoyaltyRewardInput!): RedeemLoyaltyRewardType!
@@ -5203,6 +5212,7 @@ type Mutation {
   sendAgentChatMessage(input: SendAgentChatMessageInput!): QueuedAgentChatTurnType!
   sendAgentCommand(input: SendAgentCommandInput!): AgentCommandResultType!
   sendSmtpTest(input: SendSmtpTestInput!): SmtpTestResultType!
+  sendZaloTestMessage(input: SendZaloTestInput!): ZaloTestSendType!
   setAgentAvatar(input: SetAgentAvatarInput!): AgentAckType!
   setAgentConnections(input: SetAgentConnectionsInput!): Boolean!
   setAgentOwnership(input: SetAgentOwnershipInput!): AgentAckType!
@@ -6050,6 +6060,8 @@ type Query {
   workspaceShell(input: ShellWindowInput!): WorkspaceShellType!
   workspaceStaff: [StaffOptionType!]!
   zaloConnection(input: GetZaloConnectionInput!): ZaloWizardConnectionType!
+  zaloConnectionEvents(input: ListZaloEventsInput!): [ZaloEventType!]!
+  zaloConnectionPage(input: GetZaloPageInput!): ZaloPageType!
 }
 
 type QueuedAgentChatTurnType {
@@ -6094,6 +6106,10 @@ type ReceivePoType {
   priceChanges: [String!]!
   received: Int!
   status: String!
+}
+
+input RecheckZaloConnectionInput {
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 type ReconcileCandidateType {
@@ -7242,6 +7258,12 @@ input SendSmtpTestInput {
   connectionId: ID! @inputBounds(maxLength: 64)
   makeDefault: Boolean!
   to: String! @inputBounds(maxLength: 254)
+}
+
+input SendZaloTestInput {
+  connectionId: ID! @inputBounds(maxLength: 64)
+  recipientId: String! @inputBounds(maxLength: 64)
+  text: String! @inputBounds(maxLength: 500)
 }
 
 type SepayKeyType {
@@ -8586,9 +8608,63 @@ type WorkspaceType {
   status: String!
 }
 
+type ZaloAccessType {
+  canRefresh: Boolean!
+  expiredMinutesAgo: Int
+  expiresAt: String
+  state: String!
+}
+
 type ZaloAuthorizationType {
   callbackUrl: String!
   url: String!
+}
+
+type ZaloCheckType {
+  at: String
+  code: String!
+  key: String!
+  names: [String!]!
+  state: String!
+}
+
+type ZaloEventType {
+  at: String!
+  id: ID!
+  kind: String!
+  outcome: String!
+  reason: String
+  text: String!
+  who: String!
+}
+
+type ZaloPageType {
+  access: ZaloAccessType!
+  agentIds: [ID!]!
+  appId: String!
+  appSecretMask: String
+  callbackUrl: String!
+  checks: [ZaloCheckType!]!
+  healthy: Boolean!
+  id: ID!
+  name: String!
+  oaId: String!
+  oaSecretMask: String
+  recipients: [ZaloRecipientType!]!
+  sendBlock: String
+  status: String!
+  webhookUrl: String!
+}
+
+type ZaloRecipientType {
+  lastMessageAt: String!
+  name: String!
+  userId: String!
+}
+
+type ZaloTestSendType {
+  failure: String
+  sent: Boolean!
 }
 
 type ZaloWizardConnectionType {

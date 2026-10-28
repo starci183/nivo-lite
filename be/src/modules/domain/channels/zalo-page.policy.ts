@@ -5,7 +5,7 @@ import type {
     ZaloRecipient,
     ZaloSendBlock,
     ZaloTokenState,
-    ZaloTokenView,
+    ZaloAccessView,
 } from "./zalo-page.contracts"
 import type {
     FollowEventRow,
@@ -54,7 +54,7 @@ export const tokenViewOf = (
     expiresAtMs: number | null,
     status: string,
     nowMs: number,
-): ZaloTokenView => {
+): ZaloAccessView => {
     const canRefresh = refreshLive(secret, nowMs) && status !== "error"
     const hasToken = secret.accessToken !== undefined && secret.accessToken !== ""
     if (!hasToken && !canRefresh) return { state: "none", expiresAt: null, expiredMinutesAgo: null, canRefresh }
@@ -70,10 +70,10 @@ export const tokenViewOf = (
 }
 
 /** True when the token is something a send can use now or after an automatic renewal. */
-export const tokenUsable = (token: ZaloTokenView): boolean => token.state === "valid" || token.state === "renewable"
+export const tokenUsable = (token: ZaloAccessView): boolean => token.state === "valid" || token.state === "renewable"
 
 /** Why the test send is closed, or null when it is open. */
-export const sendBlockOf = (token: ZaloTokenView, recipients: number): ZaloSendBlock | null => {
+export const sendBlockOf = (token: ZaloAccessView, recipients: number): ZaloSendBlock | null => {
     if (token.state === "none") return "not_authorized"
     if (!tokenUsable(token)) return "token_expired"
     return recipients === 0 ? "no_recipient" : null
@@ -86,14 +86,14 @@ export interface ZaloCheckFacts {
     /** The OA Secret Key is saved. */
     readonly oaSecretSaved: boolean
     /** The access token. */
-    readonly token: ZaloTokenView
+    readonly token: ZaloAccessView
     /** What the inbox holds. */
     readonly inbox: InboxFactsRow | null
     /** The latest reply the agent tried to send. */
     readonly lastReply: LastReplyRow | null
 }
 
-const tokenRow = (token: ZaloTokenView): ZaloCheckRow => {
+const tokenRow = (token: ZaloAccessView): ZaloCheckRow => {
     const base = { key: "token", at: token.expiresAt, names: [] } as const
     if (token.state === "valid") return { ...base, state: "ok", code: "token_valid" }
     if (token.state === "renewable") return { ...base, state: "ok", code: "token_renewable" }
@@ -157,13 +157,13 @@ export const recipientsOf = (rows: ReadonlyArray<RecipientRow>): ReadonlyArray<Z
 const excerpt = (text: string): string => (text.length > EXCERPT ? `${text.slice(0, EXCERPT)}${ELLIPSIS}` : text)
 
 /** A failure the delivery path stored as a generic error reads as an expired token when the token cannot work now. */
-const reasonOf = (stored: string | null, token: ZaloTokenView): string => {
+const reasonOf = (stored: string | null, token: ZaloAccessView): string => {
     const failure = stored ?? "delivery_failed"
     if (!tokenUsable(token) && (failure === "zalo_error" || failure === "zalo_token")) return "token_expired"
     return failure
 }
 
-const messageEvent = (row: MessageEventRow, token: ZaloTokenView): ZaloPageEvent => {
+const messageEvent = (row: MessageEventRow, token: ZaloAccessView): ZaloPageEvent => {
     const at = new Date(row.created_at).toISOString()
     const who = row.visitor_name ?? ""
     if (row.role === "user") {
@@ -194,7 +194,7 @@ const messageEvent = (row: MessageEventRow, token: ZaloTokenView): ZaloPageEvent
 export const eventsOf = (
     messages: ReadonlyArray<MessageEventRow>,
     follows: ReadonlyArray<FollowEventRow>,
-    token: ZaloTokenView,
+    token: ZaloAccessView,
 ): ReadonlyArray<ZaloPageEvent> => {
     const lines: Array<ZaloPageEvent> = [
         ...messages.map((row) => messageEvent(row, token)),

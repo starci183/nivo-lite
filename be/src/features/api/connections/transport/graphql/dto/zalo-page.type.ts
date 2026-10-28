@@ -1,7 +1,7 @@
 import { Field, ID, ObjectType } from "@nestjs/graphql"
 import { ZaloCheckType } from "./zalo-check.type"
 import { ZaloRecipientType } from "./zalo-recipient.type"
-import { ZaloTokenType } from "./zalo-token.type"
+import { ZaloAccessType } from "./zalo-access.type"
 
 @ObjectType()
 /** The page of one Zalo OA connection; every secret is masked to its last four characters. */
@@ -46,9 +46,9 @@ export class ZaloPageType {
     @Field(() => String)
     webhookUrl!: string
 
-    /** The access token. */
-    @Field(() => ZaloTokenType)
-    token!: ZaloTokenType
+    /** The access. */
+    @Field(() => ZaloAccessType)
+    access!: ZaloAccessType
 
     /** The rows of the check list. */
     @Field(() => [ZaloCheckType])

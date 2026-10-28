@@ -16,9 +16,9 @@ export const useZaloOverviewFacts = (connectionId: string): DataSlot<ReadonlyArr
             id: "token",
             label: t("factToken"),
             value:
-                page.token.expiresAt === null
+                page.access.expiresAt === null
                     ? t("factTokenNone")
-                    : format.dateTime(new Date(page.token.expiresAt), { dateStyle: "short", timeStyle: "short" }),
+                    : format.dateTime(new Date(page.access.expiresAt), { dateStyle: "short", timeStyle: "short" }),
         },
         { id: "oaId", label: t("factOaId"), value: page.oaId === "" ? "-" : page.oaId },
         { id: "appId", label: t("factAppId"), value: page.appId === "" ? "-" : page.appId },

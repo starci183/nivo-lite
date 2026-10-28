@@ -116,7 +116,7 @@ describe("ZaloPageService view", () => {
             oaSecretMask: "\u2022\u2022\u2022\u20229876",
             callbackUrl: "https://nivo.test/connections/zalo/callback",
             webhookUrl: "https://hooks.test/zalo_oa/c-1",
-            token: { state: "valid", canRefresh: true },
+            access: { state: "valid", canRefresh: true },
             sendBlock: null,
             agentIds: ["agent-1"],
             recipients: [{ userId: "u-1", name: "An", lastMessageAt: "2026-10-28T09:00:00.000Z" }],
@@ -146,7 +146,7 @@ describe("ZaloPageService view", () => {
 
         expect(page).toMatchObject({
             healthy: false,
-            token: { state: "expired", expiredMinutesAgo: 180 },
+            access: { state: "expired", expiredMinutesAgo: 180 },
             sendBlock: "token_expired",
         })
         expect(page.checks[3]?.code).toBe("permissions_unknown")
@@ -164,7 +164,7 @@ describe("ZaloPageService view", () => {
             appSecretMask: null,
             oaSecretMask: null,
             healthy: false,
-            token: { state: "none" },
+            access: { state: "none" },
             sendBlock: "not_authorized",
         })
         expect(page.checks[0]?.code).toBe("app_missing")
