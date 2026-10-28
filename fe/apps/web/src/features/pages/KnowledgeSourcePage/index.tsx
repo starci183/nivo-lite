@@ -1,10 +1,11 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getTranslations } from "next-intl/server"
+import { knowledgeHeadingOf } from "@/modules/page-header"
+import type { KnowledgeHeadingInput } from "@/modules/page-header"
 import { isKnowledgeId } from "@/modules/documents"
 import { CONSOLE_ROUTES, KNOWLEDGE_ROUTES } from "@/modules/routes"
 import { KnowledgeSourcePageBase } from "./component"
-import type { KnowledgeSourcePageBaseProps } from "./component"
 
 /** The document title of the page. */
 export const knowledgeSourceMetadata = async (): Promise<Metadata> => {
@@ -20,7 +21,7 @@ interface KnowledgeSourcePageProps {
 type Translate = Awaited<ReturnType<typeof getTranslations<"knowledge">>>
 
 /** The props of the connected body: the localized copy and the title the skeleton carries. */
-type ClientCopy = Omit<KnowledgeSourcePageBaseProps["props"], "sourceId">
+type ClientCopy = KnowledgeHeadingInput
 
 /** The words of the page that do not depend on its data. */
 const copyOf = (t: Translate): ClientCopy => ({
@@ -40,11 +41,11 @@ const copyOf = (t: Translate): ClientCopy => ({
 export const KnowledgeSourcePage = async (props: KnowledgeSourcePageProps) => {
     const t = await getTranslations("knowledge")
     if (!isKnowledgeId(props.sourceId)) notFound()
-    return <KnowledgeSourcePageBase props={{ ...copyOf(t), sourceId: props.sourceId }} />
+    return <KnowledgeSourcePageBase props={{ header: knowledgeHeadingOf(copyOf(t)), sourceId: props.sourceId }} />
 }
 
 /** The same page while it loads: the overview draws its own skeleton. */
 export const KnowledgeSourceLoadingPage = async () => {
     const t = await getTranslations("knowledge")
-    return <KnowledgeSourcePageBase props={{ ...copyOf(t), sourceId: undefined }} />
+    return <KnowledgeSourcePageBase props={{ header: knowledgeHeadingOf(copyOf(t)), sourceId: undefined }} />
 }

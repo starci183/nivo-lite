@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
+import { pageHeadingOf } from "@/modules/page-header"
 import { brainTabOf } from "@/modules/brain"
 import { DOCUMENT_IDEAS, moduleFilterOf } from "@/modules/documents"
 import { CONSOLE_ROUTES, KNOWLEDGE_ROUTES } from "@/modules/routes"
@@ -27,18 +28,19 @@ type KnowledgeTranslate = Awaited<ReturnType<typeof getTranslations<"knowledge">
 type SecondBrainTranslate = Awaited<ReturnType<typeof getTranslations<"secondBrain">>>
 
 /** The words and links of the page that do not depend on its data or its address. */
-type Copy = Pick<
-    BrainPageBaseProps["props"],
-    "crumbLabel" | "crumbHome" | "homeHref" | "title" | "description" | "nivoLabel" | "nivoHref" | "readOnlyNote"
->
+type Copy = Pick<BrainPageBaseProps["props"], "header" | "nivoLabel" | "nivoHref" | "readOnlyNote">
 
 /** The words of the page that do not depend on its data. */
 const copyOf = (t: Translate, brain: SecondBrainTranslate, knowledge: KnowledgeTranslate): Copy => ({
-    crumbLabel: t("crumbLabel"),
-    crumbHome: t("crumbHome"),
-    homeHref: CONSOLE_ROUTES.dashboard,
-    title: t("title"),
-    description: brain("intro"),
+    header: pageHeadingOf({
+        crumbLabel: t("crumbLabel"),
+        crumbs: [
+            { id: "home", label: t("crumbHome"), href: CONSOLE_ROUTES.dashboard },
+            { id: "brain", label: t("title") },
+        ],
+        title: t("title"),
+        description: brain("intro"),
+    }),
     nivoLabel: knowledge("nivoLink"),
     nivoHref: KNOWLEDGE_ROUTES.nivo,
     readOnlyNote: knowledge("readOnlyNote"),

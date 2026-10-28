@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
-import { PageContainer } from "@starci/grammar/common"
-import { PageHeading } from "@/components/composites/PageHeading"
+import { Button, Page } from "@starci/grammar/common"
+import { pageHeadingOf } from "@/modules/page-header"
 import { PAGE_CLASS_NAME } from "./classNames"
 
 interface CreditsLayoutBaseProps {
@@ -14,19 +14,22 @@ interface CreditsLayoutBaseProps {
     }
 }
 
-/** Draws the static credits frame around independently connected slots. */
+/** Draws the static credits page: its header, then the independently connected slots. */
 export const CreditsLayoutBase = (props: CreditsLayoutBaseProps) => (
-    <>
-        <PageHeading
-            crumbLabel={props.props.crumbLabel}
-            crumbs={props.props.crumbs}
-            title={props.props.title}
-            description={props.props.description}
-            actionLabel={props.props.history}
-            actionHref="#payments"
-        />
-        <PageContainer measure="product">
-            <div className={PAGE_CLASS_NAME}>{props.children}</div>
-        </PageContainer>
-    </>
+    <Page
+        header={pageHeadingOf({
+            crumbLabel: props.props.crumbLabel,
+            crumbs: props.props.crumbs,
+            title: props.props.title,
+            description: props.props.description,
+            actions: (
+                <Button intent="alternative" href="#payments">
+                    {props.props.history}
+                </Button>
+            ),
+        })}
+        measure="product"
+    >
+        <div className={PAGE_CLASS_NAME}>{props.children}</div>
+    </Page>
 )
