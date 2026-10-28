@@ -90,3 +90,7 @@ host `nivo-mcp`, port 8790). Its container healthcheck probes `/healthz` (livene
 ## Shared ingress and the compose tenants
 
 The Swarm Traefik is the SHARED ingress of the VPS: nivo plus the compose tenants, reached over the attachable overlay `nivo-edge-swarm`. It is a separate stack managed by `starci app stack ingress create|publish` from `environments.production.deploy.ingress`; nivo's routes (`.starcistacks/production/infra/swarm/edge/routes.yml`) are published into the shared dynamic directory as the file nivo.yml, and tenant route files are never touched. The standalone container of `nguyentuannam.org` must join `nivo-edge-swarm` with the alias `namnivo-web`; until then that one host answers 502 and the nivo.vn hosts are not affected. The history of the move from compose to Swarm is `be/docs/runbooks/cutover.md`.
+
+## Cutover to self-hosted Postgres, auth and storage
+
+The production move off Supabase cloud (locked for egress quota) is the step-by-step runbook with rollback in [CUTOVER-SELFHOST.md](CUTOVER-SELFHOST.md). The `db:*` package scripts now call `starci app db` with `--db-url-env DATABASE_URL`; the Supabase CLI scripts are gone.

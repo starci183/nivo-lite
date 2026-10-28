@@ -134,3 +134,15 @@ Public by design, passed as image build arguments (`deploy.images.web.buildArgs`
 | `NEXT_PUBLIC_DEVELOPER_API_URL` | The api origin (`https://api.nivo.vn`). |
 | `NEXT_PUBLIC_SUPABASE_URL` | The public Supabase project origin and anonymous key. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | The public Supabase project origin and anonymous key. |
+
+## Self-hosted cutover (sh-cutover)
+
+Names the move off Supabase cloud relies on (see `CUTOVER-SELFHOST.md`). Owning lanes seal their own rows; this lists only the cutover view.
+
+| Key | Member | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | `api` | Connection of the self-hosted `nivo-postgres` as `app_be`; the default env of `starci app db ... --db-url-env`. Replaces the Supabase `PRIMARY_DB_URL`. |
+| `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | `auth` | Google sign-in of our own auth; replace `SUPABASE_AUTH_EXTERNAL_GOOGLE_*`. |
+| auth signing key, storage endpoint and keys | `auth`, `api` | Exact names owned by sh-authbe and sh-storage (BE_AUTH_JWT_OWN_JWKS, BE_STORAGE_OWNER). |
+| `SUPABASE_*` | retired | Removed from the seal once the rollback window closes. |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | retired | No longer baked into the web image. |
