@@ -19,13 +19,15 @@ export interface AccountPageBaseProps {
 
 /** Draws the account screen: heading, then the connected sign-in cards (email, password, sign-in methods, device sessions). */
 export const AccountPageBase = (props: AccountPageBaseProps) => (
-    <PageContainer measure="product">
-        <div className={PAGE_CLASS_NAME}>
-            <HomePageHeading {...props.props} />
-            <AccountEmail />
-            <AccountPassword />
-            <AccountMethods />
-            <AccountSessions />
-        </div>
-    </PageContainer>
+    <>
+        <HomePageHeading {...props.props} />
+        <PageContainer measure="product">
+            <div className={PAGE_CLASS_NAME}>
+                <AccountEmail />
+                <AccountPassword />
+                <AccountMethods />
+                <AccountSessions />
+            </div>
+        </PageContainer>
+    </>
 )

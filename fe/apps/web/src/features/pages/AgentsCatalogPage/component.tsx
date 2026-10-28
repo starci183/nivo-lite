@@ -1,7 +1,7 @@
-import { Breadcrumbs, PageContainer, SectionHeader } from "@starci/grammar/common"
+import { PageContainer, PageHeader } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
 import { AgentCatalog } from "@/components/blocks/AgentCatalog"
-import { HEAD, REGIONS } from "./classNames"
+import { REGIONS } from "./classNames"
 
 /** Copy and slots of the agent catalogue page. */
 export interface AgentsCatalogPageBaseProps {
@@ -13,15 +13,18 @@ export interface AgentsCatalogPageBaseProps {
     }
 }
 
-/** Draws the catalogue page: the trail, the heading and the catalogue block. */
+/** Draws the catalogue page: the header band, then the catalogue block. */
 export const AgentsCatalogPageBase = (props: AgentsCatalogPageBaseProps) => (
-    <PageContainer measure="product">
-        <div className={REGIONS}>
-            <div className={HEAD}>
-                <Breadcrumbs label={props.props.crumbLabel} items={props.props.crumbs} />
-                <SectionHeader level={1} title={props.props.title} description={props.props.description} />
+    <>
+        <PageHeader
+            title={props.props.title}
+            description={props.props.description}
+            breadcrumbs={{ label: props.props.crumbLabel, items: props.props.crumbs }}
+        />
+        <PageContainer measure="product">
+            <div className={REGIONS}>
+                <AgentCatalog />
             </div>
-            <AgentCatalog />
-        </div>
-    </PageContainer>
+        </PageContainer>
+    </>
 )

@@ -21,10 +21,12 @@ export interface KnowledgeNivoPageBaseProps {
 
 /** Draws the base knowledge of NIVO under its trail and heading. */
 export const KnowledgeNivoPageBase = (props: KnowledgeNivoPageBaseProps) => (
-    <PageContainer measure="product">
-        <div className={PAGE_CLASS_NAME}>
-            <KnowledgeFrame {...props.props} />
-            <KnowledgeNivo />
-        </div>
-    </PageContainer>
+    <>
+        <KnowledgeFrame {...props.props} />
+        <PageContainer measure="product">
+            <div className={PAGE_CLASS_NAME}>
+                <KnowledgeNivo />
+            </div>
+        </PageContainer>
+    </>
 )

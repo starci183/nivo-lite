@@ -16,10 +16,12 @@ export interface ProfilePageBaseProps {
 
 /** Draws the signed-in person's profile: heading, then the connected picture and name card. */
 export const ProfilePageBase = (props: ProfilePageBaseProps) => (
-    <PageContainer measure="product">
-        <div className={PAGE_CLASS_NAME}>
-            <HomePageHeading {...props.props} />
-            <AccountProfile />
-        </div>
-    </PageContainer>
+    <>
+        <HomePageHeading {...props.props} />
+        <PageContainer measure="product">
+            <div className={PAGE_CLASS_NAME}>
+                <AccountProfile />
+            </div>
+        </PageContainer>
+    </>
 )
