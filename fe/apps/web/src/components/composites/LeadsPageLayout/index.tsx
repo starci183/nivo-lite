@@ -12,14 +12,16 @@ type LeadsPageLayoutProps = {
     readonly promo: ReactNode
 }
 
-/** The Leads page frame: the heading, the optional form, the list and the promotion in one product-width column. */
+/** The Leads page frame: the page header, then the optional form, the list and the promotion in one product-width column. */
 export const LeadsPageLayout = (props: LeadsPageLayoutProps) => (
-    <PageContainer measure="product">
-        <div className={PAGE_CLASS_NAME}>
-            {props.heading}
-            {props.form}
-            {props.board}
-            {props.promo}
-        </div>
-    </PageContainer>
+    <>
+        {props.heading}
+        <PageContainer measure="product">
+            <div className={PAGE_CLASS_NAME}>
+                {props.form}
+                {props.board}
+                {props.promo}
+            </div>
+        </PageContainer>
+    </>
 )

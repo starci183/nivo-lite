@@ -11,15 +11,17 @@ type LeadPageLayoutProps = {
 
 /** The lead journey frame: the header, then the primary panels beside the rail panels. */
 export const LeadPageLayout = (props: LeadPageLayoutProps) => (
-    <PageContainer measure="product">
-        <div className={PAGE_CLASS_NAME}>
-            {props.header}
-            <PrimaryRailLayout
-                railWidth="standard"
-                align="start"
-                primary={<div className={COLUMN_CLASS_NAME}>{props.primary}</div>}
-                rail={<div className={COLUMN_CLASS_NAME}>{props.rail}</div>}
-            />
-        </div>
-    </PageContainer>
+    <>
+        {props.header}
+        <PageContainer measure="product">
+            <div className={PAGE_CLASS_NAME}>
+                <PrimaryRailLayout
+                    railWidth="standard"
+                    align="start"
+                    primary={<div className={COLUMN_CLASS_NAME}>{props.primary}</div>}
+                    rail={<div className={COLUMN_CLASS_NAME}>{props.rail}</div>}
+                />
+            </div>
+        </PageContainer>
+    </>
 )

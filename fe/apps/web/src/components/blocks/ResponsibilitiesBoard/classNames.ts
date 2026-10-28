@@ -1,9 +1,7 @@
 import { cn } from "@heroui/react"
 
-/** Vertical rhythm: heading, board. */
+/** The board under the page header. */
 export const PAGE_CLASS = cn("flex", "flex-col", "gap-6")
-/** Breadcrumb trail above the page heading: one heading block. */
-export const HEAD_CLASS = cn("flex", "min-w-0", "flex-col", "gap-2")
 /** Board: filters, tabs, list. */
 export const BOARD_CLASS = cn("flex", "flex-col", "gap-6")
 /** Filter cards in one row, with clear filters at the end. */

@@ -1,13 +1,11 @@
-import { Breadcrumbs, Button, SectionHeader } from "@starci/grammar/common"
+import { Button, PageHeader } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
-import { HEAD_CLASS_NAME } from "./classNames"
 
 /** The words of the Leads page heading. */
 export interface LeadsHeadingBaseProps {
     readonly props: {
         readonly crumbLabel: string
         readonly crumbs: ReadonlyArray<BreadcrumbItem>
-        readonly eyebrow: string
         readonly title: string
         readonly description: string
         readonly newLeadLabel: string
@@ -21,21 +19,18 @@ export interface LeadsHeadingBaseProps {
 export const LeadsHeadingBase = (props: LeadsHeadingBaseProps) => {
     const { props: p } = props
     return (
-        <div className={HEAD_CLASS_NAME}>
-            <Breadcrumbs label={p.crumbLabel} items={p.crumbs} />
-            <SectionHeader
-                level={1}
-                eyebrow={p.eyebrow}
-                title={p.title}
-                description={p.description}
-                action={
-                    p.isFormOpen ? undefined : (
-                        <Button intent="commit" href={p.newLeadHref}>
-                            {p.newLeadLabel}
-                        </Button>
-                    )
-                }
-            />
-        </div>
+        <PageHeader
+            measure="product"
+            breadcrumbs={{ label: p.crumbLabel, items: p.crumbs }}
+            title={p.title}
+            description={p.description}
+            actions={
+                p.isFormOpen ? undefined : (
+                    <Button intent="commit" href={p.newLeadHref}>
+                        {p.newLeadLabel}
+                    </Button>
+                )
+            }
+        />
     )
 }

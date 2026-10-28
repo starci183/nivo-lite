@@ -1,14 +1,4 @@
-import {
-    Breadcrumbs,
-    Button,
-    PageContainer,
-    SearchField,
-    SectionHeader,
-    Select,
-    Tabs,
-    Text,
-    TextAction,
-} from "@starci/grammar/common"
+import { Button, PageContainer, PageHeader, SearchField, Select, Tabs, Text, TextAction } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
 import { OwnerGroupList } from "@/components/composites/OwnerGroupList"
 import type { OwnerGroupListLabels } from "@/components/composites/OwnerGroupList"
@@ -17,7 +7,6 @@ import type { DataSlot, OwnerGroupView, ResponsibilityRowView, SlotLabels } from
 import {
     BOARD_CLASS,
     FILTERS_CLASS,
-    HEAD_CLASS,
     LIST_HEAD_CLASS,
     LIST_TITLE_CLASS,
     PAGE_CLASS,
@@ -38,7 +27,6 @@ export interface ResponsibilitiesBoardBaseProps {
     readonly props: {
         readonly crumbLabel: string
         readonly crumbs: ReadonlyArray<BreadcrumbItem>
-        readonly eyebrow: string
         readonly title: string
         readonly description: string
         readonly newLeadLabel: string
@@ -122,77 +110,76 @@ const OWNER_GROUPS_PLACEHOLDER: ReadonlyArray<OwnerGroupView> = [
 export const ResponsibilitiesBoardBase = (props: ResponsibilitiesBoardBaseProps) => {
     const view = props.props
     return (
-        <PageContainer measure="product">
-            <div className={PAGE_CLASS}>
-                <div className={HEAD_CLASS}>
-                    <Breadcrumbs label={view.crumbLabel} items={view.crumbs} />
-                    <SectionHeader
-                        level={1}
-                        eyebrow={view.eyebrow}
-                        title={view.title}
-                        description={view.description}
-                        action={
-                            <Button intent="commit" href={view.newLeadHref}>
-                                {view.newLeadLabel}
-                            </Button>
-                        }
-                    />
-                </div>
-                <div className={BOARD_CLASS}>
-                    {view.showFilters ? (
-                        <div className={FILTERS_CLASS}>
-                            <Select
-                                label={view.ownerLabel}
-                                options={view.owners}
-                                value={view.owner}
-                                onValueChange={props.on.owner}
-                            />
-                            <Select
-                                label={view.dueLabel}
-                                options={view.dues}
-                                value={view.due}
-                                onValueChange={props.on.due}
-                            />
-                            <div>
-                                <TextAction onPress={props.on.clear} isDisabled={!view.isFiltered}>
-                                    {view.clearLabel}
-                                </TextAction>
+        <>
+            <PageHeader
+                measure="product"
+                breadcrumbs={{ label: view.crumbLabel, items: view.crumbs }}
+                title={view.title}
+                description={view.description}
+                actions={
+                    <Button intent="commit" href={view.newLeadHref}>
+                        {view.newLeadLabel}
+                    </Button>
+                }
+            />
+            <PageContainer measure="product">
+                <div className={PAGE_CLASS}>
+                    <div className={BOARD_CLASS}>
+                        {view.showFilters ? (
+                            <div className={FILTERS_CLASS}>
+                                <Select
+                                    label={view.ownerLabel}
+                                    options={view.owners}
+                                    value={view.owner}
+                                    onValueChange={props.on.owner}
+                                />
+                                <Select
+                                    label={view.dueLabel}
+                                    options={view.dues}
+                                    value={view.due}
+                                    onValueChange={props.on.due}
+                                />
+                                <div>
+                                    <TextAction onPress={props.on.clear} isDisabled={!view.isFiltered}>
+                                        {view.clearLabel}
+                                    </TextAction>
+                                </div>
                             </div>
-                        </div>
-                    ) : null}
-                    <ResponsibilityToolbar {...props} />
-                    <div className={LIST_HEAD_CLASS}>
-                        <div className={LIST_TITLE_CLASS}>
-                            <Text weight="semibold">{view.listTitle}</Text>
-                            <Text size="sm" tone="muted">
-                                {view.count}
+                        ) : null}
+                        <ResponsibilityToolbar {...props} />
+                        <div className={LIST_HEAD_CLASS}>
+                            <div className={LIST_TITLE_CLASS}>
+                                <Text weight="semibold">{view.listTitle}</Text>
+                                <Text size="sm" tone="muted">
+                                    {view.count}
+                                </Text>
+                            </div>
+                            <Text size="xs" tone="muted">
+                                {view.verifiedLabel}
                             </Text>
                         </div>
-                        <Text size="xs" tone="muted">
-                            {view.verifiedLabel}
-                        </Text>
+                        <SlotView
+                            slot={view.slot}
+                            placeholder={OWNER_GROUPS_PLACEHOLDER}
+                            labels={view.slotLabels}
+                            onRetry={props.on.retry}
+                        >
+                            {(groups, isSkeleton) => (
+                                <OwnerGroupList
+                                    isSkeleton={isSkeleton}
+                                    groups={groups}
+                                    labels={view.groupLabels}
+                                    draftingId={view.draftingId}
+                                    copiedId={view.copiedId}
+                                    onDraft={props.on.draft}
+                                    onCopy={props.on.copy}
+                                />
+                            )}
+                        </SlotView>
                     </div>
-                    <SlotView
-                        slot={view.slot}
-                        placeholder={OWNER_GROUPS_PLACEHOLDER}
-                        labels={view.slotLabels}
-                        onRetry={props.on.retry}
-                    >
-                        {(groups, isSkeleton) => (
-                            <OwnerGroupList
-                                isSkeleton={isSkeleton}
-                                groups={groups}
-                                labels={view.groupLabels}
-                                draftingId={view.draftingId}
-                                copiedId={view.copiedId}
-                                onDraft={props.on.draft}
-                                onCopy={props.on.copy}
-                            />
-                        )}
-                    </SlotView>
                 </div>
-            </div>
-        </PageContainer>
+            </PageContainer>
+        </>
     )
 }
 
