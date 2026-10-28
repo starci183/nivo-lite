@@ -6,7 +6,7 @@ import type { Logger } from "@modules/platform/logging"
 import { BillingLogEvent } from "./billing.log-events"
 import { InjectBillingOptions } from "./billing.decorators"
 import type { BillingOptions } from "./billing.options"
-import { decryptSecret } from "./channel-secret.policy"
+import { openSecretWithBase64Key } from "@modules/domain/connection-secrets"
 import type { ConnectionSecretRow } from "./persistence/bank-feed.rows"
 import { SELECT_CONNECTION_SECRET } from "./persistence/bank-feed.sql"
 
@@ -45,7 +45,7 @@ export class PaymentSecretsService {
         ])
         if (row?.provider !== provider || row.status === "disconnected") return null
         try {
-            const credential = decryptSecret(row.ciphertext, this.options.channelTokenKey?.reveal())
+            const credential = openSecretWithBase64Key(row.ciphertext, this.options.channelTokenKey?.reveal() ?? "")
             return { workspaceId: row.workspace_id, credential, webhookSecret: row.webhook_secret }
         } catch (cause) {
             this.logger.error(BillingLogEvent.Undecryptable, cause, { connectionId })
