@@ -53,6 +53,10 @@ export const agentChatConversationHref = (agentId: string, tab: string, conversa
 /** The profile page of one agent: who answers for it, who may give it work, whom it may tag. */
 export const agentProfileHref = (agentId: string): string => `/agents/profile/${agentId}`
 
+/** The page of one SePay connection, on a tab when one is named. */
+export const sepayConnectionHref = (connectionId: string, tab?: string): string =>
+    tab === undefined ? `/connections/sepay/${connectionId}` : `/connections/sepay/${connectionId}?tab=${tab}`
+
 /** The page of one Zalo OA connection, on a tab when one is named. */
 export const zaloConnectionHref = (connectionId: string, tab?: string): string =>
     tab === undefined ? `/connections/zalo/${connectionId}` : `/connections/zalo/${connectionId}?tab=${tab}`

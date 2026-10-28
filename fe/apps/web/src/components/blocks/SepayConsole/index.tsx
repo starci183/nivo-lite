@@ -1,31 +1,18 @@
 "use client"
 
-import { useTranslations } from "next-intl"
-import { useState } from "react"
+import { useSepayTab } from "@/hooks/sepayConnection"
 import { SepayConsoleBase } from "./component"
 import type { SepayConsoleShape } from "./component"
 
-/** What the page hands the console: the regions already connected to the connection of the url. */
-type SepayConsoleProps = { readonly shape: SepayConsoleShape }
+/** What the page hands the console: the regions already connected to the connection of the url, and the tab the url asked for. */
+type SepayConsoleProps = {
+    readonly shape: SepayConsoleShape
+    readonly connectionId: string
+    readonly tab: string | undefined
+}
 
-/** Holds the open tab of the SePay connection page. */
+/** Places the open tab's region (the tabs themselves sit in the header, on its separator) and the docked live panel. */
 export const SepayConsole = (props: SepayConsoleProps) => {
-    const t = useTranslations("sepayConnection")
-    const [selected, setSelected] = useState("overview")
-    return (
-        <SepayConsoleBase
-            shape={props.shape}
-            props={{
-                tabsLabel: t("tabsLabel"),
-                tabs: [
-                    { id: "overview", label: t("tabOverview") },
-                    { id: "setup", label: t("tabSetup") },
-                    { id: "test", label: t("tabTest") },
-                    { id: "agents", label: t("tabAgents") },
-                ],
-                selected,
-            }}
-            on={{ select: setSelected }}
-        />
-    )
+    const { selected } = useSepayTab(props.connectionId, props.tab)
+    return <SepayConsoleBase shape={props.shape} props={{ selected }} />
 }

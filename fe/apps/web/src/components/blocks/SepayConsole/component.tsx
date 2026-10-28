@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { Tabs } from "@starci/grammar/common"
+import { PageContainer } from "@starci/grammar/common"
 import { sepayConsoleClassNames as classNames } from "./classNames"
 
 /** The connected regions the page places. */
@@ -18,41 +18,20 @@ export type SepayTabId = "overview" | "setup" | "test" | "agents"
 /** Props for {@link SepayConsoleBase}. */
 export interface SepayConsoleBaseProps {
     readonly shape: SepayConsoleShape
-    readonly props: {
-        readonly tabsLabel: string
-        readonly tabs: ReadonlyArray<{
-            readonly id: SepayTabId
-            readonly label: string
-        }>
-        readonly selected: string
-    }
-    readonly on: { readonly select: (id: string) => void }
+    readonly props: { readonly selected: SepayTabId }
 }
 
-/** Draws the page anatomy of a connection: the header, the four tabs, and the live event panel docked on the right. */
-export const SepayConsoleBase = (props: SepayConsoleBaseProps) => {
-    const current = props.props.tabs.find((tab) => tab.id === props.props.selected) ?? props.props.tabs[0]
-    return (
-        <div className={classNames.page}>
-            {props.shape.header}
-            <div className={classNames.grid}>
-                <div className={classNames.main}>
-                    <Tabs
-                        variant="primary"
-                        label={props.props.tabsLabel}
-                        selectedKey={current?.id ?? ""}
-                        items={props.props.tabs.map((tab) => ({ id: tab.id, label: tab.label }))}
-                        inset="none"
-                        labelVisibility="always"
-                        panelId={(id) => `sepay-panel-${id}`}
-                        onSelect={props.on.select}
-                    />
-                    <div className={classNames.panel} role="tabpanel" id={`sepay-panel-${current?.id ?? ""}`}>
-                        {current === undefined ? null : props.shape[current.id]}
-                    </div>
+/** Draws the page anatomy of a connection: the header band, then the open tab's region with the live event panel docked beside it. */
+export const SepayConsoleBase = (props: SepayConsoleBaseProps) => (
+    <>
+        {props.shape.header}
+        <PageContainer measure="product">
+            <div className={classNames.frame}>
+                <div className={classNames.main} role="tabpanel" id={`sepay-panel-${props.props.selected}`}>
+                    {props.shape[props.props.selected]}
                 </div>
-                <aside>{props.shape.events}</aside>
+                <aside className={classNames.aside}>{props.shape.events}</aside>
             </div>
-        </div>
-    )
-}
+        </PageContainer>
+    </>
+)
