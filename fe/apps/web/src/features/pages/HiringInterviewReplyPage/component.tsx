@@ -1,3 +1,4 @@
+import { Page } from "@starci/grammar/common"
 import { HiringInterviewReply } from "@/components/blocks/HiringInterviewReply"
 import { HiringPublicShell } from "@/components/composites/HiringPublicShell"
 
@@ -10,9 +11,11 @@ export interface HiringInterviewReplyPageBaseProps {
     }
 }
 
-/** Draws the candidate's interview link: the connected invitation in a reading column, with the foot line. */
+/** Draws the candidate's interview link: the connected invitation in a reading column, with the foot line under it. */
 export const HiringInterviewReplyPageBase = (props: HiringInterviewReplyPageBaseProps) => (
     <HiringPublicShell label={props.props.label} foot={props.props.foot}>
-        <HiringInterviewReply token={props.props.token} />
+        <Page measure="reading">
+            <HiringInterviewReply token={props.props.token} />
+        </Page>
     </HiringPublicShell>
 )

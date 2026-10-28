@@ -1,3 +1,4 @@
+import { Page } from "@starci/grammar/common"
 import { LandingCommitment } from "@/components/blocks/LandingCommitment"
 import { LandingConnect } from "@/components/blocks/LandingConnect"
 import { LandingFaq } from "@/components/blocks/LandingFaq"
@@ -12,7 +13,7 @@ import { LandingOffer } from "@/components/blocks/LandingOffer"
 import { LandingProduct } from "@/components/blocks/LandingProduct"
 import { LandingTrustStrip } from "@/components/blocks/LandingTrustStrip"
 import { SiteShell } from "@/components/composites/SiteShell"
-import { MAIN } from "./classNames"
+import { MAIN, STACK } from "./classNames"
 
 /** The name of the page's main region. */
 interface LandingPageBaseProps {
@@ -31,16 +32,20 @@ export const LandingPageBase = (props: LandingPageBaseProps) => (
         actions={<LandingNavActions />}
     >
         <div className={MAIN}>
-            <LandingHero />
-            <LandingTrustStrip />
-            <LandingProduct />
-            <LandingFlow />
-            <LandingConnect />
-            <LandingOffer />
-            <LandingCommitment />
-            <LandingFinalCta />
-            <LandingFaq />
-            <LandingFooter anchorBase="" />
+            <Page measure="product">
+                <div className={STACK}>
+                    <LandingHero />
+                    <LandingTrustStrip />
+                    <LandingProduct />
+                    <LandingFlow />
+                    <LandingConnect />
+                    <LandingOffer />
+                    <LandingCommitment />
+                    <LandingFinalCta />
+                    <LandingFaq />
+                    <LandingFooter anchorBase="" />
+                </div>
+            </Page>
         </div>
     </SiteShell>
 )
