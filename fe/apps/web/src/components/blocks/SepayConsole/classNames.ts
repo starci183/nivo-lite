@@ -1,7 +1,6 @@
-/** The main column and the docked live panel beside it from xl; stacked below (GAP-6 between page regions). */
+/** The open tab's region and the docked live panel side by side, wrapping under each other on a narrow screen (GAP-6 between page regions). */
 export const sepayConsoleClassNames = {
-    page: "flex min-w-0 flex-col gap-6",
-    grid: "grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]",
-    main: "flex min-w-0 flex-col gap-4",
-    panel: "flex min-w-0 flex-col gap-4",
+    frame: "flex flex-wrap items-start gap-6",
+    main: "flex min-w-0 flex-[999_1_32rem] flex-col gap-4",
+    aside: "flex min-w-0 flex-[1_1_20rem] flex-col gap-4",
 } as const

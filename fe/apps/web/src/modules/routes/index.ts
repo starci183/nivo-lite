@@ -41,6 +41,7 @@ export {
     responsibilitiesHref,
     teamInviteHref,
     workItemHref,
+    sepayConnectionHref,
     zaloConnectionHref,
 } from "./console-routes"
 export { AUTOMATION_ROUTES, automationFocusPath, newModulePath } from "./automations-routes"

@@ -11,6 +11,8 @@ import { SepaySetup } from "@/components/blocks/SepaySetup"
 export interface SepayConnectionPageBaseProps {
     readonly props: {
         readonly connectionId: string
+        /** The `?tab=` of the url when it named one. */
+        readonly tab: string | undefined
         readonly homeHref: string
         readonly hubHref: string
     }
@@ -21,8 +23,17 @@ export const SepayConnectionPageBase = (props: SepayConnectionPageBaseProps) => 
     const id = props.props.connectionId
     return (
         <SepayConsole
+            connectionId={id}
+            tab={props.props.tab}
             shape={{
-                header: <SepayHeader connectionId={id} homeHref={props.props.homeHref} hubHref={props.props.hubHref} />,
+                header: (
+                    <SepayHeader
+                        connectionId={id}
+                        homeHref={props.props.homeHref}
+                        hubHref={props.props.hubHref}
+                        tab={props.props.tab}
+                    />
+                ),
                 overview: <SepayOverview connectionId={id} />,
                 setup: <SepaySetup connectionId={id} />,
                 test: (

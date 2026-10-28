@@ -106,3 +106,6 @@ export const sepayStatusTone = (status: string): "success" | "danger" | "warning
 /** The environment the other button switches to. */
 export const otherEnvironment = (environment: SepayEnvironment): SepayEnvironment =>
     environment === "test" ? "live" : "test"
+
+/** The tabs of the SePay connection page, in order. */
+export const SEPAY_TAB_IDS = ["overview", "setup", "test", "agents"] as const

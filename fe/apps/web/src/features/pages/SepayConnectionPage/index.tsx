@@ -9,14 +9,18 @@ export const sepayConnectionMetadata = async (): Promise<Metadata> => {
     return { title: t("title") }
 }
 
-/** What the route hands the page: the connection id of the url. */
-type SepayConnectionPageProps = { readonly connectionId: string }
+/** What the route hands the page: the connection id and the `?tab=` of the url. */
+type SepayConnectionPageProps = {
+    readonly connectionId: string
+    readonly tab: string | ReadonlyArray<string> | undefined
+}
 
 /** /connections/sepay/[id]: a server shell; the regions read their own data in the browser. */
 export const SepayConnectionPage = (props: SepayConnectionPageProps) => (
     <SepayConnectionPageBase
         props={{
             connectionId: props.connectionId,
+            tab: typeof props.tab === "string" ? props.tab : undefined,
             homeHref: CONSOLE_ROUTES.dashboard,
             hubHref: CONSOLE_ROUTES.connections,
         }}
