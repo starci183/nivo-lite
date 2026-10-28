@@ -1,13 +1,5 @@
 import { useState } from "react"
-import {
-    Breadcrumbs,
-    Divider,
-    FillViewport,
-    Region,
-    SurfaceCard,
-    Tabs,
-    type BreadcrumbItem,
-} from "@starci/grammar/common"
+import { Divider, FillViewport, Page, Region, SurfaceCard, Tabs, type BreadcrumbItem } from "@starci/grammar/common"
 
 import { AgentChatComposer, type AgentChatComposerProps } from "@/components/composites/AgentChatComposer"
 
@@ -172,8 +164,7 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
         setIsListOpen(false)
     }
     return (
-        <>
-            <Breadcrumbs label={view.crumbLabel} items={[...view.crumbs]} />
+        <Page chrome="bleed" header={{ breadcrumbs: { label: view.crumbLabel, items: [...view.crumbs] } }}>
             <FillViewport minHeight="md" bottomInset="page">
                 {/* FillViewport owns the page height below the chrome; SURFACE-2 / BOUNDARY-6: the chat is one top-level card, its
           columns are joined faces inside it. */}
@@ -228,6 +219,6 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
                     </div>
                 </SurfaceCard>
             </FillViewport>
-        </>
+        </Page>
     )
 }

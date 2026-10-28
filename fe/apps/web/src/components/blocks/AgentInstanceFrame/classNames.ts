@@ -1,5 +1,8 @@
 import { cn } from "@heroui/react"
 
+/** The actions at the end of the header. */
+export const HEADER_ACTIONS = cn("flex", "shrink-0", "flex-wrap", "items-center", "gap-2")
+
 /** The rail column and the main column inside the joined surface: stacked on narrow widths, side by side from lg. */
 export const FRAME = cn("flex", "h-full", "min-h-0", "min-w-0", "flex-col", "lg:flex-row")
 
