@@ -26,7 +26,7 @@ describe("SeedRunnerService", () => {
 
         await runner.run()
 
-        expect(readFile).toHaveBeenCalledWith("supabase/seed.sql", "utf8")
+        expect(readFile).toHaveBeenCalledWith("db/seed.sql", "utf8")
         expect(em.query).toHaveBeenCalledWith(SEED)
     })
 
