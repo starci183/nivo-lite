@@ -1,4 +1,4 @@
-import { Alert, Button, Image, MediaFrame, SectionHeader, Stepper, SurfaceCard } from "@starci/grammar/common"
+import { Alert, Button, Image, MediaFrame, Page, SectionHeader, Stepper, SurfaceCard } from "@starci/grammar/common"
 import { WorkspacePaymentDetails } from "@/components/composites/WorkspacePaymentDetails"
 import type { WorkspacePaymentDetailsProps } from "@/components/composites/WorkspacePaymentDetails"
 import { ACTIONS_CLASS_NAME, CENTERED_CLASS_NAME, MASCOT_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
@@ -75,23 +75,31 @@ const PaymentSituation = (props: WorkspacePaymentBaseProps) => {
 
     return (
         <>
-            <SectionHeader level={1} title={view.title} description={view.description} />
             {view.error ? <Alert tone="negative" title={view.errorTitle} description={view.error} /> : null}
             {view.details ? <WorkspacePaymentDetails {...view.details} /> : null}
         </>
     )
 }
 
-/** Draws payment progress, a paid outcome, or an expired code without reading data. */
+/** Draws the payment page without reading data: the header band, then the steps and payment progress, a paid outcome, or an expired code. */
 export const WorkspacePaymentBase = (props: WorkspacePaymentBaseProps) => (
-    <div className={STACK_CLASS_NAME}>
-        <Stepper
-            label={props.props.title}
-            steps={props.props.steps.map((label, index) => ({ id: `step-${index + 1}`, label }))}
-            currentStepId="step-3"
-        />
-        <PaymentSituation {...props} />
-    </div>
+    <Page
+        measure="product"
+        isSkeleton={props.props.phase === "loading" || props.props.phase === "creating"}
+        header={{
+            title: props.props.title,
+            description: props.props.description === "" ? undefined : props.props.description,
+        }}
+    >
+        <div className={STACK_CLASS_NAME}>
+            <Stepper
+                label={props.props.title}
+                steps={props.props.steps.map((label, index) => ({ id: `step-${index + 1}`, label }))}
+                currentStepId="step-3"
+            />
+            <PaymentSituation {...props} />
+        </div>
+    </Page>
 )
 
 /** The settled payment result retains its heading and exposes the result as output. */
@@ -109,7 +117,7 @@ const PaymentOutcome = (props: WorkspacePaymentBaseProps) => {
                         <Image src={mascot} alt="" aspect="portrait" fit="contain" plate="none" />
                     </MediaFrame>
                 </div>
-                <SectionHeader level={1} title={paid ? <output>{title}</output> : title} description={description} />
+                <SectionHeader level={2} title={paid ? <output>{title}</output> : title} description={description} />
                 {view.error ? <Alert tone="negative" title={view.errorTitle} description={view.error} /> : null}
                 <div className={ACTIONS_CLASS_NAME}>
                     <PaymentActions {...props} />

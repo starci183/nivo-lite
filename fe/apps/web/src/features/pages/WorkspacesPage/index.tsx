@@ -17,5 +17,5 @@ export const workspacesMetadata = async (): Promise<Metadata> => {
 export const WorkspacesPage = async (props: WorkspacesPageProps) => {
     const { reason } = await props.searchParams
     const t = await getTranslations("onboarding")
-    return <WorkspacesPageBase props={{ title: t("workspacesTitle"), reason }} />
+    return <WorkspacesPageBase props={{ title: t("workspacesTitle"), description: t("workspacesText"), reason }} />
 }

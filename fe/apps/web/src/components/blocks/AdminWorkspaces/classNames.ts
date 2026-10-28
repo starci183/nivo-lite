@@ -17,3 +17,6 @@ export const BADGE_WRAP_CLASS_NAME = cn("flex", "flex-wrap", "gap-1")
 
 /** Blocks inside one region (GAP-4). */
 export const STACK_CLASS_NAME = cn("flex", "flex-col", "gap-4")
+
+/** The filters and the list region stacked in the page body (GAP-5). */
+export const PAGE_CLASS_NAME = cn("flex", "flex-col", "gap-6")

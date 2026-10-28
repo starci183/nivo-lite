@@ -1,15 +1,5 @@
 import type { ComponentProps } from "react"
-import {
-    Badge,
-    Button,
-    DescriptionList,
-    PageContainer,
-    PageHeader,
-    Region,
-    SectionHeader,
-    SurfaceCard,
-    Text,
-} from "@starci/grammar/common"
+import { Badge, DescriptionList, Region, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
 import { BillingHistoryList, type BillingHistoryRow } from "@/components/composites/BillingHistoryList"
 import { BillingRenewal } from "@/components/composites/BillingRenewal"
 import { SlotView } from "@/components/composites/SlotView"
@@ -27,10 +17,6 @@ export interface BillingOverviewBaseProps {
         /** The renewal order is being requested: the renew button is pending. */
         readonly isRenewing: boolean
         readonly usageState: UsageCardProps["state"]
-        readonly title: string
-        readonly description: string
-        readonly backLabel: string
-        readonly backHref: string
         readonly planLabel: string
         readonly statusLabel: string
         readonly paidUntilLabel: string
@@ -76,75 +62,63 @@ const ROWS_PLACEHOLDER: ReadonlyArray<BillingHistoryRow> = [
     { id: "placeholder-2", title: "…", detail: "…" },
 ]
 
-/** Draws billing from settled display values, region slots and interactions. */
+/** Draws the billing regions (plan, usage, history, review) from settled display values, region slots and interactions. */
 export const BillingOverviewBase = (props: BillingOverviewBaseProps) => (
-    <PageContainer measure="product">
-        <div className={PAGE_CLASS_NAME}>
-            <PageHeader
-                measure="product"
-                title={props.props.title}
-                description={props.props.description}
-                actions={
-                    <Button intent="neutral" size="sm" href={props.props.backHref}>
-                        {props.props.backLabel}
-                    </Button>
-                }
+    <div className={PAGE_CLASS_NAME}>
+        <SlotView
+            slot={props.props.plan}
+            placeholder={PLAN_PLACEHOLDER}
+            labels={props.props.planSlotLabels}
+            forbidden="notice"
+            onRetry={props.on.retryPlan}
+        >
+            {(plan) => renderCurrentBillingPlan(props, plan)}
+        </SlotView>
+        <UsageCard
+            state={props.props.usageState}
+            props={props.props.usage}
+            on={{
+                openCredits: props.on.openCredits,
+                formatDay: props.on.formatUsageDay,
+                formatCredits: props.on.formatUsageCredits,
+                minimumBarSize: props.on.minimumUsageBarSize,
+            }}
+        />
+        <SlotView
+            slot={props.props.orders}
+            placeholder={ROWS_PLACEHOLDER}
+            labels={props.props.ordersSlotLabels}
+            forbidden="hide"
+            onRetry={props.on.retryOrders}
+        >
+            {(orders) => (
+                <BillingHistoryList
+                    props={{ title: props.props.historyTitle, empty: props.props.historyEmpty, rows: orders }}
+                />
+            )}
+        </SlotView>
+        <Region labelledBy="billing-review-title" className={SECTION_CLASS_NAME}>
+            <SectionHeader
+                id="billing-review-title"
+                level={2}
+                title={props.props.reviewTitle}
+                description={props.props.reviewDescription}
             />
             <SlotView
-                slot={props.props.plan}
-                placeholder={PLAN_PLACEHOLDER}
-                labels={props.props.planSlotLabels}
-                forbidden="notice"
-                onRetry={props.on.retryPlan}
-            >
-                {(plan) => renderCurrentBillingPlan(props, plan)}
-            </SlotView>
-            <UsageCard
-                state={props.props.usageState}
-                props={props.props.usage}
-                on={{
-                    openCredits: props.on.openCredits,
-                    formatDay: props.on.formatUsageDay,
-                    formatCredits: props.on.formatUsageCredits,
-                    minimumBarSize: props.on.minimumUsageBarSize,
-                }}
-            />
-            <SlotView
-                slot={props.props.orders}
+                slot={props.props.review}
                 placeholder={ROWS_PLACEHOLDER}
-                labels={props.props.ordersSlotLabels}
+                labels={props.props.reviewSlotLabels}
                 forbidden="hide"
-                onRetry={props.on.retryOrders}
+                onRetry={props.on.retryReview}
             >
-                {(orders) => (
+                {(review) => (
                     <BillingHistoryList
-                        props={{ title: props.props.historyTitle, empty: props.props.historyEmpty, rows: orders }}
+                        props={{ ariaLabel: props.props.reviewTitle, empty: props.props.reviewEmpty, rows: review }}
                     />
                 )}
             </SlotView>
-            <Region labelledBy="billing-review-title" className={SECTION_CLASS_NAME}>
-                <SectionHeader
-                    id="billing-review-title"
-                    level={2}
-                    title={props.props.reviewTitle}
-                    description={props.props.reviewDescription}
-                />
-                <SlotView
-                    slot={props.props.review}
-                    placeholder={ROWS_PLACEHOLDER}
-                    labels={props.props.reviewSlotLabels}
-                    forbidden="hide"
-                    onRetry={props.on.retryReview}
-                >
-                    {(review) => (
-                        <BillingHistoryList
-                            props={{ ariaLabel: props.props.reviewTitle, empty: props.props.reviewEmpty, rows: review }}
-                        />
-                    )}
-                </SlotView>
-            </Region>
-        </div>
-    </PageContainer>
+        </Region>
+    </div>
 )
 
 /** Draws the SurfaceCard section of the BillingOverview view. */

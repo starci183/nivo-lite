@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { Divider, FillViewport, PageContainer, SurfaceCard } from "@starci/grammar/common"
+import { Divider, FillViewport, Page, SurfaceCard } from "@starci/grammar/common"
 import { AgentInstanceHeader } from "@/components/blocks/AgentInstanceHeader"
 import { AgentInstanceRail } from "@/components/blocks/AgentInstanceRail"
 import type { ModuleKey } from "@/modules/catalog"
@@ -12,11 +12,11 @@ export interface AgentInstanceLayoutBaseProps {
     readonly children?: ReactNode
 }
 
-/** Draws the frame of an agent instance: the page header with the instance tabs, then one joined surface with the installed agents on the left and the routed tab. */
+/** Draws the frame of an agent instance: the header band with the instance tabs, then the body `Page` holding one joined surface with the installed agents on the left and the routed tab. */
 export const AgentInstanceLayoutBase = (props: AgentInstanceLayoutBaseProps) => (
     <>
         <AgentInstanceHeader module={props.props.module} installationId={props.props.installationId} />
-        <PageContainer measure="product">
+        <Page measure="product">
             <FillViewport minHeight="md" bottomInset="page">
                 <SurfaceCard ariaLabel={props.props.installationId} composition="joined" height="fill">
                     <div className={FRAME}>
@@ -35,6 +35,6 @@ export const AgentInstanceLayoutBase = (props: AgentInstanceLayoutBaseProps) => 
                     </div>
                 </SurfaceCard>
             </FillViewport>
-        </PageContainer>
+        </Page>
     </>
 )

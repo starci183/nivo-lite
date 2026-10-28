@@ -1,7 +1,6 @@
-import { Badge, Button, DescriptionList, SectionHeader, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, DescriptionList, SurfaceCard, Text } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
-import { ADMIN_ROUTES } from "@/modules/routes"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { FACTS_CLASS_NAME } from "./classNames"
 
@@ -25,7 +24,6 @@ export interface AdminWorkspaceOverviewData {
 /** The workspace read and the words around it. */
 export interface AdminWorkspaceOverviewBaseProps {
     readonly props: {
-        readonly allWorkspacesLabel: string
         readonly overviewTitle: string
         readonly slot: DataSlot<AdminWorkspaceOverviewData>
         readonly slotLabels: SlotLabels
@@ -64,7 +62,7 @@ const termsOf = (facts: ReadonlyArray<AdminWorkspaceFact>, isSkeleton: boolean) 
             ),
     }))
 
-/** Draws the read-only overview of one workspace: its heading and the billing and activity facts. */
+/** Draws the read-only overview of one workspace: the billing and activity facts. */
 export const AdminWorkspaceOverviewBase = (props: AdminWorkspaceOverviewBaseProps) => (
     <SlotView
         slot={props.props.slot}
@@ -73,26 +71,12 @@ export const AdminWorkspaceOverviewBase = (props: AdminWorkspaceOverviewBaseProp
         onRetry={props.on.retry}
     >
         {(view, isSkeleton) => (
-            <>
-                <SectionHeader
-                    level={1}
-                    eyebrow={view.eyebrow}
-                    title={view.title}
-                    description={view.description}
-                    isSkeleton={isSkeleton}
-                    action={
-                        <Button intent="neutral" href={ADMIN_ROUTES.workspaces}>
-                            {props.props.allWorkspacesLabel}
-                        </Button>
-                    }
-                />
-                <SurfaceCard label={props.props.overviewTitle} headingLevel={2}>
-                    <div className={FACTS_CLASS_NAME}>
-                        <DescriptionList layout="columns" isDivided items={termsOf(view.billing, isSkeleton)} />
-                        <DescriptionList layout="columns" isDivided items={termsOf(view.activity, isSkeleton)} />
-                    </div>
-                </SurfaceCard>
-            </>
+            <SurfaceCard label={props.props.overviewTitle} headingLevel={2}>
+                <div className={FACTS_CLASS_NAME}>
+                    <DescriptionList layout="columns" isDivided items={termsOf(view.billing, isSkeleton)} />
+                    <DescriptionList layout="columns" isDivided items={termsOf(view.activity, isSkeleton)} />
+                </div>
+            </SurfaceCard>
         )}
     </SlotView>
 )

@@ -27,16 +27,12 @@ export const WorkspacesOverview = (props: WorkspacesOverviewProps) => {
         <WorkspacesOverviewBase
             shape={status === "empty" ? "welcome" : "list"}
             props={{
-                title: t("workspacesTitle"),
-                description: t("workspacesText"),
-                createLabel: t("createNew"),
                 createFirstLabel: t("createFirst"),
                 welcomeTitle: t("welcomeTitle"),
                 welcomeText: t("welcomeText"),
                 welcomeStepsLabel: t("welcomeStepsLabel"),
                 welcomeSteps: [t("welcomeStep1"), t("welcomeStep2"), t("welcomeStep3")],
                 reason: props.reason === "disabled" ? t("reasonDisabled") : undefined,
-                canCreate: status === "ready",
                 slot,
                 slotLabels: slotLabels(t("welcomeTitle")),
             }}

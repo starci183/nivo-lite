@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { PageContainer, Text, WorkspaceShell } from "@starci/grammar/common"
+import { Page, Text, WorkspaceShell } from "@starci/grammar/common"
 import { COLUMN_CLASS_NAME, FOOT_CLASS_NAME } from "./classNames"
 
 /** The words of a public hiring page and what it holds. */
@@ -10,14 +10,14 @@ interface HiringPublicShellProps {
     readonly children: ReactNode
 }
 
-/** The frame of the pages a candidate opens without signing in: a reading column in the shell, with the foot line. */
+/** The frame of the pages a candidate opens without signing in: one `Page` with no header band, a reading column in the shell, with the foot line. */
 export const HiringPublicShell = (props: HiringPublicShellProps) => (
     <WorkspaceShell
         viewport="flow"
         align="stretch"
         primaryLabel={props.label}
         primary={
-            <PageContainer measure="reading">
+            <Page measure="reading">
                 <div className={COLUMN_CLASS_NAME}>
                     {props.children}
                     {props.foot === null ? null : (
@@ -26,7 +26,7 @@ export const HiringPublicShell = (props: HiringPublicShellProps) => (
                         </div>
                     )}
                 </div>
-            </PageContainer>
+            </Page>
         }
     />
 )

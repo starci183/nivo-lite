@@ -1,7 +1,9 @@
+import { Page } from "@starci/grammar/common"
 import { BrandLogo } from "@/components/blocks/BrandLogo"
 import { LocaleSwitch } from "@/components/blocks/LocaleSwitch"
 import { WorkspaceJoin } from "@/components/blocks/WorkspaceJoin"
 import { WorkspacesAccount } from "@/components/blocks/WorkspacesAccount"
+import { WorkspacesCreate } from "@/components/blocks/WorkspacesCreate"
 import { WorkspacesList } from "@/components/blocks/WorkspacesList"
 import { WorkspacesOverview } from "@/components/blocks/WorkspacesOverview"
 import { WorkspacesFrame } from "@/components/composites/WorkspacesFrame"
@@ -12,6 +14,7 @@ import { STACK_CLASS_NAME } from "./classNames"
 export interface WorkspacesPageBaseProps {
     readonly props: {
         readonly title: string
+        readonly description: string
         /** The reason the person landed here (`disabled`), from the URL. */
         readonly reason?: string | undefined
     }
@@ -26,10 +29,15 @@ export const WorkspacesPageBase = (props: WorkspacesPageBaseProps) => (
         localeSwitch={<LocaleSwitch />}
         account={<WorkspacesAccount />}
     >
-        <div className={STACK_CLASS_NAME}>
-            <WorkspacesOverview reason={props.props.reason} />
-            <WorkspacesList />
-            <WorkspaceJoin />
-        </div>
+        <Page
+            measure="product"
+            header={{ title: props.props.title, description: props.props.description, actions: <WorkspacesCreate /> }}
+        >
+            <div className={STACK_CLASS_NAME}>
+                <WorkspacesOverview reason={props.props.reason} />
+                <WorkspacesList />
+                <WorkspaceJoin />
+            </div>
+        </Page>
     </WorkspacesFrame>
 )

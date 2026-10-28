@@ -1,8 +1,7 @@
-import { PageContainer, SectionHeader } from "@starci/grammar/common"
+import { Page, SectionHeader } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { AdminAccount } from "@/components/blocks/AdminAccount"
 import { AdminNavigation } from "@/components/blocks/AdminNavigation"
-import { PAGE_CLASS_NAME } from "./classNames"
 
 /** The words and the signed-in admin the console frame draws. */
 export interface AdminLayoutBaseProps {
@@ -12,10 +11,10 @@ export interface AdminLayoutBaseProps {
     readonly children: ReactNode
 }
 
-/** Draws the team console frame: the header with brand, destinations and who is signed in, then the routed page. */
+/** Draws the team console frame: the bar with brand, destinations and who is signed in, then the routed page, which draws its own `Page`. */
 export const AdminLayoutBase = (props: AdminLayoutBaseProps) => (
-    <PageContainer measure="full">
-        <div className={PAGE_CLASS_NAME}>
+    <>
+        <Page measure="full">
             <SectionHeader
                 title={props.props.title}
                 action={
@@ -25,7 +24,7 @@ export const AdminLayoutBase = (props: AdminLayoutBaseProps) => (
                     </>
                 }
             />
-            {props.children}
-        </div>
-    </PageContainer>
+        </Page>
+        {props.children}
+    </>
 )

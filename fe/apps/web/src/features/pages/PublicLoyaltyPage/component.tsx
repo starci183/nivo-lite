@@ -1,4 +1,4 @@
-import { PageContainer, WorkspaceShell } from "@starci/grammar/common"
+import { Page, WorkspaceShell } from "@starci/grammar/common"
 import { LoyaltyCheckForm } from "@/components/blocks/LoyaltyCheckForm"
 import { CANVAS_CLASS_NAME } from "./classNames"
 
@@ -16,11 +16,11 @@ export const PublicLoyaltyPageBase = (props: PublicLoyaltyPageBaseProps) => (
         align="stretch"
         primaryLabel={props.props.label}
         primary={
-            <PageContainer measure="reading">
+            <Page measure="reading">
                 <div className={CANVAS_CLASS_NAME}>
                     <LoyaltyCheckForm slug={props.props.slug} />
                 </div>
-            </PageContainer>
+            </Page>
         }
     />
 )
