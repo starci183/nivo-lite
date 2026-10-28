@@ -7,6 +7,7 @@ import { DATA_SYNC_QUEUE } from "@modules/queues/data-sync"
 import { DECISIONS_QUEUE, DecisionsJob } from "@modules/queues/decisions"
 import { MARKETING_TICK_QUEUE } from "@modules/queues/marketing-tick"
 import { REALTIME_RETENTION_QUEUE } from "@modules/queues/realtime-retention"
+import { SYSTEM_HISTORY_RETENTION_QUEUE } from "@modules/queues/system-history-retention"
 import { SHIFTS_QUEUE, SHIFTS_TICK_JOB } from "@modules/queues/shifts"
 import { ZALO_REFRESH_QUEUE } from "@modules/queues/zalo-refresh"
 
@@ -49,6 +50,12 @@ export const JOB_TICKS: Readonly<Record<string, JobTick>> = {
         minutes: 1,
     },
     "shifts-tick": { queue: SHIFTS_QUEUE, job: SHIFTS_TICK_JOB, payload: { kind: "tick" }, minutes: 1 },
+    "system-history-retention": {
+        queue: SYSTEM_HISTORY_RETENTION_QUEUE,
+        job: SYSTEM_HISTORY_RETENTION_QUEUE,
+        payload: { doneDays: 1, failedDays: 7, batch: 5000 },
+        minutes: 1440,
+    },
     "zalo-refresh-tick": {
         queue: ZALO_REFRESH_QUEUE,
         job: ZALO_REFRESH_QUEUE,

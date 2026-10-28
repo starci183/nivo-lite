@@ -47,3 +47,21 @@ export interface JobRequeueFailedRow {
     /** The requeued and initially eligible job counts. */
     readonly result: RetryFailedResult
 }
+
+/** Rows one sweep batch deleted, per table. */
+export interface HistorySweepCountsRow {
+    /** Finished queue outbox rows. */
+    readonly outbox: number
+    /** Finished job fencing rows. */
+    readonly jobs: number
+    /** pg_cron run log rows. */
+    readonly cron: number
+    /** pg_net response rows. */
+    readonly http: number
+}
+
+/** The JSON value returned by the system history sweep. */
+export interface HistorySweepRow {
+    /** The per-table counts of this batch. */
+    readonly result: HistorySweepCountsRow
+}

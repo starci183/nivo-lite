@@ -5062,6 +5062,9 @@ isOneToOne: false
 "storage_ws_member":
 { Args: { "p_name": string }; Returns: boolean
                            },
+"system_history_sweep":
+{ Args: { "p_batch"?: number,"p_done_days"?: number,"p_failed_days"?: number }; Returns: Json
+                           },
 "update_my_profile":
 { Args: { "new_display_name": string,"ws": string }; Returns: undefined
                            },
