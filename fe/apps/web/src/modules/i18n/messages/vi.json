@@ -7112,7 +7112,6 @@
     "copyFailed": "Không sao chép được. Hãy thử lại.",
     "webhookLabel": "URL nhận webhook",
     "keyLabel": "API Key (kiểu xác thực)",
-    "copyKey": "Sao chép API Key",
     "pasteFacts": "Loại giao dịch: Tiền vào · Định dạng: JSON · Tự động gửi lại khi server trả lỗi: bật",
     "accountTitle": "Tài khoản ngân hàng",
     "bankLabel": "Ngân hàng",

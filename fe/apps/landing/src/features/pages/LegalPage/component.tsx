@@ -1,4 +1,4 @@
-import { Alert, PageContainer, SectionHeader } from "@starci/grammar/common"
+import { Alert, Page } from "@starci/grammar/common"
 import { LandingFooter } from "@/components/blocks/LandingFooter"
 import { LandingNavActions } from "@/components/blocks/LandingNavActions"
 import { LandingNavBrand } from "@/components/blocks/LandingNavBrand"
@@ -46,10 +46,9 @@ export const LegalPageBase = (props: LegalPageBaseProps) => (
         actions={<LandingNavActions />}
     >
         <div className={LEGAL_MAIN}>
-            <PageContainer measure="reading">
+            <Page measure="reading" header={{ title: props.props.title, description: props.props.intro }}>
                 <div className={LEGAL_STACK}>
                     <Alert tone="cautionary" title={props.props.draft} />
-                    <SectionHeader level={1} title={props.props.title} description={props.props.intro} />
                     {props.props.sections.map((section) => (
                         <LegalSectionView
                             key={section.id}
@@ -62,8 +61,8 @@ export const LegalPageBase = (props: LegalPageBaseProps) => (
                         />
                     ))}
                 </div>
-            </PageContainer>
-            <LandingFooter anchorBase="/" />
+                <LandingFooter anchorBase="/" />
+            </Page>
         </div>
     </SiteShell>
 )

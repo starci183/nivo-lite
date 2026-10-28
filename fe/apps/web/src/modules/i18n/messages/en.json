@@ -7112,7 +7112,6 @@
     "copyFailed": "Could not copy. Try again.",
     "webhookLabel": "Webhook URL",
     "keyLabel": "API Key (authentication type)",
-    "copyKey": "Copy API Key",
     "pasteFacts": "Transaction type: Money in · Format: JSON · Retry when the server errors: on",
     "accountTitle": "Bank account",
     "bankLabel": "Bank",
