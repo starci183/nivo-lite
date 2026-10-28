@@ -1,4 +1,4 @@
-import { Alert, GrammarRoot, PageContainer } from "@starci/grammar/common"
+import { Alert, GrammarRoot, Page } from "@starci/grammar/common"
 
 /** Props for the pure last-resort error page. */
 export type AppGlobalErrorPageBaseProps = {
@@ -16,14 +16,14 @@ export const AppGlobalErrorPageBase = (props: AppGlobalErrorPageBaseProps) => (
     <html lang={props.props.lang}>
         <body>
             <GrammarRoot theme="system" className="min-h-dvh">
-                <PageContainer measure="reading">
+                <Page measure="reading">
                     <Alert
                         tone="negative"
                         title={props.props.title}
                         description={props.props.text}
                         action={{ label: props.props.retryLabel, onAction: props.on.retry }}
                     />
-                </PageContainer>
+                </Page>
             </GrammarRoot>
         </body>
     </html>

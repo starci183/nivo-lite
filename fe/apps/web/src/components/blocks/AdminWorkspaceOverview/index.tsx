@@ -40,7 +40,6 @@ export const AdminWorkspaceOverview = (props: AdminWorkspaceOverviewProps) => {
     return (
         <AdminWorkspaceOverviewBase
             props={{
-                allWorkspacesLabel: t("allWorkspaces"),
                 overviewTitle: t("overviewTitle"),
                 slot,
                 slotLabels: slotLabels(t("loadFailed")),

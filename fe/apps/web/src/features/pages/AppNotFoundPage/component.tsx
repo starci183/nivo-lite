@@ -1,4 +1,4 @@
-import { Button, Heading, PageContainer, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, Page } from "@starci/grammar/common"
 
 /** Props for the pure not-found page. */
 export type AppNotFoundPageBaseProps = {
@@ -10,15 +10,11 @@ export type AppNotFoundPageBaseProps = {
     }
 }
 
-/** Draws the unknown-route page. */
+/** Draws the unknown-route page: the heading band with its words, and the way home as the body. */
 export const AppNotFoundPageBase = (props: AppNotFoundPageBaseProps) => (
-    <PageContainer measure="reading">
-        <SurfaceCard ariaLabel={props.props.title}>
-            <Heading level={1}>{props.props.title}</Heading>
-            <Text tone="muted">{props.props.text}</Text>
-            <Button intent="neutral" href={props.props.homeHref}>
-                {props.props.homeLabel}
-            </Button>
-        </SurfaceCard>
-    </PageContainer>
+    <Page measure="reading" header={{ title: props.props.title, description: props.props.text }}>
+        <Button intent="neutral" href={props.props.homeHref}>
+            {props.props.homeLabel}
+        </Button>
+    </Page>
 )

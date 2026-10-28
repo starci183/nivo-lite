@@ -1,7 +1,6 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { AUTH_ROUTES } from "@/modules/routes"
 import { useBillingOverview } from "@/hooks/billing"
 import { useSlotLabels } from "@/hooks/slot"
 import { BillingOverviewBase } from "./component"
@@ -20,10 +19,6 @@ export const BillingOverview = (props: BillingOverviewProps) => {
             props={{
                 isRenewing: overview.isRenewing,
                 usageState: overview.usage.state,
-                title: t("pageTitle"),
-                description: t("pageText"),
-                backHref: AUTH_ROUTES.workspaces,
-                backLabel: t("allWorkspaces"),
                 planLabel: t("currentPlan"),
                 statusLabel: t("status"),
                 paidUntilLabel: t("paidUntil"),

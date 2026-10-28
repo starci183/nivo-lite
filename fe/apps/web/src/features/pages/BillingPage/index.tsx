@@ -22,6 +22,9 @@ export const BillingPage = async (props: BillingPageProps) => {
             props={{
                 workspaceId: props.workspaceId,
                 mainLabel: t("pageTitle"),
+                title: t("pageTitle"),
+                description: t("pageText"),
+                backLabel: t("allWorkspaces"),
                 homeHref: AUTH_ROUTES.workspaces,
                 contactHref: creditsContactHref(),
             }}

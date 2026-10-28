@@ -7,7 +7,7 @@ import {
     Input,
     List,
     ListItem,
-    PageHeader,
+    Page,
     Region,
     SectionHeader,
     Text,
@@ -22,6 +22,7 @@ import {
     CELL_STACK_CLASS_NAME,
     CHIPS_CLASS_NAME,
     FILTERS_CLASS_NAME,
+    PAGE_CLASS_NAME,
     SEARCH_FORM_CLASS_NAME,
     STACK_CLASS_NAME,
 } from "./classNames"
@@ -98,14 +99,7 @@ const AdminWorkspacesView = (props: AdminWorkspacesDrawProps) => {
         renderWorkspaceCell(row, columnId, props, props.isSkeleton)
 
     return (
-        <>
-            <PageHeader
-                measure="full"
-                meta={props.props.eyebrow}
-                title={props.props.title}
-                description={props.props.description}
-                isSkeleton={props.isSkeleton}
-            />
+        <div className={PAGE_CLASS_NAME}>
             {renderWorkspaceFilters(props, props.isSkeleton)}
             <Region labelledBy="admin-workspaces-shown" className={STACK_CLASS_NAME}>
                 <SectionHeader
@@ -122,7 +116,7 @@ const AdminWorkspacesView = (props: AdminWorkspacesDrawProps) => {
                     emptyContent={<EmptyNotice message={props.props.emptyTitle} description={props.props.emptyHint} />}
                 />
             </Region>
-        </>
+        </div>
     )
 }
 
@@ -138,12 +132,21 @@ export interface AdminWorkspacesBaseProps {
     }
 }
 
-/** Draws the finished list, or the same list as a skeleton, the failure with its retry, or the empty notice. */
-export const AdminWorkspacesBase = (props: AdminWorkspacesBaseProps) => (
-    <SlotView {...props.props} onRetry={props.on.retry}>
-        {(view, isSkeleton) => <AdminWorkspacesView props={view} isSkeleton={isSkeleton} />}
-    </SlotView>
-)
+/** Draws the workspaces page: its header band from the words, over the finished list, or the same list as a skeleton, the failure with its retry, or the empty notice. */
+export const AdminWorkspacesBase = (props: AdminWorkspacesBaseProps) => {
+    const words = props.props.slot.items ?? props.props.placeholder
+    return (
+        <Page
+            measure="full"
+            isSkeleton={props.props.slot.isLoading === true}
+            header={{ meta: words.eyebrow, title: words.title, description: words.description }}
+        >
+            <SlotView {...props.props} onRetry={props.on.retry}>
+                {(view, isSkeleton) => <AdminWorkspacesView props={view} isSkeleton={isSkeleton} />}
+            </SlotView>
+        </Page>
+    )
+}
 
 /** Draws the div section of the AdminWorkspaces view. */
 const renderWorkspaceFilters = (props: AdminWorkspacesViewProps, isSkeleton: boolean) => (

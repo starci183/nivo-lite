@@ -1,4 +1,4 @@
-import { Alert, Button, Heading, PageContainer, SurfaceCard, Text, WorkspaceShell } from "@starci/grammar/common"
+import { Alert, Button, Heading, Page, SurfaceCard, Text, WorkspaceShell } from "@starci/grammar/common"
 import { PublicBookingForm } from "@/components/composites/PublicBookingForm"
 import type { PublicBookingFormProps } from "@/components/composites/PublicBookingForm"
 import { APP_ROUTES } from "@/modules/routes"
@@ -30,7 +30,7 @@ export const PublicBookingContentBase = (props: PublicBookingContentBaseProps) =
     const { title, page } = props.props
     if (page === null) {
         return (
-            <PageContainer measure="reading">
+            <Page measure="reading">
                 <SurfaceCard ariaLabel={props.props.notFoundTitle}>
                     <Heading level={1}>{props.props.notFoundTitle}</Heading>
                     <Text tone="muted">{props.props.notFoundText}</Text>
@@ -38,12 +38,12 @@ export const PublicBookingContentBase = (props: PublicBookingContentBaseProps) =
                         {props.props.homeLabel}
                     </Button>
                 </SurfaceCard>
-            </PageContainer>
+            </Page>
         )
     }
     if (page === undefined) {
         return (
-            <PageContainer measure="reading">
+            <Page measure="reading">
                 <div className={MAIN_CLASS_NAME}>
                     {props.props.failed ? (
                         <Alert tone="negative" title={props.props.failedTitle} description={props.props.failedBody} />
@@ -51,7 +51,7 @@ export const PublicBookingContentBase = (props: PublicBookingContentBaseProps) =
                         <Text live="polite">{props.props.loadingLabel}</Text>
                     )}
                 </div>
-            </PageContainer>
+            </Page>
         )
     }
     return (
@@ -59,7 +59,7 @@ export const PublicBookingContentBase = (props: PublicBookingContentBaseProps) =
             align="stretch"
             primaryLabel={title}
             primary={
-                <PageContainer measure="reading">
+                <Page measure="reading">
                     <div className={MAIN_CLASS_NAME}>
                         <div className={STACK_CLASS_NAME}>
                             <div className={HEAD_CLASS_NAME}>
@@ -75,7 +75,7 @@ export const PublicBookingContentBase = (props: PublicBookingContentBaseProps) =
                             <PublicBookingForm key={page.slug} props={props.props.form} on={props.on} />
                         </div>
                     </div>
-                </PageContainer>
+                </Page>
             }
         />
     )
