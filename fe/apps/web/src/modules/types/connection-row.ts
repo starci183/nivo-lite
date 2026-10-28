@@ -126,6 +126,8 @@ export interface RowView {
     readonly state: "negative" | "cautionary" | "unavailable" | "neutral"
     readonly primary: RowPrimary | null
     readonly access: AccessView | null
+    /** The connection's own page (SePay, Zalo OA), when its provider has one. */
+    readonly page: { readonly href: string; readonly label: string } | null
     readonly menuLabel: string
     readonly menuIsDisabled: boolean
     readonly menu: ReadonlyArray<RowMenuSection>

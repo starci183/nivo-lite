@@ -14,6 +14,8 @@ export interface ConnectionsLoadingPageBaseProps {
         readonly connectedLabel: string
         readonly automationsLink: string
         readonly automationsHref: string
+        readonly addLabel: string
+        readonly addHref: string
     }
 }
 
@@ -30,6 +32,8 @@ export const ConnectionsLoadingPageBase = (props: ConnectionsLoadingPageBaseProp
                 homeHref={props.props.homeHref}
                 title={props.props.title}
                 description={props.props.description}
+                addLabel={props.props.addLabel}
+                addHref={props.props.addHref}
             />
             <ConnectionViewTabs selected="connected" />
             <SurfaceListCard label={props.props.connectedLabel} headingLevel={2} isLoading />

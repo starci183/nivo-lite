@@ -14,7 +14,7 @@ import {
 } from "@/hooks/connection-rows"
 import type { AgentOption, Connection, RowPrimary, RowView } from "@/modules/types"
 import { useTranslations } from "next-intl"
-import { rowState, statusKey, statusTone } from "./connections.shared"
+import { connectionPageHref, rowState, statusKey, statusTone } from "./connections.shared"
 import { useAgentAccess } from "./useAgentAccess"
 import type { AgentAccess } from "./useAgentAccess"
 import { useConnectionOverlays } from "./useConnectionOverlays"
@@ -89,6 +89,7 @@ export const useConnectionRowView = (
         state: rowState(c.status),
         primary: primaryOf(c, input.canManage, actions.busy, t),
         access: usesAgents(c.provider) && live ? access.view : null,
+        page: live ? pageOf(c, t("openPage")) : null,
         menuLabel: t("more", { name: c.name }),
         menuIsDisabled: actions.busy === "keys",
         menu: menuOf(c, input.canManage, t),
@@ -112,6 +113,12 @@ export const useConnectionRowView = (
 
     const on: ConnectionRowHandlers = actionsOf(overlays, c, actions, access, smtp)
     return { view, on }
+}
+
+/** The link to the connection's own page, when its provider has one. */
+const pageOf = (c: Connection, label: string): RowView["page"] => {
+    const href = connectionPageHref(c)
+    return href === null ? null : { href, label }
 }
 
 /** Resolves the copy labels for the current locale. */

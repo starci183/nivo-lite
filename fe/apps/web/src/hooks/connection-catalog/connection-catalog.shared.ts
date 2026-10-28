@@ -159,22 +159,26 @@ export const asCategory = (id: string): ConnectorCategory | "all" =>
 /** Resolves a supported audience from a control value. */
 export const asAudience = (id: string): Audience | "all" => AUDIENCES.find((audience) => audience === id) ?? "all"
 
-/** Summarizes connection count or catalog availability. */
+/** Summarizes what the workspace runs of a connector, or the connector's own availability. */
 export const catalogBadgeOf = (
     entry: CatalogEntry,
     count: number,
     t: Translate,
-): { readonly tone: "success" | "neutral"; readonly label: string; readonly isDot: boolean } | null => {
-    if (count > 0) return { tone: "success", label: t("libConnected", { count }), isDot: true }
+    needsCheck = false,
+): { readonly tone: "success" | "danger" | "neutral"; readonly label: string; readonly isDot: boolean } | null => {
+    if (needsCheck) return { tone: "danger", label: t("libNeedsCheck"), isDot: true }
+    if (count > 0) return { tone: "success", label: t("libInUse", { count }), isDot: true }
     if (entry.status === "soon") return { tone: "neutral", label: t("statusSoon"), isDot: false }
     return entry.status === "early" ? { tone: "neutral", label: t("statusEarly"), isDot: false } : null
 }
 
-/** Names the command available for this catalog entry. */
-export const actionOf = (entry: CatalogEntry, count: number, t: Translate): string => {
-    if (entry.status === "soon") return t("libDetails")
-    return count > 0 ? t("libManage") : t("connect")
-}
+/** The "Cho: ..." line of a connector: the agents it serves, or every agent. */
+export const audienceLineOf = (entry: CatalogEntry, t: Translate): string =>
+    t("libFor", {
+        names: entry.audience.includes("any")
+            ? t("aud_any")
+            : entry.audience.map((audience) => t(`aud_${audience}`)).join(", "),
+    })
 
 /** Counts active workspace connections for each provider in the catalog. */
 export const connectionCountsOf = (items: ReadonlyArray<Connection>): Map<string, number> => {
@@ -185,3 +189,11 @@ export const connectionCountsOf = (items: ReadonlyArray<Connection>): Map<string
     }
     return counts
 }
+
+/** The providers where the workspace has a connection that needs a check (unfinished or broken). */
+export const checkProvidersOf = (items: ReadonlyArray<Connection>): ReadonlySet<string> =>
+    new Set(
+        items
+            .filter((connection) => connection.status === "pending" || connection.status === "error")
+            .map((connection) => connection.provider),
+    )

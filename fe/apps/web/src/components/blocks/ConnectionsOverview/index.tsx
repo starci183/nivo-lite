@@ -22,6 +22,8 @@ export const ConnectionsOverview = (props: ConnectionsOverviewProps) => {
                     homeLabel={words.crumbHome}
                     homeHref={words.homeHref}
                     title={words.title}
+                    addLabel={words.addLabel}
+                    addHref={words.addHref}
                     description={words.description}
                     {...(summary === null ? {} : { meta: summary })}
                 />

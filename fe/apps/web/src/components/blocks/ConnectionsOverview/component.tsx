@@ -38,6 +38,9 @@ export interface PageWords {
     readonly emptyHint: string
     readonly automationsLink: string
     readonly automationsHref: string
+    /** The primary command of the heading: "Add a connection". */
+    readonly addLabel: string
+    readonly addHref: string
 }
 
 /** What the board draws once the workspace reads are in. */
@@ -50,7 +53,8 @@ export interface ConnectionsBoard {
     readonly agents: ReadonlyArray<AgentOption>
     readonly agentNames: Readonly<Record<string, string>>
     readonly liveCount: number
-    readonly attention: { readonly first: Connection; readonly count: number } | null
+    /** Every connection that needs a check, with the agents that use it. */
+    readonly attentions: ReadonlyArray<PageRow>
     readonly groups: ReadonlyArray<PageGroup>
 }
 
@@ -63,6 +67,8 @@ export interface ConnectionsOverviewProps {
         /** The board of connections: loading, failed, forbidden to staff, or ready. */
         readonly board: DataSlot<ConnectionsBoard>
         readonly slotLabels: SlotLabels
+        /** The view the placeholder takes the shape of while the workspace reads are on their way. */
+        readonly placeholderView: "connected" | "library"
     }
     readonly on: {
         readonly retry: () => void
@@ -70,10 +76,10 @@ export interface ConnectionsOverviewProps {
     readonly renderAddButton: ComponentType<{ readonly provider: Provider; readonly kind: "add" | "connect" }>
     readonly renderAttention: ComponentType<{
         readonly connection: Connection
-        readonly count: number
+        readonly agentNames: ReadonlyArray<string>
         readonly canManage: boolean
     }>
-    readonly renderLibrary: ComponentType<{ readonly items: ReadonlyArray<Connection> }>
+    readonly renderLibrary: ComponentType<{ readonly items: ReadonlyArray<Connection>; readonly isSkeleton: boolean }>
     readonly renderRow: ComponentType<{
         readonly connection: Connection
         readonly agentNames: ReadonlyArray<string>
@@ -138,7 +144,7 @@ export const BOARD_PLACEHOLDER: ConnectionsBoard = {
     agents: [],
     agentNames: {},
     liveCount: 1,
-    attention: null,
+    attentions: [],
     groups: [
         {
             id: "placeholder",
@@ -160,16 +166,19 @@ export const BoardBody = (props: BoardBodyProps) => {
     const { board } = props
     return (
         <>
-            {board.attention === null ? null : (
+            {board.attentions.map((row) => (
                 <props.renderAttention
-                    connection={board.attention.first}
-                    count={board.attention.count}
+                    key={row.connection.id}
+                    connection={row.connection}
+                    agentNames={row.agentNames}
                     canManage={board.canManage}
                 />
-            )}
+            ))}
             {board.canManage ? null : <Alert tone="informative" title={props.props.words.ownerOnly} />}
             <props.renderViewTabs selected={board.view} liveCount={board.liveCount} />
-            {board.view === "library" ? <props.renderLibrary items={board.items} /> : null}
+            {board.view === "library" ? (
+                <props.renderLibrary items={board.items} isSkeleton={props.isSkeleton} />
+            ) : null}
             {board.view === "connected" && board.liveCount === 0 ? (
                 <EmptyNotice message={props.props.words.emptyTitle} description={props.props.words.emptyHint} />
             ) : null}
@@ -196,7 +205,7 @@ export const ConnectionsBoardRegion = (props: ConnectionsBoardRegionProps) => {
     return (
         <SlotView
             slot={overview.props.board}
-            placeholder={BOARD_PLACEHOLDER}
+            placeholder={{ ...BOARD_PLACEHOLDER, view: overview.props.placeholderView }}
             labels={overview.props.slotLabels}
             forbidden="notice"
             onRetry={overview.on.retry}

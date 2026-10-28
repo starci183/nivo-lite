@@ -70,7 +70,6 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
     const manager = role === "owner" || role === "manager"
     const live = liveConnections(data.items)
     const attention = attentionConnections(data.items)
-    const first = attention[0]
     const showsLibrary = props.tab === "library" || (props.tab !== "connected" && live.length === 0)
     const groups = connectionGroups(data.items, data.agentNames, t)
     const summaryOf =
@@ -86,7 +85,12 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
         agents: data.activeAgents,
         agentNames: data.agentNames,
         liveCount: live.length,
-        attention: first === undefined ? null : { first, count: attention.length },
+        attentions: attention.map((connection) => ({
+            connection,
+            agentNames: connection.agentIds
+                .map((id) => data.agentNames[id])
+                .filter((name): name is string => name !== undefined),
+        })),
         groups,
     }
     const slot = boardSlotOf(
@@ -113,10 +117,13 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
                         emptyHint: t("connectedEmptyHint"),
                         automationsLink: t("automationsLink"),
                         automationsHref: CONNECTION_ROUTES.automations,
+                        addLabel: t("add"),
+                        addHref: `${CONNECTION_ROUTES.connections}?${URL_PARAMS.tab}=library`,
                     },
                     summary: isReady ? summaryOf : null,
                     board: slot,
                     slotLabels: slotLabelsOf(t("connectedEmpty")),
+                    placeholderView: props.tab === "library" ? "library" : "connected",
                 }}
                 on={{ retry: data.retry }}
                 renderAddButton={renderAddButton}
