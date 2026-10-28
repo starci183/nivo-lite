@@ -2,8 +2,7 @@ import {
     Badge,
     EmptyNotice,
     ListRow,
-    PageContainer,
-    PageHeader,
+    Page,
     SurfaceListCard,
     Tabs,
     Text,
@@ -81,69 +80,68 @@ export interface DecisionsBoardBaseProps {
 export const DecisionsBoardBase = (props: DecisionsBoardBaseProps) => {
     const view = props.props
     return (
-        <>
-            <PageHeader
-                measure="product"
-                breadcrumbs={{ label: view.crumbLabel, items: view.crumbs }}
-                title={view.title}
-                description={view.description}
-                tabs={{
+        <Page
+            measure="product"
+            header={{
+                breadcrumbs: { label: view.crumbLabel, items: view.crumbs },
+                title: view.title,
+                description: view.description,
+                tabs: {
                     label: view.kindLabel,
                     selectedKey: view.kindKey,
                     labelVisibility: "always",
                     items: view.kinds,
                     onSelect: props.on.kind,
-                }}
-            />
-            <PageContainer measure="product">
-                <div className={PAGE}>
-                    <Tabs
-                        variant="secondary"
-                        label={view.deptLabel}
-                        selectedKey={view.deptKey}
-                        inset="none"
-                        labelVisibility="always"
-                        items={view.depts}
-                        onSelect={props.on.dept}
-                    />
-                    <SlotView
-                        slot={view.slot}
-                        placeholder={view.placeholder}
-                        labels={view.slotLabels}
-                        onRetry={props.on.retry}
-                    >
-                        {(list, isSkeleton) => (
-                            <>
-                                <Text size="xs" tone="muted">
-                                    {list.count}
-                                </Text>
-                                <SurfaceListCard
-                                    ariaLabel={view.listAria}
-                                    isLoading={isSkeleton}
-                                    empty={
-                                        list.isFiltered ? (
-                                            <EmptyNotice
-                                                message={view.noMatchTitle}
-                                                description={view.noMatchBody}
-                                                actionLabel={view.clearFilters}
-                                                actionVariant="secondary"
-                                                onAction={props.on.clear}
-                                            />
-                                        ) : (
-                                            <EmptyNotice message={view.emptyTitle} description={view.emptyBody} />
-                                        )
-                                    }
-                                >
-                                    {list.rows.map((row) => (
-                                        <DecisionRow key={row.id} row={row} />
-                                    ))}
-                                </SurfaceListCard>
-                            </>
-                        )}
-                    </SlotView>
-                </div>
-            </PageContainer>
-        </>
+                },
+            }}
+        >
+            <div className={PAGE}>
+                <Tabs
+                    variant="secondary"
+                    label={view.deptLabel}
+                    selectedKey={view.deptKey}
+                    inset="none"
+                    labelVisibility="always"
+                    items={view.depts}
+                    onSelect={props.on.dept}
+                />
+                <SlotView
+                    slot={view.slot}
+                    placeholder={view.placeholder}
+                    labels={view.slotLabels}
+                    onRetry={props.on.retry}
+                >
+                    {(list, isSkeleton) => (
+                        <>
+                            <Text size="xs" tone="muted">
+                                {list.count}
+                            </Text>
+                            <SurfaceListCard
+                                ariaLabel={view.listAria}
+                                isLoading={isSkeleton}
+                                empty={
+                                    list.isFiltered ? (
+                                        <EmptyNotice
+                                            message={view.noMatchTitle}
+                                            description={view.noMatchBody}
+                                            actionLabel={view.clearFilters}
+                                            actionVariant="secondary"
+                                            onAction={props.on.clear}
+                                        />
+                                    ) : (
+                                        <EmptyNotice message={view.emptyTitle} description={view.emptyBody} />
+                                    )
+                                }
+                            >
+                                {list.rows.map((row) => (
+                                    <DecisionRow key={row.id} row={row} />
+                                ))}
+                            </SurfaceListCard>
+                        </>
+                    )}
+                </SlotView>
+            </div>
+        </Page>
     )
 }
 

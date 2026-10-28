@@ -1,5 +1,5 @@
 /** Vertical rhythm under the header between the identity, the two columns and the recent work. */
-export const PAGE_CLASS = "flex min-w-0 flex-col gap-6 pt-6"
+export const PAGE_CLASS = "flex min-w-0 flex-col gap-6"
 
 /** Two columns on a wide screen, one on a narrow one. */
 export const GRID_CLASS = "grid min-w-0 gap-6 lg:grid-cols-2"

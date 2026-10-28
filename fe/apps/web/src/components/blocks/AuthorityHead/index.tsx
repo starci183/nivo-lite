@@ -1,17 +1,24 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import type { ReactNode } from "react"
 import { isManager, useMember } from "@/hooks/member"
 import { CONSOLE_ROUTES } from "@/modules/routes"
 import { AuthorityHeadBase } from "./component"
 
-/** The authority heading: the words live here, the drawing in the pure half. */
-export const AuthorityHead = () => {
+/** The sections the page draws under the heading. */
+type AuthorityHeadProps = {
+    readonly children: ReactNode
+}
+
+/** The authority page frame: the words live here, the drawing in the pure half. */
+export const AuthorityHead = (props: AuthorityHeadProps) => {
     const t = useTranslations("authority")
     const g = useTranslations("governance")
     const member = useMember()
     return (
         <AuthorityHeadBase
+            shape={{ body: props.children }}
             props={{
                 crumbLabel: t("crumbLabel"),
                 crumbs: [

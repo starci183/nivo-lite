@@ -1,4 +1,3 @@
-import { PageContainer } from "@starci/grammar/common"
 import { AgentProfileAssignable } from "@/components/blocks/AgentProfileAssignable"
 import { AgentProfileHead } from "@/components/blocks/AgentProfileHead"
 import { AgentProfileIdentity } from "@/components/blocks/AgentProfileIdentity"
@@ -20,24 +19,21 @@ export interface AgentProfilePageBaseProps {
 export const AgentProfilePageBase = (props: AgentProfilePageBaseProps) => {
     const { agentId } = props.props
     return (
-        <>
-            <AgentProfileHead agentId={agentId} />
-            <PageContainer measure="product">
-                <div className={PAGE_CLASS}>
-                    <AgentProfileIdentity agentId={agentId} />
-                    <div className={GRID_CLASS}>
-                        <div className={COLUMN_CLASS}>
-                            <AgentProfileOwner agentId={agentId} />
-                            <AgentProfileRules agentId={agentId} />
-                        </div>
-                        <div className={COLUMN_CLASS}>
-                            <AgentProfileAssignable agentId={agentId} />
-                            <AgentProfileTags agentId={agentId} />
-                        </div>
+        <AgentProfileHead agentId={agentId}>
+            <div className={PAGE_CLASS}>
+                <AgentProfileIdentity agentId={agentId} />
+                <div className={GRID_CLASS}>
+                    <div className={COLUMN_CLASS}>
+                        <AgentProfileOwner agentId={agentId} />
+                        <AgentProfileRules agentId={agentId} />
                     </div>
-                    <AgentProfileRecent agentId={agentId} />
+                    <div className={COLUMN_CLASS}>
+                        <AgentProfileAssignable agentId={agentId} />
+                        <AgentProfileTags agentId={agentId} />
+                    </div>
                 </div>
-            </PageContainer>
-        </>
+                <AgentProfileRecent agentId={agentId} />
+            </div>
+        </AgentProfileHead>
     )
 }

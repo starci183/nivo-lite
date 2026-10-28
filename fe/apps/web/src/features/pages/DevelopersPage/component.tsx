@@ -1,8 +1,6 @@
-import { PageContainer } from "@starci/grammar/common"
 import { ApiKeysSection } from "@/components/blocks/ApiKeysSection"
 import { ApiQuickStart } from "@/components/blocks/ApiQuickStart"
 import { DevelopersPanel } from "@/components/blocks/DevelopersPanel"
-import { PAGE_CLASS } from "./classNames"
 
 /** Props for {@link DevelopersPageBase}. */
 export interface DevelopersPageBaseProps {
@@ -11,13 +9,8 @@ export interface DevelopersPageBaseProps {
 
 /** Draws the "Advanced" page: the head and outgoing events (or the 403), API keys and the quick guide; each connected block hides itself from staff. */
 export const DevelopersPageBase = (props: DevelopersPageBaseProps) => (
-    <>
-        <DevelopersPanel />
-        <PageContainer measure="product">
-            <div className={PAGE_CLASS}>
-                <ApiKeysSection />
-                <ApiQuickStart base={props.props.apiBase} />
-            </div>
-        </PageContainer>
-    </>
+    <DevelopersPanel>
+        <ApiKeysSection />
+        <ApiQuickStart base={props.props.apiBase} />
+    </DevelopersPanel>
 )

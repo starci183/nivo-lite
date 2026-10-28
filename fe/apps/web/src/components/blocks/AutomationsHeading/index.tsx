@@ -1,18 +1,25 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import type { ReactNode } from "react"
 import { useActiveWorkspace, useWorkspaceCards } from "@/hooks/workspaces"
 import { APP_ROUTES, CONSOLE_ROUTES } from "@/modules/routes"
 import { AutomationsHeadingBase } from "./component"
 
-/** The Automations page heading with the words of the automations catalog; the eyebrow is the active workspace name. */
-export const AutomationsHeading = () => {
+/** The body the page draws under the heading. */
+type AutomationsHeadingProps = {
+    readonly children: ReactNode
+}
+
+/** The Automations page frame with the words of the automations catalog; the meta line is the active workspace name. */
+export const AutomationsHeading = (props: AutomationsHeadingProps) => {
     const t = useTranslations("automations")
     const { activeWorkspaceId } = useActiveWorkspace()
     const { cards, status } = useWorkspaceCards()
     const workspaceName = cards.find((card) => card.id === activeWorkspaceId)?.name
     return (
         <AutomationsHeadingBase
+            shape={{ body: props.children }}
             props={{
                 crumbLabel: t("crumbLabel"),
                 crumbs: [

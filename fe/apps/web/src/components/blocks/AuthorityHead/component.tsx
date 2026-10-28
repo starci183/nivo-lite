@@ -1,9 +1,12 @@
-import { Alert, PageContainer, PageHeader, Text } from "@starci/grammar/common"
+import { Alert, Page, Text } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
+import type { ReactNode } from "react"
 import { HEAD_CLASS } from "./classNames"
 
-/** Copy and state of the authority heading. */
+/** Copy and state of the authority page frame, and the sections it frames. */
 export interface AuthorityHeadBaseProps {
+    /** The sections of the page, drawn under the motto. */
+    readonly shape: { readonly body: ReactNode }
     readonly props: {
         readonly crumbLabel: string
         readonly crumbs: ReadonlyArray<BreadcrumbItem>
@@ -17,23 +20,25 @@ export interface AuthorityHeadBaseProps {
     }
 }
 
-/** Draws the authority heading: the page header, then the motto and, for staff, the view-only note. */
+/** Draws the authority page: its header band, then in the body the motto, for staff the view-only note, and the sections. */
 export const AuthorityHeadBase = (props: AuthorityHeadBaseProps) => {
     const view = props.props
     return (
-        <>
-            <PageHeader
-                measure="product"
-                breadcrumbs={{ label: view.crumbLabel, items: view.crumbs }}
-                title={view.title}
-                description={view.description}
-            />
-            <PageContainer measure="product" className={HEAD_CLASS}>
+        <Page
+            measure="product"
+            header={{
+                breadcrumbs: { label: view.crumbLabel, items: view.crumbs },
+                title: view.title,
+                description: view.description,
+            }}
+        >
+            <div className={HEAD_CLASS}>
                 <Text weight="medium">{view.motto}</Text>
                 {view.isReadOnly ? (
                     <Alert tone="cautionary" title={view.readOnlyTitle} description={view.readOnlyBody} />
                 ) : null}
-            </PageContainer>
-        </>
+                {props.shape.body}
+            </div>
+        </Page>
     )
 }
