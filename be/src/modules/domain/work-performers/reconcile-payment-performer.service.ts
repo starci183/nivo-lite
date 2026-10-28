@@ -32,7 +32,8 @@ import { WorkPerformersLogEvent } from "./work-performers.log-events"
 const ISSUED_WINDOW = 50
 
 /** The text a payment is matched on: its reference and the body of the input it came from. */
-const contentOf = (reference: string | null, event: OptionalInboundEvent): string => `${reference ?? ""} ${event?.body ?? ""}`
+const contentOf = (reference: string | null, event: OptionalInboundEvent): string =>
+    `${reference ?? ""} ${event?.body ?? ""}`
 
 @Injectable()
 /**

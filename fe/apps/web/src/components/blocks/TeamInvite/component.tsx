@@ -1,7 +1,7 @@
 import { Form, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
 import { FormActions } from "@/components/composites/FormActions"
 import { InviteLink } from "@/components/composites/InviteLink"
-import { SlotBoundView } from "@/components/composites/SlotView"
+import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { FORM_GRID_CLASS_NAME, SENT_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
@@ -58,7 +58,12 @@ export interface TeamInviteBaseProps {
 export const TeamInviteBase = (props: TeamInviteBaseProps) => (
     <div data-guide="team.invite">
         <SurfaceCard label={props.props.title} headingLevel={2}>
-            <SlotBoundView from={props.props} onRetry={props.on.retry}>
+            <SlotView
+                slot={props.props.slot}
+                placeholder={props.props.placeholder}
+                labels={props.props.slotLabels}
+                onRetry={props.on.retry}
+            >
                 {(staffOptions, isSkeleton) => (
                     <Form label={props.props.title} onSubmit={props.on.submit} isPending={props.props.isPending}>
                         <div className={STACK_CLASS_NAME}>
@@ -126,7 +131,7 @@ export const TeamInviteBase = (props: TeamInviteBaseProps) => (
                         </div>
                     </Form>
                 )}
-            </SlotBoundView>
+            </SlotView>
         </SurfaceCard>
     </div>
 )

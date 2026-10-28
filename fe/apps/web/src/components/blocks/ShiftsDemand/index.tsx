@@ -1,15 +1,27 @@
 "use client"
 
-import {
-    type ShiftsDemandControllerInput,
-    type CreateShiftsDemandRowsInput,
-    ShiftsDemandBase,
-    type DemandForm,
-} from "./component"
+import { ShiftsDemandBase, type DemandForm } from "./component"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsSetupCommands } from "@/hooks/shiftsCommands"
+
+/** State values and commands consumed by the connected surface. */
+type ShiftsDemandControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"shifts">>
+    readonly isBusy: boolean
+    readonly setIsBusy: React.Dispatch<React.SetStateAction<boolean>>
+    readonly format: ReturnType<typeof useShiftsFormat>
+    readonly form: DemandForm
+    readonly setForm: React.Dispatch<React.SetStateAction<DemandForm>>
+    readonly bench: NonNullable<ReturnType<typeof useShiftsBenchData>>["data"]
+    readonly commands: ReturnType<typeof useShiftsSetupCommands>
+}
+
+/** Narrowed schedule data available after the access guard. */
+type CreateShiftsDemandRowsInput = ShiftsDemandControllerInput & {
+    bench: NonNullable<ShiftsDemandControllerInput["bench"]>
+}
 
 const INITIAL: DemandForm = {
     days: ["0", "1", "2", "3", "4"],

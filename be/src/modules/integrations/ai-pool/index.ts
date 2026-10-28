@@ -1,3 +1,5 @@
 export { AiPoolClient } from "./ai-pool.client"
 export { parseAiPoolConfig } from "./ai-pool.config"
+export type { AiPoolUsage } from "./ai-pool.contracts"
+export { AI_POOL, InjectAiPool } from "./ai-pool.decorators"
 export { AiPoolModule } from "./ai-pool.module"

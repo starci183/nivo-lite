@@ -256,6 +256,20 @@ const embeddings = (data: EmbeddingsResponse["data"]): EmbeddingsResponse => ({
     routing: { ...ROUTING, provider: "embeddings" },
 })
 
+/** Answers the pool refuses: another form, another size, another count. */
+const UNEXPECTED_EMBEDDINGS: ReadonlyArray<[string, Array<string>, EmbeddingsResponse["data"]]> = [
+    ["a base64 entry", ["a"], [{ object: "embedding", index: 0, embedding: "AAAA" }]],
+    [
+        "a short vector",
+        ["a", "b"],
+        [
+            { object: "embedding", index: 0, embedding: [1] },
+            { object: "embedding", index: 1, embedding: [2, 2] },
+        ],
+    ],
+    ["one vector too few", ["a", "b"], [{ object: "embedding", index: 0, embedding: [1, 1] }]],
+]
+
 describe("AiPoolClient", () => {
     describe("embed", () => {
         it("asks the embeddings endpoint only, with the size, truncated texts and vectors back in text order", async () => {
@@ -287,15 +301,22 @@ describe("AiPoolClient", () => {
             })
         })
 
-        it("answers a base64 entry as an empty vector, and asks nothing for no text", async () => {
+        it("asks nothing for no text", async () => {
             const { client, router } = await build()
-            router.embeddings.mockResolvedValue(embeddings([{ object: "embedding", index: 0, embedding: "AAAA" }]))
 
-            await expect(client.embed({ input: ["a"], dimensions: 2, timeoutMs: 5000 })).resolves.toMatchObject({
-                vectors: [[]],
-            })
             await expect(client.embed({ input: [], dimensions: 2, timeoutMs: 5000 })).resolves.toBeNull()
-            expect(router.embeddings).toHaveBeenCalledTimes(1)
+            expect(router.embeddings).not.toHaveBeenCalled()
+        })
+
+        it.each(UNEXPECTED_EMBEDDINGS)("refuses %s and logs the counts", async (_case, input, data) => {
+            const { client, router, logger } = await build()
+            router.embeddings.mockResolvedValue(embeddings(data))
+
+            await expect(client.embed({ input, dimensions: 2, timeoutMs: 5000 })).resolves.toBeNull()
+            expect(logger.warn).toHaveBeenCalledWith(AiPoolLogEvent.EmbeddingUnexpected, {
+                expected: input.length,
+                received: data.length,
+            })
         })
 
         it("answers null and logs on a router failure", async () => {

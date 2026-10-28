@@ -15,12 +15,13 @@ import {
     useBookingRange,
 } from "@/hooks/bookingDesk"
 import { AUTO_RESOURCE } from "@/components/composites/BookingPlacementDialog"
-import { BookingDeskBase, buildBookingDeskEvents } from "./component"
+import { BookingDeskBase } from "./component"
 
 import {
     buildBookingDeskDisplay,
     buildBookingCancel,
     buildBookingLegend,
+    buildBookingDeskEvents,
     bookingPlacementView,
 } from "@/hooks/bookingDeskView"
 

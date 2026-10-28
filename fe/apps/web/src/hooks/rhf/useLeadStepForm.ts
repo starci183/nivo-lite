@@ -5,17 +5,10 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { z } from "zod"
-
-/** Step fields shared by assignment, addition and changing its due date. */
-export interface LeadStepValues {
-    title: string
-    owner: string
-    nextAction: string
-    due: string | null
-}
+import type { LeadStepMode, LeadStepValues } from "@/modules/types"
 
 /** Validates the next-step form before a responsibility mutation runs. */
-export const useLeadStepForm = (mode: "reassign" | "add" | "due" | null) => {
+export const useLeadStepForm = (mode: LeadStepMode | null) => {
     const t = useTranslations("lead")
     const schema = useMemo(
         () =>
@@ -40,9 +33,6 @@ export const useLeadStepForm = (mode: "reassign" | "add" | "due" | null) => {
     const values = useWatch({ control: form.control })
     return { ...form, ...stepFormInputs(values, t) }
 }
-
-/** The supported responsibility edit modes. */
-type LeadStepMode = "add" | "due" | "reassign"
 
 /** Normalizes watched fields and supplies the labels for each edit mode. */
 const stepFormInputs = (values: Partial<LeadStepValues>, t: ReturnType<typeof useTranslations<"lead">>) => {

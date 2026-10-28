@@ -1,11 +1,14 @@
 import type { BadgeTone } from "@starci/grammar/common"
+import type { Dispatch, SetStateAction } from "react"
 import type { useTranslations, useFormatter } from "next-intl"
 import {
     placementLabelsOf,
     type useBookingRange,
     type useBookingPlacement,
+    type useBookingActions,
     type blankPlacementOf,
 } from "@/hooks/bookingDesk"
+import { shiftDate } from "@/modules/i18n"
 
 /** Inputs owned by this display/state mapping. */
 interface BookingDeskDisplayInput {
@@ -125,5 +128,69 @@ export const bookingPlacementView = (connected: PlacementViewInput, autoResource
             canForce: place.canForce,
             isPending: place.isBusy,
         },
+    }
+}
+
+/** State and injected commands needed by the booking desk interactions. */
+interface BookingDeskEventsInput {
+    readonly openAdd: () => unknown
+    readonly place: ReturnType<typeof useBookingPlacement>
+    readonly range: ReturnType<typeof useBookingRange>
+    readonly anchor: string
+    readonly board: NonNullable<ReturnType<typeof useBookingRange>["board"]>
+    readonly setShowCancelled: Dispatch<SetStateAction<boolean>>
+    readonly desk: ReturnType<typeof useBookingActions>
+    readonly setOpenId: Dispatch<SetStateAction<string | null>>
+    readonly act: (id: string, action: string) => void
+    readonly cancelId: string | null
+    readonly setCancelId: Dispatch<SetStateAction<string | null>>
+    readonly open: NonNullable<ReturnType<typeof useBookingRange>["board"]>["bookings"][number] | undefined
+    readonly openMove: (id: string) => void
+}
+
+/** Maps the agenda controls and dialogs to the injected commands. */
+export const buildBookingDeskEvents = (connected: BookingDeskEventsInput, moveAction: string) => {
+    const {
+        openAdd,
+        place,
+        range,
+        anchor,
+        board,
+        setShowCancelled,
+        desk,
+        setOpenId,
+        act,
+        cancelId,
+        setCancelId,
+        open,
+        openMove,
+    } = connected
+    return {
+        add: openAdd,
+        placementChange: place.change,
+        placementSubmit: place.submit,
+        placementClose: place.close,
+        prev: () => range.goto(shiftDate(anchor, -7)),
+        next: () => range.goto(shiftDate(anchor, 7)),
+        thisWeek: () => range.goto(board.today),
+        pickDate: range.goto,
+        toggleCancelled: setShowCancelled,
+        dismissNotice: desk.dismiss,
+        open: setOpenId,
+        act,
+        confirmCancel: () => {
+            if (cancelId === null) return
+            desk.act(cancelId, "cancel", () => {
+                setCancelId(null)
+                setOpenId(null)
+            })
+        },
+        keepBooking: () => setCancelId(null),
+        detailAction: (action: string) => {
+            if (open === undefined) return
+            if (action === moveAction) openMove(open.id)
+            else act(open.id, action)
+        },
+        closeDetail: () => setOpenId(null),
     }
 }

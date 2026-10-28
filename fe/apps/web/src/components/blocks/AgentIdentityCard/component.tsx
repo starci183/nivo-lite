@@ -1,4 +1,4 @@
-import { SlotBoundView } from "@/components/composites/SlotView"
+import { SlotView } from "@/components/composites/SlotView"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { DataSlot, ModuleIconName, SlotLabels } from "@/modules/types"
 import { Button, Input, SurfaceCard, Text } from "@starci/grammar/common"
@@ -25,9 +25,12 @@ export interface AgentIdentityCardBaseProps {
         readonly module: string
         readonly isDisabled: boolean
         readonly isPending: boolean
-        readonly slot: DataSlot<IdentityView>
-        readonly placeholder: IdentityView
-        readonly slotLabels: SlotLabels
+        /** The read, its same-shape placeholder and the words of its states, as SlotView takes them. */
+        readonly read: {
+            readonly slot: DataSlot<IdentityView>
+            readonly placeholder: IdentityView
+            readonly labels: SlotLabels
+        }
     }
     readonly on: { readonly name: (value: string) => void; readonly save: () => void; readonly retry: () => void }
 }
@@ -35,7 +38,7 @@ export interface AgentIdentityCardBaseProps {
 /** Draws the name card of an agent: its mark, the one name field and its save. */
 export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
-        <SlotBoundView from={props.props} onRetry={props.on.retry}>
+        <SlotView {...props.props.read} onRetry={props.on.retry}>
             {(view, isSkeleton) => (
                 <div className={STACK}>
                     <div className={ROW}>
@@ -74,6 +77,6 @@ export const AgentIdentityCardBase = (props: AgentIdentityCardBaseProps) => (
                     </div>
                 </div>
             )}
-        </SlotBoundView>
+        </SlotView>
     </SurfaceCard>
 )

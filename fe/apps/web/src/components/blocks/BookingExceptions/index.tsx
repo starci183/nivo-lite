@@ -4,8 +4,7 @@ import { useBookingBoard } from "@/hooks/bookingBoard"
 import { useSlotLabels } from "@/hooks/slot"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { useMutateRemoveBookingExceptionSwr, useMutateSaveBookingExceptionSwr } from "@/hooks/swr"
-import { useBookingSetupSave } from "@/hooks/bookingSetup"
+import { useBookingSettingsCommands } from "@/hooks/bookingSetup"
 import { BookingExceptionsBase } from "./component"
 import type { ExceptionFields } from "./component"
 
@@ -15,9 +14,7 @@ export const BookingExceptions = () => {
     const slotLabels = useSlotLabels()
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
-    const persist = useBookingSetupSave()
-    const saveException = useMutateSaveBookingExceptionSwr()
-    const removeException = useMutateRemoveBookingExceptionSwr()
+    const commands = useBookingSettingsCommands()
     const [fields, setFields] = useState<ExceptionFields>({
         resourceId: "all",
         date: board.today,
@@ -68,21 +65,19 @@ export const BookingExceptions = () => {
                 change: (patch) => setFields({ ...fields, ...patch }),
                 add: () =>
                     startTransition(async () => {
-                        const answer = await persist(() =>
-                            saveException.trigger({
-                                resourceId: fields.resourceId === "all" ? null : fields.resourceId,
-                                date: fields.date,
-                                closed: fields.closed,
-                                start: fields.start,
-                                end: fields.end,
-                                note: fields.note,
-                            }),
-                        )
+                        const answer = await commands.saveException({
+                            resourceId: fields.resourceId === "all" ? null : fields.resourceId,
+                            date: fields.date,
+                            closed: fields.closed,
+                            start: fields.start,
+                            end: fields.end,
+                            note: fields.note,
+                        })
                         if (answer === undefined) return
                     }),
                 remove: (id) =>
                     startTransition(async () => {
-                        const answer = await persist(() => removeException.trigger({ id }))
+                        const answer = await commands.removeException({ id })
                         if (answer === undefined) return
                     }),
             }}

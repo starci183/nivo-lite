@@ -1,12 +1,3 @@
-import type { Dispatch, SetStateAction, useTransition } from "react"
-import type { useFormatter, useTranslations } from "next-intl"
-import type { useBookingBoard } from "@/hooks/bookingBoard"
-import type { parseWeek, useBookingSetupSave } from "@/hooks/bookingSetup"
-import type {
-    useMutateSaveBookingResourceSwr,
-    useMutateSaveBookingHoursSwr,
-    useMutateRemoveBookingResourceSwr,
-} from "@/hooks/swr"
 import { Alert, Button, Form, Input, NumberField, Select, SectionHeader } from "@starci/grammar/common"
 import { BookingActiveFooter } from "@/components/composites/BookingActiveFooter"
 import { BookingAddButton } from "@/components/composites/BookingAddButton"
@@ -14,17 +5,8 @@ import { BookingCatalogList } from "@/components/composites/BookingCatalogList"
 import { BookingRemoveDialog } from "@/components/composites/BookingRemoveDialog"
 import { BookingSetupSection } from "@/components/composites/BookingSetupSection"
 import { SlotView } from "@/components/composites/SlotView"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import type { DataSlot, ResourceFields, SlotLabels } from "@/modules/types"
 import { GRID_CLASS, STACK_CLASS } from "./classNames"
-
-/** The fields of the resource form. */
-export interface ResourceFields {
-    readonly name: string
-    readonly kind: string
-    readonly capacity: number
-    readonly active: boolean
-    readonly staffId: string
-}
 
 /** Props for {@link BookingResourcesBase}. */
 export interface BookingResourcesBaseProps {
@@ -181,90 +163,6 @@ const renderResourceForm = (p: BookingResourcesBaseProps["props"], on: BookingRe
             </div>
         </Form>
     )
-}
-
-/** The form being edited: a new resource has no id and no hours yet. */
-export interface Draft {
-    readonly id: string | null
-    readonly fields: ResourceFields
-    readonly lines: ReadonlyArray<string>
-}
-
-/** Feedback from a resource save. */
-export interface ResourceNotice {
-    readonly ok: boolean
-    readonly text: string
-}
-
-/** Inputs for composing resource form callbacks and formatted state. */
-interface ResourceContext {
-    readonly board: ReturnType<typeof useBookingBoard>["board"]
-    readonly removeId: string | null
-    readonly format: ReturnType<typeof useFormatter>
-    readonly draft: Draft | null
-    readonly startTransition: ReturnType<typeof useTransition>[1]
-    readonly persist: ReturnType<typeof useBookingSetupSave>
-    readonly saveResource: ReturnType<typeof useMutateSaveBookingResourceSwr>
-    readonly setDraft: Dispatch<SetStateAction<Draft | null>>
-    readonly setNotice: Dispatch<SetStateAction<ResourceNotice | null>>
-    readonly t: ReturnType<typeof useTranslations<"workbenchBooking">>
-    readonly saveResourceHours: ReturnType<typeof useMutateSaveBookingHoursSwr>
-    readonly isPending: boolean
-    readonly notice: ResourceNotice | null
-    readonly setRemoveId: Dispatch<SetStateAction<string | null>>
-    readonly removeResource: ReturnType<typeof useMutateRemoveBookingResourceSwr>
-    readonly parseWeek: typeof parseWeek
-}
-
-/** Composes resource form callbacks from the connected inputs. */
-export const buildBookingResourcesState = (context: ResourceContext) => {
-    const {
-        board,
-        removeId,
-        format,
-        draft,
-        startTransition,
-        persist,
-        saveResource,
-        setDraft,
-        setNotice,
-        t,
-        saveResourceHours,
-        parseWeek,
-    } = context
-    const removing = board.resources.find((resource) => resource.id === removeId)
-    const weekdayName = (day: number) =>
-        format.dateTime(new Date(Date.UTC(2024, 0, day)), { weekday: "short", timeZone: "UTC" })
-    const save = () => {
-        if (draft === null) return
-        const { fields } = draft
-        startTransition(async () => {
-            const answer = await persist(() =>
-                saveResource.trigger({
-                    id: draft.id,
-                    name: fields.name,
-                    kind: fields.kind,
-                    capacity: fields.capacity,
-                    active: fields.active,
-                    staffId: fields.staffId === "none" ? null : fields.staffId,
-                }),
-            )
-            if (answer === undefined) return
-            setDraft(null)
-        })
-    }
-    const saveHours = () => {
-        if (draft?.id === undefined || draft.id === null) return
-        const week = parseWeek(draft.lines)
-        if ("badWeekday" in week)
-            return setNotice({ ok: false, text: t("hoursInvalid", { day: weekdayName(week.badWeekday) }) })
-        const resourceId = draft.id
-        startTransition(async () => {
-            const answer = await persist(() => saveResourceHours.trigger({ resourceId, rows: week.rows }))
-            if (answer === undefined) return
-        })
-    }
-    return { ...context, weekdayName, removing, save, saveHours }
 }
 
 /** Draws the block once the booking board is read; until then the same form draws, its controls resting. */

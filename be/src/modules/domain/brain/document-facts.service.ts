@@ -7,8 +7,8 @@ import { DOC_ANSWERS, KnowledgeGapsService } from "@modules/domain/knowledge-gap
 import { KnowledgeIndexingService, UsageMeterService } from "@modules/domain/knowledge"
 import { KnowledgeSourcesService, StoredNote } from "@modules/domain/knowledge-sources"
 import type { SourceRecord } from "@modules/domain/knowledge-sources"
-import { InjectLlm } from "@modules/integrations/llm"
-import type { LlmPort } from "@modules/integrations/llm"
+import { InjectAiPool } from "@modules/integrations/ai-pool"
+import type { AiPoolClient } from "@modules/integrations/ai-pool"
 import { InjectLogger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { Logger } from "@modules/platform/logging"
@@ -44,7 +44,7 @@ const hashOf = (content: string): string => createHash("sha256").update(content)
  */
 export class DocumentFactsService {
     constructor(
-        @InjectLlm() private readonly llm: LlmPort,
+        @InjectAiPool() private readonly pool: AiPoolClient,
         @InjectLogger() private readonly logger: Logger,
         private readonly facts: BrainFactsService,
         private readonly gaps: KnowledgeGapsService,
@@ -138,7 +138,14 @@ export class DocumentFactsService {
         }
         const text = windows[state.done] ?? ""
         const prompt = userPrompt({ title: source.title, updatedAt: source.updatedAt, index: state.done, total, text })
-        const answer = await this.llm.complete({ system: SYSTEM_PROMPT, prompt, timeoutMs: WINDOW_TIMEOUT_MS })
+        const answer = await this.pool.chat({
+            messages: [
+                { role: "system", content: SYSTEM_PROMPT },
+                { role: "user", content: prompt },
+            ],
+            json: false,
+            timeoutMs: WINDOW_TIMEOUT_MS,
+        })
         if (answer !== null) {
             await this.usage.record({
                 workspaceId,

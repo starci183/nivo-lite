@@ -12,9 +12,9 @@ import {
     Textarea,
 } from "@starci/grammar/common"
 import { Fragment } from "react"
+import type { ComponentProps } from "react"
 import { SetupWriteCard } from "@/components/branches/SetupWriteCard"
 import { BrandProposalView, type BrandProposalCommands } from "@/components/leaves/BrandProposalView"
-import type { BrandKitText, BrandProposalCardView } from "@/hooks/content"
 import { SlotView } from "@/components/composites/SlotView"
 import type {
     SetupWrite,
@@ -70,7 +70,7 @@ export interface AgentSetupBrand {
     readonly attachPrompt: string
     readonly isReading: boolean
     readonly readingLabel: string
-    readonly cards: ReadonlyArray<BrandProposalCardView>
+    readonly cards: ReadonlyArray<ComponentProps<typeof BrandProposalView>["props"]>
 }
 
 /** The chat as a slot, the notice for anyone who may not set an agent up, and the commands. */
@@ -88,7 +88,7 @@ export interface AgentSetupChatBaseProps {
         readonly decide: (id: string, change: SetupWriteDecision) => void
         readonly retry: () => void
         readonly attach: (files: ReadonlyArray<File>) => void
-        readonly brandField: (name: keyof BrandKitText, value: string) => void
+        readonly brandField: (name: Parameters<BrandProposalCommands["field"]>[0], value: string) => void
         readonly brandConfirm: (id: string) => void
         readonly brandToggleEdit: (id: string) => void
         readonly brandReject: (id: string) => void

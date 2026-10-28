@@ -1,16 +1,32 @@
 "use client"
 
-import {
-    type Hours,
-    type ShiftsRulesControllerInput,
-    type CreateShiftsRulesRowsInput,
-    ShiftsRulesBase,
-    type RuleField,
-} from "./component"
+import { ShiftsRulesBase, type RuleField } from "./component"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsRuleCommands } from "@/hooks/shiftsCommands"
+
+/** State values and commands consumed by the connected surface. */
+type Hours = Readonly<Record<string, { readonly open: string; readonly close: string } | null>>
+
+/** State values and commands consumed by the connected surface. */
+type ShiftsRulesControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"shifts">>
+    readonly format: ReturnType<typeof useShiftsFormat>
+    readonly commands: ReturnType<typeof useShiftsRuleCommands>
+    readonly bench: NonNullable<ReturnType<typeof useShiftsBenchData>>["data"]
+    readonly ruleEdits: Partial<Record<RuleField, number>>
+    readonly setRuleEdits: React.Dispatch<React.SetStateAction<Partial<Record<RuleField, number>>>>
+    readonly hourEdits: Hours
+    readonly setHourEdits: React.Dispatch<React.SetStateAction<Hours>>
+    readonly isBusy: boolean
+    readonly setIsBusy: React.Dispatch<React.SetStateAction<boolean>>
+}
+
+/** Narrowed schedule data available after the access guard. */
+type CreateShiftsRulesRowsInput = ShiftsRulesControllerInput & {
+    bench: NonNullable<ShiftsRulesControllerInput["bench"]>
+}
 
 const createShiftsRulesRows = (context: CreateShiftsRulesRowsInput) => {
     const { commands, bench, ruleEdits, hourEdits, setHourEdits, setIsBusy } = context

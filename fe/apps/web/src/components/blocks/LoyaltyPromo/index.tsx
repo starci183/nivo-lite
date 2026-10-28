@@ -1,6 +1,7 @@
 "use client"
 
 import { EMPTY_LOYALTY_BOARD } from "@/hooks/loyalty"
+import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { useQueryLoyaltyBoardSwr } from "@/hooks/swr"
 import { useFormatter, useTranslations } from "next-intl"
 import {
@@ -14,16 +15,17 @@ import {
 } from "@/hooks/loyaltyPromo"
 import {
     LoyaltyPromoBase,
-    type LoyaltyPromoBaseProps,
     type LoyaltyPromoPreviewLine,
     type LoyaltyPromoResult,
+    type LoyaltyPromoView,
 } from "./component"
 
 /** The connected promotion tab: build a segment with a live count, send the offer in (the back end drafts the message slowly, so the campaign is polled) and list the offers prepared so far. */
 /** The connected Promo tab: reads the loyalty board itself (SWR shares the one request with the other tabs). */
 export const LoyaltyPromo = () => {
-    const { data } = useQueryLoyaltyBoardSwr()
-    const board = data ?? EMPTY_LOYALTY_BOARD
+    const read = useQueryLoyaltyBoardSwr()
+    const board = read.data ?? EMPTY_LOYALTY_BOARD
+    const slotLabels = useSlotLabels()
     const t = useTranslations("loyalty")
     const format = useFormatter()
     const promo = useLoyaltyPromo(board)
@@ -32,24 +34,30 @@ export const LoyaltyPromo = () => {
     const { preview, created } = promo
 
     const previewLines = promotionPreviewOf(preview, promo.segmentLabel, t, format)
-    const { result, failure } = promotionResultOf(created, promo.isWriting, t, format)
+    const { result, failure: submitError } = promotionResultOf(created, promo.isWriting, t, format)
 
     const reachNobody = preview.kind === "ready" && preview.preview.total === 0
 
+    // Built from the empty board while the read is on its way, so the placeholder is the same tree.
+    const view = buildPromotionView({
+        board,
+        t,
+        values,
+        promo,
+        previewLines,
+        reachNobody,
+        result,
+        submitError,
+        format,
+        labelOf,
+    })
     return (
         <LoyaltyPromoBase
-            props={buildPromotionView({
-                board,
-                t,
-                values,
-                promo,
-                previewLines,
-                reachNobody,
-                result,
-                failure,
-                format,
-                labelOf,
-            })}
+            props={{
+                slot: mapSlot(slotOfSwr(read), () => view),
+                placeholder: view,
+                slotLabels: slotLabels(t("campaignsEmptyTitle")),
+            }}
             on={{
                 setTiers: promo.setTiers,
                 setInactive: promo.setInactive,
@@ -58,6 +66,7 @@ export const LoyaltyPromo = () => {
                 setName: promo.setName,
                 setBrief: promo.setBrief,
                 submit: () => void promo.submit(),
+                retry: () => void read.mutate(),
             }}
         />
     )
@@ -98,12 +107,12 @@ const buildPromotionCopy = ({ t }: BuildPromotionCopyContext) =>
 interface BuildPromotionViewContext {
     readonly board: typeof EMPTY_LOYALTY_BOARD
     readonly t: ReturnType<typeof useTranslations<"loyalty">>
-    readonly values: LoyaltyPromoBaseProps["props"]["values"]
+    readonly values: LoyaltyPromoView["values"]
     readonly promo: ReturnType<typeof useLoyaltyPromo>
     readonly previewLines: LoyaltyPromoPreviewLine[]
     readonly reachNobody: boolean
     readonly result: LoyaltyPromoResult | undefined
-    readonly failure: string | undefined
+    readonly submitError: string | undefined
     readonly format: ReturnType<typeof useFormatter>
     readonly labelOf: ReturnType<typeof useSegmentLabel>
 }
@@ -116,7 +125,7 @@ const buildPromotionView = ({
     previewLines,
     reachNobody,
     result,
-    failure,
+    submitError,
     format,
     labelOf,
 }: BuildPromotionViewContext) =>
@@ -139,7 +148,7 @@ const buildPromotionView = ({
         isDrafting: promo.isWriting,
         isSubmitDisabled: values.brief.trim() === "" || reachNobody,
         ...(result === undefined ? {} : { result }),
-        ...(failure === undefined ? {} : { failure }),
+        ...(submitError === undefined ? {} : { submitError }),
         rows: board.campaigns.map((campaign) => ({
             id: campaign.id,
             name: campaign.name,

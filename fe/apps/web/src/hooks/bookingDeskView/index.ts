@@ -1,5 +1,6 @@
 export {
     buildBookingDeskDisplay,
+    buildBookingDeskEvents,
     buildBookingCancel,
     buildBookingLegend,
     bookingPlacementView,

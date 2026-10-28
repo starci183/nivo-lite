@@ -13,7 +13,8 @@ export interface ResetFormBaseProps {
     readonly props: {
         readonly title: string
         readonly text: string
-        readonly failure?: { readonly title: string; readonly text: string } | undefined
+        /** The submit's own failure, already worded: a write failure, drawn as the form's alert. */
+        readonly submitError?: { readonly title: string; readonly text: string } | undefined
         readonly newPasswordLabel: string
         readonly confirmLabel: string
         readonly passwordHint: string
@@ -61,7 +62,7 @@ export const ResetFormBase = (props: ResetFormBaseProps) => {
             <AuthForm
                 label={view.title}
                 isPending={view.isPending}
-                failure={view.failure}
+                error={view.submitError}
                 submitLabel={view.submitLabel}
                 onSubmit={props.on.submit}
             >

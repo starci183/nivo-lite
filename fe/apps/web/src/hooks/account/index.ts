@@ -1,5 +1,4 @@
 export { NAME_MAX, NAME_MIN, PASSWORD_MAX, PASSWORD_MIN } from "./account.shared"
-export type { MethodView, SessionRowView } from "./account.shared"
 export { useAccountAvatar } from "./useAccountAvatar"
 export { useAccountCommands } from "./useAccountCommands"
 export { useAccountMethods } from "./useAccountMethods"

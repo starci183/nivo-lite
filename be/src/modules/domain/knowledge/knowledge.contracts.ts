@@ -1,7 +1,7 @@
 import type { PassageView } from "@modules/domain/knowledge-chunks"
 import type { SourceDetail } from "@modules/domain/knowledge-sources"
 import type { DriveFolderListing, MaybeDriveAccess } from "@modules/integrations/documents"
-import type { LlmUsage } from "@modules/integrations/llm"
+import type { AiPoolUsage } from "@modules/integrations/ai-pool"
 import type { Outcome } from "@modules/platform/primitives"
 
 /** Who the answer is for; `customer` only ever sees public passages. */
@@ -75,7 +75,7 @@ export interface UsageRecord {
     /** The model. */
     readonly model: string
     /** What the provider reported, or null when it reported nothing. */
-    readonly usage: LlmUsage | null
+    readonly usage: AiPoolUsage | null
     /** The characters sent, to estimate tokens when the provider reported none. */
     readonly promptChars?: number
     /** The characters received, to estimate tokens when the provider reported none. */

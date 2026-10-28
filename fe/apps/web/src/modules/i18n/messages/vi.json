@@ -282,7 +282,6 @@
     "ribbonAria": "Chỉ số chính",
     "regionFailed": "Không tải được mục này",
     "regionFailedText": "Phần còn lại của trang không bị ảnh hưởng.",
-    "retry": "Thử lại",
     "waitingTitle": "Chờ bạn",
     "waitingEmpty": "Không có gì đang chờ bạn",
     "waitingEmptyBody": "Khi tác nhân cần bạn quyết định, việc đó hiện ở đây.",
@@ -742,9 +741,7 @@
   "brain": {
     "crumbLabel": "Đường dẫn",
     "crumbHome": "Tổng quan",
-    "statsLabel": "Bộ não qua các con số",
     "title": "Second Brain",
-    "intro": "Những gì doanh nghiệp biết, ở một chỗ. Mỗi agent đọc qua góc nhìn riêng; bạn quyết định điều gì thay đổi.",
     "tabReview": "Cần duyệt",
     "tabFacts": "Sự thật",
     "tabLessons": "Bài học",
@@ -963,7 +960,6 @@
     "description": "Kết nối bot Telegram, nguồn tiền về ngân hàng và Zalo OA của chính bạn. Sau đó chọn, trong Cài đặt của từng agent, agent đó dùng kết nối nào.",
     "forbiddenTitle": "Chỉ chủ và quản lý mới quản lý được kết nối",
     "forbiddenBody": "Hãy nhờ chủ hoặc quản lý thêm hay sửa kết nối.",
-    "forbiddenBack": "Về Office",
     "add": "Thêm kết nối",
     "automationsLink": "Email và báo cáo tự động được bật ở trang Tự động hoá",
     "cancel": "Hủy",
@@ -1311,7 +1307,6 @@
     "catalog_airtable_blurb": "Bảng Airtable làm nguồn dữ liệu.",
     "catalog_airtable_brings": "Bảng dữ liệu",
     "catalog_airtable_keywords": "airtable",
-    "loadFailed": "Chưa tải được danh sách kết nối. Bạn thử lại nhé.",
     "toastDisconnected": "Đã ngắt kết nối.",
     "toastRemoved": "Đã xoá kết nối.",
     "toastAgentsSaved": "Đã lưu các agent.",
@@ -1440,7 +1435,6 @@
     "close": "Đóng",
     "done": "Xong",
     "reading": "Đang đọc dữ liệu",
-    "loading": "Đang tải lần nhập",
     "agentTitle": "Agent được đọc dữ liệu này",
     "linkSheetPlaceholder": "https://docs.google.com/spreadsheets/d/...",
     "linkDocPlaceholder": "https://docs.google.com/document/d/..."
@@ -1504,7 +1498,6 @@
     "every_360": "Mỗi 6 giờ",
     "every_1440": "Mỗi 24 giờ",
     "agentTitle": "Những trợ lý nào được đọc dữ liệu này",
-    "loading": "Đang tải...",
     "needName": "Đặt tên cho kết nối.",
     "needHost": "Nhập địa chỉ máy chủ.",
     "badPort": "Cổng phải từ 1 đến 65535.",
@@ -1576,7 +1569,6 @@
     "saving": "Đang lưu",
     "done": "Xong",
     "close": "Đóng",
-    "loading": "Đang tải",
     "agentTitle": "Agent được đọc hộp thư này"
   },
   "connectorOpenapi": {
@@ -1684,7 +1676,6 @@
     "signIn": "Đăng nhập",
     "cancelLogin": "Hủy đăng nhập",
     "chatsHint": "Chọn tối đa {max} cuộc trò chuyện. Chỉ những cuộc này được đọc và lưu.",
-    "chatsLoading": "Đang tải các cuộc trò chuyện gần đây.",
     "chatsEmpty": "Không thấy cuộc trò chuyện nào.",
     "chatsRetry": "Tải lại",
     "searchLabel": "Tìm cuộc trò chuyện",
@@ -1708,8 +1699,7 @@
     "errConsent": "Hãy đồng ý với phần cam kết.",
     "errPhone": "Số điện thoại không hợp lệ.",
     "errCode": "Mã gồm 4 đến 8 chữ số.",
-    "errPassword": "Hãy nhập mật khẩu hai bước.",
-    "loading": "Đang tải."
+    "errPassword": "Hãy nhập mật khẩu hai bước."
   },
   "content": {
     "tabCalendar": "Lịch",
@@ -2058,9 +2048,7 @@
     "eyebrow": "Nâng cao",
     "title": "Nâng cao",
     "description": "Nối NIVO với n8n, Make, Zapier hoặc công cụ của riêng bạn. Dành cho chủ shop và quản lý.",
-    "forbiddenTitle": "Chỉ chủ shop và quản lý mới mở được trang này",
     "forbiddenBody": "Trang này giữ các khoá mở được dữ liệu của shop. Hãy hỏi chủ shop nếu bạn cần.",
-    "forbiddenBack": "Quay lại trò chuyện",
     "backToAutomations": "Quay lại Tự động hoá",
     "eventsTitle": "Gửi sự kiện ra ngoài (n8n, Make, Zapier)",
     "eventsBody": "Khi shop có việc mới (khách mới, chốt được khách, nhận tiền), NIVO gửi một tin có chữ ký tới địa chỉ bạn chọn để công cụ của bạn làm tiếp.",
@@ -2360,7 +2348,11 @@
     "office": {
       "title": "Office",
       "what": "Phòng làm việc chung: nhắn với đội và các agent AI, duyệt việc AI đề xuất.",
-      "steps": ["Mở Office", "Gõ @tên-agent để gọi agent", "Duyệt hoặc sửa các thẻ chờ duyệt"],
+      "steps": [
+        "Mở Office",
+        "Gõ @tên-agent để gọi agent",
+        "Duyệt hoặc sửa các thẻ chờ duyệt"
+      ],
       "keywords": [
         "office",
         "van phong",
@@ -2381,8 +2373,20 @@
     "overview": {
       "title": "Tổng quan",
       "what": "Bức tranh chung: kết quả, việc đang chờ, ngoại lệ cần chú ý.",
-      "steps": ["Mở Tổng quan", "Xem các thẻ kết quả và việc chờ"],
-      "keywords": ["tong quan", "dashboard", "bao cao", "ket qua", "doanh thu", "tinh hinh", "overview", "report"]
+      "steps": [
+        "Mở Tổng quan",
+        "Xem các thẻ kết quả và việc chờ"
+      ],
+      "keywords": [
+        "tong quan",
+        "dashboard",
+        "bao cao",
+        "ket qua",
+        "doanh thu",
+        "tinh hinh",
+        "overview",
+        "report"
+      ]
     },
     "authority": {
       "title": "Giao quyền",
@@ -2409,13 +2413,28 @@
     "inbox": {
       "title": "Đầu vào",
       "what": "Mọi thứ đi vào: tin nhắn khách, đơn, giao dịch ngân hàng, từ mọi kênh.",
-      "steps": ["Mở Đầu vào", "Lọc theo kênh hoặc loại"],
-      "keywords": ["dau vao", "inbox", "tin nhan den", "tin nhan khach", "giao dich den", "don moi", "hop thu"]
+      "steps": [
+        "Mở Đầu vào",
+        "Lọc theo kênh hoặc loại"
+      ],
+      "keywords": [
+        "dau vao",
+        "inbox",
+        "tin nhan den",
+        "tin nhan khach",
+        "giao dich den",
+        "don moi",
+        "hop thu"
+      ]
     },
     "leads": {
       "title": "Khách hàng",
       "what": "Danh sách khách và cơ hội bán hàng, ai phụ trách và việc tiếp theo.",
-      "steps": ["Mở Khách hàng", "Bấm Thêm khách hàng để thêm một khách", "Mở một khách để xem lịch sử và giao việc"],
+      "steps": [
+        "Mở Khách hàng",
+        "Bấm Thêm khách hàng để thêm một khách",
+        "Mở một khách để xem lịch sử và giao việc"
+      ],
       "keywords": [
         "khach hang",
         "lead",
@@ -2432,19 +2451,44 @@
     "responsibilities": {
       "title": "Trách nhiệm",
       "what": "Ai đang chịu trách nhiệm việc gì, hạn chót và bước tiếp theo.",
-      "steps": ["Mở Trách nhiệm", "Lọc theo người phụ trách hoặc trạng thái"],
-      "keywords": ["trach nhiem", "ai lam gi", "viec cua ai", "han chot", "phu trach", "responsibility", "task"]
+      "steps": [
+        "Mở Trách nhiệm",
+        "Lọc theo người phụ trách hoặc trạng thái"
+      ],
+      "keywords": [
+        "trach nhiem",
+        "ai lam gi",
+        "viec cua ai",
+        "han chot",
+        "phu trach",
+        "responsibility",
+        "task"
+      ]
     },
     "decisions": {
       "title": "Lịch sử quyết định",
       "what": "Nhật ký mọi quyết định: AI tự làm, người duyệt, người sửa, kèm lý do.",
-      "steps": ["Mở Lịch sử quyết định", "Lọc theo bộ phận hoặc người quyết định"],
-      "keywords": ["lich su quyet dinh", "quyet dinh", "nhat ky", "ai da duyet", "decision", "audit"]
+      "steps": [
+        "Mở Lịch sử quyết định",
+        "Lọc theo bộ phận hoặc người quyết định"
+      ],
+      "keywords": [
+        "lich su quyet dinh",
+        "quyet dinh",
+        "nhat ky",
+        "ai da duyet",
+        "decision",
+        "audit"
+      ]
     },
     "automations": {
       "title": "Tự động hoá",
       "what": "Quy trình tự chạy theo lịch hoặc sự kiện: nhắc nợ, báo cáo, chăm sóc khách.",
-      "steps": ["Mở Tự động hoá", "Chọn một mẫu có sẵn hoặc tạo mới", "Bật quy trình"],
+      "steps": [
+        "Mở Tự động hoá",
+        "Chọn một mẫu có sẵn hoặc tạo mới",
+        "Bật quy trình"
+      ],
       "keywords": [
         "tu dong hoa",
         "tu dong",
@@ -2460,7 +2504,12 @@
     "knowledge": {
       "title": "Tri thức",
       "what": "Dạy AI về doanh nghiệp: bảng giá, chính sách, câu hỏi thường gặp, tài liệu, link.",
-      "steps": ["Mở Tri thức", "Bấm Thêm nguồn", "Dán nội dung, tải tệp hoặc dán link", "Lưu để AI dùng khi trả lời"],
+      "steps": [
+        "Mở Tri thức",
+        "Bấm Thêm nguồn",
+        "Dán nội dung, tải tệp hoặc dán link",
+        "Lưu để AI dùng khi trả lời"
+      ],
       "keywords": [
         "tri thuc",
         "kien thuc",
@@ -2500,7 +2549,11 @@
     "modules": {
       "title": "Agent",
       "what": "Cài và cấu hình các agent: Chatbot, Bán hàng, Kế toán, Đặt lịch, Kho, Tuyển dụng…",
-      "steps": ["Mở Agent", "Chọn agent cần dùng và bấm Cài", "Làm theo các bước thiết lập"],
+      "steps": [
+        "Mở Agent",
+        "Chọn agent cần dùng và bấm Cài",
+        "Làm theo các bước thiết lập"
+      ],
       "keywords": [
         "module",
         "modules",
@@ -2519,7 +2572,12 @@
     "team": {
       "title": "Đội ngũ",
       "what": "Mời người vào workspace và chọn vai trò: Chủ sở hữu, Quản lý, Nhân viên.",
-      "steps": ["Mở Đội ngũ", "Bấm Mời thành viên", "Nhập email và chọn vai trò", "Gửi lời mời hoặc sao chép link mời"],
+      "steps": [
+        "Mở Đội ngũ",
+        "Bấm Mời thành viên",
+        "Nhập email và chọn vai trò",
+        "Gửi lời mời hoặc sao chép link mời"
+      ],
       "keywords": [
         "doi ngu",
         "moi nhan vien",
@@ -2537,8 +2595,17 @@
     "connections": {
       "title": "Kết nối",
       "what": "Nối NIVO với ngân hàng, Telegram, Zalo OA, email, Google Sheets, n8n.",
-      "steps": ["Mở Kết nối", "Chọn dịch vụ và bấm Thêm kết nối", "Làm theo hướng dẫn từng bước"],
-      "keywords": ["ket noi", "tich hop", "connection", "integration"]
+      "steps": [
+        "Mở Kết nối",
+        "Chọn dịch vụ và bấm Thêm kết nối",
+        "Làm theo hướng dẫn từng bước"
+      ],
+      "keywords": [
+        "ket noi",
+        "tich hop",
+        "connection",
+        "integration"
+      ]
     },
     "connections-sepay": {
       "title": "Kết nối SePay (tiền về)",
@@ -2594,7 +2661,12 @@
         "Dán Callback URL và Webhook URL sang Zalo, bật sự kiện tin nhắn",
         "Bấm Kết nối Zalo OA để chủ OA đồng ý"
       ],
-      "keywords": ["zalo", "zalo oa", "official account", "oa"]
+      "keywords": [
+        "zalo",
+        "zalo oa",
+        "official account",
+        "oa"
+      ]
     },
     "connections-smtp": {
       "title": "Email gửi đi",
@@ -2604,13 +2676,29 @@
         "Nhập máy chủ SMTP hoặc chọn nhà cung cấp",
         "Gửi thử một email"
       ],
-      "keywords": ["email", "smtp", "gui email", "gmail", "thu dien tu"]
+      "keywords": [
+        "email",
+        "smtp",
+        "gui email",
+        "gmail",
+        "thu dien tu"
+      ]
     },
     "connections-google": {
       "title": "Google Sheets",
       "what": "NIVO ghi đơn hàng vào bảng tính Google của bạn.",
-      "steps": ["Mở Kết nối › Google (Sheets) › Thêm kết nối", "Đăng nhập Google và cho phép", "Chọn bảng tính"],
-      "keywords": ["google sheet", "google sheets", "bang tinh", "excel", "spreadsheet"]
+      "steps": [
+        "Mở Kết nối › Google (Sheets) › Thêm kết nối",
+        "Đăng nhập Google và cho phép",
+        "Chọn bảng tính"
+      ],
+      "keywords": [
+        "google sheet",
+        "google sheets",
+        "bang tinh",
+        "excel",
+        "spreadsheet"
+      ]
     },
     "connections-webhook": {
       "title": "n8n / Webhook",
@@ -2620,13 +2708,29 @@
         "Dán URL webhook của n8n",
         "Chọn sự kiện cần gửi và gửi thử"
       ],
-      "keywords": ["n8n", "webhook", "zapier", "make.com", "make"]
+      "keywords": [
+        "n8n",
+        "webhook",
+        "zapier",
+        "make.com",
+        "make"
+      ]
     },
     "developers": {
       "title": "Nhà phát triển (API)",
       "what": "Tạo khóa API để phần mềm khác đọc và ghi dữ liệu NIVO.",
-      "steps": ["Mở Nhà phát triển", "Đặt tên khóa và bấm Tạo", "Sao chép khóa ngay, NIVO chỉ hiện một lần"],
-      "keywords": ["api", "khoa api", "api key", "developer", "lap trinh"]
+      "steps": [
+        "Mở Nhà phát triển",
+        "Đặt tên khóa và bấm Tạo",
+        "Sao chép khóa ngay, NIVO chỉ hiện một lần"
+      ],
+      "keywords": [
+        "api",
+        "khoa api",
+        "api key",
+        "developer",
+        "lap trinh"
+      ]
     },
     "billing": {
       "title": "Credit và gói",
@@ -2656,7 +2760,10 @@
     "account": {
       "title": "Tài khoản của bạn",
       "what": "Đổi tên hiển thị, email, mật khẩu và đăng xuất các thiết bị khác.",
-      "steps": ["Mở menu ảnh đại diện › Tài khoản", "Sửa thông tin và bấm Lưu"],
+      "steps": [
+        "Mở menu ảnh đại diện › Tài khoản",
+        "Sửa thông tin và bấm Lưu"
+      ],
       "keywords": [
         "tai khoan cua toi",
         "thong tin tai khoan",
@@ -2683,7 +2790,6 @@
     "feedDesc": "Mới nhất trước. Sự kiện nhận lại (cùng mã sự kiện) được đếm là trùng lặp, không xử lý hai lần.",
     "feedRefresh": "Làm mới",
     "feedEmptyTitle": "Chưa nhận đầu vào nào",
-    "feedEmptyBody": "Dùng form phía trên để gửi đầu vào đầu tiên, hoặc bắt đầu bằng một ví dụ nhanh.",
     "duplicates": "Đã chặn trùng lặp: {n}",
     "amountLine": "Số tiền {amount}",
     "refLine": "Mã {ref}",
@@ -2694,7 +2800,6 @@
     "minutesAgo": "{n} phút trước",
     "hoursAgo": "{n} giờ trước",
     "daysAgo": "{n} ngày trước",
-    "loadFailTitle": "Chưa tải được đầu vào",
     "loadFailBody": "Danh sách đầu vào chưa sẵn sàng. Hãy thử lại sau ít phút.",
     "feedAria": "Đầu vào đã nhận",
     "unnamed": "Người gửi chưa rõ"
@@ -2742,7 +2847,6 @@
     "crumbLabel": "Đường dẫn",
     "crumbBrain": "Second Brain",
     "title": "Tài liệu",
-    "description": "Những gì bạn dạy NIVO về doanh nghiệp của mình. Mọi agent dùng chung. Thêm điều bạn thấy quan trọng; không có mục nào bắt buộc.",
     "nivoLink": "Tri thức NIVO nền",
     "readOnlyNote": "Bạn xem được tài liệu này. Chủ và quản lý mới thêm hoặc sửa được.",
     "loadFailTitle": "Chưa tải được tài liệu",
@@ -2783,7 +2887,6 @@
     "errBadType": "Chỉ thêm được tệp .txt, .md, .csv, .pdf, .docx, .xlsx, .pptx và .zip.",
     "errTooBig": "Tệp này lớn hơn 10 MB.",
     "errBadLink": "Đây không phải liên kết hợp lệ.",
-    "driveAlertTitle": "Cho phép NIVO đọc Google Drive của bạn để nhập tài liệu riêng tư và cả thư mục",
     "driveAlertBody": "NIVO chỉ đọc, không sửa hay xoá gì trong Drive của bạn, và bạn có thể ngắt kết nối bất cứ lúc nào.",
     "driveLostBody": "Quyền Drive đã bị thu hồi trong tài khoản Google của bạn. Hãy cấp lại để đọc tệp và thư mục riêng tư.",
     "driveGrant": "Cấp quyền Google Drive",
@@ -2826,7 +2929,6 @@
     "listTitle": "Các nguồn tài liệu",
     "listCount": "{count} nguồn",
     "emptyTitle": "Chưa có tài liệu nào",
-    "emptyBody": "Thêm một ghi chú, danh sách hỏi–đáp hoặc một tệp. NIVO chia nhỏ và tìm đúng đoạn khi agent cần.",
     "filterModule": "Hiển thị",
     "filterAll": "Tất cả nguồn",
     "kind_text": "Văn bản",
@@ -2841,7 +2943,6 @@
     "status_ready": "Sẵn sàng",
     "status_failed": "Lỗi",
     "status_blocked_credits": "Hết credit",
-    "chunks": "{count} đoạn",
     "vis_public": "Công khai",
     "vis_internal": "Nội bộ",
     "visPublicLong": "Công khai: chatbot được dùng để trả lời khách",
@@ -3610,7 +3711,6 @@
     "needMore": "Chưa đủ điểm",
     "redeemHint": "Muốn đổi quà, hãy nhắn cho cửa hàng trong cuộc trò chuyện hoặc báo ở quầy.",
     "noRewards": "Cửa hàng chưa đăng quà nào.",
-    "busy": "Vui lòng chờ...",
     "unavailable": "Trang này không còn hoạt động.",
     "pointsUnit": "điểm",
     "errBadPhone": "Số điện thoại chưa đúng. Hãy nhập số bạn đã dùng khi mua hàng.",
@@ -3689,7 +3789,6 @@
     "devNote": "Thử nghiệm sớm: khi ứng dụng Meta của NIVO còn ở chế độ phát triển, chỉ người có vai trò trên ứng dụng đó mới kết nối được Page. Mọi người sẽ dùng được khi Meta duyệt ứng dụng.",
     "connect": "Kết nối Facebook",
     "reconnect": "Đăng nhập lại",
-    "working": "Đang mở Facebook...",
     "authDenied": "Facebook chưa cấp quyền. Hãy thử lại và cho phép đủ các quyền trên màn hình Facebook.",
     "authFailed": "Facebook không chấp nhận lần đăng nhập này. Vui lòng thử lại.",
     "authExpired": "Lần đăng nhập đó quá lâu. Bấm Kết nối Facebook để thử lại.",
@@ -3931,7 +4030,6 @@
     "syncing": "Đang đồng bộ…",
     "syncNone": "Chưa đồng bộ lần nào",
     "syncError": "Lỗi đồng bộ: {reason}",
-    "syncReasonWorkspaceUnavailable": "Chưa kết nối máy chủ agent",
     "syncReasonUnknown": "chưa đồng bộ được, hãy thử lại sau",
     "syncDrift": "Đang lệch: Supabase v{active}, OpenClaw v{synced}",
     "syncNever": "chưa có",
@@ -3958,7 +4056,6 @@
     "viewDetails": "Xem chi tiết",
     "detailsPoints": "Agent làm được gì",
     "detailsClose": "Đóng",
-    "roleOf": "{role} · {status}",
     "railTitle": "Agent của bạn",
     "railAdd": "Thêm agent",
     "privateChat": "Chat riêng",
@@ -3985,7 +4082,6 @@
   "office": {
     "crumbLabel": "Đường dẫn",
     "crumbHome": "Tổng quan",
-    "loadFailed": "Chưa tải được Office. Tin nhắn vẫn an toàn; hãy thử lại.",
     "title": "Office",
     "messengerLabel": "Trò chuyện Office",
     "listLabel": "Cuộc trò chuyện",
@@ -4018,7 +4114,6 @@
     "statusSent": "Đã gửi",
     "statusDelivered": "Đã nhận",
     "statusSeen": "Đã xem",
-    "readersOverflow": "{n} người đã xem khác",
     "agentPreviewPaused": "Tạm dừng",
     "customerPreviewNone": "Chưa có bước tiếp theo",
     "back": "Quay lại danh sách",
@@ -4032,15 +4127,10 @@
     "mutedChat": "Đã tắt thông báo",
     "infoClose": "Ẩn thông tin nhóm",
     "infoTitle": "Thông tin nhóm",
-    "conversationLabel": "Cuộc trò chuyện Office",
     "emptyMessage": "Chưa có tin nhắn",
-    "emptyMessageHint": "Chào cả nhóm hoặc gõ @ để gọi một agent.",
     "typing": "{name} đang soạn…",
-    "sending": "Đang gửi…",
     "nivoCore": "NIVO Core",
     "nivoRole": "Điều hành công ty cùng bạn",
-    "promptNivoAuthority": "@nivo Giao quyền: Sales tự gửi follow-up, đơn trên 20 triệu thì hỏi tôi",
-    "promptNivoExceptions": "@nivo Hôm nay có ngoại lệ nào?",
     "exceptionTitle": "Cần bạn quyết định",
     "exceptionsTitle": "Ngoại lệ",
     "exceptionsNone": "Hiện không có ngoại lệ nào.",
@@ -4058,29 +4148,21 @@
     "exceptionMissingHint": "Điền các thông tin còn thiếu để tiếp tục.",
     "exceptionDecided": "{status} bởi {who} · {time}",
     "exceptionAssigned": "Đã giao cho {name} · {time}",
-    "exceptionResult": "Kết quả",
     "exceptionOpenLead": "Mở khách hàng",
     "exceptionJump": "Xem trong trò chuyện",
     "reconcileWaiting": "Chờ xác minh thanh toán",
-    "reconcileCredit": "Khoản tiền vào",
     "reconcileCreditLine": "{amount} · từ {payer} · nội dung {ref}",
     "reconcileUnknown": "chưa rõ",
     "reconcileWarning": "Cùng số tiền không phải là bằng chứng. Chọn hóa đơn và ghi rõ căn cứ xác nhận.",
     "basisLabel": "Căn cứ xác nhận",
     "basisPlaceholder": "VD: Khách gửi ảnh chuyển khoản · Đối chiếu sao kê: tên người chuyển Minh",
     "basisHint": "Bắt buộc. Ghi rõ bạn đã kiểm tra gì (ít nhất {n} ký tự). Căn cứ được lưu cùng quyết định.",
-    "basisCount": "{n}/{min} ký tự",
-    "basisNeeded": "Ghi căn cứ xác nhận trước khi đồng ý.",
     "basisRequiredError": "Chỉ được ghi nhận đã thanh toán khi có căn cứ xác nhận (ít nhất {n} ký tự).",
     "decidedBasis": "Căn cứ: {basis}",
     "heldLine": "Đang giữ chờ: {note} · {who} · {time}",
     "today": "Hôm nay",
     "yesterday": "Hôm qua",
-    "aiBadge": "AI",
-    "copyText": "Sao chép",
-    "copied": "Đã sao chép",
     "openLead": "Mở khách hàng",
-    "reply": "Trả lời",
     "leadFallback": "Khách hàng",
     "noticeLead": "{name} · Mở khách hàng",
     "unknownLead": "Khách hàng không rõ",
@@ -4094,14 +4176,6 @@
     "approvalDecided": "{status} bởi {who} · {time}",
     "approvalDecidedNoTime": "{status} bởi {who}",
     "teammate": "một đồng đội",
-    "approveSend": "Duyệt và gửi",
-    "approveEdited": "Duyệt bản đã sửa",
-    "edit": "Sửa",
-    "cancelEdit": "Hủy sửa",
-    "reject": "Từ chối",
-    "draftLabel": "Nội dung sẽ gửi",
-    "showMore": "Xem toàn bộ tin nhắn",
-    "showLess": "Thu gọn",
     "pendingTitle": "Cần bạn duyệt",
     "pendingNone": "Không có việc nào đang chờ bạn.",
     "pendingJump": "Xem trong trò chuyện",
@@ -4123,19 +4197,6 @@
     "tasksSummary": "{open} việc đang mở · tổng {total}",
     "tasksOpen": "Xem việc của nhóm",
     "tasksBack": "Quay lại trò chuyện",
-    "mentionLabel": "Gọi một agent",
-    "mentionButton": "Nhắc tên",
-    "sendFailed": "Chưa gửi được tin nhắn",
-    "quickLabel": "Câu hỏi nhanh",
-    "quickPrevious": "Câu hỏi trước",
-    "quickNext": "Câu hỏi tiếp",
-    "promptAttention": "@sales Hôm nay khách nào cần xử lý?",
-    "promptSummary": "@sales Tóm tắt Customer A",
-    "promptInvoices": "@accounting Hóa đơn nào đang chờ?",
-    "promptChatbot": "@{handle} Bạn hỗ trợ khách hàng những gì?",
-    "composerLabel": "Tin nhắn",
-    "composerPlaceholder": "Nhắn cho cả nhóm…",
-    "composerHint": "Gõ @ để gọi agent · Enter để gửi · Shift+Enter để xuống dòng",
     "staffTag": "Nhân viên",
     "roleManager": "Quản lý",
     "waitingManager": "Chờ quản lý duyệt",
@@ -4144,7 +4205,6 @@
     "seenMinutes": "Hoạt động {n} phút trước",
     "seenAt": "Hoạt động lần cuối {time}",
     "noAccountYet": "Chưa có tài khoản",
-    "send": "Gửi",
     "statusOpen": "Đang làm",
     "statusWaiting": "Chờ duyệt",
     "statusDone": "Hoàn tất",
@@ -4164,24 +4224,14 @@
     "due": "Hạn {date}",
     "noDue": "Chưa có hạn",
     "openArrow": "Mở →",
-    "cmdCardLabel": "Lệnh cho {agent}",
     "cmdAsk": "Gửi lệnh này cho @{handle}?",
     "cmdAskReading": "NIVO đang đọc tin của bạn thành lệnh cho @{handle}…",
-    "cmdPending": "Chờ bạn xác nhận",
     "cmdSentBadge": "Đã gửi lệnh",
     "cmdCancelledBadge": "Đã hủy",
-    "cmdSend": "Gửi lệnh",
-    "cmdCancel": "Hủy",
-    "cmdOpenWork": "Mở việc",
-    "cmdRowAgent": "Agent",
-    "cmdRowCommand": "Lệnh",
     "cmdGateNote": "{agent} vẫn áp quy tắc duyệt của mình trước khi làm.",
     "cmdSentNote": "Đã gửi cho {agent}. Từ đây {agent} làm theo quy tắc của mình.",
     "cmdAlready": "Việc này đã có sẵn nên không tạo thêm bản thứ hai.",
     "cmdCancelledNote": "Bạn đã hủy lệnh này, chưa gửi gì cả.",
-    "cmdFailed": "Chưa gửi được lệnh",
-    "retry": "Thử lại",
-    "loadEarlier": "Xem tin nhắn cũ hơn",
     "approvalSaved": "Đã lưu quyết định",
     "rejectionSaved": "Đã từ chối",
     "roomOnDuty": "{n} agent đang trực",
@@ -4191,8 +4241,6 @@
     "pinsTitle": "Tài liệu đã ghim",
     "channelConnected": "Đã kết nối",
     "channelAttention": "Cần kiểm tra",
-    "cardApprove": "Duyệt",
-    "cardDecline": "Từ chối",
     "cardState_pending": "Cần bạn duyệt",
     "cardState_approved": "Đã duyệt",
     "cardState_declined": "Đã từ chối",
@@ -4209,7 +4257,6 @@
     "cardType_handoff_note": "Ghi chú bàn giao",
     "cardType_exception": "Ngoại lệ",
     "cardType_action_done": "Đã thực hiện",
-    "cardSources": "Nguồn",
     "sourceLayer_1": "Dữ liệu trực tiếp",
     "sourceLayer_2": "Second Brain",
     "sourceLayer_3": "Agent tự học",
@@ -4218,7 +4265,6 @@
   },
   "onboarding": {
     "created": "Đã tạo workspace.",
-    "loadFailed": "Không tải được danh sách workspace",
     "pageTitle": "Thiết lập workspace của bạn",
     "newTitle": "Tạo workspace mới",
     "cancel": "Hủy",
@@ -4494,14 +4540,10 @@
     "sortNewest": "Sắp xếp: Mới nhất",
     "byOwner": "Trách nhiệm theo người phụ trách",
     "emptyAll": "Chưa có trách nhiệm nào",
-    "emptyAllDesc": "Khách hàng mới sẽ có người phụ trách và bước tiếp theo tại đây.",
     "emptyOpen": "Không có việc đang mở",
     "emptyWaiting": "Không có việc nào chờ duyệt",
-    "emptyWaitingDesc": "Bản nháp từ agent sẽ hiện ở đây cho đến khi bạn quyết định.",
     "emptyDone": "Chưa có việc hoàn tất",
-    "emptyDoneDesc": "Việc đã đóng được lưu tại đây cùng kết quả.",
     "emptyFiltered": "Không có việc nào khớp bộ lọc",
-    "emptyFilteredDesc": "Xóa bộ lọc để xem toàn bộ trách nhiệm.",
     "groupAria": "Trách nhiệm",
     "groupOwnedBy": "Trách nhiệm do {name} phụ trách",
     "groupCards": "Trách nhiệm của {name}",
@@ -5223,7 +5265,6 @@
     "tabQuestions": "Câu hỏi cần trả lời",
     "tabLedger": "Sổ",
     "loadFailedTitle": "Chưa tải được Kế toán",
-    "loadFailedBody": "Dữ liệu có thể chưa sẵn sàng. Hãy thử lại sau ít phút.",
     "cancel": "Hủy",
     "close": "Đóng",
     "sourceLabel": "Nguồn",
@@ -5758,9 +5799,7 @@
     "hrTabOnboarding": "Nhận việc",
     "hrTabSettings": "Thiết lập",
     "hrFailedTitle": "Chưa tải được Tuyển dụng",
-    "hrFailedBody": "Dữ liệu có thể chưa sẵn sàng. Thử lại sau ít phút.",
     "hrForbiddenTitle": "Chỉ chủ hoặc quản lý mới xem được Tuyển dụng",
-    "hrForbiddenBody": "Hồ sơ ứng viên là thông tin cá nhân nên chỉ người quản lý được xem. Hãy nhờ chủ doanh nghiệp cấp quyền.",
     "ctWaiting": "Bài nháp chờ duyệt",
     "ctWaitingMeta": "Bài cần bạn duyệt",
     "ctPublished": "Đã đăng (30 ngày)",
@@ -6250,7 +6289,6 @@
     "contractEdit": "Sửa",
     "contractSaved": "Đã lưu hợp đồng.",
     "contractsEmptyTitle": "Chưa có hợp đồng nào",
-    "contractsEmptyBody": "Thêm hợp đồng định kỳ để được nhắc trước khi hết hạn.",
     "contractLead": "Khách đã có trong hệ thống",
     "contractLeadNone": "Không liên kết (nhập tên)",
     "contractCustomer": "Tên khách",
@@ -6634,11 +6672,9 @@
     "applyCvSkipped": "Chưa đính kèm được CV của bạn; doanh nghiệp có thể sẽ hỏi lại.",
     "applyFailed": "Có lỗi khi nộp hồ sơ, vui lòng thử lại.",
     "applyMissing": "Không tìm thấy tin tuyển dụng này",
-    "applyMissingBody": "Đường dẫn có thể sai hoặc tin đã bị gỡ.",
     "applyFoot": "Trang tuyển dụng của {company}, vận hành bởi NIVO.",
     "replyFoot": "Vận hành bởi NIVO.",
     "replyInvalid": "Đường dẫn này không còn hiệu lực",
-    "replyInvalidBody": "Vui lòng liên hệ doanh nghiệp để được hỗ trợ.",
     "replyInterviewTitle": "Chọn giờ phỏng vấn",
     "replyInterviewHeading": "Chào {name}, mời bạn phỏng vấn vị trí {job}",
     "replyInterviewDetail": "{where}. Khoảng {minutes} phút{interviewer, select, none {} other {, người phỏng vấn: {interviewer}}}.",
@@ -6834,7 +6870,6 @@
     "approvedBy": "duyệt bởi {name}",
     "duration": "{ms} ms",
     "failedTitle": "Không đọc được cổng MCP",
-    "failedBody": "Thử lại sau giây lát.",
     "retry": "Thử lại",
     "credentialSet": "đã có thông tin xác thực",
     "credentialNeeded": "cần thông tin xác thực",

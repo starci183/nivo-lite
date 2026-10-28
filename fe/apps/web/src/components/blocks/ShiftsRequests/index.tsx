@@ -1,23 +1,31 @@
 "use client"
 
-import {
-    type ShiftsRequestsControllerInput,
-    type CreateShiftsRequestsRowsInput,
-    ShiftsRequestsBase,
-    type RequestRowView,
-    type RequestSectionView,
-} from "./component"
+import { ShiftsRequestsBase, type RequestRowView, type RequestSectionView } from "./component"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsRequestCommands } from "@/hooks/shiftsCommands"
 import type { ShiftsWorkItemView } from "@/modules/types"
 
+/** State values and commands consumed by the connected surface. */
+type ShiftsRequestsControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"shifts">>
+    readonly bench: NonNullable<ReturnType<typeof useShiftsBenchData>>["data"]
+    readonly format: ReturnType<typeof useShiftsFormat>
+    readonly commands: ReturnType<typeof useShiftsRequestCommands>
+    readonly busy: boolean
+    readonly setBusy: React.Dispatch<React.SetStateAction<boolean>>
+}
+
+/** Narrowed schedule data available after the access guard. */
+type CreateShiftsRequestsRowsInput = ShiftsRequestsControllerInput & {
+    bench: NonNullable<ShiftsRequestsControllerInput["bench"]>
+}
+
 const RECENT_LIMIT = 8
 
 const createShiftsRequestsRows = (context: CreateShiftsRequestsRowsInput) => {
     const { t, bench, format } = context
-
     const { staff } = bench.setup
     const { leaves, swaps, availability } = bench.requests
     const name = (id: string | null): string => staff.find((person) => person.id === id)?.name ?? "-"
@@ -55,7 +63,6 @@ const createShiftsRequestsRows = (context: CreateShiftsRequestsRowsInput) => {
 
 const createShiftsRequestsSections = (context: ReturnType<typeof createShiftsRequestsRows>) => {
     const { t, format, leaves, swaps, availability, name, itemRow, leaveTitle, swapTitle } = context
-
     const sections: Array<RequestSectionView> = [
         {
             id: "leave",
@@ -110,7 +117,6 @@ const createShiftsRequestsSections = (context: ReturnType<typeof createShiftsReq
 
 const createShiftsRequestsActions = (context: ReturnType<typeof createShiftsRequestsSections>) => {
     const { t, commands, setBusy, leaves, swaps, name, span, statusOf, sections } = context
-
     const recent = [
         ...leaves
             .filter((leave) => leave.status !== "pending")
@@ -160,7 +166,6 @@ const renderShiftsRequests = (
     context: ReturnType<typeof createShiftsRequestsActions>,
 ): React.ComponentProps<typeof ShiftsRequestsBase> => {
     const { t, busy, openSections, decide, recent } = context
-
     return {
         props: {
             emptyTitle: t("reqNoneTitle"),
@@ -188,13 +193,8 @@ export const ShiftsRequests = () => {
     const [busy, setBusy] = useState(false)
     const state: ShiftsRequestsControllerInput = { t, bench, format, commands, busy, setBusy }
     if (bench === undefined || bench.role === "staff") return null
-    return (
-        <ShiftsRequestsBase
-            {...renderShiftsRequests(
-                createShiftsRequestsActions(
-                    createShiftsRequestsSections(createShiftsRequestsRows({ ...state, bench })),
-                ),
-            )}
-        />
+    const view = createShiftsRequestsActions(
+        createShiftsRequestsSections(createShiftsRequestsRows({ ...state, bench })),
     )
+    return <ShiftsRequestsBase {...renderShiftsRequests(view)} />
 }

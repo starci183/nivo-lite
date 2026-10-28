@@ -1,3 +1,5 @@
+import { SlotView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import {
     Badge,
     Button,
@@ -27,35 +29,47 @@ export interface LoyaltyPendingRow {
     readonly isRejecting: boolean
 }
 
-/** Props for {@link LoyaltyPendingBase}. */
+/** What the pending decisions list draws once the board read is in. */
+export interface LoyaltyPendingView {
+    readonly label: string
+    readonly emptyTitle: string
+    readonly emptyBody: string
+    readonly draftLabel: string
+    readonly draftHint: string
+    readonly waitingManager: string
+    readonly approve: string
+    readonly reject: string
+    readonly edit: string
+    readonly editDone: string
+    readonly rows: ReadonlyArray<LoyaltyPendingRow>
+    readonly isPending: boolean
+}
+
+/** Props for {@link LoyaltyPendingBase}: the board read as a slot, its same-shape placeholder and the words of its status. */
 export interface LoyaltyPendingBaseProps {
     readonly props: {
-        readonly label: string
-        readonly emptyTitle: string
-        readonly emptyBody: string
-        readonly draftLabel: string
-        readonly draftHint: string
-        readonly waitingManager: string
-        readonly approve: string
-        readonly reject: string
-        readonly edit: string
-        readonly editDone: string
-        readonly rows: ReadonlyArray<LoyaltyPendingRow>
-        readonly isPending: boolean
+        readonly slot: DataSlot<LoyaltyPendingView>
+        readonly placeholder: LoyaltyPendingView
+        readonly slotLabels: SlotLabels
     }
     readonly on: {
         readonly approve: (id: string) => void
         readonly reject: (id: string) => void
         readonly toggleEdit: (id: string) => void
         readonly setDraft: (id: string, value: string) => void
+        readonly retry: () => void
     }
 }
 
 /** Draws the loyalty decisions waiting for a person: approve or reject each, and edit the text of an offer before approving it. */
-export const LoyaltyPendingBase = (props: LoyaltyPendingBaseProps) => {
+const LoyaltyPendingBody = (props: LoyaltyPendingBodyProps) => {
     const { label, emptyTitle, emptyBody, isPending } = props.props
     return (
-        <SurfaceListCard ariaLabel={label} empty={<EmptyNotice message={emptyTitle} description={emptyBody} />}>
+        <SurfaceListCard
+            ariaLabel={label}
+            isLoading={props.isSkeleton}
+            empty={<EmptyNotice message={emptyTitle} description={emptyBody} />}
+        >
             {props.props.rows.map((row) => (
                 <ListRow
                     key={row.id}
@@ -114,8 +128,8 @@ export const LoyaltyPendingBase = (props: LoyaltyPendingBaseProps) => {
 /** Inputs needed to build the RowMain section. */
 interface RenderPendingDraftContext {
     readonly row: LoyaltyPendingRow
-    readonly props: LoyaltyPendingBaseProps
-    readonly isPending: LoyaltyPendingBaseProps["props"]["isPending"]
+    readonly props: LoyaltyPendingBodyProps
+    readonly isPending: LoyaltyPendingView["isPending"]
 }
 /** Builds the RowMain section from the current view. */
 const renderPendingDraft = ({ row, props, isPending }: RenderPendingDraftContext) => (
@@ -161,4 +175,23 @@ const renderPendingDraft = ({ row, props, isPending }: RenderPendingDraftContext
             </Text>
         )}
     </div>
+)
+
+/** The drawn tab: its view, its commands and whether it is the placeholder drawn while the board read is on its way. */
+interface LoyaltyPendingBodyProps {
+    readonly props: LoyaltyPendingView
+    readonly on: LoyaltyPendingBaseProps["on"]
+    readonly isSkeleton: boolean
+}
+
+/** Draws the tab through SlotView: the same tree as a placeholder while the board read is on its way, the notice when it failed. */
+export const LoyaltyPendingBase = (props: LoyaltyPendingBaseProps) => (
+    <SlotView
+        slot={props.props.slot}
+        placeholder={props.props.placeholder}
+        labels={props.props.slotLabels}
+        onRetry={props.on.retry}
+    >
+        {(view, isSkeleton) => <LoyaltyPendingBody props={view} on={props.on} isSkeleton={isSkeleton} />}
+    </SlotView>
 )

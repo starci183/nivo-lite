@@ -8,7 +8,10 @@ export type {
     LeadPrimaryAction,
     LeadRecord,
     LeadStageId,
+    LeadStepMode,
+    LeadStepValues,
     ResponsibilityRecord,
+    StepFormView,
     StepStatus,
 } from "./leads"
 export type {
@@ -46,6 +49,7 @@ export type {
     BookingView,
     PublicBookingAnswer,
     PublicBookingPageData,
+    ResourceFields,
 } from "./booking"
 export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleSession, ConsoleWorkspace } from "./console"
 export { ACCOUNT_ITEM, PROFILE_ITEM, SIGN_OUT_ITEM } from "./console"
@@ -359,9 +363,12 @@ export type {
     WorkThreadBoardHandlers,
     WorkThreadBoardView,
 } from "./work-threads"
-export type { BillingPlanView, BillingRowView, BillingTone } from "./billing"
+export type { ProfileRegionBaseProps } from "./agent-profile"
+export type { AdminBadgeView, AdminCardView, AdminInviteRef, AdminRowView, AdminWorkspaceRowView } from "./admin"
+export type { BillingPlanView, BillingRowView, BillingTone, PlanCardView, PlanGroupView } from "./billing"
 export type { OwnerGroupView, ResponsibilityRowView, RowStatus } from "./responsibilities"
 export type {
+    SetupGatesCardProps,
     SetupSideDraft,
     SetupSideGate,
     SetupSideGates,
@@ -392,4 +399,17 @@ export type {
     PublishStep,
     QuoteView,
 } from "./content"
+export type {
+    ContentEditorFormView,
+    ContentEditorItemView,
+    ContentEditorPatch,
+    ContentNoteView,
+    ContentStatusView,
+    ContentTransitionView,
+} from "./content-editor"
 export type { TypedDecisionValues } from "./sales-decision-typed"
+export type { MemberRowView } from "./team"
+export type { ContractImportDialogEvents, ContractImportDialogView, ContractImportRowView } from "./contract-import"
+export type { ReadGateBaseProps } from "./read-gate"
+export type { MethodView, SessionRowView } from "./account"
+export type { FlowEntryView, FlowSectionView, FlowView } from "./leads"

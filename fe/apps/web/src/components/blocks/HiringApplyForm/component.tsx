@@ -37,7 +37,7 @@ export interface HiringApplyFormBaseProps {
         readonly canSubmit: boolean
         readonly isBusy: boolean
         /** The words of the failed submission; null while none failed. */
-        readonly failure: string | null
+        readonly submitError: string | null
         readonly doneText: string | null
     }
     readonly on: {
@@ -260,7 +260,7 @@ const ApplicationSubmission = (props: HiringApplyFormBaseProps) => {
                 isDisabled={isBusy}
                 onSelectedChange={(consent) => on.flag("consent", consent)}
             />
-            {p.failure === null ? null : <Alert tone="negative" title={p.failure} />}
+            {p.submitError === null ? null : <Alert tone="negative" title={p.submitError} />}
             <Button type="submit" intent="commit" isPending={isBusy} isDisabled={isBusy || !p.canSubmit}>
                 {say("applySubmit")}
             </Button>

@@ -1,6 +1,5 @@
 import { Button, Input, NumberField, Switch } from "@starci/grammar/common"
-import type { ContentNote } from "@/hooks/content"
-import type { ContentT } from "@/modules/types"
+import type { ContentNoteView, ContentT } from "@/modules/types"
 import { ContentCommandNote, ContentSettingsCard } from "@/components/composites/ContentSettingsCard"
 import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
@@ -23,7 +22,7 @@ export interface ContentPillarsCardBaseProps {
         readonly rows: ReadonlyArray<PillarRow>
         readonly canManage: boolean
         readonly isPending: boolean
-        readonly note: ContentNote | null
+        readonly note: ContentNoteView | null
     }
     readonly on: {
         readonly change: (key: string, change: Partial<PillarRow>) => void

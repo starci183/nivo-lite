@@ -1,10 +1,10 @@
 "use client"
 
-import { type BuildStockListViewContext, type BuildStockCommandsContext, InventoryStockBase } from "./component"
+import { InventoryStockBase } from "./component"
 
 import { useInventoryBoard } from "@/hooks/inventoryBoard"
 import { useTranslations } from "next-intl"
-import { useState } from "react"
+import { useState, type Dispatch, type SetStateAction } from "react"
 import {
     stockDetailOf,
     STOCK_FILTERS,
@@ -22,6 +22,36 @@ import {
 
 import type { ItemView } from "@/modules/types"
 import { useInventoryCatalogCommands, useInventoryStockCommands } from "@/hooks/inventoryCommands"
+
+/** Inputs needed to build the InventoryStockContent section. */
+interface BuildStockListViewContext {
+    readonly t: ReturnType<typeof useTranslations<"workbenchInventory">>
+    readonly board: ReturnType<typeof useInventoryBoard>
+    readonly lowCount: number
+    readonly empty: boolean
+    readonly hasInactive: boolean
+    readonly showInactive: boolean
+    readonly query: string
+    readonly filter: StockFilter
+    readonly rows: ItemView[]
+    readonly format: ReturnType<typeof useInventoryFormat>
+    readonly detailOf: (item: ItemView) => string
+    readonly run: ReturnType<typeof useInventoryRun>
+    readonly itemDrawer: ReturnType<typeof useItemDrawer>
+    readonly adjustDrawer: ReturnType<typeof useAdjustDrawer>
+}
+
+/** Inputs needed to build the InventoryStockContent section. */
+interface BuildStockCommandsContext {
+    readonly setQuery: Dispatch<SetStateAction<string>>
+    readonly setFilter: Dispatch<SetStateAction<StockFilter>>
+    readonly itemDrawer: ReturnType<typeof useItemDrawer>
+    readonly draft: () => void
+    readonly quick: (id: string, sign: 1 | -1) => void
+    readonly board: ReturnType<typeof useInventoryBoard>
+    readonly adjustDrawer: ReturnType<typeof useAdjustDrawer>
+    readonly setShowInactive: Dispatch<SetStateAction<boolean>>
+}
 
 const filterOf = (value: string): StockFilter => STOCK_FILTERS.find((filter) => filter === value) ?? "all"
 
@@ -97,88 +127,64 @@ export const InventoryStock = () => {
     )
 }
 /** Builds the InventoryStockContent section from the current view. */
-const buildStockListView = ({
-    t,
-    board,
-    lowCount,
-    empty,
-    hasInactive,
-    showInactive,
-    query,
-    filter,
-    rows,
-    format,
-    detailOf,
-    run,
-    itemDrawer,
-    adjustDrawer,
-}: BuildStockListViewContext) =>
+const buildStockListView = (c: BuildStockListViewContext) =>
     ({
-        searchLabel: t("stockSearch"),
-        searchPlaceholder: t("stockSearchHint"),
-        clearLabel: t("clearSearch"),
-        addLabel: board.canManage ? t("stockAdd") : null,
-        draftLabel: board.canManage && lowCount > 0 ? t("stockDraft") : null,
-        filterLabel: t("stockFilter"),
-        filters: STOCK_FILTERS.map((value) => ({ value, label: t(`filter_${value}`) })),
-        listLabel: t("stockList"),
-        emptyTitle: t(empty ? "stockEmptyTitle" : "stockNoMatchTitle"),
-        emptyBody: t(empty ? "stockEmptyBody" : "stockNoMatchBody"),
-        adjustLabel: t("stockAdjust"),
-        editLabel: board.canManage ? t("edit") : null,
-        toggleInactiveLabel: stockToggleLabel(t, board.canManage && hasInactive, showInactive),
-        query,
-        filter,
-        rows: rows.map((item) => ({
+        searchLabel: c.t("stockSearch"),
+        searchPlaceholder: c.t("stockSearchHint"),
+        clearLabel: c.t("clearSearch"),
+        addLabel: c.board.canManage ? c.t("stockAdd") : null,
+        draftLabel: c.board.canManage && c.lowCount > 0 ? c.t("stockDraft") : null,
+        filterLabel: c.t("stockFilter"),
+        filters: STOCK_FILTERS.map((value) => ({ value, label: c.t(`filter_${value}`) })),
+        listLabel: c.t("stockList"),
+        emptyTitle: c.t(c.empty ? "stockEmptyTitle" : "stockNoMatchTitle"),
+        emptyBody: c.t(c.empty ? "stockEmptyBody" : "stockNoMatchBody"),
+        adjustLabel: c.t("stockAdjust"),
+        editLabel: c.board.canManage ? c.t("edit") : null,
+        toggleInactiveLabel: stockToggleLabel(c.t, c.board.canManage && c.hasInactive, c.showInactive),
+        query: c.query,
+        filter: c.filter,
+        rows: c.rows.map((item) => ({
             id: item.id,
             name: item.name,
-            statusLabel: t(`stock_${item.status}`),
+            statusLabel: c.t(`stock_${item.status}`),
             statusTone: STOCK_TONES[item.status],
             onOrderLabel:
-                item.onOrder > 0 ? t("stockOnOrder", { qty: format.qty(item.onOrder), unit: item.unit }) : null,
-            detail: detailOf(item),
-            total: `${format.qty(item.total)} ${item.unit}`,
-            stepLabel: format.qty(stepOf(item)),
-            lessLabel: t("stockLess", { qty: format.qty(stepOf(item)), unit: item.unit, name: item.name }),
-            moreLabel: t("stockMore", { qty: format.qty(stepOf(item)), unit: item.unit, name: item.name }),
+                item.onOrder > 0 ? c.t("stockOnOrder", { qty: c.format.qty(item.onOrder), unit: item.unit }) : null,
+            detail: c.detailOf(item),
+            total: `${c.format.qty(item.total)} ${item.unit}`,
+            stepLabel: c.format.qty(stepOf(item)),
+            lessLabel: c.t("stockLess", { qty: c.format.qty(stepOf(item)), unit: item.unit, name: item.name }),
+            moreLabel: c.t("stockMore", { qty: c.format.qty(stepOf(item)), unit: item.unit, name: item.name }),
         })),
-        isPending: run.isPending,
-        error: run.error,
-        notice: run.notice,
-        itemDrawer: itemDrawer.props,
-        adjustDrawer: adjustDrawer.props,
+        isPending: c.run.isPending,
+        error: c.run.error,
+        notice: c.run.notice,
+        itemDrawer: c.itemDrawer.props,
+        adjustDrawer: c.adjustDrawer.props,
     }) as const
 /** Builds the InventoryStockContent section from the current view. */
-const buildStockCommands = ({
-    setQuery,
-    setFilter,
-    itemDrawer,
-    draft,
-    quick,
-    board,
-    adjustDrawer,
-    setShowInactive,
-}: BuildStockCommandsContext) =>
+const buildStockCommands = (c: BuildStockCommandsContext) =>
     ({
-        query: setQuery,
-        filter: (value: string) => setFilter(filterOf(value)),
-        add: () => itemDrawer.open(null),
-        draft,
-        quick,
-        adjust: openById(board.items, adjustDrawer.open),
-        edit: openById(board.items, itemDrawer.open),
-        toggleInactive: () => setShowInactive((current) => !current),
-        itemField: itemDrawer.on.field,
-        itemSave: itemDrawer.on.save,
-        itemToggle: itemDrawer.on.toggleActive,
-        itemClose: itemDrawer.on.close,
-        adjustMode: adjustDrawer.on.mode,
-        adjustFrom: adjustDrawer.on.from,
-        adjustTo: adjustDrawer.on.to,
-        adjustValue: adjustDrawer.on.value,
-        adjustReason: adjustDrawer.on.reason,
-        adjustSubmit: adjustDrawer.on.submit,
-        adjustClose: adjustDrawer.on.close,
+        query: c.setQuery,
+        filter: (value: string) => c.setFilter(filterOf(value)),
+        add: () => c.itemDrawer.open(null),
+        draft: c.draft,
+        quick: c.quick,
+        adjust: openById(c.board.items, c.adjustDrawer.open),
+        edit: openById(c.board.items, c.itemDrawer.open),
+        toggleInactive: () => c.setShowInactive((current) => !current),
+        itemField: c.itemDrawer.on.field,
+        itemSave: c.itemDrawer.on.save,
+        itemToggle: c.itemDrawer.on.toggleActive,
+        itemClose: c.itemDrawer.on.close,
+        adjustMode: c.adjustDrawer.on.mode,
+        adjustFrom: c.adjustDrawer.on.from,
+        adjustTo: c.adjustDrawer.on.to,
+        adjustValue: c.adjustDrawer.on.value,
+        adjustReason: c.adjustDrawer.on.reason,
+        adjustSubmit: c.adjustDrawer.on.submit,
+        adjustClose: c.adjustDrawer.on.close,
     }) as const
 
 /** Resolves the inactive catalogue toggle only when it is available. */

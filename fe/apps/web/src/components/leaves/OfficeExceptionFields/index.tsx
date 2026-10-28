@@ -17,7 +17,6 @@ interface OfficeExceptionFieldsProps {
     readonly basisLength: number
     readonly isEditing: boolean
     readonly isLocked: boolean
-    readonly isFailed: boolean
     readonly isBasisMissing: boolean
     readonly onDraft: (value: string) => void
     readonly onAmount: (value: string) => void
@@ -32,7 +31,7 @@ export const OfficeExceptionFields = (props: OfficeExceptionFieldsProps) => (
         {renderDraft(props)}
         {props.item.missing.length > 0 ? renderMissingFields(props) : null}
         {props.item.choices.length > 0 ? renderCandidates(props) : null}
-        {!props.isFailed && props.item.isReconcile ? renderBasis(props) : null}
+        {props.item.status !== "failed" && props.item.isReconcile ? renderBasis(props) : null}
     </>
 )
 

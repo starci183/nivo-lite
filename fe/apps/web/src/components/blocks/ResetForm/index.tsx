@@ -11,6 +11,7 @@ import {
     authActionsOf,
 } from "@/hooks/auth"
 import { useResetForm } from "@/hooks/rhf"
+import { slotOfSwr } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { AUTH_ROUTES, loginResetPath } from "@/modules/routes"
 import { ResetFormBase } from "./component"
@@ -27,7 +28,8 @@ export const ResetForm = (props: ResetFormProps) => {
     const [failure, setFailure] = useState<{ readonly text: string; readonly expired: boolean }>()
     const [isPending, startTransition] = useTransition()
     const [isDone, setDone] = useState(false)
-    const { data: user } = useQueryAuthUserSwr()
+    // The session read only decides the shape: no session (a used or expired link) draws the expired screen.
+    const session = slotOfSwr(useQueryAuthUserSwr())
 
     const password = form.watch("password")
     const confirm = form.watch("confirm")
@@ -47,11 +49,13 @@ export const ResetForm = (props: ResetFormProps) => {
 
     return (
         <ResetFormBase
-            shape={props.expired || failure?.expired === true || (user === null && !isDone) ? "expired" : "form"}
+            shape={
+                props.expired || failure?.expired === true || (session.items === null && !isDone) ? "expired" : "form"
+            }
             props={{
                 title: t("resetTitle"),
                 text: t("resetText"),
-                failure: failure === undefined ? undefined : { title: t("resetFailedTitle"), text: failure.text },
+                submitError: failure === undefined ? undefined : { title: t("resetFailedTitle"), text: failure.text },
                 newPasswordLabel: t("newPasswordLabel"),
                 confirmLabel: t("confirmLabel"),
                 passwordHint: password === "" ? t("passwordHint") : t(strengthKey(passwordStrength(password))),

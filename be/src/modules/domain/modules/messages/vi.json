@@ -519,6 +519,8 @@
   "errors.MODULES_CARD_NEEDS_RESOLUTION": "Hãy chọn cách xử lý giá trị đang có trong Bộ não thứ hai.",
   "errors.MODULES_CARD_NEEDS_SITUATION": "Hãy nêu tình huống áp dụng cho giá trị mới.",
   "errors.MODULES_CARD_FACT_NOT_APPLIED": "Bộ não thứ hai giữ giá trị này để duyệt thay vì áp dụng ngay.",
+  "errors.MODULES_CARD_RULE_UNKNOWN_ACTION": "Hành động {{action}} không có trong danh mục.",
+  "errors.MODULES_CARD_RULE_MODE_CAPPED": "Hành động {{action}} không được tự chạy: hãy chọn hỏi trước hoặc không bao giờ.",
   "setup.welcome": "Chào bạn, mình là NIVO. Mình sẽ cùng bạn thiết lập {{module}}. Bạn kể về doanh nghiệp bằng lời của bạn nhé. Mình ghi lại phần mình hiểu và hỏi thêm phần còn thiếu.",
   "setup.noted": "Mình đã ghi lại. Bạn kể thêm nhé.",
   "setup.business": "Doanh nghiệp",

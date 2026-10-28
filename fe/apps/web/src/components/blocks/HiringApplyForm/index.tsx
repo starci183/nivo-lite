@@ -92,7 +92,7 @@ export const HiringApplyForm = (props: HiringApplyFormProps) => {
                 cvError: apply.cvError,
                 canSubmit: apply.canSubmit,
                 isBusy: apply.isPending,
-                failure: apply.isFailed ? say("applyFailed") : null,
+                submitError: apply.isFailed ? say("applyFailed") : null,
                 doneText,
             }}
             on={{

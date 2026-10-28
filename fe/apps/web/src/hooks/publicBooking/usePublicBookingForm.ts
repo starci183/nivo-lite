@@ -58,7 +58,7 @@ export const usePublicBookingForm = (page: PublicBookingPageData | null | undefi
                       },
                   }
                 : {}),
-            ...(result !== null && !succeeded ? { failure: { message, alternatives } } : {}),
+            ...(result !== null && !succeeded ? { refusal: { message, alternatives } } : {}),
         },
         on: {
             change: booking.change,

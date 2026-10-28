@@ -37,13 +37,15 @@ export const AgentLiveCard = (props: AgentLiveCardProps) => {
                 switchLabel: t("liveSwitch"),
                 help: t("liveHelp"),
                 isDisabled: !canEdit || isSaving || (!hasVersion && !isLive),
-                slot: mapSlot(slot, (installation): LiveView => ({
-                    isLive,
-                    statusLabel: isLive ? t("lifecycle_running") : t("lifecycle_ready"),
-                    blocker: installation.hasVersion ? "" : t("liveNeedsVersion"),
-                })),
-                placeholder: PLACEHOLDER,
-                slotLabels: slotLabels(t("liveHelp")),
+                read: {
+                    slot: mapSlot(slot, (installation): LiveView => ({
+                        isLive,
+                        statusLabel: isLive ? t("lifecycle_running") : t("lifecycle_ready"),
+                        blocker: installation.hasVersion ? "" : t("liveNeedsVersion"),
+                    })),
+                    placeholder: PLACEHOLDER,
+                    labels: slotLabels(t("liveHelp")),
+                },
             }}
             on={{ live: (next) => void change(next), retry: reload }}
         />

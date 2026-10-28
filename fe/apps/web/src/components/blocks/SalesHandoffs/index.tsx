@@ -1,6 +1,6 @@
 "use client"
 
-import { type Shipping, type SalesHandoffsControllerInput, SalesHandoffsBase, type HandoffItemView } from "./component"
+import { SalesHandoffsBase, type HandoffItemView, type Shipping } from "./component"
 import type { BadgeTone } from "@starci/grammar/common"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
@@ -9,6 +9,23 @@ import { INVOICE_TONES, useSalesActions } from "@/hooks/sales"
 import { useSalesWorkbench } from "@/hooks/salesworkbench"
 import { leadPath } from "@/modules/routes"
 import type { HandoffRow } from "@/modules/types"
+
+/** State values and commands consumed by the connected surface. */
+type SalesHandoffsControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"workbenchSales">>
+    readonly format: ReturnType<typeof useFormatter>
+    readonly actions: ReturnType<typeof useSalesActions>
+    readonly data: ReturnType<typeof useSalesWorkbench>["data"]
+    readonly rows: NonNullable<NonNullable<ReturnType<typeof useSalesWorkbench>["data"]>["handoffs"]>
+    readonly form: ReturnType<typeof useSalesShipmentForm>
+    readonly values: { readonly carrier: string; readonly tracking: string }
+    readonly busyKey: string | null
+    readonly setBusyKey: React.Dispatch<React.SetStateAction<string | null>>
+    readonly notes: Readonly<Record<string, string>>
+    readonly setNotes: React.Dispatch<React.SetStateAction<Readonly<Record<string, string>>>>
+    readonly shipping: Shipping | null
+    readonly setShipping: React.Dispatch<React.SetStateAction<Shipping | null>>
+}
 
 /** The words of a message that has any, else null. */
 const textOrNull = (text: string | undefined): string | null => (text === undefined || text === "" ? null : text)
@@ -22,8 +39,6 @@ const invoiceToneOf = (row: HandoffRow): BadgeTone => {
     if (row.invoice) return INVOICE_TONES[row.invoice.status] ?? "neutral"
     return row.work?.status === "failed" ? "danger" : "warning"
 }
-
-/** The order whose shipping drawer is open. */
 
 /** The hand-off surface: handing an order to Accounting and marking it shipped live here, the drawing in the pure half. */
 const createSalesHandoffsState = (input: SalesHandoffsControllerInput) => {
@@ -46,12 +61,7 @@ const createSalesHandoffsState = (input: SalesHandoffsControllerInput) => {
         const row = rows.find((candidate) => candidate.key === key)
         if (row?.orderId === undefined || row.orderId === null || actions.isMutating) return
         form.reset({ carrier: "", tracking: "" })
-        setShipping({
-            key,
-            orderId: row.orderId,
-            orderNo: row.orderNo,
-            customer: row.customer,
-        })
+        setShipping({ key, orderId: row.orderId, orderNo: row.orderNo, customer: row.customer })
     }
     const submitShip = form.handleSubmit(async (submitted) => {
         if (shipping === null || actions.isMutating) return

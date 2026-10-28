@@ -173,7 +173,6 @@ component_management:
         - "be/src/modules/integrations/documents/**"
         - "be/src/modules/integrations/ffmpeg/**"
         - "be/src/modules/integrations/google/**"
-        - "be/src/modules/integrations/llm/**"
         - "be/src/modules/integrations/mail/**"
         - "be/src/modules/integrations/meta/**"
         - "be/src/modules/integrations/n8n/**"

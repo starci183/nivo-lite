@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useProfileRegion } from "@/hooks/agentProfile"
+import { mapSlot } from "@/hooks/slot"
 import { moduleGlyphOf } from "@/hooks/installations"
 import { AgentProfileTagsBase } from "./component"
 
@@ -18,20 +19,23 @@ export const AgentProfileTags = (props: AgentProfileTagsProps) => {
     return (
         <AgentProfileTagsBase
             props={{
-                ...region.frame,
                 label: t("tagsTitle"),
-                rows: region.items.map((target) => ({
-                    id: target.id,
-                    title: target.name,
-                    description: g.has(`dept_${target.module}`) ? g(`dept_${target.module}`) : target.module,
-                    mark: { glyph: moduleGlyphOf(target.module), module: target.module },
-                    badges: [
-                        { label: t("aiChip"), tone: "neutral" },
-                        ...(target.isActive ? [] : [{ label: t("chip_paused"), tone: "danger" as const }]),
-                    ],
-                })),
-                emptyMessage: t("tagsEmpty"),
-                emptyDescription: t("tagsEmptyBody"),
+                read: {
+                    slot: mapSlot(region.slot, (items) =>
+                        items.map((target) => ({
+                            id: target.id,
+                            title: target.name,
+                            description: g.has(`dept_${target.module}`) ? g(`dept_${target.module}`) : target.module,
+                            mark: { glyph: moduleGlyphOf(target.module), module: target.module },
+                            badges: [
+                                { label: t("aiChip"), tone: "neutral" },
+                                ...(target.isActive ? [] : [{ label: t("chip_paused"), tone: "danger" as const }]),
+                            ],
+                        })),
+                    ),
+                    placeholder: [],
+                    labels: region.labels(t("tagsEmpty")),
+                },
                 footer: null,
             }}
             on={{ retry: region.reload }}

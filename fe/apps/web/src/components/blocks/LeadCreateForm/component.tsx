@@ -31,7 +31,7 @@ export interface LeadCreateFormBaseProps {
         readonly failTitle: string
         readonly values: LeadFormValues
         readonly errors: Partial<Record<keyof LeadFormValues, string>>
-        readonly failure: string | null
+        readonly submitError: string | null
         readonly isPending: boolean
     }
     readonly on: {
@@ -84,9 +84,9 @@ export const LeadCreateFormBase = (props: LeadCreateFormBaseProps) => {
                             onValueChange={(value) => on.change("need", value)}
                         />
                     </div>
-                    {p.failure === null ? null : (
+                    {p.submitError === null ? null : (
                         <div className={FORM_WIDE_CLASS_NAME}>
-                            <Alert title={p.failTitle} description={p.failure} tone="negative" />
+                            <Alert title={p.failTitle} description={p.submitError} tone="negative" />
                         </div>
                     )}
                     <div className={FORM_WIDE_CLASS_NAME}>

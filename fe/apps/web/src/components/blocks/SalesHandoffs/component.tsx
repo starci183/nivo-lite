@@ -1,7 +1,3 @@
-import type { useTranslations, useFormatter } from "next-intl"
-import type { useSalesActions } from "@/hooks/sales"
-import type { useSalesWorkbench } from "@/hooks/salesworkbench"
-import type { useSalesShipmentForm } from "@/hooks/rhf"
 import { Alert, Badge, Button, EmptyNotice, SurfaceListCard, Text } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
 import { SalesRow } from "@/components/branches/SalesRow"
@@ -177,27 +173,11 @@ type RenderHandoffRowInput = {
     p: SalesHandoffsBaseProps["props"]
     on: SalesHandoffsBaseProps["on"]
 }
-/** State values and commands consumed by the connected surface. */
+
+/** The confirmed order the shipping drawer is open for. */
 export interface Shipping {
     readonly key: string
     readonly orderId: string
     readonly orderNo: string | null
     readonly customer: string
-}
-
-/** State values and commands consumed by the connected surface. */
-export type SalesHandoffsControllerInput = {
-    readonly t: ReturnType<typeof useTranslations<"workbenchSales">>
-    readonly format: ReturnType<typeof useFormatter>
-    readonly actions: ReturnType<typeof useSalesActions>
-    readonly data: ReturnType<typeof useSalesWorkbench>["data"]
-    readonly rows: NonNullable<NonNullable<ReturnType<typeof useSalesWorkbench>["data"]>["handoffs"]>
-    readonly form: ReturnType<typeof useSalesShipmentForm>
-    readonly values: { readonly carrier: string; readonly tracking: string }
-    readonly busyKey: string | null
-    readonly setBusyKey: React.Dispatch<React.SetStateAction<string | null>>
-    readonly notes: Readonly<Record<string, string>>
-    readonly setNotes: React.Dispatch<React.SetStateAction<Readonly<Record<string, string>>>>
-    readonly shipping: Shipping | null
-    readonly setShipping: React.Dispatch<React.SetStateAction<Shipping | null>>
 }

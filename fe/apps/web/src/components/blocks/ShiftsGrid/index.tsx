@@ -1,13 +1,6 @@
 "use client"
 
-import {
-    type ShiftsGridControllerInput,
-    type GridCellsInput,
-    ShiftsGridBase,
-    type GridCellView,
-    type GridChipView,
-    type GridRowView,
-} from "./component"
+import { ShiftsGridBase, type GridCellView, type GridChipView, type GridRowView } from "./component"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
@@ -16,6 +9,28 @@ import { useShiftsWeekStore } from "@/hooks/zustand/shiftsWeek"
 import { useShiftsWeekModel } from "@/hooks/shiftsCoverage"
 import { isoWeekDates } from "@/hooks/shiftsTime"
 import type { ShiftsShiftView } from "@/modules/types"
+
+/** State values and commands consumed by the connected surface. */
+type ShiftsGridControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"shifts">>
+    readonly format: ReturnType<typeof useShiftsFormat>
+    readonly week: ReturnType<typeof useShiftsWeekCommands>
+    readonly bench: NonNullable<ReturnType<typeof useShiftsBenchData>>["data"]
+    readonly setMoves: React.Dispatch<React.SetStateAction<Readonly<Record<string, string | null>>>>
+    readonly picked: string | null
+    readonly setPicked: React.Dispatch<React.SetStateAction<string | null>>
+    readonly over: string | null
+    readonly setOver: React.Dispatch<React.SetStateAction<string | null>>
+    readonly dayIndex: number
+    readonly setDayIndex: React.Dispatch<React.SetStateAction<number>>
+    readonly model: ReturnType<typeof useShiftsWeekModel>
+}
+
+/** Narrowed schedule data available after the access guard. */
+type GridCellsInput = ShiftsGridControllerInput & {
+    bench: NonNullable<ShiftsGridControllerInput["bench"]>
+    model: NonNullable<ShiftsGridControllerInput["model"]>
+}
 
 const OPEN_ROW = "open"
 
@@ -108,23 +123,8 @@ const createGridRows = (context: ReturnType<typeof createGridCells>) => {
 }
 
 const createGridProps = (context: ReturnType<typeof createGridRows>): React.ComponentProps<typeof ShiftsGridBase> => {
-    const {
-        t,
-        format,
-        picked,
-        setPicked,
-        setOver,
-        setDayIndex,
-        editable,
-        dates,
-        live,
-        people,
-        move,
-        chipOf,
-        day,
-        rows,
-    } = context
-
+    const { t, format, picked, setPicked, setOver, setDayIndex, editable } = context
+    const { dates, live, people, move, chipOf, day, rows } = context
     return {
         props: {
             title: t("gridTitle"),

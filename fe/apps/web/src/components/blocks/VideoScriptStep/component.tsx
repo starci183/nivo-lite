@@ -1,9 +1,21 @@
 import type { useTranslations } from "next-intl"
-import type { SceneRole, ScriptScene } from "@/hooks/video"
 import { Alert, Badge, Button, Select, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 import { VideoErrorAlert } from "@/components/leaves/VideoErrorAlert"
 import { VideoStepFooter } from "@/components/leaves/VideoStepFooter"
 import { SCRIPT_ROW, SCRIPT_STACK } from "./classNames"
+
+/** The part a scene plays in the script. */
+type SceneRoleView = "hook" | "body" | "cta"
+
+/** One editable scene as the cards read it: what it says, shows and plays. */
+interface SceneView {
+    readonly id: string
+    readonly role: SceneRoleView
+    readonly caption: string
+    readonly voiceover: string
+    readonly visual: string
+    readonly media: string | null
+}
 
 /** One scene card of the script. */
 export interface VideoSceneCard {
@@ -74,7 +86,7 @@ export interface VideoScriptStepBaseProps {
 /** The option that means a colour card without a file. */
 const NO_MEDIA = "none"
 
-const ROLE_TONE: Record<SceneRole, "accent" | "neutral" | "success"> = {
+const ROLE_TONE: Record<SceneRoleView, "accent" | "neutral" | "success"> = {
     hook: "accent",
     body: "neutral",
     cta: "success",
@@ -98,7 +110,7 @@ export const scriptCopyOf = (t: ReturnType<typeof useTranslations<"video">>) => 
 })
 
 /** Maps editable script scenes to the atoms drawn by each scene card. */
-export const sceneCardsOf = (scenes: ReadonlyArray<ScriptScene>, t: ReturnType<typeof useTranslations<"video">>) =>
+export const sceneCardsOf = (scenes: ReadonlyArray<SceneView>, t: ReturnType<typeof useTranslations<"video">>) =>
     scenes.map((scene, index) => ({
         id: scene.id,
         title: t("sceneN", { n: index + 1 }),
@@ -247,11 +259,7 @@ export const VideoScriptStepBase = (props: VideoScriptStepBaseProps) => (
 )
 
 /** Reorders two valid scene positions without changing scene identities. */
-export const swapped = (
-    scenes: ReadonlyArray<ScriptScene>,
-    index: number,
-    target: number,
-): ReadonlyArray<ScriptScene> => {
+export const swapped = <T,>(scenes: ReadonlyArray<T>, index: number, target: number): ReadonlyArray<T> => {
     const from = scenes[index]
     const to = scenes[target]
     if (from === undefined || to === undefined) return scenes

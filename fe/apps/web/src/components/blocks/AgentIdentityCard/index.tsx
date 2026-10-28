@@ -56,18 +56,20 @@ export const AgentIdentityCard = (props: AgentIdentityCardProps) => {
                 module: props.module,
                 isDisabled: !canEdit || isSaving,
                 isPending: isSaving,
-                slot: mapSlot(slot, (installation): IdentityView => ({
-                    markLabel: installation.agentName,
-                    nameLabel: t(isInstance ? "instanceNameTitle" : "displayName"),
-                    nameHint: t(isInstance ? "instanceNameSettingsHint" : "displayNameHint"),
-                    name,
-                    maxLength: isInstance ? INSTANCE_NAME_MAX : AGENT_NAME_MAX,
-                    line: t("agentLine", { handle: installation.agentHandle }),
-                    saveLabel: t(isInstance ? "saveInstanceName" : "saveName"),
-                    canSave: canEdit && name.trim().length >= minLength && name.trim() !== saved,
-                })),
-                placeholder: PLACEHOLDER,
-                slotLabels: slotLabels(t("agentTitle")),
+                read: {
+                    slot: mapSlot(slot, (installation): IdentityView => ({
+                        markLabel: installation.agentName,
+                        nameLabel: t(isInstance ? "instanceNameTitle" : "displayName"),
+                        nameHint: t(isInstance ? "instanceNameSettingsHint" : "displayNameHint"),
+                        name,
+                        maxLength: isInstance ? INSTANCE_NAME_MAX : AGENT_NAME_MAX,
+                        line: t("agentLine", { handle: installation.agentHandle }),
+                        saveLabel: t(isInstance ? "saveInstanceName" : "saveName"),
+                        canSave: canEdit && name.trim().length >= minLength && name.trim() !== saved,
+                    })),
+                    placeholder: PLACEHOLDER,
+                    labels: slotLabels(t("agentTitle")),
+                },
             }}
             on={{ name: setDraft, save: () => void saveName(), retry: reload }}
         />

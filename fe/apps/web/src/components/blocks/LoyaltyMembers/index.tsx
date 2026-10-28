@@ -1,6 +1,7 @@
 "use client"
 
 import { EMPTY_LOYALTY_BOARD, daysSince, findTier, tierTone } from "@/hooks/loyalty"
+import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { useQueryLoyaltyBoardSwr } from "@/hooks/swr"
 import { useFormatter, useTranslations } from "next-intl"
 import { useEffect } from "react"
@@ -12,8 +13,9 @@ const DETAIL_ID = "loyalty-member-detail"
 /** The connected member list: search, tier filter, sort and show-more; a picked member opens the detail beside it. */
 /** The connected Members tab: reads the loyalty board itself (SWR shares the one request with the other tabs). */
 export const LoyaltyMembers = () => {
-    const { data } = useQueryLoyaltyBoardSwr()
-    const board = data ?? EMPTY_LOYALTY_BOARD
+    const read = useQueryLoyaltyBoardSwr()
+    const board = read.data ?? EMPTY_LOYALTY_BOARD
+    const slotLabels = useSlotLabels()
     const t = useTranslations("loyalty")
     const format = useFormatter()
     const list = useMemberList(board)
@@ -30,9 +32,15 @@ export const LoyaltyMembers = () => {
         return t(last.key, { n: last.n })
     }
     const isEmpty = list.rows.length === 0
+    // Built from the empty board while the read is on its way, so the placeholder is the same tree.
+    const view = buildLoyaltyMembersView({ t, list, board, format, visit, money, isEmpty, detail })
     return (
         <LoyaltyMembersBase
-            props={buildLoyaltyMembersView({ t, list, board, format, visit, money, isEmpty, detail })}
+            props={{
+                slot: mapSlot(slotOfSwr(read), () => view),
+                placeholder: view,
+                slotLabels: slotLabels(t("emptyMembersTitle")),
+            }}
             on={{
                 search: list.setQuery,
                 setTier: list.setTier,
@@ -42,6 +50,7 @@ export const LoyaltyMembers = () => {
                     list.select(id)
                 },
                 showMore: list.showMore,
+                retry: () => void read.mutate(),
             }}
         />
     )

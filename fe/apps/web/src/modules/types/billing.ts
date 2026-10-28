@@ -18,3 +18,38 @@ export interface BillingRowView {
     readonly content?: string | undefined
     readonly status?: { readonly label: string; readonly tone: BillingTone }
 }
+
+/** One plan as the catalogue draws it: settled copy and prices, never a computation. */
+export interface PlanCardView {
+    readonly id: string
+    readonly name: string
+    readonly isCurrent: boolean
+    readonly price: string
+    readonly isPriceLoading: boolean
+    readonly badges: ReadonlyArray<{ readonly label: string; readonly tone: "success" | "accent" | "neutral" }>
+    readonly notes: ReadonlyArray<string>
+    readonly facts: ReadonlyArray<string>
+    readonly tier?:
+        | {
+              readonly label: string
+              readonly value: string
+              readonly options: ReadonlyArray<{ readonly id: string; readonly label: string }>
+          }
+        | undefined
+    readonly seats?: { readonly label: string; readonly value: number; readonly max: number } | undefined
+    readonly action: {
+        readonly kind: "checkout" | "contact"
+        readonly label: string
+        readonly href: string
+        readonly isPending: boolean
+        readonly isDisabled: boolean
+    }
+}
+
+/** An audience group of plans with its header. */
+export interface PlanGroupView {
+    readonly id: string
+    readonly title: string
+    readonly text: string
+    readonly cards: ReadonlyArray<PlanCardView>
+}

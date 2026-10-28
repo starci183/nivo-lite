@@ -1,5 +1,5 @@
 import { AlertDialog, Button, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
-import type { AdminInviteRef } from "@/hooks/admin"
+import type { AdminInviteRef } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, ACTION_ROW_CLASS_NAME, STACK_CLASS_NAME } from "./classNames"
 
 /** One plan the select offers. */

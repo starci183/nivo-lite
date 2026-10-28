@@ -2,7 +2,6 @@ export { PLAN_CODES, isAdminWorkspaceFilter, parseCredits, parseDays } from "./a
 export type {
     AdminBadgeView,
     AdminCardView,
-    AdminInviteRef,
     AdminRowView,
     AdminWorkspaceFilter,
     AdminWorkspaceRowView,

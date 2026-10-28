@@ -1,7 +1,6 @@
 import { Button, Input, SectionHeader, SurfaceCard, Textarea } from "@starci/grammar/common"
 import { ContentCommandNote } from "@/components/composites/ContentSettingsCard"
-import type { ContentNote } from "@/hooks/content"
-import type { ContentT } from "@/modules/types"
+import type { ContentNoteView, ContentT } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** What the brand voice card draws. */
@@ -14,7 +13,7 @@ export interface ContentBrandCardBaseProps {
         readonly tags: string
         readonly canManage: boolean
         readonly isPending: boolean
-        readonly note: ContentNote | null
+        readonly note: ContentNoteView | null
     }
     readonly on: {
         readonly voice: (v: string) => void

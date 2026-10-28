@@ -2,7 +2,8 @@ import { LocalStorage, StorageId } from "@/modules/storage"
 
 const listeners = new Set<() => void>()
 
-const dismissedRecord = (): Record<string, boolean> => LocalStorage.get<Record<string, boolean>>(StorageId.Dismissed) ?? {}
+const dismissedRecord = (): Record<string, boolean> =>
+    LocalStorage.get<Record<string, boolean>>(StorageId.Dismissed) ?? {}
 
 /** Whether the reader closed the notice stored under `key`; false when the browser keeps no storage. */
 export const readDismissed = (key: string): boolean => dismissedRecord()[key] === true

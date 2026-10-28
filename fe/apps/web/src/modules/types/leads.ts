@@ -1,3 +1,6 @@
+import type { BadgeTone } from "@starci/grammar/common"
+import type { CalendarDate } from "@internationalized/date"
+
 /** The stages of a lead journey, in order; the last two close it. */
 export type LeadStageId = "new" | "qualified" | "proposal" | "won" | "lost"
 
@@ -96,3 +99,52 @@ export type LeadPrimaryAction =
 
 /** The icon names the lead timeline and brief use. */
 export type LeadIcon = "account" | "brain" | "complete" | "close" | "pending" | "review" | "send" | "notification"
+
+/** Step fields shared by assignment, addition and changing its due date. */
+export interface LeadStepValues {
+    title: string
+    owner: string
+    nextAction: string
+    due: string | null
+}
+
+/** The supported next-step edit modes: reassign the owner, add the next step or change the due date. */
+export type LeadStepMode = "reassign" | "add" | "due"
+
+/** The form that reassigns a step, changes its due date or adds the next step. */
+export interface StepFormView {
+    readonly mode: LeadStepMode
+    readonly label: string
+    readonly title: string
+    readonly owner: string
+    readonly nextAction: string
+    readonly due: CalendarDate | null
+    readonly ownerOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
+    readonly submitLabel: string
+    readonly error: string | null
+}
+
+/** One entry of the work flow card: what happened, when, how it stands and the lines that qualify it. */
+export interface FlowEntryView {
+    readonly id: string
+    readonly head: string
+    readonly when: { readonly iso: string; readonly label: string } | null
+    readonly badge: { readonly label: string; readonly tone: BadgeTone } | null
+    readonly reason: string | null
+    readonly lines: ReadonlyArray<{ readonly id: string; readonly text: string; readonly strong: boolean }>
+}
+
+/** One section of the card: its heading, what to say when it is empty and its entries. */
+export interface FlowSectionView {
+    readonly id: string
+    readonly title: string
+    readonly emptyText: string
+    readonly entries: ReadonlyArray<FlowEntryView>
+}
+
+/** Everything the work flow card shows about one lead, already worded. */
+export interface FlowView {
+    readonly fact: string
+    readonly steps: ReadonlyArray<FlowEntryView>
+    readonly sections: ReadonlyArray<FlowSectionView>
+}

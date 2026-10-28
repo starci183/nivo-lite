@@ -1,9 +1,8 @@
-import { PageContainer, TextAction } from "@starci/grammar/common"
+import { PageContainer } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { ConnectionsHead } from "@/components/composites/ConnectionsHead"
-import { SlotView } from "@/components/composites/SlotView"
 import { connectionsPageClassNames as classNames } from "./classNames"
-import { BOARD_PLACEHOLDER, BoardBody } from "./component"
+import { ConnectionsBoardRegion } from "./component"
 import type { ConnectionsOverviewProps } from "./component"
 
 export type { ConnectionsBoard } from "./component"
@@ -26,20 +25,7 @@ export const ConnectionsOverview = (props: ConnectionsOverviewProps) => {
                     description={words.description}
                     {...(summary === null ? {} : { meta: summary })}
                 />
-                <SlotView
-                    slot={props.props.board}
-                    placeholder={BOARD_PLACEHOLDER}
-                    labels={props.props.slotLabels}
-                    forbidden="notice"
-                    onRetry={props.on.retry}
-                >
-                    {(board, isSkeleton) => (
-                        <>
-                            <BoardBody {...props} board={board} isSkeleton={isSkeleton} />
-                            <TextAction href={words.automationsHref}>{words.automationsLink}</TextAction>
-                        </>
-                    )}
-                </SlotView>
+                <ConnectionsBoardRegion overview={props} />
             </div>
         </PageContainer>
     )

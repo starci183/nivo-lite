@@ -282,7 +282,6 @@
     "ribbonAria": "Key figures",
     "regionFailed": "This section could not be loaded",
     "regionFailedText": "The rest of the page is unaffected.",
-    "retry": "Try again",
     "waitingTitle": "Waiting for you",
     "waitingEmpty": "Nothing is waiting for you",
     "waitingEmptyBody": "When the agent needs a decision, it appears here.",
@@ -742,9 +741,7 @@
   "brain": {
     "crumbLabel": "Breadcrumb",
     "crumbHome": "Overview",
-    "statsLabel": "The brain in figures",
     "title": "Second Brain",
-    "intro": "What your business knows, in one place. Every agent reads it through its own view; you decide what changes.",
     "tabReview": "To review",
     "tabFacts": "Facts",
     "tabLessons": "Lessons",
@@ -963,7 +960,6 @@
     "description": "Connect your own Telegram bots, bank feeds and Zalo OA. Then choose, in each agent's Settings, which connections that agent uses.",
     "forbiddenTitle": "Only owners and managers can manage connections",
     "forbiddenBody": "Ask an owner or manager to add or change a connection.",
-    "forbiddenBack": "Back to Office",
     "add": "Add connection",
     "automationsLink": "Automatic emails and reports are switched on in Automations",
     "cancel": "Cancel",
@@ -1311,7 +1307,6 @@
     "catalog_airtable_blurb": "Airtable bases as a data source.",
     "catalog_airtable_brings": "Tables",
     "catalog_airtable_keywords": "airtable",
-    "loadFailed": "The connections could not be loaded. Please try again.",
     "toastDisconnected": "Connection disconnected.",
     "toastRemoved": "Connection removed.",
     "toastAgentsSaved": "Agents saved.",
@@ -1440,7 +1435,6 @@
     "close": "Close",
     "done": "Done",
     "reading": "Reading the data",
-    "loading": "Loading the import",
     "agentTitle": "Agents that may read this data",
     "linkSheetPlaceholder": "https://docs.google.com/spreadsheets/d/...",
     "linkDocPlaceholder": "https://docs.google.com/document/d/..."
@@ -1504,7 +1498,6 @@
     "every_360": "Every 6 hours",
     "every_1440": "Every 24 hours",
     "agentTitle": "Which agents may read this data",
-    "loading": "Loading...",
     "needName": "Name this connection.",
     "needHost": "Enter the server address.",
     "badPort": "The port must be from 1 to 65535.",
@@ -1576,7 +1569,6 @@
     "saving": "Saving",
     "done": "Done",
     "close": "Close",
-    "loading": "Loading",
     "agentTitle": "Agents that may read this mailbox"
   },
   "connectorOpenapi": {
@@ -1684,7 +1676,6 @@
     "signIn": "Sign in",
     "cancelLogin": "Cancel sign in",
     "chatsHint": "Tick up to {max} chats. Only these are read and stored.",
-    "chatsLoading": "Loading your recent chats.",
     "chatsEmpty": "No chats found.",
     "chatsRetry": "Load again",
     "searchLabel": "Search chats",
@@ -1708,8 +1699,7 @@
     "errConsent": "Please agree to the commitment.",
     "errPhone": "The phone number is not valid.",
     "errCode": "The code has 4 to 8 digits.",
-    "errPassword": "Enter the two-step password.",
-    "loading": "Loading."
+    "errPassword": "Enter the two-step password."
   },
   "content": {
     "tabCalendar": "Calendar",
@@ -2058,9 +2048,7 @@
     "eyebrow": "Advanced",
     "title": "Advanced",
     "description": "Connect NIVO to n8n, Make, Zapier or your own tools. For owners and managers.",
-    "forbiddenTitle": "Only the owner and managers can open this page",
     "forbiddenBody": "This page holds keys that open your shop's data. Ask your owner if you need it.",
-    "forbiddenBack": "Back to chat",
     "backToAutomations": "Back to Automations",
     "eventsTitle": "Send events out (n8n, Make, Zapier)",
     "eventsBody": "When something happens in the shop (a new customer, a won deal, a payment), NIVO posts a signed message to the address you choose, so your tools can carry on from there.",
@@ -2360,7 +2348,11 @@
     "office": {
       "title": "Office",
       "what": "The shared office: talk to your team and AI agents, approve what the AI proposes.",
-      "steps": ["Open Office", "Type @agent-name to call an agent", "Approve or edit the cards waiting for you"],
+      "steps": [
+        "Open Office",
+        "Type @agent-name to call an agent",
+        "Approve or edit the cards waiting for you"
+      ],
       "keywords": [
         "office",
         "van phong",
@@ -2381,13 +2373,30 @@
     "overview": {
       "title": "Overview",
       "what": "The big picture: results, waiting work, exceptions to look at.",
-      "steps": ["Open Overview", "Read the result and waiting-work cards"],
-      "keywords": ["tong quan", "dashboard", "bao cao", "ket qua", "doanh thu", "tinh hinh", "overview", "report"]
+      "steps": [
+        "Open Overview",
+        "Read the result and waiting-work cards"
+      ],
+      "keywords": [
+        "tong quan",
+        "dashboard",
+        "bao cao",
+        "ket qua",
+        "doanh thu",
+        "tinh hinh",
+        "overview",
+        "report"
+      ]
     },
     "authority": {
       "title": "Authority",
       "what": "Set goals, policies, tone, and which actions the AI may do alone or must ask about.",
-      "steps": ["Open Authority", "Set each action to Auto, Ask me or Never", "Set an amount limit if needed", "Save"],
+      "steps": [
+        "Open Authority",
+        "Set each action to Auto, Ask me or Never",
+        "Set an amount limit if needed",
+        "Save"
+      ],
       "keywords": [
         "giao quyen",
         "quyen han",
@@ -2404,13 +2413,28 @@
     "inbox": {
       "title": "Inbox",
       "what": "Everything coming in: customer messages, orders, bank transactions, from every channel.",
-      "steps": ["Open Inbox", "Filter by channel or kind"],
-      "keywords": ["dau vao", "inbox", "tin nhan den", "tin nhan khach", "giao dich den", "don moi", "hop thu"]
+      "steps": [
+        "Open Inbox",
+        "Filter by channel or kind"
+      ],
+      "keywords": [
+        "dau vao",
+        "inbox",
+        "tin nhan den",
+        "tin nhan khach",
+        "giao dich den",
+        "don moi",
+        "hop thu"
+      ]
     },
     "leads": {
       "title": "Customers",
       "what": "Customers and sales leads, who owns each, and the next step.",
-      "steps": ["Open Customers", "Press New lead to add one", "Open a customer to see history and assign work"],
+      "steps": [
+        "Open Customers",
+        "Press New lead to add one",
+        "Open a customer to see history and assign work"
+      ],
       "keywords": [
         "khach hang",
         "lead",
@@ -2427,19 +2451,44 @@
     "responsibilities": {
       "title": "Responsibilities",
       "what": "Who owns which piece of work, due dates and next steps.",
-      "steps": ["Open Responsibilities", "Filter by owner or status"],
-      "keywords": ["trach nhiem", "ai lam gi", "viec cua ai", "han chot", "phu trach", "responsibility", "task"]
+      "steps": [
+        "Open Responsibilities",
+        "Filter by owner or status"
+      ],
+      "keywords": [
+        "trach nhiem",
+        "ai lam gi",
+        "viec cua ai",
+        "han chot",
+        "phu trach",
+        "responsibility",
+        "task"
+      ]
     },
     "decisions": {
       "title": "Decisions",
       "what": "A log of every decision: done by the AI, approved or edited by a person, with reasons.",
-      "steps": ["Open Decisions", "Filter by department or decider"],
-      "keywords": ["lich su quyet dinh", "quyet dinh", "nhat ky", "ai da duyet", "decision", "audit"]
+      "steps": [
+        "Open Decisions",
+        "Filter by department or decider"
+      ],
+      "keywords": [
+        "lich su quyet dinh",
+        "quyet dinh",
+        "nhat ky",
+        "ai da duyet",
+        "decision",
+        "audit"
+      ]
     },
     "automations": {
       "title": "Automations",
       "what": "Workflows that run on a schedule or event: payment reminders, reports, customer care.",
-      "steps": ["Open Automations", "Pick a template or create one", "Turn it on"],
+      "steps": [
+        "Open Automations",
+        "Pick a template or create one",
+        "Turn it on"
+      ],
       "keywords": [
         "tu dong hoa",
         "tu dong",
@@ -2455,7 +2504,12 @@
     "knowledge": {
       "title": "Knowledge",
       "what": "Teach the AI about your business: prices, policies, FAQs, documents, links.",
-      "steps": ["Open Knowledge", "Press Add source", "Paste text, upload a file or a link", "Save so the AI uses it"],
+      "steps": [
+        "Open Knowledge",
+        "Press Add source",
+        "Paste text, upload a file or a link",
+        "Save so the AI uses it"
+      ],
       "keywords": [
         "tri thuc",
         "kien thuc",
@@ -2472,7 +2526,11 @@
     "brain": {
       "title": "Brain",
       "what": "What the business knows (prices, hours, policies, customers...) in one place; each agent reads its own view. Review proposals and conflicts here.",
-      "steps": ["Open Brain", "Check To review: apply or reject as NIVO suggests", "Facts tab: Add fact or New value"],
+      "steps": [
+        "Open Brain",
+        "Check To review: apply or reject as NIVO suggests",
+        "Facts tab: Add fact or New value"
+      ],
       "keywords": [
         "bo nao",
         "second brain",
@@ -2491,7 +2549,11 @@
     "modules": {
       "title": "Agents",
       "what": "Install and set up agents: Chatbot, Sales, Accounting, Booking, Inventory, Hiring…",
-      "steps": ["Open Agents", "Pick an agent and install it", "Follow the setup steps"],
+      "steps": [
+        "Open Agents",
+        "Pick an agent and install it",
+        "Follow the setup steps"
+      ],
       "keywords": [
         "module",
         "modules",
@@ -2510,7 +2572,12 @@
     "team": {
       "title": "Team",
       "what": "Invite people to the workspace and choose their role: Owner, Manager, Staff.",
-      "steps": ["Open Team", "Press Invite member", "Enter the email and role", "Send the invite or copy the link"],
+      "steps": [
+        "Open Team",
+        "Press Invite member",
+        "Enter the email and role",
+        "Send the invite or copy the link"
+      ],
       "keywords": [
         "doi ngu",
         "moi nhan vien",
@@ -2528,8 +2595,17 @@
     "connections": {
       "title": "Connections",
       "what": "Connect NIVO to your bank, Telegram, Zalo OA, email, Google Sheets, n8n.",
-      "steps": ["Open Connections", "Pick a service and press Add connection", "Follow the steps"],
-      "keywords": ["ket noi", "tich hop", "connection", "integration"]
+      "steps": [
+        "Open Connections",
+        "Pick a service and press Add connection",
+        "Follow the steps"
+      ],
+      "keywords": [
+        "ket noi",
+        "tich hop",
+        "connection",
+        "integration"
+      ]
     },
     "connections-sepay": {
       "title": "SePay bank feed",
@@ -2585,7 +2661,12 @@
         "Paste the callback and webhook URLs into Zalo, enable message events",
         "Press Connect Zalo OA so the OA owner consents"
       ],
-      "keywords": ["zalo", "zalo oa", "official account", "oa"]
+      "keywords": [
+        "zalo",
+        "zalo oa",
+        "official account",
+        "oa"
+      ]
     },
     "connections-smtp": {
       "title": "Outgoing email",
@@ -2595,7 +2676,13 @@
         "Enter the SMTP server or pick a provider",
         "Send a test email"
       ],
-      "keywords": ["email", "smtp", "gui email", "gmail", "thu dien tu"]
+      "keywords": [
+        "email",
+        "smtp",
+        "gui email",
+        "gmail",
+        "thu dien tu"
+      ]
     },
     "connections-google": {
       "title": "Google Sheets",
@@ -2605,7 +2692,13 @@
         "Sign in to Google and allow access",
         "Pick the spreadsheet"
       ],
-      "keywords": ["google sheet", "google sheets", "bang tinh", "excel", "spreadsheet"]
+      "keywords": [
+        "google sheet",
+        "google sheets",
+        "bang tinh",
+        "excel",
+        "spreadsheet"
+      ]
     },
     "connections-webhook": {
       "title": "n8n / Webhook",
@@ -2615,13 +2708,29 @@
         "Paste the n8n webhook URL",
         "Pick events and send a test"
       ],
-      "keywords": ["n8n", "webhook", "zapier", "make.com", "make"]
+      "keywords": [
+        "n8n",
+        "webhook",
+        "zapier",
+        "make.com",
+        "make"
+      ]
     },
     "developers": {
       "title": "Developers (API)",
       "what": "Create API keys so other software can read and write NIVO data.",
-      "steps": ["Open Developers", "Name the key and create it", "Copy it now; it is shown once"],
-      "keywords": ["api", "khoa api", "api key", "developer", "lap trinh"]
+      "steps": [
+        "Open Developers",
+        "Name the key and create it",
+        "Copy it now; it is shown once"
+      ],
+      "keywords": [
+        "api",
+        "khoa api",
+        "api key",
+        "developer",
+        "lap trinh"
+      ]
     },
     "billing": {
       "title": "Credits and plan",
@@ -2651,7 +2760,10 @@
     "account": {
       "title": "Your account",
       "what": "Change your name, email, password and sign out other devices.",
-      "steps": ["Open the avatar menu › Account", "Edit and save"],
+      "steps": [
+        "Open the avatar menu › Account",
+        "Edit and save"
+      ],
       "keywords": [
         "tai khoan cua toi",
         "thong tin tai khoan",
@@ -2678,7 +2790,6 @@
     "feedDesc": "Latest first. An event received again (same event ID) is counted as a duplicate, not processed twice.",
     "feedRefresh": "Refresh",
     "feedEmptyTitle": "Nothing received yet",
-    "feedEmptyBody": "Use the form above to send the first input, or start with a quick example.",
     "duplicates": "Duplicates blocked: {n}",
     "amountLine": "Amount {amount}",
     "refLine": "Ref {ref}",
@@ -2689,7 +2800,6 @@
     "minutesAgo": "{n} min ago",
     "hoursAgo": "{n} h ago",
     "daysAgo": "{n} days ago",
-    "loadFailTitle": "Could not load inbound",
     "loadFailBody": "The inbound feed is not available yet. Try again in a moment.",
     "feedAria": "Received inputs",
     "unnamed": "Unknown sender"
@@ -2737,7 +2847,6 @@
     "crumbLabel": "Breadcrumb",
     "crumbBrain": "Second Brain",
     "title": "Documents",
-    "description": "What you teach NIVO about your business. Every agent shares it. Add what matters to you; nothing here is required.",
     "nivoLink": "NIVO base knowledge",
     "readOnlyNote": "You can read this knowledge. Owners and managers add and change it.",
     "loadFailTitle": "Could not load knowledge",
@@ -2778,7 +2887,6 @@
     "errBadType": "Only .txt, .md, .csv, .pdf, .docx, .xlsx, .pptx and .zip files can be added.",
     "errTooBig": "This file is larger than 10 MB.",
     "errBadLink": "This is not a valid link.",
-    "driveAlertTitle": "Let NIVO read your Google Drive to import private documents and whole folders",
     "driveAlertBody": "NIVO only reads. It never edits or deletes anything in your Drive, and you can disconnect at any time.",
     "driveLostBody": "Drive access was revoked in your Google account. Grant it again to read private files and folders.",
     "driveGrant": "Grant Google Drive access",
@@ -2821,7 +2929,6 @@
     "listTitle": "Sources",
     "listCount": "{count} sources",
     "emptyTitle": "Nothing added yet",
-    "emptyBody": "Add a note, a Q&A list or a file. NIVO cuts it into passages and finds the right one when an agent needs it.",
     "filterModule": "Show",
     "filterAll": "All sources",
     "kind_text": "Text",
@@ -2836,7 +2943,6 @@
     "status_ready": "Ready",
     "status_failed": "Failed",
     "status_blocked_credits": "Out of credits",
-    "chunks": "{count} passages",
     "vis_public": "Public",
     "vis_internal": "Internal",
     "visPublicLong": "Public: the chatbot may answer customers from it",
@@ -3605,7 +3711,6 @@
     "needMore": "Not enough points yet",
     "redeemHint": "To redeem, tell the shop in your chat or at the counter.",
     "noRewards": "The shop has not listed rewards yet.",
-    "busy": "Please wait...",
     "unavailable": "This page is not available.",
     "pointsUnit": "points",
     "errBadPhone": "That phone number does not look right. Enter the number you used when you bought.",
@@ -3684,7 +3789,6 @@
     "devNote": "Early access: while NIVO's Meta app is in development mode, only people who have a role on that app can connect a Page. Others will be able to once Meta approves the app.",
     "connect": "Connect Facebook",
     "reconnect": "Log in again",
-    "working": "Opening Facebook...",
     "authDenied": "Facebook did not give access. Try again and allow every permission on the Facebook screen.",
     "authFailed": "Facebook did not accept the login. Please try again.",
     "authExpired": "That login took too long. Press Connect Facebook again.",
@@ -3926,7 +4030,6 @@
     "syncing": "Syncing...",
     "syncNone": "Not synced yet",
     "syncError": "Sync failed: {reason}",
-    "syncReasonWorkspaceUnavailable": "the agent server is not connected yet",
     "syncReasonUnknown": "could not sync, try again later",
     "syncDrift": "Out of step: Supabase v{active}, OpenClaw v{synced}",
     "syncNever": "none",
@@ -3953,7 +4056,6 @@
     "viewDetails": "View details",
     "detailsPoints": "What the agent does",
     "detailsClose": "Close",
-    "roleOf": "{role} · {status}",
     "railTitle": "Your agents",
     "railAdd": "Add agent",
     "privateChat": "Private chat",
@@ -3980,7 +4082,6 @@
   "office": {
     "crumbLabel": "Breadcrumb",
     "crumbHome": "Overview",
-    "loadFailed": "The Office could not be loaded. Your messages are safe; try again.",
     "title": "Office",
     "messengerLabel": "Office messenger",
     "listLabel": "Conversations",
@@ -4013,7 +4114,6 @@
     "statusSent": "Sent",
     "statusDelivered": "Delivered",
     "statusSeen": "Seen",
-    "readersOverflow": "{n} more readers",
     "agentPreviewPaused": "Paused",
     "customerPreviewNone": "No next step yet",
     "back": "Back to chats",
@@ -4027,15 +4127,10 @@
     "mutedChat": "Notifications muted",
     "infoClose": "Hide chat info",
     "infoTitle": "Chat info",
-    "conversationLabel": "Office conversation",
     "emptyMessage": "No messages yet",
-    "emptyMessageHint": "Say hello to the team or type @ to call an agent.",
     "typing": "{name} is typing…",
-    "sending": "Sending…",
     "nivoCore": "NIVO Core",
     "nivoRole": "Runs the company for you",
-    "promptNivoAuthority": "@nivo Give authority: Sales sends follow-ups on its own, orders over 20 million ask me first",
-    "promptNivoExceptions": "@nivo Any exceptions today?",
     "exceptionTitle": "Needs your decision",
     "exceptionsTitle": "Exceptions",
     "exceptionsNone": "No exceptions right now.",
@@ -4053,29 +4148,21 @@
     "exceptionMissingHint": "Fill in the required fields to continue.",
     "exceptionDecided": "{status} by {who} · {time}",
     "exceptionAssigned": "Assigned to {name} · {time}",
-    "exceptionResult": "Result",
     "exceptionOpenLead": "Open customer",
     "exceptionJump": "Show in chat",
     "reconcileWaiting": "Payment awaiting verification",
-    "reconcileCredit": "Bank credit",
     "reconcileCreditLine": "{amount} · from {payer} · reference {ref}",
     "reconcileUnknown": "unknown",
     "reconcileWarning": "A matching amount is not proof. Choose the invoice and write what confirms it.",
     "basisLabel": "Basis for confirming",
     "basisPlaceholder": "e.g. Customer sent a transfer screenshot · Statement shows sender name Minh",
     "basisHint": "Required. Write what you checked (at least {n} characters). It is saved with the decision.",
-    "basisCount": "{n}/{min} characters",
-    "basisNeeded": "Write the basis for confirming before approving.",
     "basisRequiredError": "A payment can only be marked paid with a written basis (at least {n} characters).",
     "decidedBasis": "Basis: {basis}",
     "heldLine": "Kept waiting: {note} · {who} · {time}",
     "today": "Today",
     "yesterday": "Yesterday",
-    "aiBadge": "AI",
-    "copyText": "Copy",
-    "copied": "Copied",
     "openLead": "Open customer",
-    "reply": "Reply",
     "leadFallback": "Customer",
     "noticeLead": "{name} · Open customer",
     "unknownLead": "Unknown customer",
@@ -4089,14 +4176,6 @@
     "approvalDecided": "{status} by {who} · {time}",
     "approvalDecidedNoTime": "{status} by {who}",
     "teammate": "a teammate",
-    "approveSend": "Approve and send",
-    "approveEdited": "Approve edited text",
-    "edit": "Edit",
-    "cancelEdit": "Cancel edit",
-    "reject": "Reject",
-    "draftLabel": "Message to send",
-    "showMore": "Show full message",
-    "showLess": "Show less",
     "pendingTitle": "Needs your approval",
     "pendingNone": "Nothing is waiting for you.",
     "pendingJump": "Show in chat",
@@ -4118,19 +4197,6 @@
     "tasksSummary": "{open} open · {total} in total",
     "tasksOpen": "See team tasks",
     "tasksBack": "Back to chat",
-    "mentionLabel": "Call an agent",
-    "mentionButton": "Mention",
-    "sendFailed": "Message not sent",
-    "quickLabel": "Quick questions",
-    "quickPrevious": "Previous questions",
-    "quickNext": "Next questions",
-    "promptAttention": "@sales Which customers need attention today?",
-    "promptSummary": "@sales Summarise Customer A",
-    "promptInvoices": "@accounting Which invoices are waiting?",
-    "promptChatbot": "@{handle} What can you help customers with?",
-    "composerLabel": "Message",
-    "composerPlaceholder": "Message the team…",
-    "composerHint": "Type @ to call an agent · Enter to send · Shift+Enter for a new line",
     "staffTag": "Staff",
     "roleManager": "Manager",
     "waitingManager": "Waiting for a manager to approve",
@@ -4139,7 +4205,6 @@
     "seenMinutes": "Last seen {n} min ago",
     "seenAt": "Last seen {time}",
     "noAccountYet": "No account yet",
-    "send": "Send",
     "statusOpen": "In progress",
     "statusWaiting": "Waiting approval",
     "statusDone": "Done",
@@ -4159,24 +4224,14 @@
     "due": "Due {date}",
     "noDue": "No due date",
     "openArrow": "Open →",
-    "cmdCardLabel": "Command for {agent}",
     "cmdAsk": "Send this command to @{handle}?",
     "cmdAskReading": "NIVO is reading your message as a command for @{handle}…",
-    "cmdPending": "Waiting for you",
     "cmdSentBadge": "Command sent",
     "cmdCancelledBadge": "Cancelled",
-    "cmdSend": "Send command",
-    "cmdCancel": "Cancel",
-    "cmdOpenWork": "Open the work item",
-    "cmdRowAgent": "Agent",
-    "cmdRowCommand": "Command",
     "cmdGateNote": "{agent} still applies its own approval rule before it acts.",
     "cmdSentNote": "Sent to {agent}. It follows its own rules from here.",
     "cmdAlready": "This work already existed, so no second copy was made.",
     "cmdCancelledNote": "You cancelled this command; nothing was sent.",
-    "cmdFailed": "The command was not sent",
-    "retry": "Try again",
-    "loadEarlier": "Show earlier messages",
     "approvalSaved": "Decision saved",
     "rejectionSaved": "Rejected",
     "roomOnDuty": "{n, plural, one {# agent on duty} other {# agents on duty}}",
@@ -4186,8 +4241,6 @@
     "pinsTitle": "Pinned documents",
     "channelConnected": "Connected",
     "channelAttention": "Needs a look",
-    "cardApprove": "Approve",
-    "cardDecline": "Decline",
     "cardState_pending": "Needs your approval",
     "cardState_approved": "Approved",
     "cardState_declined": "Declined",
@@ -4204,7 +4257,6 @@
     "cardType_handoff_note": "Handoff note",
     "cardType_exception": "Exception",
     "cardType_action_done": "Action done",
-    "cardSources": "Sources",
     "sourceLayer_1": "Live data",
     "sourceLayer_2": "Second Brain",
     "sourceLayer_3": "Agent learning",
@@ -4213,7 +4265,6 @@
   },
   "onboarding": {
     "created": "Workspace created.",
-    "loadFailed": "Your workspaces could not be loaded",
     "pageTitle": "Set up your workspace",
     "newTitle": "Create a new workspace",
     "cancel": "Cancel",
@@ -4489,14 +4540,10 @@
     "sortNewest": "Sort: Newest",
     "byOwner": "Responsibilities by owner",
     "emptyAll": "No responsibilities yet",
-    "emptyAllDesc": "New leads get an owner and a next action here.",
     "emptyOpen": "No open responsibilities",
     "emptyWaiting": "Nothing is waiting for approval",
-    "emptyWaitingDesc": "Drafts from agents appear here until a person decides.",
     "emptyDone": "No completed responsibilities yet",
-    "emptyDoneDesc": "Closed work is kept here with its outcome.",
     "emptyFiltered": "No responsibilities match these filters",
-    "emptyFilteredDesc": "Clear the filters to see every responsibility.",
     "groupAria": "Responsibilities",
     "groupOwnedBy": "Responsibilities owned by {name}",
     "groupCards": "{name} responsibilities",
@@ -5218,7 +5265,6 @@
     "tabQuestions": "Questions to answer",
     "tabLedger": "Ledger",
     "loadFailedTitle": "Accounting could not be loaded",
-    "loadFailedBody": "The data may not be ready yet. Try again in a moment.",
     "cancel": "Cancel",
     "close": "Close",
     "sourceLabel": "Source",
@@ -5753,9 +5799,7 @@
     "hrTabOnboarding": "Onboarding",
     "hrTabSettings": "Settings",
     "hrFailedTitle": "Hiring could not be loaded",
-    "hrFailedBody": "The data may not be ready yet. Try again in a moment.",
     "hrForbiddenTitle": "Only the owner or a manager can see Hiring",
-    "hrForbiddenBody": "Candidate files are personal data, so only managers can open them. Ask the business owner for access.",
     "ctWaiting": "Drafts awaiting approval",
     "ctWaitingMeta": "Posts to approve",
     "ctPublished": "Published (30 days)",
@@ -6245,7 +6289,6 @@
     "contractEdit": "Edit",
     "contractSaved": "Contract saved.",
     "contractsEmptyTitle": "No contracts yet",
-    "contractsEmptyBody": "Add a recurring contract to be reminded before it ends.",
     "contractLead": "Customer on record",
     "contractLeadNone": "Not linked (type a name)",
     "contractCustomer": "Customer name",
@@ -6629,11 +6672,9 @@
     "applyCvSkipped": "Your CV could not be attached; the business may ask you for it.",
     "applyFailed": "Something went wrong sending the application, please try again.",
     "applyMissing": "This job post was not found",
-    "applyMissingBody": "The link may be wrong or the post may have been removed.",
     "applyFoot": "Careers page of {company}, run by NIVO.",
     "replyFoot": "Run by NIVO.",
     "replyInvalid": "This link is no longer valid",
-    "replyInvalidBody": "Please contact the business for help.",
     "replyInterviewTitle": "Pick an interview time",
     "replyInterviewHeading": "Hello {name}, you are invited to interview for {job}",
     "replyInterviewDetail": "{where}. About {minutes} minutes{interviewer, select, none {} other {, interviewer: {interviewer}}}.",
@@ -6829,7 +6870,6 @@
     "approvedBy": "approved by {name}",
     "duration": "{ms} ms",
     "failedTitle": "The MCP gateway could not be read",
-    "failedBody": "Try again in a moment.",
     "retry": "Retry",
     "credentialSet": "credential set",
     "credentialNeeded": "credential needed",

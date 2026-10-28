@@ -28,7 +28,7 @@ import {
     boardSlotOf,
 } from "@/hooks/connections"
 import { webSiteOrigin } from "@/modules/config"
-import { useSlotLabels } from "@/hooks/slot"
+import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import type { AgentOption, Connection } from "@/modules/types"
 import { ConnectorDetailOverlayBase, detailRowsOf } from "./component"
 import type { DetailEntry } from "./component"
@@ -64,7 +64,8 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
     const t = useTranslations("connections")
     const slotLabelsOf = useSlotLabels()
     const { role, isLoading: isRoleLoading } = useConnectionsRole()
-    const user = useQueryAuthUserSwr()
+    // The signed-in person only prefills the SMTP test recipient: the board never waits on it.
+    const user = slotOfSwr(useQueryAuthUserSwr())
     const data = useConnectionsData()
     const manager = role === "owner" || role === "manager"
     const live = liveConnections(data.items)
@@ -78,7 +79,7 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
             : t("summaryCalm", { live: live.length })
     const board: ConnectionsBoard = {
         view: showsLibrary ? "library" : "connected",
-        ownerEmail: user.data?.email ?? "",
+        ownerEmail: user.items?.email ?? "",
         canManage: role === "owner",
         localOnly: isLocalOnly(webSiteOrigin()),
         items: data.items,

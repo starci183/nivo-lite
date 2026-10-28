@@ -16,4 +16,6 @@ export enum AiPoolLogEvent {
     ChatEmpty = "ai_pool.chat.empty",
     /** An embeddings call failed on every lane it could try; the passages are stored without vectors. */
     EmbeddingFailed = "ai_pool.embedding.failed",
+    /** The embeddings provider answered vectors of another count or size; the passages are stored without vectors. */
+    EmbeddingUnexpected = "ai_pool.embedding.unexpected",
 }

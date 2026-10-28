@@ -1,7 +1,3 @@
-import type { useTranslations } from "next-intl"
-import type { useShiftsFormat, useShiftsBenchData } from "@/hooks/shifts"
-import type { useShiftsWeekCommands } from "@/hooks/shiftsCommands"
-import type { useShiftsWeekModel } from "@/hooks/shiftsCoverage"
 import {
     Button,
     DataTable,
@@ -235,24 +231,3 @@ const renderGridCell = ({ cell, props }: RenderGridCellInput) => (
 )
 
 type RenderGridCellInput = { readonly cell: GridCellView; readonly props: ShiftsGridBaseProps }
-/** State values and commands consumed by the connected surface. */
-export type ShiftsGridControllerInput = {
-    readonly t: ReturnType<typeof useTranslations<"shifts">>
-    readonly format: ReturnType<typeof useShiftsFormat>
-    readonly week: ReturnType<typeof useShiftsWeekCommands>
-    readonly bench: NonNullable<ReturnType<typeof useShiftsBenchData>>["data"]
-    readonly setMoves: React.Dispatch<React.SetStateAction<Readonly<Record<string, string | null>>>>
-    readonly picked: string | null
-    readonly setPicked: React.Dispatch<React.SetStateAction<string | null>>
-    readonly over: string | null
-    readonly setOver: React.Dispatch<React.SetStateAction<string | null>>
-    readonly dayIndex: number
-    readonly setDayIndex: React.Dispatch<React.SetStateAction<number>>
-    readonly model: ReturnType<typeof useShiftsWeekModel>
-}
-
-/** Narrowed schedule data available after the access guard. */
-export type GridCellsInput = ShiftsGridControllerInput & {
-    bench: NonNullable<ShiftsGridControllerInput["bench"]>
-    model: NonNullable<ShiftsGridControllerInput["model"]>
-}

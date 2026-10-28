@@ -114,11 +114,11 @@ export const PublicBookingForm = (props: PublicBookingFormProps) => {
 
                 <PublicBookingContact {...contactPropsOf(props)} />
 
-                {p.failure === undefined ? null : (
+                {p.refusal === undefined ? null : (
                     <div className={STACK_CLASS}>
-                        <Alert tone="negative" title={p.failure.message} />
+                        <Alert tone="negative" title={p.refusal.message} />
                         <PublicBookingAlternatives
-                            alternatives={p.failure.alternatives}
+                            alternatives={p.refusal.alternatives}
                             label={p.labels.alternatives}
                             onPick={on.pickAlternative}
                         />

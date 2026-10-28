@@ -15,7 +15,6 @@ import {
 } from "@starci/grammar/common"
 
 import { AdminBadges } from "@/components/leaves/AdminBadges"
-import type { AdminWorkspaceRowView } from "@/hooks/admin"
 import { ADMIN_ROUTES } from "@/modules/routes"
 import {
     BADGE_WRAP_CLASS_NAME,
@@ -25,8 +24,8 @@ import {
     SEARCH_FORM_CLASS_NAME,
     STACK_CLASS_NAME,
 } from "./classNames"
-import { SlotBoundView } from "@/components/composites/SlotView"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import { SlotView } from "@/components/composites/SlotView"
+import type { AdminWorkspaceRowView, DataSlot, SlotLabels } from "@/modules/types"
 
 /** One filter chip of the list. */
 interface FilterView {
@@ -131,7 +130,7 @@ export interface AdminWorkspacesBaseProps {
     readonly props: {
         readonly slot: DataSlot<AdminWorkspacesViewProps["props"]>
         readonly placeholder: AdminWorkspacesViewProps["props"]
-        readonly slotLabels: SlotLabels
+        readonly labels: SlotLabels
     }
     readonly on: {
         readonly retry: () => void
@@ -140,9 +139,9 @@ export interface AdminWorkspacesBaseProps {
 
 /** Draws the finished list, or the same list as a skeleton, the failure with its retry, or the empty notice. */
 export const AdminWorkspacesBase = (props: AdminWorkspacesBaseProps) => (
-    <SlotBoundView from={props.props} onRetry={props.on.retry}>
+    <SlotView {...props.props} onRetry={props.on.retry}>
         {(view, isSkeleton) => <AdminWorkspacesView props={view} isSkeleton={isSkeleton} />}
-    </SlotBoundView>
+    </SlotView>
 )
 
 /** Draws the div section of the AdminWorkspaces view. */

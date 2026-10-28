@@ -63,7 +63,7 @@ interface ScriptViewContext {
     form: ReturnType<typeof useVideoScriptForm>
     error: string | null
     scriptJob: ReturnType<typeof useVideoScript>
-    failure: ReturnType<typeof useVideoFailure>
+    wordFailure: ReturnType<typeof useVideoFailure>
 }
 
 const estimateLabelOf = (estimate: "none" | "long" | "ok", total: number, t: ScriptViewContext["t"]): string | null => {
@@ -84,7 +84,7 @@ const viewOf = ({
     form,
     error,
     scriptJob,
-    failure,
+    wordFailure,
 }: ScriptViewContext) => ({
     ...scriptCopyOf(t),
     tookLabel:
@@ -110,7 +110,7 @@ const viewOf = ({
         error ??
         (Object.keys(form.formState.errors).length > 0 ? t("err_default") : null) ??
         (scriptJob.error instanceof Error ? scriptJob.error.message : null) ??
-        (project.lastError ? failure(project.lastError) : null),
+        (project.lastError ? wordFailure(project.lastError) : null),
 })
 
 /** Step three of the wizard: NIVO writes the script, the owner edits it scene by scene. Moving on saves the scenes. */
@@ -118,7 +118,7 @@ export const VideoScriptStep = (props: VideoScriptStepProps) => {
     const editor = useVideoProjectData(props)
     const t = useTranslations("video")
     const format = useFormatter()
-    const failure = useVideoFailure()
+    const wordFailure = useVideoFailure()
     const { update } = useVideoActions()
     const scriptJob = useVideoScript()
     const router = navigation.useRouter()
@@ -127,7 +127,7 @@ export const VideoScriptStep = (props: VideoScriptStepProps) => {
     const form = useVideoScriptForm(project.script)
     const scenes = form.watch("scenes")
     const dirty = form.formState.isDirty
-    const [error, setError] = useState<string | null>(project.lastError ? failure(project.lastError) : null)
+    const [error, setError] = useState<string | null>(project.lastError ? wordFailure(project.lastError) : null)
     const scripting =
         project.status === "scripting" ||
         scriptJob.isMutating ||
@@ -169,7 +169,7 @@ export const VideoScriptStep = (props: VideoScriptStepProps) => {
                 form,
                 error,
                 scriptJob,
-                failure,
+                wordFailure,
             })}
             on={{
                 write: () => void write(),

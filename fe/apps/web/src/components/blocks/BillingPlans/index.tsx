@@ -1,9 +1,10 @@
 "use client"
 
 import { useFormatter, useLocale, useTranslations } from "next-intl"
-import type { PlanCardView, PlanGroupView } from "@/components/composites/PlanCatalog"
+import type { PlanCardView, PlanGroupView } from "@/modules/types"
 import { usePlanChoices } from "@/hooks/billing"
-import { BillingPlansBase, planCardOf } from "./component"
+import { planCatalogCardOf } from "@/hooks/billingPlans"
+import { BillingPlansBase } from "./component"
 
 interface BillingPlansProps {
     readonly workspaceId: string
@@ -33,7 +34,7 @@ const buildBillingPlansState = (
     const buyable = plans.filter((plan) => !plan.isCustom)
     const annualPct = Math.max(0, ...plans.map((plan) => plan.annualDiscountPct ?? 0))
     const cardOf = (plan: Plan): PlanCardView =>
-        planCardOf(plan, { t, locale, choices, money, count, buyable, canBuy, contactHref: props.contactHref })
+        planCatalogCardOf(plan, { t, locale, choices, money, count, buyable, canBuy, contactHref: props.contactHref })
     const groups: PlanGroupView[] = [
         {
             id: "individual",

@@ -1,6 +1,5 @@
 import { Button, CheckboxGroup, Input, NumberField, SurfaceCard, Switch } from "@starci/grammar/common"
-import type { ContentChannel, ContentNote } from "@/hooks/content"
-import type { ContentT } from "@/modules/types"
+import type { ContentChannel, ContentNoteView, ContentT } from "@/modules/types"
 import { ContentCommandNote, ContentSettingsCard } from "@/components/composites/ContentSettingsCard"
 import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
@@ -22,7 +21,7 @@ export interface ContentCadenceCardBaseProps {
         readonly dayNames: ReadonlyArray<string>
         readonly canManage: boolean
         readonly isPending: boolean
-        readonly note: ContentNote | null
+        readonly note: ContentNoteView | null
     }
     readonly on: {
         readonly change: (channel: ContentChannel, change: Partial<CadenceRow>) => void

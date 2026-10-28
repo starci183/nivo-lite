@@ -15,7 +15,7 @@ export interface ForgotFormBaseProps {
     readonly props: {
         readonly title: string
         readonly text: string
-        readonly failure?: { readonly title: string; readonly text: string } | undefined
+        readonly submitError?: { readonly title: string; readonly text: string } | undefined
         readonly emailLabel: string
         readonly emailPlaceholder: string
         readonly submitLabel: string
@@ -49,7 +49,7 @@ export const ForgotFormBase = (props: ForgotFormBaseProps) => {
                 onSubmit={props.on.submit}
                 label={view.title}
                 isPending={view.isPending}
-                failure={view.failure}
+                error={view.submitError}
                 submitLabel={view.submitLabel}
                 footer={
                     <div className={FORGOT_CENTER_CLASS_NAME}>

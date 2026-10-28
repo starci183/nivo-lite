@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { LLM } from "@modules/integrations/llm"
-import type { LlmPort } from "@modules/integrations/llm"
+import { AI_POOL } from "@modules/integrations/ai-pool"
+import type { AiPoolClient } from "@modules/integrations/ai-pool"
 import { NivoKnowledgeErrorCode } from "./errors/nivo-knowledge.error"
 import { NivoFolderClient } from "./nivo-folder.client"
 import { NIVO_KNOWLEDGE_OPTIONS } from "./nivo-knowledge.decorators"
@@ -12,9 +12,9 @@ const TONE = { path: "core/core-tone.md", text: "---\ntitle: Tone\nkind: tone\n-
 const PLAYBOOK = { path: "chatbot/chatbot-care.md", text: "---\ntitle: Care\nkind: playbook\n---\nAnswer fast." }
 
 const build = async () => {
-    const llm = mock<LlmPort>()
-    llm.embeddingsConfigured.mockReturnValue(true)
-    llm.embeddingModel.mockReturnValue("embed-1")
+    const pool = mock<AiPoolClient>()
+    pool.embeddingsReady.mockReturnValue(true)
+    pool.embeddingModel.mockReturnValue("embed-1")
     const nivo = mock<NivoKnowledgeService>()
     nivo.upsert.mockResolvedValue({ inserted: 1, updated: 1 })
     nivo.removeExcept.mockResolvedValue(3)
@@ -25,12 +25,12 @@ const build = async () => {
         providers: [
             NivoSeedService,
             { provide: NIVO_KNOWLEDGE_OPTIONS, useValue: { folders: ["core", "chatbot"] } },
-            { provide: LLM, useValue: llm },
+            { provide: AI_POOL, useValue: pool },
             { provide: NivoKnowledgeService, useValue: nivo },
             { provide: NivoFolderClient, useValue: folder },
         ],
     }).compile()
-    return { service: moduleRef.get(NivoSeedService), llm, nivo, folder }
+    return { service: moduleRef.get(NivoSeedService), pool, nivo, folder }
 }
 
 describe("NivoSeedService", () => {
@@ -52,14 +52,14 @@ describe("NivoSeedService", () => {
     })
 
     it("embeds the items without a vector, batch after batch, until none is left", async () => {
-        const { service, llm, nivo, folder } = await build()
+        const { service, pool, nivo, folder } = await build()
         nivo.unembedded
             .mockResolvedValueOnce([
                 { id: "n1", text: "Tone" },
                 { id: "n2", text: "Care" },
             ])
             .mockResolvedValueOnce([])
-        llm.embed.mockResolvedValue({
+        pool.embed.mockResolvedValue({
             vectors: [[0.5, 1]],
             usage: { promptTokens: null, completionTokens: null, totalTokens: null, costUsd: null },
         })
@@ -75,10 +75,10 @@ describe("NivoSeedService", () => {
 
     it("embeds nothing without an embeddings key, and stops when the provider fails", async () => {
         const unkeyed = await build()
-        unkeyed.llm.embeddingsConfigured.mockReturnValue(false)
+        unkeyed.pool.embeddingsReady.mockReturnValue(false)
         const failing = await build()
         failing.nivo.unembedded.mockResolvedValue([{ id: "n1", text: "Tone" }])
-        failing.llm.embed.mockResolvedValue(null)
+        failing.pool.embed.mockResolvedValue(null)
 
         await expect(unkeyed.service.seedFolder(undefined)).resolves.toMatchObject({ embedded: 0 })
         await expect(failing.service.seedFolder(undefined)).resolves.toMatchObject({ embedded: 0 })

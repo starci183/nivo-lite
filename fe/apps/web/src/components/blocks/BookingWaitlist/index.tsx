@@ -4,8 +4,7 @@ import { useBookingBoard } from "@/hooks/bookingBoard"
 import { useSlotLabels } from "@/hooks/slot"
 import { useFormatter, useTranslations } from "next-intl"
 import { useTransition } from "react"
-import { useMutateRemoveBookingWaitlistEntrySwr } from "@/hooks/swr"
-import { useBookingSetupSave } from "@/hooks/bookingSetup"
+import { useBookingSettingsCommands } from "@/hooks/bookingSetup"
 import { BookingWaitlistBase } from "./component"
 
 /** The connected waiting list: customers who wait for a free time, removable one by one. */
@@ -14,8 +13,7 @@ export const BookingWaitlist = () => {
     const slotLabels = useSlotLabels()
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
-    const persist = useBookingSetupSave()
-    const remove = useMutateRemoveBookingWaitlistEntrySwr()
+    const commands = useBookingSettingsCommands()
     const [isPending, startTransition] = useTransition()
     const when = (ms: number) =>
         format.dateTime(new Date(ms), {
@@ -61,7 +59,7 @@ export const BookingWaitlist = () => {
                 retry: reload,
                 remove: (id) =>
                     startTransition(async () => {
-                        const answer = await persist(() => remove.trigger({ id }))
+                        const answer = await commands.removeWaitlistEntry({ id })
                         if (answer === undefined) return
                     }),
             }}

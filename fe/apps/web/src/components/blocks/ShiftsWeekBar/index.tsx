@@ -1,18 +1,33 @@
 "use client"
 
-import {
-    type Busy,
-    type ShiftsWeekBarControllerInput,
-    type CreateShiftsWeekBarRowsInput,
-    ShiftsWeekBarBase,
-    type WeekBarStatusView,
-} from "./component"
+import { ShiftsWeekBarBase, type WeekBarStatusView } from "./component"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsRequestCommands, useShiftsWeekCommands } from "@/hooks/shiftsCommands"
 import { isoAddDays } from "@/hooks/shiftsTime"
 import { useShiftsWeekStore } from "@/hooks/zustand/shiftsWeek"
+
+/** State values and commands consumed by the connected surface. */
+type Busy = "propose" | "explain" | "publish" | "decide" | null
+
+/** State values and commands consumed by the connected surface. */
+type ShiftsWeekBarControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"shifts">>
+    readonly format: ReturnType<typeof useShiftsFormat>
+    readonly selected: ReturnType<typeof useShiftsWeekStore.getState>["monday"]
+    readonly setSelected: ReturnType<typeof useShiftsWeekStore.getState>["setMonday"]
+    readonly bench: NonNullable<ReturnType<typeof useShiftsBenchData>>["data"]
+    readonly week: ReturnType<typeof useShiftsWeekCommands>
+    readonly requests: ReturnType<typeof useShiftsRequestCommands>
+    readonly busy: Busy
+    readonly setBusy: React.Dispatch<React.SetStateAction<Busy>>
+}
+
+/** Narrowed schedule data available after the access guard. */
+type CreateShiftsWeekBarRowsInput = ShiftsWeekBarControllerInput & {
+    bench: NonNullable<ShiftsWeekBarControllerInput["bench"]>
+}
 
 const createShiftsWeekBarRows = (context: CreateShiftsWeekBarRowsInput) => {
     const { t, bench, week, requests, busy, setBusy } = context

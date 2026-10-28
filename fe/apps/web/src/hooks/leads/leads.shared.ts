@@ -1,5 +1,7 @@
 import type { LeadFlowType as LeadFlow, LeadRecordType } from "@/hooks/swr"
 import type {
+    FlowEntryView,
+    FlowView,
     LeadJourney,
     LeadPrimaryAction,
     LeadRecord,
@@ -9,7 +11,9 @@ import type {
 } from "@/modules/types"
 import type { BadgeTone } from "@starci/grammar/common"
 import type { useTranslations } from "next-intl"
-import type { FlowEntryView, FlowView } from "./useLeadFlowView"
+
+/** The owner value of the next-step form that stands for the person, beside the agent ids. */
+export const HUMAN_OWNER = "human"
 
 /** The stages in journey order, as the tabs and the stage choice list them. */
 export const STAGE_ORDER: ReadonlyArray<LeadStageId> = ["new", "qualified", "proposal", "won", "lost"]

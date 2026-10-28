@@ -1,9 +1,8 @@
 import { SectionHeader } from "@starci/grammar/common"
 import { AdminRowsCard } from "@/components/composites/AdminRowsCard"
-import type { AdminCardView } from "@/hooks/admin"
 import { GRID_CLASS_NAME } from "./classNames"
-import { SlotBoundView } from "@/components/composites/SlotView"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import { SlotView } from "@/components/composites/SlotView"
+import type { AdminCardView, DataSlot, SlotLabels } from "@/modules/types"
 
 /** Copy and cards the platform health page supplies. */
 export interface AdminHealthViewProps {
@@ -41,7 +40,7 @@ export interface AdminHealthBaseProps {
     readonly props: {
         readonly slot: DataSlot<AdminHealthViewProps["props"]>
         readonly placeholder: AdminHealthViewProps["props"]
-        readonly slotLabels: SlotLabels
+        readonly labels: SlotLabels
     }
     readonly on: {
         readonly retry: () => void
@@ -50,7 +49,7 @@ export interface AdminHealthBaseProps {
 
 /** Draws the finished health view, or the same view as a skeleton, the failure with its retry, or the empty notice. */
 export const AdminHealthBase = (props: AdminHealthBaseProps) => (
-    <SlotBoundView from={props.props} onRetry={props.on.retry}>
+    <SlotView {...props.props} onRetry={props.on.retry}>
         {(view, isSkeleton) => <AdminHealthView props={view} isSkeleton={isSkeleton} />}
-    </SlotBoundView>
+    </SlotView>
 )

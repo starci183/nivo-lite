@@ -1,5 +1,3 @@
-"use client"
-
 import { Button } from "@starci/grammar/common"
 import { useEffect, useState } from "react"
 
@@ -13,7 +11,7 @@ interface CopyTextButtonProps {
 /** How long the button confirms a copy. */
 const CONFIRM_MS = 2000
 
-/** Ghost button that copies the text and confirms it in place. */
+/** Ghost button that copies the text and confirms it in place; the brief confirmation is its own interaction state. */
 export const CopyTextButton = (props: CopyTextButtonProps) => {
     const [isCopied, setIsCopied] = useState(false)
     useEffect(() => {

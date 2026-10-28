@@ -1,10 +1,10 @@
+import type { ComponentProps } from "react"
 import { AdminWorkspaces } from "@/components/blocks/AdminWorkspaces"
-import type { AdminWorkspaceFilter } from "@/hooks/admin"
 
 /** The filter and the search the workspaces page was opened with. */
 export interface AdminWorkspacesPageBaseProps {
     readonly props: {
-        readonly filter: AdminWorkspaceFilter
+        readonly filter: ComponentProps<typeof AdminWorkspaces>["filter"]
         readonly query: string
     }
 }

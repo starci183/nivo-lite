@@ -1,10 +1,10 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useLeadFlow, useLeadFlowView, type FlowView } from "@/hooks/leads"
+import { useLeadFlow, useLeadFlowView } from "@/hooks/leads"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { LeadWorkFlowBase } from "./component"
-import type { DataSlot } from "@/modules/types"
+import type { DataSlot, FlowView } from "@/modules/types"
 
 /** The work flow of the lead as the page read it: loading, failed or the flow itself. */
 interface LeadWorkFlowProps {

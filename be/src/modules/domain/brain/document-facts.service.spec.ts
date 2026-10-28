@@ -6,8 +6,8 @@ import { DOC_ANSWERS, KnowledgeGapsService } from "@modules/domain/knowledge-gap
 import { KnowledgeIndexingService, UsageMeterService } from "@modules/domain/knowledge"
 import type { SourceRecord } from "@modules/domain/knowledge-sources"
 import { KnowledgeSourcesService, StoredNote } from "@modules/domain/knowledge-sources"
-import { LLM } from "@modules/integrations/llm"
-import type { LlmPort } from "@modules/integrations/llm"
+import { AI_POOL } from "@modules/integrations/ai-pool"
+import type { AiPoolClient } from "@modules/integrations/ai-pool"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { BrainLogEvent } from "./brain.log-events"
@@ -56,7 +56,7 @@ const extractionOf = builder<ExtractionRecord>({
 })
 
 const build = async (source = sourceOf()) => {
-    const llm = mock<LlmPort>()
+    const pool = mock<AiPoolClient>()
     const logger = mock<Logger>()
     const facts = mock<BrainFactsService>()
     const gaps = mock<KnowledgeGapsService>()
@@ -68,12 +68,12 @@ const build = async (source = sourceOf()) => {
     indexing.sourceForFacts.mockResolvedValue(source)
     extractions.get.mockResolvedValue(extractionOf())
     usage.blockedBy.mockResolvedValue(false)
-    llm.complete.mockResolvedValue({ text: "answer", model: "m1", usage: USAGE })
+    pool.chat.mockResolvedValue({ text: "answer", model: "m1", usage: USAGE })
     json.jsonOf.mockReturnValue({ facts: [] })
     const moduleRef = await Test.createTestingModule({
         providers: [
             DocumentFactsService,
-            { provide: LLM, useValue: llm },
+            { provide: AI_POOL, useValue: pool },
             { provide: LOGGER, useValue: logger },
             { provide: BrainFactsService, useValue: facts },
             { provide: KnowledgeGapsService, useValue: gaps },
@@ -85,7 +85,7 @@ const build = async (source = sourceOf()) => {
         ],
     }).compile()
     const service = moduleRef.get(DocumentFactsService)
-    return { service, llm, logger, facts, gaps, extractions, indexing, sources, usage, json }
+    return { service, pool, logger, facts, gaps, extractions, indexing, sources, usage, json }
 }
 
 describe("DocumentFactsService", () => {
@@ -139,19 +139,19 @@ describe("DocumentFactsService", () => {
     })
 
     it("does not read a document already completed with this text and prompt", async () => {
-        const { service, extractions, sources, llm } = await build()
+        const { service, extractions, sources, pool } = await build()
         extractions.get.mockResolvedValue(extractionOf({ status: "done" }))
 
         await expect(service.run(PAYLOAD)).resolves.toBe("skipped")
 
         expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, null)
         expect(extractions.start).not.toHaveBeenCalled()
-        expect(llm.complete).not.toHaveBeenCalled()
+        expect(pool.chat).not.toHaveBeenCalled()
     })
 })
 describe("DocumentFactsService", () => {
     it("starts a new extraction without withdrawing and defaults a missing resumed record", async () => {
-        const { service, extractions, facts, usage, sources, llm } = await build()
+        const { service, extractions, facts, usage, sources, pool } = await build()
         extractions.get.mockResolvedValue(null)
         usage.blockedBy.mockResolvedValue(true)
 
@@ -176,7 +176,7 @@ describe("DocumentFactsService", () => {
         })
         expect(usage.blockedBy).toHaveBeenCalledWith(WS, "brain", false)
         expect(sources.blockFacts).toHaveBeenCalledWith(WS, SOURCE, StoredNote.NoCreditsForFacts)
-        expect(llm.complete).not.toHaveBeenCalled()
+        expect(pool.chat).not.toHaveBeenCalled()
     })
 
     it("restarts changed text, merging old and newly orphaned facts once", async () => {
@@ -246,12 +246,17 @@ describe("DocumentFactsService", () => {
     })
 
     it("retries a busy model without charging usage", async () => {
-        const { service, llm, usage, extractions, sources } = await build()
-        llm.complete.mockResolvedValue(null)
+        const { service, pool, usage, extractions, sources } = await build()
+        pool.chat.mockResolvedValue(null)
 
         await expect(service.run(PAYLOAD)).rejects.toMatchObject({ code: BrainErrorCode.ModelUnavailable })
 
-        expect(llm.complete).toHaveBeenCalledWith({ system: SYSTEM_PROMPT, prompt: PROMPT, timeoutMs: 40_000 })
+        const [request] = pool.chat.mock.calls[0] ?? []
+        expect(request?.messages.map(({ role, content }) => `${role}:${content}`)).toEqual([
+            `system:${SYSTEM_PROMPT}`,
+            `user:${PROMPT}`,
+        ])
+        expect(request).toMatchObject({ json: false, timeoutMs: 40_000 })
         expect(usage.record).not.toHaveBeenCalled()
         expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, {
             status: "running",
@@ -268,8 +273,8 @@ describe("DocumentFactsService", () => {
     it.each([ExtractionNote.ModelBusy, ExtractionNote.AnswerUnreadable])(
         "closes the third %s attempt",
         async (note) => {
-            const { service, llm, json, extractions, sources } = await build()
-            if (note === ExtractionNote.ModelBusy) llm.complete.mockResolvedValue(null)
+            const { service, pool, json, extractions, sources } = await build()
+            if (note === ExtractionNote.ModelBusy) pool.chat.mockResolvedValue(null)
             else json.jsonOf.mockReturnValue({ other: [] })
             extractions.get.mockResolvedValue(extractionOf({ attempts: 2 }))
 
@@ -314,13 +319,13 @@ describe("DocumentFactsService", () => {
     })
 
     it.each([null, undefined, ""])("keeps the original result for a provider model %s", async (model) => {
-        const { service, llm, extractions } = await build(sourceOf({ content: `${"a".repeat(3500)}b` }))
+        const { service, pool, extractions } = await build(sourceOf({ content: `${"a".repeat(3500)}b` }))
         extractions.get.mockResolvedValue(null)
         const answer = { text: "answer", model: "m1", usage: USAGE }
         Object.defineProperty(answer, "model", { value: model })
-        llm.complete.mockResolvedValueOnce({ text: "answer", model: "m1", usage: USAGE }).mockResolvedValueOnce(answer)
+        pool.chat.mockResolvedValueOnce({ text: "answer", model: "m1", usage: USAGE }).mockResolvedValueOnce(answer)
         await expect(service.run(PAYLOAD)).resolves.toBe("done")
-        expect(llm.complete).toHaveBeenCalledTimes(2)
+        expect(pool.chat).toHaveBeenCalledTimes(2)
         expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, model === "" ? "" : "m1")
     })
 })

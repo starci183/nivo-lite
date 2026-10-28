@@ -1,6 +1,5 @@
 import { Alert, SectionHeader, SurfaceCard, Switch } from "@starci/grammar/common"
-import type { ContentNote } from "@/hooks/content"
-import type { ContentT } from "@/modules/types"
+import type { ContentNoteView, ContentT } from "@/modules/types"
 import { FORM_CLASS_NAME } from "./classNames"
 
 /** One automation switch. */
@@ -18,7 +17,7 @@ export interface ContentAutomationCardBaseProps {
         readonly rows: ReadonlyArray<AutomationRow>
         readonly canManage: boolean
         readonly isPending: boolean
-        readonly note: ContentNote | null
+        readonly note: ContentNoteView | null
     }
     readonly on: {
         readonly toggle: (key: string, on: boolean) => void

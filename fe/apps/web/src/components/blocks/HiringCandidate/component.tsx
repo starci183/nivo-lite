@@ -1,13 +1,3 @@
-import type { useTranslations } from "next-intl"
-import type { reasonTone, scoreTone, useHiringFormat } from "@/hooks/hiring"
-import type {
-    isPreviewable,
-    useHiringCandidate,
-    CandidateDialog,
-    InterviewValues,
-    OfferValues,
-} from "@/hooks/hiringCandidate"
-import type { CandidateView } from "@/hooks/hiringWire"
 import { Alert, AlertDialog, Badge, Drawer, Text, type BadgeTone } from "@starci/grammar/common"
 
 import { HiringCvSection, type HiringCvSectionProps } from "@/components/composites/HiringCvSection"
@@ -20,9 +10,18 @@ import { HiringRejectDialog, type HiringRejectDialogProps } from "@/components/c
 
 import { HiringScoreSection, type HiringScoreSectionProps } from "@/components/composites/HiringScoreSection"
 
-import type { FieldOf, HiringSay } from "@/modules/types"
+import type { HiringSay } from "@/modules/types"
 import { CHIPS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 import { HiringCandidateSections } from "@/components/composites/HiringCandidateSections"
+
+/** The text fields of the interview request form. */
+export type InterviewTextField = "interviewerUserId" | "mode" | "location"
+
+/** The text fields of the offer request form. */
+export type OfferTextField = "title" | "pay" | "startDate" | "probation" | "note"
+
+/** The dialogs the candidate drawer opens. */
+export type CandidateDialogKind = "interview" | "offer" | "reject" | "delete"
 
 /** One line of text with an id and an optional heading line: an answer, an interview, an offer, an event. */
 interface CandidateLineView {
@@ -55,7 +54,7 @@ export interface HiringCandidateBaseProps {
         readonly notes: string
         readonly canSaveNotes: boolean
         readonly retention: string
-        readonly dialog: CandidateDialog | null
+        readonly dialog: CandidateDialogKind | null
         readonly isBusy: boolean
         readonly error: string | null
         readonly notice: string | null
@@ -64,7 +63,7 @@ export interface HiringCandidateBaseProps {
         readonly reject: HiringRejectDialogProps["props"]
     }
     readonly on: {
-        readonly openDialog: (dialog: CandidateDialog) => void
+        readonly openDialog: (dialog: CandidateDialogKind) => void
         readonly closeDialog: () => void
         readonly shortlist: () => void
         readonly rescreen: () => void
@@ -75,10 +74,10 @@ export interface HiringCandidateBaseProps {
         readonly remove: () => void
         readonly clear: () => void
         readonly close: () => void
-        readonly interviewText: (name: FieldOf<InterviewValues, string>, value: string) => void
-        readonly interviewNumber: (name: FieldOf<InterviewValues, number>, value: number) => void
+        readonly interviewText: (name: InterviewTextField, value: string) => void
+        readonly interviewNumber: (name: "durationMin", value: number) => void
         readonly sendInterview: () => void
-        readonly offerText: (name: FieldOf<OfferValues, string>, value: string) => void
+        readonly offerText: (name: OfferTextField, value: string) => void
         readonly sendOffer: () => void
         readonly rejectReason: (value: string) => void
         readonly confirmReject: () => void
@@ -190,85 +189,4 @@ const CandidateDialogs = (props: HiringCandidateBaseProps) => {
             ) : null}
         </>
     )
-}
-
-type CvState = HiringCandidateBaseProps["props"]["cv"]["state"]
-
-/** Where the CV stands: there is none, the link is still loading, or it is ready. */
-const cvStateOf = (hasFile: boolean, isLoaded: boolean, hasLink: boolean): CvState => {
-    if (hasLink) return "ready"
-    return hasFile && !isLoaded ? "loading" : "none"
-}
-
-/** The screening, CV and activity already resolved for the candidate. */
-export const candidateDetailsOf = (
-    candidate: CandidateView,
-    view: ReturnType<typeof useHiringCandidate>,
-    format: ReturnType<typeof useHiringFormat>,
-    t: ReturnType<typeof useTranslations<"hiring">>,
-    tools: CandidateDetailTools,
-) => {
-    const { reasonTone, scoreTone, isPreviewable, openOfferStatuses } = tools
-    const cv = view.detail?.cv ?? null
-    return {
-        score:
-            candidate.score === null
-                ? null
-                : {
-                      value: t("pipeScore", { score: candidate.score }),
-                      label: candidate.scoreLabel === null ? "" : t(`score_${candidate.scoreLabel}`),
-                      tone: scoreTone(candidate.scoreLabel),
-                      summary: candidate.scoreSummary,
-                      reasons: candidate.scoreReasons.map((reason, index) => ({
-                          id: `${index}:${reason.criterion}`,
-                          criterion: reason.criterion,
-                          note: reason.note,
-                          statusLabel: format.label("reason", reason.status),
-                          tone: reasonTone(reason.status),
-                      })),
-                  },
-        cv: {
-            state: cvStateOf(candidate.cvPath !== null, view.detail !== undefined, cv !== null),
-            openLabel: cv === null ? "" : t("candCvOpen", { name: cv.name }),
-            url: cv?.url ?? "",
-            isPdf: cv?.mime === "application/pdf",
-            canPreview: cv !== null && isPreviewable(cv.mime),
-            isPreviewing: view.showCv,
-        },
-        answers: candidate.answers.map((answer) => ({
-            id: answer.questionId,
-            title: answer.question,
-            text: answer.answer,
-        })),
-        interviews: view.interviews.map((entry) => ({
-            id: entry.id,
-            title: "",
-            text: [
-                format.label("ivStatus", entry.status) +
-                    (entry.slotStart === null ? "" : `: ${format.dateTime(entry.slotStart)}`),
-                entry.interviewerName,
-            ]
-                .filter((part) => part !== "")
-                .join(" · "),
-        })),
-        offers: view.offers.map((entry) => ({
-            id: entry.id,
-            title: "",
-            text: `${format.label("offerStatus", entry.status)} · ${entry.pay}`,
-            canCancel: openOfferStatuses.includes(entry.status),
-        })),
-        events: view.detail?.events.map((event) => ({
-            id: event.id,
-            title: event.summary,
-            text: `${event.actor} · ${format.dateTime(event.createdAt)}`,
-        })),
-    }
-}
-
-/** Pure formatting utilities supplied by the connected candidate. */
-type CandidateDetailTools = {
-    readonly reasonTone: typeof reasonTone
-    readonly scoreTone: typeof scoreTone
-    readonly isPreviewable: typeof isPreviewable
-    readonly openOfferStatuses: ReadonlyArray<string>
 }

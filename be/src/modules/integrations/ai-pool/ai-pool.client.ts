@@ -36,7 +36,7 @@ const usageOf = (value: unknown): AiPoolUsage => ({
 
 const isNumber = (entry: unknown): entry is number => typeof entry === "number"
 
-/** A vector as numbers; an entry sent in another form (base64) is empty, so the caller's size check refuses it. */
+/** A vector as numbers; an entry sent in another form (base64) is empty, so the size check of `embed` refuses it. */
 const vectorOf = (value: unknown): ReadonlyArray<number> => {
     const entries = fieldOf(value, "embedding")
     return Array.isArray(entries) && entries.every(isNumber) ? entries : []
@@ -135,7 +135,10 @@ export class AiPoolClient implements OnModuleInit {
         }
     }
 
-    /** Embeds texts in one call; null when no embeddings key is set or the call failed. */
+    /**
+     * Embeds texts in one call: exactly one vector of `dimensions` numbers per text; null when no embeddings key is set, the call
+     * failed or it answered another count or size of vectors.
+     */
     async embed(request: AiPoolEmbedRequest): Promise<AiPoolEmbeddingResult> {
         if (this.router === null || !this.embeddingsReady() || request.input.length === 0) return null
         try {
@@ -154,8 +157,18 @@ export class AiPoolClient implements OnModuleInit {
                     },
                 },
             )
-            const data = [...answer.data].sort((a, b) => indexOf(a) - indexOf(b))
-            return { vectors: data.map(vectorOf), usage: usageOf(answer.usage) }
+            const vectors = [...answer.data].sort((a, b) => indexOf(a) - indexOf(b)).map(vectorOf)
+            if (
+                vectors.length !== request.input.length ||
+                vectors.some((vector) => vector.length !== request.dimensions)
+            ) {
+                this.logger.warn(AiPoolLogEvent.EmbeddingUnexpected, {
+                    expected: request.input.length,
+                    received: vectors.length,
+                })
+                return null
+            }
+            return { vectors, usage: usageOf(answer.usage) }
         } catch (cause) {
             this.logger.warn(AiPoolLogEvent.EmbeddingFailed, failureOf(cause))
             return null

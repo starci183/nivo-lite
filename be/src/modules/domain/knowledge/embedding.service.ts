@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { InjectLlm } from "@modules/integrations/llm"
-import type { LlmPort } from "@modules/integrations/llm"
+import { EMBEDDING_DIMENSIONS } from "@modules/domain/knowledge-chunks"
+import { InjectAiPool } from "@modules/integrations/ai-pool"
+import type { AiPoolClient } from "@modules/integrations/ai-pool"
 import { EMBED_BATCH } from "./knowledge.contracts"
 import { UsageMeterService } from "./usage-meter.service"
 
@@ -27,18 +28,18 @@ export type EmbedProgress = (done: number, total: number) => Promise<void>
 /** Turns passages into vectors in batches, metering every batch against the workspace. */
 export class EmbeddingService {
     constructor(
-        @InjectLlm() private readonly llm: LlmPort,
+        @InjectAiPool() private readonly pool: AiPoolClient,
         private readonly usage: UsageMeterService,
     ) {}
 
     /** True when the deployment can embed at all. */
     configured(): boolean {
-        return this.llm.embeddingsConfigured()
+        return this.pool.embeddingsReady()
     }
 
     /** The model new vectors are made with. */
     model(): string {
-        return this.llm.embeddingModel()
+        return this.pool.embeddingModel()
     }
 
     /** One vector per text, or null when embeddings are unavailable; a batch that fails fails the whole call, nothing partial is kept. */
@@ -63,14 +64,18 @@ export class EmbeddingService {
 
     /** One batch: the vectors, and the call metered. */
     private async embedBatch(request: EmbedRequest, batch: ReadonlyArray<string>): Promise<VectorsResult> {
-        const result = await this.llm.embed(batch, request.timeoutMs)
+        const result = await this.pool.embed({
+            input: batch,
+            dimensions: EMBEDDING_DIMENSIONS,
+            timeoutMs: request.timeoutMs,
+        })
         if (result === null) return null
         if (request.workspaceId === null) return result.vectors
         await this.usage.record({
             workspaceId: request.workspaceId,
             kind: "embedding",
             module: "knowledge",
-            model: this.llm.embeddingModel(),
+            model: this.pool.embeddingModel(),
             usage: result.usage,
             promptChars: batch.reduce((sum, text) => sum + text.length, 0),
         })

@@ -5,7 +5,6 @@ import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { AuthorityRuleRecord } from "@modules/domain/authority-rules"
 import { BrainFactsService, keyOf, sameValue } from "@modules/domain/brain-facts"
 import type { Evidence, Scope } from "@modules/domain/brain-facts"
-import { DecisionsError, DecisionsErrorCode } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
@@ -232,8 +231,11 @@ export class SetupCardsService {
         const record = (await this.actions.list(this.entityManager)).find((entry) => entry.action === base.action)
         const refusal = ruleRefusalOf(record, ruleChange)
         if (refusal !== null) {
-            const code = refusal === "unknown_action" ? DecisionsErrorCode.UnknownAction : DecisionsErrorCode.ModeCapped
-            throw new DecisionsError({ code, params: { action: base.action } })
+            const code =
+                refusal === "unknown_action"
+                    ? ModulesErrorCode.CardRuleUnknownAction
+                    : ModulesErrorCode.CardRuleModeCapped
+            throw new ModulesError({ code, params: { action: base.action } })
         }
         const saved = await this.rules.save(workspaceId, ruleChange)
         const limit = saved.limit_vnd === null ? "" : ` < ${saved.limit_vnd}`

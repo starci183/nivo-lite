@@ -47,7 +47,7 @@ export const ForgotForm = (props: ForgotFormProps) => {
             props={{
                 title: t("forgotTitle"),
                 text: t("forgotText"),
-                failure: failure === undefined ? undefined : { title: t("errGeneric"), text: failure },
+                submitError: failure === undefined ? undefined : { title: t("errGeneric"), text: failure },
                 emailLabel: t("emailLabel"),
                 emailPlaceholder: t("emailPlaceholder"),
                 submitLabel: t("forgotSubmit"),

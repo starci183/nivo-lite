@@ -195,3 +195,12 @@ export interface PublicBookingAnswer {
     readonly alternatives: ReadonlyArray<string>
     readonly bookingId: string | null
 }
+
+/** The fields of the resource form. */
+export interface ResourceFields {
+    readonly name: string
+    readonly kind: string
+    readonly capacity: number
+    readonly active: boolean
+    readonly staffId: string
+}

@@ -49,7 +49,7 @@ export const LeadsBoard = (props: LeadsBoardProps) => {
         stageLabel: t(STAGE_KEYS[lead.stage]),
         stageTone: STAGE_TONES[lead.stage],
         canPropose: lead.owner_name === null,
-        failure: failureOf(lead.id),
+        actionError: failureOf(lead.id),
     })
     const slot = mapSlot(data.slot, (leads) => leadBoardViewOf(leads, { query, stage, rowOf, t }))
 
@@ -67,8 +67,8 @@ export const LeadsBoard = (props: LeadsBoardProps) => {
                 ...buildLeadsBoardView({ slot, query, stage, isPending, busyId, t, slotLabels }),
                 pagination: {
                     hasNextPage: data.hasNextPage,
-                    isLoading: data.isLoadingMore,
-                    failure: data.paginationError === undefined ? null : t("loadMoreFailed"),
+                    isPending: data.isLoadingMore,
+                    loadMoreError: data.paginationError === undefined ? null : t("loadMoreFailed"),
                     loadedHint: data.hasNextPage ? t("loadedLeads", { count: data.data?.length ?? 0 }) : null,
                     loadMoreLabel: t("loadMore"),
                     retryLabel: t("retryLoad"),

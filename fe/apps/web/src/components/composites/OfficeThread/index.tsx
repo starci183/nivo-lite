@@ -1,17 +1,15 @@
 import { useEffect, useRef } from "react"
 import { Button, ChatBubbleSkeletons, Divider, EmptyNotice, Text, VerticalScrollRegion } from "@starci/grammar/common"
+import { OfficeApprovalCard } from "@/components/branches/OfficeApprovalCard"
 import { OfficeAvatar } from "@/components/branches/OfficeAvatar"
+import { OfficeCommandCard } from "@/components/branches/OfficeCommandCard"
+import { OfficeExceptionCard } from "@/components/branches/OfficeExceptionCard"
+import { OfficeExceptionForm } from "@/components/branches/OfficeExceptionForm"
 import { OfficeMessageStatus } from "@/components/branches/OfficeMessageStatus"
 import { OfficeMessageRow } from "@/components/branches/OfficeMessageRow"
 import { OfficeOutboxBubble } from "@/components/branches/OfficeOutboxBubble"
 import { OfficeResultCard } from "@/components/branches/OfficeResultCard"
-import type { OfficeThreadProps } from "@/modules/types"
-import {
-    renderOfficeThreadApproval,
-    renderOfficeThreadCommand,
-    renderOfficeThreadException,
-    renderOfficeThreadReading,
-} from "./renderCards"
+import type { OfficeCommandView, OfficeThreadProps } from "@/modules/types"
 import { BAND_CLASS_NAME, BODY_CLASS_NAME, DAY_CLASS_NAME, SCROLL_CLASS_NAME, TYPING_CLASS_NAME } from "./classNames"
 
 const STICK_PX = 80
@@ -80,7 +78,7 @@ export const OfficeThread = (props: OfficeThreadProps) => {
                     </div>
                 ))}
                 {view.reading === null ? null : (
-                    <div className={BAND_CLASS_NAME}>{renderOfficeThreadReading(view.reading, text, props)}</div>
+                    <div className={BAND_CLASS_NAME}>{renderOfficeThreadCommand(null, view.reading, props)}</div>
                 )}
                 <div className={BAND_CLASS_NAME}>
                     <div className={TYPING_CLASS_NAME}>
@@ -114,41 +112,81 @@ const renderOfficeThreadItems = (props: OfficeThreadProps) =>
 
 /** Renders one settled, non-day thread item or its decision card. */
 const renderOfficeThreadItem = (item: OfficeThreadBandItem, props: OfficeThreadProps) => {
-    const view = props.props
+    const { props: view, on } = props
     const { text } = view
+    const avatar = item.avatar === null ? null : <OfficeAvatar avatar={item.avatar} size="sm" />
     if (item.kind === "approval") {
-        return renderOfficeThreadApproval(item, text, view, props)
+        return (
+            <OfficeApprovalCard
+                key={item.key}
+                approval={item}
+                avatar={avatar}
+                text={text}
+                draft={view.draftOf(item.key)}
+                onEdit={on.editCard}
+                isBusy={view.busyId === item.id}
+                onDecide={on.decideApproval}
+            />
+        )
     }
     if (item.kind === "exception") {
-        return renderOfficeThreadException(item, text, view, props)
+        const form = (
+            <OfficeExceptionForm
+                item={item}
+                text={text}
+                draft={view.draftOf(item.key)}
+                onEdit={on.editCard}
+                isBusy={view.busyId === item.id}
+                onDecide={on.decideWork}
+            />
+        )
+        return <OfficeExceptionCard key={item.key} item={item} avatar={avatar} text={text} form={form} />
     }
-    if (item.kind === "command") {
-        return renderOfficeThreadCommand(item, text, view, props)
-    }
+    if (item.kind === "command") return renderOfficeThreadCommand(item, item, props)
     if (item.kind === "card") {
         return (
             <OfficeResultCard
                 key={item.key}
                 card={item}
-                avatar={<OfficeAvatar avatar={item.avatar} size="sm" />}
+                avatar={avatar}
                 text={text}
                 draft={view.draftOf(item.key)}
-                onEdit={props.on.editCard}
+                onEdit={on.editCard}
                 isBusy={item.refId !== null && view.busyId === item.refId}
-                onDecide={props.on.decideCard}
+                onDecide={on.decideCard}
             />
         )
     }
+    const status = item.status === null ? null : <OfficeMessageStatus status={item.status} text={text} />
     return (
         <OfficeMessageRow
             key={item.key}
             message={item}
-            avatar={item.avatar === null ? null : <OfficeAvatar avatar={item.avatar} size="sm" />}
+            avatar={avatar}
             text={text}
-            status={item.status === null ? null : <OfficeMessageStatus status={item.status} text={text} />}
+            status={status}
             isCopied={view.copiedKey === item.key}
-            onReply={props.on.reply}
-            onCopy={props.on.copy}
+            onReply={on.reply}
+            onCopy={on.copy}
         />
     )
 }
+
+/** Renders a command card: the settled command item, or the one being prepared while NIVO reads the line (no command yet). */
+const renderOfficeThreadCommand = (
+    command: OfficeCommandView | null,
+    from: Pick<NonNullable<OfficeThreadProps["props"]["reading"]>, "ask" | "agent" | "avatar">,
+    props: OfficeThreadProps,
+) => (
+    <OfficeCommandCard
+        key={command?.key}
+        command={command}
+        ask={from.ask}
+        agent={from.agent}
+        avatar={<OfficeAvatar avatar={from.avatar} size="sm" />}
+        text={props.props.text}
+        isBusy={command !== null && props.props.busyId === command.id}
+        onSend={props.on.sendCommand}
+        onCancel={props.on.cancelCommand}
+    />
+)

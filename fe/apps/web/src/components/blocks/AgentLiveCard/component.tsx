@@ -1,5 +1,5 @@
 import { Badge, SurfaceCard, Switch, Text } from "@starci/grammar/common"
-import { SlotBoundView } from "@/components/composites/SlotView"
+import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { STACK, SWITCH_ROW } from "./classNames"
 
@@ -18,9 +18,12 @@ export interface AgentLiveCardBaseProps {
         readonly switchLabel: string
         readonly help: string
         readonly isDisabled: boolean
-        readonly slot: DataSlot<LiveView>
-        readonly placeholder: LiveView
-        readonly slotLabels: SlotLabels
+        /** The read, its same-shape placeholder and the words of its states, as SlotView takes them. */
+        readonly read: {
+            readonly slot: DataSlot<LiveView>
+            readonly placeholder: LiveView
+            readonly labels: SlotLabels
+        }
     }
     readonly on: { readonly live: (on: boolean) => void; readonly retry: () => void }
 }
@@ -28,7 +31,7 @@ export interface AgentLiveCardBaseProps {
 /** Draws the live card: the switch with its label kept readable beside it even while the switch is off-limits, the status badge and what it needs before it can go live. */
 export const AgentLiveCardBase = (props: AgentLiveCardBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
-        <SlotBoundView from={props.props} onRetry={props.on.retry}>
+        <SlotView {...props.props.read} onRetry={props.on.retry}>
             {(view, isSkeleton) => (
                 <div className={STACK}>
                     <div className={SWITCH_ROW}>
@@ -52,6 +55,6 @@ export const AgentLiveCardBase = (props: AgentLiveCardBaseProps) => (
                     {view.blocker === "" ? null : <Text size="sm">{view.blocker}</Text>}
                 </div>
             )}
-        </SlotBoundView>
+        </SlotView>
     </SurfaceCard>
 )

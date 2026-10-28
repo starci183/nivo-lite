@@ -4,22 +4,29 @@ import { type LeadResponsibilityBaseProps, LeadResponsibilityBase, type Responsi
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import type { StepFormView } from "@/components/composites/StepForm"
 import {
+    HUMAN_OWNER,
     dateOnly,
     dueFromDate,
     splitResponsibilities,
     useLeadActions,
     useLeadCommands,
     useLeadJourney,
+    useStepFormView,
     useStepView,
 } from "@/hooks/leads"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { useLeadStepForm, type LeadStepValues } from "@/hooks/rhf"
+import { useLeadStepForm } from "@/hooks/rhf"
 
-import { buildStepFormView, HUMAN, type Mode } from "./form"
 import { LEADS_ROUTES } from "@/modules/routes"
-import type { LeadJourney, ResponsibilityRecord, DataSlot } from "@/modules/types"
+import type {
+    LeadJourney,
+    LeadStepMode,
+    LeadStepValues,
+    ResponsibilityRecord,
+    DataSlot,
+    StepFormView,
+} from "@/modules/types"
 
 /** The lead the panel acts on and the workspace it belongs to; a null detail draws the loading card. */
 interface LeadResponsibilityProps {
@@ -38,7 +45,7 @@ interface BuildResponsibilityPanelViewContext {
 }
 
 const ownerIdOf = (step: ResponsibilityRecord | null): string =>
-    step?.owner_kind === "agent" && step.owner_agent_id ? step.owner_agent_id : HUMAN
+    step?.owner_kind === "agent" && step.owner_agent_id ? step.owner_agent_id : HUMAN_OWNER
 
 /** The next-step panel: reassigning the owner, changing the due date, adding the next step and proposing an owner live here. */
 export const LeadResponsibility = (props: LeadResponsibilityProps) => {
@@ -48,20 +55,19 @@ export const LeadResponsibility = (props: LeadResponsibilityProps) => {
     const commands = useLeadCommands()
     const actions = useLeadActions()
     const isPending = commands.isMutating || actions.isPending
-    const [mode, setMode] = useState<Mode | null>(null)
+    const [mode, setMode] = useState<LeadStepMode | null>(null)
     const rhf = useLeadStepForm(mode)
-    const { fields, formLabels, submitLabels } = rhf
     const [error, setError] = useState<string | null>(null)
     const [proposeError, setProposeError] = useState<string | null>(null)
     const detail = query.detail
     const { current } = splitResponsibilities(detail?.responsibilities ?? [])
     const agents = detail?.agents ?? []
 
-    const open = (next: Mode) => {
+    const open = (next: LeadStepMode) => {
         setError(null)
         rhf.reset({
             title: "",
-            owner: next === "add" ? HUMAN : ownerIdOf(current),
+            owner: next === "add" ? HUMAN_OWNER : ownerIdOf(current),
             nextAction: next === "add" ? "" : (current?.next_action ?? ""),
             due: next === "add" ? null : dateOnly(current?.due_at ?? null),
         })
@@ -94,11 +100,9 @@ export const LeadResponsibility = (props: LeadResponsibilityProps) => {
     }
 
     const stepViewOf = useStepView(agents)
+    const form = useStepFormView(mode, rhf, agents, error)
     const view: ResponsibilityView = { current: current === null ? null : stepViewOf(current) }
     const slot: DataSlot<ResponsibilityView> = mapSlot(query.slot, () => view)
-
-    const form: StepFormView | null =
-        mode === null ? null : buildStepFormView({ mode, formLabels, fields, t, agents, submitLabels, error, rhf })
 
     return (
         <LeadResponsibilityBase

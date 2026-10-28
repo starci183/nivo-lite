@@ -3,8 +3,7 @@ import type { DataTableColumn } from "@starci/grammar/common"
 import { TeamSection } from "@/components/composites/TeamSection"
 import { SlotView } from "@/components/composites/SlotView"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
-import type { DataSlot, SlotLabels } from "@/modules/types"
-import type { MemberRowView } from "./types"
+import type { DataSlot, MemberRowView, SlotLabels } from "@/modules/types"
 import { IDENTITY_CLASS_NAME, IDENTITY_TEXT_CLASS_NAME, NAME_LINE_CLASS_NAME } from "./classNames"
 
 /** The question asked before a remove or a disable. */

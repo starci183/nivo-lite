@@ -1,9 +1,9 @@
-import { ActiveWorkspaceSideEffect, AuthSideEffect } from "@/hooks/effects"
+import type { ReactNode } from "react"
 
-/** Draws nothing: mounts the two app-wide side effects of the signed-in session. */
-export const SideEffectsLayoutBase = () => (
-    <>
-        <AuthSideEffect />
-        <ActiveWorkspaceSideEffect />
-    </>
-)
+/** What the layout hands its drawing half: the side effects it mounts. */
+export interface SideEffectsLayoutBaseProps {
+    readonly children: ReactNode
+}
+
+/** Draws nothing of its own: mounts the app-wide side effects of the signed-in session it is handed. */
+export const SideEffectsLayoutBase = (props: SideEffectsLayoutBaseProps) => <>{props.children}</>

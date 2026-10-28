@@ -46,7 +46,6 @@ export const OfficeExceptionForm = (props: OfficeExceptionFormProps) => {
     const amount = props.draft.amount ?? (item.amount === null ? "" : String(item.amount))
     const edit = (patch: Partial<OfficeCardDraft>) => props.onEdit(item.key, patch)
     const setIsEditing = (value: boolean) => edit({ isEditing: value })
-    const isFailed = item.status === "failed"
     const basisLength = basis.trim().replace(/\s+/g, " ").length
     const isBasisMissing = item.isReconcile && basisLength < BASIS_MIN_CHARS
     const isOtherIncomplete =
@@ -81,7 +80,6 @@ export const OfficeExceptionForm = (props: OfficeExceptionFormProps) => {
                 basis={basis}
                 basisLength={basisLength}
                 isBasisMissing={isBasisMissing}
-                isFailed={isFailed}
                 onDraft={(value) => edit({ text: value })}
                 onAmount={(value) => edit({ amount: value })}
                 onValues={(update) => edit({ values: update(values) })}
@@ -100,7 +98,6 @@ export const OfficeExceptionForm = (props: OfficeExceptionFormProps) => {
             )}
             {item.canAct
                 ? renderOfficeExceptionFormActions({
-                      isFailed,
                       props,
                       isLocked,
                       isOtherIncomplete,
@@ -118,7 +115,6 @@ export const OfficeExceptionForm = (props: OfficeExceptionFormProps) => {
 
 /** Renders the OfficeExceptionForm actions section. */
 type OfficeExceptionActionsInput = {
-    readonly isFailed: boolean
     readonly props: OfficeExceptionFormProps
     readonly isLocked: boolean
     readonly isOtherIncomplete: boolean
@@ -131,7 +127,6 @@ type OfficeExceptionActionsInput = {
 }
 
 const renderOfficeExceptionFormActions = ({
-    isFailed,
     props,
     isLocked,
     isOtherIncomplete,
@@ -143,7 +138,7 @@ const renderOfficeExceptionFormActions = ({
     setIsEditing,
 }: OfficeExceptionActionsInput) => (
     <div className={ACTIONS_CLASS_NAME}>
-        {isFailed ? null : (
+        {item.status === "failed" ? null : (
             <Button
                 intent="commit"
                 isPending={props.isBusy}
@@ -153,7 +148,7 @@ const renderOfficeExceptionFormActions = ({
                 {isEditing ? text("exceptionSaveContinue") : text("exceptionApprove")}
             </Button>
         )}
-        {isFailed || item.isReconcile || (item.draft === null && item.amount === null) ? null : (
+        {item.status === "failed" || item.isReconcile || (item.draft === null && item.amount === null) ? null : (
             <Button intent="neutral" isDisabled={isLocked} onPress={() => setIsEditing(!isEditing)}>
                 {isEditing ? text("exceptionCancelEdit") : text("exceptionEditContinue")}
             </Button>

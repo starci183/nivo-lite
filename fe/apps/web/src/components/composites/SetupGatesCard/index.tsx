@@ -14,9 +14,9 @@ import {
     Tooltip,
 } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import { GATE_BODY, GATE_ROW, SECTION, STACK } from "./classNames"
-import { renderSetupGatesCardEdit, renderSetupGatesCardEvidence } from "./gateBody"
-import type { SetupGatesCardProps } from "./types"
+import { SetupGateBody } from "@/components/branches/SetupGateBody"
+import type { SetupGatesCardProps } from "@/modules/types"
+import { GATE_ROW, SECTION, STACK } from "./classNames"
 
 /** The gates the owner must confirm before the draft can be applied, with their evidence and the apply command. */
 export const SetupGatesCard = (props: SetupGatesCardProps) => (
@@ -59,11 +59,7 @@ export const SetupGatesCard = (props: SetupGatesCardProps) => (
                                 )
                             }
                         >
-                            <div className={GATE_BODY}>
-                                {props.editing === gate.key
-                                    ? renderSetupGatesCardEdit(gate, props)
-                                    : renderSetupGatesCardEvidence(gate, props)}
-                            </div>
+                            <SetupGateBody {...props} gate={gate} isEditing={props.editing === gate.key} />
                         </ListRow>
                     </div>
                 </Fragment>

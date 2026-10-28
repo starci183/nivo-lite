@@ -1,6 +1,7 @@
 "use client"
 
 import { EMPTY_LOYALTY_BOARD, findTier } from "@/hooks/loyalty"
+import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { useQueryLoyaltyBoardSwr } from "@/hooks/swr"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
@@ -25,8 +26,9 @@ interface Editing {
 /** The connected reward catalogue: managers add, edit, pause and remove rewards (outcome toasted); everyone else reads. */
 /** The connected Rewards tab: reads the loyalty board itself (SWR shares the one request with the other tabs). */
 export const LoyaltyRewards = () => {
-    const { data } = useQueryLoyaltyBoardSwr()
-    const board = data ?? EMPTY_LOYALTY_BOARD
+    const read = useQueryLoyaltyBoardSwr()
+    const board = read.data ?? EMPTY_LOYALTY_BOARD
+    const slotLabels = useSlotLabels()
     const t = useTranslations("loyalty")
     const format = useFormatter()
     const actions = useLoyaltyRewardActions()
@@ -56,19 +58,25 @@ export const LoyaltyRewards = () => {
         setEditing({ id })
     }
     const submit = form.handleSubmit((values) => actions.save(rewardInputOf(values, target), () => setEditing(null)))
+    // Built from the empty board while the read is on its way, so the placeholder is the same tree.
+    const view = buildLoyaltyRewardsView({
+        t,
+        board,
+        actions,
+        kindLabel,
+        costLine,
+        factsLine,
+        editing,
+        target,
+        form,
+    })
     return (
         <LoyaltyRewardsBase
-            props={buildLoyaltyRewardsView({
-                t,
-                board,
-                actions,
-                kindLabel,
-                costLine,
-                factsLine,
-                editing,
-                target,
-                form,
-            })}
+            props={{
+                slot: mapSlot(slotOfSwr(read), () => view),
+                placeholder: view,
+                slotLabels: slotLabels(t("rewardsEmptyTitle")),
+            }}
             on={{
                 add: () => open(null),
                 preset: actions.preset,
@@ -84,6 +92,7 @@ export const LoyaltyRewards = () => {
                 setActive: (active) => form.setValue("active", active),
                 submit: () => void submit(),
                 cancelForm: () => setEditing(null),
+                retry: () => void read.mutate(),
             }}
         />
     )

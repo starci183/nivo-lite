@@ -1,5 +1,6 @@
 "use client"
 
+import type { FlowEntryView, FlowView } from "@/modules/types"
 import type {
     LeadFlowDecisionType as DecisionRow,
     LeadFlowInvoiceType as Invoice,
@@ -11,31 +12,6 @@ import type {
 import type { BadgeTone } from "@starci/grammar/common"
 import { useFormatter, useTranslations } from "next-intl"
 import { flowViewMapper } from "./leads.shared"
-
-/** One entry of the work flow card: what happened, when, how it stands and the lines that qualify it. */
-export interface FlowEntryView {
-    readonly id: string
-    readonly head: string
-    readonly when: { readonly iso: string; readonly label: string } | null
-    readonly badge: { readonly label: string; readonly tone: BadgeTone } | null
-    readonly reason: string | null
-    readonly lines: ReadonlyArray<{ readonly id: string; readonly text: string; readonly strong: boolean }>
-}
-
-/** One section of the card: its heading, what to say when it is empty and its entries. */
-export interface FlowSectionView {
-    readonly id: string
-    readonly title: string
-    readonly emptyText: string
-    readonly entries: ReadonlyArray<FlowEntryView>
-}
-
-/** Everything the work flow card shows about one lead, already worded. */
-export interface FlowView {
-    readonly fact: string
-    readonly steps: ReadonlyArray<FlowEntryView>
-    readonly sections: ReadonlyArray<FlowSectionView>
-}
 
 type Tones = Readonly<Record<string, BadgeTone>>
 

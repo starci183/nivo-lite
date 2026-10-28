@@ -1,4 +1,4 @@
-// migrations-sha256: 008c92a34ea069e8b357ac2c791419148804c27ad000fdce30408c5862c249d9
+// migrations-sha256: 67de176af88d9fa2357e201354529a4f51516a5a5837ef26d5a2d6ecb2fda3b1
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -2180,16 +2180,22 @@ isOneToOne: false
                   ]
                 },"invoices": {
                   Row: {
-                    "amount_vnd": number,"created_at": string,"due_at": string | null,"id": string,"invoice_no": string,"issued_at": string | null,"issued_by": string | null,"lead_id": string | null,"order_id": string | null,"paid_at": string | null,"status": string,"workspace_id": string
+                    "amount_vnd": number,"contract_id": string | null,"created_at": string,"due_at": string | null,"id": string,"invoice_no": string,"issued_at": string | null,"issued_by": string | null,"lead_id": string | null,"order_id": string | null,"paid_at": string | null,"period_ends_on": string | null,"status": string,"workspace_id": string
                   }
                   Insert: {
-                    "amount_vnd": number,"created_at"?: string,"due_at"?: string | null,"id"?: string,"invoice_no": string,"issued_at"?: string | null,"issued_by"?: string | null,"lead_id"?: string | null,"order_id"?: string | null,"paid_at"?: string | null,"status"?: string,"workspace_id": string
+                    "amount_vnd": number,"contract_id"?: string | null,"created_at"?: string,"due_at"?: string | null,"id"?: string,"invoice_no": string,"issued_at"?: string | null,"issued_by"?: string | null,"lead_id"?: string | null,"order_id"?: string | null,"paid_at"?: string | null,"period_ends_on"?: string | null,"status"?: string,"workspace_id": string
                   }
                   Update: {
-                    "amount_vnd"?: number,"created_at"?: string,"due_at"?: string | null,"id"?: string,"invoice_no"?: string,"issued_at"?: string | null,"issued_by"?: string | null,"lead_id"?: string | null,"order_id"?: string | null,"paid_at"?: string | null,"status"?: string,"workspace_id"?: string
+                    "amount_vnd"?: number,"contract_id"?: string | null,"created_at"?: string,"due_at"?: string | null,"id"?: string,"invoice_no"?: string,"issued_at"?: string | null,"issued_by"?: string | null,"lead_id"?: string | null,"order_id"?: string | null,"paid_at"?: string | null,"period_ends_on"?: string | null,"status"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "invoices_contract_id_fkey"
+      columns: ["contract_id"]
+isOneToOne: false
+      referencedRelation: "contracts"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "invoices_lead_id_fkey"
       columns: ["lead_id"]
 isOneToOne: false

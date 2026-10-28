@@ -140,7 +140,7 @@ Channels and providers
 Agents, models, automation
 
 - `OPENCLAW_GATEWAY_URL` (set by the stack: `ws://nivo-openclaw:18790`, the loopback relay of the OpenClaw task) plus `OPENCLAW_GATEWAY_TOKEN` or `OPENCLAW_GATEWAY_PASSWORD` (O as a group; without them the chat turn path is "not configured" and answers fall back), `OPENCLAW_TOOL_SECRET` (O, signs the tool bridge), `OPENCLAW_MANAGE_AGENTS` (T, `true` or `false`), `OPENCLAW_TURN_TIMEOUT` (T, duration), `OPENCLAW_SETTLE_DELAY`, `OPENCLAW_CONFIG_DIR`, `OPENCLAW_GATEWAY_STATE_DIR`
-- the model provider keys, endpoints and models for the chat, extraction and embedding calls (all O; `be/src/modules/integrations/llm/llm.config.ts` lists the names; without a key embeddings and extraction turn off), `AI_JSON_RETRIES`
+- the model provider keys, endpoints and models for the chat, extraction and embedding calls (all O; `be/src/modules/integrations/ai-pool/ai-pool.config.ts` lists the names; without a key embeddings and extraction turn off), `AI_JSON_RETRIES`
 - `N8N_SIGNING_SECRET` (R), `N8N_WEBHOOK_BASE` (R in the runbook set; `http://nivo-n8n:5678/webhook/nivo-events`), `N8N_ALLOWED_HOSTS`, `N8N_EMIT_TIMEOUT`, `N8N_CONTAINER`
 - `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS` (O; n8n host control by the CLI; the key and known hosts are the file CONTENT, read through `_FILE`)
 - `SMTP_URL`, `SMTP_FROM` (O as a pair), `SMTP_HELLO_NAME`, `SMTP_ALLOW_PRIVATE_HOSTS`; `DATA_ALLOW_PRIVATE_HOSTS`

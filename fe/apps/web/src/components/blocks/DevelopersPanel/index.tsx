@@ -19,7 +19,7 @@ export const DevelopersPanel = () => {
     return (
         <DevelopersPanelBase
             props={{
-                isForbidden: !isManager(member),
+                access: isManager(member) ? { items: true } : { isForbidden: true },
                 webhooks: sortRows(webhooks).map((connection) => ({
                     id: connection.id,
                     name: connection.name,

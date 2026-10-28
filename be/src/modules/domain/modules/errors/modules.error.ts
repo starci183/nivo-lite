@@ -50,6 +50,10 @@ export enum ModulesErrorCode {
     CardNeedsSituation = "MODULES_CARD_NEEDS_SITUATION",
     /** The brain held the fact for review instead of applying it. */
     CardFactNotApplied = "MODULES_CARD_FACT_NOT_APPLIED",
+    /** The confirmed rule names an action outside the authority registry. */
+    CardRuleUnknownAction = "MODULES_CARD_RULE_UNKNOWN_ACTION",
+    /** The confirmed rule runs an action by itself past its cap. */
+    CardRuleModeCapped = "MODULES_CARD_RULE_MODE_CAPPED",
 }
 
 /** How each modules code travels. */
@@ -78,6 +82,8 @@ export const MODULES_ERROR_KINDS: Record<ModulesErrorCode, ErrorKind> = {
     [ModulesErrorCode.CardNeedsResolution]: "invalid",
     [ModulesErrorCode.CardNeedsSituation]: "invalid",
     [ModulesErrorCode.CardFactNotApplied]: "conflict",
+    [ModulesErrorCode.CardRuleUnknownAction]: "invalid",
+    [ModulesErrorCode.CardRuleModeCapped]: "invalid",
 }
 
 /** The one error class of the modules capability. */

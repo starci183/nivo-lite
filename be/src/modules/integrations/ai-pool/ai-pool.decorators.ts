@@ -1,6 +1,7 @@
 import type { AiRouterService } from "@starci/ai-router"
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
+import type { AiPoolClient } from "./ai-pool.client"
 import type { AiPoolOptions } from "./ai-pool.options"
 
 /** The router, or null when the pool has no key at all (no router is registered then). */
@@ -19,3 +20,9 @@ export const InjectAiPoolOptions = (): TypedParameterDecorator<AiPoolOptions> =>
 /** Injects the router of the pool (null is provided when the pool has no key). Parameter type: AiRouterService. */
 export const InjectAiPoolRouter = (): TypedParameterDecorator<AiRouterService> =>
     injector<AiRouterService>(AI_POOL_ROUTER)
+
+/** Token of the AI pool client, the one door to the language-model providers. */
+export const AI_POOL: unique symbol = Symbol("integrations.ai-pool")
+
+/** Injects the AI pool client. Parameter type: AiPoolClient. */
+export const InjectAiPool = (): TypedParameterDecorator<AiPoolClient> => injector<AiPoolClient>(AI_POOL)

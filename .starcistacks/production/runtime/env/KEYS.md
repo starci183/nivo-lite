@@ -60,8 +60,8 @@ The capability is off while its keys are absent; a group is all-or-none where no
 | `ZALO_OA_SECRET` | Zalo Official Account secret key the same cli seals beside the app secret; read only through `ZALO_OA_SECRET_FILE`, optional, and granted to no service. |
 | `VPS_SSH_KEY` | SSH key the n8n host helper uses to reach the VPS; optional, the helper is off while absent. |
 | `HTTP_SECURITY_TRUSTED_PROXY_HOPS` | `0`, `1` or `2`: trusted proxy hops before the api; optional. |
-| `OPENROUTER_API_KEY` | Language-model provider keys: read by the api model client (`llm.config.ts`) and, from the sealed `api` member, granted to openclaw. |
-| `DEEPSEEK_API_KEY` | Language-model provider keys: read by the api model client (`llm.config.ts`) and, from the sealed `api` member, granted to openclaw. |
+| `OPENROUTER_API_KEY` | Language-model provider keys: read by the api AI pool (`ai-pool.config.ts`) and, from the sealed `api` member, granted to openclaw. |
+| `DEEPSEEK_API_KEY` | Language-model provider keys: read by the api AI pool (`ai-pool.config.ts`) and, from the sealed `api` member, granted to openclaw. |
 
 ## api: optional executable paths
 

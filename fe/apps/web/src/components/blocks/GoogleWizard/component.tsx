@@ -11,7 +11,7 @@ export interface GoogleWizardBaseProps {
         /** 0 asks for the consent, 1 is the landing after Google answered. */
         readonly index: number
         /** The negative sentence when Google did not connect, null otherwise. */
-        readonly failure: string | null
+        readonly refusal: string | null
         readonly error: string | null
         readonly isPending: boolean
         readonly text: Readonly<
@@ -73,8 +73,8 @@ export const GoogleWizardBase = (props: GoogleWizardBaseProps) => {
                     <Text size="sm" tone="muted">
                         {text.allowRevoke}
                     </Text>
-                    {view.failure === null ? null : (
-                        <Alert tone="negative" title={`${text.failTitle}. ${view.failure}`} />
+                    {view.refusal === null ? null : (
+                        <Alert tone="negative" title={`${text.failTitle}. ${view.refusal}`} />
                     )}
                 </div>
             ) : (

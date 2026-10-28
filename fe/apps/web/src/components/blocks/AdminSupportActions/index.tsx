@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { PLAN_CODES, parseCredits, parseDays, useAdminCommands } from "@/hooks/admin"
+import { slotOfSwr } from "@/hooks/slot"
 import { useQueryAdminWorkspaceSwr } from "@/hooks/swr"
 import { AdminSupportActionsBase } from "./component"
 
@@ -94,7 +95,8 @@ const buildAdminSupportActionsState = ({
 export const AdminSupportActions = (props: AdminSupportActionsProps) => {
     const t = useTranslations("admin")
     const commands = useAdminCommands(props.workspaceId)
-    const { data } = useQueryAdminWorkspaceSwr({ workspaceId: props.workspaceId })
+    const workspace = slotOfSwr(useQueryAdminWorkspaceSwr({ workspaceId: props.workspaceId }))
+    const data = workspace.items
     const [days, setDays] = useState("30")
     const [typedPlan, setTypedPlan] = useState<string | null>()
     const [typedCredits, setTypedCredits] = useState<string>()

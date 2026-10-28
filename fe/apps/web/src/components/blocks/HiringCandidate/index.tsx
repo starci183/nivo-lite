@@ -1,20 +1,11 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import {
-    OPEN_OFFER_STATUSES,
-    reasonTone,
-    scoreTone,
-    focusedCandidateId,
-    stageTone,
-    useHiringFormat,
-    useHiringSay,
-    useHiringWorkbench,
-} from "@/hooks/hiring"
+import { focusedCandidateId, stageTone, useHiringFormat, useHiringSay, useHiringWorkbench } from "@/hooks/hiring"
 import {
     INTERVIEW_MODES,
+    candidateDetailsOf,
     interviewDefaults,
-    isPreviewable,
     offerDefaults,
     useHiringCandidate,
     useHiringInterviewRequest,
@@ -25,9 +16,7 @@ import { NO_CANDIDATE } from "@/hooks/hiringMap"
 import { useHiringBenchStore } from "@/hooks/zustand/hiringBench"
 import { useHiringInterviewForm, useHiringOfferForm } from "@/hooks/rhf"
 import type { CandidateView, HiringWorkbenchData } from "@/hooks/hiringWire"
-import { HiringCandidateBase, candidateDetailsOf } from "./component"
-
-const candidateDetailTools = { reasonTone, scoreTone, isPreviewable, openOfferStatuses: OPEN_OFFER_STATUSES }
+import { HiringCandidateBase } from "./component"
 
 /** The record a `?focus=` link leads to: the drawer opens on it until somebody opens another candidate or closes it. */
 interface HiringCandidateProps {
@@ -78,7 +67,7 @@ export const HiringCandidate = (props: HiringCandidateProps) => {
                 canOffer: !view.isClosed && !view.hasOpenOffer,
                 canShortlist: candidate.stage === "applied" || candidate.stage === "screening",
                 canReject: !view.isClosed,
-                ...candidateDetailsOf(candidate, view, format, t, candidateDetailTools),
+                ...candidateDetailsOf(candidate, view, format, t),
                 notes: view.notes,
                 canSaveNotes: view.notes !== candidate.notes,
                 retention: t("candRetention", { days: view.retentionDays }),

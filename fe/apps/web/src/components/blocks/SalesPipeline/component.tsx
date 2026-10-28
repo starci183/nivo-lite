@@ -1,9 +1,3 @@
-import type { LeadStageId } from "@/modules/types"
-import type { useTranslations, useFormatter } from "next-intl"
-import type { useLeadCommands } from "@/hooks/leads"
-import type { useSalesActions } from "@/hooks/sales"
-import type { useSalesWorkbench } from "@/hooks/salesworkbench"
-import type { useSalesPipelineForm } from "@/hooks/rhf"
 import {
     Badge,
     Button,
@@ -206,20 +200,3 @@ const renderPipelineLanes = ({ p, on }: RenderPipelineLanesInput) => (
 )
 
 type RenderPipelineLanesInput = { p: SalesPipelineBaseProps["props"]; on: SalesPipelineBaseProps["on"] }
-/** State values and commands consumed by the connected surface. */
-export type SalesPipelineControllerInput = {
-    readonly t: ReturnType<typeof useTranslations<"workbenchSales">>
-    readonly format: ReturnType<typeof useFormatter>
-    readonly commands: ReturnType<typeof useLeadCommands>
-    readonly actions: ReturnType<typeof useSalesActions>
-    readonly data: ReturnType<typeof useSalesWorkbench>["data"]
-    readonly deals: NonNullable<NonNullable<ReturnType<typeof useSalesWorkbench>["data"]>["deals"]>
-    readonly closedHidden: NonNullable<NonNullable<ReturnType<typeof useSalesWorkbench>["data"]>["closedHidden"]>
-    readonly form: ReturnType<typeof useSalesPipelineForm>
-    readonly selectedTarget: LeadStageId | ""
-    readonly reason: string
-    readonly target: LeadStageId | null
-    readonly isPending: boolean
-    readonly movingId: string | null
-    readonly setMovingId: React.Dispatch<React.SetStateAction<string | null>>
-}

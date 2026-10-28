@@ -85,3 +85,16 @@ export interface SetupSideView {
     readonly knowledge: SetupSideKnowledge
     readonly versions: SetupSideVersions
 }
+
+/** What the gates card draws and does: the checklist, its skeleton, the last gate failure and the commands. */
+export interface SetupGatesCardProps extends Omit<SetupSideGates, "applyTone"> {
+    readonly isSkeleton: boolean
+    readonly gateFailureTitle: string
+    readonly gateFailure: string
+    readonly applyTone: "idle" | "applied" | "refused"
+    readonly onEditText: (value: string) => void
+    readonly onGate: (gateKey: string, action: "confirm" | "reopen" | "edit", evidence?: string) => void
+    readonly onStartEdit: (gateKey: string, evidence: string) => void
+    readonly onStopEdit: () => void
+    readonly onApply: () => void
+}

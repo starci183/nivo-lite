@@ -1,7 +1,6 @@
 import { Badge, DescriptionList, SurfaceCard } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
-import type { MethodView } from "@/hooks/account"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import type { DataSlot, MethodView, SlotLabels } from "@/modules/types"
 
 /** Copy and values the connected sign-in methods card supplies. */
 export interface AccountMethodsBaseProps {

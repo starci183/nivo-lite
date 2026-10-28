@@ -1,14 +1,24 @@
 import { Alert, Button, Heading, Input, NumberField, SurfaceCard, Switch, Textarea } from "@starci/grammar/common"
-import type { SettingsValues } from "@/hooks/hiringSettings"
 import type { FieldOf, HiringSay } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
+
+/** The values of the settings form as the card draws them. */
+export interface HiringSettingsValues {
+    readonly publicSlug: string
+    readonly retentionDays: number
+    readonly applyConsentText: string
+    readonly adTone: string
+    readonly notifyNewCandidate: boolean
+    readonly remindInterview: boolean
+    readonly autoCloseWhenFilled: boolean
+}
 
 /** What the connected block settled for the settings card. */
 export interface HiringSettingsBaseProps {
     readonly props: {
         readonly say: HiringSay
         readonly slugHint: string
-        readonly values: SettingsValues
+        readonly values: HiringSettingsValues
         readonly retentionMin: number
         readonly retentionMax: number
         readonly isBusy: boolean
@@ -16,9 +26,9 @@ export interface HiringSettingsBaseProps {
         readonly notice: string | null
     }
     readonly on: {
-        readonly text: (name: FieldOf<SettingsValues, string>, value: string) => void
-        readonly number: (name: FieldOf<SettingsValues, number>, value: number) => void
-        readonly flag: (name: FieldOf<SettingsValues, boolean>, value: boolean) => void
+        readonly text: (name: FieldOf<HiringSettingsValues, string>, value: string) => void
+        readonly number: (name: FieldOf<HiringSettingsValues, number>, value: number) => void
+        readonly flag: (name: FieldOf<HiringSettingsValues, boolean>, value: boolean) => void
         readonly save: () => void
     }
 }

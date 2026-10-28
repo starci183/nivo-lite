@@ -1,16 +1,3 @@
-import type * as React from "react"
-import type { useInventoryBoard } from "@/hooks/inventoryBoard"
-import type { useTranslations } from "next-intl"
-import type {
-    useAdjustDrawer,
-    useInventoryFormat,
-    useInventoryRun,
-    useItemDrawer,
-    StockFilter,
-    ItemFormField,
-} from "@/hooks/inventory"
-
-import type { ItemView } from "@/modules/types"
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
 import {
     Badge,
@@ -29,6 +16,21 @@ import { InventoryAdjustDrawer, type InventoryAdjustDrawerProps } from "@/compon
 import { InventoryItemDrawer, type InventoryItemDrawerProps } from "@/components/composites/InventoryItemDrawer"
 
 import { ACTIONS_CLASS_NAME, STACK_CLASS_NAME, TOOLBAR_CLASS_NAME, TOOLBAR_FIELD_CLASS_NAME } from "./classNames"
+
+/** The fields the item form changes one at a time. */
+export type StockItemField =
+    | "sku"
+    | "name"
+    | "unit"
+    | "units"
+    | "category"
+    | "cost"
+    | "sell"
+    | "reorderPoint"
+    | "reorderQty"
+    | "supplierId"
+    | "aliases"
+    | "openingQty"
 
 /** One catalogue item, every word already resolved. */
 export interface StockRowView {
@@ -80,7 +82,7 @@ export interface InventoryStockBaseProps {
         readonly adjust: (id: string) => void
         readonly edit: (id: string) => void
         readonly toggleInactive: () => void
-        readonly itemField: (name: ItemFormField, value: string) => void
+        readonly itemField: (name: StockItemField, value: string) => void
         readonly itemSave: () => void
         readonly itemToggle: () => void
         readonly itemClose: () => void
@@ -222,34 +224,4 @@ const renderListLabel = (props: InventoryStockBaseProps) => {
             ))}
         </SurfaceListCard>
     )
-}
-
-/** Inputs needed to build the InventoryStockContent section. */
-export interface BuildStockListViewContext {
-    readonly t: ReturnType<typeof useTranslations<"workbenchInventory">>
-    readonly board: ReturnType<typeof useInventoryBoard>
-    readonly lowCount: number
-    readonly empty: boolean
-    readonly hasInactive: boolean
-    readonly showInactive: boolean
-    readonly query: string
-    readonly filter: StockFilter
-    readonly rows: ItemView[]
-    readonly format: ReturnType<typeof useInventoryFormat>
-    readonly detailOf: (item: ItemView) => string
-    readonly run: ReturnType<typeof useInventoryRun>
-    readonly itemDrawer: ReturnType<typeof useItemDrawer>
-    readonly adjustDrawer: ReturnType<typeof useAdjustDrawer>
-}
-
-/** Inputs needed to build the InventoryStockContent section. */
-export interface BuildStockCommandsContext {
-    readonly setQuery: React.Dispatch<React.SetStateAction<string>>
-    readonly setFilter: React.Dispatch<React.SetStateAction<StockFilter>>
-    readonly itemDrawer: ReturnType<typeof useItemDrawer>
-    readonly draft: () => void
-    readonly quick: (id: string, sign: 1 | -1) => void
-    readonly board: ReturnType<typeof useInventoryBoard>
-    readonly adjustDrawer: ReturnType<typeof useAdjustDrawer>
-    readonly setShowInactive: React.Dispatch<React.SetStateAction<boolean>>
 }

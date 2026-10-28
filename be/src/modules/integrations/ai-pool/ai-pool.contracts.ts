@@ -48,7 +48,7 @@ export interface AiPoolEmbedRequest {
     readonly timeoutMs: number
 }
 
-/** The vectors of one embeddings call, in the order of the texts; an entry the provider sent in another form is empty. */
+/** The vectors of one embeddings call: exactly one vector of the asked size per text, in the order of the texts. */
 export interface AiPoolEmbedding {
     /** One vector per answered text. */
     readonly vectors: ReadonlyArray<ReadonlyArray<number>>
@@ -59,5 +59,5 @@ export interface AiPoolEmbedding {
 /** A chat answer, or null when the pool has no key, every lane failed or the answer was empty. */
 export type AiPoolAnswerResult = AiPoolAnswer | null
 
-/** The vectors, or null when the pool has no embeddings key or the call failed. */
+/** The vectors, or null when the pool has no embeddings key, the call failed or it answered another count or size of vectors. */
 export type AiPoolEmbeddingResult = AiPoolEmbedding | null

@@ -1,12 +1,6 @@
 "use client"
 
-import {
-    type SalesPipelineControllerInput,
-    SalesPipelineBase,
-    type DealView,
-    type LaneView,
-    type MoveDialogView,
-} from "./component"
+import { SalesPipelineBase, type DealView, type LaneView, type MoveDialogView } from "./component"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import { useLeadCommands } from "@/hooks/leads"
@@ -15,6 +9,24 @@ import { useSalesWorkbench } from "@/hooks/salesworkbench"
 import { useSalesPipelineForm } from "@/hooks/rhf"
 import { leadPath } from "@/modules/routes"
 import type { LeadStageId, SalesDeal } from "@/modules/types"
+
+/** State values and commands consumed by the connected surface. */
+type SalesPipelineControllerInput = {
+    readonly t: ReturnType<typeof useTranslations<"workbenchSales">>
+    readonly format: ReturnType<typeof useFormatter>
+    readonly commands: ReturnType<typeof useLeadCommands>
+    readonly actions: ReturnType<typeof useSalesActions>
+    readonly data: ReturnType<typeof useSalesWorkbench>["data"]
+    readonly deals: NonNullable<NonNullable<ReturnType<typeof useSalesWorkbench>["data"]>["deals"]>
+    readonly closedHidden: NonNullable<NonNullable<ReturnType<typeof useSalesWorkbench>["data"]>["closedHidden"]>
+    readonly form: ReturnType<typeof useSalesPipelineForm>
+    readonly selectedTarget: LeadStageId | ""
+    readonly reason: string
+    readonly target: LeadStageId | null
+    readonly isPending: boolean
+    readonly movingId: string | null
+    readonly setMovingId: React.Dispatch<React.SetStateAction<string | null>>
+}
 
 const MIN_REASON_CHARS = 5
 const LANES: ReadonlyArray<LeadStageId> = [...OPEN_LANES, "won", "lost"]

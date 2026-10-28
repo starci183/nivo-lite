@@ -13,7 +13,7 @@ import {
     useConnectionsRefresh,
     wizardTargetOf,
 } from "@/hooks/connections"
-import { useSlotLabels } from "@/hooks/slot"
+import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import type { AgentOption, Connection, DataSlot } from "@/modules/types"
 import { ConnectionWizardOverlayBase } from "./component"
 import type { WizardBoard, WizardTargetView } from "./component"
@@ -41,7 +41,8 @@ export const ConnectionWizardOverlay = (props: ConnectionWizardOverlayProps) => 
     const overlays = useConnectionOverlays()
     const data = useConnectionsData()
     const slotLabelsOf = useSlotLabels()
-    const user = useQueryAuthUserSwr()
+    // The signed-in person only prefills the SMTP test recipient: the drawer never waits on it.
+    const user = slotOfSwr(useQueryAuthUserSwr())
     const items = props.items ?? data.items
     const agents = props.agents ?? data.activeAgents
     const found = wizardTargetOf((name) => params.get(name), items)
@@ -74,7 +75,7 @@ export const ConnectionWizardOverlay = (props: ConnectionWizardOverlayProps) => 
             props={{
                 title: def === null ? "" : t(providerKey(def.id, "title")),
                 closeLabel: t("close"),
-                ownerEmail: props.ownerEmail ?? user.data?.email ?? "",
+                ownerEmail: props.ownerEmail ?? user.items?.email ?? "",
                 target,
                 board: slot,
                 slotLabels: slotLabelsOf(""),

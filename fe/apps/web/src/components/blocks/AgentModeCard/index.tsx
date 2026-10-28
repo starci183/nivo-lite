@@ -44,13 +44,15 @@ export const AgentModeCard = (props: AgentModeCardProps) => {
                 ],
                 note: t("modeNote"),
                 isDisabled: !canEdit || isSaving,
-                slot: mapSlot(slot, (installation): ModeView => ({
-                    mode,
-                    help: mode === "autopilot" ? t("modeAutopilotHelp") : t("modeAssistHelp"),
-                    sharedNote: installation.isMulti ? t("authorityShared", { type: typeName }) : "",
-                })),
-                placeholder: PLACEHOLDER,
-                slotLabels: slotLabels(t("modeTitle")),
+                read: {
+                    slot: mapSlot(slot, (installation): ModeView => ({
+                        mode,
+                        help: mode === "autopilot" ? t("modeAutopilotHelp") : t("modeAssistHelp"),
+                        sharedNote: installation.isMulti ? t("authorityShared", { type: typeName }) : "",
+                    })),
+                    placeholder: PLACEHOLDER,
+                    labels: slotLabels(t("modeTitle")),
+                },
             }}
             on={{ mode: (value) => void change(value), retry: reload }}
         />

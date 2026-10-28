@@ -6,7 +6,8 @@ import { AUTH_FIELDS_CLASS_NAME } from "./classNames"
 interface AuthFormProps {
     readonly label: string
     readonly isPending: boolean
-    readonly failure?: { readonly title: string; readonly text: string } | undefined
+    /** The resolved reason the last submit was turned down; drawn above the fields. */
+    readonly error?: { readonly title: string; readonly text: string } | undefined
     /** The primary submit button; omit when the children draw their own. */
     readonly submitLabel?: string
     /** Content below the submit button (links to other steps). */
@@ -15,12 +16,12 @@ interface AuthFormProps {
     readonly children: ReactNode
 }
 
-/** One auth form step: a labelled form, the failure alert (when there is one) above the fields. */
+/** One auth form step: a labelled form, the submit error (when there is one) above the fields. */
 export const AuthForm = (props: AuthFormProps) => (
     <Form label={props.label} onSubmit={props.onSubmit} isPending={props.isPending}>
         <div className={AUTH_FIELDS_CLASS_NAME}>
-            {props.failure === undefined ? null : (
-                <Alert title={props.failure.title} description={props.failure.text} tone="negative" />
+            {props.error === undefined ? null : (
+                <Alert title={props.error.title} description={props.error.text} tone="negative" />
             )}
             {props.children}
             {props.submitLabel === undefined ? null : (

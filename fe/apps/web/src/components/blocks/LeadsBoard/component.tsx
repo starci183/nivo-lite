@@ -29,7 +29,8 @@ export interface LeadRowView {
     readonly stageTone: BadgeTone
     /** True when the lead has no owner yet, so the menu offers to propose one. */
     readonly canPropose: boolean
-    readonly failure: string | null
+    /** The words of a failed row command (proposing an owner); null while none failed. */
+    readonly actionError: string | null
 }
 
 /** What the board shows: the tabs with their counts and the rows the filters let through. */
@@ -73,8 +74,9 @@ export interface LeadsBoardBaseProps {
         readonly isRowBusy: boolean
         readonly pagination: {
             readonly hasNextPage: boolean
-            readonly isLoading: boolean
-            readonly failure: string | null
+            /** True while the next page is on its way. */
+            readonly isPending: boolean
+            readonly loadMoreError: string | null
             readonly loadedHint: string | null
             readonly loadMoreLabel: string
             readonly retryLabel: string
@@ -137,20 +139,20 @@ export const LeadsBoardBase = (props: LeadsBoardBaseProps) => {
                     {p.pagination.loadedHint}
                 </Text>
             )}
-            {p.pagination.failure === null ? null : (
+            {p.pagination.loadMoreError === null ? null : (
                 <Text size="sm" live="polite">
-                    {p.pagination.failure}
+                    {p.pagination.loadMoreError}
                 </Text>
             )}
-            {p.pagination.hasNextPage || p.pagination.failure !== null ? (
+            {p.pagination.hasNextPage || p.pagination.loadMoreError !== null ? (
                 <Button
                     intent="neutral"
                     size="sm"
-                    isPending={p.pagination.isLoading}
-                    isDisabled={p.pagination.isLoading}
-                    onPress={p.pagination.failure === null ? on.loadMore : on.retry}
+                    isPending={p.pagination.isPending}
+                    isDisabled={p.pagination.isPending}
+                    onPress={p.pagination.loadMoreError === null ? on.loadMore : on.retry}
                 >
-                    {p.pagination.failure === null ? p.pagination.loadMoreLabel : p.pagination.retryLabel}
+                    {p.pagination.loadMoreError === null ? p.pagination.loadMoreLabel : p.pagination.retryLabel}
                 </Button>
             ) : null}
         </div>
@@ -224,9 +226,9 @@ const renderLeadRows = ({ view, isSkeleton, l, on, p }: RenderLeadRowsContext) =
                 <Text size="xs" tone="muted" overflow="truncate">
                     {row.who}
                 </Text>
-                {row.failure === null ? null : (
+                {row.actionError === null ? null : (
                     <Text size="xs" live="polite">
-                        {row.failure}
+                        {row.actionError}
                     </Text>
                 )}
             </ListRow>

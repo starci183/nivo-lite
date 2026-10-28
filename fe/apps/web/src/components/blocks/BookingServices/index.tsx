@@ -3,9 +3,8 @@
 import { useBookingBoard } from "@/hooks/bookingBoard"
 import { useSlotLabels } from "@/hooks/slot"
 import { useFormatter, useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
-import { useMutateRemoveBookingServiceSwr, useMutateSaveBookingServiceSwr } from "@/hooks/swr"
-import { bookingServiceFormOf, useBookingSetupSave } from "@/hooks/bookingSetup"
+import type { useTransition } from "react"
+import { bookingServiceFormOf, useBookingCatalogEditor, useBookingServiceCommands } from "@/hooks/bookingSetup"
 import {
     BookingServicesBase,
     BLANK_SERVICE_FIELDS,
@@ -28,10 +27,8 @@ interface BuildBookingServicesStateInput {
     readonly removeId: string | null
     readonly draft: Draft | null
     readonly startTransition: ReturnType<typeof useTransition>[1]
-    readonly persist: ReturnType<typeof useBookingSetupSave>
-    readonly saveService: ReturnType<typeof useMutateSaveBookingServiceSwr>
+    readonly commands: ReturnType<typeof useBookingServiceCommands>
     readonly setDraft: import("react").Dispatch<import("react").SetStateAction<Draft | null>>
-    readonly removeService: ReturnType<typeof useMutateRemoveBookingServiceSwr>
     readonly setRemoveId: import("react").Dispatch<import("react").SetStateAction<string | null>>
     readonly t: ReturnType<typeof useTranslations<"workbenchBooking">>
     readonly format: ReturnType<typeof useFormatter>
@@ -44,10 +41,8 @@ const buildBookingServicesState = ({
     removeId,
     draft,
     startTransition,
-    persist,
-    saveService,
+    commands,
     setDraft,
-    removeService,
     setRemoveId,
     t,
     format,
@@ -58,19 +53,17 @@ const buildBookingServicesState = ({
         if (draft === null) return
         const { fields } = draft
         startTransition(async () => {
-            const answer = await persist(() =>
-                saveService.trigger({
-                    id: draft.id,
-                    name: fields.name,
-                    description: fields.description,
-                    durationMin: fields.durationMin,
-                    bufferMin: fields.bufferMin,
-                    priceVnd: bookingServiceDigits(fields.price),
-                    resourceKind: fields.resourceKind,
-                    followupDays: bookingServiceDigits(fields.followup),
-                    active: fields.active,
-                }),
-            )
+            const answer = await commands.saveService({
+                id: draft.id,
+                name: fields.name,
+                description: fields.description,
+                durationMin: fields.durationMin,
+                bufferMin: fields.bufferMin,
+                priceVnd: bookingServiceDigits(fields.price),
+                resourceKind: fields.resourceKind,
+                followupDays: bookingServiceDigits(fields.followup),
+                active: fields.active,
+            })
             if (answer === undefined) return
             setDraft(null)
         })
@@ -78,7 +71,7 @@ const buildBookingServicesState = ({
     const remove = () => {
         if (removeId === null) return
         startTransition(async () => {
-            const answer = await persist(() => removeService.trigger({ id: removeId }))
+            const answer = await commands.removeService({ id: removeId })
             if (answer === undefined) return
             setRemoveId(null)
         })
@@ -92,22 +85,16 @@ export const BookingServices = () => {
     const slotLabels = useSlotLabels()
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
-    const persist = useBookingSetupSave()
-    const saveService = useMutateSaveBookingServiceSwr()
-    const removeService = useMutateRemoveBookingServiceSwr()
-    const [draft, setDraft] = useState<Draft | null>(null)
-    const [removeId, setRemoveId] = useState<string | null>(null)
-    const [isPending, startTransition] = useTransition()
+    const commands = useBookingServiceCommands()
+    const { draft, setDraft, removeId, setRemoveId, isPending, startTransition } = useBookingCatalogEditor<Draft>()
 
     const connected = buildBookingServicesState({
         board,
         removeId,
         draft,
         startTransition,
-        persist,
-        saveService,
+        commands,
         setDraft,
-        removeService,
         setRemoveId,
         t,
         format,

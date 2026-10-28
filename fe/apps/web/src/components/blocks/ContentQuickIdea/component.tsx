@@ -5,8 +5,7 @@ import {
     renderContentCommandProgress,
 } from "@/components/composites/ContentSettingsCard"
 import { SlotView } from "@/components/composites/SlotView"
-import type { ContentChannel, ContentNote } from "@/hooks/content"
-import type { ContentT } from "@/modules/types"
+import type { ContentChannel, ContentNoteView, ContentT } from "@/modules/types"
 import { FORM_CLASS_NAME } from "./classNames"
 
 /** What the quick idea command draws. */
@@ -18,7 +17,7 @@ export interface ContentQuickIdeaBaseProps {
         readonly channels: ReadonlyArray<ContentChannel>
         readonly channelOptions: ReadonlyArray<{ readonly value: string; readonly label: string }>
         readonly isPending: boolean
-        readonly note: ContentNote | null
+        readonly note: ContentNoteView | null
     }
     readonly on: {
         readonly open: () => void

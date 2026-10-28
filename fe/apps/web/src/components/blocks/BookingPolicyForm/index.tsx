@@ -4,8 +4,7 @@ import { useBookingBoard } from "@/hooks/bookingBoard"
 import { useSlotLabels } from "@/hooks/slot"
 import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
-import { useMutateSaveBookingPolicySwr } from "@/hooks/swr"
-import { useBookingSetupSave } from "@/hooks/bookingSetup"
+import { useBookingSettingsCommands } from "@/hooks/bookingSetup"
 import { BookingPolicyFormBase } from "./component"
 
 /** The numeric rules of the policy, by the id the form uses. */
@@ -30,8 +29,7 @@ export const BookingPolicyForm = () => {
     const { board, slot, reload } = useBookingBoard()
     const slotLabels = useSlotLabels()
     const t = useTranslations("workbenchBooking")
-    const persist = useBookingSetupSave()
-    const savePolicy = useMutateSaveBookingPolicySwr()
+    const commands = useBookingSettingsCommands()
     const settings = board.settings
     const [edits, setEdits] = useState<Edits>({})
     const numbers: Numbers = {
@@ -49,21 +47,19 @@ export const BookingPolicyForm = () => {
     const [isPending, startTransition] = useTransition()
     const save = () =>
         startTransition(async () => {
-            const answer = await persist(() =>
-                savePolicy.trigger({
-                    cancelWindowHours: Math.round(numbers.cancelWindowHours),
-                    lateCancelFeePct: Math.round(numbers.lateCancelFeePct),
-                    noShowFeeVnd: Math.round(numbers.noShowFeeVnd),
-                    depositPct: Math.round(numbers.depositPct),
-                    minLeadMin: Math.round(numbers.minLeadMin),
-                    maxAdvanceDays: Math.round(numbers.maxAdvanceDays),
-                    slotStepMin: Math.round(numbers.slotStepMin),
-                    autoConfirm,
-                    handoffOrder: handoff,
-                    address,
-                    timezone: settings.timezone,
-                }),
-            )
+            const answer = await commands.savePolicy({
+                cancelWindowHours: Math.round(numbers.cancelWindowHours),
+                lateCancelFeePct: Math.round(numbers.lateCancelFeePct),
+                noShowFeeVnd: Math.round(numbers.noShowFeeVnd),
+                depositPct: Math.round(numbers.depositPct),
+                minLeadMin: Math.round(numbers.minLeadMin),
+                maxAdvanceDays: Math.round(numbers.maxAdvanceDays),
+                slotStepMin: Math.round(numbers.slotStepMin),
+                autoConfirm,
+                handoffOrder: handoff,
+                address,
+                timezone: settings.timezone,
+            })
             if (answer === undefined) return
         })
     return (

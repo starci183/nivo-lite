@@ -3,15 +3,18 @@
 import { useBookingBoard } from "@/hooks/bookingBoard"
 import { useSlotLabels } from "@/hooks/slot"
 import { useFormatter, useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
-import { WEEK, hoursLineOf, parseWeek, useBookingSetupSave } from "@/hooks/bookingSetup"
+import { useState } from "react"
 import {
-    useMutateRemoveBookingResourceSwr,
-    useMutateSaveBookingHoursSwr,
-    useMutateSaveBookingResourceSwr,
-} from "@/hooks/swr"
-import { BookingResourcesBase, buildBookingResourcesState } from "./component"
-import type { Draft, ResourceFields, ResourceNotice } from "./component"
+    WEEK,
+    buildBookingResourcesState,
+    useBookingCatalogEditor,
+    hoursLineOf,
+    useBookingResourceCommands,
+    type ResourceDraft,
+    type ResourceNotice,
+} from "@/hooks/bookingSetup"
+import { BookingResourcesBase } from "./component"
+import type { ResourceFields } from "@/modules/types"
 
 const BLANK: ResourceFields = { name: "", kind: "staff", capacity: 1, active: true, staffId: "none" }
 
@@ -21,14 +24,10 @@ export const BookingResources = () => {
     const slotLabels = useSlotLabels()
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
-    const persist = useBookingSetupSave()
-    const saveResource = useMutateSaveBookingResourceSwr()
-    const saveResourceHours = useMutateSaveBookingHoursSwr()
-    const removeResource = useMutateRemoveBookingResourceSwr()
-    const [draft, setDraft] = useState<Draft | null>(null)
-    const [removeId, setRemoveId] = useState<string | null>(null)
+    const commands = useBookingResourceCommands()
+    const { draft, setDraft, removeId, setRemoveId, isPending, startTransition } =
+        useBookingCatalogEditor<ResourceDraft>()
     const [notice, setNotice] = useState<ResourceNotice | null>(null)
-    const [isPending, startTransition] = useTransition()
 
     const connected = buildBookingResourcesState({
         board,
@@ -36,17 +35,13 @@ export const BookingResources = () => {
         format,
         draft,
         startTransition,
-        persist,
-        saveResource,
+        commands,
         setDraft,
         setNotice,
         t,
-        saveResourceHours,
         isPending,
         notice,
         setRemoveId,
-        removeResource,
-        parseWeek,
     })
 
     return (
@@ -136,8 +131,7 @@ const bookingResourcesProps = (
 const bookingResourcesOn = (
     connected: NonNullable<ReturnType<typeof buildBookingResourcesState>>,
 ): Omit<Parameters<typeof BookingResourcesBase>[0]["on"], "retry"> => {
-    const { setDraft, board, setRemoveId, draft, save, saveHours, removeId, startTransition, persist, removeResource } =
-        connected
+    const { setDraft, board, setRemoveId, draft, save, saveHours, removeId, startTransition, commands } = connected
     return {
         add: () => setDraft({ id: null, fields: BLANK, lines: [] }),
         edit: (id) => {
@@ -169,7 +163,7 @@ const bookingResourcesOn = (
         confirmRemove: () => {
             if (removeId === null) return
             startTransition(async () => {
-                const answer = await persist(() => removeResource.trigger({ id: removeId }))
+                const answer = await commands.removeResource({ id: removeId })
                 if (answer === undefined) return
                 setRemoveId(null)
             })

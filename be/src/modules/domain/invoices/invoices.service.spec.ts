@@ -469,7 +469,10 @@ describe("InvoicesService renewals", () => {
         })
         const service = await build(em)
 
-        await expect(service.find(WS, "inv-r1")).resolves.toMatchObject({ contract_id: CONTRACT, period_ends_on: PERIOD })
+        await expect(service.find(WS, "inv-r1")).resolves.toMatchObject({
+            contract_id: CONTRACT,
+            period_ends_on: PERIOD,
+        })
         await expect(service.markPaid(WS, "inv-r1")).resolves.toMatchObject({
             contract_id: CONTRACT,
             period_ends_on: PERIOD,

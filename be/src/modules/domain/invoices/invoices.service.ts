@@ -134,7 +134,11 @@ export class InvoicesService {
         return this.numbered({
             billing: input,
             write: (billed) =>
-                this.entityManager.query<Array<InvoiceRow>>(INSERT_INVOICE, [input.workspaceId, input.orderId, ...billed]),
+                this.entityManager.query<Array<InvoiceRow>>(INSERT_INVOICE, [
+                    input.workspaceId,
+                    input.orderId,
+                    ...billed,
+                ]),
             existing: () =>
                 input.orderId === null ? Promise.resolve(null) : this.ofOrder(input.workspaceId, input.orderId),
         })

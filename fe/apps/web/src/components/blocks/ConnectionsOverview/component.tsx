@@ -1,5 +1,6 @@
-import { Alert, EmptyNotice, Region, SectionHeader, SurfaceListCard } from "@starci/grammar/common"
+import { Alert, EmptyNotice, Region, SectionHeader, SurfaceListCard, TextAction } from "@starci/grammar/common"
 import type { ComponentType } from "react"
+import { SlotView } from "@/components/composites/SlotView"
 import type { AgentOption, Connection, DataSlot, Provider, SlotLabels } from "@/modules/types"
 import { connectionsPageClassNames as classNames } from "./classNames"
 
@@ -181,5 +182,33 @@ export const BoardBody = (props: BoardBodyProps) => {
                 />
             ) : null}
         </>
+    )
+}
+
+/** What the board region draws: the overview whose board slot it renders. */
+export interface ConnectionsBoardRegionProps {
+    readonly overview: ConnectionsOverviewProps
+}
+
+/** The board region: the workspace reads drawn through SlotView (same-shape placeholder while they load), then the automations link. */
+export const ConnectionsBoardRegion = (props: ConnectionsBoardRegionProps) => {
+    const { overview } = props
+    return (
+        <SlotView
+            slot={overview.props.board}
+            placeholder={BOARD_PLACEHOLDER}
+            labels={overview.props.slotLabels}
+            forbidden="notice"
+            onRetry={overview.on.retry}
+        >
+            {(board, isSkeleton) => (
+                <>
+                    <BoardBody {...overview} board={board} isSkeleton={isSkeleton} />
+                    <TextAction href={overview.props.words.automationsHref}>
+                        {overview.props.words.automationsLink}
+                    </TextAction>
+                </>
+            )}
+        </SlotView>
     )
 }

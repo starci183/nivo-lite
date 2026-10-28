@@ -1,5 +1,8 @@
-import type { useTranslations } from "next-intl"
-import type { BookingHoursView } from "@/modules/types"
+import type { Dispatch, SetStateAction, useTransition } from "react"
+import type { useFormatter, useTranslations } from "next-intl"
+import type { useBookingBoard } from "@/hooks/bookingBoard"
+import type { BookingHoursView, ResourceFields } from "@/modules/types"
+import type { useBookingResourceCommands } from "./useBookingResourceCommands"
 
 /** One weekly opening window as the database writer takes it. */
 export interface HoursWindow {
@@ -80,3 +83,74 @@ export const bookingServiceFormOf = <Fields extends { readonly name: string }>(
     saveLabel: t("save"),
     cancelLabel: t("cancel"),
 })
+
+/** The part of an SWR mutation a setup command triggers. */
+export interface SetupMutation<A, R> {
+    readonly trigger: (arg: A) => Promise<R>
+}
+
+/** A setup write run with the "saved" toast and the board refresh: the answer, or undefined when it failed. */
+export type SetupPersist = <T>(action: () => Promise<T>) => Promise<T | undefined>
+
+/** Turns a mutation into a setup command that runs through the setup save. */
+export const setupCommandOf =
+    (persist: SetupPersist) =>
+    <A, R>(mutation: SetupMutation<A, R>) =>
+    (arg: A) =>
+        persist(() => mutation.trigger(arg))
+
+/** The form being edited: a new resource has no id and no hours yet. */
+export interface ResourceDraft {
+    readonly id: string | null
+    readonly fields: ResourceFields
+    readonly lines: ReadonlyArray<string>
+}
+
+/** Feedback from a resource save. */
+export interface ResourceNotice {
+    readonly ok: boolean
+    readonly text: string
+}
+
+/** Inputs for composing resource form callbacks and formatted state. */
+export interface ResourceContext {
+    readonly board: ReturnType<typeof useBookingBoard>["board"]
+    readonly removeId: string | null
+    readonly format: ReturnType<typeof useFormatter>
+    readonly draft: ResourceDraft | null
+    readonly startTransition: ReturnType<typeof useTransition>[1]
+    readonly commands: ReturnType<typeof useBookingResourceCommands>
+    readonly setDraft: Dispatch<SetStateAction<ResourceDraft | null>>
+    readonly setNotice: Dispatch<SetStateAction<ResourceNotice | null>>
+    readonly t: ReturnType<typeof useTranslations<"workbenchBooking">>
+    readonly isPending: boolean
+    readonly notice: ResourceNotice | null
+    readonly setRemoveId: Dispatch<SetStateAction<string | null>>
+}
+
+/** Composes resource form callbacks from the connected inputs. */
+export const buildBookingResourcesState = (context: ResourceContext) => {
+    const { board, removeId, format, draft, startTransition, commands, setDraft, setNotice, t } = context
+    const removing = board.resources.find((resource) => resource.id === removeId)
+    const weekdayName = (day: number) =>
+        format.dateTime(new Date(Date.UTC(2024, 0, day)), { weekday: "short", timeZone: "UTC" })
+    const save = () => {
+        if (draft === null) return
+        const { fields } = draft
+        const input = { ...fields, id: draft.id, staffId: fields.staffId === "none" ? null : fields.staffId }
+        startTransition(async () => {
+            if ((await commands.saveResource(input)) !== undefined) setDraft(null)
+        })
+    }
+    const saveHours = () => {
+        if (draft?.id === undefined || draft.id === null) return
+        const week = parseWeek(draft.lines)
+        if ("badWeekday" in week)
+            return setNotice({ ok: false, text: t("hoursInvalid", { day: weekdayName(week.badWeekday) }) })
+        const resourceId = draft.id
+        startTransition(async () => {
+            await commands.saveHours({ resourceId, rows: week.rows })
+        })
+    }
+    return { ...context, weekdayName, removing, save, saveHours }
+}

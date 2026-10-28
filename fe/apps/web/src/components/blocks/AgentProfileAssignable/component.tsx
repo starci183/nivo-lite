@@ -1,5 +1,5 @@
 import { DescriptionList, SurfaceCard, Text } from "@starci/grammar/common"
-import { SlotBoundView } from "@/components/composites/SlotView"
+import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { STACK_CLASS } from "./classNames"
 
@@ -15,9 +15,12 @@ export interface AgentProfileAssignableBaseProps {
     readonly props: {
         readonly title: string
         readonly description: string
-        readonly slot: DataSlot<ReadonlyArray<AssignerRow>>
-        readonly placeholder: ReadonlyArray<AssignerRow>
-        readonly slotLabels: SlotLabels
+        /** The read, its same-shape placeholder and the words of its states, as SlotView takes them. */
+        readonly read: {
+            readonly slot: DataSlot<ReadonlyArray<AssignerRow>>
+            readonly placeholder: ReadonlyArray<AssignerRow>
+            readonly labels: SlotLabels
+        }
     }
     readonly on: { readonly retry: () => void }
 }
@@ -29,9 +32,9 @@ export const AgentProfileAssignableBase = (props: AgentProfileAssignableBaseProp
             <Text size="sm" tone="muted">
                 {props.props.description}
             </Text>
-            <SlotBoundView from={props.props} onRetry={props.on.retry}>
+            <SlotView {...props.props.read} onRetry={props.on.retry}>
                 {(rows, isSkeleton) => <DescriptionList layout="stacked" isLoading={isSkeleton} items={rows} />}
-            </SlotBoundView>
+            </SlotView>
         </div>
     </SurfaceCard>
 )

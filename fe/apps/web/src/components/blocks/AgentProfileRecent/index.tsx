@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useProfileRegion } from "@/hooks/agentProfile"
+import { mapSlot } from "@/hooks/slot"
 import { AgentProfileRecentBase } from "./component"
 
 /** The agent whose recent work the card lists. */
@@ -26,17 +27,20 @@ export const AgentProfileRecent = (props: AgentProfileRecentProps) => {
     return (
         <AgentProfileRecentBase
             props={{
-                ...region.frame,
                 label: t("recentTitle"),
-                rows: region.items.map((work) => ({
-                    id: work.id,
-                    title: work.title === "" ? actionLabel(work.action) : work.title,
-                    description: work.customer,
-                    mark: null,
-                    badges: [{ label: t(`workStatus_${work.status}`), tone: TONE[work.status] ?? "neutral" }],
-                })),
-                emptyMessage: t("recentEmpty"),
-                emptyDescription: t("recentEmptyBody"),
+                read: {
+                    slot: mapSlot(region.slot, (items) =>
+                        items.map((work) => ({
+                            id: work.id,
+                            title: work.title === "" ? actionLabel(work.action) : work.title,
+                            description: work.customer,
+                            mark: null,
+                            badges: [{ label: t(`workStatus_${work.status}`), tone: TONE[work.status] ?? "neutral" }],
+                        })),
+                    ),
+                    placeholder: [],
+                    labels: region.labels(t("recentEmpty")),
+                },
                 footer: null,
             }}
             on={{ retry: region.reload }}

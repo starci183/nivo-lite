@@ -20,7 +20,7 @@ interface AgentDashboardFrameProps {
     /** The instance whose dashboard this is; null for the first installation of the type. */
     readonly installationId?: string | null
     /** The module's own tabs are not known yet: a tab without content draws a skeleton card. */
-    readonly isLoading?: boolean
+    readonly hasPlaceholder?: boolean
     /** The page command in the header: omit for "Talk to the agent", null for none. */
     readonly command?: ReactNode | null
     /** The module's own connected figures block (its four stat items), drawn under the heading. */
@@ -80,7 +80,7 @@ export const AgentDashboardFrame = (props: AgentDashboardFrameProps) => {
                 headPlaceholder: frame.headPlaceholder,
                 headLabels: frame.headLabels,
                 ...frame.regions,
-                hasPlaceholder: props.isLoading === true,
+                hasPlaceholder: props.hasPlaceholder === true,
                 tabsLabel: frame.tabsLabel,
                 tabs: props.tabs.map((tab) => ({ id: tab.id, label: frame.tabLabel(tab, props.waitingTab) })),
                 selectedTab: selected,

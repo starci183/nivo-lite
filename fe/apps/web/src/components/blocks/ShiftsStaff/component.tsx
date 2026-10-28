@@ -1,6 +1,3 @@
-import type { useTranslations } from "next-intl"
-import type { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
-import type { useShiftsSetupCommands } from "@/hooks/shiftsCommands"
 import {
     Button,
     CheckboxGroup,
@@ -235,19 +232,3 @@ const renderStaffWorkLimits = (props: ShiftsStaffBaseProps) => (
 type RenderStaffActionsInput = { props: ShiftsStaffBaseProps }
 
 type RenderStaffListInput = { props: ShiftsStaffBaseProps }
-/** State values and commands consumed by the connected surface. */
-export type ShiftsStaffControllerInput = {
-    readonly t: ReturnType<typeof useTranslations<"shifts">>
-    readonly bench: NonNullable<ReturnType<typeof useShiftsBenchData>>["data"]
-    readonly format: ReturnType<typeof useShiftsFormat>
-    readonly commands: ReturnType<typeof useShiftsSetupCommands>
-    readonly form: StaffForm
-    readonly setForm: React.Dispatch<React.SetStateAction<StaffForm>>
-    readonly isBusy: boolean
-    readonly setIsBusy: React.Dispatch<React.SetStateAction<boolean>>
-}
-
-/** Narrowed schedule data available after the access guard. */
-export type CreateShiftsStaffRowsInput = ShiftsStaffControllerInput & {
-    bench: NonNullable<ShiftsStaffControllerInput["bench"]>
-}

@@ -31,4 +31,4 @@ export {
     TTS_VOICES,
     VIDEO_MAX_SECONDS,
 } from "./video.shared"
-export type { EditorStep, ProjectStatus, SceneRole, ScriptScene } from "./video.shared"
+export type { EditorStep, ProjectStatus, ScriptScene } from "./video.shared"

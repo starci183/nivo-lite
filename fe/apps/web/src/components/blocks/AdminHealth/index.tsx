@@ -33,7 +33,7 @@ export const AdminHealth = () => {
             props={{
                 slot: slotOfSwr({ data: view, isLoading, error: failure.message }),
                 placeholder: { ...copy, cards: PLACEHOLDER_CARDS },
-                slotLabels: { ...slotLabels(t("empty")), error: failure.message ?? t("loadFailed") },
+                labels: { ...slotLabels(t("empty")), error: failure.message ?? t("loadFailed") },
             }}
             on={{ retry: reload }}
         />

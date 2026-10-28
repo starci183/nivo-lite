@@ -1,5 +1,5 @@
 import { SegmentedControl, SurfaceCard, Text } from "@starci/grammar/common"
-import { SlotBoundView } from "@/components/composites/SlotView"
+import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { STACK } from "./classNames"
 
@@ -18,9 +18,12 @@ export interface AgentModeCardBaseProps {
         readonly options: ReadonlyArray<{ readonly value: string; readonly label: string }>
         readonly note: string
         readonly isDisabled: boolean
-        readonly slot: DataSlot<ModeView>
-        readonly placeholder: ModeView
-        readonly slotLabels: SlotLabels
+        /** The read, its same-shape placeholder and the words of its states, as SlotView takes them. */
+        readonly read: {
+            readonly slot: DataSlot<ModeView>
+            readonly placeholder: ModeView
+            readonly labels: SlotLabels
+        }
     }
     readonly on: { readonly mode: (value: string) => void; readonly retry: () => void }
 }
@@ -28,7 +31,7 @@ export interface AgentModeCardBaseProps {
 /** Draws the operating mode card: assist or autopilot, and what each means. */
 export const AgentModeCardBase = (props: AgentModeCardBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
-        <SlotBoundView from={props.props} onRetry={props.on.retry}>
+        <SlotView {...props.props.read} onRetry={props.on.retry}>
             {(view, isSkeleton) => (
                 <div className={STACK}>
                     <SegmentedControl
@@ -53,6 +56,6 @@ export const AgentModeCardBase = (props: AgentModeCardBaseProps) => (
                     )}
                 </div>
             )}
-        </SlotBoundView>
+        </SlotView>
     </SurfaceCard>
 )

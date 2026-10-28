@@ -3,7 +3,6 @@ import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
 import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import { DecisionsErrorCode } from "@modules/domain/decisions"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { AuthorityRuleRecord } from "@modules/domain/authority-rules"
 import { BrainFactsService } from "@modules/domain/brain-facts"
@@ -354,8 +353,8 @@ describe("SetupCardsService > decide", () => {
 
 describe("SetupCardsService > decide", () => {
     it.each([
-        ["unknown", "never", DecisionsErrorCode.UnknownAction],
-        ["pay_vendor", "auto", DecisionsErrorCode.ModeCapped],
+        ["unknown", "never", ModulesErrorCode.CardRuleUnknownAction],
+        ["pay_vendor", "auto", ModulesErrorCode.CardRuleModeCapped],
     ] as const)("refuses the rule of %s as the Authority page would", async (action, mode, code) => {
         const { service, writes, rules } = await build()
         writes.find.mockResolvedValue(ruleCard({ action }))

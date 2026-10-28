@@ -63,3 +63,6 @@ export interface PassageView {
     /** Whether the passage has a vector. */
     readonly hasEmbedding: boolean
 }
+
+/** The dimensions of every stored vector (the pgvector column size); the embeddings provider is asked for exactly this many. */
+export const EMBEDDING_DIMENSIONS = 1536

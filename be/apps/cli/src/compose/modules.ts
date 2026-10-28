@@ -23,8 +23,7 @@ import { WorkspaceSeedModule } from "@modules/domain/workspace-seed"
 import { WorkspaceCleanupModule } from "@modules/domain/workspace-cleanup"
 import { CORE_FOLDER, NIVO_KNOWLEDGE_MESSAGES, NivoKnowledgeModule } from "@modules/domain/nivo-knowledge"
 import { VideoMusicModule } from "@modules/domain/video-music"
-import { AiPoolClient, AiPoolModule } from "@modules/integrations/ai-pool"
-import { LlmModule } from "@modules/integrations/llm"
+import { AiPoolModule } from "@modules/integrations/ai-pool"
 import { HttpModule } from "@modules/platform/http"
 import { I18nModule } from "@modules/platform/i18n"
 import { ChannelSetupModule } from "@modules/integrations/channel-setup"
@@ -52,7 +51,6 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule> => [
     I18nModule.register({ isGlobal: true, bundles: [NIVO_KNOWLEDGE_MESSAGES, MODULES_MESSAGES] }),
     HttpModule.register({ isGlobal: true }),
     AiPoolModule.register({ isGlobal: true, ...options.aiPool }),
-    LlmModule.register({ isGlobal: true, pool: AiPoolClient }),
     NivoKnowledgeModule.register({
         isGlobal: true,
         folders: [CORE_FOLDER, ...MODULE_KNOWLEDGE_FOLDERS],

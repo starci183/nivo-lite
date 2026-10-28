@@ -1,6 +1,3 @@
-import type { useTranslations } from "next-intl"
-import type { useShiftsFormat, useShiftsBenchData } from "@/hooks/shifts"
-import type { useShiftsSetupCommands } from "@/hooks/shiftsCommands"
 import {
     Button,
     CheckboxGroup,
@@ -190,19 +187,3 @@ const renderDemandFields = ({ props }: RenderDemandFieldsInput) => (
 )
 
 type RenderDemandFieldsInput = { props: ShiftsDemandBaseProps }
-/** State values and commands consumed by the connected surface. */
-export type ShiftsDemandControllerInput = {
-    readonly t: ReturnType<typeof useTranslations<"shifts">>
-    readonly isBusy: boolean
-    readonly setIsBusy: React.Dispatch<React.SetStateAction<boolean>>
-    readonly format: ReturnType<typeof useShiftsFormat>
-    readonly form: DemandForm
-    readonly setForm: React.Dispatch<React.SetStateAction<DemandForm>>
-    readonly bench: NonNullable<ReturnType<typeof useShiftsBenchData>>["data"]
-    readonly commands: ReturnType<typeof useShiftsSetupCommands>
-}
-
-/** Narrowed schedule data available after the access guard. */
-export type CreateShiftsDemandRowsInput = ShiftsDemandControllerInput & {
-    bench: NonNullable<ShiftsDemandControllerInput["bench"]>
-}

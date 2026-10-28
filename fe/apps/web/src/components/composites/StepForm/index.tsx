@@ -1,19 +1,7 @@
-import type { CalendarDate, DateValue } from "@internationalized/date"
+import type { DateValue } from "@internationalized/date"
+import type { StepFormView } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 import { Alert, Button, DateField, Form, Input, Select, Textarea } from "@starci/grammar/common"
-
-/** The form that reassigns a step, changes its due date or adds the next step. */
-export interface StepFormView {
-    readonly mode: "reassign" | "add" | "due"
-    readonly label: string
-    readonly title: string
-    readonly owner: string
-    readonly nextAction: string
-    readonly due: CalendarDate | null
-    readonly ownerOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
-    readonly submitLabel: string
-    readonly error: string | null
-}
 
 /** The words of the step form. */
 export interface StepFormLabels {

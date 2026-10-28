@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { toVector } from "@modules/domain/knowledge-chunks"
-import { InjectLlm } from "@modules/integrations/llm"
-import type { LlmPort } from "@modules/integrations/llm"
+import { EMBEDDING_DIMENSIONS, toVector } from "@modules/domain/knowledge-chunks"
+import { InjectAiPool } from "@modules/integrations/ai-pool"
+import type { AiPoolClient } from "@modules/integrations/ai-pool"
 import { unwrapOutcome } from "@modules/platform/primitives"
 import { NivoKnowledgeError, NivoKnowledgeErrorCode } from "./errors/nivo-knowledge.error"
 import { NivoFolderClient } from "./nivo-folder.client"
@@ -26,7 +26,7 @@ const EMBED_TIMEOUT_MS = 30_000
 export class NivoSeedService {
     constructor(
         @InjectNivoKnowledgeOptions() private readonly options: NivoKnowledgeOptions,
-        @InjectLlm() private readonly llm: LlmPort,
+        @InjectAiPool() private readonly pool: AiPoolClient,
         private readonly nivo: NivoKnowledgeService,
         private readonly folder: NivoFolderClient,
     ) {}
@@ -63,14 +63,15 @@ export class NivoSeedService {
 
     /** Gives the next batch of items without a vector theirs, then the batch after it, until none is left or the provider fails. */
     private async embedMissing(batch: number, done: number): Promise<number> {
-        if (!this.llm.embeddingsConfigured() || batch >= MAX_BATCHES) return done
-        const model = this.llm.embeddingModel()
+        if (!this.pool.embeddingsReady() || batch >= MAX_BATCHES) return done
+        const model = this.pool.embeddingModel()
         const missing = await this.nivo.unembedded(model, EMBED_ITEMS)
         if (missing.length === 0) return done
-        const embedding = await this.llm.embed(
-            missing.map((item) => item.text),
-            EMBED_TIMEOUT_MS,
-        )
+        const embedding = await this.pool.embed({
+            input: missing.map((item) => item.text),
+            dimensions: EMBEDDING_DIMENSIONS,
+            timeoutMs: EMBED_TIMEOUT_MS,
+        })
         if (embedding === null) return done
         await this.nivo.setVectors({
             model,

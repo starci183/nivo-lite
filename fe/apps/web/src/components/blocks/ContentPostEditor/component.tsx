@@ -6,16 +6,27 @@ import type { LinkRow } from "@/components/leaves/ContentEditorLinks"
 import type { PublishProof } from "@/components/leaves/ContentEditorPublish"
 import type { OpenVariant } from "@/components/leaves/ContentEditorVariants"
 import { ContentStatusBadge } from "@/components/leaves/ContentStatusBadge"
-import type { ContentItem, ContentNote, ItemTransition, EditorForm } from "@/hooks/content"
-import type { ContentT, DownloadFile, HistoryRow, MediaTile, Pillar, PublishStep } from "@/modules/types"
+import type {
+    ContentEditorFormView,
+    ContentEditorItemView,
+    ContentEditorPatch,
+    ContentNoteView,
+    ContentT,
+    ContentTransitionView,
+    DownloadFile,
+    HistoryRow,
+    MediaTile,
+    Pillar,
+    PublishStep,
+} from "@/modules/types"
 import { DESCRIPTION_CLASS_NAME, FOOTER_CLASS_NAME, FORM_CLASS_NAME } from "./classNames"
 
 /** What the post editor draws. */
 export interface ContentPostEditorBaseProps {
     readonly props: {
         readonly t: ContentT
-        readonly item: ContentItem
-        readonly form: EditorForm
+        readonly item: ContentEditorItemView
+        readonly form: ContentEditorFormView
         readonly pillars: ReadonlyArray<Pillar>
         /** The words and tone of the status badge. */
         readonly statusLabel: string
@@ -38,7 +49,7 @@ export interface ContentPostEditorBaseProps {
         readonly canManage: boolean
         readonly isPending: boolean
         readonly busy: string | null
-        readonly note: ContentNote | null
+        readonly note: ContentNoteView | null
         readonly hint: string
         readonly isLibraryOpen: boolean
         readonly proof: Readonly<Record<string, PublishProof | undefined>>
@@ -50,7 +61,7 @@ export interface ContentPostEditorBaseProps {
     readonly on: {
         readonly close: () => void
         readonly dismissNote: () => void
-        readonly patch: (change: Partial<EditorForm>) => void
+        readonly patch: (change: ContentEditorPatch) => void
         readonly channels: (values: ReadonlyArray<string>) => void
         readonly tab: (id: string) => void
         readonly text: (text: string) => void
@@ -71,7 +82,7 @@ export interface ContentPostEditorBaseProps {
         readonly save: () => void
         readonly draft: () => void
         readonly submit: () => void
-        readonly transition: (kind: ItemTransition) => void
+        readonly transition: (kind: ContentTransitionView) => void
         readonly deleteOpen: (open: boolean) => void
     }
 }
@@ -131,7 +142,7 @@ const renderEditorFooter = (props: ContentPostEditorBaseProps) => {
     const { t, item, isEditable, isPending, busy } = props.props
     const on = props.on
     const status = item.status
-    const transitionButton = (kind: ItemTransition, label: string) => (
+    const transitionButton = (kind: ContentTransitionView, label: string) => (
         <Button
             intent="neutral"
             isPending={busy === "transition"}

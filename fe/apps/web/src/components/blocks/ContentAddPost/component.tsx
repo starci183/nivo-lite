@@ -1,7 +1,6 @@
 import { Button, CheckboxGroup, Dialog, Input, Select } from "@starci/grammar/common"
 import { ContentCommandNote } from "@/components/composites/ContentSettingsCard"
-import type { ContentChannel, ContentNote } from "@/hooks/content"
-import type { ContentT } from "@/modules/types"
+import type { ContentChannel, ContentNoteView, ContentT } from "@/modules/types"
 import { FORM_CLASS_NAME } from "./classNames"
 
 /** What the add-a-post command draws. */
@@ -17,7 +16,7 @@ export interface ContentAddPostBaseProps {
         readonly channelOptions: ReadonlyArray<{ readonly value: string; readonly label: string }>
         readonly pillarOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
         readonly isPending: boolean
-        readonly note: ContentNote | null
+        readonly note: ContentNoteView | null
     }
     readonly on: {
         readonly open: () => void

@@ -5,8 +5,7 @@ import {
     renderContentCommandProgress,
 } from "@/components/composites/ContentSettingsCard"
 import { SlotView } from "@/components/composites/SlotView"
-import type { ContentNote } from "@/hooks/content"
-import type { ContentT } from "@/modules/types"
+import type { ContentNoteView, ContentT } from "@/modules/types"
 import { FORM_CLASS_NAME } from "./classNames"
 
 /** What the plan command draws. */
@@ -18,7 +17,7 @@ export interface ContentPlanActionBaseProps {
         readonly month: string
         readonly lastPlan: string | null
         readonly isPending: boolean
-        readonly note: ContentNote | null
+        readonly note: ContentNoteView | null
     }
     readonly on: {
         readonly open: () => void

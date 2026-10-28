@@ -1,6 +1,6 @@
 import { Badge, Breadcrumbs, Button, ListRow, SectionHeader, SurfaceListCard, TextAction } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
-import type { SlotLabels } from "@/modules/types"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import { APP_ROUTES } from "@/modules/routes"
 import { HEAD_CLASS, STACK_CLASS } from "./classNames"
@@ -47,8 +47,8 @@ const DevelopersWebhooks = (props: DevelopersWebhooksProps) => (
 /** Props for {@link DevelopersPanelBase}. */
 export interface DevelopersPanelBaseProps {
     readonly props: {
-        /** True for staff: the forbidden notice replaces the page. */
-        readonly isForbidden: boolean
+        /** Who may read the page: forbidden for staff, so the notice replaces the page; ready for managers. */
+        readonly access: DataSlot<true>
         readonly webhooks: ReadonlyArray<DevelopersWebhookRow>
         readonly canManageWebhooks: boolean
         readonly webhooksView: DevelopersWebhooksView
@@ -73,11 +73,7 @@ export interface DevelopersPanelBaseProps {
 
 /** Draws the head and the outgoing events of the "Advanced" page, or the forbidden notice staff see. */
 export const DevelopersPanelBase = (props: DevelopersPanelBaseProps) => (
-    <SlotView
-        slot={{ isForbidden: props.props.isForbidden, items: true }}
-        placeholder={true}
-        labels={props.props.slotLabels}
-    >
+    <SlotView slot={props.props.access} placeholder={true} labels={props.props.slotLabels}>
         {() => (
             <>
                 <div className={HEAD_CLASS}>

@@ -1,5 +1,5 @@
 import { AdminRowsCard } from "@/components/composites/AdminRowsCard"
-import type { AdminCardView } from "@/hooks/admin"
+import type { AdminCardView } from "@/modules/types"
 import { GRID_CLASS_NAME } from "./classNames"
 
 /** The list cards the connected workspace lists supply. */

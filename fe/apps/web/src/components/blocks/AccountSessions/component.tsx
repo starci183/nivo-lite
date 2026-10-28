@@ -1,8 +1,7 @@
 import { Badge, Button, ListRow, Region, SectionHeader, SurfaceListCard, Text } from "@starci/grammar/common"
 import { FormNotice } from "@/components/composites/FormNotice"
 import { SlotView } from "@/components/composites/SlotView"
-import type { SessionRowView } from "@/hooks/account"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import type { DataSlot, SessionRowView, SlotLabels } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, SECTION_CLASS_NAME } from "./classNames"
 
 /** Copy, rows and state the connected sessions section supplies. */

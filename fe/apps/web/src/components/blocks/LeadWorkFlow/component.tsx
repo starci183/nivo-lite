@@ -1,8 +1,7 @@
 import { Badge, EmptyNotice, Heading, List, ListItem, Text } from "@starci/grammar/common"
 import { LeadPanel } from "@/components/composites/LeadPanel"
 import { SlotView } from "@/components/composites/SlotView"
-import type { FlowEntryView, FlowView } from "@/hooks/leads"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import type { DataSlot, FlowEntryView, FlowView, SlotLabels } from "@/modules/types"
 import {
     ITEM_CLASS_NAME,
     ITEM_HEAD_CLASS_NAME,

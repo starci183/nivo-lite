@@ -1,3 +1,4 @@
+import { SlotView } from "@/components/composites/SlotView"
 import {
     AlertDialog,
     Badge,
@@ -10,7 +11,7 @@ import {
     Text,
 } from "@starci/grammar/common"
 import { LoyaltyRewardForm } from "@/components/composites/LoyaltyRewardForm"
-import type { RewardTextField } from "@/modules/types"
+import type { DataSlot, RewardTextField, SlotLabels } from "@/modules/types"
 import type { LoyaltyRewardFormProps } from "@/components/composites/LoyaltyRewardForm"
 import { CHIPS_CLASS_NAME, ROW_ACTIONS_CLASS_NAME, ROW_CLASS_NAME, ROW_MAIN_CLASS_NAME } from "./classNames"
 
@@ -26,25 +27,32 @@ export interface RewardRowView {
     readonly note: string
 }
 
-/** Props for {@link LoyaltyRewardsBase}. */
+/** What the reward catalogue draws once the board read is in. */
+export interface LoyaltyRewardsView {
+    readonly title: string
+    readonly addLabel: string
+    readonly canManage: boolean
+    readonly isPending: boolean
+    readonly emptyTitle: string
+    readonly emptyBody: string
+    readonly presetLabel: string
+    readonly readOnlyNote: string
+    readonly activeLabel: string
+    readonly editLabel: string
+    readonly deleteLabel: string
+    readonly askLabel: string
+    readonly confirmLabel: string
+    readonly cancelLabel: string
+    readonly rows: ReadonlyArray<RewardRowView>
+    readonly form?: Omit<LoyaltyRewardFormProps, "onChange" | "onActive" | "onSubmit" | "onCancel">
+}
+
+/** Props for {@link LoyaltyRewardsBase}: the board read as a slot, its same-shape placeholder and the words of its status. */
 export interface LoyaltyRewardsBaseProps {
     readonly props: {
-        readonly title: string
-        readonly addLabel: string
-        readonly canManage: boolean
-        readonly isPending: boolean
-        readonly emptyTitle: string
-        readonly emptyBody: string
-        readonly presetLabel: string
-        readonly readOnlyNote: string
-        readonly activeLabel: string
-        readonly editLabel: string
-        readonly deleteLabel: string
-        readonly askLabel: string
-        readonly confirmLabel: string
-        readonly cancelLabel: string
-        readonly rows: ReadonlyArray<RewardRowView>
-        readonly form?: Omit<LoyaltyRewardFormProps, "onChange" | "onActive" | "onSubmit" | "onCancel">
+        readonly slot: DataSlot<LoyaltyRewardsView>
+        readonly placeholder: LoyaltyRewardsView
+        readonly slotLabels: SlotLabels
     }
     readonly on: {
         readonly add: () => void
@@ -56,16 +64,18 @@ export interface LoyaltyRewardsBaseProps {
         readonly setActive: (active: boolean) => void
         readonly submit: () => void
         readonly cancelForm: () => void
+        readonly retry: () => void
     }
 }
 
 /** Draws the reward catalogue: the list with its row actions for managers, and the add or edit form under it. */
-export const LoyaltyRewardsBase = (props: LoyaltyRewardsBaseProps) => {
+const LoyaltyRewardsBody = (props: LoyaltyRewardsBodyProps) => {
     const { props: p, on } = props
     return (
         <>
             {
                 <SurfaceListCard
+                    isLoading={props.isSkeleton}
                     label={p.title}
                     headingLevel={2}
                     labelEnd={
@@ -118,8 +128,8 @@ export const LoyaltyRewardsBase = (props: LoyaltyRewardsBaseProps) => {
 /** Inputs needed to build the Row section. */
 interface RenderRewardRowContext {
     readonly row: RewardRowView
-    readonly p: LoyaltyRewardsBaseProps["props"]
-    readonly on: LoyaltyRewardsBaseProps["on"]
+    readonly p: LoyaltyRewardsView
+    readonly on: LoyaltyRewardsBodyProps["on"]
 }
 /** Builds the Row section from the current view. */
 const renderRewardRow = ({ row, p, on }: RenderRewardRowContext) => (
@@ -170,3 +180,20 @@ const renderRewardRow = ({ row, p, on }: RenderRewardRowContext) => (
         ) : null}
     </ListItem>
 )
+
+/** The drawn tab: its view, its commands and whether it is the placeholder drawn while the board read is on its way. */
+interface LoyaltyRewardsBodyProps {
+    readonly props: LoyaltyRewardsView
+    readonly on: LoyaltyRewardsBaseProps["on"]
+    readonly isSkeleton: boolean
+}
+
+/** Draws the tab through SlotView: the same tree as a placeholder while the board read is on its way, the notice when it failed. */
+export const LoyaltyRewardsBase = (props: LoyaltyRewardsBaseProps) => {
+    const { slot, placeholder, slotLabels } = props.props
+    return (
+        <SlotView slot={slot} placeholder={placeholder} labels={slotLabels} onRetry={props.on.retry}>
+            {(view, isSkeleton) => <LoyaltyRewardsBody props={view} on={props.on} isSkeleton={isSkeleton} />}
+        </SlotView>
+    )
+}

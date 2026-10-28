@@ -1,3 +1,5 @@
+import { SlotView } from "@/components/composites/SlotView"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import {
     Badge,
     Button,
@@ -21,33 +23,40 @@ interface MemberOption {
 }
 
 /** Copy, rows and state the connected member list supplies. */
+export interface LoyaltyMembersView {
+    readonly title: string
+    readonly countLabel: string
+    readonly search: { readonly label: string; readonly placeholder: string; readonly value: string }
+    readonly tier: {
+        readonly label: string
+        readonly value: string
+        readonly options: ReadonlyArray<MemberOption>
+    }
+    readonly sort: {
+        readonly label: string
+        readonly value: string
+        readonly options: ReadonlyArray<MemberOption>
+    }
+    readonly rows: ReadonlyArray<{
+        readonly id: string
+        readonly label: string
+        readonly description: string
+        readonly tier?: { readonly name: string; readonly tone: BadgeTone }
+    }>
+    readonly empty?: { readonly title: string; readonly body: string }
+    readonly selectedId: string | null
+    readonly showMoreLabel?: string
+    readonly detailId: string
+    readonly panel: Omit<LoyaltyMemberPanelProps, "onClose">
+    readonly detailEmpty: { readonly title: string; readonly body: string }
+}
+
+/** Props for {@link LoyaltyMembersBase}: the board read as a slot, its same-shape placeholder and the words of its status. */
 export interface LoyaltyMembersBaseProps {
     readonly props: {
-        readonly title: string
-        readonly countLabel: string
-        readonly search: { readonly label: string; readonly placeholder: string; readonly value: string }
-        readonly tier: {
-            readonly label: string
-            readonly value: string
-            readonly options: ReadonlyArray<MemberOption>
-        }
-        readonly sort: {
-            readonly label: string
-            readonly value: string
-            readonly options: ReadonlyArray<MemberOption>
-        }
-        readonly rows: ReadonlyArray<{
-            readonly id: string
-            readonly label: string
-            readonly description: string
-            readonly tier?: { readonly name: string; readonly tone: BadgeTone }
-        }>
-        readonly empty?: { readonly title: string; readonly body: string }
-        readonly selectedId: string | null
-        readonly showMoreLabel?: string
-        readonly detailId: string
-        readonly panel: Omit<LoyaltyMemberPanelProps, "onClose">
-        readonly detailEmpty: { readonly title: string; readonly body: string }
+        readonly slot: DataSlot<LoyaltyMembersView>
+        readonly placeholder: LoyaltyMembersView
+        readonly slotLabels: SlotLabels
     }
     readonly on: {
         readonly search: (value: string) => void
@@ -55,11 +64,12 @@ export interface LoyaltyMembersBaseProps {
         readonly setSort: (value: string | null) => void
         readonly select: (id: string | null) => void
         readonly showMore: () => void
+        readonly retry: () => void
     }
 }
 
 /** Draws the member list with search, tier filter and sort, and the detail beside it (desktop) or below it (phone). */
-export const LoyaltyMembersBase = (props: LoyaltyMembersBaseProps) => (
+const LoyaltyMembersBody = (props: LoyaltyMembersBodyProps) => (
     <PrimaryRailLayout
         primary={renderMemberList({ props })}
         rail={
@@ -83,7 +93,7 @@ export const LoyaltyMembersBase = (props: LoyaltyMembersBaseProps) => (
 
 /** Inputs needed to build the title section. */
 interface RenderMemberListContext {
-    readonly props: LoyaltyMembersBaseProps
+    readonly props: LoyaltyMembersBodyProps
 }
 /** Builds the title section from the current view. */
 const renderMemberList = ({ props }: RenderMemberListContext) => (
@@ -145,4 +155,22 @@ const renderMemberList = ({ props }: RenderMemberListContext) => (
             )}
         </div>
     </SurfaceCard>
+)
+
+/** The drawn tab: its view, its commands. */
+interface LoyaltyMembersBodyProps {
+    readonly props: LoyaltyMembersView
+    readonly on: LoyaltyMembersBaseProps["on"]
+}
+
+/** Draws the tab through SlotView: the same tree as a placeholder while the board read is on its way, the notice when it failed. */
+export const LoyaltyMembersBase = (props: LoyaltyMembersBaseProps) => (
+    <SlotView
+        slot={props.props.slot}
+        placeholder={props.props.placeholder}
+        labels={props.props.slotLabels}
+        onRetry={props.on.retry}
+    >
+        {(view) => <LoyaltyMembersBody props={view} on={props.on} />}
+    </SlotView>
 )

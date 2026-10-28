@@ -245,8 +245,7 @@ export const AUTOMATIONS_MESSAGES: MessageBundle = {
         "automations.sample.ngay_het_han": "31/10/2026",
         "automations.sample.so_hoa_don": "INV-202611-0003",
         "automations.sample.noi_dung_ck": "INV2026110003",
-        "automations.sample.link_qr":
-            "https://qr.sepay.vn/img?acc=0123456789&bank=VCB&amount=1620000&des=INV2026110003&template=compact",
+        "automations.sample.link_qr": "https://qr.sepay.vn/img/INV2026110003",
     },
     en: {
         "errors.AUTOMATIONS_COMING_SOON": "This template is coming soon.",

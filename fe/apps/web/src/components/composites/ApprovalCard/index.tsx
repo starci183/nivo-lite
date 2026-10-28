@@ -4,7 +4,7 @@ import { Badge, Button, Divider, SurfaceCard, Text, Textarea } from "@starci/gra
 import type { BadgeTone } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { AiMarkChip } from "@/components/leaves/AiMarkChip"
-import { CopyTextButton } from "@/components/leaves/CopyTextButton"
+import { CopyTextButton } from "@/components/branches/CopyTextButton"
 import {
     APPROVAL_CARD_ACTIONS_CLASS_NAME,
     APPROVAL_CARD_BAND_CLASS_NAME,

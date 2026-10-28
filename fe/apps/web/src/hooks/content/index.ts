@@ -28,14 +28,7 @@ export {
     toContentDraftWarnings,
     warningMessage,
 } from "./content.shared"
-export type {
-    ChannelWarning,
-    ContentChannel,
-    ContentItem,
-    EditorForm,
-    ItemTransition,
-    MediaRef,
-} from "./content.shared"
+export type { ChannelWarning, ContentChannel, EditorForm, ItemTransition, MediaRef } from "./content.shared"
 export { useContentCommand } from "./useContentCommand"
 export type { ContentNote } from "./useContentCommand"
 export { useContentEditorCommands } from "./useContentEditorCommands"

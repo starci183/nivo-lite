@@ -62,7 +62,7 @@ export const LeadCreateForm = () => {
                     need: values.need ?? "",
                 },
                 errors,
-                failure,
+                submitError: failure,
                 isPending,
             }}
             on={{

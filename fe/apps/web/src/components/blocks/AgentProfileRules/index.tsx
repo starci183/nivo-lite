@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useProfileRegion } from "@/hooks/agentProfile"
+import { mapSlot } from "@/hooks/slot"
 import type { AuthorityMode } from "@/hooks/agentProfile"
 import { AgentProfileRulesBase } from "./component"
 
@@ -20,17 +21,20 @@ export const AgentProfileRules = (props: AgentProfileRulesProps) => {
     return (
         <AgentProfileRulesBase
             props={{
-                ...region.frame,
                 label: t("rulesTitle"),
-                rows: region.items.map((rule) => ({
-                    id: rule.action,
-                    title: g.has(`action_${rule.action}`) ? g(`action_${rule.action}`) : rule.action,
-                    description: rule.note === "" ? t(`ruleHint_${rule.mode}`) : rule.note,
-                    mark: null,
-                    badges: [{ label: t(`mode_${rule.mode}`), tone: TONE[rule.mode] }],
-                })),
-                emptyMessage: t("rulesEmpty"),
-                emptyDescription: t("rulesEmptyBody"),
+                read: {
+                    slot: mapSlot(region.slot, (items) =>
+                        items.map((rule) => ({
+                            id: rule.action,
+                            title: g.has(`action_${rule.action}`) ? g(`action_${rule.action}`) : rule.action,
+                            description: rule.note === "" ? t(`ruleHint_${rule.mode}`) : rule.note,
+                            mark: null,
+                            badges: [{ label: t(`mode_${rule.mode}`), tone: TONE[rule.mode] }],
+                        })),
+                    ),
+                    placeholder: [],
+                    labels: region.labels(t("rulesEmpty")),
+                },
                 footer: t("rulesReadOnly"),
             }}
             on={{ retry: region.reload }}

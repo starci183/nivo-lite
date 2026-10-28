@@ -5,12 +5,12 @@ import type { DateValue } from "@internationalized/date"
 import { Alert, Badge, Button, DescriptionList, EmptyNotice, SurfaceCard, Text } from "@starci/grammar/common"
 
 import { SlotView } from "@/components/composites/SlotView"
-import { StepForm, type StepFormLabels, type StepFormView } from "@/components/composites/StepForm"
+import { StepForm, type StepFormLabels } from "@/components/composites/StepForm"
 
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import type { BadgeTone } from "@starci/grammar/common"
-import type { DataSlot, ModuleIconName, SlotLabels } from "@/modules/types"
+import type { DataSlot, ModuleIconName, SlotLabels, StepFormView } from "@/modules/types"
 import {
     ACTIONS_CLASS_NAME,
     BODY_CLASS_NAME,

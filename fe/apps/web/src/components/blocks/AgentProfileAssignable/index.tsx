@@ -23,28 +23,30 @@ export const AgentProfileAssignable = (props: AgentProfileAssignableProps) => {
             props={{
                 title: t("assignableTitle"),
                 description: t("assignableDesc"),
-                slot: mapSlot(slot, (agent): ReadonlyArray<AssignerRow> => [
-                    ...(agent.assignableRoles.length === 0
-                        ? []
-                        : [
-                              {
-                                  id: "roles",
-                                  term: t("assignableRole"),
-                                  description: agent.assignableRoles.map((role) => t(`role_${role}`)).join(", "),
-                              },
-                          ]),
-                    ...(agent.assignableRooms.length === 0
-                        ? []
-                        : [
-                              {
-                                  id: "rooms",
-                                  term: t("assignableRoom"),
-                                  description: agent.assignableRooms.join(", "),
-                              },
-                          ]),
-                ]),
-                placeholder: PLACEHOLDER,
-                slotLabels: slotLabels(t("assignableEmpty")),
+                read: {
+                    slot: mapSlot(slot, (agent): ReadonlyArray<AssignerRow> => [
+                        ...(agent.assignableRoles.length === 0
+                            ? []
+                            : [
+                                  {
+                                      id: "roles",
+                                      term: t("assignableRole"),
+                                      description: agent.assignableRoles.map((role) => t(`role_${role}`)).join(", "),
+                                  },
+                              ]),
+                        ...(agent.assignableRooms.length === 0
+                            ? []
+                            : [
+                                  {
+                                      id: "rooms",
+                                      term: t("assignableRoom"),
+                                      description: agent.assignableRooms.join(", "),
+                                  },
+                              ]),
+                    ]),
+                    placeholder: PLACEHOLDER,
+                    labels: slotLabels(t("assignableEmpty")),
+                },
             }}
             on={{ retry: reload }}
         />

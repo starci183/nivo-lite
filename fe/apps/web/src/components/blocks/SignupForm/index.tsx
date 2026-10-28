@@ -30,8 +30,8 @@ type SignupFormControllerInput = {
     readonly t: ReturnType<typeof useTranslations<"auth">>
     readonly router: ReturnType<typeof navigation.useRouter>
     readonly form: ReturnType<typeof useSignupForm>
-    readonly failure: string | undefined
-    readonly setFailure: React.Dispatch<React.SetStateAction<string | undefined>>
+    readonly submitError: string | undefined
+    readonly setSubmitError: React.Dispatch<React.SetStateAction<string | undefined>>
     readonly sentTo: string | null
     readonly setSentTo: React.Dispatch<React.SetStateAction<string | null>>
     readonly isPending: ReturnType<typeof useTransition>[0]
@@ -40,18 +40,18 @@ type SignupFormControllerInput = {
 }
 
 const createSignupFormController = (input: SignupFormControllerInput) => {
-    const { props, auth, t, router, form, setFailure, setSentTo, startTransition, resending } = input
+    const { props, auth, t, router, form, setSubmitError, setSentTo, startTransition, resending } = input
 
     const set = (key: "name" | "email" | "password" | "confirm") => (value: string) => {
         form.setValue(key, value, { shouldValidate: form.formState.isSubmitted })
     }
 
     const submit = form.handleSubmit((values) => {
-        setFailure(undefined)
+        setSubmitError(undefined)
         startTransition(async () => {
             const outcome = await auth.signUp({ ...values, next: props.next })
             if (!outcome.success || outcome.data === undefined) {
-                setFailure(t(authErrorKey(outcome.error ?? "")))
+                setSubmitError(t(authErrorKey(outcome.error ?? "")))
                 return
             }
             if (outcome.data.sessionCreated) {
@@ -78,7 +78,7 @@ export const SignupForm = (props: SignupFormProps) => {
     const t = useTranslations("auth")
     const router = navigation.useRouter()
     const form = useSignupForm(props.initialEmail)
-    const [failure, setFailure] = useState<string>()
+    const [submitError, setSubmitError] = useState<string>()
     const [sentTo, setSentTo] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
     const resending = useResendEmail(() => auth.resendConfirmation({ email: sentTo, next: props.next }), {
@@ -95,8 +95,8 @@ export const SignupForm = (props: SignupFormProps) => {
         t,
         router,
         form,
-        failure,
-        setFailure,
+        submitError,
+        setSubmitError,
         sentTo,
         setSentTo,
         isPending,
@@ -112,13 +112,13 @@ const createSignupFormView = (
 ): React.ComponentProps<typeof SignupFormBase> => {
     const { props } = context
 
-    const { t, failure, sentTo, setSentTo, resending, set, submit, fields, errors, loginHref, isPending } = context
+    const { t, submitError, sentTo, setSentTo, resending, set, submit, fields, errors, loginHref, isPending } = context
     return {
         shape: sentTo === null ? "form" : "sent",
         props: {
             title: t("signUpTitle"),
             text: props.invited ? t("signUpInviteText") : t("signUpText"),
-            failure: failure === undefined ? undefined : { title: t("signUpFailedTitle"), text: failure },
+            submitError: submitError === undefined ? undefined : { title: t("signUpFailedTitle"), text: submitError },
             nameLabel: t("nameLabel"),
             emailLabel: t("emailLabel"),
             emailPlaceholder: t("emailPlaceholder"),

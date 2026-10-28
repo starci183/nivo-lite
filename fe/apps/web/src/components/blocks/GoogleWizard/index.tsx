@@ -67,7 +67,7 @@ export const GoogleWizard = (props: GoogleWizardProps) => {
                 stepLabel: tw("stepOf", { n: index + 1, total: steps.length }),
                 steps,
                 index,
-                failure,
+                refusal: failure,
                 error,
                 isPending,
                 text: {

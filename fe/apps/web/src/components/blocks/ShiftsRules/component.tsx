@@ -1,6 +1,3 @@
-import type { useTranslations } from "next-intl"
-import type { useShiftsFormat, useShiftsBenchData } from "@/hooks/shifts"
-import type { useShiftsRuleCommands } from "@/hooks/shiftsCommands"
 import { Badge, Button, NumberField, SectionHeader, Select, SurfaceCard, Switch, Text } from "@starci/grammar/common"
 import { BLOCK_CLASS_NAME, FORM_GRID_CLASS_NAME, HOURS_GRID_CLASS_NAME, ROW_CLASS_NAME } from "./classNames"
 
@@ -114,25 +111,3 @@ export const ShiftsRulesBase = (props: ShiftsRulesBaseProps) => (
         </div>
     </SurfaceCard>
 )
-
-/** State values and commands consumed by the connected surface. */
-export type Hours = Readonly<Record<string, { readonly open: string; readonly close: string } | null>>
-
-/** State values and commands consumed by the connected surface. */
-export type ShiftsRulesControllerInput = {
-    readonly t: ReturnType<typeof useTranslations<"shifts">>
-    readonly format: ReturnType<typeof useShiftsFormat>
-    readonly commands: ReturnType<typeof useShiftsRuleCommands>
-    readonly bench: NonNullable<ReturnType<typeof useShiftsBenchData>>["data"]
-    readonly ruleEdits: Partial<Record<RuleField, number>>
-    readonly setRuleEdits: React.Dispatch<React.SetStateAction<Partial<Record<RuleField, number>>>>
-    readonly hourEdits: Hours
-    readonly setHourEdits: React.Dispatch<React.SetStateAction<Hours>>
-    readonly isBusy: boolean
-    readonly setIsBusy: React.Dispatch<React.SetStateAction<boolean>>
-}
-
-/** Narrowed schedule data available after the access guard. */
-export type CreateShiftsRulesRowsInput = ShiftsRulesControllerInput & {
-    bench: NonNullable<ShiftsRulesControllerInput["bench"]>
-}

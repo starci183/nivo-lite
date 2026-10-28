@@ -1,7 +1,7 @@
 export {
     INTERVIEW_MODES,
+    candidateDetailsOf,
     interviewDefaults,
-    isPreviewable,
     offerDefaults,
     type CandidateDialog,
     type InterviewValues,

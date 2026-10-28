@@ -1,3 +1,4 @@
+export { EMBEDDING_DIMENSIONS } from "./knowledge-chunks.contracts"
 export type { ChunkDraft } from "./knowledge-chunks.contracts"
 export { chunkText } from "./chunk.policy"
 export { KnowledgeChunksModule } from "./knowledge-chunks.module"

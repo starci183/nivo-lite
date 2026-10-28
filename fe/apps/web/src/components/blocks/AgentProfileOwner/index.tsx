@@ -22,29 +22,33 @@ export const AgentProfileOwner = (props: AgentProfileOwnerProps) => {
         <AgentProfileOwnerBase
             props={{
                 title: t("ownerTitle"),
-                slot: mapSlot(slot, (agent): OwnerView => {
-                    const people = [agent.owner, agent.fallback]
-                    const responder = people.find((person) => person?.memberId === agent.responderId && person.isActive)
-                    const storedIsGone = !agent.owner?.isActive
-                    const fallback = agent.fallback
-                    return {
-                        name: responder?.name ?? t("ownerNone"),
-                        roleLabel: responder === undefined || responder === null ? "" : t(`role_${responder.role}`),
-                        note: t("ownerNote"),
-                        notice: storedIsGone
-                            ? {
-                                  title: t("ownerGoneTitle"),
-                                  description: t("ownerGoneBody", { name: responder?.name ?? "" }),
-                              }
-                            : null,
-                        fallback:
-                            fallback !== null && fallback.isActive && fallback.memberId !== responder?.memberId
-                                ? { label: t("fallbackLabel"), name: fallback.name }
+                read: {
+                    slot: mapSlot(slot, (agent): OwnerView => {
+                        const people = [agent.owner, agent.fallback]
+                        const responder = people.find(
+                            (person) => person?.memberId === agent.responderId && person.isActive,
+                        )
+                        const storedIsGone = !agent.owner?.isActive
+                        const fallback = agent.fallback
+                        return {
+                            name: responder?.name ?? t("ownerNone"),
+                            roleLabel: responder === undefined || responder === null ? "" : t(`role_${responder.role}`),
+                            note: t("ownerNote"),
+                            notice: storedIsGone
+                                ? {
+                                      title: t("ownerGoneTitle"),
+                                      description: t("ownerGoneBody", { name: responder?.name ?? "" }),
+                                  }
                                 : null,
-                    }
-                }),
-                placeholder: PLACEHOLDER,
-                slotLabels: slotLabels(t("ownerNone")),
+                            fallback:
+                                fallback !== null && fallback.isActive && fallback.memberId !== responder?.memberId
+                                    ? { label: t("fallbackLabel"), name: fallback.name }
+                                    : null,
+                        }
+                    }),
+                    placeholder: PLACEHOLDER,
+                    labels: slotLabels(t("ownerNone")),
+                },
             }}
             on={{ retry: reload }}
         />

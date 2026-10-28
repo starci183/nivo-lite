@@ -4,9 +4,8 @@ import { useFormatter, useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useQueryMyAccountSwr } from "@/hooks/swr"
-import type { DataSlot } from "@/modules/types"
+import type { DataSlot, SessionRowView } from "@/modules/types"
 import { parseUserAgent } from "./account.shared"
-import type { SessionRowView } from "./account.shared"
 
 const JUST_NOW_MS = 60_000
 

@@ -1,5 +1,5 @@
 import { creditsOf } from "@modules/domain/ai-usage-events"
-import type { LlmUsage } from "@modules/integrations/llm"
+import type { AiPoolUsage } from "@modules/integrations/ai-pool"
 import type { QuotaStatus, UsageKind } from "./knowledge.contracts"
 import type { QuotaStatusRow } from "./persistence/usage.rows"
 
@@ -45,7 +45,7 @@ export interface UsageInputs {
     /** The model, to price the call when the provider reports no cost. */
     readonly model: string
     /** What the provider reported, or null. */
-    readonly usage: LlmUsage | null
+    readonly usage: AiPoolUsage | null
     /** The characters sent. */
     readonly promptChars: number
     /** The characters received. */
@@ -70,7 +70,7 @@ interface ReportedTokens {
 }
 
 /** The tokens a provider reported: a missing side is derived from the total. */
-const reportedTokens = (usage: LlmUsage): ReportedTokens => {
+const reportedTokens = (usage: AiPoolUsage): ReportedTokens => {
     const total = usage.totalTokens ?? 0
     const prompt = usage.promptTokens ?? Math.max(0, total - (usage.completionTokens ?? 0))
     return { prompt, completion: usage.completionTokens ?? Math.max(0, total - prompt) }

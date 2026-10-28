@@ -17,7 +17,7 @@ export interface SignupFormBaseProps {
     readonly props: {
         readonly title: string
         readonly text: string
-        readonly failure?: { readonly title: string; readonly text: string } | undefined
+        readonly submitError?: { readonly title: string; readonly text: string } | undefined
         readonly nameLabel: string
         readonly emailLabel: string
         readonly emailPlaceholder: string
@@ -66,7 +66,7 @@ export const SignupFormBase = (props: SignupFormBaseProps) => {
             <AuthForm
                 label={view.title}
                 isPending={view.isPending}
-                failure={view.failure}
+                error={view.submitError}
                 submitLabel={view.submitLabel}
                 footer={
                     <div className={SIGNUP_CENTER_CLASS_NAME}>

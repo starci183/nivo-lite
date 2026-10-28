@@ -74,7 +74,8 @@ interface PublicBookingView {
     readonly labels: PublicBookingLabels
     readonly isBusy: boolean
     readonly done?: PublicBookingDone
-    readonly failure?: PublicBookingFeedback
+    /** The answer that turned the booking down, with nearby free times. */
+    readonly refusal?: PublicBookingFeedback
 }
 
 /** Commands supplied by the connected booking owner. */
