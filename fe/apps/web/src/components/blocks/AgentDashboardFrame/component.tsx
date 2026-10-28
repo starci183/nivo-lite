@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
-import { Badge, Button, Page, SurfaceListCard } from "@starci/grammar/common"
-import type { BadgeTone, PageHeaderContent } from "@starci/grammar/common"
+import { Badge, SurfaceListCard, Tabs } from "@starci/grammar/common"
+import type { BadgeTone } from "@starci/grammar/common"
 import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
 import type { ConnectionsRegionProps } from "@/components/composites/ConnectionsRegion"
 import { DoneRegion } from "@/components/composites/DoneRegion"
@@ -17,6 +17,7 @@ import {
     PANEL_CLASS_NAME,
     SIDE_COLUMN_CLASS_NAME,
     SIDE_GRID_CLASS_NAME,
+    TOOLBAR_CLASS_NAME,
 } from "./classNames"
 
 /** One area of the module under the strip: the strip draws its label, the content is placed through the slots. */
@@ -102,58 +103,14 @@ export interface AgentDashboardFrameBaseProps {
     }
 }
 
-/** The page header content of the workbench: the name of the agent, its mode, the default command and the area strip. */
-const dashboardHeader = (
-    view: AgentDashboardFrameBaseProps["props"],
-    head: AgentDashboardHeadView,
-    onSelectTab: (id: string) => void,
-): PageHeaderContent => ({
-    title: head.title,
-    ...(head.mode === null
-        ? {}
-        : {
-              meta: (
-                  <Badge tone={head.mode.tone} isDot>
-                      {head.mode.label}
-                  </Badge>
-              ),
-          }),
-    ...(head.chat === null
-        ? {}
-        : {
-              actions: (
-                  <Button intent="commit" href={head.chat.href}>
-                      {head.chat.label}
-                  </Button>
-              ),
-          }),
-    ...(view.tabs.length > 1
-        ? {
-              tabs: {
-                  label: view.tabsLabel,
-                  selectedKey: view.selectedTab,
-                  items: view.tabs.map((tab) => ({ id: tab.id, label: tab.label })),
-                  labelVisibility: "always" as const,
-                  panelId: tabPanelId,
-                  onSelect: onSelectTab,
-              },
-          }
-        : {}),
-})
-
-/** Draws the workbench as the one Page of the route: the heading and the area strip in the header, the regions and the open area in the body. */
+/** Draws the workbench body for the instance Page: the mode badge and the area tabs as a toolbar, the regions and the open area below. */
 export const AgentDashboardFrameBase = (props: AgentDashboardFrameBaseProps) => {
     const view = props.props
     const hasStrip = view.tabs.length > 1
     const active = view.tabs.find((tab) => tab.id === view.selectedTab)
-    const head = view.head.items ?? view.headPlaceholder
     return (
-        <Page
-            header={dashboardHeader(view, head, props.on.selectTab)}
-            isSkeleton={view.head.isLoading === true || view.head.items === undefined}
-            measure="product"
-        >
-            <div className={FRAME_CLASS_NAME}>
+        <div className={FRAME_CLASS_NAME}>
+            <div className={TOOLBAR_CLASS_NAME}>
                 <SlotView
                     slot={view.head}
                     placeholder={view.headPlaceholder}
@@ -161,36 +118,54 @@ export const AgentDashboardFrameBase = (props: AgentDashboardFrameBaseProps) => 
                     forbidden="notice"
                     onRetry={props.on.retry}
                 >
-                    {() => null}
+                    {(head) =>
+                        head.mode === null ? null : (
+                            <Badge tone={head.mode.tone} isDot>
+                                {head.mode.label}
+                            </Badge>
+                        )
+                    }
                 </SlotView>
-                {props.shape.command === null ? null : <div className={COMMAND_CLASS_NAME}>{props.shape.command}</div>}
-
-                {props.shape.ribbon}
-
-                {props.shape.waiting ?? (
-                    <Region region={view.waiting} onRetry={props.on.retry}>
-                        {(waiting, isSkeleton) => (
-                            <WaitingRegion label={view.waiting.label} view={waiting} isSkeleton={isSkeleton} />
-                        )}
-                    </Region>
-                )}
-
-                {renderDashboardRegions(view, props)}
-                {props.shape.gaps}
-
-                <div
-                    className={PANEL_CLASS_NAME}
-                    role={hasStrip ? "tabpanel" : undefined}
-                    id={hasStrip ? tabPanelId(view.selectedTab) : undefined}
-                >
-                    {props.shape.panel ??
-                        (view.hasPlaceholder ? (
-                            <SurfaceListCard ariaLabel={active?.label ?? view.tabsLabel} isLoading />
-                        ) : null)}
-                </div>
-                {props.shape.overlay}
+                {hasStrip ? (
+                    <Tabs
+                        variant="secondary"
+                        label={view.tabsLabel}
+                        selectedKey={view.selectedTab}
+                        inset="none"
+                        labelVisibility="always"
+                        items={view.tabs.map((tab) => ({ id: tab.id, label: tab.label }))}
+                        panelId={tabPanelId}
+                        onSelect={props.on.selectTab}
+                    />
+                ) : null}
             </div>
-        </Page>
+            {props.shape.command === null ? null : <div className={COMMAND_CLASS_NAME}>{props.shape.command}</div>}
+
+            {props.shape.ribbon}
+
+            {props.shape.waiting ?? (
+                <Region region={view.waiting} onRetry={props.on.retry}>
+                    {(waiting, isSkeleton) => (
+                        <WaitingRegion label={view.waiting.label} view={waiting} isSkeleton={isSkeleton} />
+                    )}
+                </Region>
+            )}
+
+            {renderDashboardRegions(view, props)}
+            {props.shape.gaps}
+
+            <div
+                className={PANEL_CLASS_NAME}
+                role={hasStrip ? "tabpanel" : undefined}
+                id={hasStrip ? tabPanelId(view.selectedTab) : undefined}
+            >
+                {props.shape.panel ??
+                    (view.hasPlaceholder ? (
+                        <SurfaceListCard ariaLabel={active?.label ?? view.tabsLabel} isLoading />
+                    ) : null)}
+            </div>
+            {props.shape.overlay}
+        </div>
     )
 }
 
