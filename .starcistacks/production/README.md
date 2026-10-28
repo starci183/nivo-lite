@@ -8,7 +8,7 @@ All commands run at the app root of an owner machine that holds the age identity
 
 | Command | What it does |
 | --- | --- |
-| prepare | `starci app stack prepare --env production --execute`: host checks without effect (Ubuntu and Docker versions, linux/amd64, disk, ports, Swarm state, the external volumes), then creates the four external volumes a fresh host lacks (`nivo-engine_openclaw-data`, `nivo-engine_video-cache`, `nivo-engine_n8n-data`, `nivo-edge_acme`). `--init-swarm --owner-approved --execute` runs `docker swarm init` once, only after the owner approved it; an active swarm is never re-initialized. One-time host setup: `sudo install -d -o <deploy user> -m 750 /srv/nivo /srv/nivo/releases`. |
+| prepare | `starci app stack prepare --env production --execute`: host checks without effect (Ubuntu and Docker versions, linux/amd64, disk, ports, Swarm state, the external volumes), then creates the four external volumes a fresh host lacks (`nivo-engine_openclaw-data`, `nivo-engine_video-cache`, `nivo-engine_n8n-data`, `nivo-engine_ai-router-data`, `nivo-edge_acme`). `--init-swarm --owner-approved --execute` runs `docker swarm init` once, only after the owner approved it; an active swarm is never re-initialized. One-time host setup: `sudo install -d -o <deploy user> -m 750 /srv/nivo /srv/nivo/releases`. |
 | doctor | `starci app stack doctor --env production`: the same checks plus services, replicas, images, the managed secret and config counts and the release pointers; changes nothing. |
 | up | Actions > **deploy stack** > Run workflow from the release tag (`operation: deploy`, environment `production`, reviewers approve). It builds and pushes the api, web and landing images to GHCR, then runs `starci app stack deploy`: render with digests, create the versioned secrets and configs, store the release record, pre-pull, `docker stack deploy --prune --with-registry-auth`, observe convergence, verify, accept and prune. A dry run is `starci app stack render --env production --image <service>=<repository>@sha256:<digest> --source-sha <sha>`. |
 | status | `starci app stack converge --env production --since <ISO time>` (desired versus running replicas, update state, no failed or rejected task) and `starci app stack doctor --env production`; on the manager `docker stack ps nivo --no-trunc` lists tasks with their errors. |
@@ -51,7 +51,7 @@ The key roster with semantics is `.starcistacks/production/runtime/env/KEYS.md`.
 
 | Slug | Consumer | Keys |
 | --- | --- | --- |
-| `api` | api task (`<KEY>_FILE`); mcp task (`PRIMARY_DB_URL`, `CHANNEL_TOKEN_KEY` only) | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CHANNEL_TOKEN_KEY`, `N8N_SIGNING_SECRET`, `WEBHOOK_SIGNING_SECRET`, `NIVO_PLATFORM_ADMINS`, `OPENCLAW_TURN_TIMEOUT`, `SMTP_URL`, `SMTP_FROM`, `SEPAY_WEBHOOK_API_KEY`, `SEPAY_BANK_ACCOUNT`, `SEPAY_BANK_CODE`, `SEPAY_ACCOUNT_NAME`, `OPENROUTER_API_KEY`, `PRIMARY_DB_URL`. Remote MCP connector credentials are not custody keys: they are sealed per workspace in the database from the console |
+| `api` | api task (`<KEY>_FILE`); mcp task (`PRIMARY_DB_URL`, `CHANNEL_TOKEN_KEY` only) | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CHANNEL_TOKEN_KEY`, `N8N_SIGNING_SECRET`, `WEBHOOK_SIGNING_SECRET`, `NIVO_PLATFORM_ADMINS`, `OPENCLAW_TURN_TIMEOUT`, `SMTP_URL`, `SMTP_FROM`, `SEPAY_WEBHOOK_API_KEY`, `SEPAY_BANK_ACCOUNT`, `SEPAY_BANK_CODE`, `SEPAY_ACCOUNT_NAME`, `AI_ROUTER_ADMIN_TOKEN`, `AI_API_KEY`, `PRIMARY_DB_URL`. Remote MCP connector credentials are not custody keys: they are sealed per workspace in the database from the console |
 | `auth` | api task | `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID`, `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET` (the api falls back to them for Google OAuth) |
 | `stack` | openclaw, n8n, api | secrets: `OPENCLAW_GATEWAY_TOKEN` (also granted to the api), `N8N_ENCRYPTION_KEY`; `OPENCLAW_MANAGE_AGENTS` (`true` or `false`, granted to the api); configuration read at render time (not a Swarm secret): `OPENCLAW_MODEL`, `N8N_ALLOWED_HOSTS`, `JOBS_FAILED_ALERT` (api `JOBS_ALERT_FAILED_MAX`), `JOBS_STALE_SECONDS` (api `JOBS_ALERT_STALE_SECONDS`). Every other key is ignored by the deploy |
 | `web` | web image build | the public Supabase build values of the console (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) read by `starci app stack build-args` |
@@ -86,6 +86,29 @@ limited to the network that already holds the api and the agent gateway; (3) it 
 untouched. HAKUEN's own MCP server is the public one; NIVO calls out to it. An external MCP client (for example a StarCi kernel agent) talks to HAKUEN
 directly with its own scoped client, never through this gateway. For an operator check use a loopback relay like the n8n one (network `nivo_agents`,
 host `nivo-mcp`, port 8790). Its container healthcheck probes `/healthz` (liveness); `starci app stack converge` asserts the task is healthy.
+
+## The AI gateway and its virtual keys
+
+The api process hosts `@starci/ai-router` 0.3.0 through `AiRouterGatewayModule`: no extra container or image. It listens on **8788** (`AI_ROUTER_PORT`, api 8787 + offset 1, declared on the `nivo-api` component) on the private `agents` network only: no route, no published port. The api calls it at `http://127.0.0.1:8788/v1`, openclaw at `http://nivo-api:8788/v1`. The pool holds one OpenRouter provider with the profiles `work` (`deepseek/deepseek-v4.1-flash`) and `embed` (`qwen/qwen3-embedding-8b`). Virtual keys are in SQLite (`AI_ROUTER_KEYS_PATH`) on the volume `nivo-engine_ai-router-data`, which `starci app stack backup` includes; losing it loses the keys (re-issue them). Sealed `api` member: `OPENROUTER_API_KEY`, `AI_ROUTER_ADMIN_TOKEN`, `AI_API_KEY`; sealed `stack` member: `OPENCLAW_AI_KEY` for openclaw.
+
+**Bootstrap, once, after the first deploy** (the api is healthy). On the manager, run the CLI inside the api container; it reads `AI_ROUTER_ADMIN_TOKEN` from the container, which holds it as a file pointer, so read the file into the variable. Each command prints JSON whose `secret` is shown ONCE:
+
+```sh
+C=$(docker ps -q -f name=nivo_nivo-api | head -n1)
+RUN='AI_ROUTER_ADMIN_TOKEN=$(cat "$AI_ROUTER_ADMIN_TOKEN_FILE") node node_modules/@starci/ai-router/dist/gateway/run.js'
+docker exec "$C" sh -c "$RUN keys create --label nivo_api --profiles work,embed --cost-per-month <usd> --url http://nivo-api:8788"
+docker exec "$C" sh -c "$RUN keys create --label nivo_openclaw --profiles work --cost-per-month <usd> --url http://nivo-api:8788"
+docker exec "$C" sh -c "$RUN keys list --url http://nivo-api:8788"   # also: usage|rotate|revoke <id>
+```
+
+Then seal each secret (stdin, never an argument), commit and run the **deploy stack** workflow:
+
+```sh
+printf %s 'sk-starci-nivo_api-...'      | npx starci app secret set production api AI_API_KEY
+printf %s 'sk-starci-nivo_openclaw-...' | npx starci app secret set production stack OPENCLAW_AI_KEY
+```
+
+Rotation: `keys rotate <id> --url http://nivo-api:8788`, seal the new secret the same way, deploy. Revoke a leaked key with `keys revoke <id>`.
 
 ## Shared ingress and the compose tenants
 

@@ -60,8 +60,10 @@ The capability is off while its keys are absent; a group is all-or-none where no
 | `ZALO_OA_SECRET` | Zalo Official Account secret key the same cli seals beside the app secret; read only through `ZALO_OA_SECRET_FILE`, optional, and granted to no service. |
 | `VPS_SSH_KEY` | SSH key the n8n host helper uses to reach the VPS; optional, the helper is off while absent. |
 | `HTTP_SECURITY_TRUSTED_PROXY_HOPS` | `0`, `1` or `2`: trusted proxy hops before the api; optional. |
-| `OPENROUTER_API_KEY` | Language-model provider keys: read by the api AI pool (`ai-pool.config.ts`) and, from the sealed `api` member, granted to openclaw. |
-| `DEEPSEEK_API_KEY` | Language-model provider keys: read by the api AI pool (`ai-pool.config.ts`) and, from the sealed `api` member, granted to openclaw. |
+| `AI_BASE_URL` | The AI gateway base URL (`http://ai-router:8788/v1`), a stack value of the api and openclaw; the port is the declared `port` of the `ai-router` component. |
+| `AI_API_KEY` | The caller's virtual key of the AI gateway (`sk-starci-nivo_api-...`), sealed in `api`, read through `AI_API_KEY_FILE`. openclaw has its own (`nivo_openclaw`) sealed in `stack`. |
+| `AI_CHAT_MODEL` | Profile the chat calls use (default `work`; stack value). |
+| `AI_EMBEDDING_MODEL` | Profile the embedding calls use (default `embed`; stack value). |
 
 ## api: optional executable paths
 
@@ -92,7 +94,7 @@ The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets co
 
 | Key | Semantics |
 | --- | --- |
-| `OPENCLAW_MODEL` | The model the openclaw service runs (default `openrouter/deepseek/deepseek-v4-flash`). |
+| `OPENCLAW_MODEL` | The model the openclaw service runs (default `nivo-ai/work`, the openclaw provider that points at the AI gateway). |
 | `JOBS_FAILED_ALERT` | Becomes the api `JOBS_ALERT_FAILED_MAX` (default 20). |
 | `JOBS_STALE_SECONDS` | Becomes the api `JOBS_ALERT_STALE_SECONDS` (default 300). |
 | `N8N_ENCRYPTION_KEY` | Swarm secret of the n8n service (`N8N_ENCRYPTION_KEY_FILE`). |
@@ -134,3 +136,15 @@ Public by design, passed as image build arguments (`deploy.images.web.buildArgs`
 | `NEXT_PUBLIC_DEVELOPER_API_URL` | The api origin (`https://api.nivo.vn`). |
 | `NEXT_PUBLIC_SUPABASE_URL` | The public Supabase project origin and anonymous key. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | The public Supabase project origin and anonymous key. |
+
+## AI gateway (in the api process, `@starci/ai-router` 0.3.0)
+
+The api hosts the gateway through `AiRouterGatewayModule`; it listens on `AI_ROUTER_PORT` (8788 = api 8787 + offset 1) on the private `agents` network only (no route, no published port). The upstream key is held only by the api.
+
+| Key | Where | Semantics |
+| --- | --- | --- |
+| `AI_ROUTER_PORT` | api stack value | The gateway listener (`8788`); declared on the `nivo-api` component. |
+| `AI_ROUTER_KEYS_PATH` | api stack value | SQLite key store (`/var/lib/ai-router/keys.sqlite`) on the volume `nivo-engine_ai-router-data`. |
+| `AI_ROUTER_ADMIN_TOKEN` | sealed `api` | Bearer token of the gateway admin API; the `keys ...` CLI reads it from the same variable. |
+| `OPENROUTER_API_KEY` | sealed `api` | The single upstream key (OpenRouter). |
+| `AI_API_KEY` | sealed `api` | The api's virtual key (`nivo_api`). openclaw has its own, `OPENCLAW_AI_KEY` (virtual key `nivo_openclaw`), sealed in `stack`, exported by the entrypoint wrapper; openclaw holds no OpenRouter key. Created after the first deploy (production README). |

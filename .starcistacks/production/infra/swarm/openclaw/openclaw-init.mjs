@@ -33,10 +33,28 @@ config.gateway = {
         token: fs.readFileSync(process.env.OPENCLAW_GATEWAY_TOKEN_FILE, "utf8"),
     },
 }
+// Language models come only from the AI gateway (hosted in the api process): one OpenAI-compatible custom provider, "nivo-ai", with this
+// service's own virtual key. The key stays a reference: openclaw resolves ${OPENCLAW_AI_KEY} from the gateway process environment.
+if (process.env.AI_BASE_URL && process.env.OPENCLAW_AI_KEY) {
+    const chat = process.env.AI_CHAT_MODEL || "work"
+    config.models = {
+        ...(config.models || {}),
+        mode: "merge",
+        providers: {
+            ...((config.models || {}).providers || {}),
+            "nivo-ai": {
+                baseUrl: process.env.AI_BASE_URL,
+                apiKey: "${OPENCLAW_AI_KEY}",
+                api: "openai-completions",
+                models: [{ id: chat, name: chat }],
+            },
+        },
+    }
+}
 const model = process.env.OPENCLAW_MODEL
 if (model) {
     config.agents.defaults.model = { ...(config.agents.defaults.model || {}), primary: model }
-    // OpenRouter DeepSeek V4 models think by default (hundreds of reasoning tokens, seconds of latency, 2x cost): switch reasoning off.
+    // DeepSeek V4 models think by default (hundreds of reasoning tokens, seconds of latency, 2x cost): switch reasoning off.
     const models = (config.agents.defaults.models = config.agents.defaults.models || {})
     const previous = models[model] || {}
     models[model] = {
