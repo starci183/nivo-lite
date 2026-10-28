@@ -20,6 +20,13 @@ const EXPECTED = [
     ["marketing-tick", "marketing_tick", "marketing_tick", {}, 15],
     ["realtime-retention-tick", "realtime_retention", "realtime_retention", { tick: true }, 1],
     ["shifts-tick", "shifts_alerts", "shifts.tick", { kind: "tick" }, 1],
+    [
+        "system-history-retention",
+        "system_history_retention",
+        "system_history_retention",
+        { doneDays: 1, failedDays: 7, batch: 5000 },
+        1440,
+    ],
     ["zalo-refresh-tick", "zalo_refresh", "zalo_refresh", { withinMs: 25_200_000 }, 360],
 ] as const
 
