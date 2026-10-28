@@ -15,6 +15,7 @@ import { TransactionsService } from "@modules/domain/transactions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { BankFeedReceiptService } from "@modules/domain/bank-feed-inbox"
+import { SepayConnectionService } from "@modules/domain/channel-connections"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
@@ -83,6 +84,9 @@ const build = async (stubs: ReadonlyArray<Stub> = []) => {
     const feedInbox = mock<BankFeedReceiptService>()
     feedInbox.claim.mockResolvedValue(true)
     feedInbox.lock.mockResolvedValue(receipt)
+    const sepayPage = mock<SepayConnectionService>()
+    sepayPage.traceIntake.mockImplementation((_feed, _raw, intake) => intake())
+    sepayPage.traceRefusal.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             BankFeedService,
@@ -96,6 +100,7 @@ const build = async (stubs: ReadonlyArray<Stub> = []) => {
             { provide: EventsService, useValue: events },
             { provide: TransactionsService, useValue: transactions },
             { provide: BankFeedReceiptService, useValue: feedInbox },
+            { provide: SepayConnectionService, useValue: sepayPage },
             { provide: QUEUE_OUTBOX, useValue: outbox },
         ],
     }).compile()
@@ -111,6 +116,7 @@ const build = async (stubs: ReadonlyArray<Stub> = []) => {
         events,
         transactions,
         feedInbox,
+        sepayPage,
     }
 }
 const acceptReceipt = (feed: BankFeedService, provider: BankFeedProvider, body: object) => {
@@ -239,6 +245,24 @@ describe("BankFeedService provider receipt intake", () => {
         else await expect(result).resolves.toBeUndefined()
         expect(proof.proveSepayFeed).toHaveBeenCalledWith(feedDelivery)
         expect(tx.outcomes).toEqual([])
+    })
+})
+describe("BankFeedService SePay connection page", () => {
+    it.each([
+        [new BillingError({ code: BillingErrorCode.WebhookUnauthorized }), 1],
+        [refusal, 0],
+    ])("remembers a refused key only, and rethrows %p", async (failure, traced) => {
+        const { feed, proof, sepayPage } = await build()
+        proof.proveSepayFeed.mockRejectedValue(failure)
+        const result = feed.verifySepayFeedDelivery(feedDelivery.authorization, "conn-1", feedDelivery.rawBody)
+        await expect(result).rejects.toBe(failure)
+        expect(sepayPage.traceRefusal).toHaveBeenCalledTimes(traced)
+    })
+    it("hands the raw delivery to the page trace around the intake", async () => {
+        const { feed, sepayPage } = await build()
+        const body = raw({ ...incoming })
+        await feed.acceptSepayFeedDelivery(body, "conn-1")
+        expect(sepayPage.traceIntake).toHaveBeenCalledWith("conn-1", body, expect.any(Function))
     })
 })
 describe("BankFeedService deferred receipt effects", () => {

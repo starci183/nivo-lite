@@ -1,4 +1,4 @@
-// migrations-sha256: 67de176af88d9fa2357e201354529a4f51516a5a5837ef26d5a2d6ecb2fda3b1
+// migrations-sha256: 9ec465382a727b6cd7e39940e7329fabbd72984864eb66020f70a392081b39bf
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -3535,6 +3535,25 @@ isOneToOne: false
       columns: ["matched_order_id"]
 isOneToOne: false
       referencedRelation: "payment_orders"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"channel_connections_sepay_events": {
+                  Row: {
+                    "amount_vnd": number | null,"connection_id": string,"environment": string,"id": string,"kind": string,"outcome": string,"provider_event_id": string | null,"received_at": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "amount_vnd"?: number | null,"connection_id": string,"environment": string,"id"?: string,"kind": string,"outcome": string,"provider_event_id"?: string | null,"received_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "amount_vnd"?: number | null,"connection_id"?: string,"environment"?: string,"id"?: string,"kind"?: string,"outcome"?: string,"provider_event_id"?: string | null,"received_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "channel_connections_sepay_events_connection_id_fkey"
+      columns: ["connection_id"]
+isOneToOne: false
+      referencedRelation: "connections"
       referencedColumns: ["id"]
     }
                   ]

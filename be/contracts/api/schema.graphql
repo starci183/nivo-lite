@@ -3185,6 +3185,10 @@ input GetRecentTitlesInput {
   id: ID! @inputBounds(maxLength: 36)
 }
 
+input GetSepayConnectionInput {
+  connectionId: ID! @inputBounds(maxLength: 64)
+}
+
 input GetVideoProjectInput {
   projectId: ID! @inputBounds(maxLength: 36)
 }
@@ -4255,6 +4259,10 @@ input ListSalesOrdersInput {
   first: Int = 50 @inputBounds(min: 1, max: 100)
 }
 
+input ListSepayEventsInput {
+  connectionId: ID! @inputBounds(maxLength: 64)
+}
+
 input ListTelegramChatsInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
@@ -5225,6 +5233,7 @@ type Mutation {
   setModuleLive(input: SetModuleLiveInput!): ModuleInstallationType!
   setMyAvatar(input: SetMyAvatarInput!): Boolean!
   setOperatingMode(input: SetOperatingModeInput!): ModuleInstallationType!
+  setSepayEnvironment(input: SetSepayEnvironmentInput!): SepayConnectionType!
   setSetupGate(input: SetSetupGateInput!): SetupSessionType!
   setSyncSchedule(input: SetSyncScheduleInput!): Boolean!
   settleWonDeal(input: SettleWonDealInput!): LeadActionQueuedType!
@@ -6023,6 +6032,8 @@ type Query {
   salesOrder(input: SalesOrderInput!): SalesOrderType
   salesOrders(input: ListSalesOrdersInput! = {}): SalesOrderConnectionType!
   salesWorkbench: SalesWorkbenchType!
+  sepayConnection(input: GetSepayConnectionInput!): SepayConnectionType!
+  sepayConnectionEvents(input: ListSepayEventsInput!): [SepayWebhookEventType!]!
   setupState(input: ModuleInstallationIdInput!): SetupStateType!
   setupVersions(input: ModuleInstallationIdInput!): SetupVersionsType!
   shiftsMine: ShiftsMineType!
@@ -7244,9 +7255,45 @@ input SendSmtpTestInput {
   to: String! @inputBounds(maxLength: 254)
 }
 
+type SepayConnectionType {
+  accountMasked: String!
+  agentIds: [ID!]!
+  apiKeyMasked: String!
+  bank: String!
+  bankCode: String!
+  environment: String!
+  hasFullAccount: Boolean!
+  health: SepayHealthType!
+  holder: String!
+  id: ID!
+  lastError: String
+  name: String!
+  pingSeenAt: String
+  status: String!
+  transactionSeenAt: String
+  webhookUrl: String!
+}
+
+type SepayHealthType {
+  duplicateCount: Int!
+  lastWebhookAt: String
+  totalCount: Int!
+  validCount: Int!
+}
+
 type SepayKeyType {
   apiKey: String!
   webhookUrl: String!
+}
+
+type SepayWebhookEventType {
+  amountVnd: Float
+  at: String!
+  environment: String!
+  id: ID!
+  kind: String!
+  outcome: String!
+  providerEventId: String
 }
 
 input SetAgentAvatarInput {
@@ -7359,6 +7406,11 @@ input SetMyAvatarInput {
 input SetOperatingModeInput {
   installationId: ID! @inputBounds(maxLength: 36)
   mode: String!
+}
+
+input SetSepayEnvironmentInput {
+  connectionId: ID! @inputBounds(maxLength: 64)
+  environment: String!
 }
 
 input SetSetupGateInput {

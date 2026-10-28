@@ -29,6 +29,8 @@ export interface AccountForm {
 export interface FollowDraft {
     readonly webhookName: string
     readonly apiKey: string
+    /** The key NIVO issued when the connection was created, in clear; empty when the wizard resumed (the server only shows it masked). */
+    readonly issuedKey: string
     readonly values: Readonly<Record<string, string>>
     readonly keysSaved: boolean
 }
@@ -79,7 +81,8 @@ export const moneyFlagsOf = (
     conn: WizardConnection | null,
 ): MoneyFlags => {
     const needsKeys = def.credentials.length > 0
-    const sepayKeyChanged = def.id === "sepay" && conn !== null && follow.apiKey.trim() !== conn.apiKey
+    const sepayKeyChanged =
+        def.id === "sepay" && conn !== null && follow.apiKey.trim() !== "" && follow.apiKey.trim() !== follow.issuedKey
     const accountDirty =
         conn !== null &&
         (form.environment !== conn.environment ||

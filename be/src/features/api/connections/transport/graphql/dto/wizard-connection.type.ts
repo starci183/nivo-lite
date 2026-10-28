@@ -28,7 +28,7 @@ export class WizardConnectionType {
     @Field(() => String)
     webhookUrl!: string
 
-    /** SePay only: the API key to paste into SePay. */
+    /** SePay only: the API key in clear only in the answer of startMoneyConnection; masked to its last 4 characters in every other answer. */
     @Field(() => String)
     apiKey!: string
 

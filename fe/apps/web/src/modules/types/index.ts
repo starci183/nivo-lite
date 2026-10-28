@@ -413,3 +413,15 @@ export type { ContractImportDialogEvents, ContractImportDialogView, ContractImpo
 export type { ReadGateBaseProps } from "./read-gate"
 export type { MethodView, SessionRowView } from "./account"
 export type { FlowEntryView, FlowSectionView, FlowView } from "./leads"
+export type {
+    SepayAccountForm,
+    SepayAgentView,
+    SepayConnectionView,
+    SepayEnvironment,
+    SepayEventKind,
+    SepayEventOutcome,
+    SepayEventView,
+    SepayHealthView,
+    SepayStepState,
+    SepayStepView,
+} from "./sepay-connection"

@@ -7,6 +7,7 @@ import type { BankFeedDeliveryRecorded } from "@modules/queues/bank-feed-deliver
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
+import { SepayConnectionService } from "@modules/domain/channel-connections"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { TransactionsService } from "@modules/domain/transactions"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -28,6 +29,7 @@ import type {
     ProvenConnection,
 } from "./billing.contracts"
 import { cassoCredits, isCassoError } from "./casso.policy"
+import { BillingError, BillingErrorCode } from "./errors/billing.error"
 import { PaymentProofService } from "./payment-proof.service"
 import { payosBodyOf, readPayosDelivery } from "./payos.policy"
 import type { AgentIdRow, ConnectionStateRow, FeedConnectionRow } from "./persistence/bank-feed.rows"
@@ -84,6 +86,7 @@ export class BankFeedService {
         private readonly events: EventsService,
         private readonly transactions: TransactionsService,
         private readonly bankFeedInbox: BankFeedReceiptService,
+        private readonly sepayPage: SepayConnectionService,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
     ) {}
 
@@ -158,7 +161,15 @@ export class BankFeedService {
 
     /** Proves the workspace feed credential before its HTTP door admits the raw delivery to receipt intake. */
     async verifySepayFeedDelivery(authorization: HeaderValue, connection: string, rawBody: RawBody): Promise<void> {
-        await this.proof.proveSepayFeed({ authorization, connectionId: connection, rawBody })
+        try {
+            await this.proof.proveSepayFeed({ authorization, connectionId: connection, rawBody })
+        } catch (error) {
+            // A refused key is remembered for the connection page; any other failure is not the sender's doing.
+            if (error instanceof BillingError && error.code === BillingErrorCode.WebhookUnauthorized) {
+                await this.sepayPage.traceRefusal(connection)
+            }
+            throw error
+        }
     }
 
     /**
@@ -166,6 +177,10 @@ export class BankFeedService {
      * debit; any other transfer, or an amount that is not above 0, is acknowledged without a receipt.
      */
     acceptSepayFeedDelivery(rawBody: RawBody, connection: string): Promise<void> {
+        return this.sepayPage.traceIntake(connection, rawBody, () => this.bookSepayFeedDelivery(rawBody, connection))
+    }
+
+    private bookSepayFeedDelivery(rawBody: RawBody, connection: string): Promise<void> {
         const payload = sepayPayloadOf(parseJsonObject(rawBody))
         const amount = payload.transferAmount
         const moves = payload.transferType === "in" || payload.transferType === "out"

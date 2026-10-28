@@ -39,6 +39,7 @@ import {
     moneyRules,
     squeeze,
 } from "./money-provider.policy"
+import { maskApiKey } from "./sepay-connection.policy"
 import { hasLiveTokens, parseZaloSecret } from "./zalo-secret.policy"
 
 const OWNER = ["owner"] as const
@@ -192,7 +193,11 @@ export class ChannelConnectionsService {
             if (!safeEqual(apiKey, stored)) await this.connections.writeSecret(current.id, apiKey, sha256(apiKey))
         }
         await this.connections.patch(actor.workspaceId, current.id, { name, environment, meta })
-        return this.wizardView(await this.connections.get(actor.workspaceId, current.id), apiKey, false)
+        return this.wizardView(
+            await this.connections.get(actor.workspaceId, current.id),
+            apiKey === "" ? "" : maskApiKey(apiKey),
+            false,
+        )
     }
 
     /** Continues an unfinished connection: SePay shows its key again; payOS and Casso keys are never returned. */
@@ -200,7 +205,7 @@ export class ChannelConnectionsService {
         await this.connections.authorize(actor, OWNER)
         const connection = await this.connections.get(actor.workspaceId, connectionId)
         const plain = (await this.connections.readSecret(connection.id))?.plain
-        const apiKey = connection.provider === "sepay" ? (plain ?? "") : ""
+        const apiKey = connection.provider === "sepay" && plain !== undefined ? maskApiKey(plain) : ""
         const saved = plain !== undefined && connection.provider !== "sepay" && plain !== EMPTY_CREDENTIAL
         return this.wizardView(connection, apiKey, saved)
     }
