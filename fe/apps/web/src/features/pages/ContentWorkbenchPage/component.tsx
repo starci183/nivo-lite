@@ -88,72 +88,71 @@ const SettingsPanel = (props: SettingsPanelProps) => (
 export const ContentWorkbenchPageBase = (props: ContentWorkbenchPageBaseProps) => {
     const { installationId, initialTab, focus, tabs } = props.props
     return (
-        <>
-            <AgentDashboardFrame
-                module="content"
-                installationId={installationId}
-                initialTab={initialTab}
-                ribbon={<ContentRibbon />}
-                waitingTab="queue"
-                tabs={[
-                    {
-                        id: "calendar",
-                        label: tabs.calendar,
-                        content: (
-                            <Panel>
-                                <Commands />
-                                <ContentWorkbenchGate placeholder={tabs.calendar}>
-                                    <ContentCalendarPanel />
-                                </ContentWorkbenchGate>
-                            </Panel>
-                        ),
-                    },
-                    {
-                        id: "list",
-                        label: tabs.list,
-                        content: (
-                            <Panel>
-                                <Commands />
-                                <ContentWorkbenchGate placeholder={tabs.list}>
-                                    <ContentListPanel />
-                                </ContentWorkbenchGate>
-                            </Panel>
-                        ),
-                    },
-                    {
-                        id: "queue",
-                        label: tabs.queue,
-                        content: (
-                            <Panel>
-                                <ContentWorkbenchGate placeholder={tabs.queue}>
-                                    <ContentQueuePanel />
-                                </ContentWorkbenchGate>
-                            </Panel>
-                        ),
-                    },
-                    {
-                        id: "balance",
-                        label: tabs.balance,
-                        content: (
-                            <Panel>
-                                <ContentWorkbenchGate placeholder={tabs.balance}>
-                                    <ContentBalancePanel />
-                                </ContentWorkbenchGate>
-                            </Panel>
-                        ),
-                    },
-                    {
-                        id: "settings",
-                        label: tabs.settings,
-                        content: <SettingsPanel label={tabs.settings} />,
-                    },
-                ]}
-            />
+        <AgentDashboardFrame
+            module="content"
+            installationId={installationId}
+            initialTab={initialTab}
+            ribbon={<ContentRibbon />}
+            waitingTab="queue"
+            tabs={[
+                {
+                    id: "calendar",
+                    label: tabs.calendar,
+                    content: (
+                        <Panel>
+                            <Commands />
+                            <ContentWorkbenchGate placeholder={tabs.calendar}>
+                                <ContentCalendarPanel />
+                            </ContentWorkbenchGate>
+                        </Panel>
+                    ),
+                },
+                {
+                    id: "list",
+                    label: tabs.list,
+                    content: (
+                        <Panel>
+                            <Commands />
+                            <ContentWorkbenchGate placeholder={tabs.list}>
+                                <ContentListPanel />
+                            </ContentWorkbenchGate>
+                        </Panel>
+                    ),
+                },
+                {
+                    id: "queue",
+                    label: tabs.queue,
+                    content: (
+                        <Panel>
+                            <ContentWorkbenchGate placeholder={tabs.queue}>
+                                <ContentQueuePanel />
+                            </ContentWorkbenchGate>
+                        </Panel>
+                    ),
+                },
+                {
+                    id: "balance",
+                    label: tabs.balance,
+                    content: (
+                        <Panel>
+                            <ContentWorkbenchGate placeholder={tabs.balance}>
+                                <ContentBalancePanel />
+                            </ContentWorkbenchGate>
+                        </Panel>
+                    ),
+                },
+                {
+                    id: "settings",
+                    label: tabs.settings,
+                    content: <SettingsPanel label={tabs.settings} />,
+                },
+            ]}
+        >
             {focus === null ? null : (
                 <ContentWorkbenchGate key={focus} focus={focus}>
                     <ContentPostEditor focus={focus} />
                 </ContentWorkbenchGate>
             )}
-        </>
+        </AgentDashboardFrame>
     )
 }
