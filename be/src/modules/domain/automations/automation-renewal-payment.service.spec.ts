@@ -103,6 +103,7 @@ describe("AutomationRenewalPaymentService paymentOf", () => {
                 },
             ],
             invoiceNo: "INV-202611-0003",
+            ...{ amountVnd: 1620000, transferContent: "INV2026110003" },
         })
         expect(payment?.fixedTail?.split("\n").at(-1)?.endsWith(QR)).toBe(true)
     })

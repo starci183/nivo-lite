@@ -221,6 +221,10 @@ export const renewalLines = (story: RenewalCashStory): ReadonlyArray<string> => 
 /** The renewal story with its report lines. */
 export const renewalReport = (story: RenewalCashStory): RenewalCashReport => ({ story, lines: renewalLines(story) })
 
+/** The renewal section of an owner report as text: its heading, then its lines. */
+export const renewalSectionOf = (report: RenewalCashReport): string =>
+    [RENEWAL_COPY.heading, ...report.lines].join("\n")
+
 /** The renewal tiles of the morning card: one count-and-total field per part of the story. */
 const renewalFields = (story: RenewalCashStory): ReadonlyArray<HubCardField> => {
     const tile = (tally: RenewalTally<unknown>): string =>

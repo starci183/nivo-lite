@@ -7,6 +7,7 @@ import {
     presentedApiKey as realPresentedApiKey,
     qrImageUrl as realQrImageUrl,
     sepayPayloadOf as realSepayPayloadOf,
+    isSepayPing as realIsSepayPing,
 } from "./sepay.policy"
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
@@ -28,6 +29,7 @@ type Subject = {
     presentedApiKey: typeof realPresentedApiKey
     qrImageUrl: typeof realQrImageUrl
     sepayPayloadOf: typeof realSepayPayloadOf
+    isSepayPing: typeof realIsSepayPing
 }
 
 const buildSubject = async () => {
@@ -40,6 +42,7 @@ const buildSubject = async () => {
                     presentedApiKey: realPresentedApiKey,
                     qrImageUrl: realQrImageUrl,
                     sepayPayloadOf: realSepayPayloadOf,
+                    isSepayPing: realIsSepayPing,
                 },
             },
         ],
@@ -156,5 +159,25 @@ describe("sepay authorization whitespace", () => {
         expect(subject.presentedApiKey("Apikey  ")).toBe(" ")
         expect(subject.presentedApiKey("Apikey  \n")).toBe(" ")
         expect(subject.presentedApiKey("Apikey a\nb")).toBeUndefined()
+    })
+})
+
+describe("sepay policy > isSepayPing", () => {
+    it.each([
+        [{}],
+        [{ transferType: "in", transferAmount: 0 }],
+        [{ id: "x", transferType: "refund", transferAmount: 5 }],
+    ])("reads %j as a ping", async (body) => {
+        const { subject } = await buildSubject()
+        expect(subject.isSepayPing(body)).toBe(true)
+    })
+
+    it.each([
+        [{ id: 7 }],
+        [{ id: "7", transferType: "in", transferAmount: 10 }],
+        [{ transferType: "in", transferAmount: "990000" }],
+    ])("reads %j as a delivery", async (body) => {
+        const { subject } = await buildSubject()
+        expect(subject.isSepayPing(body)).toBe(false)
     })
 })

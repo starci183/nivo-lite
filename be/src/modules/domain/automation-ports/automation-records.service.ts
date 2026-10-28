@@ -33,4 +33,9 @@ export class AutomationRecordsService implements AutomationRecords {
     attachContractLead(workspaceId: string, contractId: string, leadId: string): Promise<void> {
         return this.contracts.attachLead(workspaceId, contractId, leadId)
     }
+
+    /** Links the contracts of the workspace to the leads that hold their customers' contacts. */
+    async linkCustomers(workspaceId: string): Promise<void> {
+        await this.contracts.linkCustomers(workspaceId)
+    }
 }

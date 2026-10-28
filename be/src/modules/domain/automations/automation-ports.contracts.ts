@@ -62,6 +62,8 @@ export interface AutomationRecords {
     createLead(workspaceId: string, lead: AutomationNewLead): Promise<string>
     /** Attaches a lead to a contract that had none. */
     attachContractLead(workspaceId: string, contractId: string, leadId: string): Promise<void>
+    /** Links the contracts of the workspace to the leads that hold their customers' contacts. */
+    linkCustomers(workspaceId: string): Promise<void>
 }
 
 /** What a message put through the gate is about. */

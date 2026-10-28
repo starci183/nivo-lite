@@ -1,5 +1,14 @@
 import { Test } from "@nestjs/testing"
-import { textOf, numberOf, leadHref, stageOf, dotted, historyLine, firstText } from "./performer.policy"
+import {
+    textOf,
+    numberOf,
+    leadHref,
+    stageOf,
+    dotted,
+    historyLine,
+    firstText,
+    renewalNoticeOf,
+} from "./performer.policy"
 
 const SUBJECT = Symbol("performer.policy")
 type Subject = {
@@ -10,6 +19,7 @@ type Subject = {
     dotted: typeof dotted
     historyLine: typeof historyLine
     firstText: typeof firstText
+    renewalNoticeOf: typeof renewalNoticeOf
 }
 
 const buildSubject = async () => {
@@ -25,6 +35,7 @@ const buildSubject = async () => {
                     dotted,
                     historyLine,
                     firstText,
+                    renewalNoticeOf,
                 },
             },
         ],
@@ -173,4 +184,43 @@ describe("firstText", () => {
 
         expect(subject.firstText([])).toBe("")
     })
+})
+
+describe("renewalNoticeOf", () => {
+    const fields = {
+        renewal_customer: "Lan",
+        renewal_phone: "0901234567",
+        renewal_plan: "Pro",
+        renewal_end_date: "2026-11-30",
+        renewal_amount_vnd: "990000",
+        renewal_transfer_content: "INV1",
+        renewal_invoice: "INV-1",
+    }
+
+    it("builds the ZNS renewal notice from the renewal fields of the proposal", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.renewalNoticeOf(fields)).toEqual({
+            kind: "renewal",
+            phone: "0901234567",
+            fields: {
+                customerName: "Lan",
+                plan: "Pro",
+                endDate: "2026-11-30",
+                amount: 990000,
+                transferContent: "INV1",
+                invoiceNumber: "INV-1",
+            },
+        })
+        expect(subject.renewalNoticeOf({ ...fields, renewal_phone: "" })?.phone).toBeNull()
+    })
+
+    it.each([[{}], [{ ...fields, renewal_amount_vnd: "x" }], [{ ...fields, renewal_invoice: "" }]])(
+        "is none for %j",
+        async (partial) => {
+            const { subject } = await buildSubject()
+
+            expect(subject.renewalNoticeOf(partial)).toBeUndefined()
+        },
+    )
 })

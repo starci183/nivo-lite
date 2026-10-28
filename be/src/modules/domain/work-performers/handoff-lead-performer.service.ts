@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import { BusinessEventsService } from "@modules/domain/automations"
+import { ContractsService } from "@modules/domain/contracts"
 import { EvidenceService } from "@modules/domain/decisions"
 import type { Performed, Prepared, Proposal, WorkContext, WorkItem, WorkPerformer } from "@modules/domain/decisions"
 import { AgentsService } from "@modules/domain/agents"
@@ -24,6 +25,7 @@ export class HandoffLeadPerformerService implements WorkPerformer {
         private readonly evidence: EvidenceService,
         private readonly events: BusinessEventsService,
         private readonly apiCompletion: PublicLeadCompletionService,
+        private readonly contracts: ContractsService,
     ) {}
 
     /** The summary the owner reads for the handoff. */
@@ -75,6 +77,8 @@ export class HandoffLeadPerformerService implements WorkPerformer {
         if (textOf(fields.conversation_id) !== "") {
             await this.conversations.attachLead(ctx.workspaceId, textOf(fields.conversation_id), lead.id)
         }
+        // The lead now carries its contact, so a contract of this customer finds it for the renewal.
+        await this.contracts.linkCustomers(ctx.workspaceId)
         await this.responsibilities.ensureFor(ctx, lead.id)
         await this.apiCompletion.complete(ctx, item, lead.id, proposal, known !== null)
         const key = known === null ? "handoffDone" : "leadMatched"

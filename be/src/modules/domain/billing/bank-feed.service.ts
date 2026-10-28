@@ -39,7 +39,7 @@ import {
     SELECT_BOUND_ACCOUNTING_AGENT,
     SELECT_CONNECTION_STATE,
 } from "./persistence/bank-feed.sql"
-import { sepayPayloadOf } from "./sepay.policy"
+import { isSepayPing, sepayPayloadOf } from "./sepay.policy"
 import { parseJsonObject } from "./webhook-body.policy"
 
 /** The locale of the lines billing writes into the shared records: the workspace owners read them in Vietnamese. */
@@ -181,7 +181,9 @@ export class BankFeedService {
     }
 
     private bookSepayFeedDelivery(rawBody: RawBody, connection: string): Promise<void> {
-        const payload = sepayPayloadOf(parseJsonObject(rawBody))
+        const body = parseJsonObject(rawBody)
+        if (isSepayPing(body)) return Promise.resolve()
+        const payload = sepayPayloadOf(body)
         const amount = payload.transferAmount
         const moves = payload.transferType === "in" || payload.transferType === "out"
         if (!moves || amount === undefined || amount <= 0) return Promise.resolve()

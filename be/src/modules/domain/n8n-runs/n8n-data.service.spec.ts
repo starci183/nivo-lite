@@ -1,6 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { DeskDailyService, renewalSectionOf } from "@modules/domain/accounting"
+import type { RenewalCashReport } from "@modules/domain/accounting"
 import { ACCOUNT_DIRECTORY } from "@modules/domain/workspace-members"
 import type { AccountDirectory } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -32,6 +34,7 @@ const anything = (): unknown => expect.anything()
 const anyOf = (type: unknown): unknown => expect.any(type)
 
 const NOW = "2026-10-12T10:00:00.000Z"
+const RENEWAL_REPORT = mock<RenewalCashReport>({ lines: ["   - Renewal line"] })
 
 const build = async (em: MockEntityManager) => {
     const catalog = mock<MessageCatalog>()
@@ -48,9 +51,12 @@ const build = async (em: MockEntityManager) => {
                   : refused("ACCOUNT_NOT_FOUND"),
         ),
     )
+    const desk = mock<DeskDailyService>()
+    desk.renewalOfDay.mockResolvedValue(RENEWAL_REPORT)
     const moduleRef = await Test.createTestingModule({
         providers: [
             N8nDataService,
+            { provide: DeskDailyService, useValue: desk },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: MESSAGE_CATALOG, useValue: catalog },
@@ -124,6 +130,7 @@ describe("N8nDataService", () => {
                 stringMatch(/^moneyIn/),
                 stringMatch(/^invoices/),
                 stringMatch(/^overdueAmount/),
+                ...renewalSectionOf(RENEWAL_REPORT).split("\n"),
             ])
             expect(em.query).toHaveBeenCalledWith(SELECT_DAY_NUMBERS, [
                 "ws-1",

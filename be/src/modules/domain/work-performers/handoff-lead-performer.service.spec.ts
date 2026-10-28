@@ -6,6 +6,7 @@ import { BusinessEventsService } from "@modules/domain/automations"
 import { EvidenceService } from "@modules/domain/decisions"
 import type { Proposal, WorkContext, WorkItem } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
+import { ContractsService } from "@modules/domain/contracts"
 import { LeadRecordsService } from "@modules/domain/leads"
 import type { LeadRecordRow } from "@modules/domain/leads"
 import { PublicLeadCompletionService } from "@modules/domain/public-api"
@@ -82,6 +83,7 @@ const build = async () => {
     const evidence = mock<EvidenceService>()
     const events = mock<BusinessEventsService>()
     const apiCompletion = mock<PublicLeadCompletionService>()
+    const contracts = mock<ContractsService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             HandoffLeadPerformerService,
@@ -94,6 +96,7 @@ const build = async () => {
             { provide: EvidenceService, useValue: evidence },
             { provide: BusinessEventsService, useValue: events },
             { provide: PublicLeadCompletionService, useValue: apiCompletion },
+            { provide: ContractsService, useValue: contracts },
         ],
     }).compile()
     return {
@@ -106,6 +109,7 @@ const build = async () => {
         evidence,
         events,
         apiCompletion,
+        contracts,
     }
 }
 
@@ -121,7 +125,7 @@ describe("HandoffLeadPerformerService", () => {
 
 describe("HandoffLeadPerformerService perform", () => {
     it("captures a new customer, logs the capture and ties the input and the conversation to them", async () => {
-        const { service, leads, conversations, inbound, responsibilities, evidence, events, apiCompletion } =
+        const { service, leads, conversations, inbound, responsibilities, evidence, events, apiCompletion, contracts } =
             await build()
 
         await expect(service.perform(ctx, itemOf(), { summary: "s", fields })).resolves.toEqual({
@@ -156,6 +160,7 @@ describe("HandoffLeadPerformerService perform", () => {
         })
         expect(inbound.mark).toHaveBeenCalledWith("ws-1", "ev-1", null, "lead-1")
         expect(conversations.attachLead).toHaveBeenCalledWith("ws-1", "conv-1", "lead-1")
+        expect(contracts.linkCustomers).toHaveBeenCalledWith("ws-1")
         expect(responsibilities.ensureFor).toHaveBeenCalledWith(ctx, "lead-1")
         expect(events.leadCreated).toHaveBeenCalledWith("ws-1", leadOf())
         expect(apiCompletion.complete).toHaveBeenCalledWith(ctx, itemOf(), "lead-1", { summary: "s", fields }, false)

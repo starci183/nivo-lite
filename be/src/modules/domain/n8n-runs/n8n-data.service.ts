@@ -15,6 +15,7 @@ import type {
     N8nPipelineConfig,
     OptionalText,
 } from "./n8n-runs.contracts"
+import { DeskDailyService, renewalSectionOf } from "@modules/domain/accounting"
 import { InjectAccountDirectory } from "@modules/domain/workspace-members"
 import type { AccountDirectory } from "@modules/domain/workspace-members"
 import {
@@ -54,6 +55,7 @@ export class N8nDataService {
         @InjectClock() private readonly clock: Clock,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectAccountDirectory() private readonly accounts: AccountDirectory,
+        private readonly desk: DeskDailyService,
     ) {}
 
     /** The name of the shop. */
@@ -110,7 +112,11 @@ export class N8nDataService {
                 ? this.say("overdueAmount", { count: numbers.overdue_count, amount: vnd(numbers.overdue_total) })
                 : this.say("overdue", { count: numbers.overdue_count }),
         ]
-        const [shop, owners] = await Promise.all([this.shopName(workspaceId), this.ownerRecipients(workspaceId)])
+        const [shop, owners, renewal] = await Promise.all([
+            this.shopName(workspaceId),
+            this.ownerRecipients(workspaceId),
+            this.desk.renewalOfDay(workspaceId, day),
+        ])
         return {
             date: day,
             shop_name: shop,
@@ -119,7 +125,7 @@ export class N8nDataService {
             variables: {
                 ten_shop: shop,
                 ngay: dmy(`${day}T12:00:00+07:00`),
-                tom_tat: lines.join("\n"),
+                tom_tat: [...lines, renewalSectionOf(renewal)].join("\n"),
                 viec_cho:
                     numbers.waiting_decisions > 0
                         ? this.say("waiting", { count: numbers.waiting_decisions })

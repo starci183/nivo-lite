@@ -371,4 +371,8 @@ export interface RenewalPayment {
     readonly steps: ReadonlyArray<RunStep>
     /** The invoice number. */
     readonly invoiceNo: string
+    /** The amount of the invoice, in whole dong. */
+    readonly amountVnd: number
+    /** The transfer content that matches the payment to the invoice. */
+    readonly transferContent: string
 }

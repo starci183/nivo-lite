@@ -230,6 +230,12 @@ describe("BankFeedService provider receipt intake", () => {
         expect(feedInbox.claim).not.toHaveBeenCalled()
         expect(tx.outcomes).toEqual([])
     })
+    it("acknowledges a SePay test ping without an id and settles nothing", async () => {
+        const { feed, tx, feedInbox } = await build()
+        await expect(feed.acceptSepayFeedDelivery(raw({}), "conn-1")).resolves.toBeUndefined()
+        expect(feedInbox.claim).not.toHaveBeenCalled()
+        expect(tx.outcomes).toEqual([])
+    })
     it("rejects an absent Casso body before intake", async () => {
         const { feed, tx } = await build()
         expect(thrownBy(() => feed.acceptCassoDelivery(undefined, "conn-1"))).toEqual(
