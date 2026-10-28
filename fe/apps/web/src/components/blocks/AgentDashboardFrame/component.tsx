@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
-import { Badge, Button, SectionHeader, SurfaceListCard, Tabs } from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
+import { Badge, Button, Page, SurfaceListCard } from "@starci/grammar/common"
+import type { BadgeTone, PageHeaderContent } from "@starci/grammar/common"
 import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
 import type { ConnectionsRegionProps } from "@/components/composites/ConnectionsRegion"
 import { DoneRegion } from "@/components/composites/DoneRegion"
@@ -14,7 +14,6 @@ import type { DataSlot, SlotLabels } from "@/modules/types"
 import {
     COMMAND_CLASS_NAME,
     FRAME_CLASS_NAME,
-    HEAD_CLASS_NAME,
     PANEL_CLASS_NAME,
     SIDE_COLUMN_CLASS_NAME,
     SIDE_GRID_CLASS_NAME,
@@ -38,6 +37,8 @@ interface AgentDashboardFrameSlots {
     readonly waiting: ReactNode
     /** The gaps card of the module after the regions; null for none. */
     readonly gaps: ReactNode
+    /** Layers the module opens over the workbench, drawn after the open area; null for none. */
+    readonly overlay: ReactNode
     /** The content of the open area; null shows the skeleton card while `hasPlaceholder`. */
     readonly panel: ReactNode
 }
@@ -101,81 +102,95 @@ export interface AgentDashboardFrameBaseProps {
     }
 }
 
-/** Draws the heading of the workbench: the name of the agent, its mode and the default command. */
-const renderDashboardHead = (view: AgentDashboardFrameBaseProps["props"]) => (
-    <div className={HEAD_CLASS_NAME}>
-        <SlotView slot={view.head} placeholder={view.headPlaceholder} labels={view.headLabels}>
-            {(head, isSkeleton) => (
-                <SectionHeader
-                    level={2}
-                    title={head.title}
-                    isSkeleton={isSkeleton}
-                    meta={
-                        head.mode === null ? undefined : (
-                            <Badge tone={head.mode.tone} isDot>
-                                {head.mode.label}
-                            </Badge>
-                        )
-                    }
-                    action={
-                        head.chat === null ? undefined : (
-                            <Button intent="commit" href={head.chat.href}>
-                                {head.chat.label}
-                            </Button>
-                        )
-                    }
-                />
-            )}
-        </SlotView>
-    </div>
-)
+/** The page header content of the workbench: the name of the agent, its mode, the default command and the area strip. */
+const dashboardHeader = (
+    view: AgentDashboardFrameBaseProps["props"],
+    head: AgentDashboardHeadView,
+    onSelectTab: (id: string) => void,
+): PageHeaderContent => ({
+    title: head.title,
+    ...(head.mode === null
+        ? {}
+        : {
+              meta: (
+                  <Badge tone={head.mode.tone} isDot>
+                      {head.mode.label}
+                  </Badge>
+              ),
+          }),
+    ...(head.chat === null
+        ? {}
+        : {
+              actions: (
+                  <Button intent="commit" href={head.chat.href}>
+                      {head.chat.label}
+                  </Button>
+              ),
+          }),
+    ...(view.tabs.length > 1
+        ? {
+              tabs: {
+                  label: view.tabsLabel,
+                  selectedKey: view.selectedTab,
+                  items: view.tabs.map((tab) => ({ id: tab.id, label: tab.label })),
+                  labelVisibility: "always" as const,
+                  panelId: tabPanelId,
+                  onSelect: onSelectTab,
+              },
+          }
+        : {}),
+})
 
-/** Draws the anatomy of an agent workbench: header, ribbon, what waits, what was done, connections, knowledge and the areas of the module. */
+/** Draws the workbench as the one Page of the route: the heading and the area strip in the header, the regions and the open area in the body. */
 export const AgentDashboardFrameBase = (props: AgentDashboardFrameBaseProps) => {
     const view = props.props
     const hasStrip = view.tabs.length > 1
     const active = view.tabs.find((tab) => tab.id === view.selectedTab)
+    const head = view.head.items ?? view.headPlaceholder
     return (
-        <div className={FRAME_CLASS_NAME}>
-            {renderDashboardHead(view)}
-            {props.shape.command === null ? null : <div className={COMMAND_CLASS_NAME}>{props.shape.command}</div>}
+        <Page
+            header={dashboardHeader(view, head, props.on.selectTab)}
+            isSkeleton={view.head.isLoading === true || view.head.items === undefined}
+            measure="product"
+        >
+            <div className={FRAME_CLASS_NAME}>
+                <SlotView
+                    slot={view.head}
+                    placeholder={view.headPlaceholder}
+                    labels={view.headLabels}
+                    forbidden="notice"
+                    onRetry={props.on.retry}
+                >
+                    {() => null}
+                </SlotView>
+                {props.shape.command === null ? null : <div className={COMMAND_CLASS_NAME}>{props.shape.command}</div>}
 
-            {props.shape.ribbon}
+                {props.shape.ribbon}
 
-            {props.shape.waiting ?? (
-                <Region region={view.waiting} onRetry={props.on.retry}>
-                    {(waiting, isSkeleton) => (
-                        <WaitingRegion label={view.waiting.label} view={waiting} isSkeleton={isSkeleton} />
-                    )}
-                </Region>
-            )}
+                {props.shape.waiting ?? (
+                    <Region region={view.waiting} onRetry={props.on.retry}>
+                        {(waiting, isSkeleton) => (
+                            <WaitingRegion label={view.waiting.label} view={waiting} isSkeleton={isSkeleton} />
+                        )}
+                    </Region>
+                )}
 
-            {renderDashboardRegions(view, props)}
-            {props.shape.gaps}
+                {renderDashboardRegions(view, props)}
+                {props.shape.gaps}
 
-            {hasStrip ? (
-                <Tabs
-                    variant="primary"
-                    label={view.tabsLabel}
-                    selectedKey={view.selectedTab}
-                    items={view.tabs.map((tab) => ({ id: tab.id, label: tab.label }))}
-                    inset="none"
-                    labelVisibility="always"
-                    panelId={tabPanelId}
-                    onSelect={props.on.selectTab}
-                />
-            ) : null}
-            <div
-                className={PANEL_CLASS_NAME}
-                role={hasStrip ? "tabpanel" : undefined}
-                id={hasStrip ? tabPanelId(view.selectedTab) : undefined}
-            >
-                {props.shape.panel ??
-                    (view.hasPlaceholder ? (
-                        <SurfaceListCard ariaLabel={active?.label ?? view.tabsLabel} isLoading />
-                    ) : null)}
+                <div
+                    className={PANEL_CLASS_NAME}
+                    role={hasStrip ? "tabpanel" : undefined}
+                    id={hasStrip ? tabPanelId(view.selectedTab) : undefined}
+                >
+                    {props.shape.panel ??
+                        (view.hasPlaceholder ? (
+                            <SurfaceListCard ariaLabel={active?.label ?? view.tabsLabel} isLoading />
+                        ) : null)}
+                </div>
+                {props.shape.overlay}
             </div>
-        </div>
+        </Page>
     )
 }
 

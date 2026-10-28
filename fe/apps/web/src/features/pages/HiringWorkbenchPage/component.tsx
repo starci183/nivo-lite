@@ -36,35 +36,34 @@ export interface HiringWorkbenchPageBaseProps {
 export const HiringWorkbenchPageBase = (props: HiringWorkbenchPageBaseProps) => {
     const { installationId, tab, focus, labels } = props.props
     return (
-        <>
-            <AgentDashboardFrame
-                module="hiring"
-                installationId={installationId}
-                initialTab={tab}
-                ribbon={<HiringFigures />}
-                tabs={[
-                    {
-                        id: "jobs",
-                        label: labels.jobs,
-                        content: <HiringJobs />,
-                    },
-                    { id: "candidates", label: labels.candidates, content: <HiringPipeline /> },
-                    { id: "interviews", label: labels.interviewsTab, content: <HiringInterviews /> },
-                    { id: "offers", label: labels.offersTab, content: <HiringOffers /> },
-                    { id: "onboarding", label: labels.onboarding, content: <HiringOnboarding /> },
-                    {
-                        id: "settings",
-                        label: labels.settings,
-                        content: (
-                            <>
-                                <HiringSettings />
-                                <HiringAvailability />
-                            </>
-                        ),
-                    },
-                ]}
-            />
+        <AgentDashboardFrame
+            module="hiring"
+            installationId={installationId}
+            initialTab={tab}
+            ribbon={<HiringFigures />}
+            tabs={[
+                {
+                    id: "jobs",
+                    label: labels.jobs,
+                    content: <HiringJobs />,
+                },
+                { id: "candidates", label: labels.candidates, content: <HiringPipeline /> },
+                { id: "interviews", label: labels.interviewsTab, content: <HiringInterviews /> },
+                { id: "offers", label: labels.offersTab, content: <HiringOffers /> },
+                { id: "onboarding", label: labels.onboarding, content: <HiringOnboarding /> },
+                {
+                    id: "settings",
+                    label: labels.settings,
+                    content: (
+                        <>
+                            <HiringSettings />
+                            <HiringAvailability />
+                        </>
+                    ),
+                },
+            ]}
+        >
             <HiringCandidate focus={focus} />
-        </>
+        </AgentDashboardFrame>
     )
 }
