@@ -1,9 +1,9 @@
 import {
     Badge,
-    Breadcrumbs,
     Button,
     NumberField,
-    SectionHeader,
+    PageContainer,
+    PageHeader,
     Select,
     SurfaceCard,
     Text,
@@ -13,15 +13,7 @@ import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import {
-    ACTION_CLASS,
-    CHIPS_CLASS,
-    COMPOSER_CLASS,
-    COMPOSER_FOOT_CLASS,
-    HEAD_CLASS,
-    IDENTITY_CLASS,
-    TASK_CLASS,
-} from "./classNames"
+import { COMPOSER_CLASS, COMPOSER_FOOT_CLASS, COMPOSER_PAGE_CLASS, TASK_CLASS } from "./classNames"
 
 /** What the heading shows once the agent arrived, every word resolved. */
 export interface ProfileHeadView {
@@ -44,7 +36,6 @@ export interface ProfileHeadView {
 export interface AgentProfileHeadBaseProps {
     readonly props: {
         readonly crumbLabel: string
-        readonly eyebrow: string
         readonly assignLabel: string
         readonly slot: DataSlot<ProfileHeadView>
         readonly placeholder: ProfileHeadView
@@ -134,31 +125,28 @@ export const AgentProfileHeadBase = (props: AgentProfileHeadBaseProps) => {
     return (
         <SlotView slot={view.slot} placeholder={view.placeholder} labels={view.slotLabels} onRetry={props.on.retry}>
             {(head, isSkeleton) => (
-                <div className={HEAD_CLASS}>
-                    <Breadcrumbs label={view.crumbLabel} items={head.crumbs} />
-                    <SectionHeader
-                        level={1}
-                        eyebrow={view.eyebrow}
+                <>
+                    <PageHeader
+                        measure="product"
+                        isSkeleton={isSkeleton}
+                        breadcrumbs={{ label: view.crumbLabel, items: head.crumbs }}
                         title={head.title}
                         description={head.description}
-                        isSkeleton={isSkeleton}
-                    />
-                    <div className={IDENTITY_CLASS}>
-                        <AgentMark
-                            label={head.title}
-                            seed={head.seed}
-                            src={head.picture}
-                            size="lg"
-                            isSkeleton={isSkeleton}
-                        />
-                        <div className={CHIPS_CLASS}>
-                            {head.chips.map((chip) => (
-                                <Badge key={chip.id} tone={chip.tone} isSkeleton={isSkeleton}>
-                                    {chip.label}
-                                </Badge>
-                            ))}
-                        </div>
-                        <div className={ACTION_CLASS}>
+                        mark={
+                            <AgentMark
+                                label={head.title}
+                                seed={head.seed}
+                                src={head.picture}
+                                size="lg"
+                                isSkeleton={isSkeleton}
+                            />
+                        }
+                        status={head.chips.map((chip) => (
+                            <Badge key={chip.id} tone={chip.tone} isSkeleton={isSkeleton}>
+                                {chip.label}
+                            </Badge>
+                        ))}
+                        actions={
                             <Button
                                 intent="alternative"
                                 isSkeleton={isSkeleton}
@@ -167,42 +155,44 @@ export const AgentProfileHeadBase = (props: AgentProfileHeadBaseProps) => {
                             >
                                 {view.assignLabel}
                             </Button>
-                        </div>
-                    </div>
+                        }
+                    />
                     {view.composer.isOpen ? (
-                        <SurfaceCard label={head.composerTitle} headingLevel={2}>
-                            <div className={COMPOSER_CLASS}>
-                                <Textarea
-                                    id="agent-assign-text"
-                                    name="text"
-                                    label={view.composer.label}
-                                    placeholder={view.composer.placeholder}
-                                    value={view.composer.text}
-                                    rows={3}
-                                    maxLength={view.composer.maxLength}
-                                    isDisabled={view.composer.isPending}
-                                    onValueChange={props.on.change}
-                                    onSubmitShortcut={props.on.send}
-                                />
-                                <TaskFields {...props} />
-                                <div className={COMPOSER_FOOT_CLASS}>
-                                    <Badge tone="accent">{head.mention}</Badge>
-                                    <Text size="sm" tone="muted">
-                                        {view.composer.hint}
-                                    </Text>
-                                    <Button
-                                        intent="commit"
-                                        isPending={view.composer.isPending}
-                                        isDisabled={!view.composer.canSend}
-                                        onPress={props.on.send}
-                                    >
-                                        {view.composer.sendLabel}
-                                    </Button>
+                        <PageContainer measure="product" className={COMPOSER_PAGE_CLASS}>
+                            <SurfaceCard label={head.composerTitle} headingLevel={2}>
+                                <div className={COMPOSER_CLASS}>
+                                    <Textarea
+                                        id="agent-assign-text"
+                                        name="text"
+                                        label={view.composer.label}
+                                        placeholder={view.composer.placeholder}
+                                        value={view.composer.text}
+                                        rows={3}
+                                        maxLength={view.composer.maxLength}
+                                        isDisabled={view.composer.isPending}
+                                        onValueChange={props.on.change}
+                                        onSubmitShortcut={props.on.send}
+                                    />
+                                    <TaskFields {...props} />
+                                    <div className={COMPOSER_FOOT_CLASS}>
+                                        <Badge tone="accent">{head.mention}</Badge>
+                                        <Text size="sm" tone="muted">
+                                            {view.composer.hint}
+                                        </Text>
+                                        <Button
+                                            intent="commit"
+                                            isPending={view.composer.isPending}
+                                            isDisabled={!view.composer.canSend}
+                                            onPress={props.on.send}
+                                        >
+                                            {view.composer.sendLabel}
+                                        </Button>
+                                    </div>
                                 </div>
-                            </div>
-                        </SurfaceCard>
+                            </SurfaceCard>
+                        </PageContainer>
                     ) : null}
-                </div>
+                </>
             )}
         </SlotView>
     )

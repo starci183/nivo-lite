@@ -9,14 +9,16 @@ import { PAGE_CLASS } from "./classNames"
 
 /** Draws the authority page: the heading, then the four sections in the order of the operating flow, then the optional staff. */
 export const AuthorityPageBase = () => (
-    <PageContainer measure="product">
-        <div className={PAGE_CLASS}>
-            <AuthorityHead />
-            <AuthorityGoals />
-            <AuthorityPolicies />
-            <AuthorityScope />
-            <AuthorityLimits />
-            <AuthorityStaff />
-        </div>
-    </PageContainer>
+    <>
+        <AuthorityHead />
+        <PageContainer measure="product">
+            <div className={PAGE_CLASS}>
+                <AuthorityGoals />
+                <AuthorityPolicies />
+                <AuthorityScope />
+                <AuthorityLimits />
+                <AuthorityStaff />
+            </div>
+        </PageContainer>
+    </>
 )

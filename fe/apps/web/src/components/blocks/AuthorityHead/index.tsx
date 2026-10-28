@@ -18,7 +18,6 @@ export const AuthorityHead = () => {
                     { id: "home", label: t("crumbHome"), href: CONSOLE_ROUTES.dashboard },
                     { id: "authority", label: t("title") },
                 ],
-                eyebrow: t("eyebrow"),
                 title: t("title"),
                 description: t("description"),
                 motto: g("motto"),

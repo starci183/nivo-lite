@@ -39,7 +39,6 @@ export const DevelopersPanel = () => {
                 },
                 crumbLabel: t("crumbLabel"),
                 crumbHome: t("crumbHome"),
-                eyebrow: t("eyebrow"),
                 title: t("title"),
                 description: t("description"),
                 backLabel: t("backToAutomations"),

@@ -20,22 +20,24 @@ export interface AgentProfilePageBaseProps {
 export const AgentProfilePageBase = (props: AgentProfilePageBaseProps) => {
     const { agentId } = props.props
     return (
-        <PageContainer measure="product">
-            <div className={PAGE_CLASS}>
-                <AgentProfileHead agentId={agentId} />
-                <AgentProfileIdentity agentId={agentId} />
-                <div className={GRID_CLASS}>
-                    <div className={COLUMN_CLASS}>
-                        <AgentProfileOwner agentId={agentId} />
-                        <AgentProfileRules agentId={agentId} />
+        <>
+            <AgentProfileHead agentId={agentId} />
+            <PageContainer measure="product">
+                <div className={PAGE_CLASS}>
+                    <AgentProfileIdentity agentId={agentId} />
+                    <div className={GRID_CLASS}>
+                        <div className={COLUMN_CLASS}>
+                            <AgentProfileOwner agentId={agentId} />
+                            <AgentProfileRules agentId={agentId} />
+                        </div>
+                        <div className={COLUMN_CLASS}>
+                            <AgentProfileAssignable agentId={agentId} />
+                            <AgentProfileTags agentId={agentId} />
+                        </div>
                     </div>
-                    <div className={COLUMN_CLASS}>
-                        <AgentProfileAssignable agentId={agentId} />
-                        <AgentProfileTags agentId={agentId} />
-                    </div>
+                    <AgentProfileRecent agentId={agentId} />
                 </div>
-                <AgentProfileRecent agentId={agentId} />
-            </div>
-        </PageContainer>
+            </PageContainer>
+        </>
     )
 }

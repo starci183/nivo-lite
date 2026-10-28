@@ -72,7 +72,6 @@ export const DecisionsBoard = (props: DecisionsBoardProps) => {
                     { id: "home", label: t("crumbHome"), href: CONSOLE_ROUTES.dashboard },
                     { id: "decisions", label: t("title") },
                 ],
-                eyebrow: t("eyebrow"),
                 title: t("title"),
                 description: t("description"),
                 kindLabel: t("kindLabel"),

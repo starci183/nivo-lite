@@ -9,7 +9,7 @@ import { AutomationsHeadingBase } from "./component"
 export const AutomationsHeading = () => {
     const t = useTranslations("automations")
     const { activeWorkspaceId } = useActiveWorkspace()
-    const { cards } = useWorkspaceCards()
+    const { cards, status } = useWorkspaceCards()
     const workspaceName = cards.find((card) => card.id === activeWorkspaceId)?.name
     return (
         <AutomationsHeadingBase
@@ -19,12 +19,13 @@ export const AutomationsHeading = () => {
                     { id: "home", label: t("crumbHome"), href: APP_ROUTES.dashboard },
                     { id: "automations", label: t("title") },
                 ],
-                ...(workspaceName === undefined ? {} : { eyebrow: workspaceName }),
+                ...(workspaceName === undefined ? {} : { workspace: workspaceName }),
                 title: t("title"),
                 leadBefore: t("leadBefore"),
                 leadLink: t("leadLink"),
                 leadHref: CONSOLE_ROUTES.authority,
                 leadAfter: t("leadAfter"),
+                isSkeleton: status === "loading",
             }}
         />
     )

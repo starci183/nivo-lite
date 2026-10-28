@@ -1,9 +1,18 @@
-import { Badge, Breadcrumbs, Button, ListRow, SectionHeader, SurfaceListCard, TextAction } from "@starci/grammar/common"
+import {
+    Badge,
+    Button,
+    ListRow,
+    PageContainer,
+    PageHeader,
+    SectionHeader,
+    SurfaceListCard,
+    TextAction,
+} from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import { APP_ROUTES } from "@/modules/routes"
-import { HEAD_CLASS, STACK_CLASS } from "./classNames"
+import { BODY_CLASS, STACK_CLASS } from "./classNames"
 
 /** One outgoing webhook as the list shows it. */
 export interface DevelopersWebhookRow {
@@ -54,7 +63,6 @@ export interface DevelopersPanelBaseProps {
         readonly webhooksView: DevelopersWebhooksView
         readonly crumbLabel: string
         readonly crumbHome: string
-        readonly eyebrow: string
         readonly title: string
         readonly description: string
         readonly backLabel: string
@@ -76,36 +84,35 @@ export const DevelopersPanelBase = (props: DevelopersPanelBaseProps) => (
     <SlotView slot={props.props.access} placeholder={true} labels={props.props.slotLabels}>
         {() => (
             <>
-                <div className={HEAD_CLASS}>
-                    <Breadcrumbs
-                        label={props.props.crumbLabel}
-                        items={[
+                <PageHeader
+                    measure="product"
+                    breadcrumbs={{
+                        label: props.props.crumbLabel,
+                        items: [
                             { id: "home", label: props.props.crumbHome, href: APP_ROUTES.dashboard },
                             { id: "developers", label: props.props.title },
-                        ]}
-                    />
-                    <SectionHeader
-                        level={1}
-                        eyebrow={props.props.eyebrow}
-                        title={props.props.title}
-                        description={props.props.description}
-                    />
-                </div>
-                <div>
-                    <TextAction href={APP_ROUTES.automations} size="sm">
-                        {props.props.backLabel}
-                    </TextAction>
-                </div>
-                <div className={STACK_CLASS}>
-                    <SectionHeader level={2} title={props.props.eventsTitle} description={props.props.eventsBody} />
-                    <DevelopersWebhooks
-                        rows={props.props.webhooks}
-                        canManage={props.props.canManageWebhooks}
-                        view={props.props.webhooksView}
-                        onAdd={props.on.add}
-                        onEdit={props.on.edit}
-                    />
-                </div>
+                        ],
+                    }}
+                    title={props.props.title}
+                    description={props.props.description}
+                />
+                <PageContainer measure="product" className={BODY_CLASS}>
+                    <div>
+                        <TextAction href={APP_ROUTES.automations} size="sm">
+                            {props.props.backLabel}
+                        </TextAction>
+                    </div>
+                    <div className={STACK_CLASS}>
+                        <SectionHeader level={2} title={props.props.eventsTitle} description={props.props.eventsBody} />
+                        <DevelopersWebhooks
+                            rows={props.props.webhooks}
+                            canManage={props.props.canManageWebhooks}
+                            view={props.props.webhooksView}
+                            onAdd={props.on.add}
+                            onEdit={props.on.edit}
+                        />
+                    </div>
+                </PageContainer>
             </>
         )}
     </SlotView>

@@ -39,7 +39,6 @@ export const AgentProfileHead = (props: AgentProfileHeadProps) => {
         <AgentProfileHeadBase
             props={{
                 crumbLabel: t("crumbLabel"),
-                eyebrow: t("eyebrow"),
                 assignLabel: t("assignAction"),
                 slot: mapSlot(slot, (profile): ProfileHeadView => ({
                     crumbs: [

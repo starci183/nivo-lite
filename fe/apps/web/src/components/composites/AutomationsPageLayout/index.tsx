@@ -10,17 +10,19 @@ type AutomationsPageLayoutProps = {
     readonly advancedHref: string
 }
 
-/** The Automations page frame: the heading, the board and the link to Advanced in one product-width column. */
+/** The Automations page frame: the page header, then the board and the link to Advanced in one product-width column. */
 export const AutomationsPageLayout = (props: AutomationsPageLayoutProps) => (
-    <PageContainer measure="product">
-        <div className={PAGE_CLASS}>
-            {props.heading}
-            {props.board}
-            <div className={LINK_ROW_CLASS}>
-                <TextAction href={props.advancedHref} size="sm" appearance="muted">
-                    {props.advancedLabel}
-                </TextAction>
+    <>
+        {props.heading}
+        <PageContainer measure="product">
+            <div className={PAGE_CLASS}>
+                {props.board}
+                <div className={LINK_ROW_CLASS}>
+                    <TextAction href={props.advancedHref} size="sm" appearance="muted">
+                        {props.advancedLabel}
+                    </TextAction>
+                </div>
             </div>
-        </div>
-    </PageContainer>
+        </PageContainer>
+    </>
 )
