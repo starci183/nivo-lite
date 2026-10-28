@@ -1,6 +1,6 @@
-import { Alert, Breadcrumbs, PageContainer, SectionHeader } from "@starci/grammar/common"
+import { Alert, PageContainer, PageHeader } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
-import { HEAD, PAGE } from "./classNames"
+import { PAGE } from "./classNames"
 
 /** Copy, trail and the retry command supplied by the connected route error block. */
 export interface RouteErrorBaseProps {
@@ -17,18 +17,21 @@ export interface RouteErrorBaseProps {
 
 /** Draws a failed route: the page's own trail and heading stay real, the body is one negative Alert with the safe retry. */
 export const RouteErrorBase = (props: RouteErrorBaseProps) => (
-    <PageContainer measure="product">
-        <div className={PAGE}>
-            <div className={HEAD}>
-                <Breadcrumbs label={props.props.crumbLabel} items={props.props.crumbs} />
-                <SectionHeader level={1} title={props.props.title} />
+    <>
+        <PageHeader
+            measure="product"
+            breadcrumbs={{ label: props.props.crumbLabel, items: props.props.crumbs }}
+            title={props.props.title}
+        />
+        <PageContainer measure="product">
+            <div className={PAGE}>
+                <Alert
+                    tone="negative"
+                    title={props.props.alertTitle}
+                    description={props.props.message}
+                    {...(props.on.retry ? { action: { label: props.props.retryLabel, onAction: props.on.retry } } : {})}
+                />
             </div>
-            <Alert
-                tone="negative"
-                title={props.props.alertTitle}
-                description={props.props.message}
-                {...(props.on.retry ? { action: { label: props.props.retryLabel, onAction: props.on.retry } } : {})}
-            />
-        </div>
-    </PageContainer>
+        </PageContainer>
+    </>
 )

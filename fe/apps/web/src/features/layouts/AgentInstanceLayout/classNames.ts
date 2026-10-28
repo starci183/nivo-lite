@@ -1,8 +1,5 @@
 import { cn } from "@heroui/react"
 
-/** The trail above the surface and the surface under it. */
-export const STACK = cn("flex", "min-w-0", "flex-col", "gap-4")
-
 /** The rail column and the main column inside the joined surface: stacked on narrow widths, side by side from lg. */
 export const FRAME = cn("flex", "h-full", "min-h-0", "min-w-0", "flex-col", "lg:flex-row")
 
@@ -15,7 +12,7 @@ export const SEPARATOR = cn("max-lg:block", "lg:hidden")
 /** The vertical hairline between the rail and the main column: hidden on narrow widths, a column from lg. */
 export const SEPARATOR_VERTICAL = cn("hidden", "shrink-0", "lg:flex")
 
-/** The main column: header, tabs and the routed tab. */
+/** The main column: the routed tab. */
 export const MAIN = cn("flex", "min-h-0", "min-w-0", "flex-1", "flex-col")
 
 /** The routed tab; a tab that draws its own columns edge to edge marks itself with data-bleed and loses the padding. */

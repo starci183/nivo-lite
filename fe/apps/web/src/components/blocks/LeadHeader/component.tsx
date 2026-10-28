@@ -1,11 +1,10 @@
 import {
     Avatar,
     Badge,
-    Breadcrumbs,
     Button,
     DropdownMenu,
     IconButton,
-    SectionHeader,
+    PageHeader,
     Text,
     type BadgeTone,
     type BreadcrumbItem,
@@ -14,7 +13,7 @@ import {
 import { SlotView } from "@/components/composites/SlotView"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { LeadPrimaryAction, DataSlot, SlotLabels } from "@/modules/types"
-import { ACTIONS_CLASS_NAME, HEADER_CLASS_NAME, IDENTITY_BODY_CLASS_NAME, IDENTITY_CLASS_NAME } from "./classNames"
+import { ACTIONS_CLASS_NAME } from "./classNames"
 
 /** What the header says about one lead, already worded. */
 export interface HeaderView {
@@ -64,36 +63,31 @@ export const LeadHeaderBase = (props: LeadHeaderBaseProps) => {
     const { props: p } = props
     const l = p.labels
     return (
-        <div className={HEADER_CLASS_NAME}>
-            <Breadcrumbs label={l.crumbLabel} items={p.crumbs} />
-            <SlotView slot={p.slot} placeholder={PLACEHOLDER} labels={l.slot}>
-                {(view, isSkeleton) => {
-                    const primary = view.primary
-                    return (
-                        <div className={IDENTITY_CLASS_NAME}>
-                            <Avatar name={view.name} size="lg" isSkeleton={isSkeleton} />
-                            <div className={IDENTITY_BODY_CLASS_NAME}>
-                                <SectionHeader
-                                    level={1}
-                                    isSkeleton={isSkeleton}
-                                    title={view.name}
-                                    description={view.meta}
-                                    meta={
-                                        <Badge tone={view.stageTone} isDot>
-                                            {view.stageLabel}
-                                        </Badge>
-                                    }
-                                    action={renderHeaderActions(props, primary, isSkeleton)}
-                                />
-                            </div>
-                        </div>
-                    )
-                }}
-            </SlotView>
-            <Text size="sm" tone="muted" live="polite">
-                {p.notice ?? ""}
-            </Text>
-        </div>
+        <SlotView slot={p.slot} placeholder={PLACEHOLDER} labels={l.slot}>
+            {(view, isSkeleton) => (
+                <PageHeader
+                    measure="product"
+                    isSkeleton={isSkeleton}
+                    breadcrumbs={{ label: l.crumbLabel, items: p.crumbs }}
+                    mark={<Avatar name={view.name} size="lg" isSkeleton={isSkeleton} />}
+                    title={view.name}
+                    status={
+                        <Badge tone={view.stageTone} isDot>
+                            {view.stageLabel}
+                        </Badge>
+                    }
+                    description={
+                        <>
+                            {view.meta}
+                            <Text size="sm" tone="muted" live="polite">
+                                {p.notice ?? ""}
+                            </Text>
+                        </>
+                    }
+                    actions={renderHeaderActions(props, view.primary, isSkeleton)}
+                />
+            )}
+        </SlotView>
     )
 }
 

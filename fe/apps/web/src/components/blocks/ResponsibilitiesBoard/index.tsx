@@ -65,7 +65,6 @@ export const ResponsibilitiesBoard = (props: ResponsibilitiesBoardProps) => {
                     { id: "home", label: t("crumbHome"), href: CONSOLE_ROUTES.dashboard },
                     { id: "responsibilities", label: t("pageTitle") },
                 ],
-                eyebrow: t("eyebrow"),
                 title: t("pageTitle"),
                 description: t("pageDescription", { time: verified }),
                 newLeadLabel: t("newLead"),

@@ -18,7 +18,6 @@ export const LeadsHeading = (props: LeadsHeadingProps) => {
                     { id: "home", label: t("crumbHome"), href: LEADS_ROUTES.dashboard },
                     { id: "leads", label: t("title") },
                 ],
-                eyebrow: t("eyebrow"),
                 title: t("title"),
                 description: t("descriptionShort"),
                 newLeadLabel: t("newLead"),
