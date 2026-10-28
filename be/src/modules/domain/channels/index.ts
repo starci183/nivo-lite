@@ -7,6 +7,8 @@ export { CHANNELS_ERROR_KINDS, ChannelsErrorCode } from "./errors/channels.error
 export { CHANNELS_MESSAGES } from "./messages/channels.messages"
 export { ZaloCredentialsService } from "./zalo-credentials.service"
 export { ZaloConnectService } from "./zalo-connect.service"
+export { ZaloPageService } from "./zalo-page.service"
+export type { ZaloPageEvent, ZaloPageView, ZaloTestSendResult } from "./zalo-page.contracts"
 export { ZaloWizardService } from "./zalo-wizard.service"
 export type {
     ChannelSender,

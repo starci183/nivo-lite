@@ -3,6 +3,8 @@
 import { useCallback } from "react"
 import { useMutateReturnZaloAuthorizationSwr } from "@/hooks/swr"
 import { isRefusedByBackend } from "@/modules/failure"
+import { zaloConnectionHref } from "@/modules/routes"
+import { LocalStorage, StorageId } from "@/modules/storage"
 
 /** What Zalo sends the browser back with after the owner granted the OA permissions. */
 export interface ZaloReturnInput {
@@ -11,8 +13,18 @@ export interface ZaloReturnInput {
     readonly state: string | undefined
 }
 
+/** True once when the owner reconnected from the page of this connection, which is where the return lands. */
+const returnsToOwnPage = (connectionId: string): boolean => {
+    const from = LocalStorage.get<string>(StorageId.ZaloReturn)
+    if (from !== connectionId) return false
+    LocalStorage.remove(StorageId.ZaloReturn)
+    return true
+}
+
 /** The Connections address the browser lands on, with the verdict the wizard shows on its check step. */
 const connectionsHref = (verdict: string, connectionId?: string): string => {
+    if (connectionId !== undefined && verdict === "ok" && returnsToOwnPage(connectionId))
+        return zaloConnectionHref(connectionId)
     const connection = connectionId === undefined ? "" : `&id=${connectionId}`
     return `/connections?zalo=${verdict}${connection}`
 }
