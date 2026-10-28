@@ -36,6 +36,10 @@ import { StartZaloConnectionResolver } from "./start-zalo-connection.resolver"
 import { TestWebhookConnectionResolver } from "./test-webhook-connection.resolver"
 import { UpdateMoneyConnectionResolver } from "./update-money-connection.resolver"
 import { UpdateWebhookEventsResolver } from "./update-webhook-events.resolver"
+import { GetZaloPageResolver } from "./get-zalo-page.resolver"
+import { ListZaloEventsResolver } from "./list-zalo-events.resolver"
+import { RecheckZaloConnectionResolver } from "./recheck-zalo-connection.resolver"
+import { SendZaloTestResolver } from "./send-zalo-test.resolver"
 import { WantConnectorResolver } from "./want-connector.resolver"
 
 @Module({
@@ -77,6 +81,10 @@ import { WantConnectorResolver } from "./want-connector.resolver"
         UpdateMoneyConnectionResolver,
         UpdateWebhookEventsResolver,
         WantConnectorResolver,
+        GetZaloPageResolver,
+        ListZaloEventsResolver,
+        RecheckZaloConnectionResolver,
+        SendZaloTestResolver,
     ],
 })
 /** The GraphQL transport of the connections feature. */

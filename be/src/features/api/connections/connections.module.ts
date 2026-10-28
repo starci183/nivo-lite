@@ -35,6 +35,10 @@ import { SendSmtpTestHandler } from "./application/send-smtp-test.handler"
 import { ChangeSmtpPasswordHandler } from "./application/change-smtp-password.handler"
 import { SetDefaultSmtpHandler } from "./application/set-default-smtp.handler"
 import { WantConnectorHandler } from "./application/want-connector.handler"
+import { GetZaloPageHandler } from "./application/get-zalo-page.handler"
+import { ListZaloEventsHandler } from "./application/list-zalo-events.handler"
+import { RecheckZaloConnectionHandler } from "./application/recheck-zalo-connection.handler"
+import { SendZaloTestHandler } from "./application/send-zalo-test.handler"
 import { ConfigurableModuleClass } from "./connections.module-definition"
 
 @Module({
@@ -75,6 +79,10 @@ import { ConfigurableModuleClass } from "./connections.module-definition"
         ChangeSmtpPasswordHandler,
         SetDefaultSmtpHandler,
         WantConnectorHandler,
+        GetZaloPageHandler,
+        ListZaloEventsHandler,
+        RecheckZaloConnectionHandler,
+        SendZaloTestHandler,
     ],
 })
 /** The connections feature: the handlers of its application. */

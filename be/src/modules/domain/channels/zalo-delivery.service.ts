@@ -17,7 +17,7 @@ import { ZaloCredentialsService } from "./zalo-credentials.service"
 import { renewalTemplateData, znsRenewalOf } from "./zns-renewal.policy"
 
 /** Consultation messages are free for 48 hours after the customer's last interaction; later ones are paid or refused by Zalo. */
-const ZALO_FREE_WINDOW_MS = 48 * 3_600_000
+export const ZALO_FREE_WINDOW_MS = 48 * 3_600_000
 
 const BY_CONSULTATION: DeliveryResult = { delivered: true, failure: null, via: "consultation" }
 const BY_ZNS: DeliveryResult = { delivered: true, failure: null, via: "zns" }

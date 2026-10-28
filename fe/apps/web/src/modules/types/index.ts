@@ -413,3 +413,16 @@ export type { ContractImportDialogEvents, ContractImportDialogView, ContractImpo
 export type { ReadGateBaseProps } from "./read-gate"
 export type { MethodView, SessionRowView } from "./account"
 export type { FlowEntryView, FlowSectionView, FlowView } from "./leads"
+export { ZALO_TABS } from "./zalo-connection"
+export type {
+    ZaloAgentRowView,
+    ZaloCheckLineView,
+    ZaloEventLineView,
+    ZaloFactView,
+    ZaloHeadView,
+    ZaloPasteView,
+    ZaloRecipientOption,
+    ZaloSendView,
+    ZaloTab,
+    ZaloTone,
+} from "./zalo-connection"
