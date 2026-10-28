@@ -149,3 +149,15 @@ The api hosts the gateway through `AiRouterGatewayModule`; it listens on `AI_ROU
 | `AI_ROUTER_ADMIN_TOKEN` | sealed `api` | Bearer token of the gateway admin API; the `keys ...` CLI reads it from the same variable. |
 | `OPENROUTER_API_KEY` | sealed `api` | The single upstream key (OpenRouter). |
 | `AI_API_KEY` | sealed `api` | The api's virtual key (`nivo_api`). openclaw has its own, `OPENCLAW_AI_KEY` (virtual key `nivo_openclaw`), sealed in `stack`, exported by the entrypoint wrapper; openclaw holds no OpenRouter key. Created after the first deploy (production README). |
+
+## Self-hosted cutover (sh-cutover)
+
+Names the move off Supabase cloud relies on (see `CUTOVER-SELFHOST.md`). Owning lanes seal their own rows; this lists only the cutover view.
+
+| Key | Member | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | `api` | Connection of the self-hosted `nivo-postgres` as `app_be`; the default env of `starci app db plan|migrate|dump --url-env` (and of `app stack deploy --urgent --db-url-env`). Replaces the Supabase `PRIMARY_DB_URL`. |
+| `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | `auth` | Google sign-in of our own auth; replace `SUPABASE_AUTH_EXTERNAL_GOOGLE_*`. |
+| auth signing key, storage endpoint and keys | `auth`, `api` | Exact names owned by sh-authbe and sh-storage (BE_AUTH_JWT_OWN_JWKS, BE_STORAGE_OWNER). |
+| `SUPABASE_*` | retired | Removed from the seal once the rollback window closes. |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | retired | No longer baked into the web image. |
