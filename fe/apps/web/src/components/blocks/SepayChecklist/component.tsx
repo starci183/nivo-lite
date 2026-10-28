@@ -33,7 +33,7 @@ export interface SepayChecklistBaseProps {
 
 /** The waiting copy of the current step. */
 interface Waiting {
-    readonly label: string
+    readonly text: string
     readonly label: string
 }
 
