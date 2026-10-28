@@ -48,17 +48,19 @@ const Body = (props: ZaloConnectionPageBaseProps) => {
 
 /** Draws the page of one Zalo OA connection: the header and the tab body on the left, the live Zalo events docked on the right. */
 export const ZaloConnectionPageBase = (props: ZaloConnectionPageBaseProps) => (
-    <PageContainer measure="product">
-        <div className={FRAME}>
-            <div className={MAIN}>
-                <ZaloConnectionHead connectionId={props.props.connectionId} tab={props.shape} />
-                <div className={BODY}>
-                    <Body {...props} />
+    <>
+        <ZaloConnectionHead connectionId={props.props.connectionId} tab={props.shape} />
+        <PageContainer measure="product">
+            <div className={FRAME}>
+                <div className={MAIN}>
+                    <div className={BODY}>
+                        <Body {...props} />
+                    </div>
                 </div>
+                <aside className={ASIDE}>
+                    <ZaloConnectionEvents connectionId={props.props.connectionId} />
+                </aside>
             </div>
-            <aside className={ASIDE}>
-                <ZaloConnectionEvents connectionId={props.props.connectionId} />
-            </aside>
-        </div>
-    </PageContainer>
+        </PageContainer>
+    </>
 )

@@ -4,6 +4,7 @@ import {
     Button,
     DescriptionList,
     PageContainer,
+    PageHeader,
     Region,
     SectionHeader,
     SurfaceCard,
@@ -79,12 +80,16 @@ const ROWS_PLACEHOLDER: ReadonlyArray<BillingHistoryRow> = [
 export const BillingOverviewBase = (props: BillingOverviewBaseProps) => (
     <PageContainer measure="product">
         <div className={PAGE_CLASS_NAME}>
-            <div>
-                <Button intent="neutral" size="sm" href={props.props.backHref}>
-                    {props.props.backLabel}
-                </Button>
-            </div>
-            <SectionHeader level={1} title={props.props.title} description={props.props.description} />
+            <PageHeader
+                measure="product"
+                title={props.props.title}
+                description={props.props.description}
+                actions={
+                    <Button intent="neutral" size="sm" href={props.props.backHref}>
+                        {props.props.backLabel}
+                    </Button>
+                }
+            />
             <SlotView
                 slot={props.props.plan}
                 placeholder={PLAN_PLACEHOLDER}

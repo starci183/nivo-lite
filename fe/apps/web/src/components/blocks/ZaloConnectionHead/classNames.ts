@@ -1,5 +1,5 @@
-/** The header: trail, heading, banner and tabs stacked. */
-export const HEAD = "flex min-w-0 flex-col gap-4"
+/** The banner and the refusal under the page head, stacked; empty when neither shows. */
+export const NOTICES = "flex min-w-0 flex-col gap-4 empty:hidden"
 
-/** The status chip and the two commands in one wrapping row. */
+/** The two commands in one wrapping row. */
 export const ACTIONS = "flex flex-wrap items-center gap-2"

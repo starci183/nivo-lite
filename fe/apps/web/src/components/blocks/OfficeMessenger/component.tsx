@@ -143,7 +143,6 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
                                     showChat: on.showChat,
                                 }}
                             />
-                            <Divider semantics="presentation" />
                             <MessengerCentre {...props} />
                         </Region>
                         {view.isInfoDocked && view.isInfoOpen ? (
