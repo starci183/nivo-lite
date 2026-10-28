@@ -1,4 +1,5 @@
-import { PageContainer, Text, TextAction } from "@starci/grammar/common"
+import { Text, TextAction } from "@starci/grammar/common"
+import type { PageHeaderContent } from "@starci/grammar/common"
 import { BrainAgentView } from "@/components/blocks/BrainAgentView"
 import { BrainFactForm } from "@/components/blocks/BrainFactForm"
 import { BrainFacts } from "@/components/blocks/BrainFacts"
@@ -6,12 +7,11 @@ import { BrainGaps } from "@/components/blocks/BrainGaps"
 import { BrainLessons } from "@/components/blocks/BrainLessons"
 import { BrainPipeline } from "@/components/blocks/BrainPipeline"
 import { BrainReview } from "@/components/blocks/BrainReview"
-import { BrainTabs } from "@/components/blocks/BrainTabs"
+import { BrainPageFrame } from "@/components/blocks/BrainPageFrame"
 import { KnowledgeAdd } from "@/components/blocks/KnowledgeAdd"
 import { KnowledgeAsk } from "@/components/blocks/KnowledgeAsk"
 import { KnowledgeLibrary } from "@/components/blocks/KnowledgeLibrary"
 import { KnowledgeSuggestions } from "@/components/blocks/KnowledgeSuggestions"
-import { PageHeading } from "@/components/composites/PageHeading"
 import { BRAIN_PANEL_PREFIX } from "@/modules/brain"
 import type { ModuleKey } from "@/modules/catalog"
 import type { BrainTab } from "@/modules/routes"
@@ -32,11 +32,8 @@ export interface AddPresetView {
 /** Copy and values the Second Brain page supplies. */
 export interface BrainPageBaseProps {
     readonly props: {
-        readonly crumbLabel: string
-        readonly crumbHome: string
-        readonly homeHref: string
-        readonly title: string
-        readonly description: string
+        /** The header without its tabs: the frame adds them. */
+        readonly header: PageHeaderContent
         readonly nivoLabel: string
         readonly nivoHref: string
         readonly readOnlyNote: string
@@ -106,26 +103,14 @@ const Panel = (props: BrainPageBaseProps) => {
     )
 }
 
-/** Draws the Second Brain: its pipeline, then the tab the address asks for (sources, review, facts, lessons, questions, what each agent sees). */
+/** Draws the Second Brain: its tabs on the header band, then its pipeline and the tab the address asks for (sources, review, facts, lessons, questions, what each agent sees). */
 export const BrainPageBase = (props: BrainPageBaseProps) => (
-    <>
-        <PageHeading
-            crumbLabel={props.props.crumbLabel}
-            crumbs={[
-                { id: "home", label: props.props.crumbHome, href: props.props.homeHref },
-                { id: "brain", label: props.props.title },
-            ]}
-            title={props.props.title}
-            description={props.props.description}
-        />
-        <PageContainer measure="product">
-            <div className={PAGE_CLASS_NAME}>
-                <BrainPipeline />
-                <BrainTabs selected={props.props.tab} />
-                <div className={PANEL_CLASS_NAME} role="tabpanel" id={`${BRAIN_PANEL_PREFIX}${props.props.tab}`}>
-                    <Panel {...props} />
-                </div>
+    <BrainPageFrame selected={props.props.tab} header={props.props.header}>
+        <div className={PAGE_CLASS_NAME}>
+            <BrainPipeline />
+            <div className={PANEL_CLASS_NAME} role="tabpanel" id={`${BRAIN_PANEL_PREFIX}${props.props.tab}`}>
+                <Panel {...props} />
             </div>
-        </PageContainer>
-    </>
+        </div>
+    </BrainPageFrame>
 )

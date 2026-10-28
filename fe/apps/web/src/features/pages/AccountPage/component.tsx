@@ -1,33 +1,26 @@
-import { PageContainer } from "@starci/grammar/common"
+import { Page } from "@starci/grammar/common"
+import type { PageHeaderContent } from "@starci/grammar/common"
 import { AccountEmail } from "@/components/blocks/AccountEmail"
 import { AccountMethods } from "@/components/blocks/AccountMethods"
 import { AccountPassword } from "@/components/blocks/AccountPassword"
 import { AccountSessions } from "@/components/blocks/AccountSessions"
-import { HomePageHeading } from "@/components/composites/HomePageHeading"
 import { PAGE_CLASS_NAME } from "./classNames"
 
-/** Copy the account page supplies. */
+/** The header the account page supplies. */
 export interface AccountPageBaseProps {
     readonly props: {
-        readonly crumbLabel: string
-        readonly crumbHome: string
-        readonly eyebrow: string
-        readonly title: string
-        readonly description: string
+        readonly header: PageHeaderContent
     }
 }
 
 /** Draws the account screen: heading, then the connected sign-in cards (email, password, sign-in methods, device sessions). */
 export const AccountPageBase = (props: AccountPageBaseProps) => (
-    <>
-        <HomePageHeading {...props.props} />
-        <PageContainer measure="product">
-            <div className={PAGE_CLASS_NAME}>
-                <AccountEmail />
-                <AccountPassword />
-                <AccountMethods />
-                <AccountSessions />
-            </div>
-        </PageContainer>
-    </>
+    <Page header={props.props.header} measure="product">
+        <div className={PAGE_CLASS_NAME}>
+            <AccountEmail />
+            <AccountPassword />
+            <AccountMethods />
+            <AccountSessions />
+        </div>
+    </Page>
 )

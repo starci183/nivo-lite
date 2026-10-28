@@ -1,27 +1,20 @@
-import { PageContainer } from "@starci/grammar/common"
+import { Page } from "@starci/grammar/common"
+import type { PageHeaderContent } from "@starci/grammar/common"
 import { AccountProfile } from "@/components/blocks/AccountProfile"
-import { HomePageHeading } from "@/components/composites/HomePageHeading"
 import { PAGE_CLASS_NAME } from "./classNames"
 
-/** Copy the profile page supplies. */
+/** The header the profile page supplies. */
 export interface ProfilePageBaseProps {
     readonly props: {
-        readonly crumbLabel: string
-        readonly crumbHome: string
-        readonly eyebrow: string
-        readonly title: string
-        readonly description: string
+        readonly header: PageHeaderContent
     }
 }
 
 /** Draws the signed-in person's profile: heading, then the connected picture and name card. */
 export const ProfilePageBase = (props: ProfilePageBaseProps) => (
-    <>
-        <HomePageHeading {...props.props} />
-        <PageContainer measure="product">
-            <div className={PAGE_CLASS_NAME}>
-                <AccountProfile />
-            </div>
-        </PageContainer>
-    </>
+    <Page header={props.props.header} measure="product">
+        <div className={PAGE_CLASS_NAME}>
+            <AccountProfile />
+        </div>
+    </Page>
 )

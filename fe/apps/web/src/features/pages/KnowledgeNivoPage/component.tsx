@@ -1,32 +1,20 @@
-import { PageContainer } from "@starci/grammar/common"
-import { KnowledgeFrame } from "@/components/blocks/KnowledgeFrame"
+import { Page } from "@starci/grammar/common"
+import type { PageHeaderContent } from "@starci/grammar/common"
 import { KnowledgeNivo } from "@/components/blocks/KnowledgeNivo"
 import { PAGE_CLASS_NAME } from "./classNames"
 
-/** Copy and values the base knowledge page supplies. */
+/** The header the base knowledge page supplies. */
 export interface KnowledgeNivoPageBaseProps {
     readonly props: {
-        readonly crumbLabel: string
-        readonly crumbHome: string
-        readonly homeHref: string
-        readonly crumbBrain: string
-        readonly brainHref: string
-        readonly crumbDocuments: string
-        readonly documentsHref: string
-        readonly eyebrow: string
-        readonly title: string
-        readonly description: string
+        readonly header: PageHeaderContent
     }
 }
 
 /** Draws the base knowledge of NIVO under its trail and heading. */
 export const KnowledgeNivoPageBase = (props: KnowledgeNivoPageBaseProps) => (
-    <>
-        <KnowledgeFrame {...props.props} />
-        <PageContainer measure="product">
-            <div className={PAGE_CLASS_NAME}>
-                <KnowledgeNivo />
-            </div>
-        </PageContainer>
-    </>
+    <Page header={props.props.header} measure="product">
+        <div className={PAGE_CLASS_NAME}>
+            <KnowledgeNivo />
+        </div>
+    </Page>
 )

@@ -1,29 +1,20 @@
-import { PageContainer } from "@starci/grammar/common"
+import type { PageHeaderContent } from "@starci/grammar/common"
 import { PermissionRules } from "@/components/blocks/PermissionRules"
-import { TeamTabs } from "@/components/blocks/TeamTabs"
-import { HomePageHeading } from "@/components/composites/HomePageHeading"
+import { TeamPageFrame } from "@/components/blocks/TeamPageFrame"
 import { PAGE_CLASS_NAME } from "./classNames"
 
-/** Copy the permissions page supplies. */
+/** The header the permissions page supplies. */
 export interface PermissionsPageBaseProps {
     readonly props: {
-        readonly crumbLabel: string
-        readonly crumbHome: string
-        readonly eyebrow: string
-        readonly title: string
-        readonly description: string
+        readonly header: PageHeaderContent
     }
 }
 
-/** Draws the Quyen screen: heading, the tabs shared with the team page, then the rule table with its drawer. */
+/** Draws the Quyen screen: heading and the tabs shared with the team page, then the rule table with its drawer. */
 export const PermissionsPageBase = (props: PermissionsPageBaseProps) => (
-    <>
-        <HomePageHeading {...props.props} />
-        <PageContainer measure="product">
-            <div className={PAGE_CLASS_NAME}>
-                <TeamTabs selected="permissions" />
-                <PermissionRules />
-            </div>
-        </PageContainer>
-    </>
+    <TeamPageFrame selected="permissions" header={props.props.header}>
+        <div className={PAGE_CLASS_NAME}>
+            <PermissionRules />
+        </div>
+    </TeamPageFrame>
 )

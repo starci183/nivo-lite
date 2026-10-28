@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
+import { homePageHeadingOf } from "@/modules/page-header"
 import { ProfilePageBase } from "./component"
 
 /** The document title of the page. */
@@ -14,11 +15,13 @@ export const ProfilePage = async () => {
     return (
         <ProfilePageBase
             props={{
-                crumbLabel: t("crumbLabel"),
-                crumbHome: t("crumbHome"),
-                eyebrow: t("profileEyebrow"),
-                title: t("profilePageTitle"),
-                description: t("profilePageDescription"),
+                header: homePageHeadingOf({
+                    crumbLabel: t("crumbLabel"),
+                    crumbHome: t("crumbHome"),
+                    eyebrow: t("profileEyebrow"),
+                    title: t("profilePageTitle"),
+                    description: t("profilePageDescription"),
+                }),
             }}
         />
     )
