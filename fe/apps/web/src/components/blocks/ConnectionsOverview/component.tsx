@@ -1,5 +1,5 @@
 import { Alert, EmptyNotice, Region, SectionHeader, SurfaceListCard, TextAction } from "@starci/grammar/common"
-import type { ComponentType } from "react"
+import type { ComponentType, ReactNode } from "react"
 import { SlotView } from "@/components/composites/SlotView"
 import type { AgentOption, Connection, DataSlot, Provider, SlotLabels } from "@/modules/types"
 import { connectionsPageClassNames as classNames } from "./classNames"
@@ -69,9 +69,18 @@ export interface ConnectionsOverviewProps {
         readonly slotLabels: SlotLabels
         /** The view the placeholder takes the shape of while the workspace reads are on their way. */
         readonly placeholderView: "connected" | "library"
+        /** The words of the Connected / Library tabs of the header. */
+        readonly tabs: {
+            readonly label: string
+            readonly connectedLabel: string
+            readonly libraryLabel: string
+        }
+        /** The MCP gateway sections, drawn in the page body under the board (empty for staff). */
+        readonly gateway: ReactNode
     }
     readonly on: {
         readonly retry: () => void
+        readonly selectTab: (tab: "connected" | "library") => void
     }
     readonly renderAddButton: ComponentType<{ readonly provider: Provider; readonly kind: "add" | "connect" }>
     readonly renderAttention: ComponentType<{
@@ -88,7 +97,6 @@ export interface ConnectionsOverviewProps {
         readonly agents: ReadonlyArray<AgentOption>
         readonly canManage: boolean
     }>
-    readonly renderViewTabs: ComponentType<{ readonly selected: "connected" | "library"; readonly liveCount: number }>
 }
 
 /** The provider lists receive the client blocks registered by the feature host. */
@@ -161,7 +169,7 @@ interface BoardBodyProps extends ConnectionsOverviewProps {
     readonly isSkeleton: boolean
 }
 
-/** The first card of the board that needs the owner, then the tabs and the lists of the chosen view. */
+/** The first card of the board that needs the owner, then the lists of the chosen view. */
 export const BoardBody = (props: BoardBodyProps) => {
     const { board } = props
     return (
@@ -175,7 +183,6 @@ export const BoardBody = (props: BoardBodyProps) => {
                 />
             ))}
             {board.canManage ? null : <Alert tone="informative" title={props.props.words.ownerOnly} />}
-            <props.renderViewTabs selected={board.view} liveCount={board.liveCount} />
             {board.view === "library" ? (
                 <props.renderLibrary items={board.items} isSkeleton={props.isSkeleton} />
             ) : null}

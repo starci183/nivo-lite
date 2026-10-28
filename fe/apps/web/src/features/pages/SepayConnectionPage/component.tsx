@@ -2,7 +2,6 @@ import { SepayAgents } from "@/components/blocks/SepayAgents"
 import { SepayChecklist } from "@/components/blocks/SepayChecklist"
 import { SepayConsole } from "@/components/blocks/SepayConsole"
 import { SepayEvents } from "@/components/blocks/SepayEvents"
-import { SepayHeader } from "@/components/blocks/SepayHeader"
 import { SepayHealth } from "@/components/blocks/SepayHealth"
 import { SepayOverview } from "@/components/blocks/SepayOverview"
 import { SepaySetup } from "@/components/blocks/SepaySetup"
@@ -25,15 +24,9 @@ export const SepayConnectionPageBase = (props: SepayConnectionPageBaseProps) => 
         <SepayConsole
             connectionId={id}
             tab={props.props.tab}
+            homeHref={props.props.homeHref}
+            hubHref={props.props.hubHref}
             shape={{
-                header: (
-                    <SepayHeader
-                        connectionId={id}
-                        homeHref={props.props.homeHref}
-                        hubHref={props.props.hubHref}
-                        tab={props.props.tab}
-                    />
-                ),
                 overview: <SepayOverview connectionId={id} />,
                 setup: <SepaySetup connectionId={id} />,
                 test: (

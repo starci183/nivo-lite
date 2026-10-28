@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { useSlotLabels } from "@/hooks/slot"
 import { useZaloHead } from "@/hooks/zaloConnection"
 import { navigation } from "@/modules/i18n"
@@ -14,6 +14,8 @@ import { ZaloConnectionHeadBase } from "./component"
 interface ZaloConnectionHeadProps {
     readonly connectionId: string
     readonly tab: ZaloTab
+    /** The page body: the tab body and the docked events panel. */
+    readonly children: ReactNode
 }
 
 /** The connected header of a Zalo OA connection: reconnect goes through the existing authorization, disconnect asks first. */
@@ -31,6 +33,7 @@ export const ZaloConnectionHead = (props: ZaloConnectionHeadProps) => {
     }
     return (
         <ZaloConnectionHeadBase
+            shape={{ body: props.children }}
             props={{
                 head,
                 slotLabels: slotLabels(t("headEmpty")),

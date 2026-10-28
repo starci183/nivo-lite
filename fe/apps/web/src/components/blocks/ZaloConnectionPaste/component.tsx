@@ -1,8 +1,6 @@
-import { SurfaceCard } from "@starci/grammar/common"
-import { ConnectionCopyInput } from "@/components/composites/ConnectionCopyInput"
+import { CopyField, FormGrid, SurfaceCard } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
-import type { DataSlot, RowCopyLabels, SlotLabels, ZaloPasteView } from "@/modules/types"
-import { FIELDS } from "./classNames"
+import type { DataSlot, SlotLabels, ZaloPasteView } from "@/modules/types"
 
 /** Fake data of the same shape: the skeleton reuses the ready tree. */
 export const ZALO_PASTE_PLACEHOLDER: ZaloPasteView = {
@@ -18,7 +16,9 @@ export interface ZaloConnectionPasteBaseProps {
         readonly webhookLabel: string
         readonly paste: DataSlot<ZaloPasteView>
         readonly slotLabels: SlotLabels
-        readonly copyLabels: RowCopyLabels
+        readonly copyLabel: string
+        readonly copiedLabel: string
+        readonly copyErrorLabel: string
     }
     readonly on: { readonly retry: () => void }
 }
@@ -32,23 +32,25 @@ export const ZaloConnectionPasteBase = (props: ZaloConnectionPasteBaseProps) => 
             labels={props.props.slotLabels}
             onRetry={props.on.retry}
         >
-            {(paste) => (
-                <div className={FIELDS}>
-                    <ConnectionCopyInput
-                        id="zalo-callback-url"
-                        name="callbackUrl"
+            {(paste, isSkeleton) => (
+                <FormGrid columns={2}>
+                    <CopyField
                         label={props.props.callbackLabel}
                         value={paste.callbackUrl}
-                        labels={props.props.copyLabels}
+                        copyLabel={props.props.copyLabel}
+                        copiedLabel={props.props.copiedLabel}
+                        copyErrorLabel={props.props.copyErrorLabel}
+                        isSkeleton={isSkeleton}
                     />
-                    <ConnectionCopyInput
-                        id="zalo-webhook-url"
-                        name="webhookUrl"
+                    <CopyField
                         label={props.props.webhookLabel}
                         value={paste.webhookUrl}
-                        labels={props.props.copyLabels}
+                        copyLabel={props.props.copyLabel}
+                        copiedLabel={props.props.copiedLabel}
+                        copyErrorLabel={props.props.copyErrorLabel}
+                        isSkeleton={isSkeleton}
                     />
-                </div>
+                </FormGrid>
             )}
         </SlotView>
     </SurfaceCard>

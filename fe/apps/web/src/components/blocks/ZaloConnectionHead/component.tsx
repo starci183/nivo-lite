@@ -1,9 +1,10 @@
-import { Alert, AlertDialog, Badge, Button, IconTile, PageContainer, PageHeader } from "@starci/grammar/common"
+import { Alert, AlertDialog, Badge, Button, IconTile, Page } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
+import type { ReactNode } from "react"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels, ZaloHeadView } from "@/modules/types"
-import { ACTIONS, NOTICES } from "./classNames"
+import { ACTIONS, BODY, NOTICES } from "./classNames"
 
 /** Fake data of the same shape: the skeleton reuses the ready tree. */
 export const ZALO_HEAD_PLACEHOLDER: ZaloHeadView = {
@@ -25,6 +26,8 @@ export interface ZaloDisconnectConfirm {
 
 /** Copy, slot and commands of the header of a Zalo OA connection. */
 export interface ZaloConnectionHeadBaseProps {
+    /** The page body under the notices: the tab body and the docked events panel. */
+    readonly shape: { readonly body: ReactNode }
     readonly props: {
         readonly head: DataSlot<ZaloHeadView>
         readonly slotLabels: SlotLabels
@@ -49,57 +52,61 @@ export interface ZaloConnectionHeadBaseProps {
     }
 }
 
-/** Draws the page head of the OA (mark, status, facts, actions, tabs), the banner that says why it cannot send, and the disconnect confirmation. */
+/** Draws the page of the OA: one `Page` whose header is the OA band (mark, status, facts, actions, tabs), whose body opens with the banner that says why it cannot send, and the disconnect confirmation. */
 export const ZaloConnectionHeadBase = (props: ZaloConnectionHeadBaseProps) => {
     const head = props.props.head.items
     const view = head ?? ZALO_HEAD_PLACEHOLDER
     const isSkeleton = head === undefined
     return (
         <>
-            <PageHeader
+            <Page
                 measure="product"
                 isSkeleton={isSkeleton}
-                breadcrumbs={{ label: props.props.crumbLabel, items: props.props.crumbs }}
-                mark={<IconTile source={nivoIconSource("chat", "leading")} tone="accent" size="md" />}
-                title={view.name}
-                status={
-                    <Badge isDot tone={view.chipTone}>
-                        {view.chipLabel}
-                    </Badge>
-                }
-                meta={view.facts}
-                actions={
-                    <div className={ACTIONS}>
-                        <Button intent="commit" onPress={props.on.reconnect}>
-                            {props.props.reconnectLabel}
-                        </Button>
-                        <Button intent="destructive" step="entry" onPress={props.on.askDisconnect}>
-                            {props.props.disconnectLabel}
-                        </Button>
-                    </div>
-                }
-                tabs={{
-                    label: props.props.tabsLabel,
-                    selectedKey: props.props.selectedTab,
-                    labelVisibility: "always",
-                    items: props.props.tabs,
-                    onSelect: props.on.selectTab,
+                header={{
+                    breadcrumbs: { label: props.props.crumbLabel, items: props.props.crumbs },
+                    mark: <IconTile source={nivoIconSource("chat", "leading")} tone="accent" size="md" />,
+                    title: view.name,
+                    status: (
+                        <Badge isDot tone={view.chipTone}>
+                            {view.chipLabel}
+                        </Badge>
+                    ),
+                    meta: view.facts,
+                    actions: (
+                        <div className={ACTIONS}>
+                            <Button intent="commit" onPress={props.on.reconnect}>
+                                {props.props.reconnectLabel}
+                            </Button>
+                            <Button intent="destructive" step="entry" onPress={props.on.askDisconnect}>
+                                {props.props.disconnectLabel}
+                            </Button>
+                        </div>
+                    ),
+                    tabs: {
+                        label: props.props.tabsLabel,
+                        selectedKey: props.props.selectedTab,
+                        labelVisibility: "always",
+                        items: props.props.tabs,
+                        onSelect: props.on.selectTab,
+                    },
                 }}
-            />
-            <PageContainer measure="product">
-                <div className={NOTICES}>
-                    <SlotView
-                        slot={props.props.head}
-                        placeholder={ZALO_HEAD_PLACEHOLDER}
-                        labels={props.props.slotLabels}
-                        forbidden="notice"
-                        onRetry={props.on.retry}
-                    >
-                        {(ready) => (ready.banner === "" ? null : <Alert tone="negative" title={ready.banner} />)}
-                    </SlotView>
-                    {props.props.notice === "" ? null : <Alert tone="negative" title={props.props.notice} />}
+            >
+                <div className={BODY}>
+                    <div className={NOTICES}>
+                        <SlotView
+                            slot={props.props.head}
+                            placeholder={ZALO_HEAD_PLACEHOLDER}
+                            labels={props.props.slotLabels}
+                            forbidden="notice"
+                            onRetry={props.on.retry}
+                        >
+                            {(ready) => (ready.banner === "" ? null : <Alert tone="negative" title={ready.banner} />)}
+                        </SlotView>
+                        {props.props.notice === "" ? null : <Alert tone="negative" title={props.props.notice} />}
+                    </div>
+                    {props.shape.body}
                 </div>
-            </PageContainer>
+            </Page>
             <AlertDialog
                 isOpen={props.props.confirm.isOpen}
                 onOpenChange={(open) => {

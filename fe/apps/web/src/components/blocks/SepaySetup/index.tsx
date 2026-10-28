@@ -46,11 +46,12 @@ export const SepaySetup = (props: SepaySetupProps) => {
                 slot: mapSlot(slot, viewOf),
                 placeholder: viewOf(placeholder),
                 labels: slotLabels(t("loadFailed")),
-                copy,
+                copyLabel: copy.copy,
+                copiedLabel: copy.copied,
+                copyErrorLabel: t("copyFailed"),
                 pasteTitle: t("pasteTitle"),
                 webhookLabel: t("webhookLabel"),
                 keyLabel: t("keyLabel"),
-                copyKeyLabel: t("copyKey"),
                 factsLine: t("pasteFacts"),
                 accountTitle: t("accountTitle"),
                 bankLabel: t("bankLabel"),
@@ -65,10 +66,10 @@ export const SepaySetup = (props: SepaySetupProps) => {
             }}
             on={{
                 retry,
-                copyKey: () => {
-                    void commands.revealKey().then(async (settled) => {
-                        if (settled.kind === "ok") await navigator.clipboard.writeText(settled.value)
-                    })
+                copyKey: async () => {
+                    const settled = await commands.revealKey()
+                    if (settled.kind !== "ok") throw new Error(settled.message)
+                    return settled.value
                 },
                 bank: (bank) => setDraft((current) => ({ ...current, bank })),
                 account: (account) => setDraft((current) => ({ ...current, account })),

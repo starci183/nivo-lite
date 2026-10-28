@@ -1,7 +1,6 @@
-import { Button, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, CopyField, FormGrid, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
-import { ConnectionCopyInput } from "@/components/composites/ConnectionCopyInput"
-import type { DataSlot, RowCopyLabels, SepayAccountForm, SlotLabels } from "@/modules/types"
+import type { DataSlot, SepayAccountForm, SlotLabels } from "@/modules/types"
 import { sepaySetupClassNames as classNames } from "./classNames"
 
 /** What the setup tab shows once the connection is read. */
@@ -17,11 +16,12 @@ export interface SepaySetupBaseProps {
         readonly slot: DataSlot<SepaySetupView>
         readonly placeholder: SepaySetupView
         readonly labels: SlotLabels
-        readonly copy: RowCopyLabels
+        readonly copyLabel: string
+        readonly copiedLabel: string
+        readonly copyErrorLabel: string
         readonly pasteTitle: string
         readonly webhookLabel: string
         readonly keyLabel: string
-        readonly copyKeyLabel: string
         readonly factsLine: string
         readonly accountTitle: string
         readonly bankLabel: string
@@ -36,7 +36,8 @@ export interface SepaySetupBaseProps {
     }
     readonly on: {
         readonly retry: () => void
-        readonly copyKey: () => void
+        /** Reveals the clear key for the clipboard only; rejects when the reveal fails. */
+        readonly copyKey: () => Promise<string>
         readonly bank: (bank: string) => void
         readonly account: (account: string) => void
         readonly holder: (holder: string) => void
@@ -54,33 +55,27 @@ type PasteCardProps = {
 const PasteCard = ({ base, setup, isSkeleton }: PasteCardProps) => (
     <SurfaceCard label={base.props.pasteTitle} headingLevel={2}>
         <div className={classNames.stack}>
-            <div className={classNames.grid}>
-                <ConnectionCopyInput
-                    id="sepay-webhook-url"
-                    name="webhookUrl"
+            <FormGrid columns={2}>
+                <CopyField
                     label={base.props.webhookLabel}
                     value={setup.webhookUrl}
-                    labels={base.props.copy}
+                    copyLabel={base.props.copyLabel}
+                    copiedLabel={base.props.copiedLabel}
+                    copyErrorLabel={base.props.copyErrorLabel}
+                    isSkeleton={isSkeleton}
                 />
-                <div className={classNames.row}>
-                    <Input
-                        id="sepay-api-key"
-                        name="apiKey"
-                        label={base.props.keyLabel}
-                        value={setup.apiKeyMasked}
-                        isReadOnly
-                        isSkeleton={isSkeleton}
-                    />
-                    <Button
-                        intent="neutral"
-                        isSkeleton={isSkeleton}
-                        isDisabled={!base.props.canEdit || isSkeleton}
-                        onPress={base.on.copyKey}
-                    >
-                        {base.props.copyKeyLabel}
-                    </Button>
-                </div>
-            </div>
+                <CopyField
+                    masked
+                    label={base.props.keyLabel}
+                    lastFour={setup.apiKeyMasked.slice(-4)}
+                    onCopy={base.on.copyKey}
+                    copyLabel={base.props.copyLabel}
+                    copiedLabel={base.props.copiedLabel}
+                    copyErrorLabel={base.props.copyErrorLabel}
+                    isDisabled={!base.props.canEdit}
+                    isSkeleton={isSkeleton}
+                />
+            </FormGrid>
             <Text size="sm" tone="muted">
                 {base.props.factsLine}
             </Text>
@@ -95,7 +90,7 @@ const AccountCard = ({ base, setup, isSkeleton }: PasteCardProps) => {
     return (
         <SurfaceCard label={view.accountTitle} headingLevel={2}>
             <div className={classNames.stack}>
-                <div className={classNames.grid}>
+                <FormGrid columns={2}>
                     <Select
                         label={view.bankLabel}
                         placeholder={view.bankPlaceholder}
@@ -123,7 +118,7 @@ const AccountCard = ({ base, setup, isSkeleton }: PasteCardProps) => {
                         value={view.form.holder}
                         onValueChange={on.holder}
                     />
-                </div>
+                </FormGrid>
                 <div>
                     <Button
                         intent="commit"

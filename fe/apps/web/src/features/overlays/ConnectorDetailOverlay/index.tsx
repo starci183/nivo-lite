@@ -9,7 +9,6 @@ import { ConnectionLibrary } from "@/components/blocks/ConnectionLibrary"
 import { ConnectionRow } from "@/components/blocks/ConnectionRow"
 import { ConnectionsOverview, OverlayHost } from "@/components/blocks/ConnectionsOverview"
 import type { ConnectionsBoard } from "@/components/blocks/ConnectionsOverview"
-import { ConnectionViewTabs } from "@/components/blocks/ConnectionViewTabs"
 import { McpGatewaySection } from "@/components/blocks/McpGatewaySection"
 import { useQueryAuthUserSwr } from "@/hooks/auth"
 import { catalogKey, entryById } from "@/hooks/connection-catalog"
@@ -49,7 +48,6 @@ const renderAddButton = (props: ComponentProps<typeof ConnectionAddButton>) => <
 const renderAttention = (props: ComponentProps<typeof ConnectionAttention>) => <ConnectionAttention {...props} />
 const renderLibrary = (props: ComponentProps<typeof ConnectionLibrary>) => <ConnectionLibrary {...props} />
 const renderRow = (props: ComponentProps<typeof ConnectionRow>) => <ConnectionRow {...props} />
-const renderViewTabs = (props: ComponentProps<typeof ConnectionViewTabs>) => <ConnectionViewTabs {...props} />
 const RenderGateway = (props: ComponentProps<typeof McpGatewaySection>) => <McpGatewaySection {...props} />
 const STATUS_KEYS = { official: "statusOfficial", early: "statusEarly", soon: "statusSoon" } as const
 
@@ -67,6 +65,7 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
     // The signed-in person only prefills the SMTP test recipient: the board never waits on it.
     const user = slotOfSwr(useQueryAuthUserSwr())
     const data = useConnectionsData()
+    const overlays = useConnectionOverlays()
     const manager = role === "owner" || role === "manager"
     const live = liveConnections(data.items)
     const attention = attentionConnections(data.items)
@@ -124,15 +123,15 @@ export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
                     board: slot,
                     slotLabels: slotLabelsOf(t("connectedEmpty")),
                     placeholderView: props.tab === "library" ? "library" : "connected",
+                    tabs: { label: t("title"), connectedLabel: t("tabConnected"), libraryLabel: t("tabLibrary") },
+                    gateway: <RenderGateway isEnabled={isReady && manager} />,
                 }}
-                on={{ retry: data.retry }}
+                on={{ retry: data.retry, selectTab: overlays.setTab }}
                 renderAddButton={renderAddButton}
                 renderAttention={renderAttention}
                 renderLibrary={renderLibrary}
                 renderRow={renderRow}
-                renderViewTabs={renderViewTabs}
             />
-            <RenderGateway isEnabled={isReady && manager} />
             <OverlayHost active={isReady} candidate={props.candidate} />
         </>
     )

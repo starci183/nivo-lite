@@ -26,7 +26,9 @@ export const ZaloConnectionPaste = (props: ZaloConnectionPasteProps) => {
                 webhookLabel: t("pasteWebhook"),
                 paste,
                 slotLabels: slotLabels(t("pasteEmpty")),
-                copyLabels,
+                copyLabel: copyLabels.copy,
+                copiedLabel: copyLabels.copied,
+                copyErrorLabel: t("copyFailed"),
             }}
             on={{ retry: reload }}
         />

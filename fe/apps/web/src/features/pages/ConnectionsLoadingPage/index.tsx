@@ -14,6 +14,7 @@ export const ConnectionsLoadingPage = async () => {
                 crumbHome: t("crumbHome"),
                 homeHref: CONNECTION_ROUTES.dashboard,
                 connectedLabel: t("tabConnected"),
+                libraryLabel: t("tabLibrary"),
                 automationsLink: t("automationsLink"),
                 automationsHref: CONNECTION_ROUTES.automations,
                 addLabel: t("add"),

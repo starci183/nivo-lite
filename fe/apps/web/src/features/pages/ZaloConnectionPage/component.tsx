@@ -1,4 +1,3 @@
-import { PageContainer } from "@starci/grammar/common"
 import { ZaloConnectionAgents } from "@/components/blocks/ZaloConnectionAgents"
 import { ZaloConnectionChecks } from "@/components/blocks/ZaloConnectionChecks"
 import { ZaloConnectionEvents } from "@/components/blocks/ZaloConnectionEvents"
@@ -46,21 +45,18 @@ const Body = (props: ZaloConnectionPageBaseProps) => {
     }
 }
 
-/** Draws the page of one Zalo OA connection: the header and the tab body on the left, the live Zalo events docked on the right. */
+/** Draws the page of one Zalo OA connection: the head owns the `Page`; the tab body sits on the left of its body, the live Zalo events docked on the right. */
 export const ZaloConnectionPageBase = (props: ZaloConnectionPageBaseProps) => (
-    <>
-        <ZaloConnectionHead connectionId={props.props.connectionId} tab={props.shape} />
-        <PageContainer measure="product">
-            <div className={FRAME}>
-                <div className={MAIN}>
-                    <div className={BODY}>
-                        <Body {...props} />
-                    </div>
+    <ZaloConnectionHead connectionId={props.props.connectionId} tab={props.shape}>
+        <div className={FRAME}>
+            <div className={MAIN}>
+                <div className={BODY}>
+                    <Body {...props} />
                 </div>
-                <aside className={ASIDE}>
-                    <ZaloConnectionEvents connectionId={props.props.connectionId} />
-                </aside>
             </div>
-        </PageContainer>
-    </>
+            <aside className={ASIDE}>
+                <ZaloConnectionEvents connectionId={props.props.connectionId} />
+            </aside>
+        </div>
+    </ZaloConnectionHead>
 )
