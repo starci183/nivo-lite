@@ -13,8 +13,10 @@ import { GetConnectionFirstEventHandler } from "./application/get-connection-fir
 import { GetGoogleStateHandler } from "./application/get-google-state.handler"
 import { GetMetaConnectionHandler } from "./application/get-meta-connection.handler"
 import { GetMoneyConnectionHandler } from "./application/get-money-connection.handler"
+import { GetSepayConnectionHandler } from "./application/get-sepay-connection.handler"
 import { GetZaloConnectionHandler } from "./application/get-zalo-connection.handler"
 import { ListConnectionAgentsHandler } from "./application/list-connection-agents.handler"
+import { ListSepayEventsHandler } from "./application/list-sepay-events.handler"
 import { ListConnectionsHandler } from "./application/list-connections.handler"
 import { ReturnZaloAuthorizationHandler } from "./application/return-zalo-authorization.handler"
 import { RevealSepayKeyHandler } from "./application/reveal-sepay-key.handler"
@@ -24,6 +26,7 @@ import { SaveZaloOaSecretHandler } from "./application/save-zalo-oa-secret.handl
 import { SetAgentConnectionsHandler } from "./application/set-agent-connections.handler"
 import { SetConnectionAgentsHandler } from "./application/set-connection-agents.handler"
 import { SetConnectionGrantHandler } from "./application/set-connection-grant.handler"
+import { SetSepayEnvironmentHandler } from "./application/set-sepay-environment.handler"
 import { StartMoneyConnectionHandler } from "./application/start-money-connection.handler"
 import { StartWebhookConnectionHandler } from "./application/start-webhook-connection.handler"
 import { StartZaloConnectionHandler } from "./application/start-zalo-connection.handler"
@@ -57,9 +60,11 @@ import { ConfigurableModuleClass } from "./connections.module-definition"
         GetGoogleStateHandler,
         GetMetaConnectionHandler,
         GetMoneyConnectionHandler,
+        GetSepayConnectionHandler,
         GetZaloConnectionHandler,
         ListConnectionAgentsHandler,
         ListConnectionsHandler,
+        ListSepayEventsHandler,
         ReturnZaloAuthorizationHandler,
         RevealSepayKeyHandler,
         RevealWebhookConnectionHandler,
@@ -68,6 +73,7 @@ import { ConfigurableModuleClass } from "./connections.module-definition"
         SetAgentConnectionsHandler,
         SetConnectionAgentsHandler,
         SetConnectionGrantHandler,
+        SetSepayEnvironmentHandler,
         StartMoneyConnectionHandler,
         StartWebhookConnectionHandler,
         StartZaloConnectionHandler,

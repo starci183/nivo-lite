@@ -426,3 +426,15 @@ export type {
     ZaloTab,
     ZaloTone,
 } from "./zalo-connection"
+export type {
+    SepayAccountForm,
+    SepayAgentView,
+    SepayConnectionView,
+    SepayEnvironment,
+    SepayEventKind,
+    SepayEventOutcome,
+    SepayEventView,
+    SepayHealthView,
+    SepayStepState,
+    SepayStepView,
+} from "./sepay-connection"

@@ -15,9 +15,11 @@ import { GetConnectionFirstEventResolver } from "./get-connection-first-event.re
 import { GetGoogleStateResolver } from "./get-google-state.resolver"
 import { GetMetaConnectionResolver } from "./get-meta-connection.resolver"
 import { GetMoneyConnectionResolver } from "./get-money-connection.resolver"
+import { GetSepayConnectionResolver } from "./get-sepay-connection.resolver"
 import { GetZaloConnectionResolver } from "./get-zalo-connection.resolver"
 import { ListConnectionAgentsResolver } from "./list-connection-agents.resolver"
 import { ListConnectionsResolver } from "./list-connections.resolver"
+import { ListSepayEventsResolver } from "./list-sepay-events.resolver"
 import { ReturnZaloAuthorizationResolver } from "./return-zalo-authorization.resolver"
 import { RevealSepayKeyResolver } from "./reveal-sepay-key.resolver"
 import { RevealWebhookConnectionResolver } from "./reveal-webhook-connection.resolver"
@@ -26,6 +28,7 @@ import { SaveZaloOaSecretResolver } from "./save-zalo-oa-secret.resolver"
 import { SetAgentConnectionsResolver } from "./set-agent-connections.resolver"
 import { SetConnectionAgentsResolver } from "./set-connection-agents.resolver"
 import { SetConnectionGrantResolver } from "./set-connection-grant.resolver"
+import { SetSepayEnvironmentResolver } from "./set-sepay-environment.resolver"
 import { StartSmtpConnectionResolver } from "./start-smtp-connection.resolver"
 import { SendSmtpTestResolver } from "./send-smtp-test.resolver"
 import { ChangeSmtpPasswordResolver } from "./change-smtp-password.resolver"
@@ -59,9 +62,11 @@ import { WantConnectorResolver } from "./want-connector.resolver"
         GetGoogleStateResolver,
         GetMetaConnectionResolver,
         GetMoneyConnectionResolver,
+        GetSepayConnectionResolver,
         GetZaloConnectionResolver,
         ListConnectionAgentsResolver,
         ListConnectionsResolver,
+        ListSepayEventsResolver,
         ReturnZaloAuthorizationResolver,
         RevealSepayKeyResolver,
         RevealWebhookConnectionResolver,
@@ -70,6 +75,7 @@ import { WantConnectorResolver } from "./want-connector.resolver"
         SetAgentConnectionsResolver,
         SetConnectionAgentsResolver,
         SetConnectionGrantResolver,
+        SetSepayEnvironmentResolver,
         StartMoneyConnectionResolver,
         StartSmtpConnectionResolver,
         SendSmtpTestResolver,

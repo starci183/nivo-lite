@@ -77,7 +77,7 @@ export interface WizardConnection {
     readonly status: ConnectionStatus
     /** The address the provider must call. */
     readonly webhookUrl: string
-    /** SePay only: the API key to paste into SePay (empty for the others and when not asked for). */
+    /** SePay only: the API key in clear in the answer that creates the connection (to paste into SePay once), masked to its last 4 characters everywhere else; empty for the others. */
     readonly apiKey: string
     /** The bank code. */
     readonly bankCode: string

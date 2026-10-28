@@ -193,7 +193,7 @@ describe("ChannelConnectionsService updateMoneyConnection", () => {
             meta: { ...record().meta, bank_code: "TCB", account_number: "991234", account_holder: "MAI" },
         })
         expect(connections.writeSecret).not.toHaveBeenCalled()
-        expect(view.apiKey).toBe("nivo_aaaaaaaaaaaaaaaa")
+        expect(view.apiKey).toBe(`${"•".repeat(12)}aaaa`)
     })
     it("replaces the SePay key and the account when new ones are typed", async () => {
         const { service, connections } = await build()
@@ -247,7 +247,7 @@ describe("ChannelConnectionsService updateMoneyConnection", () => {
 })
 describe("ChannelConnectionsService resumeConnection and revealSepayKey", () => {
     it.each([
-        ["sepay", "nivo_key", { apiKey: "nivo_key", credentialsSaved: false }],
+        ["sepay", "nivo_key", { apiKey: `${"•".repeat(12)}_key`, credentialsSaved: false }],
         ["payos", '{"clientId":"x"}', { apiKey: "", credentialsSaved: true }],
         ["payos", "{}", { credentialsSaved: false }],
         ["payos", null, { credentialsSaved: false }],

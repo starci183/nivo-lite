@@ -62,7 +62,7 @@ const createMoneyWizardActions = ({
             const answer = await commands.update(
                 conn.id,
                 { ...form, name },
-                input.provider === "sepay" ? follow.apiKey : undefined,
+                input.provider === "sepay" && follow.apiKey.trim() !== "" ? follow.apiKey : undefined,
             )
             if (answer.kind !== "ok") return fail(answer.message)
             adopt(answer.value)

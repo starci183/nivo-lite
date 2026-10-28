@@ -11,6 +11,15 @@ import { MONEY_STEPS, moneyFlagsOf, webhookNameOf } from "./money-wizard.shared"
 import type { AccountForm, FollowDraft } from "./money-wizard.shared"
 import type { MoneyWizardInput } from "./useMoneyWizard"
 
+/** The draft after a stored connection is adopted; the key is in clear only when the server just created it, a masked one never replaces it. */
+const followAfterAdopt = (current: FollowDraft, stored: WizardConnection): FollowDraft => ({
+    ...current,
+    webhookName: webhookNameOf(stored.name),
+    ...(stored.apiKey.startsWith("•")
+        ? { issuedKey: current.apiKey || current.issuedKey }
+        : { apiKey: stored.apiKey, issuedKey: stored.apiKey }),
+})
+
 /** Owns the bank-connection draft, resumed state and first-event observation. */
 export const useMoneyWizardState = (input: MoneyWizardInput, def: ProviderDef) => {
     const [nav, setNav] = useState({ index: 0, skipped: false })
@@ -22,7 +31,13 @@ export const useMoneyWizardState = (input: MoneyWizardInput, def: ProviderDef) =
         holder: "",
     })
     const [conn, setConn] = useState<WizardConnection | null>(null)
-    const [follow, setFollow] = useState<FollowDraft>({ webhookName: "", apiKey: "", values: {}, keysSaved: false })
+    const [follow, setFollow] = useState<FollowDraft>({
+        webhookName: "",
+        apiKey: "",
+        issuedKey: "",
+        values: {},
+        keysSaved: false,
+    })
     const [agentIds, setAgentIds] = useState<ReadonlyArray<string>>(allAgentIds(input.agents))
     const [note, setNote] = useState<WizardNote | null>(null)
 
@@ -45,7 +60,7 @@ export const useMoneyWizardState = (input: MoneyWizardInput, def: ProviderDef) =
             account: "",
             holder: stored.holder,
         })
-        setFollow((current) => ({ ...current, webhookName: webhookNameOf(stored.name), apiKey: stored.apiKey }))
+        setFollow((current) => followAfterAdopt(current, stored))
     }, [])
 
     // The stored connection arrives once: adopt it while rendering (derived state), not from an effect.
