@@ -10,6 +10,7 @@
 #   nivo-landing   the Next.js landing on nivo.vn / www.nivo.vn, reached as nivo-landing:3000 on the edge network
 #   nivo-web-app   the Next.js console on app.nivo.vn, reached as nivo-web-swarm:3000 on the edge network (its own alias: nivo-web still names the old compose container until it is retired)
 #   nivo-api       the Nest api: GraphQL, webhooks, the BullMQ workers and outbox relay, the job alert monitor; reached as nivo-api:8787 on the edge network
+#                  The api process also serves the AI gateway (AiRouterGatewayModule) on 8788 (api port + offset 1), reachable as nivo-api:8788 on `agents` only
 #   nivo-mcp       the NIVO MCP gateway (be/apps/mcp), internal only: reached as nivo-mcp:8790 on the private `agents` network, no public route
 #   nivo-openclaw  the agent gateway; the api reaches it by service DNS (nivo-openclaw:18790) on the private `agents` network
 #   nivo-n8n       private automation editor on the `automation` network (no published port); SQLite database on the persisted volume n8n-data
@@ -100,6 +101,7 @@ services:
       automation:
     volumes:
       - openclaw-data:/openclaw-state
+      - ai-router-data:/var/lib/ai-router # the AI gateway's SQLite key store (virtual keys survive a restart); the gateway listens on 8788 of the private agents network only
       - video-cache:/var/cache/nivo-video # voiceover clips by text hash: re-rendering the same script costs no TTS call
     healthcheck:
       test:
@@ -279,6 +281,7 @@ volumes:
   video-cache: { external: true, name: nivo-engine_video-cache }
   n8n-data: { external: true, name: nivo-engine_n8n-data }
   redis-data: { external: true, name: nivo-engine_redis-data }
+  ai-router-data: { external: true, name: nivo-engine_ai-router-data }
 
 # Config objects are immutable and versioned by content: the provision step of `starci app stack deploy` creates `nivo-<name>-c<digest>` and the render passes the names in.
 configs:

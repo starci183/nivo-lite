@@ -38,7 +38,7 @@ components:
     role: service
     image: ghcr.io/starci183/nivo-lite-api:0.3.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
     compose: infra/swarm/stack.yaml
-    purpose: The Nest api (GraphQL, provider webhooks, OAuth callbacks, the BullMQ workers and the outbox relay, the job alert monitor). Liveness /healthz, readiness /readyz.
+    purpose: The Nest api. It also runs the AI gateway in process (AiRouterGatewayModule, @starci/ai-router 0.3.0) on its own internal port 8788 (api 8787 + offset 1) on the private agents network, reached as http://nivo-api:8788/v1 (never routed or published); virtual keys in SQLite on the volume nivo-engine_ai-router-data. GraphQL, provider webhooks, OAuth callbacks, the BullMQ workers and the outbox relay, the job alert monitor). Liveness /healthz, readiness /readyz.
     required: true
   nivo-mcp:
     role: service
@@ -199,6 +199,8 @@ environments:
       nivo-api:
         replicas: 1
         port: 8787
+        # internal AI gateway of the api process: port = api port + offset 1 (local dev 3211 -> 3212); AI_ROUTER_PORT below and the openclaw AI_BASE_URL derive from it
+        extraPorts: {ai-router: 8788}
       nivo-mcp:
         replicas: 1
         port: 8790
@@ -353,7 +355,7 @@ environments:
           app: landing
           buildArgs:
             values: {NEXT_PUBLIC_SITE_URL: "https://nivo.vn", NEXT_PUBLIC_APP_URL: "https://app.nivo.vn"}
-      volumes: [nivo-engine_openclaw-data, nivo-engine_video-cache, nivo-engine_n8n-data, nivo-engine_redis-data, nivo-edge_acme]
+      volumes: [nivo-engine_openclaw-data, nivo-engine_video-cache, nivo-engine_n8n-data, nivo-engine_redis-data, nivo-engine_ai-router-data, nivo-edge_acme]
       secrets:
         grants:
           - service: nivo-api
@@ -378,8 +380,8 @@ environments:
           - service: nivo-openclaw
             from:
               - {member: stack, keys: [OPENCLAW_GATEWAY_TOKEN], required: true}
-              - {member: stack, keys: [OPENROUTER_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY]}
-              - {member: api, keys: [OPENROUTER_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY]}
+              # its own virtual key of the AI gateway (keys create --label nivo_openclaw), sealed in the `stack` member
+              - {member: stack, keys: [OPENCLAW_AI_KEY], required: true}
           - service: nivo-n8n
             filePointers: true
             from:
@@ -396,6 +398,12 @@ environments:
             QUEUE_REDIS_PREFIX: nivo
             REALTIME_HUB: redis
             REALTIME_REDIS_PREFIX: nivo-realtime
+            # the in-process AI gateway (declared port above); AI_ROUTER_ADMIN_TOKEN, OPENROUTER_API_KEY and AI_API_KEY come from the sealed api member
+            AI_ROUTER_PORT: "8788"
+            AI_ROUTER_KEYS_PATH: /var/lib/ai-router/keys.sqlite
+            AI_BASE_URL: "http://127.0.0.1:8788/v1"
+            AI_CHAT_MODEL: work
+            AI_EMBEDDING_MODEL: embed
             OPENCLAW_GATEWAY_URL: "ws://nivo-openclaw:18790"
             OPENCLAW_CONFIG_DIR: /openclaw-state
             OPENCLAW_GATEWAY_STATE_DIR: /home/node/.openclaw
@@ -410,8 +418,11 @@ environments:
             # The OriginGuard and CORS allowlist of the gateway; it has no browser caller, so only the console origin is listed.
             HTTP_SECURITY_ALLOWED_ORIGINS: "https://app.nivo.vn"
         nivo-openclaw:
+          values:
+            AI_BASE_URL: "http://nivo-api:8788/v1"
+            AI_CHAT_MODEL: work
           settings:
-            OPENCLAW_MODEL: {key: OPENCLAW_MODEL, default: openrouter/deepseek/deepseek-v4.1-flash}
+            OPENCLAW_MODEL: {key: OPENCLAW_MODEL, default: nivo-ai/work}
       configs:
         - {name: openclaw-entrypoint, file: infra/swarm/openclaw/entrypoint.sh, env: NIVO_CFG_OPENCLAW_ENTRYPOINT}
         - {name: openclaw-init, file: infra/swarm/openclaw/openclaw-init.mjs, env: NIVO_CFG_OPENCLAW_INIT}
@@ -450,6 +461,7 @@ environments:
           - {name: n8n-data, volume: nivo-engine_n8n-data}
           - {name: openclaw-data, volume: nivo-engine_openclaw-data}
           - {name: redis-data, volume: nivo-engine_redis-data}
+          - {name: ai-router-data, volume: nivo-engine_ai-router-data}
       # The swarm Traefik is the SHARED ingress of VPS 103.142.27.9 (INGRESS-INVENTORY.md): nivo plus the compose tenants, which are
       # reached over the attachable overlay. Tenant route files (academy.yml, tayson.yml) stay in the legacy dynamic directory.
       ingress:
