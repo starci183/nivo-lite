@@ -1851,13 +1851,6 @@ input ChatTargetInput {
   room: String = null @inputBounds(maxLength: 20)
 }
 
-type ChatTypingChannelType {
-  event: String!
-  private: Boolean!
-  topic: String!
-  ttlMs: Int!
-}
-
 type ChatTypingSignalType {
   avatarSeed: String!
   expiresAt: String!
@@ -5933,7 +5926,6 @@ type Query {
   chatAnswerStatus(input: ChatAnswerStatusInput!): ChatReplyProgressType!
   chatMarkerState(input: ChatTargetInput!): ChatMarkerStateType!
   chatReplyStatus(input: ChatReplyStatusInput!): ChatReplyProgressType!
-  chatTypingChannel(input: ChatTypingTargetInput!): ChatTypingChannelType!
   chatbotGaps: ChatbotGapsType!
   chatbotOverview(input: ChatbotOverviewInput!): ChatbotOverviewType!
   chatbotThread(input: ChatbotThreadInput!): ChatbotThreadType!

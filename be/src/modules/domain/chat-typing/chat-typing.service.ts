@@ -5,21 +5,11 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectRealtimeHub } from "@modules/platform/realtime"
 import type { RealtimeHub } from "@modules/platform/realtime"
-import type { ChatTypingChannel, ChatTypingFrame, ChatTypingSignal } from "./chat-typing.contracts"
+import type { ChatTypingFrame, ChatTypingSignal } from "./chat-typing.contracts"
 import { chatTypingTopic } from "./chat-typing.policy"
 
 /** Signals are transient UI hints; a lost stop event must disappear quickly. */
 const TYPING_TTL_MS = 5000
-
-const channelOf = (workspaceId: string, target: ChatTarget): ChatTypingChannel => ({
-    topic:
-        target.conversationId === null
-            ? `chat-typing:${workspaceId.toLowerCase()}:room:${target.room ?? "office"}`
-            : `chat-typing:${workspaceId.toLowerCase()}:conversation:${target.conversationId.toLowerCase()}`,
-    event: "typing",
-    private: true,
-    ttlMs: TYPING_TTL_MS,
-})
 
 @Injectable()
 /** Authorizes chat typing at the same workspace and target boundary as persistent chat markers. */
@@ -29,12 +19,6 @@ export class ChatTypingService {
         @InjectRealtimeHub() private readonly hub: RealtimeHub,
         @InjectClock() private readonly clock: Clock,
     ) {}
-
-    /** Describes the receive-only private channel after checking membership and target existence. */
-    async channel(principalId: string, workspaceId: string, target: ChatTarget): Promise<ChatTypingChannel> {
-        await this.markers.requireTarget(principalId, workspaceId, target)
-        return channelOf(workspaceId, target)
-    }
 
     /** Publishes the admitted member's identity to the typing topic of every other admitted member; the client cannot impersonate another account. */
     async set(
