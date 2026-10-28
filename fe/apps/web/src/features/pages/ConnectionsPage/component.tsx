@@ -1,3 +1,4 @@
+import { ConnectionsFrame } from "@/components/blocks/ConnectionsFrame"
 import { ConnectionWizardOverlay } from "@/features/overlays/ConnectionWizardOverlay"
 import { ConnectionsOverlayHost, ConnectorDetailOverlay } from "@/features/overlays/ConnectorDetailOverlay"
 
@@ -8,15 +9,17 @@ export interface ConnectionsPageBaseProps {
     }
 }
 
-/** Draws the Connections page: the board with the wizard and connector detail drawers over it. */
+/** Draws the Connections page: the frame's `Page` around the board, with the wizard and connector detail drawers inside it. */
 export const ConnectionsPageBase = (props: ConnectionsPageBaseProps) => (
-    <ConnectionsOverlayHost
-        tab={props.props.tab}
-        candidate={
-            <>
-                <ConnectionWizardOverlay />
-                <ConnectorDetailOverlay />
-            </>
-        }
-    />
+    <ConnectionsFrame tab={props.props.tab}>
+        <ConnectionsOverlayHost
+            tab={props.props.tab}
+            candidate={
+                <>
+                    <ConnectionWizardOverlay />
+                    <ConnectorDetailOverlay />
+                </>
+            }
+        />
+    </ConnectionsFrame>
 )

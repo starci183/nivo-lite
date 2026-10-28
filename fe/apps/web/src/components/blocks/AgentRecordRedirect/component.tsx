@@ -1,4 +1,4 @@
-import { SurfaceCard } from "@starci/grammar/common"
+import { Page, SurfaceCard } from "@starci/grammar/common"
 import { WaitingLines } from "@/components/composites/WaitingLines"
 import type { WaitingLine } from "@/components/composites/WaitingLines"
 
@@ -16,7 +16,9 @@ export interface AgentRecordRedirectBaseProps {
 
 /** Draws waiting lines while the instance of an old agent url is found. */
 export const AgentRecordRedirectBase = (props: AgentRecordRedirectBaseProps) => (
-    <SurfaceCard ariaLabel={props.props.label}>
-        <WaitingLines rows={props.props.lines} isSkeleton />
-    </SurfaceCard>
+    <Page isSkeleton measure="reading">
+        <SurfaceCard ariaLabel={props.props.label}>
+            <WaitingLines rows={props.props.lines} isSkeleton />
+        </SurfaceCard>
+    </Page>
 )
