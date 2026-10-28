@@ -94,7 +94,6 @@ export const AutomationsBoardBase = (props: AutomationsBoardBaseProps) => {
     if (notice?.kind === "forbidden")
         return notice.isPage ? (
             <AutomationsForbidden
-                bare
                 title={notice.title}
                 body={notice.body}
                 backLabel={notice.backLabel}

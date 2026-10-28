@@ -8,11 +8,12 @@ import { AUTOMATION_ROUTES } from "@/modules/routes"
 export const AutomationsLoadingPage = async () => {
     const t = await getTranslations("automations")
     return (
-        <AutomationsPageLayout
-            heading={<AutomationsHeading />}
-            board={<AutomationsBoard layout="page" />}
-            advancedLabel={t("advanced")}
-            advancedHref={AUTOMATION_ROUTES.developers}
-        />
+        <AutomationsHeading>
+            <AutomationsPageLayout
+                board={<AutomationsBoard layout="page" />}
+                advancedLabel={t("advanced")}
+                advancedHref={AUTOMATION_ROUTES.developers}
+            />
+        </AutomationsHeading>
     )
 }

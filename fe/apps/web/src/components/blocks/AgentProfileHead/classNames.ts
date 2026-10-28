@@ -1,5 +1,5 @@
-/** The composer card sits under the header, on the page's measure. */
-export const COMPOSER_PAGE_CLASS = "pt-6"
+/** The page body: the composer card while it is open, then the children, one gap apart. */
+export const BODY_CLASS = "flex min-w-0 flex-col gap-6"
 
 /** Blocks inside the composer card. */
 export const COMPOSER_CLASS = "flex min-w-0 flex-col gap-3"

@@ -1,28 +1,22 @@
 import type { ReactNode } from "react"
-import { PageContainer, TextAction } from "@starci/grammar/common"
+import { TextAction } from "@starci/grammar/common"
 import { LINK_ROW_CLASS, PAGE_CLASS } from "./classNames"
 
-/** The regions of the Automations page, each already connected to its data. */
+/** The regions of the Automations page body, each already connected to its data. */
 type AutomationsPageLayoutProps = {
-    readonly heading: ReactNode
     readonly board: ReactNode
     readonly advancedLabel: string
     readonly advancedHref: string
 }
 
-/** The Automations page frame: the page header, then the board and the link to Advanced in one product-width column. */
+/** The Automations page body: the board, then the link to Advanced, in one column. */
 export const AutomationsPageLayout = (props: AutomationsPageLayoutProps) => (
-    <>
-        {props.heading}
-        <PageContainer measure="product">
-            <div className={PAGE_CLASS}>
-                {props.board}
-                <div className={LINK_ROW_CLASS}>
-                    <TextAction href={props.advancedHref} size="sm" appearance="muted">
-                        {props.advancedLabel}
-                    </TextAction>
-                </div>
-            </div>
-        </PageContainer>
-    </>
+    <div className={PAGE_CLASS}>
+        {props.board}
+        <div className={LINK_ROW_CLASS}>
+            <TextAction href={props.advancedHref} size="sm" appearance="muted">
+                {props.advancedLabel}
+            </TextAction>
+        </div>
+    </div>
 )

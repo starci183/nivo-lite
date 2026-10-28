@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import type { ReactNode } from "react"
 import { PROVIDER_LOGO, providerKey } from "@/hooks/connection-providers"
 import { sortRows, statusKey, statusTone, useConnectionOverlays } from "@/hooks/connections"
 import { useDeveloperWebhooks } from "@/hooks/developers"
@@ -8,8 +9,13 @@ import { isManager, useMember } from "@/hooks/member"
 import { useSlotLabels } from "@/hooks/slot"
 import { DevelopersPanelBase } from "./component"
 
-/** The connected "Advanced" page body: the member's role decides page or 403, the outgoing webhooks come from the back end GraphQL API. */
-export const DevelopersPanel = () => {
+/** The sections the page draws under the outgoing events. */
+type DevelopersPanelProps = {
+    readonly children: ReactNode
+}
+
+/** The connected "Advanced" page: the member's role decides page or 403, the outgoing webhooks come from the back end GraphQL API. */
+export const DevelopersPanel = (props: DevelopersPanelProps) => {
     const t = useTranslations("developers")
     const member = useMember()
     const tc = useTranslations("connections")
@@ -18,6 +24,7 @@ export const DevelopersPanel = () => {
     const overlays = useConnectionOverlays()
     return (
         <DevelopersPanelBase
+            shape={{ body: props.children }}
             props={{
                 access: isManager(member) ? { items: true } : { isForbidden: true },
                 webhooks: sortRows(webhooks).map((connection) => ({

@@ -1,19 +1,8 @@
-import {
-    Badge,
-    Button,
-    NumberField,
-    PageContainer,
-    PageHeader,
-    Select,
-    SurfaceCard,
-    Text,
-    Textarea,
-} from "@starci/grammar/common"
+import { Badge, Button, NumberField, Page, Select, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import type { ReactNode } from "react"
 import { AgentMark } from "@/components/leaves/AgentMark"
-import type { DataSlot, SlotLabels } from "@/modules/types"
-import { COMPOSER_CLASS, COMPOSER_FOOT_CLASS, COMPOSER_PAGE_CLASS, TASK_CLASS } from "./classNames"
+import { BODY_CLASS, COMPOSER_CLASS, COMPOSER_FOOT_CLASS, TASK_CLASS } from "./classNames"
 
 /** What the heading shows once the agent arrived, every word resolved. */
 export interface ProfileHeadView {
@@ -34,12 +23,15 @@ export interface ProfileHeadView {
 
 /** Copy and slot of the heading of an agent profile. */
 export interface AgentProfileHeadBaseProps {
+    /** The page body, drawn under the composer. */
+    readonly shape: { readonly body: ReactNode }
     readonly props: {
         readonly crumbLabel: string
         readonly assignLabel: string
-        readonly slot: DataSlot<ProfileHeadView>
-        readonly placeholder: ProfileHeadView
-        readonly slotLabels: SlotLabels
+        /** The heading once the agent arrived, or the placeholder while it has not. */
+        readonly head: ProfileHeadView
+        /** True while the agent is unresolved: the heading draws its measured placeholders. */
+        readonly isSkeleton: boolean
         readonly composer: {
             readonly isOpen: boolean
             readonly label: string
@@ -66,7 +58,6 @@ export interface AgentProfileHeadBaseProps {
         }
     }
     readonly on: {
-        readonly retry: () => void
         readonly toggle: () => void
         readonly change: (text: string) => void
         readonly send: () => void
@@ -76,9 +67,11 @@ export interface AgentProfileHeadBaseProps {
         readonly lead: (leadId: string | null) => void
     }
 }
+/** What the composer and its task fields read: the copy and the commands, not the page body. */
+type ComposerProps = Pick<AgentProfileHeadBaseProps, "props" | "on">
 
 /** The structured work of the request: the action, its amount, the deal value and the customer. */
-const TaskFields = (props: AgentProfileHeadBaseProps) => {
+const TaskFields = (props: ComposerProps) => {
     const view = props.props.composer
     return (
         <div className={TASK_CLASS}>
@@ -119,81 +112,86 @@ const TaskFields = (props: AgentProfileHeadBaseProps) => {
     )
 }
 
-/** Draws the agent profile heading: trail, name and role, the identity chips, the "Giao viec" action and its mini composer. */
+/** Draws the mini composer that hands the agent work, at the top of the page body while it is open. */
+const AssignComposer = (props: ComposerProps) => {
+    const { composer, head } = props.props
+    return (
+        <SurfaceCard label={head.composerTitle} headingLevel={2}>
+            <div className={COMPOSER_CLASS}>
+                <Textarea
+                    id="agent-assign-text"
+                    name="text"
+                    label={composer.label}
+                    placeholder={composer.placeholder}
+                    value={composer.text}
+                    rows={3}
+                    maxLength={composer.maxLength}
+                    isDisabled={composer.isPending}
+                    onValueChange={props.on.change}
+                    onSubmitShortcut={props.on.send}
+                />
+                <TaskFields {...props} />
+                <div className={COMPOSER_FOOT_CLASS}>
+                    <Badge tone="accent">{head.mention}</Badge>
+                    <Text size="sm" tone="muted">
+                        {composer.hint}
+                    </Text>
+                    <Button
+                        intent="commit"
+                        isPending={composer.isPending}
+                        isDisabled={!composer.canSend}
+                        onPress={props.on.send}
+                    >
+                        {composer.sendLabel}
+                    </Button>
+                </div>
+            </div>
+        </SurfaceCard>
+    )
+}
+
+/** Draws the agent profile as one Page: trail, name and role, the identity chips and the "Giao viec" action in its header; the mini composer and the page body inside it. */
 export const AgentProfileHeadBase = (props: AgentProfileHeadBaseProps) => {
     const view = props.props
+    const { head, isSkeleton } = view
     return (
-        <SlotView slot={view.slot} placeholder={view.placeholder} labels={view.slotLabels} onRetry={props.on.retry}>
-            {(head, isSkeleton) => (
-                <>
-                    <PageHeader
-                        measure="product"
+        <Page
+            measure="product"
+            isSkeleton={isSkeleton}
+            header={{
+                breadcrumbs: { label: view.crumbLabel, items: head.crumbs },
+                title: head.title,
+                description: head.description,
+                mark: (
+                    <AgentMark
+                        label={head.title}
+                        seed={head.seed}
+                        src={head.picture}
+                        size="lg"
                         isSkeleton={isSkeleton}
-                        breadcrumbs={{ label: view.crumbLabel, items: head.crumbs }}
-                        title={head.title}
-                        description={head.description}
-                        mark={
-                            <AgentMark
-                                label={head.title}
-                                seed={head.seed}
-                                src={head.picture}
-                                size="lg"
-                                isSkeleton={isSkeleton}
-                            />
-                        }
-                        status={head.chips.map((chip) => (
-                            <Badge key={chip.id} tone={chip.tone} isSkeleton={isSkeleton}>
-                                {chip.label}
-                            </Badge>
-                        ))}
-                        actions={
-                            <Button
-                                intent="alternative"
-                                isSkeleton={isSkeleton}
-                                isDisabled={!head.canAssign}
-                                onPress={props.on.toggle}
-                            >
-                                {view.assignLabel}
-                            </Button>
-                        }
                     />
-                    {view.composer.isOpen ? (
-                        <PageContainer measure="product" className={COMPOSER_PAGE_CLASS}>
-                            <SurfaceCard label={head.composerTitle} headingLevel={2}>
-                                <div className={COMPOSER_CLASS}>
-                                    <Textarea
-                                        id="agent-assign-text"
-                                        name="text"
-                                        label={view.composer.label}
-                                        placeholder={view.composer.placeholder}
-                                        value={view.composer.text}
-                                        rows={3}
-                                        maxLength={view.composer.maxLength}
-                                        isDisabled={view.composer.isPending}
-                                        onValueChange={props.on.change}
-                                        onSubmitShortcut={props.on.send}
-                                    />
-                                    <TaskFields {...props} />
-                                    <div className={COMPOSER_FOOT_CLASS}>
-                                        <Badge tone="accent">{head.mention}</Badge>
-                                        <Text size="sm" tone="muted">
-                                            {view.composer.hint}
-                                        </Text>
-                                        <Button
-                                            intent="commit"
-                                            isPending={view.composer.isPending}
-                                            isDisabled={!view.composer.canSend}
-                                            onPress={props.on.send}
-                                        >
-                                            {view.composer.sendLabel}
-                                        </Button>
-                                    </div>
-                                </div>
-                            </SurfaceCard>
-                        </PageContainer>
-                    ) : null}
-                </>
-            )}
-        </SlotView>
+                ),
+                status: head.chips.map((chip) => (
+                    <Badge key={chip.id} tone={chip.tone} isSkeleton={isSkeleton}>
+                        {chip.label}
+                    </Badge>
+                )),
+                actions: (
+                    <Button
+                        intent="alternative"
+                        isSkeleton={isSkeleton}
+                        isDisabled={!head.canAssign}
+                        onPress={props.on.toggle}
+                    >
+                        {view.assignLabel}
+                    </Button>
+                ),
+            }}
+        >
+            <div className={BODY_CLASS}>
+                {view.composer.isOpen ? <AssignComposer {...props} /> : null}
+                {props.shape.body}
+            </div>
+        </Page>
     )
 }
