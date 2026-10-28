@@ -1,4 +1,4 @@
-import { Button, Divider, EmptyNotice, PageContainer, PageHeader, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, Divider, EmptyNotice, Page, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { ThreadChainPanel } from "@/components/composites/ThreadChainPanel"
 import { ThreadComposer } from "@/components/composites/ThreadComposer"
@@ -163,25 +163,24 @@ const NoThread = (props: NoThreadProps) => (
 
 /** Draws the work threads board: the threads on the left, the open thread in the middle, the execution chain on the right. */
 export const WorkThreadBoardBase = (props: WorkThreadBoardBaseProps) => (
-    <>
-        <PageHeader
-            measure="product"
-            breadcrumbs={{ label: props.props.crumbLabel, items: props.props.crumbs }}
-            title={props.props.title}
-            description={props.props.subtitle}
-        />
-        <PageContainer measure="product">
-            <div className={PAGE_CLASS_NAME}>
-                <div className={PANELS_CLASS_NAME}>
-                    <Rail {...props} />
-                    {props.props.thread.hasThread ? (
-                        <Thread {...props} />
-                    ) : (
-                        <NoThread title={props.props.title} message={props.props.thread.noSelection} />
-                    )}
-                    <Chain {...props} />
-                </div>
+    <Page
+        measure="product"
+        header={{
+            breadcrumbs: { label: props.props.crumbLabel, items: props.props.crumbs },
+            title: props.props.title,
+            description: props.props.subtitle,
+        }}
+    >
+        <div className={PAGE_CLASS_NAME}>
+            <div className={PANELS_CLASS_NAME}>
+                <Rail {...props} />
+                {props.props.thread.hasThread ? (
+                    <Thread {...props} />
+                ) : (
+                    <NoThread title={props.props.title} message={props.props.thread.noSelection} />
+                )}
+                <Chain {...props} />
             </div>
-        </PageContainer>
-    </>
+        </div>
+    </Page>
 )
