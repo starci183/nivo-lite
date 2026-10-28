@@ -1,3 +1,4 @@
+export type { CatalogEntry } from "./connection-catalog.shared"
 export {
     AUDIENCES,
     CATALOG,
@@ -9,4 +10,11 @@ export {
     searchWords,
 } from "./connection-catalog.shared"
 
-export { asCategory, asAudience, catalogBadgeOf, connectionCountsOf, actionOf } from "./connection-catalog.shared"
+export {
+    asCategory,
+    asAudience,
+    audienceLineOf,
+    catalogBadgeOf,
+    checkProvidersOf,
+    connectionCountsOf,
+} from "./connection-catalog.shared"

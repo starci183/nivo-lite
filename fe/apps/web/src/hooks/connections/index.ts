@@ -2,6 +2,7 @@ export {
     attentionConnections,
     boardSlotOf,
     connectionGroups,
+    connectionPageHref,
     CONNECTION_ROUTES,
     isLocalOnly,
     liveConnections,

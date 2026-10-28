@@ -1,4 +1,4 @@
-import { Breadcrumbs, SectionHeader } from "@starci/grammar/common"
+import { Breadcrumbs, Button, SectionHeader } from "@starci/grammar/common"
 import { connectionsHeadClassNames } from "./classNames"
 
 /** The words of the Connections heading, resolved by the page. */
@@ -9,6 +9,9 @@ type ConnectionsHeadProps = {
     readonly homeHref: string
     readonly title: string
     readonly description: string
+    /** The primary command: opens the library, where a connector is chosen and its wizard opens. */
+    readonly addLabel: string
+    readonly addHref: string
     /** The summary line; absent while the page loads (STATE-8: heading and trail are real, figures are not). */
     readonly meta?: string
 }
@@ -27,6 +30,11 @@ export const ConnectionsHead = (props: ConnectionsHeadProps) => (
             level={1}
             title={props.title}
             description={props.description}
+            action={
+                <Button intent="commit" href={props.addHref}>
+                    {props.addLabel}
+                </Button>
+            }
             {...(props.meta === undefined ? {} : { meta: props.meta })}
         />
     </div>

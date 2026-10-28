@@ -54,6 +54,15 @@ export const CONNECTION_ROUTES = {
     connections: "/connections",
 } as const
 
+/** The URL segment of the providers that have a page of their own: `/connections/<segment>/<connection id>`. */
+const PAGE_SEGMENT: Readonly<Partial<Record<Provider, string>>> = { sepay: "sepay", zalo_oa: "zalo" }
+
+/** The page of one connection when its provider has one (SePay, Zalo OA), else null: the row then opens the detail drawer. */
+export const connectionPageHref = (connection: Pick<Connection, "id" | "provider">): string | null => {
+    const segment = PAGE_SEGMENT[connection.provider]
+    return segment === undefined ? null : `${CONNECTION_ROUTES.connections}/${segment}/${connection.id}`
+}
+
 /** The search params the console uses to remember which overlay is open. */
 export const URL_PARAMS = { connect: "connect", connection: "conn", detail: "detail", tab: "tab" } as const
 

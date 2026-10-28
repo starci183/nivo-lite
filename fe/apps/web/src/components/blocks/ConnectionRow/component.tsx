@@ -157,6 +157,11 @@ export const ConnectionRowBase = (props: ConnectionRowBaseProps) => {
                             {primary.label}
                         </Button>
                     )}
+                    {view.page === null ? null : (
+                        <Button intent="neutral" href={view.page.href}>
+                            {view.page.label}
+                        </Button>
+                    )}
                     {view.access === null ? null : <ConnectionAccessMenu {...view.access} onPick={on.pick} />}
                     {entries.length === 0 ? null : (
                         <DropdownMenu
