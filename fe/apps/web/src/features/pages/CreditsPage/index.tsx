@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
-import { CreditsHistorySkeleton } from "@/components/blocks/CreditsHistory"
-import { CreditsOverviewSkeleton } from "@/components/blocks/CreditsOverview"
 import { creditsContactHref } from "@/modules/config"
-import { CreditsPageBase } from "./component"
+import { pageHeadingOf } from "@/modules/page-header"
+import { APP_ROUTES } from "@/modules/routes"
+import { CreditsLoadingPageBase, CreditsPageBase } from "./component"
 
 /** The document title of the page. */
 export const creditsMetadata = async (): Promise<Metadata> => {
@@ -11,13 +11,27 @@ export const creditsMetadata = async (): Promise<Metadata> => {
     return { title: t("title") }
 }
 
-/** Credits and plan; its connected block reads workspace data in the browser. */
-export const CreditsPage = () => <CreditsPageBase props={{ contactHref: creditsContactHref() }} />
+/** The words of the header band, resolved on the server so the page and its loading state say the same. */
+const creditsHeader = async () => {
+    const t = await getTranslations("credits")
+    return {
+        header: pageHeadingOf({
+            crumbLabel: t("crumbLabel"),
+            crumbs: [
+                { id: "home", label: t("crumbHome"), href: APP_ROUTES.dashboard },
+                { id: "credits", label: t("title") },
+            ],
+            title: t("title"),
+            description: t("description"),
+        }),
+        historyLabel: t("historyAction"),
+    }
+}
 
-/** The same static frame and slot placeholders during route loading. */
-export const CreditsLoadingPage = () => (
-    <>
-        <CreditsOverviewSkeleton />
-        <CreditsHistorySkeleton />
-    </>
+/** Credits and plan; its connected block reads workspace data in the browser. */
+export const CreditsPage = async () => (
+    <CreditsPageBase props={{ ...(await creditsHeader()), contactHref: creditsContactHref() }} />
 )
+
+/** The same Page and slot placeholders during route loading. */
+export const CreditsLoadingPage = async () => <CreditsLoadingPageBase props={await creditsHeader()} />
