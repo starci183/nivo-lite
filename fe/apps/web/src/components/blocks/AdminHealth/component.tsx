@@ -1,4 +1,4 @@
-import { SectionHeader } from "@starci/grammar/common"
+import { PageHeader } from "@starci/grammar/common"
 import { AdminRowsCard } from "@/components/composites/AdminRowsCard"
 import { GRID_CLASS_NAME } from "./classNames"
 import { SlotView } from "@/components/composites/SlotView"
@@ -20,9 +20,9 @@ type AdminHealthDrawProps = AdminHealthViewProps & { readonly isSkeleton: boolea
 /** Draws the platform health page: sign-ups, billing, application errors and console activity as list cards. */
 const AdminHealthView = (props: AdminHealthDrawProps) => (
     <>
-        <SectionHeader
-            level={1}
-            eyebrow={props.props.eyebrow}
+        <PageHeader
+            measure="full"
+            meta={props.props.eyebrow}
             title={props.props.title}
             description={props.props.description}
             isSkeleton={props.isSkeleton}

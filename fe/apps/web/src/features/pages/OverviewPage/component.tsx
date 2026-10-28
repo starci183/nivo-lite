@@ -11,26 +11,28 @@ import { PAGE_CLASS_NAME, PAGE_INSET_CLASS_NAME, RAIL_CLASS_NAME } from "./class
 
 /** P01 Overview: what needs you first, one next action, real counts, open work, agents and recent activity. Each region reads its own data. */
 export const OverviewPageBase = () => (
-    <PageContainer measure="product">
-        <div className={PAGE_INSET_CLASS_NAME}>
-            <div className={PAGE_CLASS_NAME}>
-                <OverviewHeader />
-                <OverviewStatus />
-                <OverviewGovernance />
-                <OverviewKpiBand />
-                <PrimaryRailLayout
-                    railWidth="standard"
-                    align="start"
-                    primary={<OverviewOwners />}
-                    rail={
-                        <div className={RAIL_CLASS_NAME}>
-                            <OnboardingChecklist />
-                            <OverviewRail />
-                        </div>
-                    }
-                />
-                <FoundingOffer variant="hero" />
+    <>
+        <OverviewHeader />
+        <PageContainer measure="product">
+            <div className={PAGE_INSET_CLASS_NAME}>
+                <div className={PAGE_CLASS_NAME}>
+                    <OverviewStatus />
+                    <OverviewGovernance />
+                    <OverviewKpiBand />
+                    <PrimaryRailLayout
+                        railWidth="standard"
+                        align="start"
+                        primary={<OverviewOwners />}
+                        rail={
+                            <div className={RAIL_CLASS_NAME}>
+                                <OnboardingChecklist />
+                                <OverviewRail />
+                            </div>
+                        }
+                    />
+                    <FoundingOffer variant="hero" />
+                </div>
             </div>
-        </div>
-    </PageContainer>
+        </PageContainer>
+    </>
 )

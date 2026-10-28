@@ -1,4 +1,4 @@
-import { Alert, Button, Heading, Image, SectionHeader, Stepper, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Button, Heading, Image, PageHeader, Stepper, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { APP_ROUTES } from "@/modules/routes"
 import type { DataSlot, SlotLabels } from "@/modules/types"
@@ -73,11 +73,11 @@ const Welcome = (props: WelcomeProps) => (
 /** Draws the workspaces overview: the header, the way to create one, and the first-run welcome when there is none. */
 export const WorkspacesOverviewBase = (props: WorkspacesOverviewBaseProps) => (
     <div className={STACK_CLASS_NAME}>
-        <SectionHeader
-            level={1}
+        <PageHeader
+            measure="product"
             title={props.props.title}
             description={props.props.description}
-            action={
+            actions={
                 props.props.canCreate ? (
                     <Button intent="commit" href={APP_ROUTES.workspaceNew}>
                         {props.props.createLabel}

@@ -1,28 +1,44 @@
-import { Button, SectionHeader } from "@starci/grammar/common"
+import { Button, PageHeader } from "@starci/grammar/common"
 import { ACTIONS_CLASS_NAME } from "./classNames"
 
 /** The words and links of the overview heading. */
-interface OverviewHeaderBaseProps {
-    readonly props: {
-        readonly eyebrow: string
-        readonly title: string
-        readonly description: string
-        readonly openOfficeLabel: string
-        readonly openOfficeHref: string
-        readonly newLeadLabel: string
-        readonly newLeadHref: string
-        readonly newLeadIsPrimary: boolean
-    }
+export interface OverviewHeaderView {
+    readonly eyebrow: string
+    readonly title: string
+    readonly description: string
+    readonly openOfficeLabel: string
+    readonly openOfficeHref: string
+    readonly newLeadLabel: string
+    readonly newLeadHref: string
+    readonly newLeadIsPrimary: boolean
 }
 
-/** The overview heading with its two actions: open the Office, and add a lead (the primary one when nothing waits for the owner). */
+/** What the heading draws while the dashboard is read: the same shape, as inert geometry. */
+export const OVERVIEW_HEADER_PLACEHOLDER: OverviewHeaderView = {
+    eyebrow: "-",
+    title: "-",
+    description: "-",
+    openOfficeLabel: "-",
+    openOfficeHref: "",
+    newLeadLabel: "-",
+    newLeadHref: "",
+    newLeadIsPrimary: false,
+}
+
+/** The heading and whether its words are still placeholders. */
+interface OverviewHeaderBaseProps {
+    readonly props: OverviewHeaderView & { readonly isSkeleton: boolean }
+}
+
+/** The overview page head with its two actions: open the Office, and add a lead (the primary one when nothing waits for the owner). */
 export const OverviewHeaderBase = (props: OverviewHeaderBaseProps) => (
-    <SectionHeader
-        level={1}
-        eyebrow={props.props.eyebrow}
+    <PageHeader
+        measure="product"
         title={props.props.title}
+        meta={props.props.eyebrow}
         description={props.props.description}
-        action={
+        isSkeleton={props.props.isSkeleton}
+        actions={
             <div className={ACTIONS_CLASS_NAME}>
                 <Button intent="neutral" href={props.props.openOfficeHref}>
                     {props.props.openOfficeLabel}

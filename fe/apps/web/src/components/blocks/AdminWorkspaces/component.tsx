@@ -7,6 +7,7 @@ import {
     Input,
     List,
     ListItem,
+    PageHeader,
     Region,
     SectionHeader,
     Text,
@@ -98,9 +99,9 @@ const AdminWorkspacesView = (props: AdminWorkspacesDrawProps) => {
 
     return (
         <>
-            <SectionHeader
-                level={1}
-                eyebrow={props.props.eyebrow}
+            <PageHeader
+                measure="full"
+                meta={props.props.eyebrow}
                 title={props.props.title}
                 description={props.props.description}
                 isSkeleton={props.isSkeleton}
