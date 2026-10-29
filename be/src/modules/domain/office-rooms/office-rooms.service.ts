@@ -8,12 +8,18 @@ import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/da
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { OfficeRoomsError, OfficeRoomsErrorCode } from "./errors/office-rooms.error"
-import type { AgentConversationView, ConversationUnreadListView, RoomChoice, RoomView } from "./office-rooms.contracts"
+import type {
+    AgentConversationFacts,
+    AgentConversationView,
+    ConversationUnreadFacts,
+    ConversationUnreadListView,
+    RoomChoice,
+    RoomView,
+} from "./office-rooms.contracts"
 import { InjectRoomsAgents, InjectRoomsLeads } from "./office-rooms.decorators"
 import type { RoomsAgents, RoomsLeads } from "./office-rooms.port"
 import { OfficeRoomMembersService } from "./office-room-members.service"
 import { OfficeRoomReadsService } from "./office-room-reads.service"
-import type { AgentConversationFacts, ConversationUnreadFacts } from "./office-rooms.facts"
 
 /** Only owners and managers open the department rooms of a workspace. */
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
