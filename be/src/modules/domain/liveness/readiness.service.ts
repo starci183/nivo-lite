@@ -23,7 +23,7 @@ const release = (cancels: ReadonlyArray<() => void>): void => {
 }
 
 @Injectable()
-/** Checks the primary database and jobs together before the API accepts traffic. */
+/** Checks the primary database through the jobs statistics function before the API accepts traffic. */
 export class ReadinessService {
     /** Captures the primary connection and logger without probing dependencies at construction. */
     constructor(
@@ -45,16 +45,8 @@ export class ReadinessService {
             )
         })
         try {
-            const [, rows] = await Promise.race([
-                Promise.all([
-                    this.entityManager
-                        .createQueryBuilder()
-                        .select("1", "ready")
-                        .from("information_schema.schemata", "s")
-                        .limit(1)
-                        .getRawOne<{ ready: number }>(),
-                    callDbFunction<ReadinessJobsRow>(this.entityManager, "public.job_stats", []),
-                ]),
+            const rows = await Promise.race([
+                callDbFunction<ReadinessJobsRow>(this.entityManager, "public.job_stats", []),
                 deadline,
             ])
             if (rows[0]?.job_stats?.checkedAt == null) {

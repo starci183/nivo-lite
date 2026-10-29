@@ -1,8 +1,8 @@
-import type { BookingExceptionEntity } from "@modules/domain/booking-exceptions"
-import type { BookingHourEntity } from "@modules/domain/booking-hours"
-import type { BookingResourceEntity } from "@modules/domain/booking-resources"
-import type { BookingServiceEntity } from "@modules/domain/booking-services"
-import type { BookingSettingEntity } from "@modules/domain/booking-settings"
+import type { BookingExceptionRecord } from "@modules/domain/booking-exceptions"
+import type { BookingHourRecord } from "@modules/domain/booking-hours"
+import type { BookingResourceRecord } from "@modules/domain/booking-resources"
+import type { BookingServiceRecord } from "@modules/domain/booking-services"
+import type { BookingSettingRecord } from "@modules/domain/booking-settings"
 import type {
     BookingBoardEntry,
     BookingBoardException,
@@ -31,7 +31,7 @@ const minutesOf = (clock: string): number => Number(clock.slice(0, 2)) * MINUTES
 export const amountOf = (value: string | null): number | null => (value === null ? null : Number(value))
 
 /** The settings a row holds. */
-export const toSettings = (entity: BookingSettingEntity): BookingSettings => ({
+export const toSettings = (entity: BookingSettingRecord): BookingSettings => ({
     timezone: entity.timezone,
     slotStepMin: entity.slotStepMin,
     minLeadMin: entity.minLeadMin,
@@ -50,7 +50,7 @@ export const toSettings = (entity: BookingSettingEntity): BookingSettings => ({
 })
 
 /** The service the owner sees. */
-export const toBookable = (entity: BookingServiceEntity): BookableService => ({
+export const toBookable = (entity: BookingServiceRecord): BookableService => ({
     id: entity.id,
     name: entity.name,
     description: entity.description,
@@ -62,7 +62,7 @@ export const toBookable = (entity: BookingServiceEntity): BookableService => ({
 })
 
 /** The resource as the planner sees it. */
-export const toResource = (entity: BookingResourceEntity): BookingResource => ({
+export const toResource = (entity: BookingResourceRecord): BookingResource => ({
     id: entity.id,
     name: entity.name,
     kind: entity.kind,
@@ -72,7 +72,7 @@ export const toResource = (entity: BookingResourceEntity): BookingResource => ({
 })
 
 /** The weekly window as the planner sees it. */
-export const toWeeklyHours = (entity: BookingHourEntity): WeeklyHours => ({
+export const toWeeklyHours = (entity: BookingHourRecord): WeeklyHours => ({
     resourceId: entity.resourceId,
     weekday: entity.weekday,
     start: hhmmOf(entity.startTime),
@@ -80,7 +80,7 @@ export const toWeeklyHours = (entity: BookingHourEntity): WeeklyHours => ({
 })
 
 /** The exception as the planner sees it. */
-export const toDateException = (entity: BookingExceptionEntity): DateException => ({
+export const toDateException = (entity: BookingExceptionRecord): DateException => ({
     resourceId: entity.resourceId,
     date: entity.onDate,
     closed: entity.closed,
@@ -116,20 +116,20 @@ export const toFigureRow = (entity: BookingEntity): FigureRow => ({
 })
 
 /** The owner-visible service, including the follow-up rule. */
-export const toBoardService = (entity: BookingServiceEntity): BookingBoardServiceItem => ({
+export const toBoardService = (entity: BookingServiceRecord): BookingBoardServiceItem => ({
     ...toBookable(entity),
     followupDays: entity.followupDays,
 })
 
 /** The owner-visible resource, including its display colour and staff link. */
-export const toBoardResource = (entity: BookingResourceEntity): BookingBoardResource => ({
+export const toBoardResource = (entity: BookingResourceRecord): BookingBoardResource => ({
     ...toResource(entity),
     color: entity.color,
     staffId: entity.staffId,
 })
 
 /** The editable exception, including its stable id and note. */
-export const toBoardException = (entity: BookingExceptionEntity): BookingBoardException => ({
+export const toBoardException = (entity: BookingExceptionRecord): BookingBoardException => ({
     ...toDateException(entity),
     id: entity.id,
     note: entity.note,

@@ -67,6 +67,8 @@ export interface GapReturned extends Omit<GapFields, "keywords" | "status"> {
 /** The gap fields of a row a write answered and `isGapReturned` proved. */
 export const toGapFields = (row: GapReturned): GapFields => ({
     ...row,
-    keywords: Array.isArray(row.keywords) ? row.keywords.filter((word): word is string => typeof word === "string") : [],
+    keywords: Array.isArray(row.keywords)
+        ? row.keywords.filter((word): word is string => typeof word === "string")
+        : [],
     status: statusOf(row.status),
 })

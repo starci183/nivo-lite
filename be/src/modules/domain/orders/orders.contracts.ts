@@ -121,7 +121,7 @@ export interface SalesOrderListRow extends SalesOrderRow {
 }
 
 /** An order reduced to what a message may name: its number and its customer. */
-export interface OrderRef {
+export interface OrderNameRef {
     /** The order id. */
     readonly id: string
     /** The order number. */

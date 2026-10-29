@@ -124,8 +124,7 @@ describe("BookingRemindersService cardOf", () => {
         await expect(reminders.cardOf("ws-1")).resolves.toEqual({ hours: [], body: null })
     })
 
-    it.each([null, "", " 
-	 "])("returns no wording for a blank body %j", async (body) => {
+    it.each([null, "", " \n\t "])("returns no wording for a blank body %j", async (body) => {
         const reminders = await build(mockEntityManager(), cardOf(null, body))
 
         await expect(reminders.cardOf("ws-1")).resolves.toEqual({ hours: [], body: null })

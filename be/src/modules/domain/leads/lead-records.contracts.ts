@@ -1,5 +1,5 @@
 /** A lead, or null when the workspace has no such lead. */
-export type OptionalLeadRecord = LeadRecord | null
+export type OptionalLeadRecord = LeadRecordRow | null
 
 /** Nonempty public API facts to patch on an existing customer inside its request transaction. */
 export interface PublicLeadFactsPatch {
@@ -58,7 +58,7 @@ export interface LeadClassification {
 }
 
 /** Who a lead is by name, for the labels of invoices and payments that point at it. */
-export interface LeadName {
+export interface LeadLabel {
     /** The lead id. */
     readonly id: string
     /** The customer's name. */
@@ -78,7 +78,7 @@ export interface ContactFill {
 }
 
 /** public.leads as the lead records read it. */
-export interface LeadRecord {
+export interface LeadRecordRow {
     /** The lead id. */
     readonly id: string
     /** The workspace. */
@@ -100,3 +100,6 @@ export interface LeadRecord {
     /** The email, or null. */
     readonly email: string | null
 }
+
+/** The installation that owns a lead, or null when it names none. */
+export type OptionalInstallationId = string | null
