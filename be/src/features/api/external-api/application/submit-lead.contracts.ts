@@ -1,4 +1,4 @@
-import type { LeadStage } from "@modules/domain/public-api"
+import type { PublicLeadStage } from "@modules/domain/public-api"
 
 /** What handing over a customer takes, as the caller sent it. */
 export interface SubmitLeadRequest {
@@ -21,7 +21,7 @@ export interface SubmitLeadRequest {
     /** A note for the customer's history. */
     readonly note?: string | undefined
     /** The stage the caller asks for; an empty string means none. */
-    readonly stage?: LeadStage | "" | undefined
+    readonly stage?: PublicLeadStage | "" | undefined
 }
 
 /** What handing over a customer answers: queued, or unchanged for a repeated external id. */

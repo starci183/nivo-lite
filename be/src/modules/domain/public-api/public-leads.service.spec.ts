@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import type { MockEntityManager, RecordingQueueOutbox } from "@starci/jest-preset"
-import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
-import { ledgerExpected, ledgerWritten } from "@tests/fixtures/builders/public-api-ledger.builder"
+import { answerQueryBuilders } from "@tests/fixtures/builders/fake-query-builder.builder"
+import { ledgerAnswers, ledgerExpected, ledgerWritten } from "@tests/fixtures/builders/public-api-ledger.builder"
 import { ApiKeysService } from "@modules/domain/api-keys"
 import { LeadReadService, LeadRecordsService } from "@modules/domain/leads"
 import type { LeadRecord } from "@modules/domain/leads"
@@ -90,10 +90,11 @@ const INSERT_REQUEST = "insert"
 /** A transaction whose one query builder is the ledger insert, with the customer the lead records will match (if any). */
 const transactionOf = (...stubs: ReadonlyArray<readonly [string, ReadonlyArray<object>]>) => {
     const [, found] = stubs.find(([tag]) => tag !== INSERT_REQUEST) ?? ["", []]
-    const matched = found[0] === undefined ? null : recordOf((found[0] as { id: string }).id)
-    const write = fakeQueryBuilder({ execute: { raw: stubs.find(([tag]) => tag === INSERT_REQUEST)?.[1] ?? [] } })
+    const [first] = found
+    const matched = first !== undefined && "id" in first && typeof first.id === "string" ? recordOf(first.id) : null
+    const { write, builders } = ledgerAnswers(stubs.find(([tag]) => tag === INSERT_REQUEST)?.[1] ?? [])
     const em = mockEntityManager()
-    answerQueryBuilders(em, write)
+    answerQueryBuilders(em, ...builders)
     return Object.assign(fakeTransaction(em), { matched, write })
 }
 

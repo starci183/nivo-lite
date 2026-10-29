@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
-import { ledgerExpected, ledgerWritten } from "@tests/fixtures/builders/public-api-ledger.builder"
+import { ledgerAnswers, ledgerExpected, ledgerWritten } from "@tests/fixtures/builders/public-api-ledger.builder"
 import { PublicApiEntity } from "./persistence/entities"
 import { PublicApiLedgerService } from "./public-api-ledger.service"
 
@@ -46,10 +46,8 @@ describe("PublicApiLedgerService / record", () => {
 
     it("answers the row of an earlier identical request as not inserted", async () => {
         const em = mockEntityManager()
-        answerQueryBuilders(
-            em,
-            fakeQueryBuilder({ execute: { raw: [{ id: REQUEST, lead_id: "lead-2", inserted: false }] } }),
-        )
+        const repeat = ledgerAnswers([{ id: REQUEST, lead_id: "lead-2", inserted: false }])
+        answerQueryBuilders(em, ...repeat.builders)
 
         await expect((await build()).record(RECORD, em)).resolves.toEqual({
             id: REQUEST,
@@ -61,7 +59,7 @@ describe("PublicApiLedgerService / record", () => {
     it("stores an absent need presence as null and answers nothing when the insert returns no row", async () => {
         const em = mockEntityManager()
         const write = fakeQueryBuilder({ execute: { raw: [] } })
-        answerQueryBuilders(em, write)
+        answerQueryBuilders(em, write, fakeQueryBuilder({ execute: { raw: [] } }))
 
         const { workspaceId, keyId, kind, prefix, suffix, body } = RECORD
         await expect(
@@ -69,6 +67,18 @@ describe("PublicApiLedgerService / record", () => {
         ).resolves.toBeUndefined()
 
         expect(write.argsOf("values")[0]?.[0]).toMatchObject({ needSupplied: null })
+    })
+
+    it("counts the repeat against the dedupe key of the prefix and the suffix", async () => {
+        const em = mockEntityManager()
+        const repeat = ledgerAnswers([{ id: REQUEST, lead_id: null, inserted: false }])
+        answerQueryBuilders(em, ...repeat.builders)
+
+        await (await build()).record(RECORD, em)
+
+        const [, count] = repeat.builders
+        expect(count?.argsOf("where")).toEqual([[{ workspaceId: WORKSPACE, dedupeKey: "lead:key-1:crm-9" }]])
+        expect(evaluatedValues(count?.argsOf("set")[0]?.[0])).toEqual({ duplicates: "duplicates + 1" })
     })
 })
 
