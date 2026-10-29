@@ -88,7 +88,13 @@ export const turnConversation = (): AgentConversationEntity =>
     conversationOf({ leadId: "lead-1", handledBy: "Lan", installationId: "inst-1" })
 
 /** A customer conversation of agent a-1 as the conversation read specs see it, without a lead. */
-export const chatOf = builder<AgentConversationEntity>({ id: "c-1", agentId: "a-1", kind: "customer", leadId: null })
+export const chatOf = builder<AgentConversationEntity>({
+    ...conversationOf(),
+    id: "c-1",
+    agentId: "a-1",
+    kind: "customer",
+    leadId: null,
+})
 
 /** An owner's test chat of agent a-1. */
 export const testChatOf = (): AgentConversationEntity => chatOf({ kind: "test" })
