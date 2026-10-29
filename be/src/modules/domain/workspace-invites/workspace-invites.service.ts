@@ -14,7 +14,8 @@ import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/da
 import { unwrapOutcome } from "@modules/platform/primitives"
 import { WorkspaceInvitesError, WorkspaceInvitesErrorCode } from "./errors/workspace-invites.error"
 import { isEmailAddress, judgeInvite, normaliseEmail } from "./invite.policy"
-import { hashInviteToken } from "./invite-token.policy"
+import { firstChangedInvite } from "./changed-invite.policy"
+import { hashInviteToken, mintedTokenOf, uuidOfRow } from "./invite-token.policy"
 import { WorkspaceInviteEntity } from "./persistence/entities"
 import type {
     AcceptedInvite,
@@ -24,8 +25,8 @@ import type {
     InvitePreview,
     InviteRequest,
     InviteResult,
-    InviteState,
     MintedToken,
+    InviteState,
     PendingInvite,
 } from "./workspace-invites.contracts"
 import type { WorkspaceInvitesOptions } from "./workspace-invites.options"
@@ -174,7 +175,7 @@ export class WorkspaceInvitesService {
             })
             .returning("id, email, role")
             .execute()
-        const [revoked] = result.raw as Array<ChangedInvite>
+        const revoked = firstChangedInvite(result.raw)
         if (revoked === undefined) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.NotFound })
         await this.events.record({
             workspaceId,
@@ -297,6 +298,16 @@ export class WorkspaceInvitesService {
         }
     }
 
+    private async mintToken(): Promise<MintedToken> {
+        const [first, second] = await Promise.all([this.uuid(), this.uuid()])
+        return mintedTokenOf(first, second)
+    }
+
+    private async uuid(): Promise<string> {
+        const [row] = await callDbFunction<{ gen_random_uuid: string }>(this.entityManager, "gen_random_uuid", [])
+        return uuidOfRow(row)
+    }
+
     private findByToken(token: string): Promise<WorkspaceInviteEntity | null> {
         return this.entityManager.findOne(WorkspaceInviteEntity, { where: { tokenHash: hashInviteToken(token) } })
     }
@@ -313,21 +324,9 @@ export class WorkspaceInvitesService {
             })
             .returning("id, email, role")
             .execute()
-        const [invite] = result.raw as Array<ChangedInvite>
+        const invite = firstChangedInvite(result.raw)
         if (invite === undefined) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.NotFound })
         return { invite, token: minted.token }
-    }
-
-    /** Mints an invitation token from two random uuids of the database (its strong random source), dashes removed; only its hash is ever stored. */
-    private async mintToken(): Promise<MintedToken> {
-        const [first, second] = await Promise.all([this.uuid(), this.uuid()])
-        return { token: `${first}${second}`.replaceAll("-", "") }
-    }
-
-    private async uuid(): Promise<string> {
-        const [row] = await callDbFunction<{ gen_random_uuid: string }>(this.entityManager, "gen_random_uuid", [])
-        if (row === undefined) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.TokenUnavailable })
-        return row.gen_random_uuid
     }
 }
 

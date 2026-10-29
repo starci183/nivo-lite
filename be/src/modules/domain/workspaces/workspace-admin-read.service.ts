@@ -50,6 +50,9 @@ const toRow = (row: WorkspaceEntity): WorkspaceAdminRow => ({
     createdAt: row.createdAt,
 })
 
+/** A workspace of the platform console, or undefined when there is none. */
+export type OptionalWorkspaceAdminRow = WorkspaceAdminRow | undefined
+
 @Injectable()
 /** Workspace reads for the platform team console, which spans every workspace and so is scoped by nothing but a bound. */
 export class WorkspaceAdminReadService {
@@ -66,7 +69,7 @@ export class WorkspaceAdminReadService {
     }
 
     /** One workspace by id; undefined when it does not exist. */
-    async find(workspaceId: string): Promise<WorkspaceAdminRow | undefined> {
+    async find(workspaceId: string): Promise<OptionalWorkspaceAdminRow> {
         const row = await this.entityManager.findOne(WorkspaceEntity, {
             select: ADMIN_COLUMNS,
             where: { id: workspaceId },

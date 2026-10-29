@@ -3,8 +3,7 @@ import type { EntityManager } from "typeorm"
 import { AgentEntity, AgentOwnershipService } from "@modules/domain/agents"
 import type { Region } from "@modules/domain/agents"
 import { AuthorityRuleEntity } from "@modules/domain/authority-rules"
-import { WorkItemEntity } from "@modules/domain/work-items"
-import { LeadEntity } from "@modules/domain/leads"
+import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -12,7 +11,7 @@ import type { AgentHead, AgentPage, AppliedRule, RecentWork } from "./agent-prof
 import { AgentProfileLogEvent } from "./agent-profile.log-events"
 import { headOf, recentOf, ruleLineOf } from "./agent-profile.mapper"
 import { AgentProfileError, AgentProfileErrorCode } from "./errors/agent-profile.error"
-import type { AgentHeadRead, RecentWorkRead } from "./agent-profile-reads.contracts"
+import type { AgentHeadRead } from "./agent-profile-reads.contracts"
 
 const RECENT_LIMIT = 6
 const RULE_LIMIT = 50
@@ -34,6 +33,7 @@ export class AgentProfileService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectLogger() private readonly logger: Logger,
         private readonly agents: AgentOwnershipService,
+        private readonly work: WorkItemsActivityService,
     ) {}
 
     /** The page of an agent for a member of the workspace. */
@@ -73,24 +73,7 @@ export class AgentProfileService {
     }
 
     private async recentOf(workspaceId: string, agent: AgentHead): Promise<ReadonlyArray<RecentWork>> {
-        const rows = await this.entityManager
-            .createQueryBuilder(WorkItemEntity, "w")
-            .select("w.id", "id")
-            .addSelect("w.action", "action")
-            .addSelect("w.status", "status")
-            .addSelect("to_json(COALESCE(w.completed_at, w.updated_at)) #>> '{}'", "at")
-            .addSelect("COALESCE(NULLIF(w.result->>'summary', ''), w.proposal->>'summary')", "summary")
-            .addSelect("COALESCE(l.contact_name, w.proposal->'fields'->>'customer')", "customer")
-            .addSelect("w.leadId", "leadId")
-            .leftJoin(LeadEntity, "l", "l.id = w.lead_id")
-            .where("w.workspaceId = :workspaceId AND w.department = :department", {
-                workspaceId,
-                department: agent.module,
-            })
-            .orderBy("COALESCE(w.completed_at, w.updated_at)", "DESC")
-            .addOrderBy("w.id", "ASC")
-            .limit(RECENT_LIMIT)
-            .getRawMany<RecentWorkRead>()
+        const rows = await this.work.recentOf(workspaceId, agent.module, RECENT_LIMIT)
         return rows.map(recentOf)
     }
 

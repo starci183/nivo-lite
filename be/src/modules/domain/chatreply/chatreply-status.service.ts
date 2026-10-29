@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { WorkItemEntity } from "@modules/domain/work-items"
+import { WorkItemsReplyProgressService } from "@modules/domain/work-items"
 import { AgentConversationEntity } from "@modules/domain/agent-conversations"
 import { AgentMessageEntity } from "@modules/domain/agent-messages"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -12,15 +12,13 @@ import type { AnswerProgressRow, JobStateRow, ReplyProgressRow } from "./persist
 /** A reply message before its job state is read. */
 type MessageProgress = Omit<ReplyProgressRow, "job_state">
 
-/** A work item and its answer before its job state is read. */
-type WorkProgress = Omit<AnswerProgressRow, "job_state">
-
 @Injectable()
 /** Reads the existing queued jobs and their durable result rows for a verified member of the selected workspace. */
 export class ChatReplyStatusService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
+        private readonly progress: WorkItemsReplyProgressService,
     ) {}
 
     /** The stored human reply's delivery and the terminal outcome of its delivery job. */
@@ -73,29 +71,8 @@ export class ChatReplyStatusService {
     /** The escalation decision's job and the approved answer's actual delivery; rejecting an answer completes successfully. */
     async answerStatus(principalId: string, workspaceId: string, workItemId: string): Promise<ChatReplyProgress> {
         await this.members.require(principalId, workspaceId)
-        const work = await this.entityManager
-            .createQueryBuilder(WorkItemEntity, "w")
-            .select("w.id", "id")
-            .addSelect("w.status", "work_status")
-            .addSelect("m.id", "message_id")
-            .addSelect("m.delivery_status", "delivery_status")
-            .innerJoin(
-                AgentConversationEntity,
-                "c",
-                "c.id::text = COALESCE(NULLIF(w.proposal -> 'fields' ->> 'conversation_id', ''), CASE WHEN w.subject_type = 'conversation' THEN w.subject_id::text ELSE NULL END) AND c.workspace_id = w.workspace_id AND c.kind = 'customer'",
-            )
-            .leftJoin(
-                AgentMessageEntity,
-                "m",
-                "m.id = w.id AND m.workspace_id = w.workspace_id AND m.conversation_id = c.id AND m.author_kind = 'human'",
-            )
-            .where("w.workspace_id = :workspaceId AND w.id = :workItemId AND w.action = 'reply_customer'", {
-                workspaceId,
-                workItemId,
-            })
-            .limit(1)
-            .getRawOne<WorkProgress>()
-        if (work === undefined) throw new ChatreplyError({ code: ChatreplyErrorCode.NotFound })
+        const work = await this.progress.answerProgress(workspaceId, workItemId)
+        if (work === null) throw new ChatreplyError({ code: ChatreplyErrorCode.NotFound })
         const row: AnswerProgressRow = {
             ...work,
             job_state: await this.jobState(

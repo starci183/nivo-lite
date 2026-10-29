@@ -1,8 +1,11 @@
 import type { ModuleCommand } from "@modules/domain/decisions"
 import type { ProposedCommand } from "@modules/domain/ai-tasks"
+import { rowShape } from "@modules/platform/database"
 import { isDomainError } from "@modules/platform/errors"
 import type { Locale } from "@modules/platform/i18n"
+import { isRecord } from "@modules/platform/primitives"
 import type {
+    CandidateView,
     CardLabels,
     LeadRef,
     MessageRefs,
@@ -201,3 +204,24 @@ export const failureDetail = (cause: unknown): string => {
     }
     return cause instanceof Error ? cause.message : String(cause)
 }
+
+const isCandidateColumns = rowShape({
+    id: "string",
+    message_id: "string",
+    module: "string",
+    command: "string",
+    payload: "json",
+    summary: "string",
+    shown: "json",
+    status: "string",
+    work_item_id: "string?",
+    refusal_detail: "string?",
+    created_at: "string",
+})
+
+/** Whether a row the candidate statements returned has every column of a candidate with the right shape. */
+export const isCandidateView = (row: unknown): row is CandidateView =>
+    isCandidateColumns(row) &&
+    isRecord(row.payload) &&
+    Array.isArray(row.shown) &&
+    (row.status === "pending" || row.status === "sent" || row.status === "cancelled")

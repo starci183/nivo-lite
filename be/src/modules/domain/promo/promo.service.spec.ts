@@ -158,186 +158,186 @@ describe("PromoService foundingMember", () => {
 })
 
 describe("PromoService state", () => {
-    describe("state", () => {
-        it("turns the recorded facts into stats and onboarding steps that link to the chatbot", async () => {
-            const world = await build()
-            empty(world)
-            world.agents.earliestSheetOfModule.mockResolvedValue(BOT)
-            world.events.existsOfKindBetween.mockResolvedValue(true)
-            world.leads.websiteOf.mockResolvedValue([
-                // 20:00 UTC = 03:00 Bangkok, after hours; answered after 2 hours
-                { id: "w1", createdAt: new Date("2026-10-12T20:00:00.000Z") },
-                // 03:00 UTC = 10:00 Bangkok, inside hours; answered after 4 hours
-                { id: "w2", createdAt: new Date("2026-10-13T03:00:00.000Z") },
-                // 11:00 UTC = 18:00 Bangkok, after hours; never answered
-                { id: "w3", createdAt: new Date("2026-10-13T11:00:00.000Z") },
-                // answered before it was created: no wait
-                { id: "w4", createdAt: new Date("2026-10-13T05:00:00.000Z") },
-            ])
-            world.events.firstAtByLead.mockResolvedValue([
-                { leadId: "w1", at: new Date("2026-10-12T22:00:00.000Z") },
-                { leadId: "w2", at: new Date("2026-10-13T07:00:00.000Z") },
-                { leadId: "w4", at: new Date("2026-10-13T04:00:00.000Z") },
-            ])
-            world.conversations.hasCustomerChat.mockResolvedValue(true)
-            world.executions.countApproved.mockResolvedValue(3)
+    it("turns the recorded facts into stats and onboarding steps that link to the chatbot", async () => {
+        const world = await build()
+        empty(world)
+        world.agents.earliestSheetOfModule.mockResolvedValue(BOT)
+        world.events.existsOfKindBetween.mockResolvedValue(true)
+        world.leads.websiteOf.mockResolvedValue([
+            // 20:00 UTC = 03:00 Bangkok, after hours; answered after 2 hours
+            { id: "w1", createdAt: new Date("2026-10-12T20:00:00.000Z") },
+            // 03:00 UTC = 10:00 Bangkok, inside hours; answered after 4 hours
+            { id: "w2", createdAt: new Date("2026-10-13T03:00:00.000Z") },
+            // 11:00 UTC = 18:00 Bangkok, after hours; never answered
+            { id: "w3", createdAt: new Date("2026-10-13T11:00:00.000Z") },
+            // answered before it was created: no wait
+            { id: "w4", createdAt: new Date("2026-10-13T05:00:00.000Z") },
+        ])
+        world.events.firstAtByLead.mockResolvedValue([
+            { leadId: "w1", at: new Date("2026-10-12T22:00:00.000Z") },
+            { leadId: "w2", at: new Date("2026-10-13T07:00:00.000Z") },
+            { leadId: "w4", at: new Date("2026-10-13T04:00:00.000Z") },
+        ])
+        world.conversations.hasCustomerChat.mockResolvedValue(true)
+        world.executions.countApproved.mockResolvedValue(3)
 
-            await expect(world.promo.state("user-1", "ws-1")).resolves.toEqual({
-                hasChatbot: true,
-                chatbotAgentId: "agent-1",
-                isFoundingMember: true,
-                websiteLeadStats: { count: 4, afterHoursCount: 2, avgWaitHours: 3 },
-                onboarding: [
-                    { key: "Buy", done: true, href: "/modules/new?module=chatbot" },
-                    { key: "Knowledge", done: true, href: "/modules/agent-1" },
-                    { key: "Test", done: true, href: "/modules/agent-1/chat" },
-                    { key: "Lead", done: false, href: "/modules/agent-1/chat" },
-                    { key: "Approve", done: true, href: "/chat" },
-                    { key: "Won", done: false, href: "/leads" },
-                    { key: "Invoice", done: false, href: "/responsibilities" },
-                ],
-            })
-            expect(world.members.require).toHaveBeenCalledWith("user-1", "ws-1")
-            expect(world.events.firstAtByLead).toHaveBeenCalledWith(
-                "ws-1",
-                ["execution.approved", "responsibility.assigned"],
-                ["w1", "w2", "w3", "w4"],
-            )
+        await expect(world.promo.state("user-1", "ws-1")).resolves.toEqual({
+            hasChatbot: true,
+            chatbotAgentId: "agent-1",
+            isFoundingMember: true,
+            websiteLeadStats: { count: 4, afterHoursCount: 2, avgWaitHours: 3 },
+            onboarding: [
+                { key: "Buy", done: true, href: "/modules/new?module=chatbot" },
+                { key: "Knowledge", done: true, href: "/modules/agent-1" },
+                { key: "Test", done: true, href: "/modules/agent-1/chat" },
+                { key: "Lead", done: false, href: "/modules/agent-1/chat" },
+                { key: "Approve", done: true, href: "/chat" },
+                { key: "Won", done: false, href: "/leads" },
+                { key: "Invoice", done: false, href: "/responsibilities" },
+            ],
         })
+        expect(world.members.require).toHaveBeenCalledWith("user-1", "ws-1")
+        expect(world.events.firstAtByLead).toHaveBeenCalledWith(
+            "ws-1",
+            ["execution.approved", "responsibility.assigned"],
+            ["w1", "w2", "w3", "w4"],
+        )
+    })
 
-        it("marks a win and an approved invoice step when the owners say so", async () => {
-            const world = await build()
-            empty(world)
-            world.agents.earliestSheetOfModule.mockResolvedValue({ ...BOT, knowledge: "   " })
-            world.leads.idsAtStage.mockResolvedValue(["won-1"])
-            world.events.existsOfKindForLeads.mockResolvedValue(true)
-            world.conversations.hasLeadChat.mockResolvedValue(true)
-            world.responsibilities.idsTitledLike.mockResolvedValue(["r-1"])
-            world.executions.hasApprovedAmong.mockResolvedValue(true)
+    it("marks a win and an approved invoice step when the owners say so", async () => {
+        const world = await build()
+        empty(world)
+        world.agents.earliestSheetOfModule.mockResolvedValue({ ...BOT, knowledge: "   " })
+        world.leads.idsAtStage.mockResolvedValue(["won-1"])
+        world.events.existsOfKindForLeads.mockResolvedValue(true)
+        world.conversations.hasLeadChat.mockResolvedValue(true)
+        world.responsibilities.idsTitledLike.mockResolvedValue(["r-1"])
+        world.executions.hasApprovedAmong.mockResolvedValue(true)
 
-            const state = await world.promo.state("user-1", "ws-1")
+        const state = await world.promo.state("user-1", "ws-1")
 
-            expect(state.onboarding.map((step) => [step.key, step.done])).toEqual([
-                ["Buy", true],
-                ["Knowledge", false],
-                ["Test", false],
-                ["Lead", true],
-                ["Approve", false],
-                ["Won", true],
-                ["Invoice", true],
-            ])
-            expect(world.events.existsOfKindForLeads).toHaveBeenCalledWith("ws-1", "outcome.recorded", ["won-1"])
-            expect(world.responsibilities.idsTitledLike).toHaveBeenCalledWith(
-                "ws-1",
-                ["Prepare invoice%", INVOICE_TITLE_PREFIX],
-                5000,
-            )
-            expect(world.executions.hasApprovedAmong).toHaveBeenCalledWith("ws-1", ["r-1"])
-        })
+        expect(state.onboarding.map((step) => [step.key, step.done])).toEqual([
+            ["Buy", true],
+            ["Knowledge", false],
+            ["Test", false],
+            ["Lead", true],
+            ["Approve", false],
+            ["Won", true],
+            ["Invoice", true],
+        ])
+        expect(world.events.existsOfKindForLeads).toHaveBeenCalledWith("ws-1", "outcome.recorded", ["won-1"])
+        expect(world.responsibilities.idsTitledLike).toHaveBeenCalledWith(
+            "ws-1",
+            ["Prepare invoice%", INVOICE_TITLE_PREFIX],
+            5000,
+        )
+        expect(world.executions.hasApprovedAmong).toHaveBeenCalledWith("ws-1", ["r-1"])
+    })
+})
 
-        it("points every chatbot step at the install page when nothing is recorded", async () => {
-            const world = await build()
-            empty(world)
+describe("PromoService state steps", () => {
+    it("points every chatbot step at the install page when nothing is recorded", async () => {
+        const world = await build()
+        empty(world)
 
-            await expect(world.promo.state("user-1", "ws-1")).resolves.toEqual({
-                hasChatbot: false,
-                chatbotAgentId: null,
-                isFoundingMember: false,
-                websiteLeadStats: { count: 0, afterHoursCount: 0, avgWaitHours: null },
-                onboarding: [
-                    { key: "Buy", done: false, href: "/modules/new?module=chatbot" },
-                    { key: "Knowledge", done: false, href: "/modules/new?module=chatbot" },
-                    { key: "Test", done: false, href: "/modules/new?module=chatbot" },
-                    { key: "Lead", done: false, href: "/modules/new?module=chatbot" },
-                    { key: "Approve", done: false, href: "/chat" },
-                    { key: "Won", done: false, href: "/leads" },
-                    { key: "Invoice", done: false, href: "/responsibilities" },
-                ],
-            })
+        await expect(world.promo.state("user-1", "ws-1")).resolves.toEqual({
+            hasChatbot: false,
+            chatbotAgentId: null,
+            isFoundingMember: false,
+            websiteLeadStats: { count: 0, afterHoursCount: 0, avgWaitHours: null },
+            onboarding: [
+                { key: "Buy", done: false, href: "/modules/new?module=chatbot" },
+                { key: "Knowledge", done: false, href: "/modules/new?module=chatbot" },
+                { key: "Test", done: false, href: "/modules/new?module=chatbot" },
+                { key: "Lead", done: false, href: "/modules/new?module=chatbot" },
+                { key: "Approve", done: false, href: "/chat" },
+                { key: "Won", done: false, href: "/leads" },
+                { key: "Invoice", done: false, href: "/responsibilities" },
+            ],
         })
     })
 })
 
 describe("PromoService leadWait", () => {
-    describe("leadWait", () => {
-        it("answers the wait of a website lead without a chatbot at the clock instant", async () => {
-            const world = await build()
-            empty(world)
-            world.leads.listByIds.mockResolvedValue([LEAD])
+    it("answers the wait of a website lead without a chatbot at the clock instant", async () => {
+        const world = await build()
+        empty(world)
+        world.leads.listByIds.mockResolvedValue([LEAD])
 
-            // created 2026-10-13T00:00Z, now 2026-10-13T02:00Z
-            await expect(world.promo.leadWait("user-1", "ws-1", "lead-1")).resolves.toEqual({
-                show: true,
-                hours: 2,
-                replied: false,
-            })
-            expect(world.leads.listByIds).toHaveBeenCalledWith("ws-1", ["lead-1"])
-            expect(world.events.firstAtOfKind).toHaveBeenCalledWith("ws-1", "lead-1", "execution.approved")
+        // created 2026-10-13T00:00Z, now 2026-10-13T02:00Z
+        await expect(world.promo.leadWait("user-1", "ws-1", "lead-1")).resolves.toEqual({
+            show: true,
+            hours: 2,
+            replied: false,
         })
+        expect(world.leads.listByIds).toHaveBeenCalledWith("ws-1", ["lead-1"])
+        expect(world.events.firstAtOfKind).toHaveBeenCalledWith("ws-1", "lead-1", "execution.approved")
+    })
 
-        it("stops the wait at the first approved reply", async () => {
-            const world = await build()
-            empty(world)
-            world.leads.listByIds.mockResolvedValue([LEAD])
-            world.events.firstAtOfKind.mockResolvedValue(new Date("2026-10-13T01:30:00.000Z"))
+    it("stops the wait at the first approved reply", async () => {
+        const world = await build()
+        empty(world)
+        world.leads.listByIds.mockResolvedValue([LEAD])
+        world.events.firstAtOfKind.mockResolvedValue(new Date("2026-10-13T01:30:00.000Z"))
 
-            await expect(world.promo.leadWait("user-1", "ws-1", "lead-1")).resolves.toEqual({
-                show: true,
-                hours: 1,
-                replied: true,
-            })
+        await expect(world.promo.leadWait("user-1", "ws-1", "lead-1")).resolves.toEqual({
+            show: true,
+            hours: 1,
+            replied: true,
         })
+    })
 
-        it("shows no hours for a wait shorter than an hour", async () => {
-            const world = await build()
-            empty(world)
-            world.leads.listByIds.mockResolvedValue([LEAD])
-            world.events.firstAtOfKind.mockResolvedValue(new Date("2026-10-13T00:20:00.000Z"))
+    it("shows no hours for a wait shorter than an hour", async () => {
+        const world = await build()
+        empty(world)
+        world.leads.listByIds.mockResolvedValue([LEAD])
+        world.events.firstAtOfKind.mockResolvedValue(new Date("2026-10-13T00:20:00.000Z"))
 
-            await expect(world.promo.leadWait("user-1", "ws-1", "lead-1")).resolves.toEqual({
-                show: true,
-                hours: null,
-                replied: true,
-            })
+        await expect(world.promo.leadWait("user-1", "ws-1", "lead-1")).resolves.toEqual({
+            show: true,
+            hours: null,
+            replied: true,
         })
+    })
+})
 
-        it("hides the note for a missing lead", async () => {
-            const world = await build()
-            empty(world)
-            world.leads.listByIds.mockResolvedValue([])
+describe("PromoService leadWait visibility", () => {
+    it("hides the note for a missing lead", async () => {
+        const world = await build()
+        empty(world)
+        world.leads.listByIds.mockResolvedValue([])
 
-            await expect(world.promo.leadWait("user-1", "ws-1", "missing")).resolves.toEqual({
-                show: false,
-                hours: null,
-                replied: false,
-            })
+        await expect(world.promo.leadWait("user-1", "ws-1", "missing")).resolves.toEqual({
+            show: false,
+            hours: null,
+            replied: false,
         })
+    })
 
-        it("hides the note for a lead of another channel", async () => {
-            const world = await build()
-            empty(world)
-            world.leads.listByIds.mockResolvedValue([{ ...LEAD, channel: "Zalo" }])
+    it("hides the note for a lead of another channel", async () => {
+        const world = await build()
+        empty(world)
+        world.leads.listByIds.mockResolvedValue([{ ...LEAD, channel: "Zalo" }])
 
-            await expect(world.promo.leadWait("user-1", "ws-1", "lead-1")).resolves.toEqual({
-                show: false,
-                hours: null,
-                replied: false,
-            })
-            expect(world.agents.earliestSheetOfModule).not.toHaveBeenCalled()
+        await expect(world.promo.leadWait("user-1", "ws-1", "lead-1")).resolves.toEqual({
+            show: false,
+            hours: null,
+            replied: false,
         })
+        expect(world.agents.earliestSheetOfModule).not.toHaveBeenCalled()
+    })
 
-        it("hides the note when the workspace has a chatbot", async () => {
-            const world = await build()
-            empty(world)
-            world.agents.earliestSheetOfModule.mockResolvedValue(BOT)
-            world.leads.listByIds.mockResolvedValue([LEAD])
+    it("hides the note when the workspace has a chatbot", async () => {
+        const world = await build()
+        empty(world)
+        world.agents.earliestSheetOfModule.mockResolvedValue(BOT)
+        world.leads.listByIds.mockResolvedValue([LEAD])
 
-            await expect(world.promo.leadWait("user-1", "ws-1", "lead-1")).resolves.toEqual({
-                show: false,
-                hours: null,
-                replied: false,
-            })
-            expect(world.events.firstAtOfKind).not.toHaveBeenCalled()
+        await expect(world.promo.leadWait("user-1", "ws-1", "lead-1")).resolves.toEqual({
+            show: false,
+            hours: null,
+            replied: false,
         })
+        expect(world.events.firstAtOfKind).not.toHaveBeenCalled()
     })
 })

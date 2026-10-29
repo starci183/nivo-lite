@@ -16,6 +16,7 @@ import type {
     ExecutorPayload,
 } from "./automation-ports.contracts"
 import { InjectAutomationOffice, InjectAutomationOwnerChat, InjectAutomationRecords } from "./automations.decorators"
+import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { readContract, readDayFigures, readOrder } from "./automation-reads.query"
 import type { ContractRead, LeadRead } from "./automation-reads.contracts"
 import { dayText, instantOf, vndText } from "./policies/format.policy"
@@ -42,6 +43,7 @@ export class AutomationOperationsExecutorsService {
         private readonly messages: AutomationMessagesService,
         private readonly renewalPayment: AutomationRenewalPaymentService,
         private readonly desk: DeskDailyService,
+        private readonly work: WorkItemsActivityService,
     ) {}
 
     /** The executors of the templates this service runs, by template key. */
@@ -59,6 +61,7 @@ export class AutomationOperationsExecutorsService {
         const day = textOf(payload.day) || vnClock(this.clock.now()).day
         const figures = await readDayFigures(
             this.entityManager,
+            this.work,
             context.workspaceId,
             new Date(`${day}T00:00:00+07:00`).toISOString(),
         )

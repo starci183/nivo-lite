@@ -4,7 +4,7 @@ import {
     SEPAY_DELIVERY_QUEUE,
     type SepayDeliveryRecorded,
 } from "@modules/queues/sepay-delivery"
-import { InjectInbox } from "@modules/platform/inbox"
+import { InjectEntityInbox } from "@modules/platform/inbox"
 import type { EntityInbox } from "@modules/platform/inbox"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
@@ -38,7 +38,7 @@ export class SepayTransactionsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly proof: PaymentProofService,
-        @InjectInbox() private readonly inbox: EntityInbox,
+        @InjectEntityInbox() private readonly inbox: EntityInbox,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
         private readonly orders: PaymentOrdersService,
     ) {}

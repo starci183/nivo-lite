@@ -1,4 +1,7 @@
-import { PaymentOrderEntity } from "@modules/domain/payment-orders"
+import { paymentOrdersEntities } from "@modules/domain/payment-orders"
+
+const [PaymentOrderEntity] = paymentOrdersEntities
+type PaymentOrderEntity = InstanceType<typeof PaymentOrderEntity>
 
 /** The instant the payment-order specs treat as now. */
 export const PAYMENT_ORDER_NOW = "2026-10-12T10:00:00.000Z"

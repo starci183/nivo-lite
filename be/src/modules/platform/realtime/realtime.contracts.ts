@@ -19,9 +19,6 @@ export const CATCH_UP_ROWS = 1024
 /** The NOTIFY channel the Postgres hub publishes to and every replica LISTENs on. */
 export const NOTIFY_CHANNEL = "realtime_events"
 
-/** The statement that subscribes a connection to the hub channel. */
-export const LISTEN_STATEMENT = `LISTEN ${NOTIFY_CHANNEL}`
-
 /** The start of the payload of the probe the hub sends from another session after LISTEN: a connection that never hears its own probe cannot carry the hub. */
 export const PROBE_PREFIX = "probe:"
 

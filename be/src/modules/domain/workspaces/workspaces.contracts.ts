@@ -47,6 +47,12 @@ export interface FirstWorkspace {
 /** The billing statuses support can set by hand. */
 export type SupportStatus = "active" | "past_due"
 
+/** An account id, or null when there is none. */
+export type OptionalAccountId = string | null
+
+/** A plan the capability that owns plans proved active, or null when the plan is unknown or retired. */
+export type OptionalActivePlan = ActivePlan | null
+
 /** An active plan, as the capability that owns plans proved it. */
 export interface ActivePlan {
     /** The plan code. */
@@ -187,3 +193,24 @@ export interface WorkspaceBrand {
     /** The logo: an app-relative path or an https URL. */
     readonly logoUrl: string
 }
+
+/** The billing columns of a workspace, as the billing capability reads them. */
+export interface WorkspaceBillingFacts {
+    /** The workspace status. */
+    readonly status: string
+    /** The plan code, or null before the first payment. */
+    readonly planCode: string | null
+    /** The end of the paid period, or null. */
+    readonly paidUntil: Date | null
+    /** The picked monthly allowance, or null. */
+    readonly tierCredits: number | null
+    /** The paid seats, or null. */
+    readonly seatCount: number | null
+    /** The billing cycle, or null. */
+    readonly billingCycle: "monthly" | "annual" | null
+    /** The full monthly price of what was bought, or null. */
+    readonly billedMonthlyVnd: number | null
+}
+
+/** The billing columns of a workspace, or null when there is no such workspace. */
+export type OptionalBillingFacts = WorkspaceBillingFacts | null

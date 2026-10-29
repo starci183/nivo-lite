@@ -7,6 +7,8 @@ import type { GapRecord } from "@modules/domain/knowledge-gaps"
 import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesService } from "@modules/domain/modules"
 import type { ModuleDefinition } from "@modules/domain/modules"
 import { StaffDirectoryService } from "@modules/domain/staff"
+import { WorkItemsActivityService } from "@modules/domain/work-items"
+import { InstallationOperationsService } from "@modules/domain/module-installations"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -44,9 +46,22 @@ const tablesEm = (stubs: { readonly query?: TableStub | ReadonlyArray<TableStub>
     const em = mockEntityManager()
     const given = stubs.query ?? []
     const pairs: ReadonlyArray<TableStub> = isPair(given) ? [given] : given
-    SEEN.set(em, answerByTable(em, Object.fromEntries(pairs)))
+    const rowsOf = (table: string): ReadonlyArray<unknown> => pairs.find(([name]) => name === table)?.[1] ?? []
+    OWNED.set(em, { waiting: rowsOf(LIST_CHATBOT_WAITING), installations: rowsOf(LIST_CHATBOT_INSTALLATIONS) })
+    SEEN.set(
+        em,
+        answerByTable(
+            em,
+            Object.fromEntries(
+                pairs.filter(([name]) => name !== LIST_CHATBOT_WAITING && name !== LIST_CHATBOT_INSTALLATIONS),
+            ),
+        ),
+    )
     return { em }
 }
+
+/** The rows the owners of the work items and the installations answer for one manager. */
+const OWNED = new WeakMap<object, { waiting: ReadonlyArray<unknown>; installations: ReadonlyArray<unknown> }>()
 
 /** The named parameters of every condition the subject put on its n-th read of a table. */
 const parametersOf = (em: object, table: string, nth = 0): unknown =>
@@ -139,9 +154,21 @@ const build = async (em: MockEntityManager) => {
     const staff = mock<StaffDirectoryService>({
         namesOf: jest.fn(() => Promise.resolve([{ id: "st-1", name: "Minh" }])),
     })
+    const owned = OWNED.get(em)
+    const work = mock<WorkItemsActivityService>()
+    work.waitingReplies.mockResolvedValue([...(owned?.waiting ?? [])] as Array<WaitingRow>)
+    const installs = mock<InstallationOperationsService>()
+    installs.agentLinksOf.mockResolvedValue(
+        (owned?.installations ?? []).map((row) => {
+            const { id, agent_id: agentId } = row as { id: string; agent_id: string | null }
+            return { id, agentId }
+        }),
+    )
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChatbotWorkbenchService,
+            { provide: WorkItemsActivityService, useValue: work },
+            { provide: InstallationOperationsService, useValue: installs },
             { provide: StaffDirectoryService, useValue: staff },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: clock },
@@ -150,7 +177,7 @@ const build = async (em: MockEntityManager) => {
             { provide: ModulesService, useValue: modules },
         ],
     }).compile()
-    return { service: moduleRef.get(ChatbotWorkbenchService), members, knowledgeGaps, modules, staff }
+    return { service: moduleRef.get(ChatbotWorkbenchService), members, knowledgeGaps, modules, staff, work, installs }
 }
 
 const EMPTY_METRICS = { today: 0, waiting: 0, p50FirstResponseMin: null, sample: 0, leadsCaptured7d: 0 }

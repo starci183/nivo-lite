@@ -46,7 +46,7 @@ interface RelayWorld {
     timeout: ReturnType<typeof mock<QueueTimeout>>
     cancel: jest.Mock
     deadlines: Array<QueueTimeoutCallback>
-    query: (sql: unknown) => Promise<unknown>
+    answerFor: (sql: unknown) => Promise<unknown>
 }
 
 /** Bounded claim answers and producer-state doubles; the network never executes in a database transaction. */
@@ -68,7 +68,7 @@ const build = async (
     })
     let pass = 0
     let checked = false
-    const query = (sql: unknown): Promise<unknown> => {
+    const answerFor = (sql: unknown): Promise<unknown> => {
         const text = String(sql)
         if (text.includes("job_relay_claim")) return Promise.resolve(claims[pass++] ?? [])
         if (text.includes("job_reconcile")) {
@@ -79,7 +79,7 @@ const build = async (
         if (text.includes("job_reset")) return Promise.resolve([{ job_reset: true }])
         return Promise.resolve([])
     }
-    em.query.mockImplementation(query)
+    em.query.mockImplementation(answerFor)
     transport.add.mockResolvedValue(undefined)
     transport.republish.mockResolvedValue(undefined)
     transport.stateOf.mockImplementation((_queue, id) => Promise.resolve(states[id] ?? "waiting"))
@@ -94,7 +94,7 @@ const build = async (
             { provide: QUEUE_TIMEOUT, useValue: timeout },
         ],
     }).compile()
-    return { relay: moduleRef.get(QueueRelayService), em, transport, logger, timeout, cancel, deadlines, query }
+    return { relay: moduleRef.get(QueueRelayService), em, transport, logger, timeout, cancel, deadlines, answerFor }
 }
 const run = async (world: RelayWorld): Promise<void> => {
     world.relay.onApplicationBootstrap()
@@ -148,7 +148,7 @@ describe("outbox relay", () => {
                 refused = true
                 return Promise.reject(new Error("reconcile unavailable"))
             }
-            return world.query(sql)
+            return world.answerFor(sql)
         })
         await run(world)
         expect(world.logger.error).toHaveBeenCalledWith(QueueLogEvent.ReconcileFailed, expect.any(Error))
@@ -189,7 +189,7 @@ describe("due reconciliation", () => {
         async ({ answer }) => {
             const world = await build([[]], [REPAIR], { "row-1": "missing" })
             world.em.query.mockImplementation((sql) =>
-                String(sql).includes("job_reset") ? Promise.resolve(answer) : world.query(sql),
+                String(sql).includes("job_reset") ? Promise.resolve(answer) : world.answerFor(sql),
             )
             await run(world)
             expect(world.transport.republish).not.toHaveBeenCalled()
@@ -235,7 +235,7 @@ describe("relay shutdown", () => {
                 ? new Promise((resolve) => {
                       answer = resolve
                   })
-                : world.query(sql),
+                : world.answerFor(sql),
         )
         world.relay.onApplicationBootstrap()
         await nap(1)

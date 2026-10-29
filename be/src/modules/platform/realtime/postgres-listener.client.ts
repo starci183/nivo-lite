@@ -1,10 +1,11 @@
 import { randomBytes } from "node:crypto"
 import { Injectable } from "@nestjs/common"
+import { listenOn } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { CancelTimer, Timer } from "@modules/platform/retry"
 import { RealtimeError, RealtimeErrorCode } from "./errors/realtime.error"
-import { LISTEN_STATEMENT, PROBE_PREFIX, PROBE_TIMEOUT_MS, RECONNECT_DELAY_MS } from "./realtime.contracts"
+import { NOTIFY_CHANNEL, PROBE_PREFIX, PROBE_TIMEOUT_MS, RECONNECT_DELAY_MS } from "./realtime.contracts"
 import { InjectRealtimeTimer, InjectListenFactory, InjectPostgresRealtimeOptions } from "./realtime.decorators"
 import { RealtimeLogEvent } from "./realtime.log-events"
 import { listenUrlOf } from "./realtime.policy"
@@ -68,7 +69,7 @@ export class PostgresListenerClient implements NotificationListener {
         this.opening = connection
         try {
             await connection.connect()
-            await connection.query(LISTEN_STATEMENT)
+            await listenOn(connection, NOTIFY_CHANNEL)
             await handlers.probe(probePayload)
             await this.heardWithin(probed)
             const failure = this.failureOf(connection)

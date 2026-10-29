@@ -17,16 +17,26 @@ describe("returned rows", () => {
 
     beforeEach(async () => {
         const moduleRef = await Test.createTestingModule({
-            providers: [{ provide: RETURNED_ROWS_POLICY, useFactory: (): ReturnedRowsPolicy => ({ returnedRows, rowShape }) }],
+            providers: [
+                { provide: RETURNED_ROWS_POLICY, useFactory: (): ReturnedRowsPolicy => ({ returnedRows, rowShape }) },
+            ],
         }).compile()
         subject = moduleRef.get<ReturnedRowsPolicy>(RETURNED_ROWS_POLICY)
     })
 
     describe("rowShape", () => {
         it("admits a row holding every named column with a value of its kind", () => {
-            const isRow = subject.rowShape({ id: "string", hits: "number", open: "boolean", created_at: "date", payload: "json" })
+            const isRow = subject.rowShape({
+                id: "string",
+                hits: "number",
+                open: "boolean",
+                created_at: "date",
+                payload: "json",
+            })
 
-            expect(isRow({ id: "row-1", hits: 2, open: true, created_at: AT, payload: { a: 1 }, extra: "kept" })).toBe(true)
+            expect(isRow({ id: "row-1", hits: 2, open: true, created_at: AT, payload: { a: 1 }, extra: "kept" })).toBe(
+                true,
+            )
         })
 
         it("admits null only for a kind that ends in ?", () => {

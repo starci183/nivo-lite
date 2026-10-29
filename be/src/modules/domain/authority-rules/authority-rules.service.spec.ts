@@ -4,6 +4,7 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { InstallationOperationsService } from "@modules/domain/module-installations"
 import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AuthorityRulesService } from "./authority-rules.service"
@@ -24,18 +25,24 @@ import { AuthorityRuleEntity } from "./persistence/entities"
 
 const scope = { workspaceId: "ws-1" }
 
-const build = async (entityManager: MockEntityManager, registered = true) => {
+const buildWith = async (entityManager: MockEntityManager, registered = true, mode: string | null = null) => {
     const actions = mock<AuthorityActionsService>()
     actions.registeredUnder.mockResolvedValue(registered)
+    const operations = mock<InstallationOperationsService>()
+    operations.operatingModeOf.mockResolvedValue(mode)
     const moduleRef = await Test.createTestingModule({
         providers: [
             AuthorityRulesService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: AuthorityActionsService, useValue: actions },
+            { provide: InstallationOperationsService, useValue: operations },
         ],
     }).compile()
-    return moduleRef.get(AuthorityRulesService)
+    return { service: moduleRef.get(AuthorityRulesService), operations }
 }
+
+const build = async (entityManager: MockEntityManager, registered = true, mode: string | null = null) =>
+    (await buildWith(entityManager, registered, mode)).service
 
 /** The SQL expression the upsert stamps the save moment with. */
 const NOW_EXPRESSION: unknown = expect.any(Function)
@@ -70,28 +77,18 @@ describe("AuthorityRulesService > ruleFor", () => {
 
     it("downgrades an auto rule while the instance assists", async () => {
         const em = mockEntityManager({ findOne: [AuthorityRuleEntity, entityOf()] })
-        const [fake] = queueQueryBuilders(em, [{ getRawOne: { operatingMode: "assist" } }])
-        const service = await build(em)
+        const { service, operations } = await buildWith(em, true, "assist")
 
         await expect(service.ruleFor(scope, "send_follow_up", "inst-1")).resolves.toEqual(ruleOf({ mode: "ask" }))
-        expect(fake?.callsOf("where")).toEqual([
-            [
-                "i.workspace_id = :workspaceId AND i.module_key = :department",
-                { workspaceId: "ws-1", department: "sales" },
-            ],
-        ])
-        expect(fake?.callsOf("andWhere")).toEqual([["i.id = :installationId", { installationId: "inst-1" }]])
+        expect(operations.operatingModeOf).toHaveBeenCalledWith("ws-1", "sales", "inst-1")
     })
 
     it("keeps an auto rule on autopilot and reads the oldest installation when no instance is named", async () => {
         const em = mockEntityManager({ findOne: [AuthorityRuleEntity, entityOf()] })
-        const [fake] = queueQueryBuilders(em, [{ getRawOne: { operatingMode: "autopilot" } }])
-        const service = await build(em)
+        const { service, operations } = await buildWith(em, true, "autopilot")
 
         await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toEqual(ruleOf())
-        expect(fake?.callsOf("andWhere")).toEqual([])
-        expect(fake?.callsOf("orderBy")).toEqual([["i.created_at", "ASC"]])
-        expect(fake?.callsOf("addOrderBy")).toEqual([["i.id", "ASC"]])
+        expect(operations.operatingModeOf).toHaveBeenCalledWith("ws-1", "sales", null)
     })
 
     it("answers a rule that lists agents to one of them", async () => {
@@ -122,7 +119,6 @@ describe("AuthorityRulesService > ruleFor", () => {
 
     it("keeps an auto rule when the module has no installation", async () => {
         const em = mockEntityManager({ findOne: [AuthorityRuleEntity, entityOf()] })
-        queueQueryBuilders(em, [{ getRawOne: undefined }])
         const service = await build(em)
 
         await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toEqual(ruleOf())
