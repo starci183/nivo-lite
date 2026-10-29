@@ -2,7 +2,8 @@ import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import { In } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { entityRowBuilder, namedCalls } from "@tests/fixtures/builders/entity-row.builder"
+import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
+import { evaluatedCalls, evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { BrainLessonsErrorCode } from "./errors/brain-lessons.error"
@@ -18,7 +19,7 @@ const registerLessonListing = () => {
         await expect(service.list(WS)).resolves.toEqual([lesson])
         await expect(service.list(WS, ["proposed", "active"])).resolves.toEqual([lesson])
 
-        expect(namedCalls(em.find.mock.calls)).toEqual([
+        expect(evaluatedCalls(em.find.mock.calls)).toEqual([
             ["BrainLessonEntity", { where: { workspaceId: WS }, order: { proposedAt: "DESC" }, take: 500 }],
             [
                 "BrainLessonEntity",
@@ -86,9 +87,12 @@ const registerDecide = () => {
 
             expect(em.createQueryBuilder).toHaveBeenCalledWith(BrainLessonEntity, "bl")
             expect(decide?.callsOf("where")).toEqual([[{ workspaceId: WS, id: "l1", status: "proposed" }]])
-            expect(setOf(decide)).toMatchObject({ status: "active", decidedBy: "u2" })
-            expect(typeof setOf(decide).decidedAt).toBe("function")
-            expect(namedCalls(em.update.mock.calls)).toEqual([
+            expect(evaluatedValues(decide?.callsOf("set")[0]?.[0])).toEqual({
+                status: "active",
+                decidedBy: "u2",
+                decidedAt: "now()",
+            })
+            expect(evaluatedCalls(em.update.mock.calls)).toEqual([
                 ["BrainLessonEntity", { workspaceId: WS, id: "l0", status: "active" }, { status: "retired" }],
             ])
         })
@@ -104,6 +108,16 @@ const registerDecide = () => {
 
             expect(setOf(decide)).toMatchObject({ status: "rejected", decidedBy: "u2" })
             expect(em.update).not.toHaveBeenCalled()
+        })
+
+        it("refuses a lesson when the statement hands back no rows at all", async () => {
+            const em = mockEntityManager()
+            queueQueryBuilders(em, [{ execute: {} }])
+            const service = await build(em)
+
+            await expect(service.decide(WS, "l1", "active", "u2")).rejects.toMatchObject({
+                code: BrainLessonsErrorCode.NotProposed,
+            })
         })
 
         it("refuses a lesson that is not proposed", async () => {
@@ -135,7 +149,11 @@ const registerDecide = () => {
 
         for (const fake of [first, second]) {
             expect(fake?.callsOf("where")).toEqual([[{ workspaceId: WS, id: "l1", status: "active" }]])
-            expect(setOf(fake)).toMatchObject({ status: "retired", decidedBy: "u2" })
+            expect(evaluatedValues(fake?.callsOf("set")[0]?.[0])).toEqual({
+                status: "retired",
+                decidedBy: "u2",
+                decidedAt: "now()",
+            })
         }
     })
 }

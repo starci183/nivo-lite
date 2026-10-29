@@ -4,7 +4,7 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder.builder"
-import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { ContentItemsService } from "./content-items.service"
 import { ContentItemsErrorCode } from "./errors/content-items.error"
 import { ContentItemEntity } from "./persistence/entities"
@@ -77,7 +77,7 @@ describe("ContentItemsService", () => {
 
             await expect(items.createOfferIdea(IDEA)).resolves.toBe("item-9")
             expect(em.createQueryBuilder).toHaveBeenCalledWith(ContentItemEntity, "ci")
-            expect(stampedValues(fakes[0]?.callsOf("values")[0]?.[0])).toEqual({
+            expect(evaluatedValues(fakes[0]?.callsOf("values")[0]?.[0])).toEqual({
                 workspaceId: "workspace-1",
                 title: "Post about: Opening",
                 brief: "Write about the opening",
@@ -86,7 +86,7 @@ describe("ContentItemsService", () => {
                 status: "idea",
                 source: "offer",
                 createdBy: "NIVO",
-                evidence: "function",
+                evidence: ":evidence::jsonb",
             })
             expect(fakes[0]?.callsOf("setParameter")).toEqual([["evidence", "[]"]])
         })
@@ -104,12 +104,12 @@ describe("ContentItemsService", () => {
             const { items, fakes } = await build([{ execute: { raw: [stored] } }])
 
             await expect(items.createAgentDraft(draft)).resolves.toEqual(stored)
-            expect(stampedValues(fakes[0]?.callsOf("values")[0]?.[0])).toMatchObject({
+            expect(evaluatedValues(fakes[0]?.callsOf("values")[0]?.[0])).toMatchObject({
                 title: "T".repeat(200),
                 status: "draft",
                 source: "quick",
                 createdBy: "Mai Linh",
-                draftedAt: "function",
+                draftedAt: "now()",
             })
             expect(fakes[0]?.callsOf("setParameters")[0]?.[0]).toMatchObject({
                 scheduledAt: "2026-10-21T02:00:00.000Z",
@@ -167,6 +167,10 @@ describe("ContentItemsService", () => {
             expect(fakes[0]?.callsOf("setParameter")).toEqual([
                 ["published", '{"facebook":{"ref":"p_1","scheduled_at":"x"}}'],
             ])
+            expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({
+                published: "jsonb_concat(published, CAST(:published AS jsonb))",
+                updatedAt: "now()",
+            })
         })
     })
 
@@ -211,6 +215,11 @@ describe("ContentItemsService", () => {
             ])
             expect(em.createQueryBuilder).toHaveBeenCalledWith(ContentItemEntity, "ci")
             expect(fakes[0]?.callsOf("update")).toEqual([[]])
+            expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({
+                published:
+                    "jsonb_set(published, ARRAY[:channel::text], COALESCE(published -> :channel::text, '{}'::jsonb) || jsonb_build_object('failed_at', :at::text, 'reason', :reason::text))",
+                updatedAt: "now()",
+            })
         })
     })
 })

@@ -8,6 +8,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { BookingDeskService } from "./booking-desk.service"
 import { BookingModelService } from "./booking-model.service"
 import { BookingRemindersService } from "@modules/domain/booking-reminders"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { BookingReservationService } from "./booking-reservation.service"
 import { DEFAULT_SETTINGS } from "./bookings.contracts"
 import type { AddBookingParams, BookingModel, MoveBookingParams, TakenSpan } from "./bookings.contracts"
@@ -408,16 +409,12 @@ describe("BookingDeskService", () => {
         it("finishes the booking and stops its reminders", async () => {
             const { service, reminders, finish } = await buildLocked("confirmed")
             await expect(service.done(USER, REF)).resolves.toEqual({ status: "done", feeDue: false })
-            expect(finish.callsOf("set")).toEqual([
-                [
-                    expect.objectContaining({
-                        status: "done",
-                        doneAt: new Date(NOW),
-                        checkedInAt: expect.any(Function),
-                        updatedAt: new Date(NOW),
-                    }),
-                ],
-            ])
+            expect(evaluatedValues(finish.callsOf("set")[0]?.[0])).toEqual({
+                status: "done",
+                doneAt: new Date(NOW),
+                checkedInAt: "COALESCE(checked_in_at, :now)",
+                updatedAt: new Date(NOW),
+            })
             expect(finish.callsOf("where")).toEqual([[{ workspaceId: WORKSPACE, id: "b1" }]])
             expect(finish.callsOf("setParameter")).toEqual([["now", new Date(NOW)]])
             expect(reminders.cancel).toHaveBeenCalledWith(anything(), "b1", "booking_done")

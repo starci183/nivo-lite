@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import type { FakeQueryBuilder, QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
@@ -111,6 +112,7 @@ const build = async (steps: ReadonlyArray<QueryBuilderAnswers> = [], settings = 
         notifier,
         messages,
         trace: () => traceOf(fakes),
+        sets: () => fakes.map((fake) => evaluatedValues(fake.callsOf("set")[0]?.[0])),
     }
 }
 
@@ -242,12 +244,16 @@ describe("BookingEffectsService", () => {
 
 describe("BookingEffectsService", () => {
     it("releases a failed notice claim before retrying a rejected delivery", async () => {
-        const { service, tx, notifier, trace } = await build([found(), CLAIMED, RELEASED, found(), CLAIMED])
+        const { service, tx, notifier, trace, sets } = await build([found(), CLAIMED, RELEASED, found(), CLAIMED])
         const failure = new Error("Channel delivery is unavailable")
         notifier.notify.mockRejectedValueOnce(failure)
 
         await expect(service.apply(eventOf(), CLAIM)).rejects.toBe(failure)
         expect(trace()).toEqual([SELECTED, claimOf("notice:confirmed"), releaseOf("notice:confirmed")])
+        expect(sets().slice(1, 3)).toEqual([
+            { effects: "effects || jsonb_build_object(CAST(:mark AS text), true)" },
+            { effects: "effects - CAST(:mark AS text)" },
+        ])
         expect(tx.outcomes).toEqual(["commit"])
 
         await expect(service.apply(eventOf(), CLAIM)).resolves.toEqual(

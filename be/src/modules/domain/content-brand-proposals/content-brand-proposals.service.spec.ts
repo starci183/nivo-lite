@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import type { BrandProposalClosing } from "./content-brand-proposals.contracts"
 import { ContentBrandProposalsService } from "./content-brand-proposals.service"
@@ -56,15 +56,31 @@ describe("ContentBrandProposalsService", () => {
 
         await expect(service.insert(input)).resolves.toEqual(RECORD)
         await expect(service.insert(input)).resolves.toBeNull()
-        expect(stampedValues(stored?.callsOf("values")[0]?.[0])).toEqual({
+        expect(evaluatedValues(stored?.callsOf("values")[0]?.[0])).toEqual({
             workspaceId: "ws-1",
             installationId: "inst-1",
             setupSessionId: null,
             fileName: "a".repeat(255),
             fileSize: 4,
-            payload: "function",
+            payload: ":payload::jsonb",
         })
         expect(stored?.callsOf("setParameter")).toEqual([["payload", "{}"]])
+    })
+
+    it("answers null when the statement hands back no rows at all", async () => {
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ execute: {} }])
+        const service = await build(em)
+        const input = {
+            workspaceId: "ws-1",
+            installationId: "inst-1",
+            setupSessionId: null,
+            fileName: "guide.pdf",
+            fileSize: 4,
+            payload: "{}",
+        }
+
+        await expect(service.insert(input)).resolves.toBeNull()
     })
 
     it("finds one proposal or null and lists an installation's proposals", async () => {
@@ -103,11 +119,11 @@ describe("ContentBrandProposalsService", () => {
         expect(em.createQueryBuilder).toHaveBeenCalledWith(ContentBrandProposalEntity, "cbp")
         expect(closed?.callsOf("where")).toEqual([[{ workspaceId: "ws-1", id: "p-1", status: "proposed" }]])
         expect(closed?.callsOf("setParameter")).toEqual([["payload", "{}"]])
-        expect(stampedValues(closed?.callsOf("set")[0]?.[0])).toEqual({
+        expect(evaluatedValues(closed?.callsOf("set")[0]?.[0])).toEqual({
             status: "applied",
-            payload: "function",
+            payload: ":payload::jsonb",
             decidedBy: "Mai",
-            decidedAt: "function",
+            decidedAt: "now()",
         })
     })
 })

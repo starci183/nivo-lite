@@ -12,7 +12,7 @@ import { WebhookConnectionsService } from "@modules/domain/webhook-connections"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { ErrorsService } from "@modules/platform/errors"
 import { ERRORS_SERVICE } from "@modules/platform/errors"
-import { namedCalls } from "@tests/fixtures/builders/entity-row.builder"
+import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { ConnectionCommandsService } from "./connection-commands.service"
 import { ConnectionCommandEntity } from "./persistence/entities"
 
@@ -71,7 +71,7 @@ describe("ConnectionCommandsService", () => {
 
         await expect(service.run("unknown-command")).resolves.toBeUndefined()
 
-        expect(namedCalls(entityManager.findOne.mock.calls)).toEqual([
+        expect(evaluatedCalls(entityManager.findOne.mock.calls)).toEqual([
             ["ConnectionCommandEntity", { where: { id: "unknown-command" } }],
         ])
         expect(connections.firstEvent).not.toHaveBeenCalled()
@@ -84,7 +84,7 @@ describe("ConnectionCommandsService", () => {
 
         await service.runPayload({ commandId: "command-9", workspaceId: "workspace-1" })
 
-        expect(namedCalls(entityManager.findOne.mock.calls)).toEqual([
+        expect(evaluatedCalls(entityManager.findOne.mock.calls)).toEqual([
             ["ConnectionCommandEntity", { where: { id: "command-9" } }],
         ])
     })
@@ -104,7 +104,7 @@ describe("ConnectionCommandsService", () => {
 
         await expect(service.run("command-1")).resolves.toBeUndefined()
 
-        expect(namedCalls(entityManager.findOne.mock.calls)).toEqual([
+        expect(evaluatedCalls(entityManager.findOne.mock.calls)).toEqual([
             ["ConnectionCommandEntity", { where: { id: "command-1" } }],
         ])
         expect(connections.firstEvent).not.toHaveBeenCalled()
@@ -127,7 +127,7 @@ describe("ConnectionCommandsService", () => {
         await expect(service.run("command-1")).resolves.toBeUndefined()
 
         expect(connections.firstEvent.mock.calls).toEqual([[actor, CONNECTION_ID]])
-        expect(namedCalls(entityManager.update.mock.calls, 2)).toEqual([
+        expect(evaluatedCalls(entityManager.update.mock.calls, 2)).toEqual([
             [
                 "ConnectionCommandEntity",
                 { id: "command-1", status: "pending" },
@@ -140,7 +140,7 @@ describe("ConnectionCommandsService", () => {
                             firstEvent: { amount: 75000, content: "invoice-7", at: "2026-10-13T02:00:00.000Z" },
                         },
                     },
-                    finishedAt: "function",
+                    finishedAt: "now()",
                 },
             ],
         ])
@@ -169,7 +169,7 @@ describe("ConnectionCommandsService", () => {
 
         expect(connections.firstEvent.mock.calls).toEqual([[actor, CONNECTION_ID]])
         expect(errors.describe.mock.calls).toEqual([[error]])
-        expect(namedCalls(entityManager.update.mock.calls, 2)).toEqual([
+        expect(evaluatedCalls(entityManager.update.mock.calls, 2)).toEqual([
             [
                 "ConnectionCommandEntity",
                 { id: "command-1", status: "pending" },
@@ -181,7 +181,7 @@ describe("ConnectionCommandsService", () => {
                         code: "CONNECTIONS_NOT_FOUND",
                         params: { connectionId: CONNECTION_ID },
                     },
-                    finishedAt: "function",
+                    finishedAt: "now()",
                 },
             ],
         ])

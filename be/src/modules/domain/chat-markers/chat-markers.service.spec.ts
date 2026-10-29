@@ -11,7 +11,7 @@ import { ChatMarkersService } from "./chat-markers.service"
 import { ChatMarkerEntity } from "./persistence/entities"
 import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
-import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { MessageEntity } from "@modules/domain/messages"
 import { AgentMessageEntity } from "@modules/domain/agent-messages"
 
@@ -207,6 +207,48 @@ describe("ChatMarkersService state", () => {
         expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
     })
 
+    it("shows a reader with no avatar row without an avatar address", async () => {
+        const em = mockEntityManager({
+            query: [
+                [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]],
+                [CHAT_READER_AVATARS, []],
+            ],
+            findOne: [ChatMarkerEntity, null],
+        })
+        queueQueryBuilders(em, [
+            { getRawMany: [OWN_ROW] },
+            { getRawMany: [{ id: "reader", name: "Reader", total: 1 }] },
+        ])
+        const { service } = await build(em)
+
+        await expect(service.state("principal", "workspace", OFFICE)).resolves.toEqual({
+            muted: false,
+            lastOwnMessage: {
+                id: "message",
+                status: "seen",
+                seenBy: [{ id: "reader", name: "Reader", avatarSeed: "reader", avatarUrl: null }],
+                seenByCount: 1,
+            },
+        })
+    })
+
+    it.each([{ id: "message" }, { id: 7, createdAt: PERSISTED_AT }])(
+        "keeps an owned message row %j without a text id and instant null",
+        async (row) => {
+            const em = mockEntityManager({
+                query: [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]],
+                findOne: [ChatMarkerEntity, null],
+            })
+            queueQueryBuilders(em, [{ getRawMany: [row] }])
+            const { service } = await build(em)
+
+            await expect(service.state("principal", "workspace", OFFICE)).resolves.toEqual({
+                muted: false,
+                lastOwnMessage: null,
+            })
+        },
+    )
+
     it("keeps an owned message without a readable instant null", async () => {
         const em = mockEntityManager({
             query: [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]],
@@ -245,7 +287,7 @@ const expectResolvedCursorWrite = (
         "m",
     )
     expect(cursor?.callsOf("where")[0]?.[1]).toMatchObject({ workspaceId: "workspace", messageId: "fetched" })
-    expect(stampedValues(write?.callsOf("values")[0]?.[0])).toEqual({
+    expect(evaluatedValues(write?.callsOf("values")[0]?.[0])).toEqual({
         workspaceId: "workspace",
         userId: "member",
         room: target.room ?? "",
@@ -265,7 +307,7 @@ describe("ChatMarkersService delivered receipts", () => {
             await service.markDelivered("principal", "workspace", target, "fetched")
 
             expectResolvedCursorWrite(em, cursor, write, target, {
-                deliveredAt: "function",
+                deliveredAt: ":at::timestamptz",
                 deliveredMessageId: "fetched",
             })
             expect(activity.receipt.mock.calls).toEqual([["workspace", activityNameOf(target)]])
@@ -288,6 +330,16 @@ describe("ChatMarkersService delivered receipts", () => {
         expect(em.query).toHaveBeenCalledTimes(1)
         expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
     })
+
+    it("refuses a message whose lookup answers rows that carry no instant", async () => {
+        const em = mockEntityManager({ query: [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]] })
+        queueQueryBuilders(em, [{ getRawMany: ["broken", { createdAt: 7 }] }])
+        const { service } = await build(em)
+
+        await expect(service.markDelivered("principal", "workspace", SALES, "foreign")).rejects.toMatchObject({
+            code: "CHAT_MARKERS_MESSAGE_NOT_FOUND",
+        })
+    })
 })
 
 describe("ChatMarkersService read receipts", () => {
@@ -300,9 +352,9 @@ describe("ChatMarkersService read receipts", () => {
             await service.markRead("principal", "workspace", target, "fetched")
 
             expectResolvedCursorWrite(em, cursor, write, target, {
-                deliveredAt: "function",
+                deliveredAt: ":at::timestamptz",
                 deliveredMessageId: "fetched",
-                readAt: "function",
+                readAt: ":at::timestamptz",
                 readMessageId: "fetched",
             })
             expect(activity.receipt.mock.calls).toEqual([["workspace", activityNameOf(target)]])

@@ -3,7 +3,7 @@ import { mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder.builder"
-import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import type { ContentSubmissionSnapshot } from "./content-approval-store.contracts"
 import { ContentApprovalStoreService } from "./content-approval-store.service"
 import type { ContentEvidence, PublishMark } from "./content-editor.contracts"
@@ -41,6 +41,10 @@ const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = []) => {
     return { service: moduleRef.get(ContentApprovalStoreService), entityManager, fakes }
 }
 
+/** The SQL that appends one history line and keeps the newest sixty. */
+const evidenceSql = (parameter: string): string =>
+    `(SELECT jsonb_agg(line ORDER BY ord) FROM jsonb_array_elements(evidence || jsonb_build_array(:${parameter}::jsonb)) WITH ORDINALITY AS history(line, ord) WHERE ord > jsonb_array_length(evidence || jsonb_build_array(:${parameter}::jsonb)) - 60)`
+
 describe("ContentApprovalStoreService", () => {
     describe("claimSubmission", () => {
         it("claims the exact submitted draft and serializes its evidence", async () => {
@@ -52,10 +56,11 @@ describe("ContentApprovalStoreService", () => {
 
             expect(entityManager.createQueryBuilder).toHaveBeenCalledTimes(1)
             expect(entityManager.createQueryBuilder).toHaveBeenCalledWith(ContentItemEntity, "ci")
-            expect(stampedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({
+            expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({
                 status: "waiting_approval",
                 workItemId: "work",
-                evidence: "function",
+                evidence:
+                    "(SELECT jsonb_agg(line ORDER BY ord) FROM jsonb_array_elements(evidence || jsonb_build_array(:evidence::jsonb)) WITH ORDINALITY AS history(line, ord) WHERE ord > jsonb_array_length(evidence || jsonb_build_array(:evidence::jsonb)) - 60)",
             })
             expect(fakes[0]?.callsOf("where")).toEqual([[{ workspaceId: "workspace", id: "post", status: "draft" }]])
             expect(fakes[0]?.callsOf("setParameters")).toEqual([
@@ -87,7 +92,7 @@ describe("ContentApprovalStoreService", () => {
             ).resolves.toBeUndefined()
 
             expect(entityManager.createQueryBuilder).toHaveBeenCalledTimes(1)
-            expect(stampedValues(fakes[0]?.callsOf("set")[0]?.[0])).toMatchObject({
+            expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toMatchObject({
                 status: "approved",
                 approvedBy: "Approver",
             })
@@ -126,7 +131,11 @@ describe("ContentApprovalStoreService", () => {
 
             await expect(service.reject("workspace", "post", "work", evidence)).resolves.toBeUndefined()
 
-            expect(stampedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({ status: "draft", evidence: "function" })
+            expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({
+                status: "draft",
+                evidence:
+                    "(SELECT jsonb_agg(line ORDER BY ord) FROM jsonb_array_elements(evidence || jsonb_build_array(:evidence::jsonb)) WITH ORDINALITY AS history(line, ord) WHERE ord > jsonb_array_length(evidence || jsonb_build_array(:evidence::jsonb)) - 60)",
+            })
             expect(fakes[0]?.callsOf("where")).toEqual([
                 [{ workspaceId: "workspace", id: "post", status: "waiting_approval", workItemId: "work" }],
             ])
@@ -162,6 +171,13 @@ describe("ContentApprovalStoreService", () => {
                 ],
             ])
             expect(fakes[0]?.callsOf("returning")).toEqual([["id, status = 'published' AS \"allDone\""]])
+            const merged = "(published || jsonb_build_object(:channel::text, :mark::jsonb))"
+            expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({
+                published: merged,
+                status: `CASE WHEN ${merged} ?& channels THEN 'published' ELSE status END`,
+                publishedAt: `CASE WHEN ${merged} ?& channels THEN :at::timestamptz ELSE published_at END`,
+                evidence: evidenceSql("evidence"),
+            })
         })
 
         it.each([[[]], [[{ id: "post", allDone: "yes" }]]])(

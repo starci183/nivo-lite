@@ -21,7 +21,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder.builder"
-import { namedCalls, stampedValues } from "@tests/fixtures/builders/entity-row.builder"
+import { evaluatedCalls, evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { ContentEditorService } from "./content-editor.service"
 import { ContentItemsErrorCode } from "./errors/content-items.error"
 import { ContentItemEntity } from "./persistence/entities"
@@ -105,7 +105,7 @@ describe("ContentEditorService actor and reads", () => {
         const { service, members } = await build(em)
         await expect(service.list("user-1", "workspace-1")).resolves.toEqual([item])
         expect(members.require).toHaveBeenCalledWith("user-1", "workspace-1")
-        expect(namedCalls(em.find.mock.calls)).toEqual([
+        expect(evaluatedCalls(em.find.mock.calls)).toEqual([
             [
                 "ContentItemEntity",
                 {
@@ -168,16 +168,16 @@ describe("ContentEditorService create", () => {
         expect(em.exists.mock.calls).toEqual([
             [ContentPillarEntity, { where: { workspaceId: "workspace-1", id: "pillar-1" } }],
         ])
-        expect(stampedValues(fakes[0]?.callsOf("values")[0]?.[0])).toEqual({
+        expect(evaluatedValues(fakes[0]?.callsOf("values")[0]?.[0])).toEqual({
             workspaceId: "workspace-1",
             title: "x".repeat(200),
             channels: ["zalo"],
-            scheduledAt: "function",
+            scheduledAt: ":scheduledAt::timestamptz",
             pillarId: "pillar-1",
             status: "idea",
             source: "manual",
             createdBy: "Mai",
-            evidence: "function",
+            evidence: ":evidence::jsonb",
         })
         expect(fakes[0]?.callsOf("setParameters")).toEqual([
             [{ scheduledAt: "2026-02-01", evidence: JSON.stringify(createdEvidence) }],
@@ -220,7 +220,7 @@ describe("ContentEditorService save and move", () => {
                 },
             ],
         ])
-        expect(stampedValues(fakes[0]?.callsOf("set")[0]?.[0])).toMatchObject({ status: "draft", title: "Launch" })
+        expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toMatchObject({ status: "draft", title: "Launch" })
         expect(fakes[0]?.callsOf("where")).toEqual([[{ workspaceId: "workspace-1", id: "item-1" }]])
     })
 
@@ -248,7 +248,7 @@ describe("ContentEditorService save and move", () => {
             scheduledAt: "2026-02-01",
             media: JSON.stringify(media.map((attachment) => ({ ...attachment, suggested: false }))),
         })
-        expect(stampedValues(fakes[0]?.callsOf("set")[0]?.[0])).toMatchObject({ status: "approved" })
+        expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toMatchObject({ status: "approved" })
     })
 
     it("rolls back when an attachment is not a completed workspace render", async () => {
@@ -321,9 +321,9 @@ describe("ContentEditorService transition", () => {
         const em = mockEntityManager({ findOne: [ContentItemEntity, row({ status })] })
         const { service, fakes } = await build(em, [{ execute: {} }])
         await expect(service.transition("user-1", "workspace-1", "item-1", kind)).resolves.toEqual({ id: "item-1" })
-        expect(stampedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({
+        expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({
             status: next,
-            evidence: "function",
+            evidence: ":evidence::jsonb",
             ...(reopen ? { approvedBy: null, approvedAt: null } : {}),
         })
         expect(fakes[0]?.callsOf("setParameter")).toEqual([

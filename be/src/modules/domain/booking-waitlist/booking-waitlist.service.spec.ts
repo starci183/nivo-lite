@@ -80,6 +80,13 @@ describe("BookingWaitlistService cancel", () => {
         await expect(waitlist.cancel("ws-1", "w-9", caller)).resolves.toEqual([])
         expect(own.update).not.toHaveBeenCalled()
     })
+
+    it("answers nothing when the database does not say how many rows changed", async () => {
+        const em = mockEntityManager({ update: [BookingWaitlistEntity, {}] })
+        const waitlist = await build(em)
+
+        await expect(waitlist.cancel("ws-1", "w-1")).resolves.toEqual([])
+    })
 })
 describe("BookingWaitlistService join", () => {
     it("joins a customer to the service window and answers true when an entry was added", async () => {

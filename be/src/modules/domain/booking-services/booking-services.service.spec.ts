@@ -85,6 +85,13 @@ describe("BookingServicesService", () => {
 
             await expect(services.save(writeOf({ id: "svc-9" }), em)).resolves.toEqual([])
         })
+
+        it("answers nothing when the statement hands back no rows at all", async () => {
+            const { em } = withBuilders({ execute: {} })
+            const services = await build()
+
+            await expect(services.save(writeOf({ id: "svc-9" }), em)).resolves.toEqual([])
+        })
     })
 })
 

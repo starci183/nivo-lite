@@ -5,7 +5,8 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { KNOWLEDGE_QUEUE } from "@modules/queues/knowledge"
-import { entityRowBuilder, namedCalls } from "@tests/fixtures/builders/entity-row.builder"
+import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
+import { evaluatedCalls, evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { BrainCommandsService } from "./brain-commands.service"
 import { BrainCommandEntity } from "./persistence/entities"
@@ -52,7 +53,7 @@ describe("BrainCommandsService request", () => {
         await expect(commands.request("user-1", "ws-1", "reindex", { source: "s-1" })).resolves.toBe("cmd-1")
 
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-        expect(namedCalls(tx.em.insert.mock.calls)).toEqual([
+        expect(evaluatedCalls(tx.em.insert.mock.calls)).toEqual([
             [
                 "BrainCommandEntity",
                 { workspaceId: "ws-1", requestedBy: "user-1", kind: "reindex", payload: { source: "s-1" } },
@@ -133,6 +134,12 @@ describe("BrainCommandsService begin, finish and fail", () => {
         await expect(commands.begin("ws-1", "cmd-1")).resolves.toBe(false)
     })
 
+    it("refuses a command when the database does not say how many rows changed", async () => {
+        const { commands } = await build(mockEntityManager({ update: [BrainCommandEntity, {}] }))
+
+        await expect(commands.begin("ws-1", "cmd-1")).resolves.toBe(false)
+    })
+
     it("closes a command with its result, the jsonb null when it has none, or its stored code", async () => {
         const em = mockEntityManager({ update: [BrainCommandEntity, { affected: 1 }] })
         const [withResult, withNone] = queueQueryBuilders(em, [{ execute: {} }, { execute: {} }])
@@ -146,8 +153,14 @@ describe("BrainCommandsService begin, finish and fail", () => {
         expect(withResult?.callsOf("where")).toEqual([[{ workspaceId: "ws-1", id: "cmd-1" }]])
         expect(withResult?.callsOf("setParameter")).toEqual([["result", '{"facts":3}']])
         expect(withNone?.callsOf("setParameter")).toEqual([["result", "null"]])
-        expect(withResult?.callsOf("set")[0]?.[0]).toMatchObject({ status: "done", errorCode: null })
-        expect(namedCalls(em.update.mock.calls, 2)).toEqual([
+        expect(evaluatedValues(withResult?.callsOf("set")[0]?.[0])).toEqual({
+            status: "done",
+            result: ":result::jsonb",
+            errorCode: null,
+            payload: "payload - 'token'",
+            finishedAt: "now()",
+        })
+        expect(evaluatedCalls(em.update.mock.calls, 2)).toEqual([
             [
                 "BrainCommandEntity",
                 { workspaceId: "ws-1", id: "cmd-2" },
@@ -155,8 +168,8 @@ describe("BrainCommandsService begin, finish and fail", () => {
                     status: "failed",
                     result: null,
                     errorCode: "BRAIN_FAILED",
-                    payload: "function",
-                    finishedAt: "function",
+                    payload: "payload - 'token'",
+                    finishedAt: "now()",
                 },
             ],
         ])

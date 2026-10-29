@@ -165,5 +165,21 @@ describe("BookingOverviewService", () => {
             expect(result.stats).toEqual({ byResource: [], byStatus: {}, noShowPct: 0, doneRevenueVnd: 0, total: 0 })
             expect(deposits.callsOf("andWhere")).toHaveLength(1)
         })
+
+        it("shows no deposits due when the statement answers no row", async () => {
+            const { service } = await build(
+                { week: [], range: [] },
+                { finished: { getRawMany: [] }, deposits: { getRawOne: undefined } },
+            )
+
+            const result = await service.overview(USER, {
+                workspaceId: WORKSPACE,
+                from: "2026-10-12",
+                to: "2026-10-18",
+            })
+
+            expect(result.figures.depositsPending).toBe(0)
+            expect(result.figures.depositsPendingVnd).toBe(0)
+        })
     })
 })

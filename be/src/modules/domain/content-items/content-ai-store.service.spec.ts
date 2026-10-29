@@ -8,7 +8,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder.builder"
-import { namedCalls, stampedValues } from "@tests/fixtures/builders/entity-row.builder"
+import { evaluatedCalls, evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { ContentAiStoreService } from "./content-ai-store.service"
 import { ContentItemsErrorCode } from "./errors/content-items.error"
 import { ContentItemEntity } from "./persistence/entities"
@@ -156,7 +156,10 @@ describe("ContentAiStoreService applyDraft", () => {
                 },
             ],
         ])
-        expect(stampedValues(fakes[0]?.callsOf("set")[0]?.[0])).toMatchObject({ hashtags: ["launch"], status: "draft" })
+        expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toMatchObject({
+            hashtags: ["launch"],
+            status: "draft",
+        })
         expect(fakes[0]?.callsOf("where")[0]?.[1]).toEqual({ itemId: "idea-1", workspaceId: "workspace-1" })
     })
 
@@ -226,7 +229,7 @@ describe("ContentAiStoreService recentTitles", () => {
         })
         const { service } = await build([], entityManager)
         await expect(service.recentTitles("workspace-1", "idea-1")).resolves.toEqual(["Latest", "Earlier"])
-        expect(namedCalls(entityManager.find.mock.calls)).toEqual([
+        expect(evaluatedCalls(entityManager.find.mock.calls)).toEqual([
             [
                 "ContentItemEntity",
                 {
@@ -267,7 +270,7 @@ describe("ContentAiStoreService insertPlannedIdeas", () => {
         await expect(service.insertPlannedIdeas("workspace-1", "plan-1", plan([item]), tx)).resolves.toBe(1)
         expect(remove?.callsOf("where")).toEqual([[{ workspaceId: "workspace-1", status: "idea", source: "plan" }]])
         expect(remove?.callsOf("andWhere")[0]?.[1]).toEqual({ month: "2026-01-01" })
-        expect(namedCalls(tx.find.mock.calls)).toEqual([
+        expect(evaluatedCalls(tx.find.mock.calls)).toEqual([
             [
                 "ContentPillarEntity",
                 { where: { workspaceId: "workspace-1", id: In(["pillar-1"]) }, select: { id: true }, take: 100 },

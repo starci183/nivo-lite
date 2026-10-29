@@ -3,7 +3,8 @@ import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Not } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { entityRowBuilder, namedCalls } from "@tests/fixtures/builders/entity-row.builder"
+import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder"
+import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
 import { ExtractionNote } from "./brain-extractions.contracts"
 import { BrainExtractionsService } from "./brain-extractions.service"
 import { BrainExtractionEntity } from "./persistence/entities"
@@ -34,7 +35,7 @@ const rowOf = entityRowBuilder<BrainExtractionEntity>({
 })
 
 /** Every update the double saw: the entity, the filter and the changes with their function expressions named. */
-const updatesOf = (em: MockEntityManager): unknown => namedCalls(em.update.mock.calls, 2)
+const updatesOf = (em: MockEntityManager): unknown => evaluatedCalls(em.update.mock.calls, 2)
 
 describe("BrainExtractionsService", () => {
     describe("states", () => {
@@ -51,7 +52,7 @@ describe("BrainExtractionsService", () => {
                 { sourceId: "s1", status: "running" },
                 { sourceId: "s2", status: "done" },
             ])
-            expect(namedCalls(em.find.mock.calls)).toEqual([
+            expect(evaluatedCalls(em.find.mock.calls)).toEqual([
                 [
                     "BrainExtractionEntity",
                     { select: { sourceId: true, status: true }, where: { workspaceId: WS }, take: 500 },
@@ -64,7 +65,7 @@ describe("BrainExtractionsService", () => {
             const service = await build(em)
 
             await expect(service.states(WS)).resolves.toEqual([])
-            expect(namedCalls(em.find.mock.calls)).toEqual([
+            expect(evaluatedCalls(em.find.mock.calls)).toEqual([
                 [
                     "BrainExtractionEntity",
                     { select: { sourceId: true, status: true }, where: { workspaceId: WS }, take: 500 },
@@ -156,9 +157,9 @@ describe("BrainExtractionsService", () => {
                 windowsDone: 0,
                 attempts: 0,
                 orphanFactIds: ["f1", "f2"],
-                updatedAt: "function",
+                updatedAt: "now()",
             }
-            const upserts = () => namedCalls(em.upsert.mock.calls, 1)
+            const upserts = () => evaluatedCalls(em.upsert.mock.calls, 1)
             expect(upserts()).toEqual([["BrainExtractionEntity", started, ["sourceId"]]])
             orphanFactIds.push("f3")
             expect(upserts()).toEqual([["BrainExtractionEntity", started, ["sourceId"]]])
@@ -194,7 +195,7 @@ describe("BrainExtractionsService", () => {
                         windowsTotal: 5,
                         error: "BRAIN_NOTE_MODEL_BUSY",
                         attempts: 3,
-                        updatedAt: "function",
+                        updatedAt: "now()",
                     },
                 ],
             ])
@@ -224,7 +225,7 @@ describe("BrainExtractionsService", () => {
                         windowsTotal: 5,
                         error: null,
                         attempts: 0,
-                        updatedAt: "function",
+                        updatedAt: "now()",
                     },
                 ],
             ])
@@ -244,7 +245,7 @@ describe("BrainExtractionsService", () => {
                 [
                     "BrainExtractionEntity",
                     { workspaceId: WS, sourceId: "s1" },
-                    { status: "done", error: null, model: "model-1", orphanFactIds: [], updatedAt: "function" },
+                    { status: "done", error: null, model: "model-1", orphanFactIds: [], updatedAt: "now()" },
                 ],
             ])
         })
@@ -263,7 +264,7 @@ describe("BrainExtractionsService settling", () => {
                 [
                     "BrainExtractionEntity",
                     { workspaceId: WS, sourceId: "s1", status: Not("done") },
-                    { status: "failed", error: ExtractionNote.Aborted, updatedAt: "function" },
+                    { status: "failed", error: ExtractionNote.Aborted, updatedAt: "now()" },
                 ],
             ])
         })
