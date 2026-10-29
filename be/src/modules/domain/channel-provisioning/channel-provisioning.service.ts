@@ -1,5 +1,4 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import { ChannelConnectionsService } from "@modules/domain/channel-connections"
 import { ConnectionGrantsService, purposeFor } from "@modules/domain/connection-grants"
 import { randomSecret } from "@modules/domain/connection-secrets"
@@ -7,7 +6,6 @@ import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@mod
 import type { ConnectionActor, Provider } from "@modules/domain/connections"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectChannelProvisioningOptions } from "./channel-provisioning.decorators"
 import type { ProvisionFlags } from "./channel-provisioning.contracts"
 import type { ChannelProvisioningOptions } from "./channel-provisioning.options"
@@ -32,7 +30,6 @@ const invalid = (field: string): never => {
  */
 export class ChannelProvisioningService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectChannelProvisioningOptions() private readonly options: ChannelProvisioningOptions,
         private readonly channels: ChannelConnectionsService,
         private readonly grants: ConnectionGrantsService,
