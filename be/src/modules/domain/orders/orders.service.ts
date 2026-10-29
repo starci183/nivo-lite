@@ -13,7 +13,7 @@ import type {
     OptionalOrder,
     OrderConfirmation,
     OrderLabel,
-    OrderRef,
+    OrderNameRef,
     OptionalOrdersWorkbench,
     OrdersWorkbenchRow,
     SalesOrderListRow,
@@ -148,7 +148,7 @@ export class OrdersService {
     }
 
     /** The newest orders of any status reduced to the number and customer a message may name, bounded by the caller. */
-    async recentRefs(workspaceId: string, limit: number): Promise<Array<OrderRef>> {
+    async recentRefs(workspaceId: string, limit: number): Promise<Array<OrderNameRef>> {
         const orders = await this.entityManager.find(OrderEntity, {
             select: { id: true, orderNo: true, leadId: true },
             where: { workspaceId },
