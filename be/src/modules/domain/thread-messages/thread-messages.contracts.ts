@@ -111,7 +111,7 @@ export interface ThreadMessage {
 }
 
 /** One line written into a thread. */
-export interface ThreadLine {
+export interface ThreadMessageLine {
     /** The workspace. */
     readonly workspaceId: string
     /** The thread. */

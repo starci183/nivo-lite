@@ -7,7 +7,8 @@ import { pendingOf, withVote } from "./approval-card.policy"
 import { ThreadMessagesError, ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { MentionDirectoryService } from "./mention-directory.service"
 import { ThreadMessageAuthorsService } from "./thread-message-authors.service"
-import { selectMessages } from "./persistence/thread-message.query"
+import { ThreadMessageEntity } from "./persistence/entities"
+import { selectMessageColumns } from "./persistence/thread-message.query"
 import { toMessage } from "./thread.mapper"
 import { ThreadApprovalOutcomesService } from "./thread-approval-outcomes.service"
 import type { ThreadCardDecision, ThreadMessage, ThreadMessageRead } from "./thread-messages.contracts"
@@ -39,7 +40,10 @@ export class ThreadApprovalsService {
     async decide(input: ThreadCardDecision): Promise<ThreadMessage> {
         await this.members.require(input.userId, input.workspaceId)
         const memberId = await this.directory.memberIdOf(this.entityManager, input.workspaceId, input.userId)
-        const read = await selectMessages(this.entityManager, input.workspaceId)
+        const read = await selectMessageColumns(
+            this.entityManager.createQueryBuilder(ThreadMessageEntity, "m"),
+            input.workspaceId,
+        )
             .andWhere("m.id = :messageId", { messageId: input.messageId })
             .limit(1)
             .getRawOne<ThreadMessageRead>()

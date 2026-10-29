@@ -5,13 +5,13 @@ import type { ChainActor } from "@modules/domain/work-chains"
 import { WorkThreadsService } from "@modules/domain/work-threads"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { eachInOrder, unwrapOutcome } from "@modules/platform/primitives"
+import { eachInOrder, isRecord, unwrapOutcome } from "@modules/platform/primitives"
 import { ThreadMessagesError, ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { vetMentions, vetQuotes } from "./mention.policy"
 import { MentionDirectoryService } from "./mention-directory.service"
 import { ThreadMessageAuthorsService } from "./thread-message-authors.service"
 import { ThreadMessageEntity } from "./persistence/entities"
-import { readMessageById } from "./persistence/thread-message.query"
+import { selectMessageColumns } from "./persistence/thread-message.query"
 import { toMessage } from "./thread.mapper"
 import { tagStepOf } from "./thread-step.policy"
 import { stepTitleOf } from "./thread-text.policy"
@@ -19,12 +19,17 @@ import type {
     AgentGate,
     MemberPost,
     MentionView,
-    ThreadLine,
+    ThreadMessageLine,
     ThreadMessage,
+    ThreadMessageRead,
     UserPost,
 } from "./thread-messages.contracts"
 import { InjectAgentRules } from "./thread-messages.decorators"
 import type { AgentRules } from "./thread-messages.port"
+
+/** True when a RETURNING row names the id of a stored message. */
+const isInsertedId = (value: unknown): value is { readonly id: string } =>
+    isRecord(value) && typeof value.id === "string"
 
 @Injectable()
 /** What members write in a work thread, with the tags they chose; the only writer of thread_messages. */
@@ -99,7 +104,7 @@ export class ThreadMessagesService {
     }
 
     /** Writes one line into a thread inside the caller's transaction and reads it back. */
-    async append(tx: EntityManager, line: ThreadLine): Promise<ThreadMessage> {
+    async append(tx: EntityManager, line: ThreadMessageLine): Promise<ThreadMessage> {
         const card = line.card
         const result = await tx
             .createQueryBuilder(ThreadMessageEntity, "t")
@@ -117,9 +122,12 @@ export class ThreadMessagesService {
             })
             .returning("id")
             .execute()
-        const [inserted] = result.raw as Array<{ id: string }>
+        const inserted = [result.raw].flat().find(isInsertedId)
         if (inserted === undefined) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.NotStored })
-        const row = await readMessageById(tx, line.workspaceId, inserted.id)
+        const row = await selectMessageColumns(tx.createQueryBuilder(ThreadMessageEntity, "m"), line.workspaceId)
+            .andWhere("m.id = :messageId", { messageId: inserted.id })
+            .limit(1)
+            .getRawOne<ThreadMessageRead>()
         if (row === undefined) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.NotStored })
         return toMessage(await this.authors.withAuthor(tx, line.workspaceId, row))
     }

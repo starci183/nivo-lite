@@ -1,4 +1,4 @@
-import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, fakeInbox, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { WorkChainsService } from "@modules/domain/work-chains"
@@ -7,13 +7,12 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import { INBOX } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { MentionDirectoryService } from "./mention-directory.service"
 import { ThreadMessageAuthorsService } from "./thread-message-authors.service"
-import { passThroughAuthors } from "@tests/fixtures/builders/thread-message-authors.builder"
+import { namesFromRows } from "@tests/fixtures/builders/thread-message-names.builder"
 import { ThreadMessageEntity } from "./persistence/entities"
 import { ThreadApprovalOutcomesService } from "./thread-approval-outcomes.service"
 import { ThreadMessagesService } from "./thread-messages.service"
@@ -80,13 +79,17 @@ const managerOf = (answers: Answers = {}) => {
         update: [ThreadMessageEntity, { affected: 1, raw: [], generatedMaps: [] }],
     })
     const lock = fakeQueryBuilder({ getRawOne: (answers.locked ?? [rowOf(PENDING)])[0] })
-    em.createQueryBuilder.mockReturnValue(lock.builder as never)
+    em.createQueryBuilder.mockReturnValue(lock.builder)
     return { em, lock }
 }
 
+/** The delivery key the bus hands the reactor. */
+const CLAIM = { consumer: "approval_resolved__thread_outcomes", dedupeKey: "req-1" }
+
 const build = async (em: MockEntityManager, claimWon = true) => {
     fakeTransaction(em)
-    const inbox = mock<Inbox>({ claim: jest.fn().mockResolvedValue(claimWon) })
+    const inbox = fakeInbox()
+    if (!claimWon) inbox.seen(CLAIM.consumer, CLAIM.dedupeKey)
     const directory = mock<MentionDirectoryService>({
         nameOfMember: jest.fn((...[, , id]: [unknown, unknown, string]) =>
             Promise.resolve(id === "ha" ? "Chi Ha" : "Anh Minh"),
@@ -104,6 +107,8 @@ const build = async (em: MockEntityManager, claimWon = true) => {
             (key: string, params: Readonly<Record<string, string | number>>) => `${key}|${JSON.stringify(params)}`,
         ),
     })
+    const authors = mock<ThreadMessageAuthorsService>()
+    namesFromRows(authors)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ThreadApprovalOutcomesService,
@@ -112,7 +117,7 @@ const build = async (em: MockEntityManager, claimWon = true) => {
             { provide: INBOX, useValue: inbox },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: MentionDirectoryService, useValue: directory },
-            { provide: ThreadMessageAuthorsService, useValue: passThroughAuthors() },
+            { provide: ThreadMessageAuthorsService, useValue: authors },
             { provide: WorkThreadsService, useValue: threads },
             { provide: WorkChainsService, useValue: chains },
             { provide: ThreadMessagesService, useValue: messages },
@@ -120,9 +125,6 @@ const build = async (em: MockEntityManager, claimWon = true) => {
     }).compile()
     return { service: moduleRef.get(ThreadApprovalOutcomesService), inbox, directory, threads, chains, messages }
 }
-
-/** The delivery key the bus hands the reactor. */
-const CLAIM = { consumer: "approval_resolved__thread_outcomes", dedupeKey: "req-1" }
 
 const event = (outcome: ApprovalResolved["outcome"], decidedBy: string | null): ApprovalResolved => ({
     requestId: "req-1",
@@ -185,7 +187,7 @@ const registerResolvedApproved = () => {
 
             await service.resolved(event("approved", "ha"), CLAIM)
 
-            expect(inbox.claim).toHaveBeenCalledWith("approval_resolved__thread_outcomes", "req-1", expect.anything())
+            expect(inbox.claims).toEqual([{ source: "approval_resolved__thread_outcomes", eventId: "req-1" }])
             expect(em.update).not.toHaveBeenCalled()
             expect(chains.settleApproval).not.toHaveBeenCalled()
         })
