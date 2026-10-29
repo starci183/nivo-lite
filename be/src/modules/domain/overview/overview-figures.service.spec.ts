@@ -5,7 +5,6 @@ import { AgentDirectoryService } from "@modules/domain/agents"
 import { AuthorityService } from "@modules/domain/authority"
 import type { AuthorityProfile } from "@modules/domain/authority"
 import { DecisionsFiguresService } from "@modules/domain/decisions"
-import type { RecentDecision } from "@modules/domain/decisions"
 import { EventsReadService } from "@modules/domain/events"
 import { ExecutionsFiguresService } from "@modules/domain/executions"
 import { InvoicesFiguresService } from "@modules/domain/invoices"
@@ -51,6 +50,9 @@ const workFigureOf = builder<WorkFigure>({
     contact: null,
     customer: null,
 })
+
+/** A decision as the recent list returns it. */
+type RecentDecision = Awaited<ReturnType<DecisionsFiguresService["recent"]>>[number]
 
 const decisionOf = builder<RecentDecision>({
     id: "d-1",

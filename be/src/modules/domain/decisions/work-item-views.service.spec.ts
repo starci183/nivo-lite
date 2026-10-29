@@ -36,7 +36,7 @@ const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = []) => {
     return { service: moduleRef.get(WorkItemViewsService), fakes, items, leads, staff }
 }
 
-describe("WorkItemViewsService", () => {
+describe("WorkItemViewsService reads", () => {
     describe("find", () => {
         it("reads one item with its cursor and the name of its latest decider, named twice", async () => {
             const { service, items, fakes } = await build([
@@ -83,7 +83,9 @@ describe("WorkItemViewsService", () => {
             expect(fakes).toHaveLength(1)
         })
     })
+})
 
+describe("WorkItemViewsService accounting", () => {
     describe("accountingWaiting", () => {
         it("folds the customer card and the staff name into each waiting item", async () => {
             const { service, items, leads, staff } = await build()
