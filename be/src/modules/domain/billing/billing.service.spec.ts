@@ -301,8 +301,8 @@ describe("BillingService > renew", () => {
 
         await expect(billing.renew("person-1", { workspaceId: "ws-1" })).rejects.toMatchObject({
             code: BillingErrorCode.Forbidden,
+        })
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
-        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
         expect(em.findOne).not.toHaveBeenCalled()
     })
 })
@@ -470,8 +470,8 @@ describe("BillingService > quote", () => {
 
         await expect(billing.quote("person-1", { workspaceId: "ws-1", planCode: "starter" })).rejects.toMatchObject({
             code: BillingErrorCode.NotMember,
+        })
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
-        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
         expect(em.findOne).not.toHaveBeenCalled()
     })
 })
