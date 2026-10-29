@@ -26,15 +26,15 @@ export class ZaloInboxService {
     /** A redelivered message is acknowledged without being processed again; every event type has its own id, so a follow event is claimed once and never overwrites another. */
     acceptZaloDelivery(rawBody: ZaloRawDelivery, connection: string): Promise<void> {
         return this.entityManager.transaction(async (manager) => {
-            const payload = { connection, rawBody: rawBody?.toString("utf8") }
+            const payload = { connection, rawBody: rawBody?.toString("utf8") ?? "" }
             const deliveryId = rawBody === undefined ? "" : zaloDeliveryIdOf(connection, rawBody)
-            if (
-                !(await this.inbox.claimRow("zalo", deliveryId, manager, {
-                    entity: ZaloInboxEntity,
-                    row: { provider: "zalo", deliveryId, payload },
-                }))
-            )
-                return
+            if (deliveryId === "") return
+            const receipt = {
+                entity: ZaloInboxEntity,
+                row: (id: string) => ({ provider: "zalo", deliveryId: id, payload }),
+            }
+            const receiptId = await this.inbox.claimRow("zalo", deliveryId, manager, receipt)
+            if (receiptId === undefined) return
             const message: ZaloDeliveryRecorded = { deliveryId }
             await this.outbox.write(manager, ZALO_DELIVERY_QUEUE, message, {
                 dedupeKey: `${ZALO_DELIVERY_QUEUE}:${deliveryId}`,

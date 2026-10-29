@@ -12,16 +12,17 @@ export class BankFeedReceiptService {
     constructor(@InjectEntityInbox() private readonly inbox: EntityInbox) {}
 
     /** Claims a delivery once using the caller's transaction. */
-    claim(
+    async claim(
         manager: EntityManager,
         provider: BankFeedProvider,
         deliveryId: string,
         payload: FeedReceiptPayload,
     ): Promise<boolean> {
-        return this.inbox.claimRow(provider, deliveryId, manager, {
+        const receiptId = await this.inbox.claimRow(provider, deliveryId, manager, {
             entity: BankFeedInboxEntity,
-            row: { provider, deliveryId, payload },
+            row: (id) => ({ provider, deliveryId: id, payload }),
         })
+        return receiptId !== undefined
     }
 
     /** Locks a pending receipt until its booking and completion commit together. */

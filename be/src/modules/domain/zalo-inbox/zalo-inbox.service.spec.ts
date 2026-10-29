@@ -1,8 +1,7 @@
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
+import { fakeInbox, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import { IsNull } from "typeorm"
-import { fakeRowInbox } from "@tests/fixtures/builders/row-claims.builder"
 import { ConversationsService } from "@modules/domain/conversations"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
@@ -33,7 +32,8 @@ const build = async (pending: ZaloInboxEntity | null = pendingOf(), claimed = tr
     )
     const conversations = mock<ConversationsService>()
     conversations.acceptZalo.mockResolvedValue(undefined)
-    const inbox = fakeRowInbox(claimed)
+    const inbox = fakeInbox()
+    if (!claimed) inbox.seen("zalo", "c-1:m-1")
     const outbox = recordingQueueOutbox()
     const write = jest.spyOn(outbox, "write")
     const moduleRef = await Test.createTestingModule({
@@ -45,20 +45,21 @@ const build = async (pending: ZaloInboxEntity | null = pendingOf(), claimed = tr
             { provide: ConversationsService, useValue: conversations },
         ],
     }).compile()
-    return { service: moduleRef.get(ZaloInboxService), tx, conversations, outbox, write, rowClaims: inbox.rowClaims }
+    return { service: moduleRef.get(ZaloInboxService), tx, conversations, outbox, write, inbox }
 }
 
 describe("ZaloInboxService receipt delivery", () => {
     it("claims the connection-prefixed message identity and defers conversation effects", async () => {
-        const { service, conversations, write, rowClaims } = await build()
+        const { service, conversations, write, inbox } = await build()
         await service.acceptZaloDelivery(body, "c-1")
         const manager = write.mock.calls[0]?.[0]
         expect(isTransactionManager(manager)).toBe(true)
-        expect(rowClaims).toEqual([
+        expect(inbox.receipts.map(({ source, eventId, entity, row }) => ({ source, eventId, entity, row }))).toEqual([
             {
                 source: "zalo",
                 eventId: "c-1:m-1",
-                receipt: { entity: ZaloInboxEntity, row: { provider: "zalo", deliveryId: "c-1:m-1", payload } },
+                entity: ZaloInboxEntity,
+                row: { provider: "zalo", deliveryId: "c-1:m-1", payload },
             },
         ])
         expect(write).toHaveBeenCalledWith(
@@ -154,10 +155,10 @@ describe("ZaloInboxService consumer recovery", () => {
 
 describe("ZaloInboxService non-text events", () => {
     it("claims a follow event under its own connection-scoped id and completes it without a conversation effect", async () => {
-        const { service, conversations, write, rowClaims } = await build()
+        const { service, conversations, write, inbox } = await build()
         const follow = JSON.stringify({ event_name: "follow", timestamp: "1700", follower: { id: "user-9" } })
         await service.acceptZaloDelivery(Buffer.from(follow), "c-1")
-        expect(rowClaims[0]?.receipt.row).toMatchObject({ deliveryId: "c-1:follow:1700:user-9" })
+        expect(inbox.receipts[0]?.row).toMatchObject({ deliveryId: "c-1:follow:1700:user-9" })
         expect(write).toHaveBeenCalledWith(
             expect.anything(),
             ZALO_DELIVERY_QUEUE,

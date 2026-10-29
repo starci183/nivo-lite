@@ -27,16 +27,15 @@ export class TelegramInboxService {
     /** A redelivered update is acknowledged without being processed again; an update the chat does not answer is acknowledged and dropped. */
     acceptTelegramDelivery(rawBody: TelegramRawDelivery, connection: string): Promise<void> {
         return this.entityManager.transaction(async (manager) => {
-            const payload = { connection, rawBody: rawBody?.toString("utf8") }
+            const payload = { connection, rawBody: rawBody?.toString("utf8") ?? "" }
             const inbound = readTelegramUpdate(`[${this.catalog.get("conversations.photoSent", {}, "vi")}]`, rawBody)
             const deliveryId = inbound.kind === "ok" ? `${payload.connection}:${inbound.value.updateId}` : ""
-            if (
-                !(await this.inbox.claimRow("telegram", deliveryId, manager, {
-                    entity: TelegramInboxEntity,
-                    row: { provider: "telegram", deliveryId, payload },
-                }))
-            )
-                return
+            if (deliveryId === "") return
+            const receiptId = await this.inbox.claimRow("telegram", deliveryId, manager, {
+                entity: TelegramInboxEntity,
+                row: (id) => ({ provider: "telegram", deliveryId: id, payload }),
+            })
+            if (receiptId === undefined) return
             const message: TelegramDeliveryRecorded = { deliveryId }
             await this.outbox.write(manager, TELEGRAM_DELIVERY_QUEUE, message, {
                 dedupeKey: `${TELEGRAM_DELIVERY_QUEUE}:${deliveryId}`,
