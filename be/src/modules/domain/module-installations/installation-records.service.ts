@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { Not, IsNull } from "typeorm"
 import type { EntityManager, UpdateResult } from "typeorm"
-import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { isRecord } from "@modules/platform/primitives"
 import type {
     InstallationMode,
     InstallationRecord,
@@ -50,6 +50,9 @@ const toRecord = (row: ModuleInstallationEntity): InstallationRecord => ({
 })
 
 /** The installations in the order every list reads them: oldest first, ties by id. */
+const isSettledRow = (value: unknown): value is { readonly status: InstallationStatus } =>
+    isRecord(value) && typeof value.status === "string"
+
 const OLDEST_FIRST = { createdAt: "ASC", id: "ASC" } as const
 
 /** What a write on an installation did: it changed the row, found no such row, or hit a unique index. */
@@ -227,7 +230,7 @@ export class InstallationRecordsService {
             this.entityManager.update(
                 ModuleInstallationEntity,
                 { id: installationId, workspaceId },
-                { settings: settings as QueryDeepPartialEntity<InstallationSettings> },
+                { settings },
             ),
         )
     }
@@ -272,8 +275,7 @@ export class InstallationRecordsService {
             .setParameter("ready", ready)
             .returning("status")
             .execute()
-        const [row] = settled.raw as Array<{ status: InstallationStatus }>
-        return row?.status ?? null
+        return [settled.raw].flat().find(isSettledRow)?.status ?? null
     }
 
     /** Up to `limit` installations that run on OpenClaw, of one workspace or of all when `workspaceId` is null. */

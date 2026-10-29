@@ -51,7 +51,7 @@ export type OptionalRowId = string | null
 /** The settings of an installation: a name to the value the owner saved. */
 export interface InstallationSettings {
     /** One setting. */
-    readonly [name: string]: unknown
+    readonly [name: string]: string | number | boolean | object | null
 }
 
 /** An installation, or null when none matches. */
