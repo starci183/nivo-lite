@@ -69,23 +69,34 @@ describe("aiGatewayOf", () => {
             expect(options.providers[1]?.keys[0]?.alias).toBe("OPENROUTER_API_KEY")
         })
     })
+})
 
-    describe("the gateway", () => {
-        it("keeps the default key file and no admin API, and reads no port (it is the app port plus one)", async () => {
-            const options = await parse({ OPENROUTER_API_KEY: "k" })
+describe("aiGatewayOf, the gateway", () => {
+    it("keeps the default key file and no admin API, and reads no port (it is the app port plus one)", async () => {
+        const options = await parse({ OPENROUTER_API_KEY: "k" })
 
-            expect(options.gateway).toEqual({ keysPath: "ai-router-keys.sqlite", adminToken: null })
+        expect(options.gateway).toEqual({ keysPath: "ai-router-keys.sqlite", adminToken: null, mountedKeys: [] })
+    })
+
+    it("mounts the api and openclaw virtual keys that are declared, each with its label and profiles", async () => {
+        const options = await parse({ OPENROUTER_API_KEY: "k", AI_API_KEY: "api", OPENCLAW_AI_KEY: "claw" })
+
+        expect(
+            options.gateway?.mountedKeys.map((key) => ({ ...key, secret: key.secret.reveal() })),
+        ).toEqual([
+            { label: "nivo_api", secret: "api", profiles: ["work", "embed"] },
+            { label: "nivo_openclaw", secret: "claw", profiles: ["work"] },
+        ])
+    })
+
+    it("takes the key file and the admin token from the environment", async () => {
+        const options = await parse({
+            OPENROUTER_API_KEY: "k",
+            AI_ROUTER_KEYS_PATH: "/data/keys.sqlite",
+            AI_ROUTER_ADMIN_TOKEN: "admin",
         })
 
-        it("takes the key file and the admin token from the environment", async () => {
-            const options = await parse({
-                OPENROUTER_API_KEY: "k",
-                AI_ROUTER_KEYS_PATH: "/data/keys.sqlite",
-                AI_ROUTER_ADMIN_TOKEN: "admin",
-            })
-
-            expect(options.gateway?.keysPath).toBe("/data/keys.sqlite")
-            expect(options.gateway?.adminToken?.reveal()).toBe("admin")
-        })
+        expect(options.gateway?.keysPath).toBe("/data/keys.sqlite")
+        expect(options.gateway?.adminToken?.reveal()).toBe("admin")
     })
 })

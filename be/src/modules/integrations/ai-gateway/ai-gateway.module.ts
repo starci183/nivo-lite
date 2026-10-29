@@ -11,11 +11,23 @@ import { routerOptionsOf } from "./ai-gateway-router.mapper"
 /** Every interface: the agent runtime reaches the gateway from its own container, not only from loopback (BE-AI-6). */
 const GATEWAY_HOST = "0.0.0.0"
 
-/** The gateway over the registered router: virtual keys in a SQLite file, the admin token read at each admin request, its own port (the app port plus one). */
+/** The owner the mounted keys are billed to. */
+const KEY_OWNER = "nivo-lite"
+
+/**
+ * The gateway over the registered router: virtual keys in a SQLite file plus the keys mounted from sealed secrets, the admin token
+ * read at each admin request, its own port (the app port plus one).
+ */
 const gatewayOf = (gateway: AiGatewayHost): DynamicModule =>
     AiRouterGatewayModule.registerAsync({
         useFactory: async () => ({
             keys: await openSqliteKeyStore(gateway.keysPath),
+            mountedKeys: gateway.mountedKeys.map((key) => ({
+                label: key.label,
+                secret: () => key.secret.reveal(),
+                profiles: key.profiles,
+                owner: KEY_OWNER,
+            })),
             adminToken: () => gateway.adminToken?.reveal(),
             listen: { offset: 1, host: GATEWAY_HOST },
         }),

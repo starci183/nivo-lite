@@ -26,12 +26,24 @@ export interface AiGatewayModels {
     readonly embed: string
 }
 
+/** A virtual key mounted from a sealed secret: the gateway keeps only its hash, nothing is written to the key store. */
+export interface AiGatewayMountedKey {
+    /** The key label; the secret starts with `sk-starci-<label>-`. */
+    readonly label: string
+    /** The virtual key itself, read once at boot (a `<KEY>_FILE` mount included). */
+    readonly secret: Secret
+    /** The profiles the key may call. */
+    readonly profiles: ReadonlyArray<string>
+}
+
 /** The gateway: the OpenAI-compatible front of the pool that runs inside this process. */
 export interface AiGatewayHost {
     /** Where the SQLite file of the virtual keys lives. */
     readonly keysPath: string
     /** The token of the admin API (key issue, rotate, revoke); null turns the admin API off. */
     readonly adminToken: Secret | null
+    /** The virtual keys mounted from sealed secrets, so a deploy issues no key by hand. */
+    readonly mountedKeys: ReadonlyArray<AiGatewayMountedKey>
 }
 
 /** The AI pool: the upstream providers, the models behind the profiles and the gateway. */
