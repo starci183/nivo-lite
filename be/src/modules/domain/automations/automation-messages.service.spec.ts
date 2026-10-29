@@ -1,12 +1,11 @@
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { mock } from "@starci/jest-preset"
 import { StaffDirectoryService } from "@modules/domain/staff"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
-import type { MockEntityManager } from "@starci/jest-preset"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { Composition } from "./automation-messages.contracts"
 import { AutomationMessagesService } from "./automation-messages.service"
+import { AutomationReadsService } from "./automation-reads.service"
 import type {
     AutomationGate,
     AutomationOffice,
@@ -18,22 +17,6 @@ import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/buil
 import { AUTOMATION_GATE, AUTOMATION_OFFICE, AUTOMATION_TEXT } from "./automations.decorators"
 import { AutomationsErrorCode } from "./errors/automations.error"
 import type { LeadRead } from "./automation-reads.contracts"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-
-/** The manager of {@link readingOf}. */
-interface ReadingManager {
-    /** The manager whose reads answer the given results. */
-    readonly em: MockEntityManager
-}
-
-/** A manager whose reads (and the snapshot transaction around some of them) answer `answers`, one fake statement each, in order. */
-const readingOf = (...answers: Array<QueryBuilderAnswers>): ReadingManager => {
-    const em = mockEntityManager()
-    fakeTransaction(em)
-    queueQueryBuilders(em, answers)
-    return { em }
-}
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 const textLike = (text: string): unknown => expect.stringContaining(text)
@@ -81,7 +64,8 @@ const context = (overrides: Partial<ExecutorContext> = {}): ExecutorContext => (
     ...overrides,
 })
 
-const build = async (em: MockEntityManager = mockEntityManager()) => {
+const build = async () => {
+    const reads = mock<AutomationReadsService>()
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, params) => {
         if (key === "automations.pattern.negative") return "bad|terrible"
@@ -97,7 +81,7 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             AutomationMessagesService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: AutomationReadsService, useValue: reads },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: AUTOMATION_GATE, useValue: gate },
             { provide: AUTOMATION_OFFICE, useValue: office },
@@ -106,7 +90,7 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
         ],
     }).compile()
     const service = moduleRef.get(AutomationMessagesService)
-    return { service, gate, office, text, staff }
+    return { service, gate, office, text, staff, reads }
 }
 
 describe("AutomationMessagesService words", () => {
@@ -128,20 +112,24 @@ describe("AutomationMessagesService words", () => {
         expect(service.noChannel("An").steps[0]?.detail).toBe('noChannel{"name":"An"}')
     })
 })
+const CONVERSATION = { id: "cv-1", channel: "web", handled_by: null, visitor_name: null, lead_id: "l-1" }
+
 describe("AutomationMessagesService loaders", () => {
     it("reads a lead, the conversation of a lead and the first staff member", async () => {
-        const em = readingOf({ getRawOne: LEAD }, { getRawOne: LEAD }, { getRawOne: { id: "cv-1" } }).em
-        const { service } = await build(em)
+        const { service, reads } = await build()
+        reads.lead.mockResolvedValue(LEAD)
+        reads.latestConversation.mockResolvedValue(CONVERSATION)
 
         await expect(service.lead("ws-1", "l-1")).resolves.toEqual(LEAD)
         await expect(service.leadOf("ws-1", "l-1")).resolves.toEqual(LEAD)
-        await expect(service.conversationOf("ws-1", "l-1")).resolves.toEqual({ id: "cv-1" })
+        await expect(service.conversationOf("ws-1", "l-1")).resolves.toEqual(CONVERSATION)
         await expect(service.firstStaffName("ws-1")).resolves.toBe("Lan")
     })
 
     it("answers none when there is nothing to read", async () => {
-        const em = readingOf({ getRawOne: undefined }, { getRawOne: undefined }, { getRawOne: undefined }).em
-        const { service, staff } = await build(em)
+        const { service, staff, reads } = await build()
+        reads.lead.mockResolvedValue(undefined)
+        reads.latestConversation.mockResolvedValue(undefined)
         staff.list.mockResolvedValueOnce([])
 
         await expect(service.lead("ws-1", "l-1")).resolves.toBeNull()

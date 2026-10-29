@@ -1,11 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { MoreThanOrEqual } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { BookingExceptionEntity } from "@modules/domain/booking-exceptions"
-import { BookingHourEntity } from "@modules/domain/booking-hours"
-import { BookingResourceEntity } from "@modules/domain/booking-resources"
-import { BookingServiceEntity } from "@modules/domain/booking-services"
-import { BookingWaitlistEntity } from "@modules/domain/booking-waitlist"
+import { BookingExceptionsReadService } from "@modules/domain/booking-exceptions"
+import { BookingHoursReadService } from "@modules/domain/booking-hours"
+import { BookingResourcesReadService } from "@modules/domain/booking-resources"
+import { BookingServicesReadService } from "@modules/domain/booking-services"
+import { BookingWaitlistReadService } from "@modules/domain/booking-waitlist"
+import type { BookingWaitRecord } from "@modules/domain/booking-waitlist"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { StaffDirectoryService } from "@modules/domain/staff"
 import { InjectClock } from "@modules/platform/clock"
@@ -29,12 +29,7 @@ import { addDays, bookingIsoOf, localDate, mondayOf, zonedMs } from "./policies/
 
 const DAY_MS = 86_400_000
 const MAX_RANGE_DAYS = 366
-const SERVICES_LIMIT = 200
-const RESOURCES_LIMIT = 200
-const HOURS_LIMIT = 2000
-const EXCEPTIONS_LIMIT = 1000
 const BOOKINGS_LIMIT = 2000
-const WAITLIST_LIMIT = 100
 const STAFF_LIMIT = 200
 const LOCAL_DATE_PATTERN = /^[1-9]\d{3}-\d{2}-\d{2}$/
 
@@ -43,6 +38,18 @@ const validDate = (date: string): boolean => {
     const instant = Date.parse(`${date}T00:00:00.000Z`)
     return Number.isFinite(instant) && bookingIsoOf(instant).slice(0, 10) === date
 }
+
+/** A waiting customer with the current name of the service, the instants as epoch milliseconds. */
+const toWaitFacts = (wait: BookingWaitRecord, serviceName: string): BoardWaitFacts => ({
+    id: wait.id,
+    customer_name: wait.customerName,
+    customer_phone: wait.customerPhone,
+    service_name: serviceName,
+    from_ms: wait.windowStart.getTime(),
+    to_ms: wait.windowEnd.getTime(),
+    party_size: wait.partySize,
+    status: wait.status,
+})
 
 @Injectable()
 /** Reads the full booking workbench while retaining the domain's fixed-window figures and calendar statistics. */
@@ -54,6 +61,11 @@ export class BookingBoardService {
         private readonly models: BookingModelService,
         private readonly overview: BookingOverviewService,
         private readonly staff: StaffDirectoryService,
+        private readonly servicesRead: BookingServicesReadService,
+        private readonly resourcesRead: BookingResourcesReadService,
+        private readonly hoursRead: BookingHoursReadService,
+        private readonly exceptionsRead: BookingExceptionsReadService,
+        private readonly waitlistRead: BookingWaitlistReadService,
     ) {}
 
     /** Reads every setup and calendar field for an active workspace member. */
@@ -71,25 +83,10 @@ export class BookingBoardService {
         const toAt = new Date(zonedMs(addDays(to, 1), "00:00", timezone))
         const exceptionsFrom = from < addDays(today, -1) ? from : addDays(today, -1)
         const [services, resources, hours, exceptions, bookings, waitlist, staff, overview] = await Promise.all([
-            this.entityManager.find(BookingServiceEntity, {
-                where: { workspaceId: params.workspaceId },
-                order: { sortOrder: "ASC", createdAt: "ASC" },
-                take: SERVICES_LIMIT,
-            }),
-            this.entityManager.find(BookingResourceEntity, {
-                where: { workspaceId: params.workspaceId },
-                order: { sortOrder: "ASC", createdAt: "ASC" },
-                take: RESOURCES_LIMIT,
-            }),
-            this.entityManager.find(BookingHourEntity, {
-                where: { workspaceId: params.workspaceId },
-                take: HOURS_LIMIT,
-            }),
-            this.entityManager.find(BookingExceptionEntity, {
-                where: { workspaceId: params.workspaceId, onDate: MoreThanOrEqual(exceptionsFrom) },
-                order: { onDate: "ASC", id: "ASC" },
-                take: EXCEPTIONS_LIMIT,
-            }),
+            this.servicesRead.catalogue(params.workspaceId),
+            this.resourcesRead.catalogue(params.workspaceId),
+            this.hoursRead.week(params.workspaceId),
+            this.exceptionsRead.list(params.workspaceId, exceptionsFrom),
             this.boardBookings(params.workspaceId, fromAt, toAt),
             this.boardWaitlist(params.workspaceId),
             this.boardStaff(params.workspaceId),
@@ -114,15 +111,13 @@ export class BookingBoardService {
     }
 
     /** The complete appointments overlapping a window, with the current name of their service. */
-    private boardBookings(workspaceId: string, from: Date, to: Date): Promise<Array<BoardBookingFacts>> {
-        return this.entityManager
+    private async boardBookings(workspaceId: string, from: Date, to: Date): Promise<Array<BoardBookingFacts>> {
+        const rows = await this.entityManager
             .createQueryBuilder(BookingEntity, "b")
-            .leftJoin(BookingServiceEntity, "s", "s.id = b.serviceId AND s.workspaceId = b.workspaceId")
             .select("b.id", "id")
             .addSelect("b.customerName", "customer_name")
             .addSelect("b.customerPhone", "customer_phone")
             .addSelect("b.serviceId", "service_id")
-            .addSelect("COALESCE(s.name, '')", "service_name")
             .addSelect("b.resourceId", "resource_id")
             .addSelect("CAST(extract(epoch FROM b.startAt) * 1000 AS float8)", "start_ms")
             .addSelect("CAST(extract(epoch FROM b.endAt) * 1000 AS float8)", "end_ms")
@@ -143,27 +138,16 @@ export class BookingBoardService {
             .orderBy("b.startAt", "ASC")
             .addOrderBy("b.id", "ASC")
             .limit(BOOKINGS_LIMIT)
-            .getRawMany<BoardBookingFacts>()
+            .getRawMany<Omit<BoardBookingFacts, "service_name">>()
+        const names = await this.servicesRead.namesOf(workspaceId, [...new Set(rows.map((row) => row.service_id))])
+        return rows.map((row) => ({ ...row, service_name: names.get(row.service_id) ?? "" }))
     }
 
     /** The waiting customers with the current name of their service. */
-    private boardWaitlist(workspaceId: string): Promise<Array<BoardWaitFacts>> {
-        return this.entityManager
-            .createQueryBuilder(BookingWaitlistEntity, "w")
-            .leftJoin(BookingServiceEntity, "s", "s.id = w.serviceId AND s.workspaceId = w.workspaceId")
-            .select("w.id", "id")
-            .addSelect("w.customerName", "customer_name")
-            .addSelect("w.customerPhone", "customer_phone")
-            .addSelect("COALESCE(s.name, '')", "service_name")
-            .addSelect("CAST(extract(epoch FROM w.windowStart) * 1000 AS float8)", "from_ms")
-            .addSelect("CAST(extract(epoch FROM w.windowEnd) * 1000 AS float8)", "to_ms")
-            .addSelect("w.partySize", "party_size")
-            .addSelect("w.status", "status")
-            .where("w.workspaceId = :workspaceId AND w.status IN ('waiting', 'notified')", { workspaceId })
-            .orderBy("w.createdAt", "DESC")
-            .addOrderBy("w.id", "ASC")
-            .limit(WAITLIST_LIMIT)
-            .getRawMany<BoardWaitFacts>()
+    private async boardWaitlist(workspaceId: string): Promise<Array<BoardWaitFacts>> {
+        const waiting = await this.waitlistRead.open(workspaceId)
+        const names = await this.servicesRead.namesOf(workspaceId, [...new Set(waiting.map((wait) => wait.serviceId))])
+        return waiting.map((wait) => toWaitFacts(wait, names.get(wait.serviceId) ?? ""))
     }
 
     /** The active staff that resources can be linked to, by name. */

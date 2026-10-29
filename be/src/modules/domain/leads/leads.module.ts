@@ -7,6 +7,7 @@ import { LeadDeskService } from "./lead-desk.service"
 import { LeadRecordsService } from "./lead-records.service"
 import { LeadsService } from "./leads.service"
 import { LeadReadService } from "./lead-read.service"
+import { LeadAutomationReadService } from "./lead-automation-read.service"
 import { LeadGenWorkbenchService } from "./leadgen-workbench.service"
 import { LeadGenCommentService } from "./leadgen-comment.service"
 
@@ -23,6 +24,7 @@ export class LeadsModule extends ConfigurableModuleClass {
                 LeadsService,
                 LeadRecordsService,
                 LeadReadService,
+                LeadAutomationReadService,
                 LeadDeskService,
                 { provide: RESPONSIBILITY_LEAD_DESK, useExisting: LeadDeskService },
                 { provide: OFFICE_ROOMS_LEADS, useExisting: LeadReadService },
@@ -35,6 +37,7 @@ export class LeadsModule extends ConfigurableModuleClass {
                 LeadsService,
                 LeadRecordsService,
                 LeadReadService,
+                LeadAutomationReadService,
                 LeadGenWorkbenchService,
                 LeadGenCommentService,
             ],

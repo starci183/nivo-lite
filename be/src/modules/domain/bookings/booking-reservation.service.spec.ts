@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { builder, mockEntityManager } from "@starci/jest-preset"
+import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { BookingResourceEntity } from "@modules/domain/booking-resources"
+import { BookingResourcesReadService } from "@modules/domain/booking-resources"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { BookingReservationService } from "./booking-reservation.service"
 import type { NewBooking, RelocateParams } from "./booking-reservation.service"
@@ -41,9 +41,6 @@ const spanOf = (overrides: Partial<BookingEntity> = {}): BookingEntity =>
         blockEndAt: new Date(START + HOUR),
         ...overrides,
     })
-const resourceOf = (capacity: number | null): BookingResourceEntity | null =>
-    capacity === null ? null : Object.assign(new BookingResourceEntity(), { capacity })
-
 /** A manager that locks a resource of `capacity` (none for null), lists `spans` and writes through a fake builder. */
 const managerOf = (
     capacity: number | null,
@@ -51,37 +48,35 @@ const managerOf = (
     answers: { execute?: unknown } = {},
 ) => {
     const manager: MockEntityManager = mockEntityManager({
-        findOne: [BookingResourceEntity, resourceOf(capacity)],
         find: [BookingEntity, spans ?? []],
+    })
+    const resources = mock<BookingResourcesReadService>({
+        lockCapacity: jest.fn(() => Promise.resolve(capacity === null ? null : { capacity })),
     })
     const write = fakeQueryBuilder(answers)
     manager.createQueryBuilder.mockReturnValue(write.builder)
-    return { manager, write }
+    return { manager, write, resources }
 }
 
-const build = async () => {
-    const moduleRef = await Test.createTestingModule({ providers: [BookingReservationService] }).compile()
+const build = async (resources: BookingResourcesReadService) => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [BookingReservationService, { provide: BookingResourcesReadService, useValue: resources }],
+    }).compile()
     return moduleRef.get(BookingReservationService)
 }
 
 describe("BookingReservationService", () => {
     describe("reserve", () => {
         it("locks the resource, checks the load and writes the booking", async () => {
-            const { manager, write } = managerOf(1, [], { execute: { raw: [{ id: "b1" }] } })
-            const reservation = await build()
+            const { manager, write, resources } = managerOf(1, [], { execute: { raw: [{ id: "b1" }] } })
+            const reservation = await build(resources)
 
             await expect(reservation.reserve({ manager, booking: bookingOf(), force: false })).resolves.toEqual({
                 kind: "reserved",
                 id: "b1",
             })
 
-            expect(manager.findOne).toHaveBeenCalledWith(
-                BookingResourceEntity,
-                expect.objectContaining({
-                    where: { id: "r1", workspaceId: "ws-1" },
-                    lock: { mode: "pessimistic_write" },
-                }),
-            )
+            expect(resources.lockCapacity).toHaveBeenCalledWith(manager, "ws-1", "r1")
             const [, options] = manager.find.mock.calls[0] ?? []
             expect(JSON.stringify(options)).toContain(new Date(START).toISOString())
             expect(JSON.stringify(options)).toContain(new Date(START + HOUR).toISOString())
@@ -108,8 +103,8 @@ describe("BookingReservationService", () => {
         })
 
         it("answers full without writing when the resource has no room", async () => {
-            const { manager, write } = managerOf(1, [spanOf()])
-            const reservation = await build()
+            const { manager, write, resources } = managerOf(1, [spanOf()])
+            const reservation = await build(resources)
 
             await expect(reservation.reserve({ manager, booking: bookingOf(), force: false })).resolves.toEqual({
                 kind: "full",
@@ -118,8 +113,8 @@ describe("BookingReservationService", () => {
         })
 
         it("writes over a taken place when forced and skips the load check", async () => {
-            const { manager } = managerOf(1, null, { execute: { raw: [{ id: "b2" }] } })
-            const reservation = await build()
+            const { manager, resources } = managerOf(1, null, { execute: { raw: [{ id: "b2" }] } })
+            const reservation = await build(resources)
 
             await expect(reservation.reserve({ manager, booking: bookingOf(), force: true })).resolves.toEqual({
                 kind: "reserved",
@@ -133,8 +128,8 @@ describe("BookingReservationService", () => {
 describe("BookingReservationService", () => {
     describe("reserve", () => {
         it("writes a request that does not hold its slot without checking the load", async () => {
-            const { manager } = managerOf(1, null, { execute: { raw: [{ id: "b3" }] } })
-            const reservation = await build()
+            const { manager, resources } = managerOf(1, null, { execute: { raw: [{ id: "b3" }] } })
+            const reservation = await build(resources)
 
             await expect(
                 reservation.reserve({
@@ -147,8 +142,8 @@ describe("BookingReservationService", () => {
         })
 
         it("writes a booking without a price as a null price", async () => {
-            const { manager, write } = managerOf(1, [], { execute: { raw: [{ id: "b4" }] } })
-            const reservation = await build()
+            const { manager, write, resources } = managerOf(1, [], { execute: { raw: [{ id: "b4" }] } })
+            const reservation = await build(resources)
 
             await reservation.reserve({ manager, booking: bookingOf({ priceVnd: null }), force: false })
 
@@ -156,8 +151,8 @@ describe("BookingReservationService", () => {
         })
 
         it("answers resource_not_found when the resource is not in the workspace", async () => {
-            const { manager, write } = managerOf(null, null)
-            const reservation = await build()
+            const { manager, write, resources } = managerOf(null, null)
+            const reservation = await build(resources)
 
             await expect(reservation.reserve({ manager, booking: bookingOf(), force: false })).resolves.toEqual({
                 kind: "resource_not_found",
@@ -166,8 +161,8 @@ describe("BookingReservationService", () => {
         })
 
         it("fails when the insert answers no rows at all", async () => {
-            const { manager } = managerOf(1, [], { execute: {} })
-            const reservation = await build()
+            const { manager, resources } = managerOf(1, [], { execute: {} })
+            const reservation = await build(resources)
 
             await expect(reservation.reserve({ manager, booking: bookingOf(), force: false })).rejects.toMatchObject({
                 code: BookingsErrorCode.NotCreated,
@@ -175,8 +170,8 @@ describe("BookingReservationService", () => {
         })
 
         it("fails when the insert answers no row", async () => {
-            const { manager } = managerOf(1, [], { execute: { raw: [] } })
-            const reservation = await build()
+            const { manager, resources } = managerOf(1, [], { execute: { raw: [] } })
+            const reservation = await build(resources)
 
             await expect(reservation.reserve({ manager, booking: bookingOf(), force: false })).rejects.toMatchObject({
                 code: BookingsErrorCode.NotCreated,
@@ -202,8 +197,8 @@ describe("BookingReservationService", () => {
         })
 
         it("moves the booking when the new place has room", async () => {
-            const { manager, write } = managerOf(1, [], { execute: { raw: [] } })
-            const reservation = await build()
+            const { manager, write, resources } = managerOf(1, [], { execute: { raw: [] } })
+            const reservation = await build(resources)
 
             await expect(reservation.relocate(moveOf(manager))).resolves.toBe("moved")
 
@@ -228,24 +223,24 @@ describe("BookingReservationService", () => {
         })
 
         it("answers taken when the new place is full and the move is not forced", async () => {
-            const { manager, write } = managerOf(1, [spanOf({ resourceId: "r2" })])
-            const reservation = await build()
+            const { manager, write, resources } = managerOf(1, [spanOf({ resourceId: "r2" })])
+            const reservation = await build(resources)
 
             await expect(reservation.relocate(moveOf(manager))).resolves.toBe("taken")
             expect(write.calls).toEqual([])
         })
 
         it("moves over a taken place when forced", async () => {
-            const { manager } = managerOf(1, null, { execute: { raw: [] } })
-            const reservation = await build()
+            const { manager, resources } = managerOf(1, null, { execute: { raw: [] } })
+            const reservation = await build(resources)
 
             await expect(reservation.relocate(moveOf(manager, { force: true }))).resolves.toBe("moved")
             expect(manager.find).not.toHaveBeenCalled()
         })
 
         it("answers resource_not_found for a resource outside the workspace", async () => {
-            const { manager } = managerOf(null, null)
-            const reservation = await build()
+            const { manager, resources } = managerOf(null, null)
+            const reservation = await build(resources)
 
             await expect(reservation.relocate(moveOf(manager))).resolves.toBe("resource_not_found")
         })

@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./booking-exceptions.module-definition"
+import { BookingExceptionsReadService } from "./booking-exceptions-read.service"
 import { BookingExceptionsService } from "./booking-exceptions.service"
 
 @Module({})
@@ -11,8 +12,8 @@ export class BookingExceptionsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), BookingExceptionsService],
-            exports: [BookingExceptionsService],
+            providers: [...(base.providers ?? []), BookingExceptionsService, BookingExceptionsReadService],
+            exports: [BookingExceptionsService, BookingExceptionsReadService],
         }
     }
 }

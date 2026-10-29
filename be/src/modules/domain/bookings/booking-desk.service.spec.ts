@@ -4,6 +4,8 @@ import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-bui
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { BookingServicesReadService } from "@modules/domain/booking-services"
+import type { BookingServiceTiming } from "@modules/domain/booking-services"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { BookingDeskService } from "./booking-desk.service"
 import { BookingModelService } from "./booking-model.service"
@@ -13,7 +15,7 @@ import { BookingReservationService } from "./booking-reservation.service"
 import { DEFAULT_SETTINGS } from "./bookings.contracts"
 import type { AddBookingParams, BookingModel, MoveBookingParams, TakenSpan } from "./bookings.contracts"
 import { BookingsErrorCode } from "./errors/bookings.error"
-import type { BookingStateFacts } from "./booking-facts.contracts"
+import type { BookingStateRowFacts } from "./booking-facts.contracts"
 import { BookingEntity } from "./persistence/entities"
 
 const anything = (): unknown => expect.anything()
@@ -65,15 +67,15 @@ const moveOf = builder<MoveBookingParams>({
     resourceId: "r2",
     force: false,
 })
-const BOOKING: BookingStateFacts = {
+const BOOKING: BookingStateRowFacts = {
     id: "b1",
     resource_id: "r1",
     party_size: 2,
     status: "confirmed",
-    duration_min: 60,
-    buffer_min: 15,
+    service_id: "s1",
     start_ms: THURSDAY_NINE,
 }
+const TIMING: BookingServiceTiming = { durationMin: 60, bufferMin: 15 }
 const taken = (resourceId: string): TakenSpan => ({
     id: "b9",
     resourceId,
@@ -112,7 +114,8 @@ const scheduleOf = (startMs: number) => ({
 const build = async (
     model: BookingModel = modelOf(),
     spans: ReadonlyArray<TakenSpan> = [],
-    row?: BookingStateFacts,
+    row?: BookingStateRowFacts,
+    timing: BookingServiceTiming | null = TIMING,
 ) => {
     const tx = fakeTransaction(mockEntityManager({ update: [BookingEntity, {}] }))
     const lock = fakeQueryBuilder({ getRawOne: row })
@@ -137,6 +140,7 @@ const build = async (
     const reminders = mock<BookingRemindersService>()
     reminders.schedule.mockResolvedValue([])
     reminders.cancel.mockResolvedValue(undefined)
+    const servicesRead = mock<BookingServicesReadService>({ timingOf: jest.fn(() => Promise.resolve(timing)) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             BookingDeskService,
@@ -146,12 +150,13 @@ const build = async (
             { provide: BookingModelService, useValue: models },
             { provide: BookingReservationService, useValue: reservation },
             { provide: BookingRemindersService, useValue: reminders },
+            { provide: BookingServicesReadService, useValue: servicesRead },
         ],
     }).compile()
     return { service: moduleRef.get(BookingDeskService), access, models, reservation, reminders, tx, lock, finish }
 }
 
-const buildLocked = (status: BookingStateFacts["status"] = "confirmed", model: BookingModel = modelOf()) =>
+const buildLocked = (status: BookingStateRowFacts["status"] = "confirmed", model: BookingModel = modelOf()) =>
     build(model, [], { ...BOOKING, status })
 
 describe("BookingDeskService", () => {
@@ -458,6 +463,11 @@ describe("BookingDeskService", () => {
 
         it("refuses a booking the workspace does not have", async () => {
             const { service } = await build()
+            await expect(service.cancel(USER, REF)).rejects.toMatchObject({ code: BookingsErrorCode.NotFound })
+        })
+
+        it("refuses a booking whose service is gone", async () => {
+            const { service } = await build(modelOf(), [], BOOKING, null)
             await expect(service.cancel(USER, REF)).rejects.toMatchObject({ code: BookingsErrorCode.NotFound })
         })
     })

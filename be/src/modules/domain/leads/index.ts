@@ -1,4 +1,5 @@
 // Read services lead the barrel: other capabilities import this barrel while it loads (import cycles), they must already be defined.
+export { LeadAutomationReadService } from "./lead-automation-read.service"
 export { LeadReadService } from "./lead-read.service"
 export { LEADS_ERROR_KINDS } from "./errors/leads.error"
 export { LEADS_MESSAGES } from "./messages/leads.messages"

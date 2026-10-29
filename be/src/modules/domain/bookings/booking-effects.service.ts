@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { BookingRemindersService } from "@modules/domain/booking-reminders"
+import { BookingResourcesReadService } from "@modules/domain/booking-resources"
+import { BookingServicesReadService } from "@modules/domain/booking-services"
 import { EventsService } from "@modules/domain/events"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { InjectClock } from "@modules/platform/clock"
@@ -15,8 +17,8 @@ import { BookingNoticesService } from "./booking-notices.service"
 import type { BookingNotifier } from "./booking-notice.contracts"
 import type { BookingEffects, BookingEvent, BookingSettings, InboxClaim } from "./bookings.contracts"
 import { InjectBookingNotifier } from "./bookings.decorators"
-import { effectsQuery } from "./booking-effects.query"
-import type { EffectsRow } from "./booking-facts.contracts"
+import { effectsNamed, effectsQuery } from "./booking-effects.query"
+import type { EffectsBaseFacts, EffectsRow } from "./booking-facts.contracts"
 import { BookingEntity } from "./persistence/entities"
 import { feeOf, noticeMark, noticeOf, remindersOf } from "./policies/booking-effects.policy"
 import type { NoticeKind } from "./policies/booking-effects.policy"
@@ -50,6 +52,8 @@ export class BookingEffectsService {
         private readonly reminders: BookingRemindersService,
         private readonly events: EventsService,
         private readonly inbound: InboundEventsService,
+        private readonly servicesRead: BookingServicesReadService,
+        private readonly resourcesRead: BookingResourcesReadService,
     ) {}
 
     /**
@@ -74,10 +78,12 @@ export class BookingEffectsService {
         settings: BookingSettings,
         claim: InboxClaim,
     ): Promise<Applied | null> {
-        const row = await effectsQuery(manager, event.workspaceId, event.bookingId)
+        const base = await effectsQuery(manager, event.workspaceId, event.bookingId)
             .setLock("pessimistic_write", undefined, ["b"])
-            .getRawOne<EffectsRow>()
-        if (row === undefined) return null
+            .getRawOne<EffectsBaseFacts>()
+        if (base === undefined) return null
+        const row = await effectsNamed(this.servicesRead, this.resourcesRead, base)
+        if (row === null) return null
         if (!(await this.inbox.claim(claim.consumer, claim.dedupeKey, manager))) {
             // A delivery this reactor already applied: nothing changes twice, the notice still has its own mark.
             return {

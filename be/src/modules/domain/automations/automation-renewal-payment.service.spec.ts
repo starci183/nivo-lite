@@ -1,46 +1,24 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock } from "@starci/jest-preset"
+import type { ContractFacts } from "@modules/domain/contracts"
 import { WorkspacePaymentAccountService } from "@modules/domain/channel-connections"
 import { InvoicesService } from "@modules/domain/invoices"
 import type { InvoiceRow } from "@modules/domain/invoices"
 import { CLOCK } from "@modules/platform/clock"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { TextParams } from "./automations.contracts"
 import { AutomationMessagesService } from "./automation-messages.service"
 import { AutomationRenewalPaymentService } from "./automation-renewal-payment.service"
 import { AUTOMATIONS_MESSAGES } from "./messages/automations.messages"
-import type { ContractRead } from "./automation-reads.contracts"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { FakeQueryBuilder, QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-
-const READS = new WeakMap<object, ReadonlyArray<FakeQueryBuilder>>()
-
-/** The manager of {@link readingOf}. */
-interface ReadingManager {
-    /** The manager whose reads answer the given results. */
-    readonly em: MockEntityManager
-}
-
-/** A manager whose reads (and the snapshot transaction around some of them) answer `answers`, one fake statement each, in order. */
-const readingOf = (...answers: Array<QueryBuilderAnswers>): ReadingManager => {
-    const em = mockEntityManager()
-    fakeTransaction(em)
-    READS.set(em, queueQueryBuilders(em, answers))
-    return { em }
-}
-
-/** The fake statements of a manager made by {@link readingOf}, in the order the subject built them. */
-const readsOf = (em: object): ReadonlyArray<FakeQueryBuilder> => READS.get(em) ?? []
+import { AutomationReadsService } from "./automation-reads.service"
 
 const NOW = "2026-10-12T10:00:00.000Z"
-const CONTRACT: ContractRead = {
+const CONTRACT: ContractFacts = {
     id: "c-1",
-    customer_name: "Binh",
-    lead_id: "l-1",
+    customerName: "Binh",
+    leadId: "l-1",
     plan: "Hosting",
-    ends_on: "2026-10-20",
-    amount_vnd: 1_620_000,
+    endsOn: "2026-10-20",
+    amountVnd: 1_620_000,
     status: "active",
 }
 const INVOICE: InvoiceRow = {
@@ -76,7 +54,8 @@ const PAY_LINES = [
     vi("renewal.pay.content", { content: "INV2026110003" }),
 ]
 
-const build = async (em: MockEntityManager = mockEntityManager()) => {
+const build = async () => {
+    const reads = mock<AutomationReadsService>()
     const messages = mock<AutomationMessagesService>()
     messages.say.mockImplementation(vi)
     const invoices = mock<InvoicesService>()
@@ -86,14 +65,14 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             AutomationRenewalPaymentService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: AutomationReadsService, useValue: reads },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: AutomationMessagesService, useValue: messages },
             { provide: InvoicesService, useValue: invoices },
             { provide: WorkspacePaymentAccountService, useValue: accounts },
         ],
     }).compile()
-    return { service: moduleRef.get(AutomationRenewalPaymentService), invoices, accounts }
+    return { service: moduleRef.get(AutomationRenewalPaymentService), invoices, accounts, reads }
 }
 
 describe("AutomationRenewalPaymentService paymentOf", () => {
@@ -171,25 +150,23 @@ describe("AutomationRenewalPaymentService paymentOf", () => {
     it.each([[0], [null], [-1]])("issues no invoice for a contract amount of %p", async (amount) => {
         const { service, invoices, accounts } = await build()
 
-        await expect(service.paymentOf("ws-1", { ...CONTRACT, amount_vnd: amount }, "l-1", BODY)).resolves.toBeNull()
+        await expect(service.paymentOf("ws-1", { ...CONTRACT, amountVnd: amount }, "l-1", BODY)).resolves.toBeNull()
         expect(invoices.issueRenewal).not.toHaveBeenCalled()
         expect(accounts.accountOf).not.toHaveBeenCalled()
     })
 })
 
 describe("AutomationRenewalPaymentService zaloWindowSteps", () => {
-    const stepsAfter = async (lastAt: ReadonlyArray<{ created_at: string }>) => {
-        const em = readingOf({ getRawOne: lastAt[0] }).em
-        const { service } = await build(em)
-        return { em, steps: await service.zaloWindowSteps(ZALO) }
+    const stepsAfter = async (last: { created_at: string } | undefined) => {
+        const { service, reads } = await build()
+        reads.lastCustomerMessage.mockResolvedValue(last)
+        return { reads, steps: await service.zaloWindowSteps(ZALO) }
     }
 
     it("warns that Zalo will not let the message out when the customer wrote more than 48 hours ago", async () => {
-        const { em, steps } = await stepsAfter([{ created_at: "2026-10-10T09:59:00.000Z" }])
+        const { reads, steps } = await stepsAfter({ created_at: "2026-10-10T09:59:00.000Z" })
 
-        expect(readsOf(em)[0]?.callsOf("where")).toEqual([
-            [expect.stringContaining("m.conversation_id = :conversationId"), { conversationId: "cv-1" }],
-        ])
+        expect(reads.lastCustomerMessage).toHaveBeenCalledWith("cv-1")
         expect(steps).toEqual([
             { label: vi("renewal.zaloWindow"), status: "skipped", detail: vi("renewal.zaloWindowDetail") },
         ])
@@ -198,15 +175,14 @@ describe("AutomationRenewalPaymentService zaloWindowSteps", () => {
     })
 
     it("says nothing while the window is open or when the customer never wrote", async () => {
-        await expect(stepsAfter([{ created_at: "2026-10-10T10:00:00.000Z" }])).resolves.toMatchObject({ steps: [] })
-        await expect(stepsAfter([])).resolves.toMatchObject({ steps: [] })
+        await expect(stepsAfter({ created_at: "2026-10-10T10:00:00.000Z" })).resolves.toMatchObject({ steps: [] })
+        await expect(stepsAfter(undefined)).resolves.toMatchObject({ steps: [] })
     })
 
     it("does not look at a conversation on another channel", async () => {
-        const em = mockEntityManager()
-        const { service } = await build(em)
+        const { service, reads } = await build()
 
         await expect(service.zaloWindowSteps({ ...ZALO, channel: "telegram" })).resolves.toEqual([])
-        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+        expect(reads.lastCustomerMessage).not.toHaveBeenCalled()
     })
 })

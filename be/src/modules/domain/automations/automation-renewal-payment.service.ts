@@ -1,15 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import type { RunStep } from "@modules/domain/automation-runs"
+import type { ContractFacts } from "@modules/domain/contracts"
 import { vietQrUrl, WorkspacePaymentAccountService } from "@modules/domain/channel-connections"
 import { InvoicesService } from "@modules/domain/invoices"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { AutomationMessagesService } from "./automation-messages.service"
 import type { RenewalPayment } from "./automations.contracts"
-import { readLastCustomerMessage } from "./automation-reads.query"
-import type { ContractRead, ConversationRead } from "./automation-reads.contracts"
+import { AutomationReadsService } from "./automation-reads.service"
+import type { ConversationRead } from "./automation-reads.contracts"
 import { placeholdersOf } from "./policies/config.policy"
 import { instantOf } from "./policies/format.policy"
 import { dongDigits, isBillableAmount, transferContentOf } from "./policies/renewal-payment.policy"
@@ -26,7 +25,7 @@ const QR_VARIABLE = "link_qr"
  */
 export class AutomationRenewalPaymentService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly reads: AutomationReadsService,
         @InjectClock() private readonly clock: Clock,
         private readonly messages: AutomationMessagesService,
         private readonly invoices: InvoicesService,
@@ -41,18 +40,18 @@ export class AutomationRenewalPaymentService {
      */
     async paymentOf(
         workspaceId: string,
-        contract: ContractRead,
+        contract: ContractFacts,
         leadId: string,
         body: string,
     ): Promise<RenewalPayment | null> {
-        if (!isBillableAmount(contract.amount_vnd)) return null
+        if (!isBillableAmount(contract.amountVnd)) return null
         const say = this.messages.say.bind(this.messages)
         const { invoice, created } = await this.invoices.issueRenewal({
             workspaceId,
             contractId: contract.id,
             leadId,
-            amountVnd: contract.amount_vnd,
-            periodEndsOn: contract.ends_on,
+            amountVnd: contract.amountVnd,
+            periodEndsOn: contract.endsOn,
             issuedBy: null,
         })
         const amountVnd = Number(invoice.amount_vnd)
@@ -97,7 +96,7 @@ export class AutomationRenewalPaymentService {
      */
     async zaloWindowSteps(conversation: ConversationRead): Promise<ReadonlyArray<RunStep>> {
         if (conversation.channel !== "zalo") return []
-        const last = await readLastCustomerMessage(this.entityManager, conversation.id)
+        const last = await this.reads.lastCustomerMessage(conversation.id)
         if (last === undefined || this.clock.now().getTime() - instantOf(last.created_at) <= ZALO_WINDOW_MS) return []
         const say = this.messages.say.bind(this.messages)
         return [{ label: say("renewal.zaloWindow"), status: "skipped", detail: say("renewal.zaloWindowDetail") }]
