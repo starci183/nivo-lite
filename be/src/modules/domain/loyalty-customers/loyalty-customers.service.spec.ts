@@ -1,6 +1,8 @@
 import { Test } from "@nestjs/testing"
-import { builder, mockEntityManager } from "@starci/jest-preset"
+import { In } from "typeorm"
+import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { LeadReadService } from "@modules/domain/leads"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
@@ -33,9 +35,15 @@ const move = (manager: MockEntityManager) => ({
     nowIso: "2026-10-12T00:00:00.000Z",
 })
 
+const leadReads = mock<LeadReadService>()
+
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
-        providers: [LoyaltyCustomersService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            LoyaltyCustomersService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: LeadReadService, useValue: leadReads },
+        ],
     }).compile()
     return moduleRef.get(LoyaltyCustomersService)
 }
@@ -161,24 +169,52 @@ const registerEnsureByPhone = () => {
 const registerLeadContactsAndCreateFromLeads = () => {
     describe("leadContacts and createFromLeads", () => {
         it("keeps the leads with a usable phone or email, normalised", async () => {
-            const em = mockEntityManager()
-            const [leads] = queueQueryBuilders(em, [
-                {
-                    getRawMany: [
-                        { id: "l1", contact_name: "A", phone: "0912 345 678", email: null },
-                        { id: "l2", contact_name: "B", phone: null, email: "B@X.COM" },
-                        { id: "l3", contact_name: "C", phone: "12", email: "nope" },
-                    ],
-                },
+            leadReads.listContacts.mockResolvedValue([
+                { id: "l1", contact_name: "A", phone: "0912 345 678", email: null },
+                { id: "l2", contact_name: "B", phone: null, email: "B@X.COM" },
+                { id: "l3", contact_name: "C", phone: "12", email: "nope" },
             ])
-            const customers = await build(em)
+            const customers = await build(mockEntityManager())
 
             await expect(customers.leadContacts("ws-1")).resolves.toEqual([
                 { id: "l1", name: "A", phone: "84912345678", email: null },
                 { id: "l2", name: "B", phone: null, email: "b@x.com" },
             ])
-            expect(leads?.callsOf("from")).toEqual([["public.leads", "l"]])
-            expect(leads?.callsOf("limit")).toEqual([[2000]])
+            expect(leadReads.listContacts).toHaveBeenCalledWith("ws-1", 2000)
+        })
+
+        it("finds the customers behind a set of phones and emails", async () => {
+            const manager = mockEntityManager({
+                find: [LoyaltyCustomerEntity, [{ ...ROW, email: null }]],
+            })
+            const customers = await build(mockEntityManager())
+
+            await expect(
+                customers.contactsMatching(manager, "ws-1", { phones: ["84912345678"], emails: ["a@x.com"] }, 4),
+            ).resolves.toEqual([{ id: "c1", phone: "84912345678", email: null }])
+            expect(manager.find).toHaveBeenCalledWith(LoyaltyCustomerEntity, {
+                select: { id: true, phone: true, email: true },
+                where: [
+                    { workspaceId: "ws-1", phone: In(["84912345678"]) },
+                    { workspaceId: "ws-1", email: In(["a@x.com"]) },
+                ],
+                take: 4,
+            })
+        })
+
+        it("finds nobody for an empty set of contacts, and reads only the side that is given", async () => {
+            const manager = mockEntityManager({ find: [LoyaltyCustomerEntity, []] })
+            const customers = await build(mockEntityManager())
+
+            await expect(customers.contactsMatching(manager, "ws-1", { phones: [], emails: [] }, 4)).resolves.toEqual(
+                [],
+            )
+            expect(manager.find).not.toHaveBeenCalled()
+            await customers.contactsMatching(manager, "ws-1", { phones: [], emails: ["a@x.com"] }, 4)
+            expect(manager.find).toHaveBeenCalledWith(
+                LoyaltyCustomerEntity,
+                expect.objectContaining({ where: [{ workspaceId: "ws-1", email: In(["a@x.com"]) }] }),
+            )
         })
 
         it("creates the customers of leads in one statement and counts them", async () => {
@@ -269,7 +305,38 @@ const registerUpdateProfile = () => {
     })
 }
 
+const registerListAndLock = () => {
+    describe("listNewest and lockOwn", () => {
+        it("lists the newest customers of the workspace as contract customers", async () => {
+            const em = mockEntityManager({ find: [LoyaltyCustomerEntity, [ROW]] })
+            const customers = await build(em)
+
+            await expect(customers.listNewest("ws-1", 5)).resolves.toMatchObject([{ id: "c1", name: "Mai" }])
+            expect(em.find).toHaveBeenCalledWith(LoyaltyCustomerEntity, {
+                where: { workspaceId: "ws-1" },
+                order: { createdAt: "DESC", id: "DESC" },
+                take: 5,
+            })
+        })
+
+        it("locks a customer of the workspace for writing, or reports that there is none", async () => {
+            const manager = mockEntityManager({ findOne: [LoyaltyCustomerEntity, ROW] })
+            const customers = await build(mockEntityManager())
+
+            await expect(customers.lockOwn(manager, "ws-1", "c1")).resolves.toBe(true)
+            expect(manager.findOne).toHaveBeenCalledWith(LoyaltyCustomerEntity, {
+                select: { id: true },
+                where: { workspaceId: "ws-1", id: "c1" },
+                lock: { mode: "pessimistic_write" },
+            })
+            const empty = mockEntityManager({ findOne: [LoyaltyCustomerEntity, null] })
+            await expect(customers.lockOwn(empty, "ws-1", "zzz")).resolves.toBe(false)
+        })
+    })
+}
+
 describe("LoyaltyCustomersService", () => {
+    registerListAndLock()
     registerByPhoneAndById()
     registerEnsureByPhone()
     registerLeadContactsAndCreateFromLeads()

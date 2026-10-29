@@ -3,6 +3,7 @@ import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { EventsService } from "@modules/domain/events"
+import { LeadReadService } from "@modules/domain/leads"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG, REQUEST_LOCALE } from "@modules/platform/i18n"
@@ -76,6 +77,8 @@ const build = async (entityManager: MockEntityManager) => {
     events.record.mockResolvedValue(undefined)
     const links = mock<ContractLinkService>()
     links.linkCustomers.mockResolvedValue({ linked: 1, created: 0, unmatched: [] })
+    const leads = mock<LeadReadService>()
+    leads.isOwn.mockResolvedValue(true)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ContractsService,
@@ -85,20 +88,18 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: WorkspaceMembersService, useValue: members },
             { provide: EventsService, useValue: events },
             { provide: ContractLinkService, useValue: links },
+            { provide: LeadReadService, useValue: leads },
         ],
     }).compile()
-    return { members, contracts: moduleRef.get(ContractsService), events, requestLocale, links }
+    return { members, contracts: moduleRef.get(ContractsService), events, requestLocale, links, leads }
 }
 
 describe("ContractsService", () => {
     describe("saveContract", () => {
         it("adds a contract linked to a lead of the workspace and logs it in the same transaction", async () => {
             const tx = fakeTransaction(mockEntityManager())
-            const [lead, insert] = queueQueryBuilders(tx.em, [
-                { getRawOne: { id: "lead-1" } },
-                { execute: { raw: [ROW] } },
-            ])
-            const { contracts, events, requestLocale } = await build(tx.em)
+            const [insert] = queueQueryBuilders(tx.em, [{ execute: { raw: [ROW] } }])
+            const { contracts, events, requestLocale, leads } = await build(tx.em)
 
             await expect(contracts.saveContract(paramsOf())).resolves.toEqual({
                 id: "contract-1",
@@ -112,7 +113,8 @@ describe("ContractsService", () => {
                 note: "",
             })
 
-            expect(lead?.callsOf("setLock")).toEqual([["pessimistic_read"]])
+            expect(leads.isOwn).toHaveBeenCalledWith("ws-1", "lead-1", expect.anything())
+            expect(isTransactionManager(leads.isOwn.mock.calls[0]?.[2])).toBe(true)
             expect(insert?.callsOf("values")).toEqual([[{ workspaceId: "ws-1", ...FIELDS }]])
             expect(requestLocale.of).toHaveBeenCalledWith("en")
             expect(events.record).toHaveBeenCalledWith(
@@ -139,11 +141,7 @@ describe("ContractsService", () => {
                 contracts.saveContract(paramsOf({ contractId: "contract-1", leadId: null })),
             ).resolves.toMatchObject({ id: "contract-1", leadId: null })
 
-            expect(update?.callsOf("where")[0]?.[1]).toEqual({
-                workspaceId: "ws-1",
-                contractId: "contract-1",
-                leadId: null,
-            })
+            expect(update?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", contractId: "contract-1" })
             expect(update?.callsOf("set")[0]?.[0]).toMatchObject({ ...FIELDS, leadId: null })
             expect(expressionValues(update?.callsOf("set")[0]?.[0])).toMatchObject({ updatedAt: "now()" })
             expect(events.record).toHaveBeenCalledWith(
@@ -190,8 +188,9 @@ describe("ContractsService", () => {
     describe("saveContract refusals", () => {
         it("refuses a lead the workspace does not have", async () => {
             const tx = fakeTransaction(mockEntityManager())
-            const [, insert] = queueQueryBuilders(tx.em, [{ getRawOne: undefined }, { execute: { raw: [] } }])
-            const { contracts, events } = await build(tx.em)
+            const [insert] = queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
+            const { contracts, events, leads } = await build(tx.em)
+            leads.isOwn.mockResolvedValue(false)
 
             await expect(contracts.saveContract(paramsOf())).rejects.toMatchObject({
                 code: ContractsErrorCode.LeadNotFound,
@@ -200,6 +199,18 @@ describe("ContractsService", () => {
 
             expect(insert?.callsOf("execute")).toEqual([])
             expect(events.record).not.toHaveBeenCalled()
+        })
+
+        it("refuses an edit that names a lead the workspace does not have", async () => {
+            const tx = fakeTransaction(mockEntityManager())
+            const [update] = queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
+            const { contracts, leads } = await build(tx.em)
+            leads.isOwn.mockResolvedValue(false)
+
+            await expect(contracts.saveContract(paramsOf({ contractId: "contract-1" }))).rejects.toMatchObject({
+                code: ContractsErrorCode.NotFound,
+            })
+            expect(update?.callsOf("execute")).toEqual([])
         })
 
         it("refuses an edit whose write answers no row list", async () => {
@@ -230,13 +241,21 @@ describe("ContractsService", () => {
             const { contracts, members } = await build(em)
 
             await expect(contracts.attachLead("ws-1", "contract-1", "lead-9")).resolves.toBeUndefined()
-            expect(attach?.callsOf("where")[0]?.[1]).toEqual({
-                workspaceId: "ws-1",
-                contractId: "contract-1",
-                leadId: "lead-9",
-            })
+            expect(attach?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", contractId: "contract-1" })
             expect(members.require).not.toHaveBeenCalled()
             expect(expressionValues(attach?.callsOf("set")[0]?.[0])).toEqual({ leadId: "lead-9", updatedAt: "now()" })
+        })
+    })
+
+    describe("attachLead refusals", () => {
+        it("links nothing when the lead is not the workspace own", async () => {
+            const em = mockEntityManager()
+            const [attach] = queueQueryBuilders(em, [{ execute: {} }])
+            const { contracts, leads } = await build(em)
+            leads.isOwn.mockResolvedValue(false)
+
+            await expect(contracts.attachLead("ws-1", "contract-1", "lead-9")).resolves.toBeUndefined()
+            expect(attach?.callsOf("execute")).toEqual([])
         })
     })
 

@@ -1,11 +1,9 @@
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { OPENCLAW_AGENT_REGISTRY, OPENCLAW_GATEWAY } from "@modules/integrations/openclaw"
 import type { AgentRegistryService, GatewayClient } from "@modules/integrations/openclaw"
 import { CLOCK } from "@modules/platform/clock"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AGENTS_INSTALLATIONS, AGENTS_OPTIONS } from "./agents.decorators"
 import type { AgentsOptions } from "./agents.options"
 import type { Installation, InstallationDirectory } from "./agents.port"
@@ -31,14 +29,11 @@ const build = async (setup: Setup) => {
     const installations = mock<InstallationDirectory>({
         firstOfModule: jest.fn(() => Promise.resolve(setup.installation ?? null)),
     })
-    const em = mockEntityManager()
-    const syncCheck = fakeQueryBuilder({ getRawOne: { checkedAt: setup.checkedAt ?? null } })
-    em.createQueryBuilder.mockReturnValue(syncCheck.builder)
+    const lastSyncCheck = jest.fn(() => Promise.resolve(setup.checkedAt ?? null))
     const moduleRef = await Test.createTestingModule({
         providers: [
             EngineStatusService,
             { provide: AGENTS_OPTIONS, useValue: OPTIONS },
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: new FakeClock("2026-10-12T10:00:00.000Z") },
             { provide: AGENTS_INSTALLATIONS, useValue: installations },
             { provide: OPENCLAW_GATEWAY, useValue: gateway },
@@ -46,7 +41,7 @@ const build = async (setup: Setup) => {
             { provide: WorkspaceMembersService, useValue: members },
         ],
     }).compile()
-    return { service: moduleRef.get(EngineStatusService), syncCheck, members, installations, em }
+    return { service: moduleRef.get(EngineStatusService), lastSyncCheck, members, installations }
 }
 
 describe("EngineStatusService", () => {
@@ -102,42 +97,35 @@ describe("EngineStatusService", () => {
 describe("EngineStatusService", () => {
     describe("status", () => {
         it("reports a configured engine whose sync checked in recently", async () => {
-            const { service, members, syncCheck } = await build({
+            const { service, members, lastSyncCheck } = await build({
                 enabled: true,
                 dirs: true,
                 checkedAt: "2026-10-12T09:55:00.000Z",
             })
 
-            await expect(service.status("u1", "w1")).resolves.toEqual({
+            await expect(service.status("u1", "w1", lastSyncCheck)).resolves.toEqual({
                 gatewayConfigured: true,
                 workspaceWritable: true,
                 lastSyncCheckAt: "2026-10-12T09:55:00.000Z",
                 syncFresh: true,
             })
             expect(members.require).toHaveBeenCalledWith("u1", "w1")
-            expect(syncCheck.callsOf("where")).toEqual([["s.workspace_id = :workspaceId", { workspaceId: "w1" }]])
+            expect(lastSyncCheck).toHaveBeenCalledTimes(1)
         })
 
         it("reports a stale or missing sync check", async () => {
             const stale = await build({ enabled: false, dirs: false, checkedAt: "2026-10-12T08:00:00.000Z" })
             const never = await build({ enabled: false, dirs: false })
 
-            await expect(stale.service.status("u1", "w1")).resolves.toMatchObject({
+            await expect(stale.service.status("u1", "w1", stale.lastSyncCheck)).resolves.toMatchObject({
                 gatewayConfigured: false,
                 workspaceWritable: false,
                 syncFresh: false,
             })
-            await expect(never.service.status("u1", "w1")).resolves.toMatchObject({
+            await expect(never.service.status("u1", "w1", never.lastSyncCheck)).resolves.toMatchObject({
                 lastSyncCheckAt: null,
                 syncFresh: false,
             })
-        })
-
-        it("tolerates a missing aggregate row", async () => {
-            const { service, em } = await build({ enabled: true, dirs: true })
-            em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ getRawOne: undefined }).builder)
-
-            await expect(service.status("u1", "w1")).resolves.toMatchObject({ lastSyncCheckAt: null })
         })
     })
 })

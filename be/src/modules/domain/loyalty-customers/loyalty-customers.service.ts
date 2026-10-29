@@ -1,8 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import { In } from "typeorm"
+import type { EntityManager, FindOptionsWhere } from "typeorm"
+import { LeadReadService } from "@modules/domain/leads"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     CustomerMatch,
+    LoyaltyCustomer,
     CustomerPatch,
     LeadContact,
     MaybeText,
@@ -10,8 +13,25 @@ import type {
 } from "./loyalty-customers.contracts"
 import { customerBirthday } from "./policies/customer-birthday.policy"
 import { toCustomer, toLeadContact } from "./policies/customer.mapper"
-import type { LeadContactRaw } from "./policies/customer.mapper"
 import { LoyaltyCustomerEntity } from "./persistence/entities"
+
+/** The phones and emails that pick customers. */
+export interface ContactMatch {
+    /** The normalised phones. */
+    readonly phones: ReadonlyArray<string>
+    /** The normalised emails. */
+    readonly emails: ReadonlyArray<string>
+}
+
+/** A customer as the contact matching reads it. */
+export interface CustomerContact {
+    /** The customer id. */
+    readonly id: string
+    /** The normalised phone, or null. */
+    readonly phone: string | null
+    /** The email, or null. */
+    readonly email: string | null
+}
 
 /** The most leads one read answers. */
 const LEAD_LIMIT = 2000
@@ -35,7 +55,10 @@ export interface TierMove {
 @Injectable()
 /** The people of the loyalty programme: found by phone or id, created when a purchase or a lead names them, moved up the ladder. */
 export class LoyaltyCustomersService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly leads: LeadReadService,
+    ) {}
 
     /** The customer with a normalised phone, or null. */
     async byPhone(workspaceId: string, phone: string): Promise<CustomerMatch> {
@@ -84,18 +107,28 @@ export class LoyaltyCustomersService {
 
     /** The leads of a workspace that carry a usable phone or email. */
     async leadContacts(workspaceId: string): Promise<ReadonlyArray<LeadContact>> {
-        const rows = await this.entityManager
-            .createQueryBuilder()
-            .select("l.id", "id")
-            .addSelect("l.contact_name", "contact_name")
-            .addSelect("l.phone", "phone")
-            .addSelect("l.email", "email")
-            .from("public.leads", "l")
-            .where("l.workspace_id = :workspaceId AND (l.phone IS NOT NULL OR l.email IS NOT NULL)", { workspaceId })
-            .orderBy("l.created_at", "ASC")
-            .limit(LEAD_LIMIT)
-            .getRawMany<LeadContactRaw>()
+        const rows = await this.leads.listContacts(workspaceId, LEAD_LIMIT)
         return rows.map(toLeadContact).filter((lead) => lead.phone !== null || lead.email !== null)
+    }
+
+    /** The customers of the workspace whose phone is one of `phones` or whose email is one of `emails`, at most `limit`. */
+    async contactsMatching(
+        manager: EntityManager,
+        workspaceId: string,
+        match: ContactMatch,
+        limit: number,
+    ): Promise<ReadonlyArray<CustomerContact>> {
+        const where: Array<FindOptionsWhere<LoyaltyCustomerEntity>> = [
+            ...(match.phones.length === 0 ? [] : [{ workspaceId, phone: In([...match.phones]) }]),
+            ...(match.emails.length === 0 ? [] : [{ workspaceId, email: In([...match.emails]) }]),
+        ]
+        if (where.length === 0) return []
+        const rows = await manager.find(LoyaltyCustomerEntity, {
+            select: { id: true, phone: true, email: true },
+            where,
+            take: limit,
+        })
+        return rows.map((row) => ({ id: row.id, phone: row.phone, email: row.email }))
     }
 
     /** Makes customers of the leads that are not customers yet; answers how many were created. */
@@ -132,6 +165,26 @@ export class LoyaltyCustomersService {
             .returning("id")
             .execute()
         return (changed.raw as Array<unknown>).length > 0
+    }
+
+    /** The newest customers of the workspace, at most `limit`. */
+    async listNewest(workspaceId: string, limit: number): Promise<ReadonlyArray<LoyaltyCustomer>> {
+        const rows = await this.entityManager.find(LoyaltyCustomerEntity, {
+            where: { workspaceId },
+            order: { createdAt: "DESC", id: "DESC" },
+            take: limit,
+        })
+        return rows.map(toCustomer)
+    }
+
+    /** Takes the write lock on one customer of the workspace inside the caller's transaction; false when the workspace has no such customer. */
+    async lockOwn(manager: EntityManager, workspaceId: string, customerId: string): Promise<boolean> {
+        const row = await manager.findOne(LoyaltyCustomerEntity, {
+            select: { id: true },
+            where: { workspaceId, id: customerId },
+            lock: { mode: "pessimistic_write" },
+        })
+        return row !== null
     }
 
     /** The customer id of a phone; a missing phone matches nobody (a null in a TypeORM where is ignored, never `IS NULL`). */

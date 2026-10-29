@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
+import { LeadReadService } from "@modules/domain/leads"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog, InjectRequestLocale } from "@modules/platform/i18n"
@@ -20,18 +21,15 @@ type SavedContract = Pick<
 /** The columns a write answers, named as the entity properties, days as YYYY-MM-DD text and the amount as a number. */
 const RETURNED = [
     "id",
-    "lead_id AS \"leadId\"",
-    "customer_name AS \"customerName\"",
+    'lead_id AS "leadId"',
+    'customer_name AS "customerName"',
     "plan",
     "to_char(starts_on, 'YYYY-MM-DD') AS \"startsOn\"",
     "to_char(ends_on, 'YYYY-MM-DD') AS \"endsOn\"",
-    "amount_vnd::float8 AS \"amountVnd\"",
+    'amount_vnd::float8 AS "amountVnd"',
     "status",
     "note",
 ].join(", ")
-
-/** The condition that a lead belongs to the workspace, for a write that must link only the workspace own leads. */
-const LEAD_IS_OWN = "EXISTS (SELECT 1 FROM public.leads WHERE workspace_id = :workspaceId AND id = :leadId::uuid)"
 
 /** True when a RETURNING row carries a stored contract, the shape the returned columns give it. */
 const isSavedContract = (value: unknown): value is SavedContract =>
@@ -78,6 +76,7 @@ export class ContractsService {
         private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
         private readonly links: ContractLinkService,
+        private readonly leads: LeadReadService,
     ) {}
 
     /** Lists recurring contracts after proving the caller belongs to their workspace. */
@@ -93,14 +92,14 @@ export class ContractsService {
 
     /** Links a customer to a contract that was typed in by name only, on the system's behalf; a contract that has a lead keeps it. */
     async attachLead(workspaceId: string, contractId: string, leadId: string): Promise<void> {
+        if (!(await this.leads.isOwn(workspaceId, leadId))) return
         await this.entityManager
             .createQueryBuilder(ContractEntity, "c")
             .update()
             .set({ leadId, updatedAt: () => "now()" })
-            .where(`workspace_id = :workspaceId AND id = :contractId AND lead_id IS NULL AND ${LEAD_IS_OWN}`, {
+            .where("workspace_id = :workspaceId AND id = :contractId AND lead_id IS NULL", {
                 workspaceId,
                 contractId,
-                leadId,
             })
             .execute()
     }
@@ -211,11 +210,14 @@ export class ContractsService {
                     note: appendNoteLine(current.note, line, NOTE_MAX),
                     updatedAt: () => "now()",
                 })
-                .where("workspace_id = :workspaceId AND id = :contractId AND ends_on = :periodEndsOn::date AND status <> 'cancelled'", {
-                    workspaceId,
-                    contractId,
-                    periodEndsOn,
-                })
+                .where(
+                    "workspace_id = :workspaceId AND id = :contractId AND ends_on = :periodEndsOn::date AND status <> 'cancelled'",
+                    {
+                        workspaceId,
+                        contractId,
+                        periodEndsOn,
+                    },
+                )
                 .returning(RETURNED)
                 .execute()
             const row = firstSaved(extended.raw)
@@ -246,16 +248,7 @@ export class ContractsService {
         workspaceId: string,
         fields: ContractFields,
     ): Promise<SavedContract | undefined> {
-        if (fields.leadId !== null) {
-            const lead: unknown = await tx
-                .createQueryBuilder()
-                .select("l.id", "id")
-                .from("public.leads", "l")
-                .where("l.workspace_id = :workspaceId AND l.id = :leadId", { workspaceId, leadId: fields.leadId })
-                .setLock("pessimistic_read")
-                .getRawOne()
-            if (lead === undefined) return undefined
-        }
+        if (fields.leadId !== null && !(await this.leads.isOwn(workspaceId, fields.leadId, tx))) return undefined
         const inserted = await tx
             .createQueryBuilder(ContractEntity, "c")
             .insert()
@@ -272,14 +265,12 @@ export class ContractsService {
         contractId: string,
         fields: ContractFields,
     ): Promise<SavedContract | undefined> {
+        if (fields.leadId !== null && !(await this.leads.isOwn(workspaceId, fields.leadId, tx))) return undefined
         const changed = await tx
             .createQueryBuilder(ContractEntity, "c")
             .update()
             .set({ ...fields, updatedAt: () => "now()" })
-            .where(
-                `workspace_id = :workspaceId AND id = :contractId AND (:leadId::uuid IS NULL OR ${LEAD_IS_OWN})`,
-                { workspaceId, contractId, leadId: fields.leadId },
-            )
+            .where("workspace_id = :workspaceId AND id = :contractId", { workspaceId, contractId })
             .returning(RETURNED)
             .execute()
         return firstSaved(changed.raw)

@@ -1,3 +1,4 @@
+import type { LoyaltyCustomer } from "@modules/domain/loyalty-customers"
 import type { ExpiryEntry, LedgerEntry, LedgerTotal, LoyaltyMember } from "../loyalty-ledger.contracts"
 import type { LoyaltyLedgerEntity } from "../persistence/entities"
 
@@ -22,24 +23,10 @@ export type EntryFields = Pick<
 /** The ledger columns an expiry entry carries. */
 export type ExpiryFields = Pick<LoyaltyLedgerEntity, "kind" | "points" | "expiresAt">
 
-/** One member as the grouped select answers it: the customer columns and the balances the ledger gives. */
-export interface MemberRaw {
+/** The balances the ledger gives one customer, as the grouped select answers them. */
+export interface BalanceRaw {
     /** The customer id. */
-    readonly id: string
-    /** The name shown to the owner. */
-    readonly name: string
-    /** The normalised phone. */
-    readonly phone: string | null
-    /** The lower-case email. */
-    readonly email: string | null
-    /** The birthday as text. */
-    readonly birthday: string | null
-    /** The key of the held tier. */
-    readonly tier_key: string | null
-    /** When the customer joined. */
-    readonly joined_at: Date
-    /** The note of the owner. */
-    readonly note: string
+    readonly customer_id: string
     /** The points the customer holds. */
     readonly points: number
     /** The lifetime spend that earned points. */
@@ -62,20 +49,20 @@ export interface TotalRaw {
     readonly amount_vnd: number
 }
 
-/** The member a grouped row holds. */
-export const toMember = (row: MemberRaw): LoyaltyMember => ({
-    id: row.id,
-    name: row.name,
-    phone: row.phone,
-    email: row.email,
-    birthday: row.birthday,
-    tierKey: row.tier_key,
-    points: row.points,
-    lifetimeSpendVnd: row.lifetime_spend_vnd,
-    visits: row.visits,
-    lastVisitAt: row.last_visit_at === null ? null : row.last_visit_at.toISOString(),
-    joinedAt: row.joined_at.toISOString(),
-    note: row.note,
+/** The member a customer and the balances of the ledger make; a customer the ledger has no entry for holds nothing. */
+export const toMember = (customer: LoyaltyCustomer, balance: BalanceRaw | undefined): LoyaltyMember => ({
+    id: customer.id,
+    name: customer.name,
+    phone: customer.phone,
+    email: customer.email,
+    birthday: customer.birthday,
+    tierKey: customer.tierKey,
+    points: balance?.points ?? 0,
+    lifetimeSpendVnd: balance?.lifetime_spend_vnd ?? 0,
+    visits: balance?.visits ?? 0,
+    lastVisitAt: balance?.last_visit_at?.toISOString() ?? null,
+    joinedAt: customer.joinedAt,
+    note: customer.note,
 })
 
 /** The ledger entry a stored row holds. */

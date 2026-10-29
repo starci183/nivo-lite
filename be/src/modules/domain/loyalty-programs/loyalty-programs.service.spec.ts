@@ -1,6 +1,9 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
+import type { InstallationRecord } from "@modules/domain/module-installations"
+import { WorkspacesService } from "@modules/domain/workspaces"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
@@ -20,16 +23,26 @@ const ROW = Object.assign(new LoyaltyProgramEntity(), {
 
 const WRITTEN = (row: object): QueryBuilderAnswers => ({ execute: { raw: [row] } })
 const NOTHING: QueryBuilderAnswers = { execute: { raw: [] } }
-const SHOP = (name: string): QueryBuilderAnswers => ({ getRawOne: { name } })
-const NO_SHOP: QueryBuilderAnswers = { getRawOne: undefined }
-const MODULE = (status: string): QueryBuilderAnswers => ({ getRawOne: { status } })
+const installed = (status: string): InstallationRecord => Object.assign(mock<InstallationRecord>(), { status })
+
+const installations = mock<InstallationRecordsService>()
+const workspaces = mock<WorkspacesService>()
 
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
-        providers: [LoyaltyProgramsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            LoyaltyProgramsService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: InstallationRecordsService, useValue: installations },
+            { provide: WorkspacesService, useValue: workspaces },
+        ],
     }).compile()
     return moduleRef.get(LoyaltyProgramsService)
 }
+
+beforeEach(() => {
+    workspaces.nameOf.mockResolvedValue("Spa Anna")
+})
 
 const FOUND = {
     workspaceId: "ws-1",
@@ -90,19 +103,16 @@ describe("LoyaltyProgramsService", () => {
     describe("findActive", () => {
         it("answers the programme when the module runs and the owner switched it on", async () => {
             const em = mockEntityManager({ findOne: [LoyaltyProgramEntity, ROW] })
-            const [installation] = queueQueryBuilders(em, [MODULE("active")])
+            installations.firstOfModule.mockResolvedValue(installed("ready"))
             const programs = await build(em)
 
             await expect(programs.findActive("ws-1")).resolves.toMatchObject({ slug: "spa-anna" })
-            expect(installation?.callsOf("from")).toEqual([["public.module_installations", "i"]])
-            expect(installation?.callsOf("where")).toEqual([
-                ["i.workspace_id = :workspaceId AND i.module_key = 'loyalty'", { workspaceId: "ws-1" }],
-            ])
+            expect(installations.firstOfModule).toHaveBeenCalledWith("ws-1", "loyalty")
         })
 
         it("answers null when the module is not installed or is paused", async () => {
             const em = mockEntityManager()
-            queueQueryBuilders(em, [{ getRawOne: undefined }, MODULE("paused")])
+            installations.firstOfModule.mockResolvedValueOnce(null).mockResolvedValueOnce(installed("paused"))
             const programs = await build(em)
 
             await expect(programs.findActive("ws-1")).resolves.toBeNull()
@@ -113,9 +123,8 @@ describe("LoyaltyProgramsService", () => {
             const off = mockEntityManager({
                 findOne: [LoyaltyProgramEntity, Object.assign(new LoyaltyProgramEntity(), { ...ROW, enabled: false })],
             })
-            queueQueryBuilders(off, [MODULE("active")])
+            installations.firstOfModule.mockResolvedValue(installed("ready"))
             const none = mockEntityManager({ findOne: [LoyaltyProgramEntity, null] })
-            queueQueryBuilders(none, [MODULE("active")])
 
             await expect((await build(off)).findActive("ws-1")).resolves.toBeNull()
             await expect((await build(none)).findActive("ws-1")).resolves.toBeNull()
@@ -124,13 +133,12 @@ describe("LoyaltyProgramsService", () => {
 
     describe("shopName", () => {
         it("answers the name of the workspace, empty when it is gone", async () => {
-            const em = mockEntityManager()
-            const [found] = queueQueryBuilders(em, [SHOP("Spa Anna"), NO_SHOP])
-            const programs = await build(em)
+            const programs = await build(mockEntityManager())
+            workspaces.nameOf.mockResolvedValueOnce("Spa Anna").mockResolvedValueOnce("")
 
             await expect(programs.shopName("ws-1")).resolves.toBe("Spa Anna")
             await expect(programs.shopName("ws-1")).resolves.toBe("")
-            expect(found?.callsOf("from")).toEqual([["public.workspaces", "w"]])
+            expect(workspaces.nameOf).toHaveBeenCalledWith("ws-1")
         })
     })
 })
@@ -177,13 +185,13 @@ describe("LoyaltyProgramsService", () => {
 
         it("creates a programme from the shop name and default rules for an empty patch", async () => {
             const em = mockEntityManager()
-            const [update, shop, insert] = queueQueryBuilders(em, [NOTHING, SHOP("Spa Anna"), WRITTEN(ROW)])
+            const [update, insert] = queueQueryBuilders(em, [NOTHING, WRITTEN(ROW)])
             const programs = await build(em)
 
             await expect(programs.save("ws-1", {})).resolves.toEqual(FOUND)
-            expect(em.createQueryBuilder).toHaveBeenCalledTimes(3)
+            expect(em.createQueryBuilder).toHaveBeenCalledTimes(2)
             expect(update?.callsOf("setParameters")).toEqual(UPDATE_PARAMS(null, null, null))
-            expect(shop?.callsOf("where")).toEqual([["w.id = :workspaceId", { workspaceId: "ws-1" }]])
+            expect(workspaces.nameOf).toHaveBeenCalledWith("ws-1")
             expect(insert?.callsOf("insert")).toEqual([[]])
             expect(expressionValues(insert?.callsOf("values")[0]?.[0])).toEqual({
                 workspaceId: "ws-1",
@@ -206,9 +214,8 @@ describe("LoyaltyProgramsService", () => {
             const config = { ...DEFAULT_CONFIG, earn: { ...DEFAULT_CONFIG.earn, perThousandVnd: -3 } }
             const resolved = { ...DEFAULT_CONFIG, earn: { ...DEFAULT_CONFIG.earn, perThousandVnd: 0 } }
             const em = mockEntityManager()
-            const [, , insert] = queueQueryBuilders(em, [
+            const [, insert] = queueQueryBuilders(em, [
                 NOTHING,
-                SHOP("Spa Anna"),
                 WRITTEN({ ...ROW, name: "N".repeat(80), enabled: false, config: resolved }),
             ])
             const programs = await build(em)
@@ -223,11 +230,11 @@ describe("LoyaltyProgramsService", () => {
 
         it("updates the programme that another request created before the insert", async () => {
             const em = mockEntityManager()
-            const [, , , raced] = queueQueryBuilders(em, [NOTHING, SHOP("Spa Anna"), NOTHING, WRITTEN(ROW)])
+            const [, , raced] = queueQueryBuilders(em, [NOTHING, NOTHING, WRITTEN(ROW)])
             const programs = await build(em)
 
             await expect(programs.save("ws-1", {})).resolves.toEqual(FOUND)
-            expect(em.createQueryBuilder).toHaveBeenCalledTimes(4)
+            expect(em.createQueryBuilder).toHaveBeenCalledTimes(3)
             expect(raced?.callsOf("setParameters")).toEqual(UPDATE_PARAMS(null, null, null))
         })
     })
@@ -237,9 +244,8 @@ describe("LoyaltyProgramsService", () => {
     describe("save", () => {
         it("retries a conflicting slug with a suffix after finding no raced programme", async () => {
             const em = mockEntityManager()
-            const [, , first, raced, retry] = queueQueryBuilders(em, [
+            const [, first, raced, retry] = queueQueryBuilders(em, [
                 NOTHING,
-                SHOP("Spa Anna"),
                 NOTHING,
                 NOTHING,
                 WRITTEN({ ...ROW, slug: "spa-anna-abcdefgh" }),
@@ -247,7 +253,7 @@ describe("LoyaltyProgramsService", () => {
             const programs = await build(em)
 
             await expect(programs.save("ws-1", {})).resolves.toEqual({ ...FOUND, slug: "spa-anna-abcdefgh" })
-            expect(em.createQueryBuilder).toHaveBeenCalledTimes(5)
+            expect(em.createQueryBuilder).toHaveBeenCalledTimes(4)
             expect(first?.callsOf("setParameters")).toEqual(
                 INSERT_PARAMS(null, null, JSON.stringify(DEFAULT_CONFIG), false),
             )
@@ -263,16 +269,17 @@ describe("LoyaltyProgramsService", () => {
     describe("save", () => {
         it("answers null after five failed inserts, checking for a raced programme after each", async () => {
             const em = mockEntityManager()
-            const fakes = queueQueryBuilders(em, [NOTHING, NO_SHOP, ...Array.from({ length: 10 }, () => NOTHING)])
+            const fakes = queueQueryBuilders(em, [NOTHING, ...Array.from({ length: 10 }, () => NOTHING)])
+            workspaces.nameOf.mockResolvedValue("")
             const programs = await build(em)
 
             await expect(programs.save("ws-1", {})).resolves.toBeNull()
-            expect(em.createQueryBuilder).toHaveBeenCalledTimes(12)
+            expect(em.createQueryBuilder).toHaveBeenCalledTimes(11)
             for (let attempt = 0; attempt < 5; attempt += 1) {
-                expect(fakes[2 + attempt * 2]?.callsOf("setParameters")).toEqual(
+                expect(fakes[1 + attempt * 2]?.callsOf("setParameters")).toEqual(
                     INSERT_PARAMS(null, null, JSON.stringify(DEFAULT_CONFIG), attempt > 0, ""),
                 )
-                expect(fakes[3 + attempt * 2]?.callsOf("setParameters")).toEqual(UPDATE_PARAMS(null, null, null))
+                expect(fakes[2 + attempt * 2]?.callsOf("setParameters")).toEqual(UPDATE_PARAMS(null, null, null))
             }
         })
     })

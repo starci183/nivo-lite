@@ -19,3 +19,15 @@ export interface LeadView {
     /** The creation time, ISO text. */
     readonly created_at: string
 }
+
+/** The contact details of one lead. */
+export interface LeadContactView {
+    /** The lead id. */
+    readonly id: string
+    /** The customer's name. */
+    readonly contact_name: string
+    /** The stored phone, or null. */
+    readonly phone: string | null
+    /** The stored email, or null. */
+    readonly email: string | null
+}

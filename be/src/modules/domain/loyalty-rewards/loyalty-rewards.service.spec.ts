@@ -1,7 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { IsNull, Not } from "typeorm"
-import { builder, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { LoyaltyLedgerService } from "@modules/domain/loyalty-ledger"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { LoyaltyRewardsService } from "./loyalty-rewards.service"
@@ -83,9 +84,15 @@ const FIELDS = {
     active: true,
 }
 
+const ledger = mock<LoyaltyLedgerService>()
+
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
-        providers: [LoyaltyRewardsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            LoyaltyRewardsService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: LoyaltyLedgerService, useValue: ledger },
+        ],
     }).compile()
     return moduleRef.get(LoyaltyRewardsService)
 }
@@ -251,7 +258,7 @@ describe("LoyaltyRewardsService remove", () => {
             update: [LoyaltyRewardEntity, outcome],
         })
         const transaction = fakeTransaction(entityManager)
-        queueQueryBuilders(entityManager, [{ getRawOne: used }])
+        ledger.rewardUsed.mockResolvedValue(used !== undefined)
         return { entityManager, transaction }
     }
 
@@ -262,7 +269,7 @@ describe("LoyaltyRewardsService remove", () => {
 
         await expect(rewards.remove("ws-1", "gone")).resolves.toBe("missing")
 
-        expect(entityManager.createQueryBuilder).not.toHaveBeenCalled()
+        expect(ledger.rewardUsed).not.toHaveBeenCalled()
         expect(transaction.outcomes).toEqual(["commit"])
     })
 

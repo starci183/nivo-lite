@@ -10,6 +10,9 @@ import { LeadEntity } from "./persistence/entities"
 import { normalizePage } from "@modules/platform/pagination"
 import { HttpSecurityErrorCode } from "@modules/platform/http-security"
 
+const leadRow = (fields: Pick<LeadEntity, "id" | "contactName" | "phone" | "email">): LeadEntity =>
+    Object.assign(new LeadEntity(), fields)
+
 const LEAD: LeadView = {
     id: "lead-1",
     contact_name: "An",
@@ -164,5 +167,50 @@ describe("LeadReadService", () => {
         expect(fakes[0]?.callsOf("where")).toEqual([["l.workspaceId = :workspaceId", { workspaceId: "ws-1" }]])
         expect(fakes[0]?.callsOf("andWhere")).toEqual([["l.id = ANY(:leadIds)", { leadIds: ids }]])
         expect(fakes[0]?.callsOf("limit")).toEqual([[1000]])
+    })
+
+    it("answers whether a lead belongs to the workspace, on the caller's manager when given", async () => {
+        const own = mockEntityManager({ exists: [LeadEntity, true] })
+        const { leads, em } = await build([])
+        const tx = mockEntityManager({ exists: [LeadEntity, false] })
+        em.exists.mockResolvedValue(true)
+
+        await expect(leads.isOwn("ws-1", "lead-1")).resolves.toBe(true)
+        await expect(leads.isOwn("ws-1", "lead-1", tx)).resolves.toBe(false)
+
+        expect(own.exists).not.toHaveBeenCalled()
+        expect(em.exists).toHaveBeenCalledWith(LeadEntity, { where: { workspaceId: "ws-1", id: "lead-1" } })
+        expect(tx.exists).toHaveBeenCalledWith(LeadEntity, { where: { workspaceId: "ws-1", id: "lead-1" } })
+    })
+
+    it("lists the leads that carry a phone or an email, oldest first, as contact views", async () => {
+        const row = leadRow({ id: "lead-1", contactName: "An", phone: "0901", email: null })
+        const em = mockEntityManager({ find: [LeadEntity, [row]], findOne: [LeadEntity, row] })
+        const moduleRef = await Test.createTestingModule({
+            providers: [LeadReadService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
+        }).compile()
+        const leads = moduleRef.get(LeadReadService)
+        const view = { id: "lead-1", contact_name: "An", phone: "0901", email: null }
+
+        await expect(leads.listContacts("ws-1", 5)).resolves.toEqual([view])
+        await expect(leads.contactOf("ws-1", "lead-1")).resolves.toEqual(view)
+
+        expect(em.find).toHaveBeenCalledWith(
+            LeadEntity,
+            expect.objectContaining({ take: 5, order: { createdAt: "ASC", id: "ASC" } }),
+        )
+        expect(em.findOne).toHaveBeenCalledWith(
+            LeadEntity,
+            expect.objectContaining({ where: { workspaceId: "ws-1", id: "lead-1" } }),
+        )
+    })
+
+    it("answers no contact for a lead the workspace does not have", async () => {
+        const em = mockEntityManager({ findOne: [LeadEntity, null] })
+        const moduleRef = await Test.createTestingModule({
+            providers: [LeadReadService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
+        }).compile()
+
+        await expect(moduleRef.get(LeadReadService).contactOf("ws-1", "missing")).resolves.toBeNull()
     })
 })

@@ -1,23 +1,28 @@
 import { Test } from "@nestjs/testing"
-import { builder, mockEntityManager } from "@starci/jest-preset"
+import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { LoyaltyCustomersService } from "@modules/domain/loyalty-customers"
+import type { LoyaltyCustomer } from "@modules/domain/loyalty-customers"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { LoyaltyLedgerErrorCode } from "./errors/loyalty-ledger.error"
 import type { PostParams } from "./loyalty-ledger.contracts"
 import { LoyaltyLedgerService } from "./loyalty-ledger.service"
 import { LoyaltyLedgerEntity } from "./persistence/entities"
-import type { MemberRaw } from "./policies/ledger.mapper"
+import type { BalanceRaw } from "./policies/ledger.mapper"
 
-const memberRowOf = builder<MemberRaw>({
+const CUSTOMER: LoyaltyCustomer = {
     id: "c1",
     name: "Mai",
     phone: "84912345678",
     email: null,
     birthday: null,
-    tier_key: "bac",
-    joined_at: new Date("2026-10-01T00:00:00.000Z"),
+    tierKey: "bac",
+    joinedAt: "2026-10-01T00:00:00.000Z",
     note: "",
+}
+const balanceRowOf = builder<BalanceRaw>({
+    customer_id: "c1",
     points: 120,
     lifetime_spend_vnd: 500000,
     visits: 3,
@@ -73,9 +78,15 @@ const postOf = (manager: MockEntityManager) =>
         occurredAt: "2026-10-12T00:00:00.000Z",
     })()
 
+const customerReads = mock<LoyaltyCustomersService>()
+
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
-        providers: [LoyaltyLedgerService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            LoyaltyLedgerService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: LoyaltyCustomersService, useValue: customerReads },
+        ],
     }).compile()
     return moduleRef.get(LoyaltyLedgerService)
 }
@@ -99,22 +110,19 @@ const postingManager = (answers: PostingAnswers, balance: unknown = undefined) =
         exists: [LoyaltyLedgerEntity, answers.posted ?? false],
         insert: [LoyaltyLedgerEntity, answers.inserted ?? { identifiers: [{ id: "e1" }] }],
     })
-    const [lock, sum] = queueQueryBuilders(manager, [{ getRawOne: answers.locked }, { getRawOne: balance }])
-    return { manager, lock, sum }
+    const [sum] = queueQueryBuilders(manager, [{ getRawOne: balance }])
+    customerReads.lockOwn.mockResolvedValue(answers.locked !== undefined)
+    return { manager, sum }
 }
 
 describe("LoyaltyLedgerService post", () => {
     it("locks the customer, checks the key and writes the entry", async () => {
-        const { manager, lock, sum } = postingManager({ locked: { id: "c1" } })
+        const { manager, sum } = postingManager({ locked: { id: "c1" } })
         const ledger = await build(mockEntityManager())
 
         await expect(ledger.post(postOf(manager))).resolves.toBe("e1")
 
-        expect(lock?.callsOf("from")).toEqual([["public.loyalty_customers", "c"]])
-        expect(lock?.callsOf("where")).toEqual([
-            ["c.id = :customerId AND c.workspace_id = :workspaceId", { customerId: "c1", workspaceId: "ws-1" }],
-        ])
-        expect(lock?.callsOf("setLock")).toEqual([["pessimistic_write"]])
+        expect(customerReads.lockOwn).toHaveBeenCalledWith(manager, "ws-1", "c1")
         expect(manager.exists).toHaveBeenCalledWith(LoyaltyLedgerEntity, {
             where: { workspaceId: "ws-1", ref: "order:1" },
         })
@@ -206,6 +214,16 @@ describe("LoyaltyLedgerService post balance", () => {
     })
 })
 
+describe("LoyaltyLedgerService rewardUsed", () => {
+    it("tells whether an entry refers to the reward", async () => {
+        const em = mockEntityManager({ exists: [LoyaltyLedgerEntity, true] })
+        const ledger = await build(em)
+
+        await expect(ledger.rewardUsed("r1")).resolves.toBe(true)
+        expect(em.exists).toHaveBeenCalledWith(LoyaltyLedgerEntity, { where: { rewardId: "r1" } })
+    })
+})
+
 describe("LoyaltyLedgerService hasRef", () => {
     it("tells whether a key was posted before", async () => {
         const posted = await build(mockEntityManager({ exists: [LoyaltyLedgerEntity, true] }))
@@ -217,27 +235,46 @@ describe("LoyaltyLedgerService hasRef", () => {
 })
 
 describe("LoyaltyLedgerService members", () => {
-    it("lists the members, newest first, and finds one", async () => {
+    it("lists the members, newest first, with the balances of the ledger", async () => {
         const em = mockEntityManager()
-        const [list, one] = queueQueryBuilders(em, [
-            { getRawMany: [memberRowOf(), memberRowOf({ last_visit_at: null })] },
-            { getRawOne: memberRowOf() },
+        const [balances] = queueQueryBuilders(em, [
+            { getRawMany: [balanceRowOf(), balanceRowOf({ customer_id: "c2", last_visit_at: null })] },
         ])
+        customerReads.listNewest.mockResolvedValue([CUSTOMER, { ...CUSTOMER, id: "c2" }, { ...CUSTOMER, id: "c3" }])
         const ledger = await build(em)
 
-        await expect(ledger.members("ws-1")).resolves.toEqual([MEMBER, { ...MEMBER, lastVisitAt: null }])
+        await expect(ledger.members("ws-1")).resolves.toEqual([
+            MEMBER,
+            { ...MEMBER, id: "c2", lastVisitAt: null },
+            { ...MEMBER, id: "c3", points: 0, lifetimeSpendVnd: 0, visits: 0, lastVisitAt: null },
+        ])
+        expect(customerReads.listNewest).toHaveBeenCalledWith("ws-1", 2000)
+        expect(balances?.callsOf("groupBy")).toEqual([["l.customerId"]])
+        expect(balances?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", customerIds: ["c1", "c2", "c3"] })
+    })
+
+    it("reads no balances when the workspace has no customers", async () => {
+        const em = mockEntityManager()
+        customerReads.listNewest.mockResolvedValue([])
+        const ledger = await build(em)
+
+        await expect(ledger.members("ws-1")).resolves.toEqual([])
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+    })
+
+    it("finds one member", async () => {
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ getRawMany: [balanceRowOf()] }])
+        customerReads.byId.mockResolvedValue(CUSTOMER)
+        const ledger = await build(em)
+
         await expect(ledger.member("ws-1", "c1")).resolves.toEqual(MEMBER)
-        expect(list?.callsOf("from")).toEqual([["public.loyalty_customers", "c"]])
-        expect(list?.callsOf("groupBy")).toEqual([["c.id"]])
-        expect(list?.callsOf("orderBy")).toEqual([["c.created_at", "DESC"]])
-        expect(list?.callsOf("limit")).toEqual([[2000]])
-        expect(one?.callsOf("andWhere")).toEqual([["c.id = :customerId", { customerId: "c1" }]])
-        expect(one?.callsOf("limit")).toEqual([[1]])
+        expect(customerReads.byId).toHaveBeenCalledWith("ws-1", "c1")
     })
 
     it("answers null for a member that is not there", async () => {
         const em = mockEntityManager()
-        queueQueryBuilders(em, [{ getRawOne: undefined }])
+        customerReads.byId.mockResolvedValue(null)
         const ledger = await build(em)
 
         await expect(ledger.member("ws-1", "zzz")).resolves.toBeNull()

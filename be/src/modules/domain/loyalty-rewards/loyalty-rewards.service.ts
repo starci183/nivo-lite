@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { IsNull, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
+import { LoyaltyLedgerService } from "@modules/domain/loyalty-ledger"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { LoyaltyReward, RewardEdit, RewardMatch, RewardRemoval } from "./loyalty-rewards.contracts"
 import { LoyaltyRewardEntity } from "./persistence/entities"
@@ -20,7 +21,10 @@ const SUFFIXED_KEY = "CAST(:wantedKey AS text) || '-' || substr(replace(gen_rand
 @Injectable()
 /** The reward catalogue of a workspace: read for customers and owners, and the stock taken when a reward is redeemed. */
 export class LoyaltyRewardsService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly ledger: LoyaltyLedgerService,
+    ) {}
 
     /** The catalogue in display order; only the rewards customers may redeem now when `onlyActive`. */
     async list(workspaceId: string, onlyActive: boolean): Promise<ReadonlyArray<LoyaltyReward>> {
@@ -120,20 +124,13 @@ export class LoyaltyRewardsService {
         return this.entityManager.transaction(async (manager) => {
             const reward = await this.lock(manager, workspaceId, rewardId)
             if (reward === null) return "missing"
-            const used = await manager
-                .createQueryBuilder()
-                .select("1", "used")
-                .from("public.loyalty_ledger", "l")
-                .where("l.reward_id = :rewardId", { rewardId })
-                .limit(1)
-                .getRawOne<{ used: number }>()
+            const used = await this.ledger.rewardUsed(rewardId)
             const criteria = { workspaceId, id: rewardId }
-            const outcome =
-                used === undefined
-                    ? await manager.delete(LoyaltyRewardEntity, criteria)
-                    : await manager.update(LoyaltyRewardEntity, criteria, { active: false })
+            const outcome = used
+                ? await manager.update(LoyaltyRewardEntity, criteria, { active: false })
+                : await manager.delete(LoyaltyRewardEntity, criteria)
             if ((outcome.affected ?? 0) === 0) return "missing"
-            return used === undefined ? "deleted" : "retired"
+            return used ? "retired" : "deleted"
         })
     }
 
