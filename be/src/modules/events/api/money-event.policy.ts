@@ -1,4 +1,4 @@
-import { EventsError, EventsErrorCode } from "./errors/events.error"
+import { ApiError, ApiErrorCode } from "./errors/api.error"
 
 /** The envelope of a delivered event once its id and payload object are checked. */
 export interface OpenedEnvelope {
@@ -34,13 +34,13 @@ export const isKey = (value: unknown): value is string => typeof value === "stri
 export const isText = (value: unknown): value is string => typeof value === "string"
 
 /** The listed value `value` equals, else the events error that names the field: a value outside its set never reaches a reactor. */
-export const memberOf = <Member extends string>(
+export const listedValue = <Member extends string>(
     members: ReadonlyArray<Member>,
     value: string,
     field: string,
 ): Member => {
     for (const member of members) if (member === value) return member
-    throw new EventsError({ code: EventsErrorCode.ValueOutsideSet, params: { field } })
+    throw new ApiError({ code: ApiErrorCode.ValueOutsideSet, params: { field } })
 }
 
 /** True when the field is absent or text: an optional text field of a payload. */
@@ -51,12 +51,15 @@ export const isTextOrAbsent = (value: unknown): value is string | undefined =>
 export const isAmountOrAbsent = (value: unknown): value is number | undefined =>
     value === undefined || (typeof value === "number" && Number.isFinite(value))
 
+/** A payload field that is there only when it has a value: an empty object, or an object holding the value under its name. */
+export type PresentField<Name extends string, Value> = { [Key in Name]?: Value }
+
 /** A one-field object holding `value` under `name`, or an empty one when the value is absent (undefined or null), to spread into an optional payload field. */
 export const whenPresent = <Name extends string, Value>(
     name: Name,
-    value: Value | null | undefined,
-): Partial<Record<Name, Value>> => {
-    const field: Partial<Record<Name, Value>> = {}
+    value: Value,
+): PresentField<Name, NonNullable<Value>> => {
+    const field: PresentField<Name, NonNullable<Value>> = {}
     if (value !== undefined && value !== null) field[name] = value
     return field
 }
