@@ -10,7 +10,7 @@ import {
     draftChild,
 } from "@tests/fixtures/builders/content-ai-completion.builder"
 import { Test } from "@nestjs/testing"
-import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, fakeInbox, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { GenerationsService } from "@modules/domain/ai-generations"
 import type { GenerationState } from "@modules/domain/ai-generations"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
@@ -21,7 +21,6 @@ import { EventsService } from "@modules/domain/events"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ContentAiCompletionService } from "./content-ai-completion.service"
@@ -32,7 +31,8 @@ import { ContentAiErrorCode } from "./errors/content-ai.error"
 const CLAIM = { consumer: "ai_generation_completed__content", dedupeKey: "g-2" }
 
 const build = async (states: ReadonlyArray<GenerationState>, claimWon = true) => {
-    const inbox = mock<Inbox>({ claim: jest.fn().mockResolvedValue(claimWon) })
+    const inbox = fakeInbox()
+    if (!claimWon) inbox.seen(CLAIM.consumer, CLAIM.dedupeKey)
     const em = mockEntityManager()
     const tx = fakeTransaction(em)
     const clock = new FakeClock(NOW)
@@ -117,7 +117,7 @@ describe("ContentAiCompletionService", () => {
 
         await service.complete("ws-1", "g-2", CLAIM)
 
-        expect(inbox.claim).toHaveBeenCalledWith("ai_generation_completed__content", "g-2", expect.anything())
+        expect(inbox.claims).toEqual([{ source: "ai_generation_completed__content", eventId: "g-2" }])
         expect(plans.apply).not.toHaveBeenCalled()
         expect(generations.recordResult).not.toHaveBeenCalled()
     })
