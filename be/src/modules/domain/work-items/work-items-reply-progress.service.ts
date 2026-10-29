@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { AgentMessageDeliveriesService } from "@modules/domain/agent-messages"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { AnswerProgressLine } from "./work-items-activity.contracts"
+import type { AnswerProgressLine, ReplyProgress } from "./work-items-activity.contracts"
 import { WorkItemEntity } from "./persistence/entities"
 
 /** The conversation a reply work item names: the proposal's field, else the subject when it is a conversation. */
@@ -26,7 +26,7 @@ export class WorkItemsReplyProgressService {
      * How far a customer-reply work item got, with the stored answer's delivery; null when the workspace has no such item or its
      * conversation is not a customer conversation.
      */
-    async answerProgress(workspaceId: string, workItemId: string): Promise<AnswerProgressLine | null> {
+    async answerProgress(workspaceId: string, workItemId: string): Promise<ReplyProgress> {
         const item = await this.entityManager.findOne(WorkItemEntity, {
             where: { workspaceId, id: workItemId, action: "reply_customer" },
         })

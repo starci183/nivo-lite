@@ -5,6 +5,7 @@ import type {
     AutomationLeadRead,
     AutomationScanLead,
     AutomationScanLeadsQuery,
+    OptionalAutomationLead,
 } from "./lead-automation-read.contracts"
 import { LeadEntity } from "./persistence/entities"
 
@@ -14,7 +15,7 @@ export class LeadAutomationReadService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** One lead of a workspace, or none. */
-    lead(workspaceId: string, leadId: string): Promise<AutomationLeadRead | undefined> {
+    lead(workspaceId: string, leadId: string): Promise<OptionalAutomationLead> {
         return this.entityManager
             .createQueryBuilder(LeadEntity, "l")
             .select([

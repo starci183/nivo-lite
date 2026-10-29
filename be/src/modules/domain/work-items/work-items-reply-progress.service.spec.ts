@@ -1,5 +1,9 @@
 import { Test } from "@nestjs/testing"
-import { entityOf } from "@tests/fixtures/builders/entity.builder"
+import {
+    replyItemNaming,
+    replyItemOf,
+    replyItemWithoutConversation,
+} from "@tests/fixtures/builders/work-items-reply-progress.builder"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
@@ -7,16 +11,6 @@ import { AgentMessageDeliveriesService } from "@modules/domain/agent-messages"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { WorkItemEntity } from "./persistence/entities"
 import { WorkItemsReplyProgressService } from "./work-items-reply-progress.service"
-
-const itemOf = entityOf(WorkItemEntity, {
-    id: "w1",
-    workspaceId: "ws",
-    action: "reply_customer",
-    status: "done",
-    subjectType: "conversation",
-    subjectId: "c-subject",
-    proposal: { summary: "", fields: {} },
-})
 
 const build = async (entityManager: MockEntityManager) => {
     const conversations = mock<AgentConversationsReadService>()
@@ -36,7 +30,7 @@ const build = async (entityManager: MockEntityManager) => {
 
 describe("WorkItemsReplyProgressService > answerProgress", () => {
     it("answers how far the reply got and what was delivered, on the conversation of the subject", async () => {
-        const em = mockEntityManager({ findOne: [WorkItemEntity, itemOf()] })
+        const em = mockEntityManager({ findOne: [WorkItemEntity, replyItemOf()] })
         const { service, conversations, deliveries } = await build(em)
 
         await expect(service.answerProgress("ws", "w1")).resolves.toEqual({
@@ -53,7 +47,7 @@ describe("WorkItemsReplyProgressService > answerProgress", () => {
     })
 
     it("prefers the conversation the proposal names", async () => {
-        const item = itemOf({ proposal: { summary: "", fields: { conversation_id: "c-field" } } })
+        const item = replyItemNaming("c-field")
         const em = mockEntityManager({ findOne: [WorkItemEntity, item] })
         const { service, conversations } = await build(em)
 
@@ -63,7 +57,7 @@ describe("WorkItemsReplyProgressService > answerProgress", () => {
     })
 
     it("answers no stored answer before the reply was performed", async () => {
-        const em = mockEntityManager({ findOne: [WorkItemEntity, itemOf()] })
+        const em = mockEntityManager({ findOne: [WorkItemEntity, replyItemOf()] })
         const { service, deliveries } = await build(em)
         deliveries.humanReplyOf.mockResolvedValue(null)
 
@@ -80,14 +74,14 @@ describe("WorkItemsReplyProgressService > answerProgress", () => {
     })
 
     it("answers null when the item names no conversation", async () => {
-        const item = itemOf({ subjectType: "lead", subjectId: null })
+        const item = replyItemWithoutConversation()
         const { service } = await build(mockEntityManager({ findOne: [WorkItemEntity, item] }))
 
         await expect(service.answerProgress("ws", "w1")).resolves.toBeNull()
     })
 
     it("answers null when the conversation is not a customer conversation", async () => {
-        const em = mockEntityManager({ findOne: [WorkItemEntity, itemOf()] })
+        const em = mockEntityManager({ findOne: [WorkItemEntity, replyItemOf()] })
         const { service, conversations } = await build(em)
         conversations.customerChat.mockResolvedValue(null)
 

@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager, EntityTarget, ObjectLiteral, SelectQueryBuilder } from "typeorm"
 import { AgentEntity } from "@modules/domain/agents"
-import { LeadEntity } from "@modules/domain/leads"
+import { LeadAutomationReadService, LeadReadService } from "@modules/domain/leads"
 import { InstallationOperationsService } from "@modules/domain/module-installations"
 import { StaffDirectoryService } from "@modules/domain/staff"
 import { WorkItemsActivityService } from "@modules/domain/work-items"
@@ -24,8 +24,6 @@ import { waitingConversationId } from "./conversation.policy"
 import type {
     AgentIdRow,
     ConversationRow,
-    LeadBriefRow,
-    LeadRow,
     LensRow,
     MessageBriefRow,
     MessageRow,
@@ -71,6 +69,8 @@ export class ChatbotWorkbenchService {
         private readonly staff: StaffDirectoryService,
         private readonly work: WorkItemsActivityService,
         private readonly installs: InstallationOperationsService,
+        private readonly leads: LeadReadService,
+        private readonly leadFacts: LeadAutomationReadService,
     ) {}
 
     /** The selected installation's customer conversations with activity and capture figures. */
@@ -106,15 +106,7 @@ export class ChatbotWorkbenchService {
                 .limit(6000)
                 .getRawMany<MessageBriefRow>(),
             this.waiting(request.workspaceId),
-            leadIds.length === 0
-                ? Promise.resolve<Array<LeadBriefRow>>([])
-                : readFrom(this.entityManager, LeadEntity, "l", ["id", "contact_name", "created_at"])
-                      .where("l.workspace_id = :workspaceId AND l.id IN (:...leadIds)", {
-                          workspaceId: request.workspaceId,
-                          leadIds,
-                      })
-                      .limit(200)
-                      .getRawMany<LeadBriefRow>(),
+            this.leads.listByIds(request.workspaceId, leadIds),
         ])
         return buildChatbotOverview({ workspaceId: request.workspaceId, now, conversations, messages, waiting, leads })
     }
@@ -131,7 +123,7 @@ export class ChatbotWorkbenchService {
             .getRawMany<ConversationRow>()
         if (conversation === undefined)
             throw new AgentConversationsError({ code: AgentConversationsErrorCode.NotFound })
-        const [messages, waiting, leads] = await Promise.all([
+        const [messages, waiting, lead] = await Promise.all([
             readFrom(this.entityManager, AgentMessageEntity, "m", [
                 "id",
                 "conversation_id",
@@ -152,21 +144,7 @@ export class ChatbotWorkbenchService {
                 .limit(500)
                 .getRawMany<MessageRow>(),
             this.waiting(workspaceId),
-            readFrom(this.entityManager, LeadEntity, "l", [
-                "id",
-                "contact_name",
-                "company",
-                "stage",
-                "need",
-                "phone",
-                "email",
-            ])
-                .where("l.workspace_id = :workspaceId AND l.id = :leadId", {
-                    workspaceId,
-                    leadId: conversation.lead_id,
-                })
-                .limit(1)
-                .getRawMany<LeadRow>(),
+            conversation.lead_id === null ? undefined : this.leadFacts.lead(workspaceId, conversation.lead_id),
         ])
         const item = waiting.find((row) => waitingConversationId(row) === conversationId)
         const [staff] =
@@ -177,7 +155,7 @@ export class ChatbotWorkbenchService {
             conversation,
             messages,
             waiting,
-            lead: leads[0] ?? null,
+            lead: lead ?? null,
             staffName: staff?.name ?? null,
         })
     }
