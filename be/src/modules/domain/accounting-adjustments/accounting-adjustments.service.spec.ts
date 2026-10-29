@@ -6,7 +6,7 @@ import { EventsService } from "@modules/domain/events"
 import { InvoicesService } from "@modules/domain/invoices"
 import type { InvoiceRow } from "@modules/domain/invoices"
 import { TransactionsService } from "@modules/domain/transactions"
-import type { TransactionRow } from "@modules/domain/transactions"
+import type { OptionalTransaction } from "@modules/domain/transactions"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -245,7 +245,7 @@ describe("AccountingAdjustmentsService", () => {
     })
 })
 
-const transactionOf = builder<TransactionRow>({
+const transactionOf = builder<NonNullable<OptionalTransaction>>({
     id: TARGET,
     workspace_id: WORKSPACE,
     inbound_event_id: null,
@@ -296,7 +296,9 @@ describe("AccountingAdjustmentsService", () => {
 
         it("lists a stored correction with no amount as null", async () => {
             const { service } = await build(
-                mockEntityManager({ find: [AccountingAdjustmentEntity, [entityOf({ correctedAmountVnd: null })]] }),
+                mockEntityManager({
+                    find: [AccountingAdjustmentEntity, [Object.assign(entityOf(), { correctedAmountVnd: null })]],
+                }),
             )
 
             await expect(service.list(WORKSPACE)).resolves.toEqual([adjustmentOf({ corrected_amount_vnd: null })])

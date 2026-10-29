@@ -19,11 +19,10 @@ import { AiGenerationsLogEvent } from "./ai-generations.log-events"
 import type { AiGenerationsOptions } from "./ai-generations.options"
 import type { UsageGate } from "./ai-generations.port"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { EngineStatusService } from "@modules/domain/agents"
+import { EngineStatusService, PauseClient } from "@modules/domain/agents"
 import { AiGenerationsErrorCode } from "./errors/ai-generations.error"
 import { GenerationsService } from "./generations.service"
 import { AiGenerationEntity } from "./persistence/entities"
-import { PauseClient } from "@modules/domain/agents"
 
 const OPTIONS: Omit<AiGenerationsOptions, "usage"> = { pollMs: 400 }
 
@@ -214,10 +213,6 @@ describe("GenerationsService request", () => {
     })
 })
 
-/** The SQL text of the expression the statement set for `key`. */
-const expressionSet = (setCalls: ReadonlyArray<ReadonlyArray<unknown>> | undefined, key: string): unknown =>
-    evaluatedValues(setCalls?.[0]?.[0])[key]
-
 describe("GenerationsService state and completion", () => {
     it("locks a workspace row in the supplied transaction and maps its durable state", async () => {
         const { service, tx } = await build()
@@ -307,22 +302,23 @@ describe("GenerationsService state and completion", () => {
         await service.setContext("w1", "g1", { leadId: "lead1" }, tx.em)
         await service.recordResult("w1", "g1", { applied: true }, tx.em)
         await service.recordFailure("w1", "g1", "VALIDATION_FAILED", tx.em)
-        expect(tx.em.createQueryBuilder).toHaveBeenCalledTimes(3)
-        expect(tx.em.createQueryBuilder).toHaveBeenCalledWith(AiGenerationEntity, "g")
+        expect(tx.em.createQueryBuilder.mock.calls).toEqual(Array(3).fill([AiGenerationEntity, "g"]))
         expect(context?.callsOf("where")).toEqual([[{ id: "g1", workspaceId: "w1" }]])
         expect(context?.callsOf("setParameter")).toEqual([["context", '{"leadId":"lead1"}']])
         expect(result?.callsOf("where")).toEqual([[{ id: "g1", workspaceId: "w1", status: "done" }]])
         expect(result?.callsOf("setParameter")).toEqual([["result", '{"applied":true}']])
         expect(failed?.callsOf("where")).toEqual([[{ id: "g1", workspaceId: "w1" }]])
-        expect(expressionSet(context?.callsOf("set"), "input")).toBe(
-            "jsonb_set(input, '{context}', CAST(:context AS jsonb), true)",
-        )
-        expect(expressionSet(result?.callsOf("set"), "output")).toBe(
-            "coalesce(output, '{}'::jsonb) || jsonb_build_object('result', CAST(:result AS jsonb))",
-        )
-        expect(expressionSet(failed?.callsOf("set"), "finishedAt")).toBe("coalesce(finished_at, now())")
-        expect(expressionSet(failed?.callsOf("set"), "error")).toBe("VALIDATION_FAILED")
-        expect(expressionSet(failed?.callsOf("set"), "status")).toBe("error")
+        expect(evaluatedValues(context?.callsOf("set")[0]?.[0])).toEqual({
+            input: "jsonb_set(input, '{context}', CAST(:context AS jsonb), true)",
+        })
+        expect(evaluatedValues(result?.callsOf("set")[0]?.[0])).toEqual({
+            output: "coalesce(output, '{}'::jsonb) || jsonb_build_object('result', CAST(:result AS jsonb))",
+        })
+        expect(evaluatedValues(failed?.callsOf("set")[0]?.[0])).toEqual({
+            status: "error",
+            error: "VALIDATION_FAILED",
+            finishedAt: "coalesce(finished_at, now())",
+        })
     })
 })
 

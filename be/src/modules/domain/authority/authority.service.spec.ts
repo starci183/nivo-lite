@@ -170,7 +170,11 @@ describe("AuthorityService", () => {
                 ],
             ])
         })
+    })
+})
 
+describe("AuthorityService", () => {
+    describe("save", () => {
         it("stores the revenue goal as text and stamps the save with the database time", async () => {
             const { em, fake } = saving(entityWithRevenueGoal(), [savedRow({ goalRevenueVnd: "5000000" })])
             const service = await build(em)

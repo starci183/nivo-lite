@@ -69,7 +69,9 @@ describe("BookingExceptionsService", () => {
             expect(own.save).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("BookingExceptionsService", () => {
     describe("remove", () => {
         it("removes an exception of the workspace and answers its id, or nothing when it is not there", async () => {
             const em = mockEntityManager({
