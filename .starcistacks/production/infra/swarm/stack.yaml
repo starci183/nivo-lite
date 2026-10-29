@@ -365,13 +365,34 @@ configs:
 # of environments.production.secrets. No service is granted a stub and no such Swarm secret is ever created: the real Swarm secrets are one per
 # KEY, named nivo-<key>-v<keyed hash of the value> by `starci app stack deploy` and added to the rendered stack by the generated override.
 secrets:
-  api: { external: true, name: nivo-custody-api-v1 }
-  auth: { external: true, name: nivo-custody-auth-v1 }
-  stack: { external: true, name: nivo-custody-stack-v1 }
-  app-be-db: { external: true, name: nivo-custody-app-be-db-v1 }
+  nivo: { external: true, name: nivo-custody-nivo-v1 }
+  smtp: { external: true, name: nivo-custody-smtp-v1 }
+  sepay: { external: true, name: nivo-custody-sepay-v1 }
+  openrouter: { external: true, name: nivo-custody-openrouter-v1 }
+  n8n: { external: true, name: nivo-custody-n8n-v1 }
+  openclaw: { external: true, name: nivo-custody-openclaw-v1 }
   postgres: { external: true, name: nivo-custody-postgres-v1 }
-  ops: { external: true, name: nivo-custody-ops-v1 }
+  redis: { external: true, name: nivo-custody-redis-v1 }
+  auth: { external: true, name: nivo-custody-auth-v1 }
+  google: { external: true, name: nivo-custody-google-v1 }
+  storage: { external: true, name: nivo-custody-storage-v1 }
+  ai: { external: true, name: nivo-custody-ai-v1 }
+  vps: { external: true, name: nivo-custody-vps-v1 }
   test-accounts: { external: true, name: nivo-custody-test-accounts-v1 }
   ci-ssh-key: { external: true, name: nivo-custody-ci-ssh-key-v1 }
   vps-ssh-key: { external: true, name: nivo-custody-vps-ssh-key-v1 }
   vps-known-hosts: { external: true, name: nivo-custody-vps-known-hosts-v1 }
+  channel-token-key: { external: true, name: nivo-custody-channel-token-key-v1 }
+  otp-pepper: { external: true, name: nivo-custody-otp-pepper-v1 }
+  webhook-signing-secret: { external: true, name: nivo-custody-webhook-signing-secret-v1 }
+  nivo-platform-admins: { external: true, name: nivo-custody-nivo-platform-admins-v1 }
+  postgres-password: { external: true, name: nivo-custody-postgres-password-v1 }
+  app-be-db-password: { external: true, name: nivo-custody-app-be-db-password-v1 }
+  primary-db-url: { external: true, name: nivo-custody-primary-db-url-v1 }
+  demo-email: { external: true, name: nivo-custody-demo-email-v1 }
+  demo-password: { external: true, name: nivo-custody-demo-password-v1 }
+  demo-staff-password: { external: true, name: nivo-custody-demo-staff-password-v1 }
+  ready-owner-email: { external: true, name: nivo-custody-ready-owner-email-v1 }
+  ready-owner-password: { external: true, name: nivo-custody-ready-owner-password-v1 }
+  ready-staff-email: { external: true, name: nivo-custody-ready-staff-email-v1 }
+  ready-staff-password: { external: true, name: nivo-custody-ready-staff-password-v1 }

@@ -95,9 +95,9 @@ components:
     purpose: The daily age-encrypted pg_dump of nivo-postgres (02:00 Asia/Ho_Chi_Minh) onto the persisted volume nivo-engine_postgres-backups, 14 days of retention. Script infra/swarm/postgres/backup.sh as a Swarm config.
     required: true
 backing:
-  supabase:
-    provider: supabase
-    managed: true
+  postgres:
+    provider: postgres
+    component: nivo-postgres
 # Recurring work, every entry bound to its app-owned CLI command (R268). The keys are the pg_cron job names of the migrations
 # (db/migrations/20261105000000_queue-bullmq_contract_pgmq-drop.sql: each job is one job_enqueue to the outbox the relay publishes) and the schedule is the exact
 # cron expression of the job. `cli jobs tick <id>` enqueues one tick by hand (replay of a missed tick).
@@ -223,8 +223,7 @@ environments:
       nivo-api:
         replicas: 1
         port: 8787
-        # internal AI gateway of the api process: port = api port + offset 1 (local dev 3211 -> 3212); AI_ROUTER_PORT below and the openclaw AI_BASE_URL derive from it
-        extraPorts: {ai-router: 8788}
+        # internal AI gateway of the api process: port = api port + offset 1 (local dev 3211 -> 3212; ai-router 8788 in production); AI_ROUTER_PORT below and the openclaw AI_BASE_URL derive from it
       nivo-mcp:
         replicas: 1
         port: 8790
@@ -283,16 +282,16 @@ environments:
         - The jobs watchdog of the running api task prints two non-negative integers.
         - The nivo-mcp task is healthy (container healthcheck on /healthz); it is internal only, so no public URL is probed.
         - Desired and running replicas agree, no task failed, and every update completed (starci app stack converge).
-    # Stateful components and the managed Supabase project. The volumes are the external nivo-engine_* ones; encrypted tarballs are written by
+    # Stateful components. The volumes are the external nivo-engine_* ones; encrypted tarballs are written by
     # `starci app stack backup` (deploy.backup below) and copied off the VPS by the operator. Restore proofs: infra/swarm/recovery/restore-proof.md.
     backup:
-      - component: supabase
-        target: Supabase Cloud managed backups of the project (database, auth and storage) plus the migration history in db/migrations.
-        retention: Per the Supabase plan of the project (the operator confirms the window in the Supabase dashboard); the job queues live in the same database.
-        owner: Production operator
-        restoreProof: .starcistacks/production/infra/swarm/recovery/restore-proof.md
       - component: nivo-postgres
         target: Daily age-encrypted pg_dump (custom format) of nivo-postgres written by nivo-postgres-backup to the volume nivo-engine_postgres-backups (nivo-db-<UTC stamp>.dump.age plus a .sha256), encrypted to the project recipient of .sops.yaml. The operator copies the files off the VPS. The cloud data is not carried over (owner ruling 2026-10-29), production starts clean from db/bootstrap.sql and db/migrations; restore of a nightly file and the clean start are in infra/swarm/recovery/db-runbook.md.
+        retention: 14 days on the VPS (BACKUP_KEEP_DAYS in the stack); off-host retention is the operator's.
+        owner: Production operator
+        restoreProof: .starcistacks/production/infra/swarm/recovery/db-runbook.md
+      - component: nivo-postgres-backup
+        target: The age-encrypted pg_dump files it writes live on the volume nivo-engine_postgres-backups (the same copy set as the nivo-postgres record); the container itself holds no state.
         retention: 14 days on the VPS (BACKUP_KEEP_DAYS in the stack); off-host retention is the operator's.
         owner: Production operator
         restoreProof: .starcistacks/production/infra/swarm/recovery/db-runbook.md
@@ -423,58 +422,114 @@ environments:
         member: nivo
         key: CHANNEL_TOKEN_KEY
         where: secrets/nivo
+        runtimeName: nivo-custody-channel-token-key-v1
+        version: 1
+        recipientPolicy: SOPS/age, key CHANNEL_TOKEN_KEY of the sealed member nivo (nivo.enc.yaml), sealed to the production server key and the owner key per .sops.yaml.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: otp-pepper
         member: nivo
         key: OTP_PEPPER
         where: secrets/nivo
+        runtimeName: nivo-custody-otp-pepper-v1
+        version: 1
+        recipientPolicy: SOPS/age, key OTP_PEPPER of the sealed member nivo (nivo.enc.yaml), sealed to the production server key and the owner key per .sops.yaml.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: webhook-signing-secret
         member: nivo
         key: WEBHOOK_SIGNING_SECRET
         where: secrets/nivo
+        runtimeName: nivo-custody-webhook-signing-secret-v1
+        version: 1
+        recipientPolicy: SOPS/age, key WEBHOOK_SIGNING_SECRET of the sealed member nivo (nivo.enc.yaml), sealed to the production server key and the owner key per .sops.yaml.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: nivo-platform-admins
         member: nivo
         key: NIVO_PLATFORM_ADMINS
         where: secrets/nivo
+        runtimeName: nivo-custody-nivo-platform-admins-v1
+        version: 1
+        recipientPolicy: SOPS/age, key NIVO_PLATFORM_ADMINS of the sealed member nivo (nivo.enc.yaml), sealed to the production server key and the owner key per .sops.yaml.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: postgres-password
         member: postgres
         key: POSTGRES_PASSWORD
         where: secrets/postgres
+        runtimeName: nivo-custody-postgres-password-v1
+        version: 1
+        recipientPolicy: SOPS/age, key POSTGRES_PASSWORD of the sealed member postgres (postgres.enc.yaml), sealed to the production server key and the owner key per .sops.yaml.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: app-be-db-password
         member: postgres
         key: APP_BE_DB_PASSWORD
         where: secrets/postgres
+        runtimeName: nivo-custody-app-be-db-password-v1
+        version: 1
+        recipientPolicy: SOPS/age, key APP_BE_DB_PASSWORD of the sealed member postgres (postgres.enc.yaml), sealed to the production server key and the owner key per .sops.yaml.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: primary-db-url
         member: postgres
         key: PRIMARY_DB_URL
         where: secrets/postgres
+        runtimeName: nivo-custody-primary-db-url-v1
+        version: 1
+        recipientPolicy: SOPS/age, key PRIMARY_DB_URL of the sealed member postgres (postgres.enc.yaml), sealed to the production server key and the owner key per .sops.yaml.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: demo-email
         member: test-accounts
         key: DEMO_EMAIL
         where: secrets/test-accounts
+        runtimeName: nivo-custody-demo-email-v1
+        version: 1
+        recipientPolicy: SOPS/age, key DEMO_EMAIL of the sealed member test-accounts (test-accounts.enc.yaml), sealed to the production server key and the owner key per .sops.yaml.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: demo-password
         member: test-accounts
         key: DEMO_PASSWORD
         where: secrets/test-accounts
+        runtimeName: nivo-custody-demo-password-v1
+        version: 1
+        recipientPolicy: SOPS/age, key DEMO_PASSWORD of the sealed member test-accounts (test-accounts.enc.yaml), sealed to the production server key and the owner key per .sops.yaml.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: demo-staff-password
         member: test-accounts
         key: DEMO_STAFF_PASSWORD
         where: secrets/test-accounts
+        runtimeName: nivo-custody-demo-staff-password-v1
+        version: 1
+        recipientPolicy: SOPS/age, key DEMO_STAFF_PASSWORD of the sealed member test-accounts (test-accounts.enc.yaml), sealed to the production server key and the owner key per .sops.yaml.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: ready-owner-email
         member: test-accounts
         key: READY_OWNER_EMAIL
         where: secrets/test-accounts
+        runtimeName: nivo-custody-ready-owner-email-v1
+        version: 1
+        recipientPolicy: SOPS/age, key READY_OWNER_EMAIL of the sealed member test-accounts (test-accounts.enc.yaml), sealed to the production server key and the owner key per .sops.yaml.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: ready-owner-password
         member: test-accounts
         key: READY_OWNER_PASSWORD
         where: secrets/test-accounts
+        runtimeName: nivo-custody-ready-owner-password-v1
+        version: 1
+        recipientPolicy: SOPS/age, key READY_OWNER_PASSWORD of the sealed member test-accounts (test-accounts.enc.yaml), sealed to the production server key and the owner key per .sops.yaml.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: ready-staff-email
         member: test-accounts
         key: READY_STAFF_EMAIL
         where: secrets/test-accounts
+        runtimeName: nivo-custody-ready-staff-email-v1
+        version: 1
+        recipientPolicy: SOPS/age, key READY_STAFF_EMAIL of the sealed member test-accounts (test-accounts.enc.yaml), sealed to the production server key and the owner key per .sops.yaml.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: ready-staff-password
         member: test-accounts
         key: READY_STAFF_PASSWORD
         where: secrets/test-accounts
+        runtimeName: nivo-custody-ready-staff-password-v1
+        version: 1
+        recipientPolicy: SOPS/age, key READY_STAFF_PASSWORD of the sealed member test-accounts (test-accounts.enc.yaml), sealed to the production server key and the owner key per .sops.yaml.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
     # Shared VPS ingress and the verbs of the canon (starci app stack ...): the data below is the only app-specific deploy configuration.
     deploy:
       stack: nivo
