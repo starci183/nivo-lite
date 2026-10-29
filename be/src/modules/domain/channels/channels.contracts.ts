@@ -22,7 +22,7 @@ export interface ZaloSecret {
     /** The current access token, after authorization. */
     readonly accessToken?: string | undefined
     /** The single-use refresh token. */
-    readonly refreshToken?: string | undefined
+    readonly renewalToken?: string | undefined
     /** When the refresh token stops working, ISO 8601. */
     readonly refreshExpiresAt?: string
     /** A started authorization: the PKCE verifier and the one-time state nonce. */

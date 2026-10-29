@@ -70,6 +70,18 @@ describe("ZaloCredentialsService", () => {
             await expect(service.load("c-1")).resolves.toMatchObject({ value: { expiresAt: null } })
         })
 
+        it.each(['"refreshToken":"old"', '"refreshToken":"old","renewalToken":"new"'])(
+            "reads the legacy refreshToken key of a stored secret as the renewal token (%s)",
+            async (keys) => {
+                const { service, secrets } = await build()
+                secrets.secretOf.mockResolvedValue(
+                    stored(`{"appId":"a","appSecret":"s","oaSecret":"o",${keys}}`),
+                )
+                const loaded = await service.load("c-1")
+                expect(loaded).toMatchObject({ kind: "ok", value: { secret: { renewalToken: keys.includes("new") ? "new" : "old" } } })
+            },
+        )
+
         it("refuses a missing connection and a credential that is not the Zalo document", async () => {
             const { service, secrets } = await build()
             secrets.secretOf.mockResolvedValueOnce(missing)
@@ -155,7 +167,7 @@ describe("ZaloCredentialsService", () => {
             const saved = sealedJson(sealed)
             expect(saved).toMatchObject({
                 accessToken: "access-2",
-                refreshToken: "refresh-2",
+                renewalToken: "refresh-2",
                 refreshExpiresAt: new Date(NOW + 90 * 86_400_000).toISOString(),
             })
             expect(Reflect.has(saved, "pkce")).toBe(false)
@@ -368,7 +380,7 @@ describe("ZaloCredentialsService", () => {
         it("says to authorize first when the connection holds no refresh token", async () => {
             const { service, secrets } = await build()
             secrets.secretOf.mockResolvedValue(
-                stored(secretOf({ accessToken: undefined, refreshToken: undefined }), null),
+                stored(secretOf({ accessToken: undefined, renewalToken: undefined }), null),
             )
             await expect(service.accessToken("c-1")).rejects.toMatchObject({
                 code: ChannelsErrorCode.ZaloNotAuthorized,
@@ -410,7 +422,7 @@ describe("ZaloCredentialsService", () => {
         it("stops when the refresh token vanished under the lease, and frees the lease", async () => {
             const { service, secrets } = await build()
             secrets.secretOf.mockResolvedValueOnce(stored(secretOf(), NOW + 60_000))
-            secrets.secretOf.mockResolvedValueOnce(stored(secretOf({ refreshToken: undefined }), NOW + 60_000))
+            secrets.secretOf.mockResolvedValueOnce(stored(secretOf({ renewalToken: undefined }), NOW + 60_000))
             await expect(service.accessToken("c-1")).rejects.toMatchObject({
                 code: ChannelsErrorCode.ZaloNotAuthorized,
             })
@@ -450,12 +462,12 @@ describe("ZaloCredentialsService", () => {
             expect(secrets.save.mock.calls).toEqual([
                 [
                     "c-1",
-                    'sealed:{"appId":"app-1","appSecret":"app-secret","oaSecret":"oa-secret","accessToken":"access-2","refreshToken":"refresh-2","refreshExpiresAt":"2027-01-10T10:00:00.000Z"}',
+                    'sealed:{"appId":"app-1","appSecret":"app-secret","oaSecret":"oa-secret","accessToken":"access-2","renewalToken":"refresh-2","refreshExpiresAt":"2027-01-10T10:00:00.000Z"}',
                     new Date("2026-10-12T11:00:00.000Z"),
                 ],
                 [
                     "c-1",
-                    'sealed:{"appId":"app-1","appSecret":"app-secret","oaSecret":"oa-secret","accessToken":"access-2","refreshToken":"refresh-2","refreshExpiresAt":"2027-01-10T10:00:00.000Z"}',
+                    'sealed:{"appId":"app-1","appSecret":"app-secret","oaSecret":"oa-secret","accessToken":"access-2","renewalToken":"refresh-2","refreshExpiresAt":"2027-01-10T10:00:00.000Z"}',
                     new Date("2026-10-12T11:00:00.000Z"),
                 ],
             ])
