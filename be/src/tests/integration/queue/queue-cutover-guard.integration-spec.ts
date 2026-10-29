@@ -1,7 +1,8 @@
 import { CONTRACT_MIGRATION, EXPAND_MIGRATION, cutoverSandbox } from "../../world/queue-cutover-sandbox.service"
-import { seedCutoverOutbox, seedCutoverRaw } from "../../fixtures/builders/cutover-seeds.builder"
 import { useTestWorld } from "../../world/use-test-world"
 import {
+    seedCutoverOutbox,
+    seedCutoverRaw,
     originalCutoverRows,
     cutoverClaims,
     cutoverQueues,

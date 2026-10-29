@@ -36,6 +36,9 @@ const ENTER_BROWSER_ROLE = sql`GRANT authenticated TO CURRENT_USER WITH INHERIT 
 /** Applies the browser role's real grants and policies to the proof. */
 const USE_BROWSER_ROLE = sql`SET LOCAL ROLE authenticated`
 
+/** A browser trying to place an object in the avatars bucket itself ($1 object name). */
+const BROWSER_WRITE_AVATAR = sql`INSERT INTO storage.objects (bucket_id, name) VALUES ('avatars_public', $1)`
+
 /** One member picture the server-only avatar helper answers. */
 export interface MemberAvatarRow {
     /** The account id. */
@@ -138,4 +141,9 @@ export const withBrowserRole = async (
         if (runner.isTransactionActive) await runner.rollbackTransaction()
         await runner.release()
     }
+}
+
+/** A browser trying to place an object in the avatars bucket itself. */
+export const browserWriteAvatar = async (manager: EntityManager, objectName: string): Promise<void> => {
+    await manager.query(BROWSER_WRITE_AVATAR, [objectName])
 }
