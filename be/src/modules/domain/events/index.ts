@@ -1,7 +1,5 @@
 export { EventsModule } from "./events.module"
 export { EventsService } from "./events.service"
 export { EventsReadService } from "./events-read.service"
-export type { ApiEvent, LeadFirstEvent } from "./events-read.contracts"
-export type { EventRecord } from "./events.contracts"
-export type { EventRecord as EventRecordRow } from "./events.contracts"
+export type { EventRecordRow } from "./events.contracts"
 export { EventEntity, eventsEntities } from "./persistence/entities"

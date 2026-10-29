@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { Between, In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { ApiEvent, LeadFirstEvent } from "./events-read.contracts"
+import type { ApiEvent, LeadFirstEvent, OptionalInstant } from "./events-read.contracts"
 import { EventEntity } from "./persistence/entities"
 
 /** The evidence clipped by the select, in characters. */
@@ -36,12 +36,12 @@ export class EventsReadService {
     }
 
     /** When each of the given customers first reached one of the kinds; customers that never did are missing. */
-    async firstAtByLead(
+    firstAtByLead(
         workspaceId: string,
         kinds: ReadonlyArray<string>,
         leadIds: ReadonlyArray<string>,
     ): Promise<Array<LeadFirstEvent>> {
-        if (leadIds.length === 0 || kinds.length === 0) return []
+        if (leadIds.length === 0 || kinds.length === 0) return Promise.resolve([])
         return this.entityManager
             .createQueryBuilder(EventEntity, "e")
             .select("e.leadId", "leadId")
@@ -56,7 +56,7 @@ export class EventsReadService {
     }
 
     /** When the customer first reached the kind; null when never. */
-    async firstAtOfKind(workspaceId: string, leadId: string, kind: string): Promise<Date | null> {
+    async firstAtOfKind(workspaceId: string, leadId: string, kind: string): Promise<OptionalInstant> {
         const event = await this.entityManager.findOne(EventEntity, {
             select: { createdAt: true },
             where: { workspaceId, leadId, kind },
