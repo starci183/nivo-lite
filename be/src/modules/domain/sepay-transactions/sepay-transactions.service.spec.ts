@@ -1,6 +1,7 @@
 import type { ClaimedJob, JobClaims } from "@modules/platform/jobs"
 import { Test } from "@nestjs/testing"
 import { IsNull } from "typeorm"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { fakeInbox, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import { BillingError, BillingErrorCode, PaymentProofService, parseJsonObject } from "@modules/domain/billing"
 import type { SepayDelivery } from "@modules/domain/billing"
@@ -201,11 +202,8 @@ describe("SepayTransactionsService", () => {
                 { sepayId: 9001 },
                 { status: "paid", transferAmount: 990000, content: "nivo 8f3k2 chuyen tien" },
             )
-            expect(tx.em.update).toHaveBeenCalledWith(
-                SepayTransactionEntity,
-                { id: "row-1" },
-                { processedAt: expect.any(Function) },
-            )
+            const completion = tx.em.update.mock.calls.find(([, where]) => Reflect.get(Object(where), "id") === "row-1")
+            expect(evaluatedValues(completion?.[2])).toEqual({ processedAt: "now()" })
         })
 
         it("touches nothing when the delivery is refused at the door", async () => {
