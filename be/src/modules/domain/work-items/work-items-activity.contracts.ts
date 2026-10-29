@@ -82,3 +82,12 @@ export interface AnswerProgressLine {
     /** The answer's delivery result. */
     readonly delivery_status: string | null
 }
+
+/** The one-line summary of a work item waiting for a decision; null when its proposal carries none. */
+export type WaitingSummary = string | null
+
+/** The work item of a built-in care message; null when there is none. */
+export type CareWorkItemId = string | null
+
+/** The progress of a customer-reply work item; null when the workspace has no such item or no customer conversation. */
+export type ReplyProgress = AnswerProgressLine | null

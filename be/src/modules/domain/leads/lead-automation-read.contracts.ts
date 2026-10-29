@@ -41,3 +41,6 @@ export interface AutomationScanLeadsQuery {
     /** The most leads read. */
     readonly limit: number
 }
+
+/** One lead as an automation executor reads it; undefined when the workspace has no such lead. */
+export type OptionalAutomationLead = AutomationLeadRead | undefined

@@ -13,4 +13,4 @@ export type { LeadGenInstallationId, LeadGenWorkbenchData } from "./leadgen-work
 export type { ApproveLeadGenCommentRequest, LeadGenCommentStatus } from "./leadgen-comment.contracts"
 export { contactParts, normaliseContact } from "./contact.policy"
 export type { LeadRecordRow } from "./lead-records.contracts"
-export { LeadEntity, leadsEntities } from "./persistence/entities"
+export { leadsEntities } from "./persistence/entities"
