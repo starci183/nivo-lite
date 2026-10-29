@@ -1,5 +1,19 @@
 import type { EntityManager } from "typeorm"
 import { sql } from "@modules/platform/database"
+import {
+    archiveCutoverDelivery,
+    archiveEnvelope,
+    deleteCutoverDelivery,
+    enqueueCutoverProofs,
+    insertLegacyClaims,
+    insertSentOutboxOnly,
+    markCutoverSentByLegacy,
+    sendCutoverBusEvent,
+    sendCutoverDelivery,
+    sendRawEnvelope,
+    setCutoverOutboxState,
+} from "../fixtures/builders/cutover.builder"
+import type { CutoverEnvelope } from "../fixtures/builders/cutover.builder"
 import type {
     CutoverClaim,
     CutoverFunctions,
@@ -9,42 +23,34 @@ import type {
 } from "../fixtures/persistence/queue-cutover.rows"
 
 /** The cutover proofs inspect pgmq queues, catalog entries and migration side effects, which entities cannot express. */
-/** Existing durable deliveries, including an outbox-only row whose pgmq sent marker must not hide it from BullMQ. */
-const SEED_CUTOVER_OUTBOX = sql`
-    SELECT public.job_enqueue(NULL, 'content_tick', 'content_tick', jsonb_build_object('proof', scenario), 'cutover:' || scenario)
-    FROM unnest(ARRAY['queued', 'inflight', 'dead', 'done']) scenario;
-    UPDATE pgmq.q_content_tick SET read_ct = 1, vt = now() + interval '1 second'
-    WHERE message->'payload'->>'proof' = 'inflight';
-    UPDATE public.job_outbox SET state = 'running', attempts = 1, started_at = now()
-    WHERE payload->>'proof' = 'inflight';
-    SELECT pgmq.archive(queue, msg_id) FROM public.job_outbox WHERE payload->>'proof' = 'dead';
-    UPDATE public.job_outbox SET state = 'failed', finished_at = now(), last_error = 'Synthetic dead letter'
-    WHERE payload->>'proof' = 'dead';
-    SELECT pgmq.delete(queue, msg_id) FROM public.job_outbox WHERE payload->>'proof' = 'done';
-    UPDATE public.job_outbox SET state = 'done', finished_at = now(), last_error = NULL WHERE payload->>'proof' = 'done';
-    INSERT INTO public.job_outbox(queue, name, payload, dedupe_key, sent_at)
-    VALUES ('content_tick', 'content_tick', '{"proof":"outbox-only"}', 'cutover:outbox-only', now());
-    SELECT pgmq.send(queue, jsonb_build_object('name', name, 'payload', coalesce(payload, '{}'::jsonb), 'dedupe', dedupe_key, 'outbox_id', id))
-    FROM public.job_outbox WHERE payload->>'proof' = 'queued'
+/** Makes a message look claimed once, with a one second visibility window. */
+const CLAIM_ENVELOPES = sql`
+    UPDATE pgmq.q_content_tick SET read_ct = 1, vt = now() + interval '1 second' WHERE message->'payload'->>'proof' = ANY($1)
+`
+/** Reads the messages of the cutover queue that carry one of the proof tags. */
+const READ_ENVELOPES = sql`
+    SELECT msg_id::text AS "msgId", message->'payload'->>'proof' AS proof
+    FROM pgmq.q_content_tick WHERE message->'payload'->>'proof' = ANY($1) ORDER BY msg_id
+`
+/** The pgmq era renamed a finished message so no handler claims it. */
+const RENAME_DONE_ENVELOPE = sql`
+    UPDATE pgmq.q_content_tick SET message = jsonb_set(message, '{name}', '"content_tick.special"')
+    WHERE message->'payload'->>'proof' = 'raw-done'
 `
 
-/** Raw cron envelopes have no outbox id; raw dead letters have no ledger row until the data move. */
-const SEED_CUTOVER_RAW = sql`
-    SELECT pgmq.send('content_tick', jsonb_build_object('name', 'content_tick', 'payload', jsonb_build_object('proof', scenario)))
-    FROM unnest(ARRAY['raw', 'raw-inflight', 'raw-dead', 'raw-done']) scenario;
-    UPDATE pgmq.q_content_tick SET read_ct = 1, vt = now() + interval '1 second'
-    WHERE message->'payload'->>'proof' IN ('raw-inflight', 'raw-done');
-    SELECT pgmq.archive('content_tick', msg_id) FROM pgmq.q_content_tick WHERE message->'payload'->>'proof' = 'raw-dead';
-    INSERT INTO public.jobs(kind, job_key, status, fencing_token, claimed_by, lease_expires_at, payload, current_step, created_at, updated_at)
-    SELECT 'content_tick', 'content_tick:' || msg_id,
-           CASE WHEN message->'payload'->>'proof' = 'raw-done' THEN 'done' ELSE 'running' END,
-           1, 'legacy-worker', now() + interval '1 second', message->'payload', 'preserved-checkpoint', now(), now()
-    FROM pgmq.q_content_tick WHERE message->'payload'->>'proof' IN ('raw-inflight', 'raw-done');
-    UPDATE pgmq.q_content_tick SET message = jsonb_set(message, '{name}', '"content_tick.special"')
-    WHERE message->'payload'->>'proof' = 'raw-done';
-    SELECT pgmq.create('cutover_bus_events');
-    SELECT pgmq.send('cutover_bus_events', '{"name":"cutover.bus","payload":{"proof":"event-bus"}}')
-`
+interface EnvelopeRow {
+    readonly msgId: string
+    readonly proof: string
+}
+
+const claimEnvelopes = async (manager: EntityManager, proofs: ReadonlyArray<string>): Promise<void> => {
+    await manager.query(CLAIM_ENVELOPES, [proofs])
+}
+
+const readEnvelopes = async (manager: EntityManager, proofs: ReadonlyArray<string>): Promise<Array<CutoverEnvelope>> => {
+    const rows = await manager.query<Array<EnvelopeRow>>(READ_ENVELOPES, [proofs])
+    return rows.map(({ msgId, proof }) => ({ msgId: Number(msgId), proof }))
+}
 
 const CUTOVER_ROWS = sql`
     SELECT id::text, payload->>'proof' AS proof, state, attempts, sent_at, run_lease_until
@@ -64,22 +70,9 @@ const CUTOVER_PGMQ = sql`
            (SELECT count(*)::int FROM pgmq.a_content_tick) AS archived,
            (SELECT count(*)::int FROM pgmq.q_cutover_bus_events) AS event_bus
 `
-const LATE_CUTOVER_SEND = sql`
-    SELECT pgmq.send('content_tick', '{"name":"content_tick","payload":{"proof":"late"}}')
-`
-const CONTRACT_CUTOVER_SEND = sql`
-    SELECT pgmq.send('content_tick', '{"name":"content_tick","payload":{"proof":"late-contract"}}')
-`
-/** A producer that switched to the outbox still lands its work once the pgmq job queue is gone. */
-const CONTRACT_ENQUEUE = sql`
-    SELECT public.job_enqueue(NULL, 'content_tick', 'content_tick', '{"proof":"late-contract"}'::jsonb, 'cutover:late-contract')
-`
 /** The pgmq queues that remain once the contract migration dropped every job queue: the event bus only. */
 const PGMQ_AFTER_CONTRACT = sql`
     SELECT coalesce(array_agg(queue_name ORDER BY queue_name), '{}'::text[]) AS queues FROM pgmq.list_queues()
-`
-const LEGACY_CUTOVER_MARKER = sql`
-    UPDATE public.job_outbox SET msg_id = 999999, sent_at = now() WHERE payload->>'proof' = 'late'
 `
 const CONFLICT_CUTOVER_IDENTITY = sql`
     UPDATE pgmq.q_content_tick SET message = jsonb_set(message, '{outbox_id}',
@@ -101,14 +94,31 @@ export interface LegacyAckFenceRow {
     readonly body: string
 }
 
-/** Seeds the durable deliveries a cutover must carry over. */
+/** Seeds the durable deliveries a cutover must carry over, writing only columns the pre-expand schema has. */
 export const seedCutoverOutbox = async (manager: EntityManager): Promise<void> => {
-    await manager.query(SEED_CUTOVER_OUTBOX)
+    await enqueueCutoverProofs(manager, ["queued", "inflight", "dead", "done"])
+    await claimEnvelopes(manager, ["inflight"])
+    await setCutoverOutboxState(manager, "inflight", { state: "running", attempts: 1, startedAt: () => "now()" })
+    await archiveCutoverDelivery(manager, "dead")
+    await setCutoverOutboxState(manager, "dead", {
+        state: "failed",
+        finishedAt: () => "now()",
+        lastError: "Synthetic dead letter",
+    })
+    await deleteCutoverDelivery(manager, "done")
+    await setCutoverOutboxState(manager, "done", { state: "done", finishedAt: () => "now()", lastError: null })
+    await insertSentOutboxOnly(manager, "outbox-only")
+    await sendCutoverDelivery(manager, "queued")
 }
 
-/** Seeds raw cron envelopes and dead letters the cutover adopts. */
+/** Seeds raw cron envelopes and dead letters the cutover adopts: raw envelopes have no outbox id, raw dead letters no ledger row. */
 export const seedCutoverRaw = async (manager: EntityManager): Promise<void> => {
-    await manager.query(SEED_CUTOVER_RAW)
+    for (const proof of ["raw", "raw-inflight", "raw-dead", "raw-done"]) await sendRawEnvelope(manager, proof)
+    await claimEnvelopes(manager, ["raw-inflight", "raw-done"])
+    for (const envelope of await readEnvelopes(manager, ["raw-dead"])) await archiveEnvelope(manager, envelope)
+    await insertLegacyClaims(manager, await readEnvelopes(manager, ["raw-inflight", "raw-done"]))
+    await manager.query(RENAME_DONE_ENVELOPE)
+    await sendCutoverBusEvent(manager)
 }
 
 /** The outbox identities and states observed across the migration boundary. */
@@ -129,26 +139,29 @@ export const cutoverQueues = (manager: EntityManager): Promise<Array<CutoverQueu
 
 /** Sends a legacy envelope after the expand migration, as a not yet drained producer would. */
 export const lateCutoverSend = async (manager: EntityManager): Promise<void> => {
-    await manager.query(LATE_CUTOVER_SEND)
+    await sendRawEnvelope(manager, "late")
 }
 
 /** Sends a legacy envelope after the contract migration, which must be refused. */
 export const contractCutoverSend = async (manager: EntityManager): Promise<void> => {
-    await manager.query(CONTRACT_CUTOVER_SEND)
+    await sendRawEnvelope(manager, "late-contract")
 }
 
 /** Enqueues through the outbox function once the pgmq job queue is gone. */
 export const contractEnqueue = async (manager: EntityManager): Promise<void> => {
-    await manager.query(CONTRACT_ENQUEUE)
+    await enqueueCutoverProofs(manager, ["late-contract"])
 }
 
 /** Lists the pgmq queues that remain after the contract migration. */
 export const pgmqAfterContract = (manager: EntityManager): Promise<Array<CutoverQueueList>> =>
     manager.query<Array<CutoverQueueList>>(PGMQ_AFTER_CONTRACT)
 
+/** The message id a legacy producer recorded for the late row. */
+const LEGACY_MSG_ID = 999999
+
 /** Marks a late row as already sent by a legacy producer. */
 export const legacyCutoverMarker = async (manager: EntityManager): Promise<void> => {
-    await manager.query(LEGACY_CUTOVER_MARKER)
+    await markCutoverSentByLegacy(manager, "late", LEGACY_MSG_ID)
 }
 
 /** Makes two raw envelopes claim the same outbox identity. */

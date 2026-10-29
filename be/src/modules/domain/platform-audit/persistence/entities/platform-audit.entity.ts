@@ -25,7 +25,7 @@ export class PlatformAuditEntity {
 
     /** What the action carried. */
     @Column({ name: "data", type: "jsonb", default: () => "'{}'::jsonb" })
-    data!: Readonly<Record<string, unknown>>
+    data!: object
 
     /** When it happened. */
     @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
