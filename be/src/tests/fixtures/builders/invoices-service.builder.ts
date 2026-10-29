@@ -1,14 +1,9 @@
 import { mockEntityManager } from "@starci/jest-preset"
+import type { InvoiceRow, InvoiceViewRow, NewInvoice, NewRenewalInvoice } from "@modules/domain/invoices"
 import type { LeadCard } from "@modules/domain/leads"
 import type { OrderSummary } from "@modules/domain/orders"
 import { queueQueryBuilders } from "./entity-query-builder-fake.builder"
 import type { FakeQueryBuilder, QueryBuilderAnswers } from "./entity-query-builder-fake.builder"
-import type {
-    InvoiceRow,
-    InvoiceViewRow,
-    NewInvoice,
-    NewRenewalInvoice,
-} from "@modules/domain/invoices/invoices.contracts"
 
 export const WS = "11111111-1111-4111-8111-111111111111"
 export const INVOICE: InvoiceRow = {
@@ -65,9 +60,11 @@ export const queued = (answers: ReadonlyArray<QueryBuilderAnswers>) => {
     return { em, fakes: queueQueryBuilders(em, answers) }
 }
 
-/** The answers of an insert that wrote `rows`, of a read that found `row`, and of a list of `rows`. */
+/** The answers of an insert that wrote `rows`. */
 export const inserted = (rows: ReadonlyArray<unknown>): QueryBuilderAnswers => ({ execute: { raw: rows } })
+/** The answers of a read that found `row`. */
 export const found = (row: unknown): QueryBuilderAnswers => ({ getRawOne: row })
+/** The answers of a read that listed `rows`. */
 export const listed = (rows: ReadonlyArray<unknown>): QueryBuilderAnswers => ({ getRawMany: rows })
 
 /** What an insert query builder was told to write. */
