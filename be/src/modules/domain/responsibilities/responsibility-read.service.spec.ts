@@ -45,6 +45,7 @@ describe("ResponsibilityReadService", () => {
         ])
         expect(em.find).toHaveBeenCalledWith(ResponsibilityEntity, {
             where: { workspaceId: "ws-1", id: In(["r1"]) },
+            take: 1,
         })
     })
 
@@ -82,6 +83,8 @@ describe("ResponsibilityReadService", () => {
         expect(em.find).toHaveBeenCalledWith(ResponsibilityEntity, {
             select: { id: true, leadId: true },
             where: { workspaceId: "ws-1", id: In(["r1"]) },
+            order: { id: "ASC" },
+            take: 1,
         })
     })
 
@@ -91,14 +94,14 @@ describe("ResponsibilityReadService", () => {
 
         await expect(service.idsTitledLike("ws-1", [], 10)).resolves.toEqual([])
         expect(em.find).not.toHaveBeenCalled()
-        await expect(service.idsTitledLike("ws-1", ["Prepare invoice%", "Chuẩn bị hóa đơn%"], 10)).resolves.toEqual([
-            "r1",
-        ])
+        await expect(
+            service.idsTitledLike("ws-1", ["Prepare invoice%", "Chu\u1ea9n b\u1ecb h\u00f3a \u0111\u01a1n%"], 10),
+        ).resolves.toEqual(["r1"])
         expect(em.find).toHaveBeenCalledWith(ResponsibilityEntity, {
             select: { id: true },
             where: [
                 { workspaceId: "ws-1", title: ILike("Prepare invoice%") },
-                { workspaceId: "ws-1", title: ILike("Chuẩn bị hóa đơn%") },
+                { workspaceId: "ws-1", title: ILike("Chu\u1ea9n b\u1ecb h\u00f3a \u0111\u01a1n%") },
             ],
             take: 10,
         })

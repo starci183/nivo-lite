@@ -3,13 +3,13 @@ import type { EntityManager } from "typeorm"
 import { InjectAgentDirectory } from "@modules/domain/messages"
 import type { AgentDirectory } from "@modules/domain/messages"
 import { MemberLookupService } from "@modules/domain/workspace-members"
-import type { MemberRef } from "@modules/domain/workspace-members"
+import type { NamedMember } from "@modules/domain/workspace-members"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ResponsibilitiesError, ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
 import { isOwnerId, resolveOwner } from "./responsibility-owner.policy"
 import type { OwnerCandidates, ResolvedOwner } from "./responsibility-owner.policy"
 
-const memberOwner = (row: MemberRef): ResolvedOwner => ({
+const memberOwner = (row: NamedMember): ResolvedOwner => ({
     kind: "human",
     agentId: null,
     memberId: row.id,

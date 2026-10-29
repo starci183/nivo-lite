@@ -27,11 +27,15 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ResponsibilitiesError, ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
 import { RESPONSIBILITY_LEAD_DESK } from "./responsibilities.decorators"
-import type { LeadDesk } from "./responsibilities.ports"
+import type { LeadDesk } from "./responsibilities.port"
 import { ResponsibilityOwnersService } from "./responsibility-owners.service"
 import type { ResponsibilityListing } from "./responsibility-journal.contracts"
 import { ResponsibilityEntity } from "./persistence/entities"
 import { ResponsibilityJournalService } from "./responsibility-journal.service"
+
+/** The update of the step `resp-1` of the first workspace the manager received. */
+const expectStepUpdated = (em: MockEntityManager, changes: Record<string, string>) =>
+    expect(em.update).toHaveBeenCalledWith(ResponsibilityEntity, { workspaceId: "ws-1", id: "resp-1" }, changes)
 
 const registerEnsureFor = () => {
     describe("ensureFor", () => {
@@ -154,14 +158,12 @@ const registerUpdateStatus = () => {
 
             await service.markWaitingApproval(ctx, "resp-1")
 
-            expect(em.update).toHaveBeenCalledWith(
-                ResponsibilityEntity,
-                { workspaceId: "ws-1", id: "resp-1" },
-                { status: "waiting_approval" },
-            )
+            expectStepUpdated(em, { status: "waiting_approval" })
         })
     })
 }
+
+const NURTURE = { title: "Nurture Binh", nextAction: "Call back", dueAt: new Date("2026-10-14T10:00:00.000Z") }
 
 const registerOpenNamed = () => {
     describe("openNamed", () => {
@@ -179,15 +181,7 @@ const registerOpenNamed = () => {
                 where: { workspaceId: "ws-1", leadId: "lead-1", title: "Nurture Binh", status: Not("done") },
             })
             expect(write.argsOf("values")).toEqual([
-                [
-                    stepOf({
-                        title: "Nurture Binh",
-                        ownerMemberId: "member-2",
-                        ownerName: "Linh",
-                        nextAction: "Call back",
-                        dueAt: new Date("2026-10-14T10:00:00.000Z"),
-                    }),
-                ],
+                [stepOf({ ...NURTURE, ownerMemberId: "member-2", ownerName: "Linh" })],
             ])
         })
 
@@ -200,15 +194,7 @@ const registerOpenNamed = () => {
 
             await expect(service.openNamed("ws-1", task)).resolves.toBe(true)
             expect(write.argsOf("values")).toEqual([
-                [
-                    stepOf({
-                        title: "Nurture Binh",
-                        ownerMemberId: "member-9",
-                        ownerName: "Chu Van",
-                        nextAction: "Call back",
-                        dueAt: new Date("2026-10-14T10:00:00.000Z"),
-                    }),
-                ],
+                [stepOf({ ...NURTURE, ownerMemberId: "member-9", ownerName: "Chu Van" })],
             ])
         })
 
@@ -314,11 +300,7 @@ const registerEngineUpdates = () => {
             const { service } = await build(em)
 
             await expect(service.setStatus(ctx, "resp-1", "done")).resolves.toBeUndefined()
-            expect(em.update).toHaveBeenCalledWith(
-                ResponsibilityEntity,
-                { workspaceId: "ws-1", id: "resp-1" },
-                { status: "done" },
-            )
+            expectStepUpdated(em, { status: "done" })
         })
 
         it("sets a status inside the supplied transaction", async () => {
@@ -327,11 +309,7 @@ const registerEngineUpdates = () => {
             const { service } = await build(em)
 
             await expect(service.setStatus(ctx, "resp-1", "waiting_approval", transaction)).resolves.toBeUndefined()
-            expect(transaction.update).toHaveBeenCalledWith(
-                ResponsibilityEntity,
-                { workspaceId: "ws-1", id: "resp-1" },
-                { status: "waiting_approval" },
-            )
+            expectStepUpdated(transaction, { status: "waiting_approval" })
             expect(em.update).not.toHaveBeenCalled()
         })
 
@@ -340,11 +318,7 @@ const registerEngineUpdates = () => {
             const { service } = await build(em)
 
             await expect(service.setNextAction(ctx, "resp-1", "Send quote")).resolves.toBeUndefined()
-            expect(em.update).toHaveBeenCalledWith(
-                ResponsibilityEntity,
-                { workspaceId: "ws-1", id: "resp-1" },
-                { nextAction: "Send quote" },
-            )
+            expectStepUpdated(em, { nextAction: "Send quote" })
         })
     })
 }

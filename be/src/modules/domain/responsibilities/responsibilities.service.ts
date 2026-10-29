@@ -17,10 +17,12 @@ import type {
     AssignResponsibilityParams,
     HandToAccountingParams,
     ResponsibilityResult,
+    StepRow,
 } from "./responsibilities.contracts"
 import { InjectLeadDesk } from "./responsibilities.decorators"
-import type { LeadDesk } from "./responsibilities.ports"
+import type { LeadDesk } from "./responsibilities.port"
 import { ResponsibilityOwnersService } from "./responsibility-owners.service"
+import { firstStepRow } from "./returned-rows.policy"
 
 /** The evidence-log kind of a new owner. */
 const ASSIGNED_KIND = "responsibility.assigned"
@@ -29,19 +31,6 @@ const SALES_AGENT_ACTOR = "Sales Agent"
 /** A hand-over to Accounting is due one day later. */
 const DAY_MS = 86_400_000
 
-/** A step as the writes answer it, its due date as ISO text. */
-interface StepRow {
-    readonly id: string
-    readonly lead_id: string
-    readonly title: string
-    readonly owner_kind: string
-    readonly owner_agent_id: string | null
-    readonly owner_member_id: string | null
-    readonly owner_name: string
-    readonly next_action: string
-    readonly due_at: string | null
-    readonly status: string
-}
 /** The columns of a step the insert writes. */
 type NewStep = Pick<
     ResponsibilityEntity,
@@ -136,7 +125,7 @@ export class ResponsibilitiesService {
                 .where({ workspaceId: params.workspaceId, id: params.responsibilityId })
                 .returning(STEP_RETURNING)
                 .execute()
-            const [row]: Array<StepRow> = updated.raw
+            const row = firstStepRow(updated.raw)
             if (row === undefined) {
                 throw new ResponsibilitiesError({
                     code: ResponsibilitiesErrorCode.NotFound,
@@ -192,7 +181,7 @@ export class ResponsibilitiesService {
             .values(step)
             .returning(STEP_RETURNING)
             .execute()
-        const [row]: [StepRow] = inserted.raw
+        const row = firstStepRow(inserted.raw)
         return row
     }
 

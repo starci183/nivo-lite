@@ -13,8 +13,9 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { ResponsibilitiesError, ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
 import type { ResolvedOwner } from "./responsibility-owner.policy"
 import { InjectLeadDesk } from "./responsibilities.decorators"
-import type { LeadDesk } from "./responsibilities.ports"
+import type { LeadDesk } from "./responsibilities.port"
 import { ResponsibilityOwnersService } from "./responsibility-owners.service"
+import { firstRecordRow } from "./returned-rows.policy"
 import type {
     NamedFollowUp,
     NewResponsibility,
@@ -53,6 +54,13 @@ const recordOf = (manager: EntityManager): SelectQueryBuilder<ResponsibilityEnti
         .addSelect("to_json(r.due_at) #>> '{}'", "due_at")
         .addSelect("r.status", "status")
         .addSelect("to_json(r.created_at) #>> '{}'", "created_at")
+
+/** The record a RETURNING write answered; the step is gone when it answered none. */
+const recordOrNotFound = (raw: unknown): ResponsibilityRecord => {
+    const row = firstRecordRow(raw)
+    if (row === undefined) throw new ResponsibilitiesError({ code: ResponsibilitiesErrorCode.NotFound })
+    return row
+}
 
 @Injectable()
 /** What somebody owes a customer: the follow-up every new customer gets and the board the Responsibilities page shows. */
@@ -221,9 +229,7 @@ export class ResponsibilityJournalService {
             .where({ workspaceId, id: responsibilityId })
             .returning(RECORD_RETURNING)
             .execute()
-        const [row]: Array<ResponsibilityRecord> = updated.raw
-        if (row === undefined) throw new ResponsibilitiesError({ code: ResponsibilitiesErrorCode.NotFound })
-        return row
+        return recordOrNotFound(updated.raw)
     }
 
     /** Marks one of the workspace's responsibilities as waiting for the owner's approval; the card is open. */
@@ -307,7 +313,6 @@ export class ResponsibilityJournalService {
             })
             .returning(RECORD_RETURNING)
             .execute()
-        const [row]: [ResponsibilityRecord] = inserted.raw
-        return row
+        return recordOrNotFound(inserted.raw)
     }
 }
