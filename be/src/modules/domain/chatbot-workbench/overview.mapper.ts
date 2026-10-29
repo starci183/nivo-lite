@@ -1,7 +1,9 @@
 import { isoOf } from "@modules/domain/brain-facts"
 import type { ChatbotMetrics, ChatbotOverview } from "./chatbot-workbench.contracts"
 import { toConversation, waitingConversationId } from "./conversation.policy"
-import type { ConversationRow, LeadBriefRow, MessageBriefRow, WaitingRow } from "./persistence/chatbot-workbench.rows"
+import type { CustomerConversationRow } from "@modules/domain/agent-conversations"
+import type { MessageBrief } from "@modules/domain/agent-messages"
+import type { LeadBriefRow, WaitingRow } from "./persistence/chatbot-workbench.rows"
 
 const DAY_MS = 86_400_000
 const VN_OFFSET_MS = 7 * 3_600_000
@@ -14,9 +16,9 @@ export interface OverviewRecords {
     /** The injected clock's current instant in milliseconds. */
     readonly now: number
     /** Customer conversations of the selected Chatbot agents. */
-    readonly conversations: ReadonlyArray<ConversationRow>
+    readonly conversations: ReadonlyArray<CustomerConversationRow>
     /** The last thirty days of conversation lines, oldest first. */
-    readonly messages: ReadonlyArray<MessageBriefRow>
+    readonly messages: ReadonlyArray<MessageBrief>
     /** Open customer reply escalations. */
     readonly waiting: ReadonlyArray<WaitingRow>
     /** Names and capture dates of linked leads. */
@@ -31,7 +33,7 @@ const median = (values: ReadonlyArray<number>): number | null => {
     return middle.reduce((sum, value) => sum + value, 0) / middle.length
 }
 
-const firstResponseMinutes = (lines: ReadonlyArray<MessageBriefRow>): number | null => {
+const firstResponseMinutes = (lines: ReadonlyArray<MessageBrief>): number | null => {
     const user = lines.find((line) => line.role === "user")
     if (user === undefined) return null
     const userAt = Date.parse(isoOf(user.created_at))
@@ -59,7 +61,7 @@ export const emptyChatbotOverview = (workspaceId: string, now: number): ChatbotO
 export const buildChatbotOverview = (records: OverviewRecords): ChatbotOverview => {
     const waiting = new Set(records.waiting.map(waitingConversationId).filter((id): id is string => id !== null))
     const leadName = new Map(records.leads.map((lead) => [lead.id, lead.contact_name]))
-    const byConversation = new Map<string, Array<MessageBriefRow>>()
+    const byConversation = new Map<string, Array<MessageBrief>>()
     for (const message of records.messages) {
         const lines = byConversation.get(message.conversation_id) ?? []
         lines.push(message)

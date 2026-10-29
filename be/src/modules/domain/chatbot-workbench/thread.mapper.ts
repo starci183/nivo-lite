@@ -1,14 +1,16 @@
 import { isoOf } from "@modules/domain/brain-facts"
 import type { ChatbotLead, ChatbotMessage, ChatbotThread } from "./chatbot-workbench.contracts"
 import { roleOf, toConversation, waitingConversationId } from "./conversation.policy"
-import type { ConversationRow, LeadRow, MessageRow, WaitingRow } from "./persistence/chatbot-workbench.rows"
+import type { CustomerConversationRow } from "@modules/domain/agent-conversations"
+import type { ThreadLine } from "@modules/domain/agent-messages"
+import type { LeadRow, WaitingRow } from "./persistence/chatbot-workbench.rows"
 
 /** The authorized records of one customer thread. */
 export interface ThreadRecords {
     /** The workspace-scoped customer conversation. */
-    readonly conversation: ConversationRow
+    readonly conversation: CustomerConversationRow
     /** The conversation lines in creation order. */
-    readonly messages: ReadonlyArray<MessageRow>
+    readonly messages: ReadonlyArray<ThreadLine>
     /** The open customer-reply escalations. */
     readonly waiting: ReadonlyArray<WaitingRow>
     /** The linked lead, when present in the workspace. */
@@ -17,7 +19,7 @@ export interface ThreadRecords {
     readonly staffName: string | null
 }
 
-const toMessage = (row: MessageRow): ChatbotMessage => ({
+const toMessage = (row: ThreadLine): ChatbotMessage => ({
     id: row.id,
     role: roleOf(row.role),
     authorKind: row.author_kind === "human" ? "human" : "ai",

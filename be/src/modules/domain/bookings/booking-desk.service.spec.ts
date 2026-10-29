@@ -11,7 +11,13 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { BookingDeskService } from "./booking-desk.service"
 import { BookingModelService } from "./booking-model.service"
 import { BookingRemindersService } from "@modules/domain/booking-reminders"
-import { WORKSPACE, NOW } from "@tests/fixtures/builders/booking-desk.builder"
+import {
+    ADDED_BOOKING,
+    DESK_OWNER,
+    NOW,
+    THURSDAY_NINE,
+    WORKSPACE,
+} from "@tests/fixtures/builders/booking-desk.builder"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { BookingReservationService } from "./booking-reservation.service"
 import { DEFAULT_SETTINGS } from "./bookings.contracts"
@@ -55,7 +61,6 @@ const objectLike = (shape: Record<string, unknown>): unknown => expect.objectCon
 const USER = "user-1"
 const REF = { workspaceId: WORKSPACE, id: "b1" }
 const HOUR = 3_600_000
-const THURSDAY_NINE = Date.UTC(2026, 9, 15, 2, 0)
 
 const modelOf = builder<BookingModel>({
     settings: { ...DEFAULT_SETTINGS, slotStepMin: 60, noShowFeeVnd: 0 },
@@ -122,14 +127,7 @@ const build = async (
     const finish = fakeQueryBuilder({ execute: {} })
     tx.em.createQueryBuilder.mockReturnValueOnce(lock.builder).mockReturnValueOnce(finish.builder)
     const access = mock<WorkspaceMembersService>()
-    access.require.mockResolvedValue({
-        userId: USER,
-        workspaceId: WORKSPACE,
-        role: "owner",
-        staffId: null,
-        displayName: "Owner",
-        status: "active",
-    })
+    access.require.mockResolvedValue(DESK_OWNER)
     const models = mock<BookingModelService>()
     models.model.mockResolvedValue(model)
     models.settings.mockResolvedValue(model.settings)
@@ -170,27 +168,7 @@ describe("BookingDeskService", () => {
             expect(reservation.reserve).toHaveBeenCalledWith({
                 manager: anything(),
                 force: false,
-                booking: {
-                    workspaceId: WORKSPACE,
-                    customerName: "Mai",
-                    customerPhone: "84912345678",
-                    customerEmail: null,
-                    serviceId: "s1",
-                    resourceId: "r1",
-                    startMs: THURSDAY_NINE,
-                    endMs: THURSDAY_NINE + HOUR,
-                    blockEndMs: THURSDAY_NINE + HOUR + HOUR / 2,
-                    partySize: 1,
-                    status: "confirmed",
-                    holdsSlot: true,
-                    sourceChannel: "manual",
-                    priceVnd: 200000,
-                    depositVnd: 0,
-                    depositStatus: "none",
-                    note: "walk-in",
-                    conflictNote: "",
-                    idempotencyKey: null,
-                },
+                booking: ADDED_BOOKING,
             })
             expect(reminders.schedule).toHaveBeenCalledWith(
                 expect.objectContaining({

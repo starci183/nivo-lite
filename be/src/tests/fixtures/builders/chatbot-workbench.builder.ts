@@ -1,14 +1,9 @@
 import { builder } from "@starci/jest-preset"
 import type { GapRecord } from "@modules/domain/knowledge-gaps"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
-import type {
-    ConversationRow,
-    LeadBriefRow,
-    LeadRow,
-    MessageBriefRow,
-    MessageRow,
-    WaitingRow,
-} from "@modules/domain/chatbot-workbench"
+import type { CustomerConversationRow } from "@modules/domain/agent-conversations"
+import type { MessageBrief, ThreadLine } from "@modules/domain/agent-messages"
+import type { LeadBriefRow, LeadRow, WaitingRow } from "@modules/domain/chatbot-workbench"
 
 export const MEMBER: WorkspaceMember = {
     userId: "u-1",
@@ -19,7 +14,7 @@ export const MEMBER: WorkspaceMember = {
     status: "active",
 }
 
-export const conversationOf = builder<ConversationRow>({
+export const conversationOf = builder<CustomerConversationRow>({
     id: "c-1",
     channel: "zalo",
     visitor_name: null,
@@ -30,7 +25,7 @@ export const conversationOf = builder<ConversationRow>({
     created_at: "2026-10-13T01:00:00.000Z",
 })
 
-export const briefOf = builder<MessageBriefRow>({
+export const briefOf = builder<MessageBrief>({
     id: "m-1",
     conversation_id: "c-1",
     role: "user",
@@ -38,7 +33,7 @@ export const briefOf = builder<MessageBriefRow>({
     created_at: "2026-10-13T01:00:00.000Z",
 })
 
-export const messageOf = builder<MessageRow>({
+export const messageOf = builder<ThreadLine>({
     ...briefOf(),
     author_kind: null,
     author_name: null,

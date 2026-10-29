@@ -2,7 +2,9 @@ import type * as SubjectModule from "./thread.mapper"
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { buildChatbotThread } from "./thread.mapper"
-import type { ConversationRow, LeadRow, MessageRow, WaitingRow } from "./persistence/chatbot-workbench.rows"
+import type { CustomerConversationRow } from "@modules/domain/agent-conversations"
+import type { ThreadLine } from "@modules/domain/agent-messages"
+import type { LeadRow, WaitingRow } from "./persistence/chatbot-workbench.rows"
 
 const SUBJECT = Symbol("thread.mapper")
 type Subject = Pick<typeof SubjectModule, "buildChatbotThread">
@@ -14,7 +16,7 @@ const buildSubject = async () => {
     return moduleRef.get<Subject>(SUBJECT)
 }
 
-const conversationOf = builder<ConversationRow>({
+const conversationOf = builder<CustomerConversationRow>({
     id: "c-1",
     channel: "zalo",
     visitor_name: null,
@@ -25,7 +27,7 @@ const conversationOf = builder<ConversationRow>({
     created_at: "2026-10-13T01:00:00.000Z",
 })
 
-const messageOf = builder<MessageRow>({
+const messageOf = builder<ThreadLine>({
     id: "m-1",
     conversation_id: "c-1",
     role: "user",

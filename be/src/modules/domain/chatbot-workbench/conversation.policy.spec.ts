@@ -2,7 +2,9 @@ import type * as SubjectModule from "./conversation.policy"
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { channelOf, roleOf, toConversation, waitingConversationId } from "./conversation.policy"
-import type { ConversationRow, MessageBriefRow, WaitingRow } from "./persistence/chatbot-workbench.rows"
+import type { CustomerConversationRow } from "@modules/domain/agent-conversations"
+import type { MessageBrief } from "@modules/domain/agent-messages"
+import type { WaitingRow } from "./persistence/chatbot-workbench.rows"
 
 const SUBJECT = Symbol("conversation.policy")
 type Subject = Pick<typeof SubjectModule, "channelOf" | "roleOf" | "waitingConversationId" | "toConversation">
@@ -14,7 +16,7 @@ const buildSubject = async () => {
     return moduleRef.get<Subject>(SUBJECT)
 }
 
-const conversationOf = builder<ConversationRow>({
+const conversationOf = builder<CustomerConversationRow>({
     id: "c-1",
     channel: "zalo",
     visitor_name: null,
@@ -25,7 +27,7 @@ const conversationOf = builder<ConversationRow>({
     created_at: "2026-10-13T01:00:00.000Z",
 })
 
-const messageOf = builder<MessageBriefRow>({
+const messageOf = builder<MessageBrief>({
     id: "m-1",
     conversation_id: "c-1",
     role: "user",

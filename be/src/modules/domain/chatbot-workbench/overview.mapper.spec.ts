@@ -2,7 +2,9 @@ import type * as SubjectModule from "./overview.mapper"
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { buildChatbotOverview, emptyChatbotOverview } from "./overview.mapper"
-import type { ConversationRow, MessageBriefRow, WaitingRow } from "./persistence/chatbot-workbench.rows"
+import type { CustomerConversationRow } from "@modules/domain/agent-conversations"
+import type { MessageBrief } from "@modules/domain/agent-messages"
+import type { WaitingRow } from "./persistence/chatbot-workbench.rows"
 
 const SUBJECT = Symbol("overview.mapper")
 type Subject = Pick<typeof SubjectModule, "emptyChatbotOverview" | "buildChatbotOverview">
@@ -15,7 +17,7 @@ const buildSubject = async () => {
 }
 
 const NOW = Date.parse("2026-10-13T03:00:00.000Z")
-const conversationOf = builder<ConversationRow>({
+const conversationOf = builder<CustomerConversationRow>({
     id: "c-1",
     channel: "zalo",
     visitor_name: null,
@@ -26,7 +28,7 @@ const conversationOf = builder<ConversationRow>({
     created_at: "2026-10-12T17:00:00.000Z",
 })
 
-const messageOf = builder<MessageBriefRow>({
+const messageOf = builder<MessageBrief>({
     id: "m-1",
     conversation_id: "c-1",
     role: "user",
