@@ -4,7 +4,6 @@ import { INBOX, InboxService } from "@modules/platform/inbox"
 import { AgentSyncChecksService } from "./agent-sync-checks.service"
 import { AgentSyncReadService } from "./agent-sync-read.service"
 import { AgentSyncService } from "./agent-sync.service"
-import { InstallationChangedConsumer } from "./installation-changed.consumer"
 import { OPENCLAW_AGENT_SYNC_OPTIONS } from "./openclaw-agent-sync.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./openclaw-agent-sync.module-definition"
 import { AgentSyncAdminReadService } from "./agent-sync-admin-read.service"
@@ -26,7 +25,6 @@ export class OpenclawAgentSyncModule extends ConfigurableModuleClass {
                 AgentSyncReadService,
                 AgentSyncService,
                 AgentSyncChecksService,
-                InstallationChangedConsumer,
             ],
             exports: [AgentSyncAdminReadService, AgentSyncChecksService, AgentSyncReadService, AgentSyncService],
         }

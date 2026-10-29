@@ -3,8 +3,6 @@ import { AutomationTemplatesService } from "@modules/domain/automation-templates
 import { AutomationEngineService } from "@modules/domain/automations"
 import { BankFeedService } from "@modules/domain/billing"
 import { ModulesService } from "@modules/domain/modules"
-import { PaymentReconciledContractsConsumer } from "@modules/domain/contracts"
-import { BankCreditBookedAccountingConsumer } from "@modules/domain/work-performers"
 import { CLOCK } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import {
@@ -17,6 +15,8 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { JobRunnerService } from "@modules/platform/jobs"
 import type { FencedProcessor } from "@modules/platform/jobs"
 import { eachInOrder } from "@modules/platform/primitives"
+import { BankCreditBookedConsumer } from "../../../features/reactors/bank-credit-settlement/transport/message/bank_credit_booked.consumer"
+import { PaymentReconciledConsumer } from "../../../features/reactors/contract-renewal/transport/message/payment_reconciled.consumer"
 import { BankFeedDeliveryProcessor } from "../../../features/jobs/bank-feed-delivery/transport/queue/bank-feed-delivery.processor"
 import { WorkPerformersRegistrarService } from "../../../modules/domain/work-performers/work-performers-registrar.service"
 import { persistCustomerContract, persistRenewalWorld } from "../../fixtures/builders/renewal-to-cash.builder"
@@ -170,12 +170,12 @@ const drainEvents = async (): Promise<void> => {
     const bus = world.resolve(EventConsumerService)
     await bus.drain({
         queue: BANK_CREDIT_BOOKED_ACCOUNTING_TOPIC_QUEUE,
-        consumer: world.resolve(BankCreditBookedAccountingConsumer),
+        consumer: world.resolve(BankCreditBookedConsumer),
         maxDeliveries: 5,
     })
     await bus.drain({
         queue: PAYMENT_RECONCILED_CONTRACTS_TOPIC_QUEUE,
-        consumer: world.resolve(PaymentReconciledContractsConsumer),
+        consumer: world.resolve(PaymentReconciledConsumer),
         maxDeliveries: 5,
     })
 }

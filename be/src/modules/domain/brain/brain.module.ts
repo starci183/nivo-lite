@@ -10,7 +10,6 @@ import { BRAIN_CORRECTIONS } from "./brain.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./brain.module-definition"
 import { DocumentFactsService } from "./document-facts.service"
 import { IndexedSourcesService } from "./indexed-sources.service"
-import { KnowledgeSourceIndexedConsumer } from "./knowledge-source-indexed.consumer"
 import { ModelJsonService } from "./model-json.service"
 
 @Module({})
@@ -32,10 +31,10 @@ export class BrainModule extends ConfigurableModuleClass {
                 BrainCommandRunnerService,
                 DocumentFactsService,
                 IndexedSourcesService,
-                KnowledgeSourceIndexedConsumer,
                 ModelJsonService,
             ],
             exports: [
+                IndexedSourcesService,
                 BrainCommandRunnerService,
                 BrainPageService,
                 BrainService,

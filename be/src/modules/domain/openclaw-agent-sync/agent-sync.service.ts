@@ -20,6 +20,7 @@ import type {
     OptionalSyncOutcome,
     SyncAsk,
     SyncOutcome,
+    InstallationChange,
     SyncRequest,
 } from "./openclaw-agent-sync.contracts"
 import { InjectInstallations, processorFromSettings, AgentBundleService, PauseClient } from "@modules/domain/agents"
@@ -98,10 +99,10 @@ export class AgentSyncService {
     }
 
     /** The `agent_sync` reactor: claims the delivery and queues the sync job in one transaction, so a redelivery queues nothing twice. */
-    installationChanged(change: SyncRequest, claim: InboxClaim): Promise<void> {
+    installationChanged(change: InstallationChange, claim: InboxClaim): Promise<void> {
         return this.entityManager.transaction(async (tx) => {
             if (!(await this.inbox.claim(claim.consumer, claim.dedupeKey, tx))) return
-            await this.request(change, tx)
+            await this.request({ ...change, installationId: change.installationId ?? null }, tx)
         })
     }
 
