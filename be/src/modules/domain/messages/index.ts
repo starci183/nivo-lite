@@ -1,13 +1,9 @@
 // Read services lead the barrel: other capabilities import this barrel while it loads (import cycles), they must already be defined.
 export { MessagesReadService } from "./messages-read.service"
 export type {
-    LeadUnread,
     LineActivity,
-    LineCursor,
-    LinePageQuery,
     LineReader,
     LineText,
-    ReadMark,
     ThreadLine,
 } from "./messages-read.contracts"
 export type { OptionalAgentIdentity } from "./office-lines.contracts"
@@ -24,4 +20,4 @@ export { OFFICE_ROOM_KEYS } from "./office-cards.contracts"
 export type { OfficeCardPost } from "./office-cards.contracts"
 export { MESSAGES_ERROR_KINDS } from "./errors/messages.error"
 export { MESSAGES_MESSAGES } from "./messages/messages.messages"
-export { MessageEntity, messagesEntities } from "./persistence/entities"
+export { messagesEntities } from "./persistence/entities"

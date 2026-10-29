@@ -40,9 +40,9 @@ const humanLine = (
     authorUserId: string,
 ) => ({ workspaceId: "ws-1", authorKind: "human", authorName, staffId, body, room, authorUserId })
 
-const build = async (line: PostedMessage = posted()) => {
+const build = async (line: PostedMessage = posted(), raw: ReadonlyArray<unknown> = [line]) => {
     const entityManager = mockEntityManager({})
-    const [insert] = queueQueryBuilders(entityManager, [{ execute: { raw: [line] } }])
+    const [insert] = queueQueryBuilders(entityManager, [{ execute: { raw } }])
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(member())
     const activity = mock<ChatActivityService>()
@@ -94,6 +94,14 @@ describe("TeamChatService", () => {
             expect(insert?.callsOf("values")).toEqual([
                 [humanLine("Minh", "staff-1", "Hello team", "marketing", "user-1")],
             ])
+        })
+
+        it("refuses when the database answers no stored line", async () => {
+            const { service } = await build(posted(), [])
+
+            await expect(service.postHuman("user-1", "ws-1", "Hello")).rejects.toMatchObject({
+                code: MessagesErrorCode.LineNotStored,
+            })
         })
 
         it("refuses a room that is not a Hub room", async () => {

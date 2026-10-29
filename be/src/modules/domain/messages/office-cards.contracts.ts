@@ -157,3 +157,11 @@ export interface OfficeCardPost {
     /** The payload, validated before it is stored. */
     readonly card: unknown
 }
+
+/** The stored card line: its id and the room it landed in. */
+export interface PostedCard {
+    /** The message id. */
+    readonly id: string
+    /** The room the line landed in; null is the general Office room. */
+    readonly room: OptionalRoom
+}

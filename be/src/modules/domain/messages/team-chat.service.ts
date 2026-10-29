@@ -7,6 +7,7 @@ import { MessagesError, MessagesErrorCode } from "./errors/messages.error"
 import type { PostedMessage } from "./messages.contracts"
 import type { OptionalRoom, RoomKeyText } from "./office-cards.contracts"
 import { isOfficeRoomKey } from "./office-card.policy"
+import { postedMessageOf } from "./posted-rows.policy"
 import { MessageEntity } from "./persistence/entities"
 
 /** The columns the insert answers; the timestamps and ids keep the text shape the contract always had. */
@@ -45,7 +46,8 @@ export class TeamChatService {
             })
             .returning(POSTED_COLUMNS)
             .execute()
-        const [row] = result.raw as [PostedMessage]
+        const row = postedMessageOf(result.raw)
+        if (row === undefined) throw new MessagesError({ code: MessagesErrorCode.LineNotStored })
         await this.activity.message(
             workspaceId,
             chatActivityTarget({ room: target, conversationId: null }),
