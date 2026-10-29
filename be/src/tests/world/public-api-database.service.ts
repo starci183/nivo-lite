@@ -22,10 +22,6 @@ WHERE workspace_id = $1::uuid AND id = $2::uuid`
 const API_OUTBOX = sql`SELECT id, queue, name, dedupe_key, payload FROM public.job_outbox
 WHERE payload->>'workspaceId' = $1 ORDER BY created_at, id`
 
-/** The `deal_won` messages the event bus holds for the automations consumer, one workspace. */
-const API_DEAL_WON = sql`SELECT message FROM pgmq.q_deal_won__automations
-WHERE message->'payload'->>'workspaceId' = $1 ORDER BY msg_id`
-
 /** Removes only the messages and publications created by one isolated workspace. */
 const CLEAN_API_PUBLICATIONS = sql`DELETE FROM public.job_outbox WHERE payload->>'workspaceId' = $1`
 
@@ -230,9 +226,13 @@ export const apiDealWon = async (
     manager: EntityManager,
     workspaceId: string,
 ): Promise<Array<Readonly<Record<string, unknown>>>> => {
-    const rows = await manager.query<Array<{ readonly message: Readonly<Record<string, unknown>> }>>(API_DEAL_WON, [
-        workspaceId,
-    ])
+    const rows = await manager
+        .createQueryBuilder()
+        .select("q.message", "message")
+        .from("pgmq.q_deal_won__automations", "q")
+        .where("q.message->'payload'->>'workspaceId' = :workspaceId", { workspaceId })
+        .orderBy("q.msg_id")
+        .getRawMany<{ readonly message: Readonly<Record<string, unknown>> }>()
     return rows.map((row) => row.message)
 }
 
