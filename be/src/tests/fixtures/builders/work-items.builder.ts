@@ -1,3 +1,5 @@
+import { ANY_FUNCTION } from "./any-function.builder"
+import { builderOf } from "./entity-query-builder-fake.builder"
 import { builder, mockEntityManager, fakeQueryBuilder } from "@starci/jest-preset"
 import type { MockEntityManager, FakeQueryBuilder, QueryBuilderAnswers } from "@starci/jest-preset"
 import { workItemsEntities } from "@modules/domain/work-items"
@@ -7,7 +9,7 @@ const [WorkItemEntity] = workItemsEntities
 type WorkItemEntity = InstanceType<typeof WorkItemEntity>
 
 /** The any-function matcher, typed `unknown` so it flows into any slot. */
-export const anyFunction = (): unknown => expect.any(Function)
+export const anyFunction = (): unknown => ANY_FUNCTION
 
 export const NOW = "2026-10-12T10:00:00.000Z"
 
@@ -100,7 +102,7 @@ export const newItem: NewWorkItem = {
 /** A manager double whose every query builder is one fake that answers the given terminals and records the chain. */
 export const managerAnswering = (answers: QueryBuilderAnswers, em: MockEntityManager = mockEntityManager()) => {
     const fake = fakeQueryBuilder(answers)
-    em.createQueryBuilder.mockReturnValue(fake.builder as never)
+    em.createQueryBuilder.mockReturnValue(builderOf(fake.builder))
     return { em, fake }
 }
 
@@ -112,11 +114,10 @@ export const AT = new Date(NOW)
 /** The first id the kit generator hands out. */
 export const MINTED = "00000000-0000-4000-8000-000000000001"
 
-/** The one call of a builder method; a builder method called more than once, or not at all, fails the spec. */
+/** The one call of a builder method; a builder method called more than once, or not at all, answers a description of that, which no expectation equals. */
 export const singleCall = (fake: Pick<FakeQueryBuilder, "callsOf">, method: string): unknown => {
     const calls = fake.callsOf(method)
-    if (calls.length !== 1) throw new Error(`${method} was called ${calls.length} times, expected once`)
-    return calls[0]?.[0]
+    return calls.length === 1 ? calls[0]?.[0] : { [`${method} was called`]: `${calls.length} times, expected once` }
 }
 
 /** The values the insert of `newItem` writes: the minted id, the queued status and the proposal. */
