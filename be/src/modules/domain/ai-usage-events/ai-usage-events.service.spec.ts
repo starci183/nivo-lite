@@ -7,6 +7,7 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { QuotaRecord, QuotaStatus, UsageInput, UsageKind } from "./ai-usage-events.contracts"
 import { AiUsageEventsLogEvent } from "./ai-usage-events.log-events"
+import { CREDIT_USD_VALUE } from "./usage-cost.policy"
 import { AiUsageEventsService } from "./ai-usage-events.service"
 import { AiUsageEventEntity } from "./persistence/entities"
 
@@ -127,10 +128,8 @@ describe("AiUsageEventsService", () => {
 })
 
 describe("AiUsageEventsService > creditsUsedBy", () => {
-    it("sums the whole credits a module used, with the value of one credit read from the database", async () => {
-        const em = mockEntityManager({
-            query: ["SELECT * FROM public.credit_usd_value()", [{ credit_usd_value: "0.01" }]],
-        })
+    it("sums the whole credits a module used, at the value of one credit", async () => {
+        const em = mockEntityManager()
         const sums = fakeQueryBuilder({ getRawOne: { credits: 7 } })
         em.createQueryBuilder.mockReturnValue(sums.builder)
         const { usage } = await build(em)
@@ -142,7 +141,7 @@ describe("AiUsageEventsService > creditsUsedBy", () => {
         expect(sums.callsOf("where")).toEqual([
             [
                 "u.workspace_id = :workspaceId AND u.module = :module",
-                { workspaceId: "ws-1", module: "video", creditUsd: 0.01 },
+                { workspaceId: "ws-1", module: "video", creditUsd: CREDIT_USD_VALUE },
             ],
         ])
         expect(sums.callsOf("andWhere")).toEqual([
@@ -150,8 +149,8 @@ describe("AiUsageEventsService > creditsUsedBy", () => {
         ])
     })
 
-    it("answers zero credits when no value or no row comes back", async () => {
-        const em = mockEntityManager({ query: ["SELECT * FROM public.credit_usd_value()", []] })
+    it("answers zero credits when no row comes back", async () => {
+        const em = mockEntityManager()
         em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ getRawOne: undefined }).builder)
         const { usage } = await build(em)
 

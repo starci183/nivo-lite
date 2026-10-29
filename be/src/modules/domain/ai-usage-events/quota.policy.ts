@@ -34,7 +34,6 @@ const levelOf = (exceeded: boolean, ratio: number): QuotaLevel => {
     return ratio >= WARN_AT ? "warn" : "ok"
 }
 
-const numberOf = (value: number | string): number => Number(value)
 const optionalNumberOf = (value: number | string | null): number | null => (value === null ? null : Number(value))
 const pad = (value: number): string => String(value).padStart(2, "0")
 
@@ -47,9 +46,9 @@ const periodOf = (value: Date | string): string =>
 /** Reads one raw row of ai_quota_status into figures the policy can compare. */
 export const quotaFiguresOf = (record: QuotaRecord): QuotaFigures => ({
     period_start: periodOf(record.period_start),
-    messages_used: numberOf(record.messages_used),
-    tokens_used: numberOf(record.tokens_used),
-    cost_usd: numberOf(record.cost_usd),
+    messages_used: Number(record.messages_used),
+    tokens_used: Number(record.tokens_used),
+    cost_usd: Number(record.cost_usd),
     messages_limit: optionalNumberOf(record.messages_limit),
     tokens_limit: optionalNumberOf(record.tokens_limit),
     fallback_reply: record.fallback_reply,

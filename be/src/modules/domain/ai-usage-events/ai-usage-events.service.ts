@@ -15,7 +15,7 @@ import type {
     UsageSummary,
 } from "./ai-usage-events.contracts"
 import { AiUsageEventsLogEvent } from "./ai-usage-events.log-events"
-import { figuresOf } from "./usage-cost.policy"
+import { CREDIT_USD_VALUE, figuresOf } from "./usage-cost.policy"
 import { toDailyModuleUsage, toUsageSummary } from "./usage-summary.mapper"
 import type { MonthlyUsageAggregate } from "./usage-summary.mapper"
 
@@ -108,16 +108,10 @@ export class AiUsageEventsService {
 
     /** The credits one module used in the last `days` days; every call counts as whole credits, rounded up. */
     async creditsUsedBy(workspaceId: string, module: string, days: number): Promise<number> {
-        const [value] = await callDbFunction<{ credit_usd_value: string | number }>(
-            this.entityManager,
-            "public.credit_usd_value",
-            [],
-        )
-        const creditUsd = Number(value?.credit_usd_value ?? 0)
         const row = await this.entityManager
             .createQueryBuilder(AiUsageEventEntity, "u")
             .select("COALESCE(sum(ceil(u.cost_usd / :creditUsd)), 0)::int", "credits")
-            .where("u.workspace_id = :workspaceId AND u.module = :module", { workspaceId, module, creditUsd })
+            .where("u.workspace_id = :workspaceId AND u.module = :module", { workspaceId, module, creditUsd: CREDIT_USD_VALUE })
             .andWhere("u.created_at >= now() - CAST(:days AS integer) * interval '1 day'", { days })
             .getRawOne<{ credits: number }>()
         return row?.credits ?? 0
