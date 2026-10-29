@@ -1,4 +1,4 @@
-import type { DynamicModule } from "@nestjs/common"
+import type { DynamicModule, Type } from "@nestjs/common"
 import { CliModule } from "@features/cli"
 import { ChannelConnectionsModule } from "@modules/domain/channel-connections"
 import { ChannelProvisioningModule } from "@modules/domain/channel-provisioning"
@@ -8,6 +8,7 @@ import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { ConnectionsModule } from "@modules/domain/connections"
 import { AutomationTemplatesModule } from "@modules/domain/automation-templates"
 import { N8nHostModule } from "@modules/integrations/n8n-host"
+import { DataRecordsModule } from "@modules/domain/data-records"
 import { EventsModule } from "@modules/domain/events"
 import { JobOpsModule } from "@modules/domain/job-ops"
 import { StaffModule } from "@modules/domain/staff"
@@ -36,17 +37,20 @@ import { AuthorityRulesModule } from "@modules/domain/authority-rules"
 import { MemberGrantsModule, OfficeAuthorityService } from "@modules/domain/member-grants"
 import { MODULE_KNOWLEDGE_FOLDERS, MODULES_MESSAGES } from "@modules/domain/modules"
 import { OwnersModule } from "@modules/domain/owners"
+import { InboundEventRecordsModule } from "@modules/domain/inbound-events"
+import { OfficeRoomDirectoryModule } from "@modules/domain/office-rooms"
 import { ClockModule } from "@modules/platform/clock"
 import { IdsModule } from "@modules/platform/ids"
 import { DatabaseModule } from "@modules/platform/database"
 import { PRIMARY_ENTITIES } from "@modules/platform/database/entities"
 import { appPgTypes } from "@modules/integrations/data-sources"
+import { EventBusModule } from "@modules/platform/event-bus"
 import { QueueModule } from "@modules/platform/queue"
 import { LoggingModule, printConsoleLine } from "@modules/platform/logging"
 import type { CliAppOptions } from "../cli.options"
 
 /** Registers the CLI capabilities in their boot order, with queue producers only. */
-export const cliModules = (options: CliAppOptions): Array<DynamicModule> => [
+export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> => [
     ClockModule.register({ isGlobal: true }),
     IdsModule.register({ isGlobal: true }),
     LoggingModule.register({ isGlobal: true }),
@@ -88,14 +92,18 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule> => [
         shutdownGraceMs: 1000,
         schedulers: [],
     }),
+    EventBusModule.register({ isGlobal: true }),
     JobOpsModule.register({ isGlobal: true }),
     StaffModule.register({ isGlobal: true }),
     WorkspaceMembersModule.register({ isGlobal: true, accounts: IDENTITY_ACCOUNTS }),
     WorkspacesModule.register({ isGlobal: true, allowFreeWorkspace: true }),
     AuthorityRulesModule.register({ isGlobal: true }),
+    OfficeRoomDirectoryModule,
     MemberGrantsModule.register({ isGlobal: true }),
     ModuleInstallationsModule.register({ isGlobal: true }),
+    InboundEventRecordsModule,
     TransactionsModule.register({ isGlobal: true }),
+    DataRecordsModule.register({ isGlobal: true }),
     McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway, console: true }),
     WorkspaceSeedModule.register({
         isGlobal: true,

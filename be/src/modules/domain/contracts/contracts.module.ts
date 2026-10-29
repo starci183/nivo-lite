@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./contracts.module-definition"
 import { ContractLinkService } from "./contract-link.service"
 import { ContractRenewalService } from "./contract-renewal.service"
@@ -16,6 +17,7 @@ export class ContractsModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
+                { provide: INBOX, useClass: InboxService },
                 ContractLinkService,
                 ContractRenewalService,
                 ContractsService,

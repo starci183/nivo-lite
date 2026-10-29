@@ -22,12 +22,8 @@ const providerOf = (provider: AiGatewayProvider, models: ReadonlyArray<ModelConf
     models,
 })
 
-/**
- * The router pool built from the parsed options, or null when no provider holds a key: the router refuses an empty pool, so the app
- * then registers neither router nor gateway. The upstream provider serves chat, and embeddings unless they have their own provider.
- */
-export const routerOptionsOf = (options: AiGatewayOptions): AiRouterModuleOptions | null => {
-    if (options.providers.length === 0) return null
+/** The pool over a non-empty provider list: the upstream provider serves chat, and embeddings unless they have their own provider. */
+const poolOf = (options: AiGatewayOptions): AiRouterModuleOptions => {
     const ownEmbeddings = options.providers.some((provider) => provider.id === "embeddings")
     const chat: ModelConfig = {
         id: options.models.work,
@@ -52,3 +48,11 @@ export const routerOptionsOf = (options: AiGatewayOptions): AiRouterModuleOption
         telemetry: { includeContent: false },
     }
 }
+
+/**
+ * The router pool built from the parsed options, or null when no provider holds a key: the router refuses an empty pool, so the app
+ * then registers neither router nor gateway. A conditional expression, not an `if`, because the contract emitter reads the module
+ * graph statically and accepts an option-dependent choice only as an expression whose branches serve the same resolvers.
+ */
+export const routerOptionsOf = (options: AiGatewayOptions): AiRouterModuleOptions | null =>
+    options.providers.length === 0 ? null : poolOf(options)

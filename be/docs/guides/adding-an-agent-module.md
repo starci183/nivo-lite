@@ -54,7 +54,7 @@ be/src/modules/domain/modules/<key>.contracts.ts   (ModuleDefinition)
 
 ## 5. Migrations
 
-Forward-only, in `supabase/migrations/`, with a fresh timestamp after the newest migration. A module's own tables must have `workspace_id`, turn on RLS with `<table>_<role>_<action>` policies (read: `is_member`, write: `is_manager` or the `app_be` role), carry the grants of `app_be` in the same file and be prefixed `<key>_`. Do not add CHECK constraints that pin module keys or actions; add a foreign key to `modules(key)` if needed. After a migration regenerate the types with `npm run contract:emit`.
+Forward-only, in `db/migrations/`, with a fresh timestamp after the newest migration. A module's own tables must have `workspace_id`, turn on RLS with `<table>_<role>_<action>` policies (read: `is_member`, write: `is_manager` or the `app_be` role), carry the grants of `app_be` in the same file and be prefixed `<key>_`. Do not add CHECK constraints that pin module keys or actions; add a foreign key to `modules(key)` if needed. After a migration regenerate the types with `npm run contract:emit`.
 
 ## 6. Background work
 
