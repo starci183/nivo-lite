@@ -1,14 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { ConnectionSecretsErrorCode } from "@modules/domain/connection-secrets"
+import { ConnectionSecretReadsService } from "@modules/domain/connections"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { BillingLogEvent } from "./billing.log-events"
-import { InjectBillingOptions } from "./billing.decorators"
-import type { BillingOptions } from "./billing.options"
-import { ConnectionSecretEntity, openSecretWithBase64Key } from "@modules/domain/connection-secrets"
-import type { ConnectionSecretRead } from "./billing-reads.contracts"
-import { ConnectionEntity } from "@modules/domain/connections"
 
 /** A connection's secrets as the proof of its webhook needs them. */
 export interface PaymentSecret {
@@ -29,8 +24,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 /** Reads the secrets of one payment connection for the proof of its webhook; nothing about a connection is answered without them. */
 export class PaymentSecretsService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectBillingOptions() private readonly options: BillingOptions,
+        private readonly connectionSecrets: ConnectionSecretReadsService,
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
@@ -40,22 +34,14 @@ export class PaymentSecretsService {
      */
     async load(connectionId: string, provider: string): Promise<PaymentSecretLookup> {
         if (!UUID.test(connectionId)) return null
-        const row = await this.entityManager
-            .createQueryBuilder(ConnectionEntity, "c")
-            .select(["c.workspace_id AS workspace_id", "c.status AS status", "c.provider AS provider"])
-            .addSelect("s.ciphertext", "ciphertext")
-            .addSelect("s.webhook_secret", "webhook_secret")
-            .innerJoin(ConnectionSecretEntity, "s", "s.connection_id = c.id")
-            .where("c.id = :connectionId", { connectionId })
-            .limit(1)
-            .getRawOne<ConnectionSecretRead>()
-        if (row?.provider !== provider || row.status === "disconnected") return null
-        try {
-            const credential = openSecretWithBase64Key(row.ciphertext, this.options.channelTokenKey?.reveal() ?? "")
-            return { workspaceId: row.workspace_id, credential, webhookSecret: row.webhook_secret }
-        } catch (cause) {
-            this.logger.error(BillingLogEvent.Undecryptable, cause, { connectionId })
-            return null
+        const secret = await this.connectionSecrets.secretOf(connectionId, provider)
+        if (secret.kind === "ok") {
+            const { workspaceId, credential, webhookSecret } = secret.value
+            return { workspaceId, credential, webhookSecret }
         }
+        if (secret.code === ConnectionSecretsErrorCode.Unreadable) {
+            this.logger.error(BillingLogEvent.Undecryptable, new Error(secret.code), { connectionId })
+        }
+        return null
     }
 }
