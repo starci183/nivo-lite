@@ -1,11 +1,10 @@
 import { Test } from "@nestjs/testing"
-import { Equal, In, IsNull, Or } from "typeorm"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import { AuthorityService } from "@modules/domain/authority"
 import type { Authority } from "@modules/domain/authority"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import type { FactRecord } from "@modules/domain/brain-facts"
-import { KnowledgeSourceEntity } from "@modules/domain/knowledge-sources"
+import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 import { ModuleInstallationEntity } from "@modules/domain/module-installations"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -28,12 +27,9 @@ const build = async (
     profile: Authority | null = null,
     records: ReadonlyArray<FactRecord> = [],
 ) => {
-    const entityManager = mockEntityManager({
-        find: [
-            KnowledgeSourceEntity,
-            [Object.assign(new KnowledgeSourceEntity(), { title: "Menu", topic: "food", content: "Pho" })],
-        ],
-    })
+    const entityManager = mockEntityManager()
+    const sources = mock<KnowledgeSourcesReadService>()
+    sources.allPublicTexts.mockResolvedValue([{ title: "Menu", topic: "food", content: "Pho" }])
     const [setup] = queueQueryBuilders(entityManager, [{ getRawOne: snapshots[0] }])
     const authority = mock<AuthorityService>()
     authority.load.mockResolvedValue(profile)
@@ -47,15 +43,16 @@ const build = async (
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: AuthorityService, useValue: authority },
             { provide: BrainFactsService, useValue: facts },
+            { provide: KnowledgeSourcesReadService, useValue: sources },
             { provide: WorkspacesService, useValue: workspaces },
         ],
     }).compile()
-    return { service: moduleRef.get(ContentBrandService), entityManager, setup }
+    return { service: moduleRef.get(ContentBrandService), entityManager, setup, sources }
 }
 
 describe("ContentBrandService", () => {
     it("reads the shop, the public setup and drops facts that are not text", async () => {
-        const { service, entityManager, setup } = await build()
+        const { service, entityManager, setup, sources } = await build()
 
         await expect(service.material("ws-1")).resolves.toEqual({
             shop: "Lan",
@@ -76,18 +73,7 @@ describe("ContentBrandService", () => {
             ["i.workspace_id = :workspaceId AND i.module_key = 'content'", { workspaceId: "ws-1" }],
         ])
         expect(setup?.callsOf("limit")).toEqual([[1]])
-        expect(entityManager.find).toHaveBeenCalledWith(KnowledgeSourceEntity, {
-            select: { title: true, topic: true, content: true },
-            where: {
-                workspaceId: "ws-1",
-                visibility: "public",
-                status: In(["ready", "extracting_facts"]),
-                module: Or(IsNull(), Equal("content")),
-                installationId: IsNull(),
-            },
-            order: { createdAt: "ASC" },
-            take: 40,
-        })
+        expect(sources.allPublicTexts).toHaveBeenCalledWith("ws-1", "content", 40)
     })
 
     it.each([
