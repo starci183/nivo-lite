@@ -74,6 +74,27 @@ export interface AgentSheet {
     readonly createdAt: Date
 }
 
+/** The header of one agent: who it is, how it presents itself and whether it works. */
+export interface AgentHeader {
+    /** The agent id. */
+    readonly id: string
+    /** The display name. */
+    readonly name: string
+    /** The @handle. */
+    readonly handle: string
+    /** The one-line role. */
+    readonly role: string
+    /** The module (department) the agent works in. */
+    readonly module: string
+    /** `active` or `paused`. */
+    readonly status: string
+    /** The HTTPS address of the agent's picture, or null for the generated avatar. */
+    readonly avatarUrl: string | null
+}
+
+/** An agent header, or null when there is none. */
+export type OptionalAgentHeader = AgentHeader | null
+
 /** An agent card, or null when there is none. */
 export type OptionalAgentCard = AgentCard | null
 
