@@ -32,7 +32,7 @@ export interface LedgerInvoice {
     readonly status: string
 }
 
-/** The invoice a receipt is for. */
+/** What a receipt prints about the invoice it confirms: the number, the amount and who paid when. */
 export interface ReceiptInvoice {
     /** The invoice id. */
     readonly id: string
@@ -45,3 +45,6 @@ export interface ReceiptInvoice {
     /** When it was paid. */
     readonly paidAt: Date | null
 }
+
+/** The receipt invoice of a lookup, or null when the workspace has none with that id. */
+export type OptionalReceiptInvoice = ReceiptInvoice | null

@@ -2,7 +2,7 @@
 export type ClaimableState = "issued" | "paid"
 
 /** An invoice, or null when the workspace has no such invoice. */
-export type OptionalInvoice = InvoiceRecord | null
+export type OptionalInvoice = InvoiceRow | null
 
 /** What issuing an invoice takes. */
 export interface NewInvoice {
@@ -37,13 +37,13 @@ export interface NewRenewalInvoice {
 /** What issuing an invoice answered. */
 export interface IssuedInvoice {
     /** The new invoice, or the one the order or the contract period already had. */
-    readonly invoice: InvoiceRecord
+    readonly invoice: InvoiceRow
     /** False when the order or the contract period already had its invoice, so nothing was issued. */
     readonly created: boolean
 }
 
 /** One public.invoices row as the statements answer it: the amount a number and the dates as text. */
-export interface InvoiceRecord {
+export interface InvoiceRow {
     /** The invoice id. */
     readonly id: string
     /** The workspace. */
@@ -69,7 +69,7 @@ export interface InvoiceRecord {
 }
 
 /** An open invoice with the order and customer labels a payment is matched against. */
-export interface InvoiceListingRecord extends InvoiceRecord {
+export interface InvoiceListingRecord extends InvoiceRow {
     /** The order number, or null. */
     readonly order_no: string | null
     /** The customer's contact name, or null. */
@@ -77,7 +77,7 @@ export interface InvoiceListingRecord extends InvoiceRecord {
 }
 
 /** An invoice with its dates, for the Sales views. */
-export interface InvoiceViewRecord extends InvoiceRecord {
+export interface InvoiceViewRow extends InvoiceRow {
     /** When payment is due, ISO text, or null. */
     readonly due_at: string | null
     /** When it was issued, ISO text, or null. */
@@ -107,7 +107,7 @@ export interface InvoiceAccountingLead {
 }
 
 /** An invoice with its related order and customer, for the accounting book. */
-export interface InvoiceAccountingRecord extends InvoiceViewRecord {
+export interface InvoiceAccountingRow extends InvoiceViewRow {
     /** The order it bills, or null. */
     readonly order: InvoiceAccountingOrder | null
     /** The customer it bills, or null. */
@@ -115,7 +115,7 @@ export interface InvoiceAccountingRecord extends InvoiceViewRecord {
 }
 
 /** An invoice a reconciliation proposes, with the customer, the order and both statuses. */
-export interface ReconcileInvoiceRecord {
+export interface ReconcileInvoiceRow {
     /** The invoice id. */
     readonly id: string
     /** The number. */

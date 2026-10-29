@@ -30,7 +30,7 @@ import {
 } from "@tests/fixtures/builders/invoices-service.builder"
 import { InvoicesErrorCode } from "./errors/invoices.error"
 import { INVOICE_RETURNING } from "./invoice-columns.policy"
-import type { InvoiceAccountingRecord, InvoiceListingRecord, ReconcileInvoiceRecord } from "./invoices.contracts"
+import type { InvoiceAccountingRow, InvoiceListingRecord, ReconcileInvoiceRow } from "./invoices.contracts"
 import { InvoicesService } from "./invoices.service"
 
 /** The orders and customers the owners answer for the invoices a spec lists. */
@@ -191,7 +191,7 @@ describe("InvoicesService lists", () => {
     })
 
     it("lists accounting invoices with their order and customer, by the default or requested limit", async () => {
-        const row: InvoiceAccountingRecord = {
+        const row: InvoiceAccountingRow = {
             ...VIEW,
             order: { order_no: "ORDER-1", items: "Tea", amount_vnd: 50_000, status: "invoiced" },
             lead: { contact_name: "Minh", company: "Tea Co" },
@@ -225,7 +225,7 @@ describe("InvoicesService lists", () => {
             issued_at: NOW,
             due_at: DUE_AT,
         }
-        const row: ReconcileInvoiceRecord = {
+        const row: ReconcileInvoiceRow = {
             id: INVOICE.id,
             invoice_no: INVOICE.invoice_no,
             amount_vnd: INVOICE.amount_vnd,

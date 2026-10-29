@@ -1,32 +1,28 @@
-import { INVOICE_COLUMNS, INVOICE_RETURNING, INVOICE_VIEW_COLUMNS, selectColumns } from "./invoice-columns.policy"
+import { Test } from "@nestjs/testing"
+import { mockEntityManager } from "@starci/jest-preset"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { InvoiceColumn } from "./invoice-columns.policy"
+import * as policy from "./invoice-columns.policy"
+import { InvoiceEntity } from "./persistence/entities"
 
-type Call = readonly [method: string, expression: string, alias: string]
+const SUBJECT = Symbol("invoice-columns.policy")
 
-interface FakeQuery {
-    readonly calls: Call[]
-    select(expression: string, alias: string): FakeQuery
-    addSelect(expression: string, alias: string): FakeQuery
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: policy }],
+    }).compile()
+    return moduleRef.get<typeof policy>(SUBJECT)
 }
 
-const fakeQuery = (): FakeQuery => {
-    const calls: Call[] = []
-    const query: FakeQuery = {
-        calls,
-        select: (expression, alias) => {
-            calls.push(["select", expression, alias])
-            return query
-        },
-        addSelect: (expression, alias) => {
-            calls.push(["addSelect", expression, alias])
-            return query
-        },
-    }
-    return query
+const queryOf = () => {
+    const entityManager = mockEntityManager()
+    const [fake] = queueQueryBuilders(entityManager, [{}])
+    return { query: entityManager.createQueryBuilder(InvoiceEntity, "i"), fake }
 }
 
 describe("invoice columns", () => {
-    it("lists the record columns with their aliases", () => {
+    it("lists the record columns with their aliases", async () => {
+        const { INVOICE_COLUMNS } = await buildSubject()
         expect(INVOICE_COLUMNS.map(([, alias]) => alias)).toEqual([
             "id",
             "workspace_id",
@@ -42,7 +38,8 @@ describe("invoice columns", () => {
         ])
     })
 
-    it("lists the view columns, with the dates as ISO text", () => {
+    it("lists the view columns, with the dates as ISO text", async () => {
+        const { INVOICE_VIEW_COLUMNS } = await buildSubject()
         expect(INVOICE_VIEW_COLUMNS.map(([, alias]) => alias)).toEqual([
             "id",
             "workspace_id",
@@ -62,7 +59,8 @@ describe("invoice columns", () => {
         expect(INVOICE_VIEW_COLUMNS[8]).toEqual(["to_json(i.paid_at) #>> '{}'", "paid_at"])
     })
 
-    it("names the returning clause", () => {
+    it("names the returning clause", async () => {
+        const { INVOICE_RETURNING } = await buildSubject()
         expect(INVOICE_RETURNING).toBe(
             "id, workspace_id, order_id, lead_id, invoice_no, amount_vnd::float8 AS amount_vnd, status, issued_by, paid_at::text AS paid_at, contract_id, period_ends_on::text AS period_ends_on",
         )
@@ -70,28 +68,30 @@ describe("invoice columns", () => {
 })
 
 describe("selectColumns", () => {
-    it("replaces the selection with the first column and adds the rest", () => {
+    it("replaces the selection with the first column and adds the rest", async () => {
+        const { selectColumns } = await buildSubject()
         const columns: ReadonlyArray<InvoiceColumn> = [
             ["i.id", "id"],
             ["i.status", "status"],
             ["i.invoiceNo", "invoice_no"],
         ]
-        const query = fakeQuery()
+        const { query, fake } = queryOf()
 
-        const result = selectColumns(query as never, columns)
+        const result = selectColumns(query, columns)
 
         expect(result).toBe(query)
-        expect(query.calls).toEqual([
-            ["select", "i.id", "id"],
-            ["addSelect", "i.status", "status"],
-            ["addSelect", "i.invoiceNo", "invoice_no"],
+        expect(fake?.callsOf("select")).toEqual([["i.id", "id"]])
+        expect(fake?.callsOf("addSelect")).toEqual([
+            ["i.status", "status"],
+            ["i.invoiceNo", "invoice_no"],
         ])
     })
 
-    it("answers the query untouched for no columns", () => {
-        const query = fakeQuery()
+    it("answers the query untouched for no columns", async () => {
+        const { selectColumns } = await buildSubject()
+        const { query, fake } = queryOf()
 
-        expect(selectColumns(query as never, [])).toBe(query)
-        expect(query.calls).toEqual([])
+        expect(selectColumns(query, [])).toBe(query)
+        expect(fake?.calls).toEqual([])
     })
 })
