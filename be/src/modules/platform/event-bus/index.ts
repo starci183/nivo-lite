@@ -1,7 +1,7 @@
 /**
  * The pgmq event bus. A publisher sends a typed event (`BaseEvent`, a class of modules/events) to its topic, the event name, in the
  * transaction that changes the data; pgmq routes it to every consumer queue bound to that topic. The topics and consumer queues are
- * the literal constants of event-bus.queues.ts, `<TOPIC>_<CONSUMER>_TOPIC_QUEUE`, and the event-bus migration creates, with each
+ * the literal constants of event-bus.queue.ts, `<TOPIC>_<CONSUMER>_TOPIC_QUEUE`, and the event-bus migration creates, with each
  * dead-letter queue `<queue>__dead`, and binds them.
  *
  * Publishing: inject `InjectEventBus()` and call `publish(event, manager, correlationId)` inside the transaction of the change. The
@@ -21,16 +21,8 @@
  */
 export { EVENT_BUS_ERROR_KINDS } from "./errors/event-bus.error"
 export { EVENT_BUS_MESSAGES } from "./messages/event-bus.messages"
-export { BaseEvent, DEAD_QUEUE_SUFFIX, DEFAULT_MAX_DELIVERIES } from "./event-bus.contracts"
-export type {
-    DeadLetter,
-    EventClass,
-    EventDelivery,
-    EventEnvelope,
-    EventPayload,
-    EventSubscriptionOptions,
-    ParsedEvent,
-} from "./event-bus.contracts"
+export { BaseEvent } from "./event-bus.contracts"
+export type { EventDelivery, EventPayload, ParsedEvent } from "./event-bus.contracts"
 export { EVENT_BUS, EVENT_CONSUMER_REGISTRY, InjectEventBus, InjectEventConsumerRegistry } from "./event-bus.decorators"
 export { EventBusModule } from "./event-bus.module"
 export { EventBusService } from "./event-bus.service"
@@ -38,35 +30,20 @@ export { EventConsumerService } from "./event-consumer.service"
 export type { EventBusOptions } from "./event-bus.options"
 export type { EventBus, EventConsumer, EventConsumerRegistry } from "./event-bus.port"
 export {
-    EVENT_BUS_PROBE_TOPIC,
-    EVENT_BUS_PROBE_PROBE_TOPIC_QUEUE,
-    BANK_CREDIT_BOOKED_TOPIC,
     BANK_CREDIT_BOOKED_ACCOUNTING_TOPIC_QUEUE,
-    PAYMENT_RECONCILED_TOPIC,
     PAYMENT_RECONCILED_CONTRACTS_TOPIC_QUEUE,
     PAYMENT_RECONCILED_AUTOMATIONS_TOPIC_QUEUE,
     PAYMENT_RECONCILED_PAYMENT_RECEIPTS_TOPIC_QUEUE,
-    PAYMENT_RECONCILED_CARE_TOPIC_QUEUE,
-    LEAD_CAPTURED_TOPIC,
     LEAD_CAPTURED_AUTOMATIONS_TOPIC_QUEUE,
-    DEAL_WON_TOPIC,
     DEAL_WON_AUTOMATIONS_TOPIC_QUEUE,
-    ORDER_CONFIRMED_TOPIC,
     ORDER_CONFIRMED_AUTOMATIONS_TOPIC_QUEUE,
     ORDER_CONFIRMED_INVENTORY_TOPIC_QUEUE,
-    ORDER_SHIPPED_TOPIC,
     ORDER_SHIPPED_AUTOMATIONS_TOPIC_QUEUE,
-    DECISION_MADE_TOPIC,
     DECISION_MADE_AUTOMATIONS_TOPIC_QUEUE,
-    APPROVAL_RESOLVED_TOPIC,
     APPROVAL_RESOLVED_THREAD_OUTCOMES_TOPIC_QUEUE,
-    BOOKING_STATUS_CHANGED_TOPIC,
     BOOKING_STATUS_CHANGED_BOOKING_EFFECTS_TOPIC_QUEUE,
-    AI_GENERATION_COMPLETED_TOPIC,
     AI_GENERATION_COMPLETED_CONTENT_TOPIC_QUEUE,
     AI_GENERATION_COMPLETED_VIDEO_TOPIC_QUEUE,
-    INSTALLATION_CHANGED_TOPIC,
     INSTALLATION_CHANGED_AGENT_SYNC_TOPIC_QUEUE,
-    KNOWLEDGE_SOURCE_INDEXED_TOPIC,
     KNOWLEDGE_SOURCE_INDEXED_BRAIN_TOPIC_QUEUE,
-} from "./event-bus.queues"
+} from "./event-bus.queue"
