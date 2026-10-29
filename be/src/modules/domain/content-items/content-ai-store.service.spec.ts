@@ -106,7 +106,9 @@ describe("ContentAiStoreService createQuickIdea", () => {
             ).rejects.toMatchObject({ code: ContentItemsErrorCode.NotWritten })
         },
     )
+})
 
+describe("ContentAiStoreService createQuickIdea", () => {
     it("uses the bounded topic when splitting supplies no first line", async () => {
         const { service, members, fakes } = await build([quick("2026-01-03T00:00:00Z")])
         members.require.mockResolvedValue(member)
@@ -207,7 +209,9 @@ describe("ContentAiStoreService applyDraft", () => {
         ])
         expect(entityManager.createQueryBuilder).not.toHaveBeenCalled()
     })
+})
 
+describe("ContentAiStoreService applyDraft", () => {
     it("refuses a draft that no longer has an editable row", async () => {
         const { service } = await build([{ execute: { raw: [] } }])
         await expect(service.applyDraft("workspace-1", "idea-1", { variants, hashtags: [] })).rejects.toMatchObject({

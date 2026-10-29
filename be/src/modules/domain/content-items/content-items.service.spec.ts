@@ -97,7 +97,9 @@ describe("ContentItemsService", () => {
             await expect(items.createOfferIdea(IDEA)).rejects.toMatchObject({ code: ContentItemsErrorCode.NotWritten })
         })
     })
+})
 
+describe("ContentItemsService", () => {
     describe("agent drafts", () => {
         it("stores the draft with its images and history and answers the snapshot", async () => {
             const stored = { id: "item-1", variants: draft.variants, channels: ["facebook"] }
@@ -129,7 +131,9 @@ describe("ContentItemsService", () => {
             },
         )
     })
+})
 
+describe("ContentItemsService", () => {
     describe("scheduling", () => {
         it("reads a post for the scheduler, or null when it is gone", async () => {
             const { items, fakes } = await build([
@@ -173,7 +177,9 @@ describe("ContentItemsService", () => {
             })
         })
     })
+})
 
+describe("ContentItemsService", () => {
     describe("the scheduler tick", () => {
         it("reads the posts due on a channel with the channel's reference", async () => {
             const row = {

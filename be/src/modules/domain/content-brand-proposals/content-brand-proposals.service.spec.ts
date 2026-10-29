@@ -101,7 +101,9 @@ describe("ContentBrandProposalsService", () => {
         expect(many?.callsOf("orderBy")).toEqual([["p.createdAt", "DESC"]])
         expect(many?.callsOf("limit")).toEqual([[10]])
     })
+})
 
+describe("ContentBrandProposalsService", () => {
     it("closes a waiting proposal, null when decided already", async () => {
         const em = mockEntityManager()
         const [closed] = queueQueryBuilders(em, [

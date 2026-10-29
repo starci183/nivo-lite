@@ -363,7 +363,9 @@ describe("ChatbotWorkbenchService overview", () => {
 
         expect(overview.metrics).toEqual(EMPTY_METRICS)
     })
+})
 
+describe("ChatbotWorkbenchService overview", () => {
     it("combines the legacy agents for a single installation", async () => {
         const { em } = tablesEm({
             query: [

@@ -82,7 +82,9 @@ describe("ContentApprovalStoreService", () => {
             ).rejects.toMatchObject({ code: ContentItemsErrorCode.WrongStatus })
         })
     })
+})
 
+describe("ContentApprovalStoreService", () => {
     describe("approve", () => {
         it.each([null, "  Edited draft  "])("approves using the unmodified draft %p", async (draft) => {
             const { service, entityManager, fakes } = await build([written])
@@ -150,7 +152,9 @@ describe("ContentApprovalStoreService", () => {
             })
         })
     })
+})
 
+describe("ContentApprovalStoreService", () => {
     describe("markPublished", () => {
         it.each([false, true])("returns the stored publication result with allDone=%p", async (allDone) => {
             const { service, fakes } = await build([{ execute: { raw: [{ id: "post", allDone }] } }])
