@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { In, LessThan, LessThanOrEqual, MoreThanOrEqual } from "typeorm"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
@@ -24,7 +25,9 @@ import { AutomationRunEntity } from "./persistence/entities"
 
 const NOW = "2026-10-12T10:00:00.000Z"
 
-const build = async (em: MockEntityManager) => {
+const build = async (em: MockEntityManager, keys: Array<{ id: string; template_key: string }> = []) => {
+    const pipelines = mock<AutomationPipelinesService>()
+    pipelines.pipelineKeys.mockResolvedValue(keys)
     const clock = new FakeClock(NOW)
     const catalog = mock<MessageCatalog>()
     catalog.get.mockReturnValue("Loi")
@@ -36,6 +39,7 @@ const build = async (em: MockEntityManager) => {
             { provide: CLOCK, useValue: clock },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
+            { provide: AutomationPipelinesService, useValue: pipelines },
         ],
     }).compile()
     return { runs: moduleRef.get(AutomationRunsService), logger }
@@ -75,13 +79,14 @@ describe("AutomationRunsService > beginRun", () => {
                     workspaceId: "ws-1",
                     triggerRef: "t-1",
                     dedupeKey: "d-1",
-                    payload: { a: 1 },
+                    payload: expect.any(Function),
                     status: "running",
                     attempts: 1,
                     runAt: new Date(NOW),
                 },
             ],
         ])
+        expect(fake.callsOf("setParameter")).toEqual([["payload", '{"a":1}']])
         expect(fake.callsOf("orIgnore")).toHaveLength(1)
         expect(fake.callsOf("returning")).toEqual([[["id", "attempts"]]])
     })
@@ -279,7 +284,7 @@ describe("AutomationRunsService > finishRun and settleRun", () => {
 
 describe("AutomationRunsService > runsOf", () => {
     it("reads the latest runs of a workspace", async () => {
-        const { em, fake } = withBuilder([runOf()])
+        const em = mockEntityManager({ find: [AutomationRunEntity, [runOf()]] })
         const { runs } = await build(em)
 
         await expect(runs.runsOf({ workspaceId: "ws-1", templateKey: null, limit: 20 })).resolves.toEqual([
@@ -296,13 +301,15 @@ describe("AutomationRunsService > runsOf", () => {
             },
         ])
 
-        expect(fake.callsOf("where")).toEqual([["r.workspaceId = :workspaceId", { workspaceId: "ws-1" }]])
-        expect(fake.callsOf("andWhere")).toEqual([])
-        expect(fake.callsOf("limit")).toEqual([[20]])
+        expect(em.find).toHaveBeenCalledWith(AutomationRunEntity, {
+            where: { workspaceId: "ws-1" },
+            order: { createdAt: "DESC" },
+            take: 20,
+        })
     })
 
     it("reads the instant a run finished as text", async () => {
-        const { em } = withBuilder([runOf({ finishedAt: new Date(NOW) })])
+        const em = mockEntityManager({ find: [AutomationRunEntity, [runOf({ finishedAt: new Date(NOW) })]] })
         const { runs } = await build(em)
 
         const [read] = await runs.runsOf({ workspaceId: "ws-1", templateKey: null, limit: 20 })
@@ -310,13 +317,28 @@ describe("AutomationRunsService > runsOf", () => {
         expect(read?.finished_at).toBe(NOW)
     })
 
-    it("narrows the runs to one template", async () => {
-        const { em, fake } = withBuilder([])
-        const { runs } = await build(em)
+    it("narrows the runs to the pipelines of one template", async () => {
+        const em = mockEntityManager({ find: [AutomationRunEntity, []] })
+        const { runs } = await build(em, [
+            { id: "p-1", template_key: "thank" },
+            { id: "p-2", template_key: "other" },
+        ])
 
         await runs.runsOf({ workspaceId: "ws-1", templateKey: "thank", limit: 5 })
 
-        expect(fake.callsOf("andWhere")).toEqual([["p.templateKey = :templateKey", { templateKey: "thank" }]])
+        expect(em.find).toHaveBeenCalledWith(AutomationRunEntity, {
+            where: { workspaceId: "ws-1", pipelineId: In(["p-1"]) },
+            order: { createdAt: "DESC" },
+            take: 5,
+        })
+    })
+
+    it("reads nothing when the workspace has no pipeline of the template", async () => {
+        const em = mockEntityManager()
+        const { runs } = await build(em, [{ id: "p-2", template_key: "other" }])
+
+        await expect(runs.runsOf({ workspaceId: "ws-1", templateKey: "thank", limit: 5 })).resolves.toEqual([])
+        expect(em.find).not.toHaveBeenCalled()
     })
 })
 
@@ -387,11 +409,13 @@ describe("AutomationRunsService > latestDoneRun", () => {
 
 describe("AutomationRunsService > markPayload", () => {
     it("replaces the payload of a run", async () => {
-        const em = mockEntityManager({ update: [AutomationRunEntity, {}] })
+        const { em, fake } = withBuilder({})
         const { runs } = await build(em)
 
         await runs.markPayload("r-1", { y: 2 })
 
-        expect(em.update).toHaveBeenCalledWith(AutomationRunEntity, { id: "r-1" }, { payload: { y: 2 } })
+        expect(fake.callsOf("set")).toEqual([[{ payload: expect.any(Function) }]])
+        expect(fake.callsOf("where")).toEqual([[{ id: "r-1" }]])
+        expect(fake.callsOf("setParameter")).toEqual([["payload", '{"y":2}']])
     })
 })

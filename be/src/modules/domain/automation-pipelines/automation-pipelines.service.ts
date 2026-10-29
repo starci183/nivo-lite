@@ -55,17 +55,6 @@ const UPSERT_COLUMNS = [
     "updated_at",
 ]
 
-/** The columns a save reads back from the statement itself. */
-const RETURNED_COLUMNS =
-    "id, workspace_id, template_key, name, module_key, enabled, dismissed, config, body, body_version, template_version, based_on_context, approval_streak, trust_offered_at, auto_send, created_at, updated_at"
-
-/** The pipeline the saving statement hands back: timestamptz columns arrive as Dates. */
-interface SavedRow extends Omit<PipelineRow, "trust_offered_at" | "created_at" | "updated_at"> {
-    readonly trust_offered_at: Date | null
-    readonly created_at: Date
-    readonly updated_at: Date
-}
-
 @Injectable()
 /** The pipelines of public.automation_pipelines: one row per template per workspace. */
 export class AutomationPipelinesService {
@@ -130,7 +119,7 @@ export class AutomationPipelinesService {
         def: TemplateDefinition,
         write: PipelineWrite,
     ): Promise<PipelineRow> {
-        const saved = await this.entityManager
+        await this.entityManager
             .createQueryBuilder(AutomationPipelineEntity, "ap")
             .insert()
             .values({
@@ -152,29 +141,10 @@ export class AutomationPipelinesService {
                 updatedAt: () => "now()",
             })
             .orUpdate(UPSERT_COLUMNS, ["workspace_id", "template_key"])
-            .returning(RETURNED_COLUMNS)
             .execute()
-        const [row] = Array.isArray(saved.raw) ? (saved.raw as Array<SavedRow>) : []
-        if (row === undefined) throw new AutomationPipelinesError({ code: AutomationPipelinesErrorCode.NotSaved })
-        return {
-            id: row.id,
-            workspace_id: row.workspace_id,
-            template_key: row.template_key,
-            name: row.name,
-            module_key: row.module_key,
-            enabled: row.enabled,
-            dismissed: row.dismissed,
-            config: row.config,
-            body: row.body,
-            body_version: row.body_version,
-            template_version: row.template_version,
-            based_on_context: row.based_on_context,
-            approval_streak: row.approval_streak,
-            trust_offered_at: row.trust_offered_at === null ? null : row.trust_offered_at.toISOString(),
-            auto_send: row.auto_send,
-            created_at: row.created_at.toISOString(),
-            updated_at: row.updated_at.toISOString(),
-        }
+        const stored = await this.findPipeline(workspaceId, def.key)
+        if (stored === null) throw new AutomationPipelinesError({ code: AutomationPipelinesErrorCode.NotSaved })
+        return stored
     }
 
     /** Records the trust ladder after a decision. */
