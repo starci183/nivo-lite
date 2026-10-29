@@ -18,13 +18,15 @@ import { ConnectionsUpkeepService } from "./connections-upkeep.service"
 import { ConnectionsService } from "./connections.service"
 import { ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
 import { ConnectionEntity } from "./persistence/entities"
-import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { AgentConnectionEntity } from "@modules/domain/agent-connections"
 
 const buildWith = async (entityManager: MockEntityManager, urls: Urls = {}) => {
     const secrets = mock<ConnectionSecretsService>()
     const interest = mock<ConnectorInterestService>()
     const upkeep = mock<ConnectionsUpkeepService>()
+    const seats = mock<WorkspaceMemberSeatsService>()
+    seats.activeSeatOfUser.mockResolvedValue(seatOf("owner"))
     const logger = mock<Logger>()
     const options = { channelTokenKey: new Secret("k"), siteUrl: "https://site.example.com", ...urls }
     const moduleRef = await Test.createTestingModule({
@@ -34,11 +36,12 @@ const buildWith = async (entityManager: MockEntityManager, urls: Urls = {}) => {
             { provide: CONNECTIONS_OPTIONS, useValue: options },
             { provide: LOGGER, useValue: logger },
             { provide: ConnectionSecretsService, useValue: secrets },
+            { provide: WorkspaceMemberSeatsService, useValue: seats },
             { provide: ConnectorInterestService, useValue: interest },
             { provide: ConnectionsUpkeepService, useValue: upkeep },
         ],
     }).compile()
-    return { service: moduleRef.get(ConnectionsService), secrets, interest, upkeep }
+    return { service: moduleRef.get(ConnectionsService), secrets, interest, upkeep, seats }
 }
 const build = async (entityManager: MockEntityManager, urls: Urls = {}) =>
     (await buildWith(entityManager, urls)).service
@@ -54,7 +57,13 @@ const withBuilders = (
     em,
     fakes: queueQueryBuilders(em, answers),
 })
-const memberOf = (role: string) => ({ getRawOne: { role, displayName: "Lan" } })
+const seatOf = (role: "owner" | "manager" | "staff") => ({
+    memberId: "m-1",
+    userId: "user-1",
+    role,
+    displayName: "Lan",
+    status: "active" as const,
+})
 const whereOf = (fake: FakeQueryBuilder | undefined) => fake?.callsOf("where")
 const setOf = (fake: FakeQueryBuilder | undefined) => evaluatedValues(fake?.callsOf("set")[0]?.[0])
 
@@ -80,21 +89,18 @@ describe("ConnectionsService > addresses", () => {
 
 describe("ConnectionsService > authorize", () => {
     it("answers the member holding one of the roles", async () => {
-        const { em, fakes } = withBuilders([memberOf("owner")])
-        await expect((await build(em)).authorize(actor, ["owner"])).resolves.toEqual({
-            role: "owner",
-            displayName: "Lan",
-        })
-        expect(em.createQueryBuilder).toHaveBeenCalledWith(WorkspaceMemberEntity, "m")
-        expect(whereOf(fakes[0])?.[0]?.[1]).toEqual({ workspaceId: "ws-1", userId: "user-1" })
+        const { service, seats } = await buildWith(mockEntityManager())
+        await expect(service.authorize(actor, ["owner"])).resolves.toEqual({ role: "owner", displayName: "Lan" })
+        expect(seats.activeSeatOfUser).toHaveBeenCalledWith("ws-1", "user-1")
     })
 
     it.each([
-        { name: "refuses a caller who is not an active member", answer: {}, roles: ["owner"] },
-        { name: "refuses a member whose role is not listed", answer: memberOf("staff"), roles: ["owner", "manager"] },
-    ] as const)("$name", async ({ answer, roles }) => {
-        const { em } = withBuilders([answer])
-        await expect((await build(em)).authorize(actor, roles)).rejects.toMatchObject(forbidden)
+        { name: "refuses a caller who is not an active member", seat: null, roles: ["owner"] },
+        { name: "refuses a member whose role is not listed", seat: seatOf("staff"), roles: ["owner", "manager"] },
+    ] as const)("$name", async ({ seat, roles }) => {
+        const { service, seats } = await buildWith(mockEntityManager())
+        seats.activeSeatOfUser.mockResolvedValue(seat)
+        await expect(service.authorize(actor, roles)).rejects.toMatchObject(forbidden)
     })
 })
 
@@ -382,14 +388,6 @@ describe("ConnectionsService > recordEvent", () => {
         expect(fakes[0]?.callsOf("returning")).toEqual([["name, environment"]])
     })
 
-    it("names a connection whose row carries no text name as an empty name", async () => {
-        const { em } = withBuilders([{ execute: { raw: [{ environment: "live" }] } }])
-        await expect((await build(em)).recordEvent("c1", { amount: 5, content: "hi", at: AT })).resolves.toEqual({
-            name: "",
-            environment: "live",
-        })
-    })
-
     it("answers null for a connection that does not exist", async () => {
         const { em } = withBuilders([{ execute: { raw: [] } }])
         await expect((await build(em)).recordEvent("c9", { amount: 5, content: "hi", at: AT })).resolves.toBeNull()
@@ -399,10 +397,7 @@ describe("ConnectionsService > recordEvent", () => {
 describe("ConnectionsService > firstEvent", () => {
     it("answers the status and first event to a manager", async () => {
         const first = { amount: 5, content: "hi", at: AT }
-        const { em } = withBuilders([
-            memberOf("manager"),
-            { getRawOne: { ...ROW, firstEvent: first, status: "connected" } },
-        ])
+        const { em } = withBuilders([{ getRawOne: { ...ROW, firstEvent: first, status: "connected" } }])
         await expect((await build(em)).firstEvent(actor, "c1")).resolves.toEqual({
             status: "connected",
             firstEvent: first,
@@ -410,22 +405,21 @@ describe("ConnectionsService > firstEvent", () => {
     })
 
     it("refuses a member who is neither owner nor manager", async () => {
-        const { em } = withBuilders([memberOf("staff")])
-        await expect((await build(em)).firstEvent(actor, "c1")).rejects.toMatchObject(forbidden)
+        const { service, seats } = await buildWith(mockEntityManager())
+        seats.activeSeatOfUser.mockResolvedValue(seatOf("staff"))
+        await expect(service.firstEvent(actor, "c1")).rejects.toMatchObject(forbidden)
     })
 })
 
 describe("ConnectionsService > wantConnector", () => {
     it("records interest in a planned connector once", async () => {
-        const { em } = withBuilders([memberOf("owner")])
-        const { service, interest } = await buildWith(em)
+        const { service, interest } = await buildWith(mockEntityManager())
         await expect(service.wantConnector(actor, "shopee")).resolves.toBeUndefined()
         expect(interest.note).toHaveBeenCalledWith("ws-1", "shopee", "user-1")
     })
 
     it("refuses a connector that is not planned", async () => {
-        const { em } = withBuilders([memberOf("owner")])
-        await expect((await build(em)).wantConnector(actor, "sepay")).rejects.toMatchObject({
+        await expect((await build(mockEntityManager())).wantConnector(actor, "sepay")).rejects.toMatchObject({
             code: ConnectionsErrorCode.ConnectorNotFound,
             params: { id: "sepay" },
         })

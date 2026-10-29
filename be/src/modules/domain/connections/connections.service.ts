@@ -4,9 +4,9 @@ import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
 import { ConnectorInterestService } from "@modules/domain/connector-interest"
 import type { OptionalStoredSecret } from "@modules/domain/connection-secrets"
-import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { AgentConnectionEntity } from "@modules/domain/agent-connections"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ok, refused } from "@modules/platform/primitives"
@@ -47,7 +47,7 @@ import { ConnectionsLogEvent } from "./connections.log-events"
 import type { ConnectionsOptions } from "./connections.options"
 import { ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
 import { ConnectionEntity } from "./persistence/entities"
-import { returnedIds, returnedRows, projectConnections } from "./persistence/connection.projection"
+import { returnedIds, projectConnections } from "./persistence/connection.projection"
 import type { ConnectionProjection } from "./persistence/connection.projection"
 
 /** The most rows any list of connections returns. */
@@ -67,6 +67,7 @@ export class ConnectionsService {
         @InjectConnectionsOptions() options: ConnectionsOptions,
         @InjectLogger() private readonly logger: Logger,
         private readonly secrets: ConnectionSecretsService,
+        private readonly seats: WorkspaceMemberSeatsService,
         private readonly interest: ConnectorInterestService,
         private readonly upkeep: ConnectionsUpkeepService,
     ) {
@@ -96,21 +97,12 @@ export class ConnectionsService {
 
     /** Requires an active member of the workspace holding one of the roles; answers who they are. */
     async authorize(actor: ConnectionActor, roles: ReadonlyArray<ConnectionRole>): Promise<ConnectionMember> {
-        const row = await this.entityManager
-            .createQueryBuilder(WorkspaceMemberEntity, "m")
-            .select("m.role", "role")
-            .addSelect("m.display_name", "displayName")
-            .where("m.workspace_id = :workspaceId AND m.user_id = :userId AND m.status = 'active'", {
-                workspaceId: actor.workspaceId,
-                userId: actor.principalId,
-            })
-            .limit(1)
-            .getRawOne<ConnectionMember>()
+        const seat = await this.seats.activeSeatOfUser(actor.workspaceId, actor.principalId)
         const acceptedRoles: ReadonlyArray<string> = roles
-        if (row === undefined || !acceptedRoles.includes(row.role)) {
+        if (seat === null || !acceptedRoles.includes(seat.role)) {
             throw new ConnectionsError({ code: ConnectionsErrorCode.Forbidden })
         }
-        return { role: row.role, displayName: row.displayName }
+        return { role: seat.role, displayName: seat.displayName }
     }
 
     private selectConnections(manager: EntityManager): SelectQueryBuilder<ConnectionEntity> {
@@ -340,13 +332,9 @@ export class ConnectionsService {
             .setParameters({ at: event.at, first: JSON.stringify(first) })
             .returning("name, environment")
             .execute()
-        const [row] = returnedRows(recorded.raw)
+        const [row] = returnedRows(recorded.raw, rowShape({ name: "string", environment: "string?" }))
         if (row === undefined) return null
-        const name: unknown = Reflect.get(row, "name")
-        return {
-            name: typeof name === "string" ? name : "",
-            environment: Reflect.get(row, "environment") === "test" ? "test" : "live",
-        }
+        return { name: row.name, environment: row.environment === "test" ? "test" : "live" }
     }
 
     /** The wizard polling: has the first event arrived for this connection (manager). */

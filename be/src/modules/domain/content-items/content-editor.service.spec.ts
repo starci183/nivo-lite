@@ -194,11 +194,14 @@ describe("ContentEditorService create", () => {
         ])
     })
 
-    it.each([[[]], [[null]]])("refuses a missing create result (%j)", async (raw) => {
+    it.each([
+        [[], { code: ContentItemsErrorCode.NotWritten }],
+        [[null], { code: "DATABASE_RETURNING_ROW_REJECTED" }],
+    ])("refuses a missing or malformed create result (%j)", async (raw, refusal) => {
         const { service } = await build(mockEntityManager(), [{ execute: { raw } }])
         await expect(
             service.create("user-1", "workspace-1", { title: "Launch", channels: ["facebook"], scheduledAt: null }),
-        ).rejects.toMatchObject({ code: ContentItemsErrorCode.NotWritten })
+        ).rejects.toMatchObject(refusal)
     })
 
     it("refuses a pillar outside the workspace", async () => {
