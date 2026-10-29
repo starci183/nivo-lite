@@ -58,7 +58,7 @@ export const summaryOf = (summary: unknown, result: unknown, countWord: (key: st
 }
 
 /** The result n8n reported, or a mark that it was too big to keep. */
-export const boundedResult = (result: unknown): Readonly<Record<string, unknown>> | null => {
+export const boundedResult = (result: unknown): object | null => {
     if (!isRecord(result)) return null
     return JSON.stringify(result).length <= RESULT_MAX ? result : { truncated: true }
 }

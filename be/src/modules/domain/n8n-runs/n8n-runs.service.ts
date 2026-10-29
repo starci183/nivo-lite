@@ -1,12 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
 import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
 import { InjectN8nClient, N8nError, N8nErrorCode } from "@modules/integrations/n8n"
 import type { N8nClient } from "@modules/integrations/n8n"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import { InjectIds } from "@modules/platform/ids"
 import type { Ids } from "@modules/platform/ids"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
@@ -39,6 +38,9 @@ import {
 
 /** The settings key of the public address n8n calls back. */
 const API_BASE_KEY = "api_base"
+
+/** The row a run insert returns to the transaction that won it. */
+const isCreatedRun = rowShape({ id: "string" })
 
 @Injectable()
 /** The runs of the shared n8n workflows: starting one, delivering it to n8n, proving the token n8n calls back with and closing it. */
@@ -82,7 +84,7 @@ export class N8nRunsService {
                 .orIgnore()
                 .returning(["id"])
                 .execute()
-            if ((created.raw as Array<unknown>).length === 0) return null
+            if (returnedRows(created.raw, isCreatedRun).length === 0) return null
             const run = { id: runId, token }
             await this.queue.enqueueEmit(
                 {
@@ -189,7 +191,7 @@ export class N8nRunsService {
         workspaceId: string,
         status: string,
         summary: string | null,
-        result: Readonly<Record<string, unknown>> | null,
+        result: object | null,
     ): Promise<void> {
         const closed = await this.entityManager.update(
             N8nRunEntity,
@@ -197,7 +199,7 @@ export class N8nRunsService {
             {
                 status,
                 summary,
-                result: result as QueryDeepPartialEntity<N8nRunEntity["result"]>,
+                result,
                 finishedAt: () => "now()",
             },
         )
