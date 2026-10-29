@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { ConnectionBindingFacts } from "./connection-bindings-read.contracts"
+import type { ConnectionBindingFacts, ConnectionState } from "./connection-bindings-read.contracts"
 import { ConnectionEntity } from "./persistence/entities"
 
 /** The text a provider reported in the public meta, trimmed; null when it is missing or blank. */
@@ -45,5 +45,23 @@ export class ConnectionBindingsReadService {
             lock: { mode: "pessimistic_read" },
         })
         return row !== null
+    }
+
+    /** The workspace that owns the connection; null when there is no such connection. */
+    async workspaceOf(connectionId: string, manager: EntityManager): Promise<string | null> {
+        const row = await manager.findOne(ConnectionEntity, {
+            select: { id: true, workspaceId: true },
+            where: { id: connectionId },
+        })
+        return row?.workspaceId ?? null
+    }
+
+    /** The name and environment of the connection; null when there is no such connection. */
+    async stateOf(connectionId: string, manager: EntityManager): Promise<ConnectionState | null> {
+        const row = await manager.findOne(ConnectionEntity, {
+            select: { id: true, name: true, environment: true },
+            where: { id: connectionId },
+        })
+        return row === null ? null : { name: row.name, environment: row.environment }
     }
 }

@@ -81,3 +81,23 @@ describe("ConnectionBindingsReadService > holds", () => {
         await expect(service.holds("w1", "c9", handed)).resolves.toBe(false)
     })
 })
+
+describe("ConnectionBindingsReadService > owner and state", () => {
+    it("answers the workspace and the state of the connection", async () => {
+        const handed = mockEntityManager({
+            findOne: [ConnectionEntity, connectionOf({ workspaceId: "w1", environment: "live" })],
+        })
+        const service = await build(mockEntityManager())
+
+        await expect(service.workspaceOf("c1", handed)).resolves.toBe("w1")
+        await expect(service.stateOf("c1", handed)).resolves.toEqual({ name: "Shop bot", environment: "live" })
+    })
+
+    it("answers null for a connection that does not exist", async () => {
+        const handed = mockEntityManager({ findOne: [ConnectionEntity, null] })
+        const service = await build(mockEntityManager())
+
+        await expect(service.workspaceOf("c9", handed)).resolves.toBeNull()
+        await expect(service.stateOf("c9", handed)).resolves.toBeNull()
+    })
+})

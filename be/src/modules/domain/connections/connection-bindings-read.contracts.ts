@@ -15,3 +15,11 @@ export interface ConnectionBindingFacts {
     /** The masked account the provider reported, trimmed, or null. */
     readonly accountMasked: string | null
 }
+
+/** The name and the environment a connection runs in. */
+export interface ConnectionState {
+    /** The display name. */
+    readonly name: string
+    /** The environment the connection runs in. */
+    readonly environment: string
+}
