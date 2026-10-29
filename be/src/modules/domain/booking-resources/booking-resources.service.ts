@@ -5,9 +5,13 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { BookingResourceSaved, BookingResourceWrite } from "./booking-resources.contracts"
 import { BookingResourceEntity } from "./persistence/entities"
 
+/** True when a RETURNING row names the key of a stored resource. */
+const isSavedRow = (value: unknown): value is BookingResourceSaved =>
+    typeof value === "object" && value !== null && "id" in value && typeof value.id === "string"
+
 /** The ids a statement with `returning id` hands back. */
 const savedOf = (raw: unknown): Array<BookingResourceSaved> =>
-    Array.isArray(raw) ? (raw as Array<BookingResourceSaved>).slice(0, 1).map((row) => ({ id: row.id })) : []
+    Array.isArray(raw) ? raw.filter(isSavedRow).slice(0, 1).map((row) => ({ id: row.id })) : []
 
 @Injectable()
 /** Owns resource persistence; callers authorize setup writes and supply their atomic calendar transaction. */
