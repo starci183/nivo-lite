@@ -12,7 +12,7 @@ import type {
     InstallationScope,
     MaybeFact,
 } from "./brain-facts.contracts"
-import { keyOf } from "./fact-columns.policy"
+import { factKeyOf } from "./fact-columns.policy"
 import { toFactRecord } from "./fact-record.mapper"
 import { inForce, searchFacts, visibleTo } from "./fact-view.policy"
 import { BrainFactEntity } from "./persistence/entities"
@@ -99,7 +99,7 @@ export class BrainFactsReadService {
         installationId: InstallationScope,
     ): Promise<ReadonlyArray<FactRecord>> {
         const rows = await em.find(BrainFactEntity, {
-            where: { ...keyOf(workspaceId, subjectKey, attribute, installationId), status },
+            where: { ...factKeyOf(workspaceId, subjectKey, attribute, installationId), status },
             order: { proposedAt: "DESC" },
             take: 50,
         })

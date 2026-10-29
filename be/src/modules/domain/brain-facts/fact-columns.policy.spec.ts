@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import {
     isBrainFactEntity as isBrainFactEntityReal,
-    keyOf as keyOfReal,
+    factKeyOf as factKeyOfReal,
     RETURNED as RETURNEDReal,
     returnedFacts as returnedFactsReal,
     scopeOf as scopeOfReal,
@@ -11,7 +11,7 @@ import { IsNull } from "typeorm"
 const SUBJECT = Symbol("fact-columns.policy")
 
 let isBrainFactEntity: typeof isBrainFactEntityReal
-let keyOf: typeof keyOfReal
+let factKeyOf: typeof factKeyOfReal
 let RETURNED: typeof RETURNEDReal
 let returnedFacts: typeof returnedFactsReal
 let scopeOf: typeof scopeOfReal
@@ -23,7 +23,7 @@ beforeAll(async () => {
                 provide: SUBJECT,
                 useValue: {
                     isBrainFactEntity: isBrainFactEntityReal,
-                    keyOf: keyOfReal,
+                    factKeyOf: factKeyOfReal,
                     RETURNED: RETURNEDReal,
                     returnedFacts: returnedFactsReal,
                     scopeOf: scopeOfReal,
@@ -31,9 +31,9 @@ beforeAll(async () => {
             },
         ],
     }).compile()
-    ;({ isBrainFactEntity, keyOf, RETURNED, returnedFacts, scopeOf } = moduleRef.get<{
+    ;({ isBrainFactEntity, factKeyOf, RETURNED, returnedFacts, scopeOf } = moduleRef.get<{
         isBrainFactEntity: typeof isBrainFactEntityReal
-        keyOf: typeof keyOfReal
+        factKeyOf: typeof factKeyOfReal
         RETURNED: typeof RETURNEDReal
         returnedFacts: typeof returnedFactsReal
         scopeOf: typeof scopeOfReal
@@ -99,9 +99,9 @@ describe("fact-columns.policy", () => {
         })
     })
 
-    describe("keyOf", () => {
+    describe("factKeyOf", () => {
         it("builds the condition of one key in an installation", () => {
-            expect(keyOf("ws-1", "menu", "price", "inst-1")).toEqual({
+            expect(factKeyOf("ws-1", "menu", "price", "inst-1")).toEqual({
                 workspaceId: "ws-1",
                 subjectKey: "menu",
                 attribute: "price",
@@ -110,7 +110,7 @@ describe("fact-columns.policy", () => {
         })
 
         it("scopes a workspace-wide key with IS NULL", () => {
-            expect(keyOf("ws-1", "menu", "price", null)).toEqual({
+            expect(factKeyOf("ws-1", "menu", "price", null)).toEqual({
                 workspaceId: "ws-1",
                 subjectKey: "menu",
                 attribute: "price",
