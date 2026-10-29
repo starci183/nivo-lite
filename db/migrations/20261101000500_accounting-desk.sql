@@ -3,4 +3,3 @@
 -- folio payments, and posts the daily summary card and the due-date reminders into the Ke toan room. No table: the sources stay
 -- behind the gateway and the tax profile is Second Brain knowledge.
 SELECT pgmq.create('accounting_desk');
-SELECT cron.schedule('accounting-desk-morning', '30 23 * * *', $cron$SELECT pgmq.send('accounting_desk', '{"name":"accounting_desk.morning","payload":{}}'::jsonb)$cron$);

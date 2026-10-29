@@ -84,9 +84,9 @@ components:
     required: true
   nivo-postgres:
     role: stateful
-    image: supabase/postgres:17.11.0.006@sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2
+    image: ghcr.io/starci183/nivo-lite-db:0.3.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
     compose: infra/swarm/stack.yaml
-    purpose: The production PostgreSQL 17 (owner ruling 2026-10-29, self-hosted, production left Supabase cloud). Internal only on the private agents network as nivo-postgres:5432, no published port; the supabase/postgres image carries pg_cron, pg_net, pgmq, vector, unaccent and pgcrypto. The persisted named volume nivo-engine_postgres-data holds the data; the api and the mcp gateway connect as the least-privilege app_be role (PRIMARY_DB_URL).
+    purpose: The production PostgreSQL 17 (owner ruling 2026-10-29, self-hosted, production left Supabase cloud; rulings lite-official-postgres-image, lite-db-image-in-stacks). Internal only on the private agents network as nivo-postgres:5432, no published port; the managed db image (.starcistacks/images/db/Dockerfile, the Docker Official postgres image) carries pgvector and pgmq, the contrib extensions unaccent and pgcrypto ship with it. The persisted named volume nivo-engine_postgres-data holds the data; the api and the mcp gateway connect as the least-privilege app_be role (PRIMARY_DB_URL).
     required: true
   nivo-postgres-backup:
     role: stateful
@@ -486,6 +486,7 @@ environments:
       images:
         nivo-api: {app: api}
         nivo-mcp: {app: mcp}
+        nivo-postgres: {app: db}
         nivo-web-app:
           app: web
           buildArgs:

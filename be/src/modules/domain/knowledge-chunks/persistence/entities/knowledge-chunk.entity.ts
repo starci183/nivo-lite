@@ -27,8 +27,8 @@ export class KnowledgeChunkEntity {
     @Column({ name: "content", type: "text" })
     content!: string
 
-    /** The vector as pgvector text, or null; it is read only by the database, never selected. */
-    @Column({ name: "embedding", type: "text", nullable: true, select: false })
+    /** The pgvector vector, or null; it is read only by the database, never selected. */
+    @Column({ name: "embedding", type: "vector", nullable: true, select: false })
     embedding!: string | null
 
     /** The search vector the database generates from the text. */

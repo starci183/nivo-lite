@@ -270,25 +270,14 @@ services:
       rollback_config: { parallelism: 1, order: stop-first, monitor: 30s }
       restart_policy: { condition: any, delay: 5s }
 
-  # The database: the supabase/postgres image is plain PostgreSQL 17 with the extensions the migrations need (pg_cron, pg_net, pgmq, vector,
-  # unaccent, pgcrypto). Private `agents` network only (nivo-postgres:5432), no published port. shared_preload_libraries and cron.database_name are
-  # explicit, so pg_cron and pg_net load whatever the image default is. The superuser password is the sealed POSTGRES_PASSWORD of the `postgres`
-  # member (POSTGRES_PASSWORD_FILE pointer added by the override); the app_be password is set by the runbook (infra/swarm/recovery/db-runbook.md).
+  # The database: the app's managed db image (rulings lite-official-postgres-image, lite-db-image-in-stacks), built by `starci app stack build`
+  # from .starcistacks/images/db/Dockerfile: the Docker Official postgres image plus pgvector and pgmq (the event bus). Private `agents` network
+  # only (nivo-postgres:5432), no published port. The superuser is `postgres` with the sealed POSTGRES_PASSWORD of the `postgres` member
+  # (POSTGRES_PASSWORD_FILE pointer added by the override); the app_be password is set by the runbook (infra/swarm/recovery/db-runbook.md).
   # Stateful: stop-first, one replica pinned to the manager with its single-host volume. stop_grace_period lets a fast shutdown checkpoint.
   nivo-postgres:
-    image: supabase/postgres:17.11.0.006@sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2
-    command:
-      - postgres
-      - -D
-      - /etc/postgresql
-      - -c
-      - shared_preload_libraries=pg_stat_statements,pgaudit,plpgsql,plpgsql_check,pg_cron,pg_net,pgsodium,auto_explain,pg_tle,plan_filter,supabase_vault
-      - -c
-      - cron.database_name=postgres
-      - -c
-      - shared_buffers=512MB
-      - -c
-      - max_connections=120
+    image: ghcr.io/starci183/nivo-lite-db@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    command: ["postgres", "-c", "shared_buffers=512MB", "-c", "max_connections=120"]
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks: [agents]

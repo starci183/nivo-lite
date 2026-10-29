@@ -326,28 +326,6 @@ CREATE INDEX job_outbox_reconcile_due ON public.job_outbox (reconcile_at, queue)
 
 -- 16. The recurring ticks write their occurrence to the outbox on the same schedules, queues and job names; the
 --     dedupe key pins one row per scheduled minute so a replayed tick cannot double-run.
-SELECT cron.unschedule('agents-sync-all');
-SELECT cron.schedule('agents-sync-all', '*/5 * * * *', $cron$SELECT public.job_enqueue(NULL::uuid, 'agents', 'agents.sync', '{}'::jsonb, 'agents-sync-all:' || date_trunc('minute', clock_timestamp()))$cron$);
-SELECT cron.unschedule('automation-tick');
-SELECT cron.schedule('automation-tick', '*/1 * * * *', $cron$SELECT public.job_enqueue(NULL::uuid, 'automation', 'automation.tick', '{}'::jsonb, 'automation-tick:' || date_trunc('minute', clock_timestamp()))$cron$);
-SELECT cron.unschedule('connection-health-tick');
-SELECT cron.schedule('connection-health-tick', '*/15 * * * *', $cron$SELECT public.job_enqueue(NULL::uuid, 'connection_health', 'connection_health', '{"silentAfterHours":72}'::jsonb, 'connection-health-tick:' || date_trunc('minute', clock_timestamp()))$cron$);
-SELECT cron.unschedule('content-tick');
-SELECT cron.schedule('content-tick', '*/15 * * * *', $cron$SELECT public.job_enqueue(NULL::uuid, 'content_tick', 'content_tick', '{}'::jsonb, 'content-tick:' || date_trunc('minute', clock_timestamp()))$cron$);
-SELECT cron.unschedule('data-sync-tick');
-SELECT cron.schedule('data-sync-tick', '*/1 * * * *', $cron$SELECT public.job_enqueue(NULL::uuid, 'data_sync', 'data_sync', '{"tick":true}'::jsonb, 'data-sync-tick:' || date_trunc('minute', clock_timestamp()))$cron$);
-SELECT cron.unschedule('decisions-drain-work');
-SELECT cron.schedule('decisions-drain-work', '*/1 * * * *', $cron$SELECT public.job_enqueue(NULL::uuid, 'decisions', 'decisions.drain-work', '{}'::jsonb, 'decisions-drain-work:' || date_trunc('minute', clock_timestamp()))$cron$);
-SELECT cron.unschedule('shifts-tick');
-SELECT cron.schedule('shifts-tick', '*/1 * * * *', $cron$SELECT public.job_enqueue(NULL::uuid, 'shifts_alerts', 'shifts.tick', '{"kind":"tick"}'::jsonb, 'shifts-tick:' || date_trunc('minute', clock_timestamp()))$cron$);
-SELECT cron.unschedule('zalo-refresh-tick');
-SELECT cron.schedule('zalo-refresh-tick', '0 */6 * * *', $cron$SELECT public.job_enqueue(NULL::uuid, 'zalo_refresh', 'zalo_refresh', '{"withinMs":25200000}'::jsonb, 'zalo-refresh-tick:' || date_trunc('minute', clock_timestamp()))$cron$);
-SELECT cron.unschedule('accounting-desk-morning');
-SELECT cron.schedule('accounting-desk-morning', '30 23 * * *', $cron$SELECT public.job_enqueue(NULL::uuid, 'accounting_desk', 'accounting_desk.morning', '{}'::jsonb, 'accounting-desk-morning:' || date_trunc('minute', clock_timestamp()))$cron$);
-SELECT cron.unschedule('marketing-tick');
-SELECT cron.schedule('marketing-tick', '*/15 * * * *', $cron$SELECT public.job_enqueue(NULL::uuid, 'marketing_tick', 'marketing_tick', '{}'::jsonb, 'marketing-tick:' || date_trunc('minute', clock_timestamp()))$cron$);
-SELECT cron.unschedule('decisions-expire-approvals');
-SELECT cron.schedule('decisions-expire-approvals', '*/1 * * * *', $cron$SELECT public.job_enqueue(NULL::uuid, 'decisions', 'decisions.expire-approvals', '{}'::jsonb, 'decisions-expire-approvals:' || date_trunc('minute', clock_timestamp()))$cron$);
 
 
 -- Backend-only definer functions.

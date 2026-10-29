@@ -5,8 +5,6 @@
 -- and move the queue ticks to migration-owned cron jobs; on a database created from this file every one of them is a no-op or an upsert.
 
 -- Extensions the schema uses (the platform ones - pgcrypto, uuid-ossp, supabase_vault - come with the stack).
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-CREATE EXTENSION IF NOT EXISTS pg_net;
 CREATE EXTENSION IF NOT EXISTS pgmq;
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA extensions;
@@ -21090,18 +21088,6 @@ grant INSERT, SELECT on table pgmq.a_bank_credit_received to app_be;
 grant INSERT, SELECT on table pgmq.a_payment_order_requested to app_be;
 
 -- Realtime.
-alter publication supabase_realtime add table public.agent_conversations;
-alter publication supabase_realtime add table public.agent_messages;
-alter publication supabase_realtime add table public.brain_extractions;
-alter publication supabase_realtime add table public.brain_facts;
-alter publication supabase_realtime add table public.brain_lessons;
-alter publication supabase_realtime add table public.knowledge_gaps;
-alter publication supabase_realtime add table public.knowledge_sources;
-alter publication supabase_realtime add table public.messages;
-alter publication supabase_realtime add table public.module_setup_messages;
-alter publication supabase_realtime add table public.office_command_candidates;
-alter publication supabase_realtime add table public.payment_orders;
-alter publication supabase_realtime add table public.work_items;
 
 -- Scheduled jobs: the queue ticks are declared by 20261026000300_job-ticks.sql (a cron command is one pgmq.send; the pruning and reaping jobs of the old
 -- baseline run as queue jobs of the back end, not as cron SQL).

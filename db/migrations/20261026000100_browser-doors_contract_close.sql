@@ -371,8 +371,6 @@ DROP POLICY IF EXISTS objects_videos_manager_delete ON storage.objects;
 DROP POLICY IF EXISTS objects_videos_member_select ON storage.objects;
 
 -- The realtime publication carried the tables of the retired browser subscriptions; it is recreated empty (the platform expects it to exist).
-DROP PUBLICATION IF EXISTS supabase_realtime;
-CREATE PUBLICATION supabase_realtime;
 
 -- Definer functions are not callable by the browser roles (the back end keeps its own grants).
 REVOKE EXECUTE ON FUNCTION public.accept_invite(text) FROM anon, authenticated;

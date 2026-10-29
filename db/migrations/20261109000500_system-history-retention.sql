@@ -69,9 +69,4 @@ GRANT EXECUTE ON FUNCTION public.system_history_sweep(integer, integer, integer)
 
 -- 23:30 Asia/Ho_Chi_Minh (UTC+7, no DST) is 16:30 on the cron clock (cron.timezone is GMT). The windows ride in the payload: change
 -- them with cron.alter_job; `cli jobs tick system-history-retention` sends the same tick by hand.
-SELECT cron.schedule(
-    'system-history-retention',
-    '30 16 * * *',
-    $cron$SELECT public.job_enqueue(NULL::uuid, 'system_history_retention', 'system_history_retention', '{"doneDays":1,"failedDays":7,"batch":5000}'::jsonb, 'system-history-retention:' || date_trunc('minute', clock_timestamp()))$cron$
-);
 COMMIT;

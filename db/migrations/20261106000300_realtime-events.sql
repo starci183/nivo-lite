@@ -35,8 +35,3 @@ grant select, insert, delete on table public.realtime_events to app_be;
 -- The retention sweep that keeps realtime_events bounded: a BullMQ queue (realtime_retention) fed by the job outbox, ticked every
 -- minute by pg_cron. The tick only enqueues one outbox row; the delete belongs to the sweep-realtime-events job the runner claims.
 -- `cli jobs tick realtime-retention-tick` sends the same tick by hand.
-select cron.schedule(
-    'realtime-retention-tick',
-    '* * * * *',
-    $cron$select public.job_enqueue(null::uuid, 'realtime_retention', 'realtime_retention', '{"tick":true}'::jsonb, 'realtime-retention-tick:' || date_trunc('minute', clock_timestamp()))$cron$
-);

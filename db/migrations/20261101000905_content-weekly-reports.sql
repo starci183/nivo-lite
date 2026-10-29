@@ -26,4 +26,3 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.content_weekly_reports TO a
 -- The AI Marketing tick (be/src/features/jobs/run-marketing-tick): every quarter hour it publishes the Zalo OA articles whose
 -- moment has come and posts the weekly report cards that are due.
 SELECT pgmq.create('marketing_tick');
-SELECT cron.schedule('marketing-tick', '*/15 * * * *', $cron$SELECT pgmq.send('marketing_tick', '{"name":"marketing_tick","payload":{}}'::jsonb)$cron$);
