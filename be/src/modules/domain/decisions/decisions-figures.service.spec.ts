@@ -46,6 +46,7 @@ describe("DecisionsFiguresService", () => {
         expect(em.find).toHaveBeenCalledWith(DecisionEntity, {
             select: { workItemId: true, leadId: true, deciderKind: true, outcome: true, createdAt: true },
             where: { workspaceId: "ws-1", createdAt: MoreThanOrEqual(from) },
+            take: 5000,
         })
     })
 

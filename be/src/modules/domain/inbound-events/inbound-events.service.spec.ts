@@ -286,6 +286,7 @@ describe("InboundEventsService find", () => {
         expect(tx.em.find).toHaveBeenCalledTimes(1)
         expect(tx.em.find).toHaveBeenCalledWith(InboundEventEntity, {
             where: { workspaceId: "ws-1", id: In(["event-1"]) },
+            take: 1,
         })
     })
 
