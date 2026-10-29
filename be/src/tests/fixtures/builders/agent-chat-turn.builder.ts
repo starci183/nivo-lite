@@ -61,8 +61,9 @@ export const turnOwnersOf = (turn: ChatTurnFacts | null) => {
                   deliveryStatus: turn.deliveryStatus,
               },
     )
+    const replyId = turn?.replyId ?? null
     deliveries.agentReplyTo.mockResolvedValue(
-        turn === null || turn.replyId === null ? null : { id: turn.replyId, deliveryStatus: turn.replyDeliveryStatus },
+        turn === null || replyId === null ? null : { id: replyId, deliveryStatus: turn.replyDeliveryStatus },
     )
     const conversationReads = mock<AgentConversationsReadService>()
     conversationReads.channelOf.mockResolvedValue(turn?.channel ?? null)

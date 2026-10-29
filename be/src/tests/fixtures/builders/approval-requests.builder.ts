@@ -219,6 +219,7 @@ export const ESCALATION_EXPIRY_SET = {
 
 /** An approved sales refund resolved by member m-1 on step c-1, as the history reads see it. */
 export const historyRequestOf = builder<ApprovalRequestEntity>({
+    ...approvalRequestEntityOf(),
     id: "r-1",
     department: "sales",
     action: "refund",
