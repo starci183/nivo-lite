@@ -1,3 +1,4 @@
+import { EVENTS_ERROR_KINDS } from "@modules/events/api"
 import { APPROVAL_REQUESTS_ERROR_KINDS } from "@modules/domain/approval-requests"
 import { AUTHORITY_RULES_ERROR_KINDS } from "@modules/domain/authority-rules"
 import { MEMBER_GRANTS_ERROR_KINDS } from "@modules/domain/member-grants"
@@ -65,4 +66,5 @@ export const API_ERROR_KINDS_2 = [
     DATABASE_ERROR_KINDS,
     DOCUMENTS_ERROR_KINDS,
     HTTP_SECURITY_ERROR_KINDS,
+    EVENTS_ERROR_KINDS,
 ]
