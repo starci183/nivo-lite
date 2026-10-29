@@ -11,20 +11,38 @@ import type { CompletedTask } from "@modules/domain/work-chains"
 import { WorkThreadsLeadsReadService } from "@modules/domain/work-threads"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { recordOf } from "@tests/fixtures/builders/authority-rules.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { DecisionHistoryService } from "./decision-history.service"
 import type { DecisionHistoryFilter } from "./decision-history.service"
 
 const filterOf = builder<DecisionHistoryFilter>({ deciders: null, outcome: null, department: null, limit: 10 })
 
-const loggedOf = builder({
+/** A row of the decision log as the query returns it. */
+interface LoggedLine {
+    readonly id: string
+    readonly work_item_id: string
+    readonly lead_id: string | null
+    readonly department: string
+    readonly action: string
+    readonly decided_by: string
+    readonly decidedByMemberId: string | null
+    readonly decider_kind: string
+    readonly outcome: string
+    readonly reason: string
+    readonly note: string
+    readonly created_at: string
+    readonly sort_key: string
+}
+
+const loggedOf = builder<LoggedLine>({
     id: "decision-1",
     work_item_id: "work-1",
-    lead_id: "lead-1" as string | null,
+    lead_id: "lead-1",
     department: "sales",
     action: "send_quote",
     decided_by: "Mai (stored)",
-    decidedByMemberId: "member-1" as string | null,
+    decidedByMemberId: "member-1",
     decider_kind: "owner",
     outcome: "approved",
     reason: "over_authority",
@@ -103,7 +121,7 @@ const build = async (logged: ReadonlyArray<unknown> = []) => {
     }
 }
 
-describe("DecisionHistoryService", () => {
+describe("DecisionHistoryService merging", () => {
     it("merges the three sources newest first with the names of members, customers and rules", async () => {
         const kit = await build([loggedOf()])
         kit.members.byIds.mockResolvedValue([
@@ -125,7 +143,7 @@ describe("DecisionHistoryService", () => {
             { id: "thread-8", leadId: null },
             { id: "thread-1", leadId: null },
         ])
-        kit.rules.list.mockResolvedValue([{ action: "pay_bill", note: "pay with care" }] as never)
+        kit.rules.list.mockResolvedValue([recordOf({ action: "pay_bill", note: "pay with care" })])
         kit.chains.completedTasks.mockResolvedValue([taskOf()])
         kit.agents.cardsOf.mockResolvedValue([{ id: "agent-1", name: "A", module: "sales", canTagAgentIds: [] }])
         kit.leads.cardsOf.mockResolvedValue([
@@ -143,6 +161,9 @@ describe("DecisionHistoryService", () => {
         expect(lines[3]).toMatchObject({ department: "sales", action: "thread_task", outcome: "completed" })
     })
 
+})
+
+describe("DecisionHistoryService filters and passes", () => {
     it("narrows every source by decider, outcome and module", async () => {
         const kit = await build([])
         kit.members.byIds.mockResolvedValue([{ id: "member-2", displayName: "Binh", role: "staff" }])

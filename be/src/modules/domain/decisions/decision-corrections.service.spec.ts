@@ -2,6 +2,7 @@ import { builder, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { DecisionCorrectionsService } from "./decision-corrections.service"
 import type { CorrectionRow } from "./persistence/corrections.rows"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
@@ -88,7 +89,7 @@ describe("DecisionCorrectionsService", () => {
         })
 
         it("propagates a database failure", async () => {
-            const error = new Error("Decision query failed")
+            const error = new DecisionsError({ code: DecisionsErrorCode.NotFound })
             const em = mockEntityManager()
             em.createQueryBuilder.mockImplementationOnce(() => {
                 throw error

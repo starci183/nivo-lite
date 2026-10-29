@@ -223,7 +223,11 @@ describe("WorkRecorderService", () => {
                 expect.anything(),
             )
         })
+    })
+})
 
+describe("WorkRecorderService finished events", () => {
+    describe("finished", () => {
         it("leaves the inbound event alone when the item came from none", async () => {
             const built = await build()
 
