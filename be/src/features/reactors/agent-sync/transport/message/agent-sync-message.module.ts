@@ -3,7 +3,7 @@ import type { OnModuleInit } from "@nestjs/common"
 import { INSTALLATION_CHANGED_AGENT_SYNC_TOPIC_QUEUE, InjectEventConsumerRegistry } from "@modules/platform/event-bus"
 import type { EventConsumerRegistry } from "@modules/platform/event-bus"
 import { AgentSyncModule } from "../../agent-sync.module"
-import { InstallationChangedConsumer } from "./installation_changed.consumer"
+import { InstallationChangedConsumer } from "./installation-changed.consumer"
 import { ConfigurableModuleClass } from "./agent-sync-message.module-definition"
 
 @Module({ imports: [AgentSyncModule.register({})], providers: [InstallationChangedConsumer] })

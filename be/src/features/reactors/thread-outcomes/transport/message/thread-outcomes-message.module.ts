@@ -3,7 +3,7 @@ import type { OnModuleInit } from "@nestjs/common"
 import { APPROVAL_RESOLVED_THREAD_OUTCOMES_TOPIC_QUEUE, InjectEventConsumerRegistry } from "@modules/platform/event-bus"
 import type { EventConsumerRegistry } from "@modules/platform/event-bus"
 import { ThreadOutcomesModule } from "../../thread-outcomes.module"
-import { ApprovalResolvedConsumer } from "./approval_resolved.consumer"
+import { ApprovalResolvedConsumer } from "./approval-resolved.consumer"
 import { ConfigurableModuleClass } from "./thread-outcomes-message.module-definition"
 
 @Module({ imports: [ThreadOutcomesModule.register({})], providers: [ApprovalResolvedConsumer] })

@@ -6,7 +6,7 @@ import {
 } from "@modules/platform/event-bus"
 import type { EventConsumerRegistry } from "@modules/platform/event-bus"
 import { BookingEffectsModule } from "../../booking-effects.module"
-import { BookingStatusChangedConsumer } from "./booking_status_changed.consumer"
+import { BookingStatusChangedConsumer } from "./booking-status-changed.consumer"
 import { ConfigurableModuleClass } from "./booking-effects-message.module-definition"
 
 @Module({ imports: [BookingEffectsModule.register({})], providers: [BookingStatusChangedConsumer] })

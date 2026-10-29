@@ -3,7 +3,7 @@ import type { OnModuleInit } from "@nestjs/common"
 import { ORDER_CONFIRMED_INVENTORY_TOPIC_QUEUE, InjectEventConsumerRegistry } from "@modules/platform/event-bus"
 import type { EventConsumerRegistry } from "@modules/platform/event-bus"
 import { InventoryDeductionModule } from "../../inventory-deduction.module"
-import { OrderConfirmedConsumer } from "./order_confirmed.consumer"
+import { OrderConfirmedConsumer } from "./order-confirmed.consumer"
 import { ConfigurableModuleClass } from "./inventory-deduction-message.module-definition"
 
 @Module({ imports: [InventoryDeductionModule.register({})], providers: [OrderConfirmedConsumer] })

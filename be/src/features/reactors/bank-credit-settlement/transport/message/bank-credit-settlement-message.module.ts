@@ -3,7 +3,7 @@ import type { OnModuleInit } from "@nestjs/common"
 import { BANK_CREDIT_BOOKED_ACCOUNTING_TOPIC_QUEUE, InjectEventConsumerRegistry } from "@modules/platform/event-bus"
 import type { EventConsumerRegistry } from "@modules/platform/event-bus"
 import { BankCreditSettlementModule } from "../../bank-credit-settlement.module"
-import { BankCreditBookedConsumer } from "./bank_credit_booked.consumer"
+import { BankCreditBookedConsumer } from "./bank-credit-booked.consumer"
 import { ConfigurableModuleClass } from "./bank-credit-settlement-message.module-definition"
 
 @Module({ imports: [BankCreditSettlementModule.register({})], providers: [BankCreditBookedConsumer] })

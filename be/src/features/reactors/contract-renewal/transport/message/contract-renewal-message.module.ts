@@ -3,7 +3,7 @@ import type { OnModuleInit } from "@nestjs/common"
 import { PAYMENT_RECONCILED_CONTRACTS_TOPIC_QUEUE, InjectEventConsumerRegistry } from "@modules/platform/event-bus"
 import type { EventConsumerRegistry } from "@modules/platform/event-bus"
 import { ContractRenewalModule } from "../../contract-renewal.module"
-import { PaymentReconciledConsumer } from "./payment_reconciled.consumer"
+import { PaymentReconciledConsumer } from "./payment-reconciled.consumer"
 import { ConfigurableModuleClass } from "./contract-renewal-message.module-definition"
 
 @Module({ imports: [ContractRenewalModule.register({})], providers: [PaymentReconciledConsumer] })
