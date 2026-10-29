@@ -3,8 +3,8 @@ import type { EntityManager } from "typeorm"
 import { AgentConversationEntity, AgentConversationsService } from "@modules/domain/agent-conversations"
 import { AgentMessageEntity, AgentMessagesService } from "@modules/domain/agent-messages"
 import { AgentEntity, AgentsService } from "@modules/domain/agents"
+import { EventsReadService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { EventEntity } from "@modules/domain/events"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -45,6 +45,7 @@ export class AgentChatService {
         private readonly agents: AgentsService,
         private readonly conversations: AgentConversationsService,
         private readonly messages: AgentMessagesService,
+        private readonly events: EventsReadService,
         private readonly turns: ChatTurnQueue,
         @InjectQueueStatusService() private readonly queueStatus: QueueStatusService,
     ) {}
@@ -233,15 +234,11 @@ export class AgentChatService {
         const offer = AGENT_CHAT_FOUNDING_OFFER
         const now = this.clock.now().getTime()
         if (!offer.enabled || now < Date.parse(offer.startsAt) || now > Date.parse(offer.endsAt)) return false
-        const purchase = await this.entityManager
-            .createQueryBuilder(EventEntity, "e")
-            .select("e.id", "id")
-            .where(
-                "e.workspace_id = :workspaceId AND e.kind = 'module.purchased' AND e.created_at >= :startsAt AND e.created_at <= :endsAt",
-                { workspaceId, startsAt: offer.startsAt, endsAt: offer.endsAt },
-            )
-            .limit(1)
-            .getRawOne<{ id: string }>()
-        return purchase !== undefined
+        return this.events.existsOfKindBetween(
+            workspaceId,
+            "module.purchased",
+            new Date(offer.startsAt),
+            new Date(offer.endsAt),
+        )
     }
 }

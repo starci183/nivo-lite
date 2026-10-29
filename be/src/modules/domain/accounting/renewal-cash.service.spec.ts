@@ -1,12 +1,11 @@
 import { Test } from "@nestjs/testing"
-import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { builder, mock } from "@starci/jest-preset"
 import { ContractsReadService } from "@modules/domain/contracts"
 import type { ContractFacts } from "@modules/domain/contracts"
-import { InvoiceEntity } from "@modules/domain/invoices"
+import { InboundPaymentsReadService } from "@modules/domain/inbound-events"
+import { InvoicesCashReadService } from "@modules/domain/invoices"
+import type { CashInvoice } from "@modules/domain/invoices"
 import { LeadReadService } from "@modules/domain/leads"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { RenewalCashService } from "./renewal-cash.service"
 import type { RenewalCashQuery } from "./renewal-cash.service"
 
@@ -31,42 +30,36 @@ const contractOf = builder<ContractFacts>({
     status: "active",
 })
 
-const invoiceOf = (changes: Partial<InvoiceEntity>): InvoiceEntity =>
-    Object.assign(new InvoiceEntity(), {
-        invoiceNo: "INV-1",
-        amountVnd: 500_000,
-        contractId: "c1",
-        leadId: null,
-        periodEndsOn: "2026-11-05",
-        dueAt: new Date("2026-10-31T17:00:00.000Z"),
-        ...changes,
-    })
+const invoiceOf = builder<CashInvoice>({
+    invoiceNo: "INV-1",
+    amountVnd: 500_000,
+    contractId: "c1",
+    leadId: null,
+    periodEndsOn: "2026-11-05",
+    issuedAt: null,
+    dueAt: new Date("2026-10-31T17:00:00.000Z"),
+    paidAt: null,
+})
 
-/** What the statements answer, in the order the reader runs them: invoices issued, paid, unpaid, renewed, then the two unmatched reads. */
+/** What the read services answer for the invoices, the contracts, the leads and the payments. */
 const build = async (reads: {
-    readonly issued?: ReadonlyArray<InvoiceEntity>
-    readonly paid?: ReadonlyArray<InvoiceEntity>
-    readonly unpaid?: ReadonlyArray<InvoiceEntity>
-    readonly renewed?: ReadonlyArray<InvoiceEntity>
+    readonly issued?: ReadonlyArray<CashInvoice>
+    readonly paid?: ReadonlyArray<CashInvoice>
+    readonly unpaid?: ReadonlyArray<CashInvoice>
+    readonly renewed?: ReadonlyArray<{ readonly contractId: string; readonly periodEndsOn: string }>
     readonly contracts?: ReadonlyArray<ContractFacts>
     readonly ending?: ReadonlyArray<ContractFacts>
 }) => {
-    const entityManager = mockEntityManager()
-    const tx = fakeTransaction(entityManager)
-    const answers: ReadonlyArray<QueryBuilderAnswers> = [
-        { getMany: [...(reads.issued ?? [])] },
-        { getMany: [...(reads.paid ?? [])] },
-        { getMany: [...(reads.unpaid ?? [])] },
-        ...((reads.ending ?? []).length === 0 ? [] : [{ getMany: [...(reads.renewed ?? [])] }]),
-        { getRawOne: { count: 1, total: 100_000 } },
-        { getRawMany: [{ amount_vnd: 100_000, sender_name: null, memo: "CK" }] },
-    ]
-    const fakes = answers.map((answer) => fakeQueryBuilder(answer))
-    let next = 0
-    entityManager.createQueryBuilder.mockImplementation(() => {
-        const fake = fakes[Math.min(next, fakes.length - 1)]
-        next += 1
-        return (fake ?? fakes[0]).builder
+    const invoices = mock<InvoicesCashReadService>()
+    invoices.renewalsIssued.mockResolvedValue([...(reads.issued ?? [])])
+    invoices.renewalsPaid.mockResolvedValue([...(reads.paid ?? [])])
+    invoices.unpaidDueBefore.mockResolvedValue([...(reads.unpaid ?? [])])
+    invoices.invoicedPeriods.mockResolvedValue([...(reads.renewed ?? [])])
+    const payments = mock<InboundPaymentsReadService>()
+    payments.unmatched.mockResolvedValue({
+        count: 1,
+        total: 100_000,
+        items: [{ amountVnd: 100_000, senderName: null, memo: "CK" }],
     })
     const contracts = mock<ContractsReadService>()
     contracts.contractsByIds.mockResolvedValue([...(reads.contracts ?? [])])
@@ -78,17 +71,18 @@ const build = async (reads: {
     const moduleRef = await Test.createTestingModule({
         providers: [
             RenewalCashService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: InvoicesCashReadService, useValue: invoices },
+            { provide: InboundPaymentsReadService, useValue: payments },
             { provide: ContractsReadService, useValue: contracts },
             { provide: LeadReadService, useValue: leads },
         ],
     }).compile()
-    return { service: moduleRef.get(RenewalCashService), tx, contracts, leads }
+    return { service: moduleRef.get(RenewalCashService), invoices, payments, contracts, leads }
 }
 
 describe("RenewalCashService", () => {
-    it("reads every part of the story in one repeatable-read snapshot and joins the contracts in code", async () => {
-        const { service, tx, contracts } = await build({
+    it("reads every part of the story through the owners read services and joins the contracts in code", async () => {
+        const { service, invoices, payments, contracts } = await build({
             issued: [invoiceOf({ invoiceNo: "INV-1" }), invoiceOf({ invoiceNo: "INV-X", contractId: "gone" })],
             paid: [
                 invoiceOf({ invoiceNo: "INV-2", periodEndsOn: "2026-10-01" }),
@@ -101,12 +95,15 @@ describe("RenewalCashService", () => {
             ],
             contracts: [contractOf({})],
             ending: [contractOf({ id: "c2", customerName: "Lan Anh", amountVnd: null }), contractOf({ id: "c3" })],
-            renewed: [invoiceOf({ contractId: "c3", periodEndsOn: "2026-11-05" })],
+            renewed: [{ contractId: "c3", periodEndsOn: "2026-11-05" }],
         })
 
         const facts = await service.read(queryOf())
 
-        expect(tx.outcomes).toEqual(["commit"])
+        expect(invoices.renewalsIssued).toHaveBeenCalledWith(WS, queryOf().from, queryOf().to, 5000)
+        expect(invoices.unpaidDueBefore).toHaveBeenCalledWith(WS, new Date("2026-11-26T17:00:00.000Z"), 5000)
+        expect(invoices.invoicedPeriods).toHaveBeenCalledWith(WS, ["c2", "c3"])
+        expect(payments.unmatched).toHaveBeenCalledWith(WS, 20)
         expect(facts.issued_count).toBe(1)
         expect(facts.issued).toEqual([{ invoice_no: "INV-1", amount_vnd: 500_000, customer_name: "Truong Phat" }])
         expect(facts.paid.map((item) => [item.invoice_no, item.extended])).toEqual([
