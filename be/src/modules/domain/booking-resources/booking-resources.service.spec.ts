@@ -1,8 +1,9 @@
 import { Test } from "@nestjs/testing"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { builder, mockEntityManager } from "@starci/jest-preset"
+import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { StaffDirectoryService } from "@modules/domain/staff"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { BookingResourceWrite } from "./booking-resources.contracts"
 import { BookingResourcesService } from "./booking-resources.service"
@@ -28,9 +29,16 @@ const withBuilders = (...answers: Array<QueryBuilderAnswers>) => {
     return { em, fakes }
 }
 
-const build = async (entityManager: MockEntityManager = mockEntityManager()) => {
+const build = async (entityManager: MockEntityManager = mockEntityManager(), linked = true) => {
+    const staff = mock<StaffDirectoryService>({
+        namesOf: jest.fn(() => Promise.resolve(linked ? [{ id: "s-1", name: "Anna" }] : [])),
+    })
     const moduleRef = await Test.createTestingModule({
-        providers: [BookingResourcesService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            BookingResourcesService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: StaffDirectoryService, useValue: staff },
+        ],
     }).compile()
     return moduleRef.get(BookingResourcesService)
 }
@@ -78,19 +86,18 @@ describe("BookingResourcesService", () => {
 
 describe("BookingResourcesService", () => {
     describe("lock and lockStaff", () => {
-        it("answers the held resource and the held staff link", async () => {
-            const { em, fakes } = withBuilders({ getRawOne: undefined })
-            em.findOne.mockResolvedValueOnce(Object.assign(new BookingResourceEntity(), { id: "r-1" }))
+        it("answers the held resource", async () => {
+            const em = mockEntityManager({
+                findOne: [BookingResourceEntity, Object.assign(new BookingResourceEntity(), { id: "r-1" })],
+            })
             const resources = await build()
 
             await expect(resources.lock("ws-1", "r-1", em)).resolves.toEqual([{ id: "r-1" }])
-            await expect(resources.lockStaff("ws-1", "s-9", em)).resolves.toEqual([])
             expect(em.findOne).toHaveBeenCalledWith(BookingResourceEntity, {
                 select: { id: true },
                 where: { workspaceId: "ws-1", id: "r-1" },
                 lock: { mode: "pessimistic_write" },
             })
-            expect(fakes[0]?.callsOf("setLock")).toEqual([["pessimistic_read"]])
         })
 
         it("answers nothing for a resource that does not exist", async () => {
@@ -100,11 +107,16 @@ describe("BookingResourcesService", () => {
             await expect(resources.lock("ws-1", "r-9", em)).resolves.toEqual([])
         })
 
-        it("answers the held staff link", async () => {
-            const { em } = withBuilders({ getRawOne: { id: "s-1" } })
+        it("answers the proven staff link", async () => {
             const resources = await build()
 
-            await expect(resources.lockStaff("ws-1", "s-1", em)).resolves.toEqual([{ id: "s-1" }])
+            await expect(resources.lockStaff("ws-1", "s-1")).resolves.toEqual([{ id: "s-1" }])
+        })
+
+        it("answers nothing for a staff member of another workspace", async () => {
+            const resources = await build(mockEntityManager(), false)
+
+            await expect(resources.lockStaff("ws-1", "s-9")).resolves.toEqual([])
         })
     })
 })

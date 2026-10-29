@@ -8,6 +8,7 @@ import { BookingResourceEntity } from "@modules/domain/booking-resources"
 import { BookingServiceEntity } from "@modules/domain/booking-services"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
+import { StaffDirectoryService } from "@modules/domain/staff"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { BookingBoardService } from "./booking-board.service"
 import type { BoardBookingFacts } from "./booking-facts.contracts"
@@ -58,7 +59,7 @@ const BOOKING: BoardBookingFacts = {
     reschedule_count: 0,
 }
 
-/** A manager whose five entity reads are empty and whose three query builders answer the bookings, the waitlist and the staff. */
+/** A manager whose five entity reads are empty and whose two query builders answer the bookings and the waitlist. */
 const boardManager = () => {
     const em = mockEntityManager({
         find: [
@@ -70,12 +71,8 @@ const boardManager = () => {
     })
     const bookings = fakeQueryBuilder({ getRawMany: [BOOKING] })
     const waitlist = fakeQueryBuilder({ getRawMany: [] })
-    const staff = fakeQueryBuilder({ getRawMany: [{ id: "s-1", name: "Anna" }] })
-    em.createQueryBuilder
-        .mockReturnValueOnce(bookings.builder)
-        .mockReturnValueOnce(waitlist.builder)
-        .mockReturnValueOnce(staff.builder)
-    return { em, bookings, waitlist, staff }
+    em.createQueryBuilder.mockReturnValueOnce(bookings.builder).mockReturnValueOnce(waitlist.builder)
+    return { em, bookings, waitlist }
 }
 
 /** The `onDate` bound of the exceptions read. */
@@ -88,9 +85,18 @@ const build = async (entityManager: MockEntityManager) => {
     const members = mock<WorkspaceMembersService>()
     const models = mock<BookingModelService>({ settings: jest.fn(() => Promise.resolve(DEFAULT_SETTINGS)) })
     const overview = mock<BookingOverviewService>({ overview: jest.fn(() => Promise.resolve(OVERVIEW)) })
+    const staff = mock<StaffDirectoryService>({
+        list: jest.fn(() =>
+            Promise.resolve([
+                { id: "s-2", name: "Anna" },
+                { id: "s-1", name: "Anna" },
+            ]),
+        ),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             BookingBoardService,
+            { provide: StaffDirectoryService, useValue: staff },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: WorkspaceMembersService, useValue: members },
@@ -115,7 +121,10 @@ describe("BookingBoardService", () => {
                 nowMs: NOW,
                 from: "2026-10-12",
                 to: "2026-10-18",
-                staff: [{ id: "s-1", name: "Anna" }],
+                staff: [
+                    { id: "s-1", name: "Anna" },
+                    { id: "s-2", name: "Anna" },
+                ],
                 figures: OVERVIEW.figures,
                 stats: OVERVIEW.stats,
             })

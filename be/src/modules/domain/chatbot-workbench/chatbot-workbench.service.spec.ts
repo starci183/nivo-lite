@@ -6,6 +6,7 @@ import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import type { GapRecord } from "@modules/domain/knowledge-gaps"
 import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesService } from "@modules/domain/modules"
 import type { ModuleDefinition } from "@modules/domain/modules"
+import { StaffDirectoryService } from "@modules/domain/staff"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -29,7 +30,6 @@ const LIST_CHATBOT_MESSAGE_BRIEFS = "public.agent_messages"
 const LIST_CHATBOT_MESSAGES = "public.agent_messages"
 const LIST_CHATBOT_WAITING = "public.work_items"
 const LIST_CHATBOT_LEAD_BRIEFS = "public.leads"
-const FIND_CHATBOT_STAFF = "public.staff"
 const LIST_CHATBOT_INSTALLATIONS = "public.module_installations"
 const LIST_CHATBOT_AGENTS = "public.agents"
 
@@ -136,9 +136,13 @@ const build = async (em: MockEntityManager) => {
     const modules = mock<ModulesService>({
         catalog: jest.fn(() => Promise.resolve({ categories: MODULE_CATEGORIES, modules: MODULE_CATALOG })),
     })
+    const staff = mock<StaffDirectoryService>({
+        namesOf: jest.fn(() => Promise.resolve([{ id: "st-1", name: "Minh" }])),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChatbotWorkbenchService,
+            { provide: StaffDirectoryService, useValue: staff },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: clock },
             { provide: WorkspaceMembersService, useValue: members },
@@ -146,7 +150,7 @@ const build = async (em: MockEntityManager) => {
             { provide: ModulesService, useValue: modules },
         ],
     }).compile()
-    return { service: moduleRef.get(ChatbotWorkbenchService), members, knowledgeGaps, modules }
+    return { service: moduleRef.get(ChatbotWorkbenchService), members, knowledgeGaps, modules, staff }
 }
 
 const EMPTY_METRICS = { today: 0, waiting: 0, p50FirstResponseMin: null, sample: 0, leadsCaptured7d: 0 }
@@ -418,13 +422,12 @@ describe("ChatbotWorkbenchService thread", () => {
                     ],
                 ],
                 [LIST_CHATBOT_LEAD_BRIEFS, [LEAD]],
-                [FIND_CHATBOT_STAFF, [{ name: "Minh" }]],
             ],
         })
-        const { service } = await build(em)
+        const { service, staff } = await build(em)
 
         await expect(service.thread("u-1", "ws-1", "c-1")).resolves.toEqual(EXPECTED_THREAD)
-        expect(parametersOf(em, FIND_CHATBOT_STAFF)).toEqual({ workspaceId: "ws-1", staffId: "st-1" })
+        expect(staff.namesOf).toHaveBeenCalledWith("ws-1", ["st-1"])
     })
 })
 
@@ -438,10 +441,11 @@ describe("ChatbotWorkbenchService thread", () => {
                 [LIST_CHATBOT_LEAD_BRIEFS, []],
             ],
         })
-        const { service } = await build(em)
+        const { service, staff } = await build(em)
 
         const thread = await service.thread("u-1", "ws-1", "c-1")
 
+        expect(staff.namesOf).not.toHaveBeenCalled()
         expect(thread.lead).toBeNull()
         expect(thread.escalation).toBeNull()
         expect(thread.handledAt).toBeNull()
