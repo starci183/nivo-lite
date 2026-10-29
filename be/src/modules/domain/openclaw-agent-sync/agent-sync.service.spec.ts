@@ -1,13 +1,12 @@
 import { Test } from "@nestjs/testing"
 import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
-import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, builder, fakeInbox, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { FakeTransaction } from "@starci/jest-preset"
 import { OPENCLAW_AGENT_REGISTRY, OPENCLAW_WORKSPACE_WRITER } from "@modules/integrations/openclaw"
 import type { AgentRegistryService, WorkspaceWriterService } from "@modules/integrations/openclaw"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AGENTS_QUEUE_PRODUCER } from "@modules/queues/agents"
@@ -91,7 +90,7 @@ interface Setup {
 }
 
 const build = async (setup: Setup = {}) => {
-    const inbox = mock<Inbox>({ claim: jest.fn().mockResolvedValue(true) })
+    const inbox = fakeInbox()
     const tx: FakeTransaction = fakeTransaction(
         mockEntityManager({
             findOne: [
@@ -166,322 +165,316 @@ const build = async (setup: Setup = {}) => {
     }
 }
 
-describe("AgentSyncService", () => {
-    describe("request", () => {
-        it("queues the sync of one installation in the caller's transaction", async () => {
-            const { service, tx, queue } = await build()
+describe("AgentSyncService request", () => {
+    it("queues the sync of one installation in the caller's transaction", async () => {
+        const { service, tx, queue } = await build()
 
-            await service.request({ workspaceId: "w1", installationId: "i1", force: true }, tx.em)
+        await service.request({ workspaceId: "w1", installationId: "i1", force: true }, tx.em)
 
-            expect(queue.enqueueSyncAgents).toHaveBeenCalledWith(
-                { workspaceId: "w1", installationId: "i1", force: true, requestedAt: Date.parse(AT) },
-                tx.em,
-            )
+        expect(queue.enqueueSyncAgents).toHaveBeenCalledWith(
+            { workspaceId: "w1", installationId: "i1", force: true, requestedAt: Date.parse(AT) },
+            tx.em,
+        )
+    })
+
+    it("queues the sync of a whole workspace without an installation", async () => {
+        const { service, tx, queue } = await build()
+
+        await service.request({ workspaceId: "w1", installationId: null, force: false }, tx.em)
+
+        expect(queue.enqueueSyncAgents).toHaveBeenCalledWith(
+            { workspaceId: "w1", force: false, requestedAt: Date.parse(AT) },
+            tx.em,
+        )
+    })
+
+    it("claims the delivery of installation_changed and queues the sync in one transaction", async () => {
+        const { service, tx, queue, inbox } = await build()
+
+        await service.installationChanged(
+            { workspaceId: "w1", installationId: null, force: false },
+            { consumer: "installation_changed__agent_sync", dedupeKey: "change-1" },
+        )
+
+        expect(inbox.claims).toEqual([{ source: "installation_changed__agent_sync", eventId: "change-1" }])
+        expect(tx.commits).toBe(1)
+        expect(queue.enqueueSyncAgents).toHaveBeenCalledTimes(1)
+    })
+
+    it("queues nothing for a redelivery of a change it already took", async () => {
+        const { service, queue, inbox } = await build()
+        inbox.seen("installation_changed__agent_sync", "change-1")
+
+        await service.installationChanged(
+            { workspaceId: "w1", installationId: "i1", force: true },
+            { consumer: "installation_changed__agent_sync", dedupeKey: "change-1" },
+        )
+
+        expect(queue.enqueueSyncAgents).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentSyncService requestFor", () => {
+    it("queues the sync for an owner or manager of the workspace", async () => {
+        const { service, queue, members } = await build()
+
+        await service.requestFor("u1", { workspaceId: "w1", installationId: "i1", force: true })
+
+        expect(members.require).toHaveBeenCalledWith("u1", "w1", ["owner", "manager"])
+        expect(queue.enqueueSyncAgents).toHaveBeenCalledWith(
+            { workspaceId: "w1", installationId: "i1", force: true, requestedAt: Date.parse(AT) },
+            expect.anything(),
+        )
+    })
+
+    it("syncs the whole workspace, not forced, when the ask names neither", async () => {
+        const { service, queue } = await build()
+
+        await service.requestFor("u1", { workspaceId: "w1" })
+
+        expect(queue.enqueueSyncAgents).toHaveBeenCalledWith(
+            { workspaceId: "w1", force: false, requestedAt: Date.parse(AT) },
+            expect.anything(),
+        )
+    })
+
+    it("queues nothing for someone who may not", async () => {
+        const { service, queue, members } = await build()
+        const refusal = new Error("not a manager")
+        members.require.mockRejectedValue(refusal)
+
+        await expect(service.requestFor("u1", { workspaceId: "w1" })).rejects.toBe(refusal)
+        expect(queue.enqueueSyncAgents).not.toHaveBeenCalled()
+    })
+})
+
+
+describe("AgentSyncService process", () => {
+    it("syncs the installation a job names", async () => {
+        const { service, bundles } = await build({ previousHash: "old" })
+
+        await expect(service.process({ workspaceId: WORKSPACE, installationId: "i1" })).resolves.toBe(1)
+        expect(bundles.build).toHaveBeenCalledTimes(1)
+    })
+
+    it("handles nothing for an installation the sync skips", async () => {
+        const { service } = await build({ installation: null })
+
+        await expect(service.process({ workspaceId: WORKSPACE, installationId: "i1" })).resolves.toBe(0)
+    })
+
+    it("handles nothing for a payload of another shape", async () => {
+        const { service, installations } = await build()
+
+        await expect(service.process({ force: "yes" })).resolves.toBe(0)
+        expect(installations.byId).not.toHaveBeenCalled()
+    })
+
+    it("ignores a payload that names an installation without its workspace", async () => {
+        const { service, installations } = await build()
+
+        await expect(service.process({ installationId: "i1" })).resolves.toBe(0)
+        expect(installations.byId).not.toHaveBeenCalled()
+    })
+
+    it("fans a workspace out into one job per installation on OpenClaw", async () => {
+        const { service, installations, queue, tx } = await build()
+
+        await expect(service.process({ workspaceId: "w1" })).resolves.toBe(2)
+
+        expect(installations.onOpenclaw).toHaveBeenCalledWith("w1", 500)
+        expect(queue.enqueueSyncAgents).toHaveBeenNthCalledWith(
+            1,
+            { workspaceId: WORKSPACE, installationId: "i1", requestedAt: Date.parse(AT) },
+            expect.anything(),
+        )
+        expect(queue.enqueueSyncAgents).toHaveBeenNthCalledWith(
+            2,
+            { workspaceId: "w2", installationId: "i2", requestedAt: Date.parse(AT) },
+            expect.anything(),
+        )
+        expect(tx.commits).toBe(1)
+    })
+
+    it("fans the scheduler tick out over every workspace", async () => {
+        const { service, installations } = await build()
+
+        await expect(service.process({})).resolves.toBe(2)
+        expect(installations.onOpenclaw).toHaveBeenCalledWith(null, 500)
+    })
+})
+
+
+describe("AgentSyncService syncInstallation", () => {
+    it("skips an installation that is not on OpenClaw unless forced", async () => {
+        const { service, bundles } = await build({
+            installation: installationOf({ settings: { processor: "nivo" } }),
         })
 
-        it("queues the sync of a whole workspace without an installation", async () => {
-            const { service, tx, queue } = await build()
+        await expect(service.syncInstallation(WORKSPACE, "i1", false)).resolves.toBeNull()
+        await expect(service.syncInstallation(WORKSPACE, "i1", true)).resolves.toMatchObject({ changed: true })
+        expect(bundles.build).toHaveBeenCalledTimes(1)
+    })
 
-            await service.request({ workspaceId: "w1", installationId: null, force: false }, tx.em)
-
-            expect(queue.enqueueSyncAgents).toHaveBeenCalledWith(
-                { workspaceId: "w1", force: false, requestedAt: Date.parse(AT) },
-                tx.em,
-            )
+    it("writes the files, registers the agent, waits for the reload and records the sync", async () => {
+        const { service, tx, recorder, writer, registry, pause, logger } = await build({
+            previousHash: "old",
+            registered: true,
         })
 
-        it("claims the delivery of installation_changed and queues the sync in one transaction", async () => {
-            const { service, tx, queue, inbox } = await build()
+        const outcome = await service.syncInstallation(WORKSPACE, "i1", false)
 
-            await service.installationChanged(
-                { workspaceId: "w1", installationId: null, force: false },
-                { consumer: "installation_changed__agent_sync", dedupeKey: "change-1" },
-            )
-
-            expect(inbox.claim).toHaveBeenCalledWith("installation_changed__agent_sync", "change-1", expect.anything())
-            expect(tx.commits).toBe(1)
-            expect(queue.enqueueSyncAgents).toHaveBeenCalledTimes(1)
+        expect(outcome).toEqual({
+            agentId: "ws-12345678-chatbot",
+            contextVersion: 3,
+            files: 1,
+            contentHash: "hash-1",
+            changed: true,
+            written: 1,
+            removed: 0,
+            registered: true,
         })
-
-        it("queues nothing for a redelivery of a change it already took", async () => {
-            const { service, queue, inbox } = await build()
-            inbox.claim.mockResolvedValue(false)
-
-            await service.installationChanged(
-                { workspaceId: "w1", installationId: "i1", force: true },
-                { consumer: "installation_changed__agent_sync", dedupeKey: "change-1" },
-            )
-
-            expect(queue.enqueueSyncAgents).not.toHaveBeenCalled()
+        expect(writer.write).toHaveBeenCalledWith("/cfg/workspace-x", BUNDLE.files)
+        expect(registry.register).toHaveBeenCalledWith("ws-12345678-chatbot", "Bot")
+        expect(pause.wait).toHaveBeenCalledWith(2000)
+        expect(tx.em.findOne).toHaveBeenCalledWith(OpenclawAgentSyncEntity, {
+            select: { contentHash: true, status: true },
+            where: { installationId: "i1" },
+        })
+        expect(recorder.argsOf("values")).toEqual([[{ ...RECORD, syncedAt: new Date(AT) }]])
+        expect(recorder.argsOf("orUpdate")).toEqual([
+            [[...CHECKED_COLUMNS.slice(0, 3), "synced_at", ...CHECKED_COLUMNS.slice(3)], ["installation_id"]],
+        ])
+        expect(logger.info).toHaveBeenCalledWith(OpenclawAgentSyncLogEvent.AgentSynced, {
+            agentId: "ws-12345678-chatbot",
+            written: 1,
+            removed: 0,
+            registered: true,
         })
     })
 
-    describe("requestFor", () => {
-        it("queues the sync for an owner or manager of the workspace", async () => {
-            const { service, queue, members } = await build()
+    it("does not wait when openclaw.json did not change", async () => {
+        const { service, pause } = await build({ previousHash: "old", registered: false })
 
-            await service.requestFor("u1", { workspaceId: "w1", installationId: "i1", force: true })
+        await expect(service.syncInstallation(WORKSPACE, "i1", false)).resolves.toMatchObject({ registered: false })
+        expect(pause.wait).not.toHaveBeenCalled()
+    })
 
-            expect(members.require).toHaveBeenCalledWith("u1", "w1", ["owner", "manager"])
-            expect(queue.enqueueSyncAgents).toHaveBeenCalledWith(
-                { workspaceId: "w1", installationId: "i1", force: true, requestedAt: Date.parse(AT) },
-                expect.anything(),
-            )
+    it("only moves the check time when the copy is already current", async () => {
+        const { service, recorder, writer } = await build({ previousHash: "hash-1", current: true })
+
+        await expect(service.syncInstallation(WORKSPACE, "i1", false)).resolves.toMatchObject({
+            changed: false,
+            written: 0,
+            registered: false,
         })
 
-        it("syncs the whole workspace, not forced, when the ask names neither", async () => {
-            const { service, queue } = await build()
+        expect(writer.write).not.toHaveBeenCalled()
+        expect(recorder.argsOf("values")).toEqual([[RECORD]])
+        expect(recorder.argsOf("orUpdate")).toEqual([[CHECKED_COLUMNS, ["installation_id"]]])
+    })
 
-            await service.requestFor("u1", { workspaceId: "w1" })
+    it("rewrites when the hash is the same but a file on disk differs", async () => {
+        const { service, writer } = await build({ previousHash: "hash-1", current: false })
 
-            expect(queue.enqueueSyncAgents).toHaveBeenCalledWith(
-                { workspaceId: "w1", force: false, requestedAt: Date.parse(AT) },
-                expect.anything(),
-            )
+        await expect(service.syncInstallation(WORKSPACE, "i1", false)).resolves.toMatchObject({ changed: true })
+        expect(writer.write).toHaveBeenCalledTimes(1)
+    })
+})
+
+
+describe("AgentSyncService syncInstallation", () => {
+    it("records the failure on the sync row and rethrows it", async () => {
+        const { service, recorder, logger } = await build({ dirs: false })
+
+        await expect(service.syncInstallation(WORKSPACE, "i1", false)).rejects.toMatchObject({
+            code: OpenclawAgentSyncErrorCode.WorkspaceUnavailable,
         })
 
-        it("queues nothing for someone who may not", async () => {
-            const { service, queue, members } = await build()
-            const refusal = new Error("not a manager")
-            members.require.mockRejectedValue(refusal)
+        expect(recorder.argsOf("values")).toEqual([
+            [
+                {
+                    installationId: "i1",
+                    workspaceId: WORKSPACE,
+                    agentId: "ws-12345678-chatbot",
+                    checkedAt: new Date(AT),
+                    status: "error",
+                    error: "OPENCLAW_AGENT_SYNC_WORKSPACE_UNAVAILABLE",
+                },
+            ],
+        ])
+        expect(recorder.argsOf("orUpdate")).toEqual([[["checked_at", "status", "error"], ["installation_id"]]])
+        expect(logger.error).toHaveBeenCalledTimes(1)
+    })
 
-            await expect(service.requestFor("u1", { workspaceId: "w1" })).rejects.toBe(refusal)
-            expect(queue.enqueueSyncAgents).not.toHaveBeenCalled()
+    it("still rethrows the original failure when it cannot be recorded", async () => {
+        const { service, bundles, logger } = await build({ recordFails: true })
+        const failure = new Error("bundle failed")
+        const recordFailure = new Error("table locked")
+        bundles.build.mockRejectedValue(failure)
+
+        await expect(service.syncInstallation(WORKSPACE, "i1", false)).rejects.toBe(failure)
+
+        expect(logger.error).toHaveBeenCalledWith(OpenclawAgentSyncLogEvent.SyncFailureNotRecorded, recordFailure, {
+            installationId: "i1",
         })
     })
 })
 
-describe("AgentSyncService", () => {
-    describe("process", () => {
-        it("syncs the installation a job names", async () => {
-            const { service, bundles } = await build({ previousHash: "old" })
 
-            await expect(service.process({ workspaceId: WORKSPACE, installationId: "i1" })).resolves.toBe(1)
-            expect(bundles.build).toHaveBeenCalledTimes(1)
-        })
+describe("AgentSyncService ensureInternalAgent", () => {
+    it("writes the files and registers the internal agent on first use", async () => {
+        const { service, writer, registry, pause } = await build({ internalRegistered: true })
+        writer.matches.mockReturnValue(false)
 
-        it("handles nothing for an installation the sync skips", async () => {
-            const { service } = await build({ installation: null })
+        await expect(service.ensureInternalAgent(WORKSPACE)).resolves.toBe("ws-12345678-nivo")
 
-            await expect(service.process({ workspaceId: WORKSPACE, installationId: "i1" })).resolves.toBe(0)
-        })
+        expect(writer.write).toHaveBeenCalledWith("/cfg/workspace-x", INTERNAL_FILES)
+        expect(registry.register).toHaveBeenCalledWith("ws-12345678-nivo", "NIVO")
+        expect(pause.wait).toHaveBeenCalledWith(2000)
+    })
 
-        it("handles nothing for a payload of another shape", async () => {
-            const { service, installations } = await build()
+    it("only verifies an internal agent that is already current", async () => {
+        const { service, writer, registry, pause } = await build({ internalCurrent: true })
 
-            await expect(service.process({ force: "yes" })).resolves.toBe(0)
-            expect(installations.byId).not.toHaveBeenCalled()
-        })
+        await expect(service.ensureInternalAgent(WORKSPACE)).resolves.toBe("ws-12345678-nivo")
 
-        it("ignores a payload that names an installation without its workspace", async () => {
-            const { service, installations } = await build()
+        expect(writer.write).not.toHaveBeenCalled()
+        expect(registry.register).not.toHaveBeenCalled()
+        expect(pause.wait).not.toHaveBeenCalled()
+    })
 
-            await expect(service.process({ installationId: "i1" })).resolves.toBe(0)
-            expect(installations.byId).not.toHaveBeenCalled()
-        })
+    it("does not wait when registering changed nothing", async () => {
+        const { service, pause, writer } = await build({ internalRegistered: false })
+        writer.matches.mockReturnValue(true)
 
-        it("fans a workspace out into one job per installation on OpenClaw", async () => {
-            const { service, installations, queue, tx } = await build()
+        await service.ensureInternalAgent(WORKSPACE)
 
-            await expect(service.process({ workspaceId: "w1" })).resolves.toBe(2)
+        expect(pause.wait).not.toHaveBeenCalled()
+    })
 
-            expect(installations.onOpenclaw).toHaveBeenCalledWith("w1", 500)
-            expect(queue.enqueueSyncAgents).toHaveBeenNthCalledWith(
-                1,
-                { workspaceId: WORKSPACE, installationId: "i1", requestedAt: Date.parse(AT) },
-                expect.anything(),
-            )
-            expect(queue.enqueueSyncAgents).toHaveBeenNthCalledWith(
-                2,
-                { workspaceId: "w2", installationId: "i2", requestedAt: Date.parse(AT) },
-                expect.anything(),
-            )
-            expect(tx.commits).toBe(1)
-        })
+    it("refuses when the agent workspaces cannot be written", async () => {
+        const { service } = await build({ dirs: false })
 
-        it("fans the scheduler tick out over every workspace", async () => {
-            const { service, installations } = await build()
-
-            await expect(service.process({})).resolves.toBe(2)
-            expect(installations.onOpenclaw).toHaveBeenCalledWith(null, 500)
+        await expect(service.ensureInternalAgent(WORKSPACE)).rejects.toMatchObject({
+            code: OpenclawAgentSyncErrorCode.WorkspaceUnavailable,
         })
     })
 })
 
-describe("AgentSyncService", () => {
-    describe("syncInstallation", () => {
-        it("skips an installation that is not on OpenClaw unless forced", async () => {
-            const { service, bundles } = await build({
-                installation: installationOf({ settings: { processor: "nivo" } }),
-            })
 
-            await expect(service.syncInstallation(WORKSPACE, "i1", false)).resolves.toBeNull()
-            await expect(service.syncInstallation(WORKSPACE, "i1", true)).resolves.toMatchObject({ changed: true })
-            expect(bundles.build).toHaveBeenCalledTimes(1)
-        })
+describe("AgentSyncService syncInstallation of a removed installation", () => {
+    it("takes a removed installation out of OpenClaw unless another instance of the module is left", async () => {
+        const removed = installationOf({ removed: true })
+        const alone = await build({ installation: removed })
+        await expect(alone.service.syncInstallation(WORKSPACE, "i1", false)).resolves.toBeNull()
+        expect(alone.registry.unregister).toHaveBeenCalledWith("ws-12345678-chatbot")
+        expect(alone.pause.wait).toHaveBeenCalledWith(2000)
+        expect(alone.bundles.build).not.toHaveBeenCalled()
 
-        it("writes the files, registers the agent, waits for the reload and records the sync", async () => {
-            const { service, tx, recorder, writer, registry, pause, logger } = await build({
-                previousHash: "old",
-                registered: true,
-            })
-
-            const outcome = await service.syncInstallation(WORKSPACE, "i1", false)
-
-            expect(outcome).toEqual({
-                agentId: "ws-12345678-chatbot",
-                contextVersion: 3,
-                files: 1,
-                contentHash: "hash-1",
-                changed: true,
-                written: 1,
-                removed: 0,
-                registered: true,
-            })
-            expect(writer.write).toHaveBeenCalledWith("/cfg/workspace-x", BUNDLE.files)
-            expect(registry.register).toHaveBeenCalledWith("ws-12345678-chatbot", "Bot")
-            expect(pause.wait).toHaveBeenCalledWith(2000)
-            expect(tx.em.findOne).toHaveBeenCalledWith(OpenclawAgentSyncEntity, {
-                select: { contentHash: true, status: true },
-                where: { installationId: "i1" },
-            })
-            expect(recorder.argsOf("values")).toEqual([[{ ...RECORD, syncedAt: new Date(AT) }]])
-            expect(recorder.argsOf("orUpdate")).toEqual([
-                [[...CHECKED_COLUMNS.slice(0, 3), "synced_at", ...CHECKED_COLUMNS.slice(3)], ["installation_id"]],
-            ])
-            expect(logger.info).toHaveBeenCalledWith(OpenclawAgentSyncLogEvent.AgentSynced, {
-                agentId: "ws-12345678-chatbot",
-                written: 1,
-                removed: 0,
-                registered: true,
-            })
-        })
-
-        it("does not wait when openclaw.json did not change", async () => {
-            const { service, pause } = await build({ previousHash: "old", registered: false })
-
-            await expect(service.syncInstallation(WORKSPACE, "i1", false)).resolves.toMatchObject({ registered: false })
-            expect(pause.wait).not.toHaveBeenCalled()
-        })
-
-        it("only moves the check time when the copy is already current", async () => {
-            const { service, recorder, writer } = await build({ previousHash: "hash-1", current: true })
-
-            await expect(service.syncInstallation(WORKSPACE, "i1", false)).resolves.toMatchObject({
-                changed: false,
-                written: 0,
-                registered: false,
-            })
-
-            expect(writer.write).not.toHaveBeenCalled()
-            expect(recorder.argsOf("values")).toEqual([[RECORD]])
-            expect(recorder.argsOf("orUpdate")).toEqual([[CHECKED_COLUMNS, ["installation_id"]]])
-        })
-
-        it("rewrites when the hash is the same but a file on disk differs", async () => {
-            const { service, writer } = await build({ previousHash: "hash-1", current: false })
-
-            await expect(service.syncInstallation(WORKSPACE, "i1", false)).resolves.toMatchObject({ changed: true })
-            expect(writer.write).toHaveBeenCalledTimes(1)
-        })
+        const shared = await build({ installation: removed, sibling: true })
+        await expect(shared.service.syncInstallation(WORKSPACE, "i1", false)).resolves.toBeNull()
+        expect(shared.registry.unregister).not.toHaveBeenCalled()
     })
 })
 
-describe("AgentSyncService", () => {
-    describe("syncInstallation", () => {
-        it("records the failure on the sync row and rethrows it", async () => {
-            const { service, recorder, logger } = await build({ dirs: false })
-
-            await expect(service.syncInstallation(WORKSPACE, "i1", false)).rejects.toMatchObject({
-                code: OpenclawAgentSyncErrorCode.WorkspaceUnavailable,
-            })
-
-            expect(recorder.argsOf("values")).toEqual([
-                [
-                    {
-                        installationId: "i1",
-                        workspaceId: WORKSPACE,
-                        agentId: "ws-12345678-chatbot",
-                        checkedAt: new Date(AT),
-                        status: "error",
-                        error: "OPENCLAW_AGENT_SYNC_WORKSPACE_UNAVAILABLE",
-                    },
-                ],
-            ])
-            expect(recorder.argsOf("orUpdate")).toEqual([[["checked_at", "status", "error"], ["installation_id"]]])
-            expect(logger.error).toHaveBeenCalledTimes(1)
-        })
-
-        it("still rethrows the original failure when it cannot be recorded", async () => {
-            const { service, bundles, logger } = await build({ recordFails: true })
-            const failure = new Error("bundle failed")
-            const recordFailure = new Error("table locked")
-            bundles.build.mockRejectedValue(failure)
-
-            await expect(service.syncInstallation(WORKSPACE, "i1", false)).rejects.toBe(failure)
-
-            expect(logger.error).toHaveBeenCalledWith(OpenclawAgentSyncLogEvent.SyncFailureNotRecorded, recordFailure, {
-                installationId: "i1",
-            })
-        })
-    })
-})
-
-describe("AgentSyncService", () => {
-    describe("ensureInternalAgent", () => {
-        it("writes the files and registers the internal agent on first use", async () => {
-            const { service, writer, registry, pause } = await build({ internalRegistered: true })
-            writer.matches.mockReturnValue(false)
-
-            await expect(service.ensureInternalAgent(WORKSPACE)).resolves.toBe("ws-12345678-nivo")
-
-            expect(writer.write).toHaveBeenCalledWith("/cfg/workspace-x", INTERNAL_FILES)
-            expect(registry.register).toHaveBeenCalledWith("ws-12345678-nivo", "NIVO")
-            expect(pause.wait).toHaveBeenCalledWith(2000)
-        })
-
-        it("only verifies an internal agent that is already current", async () => {
-            const { service, writer, registry, pause } = await build({ internalCurrent: true })
-
-            await expect(service.ensureInternalAgent(WORKSPACE)).resolves.toBe("ws-12345678-nivo")
-
-            expect(writer.write).not.toHaveBeenCalled()
-            expect(registry.register).not.toHaveBeenCalled()
-            expect(pause.wait).not.toHaveBeenCalled()
-        })
-
-        it("does not wait when registering changed nothing", async () => {
-            const { service, pause, writer } = await build({ internalRegistered: false })
-            writer.matches.mockReturnValue(true)
-
-            await service.ensureInternalAgent(WORKSPACE)
-
-            expect(pause.wait).not.toHaveBeenCalled()
-        })
-
-        it("refuses when the agent workspaces cannot be written", async () => {
-            const { service } = await build({ dirs: false })
-
-            await expect(service.ensureInternalAgent(WORKSPACE)).rejects.toMatchObject({
-                code: OpenclawAgentSyncErrorCode.WorkspaceUnavailable,
-            })
-        })
-    })
-})
-
-describe("AgentSyncService", () => {
-    describe("syncInstallation of a removed installation", () => {
-        it("takes a removed installation out of OpenClaw unless another instance of the module is left", async () => {
-            const removed = installationOf({ removed: true })
-            const alone = await build({ installation: removed })
-            await expect(alone.service.syncInstallation(WORKSPACE, "i1", false)).resolves.toBeNull()
-            expect(alone.registry.unregister).toHaveBeenCalledWith("ws-12345678-chatbot")
-            expect(alone.pause.wait).toHaveBeenCalledWith(2000)
-            expect(alone.bundles.build).not.toHaveBeenCalled()
-
-            const shared = await build({ installation: removed, sibling: true })
-            await expect(shared.service.syncInstallation(WORKSPACE, "i1", false)).resolves.toBeNull()
-            expect(shared.registry.unregister).not.toHaveBeenCalled()
-        })
-    })
-})

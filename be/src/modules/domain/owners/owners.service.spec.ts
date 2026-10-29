@@ -5,6 +5,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { IDS } from "@modules/platform/ids"
 import { OWNERS_OPTIONS } from "./owners.decorators"
+import { OwnersErrorCode } from "./errors/owners.error"
 import { OwnersService } from "./owners.service"
 
 /** The statements `callDbFunction` sends for the account doors and the bcrypt hash. */
@@ -97,9 +98,9 @@ describe("OwnersService", () => {
             [CRYPT, []],
         ])
 
-        await expect(service.createOwner("owner@example.test", "a-long-password")).rejects.toThrow(
-            "the database did not hash the password",
-        )
+        await expect(service.createOwner("owner@example.test", "a-long-password")).rejects.toMatchObject({
+            code: OwnersErrorCode.PasswordNotHashed,
+        })
         expect(lines).toEqual([])
     })
 
