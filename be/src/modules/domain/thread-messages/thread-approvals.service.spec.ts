@@ -1,6 +1,7 @@
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { DomainError } from "@modules/platform/errors"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -61,6 +62,9 @@ const DECIDED: ApprovalCard = {
     decidedByName: "Nam",
     decidedAt: "2026-10-22T09:42:00.000Z",
 }
+
+/** A refusal as the approval capability raises it: a domain error with a code of its own family. */
+class GateRefusal extends DomainError<string> {}
 
 const rowOf = (approval: ApprovalCard | null): ThreadMessageRecord => ({
     id: "msg-1",
@@ -172,6 +176,29 @@ const registerRefusals = () => {
                 code: ThreadMessagesErrorCode.AlreadyDecided,
                 params: { name: "", at: "" },
             })
+        })
+
+        it("shows the closed card when the request expired before the card was settled", async () => {
+            const { service, gate } = await build(found())
+            gate.decide.mockRejectedValueOnce(new GateRefusal({ code: "APPROVAL_REQUESTS_EXPIRED" }))
+
+            await expect(service.decide(decision())).rejects.toMatchObject({
+                code: ThreadMessagesErrorCode.ApprovalClosed,
+            })
+        })
+
+        it("lets any other refusal of the gate through", async () => {
+            const { service, gate } = await build(found())
+            gate.decide.mockRejectedValueOnce(new GateRefusal({ code: "APPROVAL_REQUESTS_NO_GRANT" }))
+
+            await expect(service.decide(decision())).rejects.toMatchObject({ code: "APPROVAL_REQUESTS_NO_GRANT" })
+        })
+
+        it("lets a failure that is not a domain refusal through", async () => {
+            const { service, gate } = await build(found())
+            gate.decide.mockRejectedValueOnce(new Error("down"))
+
+            await expect(service.decide(decision())).rejects.toThrow("down")
         })
 
         it("refuses a card that expired", async () => {

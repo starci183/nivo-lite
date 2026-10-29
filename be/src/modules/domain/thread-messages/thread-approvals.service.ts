@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { isDomainError } from "@modules/platform/errors"
 import { pendingOf, withVote } from "./approval-card.policy"
 import { ThreadMessagesError, ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { MentionDirectoryService } from "./mention-directory.service"
@@ -11,6 +12,9 @@ import { ThreadApprovalOutcomesService } from "./thread-approval-outcomes.servic
 import type { ThreadCardDecision, ThreadMessage, ThreadMessageRecord } from "./thread-messages.contracts"
 import { InjectApprovalGate } from "./thread-messages.decorators"
 import type { ThreadApprovalGate } from "./thread-messages.port"
+
+/** The code the approval capability refuses with when the request ran out of time before this answer; the card shows it as closed. */
+const REQUEST_EXPIRED = "APPROVAL_REQUESTS_EXPIRED"
 
 @Injectable()
 /**
@@ -50,11 +54,15 @@ export class ThreadApprovalsService {
         if (!card.approvers.some((approver) => approver.memberId === memberId)) {
             throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.NotApprover })
         }
-        const result = await this.gate.decide({
-            requestId: card.requestId,
-            memberId,
-            verdict: input.verdict,
-        })
+        const result = await this.gate
+            .decide({ requestId: card.requestId, memberId, verdict: input.verdict })
+            .catch((error: unknown) => {
+                // The deadline can pass before the approval event settles the card: the member still sees the closed card, not the other capability's code.
+                if (isDomainError(error) && error.code === REQUEST_EXPIRED) {
+                    throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.ApprovalClosed, cause: error })
+                }
+                throw error
+            })
         return this.entityManager.transaction(async (tx) => {
             const locked = await this.outcomes.lock(tx, input.workspaceId, input.messageId)
             const pending = pendingOf(locked)
