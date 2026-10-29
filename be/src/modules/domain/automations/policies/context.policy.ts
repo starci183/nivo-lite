@@ -2,7 +2,7 @@ import type { Capability } from "@modules/domain/automation-templates"
 import type {
     ContextSnapshot,
     GateMode,
-    InstallationRow,
+    AutomationInstallationRow,
     OverviewRows,
     ShopFacts,
     ShopWithHours,
@@ -56,7 +56,7 @@ export interface SalesFacts {
 }
 
 /** The active contexts from installation rows (each with its active version embedded). */
-export const contextsFrom = (installations: ReadonlyArray<InstallationRow>): ActiveContexts => {
+export const contextsFrom = (installations: ReadonlyArray<AutomationInstallationRow>): ActiveContexts => {
     const versions: Record<string, number> = {}
     const operatingModes: Record<string, string | null> = {}
     const parts: Array<string> = []

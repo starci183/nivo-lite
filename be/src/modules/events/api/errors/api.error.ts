@@ -4,7 +4,7 @@ import type { ErrorKind } from "@modules/platform/errors"
 /** Codes of the events api capability. */
 export enum ApiErrorCode {
     /** A payload field held a value outside the set its event lists for it. */
-    ValueOutsideSet = "EVENTS_VALUE_OUTSIDE_SET",
+    ValueOutsideSet = "API_VALUE_OUTSIDE_SET",
 }
 
 /** How each events code travels. */

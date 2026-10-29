@@ -382,12 +382,21 @@ describe("LoyaltyCampaignsService attachDecision", () => {
         })
         const { service } = await build({ members: [], entityManager })
 
-        await expect(service.attachDecision("ws-1", "k1", "decision-1", "approval")).resolves.toBe(attached)
+        await expect(service.attachDecision("ws-1", "k1", "decision-1", "waiting_decision")).resolves.toBe(attached)
 
         expect(entityManager.update).toHaveBeenCalledWith(
             LoyaltyCampaignEntity,
             { workspaceId: "ws-1", id: "k1", status: "draft", workItemId: IsNull() },
-            { workItemId: "decision-1", status: "approval" },
+            { workItemId: "decision-1", status: "waiting_decision" },
         )
+    })
+
+    it("attaches nothing for a status a campaign cannot hold", async () => {
+        const entityManager = mockEntityManager()
+        const { service } = await build({ members: [], entityManager })
+
+        await expect(service.attachDecision("ws-1", "k1", "decision-1", "approval")).resolves.toBe(false)
+
+        expect(entityManager.update).not.toHaveBeenCalled()
     })
 })
