@@ -1,29 +1,21 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { MODULE_CATALOG } from "@modules/domain/modules"
+import type { ModuleDefinition } from "@modules/domain/modules"
 import type { Locale } from "@modules/platform/i18n"
 import type { ModuleCommand, OptionalActionEntry, OptionalModuleEntry } from "./decisions.contracts"
 import { toActionEntry, toModuleEntry } from "./module-catalog.mapper"
-import type { ActionRow, ModuleRow } from "./persistence/module-catalog.rows"
+
+/** The module of the catalogue that performs an action, with the definition of that action; null when no module lists it. */
+const performerOf = (action: string): ModuleDefinition | undefined =>
+    MODULE_CATALOG.find((module) => module.authorityActions.some((candidate) => candidate.action === action))
 
 @Injectable()
-/** The module registry as the database holds it: what each module accepts and which actions it owns. */
+/** The module registry of the catalogue: what each module accepts and which actions it owns. */
 export class ModuleCatalogService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
-
     /** The module with that key, or null when the registry has none. */
-    async entryOf(moduleKey: string, manager: EntityManager = this.entityManager): Promise<OptionalModuleEntry> {
-        const row = await manager
-            .createQueryBuilder()
-            .select("m.key", "key")
-            .addSelect("m.audience", "audience")
-            .addSelect("m.multi_instance", "multi_instance")
-            .addSelect("m.definition", "definition")
-            .from("public.modules", "m")
-            .where("m.key = :moduleKey", { moduleKey })
-            .limit(1)
-            .getRawOne<ModuleRow>()
-        return row === undefined ? null : toModuleEntry(row)
+    entryOf(moduleKey: string): Promise<OptionalModuleEntry> {
+        const module = MODULE_CATALOG.find((candidate) => candidate.key === moduleKey)
+        return Promise.resolve(module === undefined ? null : toModuleEntry(module))
     }
 
     /** The commands the module accepts from other agents; none for an unknown module. */
@@ -32,25 +24,17 @@ export class ModuleCatalogService {
     }
 
     /** The module's full name in the language; the key itself when the module or its name is unknown. */
-    async nameOf(moduleKey: string, locale: Locale, manager: EntityManager = this.entityManager): Promise<string> {
-        const name = (await this.entryOf(moduleKey, manager))?.name[locale] ?? ""
+    async nameOf(moduleKey: string, locale: Locale): Promise<string> {
+        const name = (await this.entryOf(moduleKey))?.name[locale] ?? ""
         return name === "" ? moduleKey : name
     }
 
     /** The authority action with that key, or null when the registry has none. */
-    async actionOf(action: string, manager: EntityManager = this.entityManager): Promise<OptionalActionEntry> {
-        const row = await manager
-            .createQueryBuilder()
-            .select("a.action", "action")
-            .addSelect("a.module_key", "module_key")
-            .addSelect("a.max_mode", "max_mode")
-            .addSelect("a.label", "label")
-            .addSelect("m.definition", "definition")
-            .from("public.authority_actions", "a")
-            .innerJoin("modules", "m", "m.key = a.module_key")
-            .where("a.action = :action", { action })
-            .limit(1)
-            .getRawOne<ActionRow>()
-        return row === undefined ? null : toActionEntry(row)
+    actionOf(action: string): Promise<OptionalActionEntry> {
+        const module = performerOf(action)
+        const definition = module?.authorityActions.find((candidate) => candidate.action === action)
+        return Promise.resolve(
+            module === undefined || definition === undefined ? null : toActionEntry(module.key, definition),
+        )
     }
 }

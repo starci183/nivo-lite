@@ -1,6 +1,12 @@
 import { mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { AgentDirectoryService } from "@modules/domain/agents"
+import { InvoicesLedgerService } from "@modules/domain/invoices"
+import { LeadReadService } from "@modules/domain/leads"
+import { OfficeLinesService } from "@modules/domain/messages"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
+import { OrdersLabelReadService } from "@modules/domain/orders"
+import { WorkItemsChainReadService } from "@modules/domain/work-items"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -11,7 +17,6 @@ import type { CommandRefusal, SendCommandInput, WorkItem } from "./decisions.con
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
 import { ModuleCatalogService } from "./module-catalog.service"
-import { OfficeLinesService } from "@modules/domain/messages"
 import type { CommandPlan, PlannedCommand } from "./work-engine.contracts"
 import { WorkEngineLogEvent } from "./work-engine.log-events"
 import {
@@ -24,77 +29,20 @@ import {
     replyOf,
     rowOf,
 } from "@tests/fixtures/builders/command-planner.builder"
-import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
-import type { TableAnswers, TableQuery } from "@tests/fixtures/builders/table-query-builder.builder"
+import {
+    CHAIN_REPEATS_COMMAND,
+    FIND_CHAIN_TOP,
+    FIND_GIVEN_INSTALLATION,
+    FIND_PARENT_POSITION,
+    FIND_SENDER_AGENT,
+    FIND_SUBJECT_LABEL,
+    RESOLVE_INSTALLATION,
+    UNREADABLE,
+    serve,
+} from "@tests/fixtures/builders/command-planner-owners.builder"
+import type { Queries, Served } from "@tests/fixtures/builders/command-planner-owners.builder"
 
-type Queries = ReadonlyArray<readonly [string, unknown]>
-
-/** The reads of the planner, named. Each one is a query builder on a table, except the resolver, which is a database function. */
-const FIND_SENDER_AGENT = "sender agent"
-const FIND_PARENT_POSITION = "parent position"
-const FIND_CHAIN_TOP = "chain top"
-const CHAIN_REPEATS_COMMAND = "chain repeats"
-const FIND_GIVEN_INSTALLATION = "given installation"
-const FIND_SUBJECT_LABEL = "subject label"
-/** The statement `callDbFunction` sends for the resolver. */
-const RESOLVE_INSTALLATION = "SELECT * FROM public.resolve_installation($1, $2, $3, $4, $5)"
-/** Stands for a lookup that fails: every read of the manager rejects. */
-const UNREADABLE = "SELECT 1"
-
-/** What every manager built by `serve` saw. */
-const SEEN = new WeakMap<MockEntityManager, TableAnswers>()
-
-const rowsAt = (queries: Queries, key: string): ReadonlyArray<Record<string, unknown>> => {
-    const rows: unknown = queries.find(([name]) => name === key)?.[1]
-    return Array.isArray(rows)
-        ? rows.filter((row): row is Record<string, unknown> => typeof row === "object" && row !== null)
-        : []
-}
-
-/** The manager a spec runs against, with the reads it answers. */
-interface Served {
-    readonly em: MockEntityManager
-}
-
-/** A manager that answers the named reads with their rows; with no reads it is strict and answers nothing. */
-const serve = (queries: Queries = []): Served => {
-    if (queries.length === 0) return { em: mockEntityManager() }
-    const resolved = rowsAt(queries, RESOLVE_INSTALLATION)
-    const em = queries.some(([key]) => key === RESOLVE_INSTALLATION)
-        ? mockEntityManager({
-              query: [RESOLVE_INSTALLATION, resolved.map(({ installation_id, via }) => ({ installation_id, via }))],
-          })
-        : mockEntityManager()
-    const failing = queries.some(([key]) => key === UNREADABLE)
-    const answer = (rows: ReadonlyArray<unknown>) => (failing ? Promise.reject(new RangeError("lookup failed")) : rows)
-    const label = () => answer(rowsAt(queries, FIND_SUBJECT_LABEL))
-    SEEN.set(
-        em,
-        answerByTable(em, {
-            "public.agents": () => answer(rowsAt(queries, FIND_SENDER_AGENT)),
-            "public.work_items": (query: TableQuery) => {
-                const alias = query.callsOf("select")[0]?.[1]
-                if (alias === "id") return answer(rowsAt(queries, FIND_PARENT_POSITION))
-                if (alias === "depth") return answer(rowsAt(queries, FIND_CHAIN_TOP))
-                return answer(rowsAt(queries, CHAIN_REPEATS_COMMAND).filter((row) => row.repeats === true))
-            },
-            "public.module_installations": (query: TableQuery) =>
-                query.callsOf("addSelect").length > 0
-                    ? answer(rowsAt(queries, FIND_GIVEN_INSTALLATION))
-                    : answer(resolved.map(({ name }) => ({ name }))),
-            "public.orders": label,
-            "public.leads": label,
-            "public.invoices": label,
-        }),
-    )
-    return { em }
-}
-
-/** The queries of one table that a manager built by `serve` saw. */
-const readsOf = (em: MockEntityManager, table: string): ReadonlyArray<TableQuery> =>
-    SEEN.get(em)?.queriesOf(table) ?? []
-
-const build = async (em: MockEntityManager) => {
+const build = async (served: Served = serve()) => {
     const log = jest.fn().mockResolvedValue(undefined)
     const post = jest.fn<Promise<void>, Parameters<OfficeLinesService["post"]>>().mockResolvedValue(undefined)
     const error = jest.fn<void, Parameters<Logger["error"]>>()
@@ -105,23 +53,21 @@ const build = async (em: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             CommandPlannerService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: served.em },
             { provide: LOGGER, useValue: mock<Logger>({ error }) },
-            {
-                provide: MESSAGE_CATALOG,
-                useValue: mock<MessageCatalog>({
-                    get: jest.fn(plannerText),
-                }),
-            },
-            {
-                provide: ModuleCatalogService,
-                useValue: modules,
-            },
+            { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>({ get: jest.fn(plannerText) }) },
+            { provide: ModuleCatalogService, useValue: modules },
             { provide: EvidenceService, useValue: mock<EvidenceService>({ log }) },
             { provide: OfficeLinesService, useValue: mock<OfficeLinesService>({ post }) },
+            { provide: AgentDirectoryService, useValue: served.agents },
+            { provide: InstallationRecordsService, useValue: served.installations },
+            { provide: WorkItemsChainReadService, useValue: served.chains },
+            { provide: OrdersLabelReadService, useValue: served.orders },
+            { provide: LeadReadService, useValue: served.leads },
+            { provide: InvoicesLedgerService, useValue: served.invoices },
         ],
     }).compile()
-    return { service: moduleRef.get(CommandPlannerService), em, log, post, error, modules }
+    return { service: moduleRef.get(CommandPlannerService), served, em: served.em, log, post, error, modules }
 }
 
 const planned = (plan: CommandPlan): PlannedCommand => {
@@ -131,8 +77,8 @@ const planned = (plan: CommandPlan): PlannedCommand => {
 }
 
 /** Plans the command, then runs its `onInserted` hook the way the intake does for a really inserted row. */
-const inserted = async (em: MockEntityManager, input: SendCommandInput, row: WorkItem = rowOf()) => {
-    const built = await build(em)
+const inserted = async (served: Served, input: SendCommandInput, row: WorkItem = rowOf()) => {
+    const built = await build(served)
     const plan = planned(await built.service.plan(ctx, input))
     await plan.spec.onInserted?.(row)
     return { ...built, plan }
@@ -182,31 +128,33 @@ const refusalCases = [
 describe("CommandPlannerService", () => {
     describe("a producer's domain transaction", () => {
         it("keeps command lookups, mirror and evidence in the supplied transaction", async () => {
-            const em = mockEntityManager()
             const manager = serve([
                 [FIND_SENDER_AGENT, [{ name: "Bot", module: "chatbot", installation_name: "Main" }]],
                 [FIND_PARENT_POSITION, [{ id: "parent-1", chain_id: "chain-1", depth: 0 }]],
                 [CHAIN_REPEATS_COMMAND, [{ repeats: false }]],
                 [FIND_GIVEN_INSTALLATION, [{ id: "inst-1", name: "Main" }]],
                 [FIND_SUBJECT_LABEL, [{ label: "Lan" }]],
-            ]).em
-            const built = await build(em)
+            ])
+            const own = mockEntityManager()
+            const built = await build({ ...manager, em: own })
             const input = replyOf({ from: AGENT_ID, parentId: "parent-1", installationId: "inst-1" })
-            const plan = planned(await built.service.plan(ctx, input, manager))
+            const plan = planned(await built.service.plan(ctx, input, manager.em))
 
             await plan.spec.onInserted?.(rowOf())
 
-            expect(em.createQueryBuilder).not.toHaveBeenCalled()
-            // A conversation subject has no label table, so the label is not read at all.
-            expect(manager.createQueryBuilder).toHaveBeenCalledTimes(4)
-            expect(built.modules.entryOf).toHaveBeenCalledWith("chatbot", manager)
-            expect(built.modules.nameOf).toHaveBeenCalledWith("chatbot", "en", manager)
-            expect(built.post).toHaveBeenCalledWith(ctx, expect.objectContaining({ command: true }), manager)
-            expect(built.log).toHaveBeenCalledWith(ctx, expect.objectContaining({ kind: "command.sent" }), manager)
+            expect(own.createQueryBuilder).not.toHaveBeenCalled()
+            expect(manager.chains.spotOf).toHaveBeenCalledWith("ws-1", "parent-1", manager.em)
+            expect(manager.chains.repeats).toHaveBeenCalledWith(
+                expect.objectContaining({ chainId: "chain-1" }),
+                manager.em,
+            )
+            expect(built.modules.entryOf).toHaveBeenCalledWith("chatbot")
+            expect(built.post).toHaveBeenCalledWith(ctx, expect.objectContaining({ command: true }), manager.em)
+            expect(built.log).toHaveBeenCalledWith(ctx, expect.objectContaining({ kind: "command.sent" }), manager.em)
         })
 
         it("records a refused command in the supplied transaction", async () => {
-            const built = await build(mockEntityManager())
+            const built = await build()
             const manager = mockEntityManager()
 
             expect((await built.service.plan(ctx, inputOf({ to: "missing" }), manager)).ok).toBe(false)
@@ -219,7 +167,7 @@ describe("CommandPlannerService", () => {
 describe("CommandPlannerService", () => {
     describe("refusals", () => {
         it.each(refusalCases)("refuses %s", async (_name, input, expected, queries) => {
-            const built = await build(serve(queries).em)
+            const built = await build(serve(queries))
             expect(await built.service.plan(ctx, input)).toEqual(expected)
             expect(built.log).toHaveBeenCalledTimes(1)
             const evidence = { kind: "command.refused", actor: "NIVO", evidence: expected.detail }
@@ -232,8 +180,7 @@ describe("CommandPlannerService", () => {
                 ...{ workspaceId: "ws-1", chainId: "chain-1", action: "classify_lead", subjectType: "lead" },
                 ...{ dedupeKey: "cmd:classify_lead:lead:lead-1", subjectId: "lead-1" },
             }
-            const wheres = readsOf(built.em, "public.work_items").map((query) => query.callsOf("where")[0]?.[1])
-            if (expected.refused === "cycle") expect(wheres).toContainEqual(cycle)
+            if (expected.refused === "cycle") expect(built.served.chains.repeats).toHaveBeenCalledWith(cycle, built.em)
         })
     })
 })
@@ -241,7 +188,7 @@ describe("CommandPlannerService", () => {
 describe("CommandPlannerService", () => {
     describe("refusals", () => {
         it("survives an evidence log that is down", async () => {
-            const built = await build(mockEntityManager({}))
+            const built = await build()
             built.log.mockRejectedValue(new RangeError("down"))
             const plan = await built.service.plan(ctx, inputOf({ to: "mystery" }))
             expect(plan.ok).toBe(false)
@@ -251,7 +198,7 @@ describe("CommandPlannerService", () => {
 
     describe("a planned command", () => {
         it("becomes a spec addressed to the receiver, with the payload fields in the seed", async () => {
-            const built = await build(mockEntityManager({}))
+            const built = await build()
 
             const payload = { subject_type: "lead", subject_id: "lead-1", lead_id: "lead-1", note: "vip" }
             const input = inputOf({ payload, seed: { summary: "S", fields: { a: 1 } }, inboundEventId: "in-1" })
@@ -273,7 +220,7 @@ describe("CommandPlannerService", () => {
             ["a named subject", inputOf(), "lead-1", "cmd:classify_lead:lead:lead-1"],
             ["an unnamed kind", inputOf({ payload: { lead_id: "lead-1" } }), null, "cmd:classify_lead:lead:none"],
         ])("defaults the dedupe key and seed for %s", async (_name, input, subjectId, dedupeKey) => {
-            const built = await build(mockEntityManager({}))
+            const built = await build()
             const plan = planned(await built.service.plan(ctx, input))
             expect(plan.spec.dedupeKey).toBe(dedupeKey)
             expect(plan.spec.seed).toEqual({ fields: {} })
@@ -311,7 +258,7 @@ describe("CommandPlannerService", () => {
                 [sql, rows],
                 [CHAIN_REPEATS_COMMAND, repeats === null ? [] : [{ repeats }]],
             ]
-            const built = await build(serve(query).em)
+            const built = await build(serve(query))
             const plan = planned(await built.service.plan(ctx, input))
             expect(plan.depth).toBe(depth)
             expect(plan.spec.chainId).toBe(chainId)
@@ -368,20 +315,15 @@ describe("CommandPlannerService", () => {
                 ["ws-1", "chatbot", null, "lead-9", null],
             ),
         ])("chooses %s", async (_name, input, id, query, sql, params) => {
-            const built = await build(serve(query).em)
+            const built = await build(serve(query))
             const plan = planned(await built.service.plan(ctx, input))
             expect(plan.spec.installationId).toBe(id)
             if (sql === RESOLVE_INSTALLATION) expect(built.em.query).toHaveBeenCalledWith(sql, params)
-            else
-                expect(readsOf(built.em, "public.module_installations")[0]?.callsOf("where")[0]?.[1]).toEqual({
-                    workspaceId: params[0],
-                    moduleKey: params[1],
-                    installationId: params[2],
-                })
+            else expect(built.served.installations.find).toHaveBeenCalledWith(params[0], params[2])
         })
 
         it("leaves the database trigger to attribute the item when the lookup fails", async () => {
-            const built = await build(serve([[UNREADABLE, []]]).em)
+            const built = await build(serve([[UNREADABLE, []]]))
 
             const plan = planned(await built.service.plan(ctx, replyOf()))
 
@@ -408,7 +350,7 @@ describe("CommandPlannerService", () => {
         ) => [name, body, inputOf(input), query, failed] as const
         const subject = (kind: string) => ({ lead_id: "lead-1", subject_type: kind, subject_id: `${kind}-1` })
         it("announces a command that became an item, once inserted", async () => {
-            const built = await inserted(serve([[FIND_SUBJECT_LABEL, [{ label: "Lan" }]]]).em, inputOf())
+            const built = await inserted(serve([[FIND_SUBJECT_LABEL, [{ label: "Lan" }]]]), inputOf())
 
             expect(built.plan.inserted()).toBe(true)
             const ids = { lead_id: "lead-1", work_item_id: "item-1" }
@@ -416,9 +358,7 @@ describe("CommandPlannerService", () => {
             const sent = { kind: "command.sent", actor: "Owner", summary: "sales.classify_lead", evidence: "handoff" }
             expect(built.post).toHaveBeenCalledWith(ctx, { command: true, body, ...ids }, built.em)
             expect(built.log).toHaveBeenCalledWith(ctx, { ...ids, ...sent }, built.em)
-            expect(readsOf(built.em, "public.leads").map((query) => query.callsOf("where")[0]?.[1])).toEqual([
-                { workspaceId: "ws-1", subjectId: "lead-1" },
-            ])
+            expect(built.served.leads.cardsOf).toHaveBeenCalledWith("ws-1", ["lead-1"])
         })
 
         it.each([
@@ -444,7 +384,7 @@ describe("CommandPlannerService", () => {
             mirror("no label row", "Owner: classify"),
             mirror("an unreadable label", "Owner: classify", {}, [[UNREADABLE, []]], true),
         ])("mirrors %s", async (_name, body, input, query, failed) => {
-            const built = await inserted(serve(query).em, input)
+            const built = await inserted(serve(query), input)
             expect(built.post.mock.calls[0]?.[1]?.body).toBe(`@Sales <- ${body}`)
             if (failed)
                 expect(built.error).toHaveBeenCalledWith(WorkEngineLogEvent.SubjectLabelUnreadable, expect.any(Error), {
@@ -459,12 +399,12 @@ describe("CommandPlannerService", () => {
         it.each([
             [
                 "named",
-                serve([[FIND_GIVEN_INSTALLATION, [{ id: "inst-1", name: "Branch 1" }]]]).em,
+                serve([[FIND_GIVEN_INSTALLATION, [{ id: "inst-1", name: "Branch 1" }]]]),
                 { installationId: "inst-1" },
             ],
             [
                 "resolved",
-                serve([[RESOLVE_INSTALLATION, [{ installation_id: "inst-2", via: "first", name: null }]]]).em,
+                serve([[RESOLVE_INSTALLATION, [{ installation_id: "inst-2", via: "first", name: null }]]]),
                 {},
             ],
         ])("records the instance that was chosen and how: %s", async (kind, manager, changes) => {
@@ -481,7 +421,7 @@ describe("CommandPlannerService", () => {
         })
 
         it("lets neither the Office nor the evidence log block the command", async () => {
-            const built = await build(serve([[FIND_SUBJECT_LABEL, []]]).em)
+            const built = await build(serve([[FIND_SUBJECT_LABEL, []]]))
             built.post.mockRejectedValue(new RangeError("office"))
             built.log.mockRejectedValue(new RangeError("log"))
             const plan = planned(await built.service.plan(ctx, inputOf()))

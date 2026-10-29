@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./orders.module-definition"
 import { OrdersService } from "./orders.service"
+import { OrdersLabelReadService } from "./orders-label-read.service"
 import { OrdersFiguresService } from "./orders-figures.service"
 import { OrdersReadService } from "./orders-read.service"
 import { OrdersAutomationReadService } from "./orders-automation-read.service"
@@ -20,8 +21,15 @@ export class OrdersModule extends ConfigurableModuleClass {
                 OrdersReadService,
                 OrdersFiguresService,
                 OrdersAutomationReadService,
+                OrdersLabelReadService,
             ],
-            exports: [OrdersService, OrdersReadService, OrdersFiguresService, OrdersAutomationReadService],
+            exports: [
+                OrdersService,
+                OrdersReadService,
+                OrdersFiguresService,
+                OrdersAutomationReadService,
+                OrdersLabelReadService,
+            ],
         }
     }
 }

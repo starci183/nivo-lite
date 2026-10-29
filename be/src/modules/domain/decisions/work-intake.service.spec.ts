@@ -206,7 +206,7 @@ describe("WorkIntakeService", () => {
             }),
             manager,
         )
-        expect(modules.actionOf).toHaveBeenCalledWith("send_quote", manager)
+        expect(modules.actionOf).toHaveBeenCalledWith("send_quote")
 
         expect(insert).toHaveBeenCalledWith(
             expect.objectContaining({

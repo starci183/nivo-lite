@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
+import { LeadReadService } from "@modules/domain/leads"
+import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { DecisionEntry, EvidenceEntry, WorkContext } from "./decisions.contracts"
 import type { AccountingDecisionRow } from "./decision-log.rows"
@@ -13,28 +15,27 @@ export class EvidenceService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly events: EventsService,
+        private readonly leads: LeadReadService,
+        private readonly members: WorkspaceMemberDirectoryService,
     ) {}
 
     /** Reads a bounded decision history after the composer proved workspace membership. */
-    listDecisions(workspaceId: string, query: DecisionHistoryQuery): Promise<Array<LeadDecisionRecord>> {
+    async listDecisions(workspaceId: string, query: DecisionHistoryQuery): Promise<Array<LeadDecisionRecord>> {
         const oldestFirst = query.oldestFirst ?? false
         const read = this.entityManager
             .createQueryBuilder(DecisionEntity, "d")
             .select("d.id", "id")
             .addSelect("d.workItemId", "work_item_id")
             .addSelect("d.leadId", "lead_id")
-            .addSelect("l.contact_name", "leadName")
             .addSelect("d.department", "department")
             .addSelect("d.action", "action")
-            .addSelect("COALESCE(m.display_name, d.decidedBy)", "decided_by")
+            .addSelect("d.decidedBy", "decided_by")
             .addSelect("d.decidedByMemberId", "decidedByMemberId")
             .addSelect("d.deciderKind", "decider_kind")
             .addSelect("d.outcome", "outcome")
             .addSelect("d.reason", "reason")
             .addSelect("d.note", "note")
             .addSelect("to_json(d.createdAt) #>> '{}'", "created_at")
-            .leftJoin("leads", "l", "l.id = d.leadId AND l.workspace_id = d.workspaceId")
-            .leftJoin("workspace_members", "m", "m.id = d.decidedByMemberId")
             .where("d.workspaceId = :workspaceId", { workspaceId })
         if (query.leadId !== undefined) read.andWhere("d.leadId = :leadId", { leadId: query.leadId })
         if (query.humanDepartment !== undefined) {
@@ -42,11 +43,27 @@ export class EvidenceService {
                 department: query.humanDepartment,
             })
         }
-        return read
+        const rows = await read
             .orderBy("d.createdAt", oldestFirst ? "ASC" : "DESC")
             .addOrderBy("d.id", "ASC")
             .limit(Math.min(1000, Math.max(1, Math.floor(query.limit))))
-            .getRawMany<LeadDecisionRecord>()
+            .getRawMany<Omit<LeadDecisionRecord, "leadName">>()
+        const leadIds = rows.flatMap((row) => (row.lead_id === null ? [] : [row.lead_id]))
+        const memberIds = rows.flatMap((row) => (row.decidedByMemberId === null ? [] : [row.decidedByMemberId]))
+        const names = new Map(
+            (await this.leads.cardsOf(workspaceId, leadIds)).map((card) => [card.id, card.contactName]),
+        )
+        const members = new Map(
+            (await this.members.byIds(workspaceId, [...new Set(memberIds)])).map((member) => [
+                member.id,
+                member.displayName,
+            ]),
+        )
+        return rows.map((row) => ({
+            ...row,
+            leadName: row.lead_id === null ? null : (names.get(row.lead_id) ?? null),
+            decided_by: members.get(row.decidedByMemberId ?? "") ?? row.decided_by,
+        }))
     }
 
     /** The newest accounting decisions' lineage for the accounting book. */
