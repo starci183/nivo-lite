@@ -7,8 +7,8 @@ import type { CsvImportMapView, CsvMapColumn } from "@/components/composites/Csv
 import { CsvImportRun } from "@/components/composites/CsvImportRun"
 import { SlotView } from "@/components/composites/SlotView"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import { backAction, closeAction, nextAction, WizardFooter } from "@/components/composites/WizardFooter"
-import type { WizardAction } from "@/components/composites/WizardFooter"
+import { backAction, closeAction, nextAction } from "@/components/branches/WizardFooter"
+import type { WizardAction } from "@/components/branches/WizardFooter"
 import { frameOf, WizardFrame } from "@/components/composites/WizardFrame"
 import type { AgentStepView, DataSlot, SlotLabels, WizardNote, WizardResume } from "@/modules/types"
 import { csvImportWizardClassNames as classNames } from "./classNames"
@@ -268,11 +268,7 @@ export const CsvImportWizardBase = (props: CsvImportWizardBaseProps) => {
     return (
         <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels} onRetry={on.retry}>
             {(_resume, isSkeleton) => (
-                <WizardFrame
-                    {...frameOf(view)}
-                    isSkeleton={isSkeleton}
-                    footer={<WizardFooter actions={actionsOf(props)} isSkeleton={isSkeleton} />}
-                >
+                <WizardFrame {...frameOf(view)} isSkeleton={isSkeleton} actions={actionsOf(props)}>
                     {view.resumeLine === null ? null : (
                         <Text size="sm" tone="muted">
                             {view.resumeLine}

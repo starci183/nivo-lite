@@ -10,6 +10,8 @@ type SlotViewProps<T> = {
     readonly labels: SlotLabels
     /** A secondary slot disappears on 403; a primary slot says so in place. */
     readonly forbidden?: "hide" | "notice"
+    /** Drawn under the forbidden notice of a primary slot: the way out (a link back). */
+    readonly forbiddenAction?: ReactNode
     readonly onRetry?: () => void
     readonly children: (data: T, isSkeleton: boolean) => ReactNode
 }
@@ -21,7 +23,15 @@ type SlotViewProps<T> = {
 export const SlotView = <T,>(props: SlotViewProps<T>) => {
     const { slot, labels } = props
     if (slot.isLoading) return <>{props.children(props.placeholder, true)}</>
-    if (slot.isForbidden) return props.forbidden === "hide" ? null : <EmptyNotice message={labels.forbidden} />
+    if (slot.isForbidden) {
+        if (props.forbidden === "hide") return null
+        return (
+            <>
+                <EmptyNotice message={labels.forbidden} />
+                {props.forbiddenAction}
+            </>
+        )
+    }
     if (slot.isError) {
         return (
             <EmptyNotice

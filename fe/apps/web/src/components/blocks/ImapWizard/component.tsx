@@ -4,13 +4,7 @@ import { Alert, Button, CheckboxGroup, RadioGroup, Text } from "@starci/grammar/
 import { ImapAccountFields, type ImapAccountFieldsProps } from "@/components/composites/ImapAccountFields"
 
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import {
-    backAction,
-    closeAction,
-    nextAction,
-    WizardFooter,
-    type WizardAction,
-} from "@/components/composites/WizardFooter"
+import { backAction, closeAction, nextAction, type WizardAction } from "@/components/branches/WizardFooter"
 
 import { frameOf, WizardFrame } from "@/components/composites/WizardFrame"
 
@@ -168,11 +162,7 @@ export const ImapWizardBase = (props: ImapWizardBaseProps) => {
     return (
         <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels} onRetry={on.retry}>
             {(_resume, isSkeleton) => (
-                <WizardFrame
-                    {...frameOf(view)}
-                    isSkeleton={isSkeleton}
-                    footer={<WizardFooter actions={actionsOf(props)} isSkeleton={isSkeleton} />}
-                >
+                <WizardFrame {...frameOf(view)} isSkeleton={isSkeleton} actions={actionsOf(props)}>
                     {view.step === "account" ? (
                         <ImapAccountStep
                             view={view.account}

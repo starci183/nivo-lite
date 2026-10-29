@@ -102,56 +102,70 @@ export const OverviewOwnersBase = (props: OverviewOwnersBaseProps) => {
                 description={props.props.description}
                 isSkeleton={props.props.isSkeleton}
             />
-            {props.props.isSkeleton ? (
-                <SurfaceListCard ariaLabel={props.props.listLabel} isLoading />
-            ) : props.props.groups.length === 0 ? (
-                <SurfaceCard ariaLabel={props.props.listLabel}>
-                    <EmptyNotice
-                        message={props.props.emptyMessage}
-                        description={props.props.emptyDescription}
-                        actionLabel={props.props.emptyActionLabel}
-                        actionVariant="secondary"
-                        onAction={props.on.openEmptyAction}
-                    />
-                </SurfaceCard>
-            ) : (
-                <div className={GROUPS_CLASS_NAME}>
-                    {groups.map((group) => (
-                        <Region key={group.key} className={SECTION_CLASS_NAME} label={group.ariaLabel}>
-                            <div className={SECTION_HEAD_CLASS_NAME}>
-                                <div className={OWNER_MARK_CLASS_NAME}>
-                                    {group.glyph === null ? (
-                                        <PersonAvatar name={group.name} size="md" />
-                                    ) : (
-                                        <AgentMark
-                                            glyph={nivoIconSource(group.glyph, "leading")}
-                                            label={group.name}
-                                            module={group.module}
-                                            size="md"
-                                        />
-                                    )}
-                                    <div className={OWNER_TEXT_CLASS_NAME}>
-                                        <Text weight="semibold" overflow="truncate">
-                                            {group.name}
-                                        </Text>
-                                        <Text size="sm" tone="muted" overflow="truncate">
-                                            {group.roleText}
-                                        </Text>
-                                    </div>
-                                </div>
-                                <Text size="sm" tone="muted">
-                                    {group.countText}
+            <OwnersBody {...props} groups={groups} />
+        </div>
+    )
+}
+
+type OwnersBodyProps = OverviewOwnersBaseProps & {
+    readonly groups: ReadonlyArray<Omit<OverviewOwnersGroup, "rows"> & { readonly rows: ReadonlyArray<OwnersTiledRow> }>
+}
+
+/** The rows of an owner section with the tile each one draws. */
+type OwnersTiledRow = OverviewOwnersRow & { readonly tileProps: ComponentProps<typeof TileIcon>["props"] }
+
+/** The placeholder card, the empty notice, or one section per owner. */
+const OwnersBody = ({ groups, ...props }: OwnersBodyProps) => {
+    if (props.props.isSkeleton) return <SurfaceListCard ariaLabel={props.props.listLabel} isLoading />
+    if (groups.length === 0) {
+        return (
+            <SurfaceCard ariaLabel={props.props.listLabel}>
+                <EmptyNotice
+                    message={props.props.emptyMessage}
+                    description={props.props.emptyDescription}
+                    actionLabel={props.props.emptyActionLabel}
+                    actionVariant="secondary"
+                    onAction={props.on.openEmptyAction}
+                />
+            </SurfaceCard>
+        )
+    }
+    return (
+        <div className={GROUPS_CLASS_NAME}>
+            {groups.map((group) => (
+                <Region key={group.key} className={SECTION_CLASS_NAME} label={group.ariaLabel}>
+                    <div className={SECTION_HEAD_CLASS_NAME}>
+                        <div className={OWNER_MARK_CLASS_NAME}>
+                            {group.glyph === null ? (
+                                <PersonAvatar name={group.name} size="md" />
+                            ) : (
+                                <AgentMark
+                                    glyph={nivoIconSource(group.glyph, "leading")}
+                                    label={group.name}
+                                    module={group.module}
+                                    size="md"
+                                />
+                            )}
+                            <div className={OWNER_TEXT_CLASS_NAME}>
+                                <Text weight="semibold" overflow="truncate">
+                                    {group.name}
+                                </Text>
+                                <Text size="sm" tone="muted" overflow="truncate">
+                                    {group.roleText}
                                 </Text>
                             </div>
-                            <SurfaceListCard ariaLabel={group.cardsLabel}>
-                                {group.rows.map((row) => (
-                                    <OverviewOwnerRow key={row.id} row={row} {...props} />
-                                ))}
-                            </SurfaceListCard>
-                        </Region>
-                    ))}
-                </div>
-            )}
+                        </div>
+                        <Text size="sm" tone="muted">
+                            {group.countText}
+                        </Text>
+                    </div>
+                    <SurfaceListCard ariaLabel={group.cardsLabel}>
+                        {group.rows.map((row) => (
+                            <OverviewOwnerRow key={row.id} row={row} props={props.props} on={props.on} />
+                        ))}
+                    </SurfaceListCard>
+                </Region>
+            ))}
         </div>
     )
 }

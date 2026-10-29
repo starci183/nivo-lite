@@ -7,7 +7,7 @@ import { OverviewGovHistory, type OverviewGovHistoryProps } from "@/components/c
 import { STACK_CLASS_NAME } from "./classNames"
 
 /** Every block of the governance section, as plain words. */
-interface OverviewGovernanceFigures {
+export interface OverviewGovernanceFigures {
     readonly summary: OverviewGovSummaryProps["figures"]
     readonly results: OverviewGovResultsProps["figures"]
     readonly waiting: OverviewGovWaitingProps["figures"]

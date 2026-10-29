@@ -196,26 +196,24 @@ export interface ConnectionsBoardRegionProps {
 export const ConnectionsBoardRegion = (props: ConnectionsBoardRegionProps) => {
     const { overview } = props
     return (
-        <>
-            <SlotView
-                slot={overview.props.board}
-                placeholder={{ ...BOARD_PLACEHOLDER, view: overview.props.placeholderView }}
-                labels={overview.props.slotLabels}
-                forbidden="notice"
-                onRetry={overview.on.retry}
-            >
-                {(board, isSkeleton) => (
-                    <>
-                        <BoardBody {...overview} board={board} isSkeleton={isSkeleton} />
-                        <TextAction href={overview.props.words.automationsHref}>
-                            {overview.props.words.automationsLink}
-                        </TextAction>
-                    </>
-                )}
-            </SlotView>
-            {overview.props.board.isForbidden === true ? (
+        <SlotView
+            slot={overview.props.board}
+            placeholder={{ ...BOARD_PLACEHOLDER, view: overview.props.placeholderView }}
+            labels={overview.props.slotLabels}
+            forbidden="notice"
+            forbiddenAction={
                 <TextAction href={overview.props.words.backHref}>{overview.props.words.backLabel}</TextAction>
-            ) : null}
-        </>
+            }
+            onRetry={overview.on.retry}
+        >
+            {(board, isSkeleton) => (
+                <>
+                    <BoardBody {...overview} board={board} isSkeleton={isSkeleton} />
+                    <TextAction href={overview.props.words.automationsHref}>
+                        {overview.props.words.automationsLink}
+                    </TextAction>
+                </>
+            )}
+        </SlotView>
     )
 }
