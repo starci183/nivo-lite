@@ -40,8 +40,20 @@ export interface AgentsSetupOptions {
     readonly setupOnly: true
 }
 
-/** The options of the agents capability: the full capability or its setup mode. */
-export type AgentsOptions = AgentsFullOptions | AgentsSetupOptions
+/**
+ * The options of the directory mode (the mcp app): only the agent lookups other capabilities read through, with no port bound and
+ * no queue, for an app that verifies agent keys but runs no agent.
+ */
+export interface AgentsDirectoryOptions {
+    /** Registers the directory mode. */
+    readonly directoryOnly: true
+}
+
+/** The options of a mode that runs agents: the full capability or its setup mode, the value its services read. */
+export type AgentsRunOptions = AgentsFullOptions | AgentsSetupOptions
+
+/** The options of the agents capability: a mode that runs agents, or the directory mode. */
+export type AgentsOptions = AgentsRunOptions | AgentsDirectoryOptions
 
 /** The default freshness of a sync check: 15 minutes (the scheduled sync touches it every five). */
 export const AGENTS_SYNC_FRESH_MS = 15 * 60_000

@@ -5,11 +5,11 @@ import { OPENCLAW_AGENT_REGISTRY, OPENCLAW_GATEWAY } from "@modules/integrations
 import type { AgentRegistryService, GatewayClient } from "@modules/integrations/openclaw"
 import { CLOCK } from "@modules/platform/clock"
 import { AGENTS_INSTALLATIONS, AGENTS_OPTIONS } from "./agents.decorators"
-import type { AgentsOptions } from "./agents.options"
+import type { AgentsRunOptions } from "./agents.options"
 import type { Installation, InstallationDirectory } from "./agents.port"
 import { EngineStatusService } from "./engine-status.service"
 
-const OPTIONS: Omit<AgentsOptions, "ports"> = { syncFreshMs: 600_000 }
+const OPTIONS: Omit<AgentsRunOptions, "ports"> = { syncFreshMs: 600_000 }
 
 /** What a spec sets up around the service. */
 interface Setup {

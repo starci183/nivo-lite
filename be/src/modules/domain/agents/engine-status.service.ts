@@ -6,8 +6,8 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import type { EngineAvailability, EngineStatus, Processor } from "./agents.contracts"
 import type { SyncCheckReader } from "./agents-reads.contracts"
-import { InjectAgentsOptions, InjectInstallations } from "./agents.decorators"
-import type { AgentsOptions } from "./agents.options"
+import { InjectAgentsRunOptions, InjectInstallations } from "./agents.decorators"
+import type { AgentsRunOptions } from "./agents.options"
 import type { InstallationDirectory } from "./agents.port"
 import { EngineReadinessService } from "./engine-readiness.service"
 import { isFresh, processorFromSettings } from "./engine-status.policy"
@@ -27,7 +27,7 @@ export class EngineStatusService {
         @InjectOpenclawGateway() gateway: GatewayClient,
         @InjectOpenclawAgentRegistry() registry: AgentRegistryService,
         @InjectClock() private readonly clock: Clock,
-        @InjectAgentsOptions() private readonly options: AgentsOptions,
+        @InjectAgentsRunOptions() private readonly options: AgentsRunOptions,
     ) {
         this.readiness = new EngineReadinessService(gateway, registry)
     }

@@ -25,10 +25,18 @@ import { PauseClient } from "./pause.client"
 export class AgentsModule extends ConfigurableModuleClass {
     /**
      * Registers the capability once; the other lanes' ports are bound to the classes the options name. The setup mode registers
-     * fewer real providers (no knowledge lens, no engine status) and nothing in their place.
+     * fewer real providers (no knowledge lens, no engine status) and nothing in their place; the directory mode registers only the
+     * agent directory.
      */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        if ("directoryOnly" in options) {
+            return {
+                ...base,
+                imports: [...(base.imports ?? []), AgentDirectoryModule.register({})],
+                exports: [AgentDirectoryModule],
+            }
+        }
         const { isGlobal: _isGlobal, ...parsed } = options
         const shared = [
             { provide: AGENTS_OPTIONS, useValue: parsed },
