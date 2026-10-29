@@ -103,7 +103,7 @@ const BUMP_SET = {
 
 const BUMP_WHERE = ["workspace_id = :workspaceId AND id = :id", { workspaceId: WS, id: "g1" }]
 
-const nullKeywords = null as unknown as Array<string>
+const nullKeywords = null
 
 describe("KnowledgeGapsService", () => {
     it("lists mapped gaps with the requested statuses and caps the limit at 200", async () => {
