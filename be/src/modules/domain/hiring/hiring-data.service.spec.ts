@@ -8,6 +8,7 @@ import {
     offer as offerFixture,
 } from "@tests/fixtures/builders/hiring-data.builder"
 import { settingsRow, jobRow, candidateRow, interviewRow, offerRow, availabilityRow } from "@tests/fixtures/builders/hiring-rows.builder"
+import { namedCalls } from "@tests/fixtures/builders/entity-row.builder"
 import { Test } from "@nestjs/testing"
 import { Between, In, IsNull, LessThan } from "typeorm"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
@@ -83,15 +84,15 @@ describe("HiringDataService", () => {
         await expect(service.interviewByToken("interview-token")).resolves.toEqual(present ? interview : undefined)
         await expect(service.offer("ws-1", "offer-1")).resolves.toEqual(present ? offer : undefined)
         await expect(service.offerByToken("offer-token")).resolves.toEqual(present ? offer : undefined)
-        expect(em.findOne.mock.calls).toEqual([
-            [HiringSettingEntity, { where: { workspaceId: "ws-1" } }],
-            [HiringSettingEntity, { where: { publicSlug: "shop" } }],
-            [HiringJobEntity, { where: { workspaceId: "ws-1", id: "job-1" } }],
-            [HiringJobEntity, { where: { workspaceId: "ws-1", slug: "barista" } }],
-            [HiringCandidateEntity, { where: { workspaceId: "ws-1", id: "candidate-1" } }],
-            [HiringInterviewEntity, { where: { token: "interview-token" } }],
-            [HiringOfferEntity, { where: { workspaceId: "ws-1", id: "offer-1" } }],
-            [HiringOfferEntity, { where: { token: "offer-token" } }],
+        expect(namedCalls(em.findOne.mock.calls)).toEqual([
+            ["HiringSettingEntity", { where: { workspaceId: "ws-1" } }],
+            ["HiringSettingEntity", { where: { publicSlug: "shop" } }],
+            ["HiringJobEntity", { where: { workspaceId: "ws-1", id: "job-1" } }],
+            ["HiringJobEntity", { where: { workspaceId: "ws-1", slug: "barista" } }],
+            ["HiringCandidateEntity", { where: { workspaceId: "ws-1", id: "candidate-1" } }],
+            ["HiringInterviewEntity", { where: { token: "interview-token" } }],
+            ["HiringOfferEntity", { where: { workspaceId: "ws-1", id: "offer-1" } }],
+            ["HiringOfferEntity", { where: { token: "offer-token" } }],
         ])
     })
 })
@@ -129,13 +130,13 @@ describe("HiringDataService", () => {
         await expect(service.memberName("ws-2", "user-2")).resolves.toBeUndefined()
         const tickSelect = { workspaceId: true, retentionDays: true, remindInterview: true }
         const jobSelect = { title: true, location: true, position: true }
-        expect(em.findOne.mock.calls).toEqual([
-            [HiringSettingEntity, { select: tickSelect, where: { workspaceId: "ws-1" } }],
-            [HiringCandidateEntity, { select: { id: true, name: true }, where: { id: "candidate-1" } }],
-            [HiringJobEntity, { select: jobSelect, where: { id: "job-1" } }],
-            [HiringSettingEntity, { select: tickSelect, where: { workspaceId: "ws-2" } }],
-            [HiringCandidateEntity, { select: { id: true, name: true }, where: { id: "candidate-2" } }],
-            [HiringJobEntity, { select: jobSelect, where: { id: "job-2" } }],
+        expect(namedCalls(em.findOne.mock.calls)).toEqual([
+            ["HiringSettingEntity", { select: tickSelect, where: { workspaceId: "ws-1" } }],
+            ["HiringCandidateEntity", { select: { id: true, name: true }, where: { id: "candidate-1" } }],
+            ["HiringJobEntity", { select: jobSelect, where: { id: "job-1" } }],
+            ["HiringSettingEntity", { select: tickSelect, where: { workspaceId: "ws-2" } }],
+            ["HiringCandidateEntity", { select: { id: true, name: true }, where: { id: "candidate-2" } }],
+            ["HiringJobEntity", { select: jobSelect, where: { id: "job-2" } }],
         ])
         expect(seats.activeSeatOfUser.mock.calls).toEqual([
             ["ws-1", "user-1"],
@@ -168,15 +169,15 @@ describe("HiringDataService", () => {
         await expect(service.heads("candidate-2", "job-1")).resolves.toBeUndefined()
         await expect(service.heads("candidate-1", "job-2")).resolves.toBeUndefined()
         await expect(service.heads("candidate-2", "job-2")).resolves.toBeUndefined()
-        expect(em.findOne.mock.calls.map(([entity, options]) => [entity, options?.where])).toEqual([
-            [HiringCandidateEntity, { id: "candidate-1" }],
-            [HiringJobEntity, { id: "job-1" }],
-            [HiringCandidateEntity, { id: "candidate-2" }],
-            [HiringJobEntity, { id: "job-1" }],
-            [HiringCandidateEntity, { id: "candidate-1" }],
-            [HiringJobEntity, { id: "job-2" }],
-            [HiringCandidateEntity, { id: "candidate-2" }],
-            [HiringJobEntity, { id: "job-2" }],
+        expect(em.findOne.mock.calls.map(([entity, options]) => [entity.name, options?.where])).toEqual([
+            ["HiringCandidateEntity", { id: "candidate-1" }],
+            ["HiringJobEntity", { id: "job-1" }],
+            ["HiringCandidateEntity", { id: "candidate-2" }],
+            ["HiringJobEntity", { id: "job-1" }],
+            ["HiringCandidateEntity", { id: "candidate-1" }],
+            ["HiringJobEntity", { id: "job-2" }],
+            ["HiringCandidateEntity", { id: "candidate-2" }],
+            ["HiringJobEntity", { id: "job-2" }],
         ])
     })
 })
@@ -193,9 +194,9 @@ describe("HiringDataService", () => {
 
         await expect(service.conversationChannel("conversation-1")).resolves.toBe("telegram")
         await expect(service.conversationChannel("conversation-3")).resolves.toBeNull()
-        expect(em.findOne.mock.calls).toEqual([
-            [AgentConversationEntity, { select: { channel: true }, where: { id: "conversation-1" } }],
-            [AgentConversationEntity, { select: { channel: true }, where: { id: "conversation-3" } }],
+        expect(namedCalls(em.findOne.mock.calls)).toEqual([
+            ["AgentConversationEntity", { select: { channel: true }, where: { id: "conversation-1" } }],
+            ["AgentConversationEntity", { select: { channel: true }, where: { id: "conversation-3" } }],
         ])
     })
 
@@ -242,7 +243,7 @@ describe("HiringDataService lists", () => {
             interviewFixture,
             { ...interviewFixture, id: "interview-2" },
         ])
-        expect(em.find.mock.calls).toEqual([
+        expect(namedCalls(em.find.mock.calls)).toEqual([
             [
                 HiringInterviewEntity,
                 {
@@ -272,7 +273,7 @@ describe("HiringDataService lists", () => {
             { weekday: 1, startMin: 480, endMin: 720 },
             { weekday: 2, startMin: 600, endMin: 900 },
         ])
-        expect(em.find.mock.calls).toEqual([
+        expect(namedCalls(em.find.mock.calls)).toEqual([
             [
                 HiringAvailabilityEntity,
                 {
@@ -299,6 +300,9 @@ describe("HiringDataService lists", () => {
         expect(roster.oldestOf).toHaveBeenCalledWith("ws-1", 20)
     })
 
+})
+
+describe("HiringDataService job and retention lists", () => {
     it("reads the live job ids and the retention due ids with the bounds of the old queries", async () => {
         const cutoff = new Date("2026-07-15T00:00:00.000Z")
         const em = mockEntityManager({
@@ -311,7 +315,7 @@ describe("HiringDataService lists", () => {
 
         await expect(service.liveJobIds("ws-1")).resolves.toEqual(["job-1", "job-2"])
         await expect(service.retentionDue("ws-1", cutoff)).resolves.toEqual(["candidate-1", "candidate-2"])
-        expect(em.find.mock.calls).toEqual([
+        expect(namedCalls(em.find.mock.calls)).toEqual([
             [
                 HiringJobEntity,
                 { select: { id: true }, where: { workspaceId: "ws-1", status: In(["open", "paused"]) }, take: 500 },
@@ -384,7 +388,7 @@ describe("HiringDataService lists", () => {
         const service = await build(em)
 
         await expect(service.busy("ws-1", "user-1")).resolves.toEqual([first, second, third, fourth])
-        expect(em.find.mock.calls).toEqual([
+        expect(namedCalls(em.find.mock.calls)).toEqual([
             [
                 HiringInterviewEntity,
                 {
