@@ -64,7 +64,6 @@ const build = async (entityManager: MockEntityManager = mockEntityManager()) => 
     const owners = { workspaces, installations, connections, appErrors, roster, invites, orders }
     return { service, ...owners, billingEvents, contextVersions, agentSync, knowledge, transfers, quota }
 }
-}
 
 const WORKSPACE_ROW = {
     id: "ws-1",
