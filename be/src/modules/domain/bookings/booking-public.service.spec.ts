@@ -317,7 +317,7 @@ describe("BookingPublicService", () => {
             const model = modelOf({
                 settings: settingsOf({ autoConfirm: params.autoConfirm, depositPct: heldForm ? 50 : 0 }),
             })
-            const { service, reservation, reminders, tx } = await build({ page: !chat, model, spans: params.spans })
+            const { service, reservation, reminders, tx } = await build({ page: !chat, model, spans: params.spans ?? [] })
             const form = bookingRequestOf(heldForm ? { token: "form-token-1", email: "nope" } : {})
             const result = chat ? service.requestIn(workspaceRequestOf(CHAT_LINK)) : service.book(form)
             await expect(result).resolves.toEqual(params.reply)

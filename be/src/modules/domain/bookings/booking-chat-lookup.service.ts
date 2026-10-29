@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { BookingServicesReadService } from "@modules/domain/booking-services"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { ChatBookingRef, OptionalCancellableBooking, OptionalInstallationId } from "./booking-chat.contracts"
+import type { ChatBookingRef, OptionalCancellableBooking, OptionalBookingInstallationId } from "./booking-chat.contracts"
 import type { CancellableRowFacts } from "./booking-facts.contracts"
 import { BookingEntity } from "./persistence/entities"
 import { cancellableOf } from "./policies/cancellable.policy"
@@ -16,7 +16,7 @@ export class BookingChatLookupService {
     ) {}
 
     /** The installation that owns a booking of the workspace; null when there is no such row or it names no installation. */
-    async installationIdOf(workspaceId: string, id: string): Promise<OptionalInstallationId> {
+    async installationIdOf(workspaceId: string, id: string): Promise<OptionalBookingInstallationId> {
         const row = await this.entityManager.findOne(BookingEntity, {
             select: { installationId: true },
             where: { workspaceId, id },
