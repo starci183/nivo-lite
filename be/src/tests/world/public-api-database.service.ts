@@ -2,11 +2,13 @@ import type { EntityManager } from "typeorm"
 import { eventsEntities } from "@modules/domain/events"
 import { inboundEventsEntities } from "@modules/domain/inbound-events"
 import { leadsEntities } from "@modules/domain/leads"
-import { PublicApiEntity } from "@modules/domain/public-api"
+import { publicApiEntities } from "@modules/domain/public-api"
 import { workItemsEntities } from "@modules/domain/work-items"
 import type { Proposal } from "@modules/domain/work-items"
 import { sql } from "@modules/platform/database"
 import { inboxEntities } from "@modules/platform/inbox"
+
+const [PublicApiEntity] = publicApiEntities
 
 const [WorkItemEntity] = workItemsEntities
 

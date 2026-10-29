@@ -70,7 +70,7 @@ export class DriveGrantService implements DriveAccessSource {
         }
         const email = await this.google.accountEmail(tokens)
         const row = await this.loadRow(workspaceId)
-        const refresh = await this.tokens.keptRefresh(row, tokens.refreshToken)
+        const refresh = await this.tokens.keptRefresh(row, tokens.renewalToken)
         if (!refresh) throw new GoogleConnectionsError({ code: GoogleConnectionsErrorCode.Missing })
         await this.tokens.save({
             workspaceId,

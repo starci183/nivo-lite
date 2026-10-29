@@ -27,7 +27,15 @@ const agent = (id: string, name: string, at: string): RoomAgentSeat => ({
     at,
 })
 
-const seatRow = (key: string, seat: string, who: { user?: string; agent?: string }, at: string) => ({
+/** Who sits in a seat: an account or an agent. */
+interface SeatWho {
+    /** The account id. */
+    readonly user?: string
+    /** The agent id. */
+    readonly agent?: string
+}
+
+const seatRow = (key: string, seat: string, who: SeatWho, at: string) => ({
     key,
     seat_id: seat,
     user_id: who.user ?? null,
@@ -140,7 +148,9 @@ describe("OfficeRoomMembersService.read the Office room", () => {
 
         expect(office?.preview.map((member) => member.name)).toEqual(["Agent", "A", "B", "C"])
     })
+})
 
+describe("OfficeRoomMembersService.read an almost empty Office room", () => {
     it("asks Auth for no photos when no person is previewed", async () => {
         const em = mockEntityManager()
         const { service } = await build(em, {

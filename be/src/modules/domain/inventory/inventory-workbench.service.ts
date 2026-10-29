@@ -20,7 +20,7 @@ import {
     InventorySupplierEntity,
     InventoryItemEntity,
 } from "./persistence/entities"
-import type { WorkbenchPoInput, WorkbenchWorkInput } from "./policies/inventory-workbench.inputs"
+import type { WorkbenchPoInput } from "./policies/inventory-workbench.input"
 import {
     itemRowOf,
     levelInputOf,
@@ -31,7 +31,7 @@ import {
     supplierInputOf,
 } from "./policies/inventory-row.mapper"
 import { buildInventoryWorkbench } from "./policies/inventory-workbench.policy"
-import { WorkItemEntity } from "@modules/domain/work-items"
+import { WorkItemsDecisionsReadService } from "@modules/domain/work-items"
 
 /** The most locations, suppliers, recipes, orders, lines, movements and items the workbench reads of each kind. */
 const LOCATION_LIMIT = 100
@@ -58,6 +58,7 @@ export class InventoryWorkbenchService {
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
         private readonly members: WorkspaceMembersService,
+        private readonly decisions: WorkItemsDecisionsReadService,
     ) {}
 
     /** The workbench of the caller's workspace; a member reads it, a manager sees `canManage`. */
@@ -169,21 +170,7 @@ export class InventoryWorkbenchService {
                 order: { createdAt: "DESC" },
                 take: MOVEMENT_LIMIT,
             }),
-            this.entityManager
-                .createQueryBuilder(WorkItemEntity, "w")
-                .select("w.id", "id")
-                .addSelect("w.action", "action")
-                .addSelect("w.proposal", "proposal")
-                .addSelect("w.created_at", "created_at")
-                .where(
-                    "w.workspace_id = :workspaceId AND w.department = 'inventory' AND w.status = 'waiting_decision'",
-                    {
-                        workspaceId,
-                    },
-                )
-                .orderBy("w.created_at")
-                .limit(WORK_LIMIT)
-                .getRawMany<WorkbenchWorkInput>(),
+            this.decisions.waiting(workspaceId, "inventory", WORK_LIMIT),
             this.entityManager
                 .find(InventoryMovementEntity, {
                     select: { itemId: true },

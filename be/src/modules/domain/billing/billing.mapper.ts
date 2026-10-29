@@ -1,6 +1,9 @@
 import type { BillingWorkspace, Plan, PlanFeatures, PlanLookup, PlanTier, WorkspaceBilling } from "./billing.contracts"
-import type { BillingWorkspaceRead, WorkspaceBillingRead } from "./billing-reads.contracts"
+import type { WorkspaceBillingService } from "@modules/domain/workspaces"
 import type { PlanEntity, PlanUsageTierEntity } from "./persistence/entities"
+
+/** The billing facts of a workspace as its owner answers them. */
+type WorkspaceBillingFacts = NonNullable<Awaited<ReturnType<WorkspaceBillingService["factsOf"]>>>
 
 const linesOf = (value: unknown): ReadonlyArray<string> =>
     Array.isArray(value) ? value.filter((line): line is string => typeof line === "string") : []
@@ -42,24 +45,22 @@ export const toPlan = (row: PlanEntity, tiers: ReadonlyArray<PlanUsageTierEntity
     packs: tiers.filter((tier) => tier.planCode === row.code && !tier.perSeat).map(toPlanTier),
 })
 
-/** Maps the billing columns of a workspace, its paid period as ISO text. */
-export const toWorkspaceBilling = (row: WorkspaceBillingRead): WorkspaceBilling => ({
-    status: row.status,
-    planCode: row.plan_code,
-    paidUntil: row.paid_until === null ? null : new Date(row.paid_until).toISOString(),
-    tierCredits: row.tier_credits,
-    seatCount: row.seat_count,
-    billingCycle: row.billing_cycle,
-    billedMonthlyVnd: row.billed_monthly_vnd,
+/** Maps the billing facts of a workspace, its paid period as ISO text. */
+export const toWorkspaceBilling = (facts: WorkspaceBillingFacts): WorkspaceBilling => ({
+    status: facts.status,
+    planCode: facts.planCode,
+    paidUntil: facts.paidUntil === null ? null : facts.paidUntil.toISOString(),
+    tierCredits: facts.tierCredits,
+    seatCount: facts.seatCount,
+    billingCycle: facts.billingCycle,
+    billedMonthlyVnd: facts.billedMonthlyVnd,
 })
 
-/** Maps a billing workspace with the caller's membership. */
-export const toBillingWorkspace = (row: BillingWorkspaceRead): BillingWorkspace => ({
-    ...toWorkspaceBilling(row),
-    id: row.id,
-    name: row.name,
-    role: row.role,
-})
+/** Maps a billing workspace: its billing facts beside the caller's seat in it. */
+export const toBillingWorkspace = (
+    facts: WorkspaceBillingFacts,
+    identity: Pick<BillingWorkspace, "id" | "name" | "role">,
+): BillingWorkspace => ({ ...toWorkspaceBilling(facts), ...identity })
 
 /** Maps a single-plan lookup, preserving the absent-plan result. */
 export const toPlanLookup = (

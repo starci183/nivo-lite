@@ -221,7 +221,7 @@ describe("DocumentsClient", () => {
             const { client, drive, folders } = await build()
             drive.readFile.mockResolvedValue({ name: "f", text: "t" })
             folders.listFolder.mockResolvedValue({ name: "d", files: [], truncated: false })
-            drive.refreshAccessToken.mockResolvedValue({ accessToken: "a", refreshToken: null, expiresInSeconds: 3600 })
+            drive.refreshAccessToken.mockResolvedValue({ accessToken: "a", renewalToken: null, expiresInSeconds: 3600 })
 
             await expect(client.readDriveFile("token", ID)).resolves.toEqual({ name: "f", text: "t" })
             await expect(client.listDriveFolder("token", ID)).resolves.toEqual({

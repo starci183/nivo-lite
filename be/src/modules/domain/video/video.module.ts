@@ -14,7 +14,6 @@ import { VideoApprovalPerformerService } from "./video-approval-performer.servic
 import { VideoSharingService } from "./video-sharing.service"
 import { VideoScriptingContextService } from "./video-scripting-context.service"
 import { VideoScriptingService } from "./video-scripting.service"
-import { VideoGenerationCompletionService } from "./video-generation-completion.service"
 import { VideoScriptingCompletionService } from "./video-scripting-completion.service"
 import { RendererService } from "./renderer.service"
 import { VideoRenderCommandsService } from "./video-render-commands.service"
@@ -57,7 +56,6 @@ export class VideoModule extends ConfigurableModuleClass {
                 VideoSharingService,
                 VideoScriptingService,
                 VideoScriptingCompletionService,
-                VideoGenerationCompletionService,
                 VideoScriptingContextService,
                 VideoRenderCommandsService,
                 EditorRoomService,

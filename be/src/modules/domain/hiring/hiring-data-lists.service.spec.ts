@@ -5,7 +5,9 @@ import {
     interview as interviewFixture,
 } from "@tests/fixtures/builders/hiring-data.builder"
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { WorkItemsDecisionsReadService } from "@modules/domain/work-items"
+import { MemberRosterService, WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Between, In, IsNull, LessThan } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -103,9 +105,19 @@ const availabilityRow = entityRowBuilder<HiringAvailabilityEntity>({
     endMin: 720,
 })
 
+const seats = mock<WorkspaceMemberSeatsService>()
+const roster = mock<MemberRosterService>()
+const decisions = mock<WorkItemsDecisionsReadService>()
+
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
-        providers: [HiringDataService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            HiringDataService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: WorkspaceMemberSeatsService, useValue: seats },
+            { provide: MemberRosterService, useValue: roster },
+            { provide: WorkItemsDecisionsReadService, useValue: decisions },
+        ],
     }).compile()
     return moduleRef.get(HiringDataService)
 }
@@ -181,26 +193,18 @@ describe("HiringDataService lists", () => {
     })
 
     it("maps the interviewers, the owner first", async () => {
-        const em = mockEntityManager()
-        const [membersRead] = queueQueryBuilders(em, [
-            {
-                getRawMany: [
-                    { user_id: "owner-1", display_name: "Owner", is_owner: true },
-                    { user_id: "user-1", display_name: "Blair", is_owner: false },
-                ],
-            },
+        const service = await build(mockEntityManager())
+        roster.oldestOf.mockResolvedValue([
+            { userId: "user-1", role: "staff", displayName: "Blair", status: "active", createdAt: CREATED },
+            { userId: "gone-1", role: "staff", displayName: "Gone", status: "disabled", createdAt: CREATED },
+            { userId: "owner-1", role: "owner", displayName: "Owner", status: "active", createdAt: CREATED },
         ])
-        const service = await build(em)
 
         await expect(service.interviewers("ws-1")).resolves.toEqual([
             { userId: "owner-1", name: "Owner", isOwner: true },
             { userId: "user-1", name: "Blair", isOwner: false },
         ])
-        expect(membersRead?.callsOf("where")).toEqual([["member.workspaceId = :workspaceId", { workspaceId: "ws-1" }]])
-        expect(membersRead?.callsOf("andWhere")).toEqual([["member.status = :status", { status: "active" }]])
-        expect(membersRead?.callsOf("orderBy")).toEqual([["is_owner", "DESC"]])
-        expect(membersRead?.callsOf("addOrderBy")).toEqual([["member.createdAt", "ASC"]])
-        expect(membersRead?.callsOf("limit")).toEqual([[20]])
+        expect(roster.oldestOf).toHaveBeenCalledWith("ws-1", 20)
     })
 
     it("reads the live job ids and the retention due ids with the bounds of the old queries", async () => {

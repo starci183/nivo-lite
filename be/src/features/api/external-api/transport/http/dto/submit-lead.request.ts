@@ -1,6 +1,6 @@
 import { IsIn, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from "class-validator"
 import { LEAD_STAGES, TrimmedField } from "@modules/domain/public-api"
-import type { LeadStage } from "@modules/domain/public-api"
+import type { PublicLeadStage } from "@modules/domain/public-api"
 
 /** A phone number, or empty. */
 const PHONE = /^$|^[+\d][\d\s().-]{5,}$/
@@ -73,5 +73,5 @@ export class SubmitLeadRequest {
     @TrimmedField()
     @IsIn([...LEAD_STAGES, ""])
     @MaxLength(20)
-    stage?: LeadStage | ""
+    stage?: PublicLeadStage | ""
 }

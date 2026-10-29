@@ -44,9 +44,9 @@ export interface ZaloSetupSecret {
     readonly oaSecret: string
     /** The current access token, once the OA is authorized. */
     readonly accessToken?: string
-    /** The refresh token, once the OA is authorized. */
-    readonly refreshToken?: string
-    /** When the refresh token stops working, ISO 8601. */
+    /** The provider renewal token (not a session token), once the OA is authorized. */
+    readonly renewalToken?: string
+    /** When the renewal token stops working, ISO 8601. */
     readonly refreshExpiresAt?: string
     /** A started authorization. */
     readonly pkce?: ZaloSetupPkce

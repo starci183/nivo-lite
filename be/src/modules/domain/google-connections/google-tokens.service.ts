@@ -103,7 +103,7 @@ export class GoogleTokensService {
             const next = await this.google.refreshAccessToken(stored.renewal_token)
             const kept: StoredGoogleTokens = {
                 access_token: next.accessToken,
-                renewal_token: next.refreshToken ?? stored.renewal_token,
+                renewal_token: next.renewalToken ?? stored.renewal_token,
                 expires_at: next.expiresAt,
             }
             await this.connections.writeSecret(row.id, JSON.stringify(kept))

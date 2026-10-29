@@ -7,6 +7,8 @@ export enum DatabaseErrorCode {
     IdentifierRejected = "DATABASE_IDENTIFIER_REJECTED",
     /** A database function name was not an identifier of the shape a migration declares. */
     FunctionRejected = "DATABASE_FUNCTION_REJECTED",
+    /** A webhook delivery carried no usable delivery id, so it cannot be claimed once. */
+    WebhookDeliveryIdRequired = "DATABASE_WEBHOOK_DELIVERY_ID_REQUIRED",
     /** A RETURNING statement answered something other than rows of the shape its caller expects. */
     ReturningRowRejected = "DATABASE_RETURNING_ROW_REJECTED",
     /** The managed migration wrapper failed or could not be started. */
@@ -17,6 +19,7 @@ export enum DatabaseErrorCode {
 export const DATABASE_ERROR_KINDS: Record<DatabaseErrorCode, ErrorKind> = {
     [DatabaseErrorCode.IdentifierRejected]: "internal",
     [DatabaseErrorCode.FunctionRejected]: "internal",
+    [DatabaseErrorCode.WebhookDeliveryIdRequired]: "invalid",
     [DatabaseErrorCode.ReturningRowRejected]: "internal",
     [DatabaseErrorCode.MigrationFailed]: "internal",
 }

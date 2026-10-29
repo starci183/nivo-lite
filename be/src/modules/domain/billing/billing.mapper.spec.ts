@@ -20,7 +20,7 @@ import {
 
 const SUBJECT = Symbol("billing.mapper")
 
-const NO_TIER = { tier_credits: null, seat_count: null, billing_cycle: null, billed_monthly_vnd: null } as const
+const NO_TIER = { tierCredits: null, seatCount: null, billingCycle: null, billedMonthlyVnd: null } as const
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
@@ -111,8 +111,8 @@ describe("billing mapper > toWorkspaceBilling", () => {
             toWorkspaceBilling({
                 ...NO_TIER,
                 status: "active",
-                plan_code: "starter",
-                paid_until: "2026-11-01T00:00:00+00:00",
+                planCode: "starter",
+                paidUntil: new Date("2026-11-01T00:00:00.000Z"),
             }),
         ).toEqual({
             status: "active",
@@ -128,9 +128,7 @@ describe("billing mapper > toWorkspaceBilling", () => {
     it("keeps the null period of an unpaid workspace", async () => {
         const { toWorkspaceBilling } = await buildSubject()
 
-        expect(
-            toWorkspaceBilling({ ...NO_TIER, status: "pending_payment", plan_code: null, paid_until: null }),
-        ).toEqual({
+        expect(toWorkspaceBilling({ ...NO_TIER, status: "pending_payment", planCode: null, paidUntil: null })).toEqual({
             status: "pending_payment",
             planCode: null,
             paidUntil: null,
@@ -147,18 +145,18 @@ describe("billing mapper > toBillingWorkspace", () => {
         const { toBillingWorkspace } = await buildSubject()
 
         expect(
-            toBillingWorkspace({
-                id: "ws-1",
-                name: "Acme",
-                role: "manager",
-                status: "active",
-                plan_code: "team",
-                paid_until: "2026-11-01T07:00:00+07:00",
-                tier_credits: 5000,
-                seat_count: 4,
-                billing_cycle: "annual",
-                billed_monthly_vnd: 200000,
-            }),
+            toBillingWorkspace(
+                {
+                    status: "active",
+                    planCode: "team",
+                    paidUntil: new Date("2026-11-01T00:00:00.000Z"),
+                    tierCredits: 5000,
+                    seatCount: 4,
+                    billingCycle: "annual",
+                    billedMonthlyVnd: 200000,
+                },
+                { id: "ws-1", name: "Acme", role: "manager" },
+            ),
         ).toEqual({
             id: "ws-1",
             name: "Acme",

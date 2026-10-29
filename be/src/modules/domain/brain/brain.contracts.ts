@@ -133,3 +133,13 @@ export type FactsOutcome = "done" | "skipped" | "blocked" | "failed"
 
 /** What running one command did. */
 export type CommandOutcome = "done" | "skipped" | "failed"
+
+/** A source whose passages were stored, as `knowledge_source_indexed` carries it. */
+export interface IndexedSource {
+    /** The knowledge source. */
+    readonly sourceId: string
+    /** The workspace. */
+    readonly workspaceId: string
+    /** When it was indexed (epoch milliseconds): the key of this one reading. */
+    readonly indexedAt: number
+}

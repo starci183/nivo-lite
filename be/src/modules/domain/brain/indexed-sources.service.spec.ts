@@ -29,7 +29,7 @@ describe("IndexedSourcesService", () => {
     it("claims the delivery and queues the facts job of this indexing in one transaction", async () => {
         const { service, tx, inbox, queue } = await build()
 
-        await service.queueFacts(SOURCE, 1000, CLAIM)
+        await service.queueFacts({ ...SOURCE, indexedAt: 1000 }, CLAIM)
 
         expect(inbox.claim).toHaveBeenCalledWith("knowledge_source_indexed__brain", "s1:1000", expect.anything())
         expect(queue.enqueueFacts).toHaveBeenCalledWith(SOURCE, expect.anything(), 1000)
@@ -39,7 +39,7 @@ describe("IndexedSourcesService", () => {
     it("queues nothing for a redelivery of an indexing it already took", async () => {
         const { service, queue } = await build(false)
 
-        await service.queueFacts(SOURCE, 1000, CLAIM)
+        await service.queueFacts({ ...SOURCE, indexedAt: 1000 }, CLAIM)
 
         expect(queue.enqueueFacts).not.toHaveBeenCalled()
     })
@@ -49,6 +49,6 @@ describe("IndexedSourcesService", () => {
         const cause = new Error("outbox down")
         queue.enqueueFacts.mockRejectedValue(cause)
 
-        await expect(service.queueFacts(SOURCE, 1000, CLAIM)).rejects.toBe(cause)
+        await expect(service.queueFacts({ ...SOURCE, indexedAt: 1000 }, CLAIM)).rejects.toBe(cause)
     })
 })

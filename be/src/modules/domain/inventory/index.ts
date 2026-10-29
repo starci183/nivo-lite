@@ -8,7 +8,6 @@ export { InventoryLocationsService } from "./inventory-locations.service"
 export { InventoryOrdersService } from "./inventory-orders.service"
 export { InventoryReceivingService } from "./inventory-receiving.service"
 export { InventoryReplenishService } from "./inventory-replenish.service"
-export { InventoryDeductionService } from "./inventory-deduction.service"
 export { InventoryStockService } from "./inventory-stock.service"
 export { InventoryWorkbenchService } from "./inventory-workbench.service"
 export type { InventoryTemplateInfo, InventoryWorkbenchView } from "./inventory-workbench.contracts"
@@ -42,15 +41,4 @@ export type {
     ReceivePoParams,
     ReceivePoOutput,
 } from "./inventory-operations.contracts"
-export {
-    InventoryItemEntity,
-    InventoryLocationEntity,
-    InventoryMovementEntity,
-    InventoryPoLineEntity,
-    InventoryPurchaseOrderEntity,
-    InventoryRecipeEntity,
-    InventoryRecipeLineEntity,
-    InventoryStockLevelEntity,
-    InventorySupplierEntity,
-    inventoryEntities,
-} from "./persistence/entities"
+export { inventoryEntities } from "./persistence/entities"
