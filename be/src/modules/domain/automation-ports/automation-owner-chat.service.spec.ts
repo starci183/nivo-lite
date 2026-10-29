@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
-import { ConnectionSecretsErrorCode, ConnectionSecretsService } from "@modules/domain/connection-secrets"
-import { ConnectionsService } from "@modules/domain/connections"
+import { ConnectionSecretsErrorCode } from "@modules/domain/connection-secrets"
+import { ConnectionSecretReadsService, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { TELEGRAM } from "@modules/integrations/telegram"
 import type { TelegramClient } from "@modules/integrations/telegram"
@@ -33,7 +33,7 @@ const connectionOf = builder<ConnectionRecord>({
 const setup = async () => {
     const connections = mock<ConnectionsService>()
     connections.listByProvider.mockResolvedValue([connectionOf()])
-    const secrets = mock<ConnectionSecretsService>()
+    const secrets = mock<ConnectionSecretReadsService>()
     secrets.botToken.mockResolvedValue(ok("test-bot-token"))
     const telegram = mock<TelegramClient>()
     telegram.sendMessage.mockResolvedValue(undefined)
@@ -42,7 +42,7 @@ const setup = async () => {
         providers: [
             AutomationOwnerChatService,
             { provide: ConnectionsService, useValue: connections },
-            { provide: ConnectionSecretsService, useValue: secrets },
+            { provide: ConnectionSecretReadsService, useValue: secrets },
             { provide: TELEGRAM, useValue: telegram },
             { provide: LOGGER, useValue: logger },
         ],
