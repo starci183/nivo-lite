@@ -2,7 +2,8 @@ import { Test } from "@nestjs/testing"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { ChatActivityService } from "@modules/domain/chat-activity"
-import { WorkspaceMembersService, WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { WorkspaceMembersService, WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
+import type { ActiveUserRecord } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { OfficeReadMarkersService } from "@modules/domain/office-rooms"
@@ -31,8 +32,14 @@ const PERSISTED_AT = "2026-10-25T01:00:00+00:00"
 const CHAT_TARGET_MEMBER = "SELECT * FROM be_access.chat_target_member($1, $2, $3, $4)"
 const CHAT_READER_AVATARS = "SELECT * FROM be_access.workspace_member_avatars($1, $2)"
 
-const build = async (em: MockEntityManager) => {
+/** The caller and one other active member, the roster most receipts weigh. */
+const ME: ActiveUserRecord = { userId: "member", displayName: "Me" }
+const READER: ActiveUserRecord = { userId: "reader", displayName: "Reader" }
+
+const build = async (em: MockEntityManager, roster: ReadonlyArray<ActiveUserRecord> = []) => {
     const tx = fakeTransaction(em)
+    const seats = mock<WorkspaceMemberSeatsService>()
+    seats.activeUsers.mockResolvedValue([...roster])
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(member()) })
     const roomReads = mock<OfficeReadMarkersService>({ advance: jest.fn().mockResolvedValue(undefined) })
     const activity = mock<ChatActivityService>()
@@ -43,9 +50,10 @@ const build = async (em: MockEntityManager) => {
             { provide: WorkspaceMembersService, useValue: members },
             { provide: OfficeReadMarkersService, useValue: roomReads },
             { provide: ChatActivityService, useValue: activity },
+            { provide: WorkspaceMemberSeatsService, useValue: seats },
         ],
     }).compile()
-    return { service: moduleRef.get(ChatMarkersService), members, roomReads, tx, activity }
+    return { service: moduleRef.get(ChatMarkersService), members, roomReads, tx, activity, seats }
 }
 
 describe("ChatMarkersService admission", () => {
@@ -120,9 +128,9 @@ describe("ChatMarkersService state", () => {
         })
         const [own, readers] = queueQueryBuilders(em, [
             { getRawMany: [OWN_ROW] },
-            { getRawMany: [{ id: "reader", name: "Reader", total: 4 }] },
+            { getRawMany: [{ userId: "reader" }] },
         ])
-        const { service } = await build(em)
+        const { service } = await build(em, [ME, READER])
 
         await expect(service.state("principal", "workspace", SALES)).resolves.toEqual({
             muted: true,
@@ -137,7 +145,7 @@ describe("ChatMarkersService state", () => {
                         avatarUrl: "https://cdn.example.test/reader.png",
                     },
                 ],
-                seenByCount: 4,
+                seenByCount: 1,
             },
         })
 
@@ -148,13 +156,9 @@ describe("ChatMarkersService state", () => {
         })
         expect(em.createQueryBuilder).toHaveBeenCalledWith(MessageEntity, "m")
         expect(own?.callsOf("andWhere")).toEqual([["m.room = :room", { room: "sales" }]])
-        expect(readers?.callsOf("limit")).toEqual([[3]])
-        expect(readers?.callsOf("andWhere")[0]?.[1]).toEqual({
-            room: "sales",
-            conversationId: null,
-            createdAt: PERSISTED_AT,
-            ownId: "message",
-        })
+        expect(readers?.callsOf("limit")).toEqual([[1]])
+        expect(readers?.callsOf("andWhere")[0]?.[1]).toEqual({ room: "sales" })
+        expect(readers?.callsOf("andWhere")[1]?.[1]).toMatchObject({ createdAt: PERSISTED_AT, ownId: "message" })
     })
 
     it("reads a conversation receipt from the agent messages and the conversation cursors", async () => {
@@ -167,7 +171,7 @@ describe("ChatMarkersService state", () => {
             { getRawMany: [] },
             { getRawMany: [{ one: 1 }] },
         ])
-        const { service } = await build(em)
+        const { service } = await build(em, [ME, READER])
 
         await expect(service.state("principal", "workspace", CONVERSATION)).resolves.toEqual({
             muted: false,
@@ -188,7 +192,7 @@ describe("ChatMarkersService state", () => {
             findOne: [ChatMarkerEntity, markerOf(false)],
         })
         queueQueryBuilders(em, [{ getRawMany: [OWN_ROW] }, { getRawMany: [] }, { getRawMany: [] }])
-        const { service } = await build(em)
+        const { service } = await build(em, [ME, READER])
 
         await expect(service.state("principal", "workspace", OFFICE)).resolves.toEqual({
             muted: false,
@@ -222,9 +226,9 @@ describe("ChatMarkersService state", () => {
         })
         queueQueryBuilders(em, [
             { getRawMany: [OWN_ROW] },
-            { getRawMany: [{ id: "reader", name: "Reader", total: 1 }] },
+            { getRawMany: [{ userId: "reader" }] },
         ])
-        const { service } = await build(em)
+        const { service } = await build(em, [ME, READER])
 
         await expect(service.state("principal", "workspace", OFFICE)).resolves.toEqual({
             muted: false,
@@ -429,18 +433,51 @@ describe("ChatMarkersService mute", () => {
 describe("ChatMarkersService memberIds", () => {
     it("lists the admitted accounts only after the caller itself is admitted", async () => {
         const em = mockEntityManager({ query: [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]] })
-        const [listing] = queueQueryBuilders(em, [{ getRawMany: [{ user_id: "a" }, { user_id: "b" }] }])
-        const { service } = await build(em)
+        const { service, seats } = await build(em, [
+            { userId: "a", displayName: "A" },
+            { userId: "b", displayName: "B" },
+        ])
 
         await expect(service.memberIds("principal", "workspace", SALES)).resolves.toEqual(["a", "b"])
 
         expect(em.query).toHaveBeenCalledTimes(1)
-        expect(em.createQueryBuilder).toHaveBeenCalledWith(WorkspaceMemberEntity, "m")
-        expect(listing?.callsOf("where")).toEqual([
-            ["m.workspace_id = :workspaceId AND m.status = 'active'", { workspaceId: "workspace" }],
+        expect(seats.activeUsers).toHaveBeenCalledWith("workspace", 500)
+    })
+
+    it("answers sent without reading any cursor when nobody else is active", async () => {
+        const em = mockEntityManager({
+            query: [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]],
+            findOne: [ChatMarkerEntity, null],
+        })
+        queueQueryBuilders(em, [{ getRawMany: [OWN_ROW] }])
+        const { service } = await build(em, [ME])
+
+        await expect(service.state("principal", "workspace", OFFICE)).resolves.toEqual({
+            muted: false,
+            lastOwnMessage: { id: "message", status: "sent", seenBy: [], seenByCount: 0 },
+        })
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
+    })
+
+    it("names at most three readers and counts all of them", async () => {
+        const em = mockEntityManager({
+            query: [
+                [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]],
+                [CHAT_READER_AVATARS, []],
+            ],
+            findOne: [ChatMarkerEntity, null],
+        })
+        queueQueryBuilders(em, [
+            { getRawMany: [OWN_ROW] },
+            { getRawMany: ["r1", "r2", "r3", "r4"].map((userId) => ({ userId })) },
         ])
-        expect(listing?.callsOf("orderBy")).toEqual([["m.user_id"]])
-        expect(listing?.callsOf("limit")).toEqual([[500]])
+        const roster = [ME, ...["r1", "r2", "r3", "r4", "r5"].map((userId) => ({ userId, displayName: userId }))]
+        const { service } = await build(em, roster)
+
+        const state = await service.state("principal", "workspace", OFFICE)
+
+        expect(state.lastOwnMessage?.seenBy.map((reader) => reader.id)).toEqual(["r1", "r2", "r3"])
+        expect(state.lastOwnMessage?.seenByCount).toBe(4)
     })
 
     it("refuses a caller the target does not admit, without listing anyone", async () => {
