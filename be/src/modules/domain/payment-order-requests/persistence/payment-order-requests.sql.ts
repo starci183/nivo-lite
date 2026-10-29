@@ -7,7 +7,7 @@ RETURNING id`
 
 /** Enqueues the existing fenced job inside the request transaction ($1 workspace, $2 queue, $3 request). */
 export const ENQUEUE_REQUEST = sql`SELECT public.job_enqueue(
-$1, $2, $2, jsonb_build_object('workspaceId', $1::text, 'requestId', $3::text), 'payment-order-request:' || $3::text)`
+$1::uuid, $2, $2, jsonb_build_object('workspaceId', $1::uuid::text, 'requestId', $3::text), 'payment-order-request:' || $3::text)`
 
 /** The caller's own request in the selected workspace ($1 request, $2 workspace, $3 caller). */
 export const SELECT_REQUEST_STATUS = sql`SELECT r.id, r.status, r.order_id, r.fault
