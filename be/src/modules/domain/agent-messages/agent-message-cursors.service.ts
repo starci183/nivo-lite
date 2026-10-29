@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { OptionalAgentMessageCursor } from "./agent-message-cursors.contracts"
+import type { OptionalAgentMessageCursor, OptionalCreatedAt } from "./agent-message-cursors.contracts"
 import { AgentMessageEntity } from "./persistence/entities"
 
 /** The creation instant as the database words it, so no precision is lost. */
@@ -44,7 +44,7 @@ export class AgentMessageCursorsService {
         conversationId: string,
         messageId: string,
         manager: EntityManager = this.entityManager,
-    ): Promise<string | null> {
+    ): Promise<OptionalCreatedAt> {
         const rows: ReadonlyArray<unknown> = await manager
             .createQueryBuilder(AgentMessageEntity, "m")
             .select(CREATED_AT, "createdAt")

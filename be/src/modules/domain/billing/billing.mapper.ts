@@ -11,7 +11,7 @@ const linesOf = (value: unknown): ReadonlyArray<string> =>
 /** The feature lists of a plan: a stored value that is not the { vi, en } object counts as empty lists. */
 const featuresOf = (value: unknown): PlanFeatures =>
     typeof value === "object" && value !== null && !Array.isArray(value)
-        ? { vi: linesOf((value as Record<string, unknown>).vi), en: linesOf((value as Record<string, unknown>).en) }
+        ? { vi: linesOf(Reflect.get(value, "vi")), en: linesOf(Reflect.get(value, "en")) }
         : { vi: [], en: [] }
 
 /** Maps one usage tier row. */
