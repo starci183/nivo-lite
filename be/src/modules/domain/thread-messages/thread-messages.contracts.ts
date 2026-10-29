@@ -266,8 +266,8 @@ export interface ApprovalResolved {
     readonly requestId: string
     /** How it ended, as the event carries it: one of `APPROVAL_RESOLVED_OUTCOMES`. */
     readonly outcome: string
-    /** The member id of who decided it, or null when it expired. */
-    readonly decidedBy: string | null
+    /** The member id of who decided it; none when it expired. */
+    readonly decidedBy?: string | null | undefined
 }
 
 /** What opening an approval request takes. */
