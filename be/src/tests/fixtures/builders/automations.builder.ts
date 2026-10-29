@@ -1,7 +1,7 @@
 import type { PipelineRow } from "@modules/domain/automation-pipelines"
 import type { RunRow } from "@modules/domain/automation-runs"
 import type { TemplateDefinition } from "@modules/domain/automation-templates"
-import type { InstallationRow, OverviewRows, ShopFacts, ShopPatterns, ShopWithHours } from "@modules/domain/automations"
+import type { AutomationInstallationRow, OverviewRows, ShopFacts, ShopPatterns, ShopWithHours } from "@modules/domain/automations"
 
 /** A text in both languages, for a spec. */
 export const TEXT = { vi: "Xin chao", en: "Hello" }
@@ -84,7 +84,7 @@ export const buildOverviewRows = (overrides: Partial<OverviewRows> = {}): Overvi
 })
 
 /** An installed module with an active context. */
-export const buildInstallation = (overrides: Partial<InstallationRow> = {}): InstallationRow => ({
+export const buildInstallation = (overrides: Partial<AutomationInstallationRow> = {}): AutomationInstallationRow => ({
     module_key: "sales",
     operating_mode: null,
     ctx: null,

@@ -27,3 +27,6 @@ export interface BookingServiceTiming {
     /** The rest after a visit in minutes. */
     readonly bufferMin: number
 }
+
+/** The timing of a service, or null when the service is gone. */
+export type OptionalBookingServiceTiming = BookingServiceTiming | null

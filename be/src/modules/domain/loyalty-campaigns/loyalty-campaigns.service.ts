@@ -23,6 +23,17 @@ import { loyaltyCampaignOf } from "./loyalty-campaigns.mapper"
 import type { CampaignListRaw } from "./loyalty-campaigns.mapper"
 import { LoyaltyCampaignEntity, LoyaltySendEntity } from "./persistence/entities"
 import type { LoyaltyCampaignStatus } from "./persistence/entities"
+
+/** Every status a campaign row can hold. */
+const CAMPAIGN_STATUSES: ReadonlyArray<LoyaltyCampaignStatus> = [
+    "draft",
+    "waiting",
+    "waiting_decision",
+    "sending",
+    "done",
+    "rejected",
+    "failed",
+]
 import { inSegment, segmentParts } from "./policies/segment.policy"
 
 const SAMPLE_SIZE = 5
@@ -111,10 +122,12 @@ export class LoyaltyCampaignsService {
         workItemId: string,
         status: string,
     ): Promise<boolean> {
+        const stored = CAMPAIGN_STATUSES.find((known) => known === status)
+        if (stored === undefined) return false
         const result = await this.entityManager.update(
             LoyaltyCampaignEntity,
             { workspaceId, id: campaignId, status: "draft", workItemId: IsNull() },
-            { workItemId, status: status as LoyaltyCampaignStatus },
+            { workItemId, status: stored },
         )
         return (result.affected ?? 0) > 0
     }
@@ -142,8 +155,9 @@ export class LoyaltyCampaignsService {
             recipients: members.length,
             createdBy: params.createdBy,
         })
-        const id = (result.identifiers[0] as { readonly id?: string } | undefined)?.id
-        if (id === undefined) throw new LoyaltyCampaignsError({ code: LoyaltyCampaignsErrorCode.NotCreated })
+        const created = result.identifiers.at(0)
+        const id: unknown = created?.id
+        if (typeof id !== "string") throw new LoyaltyCampaignsError({ code: LoyaltyCampaignsErrorCode.NotCreated })
         return { campaignId: id, status, recipients: members.length, draft }
     }
 

@@ -1,6 +1,6 @@
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { AutomationTemplatesService } from "@modules/domain/automation-templates"
-import { AutomationEngineService } from "@modules/domain/automations"
+import { AutomationEngineService } from "@modules/domain/automations/automation-engine.service"
 import { BankFeedService } from "@modules/domain/billing"
 import { ModulesService } from "@modules/domain/modules"
 import { CLOCK } from "@modules/platform/clock"

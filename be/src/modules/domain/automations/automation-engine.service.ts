@@ -22,6 +22,7 @@ import type {
     BusinessEvent,
     EventData,
     LoadedPipeline,
+    OptionalPaymentReference,
     ShopWithHours,
     TextParams,
     TickResult,
@@ -101,8 +102,8 @@ export class AutomationEngineService {
      */
     async startPaymentReceipt(
         workspaceId: string,
-        transactionId: string | null,
-        invoiceId: string | null,
+        transactionId: OptionalPaymentReference,
+        invoiceId: OptionalPaymentReference,
     ): Promise<void> {
         await this.startN8nEvents({
             workspaceId,

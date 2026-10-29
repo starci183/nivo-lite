@@ -18,7 +18,7 @@ export type {
     OptionalLead,
 } from "./automation-ports.contracts"
 export type {
-    InstallationRow,
+    AutomationInstallationRow,
     OverviewRows,
     ShopFacts,
     ShopWithHours,
@@ -42,6 +42,4 @@ export { AutomationsService } from "./automations.service"
 export { AUTOMATIONS_ERROR_KINDS, AutomationsError, AutomationsErrorCode } from "./errors/automations.error"
 export { AUTOMATIONS_MESSAGES } from "./messages/automations.messages"
 export type { ShopPatterns } from "./policies/context.policy"
-export type { DayFigures } from "./automation-reads.contracts"
-export { AutomationEngineService } from "./automation-engine.service"
 export { AutomationReactionsService } from "./automation-reactions.service"

@@ -57,7 +57,7 @@ export type PresentField<Name extends string, Value> = { [Key in Name]?: Value }
 /** A one-field object holding `value` under `name`, or an empty one when the value is absent (undefined or null), to spread into an optional payload field. */
 export const whenPresent = <Name extends string, Value>(
     name: Name,
-    value: Value,
+    value: Value | null | undefined,
 ): PresentField<Name, NonNullable<Value>> => {
     const field: PresentField<Name, NonNullable<Value>> = {}
     if (value !== undefined && value !== null) field[name] = value
