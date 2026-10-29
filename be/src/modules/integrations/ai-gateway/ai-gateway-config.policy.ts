@@ -1,10 +1,22 @@
 import type { Secret } from "@modules/platform/config"
-import type { AiGatewayHost, AiGatewayKey, AiGatewayOptions, AiGatewayProvider } from "./ai-gateway.options"
+import type {
+    AiGatewayHost,
+    AiGatewayKey,
+    AiGatewayMountedKey,
+    AiGatewayOptions,
+    AiGatewayProvider,
+} from "./ai-gateway.options"
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 const WORK_MODEL = "deepseek/deepseek-v4.1-flash"
 const EMBED_MODEL = "qwen/qwen3-embedding-8b"
 const KEYS_PATH = "ai-router-keys.sqlite"
+
+/** The virtual keys the gateway mounts: the env variable that holds each one, its label and the profiles it may call. */
+const MOUNTED_KEYS: ReadonlyArray<{ readonly env: string; readonly label: string; readonly profiles: ReadonlyArray<string> }> = [
+    { env: "AI_API_KEY", label: "nivo_api", profiles: ["work", "embed"] },
+    { env: "OPENCLAW_AI_KEY", label: "nivo_openclaw", profiles: ["work"] },
+]
 
 /** The part of the env reader the pool reads through, so a `<KEY>_FILE` mount supplies a key like a plain variable. */
 export interface AiGatewayEnv {
@@ -33,10 +45,19 @@ const keysOf = (env: AiGatewayEnv, names: ReadonlyArray<string>): Array<AiGatewa
     return name === undefined ? [] : [{ alias: name, secret: env.secret(name) }]
 }
 
+/** The mounted keys whose variable is declared; an undeclared one is simply not mounted. */
+const mountedKeysOf = (env: AiGatewayEnv): Array<AiGatewayMountedKey> =>
+    MOUNTED_KEYS.filter((key) => env.has(key.env)).map((key) => ({
+        label: key.label,
+        secret: env.secret(key.env),
+        profiles: key.profiles,
+    }))
+
 /** The gateway this process hosts; its port is the app port plus one (BE-AI-1), so no port is read here. */
 const gatewayOf = (env: AiGatewayEnv): AiGatewayHost => ({
     keysPath: env.optional("AI_ROUTER_KEYS_PATH") ?? KEYS_PATH,
     adminToken: env.has("AI_ROUTER_ADMIN_TOKEN") ? env.secret("AI_ROUTER_ADMIN_TOKEN") : null,
+    mountedKeys: mountedKeysOf(env),
 })
 
 /**
