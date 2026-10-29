@@ -5,6 +5,8 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     AgentCard,
     AgentCreation,
+    AgentLens,
+    OptionalAgentHeader,
     OptionalAgentChatFacts,
     OptionalAgentTurnFacts,
     AgentModuleRef,
@@ -111,6 +113,27 @@ export class AgentDirectoryService {
             name: agent.name,
             createdAt: agent.createdAt,
         }))
+    }
+
+    /** The ids of the agents of the workspace that serve one module, whatever their status, at most `limit`. */
+    async idsOfModule(workspaceId: string, module: string, limit: number): Promise<Array<string>> {
+        const agents = await this.entityManager.find(AgentEntity, {
+            select: { id: true },
+            where: { workspaceId, module },
+            take: limit,
+        })
+        return agents.map((agent) => agent.id)
+    }
+
+    /** The active agents of the workspace with the module each serves, oldest first, at most `limit`. */
+    async activeLensesOf(workspaceId: string, limit: number): Promise<Array<AgentLens>> {
+        const agents = await this.entityManager.find(AgentEntity, {
+            select: { module: true, name: true },
+            where: { workspaceId, status: "active" },
+            order: { createdAt: "ASC" },
+            take: limit,
+        })
+        return agents.map((agent) => ({ module: agent.module, name: agent.name }))
     }
 
     /** Whether the workspace holds the agent; the row is read with a shared lock so it stays until the transaction ends. */
@@ -324,6 +347,25 @@ export class AgentDirectoryService {
             order: { createdAt: "ASC", id: "ASC" },
         })
         return agent === null ? null : toSheet(agent)
+    }
+
+    /** The header of an agent of the workspace; null when the agent is not there. */
+    async headOf(workspaceId: string, agentId: string): Promise<OptionalAgentHeader> {
+        const agent = await this.entityManager.findOne(AgentEntity, {
+            select: { id: true, name: true, handle: true, role: true, module: true, status: true, avatarUrl: true },
+            where: { workspaceId, id: agentId },
+        })
+        return agent === null
+            ? null
+            : {
+                  id: agent.id,
+                  name: agent.name,
+                  handle: agent.handle,
+                  role: agent.role,
+                  module: agent.module,
+                  status: agent.status,
+                  avatarUrl: agent.avatarUrl,
+              }
     }
 
     /** The greeting that opens a visit with an agent of the workspace; null when the agent is not there. */

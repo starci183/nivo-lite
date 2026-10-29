@@ -86,3 +86,21 @@ export const insertedRefRow = {
 /** The conversation a turn answers: held by Lan, linked to a lead and to the installation inst-1. */
 export const turnConversation = (): AgentConversationEntity =>
     conversationOf({ leadId: "lead-1", handledBy: "Lan", installationId: "inst-1" })
+
+/** A customer conversation of agent a-1 as the conversation read specs see it, without a lead. */
+export const chatOf = builder<AgentConversationEntity>({ id: "c-1", agentId: "a-1", kind: "customer", leadId: null })
+
+/** An owner's test chat of agent a-1. */
+export const testChatOf = (): AgentConversationEntity => chatOf({ kind: "test" })
+
+/** The customer conversation under an id that belongs to the lead l-1. */
+export const leadChatOf = (id: string): AgentConversationEntity => chatOf({ id, leadId: "l-1" })
+
+/** A conversation on Zalo. */
+export const zaloChatOf = (): AgentConversationEntity => chatOf({ channel: "zalo" })
+
+/** The conversation c1 on Zalo. */
+export const zaloChatC1 = (): AgentConversationEntity => chatOf({ id: "c1", channel: "zalo" })
+
+/** The conversation c1 of the Zalo customer u-1 named An. */
+export const namedZaloChat = (): AgentConversationEntity => chatOf({ id: "c1", externalId: "u-1", visitorName: "An" })

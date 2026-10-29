@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { agentEntityOf } from "@tests/fixtures/builders/agents.builder"
+import { agentCreatedAt, agentEntityOf, lanAgent } from "@tests/fixtures/builders/agents.builder"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In } from "typeorm"
@@ -20,9 +20,7 @@ const build = async (entityManager: MockEntityManager) => {
     return moduleRef.get(AgentDirectoryService)
 }
 
-const lan = () => agentEntityOf({ id: "a2", name: "Lan", module: "shifts", canTagAgentIds: ["a1"] })
-
-describe("AgentDirectoryService", () => {
+describe("AgentDirectoryService > one agent and the active lists", () => {
     describe("activeOf", () => {
         it("lists the active agents of the workspace by name, bounded", async () => {
             const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf()]] })
@@ -46,7 +44,7 @@ describe("AgentDirectoryService", () => {
         })
 
         it("answers the active agents in the order of the ids, bounded", async () => {
-            const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf(), lan()]] })
+            const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf(), lanAgent()]] })
 
             await expect((await build(em)).activeInOrder("w1", ["a2", "a3", "a1"], 2)).resolves.toEqual([LAN, BOT])
             expect(em.find).toHaveBeenCalledWith(AgentEntity, {
@@ -56,7 +54,7 @@ describe("AgentDirectoryService", () => {
         })
 
         it("stops at the bound", async () => {
-            const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf(), lan()]] })
+            const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf(), lanAgent()]] })
 
             await expect((await build(em)).activeInOrder("w1", ["a1", "a2"], 1)).resolves.toEqual([BOT])
         })
@@ -79,7 +77,9 @@ describe("AgentDirectoryService", () => {
             await expect((await build(em)).find("w1", "a9")).resolves.toBeNull()
         })
     })
+})
 
+describe("AgentDirectoryService > cards and module lookups", () => {
     describe("findActive", () => {
         it("answers the active agent of the workspace", async () => {
             const em = mockEntityManager({ findOne: [AgentEntity, agentEntityOf()] })
@@ -107,7 +107,7 @@ describe("AgentDirectoryService", () => {
         })
 
         it("answers the cards of the agents that exist in the workspace", async () => {
-            const em = mockEntityManager({ find: [AgentEntity, [lan()]] })
+            const em = mockEntityManager({ find: [AgentEntity, [lanAgent()]] })
 
             await expect((await build(em)).cardsOf("w1", ["a2", "a9"])).resolves.toEqual([LAN])
             expect(em.find).toHaveBeenCalledWith(AgentEntity, {
@@ -136,7 +136,9 @@ describe("AgentDirectoryService", () => {
             await expect((await build(em)).firstActiveIdOfModule("w1", "shifts")).resolves.toBeNull()
         })
     })
+})
 
+describe("AgentDirectoryService > handles, seats and ids", () => {
     describe("handlesOf", () => {
         it("lists the handles of every agent of the workspace, bounded", async () => {
             const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf()]] })
@@ -202,7 +204,9 @@ describe("AgentDirectoryService", () => {
             })
         })
     })
+})
 
+describe("AgentDirectoryService > handle, module count and identities", () => {
     describe("activeByHandles", () => {
         it("lists the active agents holding a handle in handle order, bounded", async () => {
             const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf()]] })
@@ -250,7 +254,9 @@ describe("AgentDirectoryService", () => {
             expect(em.find).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("AgentDirectoryService > sheets", () => {
     describe("sheets", () => {
         const SHEET_SELECT = {
             id: true,
@@ -308,7 +314,9 @@ describe("AgentDirectoryService", () => {
             await expect((await build(em)).earliestSheetOfModule("w1", "chatbot")).resolves.toBeNull()
         })
     })
+})
 
+describe("AgentDirectoryService > first card and greeting", () => {
     describe("firstActiveCardOfModule", () => {
         it("answers the oldest active agent of the module", async () => {
             const em = mockEntityManager({ findOne: [AgentEntity, agentEntityOf()] })
@@ -350,7 +358,7 @@ describe("AgentDirectoryService", () => {
 describe("AgentDirectoryService bindings", () => {
     it("lists the active agents among the ids with their creation moments, oldest first, bounded", async () => {
         const created = new Date("2026-10-01T00:00:00.000Z")
-        const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf({ createdAt: created })]] })
+        const em = mockEntityManager({ find: [AgentEntity, [agentCreatedAt(created)]] })
 
         await expect((await build(em)).activeCreatedAmong("w1", ["a1", "a1"], 200)).resolves.toEqual([
             { id: "a1", module: "chatbot", name: "Bot", createdAt: created },
@@ -437,5 +445,46 @@ describe("AgentDirectoryService chat and turn facts", () => {
             greeting: "",
         })
         await expect((await build(missing)).turnFactsOf("a9")).resolves.toBeNull()
+    })
+
+    it("answers the header of an agent of the workspace, null for none", async () => {
+        const found = mockEntityManager({ findOne: [AgentEntity, agentEntityOf()] })
+        const missing = mockEntityManager({ findOne: [AgentEntity, null] })
+
+        await expect((await build(found)).headOf("w1", "a1")).resolves.toEqual({
+            id: "a1",
+            name: "Bot",
+            handle: "bot",
+            role: "Front desk",
+            module: "chatbot",
+            status: "active",
+            avatarUrl: null,
+        })
+        await expect((await build(missing)).headOf("w1", "a9")).resolves.toBeNull()
+    })
+})
+
+describe("AgentDirectoryService module lookups", () => {
+    it("answers the ids of the agents serving a module, bounded", async () => {
+        const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf(), lanAgent()]] })
+
+        await expect((await build(em)).idsOfModule("w1", "chatbot", 100)).resolves.toEqual(["a1", "a2"])
+        expect(em.find).toHaveBeenCalledWith(AgentEntity, {
+            select: { id: true },
+            where: { workspaceId: "w1", module: "chatbot" },
+            take: 100,
+        })
+    })
+
+    it("answers the module and name of the active agents, oldest first, bounded", async () => {
+        const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf()]] })
+
+        await expect((await build(em)).activeLensesOf("w1", 100)).resolves.toEqual([{ module: "chatbot", name: "Bot" }])
+        expect(em.find).toHaveBeenCalledWith(AgentEntity, {
+            select: { module: true, name: true },
+            where: { workspaceId: "w1", status: "active" },
+            order: { createdAt: "ASC" },
+            take: 100,
+        })
     })
 })

@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { OptionalRoomKeys, RoomName, UserSeatRoom } from "./office-room-directory.contracts"
+import type { OptionalRoomKeys, OptionalRoomLabel, RoomName, UserSeatRoom } from "./office-room-directory.contracts"
 import { OfficeRoomEntity, OfficeRoomMemberEntity } from "./persistence/entities"
 
 @Injectable()
@@ -21,6 +21,20 @@ export class OfficeRoomDirectoryService {
             .addOrderBy("r.key", "ASC")
             .limit(limit)
             .getRawMany<RoomName>()
+    }
+
+    /** The name of the room an agent sits in as its home; null when it has no home room. */
+    async homeRoomNameOf(workspaceId: string, agentId: string): Promise<OptionalRoomLabel> {
+        const seat = await this.entityManager.findOne(OfficeRoomMemberEntity, {
+            select: { roomId: true },
+            where: { agentId, isHome: true },
+        })
+        if (seat === null) return null
+        const room = await this.entityManager.findOne(OfficeRoomEntity, {
+            select: { name: true },
+            where: { id: seat.roomId, workspaceId },
+        })
+        return room?.name ?? null
     }
 
     /**

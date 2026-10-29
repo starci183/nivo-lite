@@ -1,4 +1,4 @@
-import { SUBJECT_TYPES, keyOf } from "@modules/domain/brain-facts"
+import { SUBJECT_TYPES, factSlugOf } from "@modules/domain/brain-facts"
 import type { BrainSubjectType } from "@modules/domain/brain-facts"
 import { chunkText } from "@modules/domain/knowledge-chunks"
 
@@ -141,7 +141,7 @@ const groundedFact = (
     const subjectLabel = textOf(fields.get("subjectLabel"), 160)
     const attributeLabel = textOf(fields.get("attributeLabel"), 120)
     const value = textOf(fields.get("value"), 500)
-    if (keyOf(subjectLabel) === "" || keyOf(attributeLabel) === "" || fold(value) === "") return null
+    if (factSlugOf(subjectLabel) === "" || factSlugOf(attributeLabel) === "" || fold(value) === "") return null
     const quote = textOf(fields.get("quote"), 300)
     const quoteOk = fold(quote).length >= 3 && grounded.includes(fold(quote).slice(0, 60))
     // Grounded = the quote is in the text, or the value is (a number may be rewritten: spaces and dots are ignored for it).
@@ -181,7 +181,7 @@ export const parseFacts = (answer: unknown, window: string): ParsedFacts => {
         if (fields === null) continue
         const fact = groundedFact(fields, grounded, compact)
         if (fact === null) continue
-        const dedupe = `${keyOf(fact.subjectLabel)}|${keyOf(fact.attributeLabel)}|${fold(fact.value)}`
+        const dedupe = `${factSlugOf(fact.subjectLabel)}|${factSlugOf(fact.attributeLabel)}|${fold(fact.value)}`
         if (seen.has(dedupe)) continue
         seen.add(dedupe)
         facts.push(fact)

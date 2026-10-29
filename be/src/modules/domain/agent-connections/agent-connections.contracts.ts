@@ -137,3 +137,13 @@ export interface BoundConnectionFacts {
     /** The masked bank account, or null. */
     readonly account_masked: string | null
 }
+
+/** A stored grant of a connection to an agent. */
+export interface StoredGrant {
+    /** The agent that holds the grant. */
+    readonly agentId: string
+    /** The connection the agent may use. */
+    readonly connectionId: string
+    /** The stored access level, which the caller parses before use. */
+    readonly access: string
+}

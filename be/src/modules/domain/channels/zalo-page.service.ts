@@ -1,14 +1,13 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import { ZaloInboxPageReadService } from "@modules/domain/zalo-inbox"
-import { AgentMessageEntity } from "@modules/domain/agent-messages"
-import { AgentConversationEntity } from "@modules/domain/agent-conversations"
+import { AgentMessagesFeedReadService } from "@modules/domain/agent-messages"
+import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
+import type { ConnectionConversation } from "@modules/domain/agent-conversations"
 import { zaloFailureOf } from "@modules/integrations/zalo"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ChannelDeliveryService } from "./channel-delivery.service"
@@ -22,8 +21,15 @@ import { ZALO_FREE_WINDOW_MS } from "./zalo-delivery.service"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
 import { znsRenewalOf } from "./zns-renewal.policy"
 
-/** The Zalo conversations of a connection, which both message reads filter by. */
-const ZALO_CONVERSATION = "c.workspace_id = :workspaceId AND c.connection_id = :connectionId AND c.channel = 'zalo'"
+/** The channel of the conversations this page lists. */
+const ZALO_CHANNEL = "zalo"
+
+/** The most conversations of one connection the page looks across. */
+const CONVERSATIONS_MAX = 500
+
+/** The most events and recipients the page lists. */
+const EVENTS_MAX = 40
+const RECIPIENTS_MAX = 40
 
 const MANAGER = ["owner", "manager"] as const
 const PROVIDER = "zalo_oa"
@@ -40,13 +46,14 @@ const invalid = (field: string): never => {
  */
 export class ZaloPageService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
         private readonly connections: ConnectionsService,
         private readonly credentials: ZaloCredentialsService,
         private readonly delivery: ChannelDeliveryService,
         private readonly inboxReads: ZaloInboxPageReadService,
+        private readonly conversations: AgentConversationsReadService,
+        private readonly feed: AgentMessagesFeedReadService,
     ) {}
 
     /** The page of a Zalo connection (owner or manager). */
@@ -60,24 +67,29 @@ export class ZaloPageService {
         await this.connections.authorize(actor, MANAGER)
         const connection = await this.zaloOf(actor, connectionId)
         const token = await this.tokenOf(connection)
-        const [messages, follows] = await Promise.all([
-            this.entityManager
-                .createQueryBuilder(AgentMessageEntity, "m")
-                .select("m.id", "id")
-                .addSelect("m.role", "role")
-                .addSelect("m.body", "body")
-                .addSelect("m.created_at::text", "created_at")
-                .addSelect("m.delivery_status", "delivery_status")
-                .addSelect("m.delivery_error", "delivery_error")
-                .addSelect("c.visitor_name", "visitor_name")
-                .innerJoin(AgentConversationEntity, "c", "c.id = m.conversation_id")
-                .where(ZALO_CONVERSATION, { workspaceId: actor.workspaceId, connectionId: connection.id })
-                .andWhere("m.role IN ('user', 'agent')")
-                .orderBy("m.created_at", "DESC")
-                .limit(40)
-                .getRawMany<MessageEventRow>(),
+        const conversations = await this.conversations.onConnection(
+            actor.workspaceId,
+            connection.id,
+            ZALO_CHANNEL,
+            CONVERSATIONS_MAX,
+        )
+        const [feed, follows] = await Promise.all([
+            this.feed.recentIn(
+                conversations.map((conversation) => conversation.id),
+                EVENTS_MAX,
+            ),
             this.inboxReads.followEvents(connection.id),
         ])
+        const nameOf = new Map(conversations.map((conversation) => [conversation.id, conversation.visitorName]))
+        const messages = feed.map((message): MessageEventRow => ({
+            id: message.id,
+            role: message.role,
+            body: message.body,
+            created_at: message.createdAt,
+            delivery_status: message.deliveryStatus,
+            delivery_error: message.deliveryError,
+            visitor_name: nameOf.get(message.conversationId) ?? null,
+        }))
         return eventsOf(messages, follows, token.view)
     }
 
@@ -134,20 +146,16 @@ export class ZaloPageService {
     private async viewOf(actor: ConnectionActor, connection: ConnectionRecord): Promise<ZaloPageView> {
         const loaded = await this.tokenOf(connection)
         const secret = loaded.secret
+        const conversations = await this.conversations.onConnection(
+            actor.workspaceId,
+            connection.id,
+            ZALO_CHANNEL,
+            CONVERSATIONS_MAX,
+        )
         const [recipients, inbox, lastReply, agentIds] = await Promise.all([
-            this.recipientsOf(actor.workspaceId, connection.id),
+            this.recipientsOf(conversations),
             this.inboxReads.factsOf(connection.id),
-            this.entityManager
-                .createQueryBuilder(AgentMessageEntity, "m")
-                .select("m.delivery_status", "delivery_status")
-                .addSelect("m.delivery_error", "delivery_error")
-                .innerJoin(AgentConversationEntity, "c", "c.id = m.conversation_id")
-                .where(ZALO_CONVERSATION, { workspaceId: actor.workspaceId, connectionId: connection.id })
-                .andWhere("m.role = 'agent' AND m.delivery_status IS NOT NULL")
-                .orderBy("m.created_at", "DESC")
-                .limit(1)
-                .getRawMany<LastReplyRow>()
-                .then((rows) => rows[0] ?? null),
+            this.lastReplyOf(conversations),
             this.connections.agentIds(actor.workspaceId, connection.id),
         ])
         const token = loaded.view
@@ -173,21 +181,33 @@ export class ZaloPageService {
         }
     }
 
-    private async recipientsOf(workspaceId: string, connectionId: string) {
-        const since = new Date(this.clock.now().getTime() - ZALO_FREE_WINDOW_MS).toISOString()
-        const rows = await this.entityManager
-            .createQueryBuilder(AgentConversationEntity, "c")
-            .select("c.external_id", "external_id")
-            .addSelect("c.visitor_name", "visitor_name")
-            .addSelect("max(m.created_at)::text", "last_at")
-            .innerJoin(AgentMessageEntity, "m", "m.conversation_id = c.id AND m.role = 'user'")
-            .where(ZALO_CONVERSATION, { workspaceId, connectionId })
-            .andWhere("c.external_id IS NOT NULL AND m.created_at > :since::timestamptz", { since })
-            .groupBy("c.id")
-            .orderBy("max(m.created_at)", "DESC")
-            .limit(40)
-            .getRawMany<RecipientRow>()
+    private async recipientsOf(conversations: ReadonlyArray<ConnectionConversation>) {
+        const since = new Date(this.clock.now().getTime() - ZALO_FREE_WINDOW_MS)
+        const writes = await this.feed.lastWritesSince(
+            conversations.map((conversation) => conversation.id),
+            since,
+            RECIPIENTS_MAX,
+        )
+        const byId = new Map(conversations.map((conversation) => [conversation.id, conversation]))
+        const rows = writes.flatMap((write): Array<RecipientRow> => {
+            const conversation = byId.get(write.conversationId)
+            return conversation === undefined || conversation.externalId === null
+                ? []
+                : [
+                      {
+                          external_id: conversation.externalId,
+                          visitor_name: conversation.visitorName,
+                          last_at: write.lastAt,
+                      },
+                  ]
+        })
         return recipientsOf(rows)
+    }
+
+    /** The verdict of the newest agent reply on the connection whose delivery was tried, or null. */
+    private async lastReplyOf(conversations: ReadonlyArray<ConnectionConversation>): Promise<LastReplyRow | null> {
+        const reply = await this.feed.lastDeliveredReplyIn(conversations.map((conversation) => conversation.id))
+        return reply === null ? null : { delivery_status: reply.deliveryStatus, delivery_error: reply.deliveryError }
     }
 
     private async tokenOf(connection: ConnectionRecord) {

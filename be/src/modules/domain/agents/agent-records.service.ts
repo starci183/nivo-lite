@@ -20,7 +20,7 @@ const keptInstructions = (given: string, stored: string): string => {
     const cleaned = given
         .replace(new RegExp(SETUP_BLOCK.source, "g"), "")
         .replace(/\n{3,}/g, "\n\n")
-        .replace(/^[ \t\n\r]+|[ \t\n\r]+$/g, "")
+        .trim()
     const kept = SETUP_BLOCK.exec(stored)?.[0] ?? ""
     return [cleaned, kept].filter((part) => part !== "").join("\n\n")
 }

@@ -72,3 +72,43 @@ describe("AgentMessagesReadService", () => {
         expect(newest?.argsOf("addOrderBy")).toContainEqual(["m.created_at", "DESC"])
     })
 })
+
+describe("AgentMessagesReadService > workbench reads", () => {
+    const BRIEF = {
+        id: "m-1",
+        conversation_id: "c-1",
+        role: "user",
+        body: "hi",
+        created_at: "2026-10-13T01:00:00.000Z",
+    }
+
+    it("lists the messages of the conversations since a moment, oldest first, bounded", async () => {
+        const em = mockEntityManager()
+        const [read] = queueSubQueryBuilders(em, [{ getRawMany: [BRIEF] }])
+        const since = new Date("2026-09-13T03:00:00.000Z")
+
+        await expect((await build(em)).briefsIn("ws-1", ["c-1"], since, 6000)).resolves.toEqual([BRIEF])
+        expect(read?.argsOf("andWhere")).toContainEqual(["m.created_at >= :since::timestamptz", { since }])
+        expect(read?.argsOf("limit")).toContainEqual([6000])
+    })
+
+    it("asks for nothing without conversations", async () => {
+        const em = mockEntityManager()
+
+        await expect((await build(em)).briefsIn("ws-1", [], new Date(0), 10)).resolves.toEqual([])
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+    })
+
+    it("lists the thread of one conversation, oldest first, bounded", async () => {
+        const em = mockEntityManager()
+        const line = { ...BRIEF, author_kind: null, author_name: null, delivery_status: null, delivery_error: null }
+        const [read] = queueSubQueryBuilders(em, [{ getRawMany: [line] }])
+
+        await expect((await build(em)).threadOf("ws-1", "c-1", 500)).resolves.toEqual([line])
+        expect(read?.argsOf("where")).toContainEqual([
+            "m.workspace_id = :workspaceId AND m.conversation_id = :conversationId",
+            { workspaceId: "ws-1", conversationId: "c-1" },
+        ])
+        expect(read?.argsOf("limit")).toContainEqual([500])
+    })
+})

@@ -55,3 +55,13 @@ export interface CustomerMessagesDay {
     /** How many messages customers wrote. */
     readonly messages: number
 }
+
+/** The messages customers wrote in one conversation on one Vietnam day. */
+export interface ConversationDayCount {
+    /** The conversation. */
+    readonly conversationId: string
+    /** The day, `YYYY-MM-DD`. */
+    readonly day: string
+    /** How many messages customers wrote. */
+    readonly messages: number
+}

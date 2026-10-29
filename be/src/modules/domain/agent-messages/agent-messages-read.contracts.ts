@@ -39,3 +39,29 @@ export interface ChatActivity {
     /** The newest line; undefined while nobody wrote. */
     readonly newest: ChatNewest | undefined
 }
+
+/** A message of a customer conversation as the activity figures read it, under its stored column names. */
+export interface MessageBrief {
+    /** The message. */
+    readonly id: string
+    /** Its conversation. */
+    readonly conversation_id: string
+    /** `user`, `agent` or `system`. */
+    readonly role: string
+    /** The text. */
+    readonly body: string
+    /** When it was written. */
+    readonly created_at: Date | string
+}
+
+/** A message of a thread with who wrote it and how its delivery stands, under its stored column names. */
+export interface ThreadLine extends MessageBrief {
+    /** Who wrote it (`ai`, `human`), or null. */
+    readonly author_kind: string | null
+    /** The name written on it, or null. */
+    readonly author_name: string | null
+    /** How the delivery stands, or null. */
+    readonly delivery_status: string | null
+    /** Why the delivery failed, or null. */
+    readonly delivery_error: string | null
+}

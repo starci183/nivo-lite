@@ -77,3 +77,57 @@ export const AGENT_BOUND_CONNECTION = {
     botUsername: null,
     accountMasked: null,
 }
+
+/** AI Sales, the agent the ownership scenarios start from: owned by Minh, Nam as the fallback, open to owners and managers. */
+export const ownedAgentOf = builder<AgentEntity>({
+    ...agentEntityOf(),
+    id: "a1",
+    workspaceId: "w1",
+    name: "AI Sales",
+    ownerMemberId: "m-minh",
+    fallbackMemberId: "m-nam",
+    assignableRoles: ["owner", "manager"],
+    assignableRooms: ["sales"],
+    canTagAgentIds: ["a2"],
+})
+
+/** AI Sales before anybody owns it. */
+export const ownerlessAgent = (): AgentEntity => ownedAgentOf({ ownerMemberId: null, fallbackMemberId: null })
+
+/** AI Sales as another workspace holds it. */
+export const agentOfOtherWorkspace = (): AgentEntity => ownedAgentOf({ workspaceId: "w2" })
+
+/** An agent a member may be handed work for: open to the owner and manager roles and the sales room. */
+export const openAgentOf = builder<AgentEntity>({
+    ...agentEntityOf(),
+    id: "a1",
+    workspaceId: "w1",
+    assignableRoles: ["owner", "manager"],
+    assignableRooms: ["sales"],
+})
+
+/** The open agent when no room may be handed work. */
+export const roomlessOpenAgent = (): AgentEntity => openAgentOf({ assignableRooms: [] })
+
+/** Agent a1 that may tag agent a2. */
+export const taggingAgent = (): AgentEntity => agentEntityOf({ id: "a1", canTagAgentIds: ["a2"] })
+
+/** Agent a2, Accounting AI, as the agent a1 tags. */
+export const taggedAgent = (): AgentEntity => agentEntityOf({ id: "a2", name: "Accounting AI" })
+
+/** Agent a3, whom a1 does not tag. */
+export const untaggedAgent = (): AgentEntity => agentEntityOf({ id: "a3" })
+
+/** Agent a2, Accounting AI of the accounting module, the target of a tag list. */
+export const accountingTarget = (): AgentEntity =>
+    agentEntityOf({ id: "a2", name: "Accounting AI", module: "accounting" })
+
+/** The stored agent a9 whose instructions are the given text. */
+export const agentHoldingInstructions = (instructions: string): AgentEntity => agentEntityOf({ id: "a9", instructions })
+
+/** The agent a2 named Lan of the shifts module, who may tag the agent a1. */
+export const lanAgent = (): AgentEntity =>
+    agentEntityOf({ id: "a2", name: "Lan", module: "shifts", canTagAgentIds: ["a1"] })
+
+/** The agent a1 created at the given moment. */
+export const agentCreatedAt = (createdAt: Date): AgentEntity => agentEntityOf({ createdAt })

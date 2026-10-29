@@ -1,5 +1,5 @@
 import type { Evidence, FactInput } from "./brain-facts.contracts"
-import { keyOf, numberOf } from "./fact-key.policy"
+import { factSlugOf, numberOf } from "./fact-key.policy"
 
 /** How many pieces of evidence a fact keeps (the newest). */
 export const EVIDENCE_MAX = 20
@@ -25,8 +25,8 @@ export const normalFact = (input: Pick<FactInput, "subjectLabel" | "attributeLab
     const subjectLabel = input.subjectLabel.trim().slice(0, 160)
     const attributeLabel = input.attributeLabel.trim().slice(0, 120)
     const value = input.value.trim().slice(0, 2000)
-    const subjectKey = keyOf(subjectLabel)
-    const attribute = keyOf(attributeLabel)
+    const subjectKey = factSlugOf(subjectLabel)
+    const attribute = factSlugOf(attributeLabel)
     if (subjectKey === "" || attribute === "" || value === "") return null
     return { subjectLabel, attributeLabel, value, subjectKey, attribute, valueNumber: numberOf(value) }
 }

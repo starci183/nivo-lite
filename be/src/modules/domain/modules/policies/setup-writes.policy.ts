@@ -1,5 +1,5 @@
 import type { RuleMode } from "@modules/domain/authority-rules"
-import { SUBJECT_TYPES, keyOf } from "@modules/domain/brain-facts"
+import { SUBJECT_TYPES, factSlugOf } from "@modules/domain/brain-facts"
 import type { BrainSubjectType, Scope } from "@modules/domain/brain-facts"
 import type { FactCardPayload, ProposedCardRecord } from "@modules/domain/module-setup-writes"
 import type { AuthorityActionDefinition, ModuleDefinition, ModuleGate, GateWrite } from "../modules.contracts"
@@ -78,7 +78,7 @@ const FACT_SUBJECTS: ReadonlyArray<BrainSubjectType> = SUBJECT_TYPES
 /** The key that makes two cards the same target: one waiting card per target. */
 export const targetKeyOf = (write: ProposedWrite): string =>
     write.kind === "fact"
-        ? `fact:${keyOf(write.payload.subjectLabel)}|${keyOf(write.payload.attributeLabel)}`
+        ? `fact:${factSlugOf(write.payload.subjectLabel)}|${factSlugOf(write.payload.attributeLabel)}`
         : `rule:${write.payload.action}`
 
 /** An amount typed by the model: a number, or "20 trieu" / "1,5 ty" / "20000000" (accents are ignored). */
@@ -145,7 +145,7 @@ const factOfGate = (
     const declared = gateWritesOf(module, gateKey).filter((write) => write.kind === "fact")
     const asked = clean(item.attribute, 120)
     const spec =
-        declared.find((write) => keyOf(write.attributeLabel) === keyOf(asked)) ??
+        declared.find((write) => factSlugOf(write.attributeLabel) === factSlugOf(asked)) ??
         (declared.length === 1 && asked === "" ? declared[0] : undefined)
     if (spec === undefined) return null
     const subject = subjectLabel || (spec.subjectType === "business" ? businessLabel : "")

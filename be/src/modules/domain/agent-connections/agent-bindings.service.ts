@@ -27,6 +27,7 @@ import type {
     ModuleRef,
     OptionalConnectionId,
     PurposeSelector,
+    StoredGrant,
 } from "./agent-connections.contracts"
 import { AgentConnectionsError, AgentConnectionsErrorCode } from "./errors/agent-connections.error"
 import { AgentConnectionEntity } from "./persistence/entities"
@@ -36,6 +37,9 @@ const GOVERNORS = ["owner", "manager"] as const
 
 /** The most bindings one read answers. */
 const BINDINGS_MAX = 200
+
+/** The most grants one grant read answers. */
+const GRANTS_MAX = 500
 
 @Injectable()
 /**
@@ -145,6 +149,56 @@ export class AgentBindingsService {
             take: limit,
         })
         return links.map((link) => link.agentId)
+    }
+
+    /** The grants of the workspace matching the condition, with the manager of the caller (its transaction), oldest first. */
+    private async grantsWhere(
+        where: FindOptionsWhere<AgentConnectionEntity>,
+        manager: EntityManager,
+    ): Promise<Array<StoredGrant>> {
+        const links = await manager.find(AgentConnectionEntity, {
+            select: { agentId: true, connectionId: true, access: true },
+            where,
+            order: { createdAt: "ASC" },
+            take: GRANTS_MAX,
+        })
+        return links.map((link) => ({ agentId: link.agentId, connectionId: link.connectionId, access: link.access }))
+    }
+
+    /** Every grant of the workspace, oldest first. */
+    grantsOfWorkspace(workspaceId: string, manager: EntityManager = this.entityManager): Promise<Array<StoredGrant>> {
+        return this.grantsWhere({ workspaceId }, manager)
+    }
+
+    /** The grants an agent of the workspace holds. */
+    grantsOfAgent(
+        workspaceId: string,
+        agentId: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<Array<StoredGrant>> {
+        return this.grantsWhere({ workspaceId, agentId }, manager)
+    }
+
+    /** The grants of one connection of the workspace. */
+    grantsOfConnection(
+        workspaceId: string,
+        connectionId: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<Array<StoredGrant>> {
+        return this.grantsWhere({ workspaceId, connectionId }, manager)
+    }
+
+    /** The grants among the given agents and connections of the workspace. */
+    grantsAmong(
+        workspaceId: string,
+        agentIds: ReadonlyArray<string>,
+        connectionIds: ReadonlyArray<string>,
+        manager: EntityManager = this.entityManager,
+    ): Promise<Array<StoredGrant>> {
+        return this.grantsWhere(
+            { workspaceId, agentId: In([...agentIds]), connectionId: In([...connectionIds]) },
+            manager,
+        )
     }
 
     /** Removes a grant the caller already proved and planned, inside its transaction (the connection grants editor). */

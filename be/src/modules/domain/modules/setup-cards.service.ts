@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { AuthorityActionsService, ruleRefusalOf } from "@modules/domain/authority-actions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { AuthorityRuleRecord } from "@modules/domain/authority-rules"
-import { BrainFactsService, keyOf, sameValue } from "@modules/domain/brain-facts"
+import { BrainFactsService, factSlugOf, sameValue } from "@modules/domain/brain-facts"
 import type { Evidence, Scope } from "@modules/domain/brain-facts"
 import { EventsService } from "@modules/domain/events"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
@@ -261,8 +261,8 @@ export class SetupCardsService {
         const scopeId = change.onlyThisAgent === true && installation.isMulti ? installation.id : null
         const [current] = await this.facts.byKey(
             workspaceId,
-            keyOf(subjectLabel),
-            keyOf(baseAttribute),
+            factSlugOf(subjectLabel),
+            factSlugOf(baseAttribute),
             "active",
             scopeId,
         )
@@ -329,7 +329,13 @@ export class SetupCardsService {
             return { kind: "rule", mode: have.mode, limitVnd: have.limitVnd }
         }
         const { subjectLabel, attributeLabel } = card.payload
-        const [active] = await this.facts.byKey(workspaceId, keyOf(subjectLabel), keyOf(attributeLabel), "active", null)
+        const [active] = await this.facts.byKey(
+            workspaceId,
+            factSlugOf(subjectLabel),
+            factSlugOf(attributeLabel),
+            "active",
+            null,
+        )
         return active === undefined
             ? null
             : { kind: "fact", value: active.value, scope: active.scope, modules: active.modules }

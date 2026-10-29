@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import { Between, In, IsNull, LessThan } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { AgentConversationEntity } from "@modules/domain/agent-conversations"
+import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { WorkItemsDecisionsReadService } from "@modules/domain/work-items"
 import { MemberRosterService, WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -60,6 +60,7 @@ export class HiringDataService {
         private readonly seats: WorkspaceMemberSeatsService,
         private readonly roster: MemberRosterService,
         private readonly decisions: WorkItemsDecisionsReadService,
+        private readonly conversations: AgentConversationsReadService,
     ) {}
 
     /** The settings of a workspace, or undefined before they are created. */
@@ -261,12 +262,8 @@ export class HiringDataService {
     }
 
     /** The channel of a chat conversation, or null. */
-    async conversationChannel(conversationId: string): Promise<string | null> {
-        const row = await this.entityManager.findOne(AgentConversationEntity, {
-            select: { channel: true },
-            where: { id: conversationId },
-        })
-        return row?.channel ?? null
+    conversationChannel(conversationId: string): Promise<string | null> {
+        return this.conversations.channelOf(conversationId)
     }
 
     /** A fresh 128-bit random token for a link or upload folder, retaining the legacy 32-hex format. */

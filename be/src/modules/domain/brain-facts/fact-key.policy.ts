@@ -18,7 +18,7 @@ export const TRUST: Readonly<Record<FactSource, number>> = {
 export const AUTO_APPLY_TRUST = 85
 
 /** Lower case, accents removed (d with stroke becomes d), anything else turned into single dashes: "Combo Thu gian!" becomes "combo-thu-gian". */
-export const keyOf = (text: string): string =>
+export const factSlugOf = (text: string): string =>
     text
         .toLowerCase()
         .replaceAll("\u0111", "d")
@@ -57,12 +57,12 @@ export const numberOf = (raw: string): number | null => {
 }
 
 /** The wording of a value without its digits, to compare "8h" with "8 minutes". */
-const wording = (text: string): string => keyOf(text.replace(/[\d.,\s]/g, ""))
+const wording = (text: string): string => factSlugOf(text.replace(/[\d.,\s]/g, ""))
 
 /** Two values say the same thing: equal numbers with the same wording around them, or equal once normalised. */
 export const sameValue = (first: string, second: string): boolean => {
     const a = numberOf(first)
     const b = numberOf(second)
     if (a !== null && b !== null && wording(first) === wording(second)) return a === b
-    return keyOf(first) === keyOf(second)
+    return factSlugOf(first) === factSlugOf(second)
 }

@@ -2,7 +2,15 @@ import { Injectable } from "@nestjs/common"
 import { In, IsNull, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { OptionalCustomerChatRef, TestChatRef } from "./agent-conversations-read.contracts"
+import type {
+    ConnectionConversation,
+    ConversationChannel,
+    CustomerConversationRow,
+    OptionalCustomerConversationRow,
+    OptionalChannelText,
+    OptionalCustomerChatRef,
+    TestChatRef,
+} from "./agent-conversations-read.contracts"
 import { AgentConversationEntity } from "./persistence/entities"
 
 @Injectable()
@@ -61,5 +69,86 @@ export class AgentConversationsReadService {
             order: { createdAt: "DESC" },
         })
         return chat === null ? null : { id: chat.id, leadId: chat.leadId }
+    }
+
+    /** The channel of a conversation by id; null when there is no such conversation. */
+    async channelOf(conversationId: string): Promise<OptionalChannelText> {
+        const row = await this.entityManager.findOne(AgentConversationEntity, {
+            select: { id: true, channel: true },
+            where: { id: conversationId },
+        })
+        return row?.channel ?? null
+    }
+
+    /** The conversations of a connection on a channel, oldest first, at most `limit`. */
+    async onConnection(
+        workspaceId: string,
+        connectionId: string,
+        channel: string,
+        limit: number,
+    ): Promise<Array<ConnectionConversation>> {
+        const rows = await this.entityManager.find(AgentConversationEntity, {
+            select: { id: true, externalId: true, visitorName: true },
+            where: { workspaceId, connectionId, channel },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: limit,
+        })
+        return rows.map((row) => ({ id: row.id, externalId: row.externalId, visitorName: row.visitorName }))
+    }
+
+    /** The channel of each customer conversation among these ids that runs on one of the channels. */
+    async customerChannelsAmong(
+        workspaceId: string,
+        conversationIds: ReadonlyArray<string>,
+        channels: ReadonlyArray<string>,
+    ): Promise<Array<ConversationChannel>> {
+        if (conversationIds.length === 0) return []
+        const rows = await this.entityManager.find(AgentConversationEntity, {
+            select: { id: true, channel: true },
+            where: { workspaceId, kind: "customer", id: In([...conversationIds]), channel: In([...channels]) },
+            take: conversationIds.length,
+        })
+        return rows.map((row) => ({ id: row.id, channel: row.channel }))
+    }
+
+    /** The newest customer conversations of the given agents, newest first, at most `limit`. */
+    async customerOfAgents(
+        workspaceId: string,
+        agentIds: ReadonlyArray<string>,
+        limit: number,
+    ): Promise<Array<CustomerConversationRow>> {
+        if (agentIds.length === 0) return []
+        return this.customerColumns()
+            .where("c.workspace_id = :workspaceId AND c.kind = 'customer'", { workspaceId })
+            .andWhere("c.agent_id IN (:...agentIds)", { agentIds: [...agentIds] })
+            .orderBy("c.created_at", "DESC")
+            .limit(limit)
+            .getRawMany<CustomerConversationRow>()
+    }
+
+    /** The customer conversation of the workspace under the id; null when there is none. */
+    async customerById(workspaceId: string, conversationId: string): Promise<OptionalCustomerConversationRow> {
+        const [row] = await this.customerColumns()
+            .where("c.workspace_id = :workspaceId AND c.id = :conversationId AND c.kind = 'customer'", {
+                workspaceId,
+                conversationId,
+            })
+            .limit(1)
+            .getRawMany<CustomerConversationRow>()
+        return row ?? null
+    }
+
+    /** A read of the inbox columns of conversations, each under its stored column name. */
+    private customerColumns() {
+        return this.entityManager
+            .createQueryBuilder(AgentConversationEntity, "c")
+            .select("c.id", "id")
+            .addSelect("c.channel", "channel")
+            .addSelect("c.visitor_name", "visitor_name")
+            .addSelect("c.lead_id", "lead_id")
+            .addSelect("c.handled_by", "handled_by")
+            .addSelect("c.handled_at", "handled_at")
+            .addSelect("c.external_id", "external_id")
+            .addSelect("c.created_at", "created_at")
     }
 }

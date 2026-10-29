@@ -1,7 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { ChatActivity, ChatMark, ChatNewest, ChatReader } from "./agent-messages-read.contracts"
+import type {
+    ChatActivity,
+    ChatMark,
+    ChatNewest,
+    ChatReader,
+    MessageBrief,
+    ThreadLine,
+} from "./agent-messages-read.contracts"
 import { AgentMessageEntity } from "./persistence/entities"
 
 /** The caller's own lines are recognised by account id, and by display name only on legacy lines that carry no account id. */
@@ -71,5 +78,54 @@ export class AgentMessagesReadService {
             unread: unreadOf.get(conversationId) ?? 0,
             newest: newestOf.get(conversationId),
         }))
+    }
+
+    /** The messages of the conversations written since `since`, oldest first, at most `limit`. */
+    async briefsIn(
+        workspaceId: string,
+        conversationIds: ReadonlyArray<string>,
+        since: Date,
+        limit: number,
+    ): Promise<Array<MessageBrief>> {
+        if (conversationIds.length === 0) return []
+        return this.entityManager
+            .createQueryBuilder(AgentMessageEntity, "m")
+            .select("m.id", "id")
+            .addSelect("m.conversation_id", "conversation_id")
+            .addSelect("m.role", "role")
+            .addSelect("m.body", "body")
+            .addSelect("m.created_at", "created_at")
+            .where("m.workspace_id = :workspaceId AND m.conversation_id IN (:...conversationIds)", {
+                workspaceId,
+                conversationIds: [...conversationIds],
+            })
+            .andWhere("m.created_at >= :since::timestamptz", { since })
+            .orderBy("m.created_at")
+            .addOrderBy("m.id")
+            .limit(limit)
+            .getRawMany<MessageBrief>()
+    }
+
+    /** The messages of one conversation with their authors and deliveries, oldest first, at most `limit`. */
+    async threadOf(workspaceId: string, conversationId: string, limit: number): Promise<Array<ThreadLine>> {
+        return this.entityManager
+            .createQueryBuilder(AgentMessageEntity, "m")
+            .select("m.id", "id")
+            .addSelect("m.conversation_id", "conversation_id")
+            .addSelect("m.role", "role")
+            .addSelect("m.author_kind", "author_kind")
+            .addSelect("m.author_name", "author_name")
+            .addSelect("m.body", "body")
+            .addSelect("m.created_at", "created_at")
+            .addSelect("m.delivery_status", "delivery_status")
+            .addSelect("m.delivery_error", "delivery_error")
+            .where("m.workspace_id = :workspaceId AND m.conversation_id = :conversationId", {
+                workspaceId,
+                conversationId,
+            })
+            .orderBy("m.created_at")
+            .addOrderBy("m.id")
+            .limit(limit)
+            .getRawMany<ThreadLine>()
     }
 }

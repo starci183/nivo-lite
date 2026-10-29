@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { In, MoreThanOrEqual, Not } from "typeorm"
 import type { EntityManager, FindOptionsWhere } from "typeorm"
 import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-activity"
-import { AgentConversationEntity } from "@modules/domain/agent-conversations"
+import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
@@ -10,6 +10,7 @@ import type {
     AgentThreadMessage,
     ApprovedMessageId,
     AuthorUserId,
+    ConversationDayCount,
     CustomerMessagesDay,
     StoredMessage,
     StoredReply,
@@ -21,6 +22,12 @@ import { AgentMessageEntity } from "./persistence/entities"
 
 /** The most messages of a thread one read answers. */
 const CHAT_MESSAGES_MAX = 300
+
+/** The most conversation-days one count looks across. */
+const CONVERSATION_DAYS_MAX = 5000
+
+/** The channels whose customer messages are counted. */
+const COUNTED_CHANNELS = ["facebook", "zalo"]
 
 /** The most lines of a transcript. */
 const TRANSCRIPT_MAX = 40
@@ -39,6 +46,7 @@ export class AgentMessagesService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly activity: ChatActivityService,
+        private readonly conversations: AgentConversationsReadService,
     ) {}
 
     /** The messages customers wrote per Vietnam day and channel from `from` (inclusive) to `to` (exclusive), oldest first. */
@@ -47,24 +55,36 @@ export class AgentMessagesService {
         from: string,
         to: string,
     ): Promise<ReadonlyArray<CustomerMessagesDay>> {
-        // Only the customer side of real customer conversations is counted.
-        const rows = await this.entityManager
+        // Only the customer side is counted, per conversation and day, then summed per channel of real customer conversations.
+        const perConversation = await this.entityManager
             .createQueryBuilder(AgentMessageEntity, "m")
-            .select("c.channel", "channel")
+            .select("m.conversation_id", "conversationId")
             .addSelect("to_char((m.createdAt AT TIME ZONE 'Asia/Ho_Chi_Minh')::date, 'YYYY-MM-DD')", "day")
             .addSelect("count(*)::integer", "messages")
-            .innerJoin(AgentConversationEntity, "c", "c.id = m.conversation_id AND c.workspace_id = m.workspace_id")
-            .where("m.workspaceId = :workspaceId AND m.role = 'user' AND c.kind = 'customer'", { workspaceId })
-            .andWhere("c.channel IN ('facebook', 'zalo')")
+            .where("m.workspaceId = :workspaceId AND m.role = 'user'", { workspaceId })
             .andWhere("m.createdAt >= (:from::date::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')", { from })
             .andWhere("m.createdAt < (:to::date::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')", { to })
-            .groupBy("c.channel")
+            .groupBy("m.conversation_id")
             .addGroupBy("day")
-            .orderBy("day", "ASC")
-            .addOrderBy("c.channel", "ASC")
-            .limit(400)
-            .getRawMany<CustomerMessagesDay>()
-        return rows.map((row) => ({ channel: row.channel, day: row.day, messages: row.messages }))
+            .limit(CONVERSATION_DAYS_MAX)
+            .getRawMany<ConversationDayCount>()
+        const channels = await this.conversations.customerChannelsAmong(
+            workspaceId,
+            [...new Set(perConversation.map((row) => row.conversationId))],
+            COUNTED_CHANNELS,
+        )
+        const channelOf = new Map(channels.map((conversation) => [conversation.id, conversation.channel]))
+        const totals = new Map<string, CustomerMessagesDay>()
+        for (const row of perConversation) {
+            const channel = channelOf.get(row.conversationId)
+            if (channel === undefined) continue
+            const key = `${row.day}|${channel}`
+            const seen = totals.get(key)
+            totals.set(key, { channel, day: row.day, messages: (seen?.messages ?? 0) + row.messages })
+        }
+        return [...totals.values()].sort(
+            (left, right) => left.day.localeCompare(right.day) || left.channel.localeCompare(right.channel),
+        )
     }
 
     /** Reads messages of the selected conversations of the workspace after its caller membership was proved. */

@@ -47,3 +47,16 @@ export const customerPriceQuestion = (): AgentMessageEntity => messageOf({ role:
 
 /** The agent's welcome reply. */
 export const agentWelcomeReply = (): AgentMessageEntity => messageOf({ role: "agent", body: "Welcome" })
+
+/** A sent message m1 as the delivery specs see it. */
+export const sentReplyOf = builder<AgentMessageEntity>({ id: "m1", deliveryStatus: "sent" })
+
+/** The sent message m1 of conversation c1. */
+export const sentReplyInC1 = (): AgentMessageEntity => sentReplyOf({ conversationId: "c1" })
+
+/** The customer message m1 of conversation c1 whose delivery was never tried. */
+export const untriedTurnMessage = (): AgentMessageEntity =>
+    sentReplyOf({ conversationId: "c1", role: "user", deliveryStatus: null })
+
+/** The sent agent reply r1. */
+export const sentReplyR1 = (): AgentMessageEntity => sentReplyOf({ id: "r1" })

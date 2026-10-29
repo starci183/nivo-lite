@@ -16,3 +16,6 @@ export interface UserSeatRoom {
 
 /** The department rooms a lookup narrows to, by key; null asks for every room. */
 export type OptionalRoomKeys = ReadonlyArray<string> | null
+
+/** The display name of a room, or null when there is none. */
+export type OptionalRoomLabel = string | null

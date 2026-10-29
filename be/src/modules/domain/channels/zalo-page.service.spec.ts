@@ -1,44 +1,25 @@
-import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
+import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
+import { AgentMessagesFeedReadService } from "@modules/domain/agent-messages"
 import { ZaloInboxPageReadService } from "@modules/domain/zalo-inbox"
 import type { ZaloFollowEventRow, ZaloInboxFactsRow } from "@modules/domain/zalo-inbox"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import { ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
 import { CLOCK } from "@modules/platform/clock"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ok, refused } from "@modules/platform/primitives"
 import { ChannelDeliveryService } from "./channel-delivery.service"
 import type { ZaloSecret } from "./channels.contracts"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
-import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
-import type { TableAnswers, TableQuery } from "@tests/fixtures/builders/table-query-builder.builder"
 
 /** The name of each read of the capability, so a spec answers the read it means. */
 const LIST_ZALO_RECIPIENTS = "recipients"
 const FIND_LAST_ZALO_REPLY = "lastReply"
 const LIST_ZALO_MESSAGE_EVENTS = "messages"
 
-const limitOf = (query: TableQuery): unknown => query.callsOf("limit")[0]?.[0]
-
-/** Makes the kit manager's tables answer the named reads; the reads of one table are told apart by their limit. */
-const answerTables = (em: ReturnType<typeof mockEntityManager>, answers: Record<string, ReadonlyArray<unknown>>) =>
-    answerByTable(em, {
-        "public.agent_conversations": answers[LIST_ZALO_RECIPIENTS] ?? [],
-        "public.agent_messages": (query) =>
-            (limitOf(query) === 1 ? answers[FIND_LAST_ZALO_REPLY] : answers[LIST_ZALO_MESSAGE_EVENTS]) ?? [],
-    })
-
-/** The named parameters of every condition the subject put on its read of a table. */
-const parametersOf = (seen: TableAnswers, table: string): unknown =>
-    Object.assign(
-        {},
-        ...(seen.queriesOf(table)[0]?.calls ?? [])
-            .filter((call) => call.method === "where" || call.method === "andWhere")
-            .map((call) => call.args[1]),
-    )
 import { ZaloCredentialsService } from "./zalo-credentials.service"
 import { ZaloPageService } from "./zalo-page.service"
 
@@ -83,6 +64,29 @@ const messageRow = {
     visitor_name: "An",
 }
 
+/** Whether a stubbed row is a recipient row. */
+const isRecipientRow = (
+    row: unknown,
+): row is { external_id: string | null; visitor_name: string | null; last_at: string } =>
+    typeof row === "object" && row !== null && "last_at" in row
+
+/** Whether a stubbed row is a message event row. */
+const isMessageRow = (
+    row: unknown,
+): row is {
+    id: string
+    role: string
+    body: string
+    created_at: string
+    delivery_status: string | null
+    delivery_error: string | null
+    visitor_name: string | null
+} => typeof row === "object" && row !== null && "body" in row
+
+/** Whether a stubbed row is a last-reply row. */
+const isLastReplyRow = (row: unknown): row is { delivery_status: string; delivery_error: string | null } =>
+    typeof row === "object" && row !== null && "delivery_status" in row && !("body" in row)
+
 const DEFAULT_ANSWERS: Record<string, ReadonlyArray<unknown>> = {
     [LIST_ZALO_RECIPIENTS]: [recipientRow],
     [FIND_LAST_ZALO_REPLY]: [{ delivery_status: "sent", delivery_error: null }],
@@ -114,26 +118,54 @@ const build = async (
     const inboxReads = mock<ZaloInboxPageReadService>()
     inboxReads.followEvents.mockResolvedValue([FOLLOW])
     inboxReads.factsOf.mockResolvedValue(facts)
-    const em = mockEntityManager()
-    const seen = answerTables(em, { ...DEFAULT_ANSWERS, ...answers })
+    const rows = { ...DEFAULT_ANSWERS, ...answers }
+    const recipients = (rows[LIST_ZALO_RECIPIENTS] ?? []).filter(isRecipientRow)
+    const events = (rows[LIST_ZALO_MESSAGE_EVENTS] ?? []).filter(isMessageRow)
+    const conversations = mock<AgentConversationsReadService>()
+    conversations.onConnection.mockResolvedValue([
+        ...recipients.map((row, at) => ({ id: `r-${at}`, externalId: row.external_id, visitorName: row.visitor_name })),
+        ...events.map((row, at) => ({ id: `m-${at}`, externalId: null, visitorName: row.visitor_name })),
+    ])
+    const feed = mock<AgentMessagesFeedReadService>()
+    feed.lastWritesSince.mockResolvedValue(
+        recipients.map((row, at) => ({ conversationId: `r-${at}`, lastAt: row.last_at })),
+    )
+    feed.recentIn.mockResolvedValue(
+        events.map((row, at) => ({
+            id: row.id,
+            conversationId: `m-${at}`,
+            role: row.role,
+            body: row.body,
+            createdAt: row.created_at,
+            deliveryStatus: row.delivery_status,
+            deliveryError: row.delivery_error,
+        })),
+    )
+    const lastReply = (rows[FIND_LAST_ZALO_REPLY] ?? []).filter(isLastReplyRow)[0]
+    feed.lastDeliveredReplyIn.mockResolvedValue(
+        lastReply === undefined
+            ? null
+            : { deliveryStatus: lastReply.delivery_status, deliveryError: lastReply.delivery_error },
+    )
     const moduleRef = await Test.createTestingModule({
         providers: [
             ZaloPageService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LOGGER, useValue: logger },
             { provide: ConnectionsService, useValue: connections },
             { provide: ZaloCredentialsService, useValue: credentials },
             { provide: ZaloInboxPageReadService, useValue: inboxReads },
             { provide: ChannelDeliveryService, useValue: delivery },
+            { provide: AgentConversationsReadService, useValue: conversations },
+            { provide: AgentMessagesFeedReadService, useValue: feed },
         ],
     }).compile()
-    return { service: moduleRef.get(ZaloPageService), logger, connections, credentials, delivery, seen }
+    return { service: moduleRef.get(ZaloPageService), logger, connections, credentials, delivery, conversations, feed }
 }
 
 describe("ZaloPageService view", () => {
     it("answers a healthy connection with masked secrets, the paste addresses, the check list and the 48-hour followers", async () => {
-        const { service, seen } = await build()
+        const { service, conversations, feed } = await build()
 
         const page = await service.view(actor, "c-1")
 
@@ -161,11 +193,8 @@ describe("ZaloPageService view", () => {
         ])
         expect(JSON.stringify(page)).not.toContain("app-secret-1234")
         expect(JSON.stringify(page)).not.toContain("access-token")
-        expect(parametersOf(seen, "public.agent_conversations")).toEqual({
-            workspaceId: "ws-1",
-            connectionId: "c-1",
-            since: "2026-10-26T10:00:00.000Z",
-        })
+        expect(conversations.onConnection).toHaveBeenCalledWith("ws-1", "c-1", "zalo", 500)
+        expect(feed.lastWritesSince).toHaveBeenCalledWith(["r-0"], new Date("2026-10-26T10:00:00.000Z"), 40)
     })
 
     it("closes the send and asks for attention when the token ended and nothing can renew it", async () => {
@@ -226,7 +255,7 @@ describe("ZaloPageService provider guard", () => {
 
 describe("ZaloPageService events", () => {
     it("lists customer texts and follows newest first, and words a failed reply by the token that cannot work", async () => {
-        const { service, credentials, seen } = await build({
+        const { service, credentials, conversations } = await build({
             [LIST_ZALO_MESSAGE_EVENTS]: [
                 {
                     id: "m-2",
@@ -253,7 +282,7 @@ describe("ZaloPageService events", () => {
             ["m-2", "agent_reply", "not_sent", "token_expired"],
             ["f-1", "follow", "received", null],
         ])
-        expect(parametersOf(seen, "public.agent_messages")).toEqual({ workspaceId: "ws-1", connectionId: "c-1" })
+        expect(conversations.onConnection).toHaveBeenCalledWith("ws-1", "c-1", "zalo", 500)
     })
 })
 

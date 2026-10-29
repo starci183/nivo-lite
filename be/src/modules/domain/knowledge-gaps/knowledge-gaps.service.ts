@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { In, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { keyOf } from "@modules/domain/brain-facts"
+import { factSlugOf } from "@modules/domain/brain-facts"
 import { InjectPrimaryEntityManager, returnedRows } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { isGapReturned, toGapFields, toGapRecord } from "./gap-record.mapper"
@@ -62,7 +62,7 @@ export class KnowledgeGapsService {
         const question = input.question.replace(/\s+/g, " ").trim().slice(0, QUESTION_MAX)
         const keywords = keywordsOf(question)
         if (keywords.length === 0) return null
-        const key = keyOf(question)
+        const key = factSlugOf(question)
         const { subject, attribute } = splitTopic(input.topic)
         const bump = async (row: GapFields): Promise<GapRecorded> => {
             const changed = await this.countAgain(workspaceId, row.id, subject, attribute, input.conversationId ?? null)

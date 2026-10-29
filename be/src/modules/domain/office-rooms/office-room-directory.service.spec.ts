@@ -3,7 +3,9 @@ import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { queueSubQueryBuilders } from "@tests/fixtures/builders/sub-query-builder.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { entityOf } from "@tests/fixtures/builders/entity.builder"
 import { OfficeRoomDirectoryService } from "./office-room-directory.service"
+import { OfficeRoomEntity, OfficeRoomMemberEntity } from "./persistence/entities"
 
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
@@ -89,5 +91,26 @@ describe("OfficeRoomDirectoryService", () => {
 
         await expect((await build(em)).staffedRooms("ws-1", ["sales"], 20)).resolves.toEqual([])
         expect(read?.argsOf("andWhere")).toContainEqual(["r.key IN (:...keys)", { keys: ["sales"] }])
+    })
+
+    it("answers the name of the home room of an agent, null when it has none", async () => {
+        const home = mockEntityManager({
+            findOne: [
+                [OfficeRoomMemberEntity, entityOf(OfficeRoomMemberEntity, { roomId: "r1" })()],
+                [OfficeRoomEntity, entityOf(OfficeRoomEntity, { name: "Sales" })()],
+            ],
+        })
+        const homeless = mockEntityManager({ findOne: [OfficeRoomMemberEntity, null] })
+
+        await expect((await build(home)).homeRoomNameOf("ws-1", "a1")).resolves.toBe("Sales")
+        expect(home.findOne).toHaveBeenCalledWith(OfficeRoomMemberEntity, {
+            select: { roomId: true },
+            where: { agentId: "a1", isHome: true },
+        })
+        expect(home.findOne).toHaveBeenCalledWith(OfficeRoomEntity, {
+            select: { name: true },
+            where: { id: "r1", workspaceId: "ws-1" },
+        })
+        await expect((await build(homeless)).homeRoomNameOf("ws-1", "a9")).resolves.toBeNull()
     })
 })
