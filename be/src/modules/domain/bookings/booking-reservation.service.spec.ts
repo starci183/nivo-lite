@@ -98,7 +98,7 @@ describe("BookingReservationService", () => {
         })
 
         it("answers full without writing when the resource has no room", async () => {
-            const { reservation, manager, write, resources } = await build(1, [spanOf()])
+            const { reservation, manager, write } = await build(1, [spanOf()])
 
             await expect(reservation.reserve({ manager, booking: bookingOf(), force: false })).resolves.toEqual({
                 kind: "full",
@@ -107,7 +107,7 @@ describe("BookingReservationService", () => {
         })
 
         it("writes over a taken place when forced and skips the load check", async () => {
-            const { reservation, manager, resources } = await build(1, null, { execute: { raw: [{ id: "b2" }] } })
+            const { reservation, manager } = await build(1, null, { execute: { raw: [{ id: "b2" }] } })
 
             await expect(reservation.reserve({ manager, booking: bookingOf(), force: true })).resolves.toEqual({
                 kind: "reserved",
@@ -121,7 +121,7 @@ describe("BookingReservationService", () => {
 describe("BookingReservationService", () => {
     describe("reserve", () => {
         it("writes a request that does not hold its slot without checking the load", async () => {
-            const { reservation, manager, resources } = await build(1, null, { execute: { raw: [{ id: "b3" }] } })
+            const { reservation, manager } = await build(1, null, { execute: { raw: [{ id: "b3" }] } })
 
             await expect(
                 reservation.reserve({
@@ -134,7 +134,7 @@ describe("BookingReservationService", () => {
         })
 
         it("writes a booking without a price as a null price", async () => {
-            const { reservation, manager, write, resources } = await build(1, [], { execute: { raw: [{ id: "b4" }] } })
+            const { reservation, manager, write } = await build(1, [], { execute: { raw: [{ id: "b4" }] } })
 
             await reservation.reserve({ manager, booking: bookingOf({ priceVnd: null }), force: false })
 
@@ -142,7 +142,7 @@ describe("BookingReservationService", () => {
         })
 
         it("answers resource_not_found when the resource is not in the workspace", async () => {
-            const { reservation, manager, write, resources } = await build(null, null)
+            const { reservation, manager, write } = await build(null, null)
 
             await expect(reservation.reserve({ manager, booking: bookingOf(), force: false })).resolves.toEqual({
                 kind: "resource_not_found",
@@ -151,7 +151,7 @@ describe("BookingReservationService", () => {
         })
 
         it("fails when the insert answers no rows at all", async () => {
-            const { reservation, manager, resources } = await build(1, [], { execute: {} })
+            const { reservation, manager } = await build(1, [], { execute: {} })
 
             await expect(reservation.reserve({ manager, booking: bookingOf(), force: false })).rejects.toMatchObject({
                 code: BookingsErrorCode.NotCreated,
@@ -159,7 +159,7 @@ describe("BookingReservationService", () => {
         })
 
         it("fails when the insert answers no row", async () => {
-            const { reservation, manager, resources } = await build(1, [], { execute: { raw: [] } })
+            const { reservation, manager } = await build(1, [], { execute: { raw: [] } })
 
             await expect(reservation.reserve({ manager, booking: bookingOf(), force: false })).rejects.toMatchObject({
                 code: BookingsErrorCode.NotCreated,
@@ -185,7 +185,7 @@ describe("BookingReservationService", () => {
         })
 
         it("moves the booking when the new place has room", async () => {
-            const { reservation, manager, write, resources } = await build(1, [], { execute: { raw: [] } })
+            const { reservation, manager, write } = await build(1, [], { execute: { raw: [] } })
 
             await expect(reservation.relocate(moveOf(manager))).resolves.toBe("moved")
 
@@ -210,21 +210,21 @@ describe("BookingReservationService", () => {
         })
 
         it("answers taken when the new place is full and the move is not forced", async () => {
-            const { reservation, manager, write, resources } = await build(1, [spanOf({ resourceId: "r2" })])
+            const { reservation, manager, write } = await build(1, [spanOf({ resourceId: "r2" })])
 
             await expect(reservation.relocate(moveOf(manager))).resolves.toBe("taken")
             expect(write.calls).toEqual([])
         })
 
         it("moves over a taken place when forced", async () => {
-            const { reservation, manager, resources } = await build(1, null, { execute: { raw: [] } })
+            const { reservation, manager } = await build(1, null, { execute: { raw: [] } })
 
             await expect(reservation.relocate(moveOf(manager, { force: true }))).resolves.toBe("moved")
             expect(manager.find).not.toHaveBeenCalled()
         })
 
         it("answers resource_not_found for a resource outside the workspace", async () => {
-            const { reservation, manager, resources } = await build(null, null)
+            const { reservation, manager } = await build(null, null)
 
             await expect(reservation.relocate(moveOf(manager))).resolves.toBe("resource_not_found")
         })

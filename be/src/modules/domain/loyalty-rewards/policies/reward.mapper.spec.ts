@@ -1,5 +1,15 @@
+import { Test } from "@nestjs/testing"
 import { REWARD_RETURNING, isRewardRaw, toReward, toRewardFromRaw } from "./reward.mapper"
 import type { RewardFieldsOfEntity, RewardRaw } from "./reward.mapper"
+
+const SUBJECT = Symbol("reward.mapper")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { isRewardRaw, toReward, toRewardFromRaw } }],
+    }).compile()
+    return moduleRef.get<Pick<typeof import("./reward.mapper"), "isRewardRaw" | "toReward" | "toRewardFromRaw">>(SUBJECT)
+}
 
 const entityRow = (overrides: Partial<RewardFieldsOfEntity> = {}): RewardFieldsOfEntity => ({
     id: "r-1",
@@ -42,7 +52,8 @@ describe("REWARD_RETURNING", () => {
 })
 
 describe("toReward", () => {
-    it("maps an entity row", () => {
+    it("maps an entity row", async () => {
+        const { toReward } = await build()
         expect(toReward(entityRow())).toEqual({
             id: "r-1",
             key: "coffee",
@@ -61,7 +72,8 @@ describe("toReward", () => {
 })
 
 describe("toRewardFromRaw", () => {
-    it("maps a returning row, keeping absent optional columns as null", () => {
+    it("maps a returning row, keeping absent optional columns as null", async () => {
+        const { toRewardFromRaw } = await build()
         expect(toRewardFromRaw(rawRow())).toEqual({
             id: "r-1",
             key: "coffee",
@@ -80,7 +92,8 @@ describe("toRewardFromRaw", () => {
 })
 
 describe("isRewardRaw", () => {
-    it("accepts a full reward row and refuses a missing column or an unknown kind", () => {
+    it("accepts a full reward row and refuses a missing column or an unknown kind", async () => {
+        const { isRewardRaw } = await build()
         const withoutNote = Object.fromEntries(Object.entries(rawRow()).filter(([column]) => column !== "note"))
 
         expect(isRewardRaw(rawRow())).toBe(true)
