@@ -1,19 +1,6 @@
 import type { EntityManager } from "typeorm"
 import { sql } from "@modules/platform/database"
-import {
-    archiveCutoverDelivery,
-    archiveEnvelope,
-    deleteCutoverDelivery,
-    enqueueCutoverProofs,
-    insertLegacyClaims,
-    insertSentOutboxOnly,
-    markCutoverSentByLegacy,
-    sendCutoverBusEvent,
-    sendCutoverDelivery,
-    sendRawEnvelope,
-    setCutoverOutboxState,
-} from "../fixtures/builders/cutover.builder"
-import type { CutoverEnvelope } from "../fixtures/builders/cutover.builder"
+import { enqueueCutoverProofs, markCutoverSentByLegacy, sendRawEnvelope } from "../fixtures/builders/cutover.builder"
 import type {
     CutoverClaim,
     CutoverFunctions,
@@ -23,35 +10,6 @@ import type {
 } from "../fixtures/persistence/queue-cutover.rows"
 
 /** The cutover proofs inspect pgmq queues, catalog entries and migration side effects, which entities cannot express. */
-/** Makes a message look claimed once, with a one second visibility window. */
-const CLAIM_ENVELOPES = sql`
-    UPDATE pgmq.q_content_tick SET read_ct = 1, vt = now() + interval '1 second' WHERE message->'payload'->>'proof' = ANY($1)
-`
-/** Reads the messages of the cutover queue that carry one of the proof tags. */
-const READ_ENVELOPES = sql`
-    SELECT msg_id::text AS "msgId", message->'payload'->>'proof' AS proof
-    FROM pgmq.q_content_tick WHERE message->'payload'->>'proof' = ANY($1) ORDER BY msg_id
-`
-/** The pgmq era renamed a finished message so no handler claims it. */
-const RENAME_DONE_ENVELOPE = sql`
-    UPDATE pgmq.q_content_tick SET message = jsonb_set(message, '{name}', '"content_tick.special"')
-    WHERE message->'payload'->>'proof' = 'raw-done'
-`
-
-interface EnvelopeRow {
-    readonly msgId: string
-    readonly proof: string
-}
-
-const claimEnvelopes = async (manager: EntityManager, proofs: ReadonlyArray<string>): Promise<void> => {
-    await manager.query(CLAIM_ENVELOPES, [proofs])
-}
-
-const readEnvelopes = async (manager: EntityManager, proofs: ReadonlyArray<string>): Promise<Array<CutoverEnvelope>> => {
-    const rows = await manager.query<Array<EnvelopeRow>>(READ_ENVELOPES, [proofs])
-    return rows.map(({ msgId, proof }) => ({ msgId: Number(msgId), proof }))
-}
-
 const CUTOVER_ROWS = sql`
     SELECT id::text, payload->>'proof' AS proof, state, attempts, sent_at, run_lease_until
     FROM public.job_outbox WHERE dedupe_key LIKE 'cutover:%' OR dedupe_key LIKE 'pgmq-cutover:content_tick:%'
@@ -92,33 +50,6 @@ const CUTOVER_FUNCTIONS = sql`
 export interface LegacyAckFenceRow {
     /** The function body. */
     readonly body: string
-}
-
-/** Seeds the durable deliveries a cutover must carry over, writing only columns the pre-expand schema has. */
-export const seedCutoverOutbox = async (manager: EntityManager): Promise<void> => {
-    await enqueueCutoverProofs(manager, ["queued", "inflight", "dead", "done"])
-    await claimEnvelopes(manager, ["inflight"])
-    await setCutoverOutboxState(manager, "inflight", { state: "running", attempts: 1, startedAt: () => "now()" })
-    await archiveCutoverDelivery(manager, "dead")
-    await setCutoverOutboxState(manager, "dead", {
-        state: "failed",
-        finishedAt: () => "now()",
-        lastError: "Synthetic dead letter",
-    })
-    await deleteCutoverDelivery(manager, "done")
-    await setCutoverOutboxState(manager, "done", { state: "done", finishedAt: () => "now()", lastError: null })
-    await insertSentOutboxOnly(manager, "outbox-only")
-    await sendCutoverDelivery(manager, "queued")
-}
-
-/** Seeds raw cron envelopes and dead letters the cutover adopts: raw envelopes have no outbox id, raw dead letters no ledger row. */
-export const seedCutoverRaw = async (manager: EntityManager): Promise<void> => {
-    for (const proof of ["raw", "raw-inflight", "raw-dead", "raw-done"]) await sendRawEnvelope(manager, proof)
-    await claimEnvelopes(manager, ["raw-inflight", "raw-done"])
-    for (const envelope of await readEnvelopes(manager, ["raw-dead"])) await archiveEnvelope(manager, envelope)
-    await insertLegacyClaims(manager, await readEnvelopes(manager, ["raw-inflight", "raw-done"]))
-    await manager.query(RENAME_DONE_ENVELOPE)
-    await sendCutoverBusEvent(manager)
 }
 
 /** The outbox identities and states observed across the migration boundary. */

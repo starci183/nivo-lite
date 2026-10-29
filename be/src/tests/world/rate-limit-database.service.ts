@@ -24,12 +24,6 @@ const CLEAN_RATE_LIMIT_BUCKET = sql`DELETE FROM public.http_security WHERE bucke
 /** Exercises the bounded expiry function under the caller's database role. */
 const RUN_RATE_LIMIT_CLEANUP = sql`SELECT public.http_rate_limit_cleanup() AS removed`
 
-/** Creates one isolated live window through the backend role's INSERT policy. */
-const INSERT_RATE_LIMIT_PROOF_BUCKET = sql`
-    INSERT INTO public.http_security (bucket_key, hits, reset_at)
-    VALUES ($1, 1, statement_timestamp() + interval '1 minute')
-`
-
 /** Exercises the backend role's UPDATE and SELECT policies before expiry. */
 const UPDATE_RATE_LIMIT_PROOF_BUCKET = sql`
     WITH changed AS (
@@ -80,11 +74,6 @@ export const cleanRateLimitBucket = async (manager: EntityManager, key: string):
 /** Exercises the bounded expiry function under the manager's database role. */
 export const runRateLimitCleanup = async (manager: EntityManager): Promise<void> => {
     await manager.query(RUN_RATE_LIMIT_CLEANUP)
-}
-
-/** Creates one isolated live window through the backend role's INSERT policy. */
-export const insertRateLimitProofBucket = async (manager: EntityManager, key: string): Promise<void> => {
-    await manager.query(INSERT_RATE_LIMIT_PROOF_BUCKET, [key])
 }
 
 /** Exercises the backend role's UPDATE and SELECT policies before expiry. */

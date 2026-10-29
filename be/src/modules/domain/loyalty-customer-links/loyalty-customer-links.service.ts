@@ -229,7 +229,8 @@ export class LoyaltyCustomerLinksService {
                 .orUpdate(["customer_id"], ["workspace_id", "kind", "ref"])
                 .returning("id")
                 .execute()
-            written += (result.raw as Array<unknown>).length
+            const returned: unknown = result.raw
+            written += Array.isArray(returned) ? returned.length : 0
         })
         return written
     }

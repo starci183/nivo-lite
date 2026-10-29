@@ -4,7 +4,7 @@ import { AgentConnectionEntity } from "@modules/domain/agent-connections"
 import { AgentConversationEntity } from "@modules/domain/agent-conversations"
 import { AgentEntity } from "@modules/domain/agents"
 import { automationPipelinesEntities } from "@modules/domain/automation-pipelines"
-import { ConnectionEntity } from "@modules/domain/connections"
+import { connectionsEntities } from "@modules/domain/connections"
 import { contractsEntities } from "@modules/domain/contracts"
 import { leadsEntities } from "@modules/domain/leads"
 import { moduleInstallationsEntities } from "@modules/domain/module-installations"
@@ -12,6 +12,7 @@ import { workspacesEntities } from "@modules/domain/workspaces"
 const [AutomationPipelineEntity] = automationPipelinesEntities
 
 const [WorkspaceEntity] = workspacesEntities
+const [ConnectionEntity] = connectionsEntities
 const [WorkspaceMemberEntity] = workspaceMembersEntities
 const [ModuleInstallationEntity] = moduleInstallationsEntities
 

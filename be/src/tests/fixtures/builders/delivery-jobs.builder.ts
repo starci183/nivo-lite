@@ -5,10 +5,11 @@ import type { TelegramInboxService } from "@modules/domain/telegram-inbox"
 import type { SepayTransactionsService } from "@modules/domain/sepay-transactions"
 import type { JobClaims, FencedProcessor } from "@modules/platform/jobs"
 import type { EntityManager } from "typeorm"
-import { ConnectionEntity } from "@modules/domain/connections"
+import { connectionsEntities } from "@modules/domain/connections"
 import { workspacesEntities } from "@modules/domain/workspaces"
 
 const [WorkspaceEntity] = workspacesEntities
+const [ConnectionEntity] = connectionsEntities
 
 /** The receipt capabilities covered by the delivery processors. */
 export type DeliveryKind = "meta" | "telegram" | "sepay"
