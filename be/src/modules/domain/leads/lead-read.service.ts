@@ -12,6 +12,8 @@ import type {
     LeadName,
     LeadSummary,
     LeadView,
+    OptionalLeadContact,
+    OptionalStageFilter,
     WebsiteLead,
 } from "./lead-read.contracts"
 import { LeadEntity } from "./persistence/entities"
@@ -22,6 +24,9 @@ const BOARD_LIMIT = 500
 
 /** The most leads one reference lookup answers. */
 const REFERENCE_LIMIT = 1000
+
+/** The most leads one stage or channel lookup answers. */
+const STAGE_LIMIT = 5000
 
 /** The contact details a stored lead holds. */
 const contactOf = (row: Pick<LeadEntity, "id" | "contactName" | "phone" | "email">): LeadContactView => ({
@@ -111,7 +116,7 @@ export class LeadReadService {
     }
 
     /** The phone and email of one lead of the workspace, or null when the workspace has no such lead. */
-    async contactOf(workspaceId: string, leadId: string): Promise<LeadContactView | null> {
+    async contactOf(workspaceId: string, leadId: string): Promise<OptionalLeadContact> {
         const row = await this.entityManager.findOne(LeadEntity, {
             select: { id: true, contactName: true, phone: true, email: true },
             where: { workspaceId, id: leadId },
@@ -120,7 +125,7 @@ export class LeadReadService {
     }
 
     /** True when the lead belongs to the workspace; `manager` joins the caller's transaction. */
-    async isOwn(workspaceId: string, leadId: string, manager: EntityManager = this.entityManager): Promise<boolean> {
+    isOwn(workspaceId: string, leadId: string, manager: EntityManager = this.entityManager): Promise<boolean> {
         return manager.exists(LeadEntity, { where: { workspaceId, id: leadId } })
     }
 
@@ -130,6 +135,7 @@ export class LeadReadService {
         const leads = await this.entityManager.find(LeadEntity, {
             select: { id: true, contactName: true, company: true, channel: true, stage: true, email: true },
             where: { workspaceId, id: In([...new Set(leadIds)]) },
+            take: new Set(leadIds).size,
         })
         return leads.map((lead) => ({
             id: lead.id,
@@ -158,13 +164,18 @@ export class LeadReadService {
         const leads = await this.entityManager.find(LeadEntity, {
             select: { id: true, createdAt: true },
             where: { workspaceId, channel: ILike("%website%") },
+            take: STAGE_LIMIT,
         })
         return leads.map((lead) => ({ id: lead.id, createdAt: lead.createdAt }))
     }
 
     /** The ids of the leads of the workspace that stand at one stage. */
     async idsAtStage(workspaceId: string, stage: LeadStage): Promise<Array<string>> {
-        const leads = await this.entityManager.find(LeadEntity, { select: { id: true }, where: { workspaceId, stage } })
+        const leads = await this.entityManager.find(LeadEntity, {
+            select: { id: true },
+            where: { workspaceId, stage },
+            take: STAGE_LIMIT,
+        })
         return leads.map((lead) => lead.id)
     }
 
@@ -185,7 +196,7 @@ export class LeadReadService {
     }
 
     /** The leads of the workspace for the public API, newest first, optionally of one stage, bounded by the caller. */
-    async listForApi(workspaceId: string, stage: string | null, limit: number): Promise<Array<ApiLead>> {
+    async listForApi(workspaceId: string, stage: OptionalStageFilter, limit: number): Promise<Array<ApiLead>> {
         const query = this.entityManager
             .createQueryBuilder(LeadEntity, "l")
             .where("l.workspaceId = :workspaceId", { workspaceId })

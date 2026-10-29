@@ -51,7 +51,9 @@ const passage = (ord: number, embedding: string | null, embeddingModel: string |
 
 /** The order numbers of the rows an insert was given. */
 const ordsOf = (rows: unknown): Array<number> =>
-    Array.isArray(rows) ? rows.flatMap((row: unknown) => (isRecord(row) && typeof row.ord === "number" ? [row.ord] : [])) : []
+    Array.isArray(rows)
+        ? rows.flatMap((row: unknown) => (isRecord(row) && typeof row.ord === "number" ? [row.ord] : []))
+        : []
 
 const write = (list: ReadonlyArray<ChunkDraft>) => ({
     workspaceId: WS,

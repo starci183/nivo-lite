@@ -1,17 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { AgentMessagesService } from "@modules/domain/agent-messages"
+import { WorkItemsService } from "@modules/domain/work-items"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import type {
-    LeadGenConversationRecord,
-    LeadGenInstallationId,
-    LeadGenLeadRecord,
-    LeadGenMessageRecord,
-    LeadGenWorkbenchData,
-    LeadGenWorkItemRecord,
-} from "./leadgen-workbench.contracts"
+import type { LeadGenInstallationId, LeadGenLeadRecord, LeadGenWorkbenchData } from "./leadgen-workbench.contracts"
 import { buildLeadGenWorkbench, conversionSinceIso } from "./leadgen-workbench.mapper"
 import { LeadEntity } from "./persistence/entities"
 
@@ -37,6 +33,9 @@ export class LeadGenWorkbenchService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         private readonly members: WorkspaceMembersService,
+        private readonly items: WorkItemsService,
+        private readonly conversations: AgentConversationsService,
+        private readonly messages: AgentMessagesService,
     ) {}
 
     /** Any workspace member may read its prospects; an optional instance limits the page to that agent. */
@@ -47,12 +46,16 @@ export class LeadGenWorkbenchService {
     ): Promise<LeadGenWorkbenchData> {
         await this.members.require(userId, workspaceId)
         const nowMs = this.clock.now().getTime()
-        const [leads, items, conversations, messages] = await Promise.all([
+        const [leads, items, conversations] = await Promise.all([
             this.leads(workspaceId),
-            this.items(workspaceId),
-            this.conversations(workspaceId),
-            this.messages(workspaceId, conversionSinceIso(nowMs)),
+            this.items.listForWorkbench(workspaceId, ITEM_LIMIT),
+            this.conversations.listCustomerLeadConversations(workspaceId, CONVERSATION_LIMIT),
         ])
+        const messages = await this.messages.listForConversations(
+            workspaceId,
+            conversations.map((conversation) => conversation.id),
+            { since: conversionSinceIso(nowMs), limit: MESSAGE_LIMIT, oldestFirst: true },
+        )
         return buildLeadGenWorkbench({
             nowMs,
             installationId: installationId ?? null,
@@ -80,55 +83,5 @@ export class LeadGenWorkbenchService {
             .orderBy("l.created_at", "DESC")
             .limit(LEAD_LIMIT)
             .getRawMany<LeadGenLeadRecord>()
-    }
-
-    /** Capture, scoring, public-comment and sales-handoff records in their original newest-first order. */
-    private items(workspaceId: string): Promise<Array<LeadGenWorkItemRecord>> {
-        return this.entityManager
-            .createQueryBuilder()
-            .select("w.id", "id")
-            .addSelect("w.department", "department")
-            .addSelect("w.action", "action")
-            .addSelect("w.lead_id", "lead_id")
-            .addSelect("w.installation_id", "installation_id")
-            .addSelect("w.status", "status")
-            .addSelect("w.proposal", "proposal")
-            .addSelect("to_json(w.created_at) #>> '{}'", "created_at")
-            .addSelect("to_json(w.completed_at) #>> '{}'", "completed_at")
-            .from("public.work_items", "w")
-            .where("w.workspace_id = :workspaceId", { workspaceId })
-            .orderBy("w.created_at", "DESC")
-            .limit(ITEM_LIMIT)
-            .getRawMany<LeadGenWorkItemRecord>()
-    }
-
-    /** Conversations with a captured customer; only these contribute last messages and reply times. */
-    private conversations(workspaceId: string): Promise<Array<LeadGenConversationRecord>> {
-        return this.entityManager
-            .createQueryBuilder()
-            .select("c.id", "id")
-            .addSelect("c.lead_id", "lead_id")
-            .from("public.agent_conversations", "c")
-            .where("c.workspace_id = :workspaceId AND c.kind = 'customer' AND c.lead_id IS NOT NULL", { workspaceId })
-            .limit(CONVERSATION_LIMIT)
-            .getRawMany<LeadGenConversationRecord>()
-    }
-
-    /** Messages in the conversion window, oldest first. */
-    private messages(workspaceId: string, sinceIso: string): Promise<Array<LeadGenMessageRecord>> {
-        return this.entityManager
-            .createQueryBuilder()
-            .select("m.conversation_id", "conversation_id")
-            .addSelect("m.role", "role")
-            .addSelect("m.body", "body")
-            .addSelect("to_json(m.created_at) #>> '{}'", "created_at")
-            .from("public.agent_messages", "m")
-            .where("m.workspace_id = :workspaceId AND m.created_at >= CAST(:since AS timestamptz)", {
-                workspaceId,
-                since: sinceIso,
-            })
-            .orderBy("m.created_at", "ASC")
-            .limit(MESSAGE_LIMIT)
-            .getRawMany<LeadGenMessageRecord>()
     }
 }

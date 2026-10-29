@@ -12,8 +12,18 @@ import { LeadEntity } from "./persistence/entities"
 import { normalizePage } from "@modules/platform/pagination"
 import { HttpSecurityErrorCode } from "@modules/platform/http-security"
 
-const leadRow = (fields: Pick<LeadEntity, "id" | "contactName" | "phone" | "email">): LeadEntity =>
-    Object.assign(new LeadEntity(), fields)
+const leadOf = entityOf(LeadEntity, {
+    id: "lead-1",
+    workspaceId: "ws-1",
+    contactName: "An",
+    company: "ACME",
+    channel: "Website chat",
+    need: "price",
+    stage: "new",
+    phone: "0900",
+    email: "an@example.com",
+    createdAt: new Date("2026-10-12T03:00:00.000Z"),
+})
 
 const LEAD: LeadView = {
     id: "lead-1",
@@ -166,7 +176,9 @@ describe("LeadReadService", () => {
 
         await expect(leads.listByIds("ws-1", ["lead-1"])).resolves.toEqual([LEAD])
     })
+})
 
+describe("LeadReadService requires", () => {
     it("refuses a lead the workspace does not have", async () => {
         const { leads } = await build([{ getRawOne: undefined }])
 
@@ -195,7 +207,9 @@ describe("LeadReadService", () => {
         expect(fakes[0]?.callsOf("andWhere")).toEqual([["l.id = ANY(:leadIds)", { leadIds: ids }]])
         expect(fakes[0]?.callsOf("limit")).toEqual([[1000]])
     })
+})
 
+describe("LeadReadService contacts", () => {
     it("answers whether a lead belongs to the workspace, on the caller's manager when given", async () => {
         const own = mockEntityManager({ exists: [LeadEntity, true] })
         const { leads, em } = await build([])
@@ -211,7 +225,7 @@ describe("LeadReadService", () => {
     })
 
     it("lists the leads that carry a phone or an email, oldest first, as contact views", async () => {
-        const row = leadRow({ id: "lead-1", contactName: "An", phone: "0901", email: null })
+        const row = Object.assign(leadOf(), { phone: "0901", email: null })
         const em = mockEntityManager({ find: [LeadEntity, [row]], findOne: [LeadEntity, row] })
         const moduleRef = await Test.createTestingModule({
             providers: [LeadReadService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
@@ -243,19 +257,6 @@ describe("LeadReadService", () => {
 })
 
 describe("LeadReadService dashboard reads", () => {
-    const leadOf = entityOf(LeadEntity, {
-        id: "lead-1",
-        workspaceId: "ws-1",
-        contactName: "An",
-        company: "ACME",
-        channel: "Website chat",
-        need: "price",
-        stage: "new",
-        phone: "0900",
-        email: "an@example.com",
-        createdAt: new Date("2026-10-12T03:00:00.000Z"),
-    })
-
     const buildWith = async (em: ReturnType<typeof mockEntityManager>) => {
         const moduleRef = await Test.createTestingModule({
             providers: [LeadReadService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
@@ -282,6 +283,7 @@ describe("LeadReadService dashboard reads", () => {
         expect(em.find).toHaveBeenCalledWith(LeadEntity, {
             select: { id: true, contactName: true, company: true, channel: true, stage: true, email: true },
             where: { workspaceId: "ws-1", id: In(["lead-1"]) },
+            take: 1,
         })
     })
 
@@ -299,6 +301,15 @@ describe("LeadReadService dashboard reads", () => {
             ],
         ])
     })
+})
+
+describe("LeadReadService dashboard channels", () => {
+    const buildWith = async (em: ReturnType<typeof mockEntityManager>) => {
+        const moduleRef = await Test.createTestingModule({
+            providers: [LeadReadService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
+        }).compile()
+        return moduleRef.get(LeadReadService)
+    }
 
     it("lists the website leads", async () => {
         const em = mockEntityManager({ find: [LeadEntity, [leadOf()]] })
@@ -309,16 +320,18 @@ describe("LeadReadService dashboard reads", () => {
         expect(em.find).toHaveBeenCalledWith(LeadEntity, {
             select: { id: true, createdAt: true },
             where: { workspaceId: "ws-1", channel: ILike("%website%") },
+            take: 5000,
         })
     })
 
     it("lists the ids of the leads at one stage", async () => {
-        const em = mockEntityManager({ find: [LeadEntity, [leadOf({ stage: "won" })]] })
+        const em = mockEntityManager({ find: [LeadEntity, [Object.assign(leadOf(), { stage: "won" })]] })
 
         await expect((await buildWith(em)).idsAtStage("ws-1", "won")).resolves.toEqual(["lead-1"])
         expect(em.find).toHaveBeenCalledWith(LeadEntity, {
             select: { id: true },
             where: { workspaceId: "ws-1", stage: "won" },
+            take: 5000,
         })
     })
 

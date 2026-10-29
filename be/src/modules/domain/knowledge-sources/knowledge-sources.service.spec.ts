@@ -3,7 +3,15 @@ import { Test } from "@nestjs/testing"
 import { In } from "typeorm"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { FakeClock, builder, fakeIds, fakeTransaction, mock, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
+import {
+    FakeClock,
+    builder,
+    fakeIds,
+    fakeTransaction,
+    mock,
+    mockEntityManager,
+    recordingEventBus,
+} from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import type { InstallationRecord } from "@modules/domain/module-installations"
 import { EntitlementsService } from "@modules/domain/billing"
@@ -168,9 +176,7 @@ describe("KnowledgeSourcesService retrySource", () => {
         await expect(service.retrySource("u1", WS, "s1")).resolves.toEqual({ id: "s1" })
         expect(queue.enqueueIndex).not.toHaveBeenCalled()
     })
-})
 
-describe("KnowledgeSourcesService reindexSource", () => {
     it.each<readonly [string, ReindexInput, object]>([
         ["replaces its text when new text is given", { sourceId: "s1", content: " new " }, { content: "new" }],
         ["keeps the text when none is given", { sourceId: "s1" }, {}],
@@ -194,9 +200,7 @@ describe("KnowledgeSourcesService reindexSource", () => {
             code: codes.ContentEmpty,
         })
     })
-})
 
-describe("KnowledgeSourcesService updateSource", () => {
     it.each<readonly [string, UpdateSourceInput, object]>([
         [
             "changes the metadata of the source",
@@ -215,9 +219,7 @@ describe("KnowledgeSourcesService updateSource", () => {
         const { service } = await build(mockEntityManager({ update: [KnowledgeSourceEntity, { affected: 0 }] }))
         await expect(service.updateSource("u1", WS, { sourceId: "s1" })).rejects.toMatchObject(missing)
     })
-})
 
-describe("KnowledgeSourcesService removeSource", () => {
     it("deletes the source and answers its title", async () => {
         const { em, fakes } = withStatements(mockEntityManager(), { execute: { raw: [{ title: "Menu" }] } })
         const { service } = await build(em)
@@ -261,9 +263,7 @@ describe("KnowledgeSourcesService requestReembed", () => {
         expect(queue.enqueueReembed).toHaveBeenCalledWith({ workspaceId: WS, model: "m1" }, expect.anything())
         expect(tx.commits).toBe(1)
     })
-})
 
-describe("KnowledgeSourcesService continueReembed", () => {
     it("queues the follow-up of a re-embedding with the instant of the continuation", async () => {
         const tx = fakeTransaction(mockEntityManager())
         const { service, queue } = await build(tx.em)
@@ -301,9 +301,7 @@ describe("KnowledgeSourcesService readUpload", () => {
         storage.download.mockResolvedValue({ kind: "refused", code: "OBJECT_STORAGE_UNAVAILABLE" })
         await expect(service.readUpload("p")).rejects.toMatchObject({ code: codes.UploadUnavailable })
     })
-})
 
-describe("KnowledgeSourcesService sourceOf", () => {
     it("answers the source as the jobs read it, or null when it is gone", async () => {
         const found = await build(mockEntityManager({ findOne: [KnowledgeSourceEntity, row] }))
         const gone = await build(mockEntityManager({ findOne: [KnowledgeSourceEntity, null] }))

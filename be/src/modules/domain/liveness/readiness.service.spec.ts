@@ -5,7 +5,6 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QUEUE_TIMEOUT } from "@modules/platform/queue"
 import type { QueueTimeout } from "@modules/platform/queue"
 import { LOGGER } from "@modules/platform/logging"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { Logger } from "@modules/platform/logging"
 import { LivenessError, LivenessErrorCode } from "./errors/liveness.error"
 import { ReadinessLogEvent } from "./readiness.log-events"
@@ -13,8 +12,6 @@ import { ReadinessService } from "./readiness.service"
 
 /** The statement `callDbFunction` sends for the jobs statistics function. */
 const CHECK_READINESS_JOBS = "SELECT * FROM public.job_stats()"
-
-const DATABASE_ROW = { ready: 1 }
 
 const JOB_ROWS = [{ job_stats: { checkedAt: "2026-10-14T00:00:00.000Z" } }]
 
@@ -30,16 +27,8 @@ const deferred = <T>() => {
     return { promise, resolve, reject }
 }
 
-/** Points the database probe of the manager at a query builder whose answer is `answer()`. */
-const probing = (entityManager: MockEntityManager, answer: () => unknown = () => DATABASE_ROW) => {
-    const fake = fakeQueryBuilder({ getRawOne: answer })
-    entityManager.createQueryBuilder.mockReturnValue(fake.builder as never)
-    return fake
-}
-
 const build = async (supplied?: MockEntityManager) => {
     const entityManager = supplied ?? mockEntityManager({ query: [CHECK_READINESS_JOBS, JOB_ROWS] })
-    if (supplied === undefined) probing(entityManager)
     const logger = mock<Logger>({ error: jest.fn() })
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -91,7 +80,6 @@ describe("ReadinessService / check", () => {
 
         await expect(readiness.check()).resolves.toEqual(READY_REPORT)
 
-        expect(entityManager.createQueryBuilder).toHaveBeenCalledTimes(1)
         expect(entityManager.query).toHaveBeenCalledTimes(1)
         expect(entityManager.query).toHaveBeenCalledWith(CHECK_READINESS_JOBS, [])
         deadline.controller.abort()
@@ -100,28 +88,22 @@ describe("ReadinessService / check", () => {
     })
     it("accepts an empty checkedAt because it is non-null", async () => {
         const entityManager = mockEntityManager({ query: [CHECK_READINESS_JOBS, [{ job_stats: { checkedAt: "" } }]] })
-        probing(entityManager)
         const { readiness, logger } = await build(entityManager)
 
         await expect(readiness.check()).resolves.toEqual(READY_REPORT)
 
         expect(logger.error).not.toHaveBeenCalled()
     })
-    it("starts both queries before either answers and accepts success before the deadline", async () => {
-        const database = deferred<unknown>()
+    it("starts the job query before it answers and accepts success before the deadline", async () => {
         const jobs = deferred<Array<unknown>>()
         const entityManager = mockEntityManager()
         entityManager.query.mockReturnValueOnce(jobs.promise)
-        probing(entityManager, () => database.promise)
         const { readiness, logger } = await build(entityManager)
         const settled = jest.fn()
 
         const check = readiness.check()
         const observed = check.then(settled, settled)
-        expect(entityManager.createQueryBuilder).toHaveBeenCalledTimes(1)
         expect(entityManager.query).toHaveBeenCalledTimes(1)
-        database.resolve(DATABASE_ROW)
-        await Promise.resolve()
         await Promise.resolve()
 
         expect(settled).not.toHaveBeenCalled()
@@ -133,16 +115,10 @@ describe("ReadinessService / check", () => {
 })
 
 describe("ReadinessService / check", () => {
-    it.each([
-        ["database", 0],
-        ["job statistics", 1],
-    ])("returns the unavailable domain error when %s rejects", async (_dependency, failedQuery) => {
+    it("returns the unavailable domain error when the job statistics reject", async () => {
         const cause = new Error("dependency rejected the query")
         const entityManager = mockEntityManager()
-        probing(entityManager, () => (failedQuery === 0 ? Promise.reject(cause) : Promise.resolve(DATABASE_ROW)))
-        entityManager.query.mockImplementationOnce(() =>
-            failedQuery === 1 ? Promise.reject(cause) : Promise.resolve(JOB_ROWS),
-        )
+        entityManager.query.mockRejectedValueOnce(cause)
         const { readiness, logger } = await build(entityManager)
 
         const check = readiness.check()
@@ -167,7 +143,6 @@ describe("ReadinessService / check", () => {
         ["a null checkedAt", [{ job_stats: { checkedAt: null } }]],
     ])("refuses readiness with %s in the job statistics result", async (_condition, rows) => {
         const entityManager = mockEntityManager({ query: [CHECK_READINESS_JOBS, rows] })
-        probing(entityManager)
         const { readiness, logger } = await build(entityManager)
 
         const check = readiness.check()
@@ -184,7 +159,6 @@ describe("ReadinessService / check", () => {
         [undefined, "Cannot read properties of undefined (reading '0')"],
     ])("wraps an invalid %s job query result in the unavailable error", async (rows, causeMessage) => {
         const entityManager = mockEntityManager()
-        probing(entityManager)
         entityManager.query.mockResolvedValueOnce(rows)
         const { readiness, logger } = await build(entityManager)
 
@@ -195,7 +169,6 @@ describe("ReadinessService / check", () => {
         await expect(check).rejects.toHaveProperty("params", {})
         await expect(check).rejects.toHaveProperty("cause", expect.any(TypeError))
         await expect(check).rejects.toHaveProperty("cause.message", causeMessage)
-        expect(entityManager.createQueryBuilder).toHaveBeenCalledTimes(1)
         expect(entityManager.query).toHaveBeenCalledTimes(1)
         expect(entityManager.query).toHaveBeenCalledWith(CHECK_READINESS_JOBS, [])
         expect(logger.error).toHaveBeenCalledTimes(1)
@@ -207,14 +180,10 @@ describe("ReadinessService / check", () => {
 })
 
 describe("ReadinessService / check", () => {
-    it.each([
-        ["database", 0],
-        ["job statistics", 1],
-    ])("times out the %s query at three seconds", async (_dependency, timedOutQuery) => {
+    it("times out the job statistics query at three seconds", async () => {
         const delayed = deferred<unknown>()
         const entityManager = mockEntityManager()
-        probing(entityManager, () => (timedOutQuery === 0 ? delayed.promise : Promise.resolve(DATABASE_ROW)))
-        entityManager.query.mockReturnValueOnce(timedOutQuery === 1 ? delayed.promise : Promise.resolve(JOB_ROWS))
+        entityManager.query.mockReturnValueOnce(delayed.promise)
         const { readiness, logger } = await build(entityManager)
         const settled = jest.fn()
 
@@ -235,7 +204,7 @@ describe("ReadinessService / check", () => {
         expect(logger.error).toHaveBeenCalledTimes(1)
         expect(logger.error).toHaveBeenCalledWith(ReadinessLogEvent.CheckFailed, expect.any(Error))
 
-        delayed.resolve(timedOutQuery === 0 ? DATABASE_ROW : JOB_ROWS)
+        delayed.resolve(JOB_ROWS)
         await Promise.resolve()
         await Promise.resolve()
         expect(logger.error).toHaveBeenCalledTimes(1)
@@ -243,7 +212,6 @@ describe("ReadinessService / check", () => {
     it("handles a query rejection that arrives after readiness has already timed out", async () => {
         const jobs = deferred<Array<unknown>>()
         const entityManager = mockEntityManager()
-        probing(entityManager)
         entityManager.query.mockReturnValueOnce(jobs.promise)
         const { readiness, logger } = await build(entityManager)
         const check = readiness.check()
