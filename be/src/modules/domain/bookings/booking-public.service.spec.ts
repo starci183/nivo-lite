@@ -33,11 +33,7 @@ import type { CancellableRowFacts } from "./booking-facts.contracts"
 import { BookingEntity } from "./persistence/entities"
 
 /** The booking an idempotency key found, as the keyed read selects it. */
-interface KeyedRow {
-    readonly id: string
-    readonly status: BookingEntity["status"]
-    readonly holdsSlot: boolean
-}
+type KeyedRow = Pick<BookingEntity, "id" | "status" | "holdsSlot">
 
 /** The keyed read of a booking with a key. */
 const keyedLookup = (key: string): [typeof BookingEntity, unknown] => [
@@ -102,8 +98,6 @@ const TAKEN_NINE: TakenSpan = {
     blockEndMs: Date.UTC(2026, 9, 12, 3),
     partySize: 1,
 }
-/** Expected next cancellable booking for a linked or unlinked lead. */
-
 const settingsOf = builder({ ...DEFAULT_SETTINGS, slotStepMin: 60 })
 const modelOf = builder<BookingModel>({
     settings: settingsOf(),
@@ -163,8 +157,7 @@ const build = async (options: BuildOptions = {}) => {
     reservation.reserve.mockResolvedValue({ kind: "reserved", id: "b1" })
     const names = mock<WorkspaceAdminReadService>()
     names.namesOf.mockResolvedValue(options.page === false || options.nameless === true ? [] : [{ id: WORKSPACE, name: PAGE.shop }])
-    const reminders = mock<BookingRemindersService>()
-    reminders.schedule.mockResolvedValue([])
+    const reminders = mock<BookingRemindersService>({ schedule: jest.fn().mockResolvedValue([]) })
     const settingsRead = mock<BookingSettingsReadService>({
         publishedBy: jest.fn(() =>
             Promise.resolve(
@@ -291,26 +284,21 @@ describe("BookingPublicService", () => {
             expect(tx.em.createQueryBuilder).toHaveBeenCalledWith(BookingEntity, "b")
         })
 
-        it("returns nothing when the service of the next booking is gone", async () => {
-            const { service } = await build({ cancellable: [NEXT_ROW], serviceGone: true })
-            await expect(service.nextCancellable(WORKSPACE, "0912 345 678", NOW)).resolves.toBeNull()
-        })
+        it.each([{ cancellable: [NEXT_ROW], serviceGone: true }, {}])(
+            "returns nothing when the service of the next booking is gone, or there is no next booking: %j",
+            async (options) => {
+                const { service } = await build(options)
+                await expect(service.nextCancellable(WORKSPACE, "0912 345 678", NOW)).resolves.toBeNull()
+            },
+        )
     })
 
     describe.each(["book", "requestIn"])("%s placement", (method) => {
         it.each([
-            {
-                label: "confirmed",
-                autoConfirm: true,
-                spans: [],
-                reply: replyOf(),
-                booking: bookingOf(),
-                scheduled: true,
-            },
+            { label: "confirmed", autoConfirm: true, reply: replyOf(), booking: bookingOf(), scheduled: true },
             {
                 label: "held",
                 autoConfirm: false,
-                spans: [],
                 scheduled: false,
                 reply: replyOf({ state: "waiting", code: "received_free" }),
                 booking: bookingOf({ status: "requested" }),
@@ -392,11 +380,7 @@ describe("BookingPublicService", () => {
             expect(tx.commits).toBe(0)
             expect(reminders.schedule).not.toHaveBeenCalled()
         })
-    })
-})
 
-describe("BookingPublicService", () => {
-    describe("requestIn", () => {
         it.each([
             failureOf({ label: "missing concurrent row", cause: { code: "23505" }, reads: 2 }),
             failureOf({
@@ -482,13 +466,7 @@ describe("BookingPublicService", () => {
         it("drops a bot that filled the honeypot without writing anything", async () => {
             const { service, reservation, models } = await build()
             await expect(service.book(bookingRequestOf({ website: "http://spam" }))).resolves.toEqual(
-                replyOf({
-                    state: "waiting",
-                    code: "received_free",
-                    serviceName: "",
-                    startIso: "",
-                    bookingId: null,
-                }),
+                replyOf({ state: "waiting", code: "received_free", serviceName: "", startIso: "", bookingId: null }),
             )
             expect(models.model).not.toHaveBeenCalled()
             expect(reservation.reserve).not.toHaveBeenCalled()

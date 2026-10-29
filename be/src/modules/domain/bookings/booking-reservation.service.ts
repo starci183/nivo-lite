@@ -3,6 +3,7 @@ import { In, LessThan, MoreThan, Not } from "typeorm"
 import type { EntityManager, FindOptionsWhere } from "typeorm"
 import { BookingResourcesReadService } from "@modules/domain/booking-resources"
 import type { BookingResourceCapacity } from "@modules/domain/booking-resources"
+import { returnedRows, rowShape } from "@modules/platform/database"
 import { toTakenSpan } from "./booking-model.mapper"
 import { ACTIVE_STATUSES } from "./bookings.contracts"
 import type { BookingStatus } from "./bookings.contracts"
@@ -144,7 +145,7 @@ export class BookingReservationService {
             })
             .returning("id")
             .execute()
-        const [row] = Array.isArray(inserted.raw) ? (inserted.raw as Array<{ id: string }>) : []
+        const [row] = Array.isArray(inserted.raw) ? returnedRows(inserted.raw, rowShape({ id: "string" })) : []
         if (row === undefined) throw new BookingsError({ code: BookingsErrorCode.NotCreated })
         return { kind: "reserved", id: row.id }
     }

@@ -8,14 +8,15 @@ import { BookingWaitlistService } from "./booking-waitlist.service"
 @Module({})
 /** The capability that owns waitlist status changes. */
 export class BookingWaitlistModule extends ConfigurableModuleClass {
-    /** Registers waitlist persistence for the application operations that import it. */
+    /** Registers waitlist persistence for the application operations that import it; the service catalogue it locks is re-exported to them. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        const services = BookingServicesModule.register({})
         return {
             ...base,
-            imports: [...(base.imports ?? []), BookingServicesModule.register({})],
+            imports: [...(base.imports ?? []), services],
             providers: [...(base.providers ?? []), BookingWaitlistService, BookingWaitlistReadService],
-            exports: [BookingWaitlistService, BookingWaitlistReadService],
+            exports: [services, BookingWaitlistService, BookingWaitlistReadService],
         }
     }
 }

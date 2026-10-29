@@ -1,15 +1,19 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { BookingResourcesReadService } from "@modules/domain/booking-resources"
+import { BookingServicesReadService } from "@modules/domain/booking-services"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { effectsQuery } from "./booking-effects.query"
-import type { EffectsRow } from "./booking-facts.contracts"
+import { EFFECTS_COLUMNS, EFFECTS_WHERE } from "./booking-effects.sql"
+import type { EffectsBaseFacts, EffectsRow } from "./booking-facts.contracts"
 import { BookingModelService } from "./booking-model.service"
 import type { BookingNotice, BookingNoticeKind, BookingNoticeResult, BookingNotifier } from "./booking-notice.contracts"
 import type { BookingSettings } from "./bookings.contracts"
 import { InjectBookingNotifier } from "./bookings.decorators"
+import { BookingEntity } from "./persistence/entities"
+import { namedEffects } from "./policies/booking-effects.policy"
 import {
     REMINDER_NEUTRAL,
     cancelledText,
@@ -44,13 +48,25 @@ export class BookingNoticesService {
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly models: BookingModelService,
         private readonly workspaces: WorkspacesService,
+        private readonly servicesRead: BookingServicesReadService,
+        private readonly resourcesRead: BookingResourcesReadService,
         @InjectBookingNotifier() private readonly notifier: BookingNotifier,
     ) {}
 
     /** The booking as a notice needs it (not locked), or null when it does not exist in the workspace. */
     async bookingOf(workspaceId: string, bookingId: string): Promise<OptionalBooking> {
-        const row = await effectsQuery(this.entityManager, workspaceId, bookingId).getRawOne<EffectsRow>()
-        return row ?? null
+        const base = await this.entityManager
+            .createQueryBuilder(BookingEntity, "b")
+            .select(EFFECTS_COLUMNS)
+            .where(EFFECTS_WHERE, { workspaceId, bookingId })
+            .limit(1)
+            .getRawOne<EffectsBaseFacts>()
+        if (base === undefined) return null
+        const [serviceNames, resourceNames] = await Promise.all([
+            this.servicesRead.namesOf(workspaceId, [base.service_id]),
+            this.resourcesRead.namesOf(workspaceId, [base.resource_id]),
+        ])
+        return namedEffects(base, serviceNames, resourceNames)
     }
 
     /** What a notice says about the booking, with the fee the booking owes now. */

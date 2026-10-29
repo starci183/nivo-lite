@@ -92,85 +92,79 @@ const invalidWith = (detail: string): unknown =>
     expect.objectContaining({ code: DataHubErrorCode.Invalid, params: { detail } })
 
 describe("ContractImportService.preview", () => {
-    {
-        it("suggests a mapping, judges the rows against the workspace contracts and counts the ready ones", async () => {
-            const { service, contracts, table } = await build()
+    it("suggests a mapping, judges the rows against the workspace contracts and counts the ready ones", async () => {
+        const { service, contracts, table } = await build()
 
-            const preview = await service.preview({ workspaceId: "ws-1", userId: "user-1", text: "pasted" })
+        const preview = await service.preview({ workspaceId: "ws-1", userId: "user-1", text: "pasted" })
 
-            expect(contracts.list).toHaveBeenCalledWith("ws-1", "user-1")
-            expect(table.readText).toHaveBeenCalledWith("pasted")
-            expect(preview.mapping).toEqual({
-                customerName: "Kh\u00e1ch h\u00e0ng",
-                plan: "G\u00f3i",
-                startsOn: null,
-                endsOn: "Ng\u00e0y h\u1ebft h\u1ea1n",
-                amountVnd: "Gi\u00e1 tr\u1ecb",
-                status: null,
-                note: null,
-            })
-            expect(preview.total).toBe(4)
-            expect(preview.ready).toBe(2)
-            expect(preview.rows.map((row) => row.problems)).toEqual([
-                ["startsOnDerived"],
-                ["endsOnMissing"],
-                ["startsOnDerived"],
-                ["startsOnDerived", "duplicate"],
-            ])
-            expect(preview.rows[2]?.status).toBe("ended")
+        expect(contracts.list).toHaveBeenCalledWith("ws-1", "user-1")
+        expect(table.readText).toHaveBeenCalledWith("pasted")
+        expect(preview.mapping).toEqual({
+            customerName: "Kh\u00e1ch h\u00e0ng",
+            plan: "G\u00f3i",
+            startsOn: null,
+            endsOn: "Ng\u00e0y h\u1ebft h\u1ea1n",
+            amountVnd: "Gi\u00e1 tr\u1ecb",
+            status: null,
+            note: null,
+        })
+        expect(preview.total).toBe(4)
+        expect(preview.ready).toBe(2)
+        expect(preview.rows.map((row) => row.problems)).toEqual([
+            ["startsOnDerived"],
+            ["endsOnMissing"],
+            ["startsOnDerived"],
+            ["startsOnDerived", "duplicate"],
+        ])
+        expect(preview.rows[2]?.status).toBe("ended")
+    })
+
+    it("judges the rows with the mapping the person chose and reads the named tab of an uploaded file", async () => {
+        const { service, table } = await build()
+
+        const preview = await service.preview({
+            workspaceId: "ws-1",
+            userId: "user-1",
+            file: { name: "hop-dong.xlsx", contentBase64: Buffer.from("PK").toString("base64") },
+            sheet: "H\u1ee3p \u0111\u1ed3ng",
+            mapping: { customerName: "G\u00f3i", endsOn: "Ng\u00e0y h\u1ebft h\u1ea1n" },
         })
 
-        it("judges the rows with the mapping the person chose and reads the named tab of an uploaded file", async () => {
-            const { service, table } = await build()
+        expect(table.readFile).toHaveBeenCalledWith("hop-dong.xlsx", expect.any(Uint8Array), "H\u1ee3p \u0111\u1ed3ng")
+        expect(preview.sheet).toBe("H\u1ee3p \u0111\u1ed3ng")
+        expect(preview.mapping.customerName).toBe("G\u00f3i")
+        expect(preview.rows[0]?.customerName).toBe("Hosting")
+    })
 
-            const preview = await service.preview({
-                workspaceId: "ws-1",
-                userId: "user-1",
-                file: { name: "hop-dong.xlsx", contentBase64: Buffer.from("PK").toString("base64") },
-                sheet: "H\u1ee3p \u0111\u1ed3ng",
-                mapping: { customerName: "G\u00f3i", endsOn: "Ng\u00e0y h\u1ebft h\u1ea1n" },
-            })
+    it("reads the first tab of an uploaded file when no tab is named", async () => {
+        const { service, table } = await build()
 
-            expect(table.readFile).toHaveBeenCalledWith(
-                "hop-dong.xlsx",
-                expect.any(Uint8Array),
-                "H\u1ee3p \u0111\u1ed3ng",
-            )
-            expect(preview.sheet).toBe("H\u1ee3p \u0111\u1ed3ng")
-            expect(preview.mapping.customerName).toBe("G\u00f3i")
-            expect(preview.rows[0]?.customerName).toBe("Hosting")
+        await service.preview({
+            workspaceId: "ws-1",
+            userId: "user-1",
+            file: { name: "hop-dong.xlsx", contentBase64: Buffer.from("PK").toString("base64") },
+            sheet: null,
         })
 
-        it("reads the first tab of an uploaded file when no tab is named", async () => {
-            const { service, table } = await build()
+        expect(table.readFile).toHaveBeenCalledWith("hop-dong.xlsx", expect.any(Uint8Array), undefined)
+    })
 
-            await service.preview({
-                workspaceId: "ws-1",
-                userId: "user-1",
-                file: { name: "hop-dong.xlsx", contentBase64: Buffer.from("PK").toString("base64") },
-                sheet: null,
-            })
+    it("refuses a request with neither a file nor pasted text", async () => {
+        const { service } = await build()
 
-            expect(table.readFile).toHaveBeenCalledWith("hop-dong.xlsx", expect.any(Uint8Array), undefined)
-        })
+        await expect(service.preview({ workspaceId: "ws-1", userId: "user-1", text: "  " })).rejects.toEqual(
+            invalidWith(CONTRACT_IMPORT_COPY.chooseSource),
+        )
+    })
 
-        it("refuses a request with neither a file nor pasted text", async () => {
-            const { service } = await build()
+    it("refuses a file over ten megabytes", async () => {
+        const { service } = await build()
+        const big = Buffer.alloc(10 * 1024 * 1024 + 1).toString("base64")
 
-            await expect(service.preview({ workspaceId: "ws-1", userId: "user-1", text: "  " })).rejects.toEqual(
-                invalidWith(CONTRACT_IMPORT_COPY.chooseSource),
-            )
-        })
-
-        it("refuses a file over ten megabytes", async () => {
-            const { service } = await build()
-            const big = Buffer.alloc(10 * 1024 * 1024 + 1).toString("base64")
-
-            await expect(
-                service.preview({ workspaceId: "ws-1", userId: "user-1", file: { name: "a.csv", contentBase64: big } }),
-            ).rejects.toEqual(invalidWith(CSV_COPY.textTooLarge))
-        })
-    }
+        await expect(
+            service.preview({ workspaceId: "ws-1", userId: "user-1", file: { name: "a.csv", contentBase64: big } }),
+        ).rejects.toEqual(invalidWith(CSV_COPY.textTooLarge))
+    })
 })
 
 describe("ContractImportService.importContracts", () => {

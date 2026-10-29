@@ -17,10 +17,10 @@ import { BookingNoticesService } from "./booking-notices.service"
 import type { BookingNotifier } from "./booking-notice.contracts"
 import type { BookingEffects, BookingEvent, BookingSettings, InboxClaim } from "./bookings.contracts"
 import { InjectBookingNotifier } from "./bookings.decorators"
-import { effectsNamed, effectsQuery } from "./booking-effects.query"
+import { EFFECTS_COLUMNS, EFFECTS_WHERE } from "./booking-effects.sql"
 import type { EffectsBaseFacts, EffectsRow } from "./booking-facts.contracts"
 import { BookingEntity } from "./persistence/entities"
-import { feeOf, noticeMark, noticeOf, remindersOf } from "./policies/booking-effects.policy"
+import { feeOf, namedEffects, noticeMark, noticeOf, remindersOf } from "./policies/booking-effects.policy"
 import type { NoticeKind } from "./policies/booking-effects.policy"
 
 const STORED_LOCALE = "vi"
@@ -78,11 +78,9 @@ export class BookingEffectsService {
         settings: BookingSettings,
         claim: InboxClaim,
     ): Promise<Applied | null> {
-        const base = await effectsQuery(manager, event.workspaceId, event.bookingId)
-            .setLock("pessimistic_write", undefined, ["b"])
-            .getRawOne<EffectsBaseFacts>()
+        const base = await this.lockedBase(manager, event)
         if (base === undefined) return null
-        const row = await effectsNamed(this.servicesRead, this.resourcesRead, base)
+        const row = await this.named(base)
         if (row === null) return null
         if (!(await this.inbox.claim(claim.consumer, claim.dedupeKey, manager))) {
             // A delivery this reactor already applied: nothing changes twice, the notice still has its own mark.
@@ -112,6 +110,26 @@ export class BookingEffectsService {
             row,
             effects: { found: true, reminders: remindersOf(live, closed), feeVnd, handedOff },
         }
+    }
+
+    /** The booking as the table holds it now, under a write lock on its row. */
+    private lockedBase(manager: EntityManager, event: BookingEvent): Promise<EffectsBaseFacts | undefined> {
+        return manager
+            .createQueryBuilder(BookingEntity, "b")
+            .select(EFFECTS_COLUMNS)
+            .where(EFFECTS_WHERE, { workspaceId: event.workspaceId, bookingId: event.bookingId })
+            .limit(1)
+            .setLock("pessimistic_write", undefined, ["b"])
+            .getRawOne<EffectsBaseFacts>()
+    }
+
+    /** The booking with the current names of its service and resource; none when its service is gone. */
+    private async named(base: EffectsBaseFacts): Promise<EffectsRow | null> {
+        const [serviceNames, resourceNames] = await Promise.all([
+            this.servicesRead.namesOf(base.workspace_id, [base.service_id]),
+            this.resourcesRead.namesOf(base.workspace_id, [base.resource_id]),
+        ])
+        return namedEffects(base, serviceNames, resourceNames)
     }
 
     private async recordFee(

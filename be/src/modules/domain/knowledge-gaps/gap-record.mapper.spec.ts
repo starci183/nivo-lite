@@ -3,11 +3,11 @@ import { isGapReturned, toGapFields, toGapRecord } from "./gap-record.mapper"
 import type { GapFields } from "./gap-record.mapper"
 
 const SUBJECT = Symbol("gap-record.mapper")
-type Subject = { toGapRecord: typeof toGapRecord; toGapFields: typeof toGapFields; isGapReturned: typeof isGapReturned }
+type Subject = { toGapRecord: typeof toGapRecord; toGapFields: typeof toGapFields }
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { toGapRecord, toGapFields, isGapReturned } }],
+        providers: [{ provide: SUBJECT, useValue: { toGapRecord, toGapFields } }],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }
@@ -69,7 +69,7 @@ describe("toGapRecord", () => {
             reopenedCount: 0,
         }
 
-        expect(subject.isGapReturned(returned)).toBe(true)
+        expect(isGapReturned(returned)).toBe(true)
         const fields = subject.toGapFields(returned)
         expect(fields.keywords).toEqual(expected)
         expect(fields.status).toBe(expectedStatus)

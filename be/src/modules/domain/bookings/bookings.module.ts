@@ -3,7 +3,6 @@ import type { DynamicModule } from "@nestjs/common"
 import { BookingExceptionsModule } from "@modules/domain/booking-exceptions"
 import { BookingHoursModule } from "@modules/domain/booking-hours"
 import { BookingResourcesModule } from "@modules/domain/booking-resources"
-import { BookingServicesModule } from "@modules/domain/booking-services"
 import { BookingSettingsModule } from "@modules/domain/booking-settings"
 import { BookingWaitlistModule } from "@modules/domain/booking-waitlist"
 import { BookingRemindersModule } from "@modules/domain/booking-reminders"
@@ -34,7 +33,6 @@ export class BookingsModule extends ConfigurableModuleClass {
             imports: [
                 ...(base.imports ?? []),
                 reminders,
-                BookingServicesModule.register({}),
                 BookingResourcesModule.register({}),
                 BookingHoursModule.register({}),
                 BookingExceptionsModule.register({}),

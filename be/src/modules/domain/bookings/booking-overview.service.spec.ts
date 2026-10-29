@@ -24,9 +24,21 @@ const modelOf = builder<BookingModel>({
     exceptions: [],
 })
 
+/** The bookings the two reads of the overview answer: the week and the range of the figures. */
+interface OverviewBookings {
+    readonly week: Array<BookingEntity>
+    readonly range: Array<BookingEntity>
+}
+
+/** The answers of the two count statements. */
+interface OverviewCounts {
+    readonly finished: QueryBuilderAnswers
+    readonly deposits: QueryBuilderAnswers
+}
+
 const build = async (
-    bookings: { readonly week: Array<BookingEntity>; readonly range: Array<BookingEntity> },
-    counts: { readonly finished: QueryBuilderAnswers; readonly deposits: QueryBuilderAnswers },
+    bookings: OverviewBookings,
+    counts: OverviewCounts,
     model: BookingModel = modelOf(),
 ) => {
     const entityManager = mockEntityManager({

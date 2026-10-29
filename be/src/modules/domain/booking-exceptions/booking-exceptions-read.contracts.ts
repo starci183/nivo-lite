@@ -15,3 +15,6 @@ export interface BookingExceptionRecord {
     /** The owner's note. */
     readonly note: string
 }
+
+/** The local date (YYYY-MM-DD) an exception list starts from, or none for every exception. */
+export type OptionalFromDate = string | null

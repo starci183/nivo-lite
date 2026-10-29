@@ -2,10 +2,10 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { BookingServicesReadService } from "@modules/domain/booking-services"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { ChatBookingRef, OptionalCancellableBooking } from "./booking-chat.contracts"
-import { cancellableNamed } from "./booking-cancellable.query"
+import type { ChatBookingRef, OptionalCancellableBooking, OptionalInstallationId } from "./booking-chat.contracts"
 import type { CancellableRowFacts } from "./booking-facts.contracts"
 import { BookingEntity } from "./persistence/entities"
+import { cancellableOf } from "./policies/cancellable.policy"
 
 @Injectable()
 /** Finds the booking a customer talks about in a chat: the next open one of the chat's lead, else of the conversation it was booked in. */
@@ -16,7 +16,7 @@ export class BookingChatLookupService {
     ) {}
 
     /** The installation that owns a booking of the workspace; null when there is no such row or it names no installation. */
-    async installationIdOf(workspaceId: string, id: string): Promise<string | null> {
+    async installationIdOf(workspaceId: string, id: string): Promise<OptionalInstallationId> {
         const row = await this.entityManager.findOne(BookingEntity, {
             select: { installationId: true },
             where: { workspaceId, id },
@@ -44,6 +44,17 @@ export class BookingChatLookupService {
             .addOrderBy("b.id", "ASC")
             .limit(1)
             .getRawOne<CancellableRowFacts>()
-        return cancellableNamed(this.services, chat.workspaceId, row)
+        return this.named(chat.workspaceId, row)
+    }
+
+    /** The booking named with the current name of its service; none for no row or when the service is gone. */
+    private async named(
+        workspaceId: string,
+        row: CancellableRowFacts | undefined,
+    ): Promise<OptionalCancellableBooking> {
+        if (row === undefined) return null
+        const names = await this.services.namesOf(workspaceId, [row.service_id])
+        const name = names.get(row.service_id)
+        return name === undefined ? null : cancellableOf({ ...row, service_name: name })
     }
 }

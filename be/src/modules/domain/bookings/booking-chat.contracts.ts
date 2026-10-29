@@ -26,3 +26,5 @@ export interface CancellableBooking {
 }
 /** A next cancellable booking, or none when no future request or confirmation matches. */
 export type OptionalCancellableBooking = CancellableBooking | null
+/** The installation that owns a booking, or none when the booking is not found or names no installation. */
+export type OptionalInstallationId = string | null

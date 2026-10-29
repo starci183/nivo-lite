@@ -1,14 +1,26 @@
 import { Test } from "@nestjs/testing"
+import { rowOf as effectsRowOf } from "@tests/fixtures/builders/booking-effects.builder"
 import { builder } from "@starci/jest-preset"
 import { DEFAULT_SETTINGS } from "../bookings.contracts"
 import type { BookingEventKind } from "../bookings.contracts"
-import { cancelFeeOf, feeOf, isLateCancel, noticeMark, noticeOf, remindersOf } from "./booking-effects.policy"
+import {
+    cancelFeeOf,
+    feeOf,
+    isLateCancel,
+    namedEffects,
+    noticeMark,
+    noticeOf,
+    remindersOf,
+} from "./booking-effects.policy"
 const SUBJECT = Symbol("booking-effects.policy")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
-            { provide: SUBJECT, useValue: { isLateCancel, cancelFeeOf, noticeOf, noticeMark, remindersOf, feeOf } },
+            {
+                provide: SUBJECT,
+                useValue: { isLateCancel, cancelFeeOf, noticeOf, noticeMark, remindersOf, feeOf, namedEffects },
+            },
         ],
     }).compile()
     return moduleRef.get<typeof import("./booking-effects.policy")>(SUBJECT)
@@ -183,5 +195,35 @@ describe("booking-effects.policy", () => {
                 ).toBe(0)
             },
         )
+    })
+})
+
+describe("booking-effects.policy", () => {
+    describe("namedEffects", () => {
+        const base = { ...effectsRowOf(), service_id: "s-1", resource_id: "r-1" }
+
+        it("names the booking with the current names of its service and resource", async () => {
+            const subject = await build()
+
+            const row = subject.namedEffects(base, new Map([["s-1", "Cut"]]), new Map([["r-1", "Anna"]]))
+
+            expect(row).toEqual(effectsRowOf({ service_name: "Cut", resource_name: "Anna" }))
+            expect(row).not.toHaveProperty("service_id")
+            expect(row).not.toHaveProperty("resource_id")
+        })
+
+        it("leaves the resource name empty when the resource is gone", async () => {
+            const subject = await build()
+
+            expect(subject.namedEffects(base, new Map([["s-1", "Cut"]]), new Map())).toMatchObject({
+                resource_name: "",
+            })
+        })
+
+        it("answers none when the service is gone", async () => {
+            const subject = await build()
+
+            expect(subject.namedEffects(base, new Map(), new Map([["r-1", "Anna"]]))).toBeNull()
+        })
     })
 })
