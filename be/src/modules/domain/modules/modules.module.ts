@@ -15,7 +15,6 @@ import { InstallationFactsService } from "./installation-facts.service"
 import { ModuleInstallService } from "./module-install.service"
 import { ModuleReadinessService } from "./module-readiness.service"
 import { ModulesService } from "./modules.service"
-import { RecordInstallationService } from "./record-installation.service"
 import { SetupCardsService } from "./setup-cards.service"
 import { SetupChatService } from "./setup-chat.service"
 import { SetupTurnService } from "./setup-turn.service"
@@ -53,7 +52,6 @@ export class ModulesModule extends ConfigurableModuleClass {
                       AgentRemovalService,
                       ModuleInstallService,
                       InstallationFactsService,
-                      RecordInstallationService,
                       SetupTurnService,
                       WorkspaceSetupService,
                   ]
