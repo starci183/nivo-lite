@@ -6,6 +6,7 @@ import { WorkspacePruneService } from "./workspace-prune.service"
 import { WorkspaceBillingService } from "./workspace-billing.service"
 import { WorkspaceShellService } from "./workspace-shell.service"
 import { WorkspacesService } from "./workspaces.service"
+import { WorkspaceAdminReadService } from "./workspace-admin-read.service"
 
 @Module({})
 /** The workspaces a person belongs to and the creation of a free one. */
@@ -17,13 +18,20 @@ export class WorkspacesModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
+                WorkspaceAdminReadService,
                 { provide: WORKSPACES_OPTIONS, useValue: options },
                 WorkspacesService,
                 WorkspaceBillingService,
                 WorkspacePruneService,
                 WorkspaceShellService,
             ],
-            exports: [WorkspacesService, WorkspaceBillingService, WorkspacePruneService, WorkspaceShellService],
+            exports: [
+                WorkspaceAdminReadService,
+                WorkspacesService,
+                WorkspaceBillingService,
+                WorkspacePruneService,
+                WorkspaceShellService,
+            ],
         }
     }
 }

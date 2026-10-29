@@ -42,14 +42,10 @@ const installationOf = builder<InstallationRecord>({
     name: "Books",
     isMulti: true,
     agentId: null,
-    agentName: "",
-    agentHandle: "",
-    agentAvatarUrl: null,
     status: "setup",
     operatingMode: "assist",
     liveEnabled: false,
     activeContextVersionId: null,
-    activeVersion: null,
     settings: {},
     createdAt: NOW,
 })
@@ -83,6 +79,9 @@ const versionOf = builder<ContextVersionRecord>({
     appliedAt: NOW,
 })
 
+/** The agent and version fields of an installation view. */
+const VIEWED_AGENT = { agentName: "Chatbot", agentHandle: "chatbot", agentAvatarUrl: null, activeVersion: 1 } as const
+
 const build = async () => {
     const tx = fakeTransaction(mockEntityManager())
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
@@ -112,7 +111,7 @@ const build = async () => {
     const readiness = mock<ModuleReadinessService>()
     readiness.settle.mockResolvedValue("ready")
     readiness.withNeeds.mockImplementation((record) =>
-        Promise.resolve({ ...record, connectionNeeds: [], lifecycle: "ready" }),
+        Promise.resolve({ ...record, ...VIEWED_AGENT, connectionNeeds: [], lifecycle: "ready" }),
     )
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -159,7 +158,7 @@ describe("SetupChatService > state", () => {
         cards.viewsOf.mockResolvedValue([])
 
         await expect(service.state("u1", "ws-1", "inst-1", "en")).resolves.toEqual({
-            installation: { ...installationOf(), connectionNeeds: [], lifecycle: "ready" },
+            installation: { ...installationOf(), ...VIEWED_AGENT, connectionNeeds: [], lifecycle: "ready" },
             session: sessionOf(),
             revisions: [{ id: "s-1", revision: 1, status: "draft" }],
             messages: [lineOf({ role: "assistant" }), lineOf({ id: "m-2" })],

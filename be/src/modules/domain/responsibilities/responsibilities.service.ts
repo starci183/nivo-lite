@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
+import { InjectAgentDirectory } from "@modules/domain/messages"
+import type { AgentDirectory } from "@modules/domain/messages"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
@@ -16,7 +18,8 @@ import type {
     HandToAccountingParams,
     ResponsibilityResult,
 } from "./responsibilities.contracts"
-import type { OwnerAgent } from "./responsibility-owner.policy"
+import { InjectLeadDesk } from "./responsibilities.decorators"
+import type { LeadDesk } from "./responsibilities.ports"
 import { ResponsibilityOwnersService } from "./responsibility-owners.service"
 
 /** The evidence-log kind of a new owner. */
@@ -82,13 +85,15 @@ export class ResponsibilitiesService {
         private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
         private readonly owners: ResponsibilityOwnersService,
+        @InjectAgentDirectory() private readonly agents: AgentDirectory,
+        @InjectLeadDesk() private readonly leads: LeadDesk,
     ) {}
 
     /** Adds the next responsibility of a lead (keeps the loop going after an outcome) and logs who owns it. */
     async addResponsibility(params: AddResponsibilityParams): Promise<ResponsibilityResult> {
         const member = await this.members.require(params.userId, params.workspaceId)
         return this.entityManager.transaction(async (tx) => {
-            const owner = await this.owners.resolve(tx, params.workspaceId, params.owner)
+            const owner = await this.owners.resolve(params.workspaceId, params.owner)
             const row = await this.insertForLead(tx, {
                 workspaceId: params.workspaceId,
                 leadId: params.leadId,
@@ -115,7 +120,7 @@ export class ResponsibilitiesService {
     async assignResponsibility(params: AssignResponsibilityParams): Promise<ResponsibilityResult> {
         const member = await this.members.require(params.userId, params.workspaceId)
         return this.entityManager.transaction(async (tx) => {
-            const owner = await this.owners.resolve(tx, params.workspaceId, params.owner)
+            const owner = await this.owners.resolve(params.workspaceId, params.owner)
             const updated = await tx
                 .createQueryBuilder(ResponsibilityEntity, "r")
                 .update()
@@ -149,18 +154,8 @@ export class ResponsibilitiesService {
      */
     async handToAccounting(params: HandToAccountingParams): Promise<boolean> {
         const { manager, locale } = params
-        const agent = await manager
-            .createQueryBuilder()
-            .select("a.id", "id")
-            .addSelect("a.name", "name")
-            .from("public.agents", "a")
-            .where("a.workspace_id = :workspaceId AND a.module = 'accounting' AND a.status = 'active'", {
-                workspaceId: params.workspaceId,
-            })
-            .orderBy("a.created_at")
-            .limit(1)
-            .getRawOne<OwnerAgent>()
-        if (agent === undefined) return false
+        const agent = await this.agents.agentOfDepartment(params.workspaceId, "accounting", null)
+        if (agent === null) return false
         await this.insertForLead(manager, {
             workspaceId: params.workspaceId,
             leadId: params.leadId,
@@ -190,18 +185,7 @@ export class ResponsibilitiesService {
      * the lead row is held `FOR SHARE` in the caller's transaction so it cannot go away between the check and the insert.
      */
     private async insertForLead(manager: EntityManager, step: NewStep): Promise<StepRow | undefined> {
-        const lead = await manager
-            .createQueryBuilder()
-            .select("l.id", "id")
-            .from("public.leads", "l")
-            .where("l.workspace_id = :workspaceId AND l.id = :leadId", {
-                workspaceId: step.workspaceId,
-                leadId: step.leadId,
-            })
-            .limit(1)
-            .setLock("pessimistic_read")
-            .getRawOne<{ id: string }>()
-        if (lead === undefined) return undefined
+        if (!(await this.leads.hold(step.workspaceId, step.leadId, manager))) return undefined
         const inserted = await manager
             .createQueryBuilder(ResponsibilityEntity, "r")
             .insert()

@@ -1,35 +1,19 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
-import { VideoBrandKitEntity } from "@modules/domain/video-brand-kits"
-import { VideoRenderEntity } from "@modules/domain/video-renders"
-import { WorkspaceEntity } from "@modules/domain/workspaces"
+import type { MockEntityManager } from "@starci/jest-preset"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { VideoProjectEntity } from "./persistence/entities"
 import { VideoProjectsService } from "./video-projects.service"
 
 /** The any-function matcher, typed `unknown` so it flows into any slot. */
 const anyFunction = (): unknown => expect.any(Function)
 
-const ROW = {
-    id: "project-1",
-    workspace_id: "workspace-1",
-    aspect: "9:16",
-    status: "draft",
-    script: [{ caption: "Hello" }],
-    version: 3,
-    render_status: "done",
-    workspace_name: "Bakery",
-    shop_name: "Bakery Shop",
-    primary_color: "#16a34a",
-    secondary_color: "#0f172a",
-    logo_path: "workspace-1/logo.png",
-    music_track: "calm-glow",
-    voice: "vi-VN-NamMinhNeural",
-}
-
-const build = async () => {
-    const moduleRef = await Test.createTestingModule({ providers: [VideoProjectsService] }).compile()
+const build = async (entityManager: MockEntityManager = mockEntityManager()) => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [VideoProjectsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+    }).compile()
     return moduleRef.get(VideoProjectsService)
 }
 
@@ -41,45 +25,183 @@ const managerAnswering = (answers: QueryBuilderAnswers) => {
     return { manager, fake }
 }
 
+const stored = (over: Partial<VideoProjectEntity> = {}) =>
+    Object.assign(new VideoProjectEntity(), {
+        id: "project-1",
+        workspaceId: "workspace-1",
+        title: "Spring offer",
+        aspect: "9:16",
+        status: "draft",
+        script: [{ caption: "Hello" }],
+        version: 3,
+        renderId: "render-1",
+        ...over,
+    })
+
 describe("VideoProjectsService", () => {
-    describe("forRender", () => {
-        it("answers the project with its brand kit, locking only the project row", async () => {
-            const { manager, fake } = managerAnswering({ getRawOne: ROW })
+    describe("lockForRender", () => {
+        it("answers the project locked in the caller's transaction", async () => {
+            const manager = mockEntityManager({ findOne: [VideoProjectEntity, stored()] })
             const projects = await build()
 
-            await expect(projects.forRender(manager, "project-1")).resolves.toEqual({
+            await expect(projects.lockForRender(manager, "project-1")).resolves.toEqual({
                 id: "project-1",
                 workspaceId: "workspace-1",
                 aspect: "9:16",
                 status: "draft",
                 script: [{ caption: "Hello" }],
                 version: 3,
-                renderStatus: "done",
-                workspaceName: "Bakery",
-                brand: {
-                    shopName: "Bakery Shop",
-                    primary: "#16a34a",
-                    secondary: "#0f172a",
-                    logoPath: "workspace-1/logo.png",
-                    musicTrack: "calm-glow",
-                    voice: "vi-VN-NamMinhNeural",
-                },
+                renderId: "render-1",
             })
-            expect(manager.createQueryBuilder).toHaveBeenCalledWith(VideoProjectEntity, "p")
-            expect(fake.callsOf("innerJoin")).toEqual([[WorkspaceEntity, "w", "w.id = p.workspaceId"]])
-            expect(fake.callsOf("leftJoin")).toEqual([
-                [VideoBrandKitEntity, "k", "k.workspaceId = p.workspaceId"],
-                [VideoRenderEntity, "r", "r.id = p.renderId"],
-            ])
-            expect(fake.callsOf("where")).toEqual([["p.id = :projectId", { projectId: "project-1" }]])
-            expect(fake.callsOf("setLock")).toEqual([["pessimistic_write", undefined, ["p"]]])
+            expect(manager.findOne).toHaveBeenCalledWith(VideoProjectEntity, {
+                where: { id: "project-1" },
+                lock: { mode: "pessimistic_write" },
+            })
         })
 
-        it("answers nothing when the project does not exist ", async () => {
-            const { manager } = managerAnswering({ getRawOne: undefined })
+        it("answers nothing when the project does not exist", async () => {
+            const manager = mockEntityManager({ findOne: [VideoProjectEntity, null] })
             const projects = await build()
 
-            await expect(projects.forRender(manager, "project-1")).resolves.toBeNull()
+            await expect(projects.lockForRender(manager, "project-1")).resolves.toBeNull()
+        })
+    })
+
+    describe("readForScript", () => {
+        it.each([true, false])("reads the project of the workspace for a script, locked: %s", async (lock) => {
+            const row = { id: "project-1", title: "Spring offer", render_id: null }
+            const { manager, fake } = managerAnswering({ getRawOne: row })
+            const projects = await build()
+
+            await expect(projects.readForScript(manager, "workspace-1", "project-1", lock)).resolves.toBe(row)
+
+            expect(manager.createQueryBuilder).toHaveBeenCalledWith(VideoProjectEntity, "p")
+            expect(fake.callsOf("select")).toEqual([["p.id", "id"]])
+            expect(fake.callsOf("addSelect").map(([expression]) => expression)).toEqual([
+                "p.title",
+                "p.goal",
+                "p.aspect",
+                "p.target_seconds",
+                "p.status",
+                "p.inputs",
+                "p.script_meta",
+                "p.updated_at",
+                "p.render_id",
+            ])
+            expect(fake.callsOf("where")).toEqual([
+                [
+                    "p.workspace_id = :workspaceId AND p.id = :projectId",
+                    { workspaceId: "workspace-1", projectId: "project-1" },
+                ],
+            ])
+            expect(fake.callsOf("setLock")).toEqual(lock ? [["pessimistic_write", undefined, ["p"]]] : [])
+        })
+    })
+
+    describe("listForWorkbench", () => {
+        it("lists the newest projects of the workspace, bounded", async () => {
+            const { manager, fake } = managerAnswering({ getRawMany: [{ id: "project-1" }] })
+            const projects = await build(manager)
+
+            await expect(projects.listForWorkbench("workspace-1", "project-1", true)).resolves.toEqual([
+                { id: "project-1" },
+            ])
+
+            expect(manager.createQueryBuilder).toHaveBeenCalledWith(VideoProjectEntity, "p")
+            expect(fake.callsOf("select")).toEqual([["p.*"]])
+            expect(fake.callsOf("where")).toEqual([
+                [
+                    "p.workspace_id = :workspaceId AND (:projectId::uuid IS NULL OR p.id = :projectId)",
+                    { workspaceId: "workspace-1", projectId: "project-1" },
+                ],
+            ])
+            expect(fake.callsOf("andWhere")).toEqual([
+                ["(:includeArchived::boolean OR p.status <> 'archived')", { includeArchived: true }],
+            ])
+            expect(fake.callsOf("orderBy")).toEqual([["p.updatedAt", "DESC"]])
+            expect(fake.callsOf("limit")).toEqual([[60]])
+        })
+    })
+
+    describe("countsOf", () => {
+        it("counts the projects by state", async () => {
+            const counts = { rendering: 1, scripting: 2, readyToPublish: 3, approved: 1, published30: 4 }
+            const { manager, fake } = managerAnswering({ getRawOne: counts })
+            const projects = await build(manager)
+
+            await expect(projects.countsOf("workspace-1")).resolves.toBe(counts)
+
+            expect(fake.callsOf("select")).toEqual([
+                ["count(*) FILTER (WHERE p.status = 'rendering')::int", "rendering"],
+            ])
+            expect(fake.callsOf("addSelect").map(([, alias]) => alias)).toEqual([
+                "scripting",
+                "readyToPublish",
+                "approved",
+                "published30",
+            ])
+            expect(fake.callsOf("where")).toEqual([["p.workspace_id = :workspaceId", { workspaceId: "workspace-1" }]])
+        })
+    })
+
+    describe("titlesOfRenders", () => {
+        it("titles each render by the newest project that holds it", async () => {
+            const { manager, fake } = managerAnswering({
+                getRawMany: [
+                    { title: "Newest", render_id: "render-2", render_ids: ["render-1", "render-2"] },
+                    { title: "Older", render_id: "render-1", render_ids: ["render-0", "render-1"] },
+                    { title: "Unrelated", render_id: null, render_ids: ["render-9"] },
+                ],
+            })
+            const projects = await build(manager)
+
+            await expect(
+                projects.titlesOfRenders("workspace-1", ["render-1", "render-2", "render-1"]),
+            ).resolves.toEqual([
+                { renderId: "render-2", title: "Newest" },
+                { renderId: "render-1", title: "Newest" },
+            ])
+
+            expect(fake.callsOf("where")).toEqual([["p.workspace_id = :workspaceId", { workspaceId: "workspace-1" }]])
+            expect(fake.callsOf("andWhere")).toEqual([
+                [
+                    "(p.render_id = ANY(:ids::uuid[]) OR p.render_ids && :ids::uuid[])",
+                    { ids: ["render-1", "render-2"] },
+                ],
+            ])
+            expect(fake.callsOf("orderBy")).toEqual([["p.updated_at", "DESC"]])
+            expect(fake.callsOf("limit")).toEqual([[500]])
+        })
+
+        it("asks nothing for no renders", async () => {
+            const manager = mockEntityManager()
+            const projects = await build(manager)
+
+            await expect(projects.titlesOfRenders("workspace-1", [])).resolves.toEqual([])
+            expect(manager.createQueryBuilder).not.toHaveBeenCalled()
+        })
+    })
+
+    describe("cardFactsOf", () => {
+        it("answers what a delegation card shows of a project of the workspace, or null", async () => {
+            const em = mockEntityManager({
+                findOne: [
+                    [VideoProjectEntity, stored()],
+                    [VideoProjectEntity, null],
+                ],
+            })
+            const projects = await build(em)
+
+            await expect(projects.cardFactsOf("workspace-1", "project-1")).resolves.toEqual({
+                title: "Spring offer",
+                aspect: "9:16",
+                script: [{ caption: "Hello" }],
+            })
+            await expect(projects.cardFactsOf("workspace-1", "missing")).resolves.toBeNull()
+            expect(em.findOne).toHaveBeenCalledWith(VideoProjectEntity, {
+                select: { title: true, aspect: true, script: true },
+                where: { id: "project-1", workspaceId: "workspace-1" },
+            })
         })
     })
 })
@@ -112,6 +234,14 @@ describe("VideoProjectsService render lifecycle", () => {
             ])
             expect(fake.callsOf("where")).toEqual([["id = :projectId", { projectId: "project-1" }]])
             expect(fake.callsOf("setParameters")).toEqual([[{ appendedRenderId: "render-1", spec: '{"version":1}' }]])
+            const set = fake.callsOf("set")[0]?.[0] as {
+                renderIds: () => string
+                currentSpec: () => string
+                version: () => string
+            }
+            expect(set.renderIds()).toBe("array_append(render_ids, CAST(:appendedRenderId AS uuid))")
+            expect(set.currentSpec()).toBe("CAST(:spec AS jsonb)")
+            expect(set.version()).toBe("version + 1")
         })
     })
 

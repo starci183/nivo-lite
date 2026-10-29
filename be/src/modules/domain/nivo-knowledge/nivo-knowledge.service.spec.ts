@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { In } from "typeorm"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { builder, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -100,6 +101,23 @@ describe("NivoKnowledgeService", () => {
                 where: { module: expect.objectContaining({ _value: folders }) },
             })
             expect(em.count).toHaveBeenCalledTimes(1)
+        })
+    })
+})
+
+describe("NivoKnowledgeService rulesOf", () => {
+    it("reads the title and text of the items of the modules and kinds, bounded", async () => {
+        const em = mockEntityManager({ find: [NivoKnowledgeItemEntity, [rowOf()]] })
+
+        await expect((await build(em)).rulesOf(["video", "core"], ["tone"], 20)).resolves.toEqual([
+            { title: "Voice", body: "Warm." },
+        ])
+
+        expect(em.find).toHaveBeenCalledWith(NivoKnowledgeItemEntity, {
+            select: { title: true, body: true },
+            where: { module: In(["video", "core"]), kind: In(["tone"]) },
+            order: { module: "DESC", slug: "ASC" },
+            take: 20,
         })
     })
 })
@@ -206,6 +224,8 @@ describe("NivoKnowledgeService", () => {
 
             expect(write?.callsOf("update")).toEqual([[]])
             expect(write?.callsOf("setParameters")).toEqual([[{ ids: ["n1"], vectors: ["[1]"] }]])
+            const set = write?.callsOf("set")[0]?.[0] as { embedding: () => string } | undefined
+            expect(set?.embedding()).toContain("unnest(CAST(:ids AS uuid[])")
         })
     })
 })

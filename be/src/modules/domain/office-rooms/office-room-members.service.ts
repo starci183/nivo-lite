@@ -1,7 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
+import type { EntityManager } from "typeorm"
+import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
+import type { MemberSeat } from "@modules/domain/workspace-members"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { RoomMemberPreviewView, RoomMembersView } from "./office-rooms.contracts"
+import { InjectRoomsAgents } from "./office-rooms.decorators"
+import type { RoomAgentSeat, RoomsAgents } from "./office-rooms.port"
 import { OfficeRoomEntity, OfficeRoomMemberEntity } from "./persistence/entities"
 
 /** The Auth-side function that answers the profile photos of accounts. */
@@ -11,18 +15,27 @@ const PREVIEW_SIZE = 4
 /** The sortable text of a creation instant: digits only, fixed width, microsecond exact, so text order is time order. */
 const SORTABLE_AT = "to_char(%s AT TIME ZONE 'UTC', 'YYYYMMDDHH24MISSUS')"
 
-/** The count a grouped or plain count read answers. */
-interface CountFacts {
-    /** The room key; absent for an ungrouped count. */
-    readonly key?: string
-    /** How many seats. */
-    readonly count: number
+/** The most seat rows the departments of one read hold in all. */
+const SEAT_LIMIT = 2000
+
+/** One seat row of a department room as the room's own tables hold it. */
+interface SeatRow {
+    /** The room key. */
+    readonly key: string
+    /** The seat id. */
+    readonly seat_id: string
+    /** The account seated; null for an agent seat. */
+    readonly user_id: string | null
+    /** The agent seated; null for a person seat. */
+    readonly agent_id: string | null
+    /** When the seat was taken, sortable text. */
+    readonly at: string
 }
 
 /** One seat read for a preview, a person or an agent. */
 interface SeatFacts {
     /** The room key; absent for the Office room. */
-    readonly key?: string
+    readonly key?: string | undefined
     /** The seat id, the second ordering key. */
     readonly seat_id: string
     /** The account id for a person or the agent id. */
@@ -60,8 +73,7 @@ const atOf = (column: string): string => SORTABLE_AT.replace("%s", column)
 const bySeatOrder = (left: KindedSeat, right: KindedSeat): number => {
     if (left.seat.at !== right.seat.at) return left.seat.at < right.seat.at ? -1 : 1
     if (left.seat.seat_id !== right.seat.seat_id) return left.seat.seat_id < right.seat.seat_id ? -1 : 1
-    if (left.kind === right.kind) return 0
-    return left.kind < right.kind ? -1 : 1
+    return left.kind.localeCompare(right.kind)
 }
 
 /** The first four seats of the people and the agents of one group, in preview order. */
@@ -73,19 +85,42 @@ const firstSeats = ({ humans, agents }: GroupSeats): ReadonlyArray<KindedSeat> =
         .sort(bySeatOrder)
         .slice(0, PREVIEW_SIZE)
 
-/** Groups seats by their room key; the Office room's seats carry no key. */
-const groupByKey = (seats: ReadonlyArray<SeatFacts>): ReadonlyMap<string | null, ReadonlyArray<SeatFacts>> => {
-    const grouped = new Map<string | null, Array<SeatFacts>>()
-    for (const seat of seats) {
-        const key = seat.key ?? null
-        grouped.set(key, [...(grouped.get(key) ?? []), seat])
-    }
+/** Groups seats by their room key. */
+const groupByKey = (seats: ReadonlyArray<SeatFacts>): ReadonlyMap<string | undefined, ReadonlyArray<SeatFacts>> => {
+    const grouped = new Map<string | undefined, Array<SeatFacts>>()
+    for (const seat of seats) grouped.set(seat.key, [...(grouped.get(seat.key) ?? []), seat])
     return grouped
 }
 
-/** The counts of a grouped read by room key. */
-const countsByKey = (counts: ReadonlyArray<CountFacts>): ReadonlyMap<string, number> =>
-    new Map(counts.flatMap((fact) => (fact.key === undefined ? [] : [[fact.key, fact.count] as const])))
+/** A person's seat as the preview draws it. */
+const humanSeatOf = (
+    seat: MemberSeat,
+    key?: string,
+    taken?: { readonly id: string; readonly at: string },
+): SeatFacts => ({
+    key,
+    seat_id: taken?.id ?? seat.seat_id,
+    id: seat.id,
+    name: seat.name,
+    module: null,
+    avatar_url: null,
+    at: taken?.at ?? seat.at,
+})
+
+/** An agent's seat as the preview draws it. */
+const agentSeatOf = (
+    seat: RoomAgentSeat,
+    key?: string,
+    taken?: { readonly id: string; readonly at: string },
+): SeatFacts => ({
+    key,
+    seat_id: taken?.id ?? seat.id,
+    id: seat.id,
+    name: seat.name,
+    module: seat.module,
+    avatar_url: seat.avatar_url,
+    at: taken?.at ?? seat.at,
+})
 
 /** One group of seats with its full count. */
 interface MemberGroup {
@@ -111,76 +146,54 @@ const previewOf = (
 })
 
 @Injectable()
-/** The member counts and four-seat previews of the Hub rooms, read in one snapshot. */
+/** The member counts and four-seat previews of the Hub rooms. */
 export class OfficeRoomMembersService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly people: WorkspaceMembersReadService,
+        @InjectRoomsAgents() private readonly agents: RoomsAgents,
+    ) {}
 
     /**
      * The Office room (key null) and each given department key with its full member count and its first four members. The
      * general Office room holds every active account and every agent; a department holds its seated active accounts and
      * agents, and the active owners and managers when it seats no active account. Only the previewed accounts reach Auth.
      */
-    read(workspaceId: string, keys: ReadonlyArray<string>): Promise<ReadonlyMap<string | null, RoomMembersView>> {
-        return this.entityManager.transaction("REPEATABLE READ", async (manager) => {
-            const office = await this.officeGroup(workspaceId, manager)
-            const departments = keys.length === 0 ? [] : await this.departmentGroups(workspaceId, keys, manager)
-            const groups = [office, ...departments]
-            const previewed = groups.flatMap(({ seats }) => firstSeats(seats))
-            const photos = await this.photosOf(
-                workspaceId,
-                previewed.filter(({ kind }) => kind === "human").map(({ seat }) => seat.id),
-                manager,
-            )
-            return new Map(
-                groups.map(({ key, count, seats }): [string | null, RoomMembersView] => [
-                    key,
-                    {
-                        count,
-                        preview: firstSeats(seats).map(({ kind, seat }) => previewOf(kind, seat, photos)),
-                    },
-                ]),
-            )
-        })
+    async read(workspaceId: string, keys: ReadonlyArray<string>): Promise<ReadonlyMap<string | null, RoomMembersView>> {
+        const office = await this.officeGroup(workspaceId)
+        const departments = keys.length === 0 ? [] : await this.departmentGroups(workspaceId, keys)
+        const groups = [office, ...departments]
+        const previewed = groups.flatMap(({ seats }) => firstSeats(seats))
+        const photos = await this.photosOf(
+            workspaceId,
+            previewed.filter(({ kind }) => kind === "human").map(({ seat }) => seat.id),
+        )
+        return new Map(
+            groups.map(({ key, count, seats }): [string | null, RoomMembersView] => [
+                key,
+                {
+                    count,
+                    preview: firstSeats(seats).map(({ kind, seat }) => previewOf(kind, seat, photos)),
+                },
+            ]),
+        )
     }
 
     /** The Office room: every active account and every agent of the workspace. */
-    private async officeGroup(workspaceId: string, manager: EntityManager): Promise<MemberGroup> {
-        const people = (): SelectQueryBuilder<object> =>
-            manager
-                .createQueryBuilder()
-                .from("public.workspace_members", "m")
-                .where("m.workspace_id = :workspaceId AND m.status = 'active'", { workspaceId })
-        const agents = (): SelectQueryBuilder<object> =>
-            manager
-                .createQueryBuilder()
-                .from("public.agents", "a")
-                .where("a.workspace_id = :workspaceId", { workspaceId })
-        const humanCount = await people().select("count(*)::int", "count").getRawOne<CountFacts>()
-        const agentCount = await agents().select("count(*)::int", "count").getRawOne<CountFacts>()
-        const humans = await people()
-            .select("m.id", "seat_id")
-            .addSelect("m.user_id", "id")
-            .addSelect("m.display_name", "name")
-            .addSelect(atOf("m.created_at"), "at")
-            .orderBy("m.created_at")
-            .addOrderBy("m.id")
-            .limit(PREVIEW_SIZE)
-            .getRawMany<SeatFacts>()
-        const agentSeats = await agents()
-            .select("a.id", "seat_id")
-            .addSelect("a.id", "id")
-            .addSelect("a.name", "name")
-            .addSelect("a.module", "module")
-            .addSelect("a.avatar_url", "avatar_url")
-            .addSelect(atOf("a.created_at"), "at")
-            .orderBy("a.created_at")
-            .addOrderBy("a.id")
-            .limit(PREVIEW_SIZE)
-            .getRawMany<SeatFacts>()
+    private async officeGroup(workspaceId: string): Promise<MemberGroup> {
+        const [humanCount, agentCount, humans, agentSeats] = await Promise.all([
+            this.people.activeCount(workspaceId),
+            this.agents.countOf(workspaceId),
+            this.people.firstActive(workspaceId, PREVIEW_SIZE),
+            this.agents.firstSeats(workspaceId, PREVIEW_SIZE),
+        ])
         return {
             key: null,
-            count: (humanCount?.count ?? 0) + (agentCount?.count ?? 0),
-            seats: { humans, agents: agentSeats },
+            count: humanCount + agentCount,
+            seats: {
+                humans: humans.map((seat) => humanSeatOf(seat)),
+                agents: agentSeats.map((seat) => agentSeatOf(seat)),
+            },
         }
     }
 
@@ -188,111 +201,72 @@ export class OfficeRoomMembersService {
     private async departmentGroups(
         workspaceId: string,
         keys: ReadonlyArray<string>,
-        manager: EntityManager,
     ): Promise<ReadonlyArray<MemberGroup>> {
-        const params = { workspaceId, keys }
-        const seated = (): SelectQueryBuilder<object> =>
-            manager
-                .createQueryBuilder(OfficeRoomEntity, "r")
-                .innerJoin(OfficeRoomMemberEntity, "rm", "rm.room_id = r.id")
-                .where("r.workspace_id = :workspaceId AND r.key IN (:...keys)", params)
-        const people = (): SelectQueryBuilder<object> =>
-            seated().innerJoin(
-                "workspace_members",
-                "m",
-                "m.user_id = rm.user_id AND m.workspace_id = r.workspace_id AND m.status = 'active'",
-            )
-        const agents = (): SelectQueryBuilder<object> =>
-            seated().innerJoin("agents", "a", "a.id = rm.agent_id AND a.workspace_id = r.workspace_id")
-        const stewards = (): SelectQueryBuilder<object> =>
-            manager
-                .createQueryBuilder()
-                .from("public.workspace_members", "m")
-                .where("m.workspace_id = :workspaceId AND m.status = 'active' AND m.role IN ('owner', 'manager')", {
-                    workspaceId,
-                })
-        const humanCounts = countsByKey(
-            await people()
-                .select("r.key", "key")
-                .addSelect("count(*)::int", "count")
-                .groupBy("r.key")
-                .getRawMany<CountFacts>(),
-        )
-        const agentCounts = countsByKey(
-            await agents()
-                .select("r.key", "key")
-                .addSelect("count(*)::int", "count")
-                .groupBy("r.key")
-                .getRawMany<CountFacts>(),
-        )
-        const stewardCount = await stewards().select("count(*)::int", "count").getRawOne<CountFacts>()
-        const humanSeats = groupByKey(
-            await this.firstPerRoom(
-                people()
-                    .select("r.key", "key")
-                    .addSelect("rm.id", "seat_id")
-                    .addSelect("m.user_id", "id")
-                    .addSelect("m.display_name", "name")
-                    .addSelect(atOf("rm.created_at"), "at")
-                    .addSelect("row_number() OVER (PARTITION BY r.key ORDER BY rm.created_at, rm.id)", "position"),
-                manager,
+        const rows = await this.seatRows(workspaceId, keys)
+        const [accounts, agentCards, stewardCount, stewards] = await Promise.all([
+            this.people.activeByUserIds(
+                workspaceId,
+                rows.flatMap((row) => (row.user_id === null ? [] : [row.user_id])),
             ),
-        )
-        const agentSeats = groupByKey(
-            await this.firstPerRoom(
-                agents()
-                    .select("r.key", "key")
-                    .addSelect("rm.id", "seat_id")
-                    .addSelect("a.id", "id")
-                    .addSelect("a.name", "name")
-                    .addSelect("a.module", "module")
-                    .addSelect("a.avatar_url", "avatar_url")
-                    .addSelect(atOf("rm.created_at"), "at")
-                    .addSelect("row_number() OVER (PARTITION BY r.key ORDER BY rm.created_at, rm.id)", "position"),
-                manager,
+            this.agents.seatsOf(
+                workspaceId,
+                rows.flatMap((row) => (row.agent_id === null ? [] : [row.agent_id])),
             ),
-        )
-        const stewardSeats = await stewards()
-            .select("m.id", "seat_id")
-            .addSelect("m.user_id", "id")
-            .addSelect("m.display_name", "name")
-            .addSelect(atOf("m.created_at"), "at")
-            .orderBy("m.created_at")
-            .addOrderBy("m.id")
-            .limit(PREVIEW_SIZE)
-            .getRawMany<SeatFacts>()
+            this.people.stewardCount(workspaceId),
+            this.people.firstStewards(workspaceId, PREVIEW_SIZE),
+        ])
+        const accountOf = new Map(accounts.map((account) => [account.id, account]))
+        const agentOf = new Map(agentCards.map((card) => [card.id, card]))
+        const humanSeats = rows.flatMap((row): Array<SeatFacts> => {
+            const account = accountOf.get(row.user_id ?? "")
+            return account === undefined ? [] : [humanSeatOf(account, row.key, { id: row.seat_id, at: row.at })]
+        })
+        const agentSeats = rows.flatMap((row): Array<SeatFacts> => {
+            const card = agentOf.get(row.agent_id ?? "")
+            return card === undefined ? [] : [agentSeatOf(card, row.key, { id: row.seat_id, at: row.at })]
+        })
+        const humansByKey = groupByKey(humanSeats)
+        const agentsByKey = groupByKey(agentSeats)
+        const stewardSeats = stewards.map((seat) => humanSeatOf(seat))
         return keys.map((key): MemberGroup => {
-            const seatedPeople = humanCounts.get(key) ?? 0
-            const people = seatedPeople > 0 ? (humanSeats.get(key) ?? []) : stewardSeats
+            const seatedPeople = humansByKey.get(key) ?? []
+            const seatedAgents = agentsByKey.get(key) ?? []
             return {
                 key,
-                count: (seatedPeople > 0 ? seatedPeople : (stewardCount?.count ?? 0)) + (agentCounts.get(key) ?? 0),
-                seats: { humans: people, agents: agentSeats.get(key) ?? [] },
+                count: (seatedPeople.length > 0 ? seatedPeople.length : stewardCount) + seatedAgents.length,
+                seats: {
+                    humans: seatedPeople.length > 0 ? seatedPeople.slice(0, PREVIEW_SIZE) : stewardSeats,
+                    agents: seatedAgents.slice(0, PREVIEW_SIZE),
+                },
             }
         })
     }
 
-    /** The first four ranked seats of each room: the ranked read becomes a sub query and is cut at the preview size. */
-    private firstPerRoom(ranked: SelectQueryBuilder<object>, manager: EntityManager): Promise<Array<SeatFacts>> {
-        return manager
-            .createQueryBuilder()
-            .select("ranked.*")
-            .from(`(${ranked.getQuery()})`, "ranked")
-            .setParameters(ranked.getParameters())
-            .where("ranked.position <= :previewSize", { previewSize: PREVIEW_SIZE })
-            .orderBy("ranked.key")
-            .addOrderBy("ranked.position")
-            .getRawMany<SeatFacts>()
+    /** The seats of the given department rooms in seat order: by room, then when the seat was taken, then the seat id. */
+    private seatRows(workspaceId: string, keys: ReadonlyArray<string>): Promise<Array<SeatRow>> {
+        return this.entityManager
+            .createQueryBuilder(OfficeRoomEntity, "r")
+            .innerJoin(OfficeRoomMemberEntity, "rm", "rm.room_id = r.id")
+            .select("r.key", "key")
+            .addSelect("rm.id", "seat_id")
+            .addSelect("rm.user_id", "user_id")
+            .addSelect("rm.agent_id", "agent_id")
+            .addSelect(atOf("rm.created_at"), "at")
+            .where("r.workspace_id = :workspaceId AND r.key IN (:...keys)", { workspaceId, keys })
+            .orderBy("r.key")
+            .addOrderBy("rm.created_at")
+            .addOrderBy("rm.id")
+            .limit(SEAT_LIMIT)
+            .getRawMany<SeatRow>()
     }
 
     /** The profile photos of the previewed accounts, keyed by account id. */
     private async photosOf(
         workspaceId: string,
         accountIds: ReadonlyArray<string>,
-        manager: EntityManager,
     ): Promise<ReadonlyMap<string, string | null>> {
         if (accountIds.length === 0) return new Map()
-        const rows = await callDbFunction<{ id: string; avatar_url: string | null }>(manager, AVATARS, [
+        const rows = await callDbFunction<{ id: string; avatar_url: string | null }>(this.entityManager, AVATARS, [
             workspaceId,
             [...new Set(accountIds)],
         ])

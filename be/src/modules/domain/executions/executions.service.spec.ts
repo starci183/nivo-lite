@@ -1,6 +1,7 @@
 import { FakeClock, builder, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { In } from "typeorm"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { fakeQueryBuilder, queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
@@ -173,6 +174,48 @@ describe("ExecutionsService lists", () => {
         expect(query?.callsOf("orderBy")).toEqual([["x.createdAt", "ASC"]])
         expect(query?.callsOf("addOrderBy")).toEqual([["x.id", "ASC"]])
         expect(query?.callsOf("limit")).toEqual([[limit]])
+    })
+})
+
+describe("ExecutionsService approvals", () => {
+    it("reads the cards waiting for a decision, newest first, bounded", async () => {
+        const em = mockEntityManager()
+        const [query] = queueQueryBuilders(em, [{ getRawMany: [recordOf] }])
+
+        expect(await (await build(em)).pendingApprovals("ws-1", 100)).toEqual([recordOf])
+        expect(query?.callsOf("andWhere")).toEqual([["x.status = 'pending_approval'"]])
+        expect(query?.callsOf("orderBy")).toEqual([["x.createdAt", "DESC"]])
+        expect(query?.callsOf("addOrderBy")).toEqual([["x.id", "DESC"]])
+        expect(query?.callsOf("limit")).toEqual([[100]])
+    })
+
+    it("reads the decided cards, newest decision first with undated decisions last, bounded", async () => {
+        const em = mockEntityManager()
+        const [query] = queueQueryBuilders(em, [{ getRawMany: [recordOf] }])
+
+        expect(await (await build(em)).decidedApprovals("ws-1", 8)).toEqual([recordOf])
+        expect(query?.callsOf("andWhere")).toEqual([["x.status IN ('approved', 'rejected')"]])
+        expect(query?.callsOf("orderBy")).toEqual([["x.decidedAt", "DESC", "NULLS LAST"]])
+        expect(query?.callsOf("limit")).toEqual([[8]])
+    })
+
+    it("asks for no status when no card is given", async () => {
+        const em = mockEntityManager()
+
+        expect(await (await build(em)).statusesOf("ws-1", [])).toEqual([])
+        expect(em.find).not.toHaveBeenCalled()
+    })
+
+    it("reads the status of the given cards of the workspace once each", async () => {
+        const em = mockEntityManager({ find: [ExecutionEntity, [entityOf()]] })
+
+        expect(await (await build(em)).statusesOf("ws-1", ["exec-1", "exec-1"])).toEqual([
+            { id: "exec-1", status: "pending_approval" },
+        ])
+        expect(em.find).toHaveBeenCalledWith(ExecutionEntity, {
+            select: { id: true, status: true },
+            where: { workspaceId: "ws-1", id: In(["exec-1"]) },
+        })
     })
 })
 

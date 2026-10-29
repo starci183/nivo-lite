@@ -4,6 +4,7 @@ import { ConnectorInterestModule } from "@modules/domain/connector-interest"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./connections.module-definition"
 import { ConnectionsUpkeepService } from "./connections-upkeep.service"
 import { ConnectionsService } from "./connections.service"
+import { ConnectionsAdminReadService } from "./connections-admin-read.service"
 
 @Module({})
 /** The connections capability over the primary Supabase PostgreSQL connection. */
@@ -14,8 +15,13 @@ export class ConnectionsModule extends ConfigurableModuleClass {
         return {
             ...base,
             imports: [...(base.imports ?? []), ConnectorInterestModule.register({})],
-            providers: [...(base.providers ?? []), ConnectionsService, ConnectionsUpkeepService],
-            exports: [ConnectionsService],
+            providers: [
+                ...(base.providers ?? []),
+                ConnectionsAdminReadService,
+                ConnectionsService,
+                ConnectionsUpkeepService,
+            ],
+            exports: [ConnectionsAdminReadService, ConnectionsService],
         }
     }
 }

@@ -82,6 +82,15 @@ describe("AuthorityActionsService", () => {
             })
         })
     })
+    describe("exists", () => {
+        it("asks the given manager whether the catalogue holds the action", async () => {
+            const em = mockEntityManager({ exists: [AuthorityActionEntity, true] })
+
+            await expect((await build()).exists(em, "issue_invoice")).resolves.toBe(true)
+            expect(em.exists).toHaveBeenCalledWith(AuthorityActionEntity, { where: { action: "issue_invoice" } })
+        })
+    })
+
     describe("list", () => {
         it("reads every catalogue action through the given manager", async () => {
             const em = mockEntityManager({ find: [AuthorityActionEntity, [ROW]] })

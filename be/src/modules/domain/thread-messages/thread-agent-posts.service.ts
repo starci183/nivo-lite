@@ -60,7 +60,7 @@ export class ThreadAgentPostsService {
      * the agent's owner instead; an approval ask opens a request and the message carries its card.
      */
     async postAsAgent(post: AgentPost): Promise<PostedAgentMessage> {
-        const agent = await this.directory.findAgent(this.entityManager, post.workspaceId, post.agentId)
+        const agent = await this.directory.findAgent(post.workspaceId, post.agentId)
         if (agent === null) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.AgentNotFound })
         const mentions = unwrapOutcome(vetMentions(post.mentions), ThreadMessagesError)
         const quoted = unwrapOutcome(vetQuotes(post.quoted), ThreadMessagesError)

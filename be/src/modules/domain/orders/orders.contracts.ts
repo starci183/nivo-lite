@@ -120,6 +120,16 @@ export interface SalesOrderListRow extends SalesOrderRow {
     readonly company: string | null
 }
 
+/** An order reduced to what a message may name: its number and its customer. */
+export interface OrderRef {
+    /** The order id. */
+    readonly id: string
+    /** The order number. */
+    readonly orderNo: string
+    /** The customer, null when the order has none. */
+    readonly leadId: string | null
+}
+
 /** An order as the Sales and Lead journey pages display it. */
 export interface OrdersWorkbenchRow extends SalesOrderRow {
     /** When it was drafted. */

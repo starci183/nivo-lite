@@ -30,6 +30,15 @@ const NAME_LIMIT = 200
 export class LeadRecordsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
+    /** The installation that owns a lead of the workspace; null when there is no such row or it names no installation. */
+    async installationIdOf(workspaceId: string, id: string): Promise<string | null> {
+        const row = await this.entityManager.findOne(LeadEntity, {
+            select: { installationId: true },
+            where: { workspaceId, id },
+        })
+        return row?.installationId ?? null
+    }
+
     /** The lead of the workspace, or null when there is none with that id. */
     async find(
         workspaceId: string,
@@ -214,6 +223,16 @@ export class LeadRecordsService {
             .execute()
         const [changed] = result.raw as Array<LeadRecord>
         return changed ?? null
+    }
+
+    /** Holds the lead of the workspace `FOR SHARE` in the caller's transaction, so it cannot go away before the caller writes; false when the workspace has no such lead. */
+    async hold(workspaceId: string, leadId: string, manager: EntityManager): Promise<boolean> {
+        const lead = await manager.findOne(LeadEntity, {
+            select: { id: true },
+            where: { workspaceId, id: leadId },
+            lock: { mode: "pessimistic_read" },
+        })
+        return lead !== null
     }
 
     /** The names of the given leads. */

@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { BillingService } from "@modules/domain/billing"
 import { AiQuotaOverridesService } from "@modules/domain/ai-quota-overrides"
 import type { CreditsLimit } from "@modules/domain/ai-quota-overrides"
 import { InviteSupportService } from "@modules/domain/workspace-invites"
@@ -14,6 +15,7 @@ export class AdminSupportService {
     constructor(
         private readonly access: AdminAccessService,
         private readonly billing: WorkspaceBillingService,
+        private readonly plans: BillingService,
         private readonly quotas: AiQuotaOverridesService,
         private readonly invites: InviteSupportService,
     ) {}
@@ -45,7 +47,7 @@ export class AdminSupportService {
         creditsLimit: CreditsLimit,
     ): Promise<PlanSet> {
         const admin = this.access.requireAdmin(principal)
-        const change = await this.billing.setPlan(workspaceId, planCode)
+        const change = await this.billing.setPlan(workspaceId, await this.plans.findPlan(planCode))
         await this.quotas.setCreditsLimit(workspaceId, creditsLimit)
         await this.access.audit(admin, "workspace.set_plan", workspaceId, { ...change, creditsTo: creditsLimit })
         return { planCode: change.to, creditsLimit }

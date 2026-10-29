@@ -13,7 +13,7 @@ import { IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { PaymentProofService, parseJsonObject, sepayPayloadOf } from "@modules/domain/billing"
 import type { SepayDelivery, SepayPayload } from "@modules/domain/billing"
-import { orderCodesIn } from "@modules/domain/payment-orders"
+import { orderCodesIn, PaymentOrdersService } from "@modules/domain/payment-orders"
 import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import type { ReviewTransaction, SepayAuthorization, SettleOutcome } from "./sepay-transactions.contracts"
 import { transactionStatus } from "./sepay-transactions.policy"
@@ -40,20 +40,16 @@ export class SepayTransactionsService {
         private readonly proof: PaymentProofService,
         @InjectInbox() private readonly inbox: EntityInbox,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
+        private readonly orders: PaymentOrdersService,
     ) {}
 
     /** Transfers needing review on the requested orders; the workspace predicate prevents cross-workspace disclosure. */
     async review(workspaceId: string, orderIds: ReadonlyArray<string>): Promise<Array<ReviewTransaction>> {
-        if (orderIds.length === 0) return []
+        const ownedIds = await this.orders.idsOfWorkspace(workspaceId, orderIds)
+        if (ownedIds.length === 0) return []
         const rows = await this.entityManager
             .createQueryBuilder(SepayTransactionEntity, "t")
-            .innerJoin(
-                (orders) => orders.select(["po.id", "po.workspace_id"]).from("public.payment_orders", "po"),
-                "o",
-                "o.id = t.matchedOrderId",
-            )
-            .where("o.workspace_id = :workspaceId", { workspaceId })
-            .andWhere("o.id IN (:...orderIds)", { orderIds })
+            .where("t.matchedOrderId IN (:...ownedIds)", { ownedIds })
             .andWhere("t.status IN (:...statuses)", { statuses: REVIEW_STATUSES })
             .orderBy("t.receivedAt", "DESC")
             .limit(REVIEW_ROWS_MAX)

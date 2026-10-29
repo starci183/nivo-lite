@@ -4,6 +4,7 @@ import { IsNull } from "typeorm"
 import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import { BillingError, BillingErrorCode, PaymentProofService, parseJsonObject } from "@modules/domain/billing"
 import type { SepayDelivery } from "@modules/domain/billing"
+import { PaymentOrdersService } from "@modules/domain/payment-orders"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
@@ -66,6 +67,11 @@ const build = async (stubs: ReadonlyArray<Stub>, patch: Record<string, unknown> 
     const claims = mock<JobClaims>()
     claims.advance.mockResolvedValue(undefined)
     const outbox = recordingQueueOutbox()
+    const orders = mock<PaymentOrdersService>({
+        idsOfWorkspace: jest.fn((_workspaceId: string, ids: ReadonlyArray<string>) =>
+            Promise.resolve(ids.filter((id) => id !== "foreign")),
+        ),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             SepayTransactionsService,
@@ -73,9 +79,10 @@ const build = async (stubs: ReadonlyArray<Stub>, patch: Record<string, unknown> 
             { provide: PaymentProofService, useValue: proof },
             { provide: INBOX, useValue: inbox },
             { provide: QUEUE_OUTBOX, useValue: outbox },
+            { provide: PaymentOrdersService, useValue: orders },
         ],
     }).compile()
-    return { settlement: moduleRef.get(SepayTransactionsService), tx, proof, inbox, outbox, claims }
+    return { settlement: moduleRef.get(SepayTransactionsService), tx, proof, inbox, outbox, claims, orders }
 }
 
 describe("SepayTransactionsService", () => {
@@ -87,8 +94,15 @@ describe("SepayTransactionsService", () => {
             expect(tx.em.query).not.toHaveBeenCalled()
         })
 
-        it("maps the transfers of the workspace orders with an ISO receipt time", async () => {
+        it("reads nothing when none of the orders belongs to the workspace", async () => {
             const { settlement, tx } = await build([])
+
+            await expect(settlement.review("ws-1", ["foreign"])).resolves.toEqual([])
+            expect(tx.em.createQueryBuilder).not.toHaveBeenCalled()
+        })
+
+        it("maps the transfers of the workspace orders with an ISO receipt time", async () => {
+            const { settlement, tx, orders } = await build([])
             const review = fakeQueryBuilder({
                 getMany: [
                     Object.assign(new SepayTransactionEntity(), {
@@ -97,6 +111,13 @@ describe("SepayTransactionsService", () => {
                         transferAmount: 500000,
                         receivedAt: new Date("2026-10-13T09:00:00+07:00"),
                         content: null,
+                    }),
+                    Object.assign(new SepayTransactionEntity(), {
+                        sepayId: 9002,
+                        status: "unmatched",
+                        transferAmount: null,
+                        receivedAt: new Date("2026-10-13T08:00:00+07:00"),
+                        content: "chuyen khoan",
                     }),
                 ],
             })
@@ -110,11 +131,18 @@ describe("SepayTransactionsService", () => {
                     receivedAt: "2026-10-13T02:00:00.000Z",
                     content: null,
                 },
+                {
+                    id: 9002,
+                    status: "unmatched",
+                    transferAmount: 0,
+                    receivedAt: "2026-10-13T01:00:00.000Z",
+                    content: "chuyen khoan",
+                },
             ])
             expect(tx.em.createQueryBuilder).toHaveBeenCalledWith(SepayTransactionEntity, "t")
-            expect(review.callsOf("where")).toEqual([["o.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
+            expect(orders.idsOfWorkspace).toHaveBeenCalledWith("ws-1", ["order-1"])
+            expect(review.callsOf("where")).toEqual([["t.matchedOrderId IN (:...ownedIds)", { ownedIds: ["order-1"] }]])
             expect(review.callsOf("andWhere")).toEqual([
-                ["o.id IN (:...orderIds)", { orderIds: ["order-1"] }],
                 ["t.status IN (:...statuses)", { statuses: ["underpaid", "expired", "unmatched"] }],
             ])
             expect(review.callsOf("orderBy")).toEqual([["t.receivedAt", "DESC"]])

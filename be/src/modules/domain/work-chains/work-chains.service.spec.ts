@@ -1,28 +1,59 @@
 import { FakeClock, fakeTransaction, mock } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { EventsService } from "@modules/domain/events"
+import { WorkThreadsService } from "@modules/domain/work-threads"
+import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
+import { WorkspacesService } from "@modules/domain/workspaces"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { WorkChainsErrorCode } from "./errors/work-chains.error"
-import { WorkThreadEntity } from "@modules/domain/work-threads"
 import {
     anyFunction,
+    answersOf,
     chainedWith,
     insertedValues,
     managerOf,
     rowOf,
     stepOf,
+    threadOf,
 } from "@tests/fixtures/builders/work-chains.builder"
 import { WorkChainEntity } from "./persistence/entities"
 import { CHAIN_OWNER_DIRECTORY } from "./work-chains.decorators"
 import type { ChainOwnerDirectory } from "./work-chains.port"
 import { WorkChainsService } from "./work-chains.service"
 
+/** What a column expression of a write (`() => "..."`) evaluates to. */
+const expressionOf = (values: unknown, column: string): unknown => {
+    const expression =
+        typeof values === "object" && values !== null && column in values ? Reflect.get(values, column) : null
+    return typeof expression === "function" ? expression() : undefined
+}
+
 const build = async (em: MockEntityManager) => {
     fakeTransaction(em)
+    const answers = answersOf(em)
+    const thread = answers.thread === undefined ? threadOf() : answers.thread
+    const threads = mock<WorkThreadsService>()
+    threads.lockIfAny.mockResolvedValue(thread)
+    threads.findIfAny.mockResolvedValue(thread)
+    const agents = mock<AgentDirectoryService>()
+    agents.cardsOf.mockResolvedValue([{ id: "agent-1", name: "AI Sales", module: "sales", canTagAgentIds: [] }])
+    const members = mock<WorkspaceMemberDirectoryService>()
+    members.byIds.mockResolvedValue([])
+    members.activeAmong.mockResolvedValue(
+        (answers.active ?? [{ id: "owner-1" }]).map(({ id }) => ({ id, displayName: id, role: "manager" })),
+    )
+    members.idOfUser.mockResolvedValue((answers.workspace ?? [{ id: "boss-1" }])[0]?.id ?? null)
+    const [named] = answers.name ?? [{ name: "Mr Minh" }]
+    members.find.mockResolvedValue(
+        named === undefined ? null : { id: "minh", displayName: named.name, role: "manager" },
+    )
+    const workspaces = mock<WorkspacesService>()
+    workspaces.ownerIdOf.mockResolvedValue("boss-user")
     const events = mock<EventsService>({ record: jest.fn().mockResolvedValue(undefined) })
     const catalog = mock<MessageCatalog>({
         get: jest.fn(
@@ -40,16 +71,20 @@ const build = async (em: MockEntityManager) => {
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: CHAIN_OWNER_DIRECTORY, useValue: owners },
             { provide: EventsService, useValue: events },
+            { provide: WorkThreadsService, useValue: threads },
+            { provide: AgentDirectoryService, useValue: agents },
+            { provide: WorkspaceMemberDirectoryService, useValue: members },
+            { provide: WorkspacesService, useValue: workspaces },
         ],
     }).compile()
-    return { service: moduleRef.get(WorkChainsService), events, owners, catalog }
+    return { service: moduleRef.get(WorkChainsService), events, owners, catalog, threads, agents, members, workspaces }
 }
 
 const registerFirstSteps = () => {
     describe("record", () => {
         it("stores the first step of a chain and writes it into the evidence log", async () => {
             const harness = managerOf()
-            const { service, events } = await build(harness.em)
+            const { service, events, threads, agents } = await build(harness.em)
 
             const recorded = await service.record(stepOf())
 
@@ -61,11 +96,8 @@ const registerFirstSteps = () => {
             expect(insert?.callsOf("values")).toEqual([[insertedValues()]])
             expect(insert?.callsOf("setParameter")).toEqual([["seqThreadId", "thread-1"]])
             expect(insert?.callsOf("returning")).toEqual([["id"]])
-            expect(harness.em.findOne).toHaveBeenCalledWith(WorkThreadEntity, {
-                select: { id: true, leadId: true },
-                where: { workspaceId: "ws-1", id: "thread-1" },
-                lock: { mode: "pessimistic_write" },
-            })
+            expect(threads.lockIfAny).toHaveBeenCalledWith(expect.anything(), "ws-1", "thread-1")
+            expect(agents.cardsOf).toHaveBeenCalledWith("ws-1", ["agent-1"])
             expect(harness.steps.callsOf("andWhere")).toEqual([
                 ["s.thread_id = :threadId", { threadId: "thread-1" }],
                 ["s.id = :stepId", { stepId: "step-9" }],
@@ -83,6 +115,17 @@ const registerFirstSteps = () => {
                 },
                 expect.anything(),
             )
+        })
+
+        it("takes the next place and the end instant from the database", async () => {
+            const harness = managerOf()
+            const { service } = await build(harness.em)
+
+            await service.record(stepOf())
+
+            const [values] = chainedWith(harness, "insert")?.callsOf("values")[0] ?? []
+            expect(expressionOf(values, "seq")).toContain("max(seq)")
+            expect(expressionOf(values, "finishedAt")).toBe("now()")
         })
 
         it("keeps the detail of a step as evidence", async () => {
@@ -269,6 +312,15 @@ const registerOwnerChoice = () => {
             })
         })
 
+        it("tags the fallback when the workspace has no owner account", async () => {
+            const { service, workspaces } = await build(managerOf({ history: twelveSteps, active: [] }).em)
+            workspaces.ownerIdOf.mockResolvedValue(null)
+
+            await expect(service.record(stepOf())).resolves.toMatchObject({
+                ownerTag: { kind: "member", id: "fallback-1" },
+            })
+        })
+
         it("tags the fallback when the workspace has no owner row at all", async () => {
             const { service } = await build(managerOf({ history: twelveSteps, active: [], workspace: [] }).em)
 
@@ -299,6 +351,29 @@ const registerView = () => {
 
             expect(view.steps.map((step) => step.id)).toEqual(["s1", "s2"])
             expect(view.summary).toEqual({ steps: 2, humanDecisions: 1, minutes: 4, state: "complete" })
+        })
+    })
+}
+
+const registerActorNames = () => {
+    describe("view: who acted", () => {
+        it("names a member who acted by display name and role, and an unknown actor as empty", async () => {
+            const history = [
+                rowOf({ id: "s1", seq: 1, actor_kind: "member", actor_id: "minh" }),
+                rowOf({ id: "s2", seq: 2, actor_kind: "member", actor_id: "gone" }),
+                rowOf({ id: "s3", seq: 3, actor_kind: "agent", actor_id: "agent-9" }),
+            ]
+            const { service, members } = await build(managerOf({ history }).em)
+            members.byIds.mockResolvedValue([{ id: "minh", displayName: "Mr Minh", role: "owner" }])
+
+            const view = await service.view("ws-1", "thread-1")
+
+            expect(view.steps.map((step) => [step.actorName, step.actorRole])).toEqual([
+                ["Mr Minh", "owner"],
+                ["", ""],
+                ["", ""],
+            ])
+            expect(members.byIds).toHaveBeenCalledWith("ws-1", ["minh", "gone"], expect.anything())
         })
     })
 }
@@ -344,6 +419,7 @@ const registerApprovalLinks = () => {
                 { workspaceId: "ws-1", id: "step-1", status: "waiting" },
                 { status: "stopped", finishedAt: anyFunction() },
             )
+            expect(expressionOf(em.update.mock.calls[0]?.[2], "finishedAt")).toBe("now()")
         })
     })
 }
@@ -360,6 +436,7 @@ const registerSettleFor = () => {
             expect(harness.em.createQueryBuilder).toHaveBeenCalledWith(WorkChainEntity, "w")
             expect(update?.callsOf("update")).toEqual([[]])
             expect(update?.callsOf("set")).toEqual([[{ status: "done", finishedAt: anyFunction(), decidedBy: "van" }]])
+            expect(expressionOf(update?.callsOf("set")[0]?.[0], "finishedAt")).toBe("now()")
             expect(update?.callsOf("where")[0]?.[1]).toEqual({
                 workspaceId: "ws-1",
                 threadId: "thread-1",
@@ -401,12 +478,13 @@ const registerSettleApproval = () => {
         it("settles an approved request as done and says who approved in the evidence log", async () => {
             const harness = managerOf()
             const em = harness.em
-            const { service, events } = await build(em)
+            const { service, events, threads, members } = await build(em)
 
             await service.settleApproval(approval("approved", "minh"))
 
             const update = chainedWith(harness, "update")
             expect(update?.callsOf("set")).toEqual([[{ status: "done", decidedBy: "minh", finishedAt: anyFunction() }]])
+            expect(expressionOf(update?.callsOf("set")[0]?.[0], "finishedAt")).toBe("now()")
             expect(update?.callsOf("where")).toEqual([
                 [
                     "workspace_id = :workspaceId AND approval_request_id = :requestId AND kind = 'ask_approval' AND status = 'waiting'",
@@ -414,10 +492,8 @@ const registerSettleApproval = () => {
                 ],
             ])
             expect(update?.callsOf("returning")).toEqual([["thread_id, action"]])
-            expect(em.findOne).toHaveBeenCalledWith(WorkThreadEntity, {
-                select: { id: true, leadId: true },
-                where: { id: "thread-1" },
-            })
+            expect(threads.findIfAny).toHaveBeenCalledWith("ws-1", "thread-1", expect.anything())
+            expect(members.find).toHaveBeenCalledWith("ws-1", "minh", expect.anything())
             expect(events.record).toHaveBeenCalledWith(
                 {
                     workspaceId: "ws-1",
@@ -463,6 +539,14 @@ const registerSettleApproval = () => {
             expect(callers.createQueryBuilder).toHaveBeenCalled()
         })
 
+        it("leaves the lead out of the evidence when the thread is gone", async () => {
+            const { service, events } = await build(managerOf({ thread: null }).em)
+
+            await service.settleApproval(approval("approved", "minh"))
+
+            expect(events.record).toHaveBeenCalledWith(expect.objectContaining({ leadId: null }), expect.anything())
+        })
+
         it("writes nothing when no waiting step belongs to the request", async () => {
             const { service, events } = await build(managerOf({ settled: [] }).em)
 
@@ -480,6 +564,7 @@ describe("WorkChainsService", () => {
     registerLimitStops()
     registerOwnerChoice()
     registerView()
+    registerActorNames()
     registerApprovalLinks()
     registerSettleFor()
     registerSettleApproval()

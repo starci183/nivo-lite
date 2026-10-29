@@ -1,7 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { GuidelineVideoBrand, KitIdentity, SaveVideoBrandKit } from "./video-brand-kits.contracts"
+import type {
+    GuidelineVideoBrand,
+    KitIdentity,
+    OptionalVideoBrandKit,
+    SaveVideoBrandKit,
+} from "./video-brand-kits.contracts"
 import { VideoBrandKitEntity } from "./persistence/entities"
 
 @Injectable()
@@ -67,6 +72,20 @@ export class VideoBrandKitsService {
                 ["workspace_id"],
             )
             .execute()
+    }
+
+    /** The whole kit of the workspace; null when it has none. */
+    async kitOf(workspaceId: string): Promise<OptionalVideoBrandKit> {
+        const kit = await this.entityManager.findOne(VideoBrandKitEntity, { where: { workspaceId } })
+        if (kit === null) return null
+        return {
+            shopName: kit.shopName,
+            primaryColor: kit.primaryColor,
+            secondaryColor: kit.secondaryColor,
+            logoPath: kit.logoPath,
+            musicTrack: kit.musicTrack,
+            voice: kit.voice,
+        }
     }
 
     /** The logo path and shop name of the workspace kit; empty when it has none. */

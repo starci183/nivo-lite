@@ -32,6 +32,15 @@ describe("StaffDirectoryService", () => {
         })
     })
 
+    describe("activeCount", () => {
+        it("counts the active staff of the workspace", async () => {
+            const em = mockEntityManager({ count: [StaffEntity, 4] })
+
+            await expect((await build(em)).activeCount("ws-1")).resolves.toBe(4)
+            expect(em.count).toHaveBeenCalledWith(StaffEntity, { where: { workspaceId: "ws-1", active: true } })
+        })
+    })
+
     describe("namesOf", () => {
         it("asks for nothing when no one is assigned", async () => {
             const em = mockEntityManager()

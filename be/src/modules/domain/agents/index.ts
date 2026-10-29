@@ -1,3 +1,6 @@
+// The directory leads: other capabilities import this barrel while it loads (office-rooms <-> agents), see AgentDirectoryService.
+export { AgentDirectoryModule } from "./agent-directory.module"
+export { AgentDirectoryService } from "./agent-directory.service"
 export { AGENTS_ERROR_KINDS } from "./errors/agents.error"
 export { AGENTS_MESSAGES } from "./messages/agents.messages"
 export { AgentBundleService } from "./agent-bundle.service"
@@ -17,6 +20,7 @@ export type {
 } from "./agents.port"
 export { AgentLensesService } from "./agent-lenses.service"
 export { AgentsService } from "./agents.service"
+export type { AgentCard, AgentHandleCard, AgentIdentityCard, AgentSeat, AgentSheet } from "./agent-directory.contracts"
 export { AgentIdentityService } from "./agent-identity.service"
 export { AgentOwnershipService } from "./agent-ownership.service"
 export { AgentRecordsService } from "./agent-records.service"

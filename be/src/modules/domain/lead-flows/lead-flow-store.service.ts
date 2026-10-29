@@ -12,7 +12,13 @@ import type {
     OptionalText,
 } from "./lead-flows.contracts"
 import type { LeadFlowRow } from "./persistence/lead-flows.rows"
-import { FIND_FLOW_BY_LEAD, FIND_FLOW_CANDIDATES, INSERT_FLOW, SAVE_FLOW } from "./persistence/lead-flows.sql"
+import {
+    FIND_FLOW_BY_LEAD,
+    FIND_FLOW_CANDIDATES,
+    FIND_FLOW_INSTALLATION,
+    INSERT_FLOW,
+    SAVE_FLOW,
+} from "./persistence/lead-flows.sql"
 
 @Injectable()
 /** The only writer of public.lead_flows: one row per prospect that came in through Facebook or Instagram. */
@@ -31,6 +37,15 @@ export class LeadFlowStoreService {
         const flow = await this.byLead(workspaceId, leadId)
         if (flow === null) throw new LeadFlowsError({ code: LeadFlowsErrorCode.NoFlow })
         return flow
+    }
+
+    /** The installation that owns a flow of the workspace; null when there is no such flow or it names none. */
+    async installationIdOf(workspaceId: string, flowId: string): Promise<string | null> {
+        const [row] = await this.entityManager.query<Array<{ installation_id: string }>>(FIND_FLOW_INSTALLATION, [
+            workspaceId,
+            flowId,
+        ])
+        return row?.installation_id ?? null
     }
 
     /** The flows any key of the identity matches; `matchFlow` picks the strongest. */

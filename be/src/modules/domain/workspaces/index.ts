@@ -1,12 +1,14 @@
 export { WORKSPACES_ERROR_KINDS } from "./errors/workspaces.error"
 export { WORKSPACES_MESSAGES } from "./messages/workspaces.messages"
 export type {
+    ActivePlan,
     CreatedWorkspace,
     FirstWorkspace,
     PruneRequest,
     ShellFacts,
     SupportStatus,
     WorkspaceMembership,
+    WorkspaceName,
 } from "./workspaces.contracts"
 export { parseWorkspacesConfig } from "./workspaces.config"
 export { WorkspacesModule } from "./workspaces.module"
@@ -16,3 +18,5 @@ export { WorkspaceShellService } from "./workspace-shell.service"
 export { StdioConsoleClient } from "./stdio-console.client"
 export { WorkspacePruneService } from "./workspace-prune.service"
 export { WorkspaceEntity, workspacesEntities } from "./persistence/entities"
+export { WorkspaceAdminReadService } from "./workspace-admin-read.service"
+export type { WorkspaceAdminRow } from "./workspace-admin-read.service"

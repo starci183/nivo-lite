@@ -222,6 +222,23 @@ describe("AgentsService", () => {
     })
 })
 
+describe("AgentsService agentById", () => {
+    it("answers the agent of the workspace with the id, active or paused", async () => {
+        const em = mockEntityManager({ findOne: [AgentEntity, AGENT] })
+        const { service } = await build(em)
+
+        await expect(service.agentById("w1", "a1")).resolves.toEqual({ id: "a1", name: "Bot" })
+        expect(em.findOne).toHaveBeenCalledWith(AgentEntity, { where: { id: "a1", workspaceId: "w1" } })
+    })
+
+    it("answers nobody for an agent the workspace does not have", async () => {
+        const em = mockEntityManager({ findOne: [AgentEntity, null] })
+        const { service } = await build(em)
+
+        await expect(service.agentById("w1", "a9")).resolves.toBeNull()
+    })
+})
+
 describe("AgentsService", () => {
     describe("dashboard", () => {
         const stubs = mockEntityManager()

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./orders.module-definition"
 import { OrdersService } from "./orders.service"
+import { OrdersFiguresService } from "./orders-figures.service"
 import { OrdersReadService } from "./orders-read.service"
 
 @Module({})
@@ -12,8 +13,8 @@ export class OrdersModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), OrdersService, OrdersReadService],
-            exports: [OrdersService, OrdersReadService],
+            providers: [...(base.providers ?? []), OrdersService, OrdersReadService, OrdersFiguresService],
+            exports: [OrdersService, OrdersReadService, OrdersFiguresService],
         }
     }
 }

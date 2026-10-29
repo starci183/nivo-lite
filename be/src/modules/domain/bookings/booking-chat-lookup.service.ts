@@ -12,6 +12,15 @@ import { cancellableOf } from "./policies/cancellable.policy"
 export class BookingChatLookupService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
+    /** The installation that owns a booking of the workspace; null when there is no such row or it names no installation. */
+    async installationIdOf(workspaceId: string, id: string): Promise<string | null> {
+        const row = await this.entityManager.findOne(BookingEntity, {
+            select: { installationId: true },
+            where: { workspaceId, id },
+        })
+        return row?.installationId ?? null
+    }
+
     /** The next open booking of a chat that has not started yet, or none. */
     async nextOfChat(chat: ChatBookingRef, nowMs: number): Promise<OptionalCancellableBooking> {
         const row = await this.entityManager

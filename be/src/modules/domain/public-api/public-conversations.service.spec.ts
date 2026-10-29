@@ -1,53 +1,50 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
-import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
+import { mock, mockEntityManager } from "@starci/jest-preset"
+import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { PublicConversationsService } from "./public-conversations.service"
 
 const CONVERSATION = { id: "conv-1", lead_id: "lead-1" }
 
 const build = async () => {
-    const moduleRef = await Test.createTestingModule({ providers: [PublicConversationsService] }).compile()
-    return moduleRef.get(PublicConversationsService)
+    const chats = mock<AgentConversationsReadService>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [PublicConversationsService, { provide: AgentConversationsReadService, useValue: chats }],
+    }).compile()
+    return { service: moduleRef.get(PublicConversationsService), chats }
 }
 
 describe("PublicConversationsService", () => {
-    it("finds a customer conversation of the workspace by id", async () => {
+    it("finds a customer conversation of the workspace by id inside the caller's transaction", async () => {
         const em = mockEntityManager()
-        const read = fakeQueryBuilder({ getRawOne: CONVERSATION })
-        answerQueryBuilders(em, read)
+        const { service, chats } = await build()
+        chats.customerChat.mockResolvedValue({ id: "conv-1", leadId: "lead-1" })
 
-        await expect((await build()).find("ws-1", "conv-1", em)).resolves.toEqual(CONVERSATION)
+        await expect(service.find("ws-1", "conv-1", em)).resolves.toEqual(CONVERSATION)
 
-        expect(read.argsOf("from")).toEqual([["public.agent_conversations", "c"]])
-        expect(read.argsOf("where")).toEqual([
-            [
-                "c.workspace_id = :workspaceId AND c.kind = 'customer' AND c.id = :conversationId",
-                { workspaceId: "ws-1", conversationId: "conv-1" },
-            ],
-        ])
-        expect(read.argsOf("limit")).toEqual([[1]])
+        expect(chats.customerChat).toHaveBeenCalledWith("ws-1", "conv-1", em)
     })
 
     it("answers nothing for a conversation that is not there", async () => {
-        const em = mockEntityManager()
-        answerQueryBuilders(em, fakeQueryBuilder({ getRawOne: undefined }))
+        const { service, chats } = await build()
+        chats.customerChat.mockResolvedValue(null)
 
-        await expect((await build()).find("ws-1", "missing", em)).resolves.toBeUndefined()
+        await expect(service.find("ws-1", "missing", mockEntityManager())).resolves.toBeUndefined()
     })
 
     it("finds the latest customer conversation of a customer", async () => {
         const em = mockEntityManager()
-        const read = fakeQueryBuilder({ getRawOne: CONVERSATION })
-        answerQueryBuilders(em, read)
+        const { service, chats } = await build()
+        chats.latestCustomerChatOfLead.mockResolvedValue({ id: "conv-1", leadId: "lead-1" })
 
-        await expect((await build()).ofLead("ws-1", "lead-1", em)).resolves.toEqual(CONVERSATION)
+        await expect(service.ofLead("ws-1", "lead-1", em)).resolves.toEqual(CONVERSATION)
 
-        expect(read.argsOf("where")).toEqual([
-            [
-                "c.workspace_id = :workspaceId AND c.kind = 'customer' AND c.lead_id = :leadId",
-                { workspaceId: "ws-1", leadId: "lead-1" },
-            ],
-        ])
-        expect(read.argsOf("orderBy")).toEqual([["c.created_at", "DESC"]])
+        expect(chats.latestCustomerChatOfLead).toHaveBeenCalledWith("ws-1", "lead-1", em)
+    })
+
+    it("answers nothing for a customer without a conversation", async () => {
+        const { service, chats } = await build()
+        chats.latestCustomerChatOfLead.mockResolvedValue(null)
+
+        await expect(service.ofLead("ws-1", "lead-9", mockEntityManager())).resolves.toBeUndefined()
     })
 })

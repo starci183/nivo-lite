@@ -1,6 +1,7 @@
 export { LEAD_FLOWS_ERROR_KINDS } from "./errors/lead-flows.error"
 export { LEAD_FLOWS_MESSAGES } from "./messages/lead-flows.messages"
 export { LeadFlowsModule } from "./lead-flows.module"
+export { LeadFlowStoreService } from "./lead-flow-store.service"
 export { LeadFlowChainService } from "./lead-flow-chain.service"
 export { LeadFlowContinuationService } from "./lead-flow-continuation.service"
 export { LeadGenIntakeService } from "./lead-gen-intake.service"

@@ -1,6 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import { In, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
+import { AuthorityActionsService } from "@modules/domain/authority-actions"
+import { AuthorityRulesService } from "@modules/domain/authority-rules"
+import { OfficeRoomDirectoryService } from "@modules/domain/office-rooms"
+import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
+import type { MemberRow } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { MemberGrantsError, MemberGrantsErrorCode } from "./errors/member-grants.error"
@@ -8,47 +13,26 @@ import type { DirectoryMember, MemberGrantChange, MemberGrant } from "./member-g
 import { MemberGrantEntity } from "./persistence/entities"
 import type { MemberGrantUnit } from "./persistence/entities"
 
-/** One member of the directory as the statement answers it. */
-interface DirectoryRaw {
-    readonly member_id: string
-    readonly name: string
-    readonly role: DirectoryMember["role"]
-    readonly status: DirectoryMember["status"]
-    readonly rooms: Array<string>
-}
-
-/** The rooms a member sits in, in room order. */
-const MEMBER_ROOMS = `COALESCE((SELECT array_agg(r.key ORDER BY r.position, r.key)
-    FROM public.office_rooms_members rm
-    JOIN public.office_rooms r ON r.id = rm.room_id
-    WHERE rm.user_id = m.user_id AND r.workspace_id = m.workspace_id), '{}'::text[])`
-
-/** Owners first, then managers, then the rest. */
-const ROLE_ORDER = "CASE m.role WHEN 'owner' THEN 0 WHEN 'manager' THEN 1 ELSE 2 END"
-
 /** The most grants or members one list returns. */
 const LIST_MAX = 500
 
-/** The unit of the workspace's rule for the action, VND while the rule does not exist yet. */
-const RULE_UNIT = `COALESCE((SELECT r.unit FROM public.authority_rules r WHERE r.workspace_id = m.workspace_id AND r.action = a.action), 'vnd')`
+/** The most seat rows the rooms of one directory read hold in all. */
+const ROOM_SEAT_MAX = 5000
 
-/** What the guard read answers: the member that exists and the unit the grant is counted in. */
-interface GuardRaw {
-    readonly member_id: string
-    readonly unit: MemberGrantUnit
-}
+/** The unit a grant is counted in while the workspace has no rule for the action yet. */
+const DEFAULT_UNIT: MemberGrantUnit = "vnd"
 
 /** The columns the upsert answers, in the shape of the contract. */
 const GRANT_RETURNING =
     "id, workspace_id, member_id, action, unit, max_amount::float8 AS max_amount, to_json(updated_at) #>> '{}' AS updated_at"
 
-const toMember = (row: DirectoryRaw): DirectoryMember => ({
-    memberId: row.member_id,
-    name: row.name,
+const toMember = (row: MemberRow, rooms: ReadonlyArray<string>): DirectoryMember => ({
+    memberId: row.id,
+    name: row.display_name,
     role: row.role,
-    roomId: row.rooms[0] ?? null,
+    roomId: rooms[0] ?? null,
     status: row.status,
-    rooms: row.rooms,
+    rooms,
 })
 
 const isLimit = (value: number | null): boolean => value === null || (Number.isFinite(value) && value >= 0)
@@ -56,25 +40,28 @@ const isLimit = (value: number | null): boolean => value === null || (Number.isF
 @Injectable()
 /** What each member may approve: the only owner of the member_grants table. */
 export class MemberGrantsService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly members: WorkspaceMembersReadService,
+        private readonly rooms: OfficeRoomDirectoryService,
+        private readonly actions: AuthorityActionsService,
+        private readonly rules: AuthorityRulesService,
+    ) {}
 
     /** Everyone of the workspace with the rooms they sit in, owners first. */
     async directory(workspaceId: string): Promise<ReadonlyArray<DirectoryMember>> {
-        const rows = await this.entityManager
-            .createQueryBuilder()
-            .select("m.id", "member_id")
-            .addSelect("m.display_name", "name")
-            .addSelect("m.role", "role")
-            .addSelect("m.status", "status")
-            .addSelect(MEMBER_ROOMS, "rooms")
-            .from("public.workspace_members", "m")
-            .where("m.workspace_id = :workspaceId", { workspaceId })
-            .orderBy(ROLE_ORDER)
-            .addOrderBy("m.created_at", "ASC")
-            .addOrderBy("m.id", "ASC")
-            .limit(LIST_MAX)
-            .getRawMany<DirectoryRaw>()
-        return rows.map(toMember)
+        const people = await this.members.directory(workspaceId, LIST_MAX)
+        const seats = await this.rooms.seatRoomsOf(
+            workspaceId,
+            people.map((person) => person.user_id),
+            ROOM_SEAT_MAX,
+        )
+        return people.map((person) =>
+            toMember(
+                person,
+                seats.filter((seat) => seat.userId === person.user_id).map((seat) => seat.key),
+            ),
+        )
     }
 
     /** The grants of one action of the workspace. */
@@ -118,26 +105,19 @@ export class MemberGrantsService {
         action: string,
         grant: MemberGrantChange,
     ): Promise<MemberGrant> {
-        const guard = await tx
-            .createQueryBuilder()
-            .select("m.id", "member_id")
-            .addSelect(RULE_UNIT, "unit")
-            .from("public.workspace_members", "m")
-            .innerJoin("authority_actions", "a", "a.action = :action", { action })
-            .where("m.id = :memberId AND m.workspace_id = :workspaceId", { memberId: grant.memberId, workspaceId })
-            .setLock("pessimistic_read")
-            .getRawOne<GuardRaw>()
-        if (guard === undefined) {
+        const memberFound = await this.members.lockMember(tx, workspaceId, grant.memberId)
+        if (!memberFound || !(await this.actions.exists(tx, action))) {
             throw new MemberGrantsError({ code: MemberGrantsErrorCode.UnknownTarget, params: { action } })
         }
+        const setup = await this.rules.approvalSetup(workspaceId, action)
         const saved = await tx
             .createQueryBuilder(MemberGrantEntity, "mg")
             .insert()
             .values({
                 workspaceId,
-                memberId: guard.member_id,
+                memberId: grant.memberId,
                 action,
-                unit: guard.unit,
+                unit: setup?.unit ?? DEFAULT_UNIT,
                 maxAmount: grant.maxAmount === null ? null : String(grant.maxAmount),
                 updatedAt: () => "now()",
             })

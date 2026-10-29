@@ -6,6 +6,7 @@ import { EventsService } from "@modules/domain/events"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { AgentSyncStatus } from "@modules/domain/module-installations"
 import { InstallationChangesService } from "./installation-changes.service"
+import { InstallationFactsService } from "./installation-facts.service"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ACCOUNTING_MODULE } from "./accounting.contracts"
@@ -15,13 +16,21 @@ import { ModuleInstallService } from "./module-install.service"
 import type { InstallRequest } from "./module-installs.contracts"
 import { ModuleReadinessService } from "./module-readiness.service"
 import { ModulesService } from "./modules.service"
+import { RecordInstallationService } from "./record-installation.service"
 import {
     INSTALLING_MEMBER as MEMBER,
     installAgentOf as agentOf,
     installationRecordOf as recordOf,
 } from "@tests/fixtures/builders/module-install.builder"
 
-const VIEWED = { connectionNeeds: [], lifecycle: "ready" } as const
+const VIEWED = {
+    agentName: "Chatbot",
+    agentHandle: "chatbot",
+    agentAvatarUrl: null,
+    activeVersion: 1,
+    connectionNeeds: [],
+    lifecycle: "ready",
+} as const
 
 const requestOf = builder<InstallRequest>({
     workspaceId: "ws-1",
@@ -43,6 +52,8 @@ const build = async () => {
     const rules = mock<AuthorityRulesService>()
     const events = mock<EventsService>()
     const sync = mock<InstallationChangesService>()
+    const facts = mock<InstallationFactsService>()
+    const recordOwners = mock<RecordInstallationService>()
     const readiness = mock<ModuleReadinessService>()
     readiness.needsOf.mockResolvedValue([])
     readiness.withNeeds.mockImplementation((record) => Promise.resolve({ ...record, ...VIEWED }))
@@ -58,11 +69,27 @@ const build = async () => {
             { provide: AuthorityRulesService, useValue: rules },
             { provide: EventsService, useValue: events },
             { provide: InstallationChangesService, useValue: sync },
+            { provide: InstallationFactsService, useValue: facts },
+            { provide: RecordInstallationService, useValue: recordOwners },
             { provide: ModuleReadinessService, useValue: readiness },
         ],
     }).compile()
     const service = moduleRef.get(ModuleInstallService)
-    return { tx, service, installations, members, catalog, agents, identity, rules, events, sync, readiness }
+    return {
+        tx,
+        service,
+        installations,
+        members,
+        catalog,
+        agents,
+        identity,
+        rules,
+        events,
+        sync,
+        readiness,
+        facts,
+        recordOwners,
+    }
 }
 
 describe("ModuleInstallService > install", () => {
@@ -318,7 +345,7 @@ describe("ModuleInstallService > saveSetting", () => {
 
 describe("ModuleInstallService > syncStatus", () => {
     it("answers the status of the copy", async () => {
-        const { service, installations } = await build()
+        const { service, facts } = await build()
         const status: AgentSyncStatus = {
             state: "ok",
             syncedVersion: 1,
@@ -326,14 +353,14 @@ describe("ModuleInstallService > syncStatus", () => {
             checkedAt: null,
             error: null,
         }
-        installations.syncStatus.mockResolvedValue(status)
+        facts.syncStatus.mockResolvedValue(status)
 
         await expect(service.syncStatus("u1", "ws-1", "inst-1")).resolves.toEqual(status)
     })
 
     it("refuses an installation of another workspace", async () => {
-        const { service, installations } = await build()
-        installations.syncStatus.mockResolvedValue(null)
+        const { service, facts } = await build()
+        facts.syncStatus.mockResolvedValue(null)
 
         await expect(service.syncStatus("u1", "ws-1", "inst-1")).rejects.toMatchObject({
             code: ModulesErrorCode.InstallationNotFound,
@@ -477,23 +504,23 @@ describe("ModuleInstallService lifecycle and reads", () => {
     })
 
     it("answers record ownership after checking workspace membership", async () => {
-        const { service, installations, members } = await build()
-        installations.installationOfRecord.mockResolvedValue({ installationId: "inst-1" })
+        const { service, recordOwners, members } = await build()
+        recordOwners.installationOfRecord.mockResolvedValue({ installationId: "inst-1" })
 
         await expect(service.installationOfRecord("u1", "ws-1", "record-1")).resolves.toEqual({
             installationId: "inst-1",
         })
         expect(members.require).toHaveBeenCalledWith("u1", "ws-1")
-        expect(installations.installationOfRecord).toHaveBeenCalledWith("ws-1", "record-1")
+        expect(recordOwners.installationOfRecord).toHaveBeenCalledWith("ws-1", "record-1")
     })
 
     it("answers requirement facts after checking workspace membership", async () => {
-        const { service, installations, members } = await build()
-        const facts = { providers: ["meta"], chatAgents: 2, staff: 3, members: 4 }
-        installations.requirementFacts.mockResolvedValue(facts)
+        const { service, facts, members } = await build()
+        const answer = { providers: ["meta"], chatAgents: 2, staff: 3, members: 4 }
+        facts.requirementFacts.mockResolvedValue(answer)
 
-        await expect(service.requirementFacts("u1", "ws-1")).resolves.toEqual(facts)
+        await expect(service.requirementFacts("u1", "ws-1")).resolves.toEqual(answer)
         expect(members.require).toHaveBeenCalledWith("u1", "ws-1")
-        expect(installations.requirementFacts).toHaveBeenCalledWith("ws-1")
+        expect(facts.requirementFacts).toHaveBeenCalledWith("ws-1")
     })
 })

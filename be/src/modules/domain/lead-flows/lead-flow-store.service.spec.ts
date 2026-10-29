@@ -6,7 +6,13 @@ import { saveParams, toLeadFlow } from "./lead-flow.mapper"
 import { LeadFlowStoreService } from "./lead-flow-store.service"
 import type { Identity, LeadSource, NewLeadFlow } from "./lead-flows.contracts"
 import type { LeadFlowRow } from "./persistence/lead-flows.rows"
-import { FIND_FLOW_BY_LEAD, FIND_FLOW_CANDIDATES, INSERT_FLOW, SAVE_FLOW } from "./persistence/lead-flows.sql"
+import {
+    FIND_FLOW_BY_LEAD,
+    FIND_FLOW_CANDIDATES,
+    FIND_FLOW_INSTALLATION,
+    INSERT_FLOW,
+    SAVE_FLOW,
+} from "./persistence/lead-flows.sql"
 
 const rowOf = builder<LeadFlowRow>({
     id: "flow-1",
@@ -150,5 +156,22 @@ describe("LeadFlowStoreService", () => {
         })
 
         expect(entityManager.query).toHaveBeenNthCalledWith(1, SAVE_FLOW, saveParams({ ...flow, state: "greeted" }))
+    })
+})
+
+describe("LeadFlowStoreService installationIdOf", () => {
+    it("answers the installation a flow of the workspace names, or null", async () => {
+        const { store, entityManager } = await build([
+            [FIND_FLOW_INSTALLATION, [{ installation_id: "inst-1" }]],
+            [FIND_FLOW_INSTALLATION, []],
+        ])
+
+        await expect(store.installationIdOf("ws-1", "flow-1")).resolves.toBe("inst-1")
+        await expect(store.installationIdOf("ws-1", "flow-2")).resolves.toBeNull()
+
+        expect(entityManager.query.mock.calls).toEqual([
+            [FIND_FLOW_INSTALLATION, ["ws-1", "flow-1"]],
+            [FIND_FLOW_INSTALLATION, ["ws-1", "flow-2"]],
+        ])
     })
 })

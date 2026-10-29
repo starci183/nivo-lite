@@ -1,3 +1,8 @@
+// Read services lead the barrel: other capabilities import this barrel while it loads (import cycles), they must already be defined.
+export { AgentMessagesReadService } from "./agent-messages-read.service"
+export { AgentTestChatsService } from "./agent-test-chats.service"
+export type { AgentChatLine, AgentChatMark, AgentChats } from "./agent-test-chats.contracts"
+export type { ChatActivity, ChatMark, ChatNewest, ChatReader } from "./agent-messages-read.contracts"
 export { AgentMessagesModule } from "./agent-messages.module"
 export { AgentMessagesService } from "./agent-messages.service"
 export { AGENT_MESSAGES_ERROR_KINDS, AgentMessagesErrorCode } from "./errors/agent-messages.error"

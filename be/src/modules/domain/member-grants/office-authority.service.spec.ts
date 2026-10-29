@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import { MemberGrantsService } from "@modules/domain/member-grants"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { ResolvedOfficeAuthority } from "@modules/domain/workspace-seed"
-import { MemberGrantsService } from "./member-grants.service"
 import { OfficeAuthorityService } from "./office-authority.service"
 
 const AUTHORITY: ResolvedOfficeAuthority = {

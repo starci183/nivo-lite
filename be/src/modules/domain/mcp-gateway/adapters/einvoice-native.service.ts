@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager, ObjectLiteral, SelectQueryBuilder } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { DataRecordsReadService } from "@modules/domain/data-records"
+import type { MailAttachments } from "@modules/domain/data-records"
 import { McpGatewayError, McpGatewayErrorCode } from "../errors/mcp-gateway.error"
 import type { GatewayJson, NativeAdapter, NativeConnectorManifest } from "../mcp-gateway.contracts"
 import {
@@ -42,14 +42,6 @@ export const EINVOICE_MANIFEST: NativeConnectorManifest = {
 /** The most mails one `einvoice.list` reads. */
 const MAIL_LIMIT = 200
 
-/** One mail record of the IMAP sync with its attachments. */
-interface InvoiceMailRow {
-    /** The data record. */
-    readonly id: string
-    /** The attachments (a JSON array; a small `.xml` attachment keeps its text under `xml`). */
-    readonly attachments: unknown
-}
-
 /** One parsed invoice of a mail, with its id `<record>:<attachment index>`. */
 interface MailInvoice {
     /** The id. */
@@ -62,7 +54,7 @@ const isObject = (value: unknown): value is GatewayJson =>
     typeof value === "object" && value !== null && !Array.isArray(value)
 
 /** The parsed invoices of one mail row. */
-const invoicesOf = (row: InvoiceMailRow): ReadonlyArray<MailInvoice> => {
+const invoicesOf = (row: MailAttachments): ReadonlyArray<MailInvoice> => {
     const attachments: ReadonlyArray<unknown> = Array.isArray(row.attachments) ? row.attachments : []
     return attachments.flatMap((attachment, index) => {
         const xml = isObject(attachment) && typeof attachment.xml === "string" ? attachment.xml : ""
@@ -122,7 +114,7 @@ const detailOf = (entry: MailInvoice): GatewayJson => {
 export class EinvoiceNativeService implements NativeAdapter {
     readonly manifest = EINVOICE_MANIFEST
 
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(private readonly mails: DataRecordsReadService) {}
 
     /** Runs one e-invoice tool. */
     async invoke(workspaceId: string, tool: string, args: GatewayJson): Promise<GatewayJson> {
@@ -137,14 +129,7 @@ export class EinvoiceNativeService implements NativeAdapter {
             throw new McpGatewayError({ code: McpGatewayErrorCode.InvalidArguments, params: { tool: "list" } })
         }
         const { since, limit } = parsed.data
-        const query = this.mailQuery(workspaceId)
-            .andWhere("jsonb_path_exists(r.data, CAST(:attachmentsPath AS jsonpath))", {
-                attachmentsPath: "$.attachments[*].xml",
-            })
-            .orderBy("r.occurred_at", "DESC", "NULLS LAST")
-            .limit(MAIL_LIMIT)
-        if (since !== undefined) query.andWhere("r.occurred_at >= CAST(:since AS date)", { since })
-        const rows = await query.getRawMany<InvoiceMailRow>()
+        const rows = await this.mails.mailsWithXml(workspaceId, since, MAIL_LIMIT)
         return { invoices: rows.flatMap(invoicesOf).slice(0, limit).map(summaryOf) }
     }
 
@@ -155,21 +140,8 @@ export class EinvoiceNativeService implements NativeAdapter {
         }
         const { id } = parsed.data
         const recordId = id.split(":", 1).join("")
-        const rows = await this.mailQuery(workspaceId)
-            .andWhere("CAST(r.id AS text) = :recordId", { recordId })
-            .limit(1)
-            .getRawMany<InvoiceMailRow>()
-        const found = rows.flatMap(invoicesOf).find((entry) => entry.id === id)
+        const mail = await this.mails.mailAttachments(workspaceId, recordId)
+        const found = (mail === undefined ? [] : invoicesOf(mail)).find((entry) => entry.id === id)
         return found === undefined ? { found: false } : detailOf(found)
-    }
-
-    /** The mail records of the workspace, read by table name: the data hub owns the table. */
-    private mailQuery(workspaceId: string): SelectQueryBuilder<ObjectLiteral> {
-        return this.entityManager
-            .createQueryBuilder()
-            .select("r.id", "id")
-            .addSelect("r.data -> 'attachments'", "attachments")
-            .from("public.data_records", "r")
-            .where("r.workspace_id = :workspaceId AND r.entity = 'message'", { workspaceId })
     }
 }

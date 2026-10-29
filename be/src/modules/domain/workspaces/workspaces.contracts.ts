@@ -16,6 +16,14 @@ export interface WorkspaceSummary {
     readonly businessType: string | null
 }
 
+/** The id and name of a workspace. */
+export interface WorkspaceName {
+    /** The workspace id. */
+    readonly id: string
+    /** The workspace name. */
+    readonly name: string
+}
+
 /** A workspace together with the caller's membership in it. */
 export interface WorkspaceMembership {
     /** The workspace. */
@@ -38,6 +46,12 @@ export interface FirstWorkspace {
 
 /** The billing statuses support can set by hand. */
 export type SupportStatus = "active" | "past_due"
+
+/** An active plan, as the capability that owns plans proved it. */
+export interface ActivePlan {
+    /** The plan code. */
+    readonly code: string
+}
 
 /** A support change to a billing fact: what it was and what it is now. */
 export interface BillingChange {

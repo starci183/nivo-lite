@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
+import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
 import { InjectN8nClient, N8nError, N8nErrorCode } from "@modules/integrations/n8n"
 import type { N8nClient } from "@modules/integrations/n8n"
 import { InjectClock } from "@modules/platform/clock"
@@ -39,14 +40,6 @@ import {
 /** The settings key of the public address n8n calls back. */
 const API_BASE_KEY = "api_base"
 
-/** The settings and the approved wording of the pipeline a run belongs to, as the pipeline query selects them. */
-interface RunPipeline {
-    /** The settings. */
-    readonly config: Record<string, unknown>
-    /** The approved message template. */
-    readonly body: string | null
-}
-
 @Injectable()
 /** The runs of the shared n8n workflows: starting one, delivering it to n8n, proving the token n8n calls back with and closing it. */
 export class N8nRunsService {
@@ -58,6 +51,7 @@ export class N8nRunsService {
         @InjectLogger() private readonly logger: Logger,
         @InjectN8nClient() private readonly n8n: N8nClient,
         private readonly queue: N8nQueue,
+        private readonly pipelines: AutomationPipelinesService,
     ) {}
 
     /**
@@ -156,17 +150,7 @@ export class N8nRunsService {
         ) {
             return null
         }
-        const pipeline = await this.entityManager
-            .createQueryBuilder()
-            .select("p.config", "config")
-            .addSelect("p.body", "body")
-            .from("public.automation_pipelines", "p")
-            .where("p.workspace_id = :workspaceId AND p.template_key = :templateKey", {
-                workspaceId: run.workspaceId,
-                templateKey: run.templateKey,
-            })
-            .limit(1)
-            .getRawOne<RunPipeline>()
+        const pipeline = await this.pipelines.findPipeline(run.workspaceId, run.templateKey)
         return {
             runId: run.id,
             workspaceId: run.workspaceId,

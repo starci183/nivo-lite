@@ -2,6 +2,8 @@ import { Test } from "@nestjs/testing"
 import { builder, FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import { Between, In } from "typeorm"
 import { StaffDirectoryService } from "@modules/domain/staff"
+import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
+import type { PipelineRow } from "@modules/domain/automation-pipelines"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
@@ -130,6 +132,27 @@ const itemOf = (overrides: Record<string, unknown> = {}) => ({
     ...overrides,
 })
 
+/** The reminder pipeline the owner of automations answers; the specs set its switch. */
+const PIPELINE: PipelineRow = {
+    id: "pipeline-1",
+    workspace_id: "ws-1",
+    template_key: "shifts_shift_reminder",
+    name: "Reminder",
+    module_key: "shifts",
+    enabled: true,
+    dismissed: false,
+    config: {},
+    body: null,
+    body_version: 0,
+    template_version: 1,
+    based_on_context: null,
+    approval_streak: 0,
+    trust_offered_at: null,
+    auto_send: false,
+    created_at: "2026-10-01T00:00:00.000Z",
+    updated_at: "2026-10-01T00:00:00.000Z",
+}
+
 /** What the reads answer: the rows of each entity, whether the member has a profile, the reminder switch and the figures. */
 interface Answers {
     /** The work items the decision lookup answers. */
@@ -150,8 +173,6 @@ interface Answers {
     readonly minutes?: string
 }
 
-const fromOf = (fake: FakeQueryBuilder): unknown => fake.callsOf("from")[0]?.[0]
-
 const build = async (answers: Answers = {}, member: WorkspaceMember = memberOf()) => {
     const em = mockEntityManager()
     em.find.mockImplementation(((entity: unknown) => Promise.resolve(answers.find?.get(entity) ?? [])) as never)
@@ -161,19 +182,14 @@ const build = async (answers: Answers = {}, member: WorkspaceMember = memberOf()
         Promise.resolve(entity === ShiftsShiftEntity ? (answers.gaps ?? 0) : (answers.pending ?? 0))) as never)
     em.createQueryBuilder.mockImplementation(() => {
         const fake: FakeQueryBuilder = routedQueryBuilder({
-            getRawOne: (read) =>
-                Promise.resolve(
-                    fromOf(read) === "public.automation_pipelines"
-                        ? answers.reminder === undefined || answers.reminder === null
-                            ? undefined
-                            : { enabled: answers.reminder }
-                        : answers.minutes === undefined
-                          ? undefined
-                          : { minutes: answers.minutes },
-                ),
+            getRawOne: () => Promise.resolve(answers.minutes === undefined ? undefined : { minutes: answers.minutes }),
         })
         return fake.builder as never
     })
+    const pipelines = mock<AutomationPipelinesService>()
+    pipelines.findPipeline.mockResolvedValue(
+        answers.reminder === undefined || answers.reminder === null ? null : { ...PIPELINE, enabled: answers.reminder },
+    )
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(member)
     const workItems = mock<WorkItemsService>()
@@ -193,9 +209,10 @@ const build = async (answers: Answers = {}, member: WorkspaceMember = memberOf()
             { provide: ShiftsDataService, useValue: data },
             { provide: WorkItemsService, useValue: workItems },
             { provide: StaffDirectoryService, useValue: staff },
+            { provide: AutomationPipelinesService, useValue: pipelines },
         ],
     }).compile()
-    return { workbench: moduleRef.get(ShiftsWorkbenchService), em, members, data, workItems, staff }
+    return { workbench: moduleRef.get(ShiftsWorkbenchService), em, members, data, workItems, staff, pipelines }
 }
 
 const managerBenchRows: Answers = {

@@ -4,6 +4,10 @@ import { sql } from "@modules/platform/database"
 export const FIND_FLOW_BY_LEAD = sql`
     SELECT * FROM public.lead_flows WHERE workspace_id = $1 AND lead_id = $2 LIMIT 1`
 
+/** The installation a flow of the workspace belongs to; no row when the flow is missing or names none. */
+export const FIND_FLOW_INSTALLATION = sql`
+    SELECT installation_id FROM public.lead_flows WHERE workspace_id = $1 AND id = $2 AND installation_id IS NOT NULL LIMIT 1`
+
 /** The flows any identity key matches (Messenger id, Instagram id, phone, email), oldest first. */
 export const FIND_FLOW_CANDIDATES = sql`
     SELECT * FROM public.lead_flows

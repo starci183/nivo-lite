@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { MoreThan } from "typeorm"
+import { In, MoreThan } from "typeorm"
 import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import {
     AT_DEADLINE_ROW,
@@ -127,6 +127,27 @@ describe("PaymentOrdersService", () => {
 })
 
 describe("PaymentOrdersService", () => {
+    describe("idsOfWorkspace", () => {
+        it("asks for nothing when no id is given", async () => {
+            const em = mockEntityManager()
+
+            await expect((await build(em)).idsOfWorkspace("ws-1", [])).resolves.toEqual([])
+            expect(em.find).not.toHaveBeenCalled()
+        })
+
+        it("answers the given ids that are orders of the workspace", async () => {
+            const em = mockEntityManager({ find: [PaymentOrderEntity, [paymentOrderRowOf()]] })
+
+            await expect((await build(em)).idsOfWorkspace("ws-1", ["order-1", "order-1", "foreign"])).resolves.toEqual([
+                "order-1",
+            ])
+            expect(em.find).toHaveBeenCalledWith(PaymentOrderEntity, {
+                select: { id: true },
+                where: { workspaceId: "ws-1", id: In(["order-1", "foreign"]) },
+            })
+        })
+    })
+
     describe("create", () => {
         it("writes the pending order with a fresh code and answers it", async () => {
             const em = mockEntityManager()

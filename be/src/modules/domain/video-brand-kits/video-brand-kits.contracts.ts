@@ -31,3 +31,22 @@ export interface KitIdentity {
     /** The shop name; empty when unknown. */
     readonly shopName: string
 }
+
+/** The whole kit of a workspace as the video capability builds a render and the workbench from it. */
+export interface VideoBrandKit {
+    /** The shop name shown in the video; empty when none was saved. */
+    readonly shopName: string
+    /** The accent colour. */
+    readonly primaryColor: string
+    /** The second colour. */
+    readonly secondaryColor: string
+    /** The logo path in the media bucket, or null. */
+    readonly logoPath: string | null
+    /** The music track id, or null. */
+    readonly musicTrack: string | null
+    /** The voice name. */
+    readonly voice: string
+}
+
+/** The kit of a workspace, or null when the workspace saved none. */
+export type OptionalVideoBrandKit = VideoBrandKit | null

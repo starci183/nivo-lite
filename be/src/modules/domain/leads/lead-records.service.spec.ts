@@ -3,6 +3,7 @@ import { Not } from "typeorm"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { entityOf } from "@tests/fixtures/builders/entity.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { FakeQueryBuilder, QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { LeadsErrorCode } from "./errors/leads.error"
@@ -388,5 +389,48 @@ describe("LeadRecordsService for the contract link", () => {
 
         expect(caller.createQueryBuilder).toHaveBeenCalledTimes(3)
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
+    })
+})
+
+describe("LeadRecordsService installationIdOf", () => {
+    it("answers the installation a row of the workspace names", async () => {
+        const em = mockEntityManager({
+            findOne: [LeadEntity, Object.assign(new LeadEntity(), { installationId: "inst-1" })],
+        })
+
+        await expect((await build([], em)).records.installationIdOf("ws-1", "rec-1")).resolves.toBe("inst-1")
+        expect(em.findOne).toHaveBeenCalledWith(LeadEntity, {
+            select: { installationId: true },
+            where: { workspaceId: "ws-1", id: "rec-1" },
+        })
+    })
+
+    it("answers null for a missing row and for a row that names no installation", async () => {
+        const em = mockEntityManager({ findOne: [LeadEntity, null] })
+        await expect((await build([], em)).records.installationIdOf("ws-1", "rec-1")).resolves.toBeNull()
+
+        const bare = mockEntityManager({
+            findOne: [LeadEntity, Object.assign(new LeadEntity(), { installationId: null })],
+        })
+        await expect((await build([], bare)).records.installationIdOf("ws-1", "rec-1")).resolves.toBeNull()
+    })
+
+    it("holds a lead of the workspace in the caller's transaction and says whether it exists", async () => {
+        const em = mockEntityManager({ findOne: [LeadEntity, entityOf(LeadEntity, { id: "lead-1" })()] })
+        const { records } = await build([], em)
+
+        await expect(records.hold("ws-1", "lead-1", em)).resolves.toBe(true)
+        expect(em.findOne).toHaveBeenCalledWith(LeadEntity, {
+            select: { id: true },
+            where: { workspaceId: "ws-1", id: "lead-1" },
+            lock: { mode: "pessimistic_read" },
+        })
+    })
+
+    it("answers false when the workspace has no such lead to hold", async () => {
+        const em = mockEntityManager({ findOne: [LeadEntity, null] })
+        const { records } = await build([], em)
+
+        await expect(records.hold("ws-1", "lead-9", em)).resolves.toBe(false)
     })
 })

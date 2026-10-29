@@ -4,6 +4,8 @@ import type { MockEntityManager, RecordingQueueOutbox } from "@starci/jest-prese
 import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { ledgerExpected, ledgerWritten } from "@tests/fixtures/builders/public-api-ledger.builder"
 import { ApiKeysService } from "@modules/domain/api-keys"
+import { LeadReadService, LeadRecordsService } from "@modules/domain/leads"
+import type { LeadRecord } from "@modules/domain/leads"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { PUBLIC_API_QUEUE, PublicApiQueue } from "@modules/queues/public-api"
 import { PublicApiErrorCode } from "./errors/public-api.error"
@@ -28,53 +30,71 @@ const LEAD: AcceptLeadParams = {
     stage: "qualified",
 }
 
-const LEAD_ROW = {
+const API_LEAD = {
     id: "lead-1",
-    contact_name: "A",
+    contactName: "A",
     company: "ACME",
     channel: "Zalo",
     need: "price",
     stage: "new",
     phone: "84912000701",
     email: null,
-    created_at: "2026-10-12T09:00:00.000Z",
+    createdAt: new Date("2026-10-12T09:00:00.000Z"),
 }
+
+/** A matched customer as the lead records answer it. */
+const recordOf = (id: string): LeadRecord => ({
+    id,
+    workspace_id: "workspace-1",
+    contact_name: "A",
+    company: "ACME",
+    channel: "Zalo",
+    need: "price",
+    stage: "new",
+    context_summary: null,
+    phone: null,
+    email: null,
+})
 
 const RECORDED = { id: "request-1", lead_id: null, inserted: true }
 
-const build = async (entityManager: MockEntityManager) => {
+const build = async (entityManager: MockEntityManager, matched: LeadRecord | null = null) => {
     const outbox: RecordingQueueOutbox = recordingQueueOutbox()
     const queue = mock<PublicApiQueue>({
         enqueueRequest: (payload, tx) => outbox.write(tx, PUBLIC_API_QUEUE, payload),
     })
     const keys = mock<ApiKeysService>()
     keys.authenticate.mockResolvedValue(WHO)
+    const leads = mock<LeadReadService>()
+    const leadRecords = mock<LeadRecordsService>()
+    leadRecords.match.mockResolvedValue(matched)
     const moduleRef = await Test.createTestingModule({
         providers: [
             PublicLeadsService,
             { provide: PublicApiQueue, useValue: queue },
             { provide: ApiKeysService, useValue: keys },
             PublicApiLedgerService,
+            { provide: LeadReadService, useValue: leads },
+            { provide: LeadRecordsService, useValue: leadRecords },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
         ],
     }).compile()
-    return { service: moduleRef.get(PublicLeadsService), outbox, keys }
+    return { service: moduleRef.get(PublicLeadsService), outbox, keys, leads, leadRecords }
 }
 
-const MATCH_LEAD_BY_PHONE = "l.phone = :phone"
-const MATCH_LEAD_BY_EMAIL = "l.email = :email"
-const MATCH_LEAD_BY_NAME = "l.contact_name = :name AND l.channel = :channel"
+const MATCH_LEAD_BY_PHONE = "phone"
+const MATCH_LEAD_BY_EMAIL = "email"
+const MATCH_LEAD_BY_NAME = "name"
 const INSERT_REQUEST = "insert"
 
-/** A transaction whose query builders answer in call order: the customer matches, then the ledger insert. */
+/** A transaction whose one query builder is the ledger insert, with the customer the lead records will match (if any). */
 const transactionOf = (...stubs: ReadonlyArray<readonly [string, ReadonlyArray<object>]>) => {
-    const matches = stubs
-        .filter(([tag]) => tag !== INSERT_REQUEST)
-        .map(([, rows]) => fakeQueryBuilder({ getRawOne: rows[0] }))
+    const [, found] = stubs.find(([tag]) => tag !== INSERT_REQUEST) ?? ["", []]
+    const matched = found[0] === undefined ? null : recordOf((found[0] as { id: string }).id)
     const write = fakeQueryBuilder({ execute: { raw: stubs.find(([tag]) => tag === INSERT_REQUEST)?.[1] ?? [] } })
     const em = mockEntityManager()
-    answerQueryBuilders(em, ...matches, write)
-    return Object.assign(fakeTransaction(em), { matches, write })
+    answerQueryBuilders(em, write)
+    return Object.assign(fakeTransaction(em), { matched, write })
 }
 
 /** The ledger record a lead request makes. */
@@ -90,10 +110,8 @@ const leadRecord = (suffix: string, body: object, needSupplied: boolean) => ({
 
 describe("PublicLeadsService / listLeads", () => {
     it("admits the key for leads:read and lists the workspace customers with the stage filter and the limit", async () => {
-        const em = mockEntityManager()
-        const read = fakeQueryBuilder({ getRawMany: [LEAD_ROW] })
-        answerQueryBuilders(em, read)
-        const { service, keys } = await build(em)
+        const { service, keys, leads } = await build(mockEntityManager())
+        leads.listForApi.mockResolvedValue([API_LEAD])
 
         await expect(service.listLeads({ authorization: AUTH, stage: "new", limit: "20" })).resolves.toEqual([
             {
@@ -110,56 +128,43 @@ describe("PublicLeadsService / listLeads", () => {
         ])
 
         expect(keys.authenticate).toHaveBeenCalledWith("leads:read", AUTH)
-        expect(read.argsOf("from")).toEqual([["public.leads", "l"]])
-        expect(read.argsOf("where")).toEqual([
-            [
-                "l.workspace_id = :workspaceId AND (:stage::text IS NULL OR l.stage = :stage)",
-                { workspaceId: "workspace-1", stage: "new" },
-            ],
-        ])
-        expect(read.argsOf("orderBy")).toEqual([["l.created_at", "DESC"]])
-        expect(read.argsOf("limit")).toEqual([[20]])
+        expect(leads.listForApi).toHaveBeenCalledWith("workspace-1", "new", 20)
     })
     it("asks for every stage, fifty customers when none is named and at most two hundred", async () => {
-        const em = mockEntityManager()
-        const read = fakeQueryBuilder({ getRawMany: [{ ...LEAD_ROW, phone: undefined, email: undefined }] })
-        answerQueryBuilders(em, read)
-        const { service } = await build(em)
+        const { service, leads } = await build(mockEntityManager())
+        leads.listForApi.mockResolvedValue([{ ...API_LEAD, phone: null, email: null }])
 
         await expect(service.listLeads({ authorization: AUTH })).resolves.toMatchObject([{ phone: null, email: null }])
         await service.listLeads({ authorization: AUTH, limit: "9999" })
 
-        expect(read.argsOf("limit")).toEqual([[50], [200]])
-        expect(read.argsOf("where")[0]?.[1]).toEqual({ workspaceId: "workspace-1", stage: null })
+        expect(leads.listForApi.mock.calls).toEqual([
+            ["workspace-1", null, 50],
+            ["workspace-1", null, 200],
+        ])
     })
     it("stops at a refused key before any query", async () => {
-        const em = mockEntityManager()
-        const { service, keys } = await build(em)
+        const { service, keys, leads } = await build(mockEntityManager())
         const refused = new Error("API_KEYS_UNAUTHORIZED")
         keys.authenticate.mockRejectedValue(refused)
 
         await expect(service.listLeads({ authorization: undefined })).rejects.toBe(refused)
 
-        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+        expect(leads.listForApi).not.toHaveBeenCalled()
     })
 })
 
 describe("PublicLeadsService / acceptLead", () => {
     it("admits leads:write, records and queues the request in one transaction, and returns the known customer", async () => {
         const tx = transactionOf([MATCH_LEAD_BY_PHONE, [{ id: "lead-7" }]], [INSERT_REQUEST, [RECORDED]])
-        const { service, outbox, keys } = await build(tx.em)
+        const { service, outbox, keys, leadRecords } = await build(tx.em, tx.matched)
 
         await expect(service.acceptLead(LEAD)).resolves.toEqual({ leadId: "lead-7", status: "accepted" })
 
         expect(keys.authenticate).toHaveBeenCalledWith("leads:write", AUTH)
-        expect(tx.matches[0]?.argsOf("where")).toEqual([
-            [
-                `l.workspace_id = :workspaceId AND ${MATCH_LEAD_BY_PHONE}`,
-                { workspaceId: "workspace-1", phone: "84912000701" },
-            ],
-        ])
-        expect(tx.matches[0]?.argsOf("orderBy")).toEqual([["l.created_at"]])
-        expect(tx.matches[0]?.argsOf("limit")).toEqual([[1]])
+        expect(leadRecords.match).toHaveBeenCalledWith(
+            { workspaceId: "workspace-1", phone: "84912000701", email: null, name: "Nguyen A", channel: "Zalo" },
+            expect.anything(),
+        )
         expect(ledgerWritten(tx.write)).toEqual(
             ledgerExpected(
                 leadRecord(
@@ -188,19 +193,17 @@ describe("PublicLeadsService / acceptLead", () => {
     })
     it("matches by email and takes the defaults of a bare request", async () => {
         const tx = transactionOf([MATCH_LEAD_BY_EMAIL, []], [INSERT_REQUEST, [RECORDED]])
-        const { service } = await build(tx.em)
+        const { service, leadRecords } = await build(tx.em, tx.matched)
 
         await expect(service.acceptLead({ authorization: AUTH, name: "Nguyen A", email: "A@B.co" })).resolves.toEqual({
             leadId: null,
             status: "accepted",
         })
 
-        expect(tx.matches[0]?.argsOf("where")).toEqual([
-            [
-                `l.workspace_id = :workspaceId AND ${MATCH_LEAD_BY_EMAIL}`,
-                { workspaceId: "workspace-1", email: "a@b.co" },
-            ],
-        ])
+        expect(leadRecords.match).toHaveBeenCalledWith(
+            { workspaceId: "workspace-1", phone: null, email: "a@b.co", name: "Nguyen A", channel: "API" },
+            expect.anything(),
+        )
         expect(ledgerWritten(tx.write)).toEqual(
             ledgerExpected(
                 leadRecord(
@@ -231,7 +234,7 @@ describe("PublicLeadsService / acceptLead", () => {
         ["explicit default text", "Created through the API", true],
     ] as const)("records need presence for %s input", async (_name, need, needSupplied) => {
         const tx = transactionOf([MATCH_LEAD_BY_PHONE, [{ id: "lead-7" }]], [INSERT_REQUEST, [RECORDED]])
-        const { service } = await build(tx.em)
+        const { service } = await build(tx.em, tx.matched)
 
         await service.acceptLead({ ...LEAD, need })
 
@@ -261,7 +264,7 @@ describe("PublicLeadsService / acceptLead", () => {
 describe("PublicLeadsService / customer matching", () => {
     it("answers the customer an email matches", async () => {
         const tx = transactionOf([MATCH_LEAD_BY_EMAIL, [{ id: "lead-4" }]], [INSERT_REQUEST, [RECORDED]])
-        const { service } = await build(tx.em)
+        const { service } = await build(tx.em, tx.matched)
 
         await expect(service.acceptLead({ ...LEAD, phone: "", email: "a@b.co" })).resolves.toEqual({
             leadId: "lead-4",
@@ -270,28 +273,26 @@ describe("PublicLeadsService / customer matching", () => {
     })
     it("falls back to the name and channel only when the request has no contact", async () => {
         const tx = transactionOf([MATCH_LEAD_BY_NAME, [{ id: "lead-3" }]], [INSERT_REQUEST, [RECORDED]])
-        const { service } = await build(tx.em)
+        const { service, leadRecords } = await build(tx.em, tx.matched)
 
         await expect(service.acceptLead({ ...LEAD, phone: "", email: "" })).resolves.toMatchObject({
             leadId: "lead-3",
         })
-        expect(tx.matches[0]?.argsOf("where")).toEqual([
-            [
-                `l.workspace_id = :workspaceId AND ${MATCH_LEAD_BY_NAME}`,
-                { workspaceId: "workspace-1", name: "Nguyen A", channel: "Zalo" },
-            ],
-        ])
+        expect(leadRecords.match).toHaveBeenCalledWith(
+            { workspaceId: "workspace-1", phone: null, email: null, name: "Nguyen A", channel: "Zalo" },
+            expect.anything(),
+        )
     })
     it("treats a name that matches nobody as a new customer and a phone that matches nobody likewise", async () => {
         const named = transactionOf([MATCH_LEAD_BY_NAME, []], [INSERT_REQUEST, [RECORDED]])
-        const first = await build(named.em)
+        const first = await build(named.em, named.matched)
         await expect(first.service.acceptLead({ ...LEAD, phone: "", email: "" })).resolves.toEqual({
             leadId: null,
             status: "accepted",
         })
 
         const phoned = transactionOf([MATCH_LEAD_BY_PHONE, []], [INSERT_REQUEST, [RECORDED]])
-        const second = await build(phoned.em)
+        const second = await build(phoned.em, phoned.matched)
         await expect(second.service.acceptLead(LEAD)).resolves.toEqual({ leadId: null, status: "accepted" })
     })
     it("answers the customer of a repeated request and enqueues nothing", async () => {
@@ -299,7 +300,7 @@ describe("PublicLeadsService / customer matching", () => {
             [MATCH_LEAD_BY_PHONE, []],
             [INSERT_REQUEST, [{ id: "request-1", lead_id: "lead-2", inserted: false }]],
         )
-        const { service, outbox } = await build(tx.em)
+        const { service, outbox } = await build(tx.em, tx.matched)
 
         await expect(service.acceptLead(LEAD)).resolves.toEqual({ leadId: "lead-2", status: "unchanged" })
 
@@ -310,14 +311,14 @@ describe("PublicLeadsService / customer matching", () => {
             [MATCH_LEAD_BY_PHONE, [{ id: "lead-7" }]],
             [INSERT_REQUEST, [{ id: "request-1", lead_id: null, inserted: false }]],
         )
-        const first = await build(known.em)
+        const first = await build(known.em, known.matched)
         await expect(first.service.acceptLead(LEAD)).resolves.toEqual({ leadId: "lead-7", status: "unchanged" })
 
         const unknown = transactionOf(
             [MATCH_LEAD_BY_PHONE, []],
             [INSERT_REQUEST, [{ id: "request-1", lead_id: null, inserted: false }]],
         )
-        const second = await build(unknown.em)
+        const second = await build(unknown.em, unknown.matched)
         await expect(second.service.acceptLead(LEAD)).resolves.toEqual({ leadId: null, status: "unchanged" })
     })
 })
@@ -325,7 +326,7 @@ describe("PublicLeadsService / customer matching", () => {
 describe("PublicLeadsService / acceptLead", () => {
     it("refuses when the ledger answers no row", async () => {
         const tx = transactionOf([MATCH_LEAD_BY_PHONE, []], [INSERT_REQUEST, []])
-        const { service, outbox } = await build(tx.em)
+        const { service, outbox } = await build(tx.em, tx.matched)
 
         await expect(service.acceptLead(LEAD)).rejects.toMatchObject({ code: PublicApiErrorCode.NotWritten })
 
@@ -336,7 +337,7 @@ describe("PublicLeadsService / acceptLead", () => {
 describe("PublicLeadsService / acceptLead", () => {
     it("rolls the request back when its job cannot be enqueued", async () => {
         const tx = transactionOf([MATCH_LEAD_BY_PHONE, []], [INSERT_REQUEST, [RECORDED]])
-        const { service, outbox } = await build(tx.em)
+        const { service, outbox } = await build(tx.em, tx.matched)
         const failure = new Error("queue missing")
         outbox.failNext("write", failure)
 

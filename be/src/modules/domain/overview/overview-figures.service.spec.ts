@@ -1,74 +1,147 @@
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
-import { queueSubQueryBuilders } from "@tests/fixtures/builders/sub-query-builder.builder"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { mock } from "@starci/jest-preset"
+import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
+import { AgentDirectoryService } from "@modules/domain/agents"
+import { AuthorityService } from "@modules/domain/authority"
+import { DecisionsFiguresService } from "@modules/domain/decisions"
+import { EventsReadService } from "@modules/domain/events"
+import { ExecutionsFiguresService } from "@modules/domain/executions"
+import { InvoicesFiguresService } from "@modules/domain/invoices"
+import { LeadReadService, LeadRecordsService } from "@modules/domain/leads"
+import { OrdersFiguresService } from "@modules/domain/orders"
+import { ResponsibilityReadService } from "@modules/domain/responsibilities"
+import { TransactionsFiguresService } from "@modules/domain/transactions"
+import { WorkItemsReadService } from "@modules/domain/work-items"
 import { OverviewFiguresService } from "./overview-figures.service"
 import { windowAt } from "./overview.policy"
 
-const build = async (entityManager: MockEntityManager) => {
+const WINDOW = windowAt(new Date("2026-10-13T03:00:00.000Z"))
+const AT = new Date("2026-10-01T00:00:00.000Z")
+const AT_TEXT = "2026-10-01T00:00:00.000Z"
+
+const build = async () => {
+    const agents = mock<AgentDirectoryService>()
+    const events = mock<EventsReadService>()
+    const leads = mock<LeadReadService>()
+    const leadRecords = mock<LeadRecordsService>()
+    const conversations = mock<AgentConversationsReadService>()
+    const executions = mock<ExecutionsFiguresService>()
+    const responsibilities = mock<ResponsibilityReadService>()
+    const authority = mock<AuthorityService>()
+    const orders = mock<OrdersFiguresService>()
+    const invoices = mock<InvoicesFiguresService>()
+    const transactions = mock<TransactionsFiguresService>()
+    const work = mock<WorkItemsReadService>()
+    const decisions = mock<DecisionsFiguresService>()
     const moduleRef = await Test.createTestingModule({
-        providers: [OverviewFiguresService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            OverviewFiguresService,
+            { provide: AgentDirectoryService, useValue: agents },
+            { provide: EventsReadService, useValue: events },
+            { provide: LeadReadService, useValue: leads },
+            { provide: LeadRecordsService, useValue: leadRecords },
+            { provide: AgentConversationsReadService, useValue: conversations },
+            { provide: ExecutionsFiguresService, useValue: executions },
+            { provide: ResponsibilityReadService, useValue: responsibilities },
+            { provide: AuthorityService, useValue: authority },
+            { provide: OrdersFiguresService, useValue: orders },
+            { provide: InvoicesFiguresService, useValue: invoices },
+            { provide: TransactionsFiguresService, useValue: transactions },
+            { provide: WorkItemsReadService, useValue: work },
+            { provide: DecisionsFiguresService, useValue: decisions },
+        ],
     }).compile()
-    return moduleRef.get(OverviewFiguresService)
+    return {
+        service: moduleRef.get(OverviewFiguresService),
+        agents,
+        events,
+        leads,
+        leadRecords,
+        conversations,
+        executions,
+        responsibilities,
+        authority,
+        orders,
+        invoices,
+        transactions,
+        work,
+        decisions,
+    }
 }
 
-const WINDOW = windowAt(new Date("2026-10-13T03:00:00.000Z"))
-
 describe("OverviewFiguresService.promo", () => {
-    it("composes the onboarding facts from its reads in one repeatable-read transaction", async () => {
-        const em = mockEntityManager()
-        fakeTransaction(em)
-        queueSubQueryBuilders(em, [
-            { getRawOne: { id: "bot-1", knowledge: "hours" } },
-            { getExists: true },
-            { getRawMany: [{ id: "l-web", createdAt: "2026-10-01T00:00:00+00:00" }] },
-            {},
-            { getRawMany: [{ leadId: "l-web", at: "2026-10-01T01:00:00+00:00" }] },
-            { getExists: true },
-            { getExists: false },
-            { getRawOne: { count: 2 } },
-            {},
-            { getExists: true },
-            {},
-            { getExists: true },
-        ])
-        const service = await build(em)
+    it("composes the onboarding facts from the owners' reads", async () => {
+        const world = await build()
+        world.agents.earliestSheetOfModule.mockResolvedValue({
+            id: "bot-1",
+            knowledge: "hours",
+            module: "chatbot",
+            name: "Bot",
+            handle: "bot",
+            role: "",
+            instructions: "",
+            greeting: "",
+            approvalRule: "",
+            status: "active",
+            createdAt: AT,
+        })
+        world.events.existsOfKindBetween.mockResolvedValue(true)
+        world.leads.websiteOf.mockResolvedValue([{ id: "l-web", createdAt: AT }])
+        world.conversations.hasCustomerChat.mockResolvedValue(true)
+        world.conversations.hasLeadChat.mockResolvedValue(false)
+        world.executions.countApproved.mockResolvedValue(2)
+        world.events.firstAtByLead.mockResolvedValue([{ leadId: "l-web", at: new Date("2026-10-01T01:00:00.000Z") }])
+        world.leads.idsAtStage.mockResolvedValue(["l-won"])
+        world.events.existsOfKindForLeads.mockResolvedValue(true)
+        world.responsibilities.idsTitledLike.mockResolvedValue(["r-1"])
+        world.executions.hasApprovedAmong.mockResolvedValue(true)
 
-        await expect(service.promo("ws-1", WINDOW)).resolves.toEqual({
+        await expect(world.service.promo("ws-1", WINDOW)).resolves.toEqual({
             chatbot: { id: "bot-1", knowledge: "hours" },
             isFoundingMember: true,
-            websiteLeads: [{ id: "l-web", createdAt: "2026-10-01T00:00:00+00:00" }],
-            firstEvents: [{ leadId: "l-web", at: "2026-10-01T01:00:00+00:00" }],
+            websiteLeads: [{ id: "l-web", createdAt: AT_TEXT }],
+            firstEvents: [{ leadId: "l-web", at: "2026-10-01T01:00:00.000Z" }],
             hasCustomerConversation: true,
             hasLeadConversation: false,
             approvedCount: 2,
             hasWon: true,
             invoiceApproved: true,
         })
-        expect(em.transaction).toHaveBeenCalledWith("REPEATABLE READ", expect.any(Function))
+        expect(world.events.existsOfKindBetween).toHaveBeenCalledWith(
+            "ws-1",
+            "module.purchased",
+            new Date(WINDOW.foundingFrom),
+            new Date(WINDOW.foundingTo),
+        )
+        expect(world.events.firstAtByLead).toHaveBeenCalledWith(
+            "ws-1",
+            ["execution.approved", "responsibility.assigned"],
+            ["l-web"],
+        )
+        expect(world.events.existsOfKindForLeads).toHaveBeenCalledWith("ws-1", "outcome.recorded", ["l-won"])
+        expect(world.responsibilities.idsTitledLike).toHaveBeenCalledWith(
+            "ws-1",
+            ["Prepare invoice%", "Chuẩn bị hóa đơn%"],
+            5000,
+        )
+        expect(world.executions.hasApprovedAmong).toHaveBeenCalledWith("ws-1", ["r-1"])
     })
 
     it("answers blank facts for a workspace that recorded nothing", async () => {
-        const em = mockEntityManager()
-        fakeTransaction(em)
-        queueSubQueryBuilders(em, [
-            { getRawOne: undefined },
-            { getExists: false },
-            { getRawMany: [] },
-            {},
-            { getRawMany: [] },
-            { getExists: false },
-            { getExists: false },
-            { getRawOne: undefined },
-            {},
-            { getExists: false },
-            {},
-            { getExists: false },
-        ])
-        const service = await build(em)
+        const world = await build()
+        world.agents.earliestSheetOfModule.mockResolvedValue(null)
+        world.events.existsOfKindBetween.mockResolvedValue(false)
+        world.leads.websiteOf.mockResolvedValue([])
+        world.conversations.hasCustomerChat.mockResolvedValue(false)
+        world.conversations.hasLeadChat.mockResolvedValue(false)
+        world.executions.countApproved.mockResolvedValue(0)
+        world.events.firstAtByLead.mockResolvedValue([])
+        world.leads.idsAtStage.mockResolvedValue([])
+        world.events.existsOfKindForLeads.mockResolvedValue(false)
+        world.responsibilities.idsTitledLike.mockResolvedValue([])
+        world.executions.hasApprovedAmong.mockResolvedValue(false)
 
-        await expect(service.promo("ws-1", WINDOW)).resolves.toEqual({
+        await expect(world.service.promo("ws-1", WINDOW)).resolves.toEqual({
             chatbot: null,
             isFoundingMember: false,
             websiteLeads: [],
@@ -83,24 +156,24 @@ describe("OverviewFiguresService.promo", () => {
 })
 
 describe("OverviewFiguresService.governance", () => {
-    it("answers null authority and zero counts when the rows are missing", async () => {
-        const em = mockEntityManager()
-        fakeTransaction(em)
-        queueSubQueryBuilders(em, [
-            { getRawOne: undefined },
-            { getRawMany: [] },
-            { getRawMany: [] },
-            { getRawMany: [] },
-            { getRawMany: [] },
-            { getRawMany: [] },
-            { getRawOne: undefined },
-            { getRawMany: [] },
-            { getRawMany: [] },
-            {},
-        ])
-        const service = await build(em)
+    const quiet = (world: Awaited<ReturnType<typeof build>>) => {
+        world.authority.profileOf.mockResolvedValue(null)
+        world.leads.summariesOf.mockResolvedValue([])
+        world.orders.confirmedOrBeyond.mockResolvedValue([])
+        world.invoices.issuedOrPaid.mockResolvedValue([])
+        world.transactions.openCredits.mockResolvedValue([])
+        world.work.newestFigures.mockResolvedValue([])
+        world.executions.countPendingWithoutWork.mockResolvedValue(0)
+        world.decisions.since.mockResolvedValue([])
+        world.decisions.recent.mockResolvedValue([])
+        world.leadRecords.namesOf.mockResolvedValue([])
+    }
 
-        await expect(service.governance("ws-1", WINDOW.since7)).resolves.toEqual({
+    it("answers null authority and zero counts when the rows are missing", async () => {
+        const world = await build()
+        quiet(world)
+
+        await expect(world.service.governance("ws-1", WINDOW.since7)).resolves.toEqual({
             authority: null,
             leads: [],
             orders: [],
@@ -111,35 +184,131 @@ describe("OverviewFiguresService.governance", () => {
             decisions7: [],
             recent: [],
         })
+        expect(world.decisions.since).toHaveBeenCalledWith("ws-1", new Date(WINDOW.since7))
+        expect(world.leads.summariesOf).toHaveBeenCalledWith("ws-1", 10_000)
+        expect(world.work.newestFigures).toHaveBeenCalledWith("ws-1", 2000)
+        expect(world.decisions.recent).toHaveBeenCalledWith("ws-1", 40)
     })
 
-    it("composes the rows of every block and the pending count", async () => {
-        const em = mockEntityManager()
-        fakeTransaction(em)
-        queueSubQueryBuilders(em, [
-            { getRawOne: { goalRevenueVnd: 5, goalNewCustomers: 2, goalFirstReplyMinutes: 3 } },
-            { getRawMany: [{ id: "l-1" }] },
-            { getRawMany: [{ id: "o-1" }] },
-            { getRawMany: [{ id: "i-1" }] },
-            { getRawMany: [{ id: "t-1" }] },
-            { getRawMany: [{ id: "w-1" }] },
-            { getRawOne: { count: 4 } },
-            { getRawMany: [{ workItemId: "w-1" }] },
-            { getRawMany: [{ id: "d-1" }] },
-            {},
+    it("composes the rows of every block, the pending count and the lead name of each recent decision", async () => {
+        const world = await build()
+        quiet(world)
+        world.authority.profileOf.mockResolvedValue({
+            goal_revenue_vnd: 5,
+            goal_new_customers: 2,
+            goal_first_reply_minutes: 3,
+        } as never)
+        world.leads.summariesOf.mockResolvedValue([
+            { id: "l-1", contactName: "An", company: "Co", stage: "new", createdAt: AT },
         ])
-        const service = await build(em)
+        world.orders.confirmedOrBeyond.mockResolvedValue([
+            { id: "o-1", leadId: "l-1", orderNo: "SO-1", items: "tea", amountVnd: 10, status: "paid" },
+        ])
+        world.invoices.issuedOrPaid.mockResolvedValue([
+            { id: "i-1", orderId: "o-1", leadId: "l-1", invoiceNo: "INV-1", amountVnd: 10, status: "paid" },
+        ])
+        world.transactions.openCredits.mockResolvedValue([
+            { id: "t-1", invoiceId: "i-1", payer: "An", reference: "R", amountVnd: 10, status: "matched" },
+        ])
+        world.work.newestFigures.mockResolvedValue([
+            {
+                id: "w-1",
+                leadId: "l-1",
+                department: "sales",
+                status: "done",
+                reason: null,
+                decidedPath: null,
+                createdAt: AT,
+                updatedAt: AT,
+                completedAt: AT,
+                summary: null,
+                contact: null,
+                customer: null,
+            },
+            {
+                id: "w-2",
+                leadId: null,
+                department: "sales",
+                status: "queued",
+                reason: null,
+                decidedPath: null,
+                createdAt: AT,
+                updatedAt: AT,
+                completedAt: null,
+                summary: null,
+                contact: null,
+                customer: null,
+            },
+        ])
+        world.executions.countPendingWithoutWork.mockResolvedValue(4)
+        world.decisions.since.mockResolvedValue([
+            { workItemId: "w-1", leadId: "l-1", deciderKind: "human", outcome: "approved", createdAt: AT },
+        ])
+        world.decisions.recent.mockResolvedValue([
+            {
+                id: "d-1",
+                workItemId: "w-1",
+                leadId: "l-1",
+                department: "sales",
+                action: "reply",
+                decidedBy: "Lan",
+                deciderKind: "human",
+                outcome: "approved",
+                reason: null,
+                note: null,
+                createdAt: AT,
+            },
+            {
+                id: "d-2",
+                workItemId: null,
+                leadId: null,
+                department: "sales",
+                action: "reply",
+                decidedBy: "Lan",
+                deciderKind: "human",
+                outcome: "approved",
+                reason: null,
+                note: null,
+                createdAt: AT,
+            },
+            {
+                id: "d-3",
+                workItemId: null,
+                leadId: "l-gone",
+                department: "sales",
+                action: "reply",
+                decidedBy: "Lan",
+                deciderKind: "human",
+                outcome: "approved",
+                reason: null,
+                note: null,
+                createdAt: AT,
+            },
+        ])
+        world.leadRecords.namesOf.mockResolvedValue([{ id: "l-1", contact_name: "An" }])
 
-        await expect(service.governance("ws-1", WINDOW.since7)).resolves.toEqual({
-            authority: { goalRevenueVnd: 5, goalNewCustomers: 2, goalFirstReplyMinutes: 3 },
-            leads: [{ id: "l-1" }],
-            orders: [{ id: "o-1" }],
-            invoices: [{ id: "i-1" }],
-            transactions: [{ id: "t-1" }],
-            work: [{ id: "w-1" }],
-            pendingWithoutWork: 4,
-            decisions7: [{ workItemId: "w-1" }],
-            recent: [{ id: "d-1" }],
-        })
+        const governance = await world.service.governance("ws-1", WINDOW.since7)
+
+        expect(governance.authority).toEqual({ goalRevenueVnd: 5, goalNewCustomers: 2, goalFirstReplyMinutes: 3 })
+        expect(governance.leads).toEqual([
+            { id: "l-1", contactName: "An", company: "Co", stage: "new", createdAt: AT_TEXT },
+        ])
+        expect(governance.orders).toHaveLength(1)
+        expect(governance.invoices).toHaveLength(1)
+        expect(governance.transactions).toHaveLength(1)
+        expect(governance.work.map((item) => [item.id, item.completedAt])).toEqual([
+            ["w-1", AT_TEXT],
+            ["w-2", null],
+        ])
+        expect(governance.pendingWithoutWork).toBe(4)
+        expect(governance.decisions7).toEqual([
+            { workItemId: "w-1", leadId: "l-1", deciderKind: "human", outcome: "approved", createdAt: AT_TEXT },
+        ])
+        expect(governance.recent.map((decision) => [decision.id, decision.leadName])).toEqual([
+            ["d-1", "An"],
+            ["d-2", null],
+            ["d-3", null],
+        ])
+        expect(world.leadRecords.namesOf).toHaveBeenCalledWith("ws-1", ["l-1", "l-gone"])
     })
 })

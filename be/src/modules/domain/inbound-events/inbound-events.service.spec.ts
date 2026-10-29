@@ -6,6 +6,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { In } from "typeorm"
 import { InboundEventsErrorCode } from "./errors/inbound-events.error"
 import { InboundEventsService } from "./inbound-events.service"
 import { InboundEventEntity } from "./persistence/entities"
@@ -272,6 +273,19 @@ describe("InboundEventsService find", () => {
         await expect(events.find("ws-1", "event-1")).resolves.toEqual(row)
         expect(tx.em.findOne).toHaveBeenCalledWith(InboundEventEntity, {
             where: { workspaceId: "ws-1", id: "event-1" },
+        })
+    })
+
+    it("reads the given inbound events of the workspace once each, and nothing for no id", async () => {
+        const { events, tx } = await build(mockEntityManager({ find: [InboundEventEntity, [stored]] }))
+
+        await expect(events.findMany("ws-1", [])).resolves.toEqual([])
+        await expect(events.findMany("ws-1", ["event-1", "event-1"])).resolves.toEqual([
+            expect.objectContaining({ id: "event-1", workspace_id: "ws-1", channel: "zalo", body: "Haircut" }),
+        ])
+        expect(tx.em.find).toHaveBeenCalledTimes(1)
+        expect(tx.em.find).toHaveBeenCalledWith(InboundEventEntity, {
+            where: { workspaceId: "ws-1", id: In(["event-1"]) },
         })
     })
 

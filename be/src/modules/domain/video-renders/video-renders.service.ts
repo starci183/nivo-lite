@@ -1,11 +1,20 @@
 import { Injectable } from "@nestjs/common"
 import { In, LessThanOrEqual } from "typeorm"
 import type { EntityManager } from "typeorm"
+import { VideoProjectsService } from "@modules/domain/video-projects"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { parseJsonText } from "@modules/platform/primitives"
 import { VideoRendersError, VideoRendersErrorCode } from "./errors/video-renders.error"
 import { MAX_OPEN_RENDERS } from "./video-renders.contracts"
-import type { CompletedRenderMedia, NewRender, RenderClaim, RenderDone, RenderStatus } from "./video-renders.contracts"
+import type {
+    CompletedRenderMedia,
+    NewRender,
+    RenderClaim,
+    RenderDone,
+    RenderFacts,
+    RenderStatus,
+    SettledRender,
+} from "./video-renders.contracts"
 import { VideoRenderEntity } from "./persistence/entities"
 import type { VideoRenderState } from "./persistence/entities"
 
@@ -20,6 +29,12 @@ const RENDER_STATUSES: Record<VideoRenderState, RenderStatus["status"]> = {
     failed: "failed",
 }
 
+/** The states in which a render is settled. */
+const SETTLED_STATES: ReadonlyArray<VideoRenderState> = ["done", "failed"]
+
+/** A text a render recorded in its meta, or null when it recorded none. */
+const textOf = (value: unknown): string | null => (typeof value === "string" ? value : null)
+
 /** The states in which a render still waits or runs. */
 const OPEN_STATES: ReadonlyArray<VideoRenderState> = ["queued", "rendering"]
 
@@ -30,8 +45,8 @@ const FIND_MEDIA_MAX = 80
 interface CompletedRenderMediaRow {
     /** The render id. */
     readonly id: string
-    /** The project title or fallback brand name. */
-    readonly title: string
+    /** The brand name of the spec, when it names one. */
+    readonly brand_name: string | null
     /** The non-null video output path. */
     readonly output_path: string
     /** The video duration, when recorded. */
@@ -40,15 +55,10 @@ interface CompletedRenderMediaRow {
     readonly created_at: Date | string
 }
 
-/** The most recent project title of the render, or the brand name of its spec, or empty. */
-const MEDIA_TITLE = `COALESCE((SELECT p.title FROM public.video_projects p
-    WHERE p.workspace_id = r.workspace_id AND (p.render_id = r.id OR r.id = ANY(p.render_ids))
-    ORDER BY p.updated_at DESC LIMIT 1), r.spec #>> '{brand,name}', '')`
-
-/** Maps one completed render row to attachable media. */
-const toCompletedMedia = (row: CompletedRenderMediaRow): CompletedRenderMedia => ({
+/** Maps one completed render row to attachable media, titled by the newest project that holds it, else by the brand of its spec, else empty. */
+const toCompletedMedia = (row: CompletedRenderMediaRow, projectTitle: string | undefined): CompletedRenderMedia => ({
     id: row.id,
-    title: row.title,
+    title: projectTitle ?? row.brand_name ?? "",
     outputPath: row.output_path,
     durationMs: row.duration_ms,
     createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
@@ -75,7 +85,10 @@ interface RenderMetaRaw {
 @Injectable()
 /** The `video_renders` rows reached only through the primary EntityManager: a render is queued by the video capability's transaction and settled by the render job. */
 export class VideoRendersService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly projects: VideoProjectsService,
+    ) {}
 
     /** Writes a queued render in the caller's transaction and answers its id; a workspace that already has the most open renders is refused. */
     async open(manager: EntityManager, render: NewRender): Promise<string> {
@@ -198,7 +211,7 @@ export class VideoRendersService {
         const rows = await this.completedMedia(workspaceId)
             .limit(Math.max(1, Math.min(100, Math.trunc(limit))))
             .getRawMany<CompletedRenderMediaRow>()
-        return rows.map(toCompletedMedia)
+        return this.titled(workspaceId, rows)
     }
 
     /** Finds selected completed media inside a workspace after the caller has proved membership. */
@@ -211,7 +224,93 @@ export class VideoRendersService {
             .andWhere("r.id IN (:...ids)", { ids: [...new Set(ids)].slice(0, FIND_MEDIA_MAX) })
             .limit(FIND_MEDIA_MAX)
             .getRawMany<CompletedRenderMediaRow>()
-        return rows.map(toCompletedMedia)
+        return this.titled(workspaceId, rows)
+    }
+
+    /** The raw status text of a render; null when there is no such render. */
+    async stateOf(renderId: string): Promise<string | null> {
+        const row = await this.entityManager.findOne(VideoRenderEntity, {
+            select: { status: true },
+            where: { id: renderId },
+        })
+        return row?.status ?? null
+    }
+
+    /** Whether a render of the workspace finished: a done render never changes again. */
+    isDone(workspaceId: string, renderId: string): Promise<boolean> {
+        return this.entityManager.exists(VideoRenderEntity, { where: { id: renderId, workspaceId, status: "done" } })
+    }
+
+    /** What the workbench shows of the given renders of the workspace; an id that is no render of the workspace is missing from the answer. */
+    async factsOf(workspaceId: string, renderIds: ReadonlyArray<string>): Promise<Array<RenderFacts>> {
+        if (renderIds.length === 0) return []
+        const renders = await this.entityManager.find(VideoRenderEntity, {
+            select: {
+                id: true,
+                status: true,
+                progress: true,
+                stage: true,
+                durationMs: true,
+                sizeBytes: true,
+                outputPath: true,
+                posterPath: true,
+                meta: true,
+            },
+            where: { workspaceId, id: In([...new Set(renderIds)]) },
+        })
+        return renders.map((render) => ({
+            id: render.id,
+            status: render.status,
+            progress: render.progress,
+            stage: render.stage,
+            durationMs: render.durationMs,
+            sizeBytes: render.sizeBytes === null ? null : Number(render.sizeBytes),
+            outputPath: render.outputPath,
+            posterPath: render.posterPath,
+            captionsPath: textOf(render.meta.captions_path),
+            captionsLang: textOf(render.meta.captions_lang),
+        }))
+    }
+
+    /** A done or failed render of the workspace with what a delegation card shows; null when it is still open or is no render of the workspace. */
+    async settledOf(workspaceId: string, renderId: string): Promise<SettledRender | null> {
+        const render = await this.entityManager.findOne(VideoRenderEntity, {
+            select: {
+                id: true,
+                status: true,
+                durationMs: true,
+                outputPath: true,
+                posterPath: true,
+                error: true,
+                meta: true,
+            },
+            where: { id: renderId, workspaceId, status: In([...SETTLED_STATES]) },
+        })
+        if (render === null) return null
+        return {
+            id: render.id,
+            status: render.status,
+            durationMs: render.durationMs,
+            outputPath: render.outputPath,
+            posterPath: render.posterPath,
+            captionsPath: textOf(render.meta.captions_path),
+            captionsLang: textOf(render.meta.captions_lang),
+            voiceover: textOf(render.meta.voiceover),
+            error: render.error,
+        }
+    }
+
+    /** Titles the completed media rows by the newest project that holds each render. */
+    private async titled(
+        workspaceId: string,
+        rows: ReadonlyArray<CompletedRenderMediaRow>,
+    ): Promise<Array<CompletedRenderMedia>> {
+        const titles = await this.projects.titlesOfRenders(
+            workspaceId,
+            rows.map((row) => row.id),
+        )
+        const titleOf = new Map(titles.map((entry) => [entry.renderId, entry.title]))
+        return rows.map((row) => toCompletedMedia(row, titleOf.get(row.id)))
     }
 
     /** The done renders of a workspace that have an output, newest first, selecting title and file facts. */
@@ -219,7 +318,7 @@ export class VideoRendersService {
         return this.entityManager
             .createQueryBuilder(VideoRenderEntity, "r")
             .select("r.id", "id")
-            .addSelect(MEDIA_TITLE, "title")
+            .addSelect("r.spec #>> '{brand,name}'", "brand_name")
             .addSelect("r.output_path", "output_path")
             .addSelect("r.duration_ms", "duration_ms")
             .addSelect("r.created_at", "created_at")

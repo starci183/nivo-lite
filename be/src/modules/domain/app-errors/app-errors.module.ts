@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { ERROR_REPORTER } from "@modules/platform/errors"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./app-errors.module-definition"
 import { AppErrorsService } from "./app-errors.service"
+import { AppErrorsReadService } from "./app-errors-read.service"
 
 @Module({})
 /** The `app_errors` writer, bound as the error reporter of the errors capability so transports and the queue record their failures. */
@@ -14,10 +15,11 @@ export class AppErrorsModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
+                AppErrorsReadService,
                 AppErrorsService,
                 { provide: ERROR_REPORTER, useExisting: AppErrorsService },
             ],
-            exports: [AppErrorsService, ERROR_REPORTER],
+            exports: [AppErrorsReadService, AppErrorsService, ERROR_REPORTER],
         }
     }
 }

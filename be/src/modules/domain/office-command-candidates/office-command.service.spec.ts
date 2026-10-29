@@ -1,12 +1,16 @@
 import { Test } from "@nestjs/testing"
-import { agentEntityOf } from "@tests/fixtures/builders/agents.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
-import { AgentEntity } from "@modules/domain/agents"
-import { OrderEntity } from "@modules/domain/orders"
+import { AgentDirectoryService } from "@modules/domain/agents"
+import type { AgentHandleCard } from "@modules/domain/agents"
+import { LeadReadService } from "@modules/domain/leads"
+import type { LeadName } from "@modules/domain/leads"
+import { OrdersService } from "@modules/domain/orders"
+import type { OrderRef } from "@modules/domain/orders"
 import { CommandBusService, ModuleCatalogService } from "@modules/domain/decisions"
-import { OfficeLinesService } from "@modules/domain/messages"
+import { MessagesReadService, OfficeLinesService } from "@modules/domain/messages"
+import type { LineText } from "@modules/domain/messages"
 import type { ModuleCommand, CommandResult, ModuleEntry, WorkItem } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -23,17 +27,20 @@ import { COMMAND_READER } from "./office-command-candidates.decorators"
 import { OfficeCommandCandidatesLogEvent } from "./office-command-candidates.log-events"
 import type { CommandReader } from "./office-command-candidates.port"
 import { OfficeCommandService } from "./office-command.service"
-import type { LeadPoolLine, MessageText } from "./office-reads.contracts"
 import { OfficeCommandCandidateEntity } from "./persistence/entities"
 
 /** What a spec's database holds, in the order the service reaches for it: the query builders it creates, then the finds. */
 interface Plan {
     /** The answers of the query builders, in the order the service creates them. */
     readonly builders: ReadonlyArray<QueryBuilderAnswers>
+    /** The message the messages owner finds; none when it has no such message. */
+    readonly message?: LineText
     /** The active agents a handle lookup finds. */
-    readonly agents?: ReadonlyArray<AgentEntity>
+    readonly agents?: ReadonlyArray<AgentHandleCard>
+    /** The recent customers the reference pool reads. */
+    readonly leads?: ReadonlyArray<LeadName>
     /** The recent orders the reference pool reads. */
-    readonly orders?: ReadonlyArray<OrderEntity>
+    readonly orders?: ReadonlyArray<OrderRef>
 }
 
 const manager: WorkspaceMember = {
@@ -58,10 +65,10 @@ const accounting: ModuleEntry = {
     name: { vi: "Ke toan", en: "Accounting" },
     accepts: [receipt],
 }
-const humanMessage: MessageText = { id: "m-1", author_kind: "human", body: "@ke-toan phieu thu cho don #DH-1" }
-const agentRow = agentEntityOf({ id: "a-1", handle: "ke-toan", module: "accounting", name: "Mai" })
-const orderRow = { id: "o-1", orderNo: "DH-1", leadId: "l-1" } as OrderEntity
-const leadRow: LeadPoolLine = { id: "l-1", contact_name: "Lan", company: null }
+const humanMessage: LineText = { id: "m-1", author_kind: "human", body: "@ke-toan phieu thu cho don #DH-1" }
+const agentRow: AgentHandleCard = { id: "a-1", handle: "ke-toan", module: "accounting", name: "Mai" }
+const orderRow: OrderRef = { id: "o-1", orderNo: "DH-1", leadId: "l-1" }
+const leadRow: LeadName = { id: "l-1", contactName: "Lan", company: "" }
 const candidateOf = builder<CandidateView>({
     id: "c-1",
     message_id: "m-1",
@@ -91,25 +98,20 @@ const sentOk = (created: boolean): CommandResult => ({
 })
 
 /** The world before proposing: the message, no candidate yet, the agent, the two reference pools and the answer of the insert. */
-const reaching = (message: MessageText | null = humanMessage, insert: ReadonlyArray<CandidateView> = []): Plan => ({
-    builders: [
-        { getRawOne: message ?? undefined },
-        { getRawOne: undefined },
-        { getRawMany: [leadRow] },
-        { execute: { raw: insert } },
-    ],
+const reaching = (message: LineText = humanMessage, insert: ReadonlyArray<CandidateView> = []): Plan => ({
+    message,
+    builders: [{ getRawOne: undefined }, { execute: { raw: insert } }],
     agents: [agentRow],
+    leads: [leadRow],
     orders: [orderRow],
 })
 
 const build = async (plan: Plan, entry: ModuleEntry | null = accounting) => {
-    const entityManager = mockEntityManager({
-        find: [
-            [AgentEntity, plan.agents ?? []],
-            [OrderEntity, plan.orders ?? []],
-        ],
-        update: [OfficeCommandCandidateEntity, { affected: 1 }],
-    })
+    const entityManager = mockEntityManager({ update: [OfficeCommandCandidateEntity, { affected: 1 }] })
+    const messages = mock<MessagesReadService>({ textOf: jest.fn().mockResolvedValue(plan.message) })
+    const agents = mock<AgentDirectoryService>({ activeByHandles: jest.fn().mockResolvedValue(plan.agents ?? []) })
+    const leads = mock<LeadReadService>({ recentNames: jest.fn().mockResolvedValue(plan.leads ?? []) })
+    const orders = mock<OrdersService>({ recentRefs: jest.fn().mockResolvedValue(plan.orders ?? []) })
     const fakes = queueQueryBuilders(entityManager, plan.builders)
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(manager) })
     const modules = mock<ModuleCatalogService>({
@@ -135,10 +137,29 @@ const build = async (plan: Plan, entry: ModuleEntry | null = accounting) => {
             { provide: CommandBusService, useValue: bus },
             { provide: COMMAND_READER, useValue: reader },
             { provide: EventsService, useValue: events },
+            { provide: MessagesReadService, useValue: messages },
+            { provide: AgentDirectoryService, useValue: agents },
+            { provide: LeadReadService, useValue: leads },
+            { provide: OrdersService, useValue: orders },
         ],
     }).compile()
     const service = moduleRef.get(OfficeCommandService)
-    return { service, entityManager, members, lines, bus, reader, events, catalog, logger, fakes }
+    return {
+        service,
+        entityManager,
+        members,
+        lines,
+        bus,
+        reader,
+        events,
+        catalog,
+        logger,
+        fakes,
+        messages,
+        agents,
+        leads,
+        orders,
+    }
 }
 
 const request = { messageId: "m-1", locale: "en" } as const
@@ -148,7 +169,7 @@ const reply = (key: string) => ({ kind: "reply", body: `[${key}]` })
 describe("OfficeCommandService propose", () => {
     it("turns a message into a confirm card and records the evidence", async () => {
         const created = candidateOf()
-        const { service, entityManager, members, reader, events, fakes } = await build(
+        const { service, members, reader, events, fakes, messages, agents, leads, orders } = await build(
             reaching(humanMessage, [created]),
         )
 
@@ -165,13 +186,11 @@ describe("OfficeCommandService propose", () => {
                 text: humanMessage.body,
             },
         )
-        expect(entityManager.find).toHaveBeenCalledWith(AgentEntity, {
-            select: { id: true, handle: true, module: true, name: true },
-            where: { workspaceId: "ws-1", status: "active", handle: expect.objectContaining({ _value: ["ke-toan"] }) },
-            order: { handle: "ASC" },
-            take: 10,
-        })
-        expect(fakes[3]?.callsOf("values")).toEqual([
+        expect(messages.textOf).toHaveBeenCalledWith("ws-1", "m-1")
+        expect(agents.activeByHandles).toHaveBeenCalledWith("ws-1", ["ke-toan"], 10)
+        expect(leads.recentNames).toHaveBeenCalledWith("ws-1", 300)
+        expect(orders.recentRefs).toHaveBeenCalledWith("ws-1", 300)
+        expect(fakes[1]?.callsOf("values")).toEqual([
             [
                 {
                     workspaceId: "ws-1",
@@ -207,7 +226,7 @@ describe("OfficeCommandService propose", () => {
 
         await service.propose("u-1", "ws-1", request)
 
-        expect(fakes[3]?.callsOf("values")).toEqual([
+        expect(fakes[1]?.callsOf("values")).toEqual([
             [
                 {
                     workspaceId: "ws-1",
@@ -227,7 +246,7 @@ describe("OfficeCommandService propose", () => {
 describe("OfficeCommandService propose", () => {
     it("answers the existing card of a message without a second model call", async () => {
         const existing = candidateOf()
-        const { service, reader } = await build({ builders: [{ getRawOne: humanMessage }, { getRawOne: existing }] })
+        const { service, reader } = await build({ message: humanMessage, builders: [{ getRawOne: existing }] })
 
         await expect(service.propose("u-1", "ws-1", request)).resolves.toEqual({
             kind: "card",
@@ -237,11 +256,11 @@ describe("OfficeCommandService propose", () => {
     })
 
     it("rejects a message that is missing or not a person's", async () => {
-        const missing = await build({ builders: [{ getRawOne: undefined }] })
+        const missing = await build({ builders: [] })
         await expect(missing.service.propose("u-1", "ws-1", request)).rejects.toMatchObject({
             code: OfficeCommandCandidatesErrorCode.MessageNotFound,
         })
-        const system = await build({ builders: [{ getRawOne: { ...humanMessage, author_kind: "system" } }] })
+        const system = await build({ message: { ...humanMessage, author_kind: "system" }, builders: [] })
         await expect(system.service.propose("u-1", "ws-1", request)).rejects.toMatchObject({
             code: OfficeCommandCandidatesErrorCode.MessageNotHuman,
         })
@@ -253,7 +272,7 @@ describe("OfficeCommandService propose", () => {
         ["an unknown handle", humanMessage, [], accounting],
         ["an agent that accepts nothing", humanMessage, [agentRow], null],
     ])("leaves the message to the chat for %s", async (_name, message, agents, entry) => {
-        const { service } = await build({ builders: [{ getRawOne: message }, { getRawOne: undefined }], agents }, entry)
+        const { service } = await build({ message, builders: [{ getRawOne: undefined }], agents }, entry)
 
         await expect(service.propose("u-1", "ws-1", request)).resolves.toEqual({ kind: "chat" })
     })
@@ -305,11 +324,8 @@ describe("OfficeCommandService propose", () => {
             accepts: [{ ...receipt, requiredFields: ["subject_id", "amount"] }],
         }
         const plan: Plan = {
-            builders: [
-                { getRawOne: { ...humanMessage, body: "@ke-toan phieu thu" } },
-                { getRawOne: undefined },
-                { getRawMany: [] },
-            ],
+            message: { ...humanMessage, body: "@ke-toan phieu thu" },
+            builders: [{ getRawOne: undefined }],
             agents: [agentRow],
             orders: [],
         }

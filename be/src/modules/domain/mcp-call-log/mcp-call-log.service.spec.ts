@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
@@ -21,11 +22,20 @@ const ROW: CallLogRecord = {
     created_at: "2026-10-20T02:00:00.000Z",
 }
 
-const build = async (entityManager: MockEntityManager): Promise<McpCallLogService> => {
+const build = async (entityManager: MockEntityManager) => {
+    const agents = mock<AgentDirectoryService>({
+        cardsOf: jest
+            .fn()
+            .mockResolvedValue([{ id: "agent-1", name: "AI Sales", module: "sales", canTagAgentIds: [] }]),
+    })
     const moduleRef = await Test.createTestingModule({
-        providers: [McpCallLogService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            McpCallLogService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: AgentDirectoryService, useValue: agents },
+        ],
     }).compile()
-    return moduleRef.get(McpCallLogService)
+    return Object.assign(moduleRef.get(McpCallLogService), { doubles: { agents } })
 }
 
 /** What an insert query builder was told to write; a function value is read as its source text. */
@@ -93,15 +103,26 @@ describe("McpCallLogService", () => {
         expect(fake.callsOf("setParameter")).toEqual([["argsMaskedJson", "{not json"]])
     })
 
-    it("reads the newest lines of the workspace within the page", async () => {
-        const fake = fakeQueryBuilder({ getRawMany: [ROW] })
+    it("reads the newest lines of the workspace within the page, each named after its agent", async () => {
+        const { agent_name: _name, ...stored } = ROW
+        const fake = fakeQueryBuilder({
+            getRawMany: [
+                { ...stored, agent_id: "agent-1" },
+                { ...stored, id: "log-2", agent_id: "gone" },
+                { ...stored, id: "log-3", agent_id: null },
+            ],
+        })
         const em = mockEntityManager()
         em.createQueryBuilder.mockReturnValue(fake.builder as never)
         const log = await build(em)
 
-        await expect(log.latest({ workspaceId: "ws-1", limit: 50 })).resolves.toEqual([ROW])
+        await expect(log.latest({ workspaceId: "ws-1", limit: 50 })).resolves.toEqual([
+            ROW,
+            { ...ROW, id: "log-2", agent_name: "" },
+            { ...ROW, id: "log-3", agent_name: "" },
+        ])
         expect(em.createQueryBuilder).toHaveBeenCalledWith(McpCallLogEntity, "l")
-        expect(fake.callsOf("leftJoin")).toEqual([["agents", "a", "a.id = l.agent_id"]])
+        expect(log.doubles.agents.cardsOf).toHaveBeenCalledWith("ws-1", ["agent-1", "gone"])
         expect(fake.callsOf("where")).toEqual([["l.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
         expect(fake.callsOf("orderBy")).toEqual([["l.created_at", "DESC"]])
         expect(fake.callsOf("limit")).toEqual([[50]])

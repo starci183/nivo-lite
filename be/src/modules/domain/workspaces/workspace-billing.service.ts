@@ -6,7 +6,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { extendedPaidUntil } from "./billing.policy"
 import { WorkspacesError, WorkspacesErrorCode } from "./errors/workspaces.error"
 import { WorkspaceEntity } from "./persistence/entities"
-import type { BillingChange, SupportStatus } from "./workspaces.contracts"
+import type { ActivePlan, BillingChange, SupportStatus } from "./workspaces.contracts"
 
 @Injectable()
 /** The billing facts of a workspace (status, plan, paid-until) as support changes them by hand; the only writer of those columns. */
@@ -31,16 +31,12 @@ export class WorkspaceBillingService {
         return { from: before.status, to: status }
     }
 
-    /** Moves the workspace to an active plan; paid-until is untouched, extending handles the period. */
-    async setPlan(workspaceId: string, planCode: string): Promise<BillingChange> {
-        const plan = await this.entityManager
-            .createQueryBuilder()
-            .select("p.code", "code")
-            .from("plans", "p")
-            .where("p.code = :planCode AND p.active = true", { planCode })
-            .limit(1)
-            .getRawOne<{ readonly code: string }>()
-        if (plan === undefined) throw new WorkspacesError({ code: WorkspacesErrorCode.PlanUnknown })
+    /**
+     * Moves the workspace to an active plan; paid-until is untouched, extending handles the period. The caller proves the plan with the
+     * capability that owns plans and hands it over; none (an unknown or retired plan) is refused.
+     */
+    async setPlan(workspaceId: string, plan: ActivePlan | null): Promise<BillingChange> {
+        if (plan === null) throw new WorkspacesError({ code: WorkspacesErrorCode.PlanUnknown })
         const before = await this.billingOf(workspaceId)
         await this.entityManager.update(
             WorkspaceEntity,

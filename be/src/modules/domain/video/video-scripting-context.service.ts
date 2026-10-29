@@ -1,10 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import { AuthorityService } from "@modules/domain/authority"
 import { BrainFactsService, factLine } from "@modules/domain/brain-facts"
 import { KnowledgeSearchService } from "@modules/domain/knowledge"
 import type { ScriptProject } from "./video-stored.contracts"
-import { readScriptBase, readScriptSetup } from "./persistence/video-scripting.query"
+import { VideoScriptReadsService } from "./video-script-reads.service"
 import { videoScriptSetupText } from "./video-scripting-context.policy"
 import { VIDEO_SCRIPT_GOALS } from "./video-scripting.templates"
 import { videoInputsOf } from "./video-workbench.policy"
@@ -16,15 +15,11 @@ export class VideoScriptingContextService {
         private readonly facts: BrainFactsService,
         private readonly authority: AuthorityService,
         private readonly knowledge: KnowledgeSearchService,
+        private readonly reads: VideoScriptReadsService,
     ) {}
 
     /** A bounded system-context snapshot for one script request; every dynamic business lookup uses the customer lens. */
-    async forProject(
-        tx: EntityManager,
-        workspaceId: string,
-        project: ScriptProject,
-        selectedSources: string,
-    ): Promise<string> {
+    async forProject(workspaceId: string, project: ScriptProject, selectedSources: string): Promise<string> {
         const goal = VIDEO_SCRIPT_GOALS[project.goal] ?? VIDEO_SCRIPT_GOALS.custom
         const query = [
             goal.label.vi,
@@ -32,8 +27,8 @@ export class VideoScriptingContextService {
             selectedSources.slice(0, 300),
         ].join(" ")
         const [snapshots, base, facts, passages, authority] = await Promise.all([
-            readScriptSetup(tx, workspaceId),
-            readScriptBase(tx),
+            this.reads.setupOf(workspaceId),
+            this.reads.baseRules(),
             this.facts.search(workspaceId, "customer", "video", null, query, 6),
             this.knowledge.passagesText(
                 { workspaceId, module: "video", audience: "customer", installationId: null },

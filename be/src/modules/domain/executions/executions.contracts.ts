@@ -28,6 +28,14 @@ export interface ExecutionRecord extends ExecutionCard {
     readonly created_at: string
 }
 
+/** The status of one approval card. */
+export interface ExecutionStatus {
+    /** The execution id. */
+    readonly id: string
+    /** `pending_approval`, `approved` or `rejected`. */
+    readonly status: string
+}
+
 /** A complete approval card, or null when the workspace has no such card. */
 export type OptionalExecutionRecord = ExecutionRecord | null
 

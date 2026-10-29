@@ -164,8 +164,8 @@ export const LOOP_REPEATS = 2
 /** The step shape the limits are judged on. */
 export type JudgedStep = Pick<ChainStep, "actor" | "kind" | "action" | "target">
 
-/** One step of a chain joined with the name of whoever acted, as the chain reads select it. */
-export interface ChainStepRecord {
+/** One step of a chain as the chain reads select it, before the name of whoever acted is added. */
+export interface ChainStepRead {
     /** The step id. */
     readonly id: string
     /** The place of the step in its chain. */
@@ -174,10 +174,6 @@ export interface ChainStepRecord {
     readonly actor_kind: string
     /** The actor id. */
     readonly actor_id: string
-    /** The actor display name, or empty when the actor is gone. */
-    readonly actor_name: string
-    /** The member role or the agent module, or empty. */
-    readonly actor_role: string
     /** The step kind. */
     readonly kind: string
     /** The short title. */
@@ -198,4 +194,12 @@ export interface ChainStepRecord {
     readonly started_at: Date
     /** End instant, or null. */
     readonly finished_at: Date | null
+}
+
+/** One step of a chain joined with the name of whoever acted. */
+export interface ChainStepRecord extends ChainStepRead {
+    /** The actor display name, or empty when the actor is gone. */
+    readonly actor_name: string
+    /** The member role or the agent module, or empty. */
+    readonly actor_role: string
 }

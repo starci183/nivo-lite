@@ -12,6 +12,8 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ResponsibilitiesError, ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
 import type { ResolvedOwner } from "./responsibility-owner.policy"
+import { InjectLeadDesk } from "./responsibilities.decorators"
+import type { LeadDesk } from "./responsibilities.ports"
 import { ResponsibilityOwnersService } from "./responsibility-owners.service"
 import type {
     NamedFollowUp,
@@ -29,12 +31,6 @@ const LISTING_LIMIT = 200
 const LEAD_STEPS_LIMIT = 200
 const OPEN_STEPS_LIMIT = 500
 const BOARD_STEPS_LIMIT = 100
-
-/** The name of a customer, as the follow-up title is worded from it. */
-interface LeadName {
-    /** The customer's name. */
-    readonly contact_name: string
-}
 
 /** The columns of a step as the contract carries them, the instants as the JSON text of the stored value. */
 const RECORD_RETURNING =
@@ -69,6 +65,7 @@ export class ResponsibilityJournalService {
         private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
         private readonly owners: ResponsibilityOwnersService,
+        @InjectLeadDesk() private readonly leadDesk: LeadDesk,
     ) {}
 
     /**
@@ -86,13 +83,7 @@ export class ResponsibilityJournalService {
             .limit(1)
             .getRawOne<ResponsibilityRecord>()
         if (open !== undefined) return open
-        const lead = await this.entityManager
-            .createQueryBuilder()
-            .select("l.contact_name", "contact_name")
-            .from("public.leads", "l")
-            .where("l.workspace_id = :workspaceId AND l.id = :leadId", { workspaceId: ctx.workspaceId, leadId })
-            .limit(1)
-            .getRawOne<LeadName>()
+        const [lead] = await this.leadDesk.cardsOf(ctx.workspaceId, [leadId])
         if (lead === undefined) throw new ResponsibilitiesError({ code: ResponsibilitiesErrorCode.NotFound })
         const sales = await this.agents.agentOfDepartment(ctx.workspaceId, "sales", null)
         const owner: ResolvedOwner =
@@ -103,7 +94,7 @@ export class ResponsibilityJournalService {
             ctx.workspaceId,
             {
                 lead_id: leadId,
-                title: this.catalog.get("responsibility.title", { name: lead.contact_name }, ctx.locale),
+                title: this.catalog.get("responsibility.title", { name: lead.contactName }, ctx.locale),
                 next_action: this.catalog.get("responsibility.next", {}, ctx.locale),
                 due_at: new Date(this.clock.now().getTime() + DAY_MS).toISOString(),
             },
@@ -135,17 +126,24 @@ export class ResponsibilityJournalService {
     /** The workspace's responsibilities with their customer, open ones first. */
     async list(principalId: string, workspaceId: string): Promise<ReadonlyArray<ResponsibilityListing>> {
         await this.members.require(principalId, workspaceId)
-        return recordOf(this.entityManager)
-            .innerJoin("leads", "l", "l.id = r.leadId")
-            .addSelect("l.contact_name", "contact_name")
-            .addSelect("l.company", "company")
-            .addSelect("l.stage", "leadStage")
+        const steps = await recordOf(this.entityManager)
             .where("r.workspaceId = :workspaceId", { workspaceId })
             .orderBy("(r.status = 'done')", "ASC")
             .addOrderBy("r.createdAt", "DESC")
             .addOrderBy("r.id", "DESC")
             .limit(LISTING_LIMIT)
-            .getRawMany<ResponsibilityListing>()
+            .getRawMany<ResponsibilityRecord>()
+        const leads = new Map(
+            (await this.leadDesk.cardsOf(workspaceId, [...new Set(steps.map((step) => step.lead_id))])).map((card) => [
+                card.id,
+                card,
+            ]),
+        )
+        return steps.flatMap((step): Array<ResponsibilityListing> => {
+            const lead = leads.get(step.lead_id)
+            if (lead === undefined) return []
+            return [{ ...step, contact_name: lead.contactName, company: lead.company, leadStage: lead.stage }]
+        })
     }
 
     /** The steps of a workspace's customer in journey order, after membership is proved by the reader. */
@@ -193,7 +191,7 @@ export class ResponsibilityJournalService {
         manager: EntityManager = this.entityManager,
     ): Promise<ResponsibilityRecord> {
         const member = await this.members.require(principalId, workspaceId)
-        const owner = await this.owners.resolve(manager, workspaceId, input.owner)
+        const owner = await this.owners.resolve(workspaceId, input.owner)
         const created = await this.insert(workspaceId, input, owner, manager)
         await this.events.record(
             {
@@ -292,15 +290,7 @@ export class ResponsibilityJournalService {
         input: Omit<NewResponsibility, "owner">,
         owner: ResolvedOwner,
     ): Promise<ResponsibilityRecord | undefined> {
-        const lead = await tx
-            .createQueryBuilder()
-            .select("l.id", "id")
-            .from("public.leads", "l")
-            .where("l.workspace_id = :workspaceId AND l.id = :leadId", { workspaceId, leadId: input.lead_id })
-            .limit(1)
-            .setLock("pessimistic_read")
-            .getRawOne<{ id: string }>()
-        if (lead === undefined) return undefined
+        if (!(await this.leadDesk.hold(workspaceId, input.lead_id, tx))) return undefined
         const inserted = await tx
             .createQueryBuilder(ResponsibilityEntity, "r")
             .insert()

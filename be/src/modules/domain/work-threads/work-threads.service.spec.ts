@@ -1,5 +1,7 @@
-import { mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { LeadReadService } from "@modules/domain/leads"
+import { OrdersService } from "@modules/domain/orders"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { normalizePage } from "@modules/platform/pagination"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
@@ -13,6 +15,12 @@ import type { WorkThreadRecord } from "./work-threads.contracts"
 /** The any-function matcher, typed `unknown` so it flows into any slot. */
 const anyFunction = (): unknown => expect.any(Function)
 
+/** What the `updatedAt` expression of a column change evaluates to. */
+const nowOf = (change: unknown): unknown =>
+    typeof change === "object" && change !== null && "updatedAt" in change && typeof change.updatedAt === "function"
+        ? change.updatedAt()
+        : undefined
+
 const threadRow: WorkThreadRecord = {
     id: "thread-1",
     workspace_id: "ws-1",
@@ -25,11 +33,21 @@ const threadRow: WorkThreadRecord = {
     updated_at: "2026-10-22T09:41:00+07:00",
 }
 
-const build = async (em: ReturnType<typeof mockEntityManager>) => {
+/** The owners' answers to "does the workspace have this lead / order": both yes unless told otherwise. */
+const build = async (em: ReturnType<typeof mockEntityManager>, owned: { lead?: boolean; order?: boolean } = {}) => {
+    const leads = mock<LeadReadService>()
+    leads.exists.mockResolvedValue(owned.lead ?? true)
+    const orders = mock<OrdersService>()
+    orders.exists.mockResolvedValue(owned.order ?? true)
     const moduleRef = await Test.createTestingModule({
-        providers: [WorkThreadsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
+        providers: [
+            WorkThreadsService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: LeadReadService, useValue: leads },
+            { provide: OrdersService, useValue: orders },
+        ],
     }).compile()
-    return moduleRef.get(WorkThreadsService)
+    return Object.assign(moduleRef.get(WorkThreadsService), { leadsDouble: leads, ordersDouble: orders })
 }
 
 /** A manager double that hands out one fake query builder per `createQueryBuilder` call, in order. */
@@ -83,27 +101,20 @@ const registerCreateFor = () => {
 
         it("opens a thread about a lead and an order of the workspace inside the transaction of the caller", async () => {
             const em = mockEntityManager()
-            const other = managerOf([
-                { getRawOne: { id: "lead-1" } },
-                { getRawOne: { id: "order-1" } },
-                { execute: { raw: [threadRow] } },
-            ])
+            const other = managerOf([{ execute: { raw: [threadRow] } }])
             const service = await build(em)
 
             await service.createFor({ ...input, leadId: "lead-1", orderId: "order-1" }, other.em)
 
-            const [leadRead, orderRead, insert] = other.fakes
-            expect(leadRead?.callsOf("from")).toEqual([["public.leads", "x"]])
-            expect(leadRead?.callsOf("where")).toEqual([
-                ["x.workspace_id = :workspaceId AND x.id = :id", { workspaceId: "ws-1", id: "lead-1" }],
-            ])
-            expect(orderRead?.callsOf("from")).toEqual([["public.orders", "x"]])
+            const [insert] = other.fakes
+            expect(service.leadsDouble.exists).toHaveBeenCalledWith("ws-1", "lead-1")
+            expect(service.ordersDouble.exists).toHaveBeenCalledWith("ws-1", "order-1")
             expect(insert?.callsOf("values")[0]?.[0]).toMatchObject({ leadId: "lead-1", orderId: "order-1" })
             expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
 
         it("refuses a lead that is not in the workspace", async () => {
-            const service = await build(managerWith({ getRawOne: undefined }).em)
+            const service = await build(mockEntityManager(), { lead: false })
 
             await expect(service.createFor({ ...input, leadId: "lead-9" })).rejects.toMatchObject({
                 code: WorkThreadsErrorCode.LeadNotFound,
@@ -111,7 +122,7 @@ const registerCreateFor = () => {
         })
 
         it("refuses an order that is not in the workspace", async () => {
-            const service = await build(managerWith({ getRawOne: undefined }).em)
+            const service = await build(mockEntityManager(), { order: false })
 
             await expect(service.createFor({ ...input, orderId: "order-9" })).rejects.toMatchObject({
                 code: WorkThreadsErrorCode.OrderNotFound,
@@ -146,6 +157,21 @@ const registerReads = () => {
             await expect(service.find("ws-1", "thread-9")).rejects.toMatchObject({
                 code: WorkThreadsErrorCode.ThreadNotFound,
             })
+        })
+
+        it("answers null for a thread the workspace does not have, reading inside the transaction of the caller", async () => {
+            const { em, fake } = managerWith({ getRawOne: undefined })
+            const service = await build(mockEntityManager())
+
+            await expect(service.findIfAny("ws-1", "thread-9", em)).resolves.toBeNull()
+            expect(fake.callsOf("setLock")).toEqual([])
+        })
+
+        it("answers null when there is no thread to lock", async () => {
+            const { em } = managerWith({ getRawOne: undefined })
+            const service = await build(mockEntityManager())
+
+            await expect(service.lockIfAny(em, "ws-1", "thread-9")).resolves.toBeNull()
         })
 
         it("locks a thread for the transaction of the caller", async () => {
@@ -262,6 +288,7 @@ const registerStatus = () => {
                 { workspaceId: "ws-1", id: "thread-1" },
                 { status: "waiting", updatedAt: anyFunction() },
             )
+            expect(nowOf(em.update.mock.calls[0]?.[2])).toBe("now()")
         })
     })
 }

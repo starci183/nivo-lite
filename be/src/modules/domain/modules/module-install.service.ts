@@ -13,6 +13,7 @@ import type {
     RequirementFacts,
 } from "@modules/domain/module-installations"
 import { InstallationChangesService } from "./installation-changes.service"
+import { InstallationFactsService } from "./installation-facts.service"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
@@ -21,6 +22,7 @@ import type { InstallRequest, InstallResult } from "./module-installs.contracts"
 import { ModuleReadinessService } from "./module-readiness.service"
 import type { InstallationView, ModuleDefinition } from "./modules.contracts"
 import { ModulesService } from "./modules.service"
+import { RecordInstallationService } from "./record-installation.service"
 import {
     AGENT_NAME_LIMITS,
     agentNameOf,
@@ -58,6 +60,8 @@ export class ModuleInstallService {
         private readonly rules: AuthorityRulesService,
         private readonly events: EventsService,
         private readonly changes: InstallationChangesService,
+        private readonly facts: InstallationFactsService,
+        private readonly recordOwners: RecordInstallationService,
         private readonly readiness: ModuleReadinessService,
     ) {}
 
@@ -81,7 +85,7 @@ export class ModuleInstallService {
         recordId: string,
     ): Promise<RecordInstallation> {
         await this.members.require(principalId, workspaceId)
-        return this.installations.installationOfRecord(workspaceId, recordId)
+        return this.recordOwners.installationOfRecord(workspaceId, recordId)
     }
 
     /**
@@ -216,13 +220,13 @@ export class ModuleInstallService {
     /** What the workspace has for the requirements of a module (connected providers, head counts); any member may look. */
     async requirementFacts(principalId: string, workspaceId: string): Promise<RequirementFacts> {
         await this.members.require(principalId, workspaceId)
-        return this.installations.requirementFacts(workspaceId)
+        return this.facts.requirementFacts(workspaceId)
     }
 
     /** Where the OpenClaw copy of the agent of an installation stands; any member may look. */
     async syncStatus(principalId: string, workspaceId: string, installationId: string): Promise<AgentSyncStatus> {
         await this.members.require(principalId, workspaceId)
-        const status = await this.installations.syncStatus(workspaceId, installationId)
+        const status = await this.facts.syncStatus(workspaceId, installationId)
         if (status === null) throw new ModulesError({ code: ModulesErrorCode.InstallationNotFound })
         return status
     }

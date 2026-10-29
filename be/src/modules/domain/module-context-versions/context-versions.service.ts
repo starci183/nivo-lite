@@ -1,9 +1,11 @@
 import { Injectable } from "@nestjs/common"
+import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     ContextVersionRecord,
     NewContextVersion,
+    VersionNumber,
     OptionalContextVersionRecord,
 } from "./module-context-versions.contracts"
 import { ModuleContextVersionEntity } from "./persistence/entities"
@@ -40,6 +42,16 @@ export class ContextVersionsService {
     async find(versionId: string): Promise<OptionalContextVersionRecord> {
         const row = await this.entityManager.findOne(ModuleContextVersionEntity, { where: { id: versionId } })
         return row === null ? null : toRecord(row)
+    }
+
+    /** The version numbers of the given versions, by id (an id that does not exist is absent from the answer). */
+    async numbersOf(versionIds: ReadonlyArray<string>): Promise<ReadonlyArray<VersionNumber>> {
+        if (versionIds.length === 0) return []
+        const rows = await this.entityManager.find(ModuleContextVersionEntity, {
+            select: { id: true, version: true },
+            where: { id: In([...new Set(versionIds)]) },
+        })
+        return rows.map((row) => ({ id: row.id, version: row.version }))
     }
 
     /** The newest version of an installation; null before the first apply. */

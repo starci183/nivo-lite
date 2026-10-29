@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
-import { StaffService } from "@modules/domain/staff"
+import { StaffDirectoryService, StaffService } from "@modules/domain/staff"
 import type { StaffWrite } from "@modules/domain/staff"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused, unwrapOutcome } from "@modules/platform/primitives"
@@ -69,6 +69,7 @@ export class WorkspaceMembersService {
         @InjectAccountDirectory() private readonly accounts: AccountDirectory,
         private readonly events: EventsService,
         private readonly staff: StaffService,
+        private readonly staffNames: StaffDirectoryService,
     ) {}
 
     /**
@@ -213,6 +214,7 @@ export class WorkspaceMembersService {
 
     /** Creates or reactivates a membership; an owner is never demoted and a staff link is never dropped. */
     async join(entry: JoinEntry): Promise<void> {
+        const [linked] = entry.staffId === null ? [] : await this.staffNames.namesOf(entry.workspaceId, [entry.staffId])
         await this.entityManager
             .createQueryBuilder(WorkspaceMemberEntity, "workspace_members")
             .insert()
@@ -221,11 +223,9 @@ export class WorkspaceMembersService {
                 userId: entry.userId,
                 role: roleOf(entry.role),
                 staffId: entry.staffId,
-                displayName: () =>
-                    "coalesce((SELECT s.name FROM public.staff s WHERE s.id = :staffId LIMIT 1), :displayName)",
+                displayName: linked?.name ?? entry.displayName,
             })
             .onConflict(JOIN_CONFLICT)
-            .setParameters({ staffId: entry.staffId, displayName: entry.displayName })
             .execute()
     }
 

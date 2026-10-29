@@ -1,19 +1,22 @@
 import { Test } from "@nestjs/testing"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { VideoBrandKitsService } from "@modules/domain/video-brand-kits"
 import { VideoProjectsService } from "@modules/domain/video-projects"
 import { VideoProjectVersionsService } from "@modules/domain/video-project-versions"
 import { VideoRendersService } from "@modules/domain/video-renders"
+import { WorkspacesService } from "@modules/domain/workspaces"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { VideoRenderQueue } from "@modules/queues/video-render"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
+import type { ProjectForRender } from "./video.contracts"
 import { VideoService } from "./video.service"
 
 const WORKSPACE = "0a1b2c3d-0a1b-4c3d-8a1b-0a1b2c3d4e5f"
 
-type Found = NonNullable<Awaited<ReturnType<VideoProjectsService["forRender"]>>>
+type Found = ProjectForRender
 
 const projectOf = builder<Found>({
     id: "project-1",
@@ -42,6 +45,40 @@ const build = async () => {
     const renders = mock<VideoRendersService>()
     const catalog = mock<MessageCatalog>()
     const queue = mock<VideoRenderQueue>()
+    const brandKits = mock<VideoBrandKitsService>()
+    const workspaces = mock<WorkspacesService>()
+    /** Makes the owners answer as the given project says: the locked row, the workspace name, the kit and the render status. */
+    const stage = (found: Found | null): void => {
+        if (found === null) {
+            projects.lockForRender.mockResolvedValue(null)
+            return
+        }
+        const { brand } = found
+        const hasKit = Object.values(brand).some((value) => value !== null)
+        projects.lockForRender.mockResolvedValue({
+            id: found.id,
+            workspaceId: found.workspaceId,
+            aspect: found.aspect,
+            status: found.status,
+            script: found.script,
+            version: found.version,
+            renderId: found.renderStatus === null ? null : "render-0",
+        })
+        workspaces.nameOf.mockResolvedValue(found.workspaceName)
+        brandKits.kitOf.mockResolvedValue(
+            hasKit
+                ? {
+                      shopName: brand.shopName ?? "",
+                      primaryColor: brand.primary ?? "",
+                      secondaryColor: brand.secondary ?? "",
+                      logoPath: brand.logoPath,
+                      musicTrack: brand.musicTrack,
+                      voice: brand.voice ?? "",
+                  }
+                : null,
+        )
+        renders.stateOf.mockResolvedValue(found.renderStatus)
+    }
     catalog.get.mockImplementation((key, params) => `${key}:${JSON.stringify(params)}`)
     renders.open.mockResolvedValue("render-1")
     const moduleRef = await Test.createTestingModule({
@@ -52,18 +89,31 @@ const build = async () => {
             { provide: VideoProjectsService, useValue: projects },
             { provide: VideoProjectVersionsService, useValue: versions },
             { provide: VideoRendersService, useValue: renders },
+            { provide: VideoBrandKitsService, useValue: brandKits },
+            { provide: WorkspacesService, useValue: workspaces },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: VideoRenderQueue, useValue: queue },
         ],
     }).compile()
-    return { video: moduleRef.get(VideoService), tx, members, projects, versions, renders, queue }
+    return {
+        video: moduleRef.get(VideoService),
+        tx,
+        members,
+        projects,
+        versions,
+        renders,
+        queue,
+        brandKits,
+        workspaces,
+        stage,
+    }
 }
 
 describe("VideoService", () => {
     describe("requestRender", () => {
         it("writes the render, its version, the project's new status and the job in one transaction", async () => {
-            const { video, tx, projects, versions, renders, queue } = await build()
-            projects.forRender.mockResolvedValue(projectOf())
+            const { video, tx, projects, versions, renders, queue, stage } = await build()
+            stage(projectOf())
 
             await expect(video.requestRender("person-1", "project-1")).resolves.toEqual({
                 renderId: "render-1",
@@ -101,8 +151,8 @@ describe("VideoService", () => {
         })
 
         it("refuses a project that does not exist", async () => {
-            const { video, projects, renders, queue } = await build()
-            projects.forRender.mockResolvedValue(null)
+            const { video, renders, queue, stage } = await build()
+            stage(null)
 
             await expect(video.requestRender("person-1", "project-1")).rejects.toMatchObject({
                 code: VideoErrorCode.ProjectNotFound,
@@ -118,8 +168,8 @@ describe("VideoService", () => {
 describe("VideoService", () => {
     describe("requestRender", () => {
         it("refuses anyone who does not manage the workspace", async () => {
-            const { video, projects, members, renders, queue } = await build()
-            projects.forRender.mockResolvedValue(projectOf())
+            const { video, members, renders, queue, stage } = await build()
+            stage(projectOf())
             const refusal = new VideoError({ code: VideoErrorCode.NotApproved })
             members.require.mockRejectedValue(refusal)
 
@@ -135,8 +185,8 @@ describe("VideoService", () => {
             ["a render waiting", projectOf({ renderStatus: "queued" })],
             ["a render running", projectOf({ renderStatus: "rendering" })],
         ])("refuses %s", async (_label, found) => {
-            const { video, projects, queue } = await build()
-            projects.forRender.mockResolvedValue(found)
+            const { video, queue, stage } = await build()
+            stage(found)
 
             await expect(video.requestRender("person-1", "project-1")).rejects.toMatchObject({
                 code: VideoErrorCode.ProjectBusy,
@@ -145,8 +195,8 @@ describe("VideoService", () => {
         })
 
         it("renders again a project whose last render ended", async () => {
-            const { video, projects } = await build()
-            projects.forRender.mockResolvedValue(projectOf({ status: "rendering", renderStatus: "failed" }))
+            const { video, stage } = await build()
+            stage(projectOf({ status: "rendering", renderStatus: "failed" }))
 
             await expect(video.requestRender("person-1", "project-1")).resolves.toMatchObject({ renderId: "render-1" })
         })
@@ -156,7 +206,7 @@ describe("VideoService", () => {
 describe("VideoService", () => {
     describe("requestRender", () => {
         it("names the video after the workspace until the owner saves a shop name, and fills in the brand defaults", async () => {
-            const { video, projects, renders } = await build()
+            const { video, renders, stage } = await build()
             const blank = {
                 shopName: null,
                 primary: null,
@@ -165,9 +215,9 @@ describe("VideoService", () => {
                 musicTrack: null,
                 voice: null,
             }
-            projects.forRender.mockResolvedValue(projectOf({ brand: blank }))
+            stage(projectOf({ brand: blank }))
             await video.requestRender("person-1", "project-1")
-            projects.forRender.mockResolvedValue(projectOf({ brand: { ...blank, shopName: "" } }))
+            stage(projectOf({ brand: { ...blank, shopName: "" } }))
             await video.requestRender("person-1", "project-1")
 
             for (const call of renders.open.mock.calls) {
@@ -180,10 +230,8 @@ describe("VideoService", () => {
         })
 
         it("uses the fallback shop name when the workspace has none either", async () => {
-            const { video, projects, renders } = await build()
-            projects.forRender.mockResolvedValue(
-                projectOf({ workspaceName: "", brand: { ...projectOf().brand, shopName: null } }),
-            )
+            const { video, renders, stage } = await build()
+            stage(projectOf({ workspaceName: "", brand: { ...projectOf().brand, shopName: null } }))
 
             await video.requestRender("person-1", "project-1")
 
@@ -191,8 +239,8 @@ describe("VideoService", () => {
         })
 
         it("refuses a script that makes no valid spec", async () => {
-            const { video, projects, renders, queue } = await build()
-            projects.forRender.mockResolvedValue(projectOf({ script: [] }))
+            const { video, renders, queue, stage } = await build()
+            stage(projectOf({ script: [] }))
 
             await expect(video.requestRender("person-1", "project-1")).rejects.toMatchObject({
                 code: VideoErrorCode.SpecInvalid,
@@ -207,8 +255,8 @@ describe("VideoService", () => {
 describe("VideoService", () => {
     describe("requestRender", () => {
         it("writes nothing when the workspace has the most renders open", async () => {
-            const { video, tx, projects, versions, renders, queue } = await build()
-            projects.forRender.mockResolvedValue(projectOf())
+            const { video, tx, projects, versions, renders, queue, stage } = await build()
+            stage(projectOf())
             const full = new VideoError({ code: VideoErrorCode.ProjectBusy, params: { projectId: "project-1" } })
             renders.open.mockRejectedValue(full)
 
@@ -221,8 +269,8 @@ describe("VideoService", () => {
         })
 
         it("rolls everything back when the job cannot be enqueued", async () => {
-            const { video, tx, projects, queue } = await build()
-            projects.forRender.mockResolvedValue(projectOf())
+            const { video, tx, queue, stage } = await build()
+            stage(projectOf())
             const failure = new VideoError({ code: VideoErrorCode.StorageFailed, params: { path: "queue" } })
             queue.enqueueRenderVideo.mockRejectedValue(failure)
 
@@ -273,8 +321,8 @@ describe("VideoService", () => {
 describe("VideoService", () => {
     describe("requestDelegatedRender", () => {
         it("queues a framed render with no creator for a project of the delegating workspace", async () => {
-            const { video, members, projects, versions, renders, queue } = await build()
-            projects.forRender.mockResolvedValue(projectOf())
+            const { video, members, versions, renders, queue, stage } = await build()
+            stage(projectOf())
 
             await expect(video.requestDelegatedRender(WORKSPACE, "project-1")).resolves.toEqual({
                 renderId: "render-1",
@@ -299,8 +347,8 @@ describe("VideoService", () => {
         it.each([null, projectOf({ workspaceId: "other-workspace" })])(
             "refuses a project that is missing or belongs to another workspace",
             async (found) => {
-                const { video, projects, renders } = await build()
-                projects.forRender.mockResolvedValue(found)
+                const { video, renders, stage } = await build()
+                stage(found)
 
                 await expect(video.requestDelegatedRender(WORKSPACE, "project-1")).rejects.toMatchObject({
                     code: VideoErrorCode.ProjectNotFound,

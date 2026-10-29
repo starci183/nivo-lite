@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
-import { builder, mockEntityManager } from "@starci/jest-preset"
+import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { InboundEventsService } from "@modules/domain/inbound-events"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { TransactionsErrorCode } from "./errors/transactions.error"
@@ -45,11 +46,32 @@ const payment: NewTransaction = {
     payer: "Minh",
 }
 
-const build = async (entityManager: MockEntityManager) => {
+/** The input of payment `in-1`, as the inbound events owner answers it. */
+const INPUT = {
+    id: "in-1",
+    workspace_id: "ws-1",
+    channel: "sepay",
+    kind: "payment",
+    sender_name: "Minh",
+    sender_contact: null,
+    body: "DH-20261013-0001",
+    amount_vnd: 500000,
+    external_ref: null,
+    event_id: "evt-1",
+    lead_id: null,
+    status: "received",
+}
+
+const build = async (entityManager: MockEntityManager, inputs: ReadonlyArray<typeof INPUT> = []) => {
+    const events = mock<InboundEventsService>({ findMany: jest.fn().mockResolvedValue([...inputs]) })
     const moduleRef = await Test.createTestingModule({
-        providers: [TransactionsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            TransactionsService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: InboundEventsService, useValue: events },
+        ],
     }).compile()
-    return moduleRef.get(TransactionsService)
+    return Object.assign(moduleRef.get(TransactionsService), { events })
 }
 
 const managerWith = (
@@ -180,11 +202,6 @@ describe("TransactionsService", () => {
             status: "unmatched",
             occurred_at: "2026-10-13T02:00:00.000000+00:00",
             created_at: "2026-10-13T02:00:01.000000+00:00",
-            inbound_id: null,
-            inbound_channel: null,
-            inbound_event: null,
-            inbound_body: null,
-            inbound_sender_name: null,
         }
 
         it("reads the newest payments, a thousand by default", async () => {
@@ -210,31 +227,18 @@ describe("TransactionsService", () => {
             expect(read.callsOf("limit")).toEqual([[1000]])
         })
 
-        it("bounds the read by the limit given and joins the input of the same workspace", async () => {
-            const read = fakeQueryBuilder({ getRawMany: [] })
+        it("bounds the read by the limit given and asks the inbound events owner for the inputs of the workspace", async () => {
+            const read = fakeQueryBuilder({ getRawMany: [raw, { ...raw, id: "tx-2", inbound_event_id: null }] })
             const transactions = await build(managerWith(read))
 
-            await expect(transactions.listAccounting("ws-1", 20)).resolves.toEqual([])
+            await expect(transactions.listAccounting("ws-1", 20)).resolves.toHaveLength(2)
             expect(read.callsOf("limit")).toEqual([[20]])
-            expect(read.callsOf("leftJoin")).toEqual([
-                ["inbound_events", "i", "i.id = t.inbound_event_id AND i.workspace_id = t.workspace_id"],
-            ])
+            expect(transactions.events.findMany).toHaveBeenCalledWith("ws-1", ["in-1"])
         })
 
         it("carries the input record when the payment still has one", async () => {
-            const read = fakeQueryBuilder({
-                getRawMany: [
-                    {
-                        ...raw,
-                        inbound_id: "in-1",
-                        inbound_channel: "sepay",
-                        inbound_event: "evt-1",
-                        inbound_body: "DH-20261013-0001",
-                        inbound_sender_name: "Minh",
-                    },
-                ],
-            })
-            const transactions = await build(managerWith(read))
+            const read = fakeQueryBuilder({ getRawMany: [raw] })
+            const transactions = await build(managerWith(read), [INPUT])
 
             const [row] = await transactions.listAccounting("ws-1")
             expect(row?.inbound).toEqual({

@@ -124,6 +124,15 @@ const holding = (holder: string | null) => ({
 export class AgentConversationsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
+    /** The installation that owns a conversation of the workspace; null when there is no such row or it names no installation. */
+    async installationIdOf(workspaceId: string, id: string): Promise<string | null> {
+        const row = await this.entityManager.findOne(AgentConversationEntity, {
+            select: { installationId: true },
+            where: { workspaceId, id },
+        })
+        return row?.installationId ?? null
+    }
+
     /** Lead-linked customer conversations for a workbench whose caller has already proved membership. */
     async listCustomerLeadConversations(
         workspaceId: string,

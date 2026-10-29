@@ -16,7 +16,7 @@ import { videoScriptMessages, videoScriptSourcesText } from "./video-scripting-p
 import { VideoScriptingContextService } from "./video-scripting-context.service"
 import { videoInputsOf, videoRecord } from "./video-workbench.policy"
 import type { ScriptProject } from "./video-stored.contracts"
-import { readScriptProject, readScriptSources } from "./persistence/video-scripting.query"
+import { VideoScriptReadsService } from "./video-script-reads.service"
 
 @Injectable()
 /** Queues script writing with its project state, and exposes read-only progress for the workbench. */
@@ -29,6 +29,7 @@ export class VideoScriptingService {
         private readonly context: VideoScriptingContextService,
         private readonly projectWriter: VideoProjectScriptingService,
         private readonly completion: VideoScriptingCompletionService,
+        private readonly reads: VideoScriptReadsService,
     ) {}
 
     /** A manager starts one fenced agent-generation job; concurrent clicks reuse its stable operation id. */
@@ -42,13 +43,12 @@ export class VideoScriptingService {
             const meta = videoRecord(project.script_meta)
             const previous = await this.currentRequest(tx, workspaceId, project, meta)
             if (previous !== null) return previous
-            const sources = await readScriptSources(
-                tx,
+            const sources = await this.reads.sourcesOf(
                 workspaceId,
                 videoInputsOf(project.inputs, workspaceId).sourceIds,
             )
             const publicSources = videoScriptSourcesText(sources)
-            const context = await this.context.forProject(tx, workspaceId, project, publicSources)
+            const context = await this.context.forProject(workspaceId, project, publicSources)
             const queued = await this.generations.request(
                 {
                     workspaceId,
@@ -125,7 +125,7 @@ export class VideoScriptingService {
         projectId: string,
         lock = false,
     ): Promise<ScriptProject> {
-        const row = await readScriptProject(tx, workspaceId, projectId, lock)
+        const row = await this.reads.projectOf(tx, workspaceId, projectId, lock)
         if (row === undefined) throw new VideoError({ code: VideoErrorCode.ProjectNotFound, params: { projectId } })
         return row
     }

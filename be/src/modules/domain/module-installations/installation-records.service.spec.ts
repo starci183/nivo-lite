@@ -12,8 +12,6 @@ import { InstallationRecordsService } from "./installation-records.service"
 import type { InstallationRecord, NewInstallation } from "./module-installations.contracts"
 import { ModuleInstallationEntity } from "./persistence/entities"
 
-const RECORD_ID = "0b6c5d1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
-
 const UNIQUE_VIOLATION = { code: "23505" }
 
 const recordOf = builder<InstallationRecord>({
@@ -23,22 +21,18 @@ const recordOf = builder<InstallationRecord>({
     name: "Sales",
     isMulti: false,
     agentId: "agent-1",
-    agentName: "Sales",
-    agentHandle: "sales",
-    agentAvatarUrl: null,
     status: "live",
     operatingMode: "assist",
     liveEnabled: true,
     activeContextVersionId: "version-1",
-    activeVersion: 1,
     settings: {},
     createdAt: "2026-10-01T00:00:00.000Z",
 })
 
-/** The projection a read query answers: the record with a Date in place of the ISO text. */
-const projectionOf = (over: Partial<InstallationRecord> = {}) => {
+/** The stored row of a record: the entity with a Date in place of the ISO text. */
+const entityOf = (over: Partial<InstallationRecord> = {}): ModuleInstallationEntity => {
     const record = recordOf(over)
-    return { ...record, createdAt: new Date(record.createdAt) }
+    return Object.assign(new ModuleInstallationEntity(), { ...record, createdAt: new Date(record.createdAt) })
 }
 
 const build = async (entityManager: MockEntityManager) => {
@@ -56,60 +50,51 @@ const installation: NewInstallation = {
     operatingMode: "assist",
 }
 
-const row = { syncedVersion: 1, activeVersion: 2, checkedAt: "2026-10-01T00:00:00.000Z", error: null }
-
-const syncProjection = (state: string | null) => ({ ...row, state, checkedAt: new Date(row.checkedAt) })
-
 describe("InstallationRecordsService", () => {
     it("lists the installations of the workspace", async () => {
         const records = [recordOf(), recordOf({ id: "inst-2", name: "Bookings" })]
-        const em = mockEntityManager()
-        const query = fakeQueryBuilder({ getRawMany: records.map((record) => projectionOf(record)) })
-        answerQueryBuilders(em, query)
+        const em = mockEntityManager({ find: [ModuleInstallationEntity, records.map((record) => entityOf(record))] })
         const service = await build(em)
 
         await expect(service.list("ws-1")).resolves.toEqual(records)
 
-        expect(em.createQueryBuilder).toHaveBeenCalledWith(ModuleInstallationEntity, "i")
-        expect(query.argsOf("where")).toEqual([
-            ["i.workspaceId = :workspaceId AND i.status <> 'removed'", { workspaceId: "ws-1" }],
-        ])
-        expect(query.argsOf("orderBy")).toEqual([["i.createdAt", "ASC"]])
-        expect(query.argsOf("addOrderBy")).toEqual([["i.id", "ASC"]])
-        expect(query.argsOf("limit")).toEqual([[200]])
-        expect(query.argsOf("leftJoin").map((args) => args[1])).toEqual(["a", "v"])
+        expect(em.find).toHaveBeenCalledWith(ModuleInstallationEntity, {
+            where: { workspaceId: "ws-1", status: Not("removed") },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: 200,
+        })
     })
     it("finds an installation by id or answers null", async () => {
-        const em = mockEntityManager()
-        const found = fakeQueryBuilder({ getRawOne: projectionOf() })
-        const none = fakeQueryBuilder({ getRawOne: undefined })
-        answerQueryBuilders(em, found, none)
+        const em = mockEntityManager({
+            findOne: [
+                [ModuleInstallationEntity, entityOf()],
+                [ModuleInstallationEntity, null],
+            ],
+        })
         const service = await build(em)
 
         await expect(service.findById("inst-1")).resolves.toEqual(recordOf())
         await expect(service.findById("missing")).resolves.toBeNull()
 
-        expect(found.argsOf("where")).toEqual([["i.id = :installationId", { installationId: "inst-1" }]])
-        expect(none.argsOf("where")).toEqual([["i.id = :installationId", { installationId: "missing" }]])
+        expect(em.findOne).toHaveBeenNthCalledWith(1, ModuleInstallationEntity, { where: { id: "inst-1" } })
+        expect(em.findOne).toHaveBeenNthCalledWith(2, ModuleInstallationEntity, { where: { id: "missing" } })
     })
     it("finds the first installation of a module or answers null", async () => {
-        const em = mockEntityManager()
-        const found = fakeQueryBuilder({ getRawOne: projectionOf() })
-        const none = fakeQueryBuilder({ getRawOne: undefined })
-        answerQueryBuilders(em, found, none)
+        const em = mockEntityManager({
+            findOne: [
+                [ModuleInstallationEntity, entityOf()],
+                [ModuleInstallationEntity, null],
+            ],
+        })
         const service = await build(em)
 
         await expect(service.firstOfModule("ws-1", "sales")).resolves.toEqual(recordOf())
         await expect(service.firstOfModule("ws-1", "booking")).resolves.toBeNull()
 
-        expect(found.argsOf("where")).toEqual([
-            [
-                "i.workspaceId = :workspaceId AND i.moduleKey = :moduleKey AND i.status <> 'removed'",
-                { workspaceId: "ws-1", moduleKey: "sales" },
-            ],
-        ])
-        expect(found.argsOf("orderBy")).toEqual([["i.createdAt", "ASC"]])
-        expect(found.argsOf("limit")).toEqual([[1]])
+        expect(em.findOne).toHaveBeenNthCalledWith(1, ModuleInstallationEntity, {
+            where: { workspaceId: "ws-1", moduleKey: "sales", status: Not("removed") },
+            order: { createdAt: "ASC", id: "ASC" },
+        })
     })
 })
 
@@ -130,18 +115,20 @@ describe("InstallationRecordsService", () => {
         expect(query.argsOf("limit")).toEqual([[1000]])
     })
     it("finds the installation driven by an agent or answers null", async () => {
-        const em = mockEntityManager()
-        const found = fakeQueryBuilder({ getRawOne: projectionOf() })
-        const none = fakeQueryBuilder({ getRawOne: undefined })
-        answerQueryBuilders(em, found, none)
+        const em = mockEntityManager({
+            findOne: [
+                [ModuleInstallationEntity, entityOf()],
+                [ModuleInstallationEntity, null],
+            ],
+        })
         const service = await build(em)
 
         await expect(service.ofAgent("ws-1", "agent-1")).resolves.toEqual(recordOf())
         await expect(service.ofAgent("ws-1", "unbound")).resolves.toBeNull()
 
-        expect(found.argsOf("where")).toEqual([
-            ["i.workspaceId = :workspaceId AND i.agentId = :agentId", { workspaceId: "ws-1", agentId: "agent-1" }],
-        ])
+        expect(em.findOne).toHaveBeenNthCalledWith(1, ModuleInstallationEntity, {
+            where: { workspaceId: "ws-1", agentId: "agent-1" },
+        })
     })
 })
 
@@ -169,22 +156,6 @@ describe("InstallationRecordsService", () => {
 })
 
 describe("InstallationRecordsService", () => {
-    it("reads the workspace requirement facts", async () => {
-        const facts = { providers: ["facebook", "instagram"], chatAgents: 2, staff: 3, members: 9 }
-        const em = mockEntityManager()
-        answerQueryBuilders(
-            em,
-            fakeQueryBuilder({ getRawMany: [{ provider: "facebook" }, { provider: "instagram" }] }),
-            fakeQueryBuilder({ getRawOne: { total: 2 } }),
-            fakeQueryBuilder({ getRawOne: { total: 3 } }),
-            fakeQueryBuilder({ getRawOne: { total: 9 } }),
-        )
-        const service = await build(em)
-
-        await expect(service.requirementFacts("ws-1")).resolves.toEqual(facts)
-
-        expect(em.createQueryBuilder).toHaveBeenCalledTimes(4)
-    })
     it("lists OpenClaw installations within the requested workspace and limit", async () => {
         const installations = [{ id: "inst-1", workspaceId: "ws-1" }]
         const em = mockEntityManager()
@@ -206,48 +177,22 @@ describe("InstallationRecordsService", () => {
     })
 })
 
-describe("InstallationRecordsService / installationOfRecord", () => {
-    it("answers no installation for an id that is not a record id, without reading", async () => {
-        const em = mockEntityManager()
-        const service = await build(em)
-
-        await expect(service.installationOfRecord("ws-1", "not-a-uuid")).resolves.toEqual({ installationId: null })
-
-        expect(em.createQueryBuilder).not.toHaveBeenCalled()
-    })
-    it("answers the installation that owns the record, or none", async () => {
-        const em = mockEntityManager()
-        const miss = () => fakeQueryBuilder({ getRawOne: undefined })
-        answerQueryBuilders(
-            em,
-            miss(),
-            miss(),
-            fakeQueryBuilder({ getRawOne: { installationId: "inst-1" } }),
-            miss(),
-            miss(),
-        )
-        const service = await build(em)
-
-        await expect(service.installationOfRecord("ws-1", RECORD_ID)).resolves.toEqual({ installationId: "inst-1" })
-        expect(em.createQueryBuilder).toHaveBeenCalledTimes(5)
-
-        answerQueryBuilders(em, miss())
-        await expect(service.installationOfRecord("ws-1", RECORD_ID)).resolves.toEqual({ installationId: null })
-    })
-})
-
 describe("InstallationRecordsService / find", () => {
     it("answers the row or null", async () => {
-        const em = mockEntityManager()
-        answerQueryBuilders(
-            em,
-            fakeQueryBuilder({ getRawOne: projectionOf() }),
-            fakeQueryBuilder({ getRawOne: undefined }),
-        )
+        const em = mockEntityManager({
+            findOne: [
+                [ModuleInstallationEntity, entityOf()],
+                [ModuleInstallationEntity, null],
+            ],
+        })
         const service = await build(em)
 
         await expect(service.find("ws-1", "inst-1")).resolves.toEqual(recordOf())
         await expect(service.find("ws-1", "missing")).resolves.toBeNull()
+
+        expect(em.findOne).toHaveBeenNthCalledWith(1, ModuleInstallationEntity, {
+            where: { workspaceId: "ws-1", id: "inst-1" },
+        })
     })
 })
 
@@ -260,6 +205,9 @@ describe("InstallationRecordsService / boundAgentIds", () => {
         const service = await build(em)
 
         await expect(service.boundAgentIds("ws-1")).resolves.toEqual(["agent-1", "agent-2"])
+
+        em.find.mockResolvedValueOnce([Object.assign(new ModuleInstallationEntity(), { agentId: null })])
+        await expect(service.boundAgentIds("ws-1")).resolves.toEqual([])
 
         expect(em.find).toHaveBeenCalledWith(ModuleInstallationEntity, {
             select: { agentId: true },
@@ -391,46 +339,6 @@ describe("InstallationRecordsService / writes", () => {
     })
 })
 
-describe("InstallationRecordsService / syncStatus", () => {
-    it("keeps a known state and reads anything else as none", async () => {
-        const em = mockEntityManager()
-        answerQueryBuilders(
-            em,
-            fakeQueryBuilder({ getRawOne: syncProjection("ok") }),
-            fakeQueryBuilder({ getRawOne: syncProjection("error") }),
-            fakeQueryBuilder({ getRawOne: syncProjection(null) }),
-        )
-        const service = await build(em)
-
-        await expect(service.syncStatus("ws-1", "inst-1")).resolves.toEqual({ ...row, state: "ok" })
-        await expect(service.syncStatus("ws-1", "inst-1")).resolves.toEqual({ ...row, state: "error" })
-        await expect(service.syncStatus("ws-1", "inst-1")).resolves.toEqual({ ...row, state: "none" })
-    })
-    it("answers a missing check time as null", async () => {
-        const em = mockEntityManager()
-        answerQueryBuilders(
-            em,
-            fakeQueryBuilder({ getRawOne: { ...syncProjection(null), checkedAt: null, syncedVersion: null } }),
-        )
-        const service = await build(em)
-
-        await expect(service.syncStatus("ws-1", "inst-1")).resolves.toEqual({
-            state: "none",
-            syncedVersion: null,
-            activeVersion: 2,
-            checkedAt: null,
-            error: null,
-        })
-    })
-    it("answers null for an installation of another workspace", async () => {
-        const em = mockEntityManager()
-        answerQueryBuilders(em, fakeQueryBuilder({ getRawOne: undefined }))
-        const service = await build(em)
-
-        await expect(service.syncStatus("ws-2", "inst-1")).resolves.toBeNull()
-    })
-})
-
 describe("InstallationRecordsService / settleConnection", () => {
     it("answers the status the connection check moved the installation to, or null when it did not move", async () => {
         const em = mockEntityManager()
@@ -442,6 +350,8 @@ describe("InstallationRecordsService / settleConnection", () => {
         await expect(service.settleConnection("ws-1", "inst-1", false)).resolves.toBe("needs_connection")
         await expect(service.settleConnection("ws-1", "inst-1", true)).resolves.toBeNull()
 
+        const set = moved.argsOf("set")[0]?.[0] as { status: () => string } | undefined
+        expect(set?.status()).toContain("CASE WHEN NOT :ready::boolean")
         expect(moved.argsOf("where")).toEqual([
             ["id = :installationId AND workspace_id = :workspaceId", { installationId: "inst-1", workspaceId: "ws-1" }],
         ])
@@ -463,7 +373,12 @@ describe("InstallationRecordsService > markRemoved", () => {
             { status: "removed", liveEnabled: false, removedAt: ANY_FUNCTION, removedBy: "Lan" },
         )
 
+        const set = em.update.mock.calls[0]?.[2] as { removedAt: () => string } | undefined
+        expect(set?.removedAt()).toBe("now()")
+
         const none = mockEntityManager({ update: [ModuleInstallationEntity, { affected: 0 }] })
         await expect(service.markRemoved("ws-1", "inst-1", "Lan", none)).resolves.toBe("missing")
+        const unknown = mockEntityManager({ update: [ModuleInstallationEntity, {}] })
+        await expect(service.markRemoved("ws-1", "inst-1", "Lan", unknown)).resolves.toBe("missing")
     })
 })

@@ -1,16 +1,16 @@
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
 import type { BoundConnection } from "@modules/domain/agent-connections"
 import { ChannelDeliveryService } from "@modules/domain/channels"
 import { OfficeLog } from "@modules/domain/module-ops"
-import { StaffEntity } from "@modules/domain/staff"
+import { StaffDirectoryService } from "@modules/domain/staff"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ShiftsNotificationEntity, ShiftsStaffEntity } from "./persistence/entities"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { entityOf } from "@tests/fixtures/builders/entity.builder"
 import { ShiftsNotifyService } from "./shifts-notify.service"
 import { ShiftsTextService } from "./shifts-text.service"
@@ -41,7 +41,7 @@ const personOf = entityOf(ShiftsStaffEntity, {
     zaloUserId: null,
 })
 
-const answer = (person: Person | null, agent: boolean): MockEntityManager => {
+const answer = (person: Person | null): MockEntityManager => {
     const em = mockEntityManager({
         findOne: [
             ShiftsStaffEntity,
@@ -53,22 +53,22 @@ const answer = (person: Person | null, agent: boolean): MockEntityManager => {
                       zaloUserId: person.zalo ?? null,
                   }),
         ],
-        find: [StaffEntity, [entityOf(StaffEntity, { id: "row-1", name: "Chi Lan" })()]],
         insert: [ShiftsNotificationEntity, {}],
     })
-    em.createQueryBuilder.mockReturnValue(
-        fakeQueryBuilder({ getRawOne: agent ? { id: "agent-1" } : undefined, getRawMany: [{ handle: "sales" }] })
-            .builder as never,
-    )
     return em
 }
 
-const build = async (em: MockEntityManager) => {
+const build = async (em: MockEntityManager, hasAgent = false) => {
     const office = mock<OfficeLog>()
     office.postOffice.mockResolvedValue(undefined)
     const bindings = mock<AgentBindingsService>()
     const delivery = mock<ChannelDeliveryService>()
     delivery.sendToPerson.mockResolvedValue(undefined)
+    const agents = mock<AgentDirectoryService>()
+    agents.firstActiveIdOfModule.mockResolvedValue(hasAgent ? "agent-1" : null)
+    agents.handlesOf.mockResolvedValue(["sales"])
+    const staff = mock<StaffDirectoryService>()
+    staff.list.mockResolvedValue([{ id: "row-1", name: "Chi Lan" }])
     const words = mock<ShiftsTextService>()
     words.text.mockImplementation((key: string) => key)
     const logger = mock<Logger>()
@@ -79,11 +79,13 @@ const build = async (em: MockEntityManager) => {
             { provide: LOGGER, useValue: logger },
             { provide: OfficeLog, useValue: office },
             { provide: AgentBindingsService, useValue: bindings },
+            { provide: AgentDirectoryService, useValue: agents },
+            { provide: StaffDirectoryService, useValue: staff },
             { provide: ChannelDeliveryService, useValue: delivery },
             { provide: ShiftsTextService, useValue: words },
         ],
     }).compile()
-    return { service: moduleRef.get(ShiftsNotifyService), office, bindings, delivery, logger, words }
+    return { service: moduleRef.get(ShiftsNotifyService), office, bindings, delivery, logger, words, agents, staff }
 }
 
 const recorded = (em: MockEntityManager): Array<ReadonlyArray<unknown>> =>
@@ -106,7 +108,7 @@ const recorded = (em: MockEntityManager): Array<ReadonlyArray<unknown>> =>
 
 describe("ShiftsNotifyService toStaff", () => {
     it("tags the person in Office and records the line", async () => {
-        const em = answer({ staffRow: "row-1" }, false)
+        const em = answer({ staffRow: "row-1" })
         const { service, office } = await build(em)
 
         await expect(
@@ -120,8 +122,8 @@ describe("ShiftsNotifyService toStaff", () => {
     })
 
     it("sends on Telegram and Zalo through the connections bound to the shifts agent", async () => {
-        const em = answer({ telegram: "chat-9", zalo: "zu-9" }, true)
-        const { service, bindings, delivery } = await build(em)
+        const em = answer({ telegram: "chat-9", zalo: "zu-9" })
+        const { service, bindings, delivery } = await build(em, true)
         bindings.connectionsFor.mockImplementation((_agent, _purpose, options) =>
             Promise.resolve([connection(options?.providers?.[0] ?? "")]),
         )
@@ -164,8 +166,8 @@ describe("ShiftsNotifyService toStaff", () => {
 
 describe("ShiftsNotifyService toStaff", () => {
     it("records a channel as skipped when nothing is bound and as failed when the send fails", async () => {
-        const em = answer({ telegram: "chat-9", zalo: "zu-9" }, true)
-        const { service, bindings, delivery } = await build(em)
+        const em = answer({ telegram: "chat-9", zalo: "zu-9" })
+        const { service, bindings, delivery } = await build(em, true)
         bindings.connectionsFor.mockImplementation((_agent, _purpose, options) =>
             Promise.resolve(options?.providers?.[0] === "telegram" ? [connection("telegram")] : []),
         )
@@ -185,7 +187,7 @@ describe("ShiftsNotifyService toStaff", () => {
     })
 
     it("does nothing for an unknown person", async () => {
-        const em = answer(null, false)
+        const em = answer(null)
         const { service, office } = await build(em)
 
         await expect(service.toStaff("ws-1", { staffId: "p-x", kind: "leave", body: "x" })).resolves.toEqual({
@@ -197,7 +199,7 @@ describe("ShiftsNotifyService toStaff", () => {
     })
 
     it("records a failed Office line without throwing", async () => {
-        const em = answer({}, false)
+        const em = answer({})
         const { service, office } = await build(em)
         office.postOffice.mockRejectedValue(new Error("office down"))
 
@@ -210,8 +212,8 @@ describe("ShiftsNotifyService toStaff", () => {
     })
 
     it("uses the person's name when the linked staff row is missing and ignores empty channel ids", async () => {
-        const em = answer({ staffRow: "missing", telegram: "", zalo: "" }, true)
-        const { service, office, words, bindings, delivery } = await build(em)
+        const em = answer({ staffRow: "missing", telegram: "", zalo: "" })
+        const { service, office, words, bindings, delivery } = await build(em, true)
 
         await expect(service.toStaff("ws-1", { staffId: "p-1", kind: "publish", body: "Week ready" })).resolves.toEqual(
             {
@@ -231,7 +233,7 @@ describe("ShiftsNotifyService toStaff", () => {
 
 describe("ShiftsNotifyService toStaff", () => {
     it("skips both linked channels when there is no shifts agent", async () => {
-        const em = answer({ telegram: "chat-9", zalo: "zu-9" }, false)
+        const em = answer({ telegram: "chat-9", zalo: "zu-9" })
         const { service, delivery } = await build(em)
 
         await expect(service.toStaff("ws-1", { staffId: "p-1", kind: "gap", body: "Open shift" })).resolves.toEqual({
@@ -249,8 +251,8 @@ describe("ShiftsNotifyService toStaff", () => {
     })
 
     it("caps non-Error Office failures and keeps sending through both channels", async () => {
-        const em = answer({ telegram: "chat-9", zalo: "zu-9" }, true)
-        const { service, office, bindings, delivery, logger } = await build(em)
+        const em = answer({ telegram: "chat-9", zalo: "zu-9" })
+        const { service, office, bindings, delivery, logger } = await build(em, true)
         const cause = "x".repeat(240)
         office.postOffice.mockRejectedValue(cause)
         bindings.connectionsFor.mockImplementation((_agent, _purpose, options) =>
@@ -278,7 +280,7 @@ describe("ShiftsNotifyService toStaff", () => {
 
 describe("ShiftsNotifyService toManagers", () => {
     it("posts one Office line and records it under its kind", async () => {
-        const em = answer(null, false)
+        const em = answer(null)
         const { service, office } = await build(em)
 
         await service.toManagers("ws-1", "Nobody checked in", "no_show", { shiftId: "s-1" })
@@ -290,7 +292,7 @@ describe("ShiftsNotifyService toManagers", () => {
     })
 
     it("defaults to a gap alert and logs a failed evidence insert", async () => {
-        const em = answer(null, false)
+        const em = answer(null)
         const cause = new Error("evidence unavailable")
         em.insert.mockRejectedValue(cause)
         const { service, office, logger } = await build(em)
@@ -308,7 +310,7 @@ describe("ShiftsNotifyService toManagers", () => {
 
 describe("ShiftsNotifyService evidence length", () => {
     it("keeps at most 4000 characters of the line", async () => {
-        const em = answer(null, false)
+        const em = answer(null)
         const { service } = await build(em)
 
         await service.toManagers("ws-1", "m".repeat(4100))
@@ -322,15 +324,15 @@ describe("ShiftsNotifyService evidence length", () => {
 
 describe("ShiftsNotifyService hasChannel", () => {
     it("is false without an active shifts agent", async () => {
-        const em = answer(null, false)
+        const em = answer(null)
         const { service } = await build(em)
 
         await expect(service.hasChannel("ws-1")).resolves.toBe(false)
     })
 
     it("stops searching once Telegram has a bound connection", async () => {
-        const em = answer(null, true)
-        const { service, bindings } = await build(em)
+        const em = answer(null)
+        const { service, bindings } = await build(em, true)
         bindings.connectionsFor.mockResolvedValue([connection("telegram")])
 
         await expect(service.hasChannel("ws-1")).resolves.toBe(true)
@@ -349,8 +351,8 @@ describe("ShiftsNotifyService hasChannel", () => {
     })
 
     it("uses a Zalo binding when Telegram has none", async () => {
-        const em = answer(null, true)
-        const { service, bindings } = await build(em)
+        const em = answer(null)
+        const { service, bindings } = await build(em, true)
         bindings.connectionsFor.mockResolvedValueOnce([]).mockResolvedValueOnce([connection("zalo_oa")])
 
         await expect(service.hasChannel("ws-1")).resolves.toBe(true)

@@ -126,6 +126,39 @@ describe("AiUsageEventsService", () => {
     })
 })
 
+describe("AiUsageEventsService > creditsUsedBy", () => {
+    it("sums the whole credits a module used, with the value of one credit read from the database", async () => {
+        const em = mockEntityManager({
+            query: ["SELECT * FROM public.credit_usd_value()", [{ credit_usd_value: "0.01" }]],
+        })
+        const sums = fakeQueryBuilder({ getRawOne: { credits: 7 } })
+        em.createQueryBuilder.mockReturnValue(sums.builder)
+        const { usage } = await build(em)
+
+        await expect(usage.creditsUsedBy("ws-1", "video", 30)).resolves.toBe(7)
+
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(AiUsageEventEntity, "u")
+        expect(sums.callsOf("select")).toEqual([["COALESCE(sum(ceil(u.cost_usd / :creditUsd)), 0)::int", "credits"]])
+        expect(sums.callsOf("where")).toEqual([
+            [
+                "u.workspace_id = :workspaceId AND u.module = :module",
+                { workspaceId: "ws-1", module: "video", creditUsd: 0.01 },
+            ],
+        ])
+        expect(sums.callsOf("andWhere")).toEqual([
+            ["u.created_at >= now() - CAST(:days AS integer) * interval '1 day'", { days: 30 }],
+        ])
+    })
+
+    it("answers zero credits when no value or no row comes back", async () => {
+        const em = mockEntityManager({ query: ["SELECT * FROM public.credit_usd_value()", []] })
+        em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ getRawOne: undefined }).builder)
+        const { usage } = await build(em)
+
+        await expect(usage.creditsUsedBy("ws-1", "video", 30)).resolves.toBe(0)
+    })
+})
+
 const BOOKED = (overrides: Record<string, unknown> = {}) => ({
     workspaceId: "ws-1",
     kind: "chat_reply",

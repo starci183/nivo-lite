@@ -10,6 +10,7 @@ import { EntitlementsService } from "./entitlements.service"
 import { PaymentProofService } from "./payment-proof.service"
 import { CassoProofService } from "./casso-proof.service"
 import { PayosProofService } from "./payos-proof.service"
+import { BillingEventsReadService } from "./billing-events-read.service"
 @Module({})
 /** The billing capability over the primary Supabase connection: plans, payment orders, SePay settlement and the payment feeds. */
 export class BillingModule extends ConfigurableModuleClass {
@@ -20,6 +21,7 @@ export class BillingModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
+                BillingEventsReadService,
                 BillingService,
                 BillingReadService,
                 EntitlementsService,
@@ -31,6 +33,7 @@ export class BillingModule extends ConfigurableModuleClass {
                 BankFeedDeliveryService,
             ],
             exports: [
+                BillingEventsReadService,
                 MODULE_OPTIONS_TOKEN,
                 BillingService,
                 BillingReadService,

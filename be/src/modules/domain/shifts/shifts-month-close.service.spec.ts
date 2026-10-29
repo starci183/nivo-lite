@@ -1,8 +1,10 @@
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
+import type { PipelineConfig, PipelineRow } from "@modules/domain/automation-pipelines"
 import { OfficeLog, OutboundMail } from "@modules/domain/module-ops"
-import { ACCOUNT_DIRECTORY } from "@modules/domain/workspace-members"
+import { ACCOUNT_DIRECTORY, WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import type { AccountDirectory } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
@@ -59,29 +61,58 @@ const SHIFT: AlertShiftRead = {
     alerted: false,
 }
 
+/** The pipeline the owner of automations lists for a workspace whose month close is on. */
+const pipelineOf = (workspace: { workspace_id: string; config: PipelineConfig }): PipelineRow => ({
+    id: "pipeline-1",
+    workspace_id: workspace.workspace_id,
+    template_key: "shifts_month_close",
+    name: "Month close",
+    module_key: "shifts",
+    enabled: true,
+    dismissed: false,
+    config: workspace.config,
+    body: null,
+    body_version: 0,
+    template_version: 1,
+    based_on_context: null,
+    approval_streak: 0,
+    trust_offered_at: null,
+    auto_send: false,
+    created_at: "2026-10-01T00:00:00.000Z",
+    updated_at: "2026-10-01T00:00:00.000Z",
+})
+
+/** What `answer` set up for a manager: whether the workspace has an owner and which workspaces have the close on. */
+interface Setting {
+    readonly owner: boolean
+    readonly workspaces: ReadonlyArray<{ workspace_id: string; config: PipelineConfig }>
+}
+
+const settingOfManager = new WeakMap<object, Setting>()
+
 /** Whether the month was closed already (null: no marker line yet) and whether the workspace has an owner; the builders made are answered back. */
 const answer = (
     done: boolean | null,
     owner: boolean,
-    workspaces: ReadonlyArray<object> = WORKSPACES,
+    workspaces: ReadonlyArray<{ workspace_id: string; config: PipelineConfig }> = WORKSPACES,
 ): { readonly em: MockEntityManager; readonly built: Array<FakeQueryBuilder> } => {
     const em = mockEntityManager({ exists: [ShiftsNotificationEntity, done === true] })
+    settingOfManager.set(em, { owner, workspaces })
     const built: Array<FakeQueryBuilder> = []
     em.createQueryBuilder.mockImplementation(() => {
-        const fake: FakeQueryBuilder = routedQueryBuilder({
-            getRawMany: (read) =>
-                Promise.resolve(fromOf(read) === "public.automation_pipelines" ? workspaces : [SHIFT]),
-            getRawOne: () => Promise.resolve(owner ? { user_id: "u-1" } : undefined),
-        })
+        const fake: FakeQueryBuilder = routedQueryBuilder({ getRawMany: () => Promise.resolve([SHIFT]) })
         built.push(fake)
         return fake.builder as never
     })
     return { em, built }
 }
 
-const fromOf = (fake: FakeQueryBuilder): unknown => fake.callsOf("from")[0]?.[0]
-
 const build = async (em: MockEntityManager) => {
+    const setting = settingOfManager.get(em) ?? { owner: true, workspaces: WORKSPACES }
+    const pipelines = mock<AutomationPipelinesService>()
+    pipelines.enabledOfTemplate.mockResolvedValue(setting.workspaces.map(pipelineOf))
+    const members = mock<WorkspaceMemberDirectoryService>()
+    members.firstActiveOwnerUserId.mockResolvedValue(setting.owner ? "u-1" : null)
     const accounts = mock<AccountDirectory>()
     accounts.accountOf.mockResolvedValue({
         kind: "ok",
@@ -109,9 +140,22 @@ const build = async (em: MockEntityManager) => {
             { provide: ShiftsDataService, useValue: data },
             { provide: ShiftsNotifyService, useValue: notify },
             { provide: ShiftsTextService, useValue: words },
+            { provide: AutomationPipelinesService, useValue: pipelines },
+            { provide: WorkspaceMemberDirectoryService, useValue: members },
         ],
     }).compile()
-    return { service: moduleRef.get(ShiftsMonthCloseService), office, mail, notify, accounts, logger, data, words }
+    return {
+        service: moduleRef.get(ShiftsMonthCloseService),
+        office,
+        mail,
+        notify,
+        accounts,
+        logger,
+        data,
+        words,
+        pipelines,
+        members,
+    }
 }
 
 describe("ShiftsMonthCloseService", () => {
@@ -156,10 +200,11 @@ describe("ShiftsMonthCloseService", () => {
 
     it("on a tick closes the previous month of every workspace past its day and time", async () => {
         const { em } = answer(false, false)
-        const { service } = await build(em)
+        const { service, pipelines } = await build(em)
 
         await expect(service.tick(new Date("2026-10-01T03:00:00.000Z"))).resolves.toBe(1)
         await expect(service.tick(new Date("2026-10-01T01:00:00.000Z"))).resolves.toBe(0)
+        expect(pipelines.enabledOfTemplate).toHaveBeenCalledWith("shifts_month_close", 2000)
     })
 
     it.each([
@@ -181,7 +226,7 @@ describe("ShiftsMonthCloseService", () => {
 describe("ShiftsMonthCloseService", () => {
     it("builds the payroll text, CSV and evidence even when mail fails and no prior marker exists", async () => {
         const { em, built } = answer(null, true)
-        const { service, words, mail, office, notify, data } = await build(em)
+        const { service, words, mail, office, notify, data, members } = await build(em)
         words.text.mockImplementation((key, params) => {
             if (key === "shifts.payrollOffice") return `${params?.marker}  Monthly wages  `
             return key
@@ -197,10 +242,7 @@ describe("ShiftsMonthCloseService", () => {
             "s.shift_date BETWEEN :from AND :to",
             { from: "2026-09-01", to: "2026-09-30" },
         ])
-        expect(built.flatMap((fake) => fake.callsOf("where"))).toContainEqual([
-            "m.workspace_id = :workspaceId AND m.role = 'owner' AND m.status = 'active'",
-            { workspaceId: "ws-1" },
-        ])
+        expect(members.firstActiveOwnerUserId).toHaveBeenCalledWith("ws-1")
         expect(data.loadSetup).toHaveBeenCalledWith("ws-1", true)
         expect(words.text).toHaveBeenCalledWith("shifts.payrollLine", {
             name: "Lan",

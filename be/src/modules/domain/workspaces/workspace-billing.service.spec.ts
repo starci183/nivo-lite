@@ -3,7 +3,6 @@ import { FakeClock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { WorkspacesErrorCode } from "./errors/workspaces.error"
 import { WorkspaceEntity } from "./persistence/entities"
 import { WorkspaceBillingService } from "./workspace-billing.service"
@@ -96,21 +95,15 @@ describe("WorkspaceBillingService", () => {
 describe("WorkspaceBillingService", () => {
     describe("setPlan", () => {
         it("moves the workspace to an active plan and drops the tier and seats bought on the old one", async () => {
-            const plan = fakeQueryBuilder({ getRawOne: { code: "enterprise" } })
             const em = mockEntityManager({
                 findOne: [WorkspaceEntity, billingOf()],
                 update: [WorkspaceEntity, UPDATED],
             })
-            em.createQueryBuilder.mockReturnValue(plan.builder as never)
 
-            await expect((await build(em)).setPlan("ws-1", "enterprise")).resolves.toEqual({
+            await expect((await build(em)).setPlan("ws-1", { code: "enterprise" })).resolves.toEqual({
                 from: "starter",
                 to: "enterprise",
             })
-            expect(plan.callsOf("from")).toEqual([["plans", "p"]])
-            expect(plan.callsOf("where")).toEqual([
-                ["p.code = :planCode AND p.active = true", { planCode: "enterprise" }],
-            ])
             expect(em.update).toHaveBeenCalledWith(
                 WorkspaceEntity,
                 { id: "ws-1" },
@@ -120,9 +113,8 @@ describe("WorkspaceBillingService", () => {
 
         it("refuses an unknown or retired plan and changes nothing", async () => {
             const em = mockEntityManager()
-            em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ getRawOne: undefined }).builder as never)
 
-            await expect((await build(em)).setPlan("ws-1", "gone")).rejects.toMatchObject({
+            await expect((await build(em)).setPlan("ws-1", null)).rejects.toMatchObject({
                 code: WorkspacesErrorCode.PlanUnknown,
             })
             expect(em.update).not.toHaveBeenCalled()

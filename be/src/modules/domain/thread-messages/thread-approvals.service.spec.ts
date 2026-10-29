@@ -7,6 +7,8 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { MentionDirectoryService } from "./mention-directory.service"
+import { ThreadMessageAuthorsService } from "./thread-message-authors.service"
+import { passThroughAuthors } from "@tests/fixtures/builders/thread-message-authors.builder"
 import { toMessage } from "./thread.mapper"
 import { ThreadApprovalOutcomesService } from "./thread-approval-outcomes.service"
 import { ThreadApprovalsService } from "./thread-approvals.service"
@@ -108,6 +110,7 @@ const build = async (em: MockEntityManager, answers: Answers = {}) => {
             { provide: APPROVAL_GATE, useValue: gate },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: MentionDirectoryService, useValue: directory },
+            { provide: ThreadMessageAuthorsService, useValue: passThroughAuthors() },
             { provide: ThreadApprovalOutcomesService, useValue: outcomes },
         ],
     }).compile()

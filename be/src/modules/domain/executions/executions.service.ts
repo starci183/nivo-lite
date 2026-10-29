@@ -1,10 +1,12 @@
 import { Injectable } from "@nestjs/common"
+import { In } from "typeorm"
 import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import type {
     ExecutionCard,
+    ExecutionStatus,
     ExecutionListFilter,
     ExecutionRecord,
     ExecutionSettlement,
@@ -101,6 +103,36 @@ export class ExecutionsService {
             .addOrderBy("x.id", "ASC")
             .limit(filter.limit)
             .getRawMany<ExecutionRecord>()
+    }
+
+    /** The cards waiting for a decision, newest first, bounded by the caller. */
+    pendingApprovals(workspaceId: string, limit: number): Promise<Array<ExecutionRecord>> {
+        return recordQuery(this.entityManager, workspaceId)
+            .andWhere("x.status = 'pending_approval'")
+            .orderBy("x.createdAt", "DESC")
+            .addOrderBy("x.id", "DESC")
+            .limit(limit)
+            .getRawMany<ExecutionRecord>()
+    }
+
+    /** The most recently approved or rejected cards, newest decision first, bounded by the caller. */
+    decidedApprovals(workspaceId: string, limit: number): Promise<Array<ExecutionRecord>> {
+        return recordQuery(this.entityManager, workspaceId)
+            .andWhere("x.status IN ('approved', 'rejected')")
+            .orderBy("x.decidedAt", "DESC", "NULLS LAST")
+            .addOrderBy("x.id", "DESC")
+            .limit(limit)
+            .getRawMany<ExecutionRecord>()
+    }
+
+    /** The status of each given card of the workspace (a missing card is missing from the answer). */
+    async statusesOf(workspaceId: string, executionIds: ReadonlyArray<string>): Promise<Array<ExecutionStatus>> {
+        if (executionIds.length === 0) return []
+        const cards = await this.entityManager.find(ExecutionEntity, {
+            select: { id: true, status: true },
+            where: { workspaceId, id: In([...new Set(executionIds)]) },
+        })
+        return cards.map((card) => ({ id: card.id, status: card.status }))
     }
 
     /** Settles a card that still waits; answers null when somebody decided it first, so a double click settles once. */

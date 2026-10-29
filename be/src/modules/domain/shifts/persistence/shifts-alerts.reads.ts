@@ -1,15 +1,3 @@
-/** The handle of an agent. */
-export interface AgentHandleRead {
-    /** The handle. */
-    readonly handle: string
-}
-
-/** An id. */
-export interface AgentIdRead {
-    /** The id. */
-    readonly id: string
-}
-
 /** A workspace whose shift reminders are on (a raw read of the automation pipelines joined with the shifts rules). */
 export interface ReminderWorkspaceRead {
     /** The workspace. */
@@ -52,18 +40,4 @@ export interface AlertShiftRead {
 export interface NameRead {
     /** The name. */
     readonly name: string
-}
-
-/** A workspace whose monthly close is on. */
-export interface MonthCloseWorkspaceRead {
-    /** The workspace. */
-    readonly workspace_id: string
-    /** The automation settings (`day`, `time`). */
-    readonly config: Readonly<Record<string, unknown>> | null
-}
-
-/** A member's account. */
-export interface OwnerRead {
-    /** The account. */
-    readonly user_id: string
 }

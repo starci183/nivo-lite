@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
+import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
+import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
 import { ActionPerformerRegistry, ApprovalGate, OfficeLog } from "@modules/domain/module-ops"
 import type { PerformContext, PerformResult } from "@modules/domain/module-ops"
 import { WorkspacesService } from "@modules/domain/workspaces"
@@ -23,7 +25,7 @@ import type { ShiftAlertPayload } from "@modules/queues/shifts"
 import { ShiftsShiftEntity, ShiftsSettingsEntity, ShiftsStaffEntity } from "./persistence/entities"
 import type { AlertShiftRead, NameRead, ReminderWorkspaceRead } from "./persistence/shifts-alerts.reads"
 import { selectAlertShifts } from "./persistence/shifts-alert-shift.query"
-import { REMINDER_TEMPLATE, isReminderOn, selectEnabledPipelines } from "./persistence/shifts-pipeline.query"
+import { PIPELINES_MAX, REMINDER_TEMPLATE, isReminderOn } from "./persistence/shifts-pipeline.query"
 import { fieldText } from "./policies/gate-fields.policy"
 import { nameOf } from "./policies/labels.policy"
 import { shiftsJobOf } from "./policies/shift-jobs.policy"
@@ -94,6 +96,7 @@ export class ShiftsAlertsService implements OnModuleInit {
         private readonly gate: ApprovalGate,
         private readonly office: OfficeLog,
         private readonly workspaces: WorkspacesService,
+        private readonly pipelines: AutomationPipelinesService,
         private readonly data: ShiftsDataService,
         private readonly monthClose: ShiftsMonthCloseService,
         private readonly notify: ShiftsNotifyService,
@@ -127,15 +130,18 @@ export class ShiftsAlertsService implements OnModuleInit {
 
     /** Queues every reminder and no-show check that is due now; a workspace that fails is logged and the others still run. */
     async scan(now: Date): Promise<AlertScan> {
-        const workspaces = await selectEnabledPipelines(this.entityManager, REMINDER_TEMPLATE)
-            .select([
-                "p.workspace_id AS workspace_id",
-                "p.config AS config",
-                "s.remind_minutes AS remind_minutes",
-                "s.noshow_minutes AS noshow_minutes",
-            ])
-            .leftJoin(ShiftsSettingsEntity, "s", "s.workspace_id = p.workspace_id")
-            .getRawMany<ReminderWorkspaceRead>()
+        const enabled = await this.pipelines.enabledOfTemplate(REMINDER_TEMPLATE, PIPELINES_MAX)
+        const rules = await this.entityManager.find(ShiftsSettingsEntity, {
+            select: { workspaceId: true, remindMinutes: true, noshowMinutes: true },
+            where: { workspaceId: In(enabled.map((pipeline) => pipeline.workspace_id)) },
+        })
+        const rulesOf = new Map(rules.map((rule) => [rule.workspaceId, rule]))
+        const workspaces = enabled.map((pipeline): ReminderWorkspaceRead => ({
+            workspace_id: pipeline.workspace_id,
+            config: pipeline.config,
+            remind_minutes: rulesOf.get(pipeline.workspace_id)?.remindMinutes ?? null,
+            noshow_minutes: rulesOf.get(pipeline.workspace_id)?.noshowMinutes ?? null,
+        }))
         const today = todayVn(now)
         let reminders = 0
         let noShows = 0
@@ -301,7 +307,7 @@ export class ShiftsAlertsService implements OnModuleInit {
     }
 
     private isOn(workspaceId: string): Promise<boolean> {
-        return isReminderOn(this.entityManager, workspaceId)
+        return isReminderOn(this.pipelines, workspaceId)
     }
 
     private async alertShift(workspaceId: string, shiftId: string): Promise<AlertShift | undefined> {

@@ -59,6 +59,10 @@ export class PublicApiProofDirectory implements AgentDirectory, AccountDirectory
         return Promise.resolve(null)
     }
 
+    agentById(): ReturnType<AgentDirectory["agentById"]> {
+        return Promise.resolve(null)
+    }
+
     accountOf(): ReturnType<AccountDirectory["accountOf"]> {
         return Promise.reject(new TestWorldError({ code: TestWorldErrorCode.AccountsUnread }))
     }

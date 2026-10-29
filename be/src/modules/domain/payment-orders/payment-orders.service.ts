@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { MoreThan } from "typeorm"
+import { In, MoreThan } from "typeorm"
 import type { EntityManager } from "typeorm"
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
 import { InjectClock } from "@modules/platform/clock"
@@ -66,6 +66,16 @@ export class PaymentOrdersService {
             take: LIST_LIMIT,
         })
         return rows.map(toPaymentOrder)
+    }
+
+    /** The ids among the given ones that are orders of the workspace. */
+    async idsOfWorkspace(workspaceId: string, orderIds: ReadonlyArray<string>): Promise<Array<string>> {
+        if (orderIds.length === 0) return []
+        const rows = await this.entityManager.find(PaymentOrderEntity, {
+            select: { id: true },
+            where: { workspaceId, id: In([...new Set(orderIds)]) },
+        })
+        return rows.map((row) => row.id)
     }
 
     /** One workspace-scoped order; reads a lapsed pending order as expired without writing during a read. */

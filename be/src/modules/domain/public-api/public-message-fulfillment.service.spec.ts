@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
-import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
+import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { DurableWorkService, EvidenceService } from "@modules/domain/decisions"
 import type { WorkItem } from "@modules/domain/decisions"
 import { CLOCK } from "@modules/platform/clock"
@@ -26,12 +26,13 @@ const NOW = new Date("2026-10-25T12:00:00.000Z")
 const RECENT = new Date("2026-10-25T11:00:00.000Z")
 const CONVERSATION = { id: "conversation-1", lead_id: "lead-1" }
 
-/** A manager whose conversation read answers the given conversation, or none. */
+/** The conversation the conversation read answers, or none. */
+let primed: ConversationRef | undefined
+
+/** A manager for a request whose conversation read answers the given conversation, or none. */
 const managerWith = (conversation: ConversationRef | undefined) => {
-    const tx = mockEntityManager()
-    const read = fakeQueryBuilder({ getRawOne: conversation })
-    answerQueryBuilders(tx, read)
-    return { tx, read }
+    primed = conversation
+    return { tx: mockEntityManager() }
 }
 
 const build = async () => {
@@ -40,33 +41,32 @@ const build = async () => {
     })
     const evidence = mock<EvidenceService>({ log: jest.fn().mockResolvedValue(undefined) })
     const logger = mock<Logger>()
+    const chats = mock<AgentConversationsReadService>()
+    chats.customerChat.mockImplementation(() =>
+        Promise.resolve(primed === undefined ? null : { id: primed.id, leadId: primed.lead_id }),
+    )
     const moduleRef = await Test.createTestingModule({
         providers: [
             PublicMessageFulfillmentService,
             { provide: DurableWorkService, useValue: work },
             { provide: EvidenceService, useValue: evidence },
             PublicConversationsService,
+            { provide: AgentConversationsReadService, useValue: chats },
             { provide: CLOCK, useValue: new FakeClock(NOW.toISOString()) },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { service: moduleRef.get(PublicMessageFulfillmentService), work, evidence, logger }
+    return { service: moduleRef.get(PublicMessageFulfillmentService), work, evidence, logger, chats }
 }
 
 describe("PublicMessageFulfillmentService", () => {
     it("keeps the exact draft and its durable work and evidence in the supplied transaction", async () => {
-        const { tx, read } = managerWith(CONVERSATION)
-        const { service, work, evidence, logger } = await build()
+        const { tx } = managerWith(CONVERSATION)
+        const { service, work, evidence, logger, chats } = await build()
 
         expect(await service.fulfill("workspace-1", "request-1", body, RECENT, tx)).toBe("lead-1")
 
-        expect(read.argsOf("from")).toEqual([["public.agent_conversations", "c"]])
-        expect(read.argsOf("where")).toEqual([
-            [
-                "c.workspace_id = :workspaceId AND c.kind = 'customer' AND c.id = :conversationId",
-                { workspaceId: "workspace-1", conversationId: "conversation-1" },
-            ],
-        ])
+        expect(chats.customerChat).toHaveBeenCalledWith("workspace-1", "conversation-1", tx)
         expect(work.enqueueWork).toHaveBeenCalledWith(
             ctx,
             {

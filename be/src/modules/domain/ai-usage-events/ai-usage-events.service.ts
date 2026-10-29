@@ -106,6 +106,23 @@ export class AiUsageEventsService {
         return row?.cost_usd ?? 0
     }
 
+    /** The credits one module used in the last `days` days; every call counts as whole credits, rounded up. */
+    async creditsUsedBy(workspaceId: string, module: string, days: number): Promise<number> {
+        const [value] = await callDbFunction<{ credit_usd_value: string | number }>(
+            this.entityManager,
+            "public.credit_usd_value",
+            [],
+        )
+        const creditUsd = Number(value?.credit_usd_value ?? 0)
+        const row = await this.entityManager
+            .createQueryBuilder(AiUsageEventEntity, "u")
+            .select("COALESCE(sum(ceil(u.cost_usd / :creditUsd)), 0)::int", "credits")
+            .where("u.workspace_id = :workspaceId AND u.module = :module", { workspaceId, module, creditUsd })
+            .andWhere("u.created_at >= now() - CAST(:days AS integer) * interval '1 day'", { days })
+            .getRawOne<{ credits: number }>()
+        return row?.credits ?? 0
+    }
+
     /**
      * Before a model call: the status when the call must NOT be made (over the allowance), else null. Embedding one query and the
      * guide are never blocked; a bulk embedding is real spend and stops with the credits. The owner is told once the limit was reached.

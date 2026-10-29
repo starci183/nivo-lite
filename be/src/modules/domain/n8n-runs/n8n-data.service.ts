@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type {
@@ -16,93 +14,24 @@ import type {
     OptionalText,
 } from "./n8n-runs.contracts"
 import { DeskDailyService, renewalSectionOf } from "@modules/domain/accounting"
-import { InjectAccountDirectory } from "@modules/domain/workspace-members"
+import { EmailMessagesLedgerService } from "@modules/domain/email-messages"
+import { InvoicesLedgerService } from "@modules/domain/invoices"
+import { LeadReadService } from "@modules/domain/leads"
+import { OrdersFiguresService } from "@modules/domain/orders"
+import { TransactionsLedgerService } from "@modules/domain/transactions"
+import { InjectAccountDirectory, MemberLookupService } from "@modules/domain/workspace-members"
 import type { AccountDirectory } from "@modules/domain/workspace-members"
+import { WorkItemsReadService } from "@modules/domain/work-items"
+import { WorkspacesService } from "@modules/domain/workspaces"
 import { csvOf, dayOf, dayRange, daysLate, dmy, periodOf, periodRange, vnd, vnDay } from "./policies/n8n-data.policy"
 import type { InstantRange } from "./policies/n8n-data.policy"
 
-/** The figures of a count-and-sum query; a bigint sum arrives as text. */
+/** The figures of a count-and-sum read. */
 interface Tally {
     /** How many rows. */
     readonly total: number
-    /** The sum of the amounts (a bigint the driver answers as text). */
-    readonly amount: string | number
-}
-
-/** An overdue invoice. */
-interface OverdueInvoice {
-    /** The invoice id. */
-    readonly id: string
-    /** The invoice number. */
-    readonly invoiceNo: string
-    /** The amount in VND. */
-    readonly amountVnd: number
-    /** When it was due. */
-    readonly dueAt: Date | null
-    /** The customer. */
-    readonly leadId: string | null
-}
-
-/** A lead's name and address. */
-interface LeadContact {
-    /** The lead id. */
-    readonly id: string
-    /** The name. */
-    readonly contactName: string
-    /** The address. */
-    readonly email: string | null
-}
-
-/** A payment of the ledger. */
-interface LedgerPayment {
-    /** When the money arrived. */
-    readonly occurredAt: Date
-    /** The amount in VND. */
-    readonly amountVnd: number
-    /** The bank reference. */
-    readonly reference: string | null
-    /** The payer. */
-    readonly payer: string | null
-    /** The channel. */
-    readonly channel: string
-    /** The state. */
-    readonly status: string
-}
-
-/** An invoice of the ledger. */
-interface LedgerInvoice {
-    /** The invoice number. */
-    readonly invoiceNo: string
-    /** The amount in VND. */
-    readonly amountVnd: number
-    /** When it was issued. */
-    readonly issuedAt: Date | null
-    /** The state. */
-    readonly status: string
-}
-
-/** The invoice a receipt is for. */
-interface ReceiptInvoice {
-    /** The invoice id. */
-    readonly id: string
-    /** The invoice number. */
-    readonly invoiceNo: string
-    /** The amount in VND. */
-    readonly amountVnd: number
-    /** The customer. */
-    readonly leadId: string | null
-    /** When it was paid. */
-    readonly paidAt: Date | null
-}
-
-/** The payment a receipt is for. */
-interface ReceiptPayment {
-    /** The invoice it settles. */
-    readonly invoiceId: string | null
-    /** The amount in VND. */
-    readonly amountVnd: number
-    /** When the money arrived. */
-    readonly occurredAt: Date
+    /** The sum of the amounts. */
+    readonly amount: number
 }
 
 const DEFAULT_SHOP = "NIVO"
@@ -112,7 +41,6 @@ const DAY_MS = 86_400_000
 const REMINDERS_MAX = 50
 const OWNERS_LIMIT = 50
 const OVERDUE_LIMIT = 200
-const LEAD_CONTACTS_LIMIT = 200
 const REMINDED_LIMIT = 500
 const LEDGER_LIMIT = 5000
 
@@ -120,37 +48,29 @@ const LEDGER_LIMIT = 5000
 /** The data the shared n8n workflows fetch (the day's figures, overdue invoices, a month of the ledger) and the owners they mail. */
 export class N8nDataService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectAccountDirectory() private readonly accounts: AccountDirectory,
         private readonly desk: DeskDailyService,
+        private readonly workspaces: WorkspacesService,
+        private readonly members: MemberLookupService,
+        private readonly leads: LeadReadService,
+        private readonly orders: OrdersFiguresService,
+        private readonly invoices: InvoicesLedgerService,
+        private readonly transactions: TransactionsLedgerService,
+        private readonly workItems: WorkItemsReadService,
+        private readonly emails: EmailMessagesLedgerService,
     ) {}
 
     /** The name of the shop. */
     async shopName(workspaceId: string): Promise<string> {
-        const row = await this.entityManager
-            .createQueryBuilder()
-            .select("w.name", "name")
-            .from("public.workspaces", "w")
-            .where("w.id = :workspaceId", { workspaceId })
-            .limit(1)
-            .getRawOne<{ name: string }>()
-        return row?.name ?? DEFAULT_SHOP
+        const name = await this.workspaces.nameOf(workspaceId)
+        return name === "" ? DEFAULT_SHOP : name
     }
 
     /** The owners and managers of the workspace with an address: the only addresses an owner-facing mail may go to, besides the accountant. */
     async ownerRecipients(workspaceId: string): Promise<ReadonlyArray<OwnerRecipient>> {
-        const members = await this.entityManager
-            .createQueryBuilder()
-            .select("m.user_id", "userId")
-            .addSelect("m.display_name", "displayName")
-            .from("public.workspace_members", "m")
-            .where("m.workspace_id = :workspaceId AND m.status = 'active' AND m.role IN ('owner', 'manager')", {
-                workspaceId,
-            })
-            .limit(OWNERS_LIMIT)
-            .getRawMany<{ userId: string; displayName: string }>()
+        const members = await this.members.ownersAndManagers(workspaceId, OWNERS_LIMIT)
         const found = await Promise.all(
             members.map(async (member) => {
                 const account = await this.accounts.accountOf(member.userId)
@@ -211,54 +131,29 @@ export class N8nDataService {
     }
 
     /** The six day counters, in order: new leads, confirmed orders, money in, invoiced, waiting decisions and overdue. */
-    private tallies(
+    private async tallies(
         workspaceId: string,
         window: InstantRange,
         now: Date,
     ): Promise<[Tally, Tally, Tally, Tally, Tally, Tally]> {
-        const { from, to } = window
-        return Promise.all([
-            this.tally(
-                "public.leads",
-                "l",
-                "l.workspace_id = :workspaceId AND l.created_at >= :from AND l.created_at < :to",
-                {
-                    workspaceId,
-                    from,
-                    to,
-                },
-            ),
-            this.tally(
-                "public.orders",
-                "o",
-                "o.workspace_id = :workspaceId AND o.confirmed_at >= :from AND o.confirmed_at < :to",
-                { workspaceId, from, to },
-            ),
-            this.tally(
-                "public.transactions",
-                "t",
-                "t.workspace_id = :workspaceId AND t.direction = 'credit' AND t.occurred_at >= :from AND t.occurred_at < :to",
-                { workspaceId, from, to },
-                "coalesce(sum(t.amount_vnd), 0)::bigint",
-            ),
-            this.tally(
-                "public.invoices",
-                "i",
-                "i.workspace_id = :workspaceId AND i.status = 'issued' AND i.issued_at >= :from AND i.issued_at < :to",
-                { workspaceId, from, to },
-                "coalesce(sum(i.amount_vnd), 0)::bigint",
-            ),
-            this.tally("public.work_items", "w", "w.workspace_id = :workspaceId AND w.status = 'waiting_decision'", {
-                workspaceId,
-            }),
-            this.tally(
-                "public.invoices",
-                "d",
-                "d.workspace_id = :workspaceId AND d.status = 'issued' AND d.due_at < :now",
-                { workspaceId, now: now.toISOString() },
-                "coalesce(sum(d.amount_vnd), 0)::bigint",
-            ),
+        const from = new Date(window.from)
+        const to = new Date(window.to)
+        const [leads, orders, credits, invoiced, waiting, overdue] = await Promise.all([
+            this.leads.countCreatedBetween(workspaceId, from, to),
+            this.orders.countConfirmedBetween(workspaceId, from, to),
+            this.transactions.creditTally(workspaceId, from, to),
+            this.invoices.issuedTally(workspaceId, from, to),
+            this.workItems.countByStatus(workspaceId, "waiting_decision"),
+            this.invoices.overdueTally(workspaceId, now),
         ])
+        return [
+            { total: leads, amount: 0 },
+            { total: orders, amount: 0 },
+            credits,
+            invoiced,
+            { total: waiting, amount: 0 },
+            overdue,
+        ]
     }
 
     /** The overdue invoices of customers with an address that a reminder was not sent for lately, one item per reminder. */
@@ -266,39 +161,19 @@ export class N8nDataService {
         const now = this.clock.now()
         const afterDays = Math.max(0, Number(config.after_days ?? DEFAULT_DEBT_AFTER_DAYS))
         const repeatDays = Math.max(1, Number(config.repeat_days ?? DEFAULT_DEBT_REPEAT_DAYS))
-        const invoices = await this.entityManager
-            .createQueryBuilder()
-            .select("i.id", "id")
-            .addSelect("i.invoice_no", "invoiceNo")
-            .addSelect("i.amount_vnd", "amountVnd")
-            .addSelect("i.due_at", "dueAt")
-            .addSelect("i.lead_id", "leadId")
-            .from("public.invoices", "i")
-            .where("i.workspace_id = :workspaceId AND i.status = 'issued' AND i.due_at < :cutoff", {
-                workspaceId,
-                cutoff: new Date(now.getTime() - afterDays * DAY_MS).toISOString(),
-            })
-            .orderBy("i.due_at")
-            .limit(OVERDUE_LIMIT)
-            .getRawMany<OverdueInvoice>()
+        const invoices = await this.invoices.overdueBefore(
+            workspaceId,
+            new Date(now.getTime() - afterDays * DAY_MS),
+            OVERDUE_LIMIT,
+        )
         const leadIds = [...new Set(invoices.flatMap((invoice) => (invoice.leadId === null ? [] : [invoice.leadId])))]
         const [leads, reminded, shop] = await Promise.all([
-            leadIds.length > 0 ? this.leadContacts(leadIds) : Promise.resolve<Array<LeadContact>>([]),
-            this.entityManager
-                .createQueryBuilder()
-                .select("e.refs ->> 'invoice_id'", "invoiceId")
-                .distinct(true)
-                .from("public.email_messages", "e")
-                .where(
-                    "e.workspace_id = :workspaceId AND e.purpose = 'debt_reminder' AND e.status IN ('sent', 'waiting_decision') AND e.created_at >= :since",
-                    { workspaceId, since: new Date(now.getTime() - repeatDays * DAY_MS).toISOString() },
-                )
-                .limit(REMINDED_LIMIT)
-                .getRawMany<{ invoiceId: string | null }>(),
+            leadIds.length > 0 ? this.leads.cardsOf(workspaceId, leadIds) : Promise.resolve([]),
+            this.emails.remindedInvoiceIds(workspaceId, new Date(now.getTime() - repeatDays * DAY_MS), REMINDED_LIMIT),
             this.shopName(workspaceId),
         ])
         const contactOf = new Map(leads.map((lead) => [lead.id, lead]))
-        const remindedIds = new Set(reminded.map((row) => row.invoiceId))
+        const remindedIds = new Set(reminded)
         const today = vnDay(now)
         let noEmail = 0
         let recent = 0
@@ -340,36 +215,8 @@ export class N8nDataService {
         const period = periodOf(requestedPeriod, this.clock.now())
         const { from, to, label } = periodRange(period)
         const [payments, invoices, shop] = await Promise.all([
-            this.entityManager
-                .createQueryBuilder()
-                .select("t.occurred_at", "occurredAt")
-                .addSelect("t.amount_vnd", "amountVnd")
-                .addSelect("t.reference", "reference")
-                .addSelect("t.payer", "payer")
-                .addSelect("t.channel", "channel")
-                .addSelect("t.status", "status")
-                .from("public.transactions", "t")
-                .where(
-                    "t.workspace_id = :workspaceId AND t.direction = 'credit' AND t.occurred_at >= :from AND t.occurred_at < :to",
-                    { workspaceId, from, to },
-                )
-                .orderBy("t.occurred_at")
-                .limit(LEDGER_LIMIT)
-                .getRawMany<LedgerPayment>(),
-            this.entityManager
-                .createQueryBuilder()
-                .select("i.invoice_no", "invoiceNo")
-                .addSelect("i.amount_vnd", "amountVnd")
-                .addSelect("i.issued_at", "issuedAt")
-                .addSelect("i.status", "status")
-                .from("public.invoices", "i")
-                .where(
-                    "i.workspace_id = :workspaceId AND i.status <> 'draft' AND i.issued_at >= :from AND i.issued_at < :to",
-                    { workspaceId, from, to },
-                )
-                .orderBy("i.issued_at")
-                .limit(LEDGER_LIMIT)
-                .getRawMany<LedgerInvoice>(),
+            this.transactions.creditLedger(workspaceId, new Date(from), new Date(to), LEDGER_LIMIT),
+            this.invoices.issuedLedger(workspaceId, new Date(from), new Date(to), LEDGER_LIMIT),
             this.shopName(workspaceId),
         ])
         const rows: Array<Array<string | number | null>> = [
@@ -417,32 +264,12 @@ export class N8nDataService {
      */
     async paymentReceipt(workspaceId: string, transactionId: string, invoiceId: string): Promise<ReceiptRunOrNone> {
         if (!transactionId && !invoiceId) return null
-        const payment = transactionId
-            ? await this.entityManager
-                  .createQueryBuilder()
-                  .select("t.invoice_id", "invoiceId")
-                  .addSelect("t.amount_vnd", "amountVnd")
-                  .addSelect("t.occurred_at", "occurredAt")
-                  .from("public.transactions", "t")
-                  .where("t.workspace_id = :workspaceId AND t.id = :transactionId", { workspaceId, transactionId })
-                  .limit(1)
-                  .getRawOne<ReceiptPayment>()
-            : undefined
+        const payment = transactionId ? await this.transactions.receiptPayment(workspaceId, transactionId) : null
         const resolvedInvoice = invoiceId || payment?.invoiceId || ""
         if (!resolvedInvoice) return null
-        const invoice = await this.entityManager
-            .createQueryBuilder()
-            .select("i.id", "id")
-            .addSelect("i.invoice_no", "invoiceNo")
-            .addSelect("i.amount_vnd", "amountVnd")
-            .addSelect("i.lead_id", "leadId")
-            .addSelect("i.paid_at", "paidAt")
-            .from("public.invoices", "i")
-            .where("i.workspace_id = :workspaceId AND i.id = :invoiceId", { workspaceId, invoiceId: resolvedInvoice })
-            .limit(1)
-            .getRawOne<ReceiptInvoice>()
+        const invoice = await this.invoices.receiptInvoice(workspaceId, resolvedInvoice)
         if (invoice?.leadId === undefined || invoice.leadId === null) return null
-        const [lead] = await this.leadContacts([invoice.leadId])
+        const [lead] = await this.leads.cardsOf(workspaceId, [invoice.leadId])
         if (!lead?.email) return null
         const shop = await this.shopName(workspaceId)
         const key = `receipt:${transactionId || resolvedInvoice}`
@@ -461,36 +288,6 @@ export class N8nDataService {
                 },
             },
         }
-    }
-
-    private leadContacts(ids: ReadonlyArray<string>): Promise<Array<LeadContact>> {
-        return this.entityManager
-            .createQueryBuilder()
-            .select("l.id", "id")
-            .addSelect("l.contact_name", "contactName")
-            .addSelect("l.email", "email")
-            .from("public.leads", "l")
-            .where("l.id IN (:...ids)", { ids })
-            .limit(LEAD_CONTACTS_LIMIT)
-            .getRawMany<LeadContact>()
-    }
-
-    /** The count, and optionally the sum of an amount column, of the rows of a table that match a condition. */
-    private async tally(
-        table: string,
-        alias: string,
-        condition: string,
-        parameters: Record<string, string>,
-        amount = "0",
-    ): Promise<Tally> {
-        const row = await this.entityManager
-            .createQueryBuilder()
-            .select("count(*)::int", "total")
-            .addSelect(amount, "amount")
-            .from(table, alias)
-            .where(condition, parameters)
-            .getRawOne<Tally>()
-        return row ?? { total: 0, amount: 0 }
     }
 
     private say(key: string, params: TextParams = {}): string {

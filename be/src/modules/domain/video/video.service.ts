@@ -4,14 +4,15 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { VideoBrandKitsService } from "@modules/domain/video-brand-kits"
 import { VideoProjectsService } from "@modules/domain/video-projects"
-import type { ProjectForRender } from "@modules/domain/video-projects"
 import { VideoProjectVersionsService } from "@modules/domain/video-project-versions"
 import { VideoRendersService } from "@modules/domain/video-renders"
 import type { RenderDone } from "@modules/domain/video-renders"
+import { WorkspacesService } from "@modules/domain/workspaces"
 import { VideoRenderQueue } from "@modules/queues/video-render"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
-import type { RenderQueued } from "./video.contracts"
+import type { ProjectForRender, RenderQueued } from "./video.contracts"
 import { readScript, specOf } from "./video-script.policy"
 import { validateVideoSpec } from "./video-spec.policy"
 
@@ -30,6 +31,8 @@ export class VideoService {
         private readonly projects: VideoProjectsService,
         private readonly versions: VideoProjectVersionsService,
         private readonly renders: VideoRendersService,
+        private readonly brandKits: VideoBrandKitsService,
+        private readonly workspaces: WorkspacesService,
         private readonly queue: VideoRenderQueue,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
     ) {}
@@ -41,7 +44,7 @@ export class VideoService {
      */
     requestRender(principalId: string, projectId: string): Promise<RenderQueued> {
         return this.entityManager.transaction(async (manager) => {
-            const project = await this.projects.forRender(manager, projectId)
+            const project = await this.projectForRender(manager, projectId)
             if (project === null) {
                 throw new VideoError({ code: VideoErrorCode.ProjectNotFound, params: { projectId } })
             }
@@ -56,12 +59,41 @@ export class VideoService {
      */
     requestDelegatedRender(workspaceId: string, projectId: string): Promise<RenderQueued> {
         return this.entityManager.transaction(async (manager) => {
-            const project = await this.projects.forRender(manager, projectId)
+            const project = await this.projectForRender(manager, projectId)
             if (project?.workspaceId !== workspaceId) {
                 throw new VideoError({ code: VideoErrorCode.ProjectNotFound, params: { projectId } })
             }
             return this.openRender(manager, project, null, true)
         })
+    }
+
+    /** The project locked in the transaction, with the workspace name, the brand kit and the render status asked of their owners; null when the project does not exist. */
+    private async projectForRender(manager: EntityManager, projectId: string): Promise<ProjectForRender | null> {
+        const project = await this.projects.lockForRender(manager, projectId)
+        if (project === null) return null
+        const [workspaceName, kit, renderStatus] = await Promise.all([
+            this.workspaces.nameOf(project.workspaceId),
+            this.brandKits.kitOf(project.workspaceId),
+            project.renderId === null ? null : this.renders.stateOf(project.renderId),
+        ])
+        return {
+            id: project.id,
+            workspaceId: project.workspaceId,
+            aspect: project.aspect,
+            status: project.status,
+            script: project.script,
+            version: project.version,
+            renderStatus,
+            workspaceName,
+            brand: {
+                shopName: kit?.shopName ?? null,
+                primary: kit?.primaryColor ?? null,
+                secondary: kit?.secondaryColor ?? null,
+                logoPath: kit?.logoPath ?? null,
+                musicTrack: kit?.musicTrack ?? null,
+                voice: kit?.voice ?? null,
+            },
+        }
     }
 
     private async openRender(

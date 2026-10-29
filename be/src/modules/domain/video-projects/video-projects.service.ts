@@ -1,92 +1,138 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { VideoBrandKitEntity } from "@modules/domain/video-brand-kits"
-import { VideoRenderEntity } from "@modules/domain/video-renders"
-import { WorkspaceEntity } from "@modules/domain/workspaces"
-import type { ProjectLookup, RenderStart } from "./video-projects.contracts"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import type {
+    LockedProjectLookup,
+    ProjectCardFacts,
+    ProjectCounts,
+    ProjectRow,
+    RenderStart,
+    RenderTitle,
+    ScriptProjectRow,
+} from "./video-projects.contracts"
 import { VideoProjectEntity } from "./persistence/entities"
 
-/** The project to render with everything the spec needs, as the joined read selects it. */
-interface ProjectRenderRaw {
-    /** The project id. */
-    readonly id: string
-    /** The workspace it belongs to. */
-    readonly workspace_id: string
-    /** The output shape. */
-    readonly aspect: string
-    /** The project status. */
-    readonly status: string
-    /** The editable scenes, as stored. */
-    readonly script: unknown
-    /** The version the next render snapshots. */
-    readonly version: number
-    /** The status of the render the project points at, or null. */
-    readonly render_status: string | null
-    /** The workspace name. */
-    readonly workspace_name: string
-    /** The brand kit shop name; null without a kit. */
-    readonly shop_name: string | null
-    /** The brand kit primary colour. */
-    readonly primary_color: string | null
-    /** The brand kit secondary colour. */
-    readonly secondary_color: string | null
-    /** The brand kit logo path in the media bucket. */
-    readonly logo_path: string | null
-    /** The brand kit music track. */
-    readonly music_track: string | null
-    /** The brand kit voice. */
-    readonly voice: string | null
-}
+/** How many projects one workbench list reads. */
+const WORKBENCH_PROJECTS_LIMIT = 60
+
+/** How many projects one title lookup reads. */
+const TITLE_PROJECTS_LIMIT = 500
 
 @Injectable()
-/** The `video_projects` rows: the project a render starts from, locked in the transaction that queues the render, and the status the render leaves it in. */
+/** The `video_projects` rows: the project a render starts from, locked in the transaction that queues the render, the status the render leaves it in, and the reads of the workbench. */
 export class VideoProjectsService {
-    /** The project with its brand kit, locked in the caller's transaction; null when it does not exist. */
-    async forRender(manager: EntityManager, projectId: string): Promise<ProjectLookup> {
-        const row = await manager
-            .createQueryBuilder(VideoProjectEntity, "p")
-            .innerJoin(WorkspaceEntity, "w", "w.id = p.workspaceId")
-            .leftJoin(VideoBrandKitEntity, "k", "k.workspaceId = p.workspaceId")
-            .leftJoin(VideoRenderEntity, "r", "r.id = p.renderId")
-            .select([
-                "p.id AS id",
-                "p.workspace_id AS workspace_id",
-                "p.aspect AS aspect",
-                "p.status AS status",
-                "p.script AS script",
-                "p.version AS version",
-                "r.status AS render_status",
-                "w.name AS workspace_name",
-                "k.shop_name AS shop_name",
-                "k.primary_color AS primary_color",
-                "k.secondary_color AS secondary_color",
-                "k.logo_path AS logo_path",
-                "k.music_track AS music_track",
-                "k.voice AS voice",
-            ])
-            .where("p.id = :projectId", { projectId })
-            .limit(1)
-            .setLock("pessimistic_write", undefined, ["p"])
-            .getRawOne<ProjectRenderRaw>()
-        if (row === undefined) return null
+    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+
+    /** The project, locked in the caller's transaction; null when it does not exist. */
+    async lockForRender(manager: EntityManager, projectId: string): Promise<LockedProjectLookup> {
+        const project = await manager.findOne(VideoProjectEntity, {
+            where: { id: projectId },
+            lock: { mode: "pessimistic_write" },
+        })
+        if (project === null) return null
         return {
-            id: row.id,
-            workspaceId: row.workspace_id,
-            aspect: row.aspect,
-            status: row.status,
-            script: row.script,
-            version: row.version,
-            renderStatus: row.render_status,
-            workspaceName: row.workspace_name,
-            brand: {
-                shopName: row.shop_name,
-                primary: row.primary_color,
-                secondary: row.secondary_color,
-                logoPath: row.logo_path,
-                musicTrack: row.music_track,
-                voice: row.voice,
-            },
+            id: project.id,
+            workspaceId: project.workspaceId,
+            aspect: project.aspect,
+            status: project.status,
+            script: project.script,
+            version: project.version,
+            renderId: project.renderId,
         }
+    }
+
+    /** One project of the workspace as script generation reads it; locked against a second script request when `lock` is set. */
+    readForScript(
+        manager: EntityManager,
+        workspaceId: string,
+        projectId: string,
+        lock: boolean,
+    ): Promise<ScriptProjectRow | undefined> {
+        const query = manager
+            .createQueryBuilder(VideoProjectEntity, "p")
+            .select("p.id", "id")
+            .addSelect("p.title", "title")
+            .addSelect("p.goal", "goal")
+            .addSelect("p.aspect", "aspect")
+            .addSelect("p.target_seconds", "target_seconds")
+            .addSelect("p.status", "status")
+            .addSelect("p.inputs", "inputs")
+            .addSelect("p.script_meta", "script_meta")
+            .addSelect("p.updated_at", "updated_at")
+            .addSelect("p.render_id", "render_id")
+            .where("p.workspace_id = :workspaceId AND p.id = :projectId", { workspaceId, projectId })
+            .limit(1)
+        return (lock ? query.setLock("pessimistic_write", undefined, ["p"]) : query).getRawOne<ScriptProjectRow>()
+    }
+
+    /** The projects of a workspace, newest first; one project when `projectId` names it. */
+    listForWorkbench(
+        workspaceId: string,
+        projectId: string | null,
+        includeArchived: boolean,
+    ): Promise<Array<ProjectRow>> {
+        return this.entityManager
+            .createQueryBuilder(VideoProjectEntity, "p")
+            .select("p.*")
+            .where("p.workspace_id = :workspaceId AND (:projectId::uuid IS NULL OR p.id = :projectId)", {
+                workspaceId,
+                projectId,
+            })
+            .andWhere("(:includeArchived::boolean OR p.status <> 'archived')", { includeArchived })
+            .orderBy("p.updatedAt", "DESC")
+            .limit(WORKBENCH_PROJECTS_LIMIT)
+            .getRawMany<ProjectRow>()
+    }
+
+    /** The project counts by state; undefined when the count cannot be read. */
+    countsOf(workspaceId: string): Promise<ProjectCounts | undefined> {
+        return this.entityManager
+            .createQueryBuilder(VideoProjectEntity, "p")
+            .select("count(*) FILTER (WHERE p.status = 'rendering')::int", "rendering")
+            .addSelect("count(*) FILTER (WHERE p.status = 'scripting')::int", "scripting")
+            .addSelect("count(*) FILTER (WHERE p.status IN ('ready', 'approved'))::int", "readyToPublish")
+            .addSelect("count(*) FILTER (WHERE p.status = 'approved')::int", "approved")
+            .addSelect(
+                "count(*) FILTER (WHERE p.status = 'published' AND p.published_at >= now() - interval '30 days')::int",
+                "published30",
+            )
+            .where("p.workspace_id = :workspaceId", { workspaceId })
+            .getRawOne<ProjectCounts>()
+    }
+
+    /** The title of the newest project each of the renders belongs to; a render no project holds is missing from the answer. */
+    async titlesOfRenders(workspaceId: string, renderIds: ReadonlyArray<string>): Promise<Array<RenderTitle>> {
+        if (renderIds.length === 0) return []
+        const wanted = new Set(renderIds)
+        const projects = await this.entityManager
+            .createQueryBuilder(VideoProjectEntity, "p")
+            .select("p.title", "title")
+            .addSelect("p.render_id", "render_id")
+            .addSelect("p.render_ids", "render_ids")
+            .where("p.workspace_id = :workspaceId", { workspaceId })
+            .andWhere("(p.render_id = ANY(:ids::uuid[]) OR p.render_ids && :ids::uuid[])", { ids: [...wanted] })
+            .orderBy("p.updated_at", "DESC")
+            .addOrderBy("p.id", "DESC")
+            .limit(TITLE_PROJECTS_LIMIT)
+            .getRawMany<{ title: string; render_id: string | null; render_ids: Array<string> }>()
+        const titles = new Map<string, string>()
+        for (const project of projects) {
+            for (const renderId of [project.render_id, ...project.render_ids]) {
+                if (renderId !== null && wanted.has(renderId) && !titles.has(renderId)) {
+                    titles.set(renderId, project.title)
+                }
+            }
+        }
+        return [...titles].map(([renderId, title]) => ({ renderId, title }))
+    }
+
+    /** What a delegation card shows of a project of the workspace; null when there is none. */
+    async cardFactsOf(workspaceId: string, projectId: string): Promise<ProjectCardFacts | null> {
+        const project = await this.entityManager.findOne(VideoProjectEntity, {
+            select: { title: true, aspect: true, script: true },
+            where: { id: projectId, workspaceId },
+        })
+        return project === null ? null : { title: project.title, aspect: project.aspect, script: project.script }
     }
 
     /**

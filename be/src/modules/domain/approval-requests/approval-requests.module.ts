@@ -7,6 +7,7 @@ import { ApprovalOpeningService } from "./approval-opening.service"
 import { APPROVAL_AGENT_OWNERS } from "./approval-requests.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./approval-requests.module-definition"
 import { ApprovalRequestsService } from "./approval-requests.service"
+import { ApprovalRequestsReadService } from "./approval-requests-read.service"
 import { ApprovalSweepService } from "./approval-sweep.service"
 import { ApprovalEvidenceService } from "./approval-evidence.service"
 
@@ -33,8 +34,9 @@ export class ApprovalRequestsModule extends ConfigurableModuleClass {
                 ApprovalDecidingService,
                 ApprovalSweepService,
                 ApprovalRequestsService,
+                ApprovalRequestsReadService,
             ],
-            exports: [ApprovalRequestsService],
+            exports: [ApprovalRequestsService, ApprovalRequestsReadService],
         }
     }
 }

@@ -152,6 +152,20 @@ describe("ConnectionsService > find, get, findMany, list, listByProvider", () =>
     })
 })
 
+describe("ConnectionsService > connectedProviders", () => {
+    it("lists each provider the workspace is connected to, bounded", async () => {
+        const { em, fakes } = withBuilders([{ getRawMany: [{ provider: "sepay" }, { provider: "telegram" }] }])
+        await expect((await build(em)).connectedProviders("ws-1", 200)).resolves.toEqual(["sepay", "telegram"])
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(ConnectionEntity, "c")
+        expect(fakes[0]?.callsOf("select")).toEqual([["c.provider", "provider"]])
+        expect(fakes[0]?.callsOf("distinct")).toEqual([[true]])
+        expect(whereOf(fakes[0])).toEqual([
+            ["c.workspaceId = :workspaceId AND c.status <> 'disconnected'", { workspaceId: "ws-1" }],
+        ])
+        expect(fakes[0]?.callsOf("limit")).toEqual([[200]])
+    })
+})
+
 describe("ConnectionsService > findLiveByMeta", () => {
     it("answers the live owner of a public fact, or null", async () => {
         const em = mockEntityManager({

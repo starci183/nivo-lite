@@ -16,7 +16,7 @@ import { parseVideoScript } from "./video-scripting.policy"
 import { VIDEO_SCRIPT_RETRY } from "./video-scripting.templates"
 import { videoInputsOf, videoRecord } from "./video-workbench.policy"
 import type { ScriptProject } from "./video-stored.contracts"
-import { readScriptProject } from "./persistence/video-scripting.query"
+import { VideoScriptReadsService } from "./video-script-reads.service"
 
 /** Whether a stored entry is a chat message the model can be sent again. */
 const isMessage = (entry: unknown): entry is GenMessage => {
@@ -35,6 +35,7 @@ export class VideoScriptingCompletionService {
         private readonly generations: GenerationsService,
         private readonly events: EventsService,
         private readonly projectWriter: VideoProjectScriptingService,
+        private readonly reads: VideoScriptReadsService,
     ) {}
 
     /**
@@ -53,7 +54,7 @@ export class VideoScriptingCompletionService {
             return
         await this.entityManager.transaction(async (tx) => {
             if (!(await this.inbox.claim(claim.consumer, claim.dedupeKey, tx))) return
-            const project = await readScriptProject(tx, workspaceId, projectId, true)
+            const project = await this.reads.projectOf(tx, workspaceId, projectId, true)
             if (project?.status !== "scripting") return
             const meta = videoRecord(project.script_meta)
             if (meta.generation_id !== generationId || typeof meta.script_request_id !== "string") return

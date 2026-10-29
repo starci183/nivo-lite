@@ -152,7 +152,7 @@ describe("ProfileActivationService", () => {
                 draftOf({ revision: 2, gateEvidence: { identity: confirmed("HAKUEN"), tone: confirmed("warm") } }),
             )
             readiness.settle.mockResolvedValue("live")
-            const applied = installationOf({ status: "live", activeContextVersionId: "v1", activeVersion: 1 })
+            const applied = installationOf({ status: "live", activeContextVersionId: "v1" })
 
             await expect(service.activate(TARGET, [keptOf(applied)])).resolves.toEqual({ "ai-sales": "live" })
             expect(setup.setGate).not.toHaveBeenCalled()

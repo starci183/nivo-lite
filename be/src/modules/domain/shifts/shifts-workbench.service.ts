@@ -4,6 +4,7 @@ import type { EntityManager } from "typeorm"
 import { StaffDirectoryService } from "@modules/domain/staff"
 import { WorkItemsService } from "@modules/domain/work-items"
 import type { WorkItem } from "@modules/domain/work-items"
+import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -142,6 +143,7 @@ export class ShiftsWorkbenchService {
         private readonly data: ShiftsDataService,
         private readonly workItemsOf: WorkItemsService,
         private readonly staff: StaffDirectoryService,
+        private readonly pipelines: AutomationPipelinesService,
     ) {}
 
     /** The whole workbench of one week: setup, versions, requests, figures for a manager. */
@@ -154,7 +156,7 @@ export class ShiftsWorkbenchService {
         const [setup, myProfileId, reminderOn] = await Promise.all([
             this.data.loadSetup(workspaceId, isManager),
             this.profileOfMember(workspaceId, userId, member.staffId),
-            isReminderOn(this.entityManager, workspaceId),
+            isReminderOn(this.pipelines, workspaceId),
         ])
         const [weekView, requests, staffRows, allAvailability, figures] = await Promise.all([
             this.weekView(workspaceId, monday, setup, isManager),

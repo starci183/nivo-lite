@@ -142,6 +142,13 @@ describe("VideoProjectWorkbenchWriterService > update", () => {
         const set = fake.callsOf("set")[0]?.[0] as Record<string, () => string>
         expect(set.title?.()).toBe("COALESCE(NULLIF(CAST(:title AS text), ''), title)")
         expect(set.script?.()).toBe("COALESCE(CAST(:script AS jsonb), script)")
+        expect(set.goal?.()).toBe("COALESCE(CAST(:goal AS text), goal)")
+        expect(set.aspect?.()).toBe("COALESCE(CAST(:aspect AS text), aspect)")
+        expect(set.targetSeconds?.()).toBe("COALESCE(CAST(:targetSeconds AS integer), target_seconds)")
+        expect(set.inputs?.()).toBe("COALESCE(CAST(:inputs AS jsonb), inputs)")
+        expect(set.approvedByName?.()).toBe(
+            "CASE WHEN CAST(:script AS jsonb) IS NOT NULL THEN NULL ELSE approved_by_name END",
+        )
         expect(set.status?.()).toBe(
             "CASE WHEN CAST(:script AS jsonb) IS NOT NULL AND status IN ('ready', 'approved', 'published') THEN 'draft' ELSE status END",
         )
@@ -181,6 +188,8 @@ describe("VideoProjectWorkbenchWriterService > duplicate", () => {
 
         await expect(writer.duplicate(copied.em, "workspace-1", "project-1", "person-1")).resolves.toBe("project-2")
         await expect(writer.duplicate(missing.em, "workspace-1", "project-1", "person-1")).resolves.toBeNull()
+        const unwritten = managerAnswering(returned([]), mockEntityManager({ findOne: [VideoProjectEntity, source] }))
+        await expect(writer.duplicate(unwritten.em, "workspace-1", "project-1", "person-1")).resolves.toBeNull()
         expect(copied.em.findOne).toHaveBeenCalledWith(VideoProjectEntity, {
             where: { workspaceId: "workspace-1", id: "project-1" },
             lock: { mode: "pessimistic_read" },
@@ -251,6 +260,8 @@ describe("VideoProjectWorkbenchWriterService > publish", () => {
         await expect(writer.publish(approved.em, "workspace-1", "project-1")).resolves.toBe(true)
         await expect(writer.publish(draft.em, "workspace-1", "project-1")).resolves.toBe(false)
         expect(approved.fake.callsOf("set")).toEqual([[{ status: "published", publishedAt: anyFunction() }]])
+        const published = approved.fake.callsOf("set")[0]?.[0] as { publishedAt: () => string }
+        expect(published.publishedAt()).toBe("now()")
         expect(approved.fake.callsOf("where")).toEqual([
             [
                 "workspace_id = :workspaceId AND id = :projectId AND status = 'approved'",
@@ -261,7 +272,7 @@ describe("VideoProjectWorkbenchWriterService > publish", () => {
 })
 
 describe("VideoProjectWorkbenchWriterService > approve", () => {
-    it("records the approver of the selected render once a done render backs it", async () => {
+    it("records the approver of the selected render the caller proved done", async () => {
         const { em, fake } = managerAnswering(returned(ONE))
         const writer = await build(em)
 
@@ -275,7 +286,9 @@ describe("VideoProjectWorkbenchWriterService > approve", () => {
                 { workspaceId: "workspace-1", projectId: "project-1", renderId: "render-1" },
             ],
         ])
-        expect(fake.callsOf("andWhere")[0]?.[0]).toContain("r.status = 'done'")
+        expect(fake.callsOf("andWhere")).toEqual([])
+        const approved = fake.callsOf("set")[0]?.[0] as { approvedAt: () => string }
+        expect(approved.approvedAt()).toBe("now()")
     })
 
     it("reports a render that is not the finished one", async () => {

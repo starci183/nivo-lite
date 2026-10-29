@@ -1,7 +1,7 @@
 import { mockEntityManager, fakeQueryBuilder } from "@starci/jest-preset"
-import { WorkThreadEntity } from "@modules/domain/work-threads"
 import { WorkChainEntity } from "@modules/domain/work-chains"
-import type { ChainStepRecord, NewChainStep } from "@modules/domain/work-chains"
+import type { ChainStepRead, ChainStepRecord, NewChainStep } from "@modules/domain/work-chains"
+import type { WorkThread } from "@modules/domain/work-threads"
 
 /** The any-function matcher, typed `unknown` so it flows into any slot. */
 export const anyFunction = (): unknown => expect.any(Function)
@@ -27,6 +27,24 @@ export const rowOf = (overrides: Partial<ChainStepRecord> = {}): ChainStepRecord
     ...overrides,
 })
 
+/** The columns a chain read selects from the table: a step row without the name of whoever acted. */
+export const readOf = (row: ChainStepRecord): ChainStepRead => ({
+    id: row.id,
+    seq: row.seq,
+    actor_kind: row.actor_kind,
+    actor_id: row.actor_id,
+    kind: row.kind,
+    action: row.action,
+    detail: row.detail,
+    rule: row.rule,
+    target: row.target,
+    approval_request_id: row.approval_request_id,
+    status: row.status,
+    decided_by: row.decided_by,
+    started_at: row.started_at,
+    finished_at: row.finished_at,
+})
+
 /** A new chain step of the proof, overridable. */
 export const stepOf = (overrides: Partial<NewChainStep> = {}): NewChainStep => ({
     workspaceId: "ws-1",
@@ -42,36 +60,56 @@ export const stepOf = (overrides: Partial<NewChainStep> = {}): NewChainStep => (
     ...overrides,
 })
 
-/** What the chain proof manager answers for each read. */
+/** The thread the owner of threads answers by default. */
+export const threadOf = (overrides: Partial<WorkThread> = {}): WorkThread => ({
+    id: "thread-1",
+    workspaceId: "ws-1",
+    title: "Villa booking",
+    leadId: "lead-1",
+    orderId: null,
+    status: "open",
+    createdBy: "member-1",
+    createdAt: "2026-10-22T09:41:00+07:00",
+    updatedAt: "2026-10-22T09:41:00+07:00",
+    ...overrides,
+})
+
+/** What the chain proof answers for each read. */
 export interface Answers {
-    /** The thread the lock finds; null when the workspace has none with that id. */
-    readonly thread?: { readonly id: string; readonly leadId: string | null } | null
+    /** The thread the owner of threads finds; null when the workspace has none with that id. */
+    readonly thread?: WorkThread | null
+    /** The steps of the chain read from the table, with the names of whoever acted as the owners would give them. */
     readonly history?: ReadonlyArray<ChainStepRecord>
     readonly inserted?: ReadonlyArray<unknown>
     readonly stored?: ReadonlyArray<ChainStepRecord>
-    readonly active?: ReadonlyArray<unknown>
-    readonly workspace?: ReadonlyArray<unknown>
+    /** The ids of the members the owner of members says are active. */
+    readonly active?: ReadonlyArray<{ readonly id: string }>
+    /** The seat of the workspace owner; none when the owner holds no seat. */
+    readonly workspace?: ReadonlyArray<{ readonly id: string }>
     readonly settled?: ReadonlyArray<unknown>
-    readonly name?: ReadonlyArray<unknown>
+    /** The display name of the member the owner of members finds; none when the member is gone. */
+    readonly name?: ReadonlyArray<{ readonly name: string }>
 }
 
 /** The query builder double the chain proof uses. */
 export type FakeBuilder = ReturnType<typeof fakeQueryBuilder>
 
+const answersByManager = new WeakMap<object, Answers>()
+
+/** The answers a manager double from {@link managerOf} was made with. */
+export const answersOf = (manager: object): Answers => answersByManager.get(manager) ?? {}
+
 /**
- * The manager double, overridable per spec. The thread is found by entity, the chain reads are one builder over the chain entity
- * (the history, then the step read back), and every plain builder answers by what was chained on it: an insert answers the new id,
- * an update the settled step, a member list the active ids, a joined read the workspace owner, any other read a name.
+ * The manager double, overridable per spec. Every chain read and write is one builder over the chain entity (the history, then the
+ * step read back, an insert answering the new id, an update the settled step); who acted, the thread and the members are answered by the
+ * owners' services, which the spec builds from {@link answersOf}.
  */
 export const managerOf = (answers: Answers = {}) => {
-    const thread = answers.thread === undefined ? { id: "thread-1", leadId: "lead-1" } : answers.thread
-    const em = mockEntityManager({
-        findOne: [WorkThreadEntity, thread === null ? null : Object.assign(new WorkThreadEntity(), thread)],
-        update: [WorkChainEntity, { affected: 1, raw: [], generatedMaps: [] }],
-    })
+    const em = mockEntityManager({ update: [WorkChainEntity, { affected: 1, raw: [], generatedMaps: [] }] })
+    answersByManager.set(em, answers)
     const steps: FakeBuilder = fakeQueryBuilder({
-        getRawMany: answers.history ?? [],
-        getRawOne: (answers.stored ?? [rowOf({ id: "step-9", seq: 1 })])[0],
+        getRawMany: (answers.history ?? []).map(readOf),
+        getRawOne: readOfFirst(answers.stored ?? [rowOf({ id: "step-9", seq: 1 })]),
         execute: () => {
             const written = steps.calls.findLast((call) => call.method === "insert" || call.method === "update")
             return Promise.resolve({
@@ -82,38 +120,18 @@ export const managerOf = (answers: Answers = {}) => {
             })
         },
     })
-    const plains: Array<FakeBuilder> = []
-    em.createQueryBuilder.mockImplementation(((entity?: unknown) => {
-        if (entity === WorkChainEntity) return steps.builder
-        const plain: FakeBuilder = fakeQueryBuilder({
-            execute: () =>
-                Promise.resolve({
-                    raw:
-                        plain.callsOf("insert").length > 0
-                            ? (answers.inserted ?? [{ id: "step-9" }])
-                            : (answers.settled ?? [{ thread_id: "thread-1", action: "Approve 8%" }]),
-                }),
-            getRawMany: answers.active ?? [{ id: "owner-1" }],
-            getRawOne: () =>
-                Promise.resolve(
-                    plain.callsOf("innerJoin").length > 0
-                        ? (answers.workspace ?? [{ id: "boss-1" }])[0]
-                        : (answers.name ?? [{ name: "Mr Minh" }])[0],
-                ),
-        })
-        plains.push(plain)
-        return plain.builder
-    }) as never)
-    return { em, steps, plains }
+    em.createQueryBuilder.mockReturnValue(steps.builder as never)
+    return { em, steps }
 }
 
-/** The plain builder that carried the chained call, or undefined. */
-export const chainedWith = (
-    harness: { readonly plains: ReadonlyArray<FakeBuilder>; readonly steps: FakeBuilder },
-    method: string,
-) =>
-    harness.plains.find((plain) => plain.callsOf(method).length > 0) ??
-    (harness.steps.callsOf(method).length > 0 ? harness.steps : undefined)
+function readOfFirst(rows: ReadonlyArray<ChainStepRecord>): ChainStepRead | undefined {
+    const [first] = rows
+    return first === undefined ? undefined : readOf(first)
+}
+
+/** The chain builder when the chained call was made on it, or undefined. */
+export const chainedWith = (harness: { readonly steps: FakeBuilder }, method: string) =>
+    harness.steps.callsOf(method).length > 0 ? harness.steps : undefined
 
 /** The values a step insert is expected to carry. */
 export const insertedValues = (overrides: Record<string, unknown> = {}) => ({

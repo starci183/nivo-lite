@@ -15,6 +15,9 @@ import { AgentRemovalService } from "./agent-removal.service"
 import { ModulesErrorCode } from "./errors/modules.error"
 import { ModuleReadinessService } from "./module-readiness.service"
 
+/** The agent and version fields of an installation view. */
+const VIEWED_AGENT = { agentName: "Chatbot", agentHandle: "chatbot", agentAvatarUrl: null, activeVersion: 1 } as const
+
 const build = async () => {
     const tx = fakeTransaction(mockEntityManager())
     const installations = mock<InstallationRecordsService>()
@@ -26,7 +29,7 @@ const build = async () => {
     const sync = mock<InstallationChangesService>()
     const readiness = mock<ModuleReadinessService>()
     readiness.withNeeds.mockImplementation((record) =>
-        Promise.resolve({ ...record, connectionNeeds: [], lifecycle: "removed" }),
+        Promise.resolve({ ...record, ...VIEWED_AGENT, connectionNeeds: [], lifecycle: "removed" }),
     )
     const moduleRef = await Test.createTestingModule({
         providers: [

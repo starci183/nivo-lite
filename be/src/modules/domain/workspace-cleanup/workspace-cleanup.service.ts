@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { WorkspaceEntity, WorkspacePruneService } from "@modules/domain/workspaces"
+import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
+import { WorkspacePruneService, WorkspacesService } from "@modules/domain/workspaces"
 import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { WorkspaceCleanupError, WorkspaceCleanupErrorCode } from "./errors/workspace-cleanup.error"
@@ -25,12 +26,6 @@ import type {
 } from "./workspace-cleanup.contracts"
 import { InjectCleanupAccounts, InjectWorkspaceCleanupOptions } from "./workspace-cleanup.decorators"
 import type { CleanupAccounts, CleanupAuthUser, WorkspaceCleanupOptions } from "./workspace-cleanup.options"
-
-/** One account id a kept workspace holds. */
-interface KeptUser {
-    /** The Auth user id. */
-    readonly user_id: string
-}
 
 /** The most workspaces one cleanup scans; a scan that reaches it is refused, never cut short. */
 const WORKSPACE_SCAN_MAX = 1000
@@ -61,6 +56,8 @@ export class WorkspaceCleanupService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly workspacePrune: WorkspacePruneService,
+        private readonly workspaces: WorkspacesService,
+        private readonly members: WorkspaceMemberDirectoryService,
         @InjectCleanupAccounts() private readonly accounts: CleanupAccounts,
         @InjectWorkspaceCleanupOptions() private readonly options: WorkspaceCleanupOptions,
     ) {}
@@ -108,11 +105,7 @@ export class WorkspaceCleanupService {
 
     /** Every workspace by id, bounded by the scan size, with the footprint of each one that is not kept (null for a kept one, which is never counted). */
     private async footprints(keep: ReadonlyArray<string>): Promise<ReadonlyArray<WorkspaceFootprintRow>> {
-        const found = await this.entityManager.find(WorkspaceEntity, {
-            select: { id: true, name: true },
-            order: { id: "ASC" },
-            take: WORKSPACE_SCAN_MAX,
-        })
+        const found = await this.workspaces.list(WORKSPACE_SCAN_MAX)
         const rows: Array<WorkspaceFootprintRow> = []
         await eachInOrder(found, async (workspace) => {
             if (keep.includes(workspace.id)) {
@@ -131,24 +124,9 @@ export class WorkspaceCleanupService {
 
     /** The accounts the kept workspaces hold: every member and every owner, each read bounded by the read size. */
     private async keptUserIds(keep: ReadonlyArray<string>): Promise<ReadonlySet<string>> {
-        const members = await this.entityManager
-            .createQueryBuilder()
-            .select("m.user_id", "user_id")
-            .distinct(true)
-            .from("workspace_members", "m")
-            .where("m.workspace_id = ANY(CAST(:keep AS uuid[]))", { keep })
-            .orderBy("m.user_id")
-            .limit(KEPT_USERS_MAX)
-            .getRawMany<KeptUser>()
-        const owners = await this.entityManager
-            .createQueryBuilder(WorkspaceEntity, "w")
-            .select("w.owner_id", "user_id")
-            .distinct(true)
-            .where("w.id = ANY(CAST(:keep AS uuid[]))", { keep })
-            .orderBy("w.owner_id")
-            .limit(KEPT_USERS_MAX)
-            .getRawMany<KeptUser>()
-        return new Set([...members, ...owners].map((row) => row.user_id))
+        const members = await this.members.userIdsOf(keep, KEPT_USERS_MAX)
+        const owners = await this.workspaces.ownerIdsOf(keep, KEPT_USERS_MAX)
+        return new Set([...members, ...owners])
     }
 
     /** What deleting each orphan account would do to kept data; no query when there is no orphan. */

@@ -1,6 +1,5 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { GenerationsService } from "@modules/domain/ai-generations"
 import type { GenerationState } from "@modules/domain/ai-generations"
 import { VideoProjectScriptingService } from "@modules/domain/video-projects"
@@ -9,6 +8,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { VideoErrorCode } from "./errors/video.error"
 import type { ScriptSource, ScriptProject } from "./video-stored.contracts"
+import { VideoScriptReadsService } from "./video-script-reads.service"
 import { VideoScriptingCompletionService } from "./video-scripting-completion.service"
 import { VideoScriptingContextService } from "./video-scripting-context.service"
 import { videoScriptMessages, videoScriptSourcesText } from "./video-scripting-prompt.policy"
@@ -58,9 +58,10 @@ const SCRIPTING = projectOf({
 })
 
 const build = async (project: ScriptProject | null = projectOf()) => {
-    const em = mockEntityManager()
-    const fakes = queueQueryBuilders(em, [{ getRawOne: project ?? undefined }, { getRawMany: SOURCES }])
-    const tx = fakeTransaction(em)
+    const tx = fakeTransaction(mockEntityManager())
+    const reads = mock<VideoScriptReadsService>()
+    reads.projectOf.mockResolvedValue(project ?? undefined)
+    reads.sourcesOf.mockResolvedValue(SOURCES)
     const members = mock<WorkspaceMembersService>()
     const generations = mock<GenerationsService>()
     generations.request.mockResolvedValue({ id: "generation-1", status: "queued" })
@@ -79,12 +80,13 @@ const build = async (project: ScriptProject | null = projectOf()) => {
             { provide: VideoScriptingContextService, useValue: context },
             { provide: VideoProjectScriptingService, useValue: projectWriter },
             { provide: VideoScriptingCompletionService, useValue: completion },
+            { provide: VideoScriptReadsService, useValue: reads },
         ],
     }).compile()
     return {
         scripting: moduleRef.get(VideoScriptingService),
         tx,
-        fakes,
+        reads,
         members,
         generations,
         context,
@@ -96,7 +98,7 @@ const build = async (project: ScriptProject | null = projectOf()) => {
 describe("VideoScriptingService", () => {
     describe("request", () => {
         it("queues one generation from the project's public sources and stores its operation", async () => {
-            const { scripting, tx, fakes, members, generations, context, projectWriter } = await build()
+            const { scripting, tx, reads, members, generations, context, projectWriter } = await build()
 
             await expect(scripting.request("person-1", WS, "project-1")).resolves.toEqual({
                 id: "generation-1",
@@ -107,10 +109,9 @@ describe("VideoScriptingService", () => {
             const sources = videoScriptSourcesText(SOURCES)
             const manager = projectWriter.start.mock.calls[0]?.[0]
             expect(members.require).toHaveBeenCalledWith("person-1", WS, ["owner", "manager"])
-            expect(fakes[1]?.callsOf("where")).toEqual([
-                [expect.stringContaining("ANY(:sourceIds"), { workspaceId: WS, sourceIds: [SOURCE] }],
-            ])
-            expect(context.forProject).toHaveBeenCalledWith(manager, WS, projectOf(), sources)
+            expect(reads.projectOf).toHaveBeenCalledWith(manager, WS, "project-1", true)
+            expect(reads.sourcesOf).toHaveBeenCalledWith(WS, [SOURCE])
+            expect(context.forProject).toHaveBeenCalledWith(WS, projectOf(), sources)
             expect(generations.request).toHaveBeenCalledWith(
                 {
                     workspaceId: WS,

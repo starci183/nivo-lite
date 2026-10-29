@@ -1,14 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { ChannelDeliveryService } from "@modules/domain/channels"
 import { OfficeLog } from "@modules/domain/module-ops"
-import { StaffEntity } from "@modules/domain/staff"
+import { StaffDirectoryService } from "@modules/domain/staff"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ShiftsNotificationEntity, ShiftsStaffEntity } from "./persistence/entities"
-import type { AgentHandleRead, AgentIdRead } from "./persistence/shifts-alerts.reads"
 import { staffHandles } from "./policies/staff-handles.policy"
 import { ShiftsLogEvent } from "./shifts.log-events"
 import { ShiftsTextService } from "./shifts-text.service"
@@ -81,6 +81,8 @@ export class ShiftsNotifyService {
         @InjectLogger() private readonly logger: Logger,
         private readonly office: OfficeLog,
         private readonly bindings: AgentBindingsService,
+        private readonly agents: AgentDirectoryService,
+        private readonly staff: StaffDirectoryService,
         private readonly delivery: ChannelDeliveryService,
         private readonly words: ShiftsTextService,
     ) {}
@@ -167,16 +169,9 @@ export class ShiftsNotifyService {
 
     /** The connection the shifts agent speaks through for one provider: only a connected one bound for outbound chat; never "any". */
     private async boundConnection(workspaceId: string, provider: "telegram" | "zalo_oa"): Promise<string | null> {
-        const agent = await this.entityManager
-            .createQueryBuilder()
-            .select("a.id", "id")
-            .from("public.agents", "a")
-            .where("a.workspace_id = :workspaceId AND a.module = 'shifts' AND a.status = 'active'", { workspaceId })
-            .orderBy("a.created_at", "ASC")
-            .limit(1)
-            .getRawOne<AgentIdRead>()
-        if (agent === undefined) return null
-        const bound = await this.bindings.connectionsFor(agent.id, "outbound_chat", {
+        const agentId = await this.agents.firstActiveIdOfModule(workspaceId, "shifts")
+        if (agentId === null) return null
+        const bound = await this.bindings.connectionsFor(agentId, "outbound_chat", {
             acting: true,
             connectedOnly: true,
             providers: [provider],
@@ -186,25 +181,11 @@ export class ShiftsNotifyService {
 
     /** id → @handle of the active staff rows, clear of every agent handle and @nivo. */
     private async handles(workspaceId: string): Promise<ReadonlyMap<string, string>> {
-        const [staff, agents] = await Promise.all([
-            this.entityManager.find(StaffEntity, {
-                select: { id: true, name: true },
-                where: { workspaceId, active: true },
-                order: { createdAt: "ASC", id: "ASC" },
-                take: HANDLES_MAX,
-            }),
-            this.entityManager
-                .createQueryBuilder()
-                .select("a.handle", "handle")
-                .from("public.agents", "a")
-                .where("a.workspace_id = :workspaceId", { workspaceId })
-                .limit(HANDLES_MAX)
-                .getRawMany<AgentHandleRead>(),
+        const [staff, handles] = await Promise.all([
+            this.staff.list(workspaceId),
+            this.agents.handlesOf(workspaceId, HANDLES_MAX),
         ])
-        return staffHandles(
-            staff,
-            agents.map((agent) => agent.handle),
-        )
+        return staffHandles(staff, handles)
     }
 
     private async record(

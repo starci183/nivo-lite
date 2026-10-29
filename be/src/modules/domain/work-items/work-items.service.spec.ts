@@ -491,3 +491,27 @@ describe("WorkItemsService persistence", () => {
         })
     })
 })
+
+describe("WorkItemsService installationIdOf", () => {
+    it("answers the installation a row of the workspace names", async () => {
+        const em = mockEntityManager({
+            findOne: [WorkItemEntity, Object.assign(new WorkItemEntity(), { installationId: "inst-1" })],
+        })
+
+        await expect((await build(em)).installationIdOf("ws-1", "rec-1")).resolves.toBe("inst-1")
+        expect(em.findOne).toHaveBeenCalledWith(WorkItemEntity, {
+            select: { installationId: true },
+            where: { workspaceId: "ws-1", id: "rec-1" },
+        })
+    })
+
+    it("answers null for a missing row and for a row that names no installation", async () => {
+        const em = mockEntityManager({ findOne: [WorkItemEntity, null] })
+        await expect((await build(em)).installationIdOf("ws-1", "rec-1")).resolves.toBeNull()
+
+        const bare = mockEntityManager({
+            findOne: [WorkItemEntity, Object.assign(new WorkItemEntity(), { installationId: null })],
+        })
+        await expect((await build(bare)).installationIdOf("ws-1", "rec-1")).resolves.toBeNull()
+    })
+})

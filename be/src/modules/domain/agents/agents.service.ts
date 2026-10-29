@@ -115,6 +115,12 @@ export class AgentsService {
         return row === null ? null : refOf(row)
     }
 
+    /** The agent of the workspace with this id, active or paused; null when there is none. */
+    async agentById(workspaceId: string, agentId: string): Promise<OptionalAgentRef> {
+        const row = await this.entityManager.findOne(AgentEntity, { where: { id: agentId, workspaceId } })
+        return row === null ? null : refOf(row)
+    }
+
     /** The profile of one agent of the workspace, whatever its status; null when there is none. */
     async profileOf(workspaceId: string, agentId: string): Promise<OptionalAgentProfile> {
         return firstProfileOf(await this.entityManager.findOne(AgentEntity, { where: { id: agentId, workspaceId } }))

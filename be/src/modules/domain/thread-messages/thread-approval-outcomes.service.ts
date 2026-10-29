@@ -12,8 +12,9 @@ import type { Inbox } from "@modules/platform/inbox"
 import { pendingOf, settleCard, withVote } from "./approval-card.policy"
 import { ThreadMessagesError, ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { MentionDirectoryService } from "./mention-directory.service"
+import { ThreadMessageAuthorsService } from "./thread-message-authors.service"
 import { ThreadMessageEntity } from "./persistence/entities"
-import { selectMessagesWithAuthor } from "./persistence/thread-message.query"
+import { selectMessages } from "./persistence/thread-message.query"
 import { toMessage } from "./thread.mapper"
 import { ThreadMessagesService } from "./thread-messages.service"
 import type {
@@ -21,6 +22,7 @@ import type {
     ApprovalResolved,
     InboxClaim,
     ThreadMessage,
+    ThreadMessageRead,
     ThreadMessageRecord,
 } from "./thread-messages.contracts"
 
@@ -51,6 +53,7 @@ export class ThreadApprovalOutcomesService {
         @InjectInbox() private readonly inbox: Inbox,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly directory: MentionDirectoryService,
+        private readonly authors: ThreadMessageAuthorsService,
         private readonly threads: WorkThreadsService,
         private readonly chains: WorkChainsService,
         private readonly messages: ThreadMessagesService,
@@ -80,13 +83,13 @@ export class ThreadApprovalOutcomesService {
 
     /** Locks the message of a card for the rest of the transaction. */
     async lock(tx: EntityManager, workspaceId: string, messageId: string): Promise<ThreadMessageRecord> {
-        const row = await selectMessagesWithAuthor(tx, workspaceId)
+        const row = await selectMessages(tx, workspaceId)
             .andWhere("m.id = :messageId", { messageId })
             .limit(1)
             .setLock("pessimistic_write", undefined, ["m"])
-            .getRawOne<ThreadMessageRecord>()
+            .getRawOne<ThreadMessageRead>()
         if (row === undefined) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.MessageNotFound })
-        return row
+        return this.authors.withAuthor(tx, workspaceId, row)
     }
 
     /** A vote that does not end the request: the card shows who voted. */
