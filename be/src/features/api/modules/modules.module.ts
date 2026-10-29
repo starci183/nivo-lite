@@ -11,6 +11,7 @@ import { GetRequirementFactsHandler } from "./application/get-requirement-facts.
 import { GetSetupStateHandler } from "./application/get-setup-state.handler"
 import { InstallModuleHandler } from "./application/install-module.handler"
 import { InstanceOfRecordHandler } from "./application/instance-of-record.handler"
+import { InstanceOfRecordService } from "./application/instance-of-record.service"
 import { ListInstallationsHandler } from "./application/list-installations.handler"
 import { ListSetupVersionsHandler } from "./application/list-setup-versions.handler"
 import { PostSetupMessageHandler } from "./application/post-setup-message.handler"
@@ -37,6 +38,7 @@ import { ConfigurableModuleClass } from "./modules.module-definition"
         GetSetupStateHandler,
         InstallModuleHandler,
         InstanceOfRecordHandler,
+        InstanceOfRecordService,
         ListInstallationsHandler,
         ListSetupVersionsHandler,
         PostSetupMessageHandler,
