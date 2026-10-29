@@ -4,8 +4,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectInbox } from "@modules/platform/inbox"
 import type { Inbox } from "@modules/platform/inbox"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
-import type { KnowledgeSourcePayload } from "@modules/queues/knowledge"
-import type { InboxClaim } from "./brain.contracts"
+import type { IndexedSource, InboxClaim } from "./brain.contracts"
 
 @Injectable()
 /**
@@ -20,10 +19,14 @@ export class IndexedSourcesService {
     ) {}
 
     /** Queues the facts job of an indexed source; `indexedAt` keys the one reading of this indexing. */
-    queueFacts(source: KnowledgeSourcePayload, indexedAt: number, claim: InboxClaim): Promise<void> {
+    queueFacts(indexed: IndexedSource, claim: InboxClaim): Promise<void> {
         return this.entityManager.transaction(async (tx) => {
             if (!(await this.inbox.claim(claim.consumer, claim.dedupeKey, tx))) return
-            await this.queue.enqueueFacts(source, tx, indexedAt)
+            await this.queue.enqueueFacts(
+                { sourceId: indexed.sourceId, workspaceId: indexed.workspaceId },
+                tx,
+                indexed.indexedAt,
+            )
         })
     }
 }

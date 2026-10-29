@@ -1,9 +1,11 @@
 import type { DynamicModule } from "@nestjs/common"
 import { AgentSyncMessageModule } from "@features/reactors/agent-sync"
+import { SourceFactsMessageModule } from "@features/reactors/source-facts"
 import { ThreadOutcomesMessageModule } from "@features/reactors/thread-outcomes"
 
 /** The event reactors the api runs: each message module subscribes its consumers to their queues on the event bus. */
 export const API_REACTORS: Array<DynamicModule> = [
     AgentSyncMessageModule.register({}),
+    SourceFactsMessageModule.register({}),
     ThreadOutcomesMessageModule.register({}),
 ]
