@@ -67,6 +67,22 @@ describe("ContentBrandProposalsService", () => {
         expect(stored?.callsOf("setParameter")).toEqual([["payload", "{}"]])
     })
 
+    it("answers null when the statement hands back no rows at all", async () => {
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ execute: {} }])
+        const service = await build(em)
+        const input = {
+            workspaceId: "ws-1",
+            installationId: "inst-1",
+            setupSessionId: null,
+            fileName: "guide.pdf",
+            fileSize: 4,
+            payload: "{}",
+        }
+
+        await expect(service.insert(input)).resolves.toBeNull()
+    })
+
     it("finds one proposal or null and lists an installation's proposals", async () => {
         const em = mockEntityManager()
         const [one, none, many] = queueQueryBuilders(em, [

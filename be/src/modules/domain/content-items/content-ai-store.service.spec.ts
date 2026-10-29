@@ -156,7 +156,10 @@ describe("ContentAiStoreService applyDraft", () => {
                 },
             ],
         ])
-        expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toMatchObject({ hashtags: ["launch"], status: "draft" })
+        expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toMatchObject({
+            hashtags: ["launch"],
+            status: "draft",
+        })
         expect(fakes[0]?.callsOf("where")[0]?.[1]).toEqual({ itemId: "idea-1", workspaceId: "workspace-1" })
     })
 

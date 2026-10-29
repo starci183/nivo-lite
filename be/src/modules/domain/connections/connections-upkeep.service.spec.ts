@@ -59,6 +59,9 @@ describe("ConnectionsUpkeepService > health", () => {
             ["verdict", '{"state":"silent","reason":"no event for 80h","checked_at":"2026-10-12T10:00:00.000Z"}'],
         ])
         expect(fakes[0]?.callsOf("where")).toEqual([[{ id: "c-1" }]])
+        expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({
+            publicMeta: "jsonb_set(public_meta, '{health}', :verdict::jsonb)",
+        })
     })
 })
 
@@ -83,7 +86,11 @@ describe("ConnectionsUpkeepService > sync scheduling and default SMTP", () => {
         await expect((await build(em)).setSchedule("ws-1", "c1", everyMinutes)).resolves.toBeUndefined()
         expect(fakes[0]?.callsOf("setParameter")).toEqual([["minutes", everyMinutes]])
         expect(fakes[0]?.callsOf("where")).toEqual([[{ workspaceId: "ws-1", id: "c1" }]])
-        expect(setOf(fakes[0])).toEqual({ syncEveryMinutes: ":minutes::int", nextSyncAt: "CASE WHEN :minutes::int IS NULL THEN NULL ELSE now() END", updatedAt: "now()" })
+        expect(setOf(fakes[0])).toEqual({
+            syncEveryMinutes: ":minutes::int",
+            nextSyncAt: "CASE WHEN :minutes::int IS NULL THEN NULL ELSE now() END",
+            updatedAt: "now()",
+        })
     })
 
     it("rejects a missing connection when setting its schedule", async () => {
@@ -107,7 +114,13 @@ describe("ConnectionsUpkeepService > sync scheduling and default SMTP", () => {
             [
                 "ConnectionEntity",
                 { id: "c2" },
-                { status: "error", lastError: "Expired token", nextSyncAt: "CASE WHEN sync_every_minutes IS NULL THEN NULL ELSE now() + make_interval(mins => GREATEST(sync_every_minutes, 15)) END", updatedAt: "now()" },
+                {
+                    status: "error",
+                    lastError: "Expired token",
+                    nextSyncAt:
+                        "CASE WHEN sync_every_minutes IS NULL THEN NULL ELSE now() + make_interval(mins => GREATEST(sync_every_minutes, 15)) END",
+                    updatedAt: "now()",
+                },
             ],
         ])
         expect(setOf(fakes[1])).toEqual({ isDefault: "(id = :id)", updatedAt: "now()" })
@@ -144,6 +157,9 @@ describe("ConnectionsUpkeepService > sync scheduling and default SMTP", () => {
         expect(fakes[0]?.callsOf("limit")).toEqual([[2]])
         expect(fakes[1]?.callsOf("where")).toEqual([[{ id: In(["c2", "c1"]) }]])
         expect(fakes[1]?.callsOf("returning")).toEqual([["id, workspace_id"]])
+        expect(evaluatedValues(fakes[1]?.callsOf("set")[0]?.[0])).toEqual({
+            nextSyncAt: "now() + interval '30 minutes'",
+        })
         expect(tx.commits).toBe(1)
     })
 

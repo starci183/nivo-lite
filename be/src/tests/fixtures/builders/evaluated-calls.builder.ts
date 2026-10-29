@@ -1,9 +1,9 @@
+const isThunk = (value: unknown): value is () => unknown => typeof value === "function"
+
 /** The values of one write with every function expression (`() => "now()"`) run, so a spec compares the SQL each one yields. */
 export const evaluatedValues = (values: unknown): Record<string, unknown> =>
     typeof values === "object" && values !== null
-        ? Object.fromEntries(
-              Object.entries(values).map(([key, value]) => [key, typeof value === "function" ? value() : value]),
-          )
+        ? Object.fromEntries(Object.entries(values).map(([key, value]) => [key, isThunk(value) ? value() : value]))
         : {}
 
 /**

@@ -3,12 +3,13 @@ import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { And, LessThan, MoreThanOrEqual } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { ContentEngagementDailyService } from "./content-engagement-daily.service"
 import { ContentEngagementDailyEntity } from "./persistence/entities"
 
-/** The rows of one upsert with the type of their sync stamp, which is a function expression and cannot be compared. */
+/** The rows of one upsert with their sync stamp, a function expression, run to the SQL it yields. */
 const stamped = (rows: unknown): ReadonlyArray<unknown> =>
-    Array.isArray(rows) ? rows.map((row: Record<string, unknown>) => ({ ...row, syncedAt: typeof row.syncedAt })) : []
+    Array.isArray(rows) ? rows.map((row: unknown) => evaluatedValues(row)) : []
 
 /** What each upsert wrote: the entity, the stamped rows, and the conflict keys. */
 const upsertsOf = (em: MockEntityManager) =>
@@ -38,7 +39,7 @@ describe("ContentEngagementDailyService", () => {
                         day: "2026-10-12",
                         reach: 100,
                         engagements: 10,
-                        syncedAt: "function",
+                        syncedAt: "now()",
                     },
                 ],
                 ["workspaceId", "channel", "day"],
@@ -63,7 +64,7 @@ describe("ContentEngagementDailyService", () => {
         expect(upsertsOf(em)).toEqual([
             [
                 ContentEngagementDailyEntity,
-                [{ workspaceId: "ws-1", channel: "zalo", day: "2026-10-12", messages: 3, syncedAt: "function" }],
+                [{ workspaceId: "ws-1", channel: "zalo", day: "2026-10-12", messages: 3, syncedAt: "now()" }],
                 ["workspaceId", "channel", "day"],
             ],
         ])
