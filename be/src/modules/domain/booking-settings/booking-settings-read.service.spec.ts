@@ -24,7 +24,7 @@ describe("BookingSettingsReadService", () => {
 
         await expect(settings.of("ws-1")).resolves.toEqual(saved)
 
-        expect(em.findOneBy.mock.calls).toEqual([[BookingSettingEntity, { workspaceId: "ws-1" }]])
+        expect(em.findOneBy).toHaveBeenCalledWith(BookingSettingEntity, { workspaceId: "ws-1" })
     })
 
     it("answers the page that is on under a slug", async () => {
@@ -34,14 +34,9 @@ describe("BookingSettingsReadService", () => {
 
         await expect(settings.publishedBy("salon")).resolves.toEqual(page)
 
-        expect(em.findOne.mock.calls).toEqual([
-            [
-                BookingSettingEntity,
-                {
-                    select: { workspaceId: true, publicNote: true, address: true, timezone: true },
-                    where: { publicSlug: "salon", publicEnabled: true },
-                },
-            ],
-        ])
+        expect(em.findOne).toHaveBeenCalledWith(BookingSettingEntity, {
+            select: { workspaceId: true, publicNote: true, address: true, timezone: true },
+            where: { publicSlug: "salon", publicEnabled: true },
+        })
     })
 })

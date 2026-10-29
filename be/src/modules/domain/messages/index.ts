@@ -2,7 +2,7 @@
 export { MessagesReadService } from "./messages-read.service"
 export { MessageCursorsService } from "./message-cursors.service"
 export { createdAtOfRows, cursorOfRows } from "./message-cursor-rows.policy"
-export type { MessageCursor, OptionalCreatedAt, OptionalMessageCursor, OptionalRoom } from "./message-cursors.contracts"
+export type { MessageCursor, OptionalMessageCursor } from "./message-cursors.contracts"
 export type { LineActivity, LineReader, LineText, ThreadLine } from "./messages-read.contracts"
 export type { OptionalAgentIdentity } from "./office-lines.contracts"
 export { AGENT_DIRECTORY, InjectAgentDirectory } from "./office-lines.decorators"
