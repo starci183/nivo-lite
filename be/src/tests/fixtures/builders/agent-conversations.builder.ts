@@ -83,24 +83,6 @@ export const insertedRefRow = {
     visitor_name: "Minh",
 }
 
-/** The joined row a turn read answers: the conversation of {@link leadConversation} with its agent. */
-export const turnRow = {
-    id: "conv-1",
-    workspace_id: "ws-1",
-    channel: "telegram",
-    external_id: "555",
-    connection_id: "c-1",
-    lead_id: "lead-1",
-    handled_by: "Lan",
-    visitor_name: "Minh",
-    installation_id: "inst-1",
-    agent_id: "agent-1",
-    agent_name: "Chatbot",
-    agent_handle: "chatbot",
-    agent_role: "Customer chat",
-    agent_module: "chatbot",
-    agent_instructions: "Be kind",
-    agent_knowledge: "Tea",
-    agent_approval_rule: "ask",
-    agent_greeting: "Hi",
-}
+/** The conversation a turn answers: held by Lan, linked to a lead and to the installation inst-1. */
+export const turnConversation = (): AgentConversationEntity =>
+    conversationOf({ leadId: "lead-1", handledBy: "Lan", installationId: "inst-1" })

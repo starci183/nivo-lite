@@ -136,6 +136,17 @@ export class AgentBindingsService {
         await this.upsert(manager, grant)
     }
 
+    /** The ids of the agents that use a connection of the workspace, in the order they were attached, at most `limit`. */
+    async agentIdsOf(workspaceId: string, connectionId: string, limit: number): Promise<ReadonlyArray<string>> {
+        const links = await this.entityManager.find(AgentConnectionEntity, {
+            select: { agentId: true },
+            where: { workspaceId, connectionId },
+            order: { createdAt: "ASC" },
+            take: limit,
+        })
+        return links.map((link) => link.agentId)
+    }
+
     /** Removes a grant the caller already proved and planned, inside its transaction (the connection grants editor). */
     async removeGrant(target: BindingTarget, manager: EntityManager = this.entityManager): Promise<void> {
         await manager.delete(AgentConnectionEntity, {

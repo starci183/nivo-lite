@@ -1,4 +1,5 @@
 import { LeadGenIntakeService } from "@modules/domain/lead-flows"
+import { AgentBindingsService } from "@modules/domain/agent-connections"
 import type { DynamicModule } from "@nestjs/common"
 import { ConnectionsModule } from "@modules/domain/connections"
 import { DataHubModule } from "@modules/domain/data-hub"
@@ -23,7 +24,11 @@ import { TELEGRAM_USER_ERRORS } from "../api.options"
 import type { ApiOptions } from "../api.options"
 /** The connections area of the API, in registration order. */
 export const connectionsModules = (options: ApiOptions): Array<DynamicModule> => [
-    ConnectionsModule.register({ isGlobal: true, ...options.connections }),
+    ConnectionsModule.register({
+        isGlobal: true,
+        ...options.connections,
+        ports: { agents: AgentBindingsService },
+    }),
     ConnectionGrantsModule.register({ isGlobal: true }),
     DataSourcesModule.register({ isGlobal: true, ...options.dataSources, documentReaders: DOCUMENT_FILE_READERS }),
     TelegramUserModule.register({ isGlobal: true, ...options.telegramUser, errors: TELEGRAM_USER_ERRORS }),

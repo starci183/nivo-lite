@@ -1,11 +1,10 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import { Not, Raw } from "typeorm"
 import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
 import { ConnectorInterestService } from "@modules/domain/connector-interest"
 import type { OptionalStoredSecret } from "@modules/domain/connection-secrets"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
-import { AgentConnectionEntity } from "@modules/domain/agent-connections"
 import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -42,7 +41,8 @@ import type {
 } from "./connections.contracts"
 import { ConnectionsUpkeepService } from "./connections-upkeep.service"
 import { toConnectionRecord } from "./connections.mapper"
-import { InjectConnectionsOptions } from "./connections.decorators"
+import { InjectConnectionAgents, InjectConnectionsOptions } from "./connections.decorators"
+import type { ConnectionAgentsDirectory } from "./connections.port"
 import { ConnectionsLogEvent } from "./connections.log-events"
 import type { ConnectionsOptions } from "./connections.options"
 import { ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
@@ -70,6 +70,7 @@ export class ConnectionsService {
         private readonly seats: WorkspaceMemberSeatsService,
         private readonly interest: ConnectorInterestService,
         private readonly upkeep: ConnectionsUpkeepService,
+        @Optional() @InjectConnectionAgents() private readonly agents: ConnectionAgentsDirectory | null = null,
     ) {
         this.siteUrl = options.publicSiteUrl ?? options.siteUrl
         this.providerUrl = options.publicApiUrl ?? options.publicSiteUrl
@@ -166,15 +167,8 @@ export class ConnectionsService {
     }
 
     /** The ids of the agents that use a connection, in the order they were attached. */
-    async agentIds(workspaceId: string, connectionId: string): Promise<ReadonlyArray<string>> {
-        const rows = await this.entityManager
-            .createQueryBuilder(AgentConnectionEntity, "a")
-            .select("a.agent_id", "agentId")
-            .where("a.workspace_id = :workspaceId AND a.connection_id = :connectionId", { workspaceId, connectionId })
-            .orderBy("a.created_at")
-            .limit(LIST_MAX)
-            .getRawMany<{ agentId: string }>()
-        return rows.map((row) => row.agentId)
+    agentIds(workspaceId: string, connectionId: string): Promise<ReadonlyArray<string>> {
+        return this.agents === null ? Promise.resolve([]) : this.agents.agentIdsOf(workspaceId, connectionId, LIST_MAX)
     }
 
     /** Every connection of the workspace, oldest first. */

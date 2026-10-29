@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { IsNull, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { AgentEntity } from "@modules/domain/agents"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
@@ -25,28 +25,6 @@ import type {
 } from "./agent-conversations.contracts"
 import { AgentConversationsError, AgentConversationsErrorCode } from "./errors/agent-conversations.error"
 import { AgentConversationEntity } from "./persistence/entities"
-
-/** The conversation of a turn with the agent that speaks in it, as the join of the two tables answers it. */
-interface TurnConversationRead {
-    readonly id: string
-    readonly workspace_id: string
-    readonly channel: string
-    readonly external_id: string | null
-    readonly connection_id: string | null
-    readonly lead_id: string | null
-    readonly handled_by: string | null
-    readonly visitor_name: string | null
-    readonly installation_id: string | null
-    readonly agent_id: string
-    readonly agent_name: string
-    readonly agent_handle: string
-    readonly agent_role: string
-    readonly agent_module: string
-    readonly agent_instructions: string
-    readonly agent_knowledge: string
-    readonly agent_approval_rule: string
-    readonly agent_greeting: string
-}
 
 /** A chat conversation as the insert answers it (the columns the statement returns). */
 /** Whether a RETURNING row carries the id of a stored conversation. */
@@ -131,7 +109,10 @@ const holding = (holder: string | null) => ({
 @Injectable()
 /** The conversations customers have with the workspace's agents on a channel; the only writer of agent_conversations. */
 export class AgentConversationsService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly agents: AgentDirectoryService,
+    ) {}
 
     /** The installation that owns a conversation of the workspace; null when there is no such row or it names no installation. */
     async installationIdOf(workspaceId: string, id: string): Promise<OptionalInstallationId> {
@@ -417,54 +398,34 @@ export class AgentConversationsService {
 
     /** The conversation a turn answers, with the agent that speaks in it, or a refusal when it does not exist. */
     async turnOf(conversationId: string): Promise<Outcome<TurnConversation, AgentConversationsErrorCode>> {
-        const row = await this.entityManager
-            .createQueryBuilder(AgentConversationEntity, "c")
-            .select([
-                "c.id AS id",
-                "c.workspace_id AS workspace_id",
-                "c.channel AS channel",
-                "c.external_id AS external_id",
-                "c.connection_id AS connection_id",
-                "c.lead_id AS lead_id",
-                "c.handled_by AS handled_by",
-                "c.visitor_name AS visitor_name",
-                "c.installation_id AS installation_id",
-                "a.id AS agent_id",
-                "a.name AS agent_name",
-                "a.handle AS agent_handle",
-                "a.role AS agent_role",
-                "a.module AS agent_module",
-                "a.instructions AS agent_instructions",
-                "a.knowledge AS agent_knowledge",
-                "a.approval_rule AS agent_approval_rule",
-                "a.greeting AS agent_greeting",
-            ])
-            .innerJoin(AgentEntity, "a", "a.id = c.agentId")
-            .where("c.id = :conversationId", { conversationId })
-            .limit(1)
-            .getRawOne<TurnConversationRead>()
-        if (row === undefined) return refused(AgentConversationsErrorCode.NotFound)
+        const row = await this.entityManager.findOne(AgentConversationEntity, {
+            select: {
+                id: true,
+                workspaceId: true,
+                channel: true,
+                externalId: true,
+                connectionId: true,
+                leadId: true,
+                handledBy: true,
+                visitorName: true,
+                installationId: true,
+                agentId: true,
+            },
+            where: { id: conversationId },
+        })
+        const agent = row === null ? null : await this.agents.turnFactsOf(row.agentId)
+        if (row === null || agent === null) return refused(AgentConversationsErrorCode.NotFound)
         return ok({
             id: row.id,
-            workspaceId: row.workspace_id,
+            workspaceId: row.workspaceId,
             channel: row.channel,
-            externalId: row.external_id,
-            connectionId: row.connection_id,
-            leadId: row.lead_id,
-            handledBy: row.handled_by,
-            visitorName: row.visitor_name,
-            installationId: row.installation_id,
-            agent: {
-                id: row.agent_id,
-                name: row.agent_name,
-                handle: row.agent_handle,
-                role: row.agent_role,
-                module: row.agent_module,
-                instructions: row.agent_instructions,
-                knowledge: row.agent_knowledge,
-                approvalRule: row.agent_approval_rule,
-                greeting: row.agent_greeting,
-            },
+            externalId: row.externalId,
+            connectionId: row.connectionId,
+            leadId: row.leadId,
+            handledBy: row.handledBy,
+            visitorName: row.visitorName,
+            installationId: row.installationId,
+            agent,
         })
     }
 }

@@ -2,7 +2,7 @@ import type { DynamicModule, Type } from "@nestjs/common"
 import { CliModule } from "@features/cli"
 import { ChannelConnectionsModule } from "@modules/domain/channel-connections"
 import { ChannelProvisioningModule } from "@modules/domain/channel-provisioning"
-import { AgentConnectionsModule } from "@modules/domain/agent-connections"
+import { AgentBindingsService, AgentConnectionsModule } from "@modules/domain/agent-connections"
 import { ConnectionGrantsModule } from "@modules/domain/connection-grants"
 import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { ConnectionsModule } from "@modules/domain/connections"
@@ -128,7 +128,11 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
         isGlobal: true,
         tokenKey: options.channelConnections.channelTokenKey,
     }),
-    ConnectionsModule.register({ isGlobal: true, ...options.channelConnections }),
+    ConnectionsModule.register({
+        isGlobal: true,
+        ...options.channelConnections,
+        ports: { agents: AgentBindingsService },
+    }),
     AgentConnectionsModule.register({ isGlobal: true }),
     ConnectionGrantsModule.register({ isGlobal: true }),
     ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),

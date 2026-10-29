@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentConversationEntity, AgentConversationsService } from "@modules/domain/agent-conversations"
 import { AgentMessageEntity, AgentMessagesService } from "@modules/domain/agent-messages"
-import { AgentEntity, AgentsService } from "@modules/domain/agents"
+import { AgentDirectoryService, AgentsService } from "@modules/domain/agents"
 import { EventsReadService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
@@ -43,6 +43,7 @@ export class AgentChatService {
         @InjectClock() private readonly clock: Clock,
         private readonly members: WorkspaceMembersService,
         private readonly agents: AgentsService,
+        private readonly directory: AgentDirectoryService,
         private readonly conversations: AgentConversationsService,
         private readonly messages: AgentMessagesService,
         private readonly events: EventsReadService,
@@ -211,16 +212,8 @@ export class AgentChatService {
     }
 
     private async requireAgent(request: AgentChatAgentRequest): Promise<ChatAgentFacts> {
-        const row = await this.entityManager
-            .createQueryBuilder(AgentEntity, "a")
-            .select(["a.id AS id", "a.module AS module", "a.status AS status", "a.greeting AS greeting"])
-            .where("a.workspace_id = :workspaceId AND a.id = :agentId", {
-                workspaceId: request.workspaceId,
-                agentId: request.agentId,
-            })
-            .limit(1)
-            .getRawOne<ChatAgentFacts>()
-        if (row === undefined) throw new AgentChatError({ code: AgentChatErrorCode.AgentNotFound })
+        const row = await this.directory.chatFactsOf(request.workspaceId, request.agentId)
+        if (row === null) throw new AgentChatError({ code: AgentChatErrorCode.AgentNotFound })
         return row
     }
 

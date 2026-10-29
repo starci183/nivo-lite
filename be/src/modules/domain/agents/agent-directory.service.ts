@@ -5,6 +5,8 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     AgentCard,
     AgentCreation,
+    OptionalAgentChatFacts,
+    OptionalAgentTurnFacts,
     AgentModuleRef,
     OptionalAgentStatus,
     OptionalGreeting,
@@ -139,6 +141,48 @@ export class AgentDirectoryService {
             take: limit,
         })
         return agents.map((agent) => ({ id: agent.id, module: agent.module }))
+    }
+
+    /** The facts the chat page needs of the agent in the workspace; null when the workspace has no such agent. */
+    async chatFactsOf(workspaceId: string, agentId: string): Promise<OptionalAgentChatFacts> {
+        const agent = await this.entityManager.findOne(AgentEntity, {
+            select: { id: true, module: true, status: true, greeting: true },
+            where: { workspaceId, id: agentId },
+        })
+        return agent === null
+            ? null
+            : { id: agent.id, module: agent.module, status: agent.status, greeting: agent.greeting }
+    }
+
+    /** The agent that speaks in a conversation turn, with the texts that steer it; null when there is no such agent. */
+    async turnFactsOf(agentId: string): Promise<OptionalAgentTurnFacts> {
+        const agent = await this.entityManager.findOne(AgentEntity, {
+            select: {
+                id: true,
+                name: true,
+                handle: true,
+                role: true,
+                module: true,
+                instructions: true,
+                knowledge: true,
+                approvalRule: true,
+                greeting: true,
+            },
+            where: { id: agentId },
+        })
+        return agent === null
+            ? null
+            : {
+                  id: agent.id,
+                  name: agent.name,
+                  handle: agent.handle,
+                  role: agent.role,
+                  module: agent.module,
+                  instructions: agent.instructions,
+                  knowledge: agent.knowledge,
+                  approvalRule: agent.approvalRule,
+                  greeting: agent.greeting,
+              }
     }
 
     /** One agent of the workspace by id, active or paused; null when there is none. */
