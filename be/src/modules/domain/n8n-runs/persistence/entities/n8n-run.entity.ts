@@ -37,7 +37,7 @@ export class N8nRunEntity {
 
     /** What n8n reported, bounded. */
     @Column({ name: "result", type: "jsonb", nullable: true })
-    result!: Readonly<Record<string, unknown>> | null
+    result!: object | null
 
     /** The engine job that carried the run, when one did. */
     @Column({ name: "engine_job_id", type: "uuid", nullable: true })

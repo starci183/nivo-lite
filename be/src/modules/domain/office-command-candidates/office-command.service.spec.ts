@@ -1,7 +1,9 @@
 import { Test } from "@nestjs/testing"
+import { candidateOf, choiceOf, sentOk } from "@tests/fixtures/builders/office-command.builder"
+import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import type { AgentHandleCard } from "@modules/domain/agents"
 import { LeadReadService } from "@modules/domain/leads"
@@ -11,11 +13,10 @@ import type { OrderRef } from "@modules/domain/orders"
 import { CommandBusService, ModuleCatalogService } from "@modules/domain/decisions"
 import { MessagesReadService, OfficeLinesService } from "@modules/domain/messages"
 import type { LineText } from "@modules/domain/messages"
-import type { ModuleCommand, CommandResult, ModuleEntry, WorkItem } from "@modules/domain/decisions"
+import type { ModuleCommand, ModuleEntry } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
-import type { ProposedCommand } from "@modules/domain/ai-tasks"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -69,34 +70,6 @@ const humanMessage: LineText = { id: "m-1", author_kind: "human", body: "@ke-toa
 const agentRow: AgentHandleCard = { id: "a-1", handle: "ke-toan", module: "accounting", name: "Mai" }
 const orderRow: OrderRef = { id: "o-1", orderNo: "DH-1", leadId: "l-1" }
 const leadRow: LeadName = { id: "l-1", contactName: "Lan", company: "" }
-const candidateOf = builder<CandidateView>({
-    id: "c-1",
-    message_id: "m-1",
-    module: "accounting",
-    command: "issue_receipt",
-    payload: { subject_type: "order", subject_id: "o-1", lead_id: "l-1" },
-    summary: "issue a receipt for #DH-1",
-    shown: [],
-    status: "pending",
-    work_item_id: null,
-    refusal_detail: null,
-    created_at: "2026-10-12T10:00:00+00:00",
-})
-const choiceOf = builder<ProposedCommand>({
-    intent: "command",
-    command: "issue_receipt",
-    subject_id: "o-1",
-    lead_id: null,
-    fields: {},
-})
-const sentOk = (created: boolean): CommandResult => ({
-    ok: true,
-    item: mock<WorkItem>({ id: "w-1" }),
-    created,
-    chainId: null,
-    depth: 0,
-})
-
 /** The world before proposing: the message, no candidate yet, the agent, the two reference pools and the answer of the insert. */
 const reaching = (message: LineText = humanMessage, insert: ReadonlyArray<CandidateView> = []): Plan => ({
     message,
@@ -399,8 +372,8 @@ describe("OfficeCommandService confirm", () => {
                 reason: "office:m-1",
             },
         )
-        expect(fakes[0]?.callsOf("set")).toEqual([
-            [{ status: "sent", decidedAt: expect.any(Function), refusalDetail: null }],
+        expect(evaluatedCalls(fakes[0]?.callsOf("set") ?? [], 0)).toEqual([
+            [{ status: "sent", decidedAt: "now()", refusalDetail: null }],
         ])
         expect(entityManager.update).toHaveBeenCalledWith(
             OfficeCommandCandidateEntity,
@@ -447,35 +420,29 @@ describe("OfficeCommandService confirm", () => {
         await expect(service.confirm("u-1", "ws-1", confirmRequest)).rejects.toMatchObject({ code })
     })
 })
-describe("OfficeCommandService confirm", () => {
-    it("puts the card back when the receiving module is not in the registry", async () => {
-        const { service, entityManager, bus } = await build({ builders: [{ execute: { raw: [candidateOf()] } }] }, null)
+describe("OfficeCommandService confirm rollback", () => {
+    const putBack = (detail: string) => [
+        OfficeCommandCandidateEntity,
+        { workspaceId: "ws-1", id: "c-1" },
+        { status: "pending", decidedAt: null, refusalDetail: detail },
+    ]
+    const refusal = { ok: false, refused: "missing_fields", detail: "needs amount" } as const
+
+    it.each([
+        ["the receiving module is not in the registry", null, "no agent accounting", "ModuleUnknown"],
+        ["the bus refuses", accounting, "needs amount", "CommandRefused"],
+    ] as const)("puts the card back when %s", async (_name, entry, detail, code) => {
+        const { service, entityManager, bus } = await build(
+            { builders: [{ execute: { raw: [candidateOf()] } }] },
+            entry,
+        )
+        bus.sendCommand.mockResolvedValue(refusal)
 
         await expect(service.confirm("u-1", "ws-1", confirmRequest)).rejects.toMatchObject({
-            code: OfficeCommandCandidatesErrorCode.ModuleUnknown,
-            params: { module: "accounting" },
+            code: OfficeCommandCandidatesErrorCode[code],
         })
-        expect(entityManager.update).toHaveBeenCalledWith(
-            OfficeCommandCandidateEntity,
-            { workspaceId: "ws-1", id: "c-1" },
-            { status: "pending", decidedAt: null, refusalDetail: "no agent accounting" },
-        )
-        expect(bus.sendCommand).not.toHaveBeenCalled()
-    })
-
-    it("puts the card back with the reason when the bus refuses", async () => {
-        const { service, entityManager, bus } = await build({ builders: [{ execute: { raw: [candidateOf()] } }] })
-        bus.sendCommand.mockResolvedValue({ ok: false, refused: "missing_fields", detail: "needs amount" })
-
-        await expect(service.confirm("u-1", "ws-1", confirmRequest)).rejects.toMatchObject({
-            code: OfficeCommandCandidatesErrorCode.CommandRefused,
-            params: { detail: "needs amount" },
-        })
-        expect(entityManager.update).toHaveBeenCalledWith(
-            OfficeCommandCandidateEntity,
-            { workspaceId: "ws-1", id: "c-1" },
-            { status: "pending", decidedAt: null, refusalDetail: "needs amount" },
-        )
+        expect(entityManager.update).toHaveBeenCalledWith(...putBack(detail))
+        if (entry === null) expect(bus.sendCommand).not.toHaveBeenCalled()
     })
 
     it("puts the card back and rethrows when the bus fails", async () => {
@@ -484,11 +451,7 @@ describe("OfficeCommandService confirm", () => {
         bus.sendCommand.mockRejectedValue(cause)
 
         await expect(service.confirm("u-1", "ws-1", confirmRequest)).rejects.toBe(cause)
-        expect(entityManager.update).toHaveBeenCalledWith(
-            OfficeCommandCandidateEntity,
-            { workspaceId: "ws-1", id: "c-1" },
-            { status: "pending", decidedAt: null, refusalDetail: "bus down" },
-        )
+        expect(entityManager.update).toHaveBeenCalledWith(...putBack("bus down"))
     })
 })
 describe("OfficeCommandService cancel", () => {
@@ -497,6 +460,9 @@ describe("OfficeCommandService cancel", () => {
 
         await expect(service.cancel("u-1", "ws-1", "c-1")).resolves.toBeUndefined()
         expect(members.require).toHaveBeenCalledWith("u-1", "ws-1", ["owner", "manager"])
+        expect(evaluatedCalls(fakes[0]?.callsOf("set") ?? [], 0)).toEqual([
+            [{ status: "cancelled", decidedAt: "now()" }],
+        ])
         expect(fakes[0]?.callsOf("where")).toEqual([
             [
                 "workspace_id = :workspaceId AND id = :candidateId AND status = 'pending'",
