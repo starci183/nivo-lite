@@ -25,7 +25,6 @@ import type {
     WorkspaceTimesParams,
 } from "./bookings.contracts"
 import type { OptionalCancellableBooking } from "./booking-chat.contracts"
-import { cancellableNamed } from "./booking-cancellable.query"
 import { BookingsError, BookingsErrorCode } from "./errors/bookings.error"
 import { BookingServicesReadService } from "@modules/domain/booking-services"
 import { WorkspaceAdminReadService } from "@modules/domain/workspaces"
@@ -42,6 +41,7 @@ import {
     normalisePhone,
     planInputOf,
 } from "./policies/booking-rules.policy"
+import { cancellableOf } from "./policies/cancellable.policy"
 import { addDays, zonedMs, bookingIsoOf } from "./policies/zoned-time.policy"
 
 const MINUTE_MS = 60_000
@@ -228,7 +228,10 @@ export class BookingPublicService {
             .addOrderBy("b.id", "ASC")
             .limit(1)
             .getRawOne<CancellableRowFacts>()
-        return cancellableNamed(this.servicesRead, workspaceId, row)
+        if (row === undefined) return null
+        const names = await this.servicesRead.namesOf(workspaceId, [row.service_id])
+        const name = names.get(row.service_id)
+        return name === undefined ? null : cancellableOf({ ...row, service_name: name })
     }
 
     private async published(slug: string): Promise<PublishedPageFacts> {

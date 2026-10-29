@@ -101,7 +101,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     OfficeRoomDirectoryModule,
     MemberGrantsModule.register({ isGlobal: true }),
     ModuleInstallationsModule.register({ isGlobal: true }),
-    InboundEventRecordsModule,
+    InboundEventRecordsModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),
     DataRecordsModule.register({ isGlobal: true }),
     McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway, console: true }),

@@ -1,10 +1,6 @@
 import type { BookingNoticeKind } from "../booking-notice.contracts"
-import type {
-    BookingEffects,
-    BookingSettings,
-    CancelFeeFacts,
-    ClosedBookingFacts,
-} from "../bookings.contracts"
+import type { CancelFeeFacts, ClosedBookingFacts, EffectsBaseFacts, EffectsRow } from "../booking-facts.contracts"
+import type { BookingEffects, BookingSettings } from "../bookings.contracts"
 
 const HOUR_MS = 3_600_000
 
@@ -47,4 +43,16 @@ export const remindersOf = (live: boolean, closed: boolean): BookingEffects["rem
 export const feeOf = (row: ClosedBookingFacts, settings: BookingSettings): number => {
     if (row.status === "cancelled") return cancelFeeOf(row, settings.cancelWindowHours, settings.lateCancelFeePct)
     return row.status === "no_show" ? settings.noShowFeeVnd : 0
+}
+
+/** The booking with the current names of its service and resource; none when its service is gone, an empty resource name when its resource is. */
+export const namedEffects = (
+    base: EffectsBaseFacts,
+    serviceNames: ReadonlyMap<string, string>,
+    resourceNames: ReadonlyMap<string, string>,
+): EffectsRow | null => {
+    const { service_id: serviceId, resource_id: resourceId, ...rest } = base
+    const serviceName = serviceNames.get(serviceId)
+    if (serviceName === undefined) return null
+    return { ...rest, service_name: serviceName, resource_name: resourceNames.get(resourceId) ?? "" }
 }

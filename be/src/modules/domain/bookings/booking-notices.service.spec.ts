@@ -1,6 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { BookingResourcesReadService } from "@modules/domain/booking-resources"
+import { BookingServicesReadService } from "@modules/domain/booking-services"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
@@ -61,10 +63,18 @@ const settingsOf = builder<BookingSettings>({
     address: "12 L\u00ea L\u1ee3i",
     cancelWindowHours: 24,
 })
-const build = async (row?: EffectsRow, shop = "Nivo Salon") => {
+const build = async (row?: EffectsRow, shop = "Nivo Salon", serviceGone = false) => {
     const em = mockEntityManager()
-    const read = fakeQueryBuilder({ getRawOne: row })
+    const read = fakeQueryBuilder({
+        getRawOne: row === undefined ? undefined : { ...row, service_id: "service-1", resource_id: "resource-1" },
+    })
     em.createQueryBuilder.mockReturnValue(read.builder)
+    const servicesRead = mock<BookingServicesReadService>({
+        namesOf: jest.fn(() => Promise.resolve(new Map(serviceGone ? [] : [["service-1", row?.service_name ?? ""]]))),
+    })
+    const resourcesRead = mock<BookingResourcesReadService>({
+        namesOf: jest.fn(() => Promise.resolve(new Map([["resource-1", row?.resource_name ?? ""]]))),
+    })
     const models = mock<BookingModelService>()
     models.settings.mockResolvedValue(settingsOf())
     const workspaces = mock<WorkspacesService>()
@@ -86,6 +96,8 @@ const build = async (row?: EffectsRow, shop = "Nivo Salon") => {
             { provide: MESSAGE_CATALOG, useValue: messages },
             { provide: BookingModelService, useValue: models },
             { provide: WorkspacesService, useValue: workspaces },
+            { provide: BookingServicesReadService, useValue: servicesRead },
+            { provide: BookingResourcesReadService, useValue: resourcesRead },
             { provide: BOOKINGS_NOTIFIER, useValue: notifier },
         ],
     }).compile()
@@ -97,7 +109,7 @@ describe("BookingNoticesService", () => {
         const row = rowOf()
         const { service, read } = await build(row)
 
-        await expect(service.bookingOf(WORKSPACE, BOOKING_ID)).resolves.toBe(row)
+        await expect(service.bookingOf(WORKSPACE, BOOKING_ID)).resolves.toEqual(row)
 
         expect(read.callsOf("where")).toEqual([
             ["b.workspaceId = :workspaceId AND b.id = :bookingId", { workspaceId: WORKSPACE, bookingId: BOOKING_ID }],
@@ -114,6 +126,12 @@ describe("BookingNoticesService", () => {
             ["b.workspaceId = :workspaceId AND b.id = :bookingId", { workspaceId: WORKSPACE, bookingId: BOOKING_ID }],
         ])
         expect(read.callsOf("setLock")).toEqual([])
+    })
+
+    it("returns null when the service of the booking is gone", async () => {
+        const { service } = await build(rowOf(), "Nivo Salon", true)
+
+        await expect(service.bookingOf(WORKSPACE, BOOKING_ID)).resolves.toBeNull()
     })
 
     it("combines the trimmed workspace name, row, settings and current fee", async () => {

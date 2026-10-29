@@ -209,3 +209,21 @@ export interface FinishedCountFacts {
     /** The total. */
     readonly total: number
 }
+
+/** What decides the fee of a cancelled booking. */
+export interface CancelFeeFacts {
+    /** The price in VND, or null. */
+    readonly price_vnd: number | null
+    /** Why it was cancelled, or null. */
+    readonly cancel_reason: string | null
+    /** The start instant. */
+    readonly start_ms: number
+    /** The instant it was cancelled, or null. */
+    readonly cancelled_ms: number | null
+}
+
+/** What decides the fee of a closed booking: its status and the facts of a cancellation. */
+export interface ClosedBookingFacts extends CancelFeeFacts {
+    /** The status now. */
+    readonly status: string
+}

@@ -10,11 +10,12 @@ export class InboundEventsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        const records = InboundEventRecordsModule.register({})
         return {
             ...base,
-            imports: [...(base.imports ?? []), InboundEventRecordsModule],
+            imports: [...(base.imports ?? []), records],
             providers: [...(base.providers ?? []), InboxFeedService],
-            exports: [InboundEventRecordsModule, InboxFeedService],
+            exports: [records, InboxFeedService],
         }
     }
 }

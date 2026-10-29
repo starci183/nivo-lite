@@ -1,8 +1,33 @@
 import { Test } from "@nestjs/testing"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import {
+    ALREADY_CLAIMED,
+    CLAIM,
+    CLAIMED,
+    FEE_CASES,
+    HANDOFF_CASES,
+    MISSING,
+    NEXT_CLAIM,
+    NO_EFFECTS,
+    PUBLIC_CONTACT_CASES,
+    RELEASED,
+    RESOURCE_NAMES,
+    SELECTED,
+    SERVICE_NAMES,
+    SKIPPED_HANDOFF_CASES,
+    claimOf,
+    effectsOf,
+    eventOf,
+    expectUntouched,
+    feeWritten,
+    found,
+    namesCleared,
+    releaseOf,
+    traceOf,
+} from "@tests/fixtures/builders/booking-effects-trace.builder"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
-import type { FakeQueryBuilder, QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { FakeClock, builder, fakeInbox, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import { BookingRemindersService } from "@modules/domain/booking-reminders"
 import { BookingResourcesReadService } from "@modules/domain/booking-resources"
@@ -14,16 +39,13 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { INBOX } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
 import { BookingEffectsService } from "./booking-effects.service"
 import { BookingModelService } from "./booking-model.service"
 import type { BookingNotifier } from "./booking-notice.contracts"
 import { BookingNoticesService } from "./booking-notices.service"
 import { DEFAULT_SETTINGS } from "./bookings.contracts"
-import type { BookingEffects, BookingEvent, BookingSettings } from "./bookings.contracts"
+import type { BookingSettings } from "./bookings.contracts"
 import { BOOKINGS_NOTIFIER } from "./bookings.decorators"
-import type { EffectsRow } from "./booking-facts.contracts"
-
 import { noticeOf, FACTS, rowOf, evidenceOf } from "@tests/fixtures/builders/booking-effects.builder"
 
 const WORKSPACE = "ws-1"
@@ -32,48 +54,10 @@ const NOW = Date.UTC(2026, 9, 14, 5)
 const START = Date.UTC(2026, 9, 15, 2, 30)
 const HOUR = 3_600_000
 
-/** The answers of the statements a booking event runs, in order: the locked read, the fee, the claims and the release. */
-const SERVICE_NAMES = new Map<string, string>()
-const RESOURCE_NAMES = new Map<string, string>()
-/** The locked read of the booking as the table holds it; the names of its service and resource are answered by the owner reads. */
-const found = (row: EffectsRow = rowOf()): QueryBuilderAnswers => {
-    SERVICE_NAMES.set("service-1", row.service_name)
-    RESOURCE_NAMES.set("resource-1", row.resource_name)
-    return { getRawOne: { ...row, service_id: "service-1", resource_id: "resource-1" } }
-}
-const MISSING: QueryBuilderAnswers = { getRawOne: undefined }
-const CLAIMED: QueryBuilderAnswers = { execute: { raw: [{ id: BOOKING_ID }] } }
-const ALREADY_CLAIMED: QueryBuilderAnswers = { execute: { raw: [] } }
-const RELEASED: QueryBuilderAnswers = { execute: { raw: [] } }
-const feeWritten = (changed: boolean): QueryBuilderAnswers => ({
-    execute: { raw: changed ? [{ id: BOOKING_ID }] : [] },
-})
-const SELECTED = "select"
-const claimOf = (mark: string) => `claim:${mark}`
-const releaseOf = (mark: string) => `release:${mark}`
-
-/** What each statement was, in the order the service ran them. */
-const traceOf = (fakes: ReadonlyArray<FakeQueryBuilder>): Array<string> =>
-    fakes
-        .filter((fake) => fake.calls.length > 0)
-        .map((fake) => {
-            if (fake.callsOf("getRawOne").length > 0) return SELECTED
-            const [set] = fake.callsOf("set")[0] ?? []
-            if (typeof set === "object" && set !== null && "cancelFeeVnd" in set)
-                return `fee:${String(set.cancelFeeVnd)}`
-            const mark = String(fake.callsOf("setParameter")[0]?.[1])
-            return fake.callsOf("andWhere").length > 0 ? claimOf(mark) : releaseOf(mark)
-        })
-const NO_EFFECTS: BookingEffects = { found: false, reminders: "none", feeVnd: 0, handedOff: false, notified: false }
-const effectsOf = builder<BookingEffects>({ ...NO_EFFECTS, found: true })
-const eventOf = builder<BookingEvent>({ workspaceId: WORKSPACE, bookingId: BOOKING_ID, kind: "status" })
 const settingsOf = builder<BookingSettings>(DEFAULT_SETTINGS)
 
-/** The delivery key the bus hands the `booking_effects` reactor. */
-const CLAIM = { consumer: "booking_status_changed__booking_effects", dedupeKey: "booking-1:status:confirmed:100" }
-
-const build = async (steps: ReadonlyArray<QueryBuilderAnswers> = [], settings = settingsOf(), claimWon = true) => {
-    const inbox = mock<Inbox>({ claim: jest.fn().mockResolvedValue(claimWon) })
+const build = async (steps: ReadonlyArray<QueryBuilderAnswers> = [], settings = settingsOf()) => {
+    const inbox = fakeInbox()
     const tx = fakeTransaction(mockEntityManager())
     const fakes = queueQueryBuilders(tx.em, steps)
     const models = mock<BookingModelService>()
@@ -132,10 +116,7 @@ const build = async (steps: ReadonlyArray<QueryBuilderAnswers> = [], settings = 
 }
 
 describe("BookingEffectsService", () => {
-    beforeEach(() => {
-        SERVICE_NAMES.clear()
-        RESOURCE_NAMES.clear()
-    })
+    beforeEach(namesCleared)
 
     it.each([
         { workspaceId: "", bookingId: BOOKING_ID },
@@ -146,16 +127,17 @@ describe("BookingEffectsService", () => {
 
         await expect(service.apply(eventOf(ids), CLAIM)).resolves.toEqual(NO_EFFECTS)
 
-        expect(models.settings).not.toHaveBeenCalled()
-        expect(tx.em.transaction).not.toHaveBeenCalled()
+        expectUntouched(models.settings, tx.em.transaction)
         expect(trace()).toEqual([])
-        expect(tx.em.createQueryBuilder).not.toHaveBeenCalled()
-        expect(reminders.schedule).not.toHaveBeenCalled()
-        expect(reminders.cancel).not.toHaveBeenCalled()
-        expect(events.record).not.toHaveBeenCalled()
-        expect(inbound.handOffOrder).not.toHaveBeenCalled()
-        expect(notifier.notify).not.toHaveBeenCalled()
-        expect(messages.get).not.toHaveBeenCalled()
+        expectUntouched(
+            tx.em.createQueryBuilder,
+            reminders.schedule,
+            reminders.cancel,
+            events.record,
+            inbound.handOffOrder,
+            notifier.notify,
+            messages.get,
+        )
     })
 
     it("returns no effects when the service of the booking is gone", async () => {
@@ -177,11 +159,7 @@ describe("BookingEffectsService", () => {
         expect(models.settings.mock.calls).toEqual([[WORKSPACE]])
         expect(trace()).toEqual([SELECTED])
         expect(tx.outcomes).toEqual(["commit"])
-        expect(reminders.schedule).not.toHaveBeenCalled()
-        expect(reminders.cancel).not.toHaveBeenCalled()
-        expect(notifier.notify).not.toHaveBeenCalled()
-        expect(events.record).not.toHaveBeenCalled()
-        expect(inbound.handOffOrder).not.toHaveBeenCalled()
+        expectUntouched(reminders.schedule, reminders.cancel, notifier.notify, events.record, inbound.handOffOrder)
     })
 
     it("leaves a requested booking without reminders, fees, evidence or a notice", async () => {
@@ -192,12 +170,14 @@ describe("BookingEffectsService", () => {
         await expect(service.apply(eventOf({ kind: "created" }), CLAIM)).resolves.toEqual(effectsOf())
 
         expect(trace()).toEqual([SELECTED])
-        expect(reminders.schedule).not.toHaveBeenCalled()
-        expect(reminders.cancel).not.toHaveBeenCalled()
-        expect(events.record).not.toHaveBeenCalled()
-        expect(notifier.notify).not.toHaveBeenCalled()
-        expect(messages.get).not.toHaveBeenCalled()
-        expect(inbound.handOffOrder).not.toHaveBeenCalled()
+        expectUntouched(
+            reminders.schedule,
+            reminders.cancel,
+            events.record,
+            notifier.notify,
+            messages.get,
+            inbound.handOffOrder,
+        )
     })
 })
 
@@ -244,19 +224,12 @@ describe("BookingEffectsService", () => {
         expect(notifier.notify.mock.calls).toEqual([
             [noticeOf({ kind: test.notice, dedupeKey: `${BOOKING_ID}:${test.mark}` })],
         ])
-        expect(reminders.cancel).not.toHaveBeenCalled()
-        expect(events.record).not.toHaveBeenCalled()
-        expect(inbound.handOffOrder).not.toHaveBeenCalled()
+        expectUntouched(reminders.cancel, events.record, inbound.handOffOrder)
     })
-})
 
-describe("BookingEffectsService", () => {
     it("claims the delivery under the row lock and changes nothing twice for a redelivery, but still owes the notice", async () => {
-        const { service, tx, inbox, reminders, events, inbound, notifier } = await build(
-            [found(), CLAIMED],
-            settingsOf(),
-            false,
-        )
+        const { service, tx, inbox, reminders, events, inbound, notifier } = await build([found(), CLAIMED])
+        inbox.seen(CLAIM.consumer, CLAIM.dedupeKey)
 
         await expect(service.apply(eventOf(), CLAIM)).resolves.toMatchObject({
             found: true,
@@ -264,10 +237,8 @@ describe("BookingEffectsService", () => {
             notified: true,
         })
 
-        expect(inbox.claim).toHaveBeenCalledWith(CLAIM.consumer, CLAIM.dedupeKey, expect.anything())
-        expect(reminders.schedule).not.toHaveBeenCalled()
-        expect(events.record).not.toHaveBeenCalled()
-        expect(inbound.handOffOrder).not.toHaveBeenCalled()
+        expect(inbox.claims).toEqual([{ source: CLAIM.consumer, eventId: CLAIM.dedupeKey }])
+        expectUntouched(reminders.schedule, events.record, inbound.handOffOrder)
         expect(notifier.notify).toHaveBeenCalledTimes(1)
         expect(tx.outcomes).toEqual(["commit"])
     })
@@ -287,7 +258,7 @@ describe("BookingEffectsService", () => {
         ])
         expect(tx.outcomes).toEqual(["commit"])
 
-        await expect(service.apply(eventOf(), CLAIM)).resolves.toEqual(
+        await expect(service.apply(eventOf(), NEXT_CLAIM)).resolves.toEqual(
             effectsOf({ reminders: "planned", notified: true }),
         )
         expect(notifier.notify).toHaveBeenCalledTimes(2)
@@ -306,7 +277,7 @@ describe("BookingEffectsService", () => {
         notifier.notify.mockResolvedValue({ delivered: false, kept: true, via: "email" })
 
         await expect(service.apply(eventOf(), CLAIM)).resolves.toEqual(effectsOf({ reminders: "planned" }))
-        await expect(service.apply(eventOf(), CLAIM)).resolves.toEqual(effectsOf({ reminders: "planned" }))
+        await expect(service.apply(eventOf(), NEXT_CLAIM)).resolves.toEqual(effectsOf({ reminders: "planned" }))
 
         expect(notifier.notify.mock.calls).toEqual([[noticeOf()]])
         const claim = claimOf("notice:confirmed")
@@ -314,10 +285,7 @@ describe("BookingEffectsService", () => {
         expect(tx.outcomes).toEqual(["commit", "commit"])
     })
 
-    it.each([
-        { lead_id: "lead-1", customer_email: "mai@example.com" },
-        { lead_id: null, customer_email: null },
-    ])("notifies a public-page booking with lead=$lead_id and email=$customer_email", async (contact) => {
+    it.each(PUBLIC_CONTACT_CASES)("notifies a public-page booking with lead=$lead_id and email=$customer_email", async (contact) => {
         const row = rowOf({ ...contact, conversation_id: null })
         const { service, trace, notices, notifier } = await build([found(row), CLAIMED])
 
@@ -339,9 +307,7 @@ describe("BookingEffectsService", () => {
         ])
         expect(trace()).toEqual([SELECTED, claimOf("notice:confirmed")])
     })
-})
 
-describe("BookingEffectsService", () => {
     it.each([true, false])("skips an already claimed notice when conversation exists=%s", async (conversation) => {
         const { service, trace, reminders, notifier, messages, notices } = await build([
             found(rowOf({ conversation_id: conversation ? "conversation-1" : null })),
@@ -352,23 +318,12 @@ describe("BookingEffectsService", () => {
 
         expect(reminders.schedule).toHaveBeenCalledTimes(1)
         expect(trace()).toEqual([SELECTED, claimOf("notice:confirmed")])
-        expect(notifier.notify).not.toHaveBeenCalled()
-        expect(messages.get).not.toHaveBeenCalled()
-        expect(notices.factsOf).not.toHaveBeenCalled()
-        expect(notices.textOf).not.toHaveBeenCalled()
-        expect(notices.subjectOf).not.toHaveBeenCalled()
+        expectUntouched(notifier.notify, messages.get, notices.factsOf, notices.textOf, notices.subjectOf)
     })
 })
 
 describe("BookingEffectsService", () => {
-    it.each([
-        { status: "cancelled", fee: 74000, recorded: 74000, previous: 0, changed: true },
-        { status: "no_show", fee: 35000, recorded: 35000, previous: 0, changed: true },
-        { status: "no_show", fee: 35000, recorded: 1700, previous: 1700, changed: false },
-        { status: "cancelled", fee: 0, recorded: 1700, previous: 1700, changed: false },
-        { status: "no_show", fee: 0, recorded: 1700, previous: 1700, changed: false },
-        { status: "done", fee: 0, recorded: 1700, previous: 1700, changed: false },
-    ])("stops $status reminders and retains or records fee $recorded (policy=$fee)", async (test) => {
+    it.each(FEE_CASES)("stops $status reminders and retains or records fee $recorded (policy=$fee)", async (test) => {
         const row = rowOf({
             status: test.status,
             conversation_id: null,
@@ -419,8 +374,7 @@ describe("BookingEffectsService", () => {
             [`bookings.evidence.${test.status}`, { service: "Cut", customer: "Mai" }, "vi"],
         ])
         if (test.status === "done") {
-            expect(notifier.notify).not.toHaveBeenCalled()
-            expect(notices.factsOf).not.toHaveBeenCalled()
+            expectUntouched(notifier.notify, notices.factsOf)
         } else {
             expect(notices.factsOf.mock.calls).toEqual([[WORKSPACE, row, settings, test.recorded]])
             expect(notices.textOf.mock.calls).toEqual([[test.status, FACTS]])
@@ -449,7 +403,7 @@ describe("BookingEffectsService", () => {
         ])
 
         await expect(service.apply(eventOf(), CLAIM)).resolves.toEqual(effectsOf({ reminders: "stopped" }))
-        await expect(service.apply(eventOf(), CLAIM)).resolves.toEqual(effectsOf({ reminders: "stopped" }))
+        await expect(service.apply(eventOf(), NEXT_CLAIM)).resolves.toEqual(effectsOf({ reminders: "stopped" }))
 
         const manager = reminders.cancel.mock.calls[0]?.[0]
         expect(isTransactionManager(manager)).toBe(true)
@@ -478,8 +432,7 @@ describe("BookingEffectsService", () => {
         expect(isTransactionManager(manager)).toBe(true)
         expect(reminders.cancel.mock.calls).toEqual([[manager, BOOKING_ID, "booking_cancelled"]])
         expect(trace()).toEqual([SELECTED, claimOf("evidence:cancelled"), claimOf("notice:cancelled")])
-        expect(events.record).not.toHaveBeenCalled()
-        expect(messages.get).not.toHaveBeenCalled()
+        expectUntouched(events.record, messages.get)
         expect(notices.factsOf.mock.calls).toEqual([[WORKSPACE, row, settingsOf(), 0]])
         expect(notices.textOf.mock.calls).toEqual([["cancelled", FACTS]])
         expect(notices.subjectOf.mock.calls).toEqual([["cancelled", "Cut"]])
@@ -490,11 +443,7 @@ describe("BookingEffectsService", () => {
 })
 
 describe("BookingEffectsService", () => {
-    it.each([
-        { phone: "84912345678", email: "mai@example.com", contact: "84912345678", handedOff: true },
-        { phone: null, email: "mai@example.com", contact: "mai@example.com", handedOff: false },
-        { phone: null, email: null, contact: null, handedOff: true },
-    ])("hands a finished booking to inbound events with contact=$contact", async (test) => {
+    it.each(HANDOFF_CASES)("hands a finished booking to inbound events with contact=$contact", async (test) => {
         const row = rowOf({
             status: "done",
             customer_phone: test.phone,
@@ -536,12 +485,7 @@ describe("BookingEffectsService", () => {
         expect(tx.outcomes).toEqual(["commit"])
     })
 
-    it.each([
-        { handoffOrder: false, price: 200000 },
-        { handoffOrder: true, price: null },
-        { handoffOrder: true, price: 0 },
-        { handoffOrder: true, price: -1 },
-    ])("skips hand-off with handoffOrder=$handoffOrder and price=$price", async ({ handoffOrder, price }) => {
+    it.each(SKIPPED_HANDOFF_CASES)("skips hand-off with handoffOrder=$handoffOrder and price=$price", async ({ handoffOrder, price }) => {
         const { service, trace, inbound, messages } = await build(
             [found(rowOf({ status: "done", price_vnd: price })), ALREADY_CLAIMED],
             settingsOf({ handoffOrder }),
@@ -549,8 +493,7 @@ describe("BookingEffectsService", () => {
 
         await expect(service.apply(eventOf(), CLAIM)).resolves.toEqual(effectsOf({ reminders: "stopped" }))
 
-        expect(inbound.handOffOrder).not.toHaveBeenCalled()
-        expect(messages.get).not.toHaveBeenCalled()
+        expectUntouched(inbound.handOffOrder, messages.get)
         expect(trace()).toEqual([SELECTED, claimOf("evidence:done")])
     })
 })

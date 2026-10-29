@@ -19,18 +19,16 @@ const NEXT_ROW: CancellableRowFacts = {
     start_ms: Date.parse(MONDAY_NINE),
 }
 
-const servicesNamed = (names: ReadonlyMap<string, string>) =>
-    mock<BookingServicesReadService>({ namesOf: jest.fn(() => Promise.resolve(names)) })
-
 const build = async (row?: CancellableRowFacts, names: ReadonlyMap<string, string> = new Map([["service-1", "Cut"]])) => {
     const entityManager = mockEntityManager()
     const fake = fakeQueryBuilder({ getRawOne: row })
     entityManager.createQueryBuilder.mockReturnValue(fake.builder)
+    const services = mock<BookingServicesReadService>({ namesOf: jest.fn(() => Promise.resolve(names)) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             BookingChatLookupService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: BookingServicesReadService, useValue: servicesNamed(names) },
+            { provide: BookingServicesReadService, useValue: services },
         ],
     }).compile()
     return { service: moduleRef.get(BookingChatLookupService), entityManager, fake }
@@ -74,16 +72,17 @@ describe("BookingChatLookupService", () => {
     })
 })
 
-const lookupOver = async (entityManager: ReturnType<typeof mockEntityManager>) =>
-    (
-        await Test.createTestingModule({
-            providers: [
-                BookingChatLookupService,
-                { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-                { provide: BookingServicesReadService, useValue: servicesNamed(new Map()) },
-            ],
-        }).compile()
-    ).get(BookingChatLookupService)
+const lookupOver = async (entityManager: ReturnType<typeof mockEntityManager>) => {
+    const services = mock<BookingServicesReadService>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            BookingChatLookupService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: BookingServicesReadService, useValue: services },
+        ],
+    }).compile()
+    return moduleRef.get(BookingChatLookupService)
+}
 
 describe("BookingChatLookupService installationIdOf", () => {
     it("answers the installation a row of the workspace names", async () => {
