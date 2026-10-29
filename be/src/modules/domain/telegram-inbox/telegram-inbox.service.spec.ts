@@ -21,8 +21,8 @@ const body = Buffer.from(
 )
 const payload = { connection: "c-1", rawBody: body.toString("utf8") }
 
-const pendingOf = (over: Partial<TelegramInboxEntity> = {}): TelegramInboxEntity =>
-    Object.assign(new TelegramInboxEntity(), { id: "receipt-1", provider: "telegram", payload }, over)
+const pendingOf = (delivered: TelegramInboxEntity["payload"] = payload): TelegramInboxEntity =>
+    Object.assign(new TelegramInboxEntity(), { id: "receipt-1", provider: "telegram", payload: delivered })
 
 const build = async (pending: TelegramInboxEntity | null = pendingOf(), claimed = true) => {
     const tx = fakeTransaction(
@@ -141,7 +141,7 @@ describe("TelegramInboxService deferred effects", () => {
 
 describe("TelegramInboxService consumer recovery", () => {
     it("completes an ignored decoded message without a conversation effect", async () => {
-        const { service, conversations, tx } = await build(pendingOf({ payload: { connection: "c-1", rawBody: "{}" } }))
+        const { service, conversations, tx } = await build(pendingOf({ connection: "c-1", rawBody: "{}" }))
         await service.processRecordedDelivery({ deliveryId: "c-1:77" })
         expect(conversations.acceptTelegram).not.toHaveBeenCalled()
         expect(tx.em.update).toHaveBeenCalledTimes(1)
@@ -174,7 +174,7 @@ describe("TelegramInboxService photo messages", () => {
             update_id: 78,
             message: { message_id: 10, chat: { id: 555 }, photo: [{}], caption: "Paid" },
         })
-        const { service, conversations } = await build(pendingOf({ payload: { connection: "c-1", rawBody: photo } }))
+        const { service, conversations } = await build(pendingOf({ connection: "c-1", rawBody: photo }))
         await service.processRecordedDelivery({ deliveryId: "c-1:78" })
         expect(conversations.acceptTelegram).toHaveBeenCalledWith(
             "c-1",

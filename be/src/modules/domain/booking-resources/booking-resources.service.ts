@@ -10,8 +10,10 @@ const isSavedRow = (value: unknown): value is BookingResourceSaved =>
     typeof value === "object" && value !== null && "id" in value && typeof value.id === "string"
 
 /** The ids a statement with `returning id` hands back. */
-const savedOf = (raw: unknown): Array<BookingResourceSaved> =>
-    Array.isArray(raw) ? raw.filter(isSavedRow).slice(0, 1).map((row) => ({ id: row.id })) : []
+const savedOf = (raw: unknown): Array<BookingResourceSaved> => {
+    const rows: ReadonlyArray<unknown> = Array.isArray(raw) ? raw : []
+    return rows.flatMap((row) => (isSavedRow(row) ? [{ id: row.id }] : [])).slice(0, 1)
+}
 
 @Injectable()
 /** Owns resource persistence; callers authorize setup writes and supply their atomic calendar transaction. */

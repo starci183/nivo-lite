@@ -5,6 +5,6 @@ const hasTextId = (row: unknown): row is { readonly id: string } =>
 /** The id of the first row a write returned, or undefined when it returned none (or none that carries an id). */
 export const returnedIdOf = (raw: unknown): string | undefined => {
     if (!Array.isArray(raw)) return undefined
-    const [row]: ReadonlyArray<unknown> = raw
+    const row: unknown = raw[0]
     return hasTextId(row) ? row.id : undefined
 }
