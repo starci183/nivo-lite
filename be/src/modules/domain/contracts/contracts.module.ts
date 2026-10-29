@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./contracts.module-definition"
 import { ContractLinkService } from "./contract-link.service"
+import { ContractsReadService } from "./contracts-read.service"
 import { ContractRenewalService } from "./contract-renewal.service"
 import { ContractsService } from "./contracts.service"
 
@@ -20,8 +21,9 @@ export class ContractsModule extends ConfigurableModuleClass {
                 ContractLinkService,
                 ContractRenewalService,
                 ContractsService,
+                ContractsReadService,
             ],
-            exports: [ContractsService, ContractRenewalService],
+            exports: [ContractsService, ContractRenewalService, ContractsReadService],
         }
     }
 }
