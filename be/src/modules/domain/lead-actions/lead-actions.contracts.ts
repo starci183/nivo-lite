@@ -1,3 +1,5 @@
+import type { Locale } from "@modules/platform/i18n"
+
 /** The supported asynchronous lead actions. */
 export type LeadAction = "create" | "refresh-context" | "suggest-owner" | "draft-execution" | "settle-won"
 
@@ -59,3 +61,25 @@ export interface LeadActionStatus {
 
 /** The optional accepted language header of a lead action request. */
 export type LeadActionLanguage = string | undefined
+
+/** The persisted backend run a worker reads once it has claimed the action. */
+export interface LeadActionRun {
+    /** The run id. */
+    readonly id: string
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The member who requested the action. */
+    readonly requestedBy: string
+    /** The supported action. */
+    readonly action: LeadAction
+    /** The validated action input. */
+    readonly input: LeadActionInput
+    /** The output language. */
+    readonly locale: Locale
+    /** The progress. */
+    readonly status: LeadActionStatus["status"]
+    /** The terminal result. */
+    readonly result: LeadActionResult | null
+    /** The terminal error code. */
+    readonly errorCode: string | null
+}

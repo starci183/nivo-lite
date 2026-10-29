@@ -12,7 +12,7 @@ import type {
     Referral,
     SourceKind,
 } from "./lead-flows.contracts"
-import type { LeadFlowRow } from "./persistence/lead-flows.rows"
+import type { LeadFlowEntity } from "./persistence/entities"
 
 const STATES: ReadonlyArray<FlowState> = [
     "new",
@@ -35,10 +35,9 @@ export const platformOf = (value: unknown): Platform => (value === "instagram" ?
 export const sourceKindOf = (value: unknown, fallback: SourceKind): SourceKind =>
     KINDS.find((kind) => kind === value) ?? fallback
 
-const isoOf = (value: Date | string | null): string | null => {
-    if (value === null) return null
-    return value instanceof Date ? value.toISOString() : value
-}
+const isoOf = (value: Date | null): string | null => (value === null ? null : value.toISOString())
+
+const dateOf = (value: string | null): Date | null => (value === null ? null : new Date(value))
 
 const referralOf = (value: unknown): Referral | null => {
     if (typeof value !== "object" || value === null) return null
@@ -86,12 +85,12 @@ const levelOf = (value: string | null): Level | null =>
     value === "hot" || value === "warm" || value === "cold" ? value : null
 
 /** One stored row as the domain reads it. */
-export const toLeadFlow = (row: LeadFlowRow): LeadFlow => ({
+export const toLeadFlow = (row: LeadFlowEntity): LeadFlow => ({
     id: row.id,
-    workspace_id: row.workspace_id,
-    lead_id: row.lead_id,
-    connection_id: row.connection_id,
-    conversation_id: row.conversation_id,
+    workspace_id: row.workspaceId,
+    lead_id: row.leadId,
+    connection_id: row.connectionId,
+    conversation_id: row.conversationId,
     platform: row.platform === null ? null : platformOf(row.platform),
     psid: row.psid,
     igsid: row.igsid,
@@ -99,7 +98,7 @@ export const toLeadFlow = (row: LeadFlowRow): LeadFlow => ({
     email: row.email,
     name: row.name,
     state: stateOf(row.state) ?? "new",
-    resume_state: stateOf(row.resume_state),
+    resume_state: stateOf(row.resumeState),
     source: leadSourceOf(row.source),
     touches: listOf(row.touches)
         .map(leadSourceOf)
@@ -108,55 +107,53 @@ export const toLeadFlow = (row: LeadFlowRow): LeadFlow => ({
         .map(answerOf)
         .filter((answer): answer is Answer => answer !== null),
     asked: row.asked,
-    pending_question: row.pending_question,
-    contact_asked_at: isoOf(row.contact_asked_at),
+    pending_question: row.pendingQuestion,
+    contact_asked_at: isoOf(row.contactAskedAt),
     signals: row.signals === null ? EMPTY_SIGNALS : cleanSignals(row.signals),
     score: levelOf(row.score),
-    score_reasons: listOf(row.score_reasons).map(textOf),
-    scored_at: isoOf(row.scored_at),
+    score_reasons: listOf(row.scoreReasons).map(textOf),
+    scored_at: isoOf(row.scoredAt),
     analysis: analysisOf(row.analysis),
-    last_user_at: isoOf(row.last_user_at),
-    last_user_text: row.last_user_text,
-    greeted_at: isoOf(row.greeted_at),
-    handed_off_at: isoOf(row.handed_off_at),
-    followed_up_at: isoOf(row.followed_up_at),
-    closed_at: isoOf(row.closed_at),
-    escalated_at: isoOf(row.escalated_at),
-    escalation_reason: row.escalation_reason,
+    last_user_at: isoOf(row.lastUserAt),
+    last_user_text: row.lastUserText,
+    greeted_at: isoOf(row.greetedAt),
+    handed_off_at: isoOf(row.handedOffAt),
+    followed_up_at: isoOf(row.followedUpAt),
+    closed_at: isoOf(row.closedAt),
+    escalated_at: isoOf(row.escalatedAt),
+    escalation_reason: row.escalationReason,
 })
 
-/** The parameters of SAVE_FLOW for a flow. */
-export const saveParams = (flow: LeadFlow): Array<unknown> => [
-    flow.id,
-    flow.workspace_id,
-    flow.lead_id,
-    flow.connection_id,
-    flow.conversation_id,
-    flow.platform,
-    flow.psid,
-    flow.igsid,
-    flow.phone,
-    flow.email,
-    flow.name,
-    flow.state,
-    flow.resume_state,
-    JSON.stringify(flow.source ?? {}),
-    JSON.stringify(flow.touches),
-    JSON.stringify(flow.answers),
-    flow.asked,
-    flow.pending_question,
-    flow.contact_asked_at,
-    JSON.stringify(flow.signals),
-    flow.score,
-    JSON.stringify(flow.score_reasons),
-    flow.scored_at,
-    flow.analysis === null ? null : JSON.stringify(flow.analysis),
-    flow.last_user_at,
-    flow.last_user_text,
-    flow.greeted_at,
-    flow.handed_off_at,
-    flow.followed_up_at,
-    flow.closed_at,
-    flow.escalated_at,
-    flow.escalation_reason,
-]
+/** Every mutable column of a flow, as the values an update writes (the key columns stay out). */
+export const saveValues = (flow: LeadFlow): Partial<LeadFlowEntity> => ({
+    leadId: flow.lead_id,
+    connectionId: flow.connection_id,
+    conversationId: flow.conversation_id,
+    platform: flow.platform,
+    psid: flow.psid,
+    igsid: flow.igsid,
+    phone: flow.phone,
+    email: flow.email,
+    name: flow.name,
+    state: flow.state,
+    resumeState: flow.resume_state,
+    source: flow.source ?? {},
+    touches: flow.touches,
+    answers: flow.answers,
+    asked: flow.asked,
+    pendingQuestion: flow.pending_question,
+    contactAskedAt: dateOf(flow.contact_asked_at),
+    signals: flow.signals,
+    score: flow.score,
+    scoreReasons: flow.score_reasons,
+    scoredAt: dateOf(flow.scored_at),
+    analysis: flow.analysis,
+    lastUserAt: dateOf(flow.last_user_at),
+    lastUserText: flow.last_user_text,
+    greetedAt: dateOf(flow.greeted_at),
+    handedOffAt: dateOf(flow.handed_off_at),
+    followedUpAt: dateOf(flow.followed_up_at),
+    closedAt: dateOf(flow.closed_at),
+    escalatedAt: dateOf(flow.escalated_at),
+    escalationReason: flow.escalation_reason,
+})
