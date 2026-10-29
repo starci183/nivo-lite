@@ -16,3 +16,6 @@ export interface CustomerChatRef {
 
 /** A customer conversation, or none. */
 export type OptionalCustomerChatRef = CustomerChatRef | null
+
+/** The channel text of a conversation, or null when there is none. */
+export type OptionalChannelText = string | null

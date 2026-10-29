@@ -89,3 +89,17 @@ describe("AgentConversationsReadService", () => {
         })
     })
 })
+
+describe("AgentConversationsReadService > channelOf", () => {
+    it("answers the channel of the conversation, null for none", async () => {
+        const found = mockEntityManager({ findOne: [AgentConversationEntity, chatOf({ channel: "zalo" })] })
+        const missing = mockEntityManager({ findOne: [AgentConversationEntity, null] })
+
+        await expect((await build(found)).channelOf("c1")).resolves.toBe("zalo")
+        await expect((await build(missing)).channelOf("c9")).resolves.toBeNull()
+        expect(found.findOne).toHaveBeenCalledWith(AgentConversationEntity, {
+            select: { id: true, channel: true },
+            where: { id: "c1" },
+        })
+    })
+})

@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { In, IsNull, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { OptionalCustomerChatRef, TestChatRef } from "./agent-conversations-read.contracts"
+import type { OptionalChannelText, OptionalCustomerChatRef, TestChatRef } from "./agent-conversations-read.contracts"
 import { AgentConversationEntity } from "./persistence/entities"
 
 @Injectable()
@@ -61,5 +61,14 @@ export class AgentConversationsReadService {
             order: { createdAt: "DESC" },
         })
         return chat === null ? null : { id: chat.id, leadId: chat.leadId }
+    }
+
+    /** The channel of a conversation by id; null when there is no such conversation. */
+    async channelOf(conversationId: string): Promise<OptionalChannelText> {
+        const row = await this.entityManager.findOne(AgentConversationEntity, {
+            select: { id: true, channel: true },
+            where: { id: conversationId },
+        })
+        return row?.channel ?? null
     }
 }
