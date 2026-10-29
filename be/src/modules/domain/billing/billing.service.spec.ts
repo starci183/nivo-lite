@@ -217,6 +217,13 @@ describe("BillingService > membership", () => {
 })
 
 describe("BillingService > renew", () => {
+    it("counts no payments when the workspace has no paid plan order yet", async () => {
+        const { billing, orders } = await build(worldOf({ ...pricedWorld(), promo: undefined }))
+
+        await expect(billing.renew("person-1", { workspaceId: "ws-1" })).resolves.toEqual(PAYABLE)
+        expect(orders.create).toHaveBeenCalledWith(expect.objectContaining({ planCode: "starter", amountVnd: 990000 }))
+    })
+
     it("orders the current plan of the workspace at its price", async () => {
         const { billing, orders } = await build(worldOf(pricedWorld()))
 

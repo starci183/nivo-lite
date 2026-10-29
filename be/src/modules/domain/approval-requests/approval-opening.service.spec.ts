@@ -150,6 +150,15 @@ describe("ApprovalOpeningService > open, a step that has a request", () => {
         })
     })
 
+    it("reads an insert that answered no row list as an already open step", async () => {
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ execute: { raw: undefined } }])
+        em.findOne.mockResolvedValue(requestExcludingLan())
+        const { service } = await build(em)
+
+        await expect(service.open(openOf())).resolves.toMatchObject({ requestId: "request-1", policy: "any" })
+    })
+
     it("fails when the pending request vanished between the insert and the read", async () => {
         const { em } = inserting()
         em.findOne.mockResolvedValue(null)

@@ -82,7 +82,45 @@ describe("AuthorityActionsService", () => {
             })
         })
     })
+    describe("upsertAll edges", () => {
+        it("writes nothing for no records and reports every held action as stale", async () => {
+            const { em, fake } = syncing([ROW], [])
+
+            await expect((await build()).upsertAll(em, [])).resolves.toEqual({ written: 0, stale: ["issue_invoice"] })
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
+            expect(fake.callsOf("values")).toEqual([])
+        })
+
+        it("stores a record without a default limit as null", async () => {
+            const { em, fake } = syncing([ROW], [{ action: "issue_invoice" }])
+
+            await (await build()).upsertAll(em, [{ ...RECORD, default_limit_vnd: null }])
+
+            expect(fake.callsOf("values")[0]?.[0]).toEqual([expect.objectContaining({ defaultLimitVnd: null })])
+        })
+
+        it("counts nothing written when the statement answers no row list", async () => {
+            const em = mockEntityManager({ find: [AuthorityActionEntity, [ROW]] })
+            em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ execute: { raw: undefined } }).builder)
+
+            await expect((await build()).upsertAll(em, [RECORD])).resolves.toEqual({
+                written: 0,
+                stale: ["issue_invoice"],
+            })
+        })
+    })
     describe("list", () => {
+        it("reads an action without a default limit as null", async () => {
+            const em = mockEntityManager({
+                find: [
+                    AuthorityActionEntity,
+                    [Object.assign(new AuthorityActionEntity(), { ...ROW, defaultLimitVnd: null })],
+                ],
+            })
+
+            await expect((await build()).list(em)).resolves.toEqual([{ ...RECORD, default_limit_vnd: null }])
+        })
+
         it("reads every catalogue action through the given manager", async () => {
             const em = mockEntityManager({ find: [AuthorityActionEntity, [ROW]] })
 

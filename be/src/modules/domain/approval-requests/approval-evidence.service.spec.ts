@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { builder, mock } from "@starci/jest-preset"
+import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import { EventsService } from "@modules/domain/events"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -65,6 +65,15 @@ describe("ApprovalEvidenceService > resolved", () => {
                 },
             ],
         ])
+    })
+
+    it("writes inside the caller's transaction when it hands one", async () => {
+        const { subject, events } = await build()
+        const tx = mockEntityManager()
+
+        await subject.resolved(resolvedOf(), tx)
+
+        expect(events.record.mock.calls[0]?.[1]).toBe(tx)
     })
 
     it("writes a rejection with its own line", async () => {

@@ -274,6 +274,21 @@ describe("GenerationRunnerService", () => {
         expect(bus.publish).not.toHaveBeenCalled()
     })
 
+    it.each<[string, unknown]>([
+        ["no row list", undefined],
+        ["a row that is no record", [null]],
+        ["a row without a usage kind", [{ module: "office" }]],
+        ["a row without a module", [{ usage_kind: "relay" }]],
+    ])("treats a finishing write that answered %s as a dropped row", async (_name, raw) => {
+        const { em } = managerOf(generationRow(), null)
+        queueQueryBuilders(em, [{ execute: { raw } }])
+        const { runner, usage, bus } = await build(em)
+
+        await expect(runner.run(PAYLOAD)).resolves.toBe("dropped")
+        expect(usage.record).not.toHaveBeenCalled()
+        expect(bus.publish).not.toHaveBeenCalled()
+    })
+
     it("drops a payload of another shape", async () => {
         const em = mockEntityManager()
         const { runner } = await build(em)

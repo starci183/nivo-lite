@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -241,5 +242,50 @@ describe("AutomationPipelinesService", () => {
                 },
             )
         })
+    })
+})
+
+const OFFERED = "2026-10-12T08:00:00.000Z"
+
+describe("AutomationPipelinesService trust offer and clock", () => {
+    it("reads the instant the trust offer was made as text", async () => {
+        const stored = Object.assign(new AutomationPipelineEntity(), { ...ENTITY, trustOfferedAt: new Date(OFFERED) })
+        const em = mockEntityManager({ findOne: [AutomationPipelineEntity, stored] })
+
+        await expect((await build(em)).findPipeline("ws-1", "thank_payment")).resolves.toEqual({
+            ...ROW,
+            trust_offered_at: OFFERED,
+        })
+    })
+
+    it("stores and answers the trust offer instant and stamps the save with the database time", async () => {
+        const { em, fake } = saving([{ ...RAW, trust_offered_at: new Date(OFFERED) }])
+
+        await expect(
+            (await build(em)).savePipeline("ws-1", "user-1", DEFINITION, { ...WRITE, trustOfferedAt: OFFERED }),
+        ).resolves.toEqual({ ...ROW, trust_offered_at: OFFERED })
+
+        const values = fake.callsOf("values")[0]?.[0]
+        expect(evaluatedValues(values).trustOfferedAt).toEqual(new Date(OFFERED))
+        expect(evaluatedValues(values).updatedAt).toBe("now()")
+    })
+
+    it("fails when the save answers no row list", async () => {
+        const em = mockEntityManager()
+        em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ execute: { raw: undefined } }).builder)
+
+        await expect((await build(em)).savePipeline("ws-1", "user-1", DEFINITION, WRITE)).rejects.toMatchObject({
+            code: AutomationPipelinesErrorCode.NotSaved,
+        })
+    })
+
+    it("clears the offer of the ladder and stamps it with the database time", async () => {
+        const em = mockEntityManager({ update: [AutomationPipelineEntity, { affected: 1 }] })
+
+        await (await build(em)).saveLadder("p-1", 0, null)
+
+        const values = em.update.mock.calls[0]?.[2]
+        expect(evaluatedValues(values).trustOfferedAt).toBeNull()
+        expect(evaluatedValues(values).updatedAt).toBe("now()")
     })
 })

@@ -286,6 +286,22 @@ describe("AgentOwnershipService ownershipOf", () => {
         expect(em.find).toHaveBeenCalledWith(AgentEntity, expect.objectContaining({ take: 50 }))
     })
 
+    it("reads no room labels for an agent that is open to no room", async () => {
+        const em = mockEntityManager({
+            findOne: [AgentEntity, { ...OWNERSHIP, assignableRooms: [] }],
+            find: [
+                [WorkspaceMemberEntity, [MINH, NAM]],
+                [AgentEntity, [TARGET]],
+            ],
+            query: [FIND_WORKSPACE_OWNER, ownerRow("m-nam")],
+        })
+        queueQueryBuilders(em, [{ getRawMany: [{ userId: "u-minh", key: "sales" }] }])
+        const { service } = await build(em)
+
+        await expect(service.ownershipOf("u1", "w1", "a1")).resolves.toMatchObject({ assignableRooms: [] })
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
+    })
+
     it("shows a disabled owner as inactive and answers through the fallback", async () => {
         const { em } = ownershipWorld([{ ...MINH, status: "disabled" }, NAM], "m-nam")
         const { service } = await build(em)
@@ -449,6 +465,16 @@ describe("AgentOwnershipService setOwnership refusals", () => {
         const { service } = await build(writable({ affected: 0 }))
 
         await expect(service.setOwnership("u1", "w1", "ghost", CHANGE)).rejects.toMatchObject({
+            code: AgentsErrorCode.AgentNotFound,
+        })
+    })
+
+    it("treats an update that reports no affected count as no agent", async () => {
+        const em = writable()
+        em.update.mockResolvedValueOnce({ raw: [], generatedMaps: [] })
+        const { service } = await build(em)
+
+        await expect(service.setOwnership("u1", "w1", "a1", CHANGE)).rejects.toMatchObject({
             code: AgentsErrorCode.AgentNotFound,
         })
     })

@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { In } from "typeorm"
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { FakeTransaction } from "@starci/jest-preset"
@@ -213,6 +214,10 @@ describe("GenerationsService request", () => {
     })
 })
 
+/** The SQL text of the expression the statement set for `key`. */
+const expressionSet = (setCalls: ReadonlyArray<ReadonlyArray<unknown>> | undefined, key: string): unknown =>
+    evaluatedValues(setCalls?.[0]?.[0])[key]
+
 describe("GenerationsService state and completion", () => {
     it("locks a workspace row in the supplied transaction and maps its durable state", async () => {
         const { service, tx } = await build()
@@ -309,9 +314,15 @@ describe("GenerationsService state and completion", () => {
         expect(result?.callsOf("where")).toEqual([[{ id: "g1", workspaceId: "w1", status: "done" }]])
         expect(result?.callsOf("setParameter")).toEqual([["result", '{"applied":true}']])
         expect(failed?.callsOf("where")).toEqual([[{ id: "g1", workspaceId: "w1" }]])
-        expect(failed?.callsOf("set")).toEqual([
-            [{ status: "error", error: "VALIDATION_FAILED", finishedAt: expect.any(Function) }],
-        ])
+        expect(expressionSet(context?.callsOf("set"), "input")).toBe(
+            "jsonb_set(input, '{context}', CAST(:context AS jsonb), true)",
+        )
+        expect(expressionSet(result?.callsOf("set"), "output")).toBe(
+            "coalesce(output, '{}'::jsonb) || jsonb_build_object('result', CAST(:result AS jsonb))",
+        )
+        expect(expressionSet(failed?.callsOf("set"), "finishedAt")).toBe("coalesce(finished_at, now())")
+        expect(expressionSet(failed?.callsOf("set"), "error")).toBe("VALIDATION_FAILED")
+        expect(expressionSet(failed?.callsOf("set"), "status")).toBe("error")
     })
 })
 

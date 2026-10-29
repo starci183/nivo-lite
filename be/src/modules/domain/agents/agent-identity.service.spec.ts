@@ -96,6 +96,14 @@ describe("AgentIdentityService", () => {
             expect(em.update).not.toHaveBeenCalled()
         })
 
+        it("treats an update that reports no affected count as no agent", async () => {
+            const { service } = await build(mockEntityManager({ update: [AgentEntity, {}] }))
+
+            await expect(service.setAvatar("u1", "w1", "ghost", null)).rejects.toMatchObject({
+                code: AgentsErrorCode.AgentNotFound,
+            })
+        })
+
         it("refuses a picture for an agent that is not in the workspace", async () => {
             const { service } = await build(mockEntityManager({ update: [AgentEntity, { affected: 0 }] }))
 

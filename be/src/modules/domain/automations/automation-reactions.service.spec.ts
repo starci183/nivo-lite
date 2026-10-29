@@ -195,6 +195,58 @@ describe("AutomationReactionsService", () => {
         )
     })
 
+    it("publishes deal.won without the facts the door did not know", async () => {
+        const { reactions, engine } = await build()
+        const bare = DealWonEvent.create({
+            workspaceId: "ws-1",
+            leadId: "lead-2",
+            name: "Binh",
+            company: "Tea Co",
+            channel: "Zalo",
+            need: "tea",
+        })
+
+        await reactions.onDealWon(deliveryOf("deal_won__automations", bare))
+
+        expect(engine.onBusinessEvent).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            event: "deal.won",
+            dedupe: "deal.won:lead-2",
+            data: { lead_id: "lead-2", name: "Binh", company: "Tea Co", channel: "Zalo", need: "tea" },
+        })
+    })
+
+    it("passes on the source and the evidence of a deal when the door knew them", async () => {
+        const { reactions, engine } = await build()
+        const sourced = DealWonEvent.create({
+            workspaceId: "ws-1",
+            leadId: "lead-3",
+            name: "Cuong",
+            company: "Tea Co",
+            channel: "Zalo",
+            need: "tea",
+            source: "payment",
+            evidence: "Paid in full",
+        })
+
+        await reactions.onDealWon(deliveryOf("deal_won__automations", sourced))
+
+        expect(engine.onBusinessEvent).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            event: "deal.won",
+            dedupe: "deal.won:lead-3",
+            data: {
+                lead_id: "lead-3",
+                name: "Cuong",
+                company: "Tea Co",
+                channel: "Zalo",
+                need: "tea",
+                source: "payment",
+                evidence: "Paid in full",
+            },
+        })
+    })
+
     it("publishes decision.made with the decision as the web app's emit carried it", async () => {
         const { reactions, engine, webhooks } = await build()
         const data = {

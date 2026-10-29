@@ -1,4 +1,5 @@
 import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
@@ -307,6 +308,30 @@ describe("AuthorityRulesService > save, refusals", () => {
     })
 })
 
+/** The SQL text of the expression a statement set or inserted for `key`. */
+const expressionOf = (calls: ReadonlyArray<ReadonlyArray<unknown>> | undefined, key: string): unknown =>
+    evaluatedValues(calls?.[0]?.[0])[key]
+
+describe("AuthorityRulesService > save, database clock", () => {
+    it("stamps the saved rule with the database time", async () => {
+        const { em, fakes } = saving(registered(true), upserted(askRuleEntity()))
+        const service = await build(em)
+
+        await service.save("ws-1", changeOf())
+
+        expect(expressionOf(fakes[1]?.callsOf("values"), "updatedAt")).toBe("now()")
+    })
+
+    it("refuses an action when the upsert answers no row list", async () => {
+        const { em } = saving(registered(true), { execute: { raw: undefined } })
+        const service = await build(em)
+
+        await expect(service.save("ws-1", changeOf())).rejects.toMatchObject({
+            code: AuthorityRulesErrorCode.UnknownAction,
+        })
+    })
+})
+
 describe("AuthorityRulesService > seedDefaults", () => {
     it("inserts the module defaults without changing their fields and keeps the rules the owner set", async () => {
         const rules = [
@@ -362,6 +387,13 @@ describe("AuthorityRulesService > disableForAgent", () => {
 
         await expect(service.disableForAgent("ws-1", "agent-1", em)).resolves.toBeUndefined()
         expect(em.createQueryBuilder).toHaveBeenCalledWith(AuthorityRuleEntity, "ar")
+        expect(expressionOf(fake?.callsOf("set"), "mode")).toBe(
+            "CASE WHEN agents = ARRAY[:agentId::uuid] THEN 'never' ELSE mode END",
+        )
+        expect(expressionOf(fake?.callsOf("set"), "agents")).toBe(
+            "CASE WHEN agents = ARRAY[:agentId::uuid] THEN agents ELSE array_remove(agents, :agentId::uuid) END",
+        )
+        expect(expressionOf(fake?.callsOf("set"), "updatedAt")).toBe("now()")
         expect(fake?.callsOf("where")).toEqual([
             [
                 "workspace_id = :workspaceId AND :agentId::uuid = ANY(agents)",

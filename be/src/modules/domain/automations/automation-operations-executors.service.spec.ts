@@ -451,6 +451,17 @@ describe("AutomationOperationsExecutorsService contract_renewal links the custom
         expect(linked.messages.lead).toHaveBeenCalledWith("ws-1", "l-1")
     })
 
+    it("keeps the contract it read when it cannot be read again after the link", async () => {
+        const unlinked = { ...CONTRACT, lead_id: null }
+        const { run, records } = await build(readingOf({ getRawOne: unlinked }, { getRawOne: undefined }).em)
+        records.linkCustomers.mockResolvedValue(undefined)
+
+        await run("contract_renewal", context(), { contract_id: "c-1" })
+
+        expect(records.linkCustomers).toHaveBeenCalledWith("ws-1")
+        expect(records.createLead).toHaveBeenCalledTimes(1)
+    })
+
     it("does not link when the contract already has its lead", async () => {
         const { run, records } = await build(readingOf({ getRawOne: CONTRACT }).em)
         await run("contract_renewal", context(), { contract_id: "c-1" })

@@ -1,4 +1,5 @@
 import { IsNull } from "typeorm"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import { INBOX } from "@modules/platform/inbox"
@@ -74,6 +75,14 @@ describe("BankFeedReceiptService", () => {
             { id: "receipt-1" },
             { processedAt: SQL_EXPRESSION },
         )
+    })
+
+    it("stamps the completed receipt with the database time", async () => {
+        const { service, manager } = await build()
+
+        await service.complete(manager, "receipt-1")
+
+        expect(evaluatedValues(manager.update.mock.calls[0]?.[2]).processedAt).toBe("now()")
     })
 
     it("propagates a refused claim to the transaction owner", async () => {

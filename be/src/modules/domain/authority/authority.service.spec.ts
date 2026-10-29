@@ -1,4 +1,5 @@
 import { builder, mockEntityManager } from "@starci/jest-preset"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
@@ -168,6 +169,27 @@ describe("AuthorityService", () => {
                     }),
                 ],
             ])
+        })
+
+        it("stores the revenue goal as text and stamps the save with the database time", async () => {
+            const { em, fake } = saving(entityWithRevenueGoal(), [savedRow({ goalRevenueVnd: "5000000" })])
+            const service = await build(em)
+
+            await service.save("ws-1", {}, "Binh")
+
+            const values = fake.callsOf("values")[0]?.[0]
+            expect(evaluatedValues(values).goalRevenueVnd).toBe("5000000")
+            expect(evaluatedValues(values).updatedAt).toBe("now()")
+        })
+
+        it("fails when the save answers no row list", async () => {
+            const em = mockEntityManager({ findOne: [AuthorityEntity, null] })
+            em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ execute: { raw: undefined } }).builder)
+            const service = await build(em)
+
+            await expect(service.save("ws-1", {}, "Binh")).rejects.toMatchObject({
+                code: AuthorityErrorCode.NotSaved,
+            })
         })
 
         it("fails when nothing came back from the save", async () => {
