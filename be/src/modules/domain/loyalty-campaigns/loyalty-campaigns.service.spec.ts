@@ -377,7 +377,9 @@ describe("LoyaltyCampaignsService attachDecision", () => {
         { affected: 0, attached: false },
         { affected: undefined, attached: false },
     ])("reports whether the decision attached: $attached", async ({ affected, attached }) => {
-        const entityManager = mockEntityManager({ update: [LoyaltyCampaignEntity, { affected }] })
+        const entityManager = mockEntityManager({
+            update: [LoyaltyCampaignEntity, affected === undefined ? {} : { affected }],
+        })
         const { service } = await build({ members: [], entityManager })
 
         await expect(service.attachDecision("ws-1", "k1", "decision-1", "approval")).resolves.toBe(attached)

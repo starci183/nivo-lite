@@ -84,11 +84,9 @@ const build = async (em: MockEntityManager = mockEntityManager(), answers: Reado
     }
 }
 
-type ManagerStubs = NonNullable<Parameters<typeof mockEntityManager>[0]>
-
 /** The stubs of a manager whose read of one item answers the item with these changes. */
-const readingItem = (changes: Partial<ContentItemEntity>): ManagerStubs => ({
-    findOne: [ContentItemEntity, row(changes)],
+const readingItem = (changes: Partial<ContentItemEntity>) => ({
+    findOne: [ContentItemEntity, row(changes)] as const,
 })
 
 /** The item scheduled at an instant. */
@@ -347,14 +345,14 @@ describe("ContentEditorService transition", () => {
 })
 
 describe("ContentEditorService figures and workbench", () => {
-    const figuresStubs = (upcoming: ContentItemEntity | null, counts: [number, number, number]): ManagerStubs => ({
+    const figuresStubs = (upcoming: ContentItemEntity | null, counts: [number, number, number]) => ({
         count: [
             [ContentItemEntity, counts[0]],
             [ContentItemEntity, counts[1]],
             [ContentPillarEntity, counts[2]],
-        ],
-        findOne: [ContentItemEntity, upcoming],
-        find: [ContentItemEntity, []],
+        ] as const,
+        findOne: [ContentItemEntity, upcoming] as const,
+        find: [ContentItemEntity, []] as const,
     })
 
     it("computes Vietnam month boundaries and maps live figures and the upcoming post", async () => {

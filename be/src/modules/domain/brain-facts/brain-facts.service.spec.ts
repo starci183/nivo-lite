@@ -16,7 +16,7 @@ import { BrainFactsService } from "./brain-facts.service"
 import { BrainFactsErrorCode } from "./errors/brain-facts.error"
 import { BrainFactEntity } from "./persistence/entities"
 
-const build = async (em: MockEntityManager) => {
+const parts = async (em: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             BrainFactsService,
@@ -26,8 +26,14 @@ const build = async (em: MockEntityManager) => {
             { provide: CLOCK, useValue: new FakeClock(facts.AT) },
         ],
     }).compile()
-    return moduleRef.get(BrainFactsService)
+    return {
+        service: moduleRef.get(BrainFactsService),
+        reads: moduleRef.get(BrainFactsReadService),
+        maintenance: moduleRef.get(BrainFactsMaintenanceService),
+    }
 }
+
+const build = async (em: MockEntityManager) => (await parts(em)).service
 
 /** The condition of the facts of the spec key in a status, in the workspace-wide scope unless an installation is named. */
 const keyed = (status: string, installationId: string | null = null) => ({
@@ -43,15 +49,14 @@ const answered = (...rows: ReadonlyArray<object>) => ({ execute: { raw: rows } }
 
 const setOf = (fake: FakeQueryBuilder | undefined) => evaluatedValues(fake?.callsOf("set")[0]?.[0])
 
-const registerIncomplete = () => {
-    it("rejects incomplete facts before reaching persistence", async () => {
-        const em = mockEntityManager()
-        await expect((await build(em)).propose(facts.WS, facts.inputOf({ value: " " }))).rejects.toMatchObject({
-            code: BrainFactsErrorCode.FactIncomplete,
-        })
-        expect(em.find).not.toHaveBeenCalled()
-        expect(em.createQueryBuilder).not.toHaveBeenCalled()
-    })
+/** A service whose key holds these groups of facts, answering a write with these rows, and the first write it runs. */
+const writing = async (
+    finds: ReadonlyArray<ReadonlyArray<BrainFactEntity>>,
+    back: ReadonlyArray<BrainFactEntity> = [facts.rowOf()],
+) => {
+    const em = mockEntityManager({ find: finds.map((rows) => [BrainFactEntity, rows] as const) })
+    const [insert] = queueQueryBuilders(em, [answered(...back)])
+    return { em, insert, service: await build(em) }
 }
 
 const registerReinforce = () => {
@@ -89,17 +94,11 @@ const registerReinforce = () => {
     )
 
     it.each([false, true])("reinforces a waiting value with an active conflict %s", async (hasActive) => {
-        const em = mockEntityManager({
-            find: [
-                [BrainFactEntity, hasActive ? [facts.rowOf({ id: "old", value: "9h" })] : []],
-                [
-                    BrainFactEntity,
-                    [facts.rowOf({ proposalKind: "retire" }), facts.rowOf({ value: "10h" }), facts.rowOf()],
-                ],
-            ],
-        })
-        const [grow] = queueQueryBuilders(em, [answered(facts.rowOf())])
-        const service = await build(em)
+        const waiting = [facts.rowOf({ proposalKind: "retire" }), facts.rowOf({ value: "10h" }), facts.rowOf()]
+        const { insert: grow, service } = await writing([
+            hasActive ? [facts.rowOf({ id: "old", value: "9h" })] : [],
+            waiting,
+        ])
         await expect(service.propose(facts.WS, facts.inputOf())).resolves.toEqual({
             fact: facts.factOf(),
             outcome: hasActive ? "conflict" : "proposed",
@@ -109,14 +108,7 @@ const registerReinforce = () => {
     })
 
     it("applies a waiting value when the trusted owner confirms it", async () => {
-        const em = mockEntityManager({
-            find: [
-                [BrainFactEntity, []],
-                [BrainFactEntity, [facts.rowOf()]],
-            ],
-        })
-        const [grow] = queueQueryBuilders(em, [answered(facts.rowOf({ trust: 95 }))])
-        const service = await build(em)
+        const { insert: grow, service } = await writing([[], [facts.rowOf()]], [facts.rowOf({ trust: 95 })])
         const apply = jest.spyOn(service, "apply").mockResolvedValue(facts.factOf({ status: "active" }))
         await expect(service.propose(facts.WS, facts.inputOf({ sourceKind: "owner" }))).resolves.toEqual({
             fact: facts.factOf({ status: "active" }),
@@ -127,11 +119,6 @@ const registerReinforce = () => {
     })
 }
 
-describe("BrainFactsService", () => {
-    registerIncomplete()
-    registerReinforce()
-})
-
 /** What an insert carried: the stamped values and the parameters. */
 const insertedBy = (fake: FakeQueryBuilder | undefined) => ({
     values: stampedValues(fake?.callsOf("values")[0]?.[0]),
@@ -140,20 +127,12 @@ const insertedBy = (fake: FakeQueryBuilder | undefined) => ({
 
 const registerInsert = () => {
     it("creates an ordinary proposal with defaults", async () => {
-        const em = mockEntityManager({ find: [BrainFactEntity, []] })
-        const [insert] = queueQueryBuilders(em, [answered(facts.rowOf())])
-        const service = await build(em)
+        const { insert, service } = await writing([[]])
         await expect(service.propose(facts.WS, facts.inputOf())).resolves.toEqual({
             fact: facts.factOf(),
             outcome: "proposed",
         })
         expect(insertedBy(insert)).toEqual({ values: facts.insertedOf(), parameters: facts.insertParametersOf() })
-    })
-    it("writes the instants and the evidence of a proposal as parameterised SQL", async () => {
-        const em = mockEntityManager({ find: [BrainFactEntity, []] })
-        const [insert] = queueQueryBuilders(em, [answered(facts.rowOf())])
-        const service = await build(em)
-        await service.propose(facts.WS, facts.inputOf())
         const values = evaluatedValues(insert?.callsOf("values")[0]?.[0])
         expect({ validFrom: values.validFrom, validTo: values.validTo, evidence: values.evidence }).toEqual({
             validFrom: ":validFrom::timestamptz",
@@ -163,14 +142,8 @@ const registerInsert = () => {
     })
 
     it("inherits the active value's type, restricted modules and unit for a conflict", async () => {
-        const em = mockEntityManager({
-            find: [
-                [BrainFactEntity, [facts.conflictingActive]],
-                [BrainFactEntity, []],
-            ],
-        })
-        const [insert] = queueQueryBuilders(em, [answered(facts.rowOf())])
-        await expect((await build(em)).propose(facts.WS, facts.inputOf({ unit: " " }))).resolves.toEqual({
+        const { insert, service } = await writing([[facts.conflictingActive], []])
+        await expect(service.propose(facts.WS, facts.inputOf({ unit: " " }))).resolves.toEqual({
             fact: facts.factOf(),
             outcome: "conflict",
         })
@@ -178,9 +151,7 @@ const registerInsert = () => {
     })
 
     it("honors explicit fields and auto-applies the new value", async () => {
-        const em = mockEntityManager({ find: [BrainFactEntity, []] })
-        const [insert] = queueQueryBuilders(em, [answered(facts.rowOf())])
-        const service = await build(em)
+        const { insert, service } = await writing([[]])
         const apply = jest.spyOn(service, "apply").mockResolvedValue(facts.factOf({ status: "active" }))
         await expect(service.propose(facts.WS, facts.inputOf(facts.explicitInput))).resolves.toEqual({
             fact: facts.factOf({ status: "active" }),
@@ -197,13 +168,17 @@ const registerInsert = () => {
         expect(apply).toHaveBeenCalledWith(facts.WS, "f1", "u1")
     })
 
-    it("creates a restricted proposal without modules and reports an insert that returns no fact", async () => {
-        const em = mockEntityManager({ find: [BrainFactEntity, []] })
-        const [insert] = queueQueryBuilders(em, [answered()])
-        await expect(
-            (await build(em)).propose(facts.WS, facts.inputOf({ scope: "restricted", autoApply: false })),
-        ).rejects.toMatchObject({ code: BrainFactsErrorCode.FactNotFound })
-        expect(insertedBy(insert).values).toEqual(facts.restrictedInsert)
+    it("creates a restricted text proposal without modules and reports an insert that returns no fact", async () => {
+        const { insert, service } = await writing([[]], [])
+        const input = facts.inputOf({ scope: "restricted", autoApply: false, value: "Open every day" })
+        await expect(service.propose(facts.WS, input)).rejects.toMatchObject({
+            code: BrainFactsErrorCode.FactNotFound,
+        })
+        expect(insertedBy(insert).values).toEqual({
+            ...facts.restrictedInsert,
+            value: "Open every day",
+            valueNumber: null,
+        })
     })
 
     it.each([null, facts.factOf({ status: "active" }), facts.factOf({ proposalKind: "retire" })])(
@@ -305,11 +280,6 @@ const registerApply = () => {
     })
 }
 
-describe("BrainFactsService", () => {
-    registerInsert()
-    registerApply()
-})
-
 const registerDecisions = () => {
     it.each([undefined, " because "])("applies retirement proposals with reason %s", async (note) => {
         const tx = fakeTransaction(
@@ -382,8 +352,6 @@ const registerDecisions = () => {
     })
 }
 
-describe("BrainFactsService", () => registerDecisions())
-
 const registerChoices = () => {
     it("chooses one value and rejects the other values and retirement proposals", async () => {
         const service = await build(mockEntityManager())
@@ -437,14 +405,7 @@ const registerChoices = () => {
     })
 
     it("files a retirement only once and retains the complete active value", async () => {
-        const em = mockEntityManager({
-            find: [
-                [BrainFactEntity, [facts.rowOf()]],
-                [BrainFactEntity, [facts.rowOf({ proposalKind: "retire" })]],
-            ],
-        })
-        const [insert] = queueQueryBuilders(em, [answered(facts.rowOf())])
-        const service = await build(em)
+        const { em, insert, service } = await writing([[facts.rowOf()], [facts.rowOf({ proposalKind: "retire" })]])
         const active = facts.factOf({ status: "active", installationId: "i1", modules: ["sales"] })
         await expect(service.proposeRetire(facts.WS, active, facts.PROOF, "u2")).resolves.toBe(true)
         await expect(service.proposeRetire(facts.WS, active, facts.PROOF, "u2")).resolves.toBe(false)
@@ -456,9 +417,7 @@ const registerChoices = () => {
     })
 }
 
-describe("BrainFactsService", () => registerChoices())
-
-const registerSources = () => {
+const registerUpkeep = () => {
     it("only finalizes still unsupported active facts without a waiting value", async () => {
         const retire = facts.rowOf({ proposalKind: "retire" })
         const active = (id: string) => facts.rowOf({ status: "active", id })
@@ -489,6 +448,48 @@ const registerSources = () => {
         ).resolves.toBe(1)
         expect(insertedBy(insert).values).toEqual(facts.orphanInsert)
     })
+
+    it("rejects incomplete facts before reaching persistence", async () => {
+        const em = mockEntityManager()
+        await expect((await build(em)).propose(facts.WS, facts.inputOf({ value: " " }))).rejects.toMatchObject({
+            code: BrainFactsErrorCode.FactIncomplete,
+        })
+        expect(em.find).not.toHaveBeenCalled()
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+    })
+
+    it("hands reads and upkeep to their services unchanged", async () => {
+        const { service, reads, maintenance } = await parts(mockEntityManager())
+        const listed = [facts.factOf()]
+        const done = { activated: listed, expired: 1 }
+        for (const method of ["list", "forView", "search"] as const) jest.spyOn(reads, method).mockResolvedValue(listed)
+        jest.spyOn(maintenance, "withdrawSource").mockResolvedValue(["orphan"])
+        jest.spyOn(maintenance, "maintain").mockResolvedValue(done)
+        await expect(service.list(facts.WS, { statuses: ["active"] })).resolves.toBe(listed)
+        await expect(service.forView(facts.WS, "customer", "chatbot", null, 5)).resolves.toBe(listed)
+        await expect(service.search(facts.WS, "internal", "sales", "i1", "hours", 3)).resolves.toBe(listed)
+        await expect(service.withdrawSource(facts.WS, "doc-1", "Removed")).resolves.toEqual(["orphan"])
+        await expect(service.maintain(facts.WS)).resolves.toBe(done)
+        expect(reads.list).toHaveBeenCalledWith(facts.WS, { statuses: ["active"] })
+        expect(reads.forView).toHaveBeenCalledWith(facts.WS, "customer", "chatbot", null, 5)
+        expect(reads.search).toHaveBeenCalledWith(facts.WS, "internal", "sales", "i1", "hours", 3)
+        expect(maintenance.withdrawSource).toHaveBeenCalledWith(facts.WS, "doc-1", "Removed")
+        expect(maintenance.maintain).toHaveBeenCalledWith(facts.WS)
+    })
+
+    it("files the retirement of an active value that has no number", async () => {
+        const { insert, service } = await writing([[]])
+        const active = facts.factOf({ status: "active", value: "Open every day", valueNumber: null })
+        await expect(service.proposeRetire(facts.WS, active, facts.PROOF, "u2")).resolves.toBe(true)
+        expect(insertedBy(insert).values).toMatchObject({ value: "Open every day", valueNumber: null })
+    })
 }
 
-describe("BrainFactsService", () => registerSources())
+describe("BrainFactsService", () => {
+    registerReinforce()
+    registerInsert()
+    registerApply()
+    registerDecisions()
+    registerChoices()
+    registerUpkeep()
+})
