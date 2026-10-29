@@ -87,7 +87,7 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
     }),
     LivenessModule.register({ isGlobal: true }),
     AgentDirectoryModule,
-    InboundEventRecordsModule,
+    InboundEventRecordsModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),
     ConnectionSecretsModule.register({ isGlobal: true, ...options.connectionSecrets }),
     DataRecordsModule.register({ isGlobal: true }),

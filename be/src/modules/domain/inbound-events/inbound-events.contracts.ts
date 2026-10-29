@@ -119,7 +119,7 @@ export interface InboundEventDetail {
 }
 
 /** A received input with feed timestamps and repeat-delivery counts. */
-export interface InboundEventFeedRecord extends InboundEventDetail {
+export interface InboundEventFeedRow extends InboundEventDetail {
     /** How many duplicate deliveries have been blocked. */
     readonly duplicate_count: number
     /** When this event was first received, as ISO 8601 text. */

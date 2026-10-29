@@ -10,7 +10,8 @@ import { LEAD_GEN_ACTOR, LeadFlowConversationService } from "./lead-flow-convers
 import { LeadFlowMetaService } from "./lead-flow-meta.service"
 import { LeadFlowStoreService } from "./lead-flow-store.service"
 import { sourceLine, textOf } from "./lead-flow-identity.policy"
-import type { DmOutcome, EscalationReason, LeadFlow, LeadSource } from "./lead-flows.contracts"
+import type { EscalationReason, LeadFlow, LeadSource } from "./lead-flows.contracts"
+import type { DmOutcome } from "./lead-flow-delivery.contracts"
 
 /** What handing a prospect to a person takes. */
 export interface HoldRequest {

@@ -8,7 +8,7 @@ import { META_CLIENT } from "@modules/integrations/meta"
 import type { MetaClient, MetaPageAccess } from "@modules/integrations/meta"
 import { CLOCK } from "@modules/platform/clock"
 import { LeadFlowMetaService } from "./lead-flow-meta.service"
-import type { CommentTarget, DmTarget } from "./lead-flows.contracts"
+import type { CommentTarget, DmTarget } from "./lead-flow-delivery.contracts"
 
 const NOW = "2026-10-13T10:00:00.000Z"
 

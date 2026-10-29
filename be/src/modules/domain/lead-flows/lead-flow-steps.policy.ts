@@ -1,16 +1,7 @@
 import { clip, fold, textOf, textOrNull } from "./lead-flow-identity.policy"
 import { MAX_QUESTIONS, cleanSignals, recordOf } from "./lead-flow-score.policy"
-import type {
-    Analysis,
-    Answer,
-    ComposeAsk,
-    EscalationReason,
-    Flags,
-    HandoffPack,
-    Step,
-    StepInput,
-    WindowStatus,
-} from "./lead-flows.contracts"
+import type { Analysis, Answer, EscalationReason, Flags, Step, StepInput, WindowStatus } from "./lead-flows.contracts"
+import type { ComposeAsk, HandoffPack } from "./lead-flow-delivery.contracts"
 
 /** Below this confidence the bot hands the prospect to a person (the gate's bar). */
 export const MIN_CONFIDENCE = 0.6
