@@ -29,11 +29,7 @@ export class MessageCursorsService {
             .addOrderBy("m.id", "DESC")
             .limit(1)
             .getRawMany()
-        const [row] = rows
-        if (typeof row !== "object" || row === null) return null
-        const id: unknown = Reflect.get(row, "id")
-        const createdAt: unknown = Reflect.get(row, "createdAt")
-        return typeof id === "string" && typeof createdAt === "string" ? { id, createdAt } : null
+        return cursorOfRows(rows)
     }
 
     /** The creation instant of a message posted in the room (any office room when `room` is null); null when there is no such message. */
@@ -50,9 +46,6 @@ export class MessageCursorsService {
             .andWhere(room === null ? "true" : "m.room = :room", { room })
             .limit(1)
             .getRawMany()
-        const created = rows.map((row): unknown =>
-            typeof row === "object" && row !== null ? Reflect.get(row, "createdAt") : null,
-        )
-        return created.find((value): value is string => typeof value === "string") ?? null
+        return createdAtOfRows(rows)
     }
 }
