@@ -14,7 +14,7 @@ import { EventsService } from "@modules/domain/events"
 import { isManagerRole, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
 import type { CommandProposalInput } from "@modules/domain/ai-tasks"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
@@ -43,6 +43,7 @@ import {
     acceptsText,
     cardRowsOf,
     failureDetail,
+    isCandidateView,
     matchLeads,
     matchOrders,
     mentionedHandles,
@@ -54,6 +55,8 @@ import { OfficeCommandCandidateEntity } from "./persistence/entities"
 
 /** Only owners and managers compose commands: the receiver's own gate still decides what happens next. */
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
+/** The column a statement returning only candidate ids answers. */
+const isReturnedId = rowShape({ id: "string" })
 /** How many recent customers and orders a message's names are matched against. */
 const REF_POOL = 300
 /** How many matched customers or orders are offered to the model. */
@@ -180,7 +183,7 @@ export class OfficeCommandService {
             })
             .returning(CANDIDATE_RETURNING)
             .execute()
-        const [claimed] = claim.raw as Array<CandidateView>
+        const [claimed] = returnedRows(claim.raw, isCandidateView)
         if (claimed === undefined) return this.alreadyHandled(workspaceId, request.candidateId)
         if ((await this.modules.entryOf(claimed.module)) === null) {
             await this.release(workspaceId, claimed.id, `no agent ${claimed.module}`)
@@ -225,7 +228,7 @@ export class OfficeCommandService {
             })
             .returning("id")
             .execute()
-        if ((cancelled.raw as Array<{ id: string }>).length > 0) return
+        if (returnedRows(cancelled.raw, isReturnedId).length > 0) return
         const row = await this.candidateOf(workspaceId, candidateId)
         if (row === undefined)
             throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.CandidateNotFound })
@@ -266,7 +269,7 @@ export class OfficeCommandService {
         return message
     }
 
-    private async candidateOfMessage(workspaceId: string, messageId: string): Promise<CandidateView | undefined> {
+    private candidateOfMessage(workspaceId: string, messageId: string): Promise<CandidateView | undefined> {
         return this.candidatesOf(this.entityManager)
             .where("c.workspaceId = :workspaceId AND c.messageId = :messageId", { workspaceId, messageId })
             .limit(1)
@@ -349,7 +352,7 @@ export class OfficeCommandService {
             .orUpdate(["message_id"], ["message_id"])
             .returning(CANDIDATE_RETURNING)
             .execute()
-        const [candidate] = created.raw as Array<CandidateView>
+        const [candidate] = returnedRows(created.raw, isCandidateView)
         return candidate ?? this.missingCandidate()
     }
 

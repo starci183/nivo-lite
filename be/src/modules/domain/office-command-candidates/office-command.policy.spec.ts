@@ -13,6 +13,7 @@ import {
     cardRowsOf,
     failureDetail,
     fold,
+    isCandidateView,
     matchLeads,
     matchOrders,
     mentionedHandles,
@@ -34,6 +35,7 @@ type PolicySubject = {
     cardRowsOf: typeof cardRowsOf
     subjectRowOf: typeof subjectRowOf
     failureDetail: typeof failureDetail
+    isCandidateView: typeof isCandidateView
 }
 
 class SampleError extends DomainError<"SAMPLE"> {}
@@ -90,6 +92,7 @@ const buildSubject = async () => {
                     cardRowsOf,
                     subjectRowOf,
                     failureDetail,
+                    isCandidateView,
                 },
             },
         ],
@@ -331,5 +334,38 @@ describe("office command policy failureDetail", () => {
         expect(subject.failureDetail(new SampleError({ code: "SAMPLE", params: { detail: 3 } }))).toBe("SAMPLE")
         expect(subject.failureDetail(new TypeError("boom"))).toBe("boom")
         expect(subject.failureDetail("plain")).toBe("plain")
+    })
+})
+
+describe("office command policy candidate rows", () => {
+    const row = {
+        id: "c-1",
+        message_id: "m-1",
+        module: "accounting",
+        command: "issue_receipt",
+        payload: {},
+        summary: "s",
+        shown: [],
+        status: "pending",
+        work_item_id: null,
+        refusal_detail: null,
+        created_at: "2026-10-12T10:00:00+00:00",
+    }
+
+    it.each([["pending"], ["sent"], ["cancelled"]])("accepts a complete row with status %s", async (status) => {
+        const { subject } = await buildSubject()
+
+        expect(subject.isCandidateView({ ...row, status })).toBe(true)
+    })
+
+    it.each([
+        ["an unknown status", { ...row, status: "lost" }],
+        ["a payload that is not an object", { ...row, payload: null }],
+        ["shown rows that are not a list", { ...row, shown: {} }],
+        ["a missing column", { ...row, summary: undefined }],
+    ])("refuses a row with %s", async (_name, bad) => {
+        const { subject } = await buildSubject()
+
+        expect(subject.isCandidateView(bad)).toBe(false)
     })
 })

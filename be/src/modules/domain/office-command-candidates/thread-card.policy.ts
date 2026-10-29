@@ -1,3 +1,5 @@
+import { parseJsonText } from "@modules/platform/primitives"
+
 /** What a result card points at: the kind of record and its id. */
 export interface CardRef {
     /** `execution` or `work_item`; any other kind has no live state. */
@@ -17,10 +19,12 @@ const textOf = (value: unknown, key: string): string | null => {
     return typeof field === "string" ? field : null
 }
 
-/** The record a card (JSON text) points at; null when the card names none. */
+/** The record a card (JSON text) points at; null when the card names none or is not readable JSON. */
 export const cardRefOf = (cardJson: string | null): CardRef | null => {
     if (cardJson === null) return null
-    const card: unknown = JSON.parse(cardJson)
+    const read = parseJsonText(cardJson)
+    if (!read.ok) return null
+    const card: unknown = read.value
     const ref: unknown = typeof card === "object" && card !== null ? Reflect.get(card, "ref") : undefined
     const kind = textOf(ref, "kind")
     const id = textOf(ref, "id")
