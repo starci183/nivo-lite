@@ -13,6 +13,9 @@ import { ModuleContextVersionEntity } from "./persistence/entities"
 /** How many versions of one installation are listed at once. */
 const VERSIONS_LIMIT = 100
 
+/** The most version numbers one lookup answers. */
+const NUMBERS_MAX = 500
+
 /** Maps a stored version to its contract. */
 const toRecord = (row: ModuleContextVersionEntity): ContextVersionRecord => ({
     id: row.id,
@@ -47,9 +50,11 @@ export class ContextVersionsService {
     /** The version numbers of the given versions, by id (an id that does not exist is absent from the answer). */
     async numbersOf(versionIds: ReadonlyArray<string>): Promise<ReadonlyArray<VersionNumber>> {
         if (versionIds.length === 0) return []
+        const wanted = [...new Set(versionIds)].slice(0, NUMBERS_MAX)
         const rows = await this.entityManager.find(ModuleContextVersionEntity, {
             select: { id: true, version: true },
-            where: { id: In([...new Set(versionIds)]) },
+            where: { id: In(wanted) },
+            take: NUMBERS_MAX,
         })
         return rows.map((row) => ({ id: row.id, version: row.version }))
     }

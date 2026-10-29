@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { ModuleSetupSessionsModule } from "@modules/domain/module-setup-sessions"
 import { ContextNotesService } from "./context-notes.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./module-context-notes.module-definition"
 
@@ -12,7 +11,7 @@ export class ContextNotesModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), ModuleSetupSessionsModule.register({})],
+            imports: [...(base.imports ?? []), options.sessions],
             providers: [...(base.providers ?? []), ContextNotesService],
             exports: [ContextNotesService],
         }

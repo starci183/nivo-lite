@@ -184,115 +184,113 @@ describe("ContractsService", () => {
     })
 })
 
-describe("ContractsService", () => {
-    describe("saveContract refusals", () => {
-        it("refuses a lead the workspace does not have", async () => {
-            const tx = fakeTransaction(mockEntityManager())
-            const [insert] = queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
-            const { contracts, events, leads } = await build(tx.em)
-            leads.isOwn.mockResolvedValue(false)
+describe("ContractsService / saveContract refusals", () => {
+    it("refuses a lead the workspace does not have", async () => {
+        const tx = fakeTransaction(mockEntityManager())
+        const [insert] = queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
+        const { contracts, events, leads } = await build(tx.em)
+        leads.isOwn.mockResolvedValue(false)
 
-            await expect(contracts.saveContract(paramsOf())).rejects.toMatchObject({
-                code: ContractsErrorCode.LeadNotFound,
-                params: { id: "lead-1" },
-            })
-
-            expect(insert?.callsOf("execute")).toEqual([])
-            expect(events.record).not.toHaveBeenCalled()
+        await expect(contracts.saveContract(paramsOf())).rejects.toMatchObject({
+            code: ContractsErrorCode.LeadNotFound,
+            params: { id: "lead-1" },
         })
 
-        it("refuses an edit that names a lead the workspace does not have", async () => {
-            const tx = fakeTransaction(mockEntityManager())
-            const [update] = queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
-            const { contracts, leads } = await build(tx.em)
-            leads.isOwn.mockResolvedValue(false)
-
-            await expect(contracts.saveContract(paramsOf({ contractId: "contract-1" }))).rejects.toMatchObject({
-                code: ContractsErrorCode.NotFound,
-            })
-            expect(update?.callsOf("execute")).toEqual([])
-        })
-
-        it("refuses an edit whose write answers no row list", async () => {
-            const tx = fakeTransaction(mockEntityManager())
-            queueQueryBuilders(tx.em, [{ execute: { raw: undefined } }])
-            const { contracts } = await build(tx.em)
-
-            await expect(
-                contracts.saveContract(paramsOf({ contractId: "contract-9", leadId: null })),
-            ).rejects.toMatchObject({ code: ContractsErrorCode.NotFound, params: { id: "contract-9" } })
-        })
-
-        it("refuses an edit of a contract the workspace does not have", async () => {
-            const tx = fakeTransaction(mockEntityManager())
-            queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
-            const { contracts } = await build(tx.em)
-
-            await expect(
-                contracts.saveContract(paramsOf({ contractId: "contract-9", leadId: null })),
-            ).rejects.toMatchObject({ code: ContractsErrorCode.NotFound, params: { id: "contract-9" } })
-        })
+        expect(insert?.callsOf("execute")).toEqual([])
+        expect(events.record).not.toHaveBeenCalled()
     })
 
-    describe("attachLead", () => {
-        it("links the lead to the workspace's contract on the system's behalf", async () => {
-            const em = mockEntityManager()
-            const [attach] = queueQueryBuilders(em, [{ execute: {} }])
-            const { contracts, members } = await build(em)
+    it("refuses an edit that names a lead the workspace does not have", async () => {
+        const tx = fakeTransaction(mockEntityManager())
+        const [update] = queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
+        const { contracts, leads } = await build(tx.em)
+        leads.isOwn.mockResolvedValue(false)
 
-            await expect(contracts.attachLead("ws-1", "contract-1", "lead-9")).resolves.toBeUndefined()
-            expect(attach?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", contractId: "contract-1" })
-            expect(members.require).not.toHaveBeenCalled()
-            expect(evaluatedValues(attach?.callsOf("set")[0]?.[0])).toEqual({ leadId: "lead-9", updatedAt: "now()" })
+        await expect(contracts.saveContract(paramsOf({ contractId: "contract-1" }))).rejects.toMatchObject({
+            code: ContractsErrorCode.NotFound,
         })
+        expect(update?.callsOf("execute")).toEqual([])
     })
 
-    describe("attachLead refusals", () => {
-        it("links nothing when the lead is not the workspace own", async () => {
-            const em = mockEntityManager()
-            const [attach] = queueQueryBuilders(em, [{ execute: {} }])
-            const { contracts, leads } = await build(em)
-            leads.isOwn.mockResolvedValue(false)
+    it("refuses an edit whose write answers no row list", async () => {
+        const tx = fakeTransaction(mockEntityManager())
+        queueQueryBuilders(tx.em, [{ execute: { raw: undefined } }])
+        const { contracts } = await build(tx.em)
 
-            await expect(contracts.attachLead("ws-1", "contract-1", "lead-9")).resolves.toBeUndefined()
-            expect(attach?.callsOf("execute")).toEqual([])
-        })
+        await expect(
+            contracts.saveContract(paramsOf({ contractId: "contract-9", leadId: null })),
+        ).rejects.toMatchObject({ code: ContractsErrorCode.NotFound, params: { id: "contract-9" } })
     })
 
-    describe("list", () => {
-        it("lists the workspace contracts after proving membership", async () => {
-            const em = mockEntityManager({ find: [ContractEntity, [ROW, rowOf({ id: "contract-2", leadId: null })]] })
-            const { contracts, members } = await build(em)
+    it("refuses an edit of a contract the workspace does not have", async () => {
+        const tx = fakeTransaction(mockEntityManager())
+        queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
+        const { contracts } = await build(tx.em)
 
-            await expect(contracts.list("ws-1", "user-1")).resolves.toEqual([
-                {
-                    id: "contract-1",
-                    leadId: "lead-1",
-                    customerName: "Anh Minh",
-                    plan: "Monthly",
-                    startsOn: "2026-10-01",
-                    endsOn: "2027-09-30",
-                    amountVnd: 5_000_000,
-                    status: "active",
-                    note: "",
-                },
-                {
-                    id: "contract-2",
-                    leadId: null,
-                    customerName: "Anh Minh",
-                    plan: "Monthly",
-                    startsOn: "2026-10-01",
-                    endsOn: "2027-09-30",
-                    amountVnd: 5_000_000,
-                    status: "active",
-                    note: "",
-                },
-            ])
-            expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-            expect(namedCalls(em.find.mock.calls)).toEqual([
-                ["ContractEntity", { where: { workspaceId: "ws-1" }, order: { endsOn: "ASC", id: "ASC" }, take: 300 }],
-            ])
-        })
+        await expect(
+            contracts.saveContract(paramsOf({ contractId: "contract-9", leadId: null })),
+        ).rejects.toMatchObject({ code: ContractsErrorCode.NotFound, params: { id: "contract-9" } })
+    })
+})
+
+describe("ContractsService / attachLead", () => {
+    it("links the lead to the workspace's contract on the system's behalf", async () => {
+        const em = mockEntityManager()
+        const [attach] = queueQueryBuilders(em, [{ execute: {} }])
+        const { contracts, members } = await build(em)
+
+        await expect(contracts.attachLead("ws-1", "contract-1", "lead-9")).resolves.toBeUndefined()
+        expect(attach?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", contractId: "contract-1" })
+        expect(members.require).not.toHaveBeenCalled()
+        expect(evaluatedValues(attach?.callsOf("set")[0]?.[0])).toEqual({ leadId: "lead-9", updatedAt: "now()" })
+    })
+})
+
+describe("ContractsService / attachLead refusals", () => {
+    it("links nothing when the lead is not the workspace own", async () => {
+        const em = mockEntityManager()
+        const [attach] = queueQueryBuilders(em, [{ execute: {} }])
+        const { contracts, leads } = await build(em)
+        leads.isOwn.mockResolvedValue(false)
+
+        await expect(contracts.attachLead("ws-1", "contract-1", "lead-9")).resolves.toBeUndefined()
+        expect(attach?.callsOf("execute")).toEqual([])
+    })
+})
+
+describe("ContractsService / list", () => {
+    it("lists the workspace contracts after proving membership", async () => {
+        const em = mockEntityManager({ find: [ContractEntity, [ROW, rowOf({ id: "contract-2", leadId: null })]] })
+        const { contracts, members } = await build(em)
+
+        await expect(contracts.list("ws-1", "user-1")).resolves.toEqual([
+            {
+                id: "contract-1",
+                leadId: "lead-1",
+                customerName: "Anh Minh",
+                plan: "Monthly",
+                startsOn: "2026-10-01",
+                endsOn: "2027-09-30",
+                amountVnd: 5_000_000,
+                status: "active",
+                note: "",
+            },
+            {
+                id: "contract-2",
+                leadId: null,
+                customerName: "Anh Minh",
+                plan: "Monthly",
+                startsOn: "2026-10-01",
+                endsOn: "2027-09-30",
+                amountVnd: 5_000_000,
+                status: "active",
+                note: "",
+            },
+        ])
+        expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
+        expect(namedCalls(em.find.mock.calls)).toEqual([
+            ["ContractEntity", { where: { workspaceId: "ws-1" }, order: { endsOn: "ASC", id: "ASC" }, take: 300 }],
+        ])
     })
 })
 

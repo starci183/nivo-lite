@@ -3,7 +3,7 @@ import { Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { ContentPillarsService } from "@modules/domain/content-pillars"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import type {
@@ -14,7 +14,6 @@ import type {
     ContentGeneratedPlan,
 } from "./content-ai-store.contracts"
 import { ContentItemsError, ContentItemsErrorCode } from "./errors/content-items.error"
-import { returnedRows } from "./persistence/content-item.projection"
 import { ContentItemEntity } from "./persistence/entities"
 
 /** The revision the caller read is still the stored one, or the caller named none. */
@@ -53,13 +52,12 @@ export class ContentAiStoreService {
             })
             .returning("id, updated_at")
             .execute()
-        const [row] = returnedRows(inserted.raw)
-        const id: unknown = row === undefined ? undefined : Reflect.get(row, "id")
-        const updatedAt: unknown = row === undefined ? undefined : Reflect.get(row, "updated_at")
-        if (typeof id !== "string" || !(typeof updatedAt === "string" || updatedAt instanceof Date)) {
+        const [row] = returnedRows(inserted.raw, rowShape({ id: "string", updated_at: "json" }))
+        const updatedAt = row?.updated_at
+        if (row === undefined || !(typeof updatedAt === "string" || updatedAt instanceof Date)) {
             throw new ContentItemsError({ code: ContentItemsErrorCode.NotWritten })
         }
-        return { id, updatedAt: new Date(updatedAt).toISOString() }
+        return { id: row.id, updatedAt: new Date(updatedAt).toISOString() }
     }
 
     /** Applies a completed draft only while its item is editable. */
@@ -105,10 +103,9 @@ export class ContentAiStoreService {
             })
             .returning("id")
             .execute()
-        const [row] = returnedRows(updated.raw)
-        const id: unknown = row === undefined ? undefined : Reflect.get(row, "id")
-        if (typeof id !== "string") throw new ContentItemsError({ code: ContentItemsErrorCode.NotWritten })
-        return { id }
+        const [row] = returnedRows(updated.raw, rowShape({ id: "string" }))
+        if (row === undefined) throw new ContentItemsError({ code: ContentItemsErrorCode.NotWritten })
+        return { id: row.id }
     }
 
     /** Titles offered to the draft prompt. */
@@ -171,6 +168,7 @@ export class ContentAiStoreService {
                               .returning("id")
                               .execute()
                       ).raw,
+                      rowShape({ id: "string" }),
                   )
         if (ideas.length !== plan.items.length) throw new ContentItemsError({ code: ContentItemsErrorCode.NotWritten })
         return ideas.length

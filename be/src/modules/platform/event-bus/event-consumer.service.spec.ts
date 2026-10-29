@@ -1,9 +1,11 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { BaseEvent } from "./event-bus.contracts"
 import type { EventDelivery, ParsedEvent } from "./event-bus.contracts"
+import { EventBusError, EventBusErrorCode } from "./errors/event-bus.error"
 import { EventBusLogEvent } from "./event-bus.log-events"
 import { EVENT_BUS_OPTIONS } from "./event-bus.decorators"
 import type { EventBusOptions } from "./event-bus.options"
@@ -16,6 +18,12 @@ const ARCHIVE = "SELECT * FROM public.event_bus_archive($1, $2)"
 const BURY = "SELECT * FROM public.event_bus_bury($1, $2, $3, $4, $5)"
 const QUEUE = "spec_delivery_recorded__mailer"
 
+/** The payload of the spec event. */
+interface ReceiptPayload {
+    readonly dedupeKey: string
+    readonly receiptId: string
+}
+
 class ReceiptRecordedEvent extends BaseEvent {
     static readonly eventName = "spec.delivery-recorded"
     static readonly version = 1
@@ -23,7 +31,7 @@ class ReceiptRecordedEvent extends BaseEvent {
 
     constructor(
         readonly eventId: string,
-        readonly payload: { readonly dedupeKey: string; readonly receiptId: string },
+        readonly payload: ReceiptPayload,
     ) {
         super()
     }
@@ -63,6 +71,19 @@ class AnyMessageEvent extends BaseEvent {
     }
 }
 
+/** An event whose parser refuses the value of a field the way an event class does: by throwing. */
+class RefusingEvent extends BaseEvent {
+    static readonly eventName = "spec.refusing"
+    static readonly version = 1
+    readonly eventName = RefusingEvent.eventName
+    readonly eventId = "event-8"
+    readonly payload = { dedupeKey: "refusing-1" }
+
+    static parse(): ParsedEvent<RefusingEvent> {
+        throw new EventBusError({ code: EventBusErrorCode.CorrelationInvalid })
+    }
+}
+
 const envelope = {
     metadata: { correlationId: "request-1" },
     eventId: "event-1",
@@ -82,21 +103,21 @@ class RecordingConsumer implements EventConsumer<ReceiptRecordedEvent> {
     }
 }
 
-describe("EventConsumerService", () => {
-    const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
+const logger = mock<Logger>()
 
-    const build = async (primary: ReturnType<typeof mockEntityManager>, options: EventBusOptions = {}) => {
-        const module = await Test.createTestingModule({
-            providers: [
-                EventConsumerService,
-                { provide: PRIMARY_ENTITY_MANAGER, useValue: primary },
-                { provide: EVENT_BUS_OPTIONS, useValue: options },
-                { provide: LOGGER, useValue: logger },
-            ],
-        }).compile()
-        return module.get(EventConsumerService)
-    }
+const build = async (primary: ReturnType<typeof mockEntityManager>, options: EventBusOptions = {}) => {
+    const module = await Test.createTestingModule({
+        providers: [
+            EventConsumerService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: primary },
+            { provide: EVENT_BUS_OPTIONS, useValue: builder<EventBusOptions>({})(options) },
+            { provide: LOGGER, useValue: logger },
+        ],
+    }).compile()
+    return module.get(EventConsumerService)
+}
 
+describe("EventConsumerService delivery", () => {
     it("delivers a committed event once to the consumer with its inbox claim keys and archives it", async () => {
         const primary = mockEntityManager({
             query: [
@@ -109,16 +130,16 @@ describe("EventConsumerService", () => {
 
         await expect(subject.drain({ queue: QUEUE, consumer, maxDeliveries: 5 })).resolves.toBe(1)
 
-        expect(consumer.deliveries).toEqual([
+        expect(consumer.deliveries.map(({ event: _event, ...rest }) => rest)).toEqual([
             {
                 correlationId: "request-1",
                 eventId: "event-1",
                 consumer: QUEUE,
                 dedupeKey: "receipt-1",
-                event: expect.any(ReceiptRecordedEvent),
                 attempt: 1,
             },
         ])
+        expect(consumer.deliveries[0]?.event).toBeInstanceOf(ReceiptRecordedEvent)
         expect(primary.query).toHaveBeenCalledWith(READ, [QUEUE, 30, 10])
         expect(primary.query).toHaveBeenCalledWith(ARCHIVE, [QUEUE, "1"])
     })
@@ -158,7 +179,9 @@ describe("EventConsumerService", () => {
         expect(consumer.deliveries).toEqual([])
         expect(primary.query).toHaveBeenCalledWith(BURY, [QUEUE, "1", row.read_ct, JSON.stringify(row.message), reason])
     })
+})
 
+describe("EventConsumerService correlation ids", () => {
     it("falls back to the event id as the correlation id of a message with no metadata", async () => {
         const { metadata: _metadata, ...bare } = envelope
         const primary = mockEntityManager({
@@ -174,7 +197,9 @@ describe("EventConsumerService", () => {
 
         expect(consumer.deliveries.map((delivery) => delivery.correlationId)).toEqual(["event-1"])
     })
+})
 
+describe("EventConsumerService envelopes", () => {
     it.each([null, "raw text"])("falls back to the event id for a message that is no object: %p", async (message) => {
         const primary = mockEntityManager({
             query: [
@@ -212,7 +237,9 @@ describe("EventConsumerService", () => {
 
         expect(primary.query).toHaveBeenCalledWith(BURY, [QUEUE, "1", 1, JSON.stringify(message), "malformed"])
     })
+})
 
+describe("EventConsumerService options and budgets", () => {
     it("reads the batch size and visibility timeout the options name", async () => {
         const primary = mockEntityManager({ query: [READ, []] })
         const subject = await build(primary, { visibilitySeconds: 45, batch: 3 })
@@ -269,7 +296,34 @@ describe("EventConsumerService", () => {
             consumer.deliveries.map((delivery) => [delivery.consumer, delivery.dedupeKey, delivery.attempt]),
         ).toEqual([[QUEUE, "receipt-1", 2]])
     })
+})
 
+describe("EventConsumerService refused values", () => {
+    it("logs an envelope the event class refuses and moves it to the dead-letter queue as malformed", async () => {
+        const primary = mockEntityManager({
+            query: [
+                [READ, [{ msg_id: "1", read_ct: 1, message: envelope }]],
+                [BURY, [{ event_bus_bury: true }]],
+            ],
+        })
+        const subject = await build(primary)
+        const consumer: EventConsumer<RefusingEvent> = { event: RefusingEvent, handle: () => Promise.resolve() }
+
+        await subject.drain({ queue: QUEUE, consumer, maxDeliveries: 5 })
+
+        expect(logger.error).toHaveBeenCalledWith(
+            EventBusLogEvent.ParseFailed,
+            new EventBusError({ code: EventBusErrorCode.CorrelationInvalid }),
+            {
+                consumer: QUEUE,
+                msgId: "1",
+            },
+        )
+        expect(primary.query).toHaveBeenCalledWith(BURY, [QUEUE, "1", 1, JSON.stringify(envelope), "malformed"])
+    })
+})
+
+describe("EventConsumerService loops", () => {
     it("reads no queue when consumers are off, whatever was subscribed", async () => {
         const primary = mockEntityManager({ query: [READ, []] })
         const subject = await build(primary)

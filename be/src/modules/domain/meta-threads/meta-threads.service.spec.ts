@@ -15,7 +15,7 @@ const serviceOf = async (primary: ReturnType<typeof mockEntityManager>) => {
 const touchingManager = () => {
     const fake = fakeQueryBuilder({ execute: {} })
     const manager = mockEntityManager()
-    manager.createQueryBuilder.mockReturnValue(fake.builder as never)
+    manager.createQueryBuilder.mockReturnValue(fake.builder)
     return { fake, manager }
 }
 

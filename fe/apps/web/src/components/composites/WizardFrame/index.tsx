@@ -1,5 +1,7 @@
 import type { ReactNode } from "react"
 import { Heading, Progress, Region, Text } from "@starci/grammar/common"
+import { WizardFooter } from "@/components/branches/WizardFooter"
+import type { WizardAction } from "@/components/branches/WizardFooter"
 import { wizardFrameClassNames as classNames } from "./classNames"
 
 /** What the shared wizard frame draws. */
@@ -11,8 +13,9 @@ type WizardFrameProps = {
     readonly steps: ReadonlyArray<string>
     readonly index: number
     readonly children: ReactNode
-    /** The step's buttons: one filled primary, the rest outline or ghost. */
-    readonly footer: ReactNode
+    /** The step's buttons: one filled primary, the rest outline or ghost. A step with a footer of its own passes `footer` instead. */
+    readonly actions?: ReadonlyArray<WizardAction>
+    readonly footer?: ReactNode
     /** The frame is drawn as a placeholder while the stored connection is read. */
     readonly isSkeleton?: boolean
 }
@@ -55,7 +58,13 @@ export const WizardFrame = (props: WizardFrameProps) => (
                 />
             </div>
             <div className={classNames.body}>{props.children}</div>
-            <div className={classNames.footer}>{props.footer}</div>
+            <div className={classNames.footer}>
+                {props.actions === undefined ? (
+                    props.footer
+                ) : (
+                    <WizardFooter actions={props.actions} isSkeleton={props.isSkeleton === true} />
+                )}
+            </div>
         </div>
     </Region>
 )

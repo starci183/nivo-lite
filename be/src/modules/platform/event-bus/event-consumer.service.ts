@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
 import type { BeforeApplicationShutdown, OnApplicationBootstrap } from "@nestjs/common"
-import { setTimeout as sleep } from "node:timers/promises"
 import type { EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
@@ -80,7 +79,7 @@ export class EventConsumerService implements EventConsumerRegistry, OnApplicatio
             this.logger.info(EventBusLogEvent.ConsumersDisabled, { subscriptions: this.subscriptions.length })
             return
         }
-        this.loops = Promise.all(this.subscriptions.map((subscription) => this.loop(subscription)))
+        this.loops = Promise.all(this.subscriptions.map((subscription) => this.run(subscription)))
     }
 
     /** Stops admitting reads, wakes the pauses and waits for the batch in flight to settle. */
@@ -104,23 +103,59 @@ export class EventConsumerService implements EventConsumerRegistry, OnApplicatio
         return rows.length
     }
 
-    private async loop(subscription: EventSubscription): Promise<void> {
-        while (!this.abort.signal.aborted) {
-            const read = await this.drain(subscription).catch((cause: unknown) => {
-                this.logger.error(EventBusLogEvent.ReadFailed, cause, { queue: subscription.queue })
-                return 0
-            })
-            if (read === 0) await this.pause()
-        }
+    /** Polls one queue until shutdown: each pass starts only when the one before it settled, and the answer settles at the stop. */
+    private run(subscription: EventSubscription): Promise<void> {
+        return new Promise((stopped) => {
+            const next = (): void => {
+                if (this.abort.signal.aborted) {
+                    stopped()
+                    return
+                }
+                void this.poll(subscription).then(next)
+            }
+            next()
+        })
+    }
+
+    /** One pass: drains a batch, and rests when the queue was empty or the read failed. */
+    private async poll(subscription: EventSubscription): Promise<void> {
+        const read = await this.drain(subscription).catch((cause: unknown) => {
+            this.logger.error(EventBusLogEvent.ReadFailed, cause, { queue: subscription.queue })
+            return 0
+        })
+        if (read === 0) await this.pause()
     }
 
     /** Waits `idleMs`, or less when shutdown aborts it. */
-    private async pause(): Promise<void> {
-        await sleep(this.options.idleMs ?? 500, undefined, { signal: this.abort.signal }).catch(() => undefined)
+    private pause(): Promise<void> {
+        return new Promise((rested) => {
+            const timer = setTimeout(rested, this.options.idleMs ?? 500)
+            this.abort.signal.addEventListener(
+                "abort",
+                () => {
+                    clearTimeout(timer)
+                    rested()
+                },
+                { once: true },
+            )
+        })
+    }
+
+    /** The event an envelope stands for; null when it is malformed or the event class refuses one of its values. */
+    private parse(subscription: EventSubscription, message: EventMessage): BaseEvent | null {
+        try {
+            return subscription.consumer.event.parse(message.message)
+        } catch (cause) {
+            this.logger.error(EventBusLogEvent.ParseFailed, cause, {
+                consumer: subscription.queue,
+                msgId: message.msgId,
+            })
+            return null
+        }
     }
 
     private async settle(subscription: EventSubscription, message: EventMessage): Promise<void> {
-        const event = subscription.consumer.event.parse(message.message)
+        const event = this.parse(subscription, message)
         const correlationId = event === null ? null : correlationOf(message.message, event.eventId)
         if (event === null || correlationId === null || !isDedupeKey(event.payload.dedupeKey)) {
             return this.dead(subscription, message, "malformed", null)

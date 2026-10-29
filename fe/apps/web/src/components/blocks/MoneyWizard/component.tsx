@@ -1,13 +1,7 @@
 import { Alert, Badge, Button, Input, RadioGroup, Select, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import {
-    backAction,
-    nextAction,
-    startActions,
-    WizardFooter,
-    type WizardAction,
-} from "@/components/composites/WizardFooter"
+import { backAction, nextAction, startActions, type WizardAction } from "@/components/branches/WizardFooter"
 
 import { frameOf, WizardFrame } from "@/components/composites/WizardFrame"
 import { WizardGuideView } from "@/components/composites/WizardGuideView"
@@ -197,11 +191,7 @@ export const MoneyWizardBase = (props: MoneyWizardBaseProps) => {
     return (
         <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels} onRetry={on.retry}>
             {(_resume, isSkeleton) => (
-                <WizardFrame
-                    {...frameOf(view)}
-                    isSkeleton={isSkeleton}
-                    footer={<WizardFooter actions={actionsOf(props)} isSkeleton={isSkeleton} />}
-                >
+                <WizardFrame {...frameOf(view)} isSkeleton={isSkeleton} actions={actionsOf(props)}>
                     <MoneyStepBody {...props} isSkeleton={isSkeleton} />
                 </WizardFrame>
             )}

@@ -116,6 +116,9 @@ describe("ContractRenewalService renewForPaidInvoice", () => {
         expect(events.record).not.toHaveBeenCalled()
     })
 
+})
+
+describe("ContractRenewalService renewForPaidInvoice refusals", () => {
     it("does nothing for a delivery key it already handled", async () => {
         const { service, inbox, contracts } = await build()
         inbox.seen(QUEUE, "inv-1")

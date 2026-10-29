@@ -184,17 +184,15 @@ describe("ContentApprovalStoreService", () => {
             })
         })
 
-        it.each([[[]], [[{ id: "post", allDone: "yes" }]]])(
-            "rejects publication when the guarded write finds no approved post (%j)",
-            async (raw) => {
-                const { service } = await build([{ execute: { raw } }])
+        it.each([
+            [[], { code: ContentItemsErrorCode.WrongStatus }],
+            [[{ id: "post", allDone: "yes" }], { code: "DATABASE_RETURNING_ROW_REJECTED" }],
+        ])("rejects publication when the guarded write finds no approved post (%j)", async (raw, refusal) => {
+            const { service } = await build([{ execute: { raw } }])
 
-                await expect(
-                    service.markPublished("workspace", "post", "facebook", mark, evidence),
-                ).rejects.toMatchObject({
-                    code: ContentItemsErrorCode.WrongStatus,
-                })
-            },
-        )
+            await expect(service.markPublished("workspace", "post", "facebook", mark, evidence)).rejects.toMatchObject(
+                refusal,
+            )
+        })
     })
 })
