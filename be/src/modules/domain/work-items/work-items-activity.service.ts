@@ -1,11 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AgentConversationEntity } from "@modules/domain/agent-conversations"
-import { AgentMessageEntity } from "@modules/domain/agent-messages"
 import { LeadEntity } from "@modules/domain/leads"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
-    AnswerProgressLine,
     DashboardListLine,
     DashboardListQuery,
     RecentWorkLine,
@@ -76,10 +73,7 @@ export class WorkItemsActivityService {
             items.andWhere("w.installationId = :scopeId", { scopeId: query.installationId })
         }
         const listed = waiting
-            ? items
-                  .andWhere("w.status = 'waiting_decision'")
-                  .orderBy("w.createdAt", "ASC")
-                  .addOrderBy("w.id", "ASC")
+            ? items.andWhere("w.status = 'waiting_decision'").orderBy("w.createdAt", "ASC").addOrderBy("w.id", "ASC")
             : items
                   .andWhere("w.status = 'done' AND w.decidedPath = 'auto' AND w.completedAt >= :since", {
                       since: query.since,
@@ -104,32 +98,5 @@ export class WorkItemsActivityService {
             .orderBy("w.created_at")
             .limit(limit)
             .getRawMany<WaitingReplyRow>()
-    }
-
-    /** How far a customer-reply work item got, with the stored answer's delivery; null when the workspace has no such item. */
-    async answerProgress(workspaceId: string, workItemId: string): Promise<AnswerProgressLine | null> {
-        const row = await this.entityManager
-            .createQueryBuilder(WorkItemEntity, "w")
-            .select("w.id", "id")
-            .addSelect("w.status", "work_status")
-            .addSelect("m.id", "message_id")
-            .addSelect("m.delivery_status", "delivery_status")
-            .innerJoin(
-                AgentConversationEntity,
-                "c",
-                "c.id::text = COALESCE(NULLIF(w.proposal -> 'fields' ->> 'conversation_id', ''), CASE WHEN w.subject_type = 'conversation' THEN w.subject_id::text ELSE NULL END) AND c.workspace_id = w.workspace_id AND c.kind = 'customer'",
-            )
-            .leftJoin(
-                AgentMessageEntity,
-                "m",
-                "m.id = w.id AND m.workspace_id = w.workspace_id AND m.conversation_id = c.id AND m.author_kind = 'human'",
-            )
-            .where("w.workspace_id = :workspaceId AND w.id = :workItemId AND w.action = 'reply_customer'", {
-                workspaceId,
-                workItemId,
-            })
-            .limit(1)
-            .getRawOne<AnswerProgressLine>()
-        return row ?? null
     }
 }

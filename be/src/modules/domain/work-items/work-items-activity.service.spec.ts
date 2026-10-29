@@ -103,20 +103,3 @@ describe("WorkItemsActivityService > waitingReplies", () => {
         expect(fake.callsOf("limit")).toEqual([[200]])
     })
 })
-
-describe("WorkItemsActivityService > answerProgress", () => {
-    it("answers how far the reply got and what was delivered", async () => {
-        const row = { id: "w1", work_status: "done", message_id: "m1", delivery_status: "sent" }
-        const { em, fake } = answering({ getRawOne: row })
-
-        await expect((await build(em)).answerProgress("ws", "w1")).resolves.toEqual(row)
-        expect(fake.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws", workItemId: "w1" })
-        expect(fake.callsOf("limit")).toEqual([[1]])
-    })
-
-    it("answers null when the workspace has no such reply", async () => {
-        const { em } = answering({ getRawOne: undefined })
-
-        await expect((await build(em)).answerProgress("ws", "ghost")).resolves.toBeNull()
-    })
-})
