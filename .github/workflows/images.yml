@@ -36,6 +36,8 @@ jobs:
             file: fe/apps/web/Dockerfile
           - name: landing
             file: fe/apps/landing/Dockerfile
+          - name: db
+            file: .starcistacks/images/db/Dockerfile
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: release tag matches package version

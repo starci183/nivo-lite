@@ -1,16 +1,16 @@
--- Pre-baseline bootstrap for the self-hosted PostgreSQL (owner ruling 2026-10-29: production leaves Supabase cloud and starts CLEAN).
+-- Managed by starci app sync (slot app.db.bootstrap); do not edit: run "npx starci app sync --write".
+-- The pre-migration bootstrap of a lite app's self-hosted PostgreSQL (ruling lite-self-hosted-postgres-passport-minio), run on the official
+-- postgres image of .starcistacks/images/db/Dockerfile (ruling lite-official-postgres-image). Migrations written for Supabase reference objects GoTrue and Supabase
+-- Storage created: the browser roles, the `auth` schema (auth.users, auth.identities, auth.sessions, auth.uid/jwt/role) and the `storage`
+-- schema (storage.buckets, storage.objects). A lite app runs neither GoTrue nor storage-api: auth is the app's own (integrations/passport) and
+-- storage is the S3 endpoint of integrations/object-storage. This file gives the migrations those objects, EMPTY, and the `extensions` schema
+-- every allowed extension is created in (`create extension ... with schema extensions`, the app role's search_path is `public, extensions`);
+-- nothing else of Supabase (supabase_admin, the realtime publication) exists. It is idempotent; `starci app db migrate` applies it as the
+-- database owner before the first migration of an empty database.
 --
--- The applied migrations were written for Supabase and call objects GoTrue and Supabase Storage created: the browser roles, the `auth` schema
--- (auth.users, auth.identities, auth.sessions, auth.uid/jwt/role) and the `storage` schema (storage.buckets, storage.objects). The supabase/postgres
--- image ships only a partial, old-shaped copy of them (no auth.identities, auth.sessions, auth.jwt(), no storage tables), and the lite edition runs
--- no GoTrue and no storage-api: auth is the app's own (Google OAuth + email/password) and storage is MinIO. This file gives the migrations the objects
--- they reference, EMPTY, and nothing else. It is idempotent and runs once, as the image superuser, BEFORE `db/migrations/20261026000000_baseline.sql`:
---
---   psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -f db/bootstrap.sql         (supabase_admin; see .starcistacks/production/infra/swarm/recovery/db-runbook.md)
---
--- auth.users keeps the GoTrue column set so restored/future rows and FKs from public tables stay valid; encrypted_password holds bcrypt hashes.
--- auth.uid(), auth.role() and auth.jwt() read the request.jwt.claims setting Supabase's PostgREST sets; the API connects as app_be and sets none,
--- so they return NULL and every policy that names them denies the browser roles, which have no door in lite.
+-- auth.users keeps the GoTrue column set so restored rows and foreign keys from public tables stay valid; encrypted_password holds bcrypt hashes.
+-- auth.uid(), auth.role() and auth.jwt() read the request.jwt.claims setting; the API connects as app_be and sets none, so they return NULL and
+-- every policy that names them denies the browser roles, which have no door in lite.
 
 create schema if not exists extensions;
 create schema if not exists auth;
@@ -27,7 +27,7 @@ $roles$;
 grant usage on schema auth, storage to anon, authenticated, service_role;
 grant usage on schema extensions to anon, authenticated, service_role;
 
--- auth.users: the full GoTrue column set (the image's old copy is extended in place).
+-- auth.users: the full GoTrue column set (a copy an earlier database carries is extended in place).
 create table if not exists auth.users (id uuid primary key);
 alter table auth.users
     add column if not exists instance_id uuid,
@@ -132,10 +132,3 @@ alter table storage.buckets enable row level security;
 
 grant select, insert, update, delete on storage.objects, storage.buckets to authenticated, service_role;
 grant select on storage.objects, storage.buckets to anon;
-
--- Replication publication the baseline adds tables to (the image ships it; a bare PostgreSQL does not).
-do $pub$
-begin
-    if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then create publication supabase_realtime; end if;
-end
-$pub$;
