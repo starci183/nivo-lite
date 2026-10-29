@@ -50,13 +50,11 @@ export class MetaInboxService {
                 rawBody === undefined || signature === undefined || !decoded.valid
                     ? ""
                     : createHash("sha256").update(rawBody).digest("hex")
-            if (
-                !(await this.inbox.claimRow("meta", deliveryId, manager, {
-                    entity: MetaInboxEntity,
-                    row: { provider: "meta", deliveryId, payload: decoded.payload },
-                }))
-            )
-                return
+            const receiptId = await this.inbox.claimRow<MetaInboxEntity>("meta", deliveryId, manager, {
+                entity: MetaInboxEntity,
+                row: (id) => ({ provider: "meta", deliveryId: id, payload: decoded.payload }),
+            })
+            if (receiptId === undefined) return
             const message: MetaDeliveryRecorded = { deliveryId }
             await this.outbox.write(manager, META_DELIVERY_QUEUE, message, {
                 dedupeKey: `${META_DELIVERY_QUEUE}:${deliveryId}`,

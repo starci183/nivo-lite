@@ -1,40 +1,39 @@
 import type { EntityManager, EntityTarget, ObjectLiteral } from "typeorm"
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
-import type { sql } from "@modules/platform/database"
 
-/** The provider-owned receipt insert as raw SQL; retained only until the capabilities that still pass it move to `claimRow`. */
-export interface InboxReceipt {
-    /** The provider receipt SQL, returning the inserted identity only to the winning claim. */
-    readonly insert: ReturnType<typeof sql>
-    /** The receipt data the deferred consumer needs, excluding authentication credentials. */
-    readonly payload: object
-}
+/** The signed provider header may omit its delivery identity; the adapter refuses that delivery. */
+export type InboxEventId = string | undefined
 
-/** The provider-owned receipt row, inserted with `ON CONFLICT DO NOTHING` in the caller transaction. */
-export interface InboxEntityReceipt {
-    /** The provider's receipt entity; it must have an `id` column that the winning insert returns. */
-    readonly entity: EntityTarget<ObjectLiteral>
-    /** The complete row of the receipt, including its delivery key and the data the deferred consumer needs. */
-    readonly row: QueryDeepPartialEntity<ObjectLiteral>
-}
-
-/** The inbox port: a delivery method claims `(source, eventId)` before it acts, so a repeat can be told from a first delivery. */
+/** Deduplicates a delivery inside the transaction that records its receipt or applies its effect. */
 export interface Inbox {
-    /**
-     * Claims one delivery. True when this pair is new; false when it was already claimed.
-     * `source` names the door, `eventId` is the sender's id of the delivery.
-     * A supplied manager keeps the claim in the same transaction as the domain action.
-     */
-    claim(source: string, eventId: string, manager?: EntityManager): Promise<boolean>
-    /** Persists a provider receipt in the same transaction as its outbox publication. */
-    claim(source: string, eventId: string, manager: EntityManager, receipt: InboxReceipt): Promise<boolean>
+    /** Claims once per source and event id; a rolled-back transaction gives the claim back automatically. */
+    claim(source: string, eventId: InboxEventId, tx: EntityManager): Promise<boolean>
 }
 
-/** The inbox of capabilities whose provider receipt is an entity row rather than raw SQL. */
+/** A provider's receipt row: its entity, mapping a table with an `id` column, and the complete row, delivery key and payload included. */
+export interface InboxEntityReceipt<Row extends ObjectLiteral> {
+    /** The provider's receipt entity. */
+    readonly entity: EntityTarget<Row>
+    /**
+     * The row the receipt holds, built from the delivery id the claim normalized (trimmed, never missing), so the receipt keys
+     * exactly what was claimed; the deferred consumer reads it, so it carries no credential.
+     */
+    readonly row: (deliveryId: string) => QueryDeepPartialEntity<Row>
+}
+
+/** The id of the receipt row a winning claim inserted; undefined when the delivery was a repeat or its receipt already existed. */
+export type InboxReceiptId = string | undefined
+
+/** The inbox of a capability whose provider receipt is an entity row, so it records the receipt without raw SQL. */
 export interface EntityInbox extends Inbox {
     /**
-     * Claims one delivery by inserting the provider's receipt entity row in the caller transaction.
-     * True only for the insert that won; a repeat inserts nothing and returns false.
+     * Claims once per source and event id, then inserts the receipt row, both in the caller transaction. Answers the id the
+     * winning insert returned; a repeated delivery, or a receipt row that already exists, inserts nothing and answers undefined.
      */
-    claimRow(source: string, eventId: string, manager: EntityManager, receipt: InboxEntityReceipt): Promise<boolean>
+    claimRow<Row extends ObjectLiteral>(
+        source: string,
+        eventId: InboxEventId,
+        tx: EntityManager,
+        receipt: InboxEntityReceipt<Row>,
+    ): Promise<InboxReceiptId>
 }
