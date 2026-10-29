@@ -1,5 +1,5 @@
-import type { EntityManager, SelectQueryBuilder, UpdateQueryBuilder } from "typeorm"
-import { ConnectionEntity } from "./entities"
+import type { SelectQueryBuilder, UpdateQueryBuilder } from "typeorm"
+import type { ConnectionEntity } from "./entities"
 
 /** A timestamp column as the ISO text the contracts carry (UTC, millisecond precision). */
 export const isoText = (column: string): string =>
@@ -35,10 +35,9 @@ export interface ConnectionProjection {
     readonly createdAt: string
 }
 
-/** A query over connections that answers `ConnectionProjection` rows through `getRawMany` / `getRawOne`. */
-export const selectConnections = (manager: EntityManager): SelectQueryBuilder<ConnectionEntity> =>
-    manager
-        .createQueryBuilder(ConnectionEntity, "c")
+/** Selects the `ConnectionProjection` columns of a connections query (alias `c`), to answer through `getRawMany` / `getRawOne`. */
+export const projectConnections = (query: SelectQueryBuilder<ConnectionEntity>): SelectQueryBuilder<ConnectionEntity> =>
+    query
         .select("c.id", "id")
         .addSelect("c.workspace_id", "workspaceId")
         .addSelect("c.provider", "provider")

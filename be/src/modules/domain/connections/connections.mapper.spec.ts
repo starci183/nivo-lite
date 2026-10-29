@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { toConnectionRecord as realToConnectionRecord } from "./connections.mapper"
 import { ConnectionsErrorCode } from "./errors/connections.error"
-import type { ConnectionProjection } from "./persistence/connection-projection"
+import type { ConnectionProjection } from "./persistence/connection.projection"
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 

@@ -3,21 +3,14 @@ import { Test } from "@nestjs/testing"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { GOOGLE_CLIENT, GOOGLE_SCOPE, GoogleError, GoogleErrorCode } from "@modules/integrations/google"
-import type { GoogleClient, GoogleTokenSet } from "@modules/integrations/google"
+import type { GoogleClient } from "@modules/integrations/google"
 import { CLOCK } from "@modules/platform/clock"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "./errors/google-connections.error"
 import { GoogleTokensService } from "./google-tokens.service"
+import { stored, tokens, tokensWithoutRenewal } from "@tests/fixtures/builders/google-connections.builder"
 
 const NOW = new Date("2026-10-12T03:00:00.000Z")
 const EXPIRES = NOW.getTime() + 3_600_000
-const tokens: GoogleTokenSet = {
-    accessToken: "access-new",
-    refreshToken: "refresh-new",
-    expiresAt: EXPIRES,
-    idToken: null,
-    scope: null,
-}
-const stored = { access_token: "access-old", refresh_token: "refresh-old", expires_at: EXPIRES }
 
 const record = (overrides: Partial<ConnectionRecord> = {}): ConnectionRecord => ({
     id: "c1",
@@ -108,11 +101,11 @@ describe("GoogleTokensService", () => {
 
         await expect(service.accessToken({ row: record(), force: false })).resolves.toBe("access-old")
         expect(google.refreshAccessToken).not.toHaveBeenCalled()
-        google.refreshAccessToken.mockResolvedValue({ ...tokens, refreshToken: null })
+        google.refreshAccessToken.mockResolvedValue(tokensWithoutRenewal)
         await expect(service.accessToken({ row: record(), force: true })).resolves.toBe("access-new")
         expect(connections.writeSecret).toHaveBeenCalledWith(
             "c1",
-            JSON.stringify({ access_token: "access-new", refresh_token: "refresh-old", expires_at: EXPIRES }),
+            JSON.stringify({ access_token: "access-new", renewal_token: "refresh-old", expires_at: EXPIRES }),
         )
     })
 
