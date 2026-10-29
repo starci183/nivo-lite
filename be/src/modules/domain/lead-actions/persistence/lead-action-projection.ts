@@ -1,5 +1,8 @@
 import type { LeadActionRun } from "../lead-actions.contracts"
 
+/** The database instant of a write, for the `updated_at` column. */
+export const NOW = (): string => "now()"
+
 /** The rows an `UPDATE ... RETURNING` answered, each as a plain record. */
 export const returnedRows = (raw: unknown): ReadonlyArray<object> =>
     Array.isArray(raw) ? raw.filter((row): row is object => typeof row === "object" && row !== null) : []

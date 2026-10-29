@@ -6,6 +6,7 @@ export {
 export { MAX_SOURCE_CHARS, MAX_UPLOAD_BYTES, StoredNote } from "./knowledge-sources.contracts"
 export type {
     MaybeSource,
+    SourceBrief,
     SourceDetail,
     SourceRecord,
     SourceRef,

@@ -29,7 +29,7 @@ import type {
 } from "./lead-actions.contracts"
 import { inputOf } from "./lead-action-input.policy"
 import { LeadActionEntity } from "./persistence/entities"
-import { returnedRows, runOfRaw } from "./persistence/lead-action-projection"
+import { NOW, returnedRows, runOfRaw } from "./persistence/lead-action-projection"
 
 @Injectable()
 /** Owns backend run rows: membership-proved enqueue, workspace-scoped status and results under the platform-held fence. */
@@ -91,7 +91,7 @@ export class LeadActionsService {
         const begun = await this.entityManager
             .createQueryBuilder(LeadActionEntity, "la")
             .update()
-            .set({ status: "running", jobId: job.jobId, fencingToken: job.fencingToken, updatedAt: () => "now()" })
+            .set({ status: "running", jobId: job.jobId, fencingToken: job.fencingToken, updatedAt: NOW })
             .where({ workspaceId: payload.workspaceId, id: payload.runId, status: In(["queued", "running"]) })
             .returning("id, workspace_id, requested_by, action, input, locale, status, result, error_code")
             .execute()
@@ -122,7 +122,7 @@ export class LeadActionsService {
             await this.entityManager
                 .createQueryBuilder(LeadActionEntity, "la")
                 .update()
-                .set({ status: "failed", errorCode: code, updatedAt: () => "now()" })
+                .set({ status: "failed", errorCode: code, updatedAt: NOW })
                 .where({ workspaceId: payload.workspaceId, id: payload.runId, status: In(["queued", "running"]) })
                 .andWhere(
                     new Brackets((held) =>
@@ -164,7 +164,7 @@ export class LeadActionsService {
         const written = await this.entityManager
             .createQueryBuilder(LeadActionEntity, "la")
             .update()
-            .set({ ...change, updatedAt: () => "now()" })
+            .set({ ...change, updatedAt: NOW })
             .where({
                 id: held.id,
                 workspaceId: held.workspaceId,

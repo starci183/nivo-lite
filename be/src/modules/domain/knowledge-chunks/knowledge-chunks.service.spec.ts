@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { Brackets } from "typeorm"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { builder, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -20,6 +21,7 @@ const chunkOf = builder<KnowledgeChunkEntity>({
     createdAt: new Date("2026-04-01T00:00:00.000Z"),
     visibility: "internal",
     embeddingModel: null,
+    installationId: null,
 })
 
 const build = async (em: ReturnType<typeof mockEntityManager>) => {
@@ -37,6 +39,7 @@ const passage = (ord: number, embedding: string | null, embeddingModel: string |
     sourceId: "s1",
     module: "chatbot",
     visibility: "internal",
+    installationId: null,
     ord,
     content: "",
     embedding,
@@ -48,6 +51,7 @@ const write = (list: ReadonlyArray<ChunkDraft>) => ({
     sourceId: "s1",
     module: "chatbot",
     visibility: "internal",
+    installationId: null,
     model: "m1",
     drafts: list,
 })
@@ -182,7 +186,92 @@ describe("KnowledgeChunksService", () => {
             await service.setVectors({ workspaceId: WS, model: "m1", ids: ["c1"], vectors: ["[1]"] })
 
             expect(write?.callsOf("update")).toEqual([[]])
+            const changes: unknown = write?.callsOf("set")[0]?.[0]
+            const embedding: unknown =
+                typeof changes === "object" && changes !== null ? Reflect.get(changes, "embedding") : undefined
+            expect(typeof embedding === "function" ? embedding() : "").toContain("unnest(CAST(:ids AS uuid[])")
             expect(write?.callsOf("setParameters")).toEqual([[{ workspaceId: WS, ids: ["c1"], vectors: ["[1]"] }]])
+        })
+    })
+})
+
+describe("KnowledgeChunksService", () => {
+    describe("search", () => {
+        const raw = {
+            id: "c1",
+            sourceId: "s1",
+            module: "chatbot",
+            content: "a",
+            score: 0.4,
+            visibility: "public",
+            ord: 3,
+        }
+        const hit = {
+            id: "c1",
+            sourceId: "s1",
+            module: "chatbot",
+            content: "a",
+            score: 0.4,
+            visibility: "public",
+            order: 3,
+        }
+        const query = {
+            workspaceId: WS,
+            module: "chatbot",
+            audience: "internal" as const,
+            installationId: "i1",
+            vector: "[1,2]",
+            model: "m1",
+            tsquery: "a | b",
+            limit: 100,
+        }
+
+        it("filters by the lens in SQL and answers the best passages", async () => {
+            const em = mockEntityManager()
+            const [fake] = queueQueryBuilders(em, [{ getRawMany: [raw] }])
+            const service = await build(em)
+
+            await expect(service.search(query)).resolves.toEqual([hit])
+
+            expect(fake?.callsOf("where")).toEqual([[{ workspaceId: WS }]])
+            expect(fake?.callsOf("andWhere")).toHaveLength(3)
+            const conditions: Array<unknown> = []
+            const scope = {
+                where: (...args: Array<unknown>) => (conditions.push(args), scope),
+                orWhere: (...args: Array<unknown>) => (conditions.push(args), scope),
+            }
+            for (const [brackets] of fake?.callsOf("andWhere") ?? [])
+                if (brackets instanceof Brackets) brackets.whereFactory(scope as never)
+            expect(conditions).toEqual([
+                ["c.module IS NULL"],
+                ["c.module = :module", { module: "chatbot" }],
+                ["c.installationId IS NULL"],
+                ["c.installationId = :installationId", { installationId: "i1" }],
+            ])
+            expect(fake?.callsOf("setParameters")).toEqual([[{ vector: "[1,2]", model: "m1", tsquery: "a | b" }]])
+            expect(fake?.callsOf("orderBy")).toEqual([["score", "DESC"]])
+            expect(fake?.callsOf("limit")).toEqual([[40]])
+        })
+
+        it("shows public passages only to the customer audience", async () => {
+            const em = mockEntityManager()
+            const [fake] = queueQueryBuilders(em, [{ getRawMany: [] }])
+            const service = await build(em)
+
+            await service.search({ ...query, audience: "customer", limit: 0 })
+
+            expect(fake?.callsOf("andWhere")).toContainEqual([{ visibility: "public" }])
+            expect(fake?.callsOf("limit")).toEqual([[1]])
+        })
+
+        it("searches nothing when the query has neither a vector of a model nor words", async () => {
+            const em = mockEntityManager()
+            const service = await build(em)
+
+            await expect(service.search({ ...query, model: null, tsquery: null })).resolves.toEqual([])
+            await expect(service.search({ ...query, vector: null, tsquery: null })).resolves.toEqual([])
+
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
     })
 })

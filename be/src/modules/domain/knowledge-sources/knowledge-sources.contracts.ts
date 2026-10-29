@@ -263,3 +263,15 @@ export interface ProfileSourceInput {
 
 /** What keeping one document did: a new row, a changed text queued again, or nothing. */
 export type ProfileSourceOutcome = "inserted" | "requeued" | "unchanged"
+
+/** What a search result shows of the source of a passage. */
+export interface SourceBrief {
+    /** The source id. */
+    readonly id: string
+    /** text, faq, file or url. */
+    readonly kind: string
+    /** The title. */
+    readonly title: string
+    /** The topic, or null. */
+    readonly topic: string | null
+}

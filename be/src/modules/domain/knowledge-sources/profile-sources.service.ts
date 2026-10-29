@@ -7,7 +7,7 @@ import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import type { ProfileSourceInput, ProfileSourceOutcome } from "./knowledge-sources.contracts"
 import { KnowledgeSourceEntity } from "./persistence/entities"
-import { metaChanges } from "./source-input.policy"
+import { NOW, metaChanges } from "./source-input.policy"
 
 @Injectable()
 /**
@@ -41,7 +41,7 @@ export class ProfileSourcesService {
             await tx.update(
                 KnowledgeSourceEntity,
                 { id: found.id, workspaceId },
-                { status: "queued", progress: 0, error: null, content: source.content, updatedAt: () => "now()" },
+                { status: "queued", progress: 0, error: null, content: source.content, updatedAt: NOW },
             )
             await tx.update(
                 KnowledgeSourceEntity,

@@ -1,5 +1,8 @@
 import { LeadFlowEntity } from "./entities"
 
+/** The database instant of a write, for the `updated_at` column. */
+export const NOW = (): string => "now()"
+
 /** The entity property and the column it reads, for every column a `RETURNING *` row carries. */
 const COLUMNS: ReadonlyArray<readonly [string, string]> = [
     ["id", "id"],

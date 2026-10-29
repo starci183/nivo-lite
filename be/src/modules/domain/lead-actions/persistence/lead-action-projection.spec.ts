@@ -1,6 +1,10 @@
-import { returnedRows, runOfRaw } from "./lead-action-projection"
+import { NOW, returnedRows, runOfRaw } from "./lead-action-projection"
 
 describe("lead action projection", () => {
+    it("names the database instant", () => {
+        expect(NOW()).toBe("now()")
+    })
+
     it("keeps only the rows a write answered", () => {
         expect(returnedRows([{ id: "run-1" }, null, "text"])).toEqual([{ id: "run-1" }])
         expect(returnedRows(undefined)).toEqual([])

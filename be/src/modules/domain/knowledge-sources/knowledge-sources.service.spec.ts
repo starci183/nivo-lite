@@ -25,6 +25,7 @@ import { KNOWLEDGE_STORAGE } from "./knowledge-sources.decorators"
 import { KnowledgeSourcesLogEvent } from "./knowledge-sources.log-events"
 import { KnowledgeSourcesService } from "./knowledge-sources.service"
 import { KnowledgeSourceEntity } from "./persistence/entities"
+import { NOW } from "./source-input.policy"
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const AT = "2026-10-12T10:00:00.000Z"
@@ -44,7 +45,7 @@ const readableRowOf = builder({
     updatedAt: AT,
 })
 const KEY = { id: "s1", workspaceId: WS }
-const touched = (changes: object) => [{ ...changes, updatedAt: expect.any(Function) }]
+const touched = (changes: object) => [{ ...changes, updatedAt: NOW }]
 const instance = { id: "i1", workspaceId: WS, moduleKey: "chatbot" }
 const inputOf = builder<AddSourceInput>({ kind: "text", title: "Hours", content: "Open 8 to 21" })
 /** A manager that hands out one fake statement per createQueryBuilder call, in order. */
@@ -551,6 +552,19 @@ describe("KnowledgeSourcesService reading", () => {
         expect(fakes[0]?.callsOf("where")).toEqual([[{ workspaceId: WS, status: In(["ready", "extracting_facts"]) }]])
         expect(fakes[0]?.callsOf("andWhere")).toEqual([[expect.any(Brackets)], [expect.any(Brackets)]])
         expect(fakes[0]?.callsOf("addSelect")).toContainEqual(["ks.updated_at::text", "updatedAt"])
+        const conditions: Array<unknown> = []
+        const scoped = {
+            where: (...args: Array<unknown>) => (conditions.push(args), scoped),
+            orWhere: (...args: Array<unknown>) => (conditions.push(args), scoped),
+        }
+        for (const [brackets] of fakes[0]?.callsOf("andWhere") ?? [])
+            if (brackets instanceof Brackets) brackets.whereFactory(scoped as never)
+        expect(conditions).toEqual([
+            ["ks.module IS NULL"],
+            ["ks.module = :module", { module: "chatbot" }],
+            ["ks.installationId IS NULL"],
+            ["ks.installationId = :installationId", { installationId: "i1" }],
+        ])
         expect(fakes[0]?.callsOf("orderBy")).toEqual([["ks.createdAt", "ASC"]])
         expect(fakes[0]?.callsOf("limit")).toEqual([[8]])
     })
@@ -574,5 +588,29 @@ describe("KnowledgeSourcesService reading", () => {
             [expect.any(Brackets)],
             [{ visibility: "public" }],
         ])
+    })
+})
+
+describe("KnowledgeSourcesService briefsOf", () => {
+    it("answers the kind, title and topic of the sources of the workspace", async () => {
+        const em = mockEntityManager({ find: [KnowledgeSourceEntity, [listRowOf({ topic: "hours" })]] })
+        const { service } = await build(em)
+
+        await expect(service.briefsOf(WS, ["s1"])).resolves.toEqual([
+            { id: "s1", kind: "text", title: "T", topic: "hours" },
+        ])
+        expect(em.find).toHaveBeenCalledWith(KnowledgeSourceEntity, {
+            select: { id: true, kind: true, title: true, topic: true },
+            where: { workspaceId: WS, id: In(["s1"]) },
+            take: 1,
+        })
+    })
+
+    it("reads nothing for no ids", async () => {
+        const em = mockEntityManager()
+        const { service } = await build(em)
+
+        await expect(service.briefsOf(WS, [])).resolves.toEqual([])
+        expect(em.find).not.toHaveBeenCalled()
     })
 })

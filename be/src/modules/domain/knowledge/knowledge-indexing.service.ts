@@ -107,6 +107,7 @@ export class KnowledgeIndexingService {
             sourceId: source.id,
             module: source.module,
             visibility: source.visibility,
+            installationId: source.installationId,
             model: this.embeddings.model(),
             drafts: draftsOf(pieces, vectors),
         })

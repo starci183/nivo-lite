@@ -1,7 +1,11 @@
 import { LeadFlowEntity } from "./entities"
-import { leadFlowOfRaw } from "./lead-flow-projection"
+import { NOW, leadFlowOfRaw } from "./lead-flow-projection"
 
 describe("lead flow projection", () => {
+    it("names the database instant", () => {
+        expect(NOW()).toBe("now()")
+    })
+
     it("reads the first returned row from its column names", () => {
         const at = new Date("2026-10-12T10:00:00.000Z")
         const flow = leadFlowOfRaw([

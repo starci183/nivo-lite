@@ -1,11 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
+import { hybridHit, hybridScore } from "@modules/domain/knowledge-chunks"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import type {
     NivoEntry,
+    NivoHit,
     NivoItemInput,
+    NivoQuery,
     NivoUnembedded,
     NivoVectorWrite,
     NivoWriteResult,
@@ -33,6 +36,19 @@ const UPSERT_CONFLICT = `("slug") DO UPDATE SET
 /** The vector of each id, picked from the two arrays the write carries. */
 const VECTOR_OF_ID =
     '(SELECT t.embedding::extensions.vector FROM unnest(CAST(:ids AS uuid[]), CAST(:vectors AS text[])) AS t(id, embedding) WHERE t.id = "nivo_knowledge"."id")'
+
+/** The most items one search answers. */
+const SEARCH_MAX = 40
+
+/** An item row as the search names its columns. */
+interface NivoHitRow {
+    readonly id: string
+    readonly module: string
+    readonly kind: string
+    readonly title: string
+    readonly content: string
+    readonly score: number
+}
 
 /** The longest text of an item that is embedded. */
 const EMBED_CHARS = 8000
@@ -100,6 +116,27 @@ export class NivoKnowledgeService {
             version: row.version,
             updatedAt: row.updatedAt.toISOString(),
         }))
+    }
+
+    /** The best items of the module folder and of core for a query, scored like the business passages (vector half and word half). */
+    async search(query: NivoQuery): Promise<ReadonlyArray<NivoHit>> {
+        const terms = { vector: query.vector !== null && query.model !== null, text: query.tsquery !== null }
+        if (!terms.vector && !terms.text) return []
+        const rows = await this.entityManager
+            .createQueryBuilder(NivoKnowledgeItemEntity, "k")
+            .select("k.id", "id")
+            .addSelect("k.module", "module")
+            .addSelect("k.kind", "kind")
+            .addSelect("k.title", "title")
+            .addSelect("k.body", "content")
+            .addSelect(hybridScore("k", terms), "score")
+            .where("k.module IN (:...modules)", { modules: [query.module, CORE_FOLDER] })
+            .andWhere(hybridHit("k", terms))
+            .setParameters({ vector: query.vector, model: query.model, tsquery: query.tsquery })
+            .orderBy("score", "DESC")
+            .limit(Math.max(1, Math.min(query.limit, SEARCH_MAX)))
+            .getRawMany<NivoHitRow>()
+        return rows
     }
 
     /** Removes the items whose slug is not given, so the table mirrors the folder; answers how many went. */

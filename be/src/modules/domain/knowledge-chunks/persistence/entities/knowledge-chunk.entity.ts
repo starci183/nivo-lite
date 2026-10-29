@@ -46,4 +46,8 @@ export class KnowledgeChunkEntity {
     /** The model that made the vector, or null. */
     @Column({ name: "embedding_model", type: "text", nullable: true })
     embeddingModel!: string | null
+
+    /** The agent instance the source is kept for, or null for every instance. */
+    @Column({ name: "installation_id", type: "uuid", nullable: true })
+    installationId!: string | null
 }

@@ -31,6 +31,7 @@ import type {
     ReadableScope,
     ReadableSource,
     ReindexInput,
+    SourceBrief,
     SourceDetail,
     SourceRef,
     SourceSummary,
@@ -43,7 +44,14 @@ import { KnowledgeSourcesLogEvent } from "./knowledge-sources.log-events"
 import { KnowledgeSourceEntity } from "./persistence/entities"
 import { removedTitle } from "./persistence/knowledge-source-projection"
 import type { ReadableSourceProjection } from "./persistence/knowledge-source-projection"
-import { metaChanges, normalizeSource, normalizeUpdate, replacementContent, safeFileName } from "./source-input.policy"
+import {
+    NOW,
+    metaChanges,
+    normalizeSource,
+    normalizeUpdate,
+    replacementContent,
+    safeFileName,
+} from "./source-input.policy"
 import { toSourceDetail, toSourceRecord, toSourceSummary } from "./source-record.mapper"
 
 /** The most documents the Knowledge page lists. */
@@ -148,7 +156,7 @@ export class KnowledgeSourcesService {
             const requeued = await tx.update(
                 KnowledgeSourceEntity,
                 { id: sourceId, workspaceId, status: In(["failed", "blocked_credits"]) },
-                { status: "queued", progress: 0, error: null, updatedAt: () => "now()" },
+                { status: "queued", progress: 0, error: null, updatedAt: NOW },
             )
             if (requeued.affected === 0) return
             await this.queue.enqueueIndex({ sourceId, workspaceId }, tx, this.clock.now().getTime())
@@ -169,7 +177,7 @@ export class KnowledgeSourcesService {
                     progress: 0,
                     error: null,
                     ...(content === null ? {} : { content }),
-                    updatedAt: () => "now()",
+                    updatedAt: NOW,
                 },
             )
             if (requeued.affected === 0)
@@ -238,6 +246,17 @@ export class KnowledgeSourcesService {
         return row === null ? null : toSourceRecord(row)
     }
 
+    /** The kind, title and topic of these sources of a workspace, for the passages a search found; an unknown id is left out. */
+    async briefsOf(workspaceId: string, sourceIds: ReadonlyArray<string>): Promise<ReadonlyArray<SourceBrief>> {
+        if (sourceIds.length === 0) return []
+        const rows = await this.entityManager.find(KnowledgeSourceEntity, {
+            select: { id: true, kind: true, title: true, topic: true },
+            where: { workspaceId, id: In([...sourceIds]) },
+            take: sourceIds.length,
+        })
+        return rows.map((row) => ({ id: row.id, kind: row.kind, title: row.title, topic: row.topic }))
+    }
+
     /** The bytes of an uploaded document; null when the object is not in storage. Any other storage failure is thrown for the queue to retry. */
     async readUpload(path: string): Promise<MaybeUploadedFile> {
         const stored = await this.storage.download(KNOWLEDGE_UPLOAD_BUCKET, path)
@@ -251,7 +270,7 @@ export class KnowledgeSourcesService {
         await this.entityManager.update(
             KnowledgeSourceEntity,
             { id: sourceId, workspaceId },
-            { status: "reading", error: null, progress: 5, updatedAt: () => "now()" },
+            { status: "reading", error: null, progress: 5, updatedAt: NOW },
         )
     }
 
@@ -260,7 +279,7 @@ export class KnowledgeSourcesService {
         await this.entityManager.update(
             KnowledgeSourceEntity,
             { id: sourceId, workspaceId },
-            { status: "indexing", content, title, progress: 20, updatedAt: () => "now()" },
+            { status: "indexing", content, title, progress: 20, updatedAt: NOW },
         )
     }
 
@@ -268,11 +287,7 @@ export class KnowledgeSourcesService {
     async advance(workspaceId: string, sourceId: string, percent: number): Promise<void> {
         const clamped = Math.max(0, Math.min(100, Math.round(percent)))
         await this.entityManager
-            .update(
-                KnowledgeSourceEntity,
-                { id: sourceId, workspaceId },
-                { progress: clamped, updatedAt: () => "now()" },
-            )
+            .update(KnowledgeSourceEntity, { id: sourceId, workspaceId }, { progress: clamped, updatedAt: NOW })
             .catch((cause: unknown) => {
                 this.logger.error(KnowledgeSourcesLogEvent.ProgressFailed, cause, { sourceId })
             })
@@ -283,7 +298,7 @@ export class KnowledgeSourcesService {
         await this.entityManager.update(
             KnowledgeSourceEntity,
             { id: sourceId, workspaceId },
-            { status: "failed", error: note, updatedAt: () => "now()" },
+            { status: "failed", error: note, updatedAt: NOW },
         )
     }
 
@@ -293,7 +308,7 @@ export class KnowledgeSourcesService {
             await tx.update(
                 KnowledgeSourceEntity,
                 { id: sourceId, workspaceId },
-                { error: note, chunkCount: chunks, progress: 80, updatedAt: () => "now()" },
+                { error: note, chunkCount: chunks, progress: 80, updatedAt: NOW },
             )
             const indexed = KnowledgeSourceIndexedEvent.create({
                 sourceId,
@@ -304,7 +319,7 @@ export class KnowledgeSourcesService {
             await tx.update(
                 KnowledgeSourceEntity,
                 { id: sourceId, workspaceId },
-                { status: "extracting_facts", progress: 85, updatedAt: () => "now()" },
+                { status: "extracting_facts", progress: 85, updatedAt: NOW },
             )
         })
     }
@@ -314,7 +329,7 @@ export class KnowledgeSourcesService {
         await this.entityManager.update(
             KnowledgeSourceEntity,
             { id: sourceId, workspaceId },
-            { status: "blocked_credits", error: note, chunkCount: chunks, progress: 80, updatedAt: () => "now()" },
+            { status: "blocked_credits", error: note, chunkCount: chunks, progress: 80, updatedAt: NOW },
         )
     }
 
@@ -323,7 +338,7 @@ export class KnowledgeSourcesService {
         await this.entityManager.update(
             KnowledgeSourceEntity,
             { id: sourceId, workspaceId },
-            { status: "ready", progress: 100, ...(note === null ? {} : { error: note }), updatedAt: () => "now()" },
+            { status: "ready", progress: 100, ...(note === null ? {} : { error: note }), updatedAt: NOW },
         )
     }
 
@@ -332,7 +347,7 @@ export class KnowledgeSourcesService {
         await this.entityManager.update(
             KnowledgeSourceEntity,
             { id: sourceId, workspaceId },
-            { status: "blocked_credits", error: note, updatedAt: () => "now()" },
+            { status: "blocked_credits", error: note, updatedAt: NOW },
         )
     }
 

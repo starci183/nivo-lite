@@ -89,6 +89,7 @@ describe("KnowledgeIndexingService", () => {
                 sourceId: "s1",
                 module: "chatbot",
                 visibility: "internal",
+                installationId: null,
                 model: "m1",
                 drafts: [{ text: "Open 8 to 21", vector: "[0.5,1]" }],
             })
