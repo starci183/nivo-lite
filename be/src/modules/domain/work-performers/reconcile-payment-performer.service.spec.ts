@@ -388,6 +388,17 @@ describe("ReconcilePaymentPerformerService perform", () => {
         })
     })
 
+    it("publishes no customer or order when the settled invoice cannot be read back", async () => {
+        const { service, invoices, leads, orders, bus } = await build()
+        invoices.find.mockResolvedValue(null)
+
+        await service.perform(ctx, itemOf(), proposalOf(), { name: "Mai" })
+
+        expect(leads.find).not.toHaveBeenCalled()
+        expect(orders.find).not.toHaveBeenCalled()
+        expect(bus.writes[0]?.payload).toMatchObject({ customer: "", channel: null, orderNo: null })
+    })
+
     it("names the renewed contract and its term in the fact so the contracts reactor can renew it", async () => {
         const { service, invoices, bus } = await build()
         invoices.markPaid.mockResolvedValue(

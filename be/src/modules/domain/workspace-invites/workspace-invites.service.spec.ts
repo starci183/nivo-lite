@@ -307,6 +307,14 @@ describe("WorkspaceInvitesService", () => {
             })
             expect(delivery.deliverInvite).not.toHaveBeenCalled()
         })
+
+        it("answers token unavailable when the database mints no uuid", async () => {
+            const { service } = await build(mockEntityManager({ query: [[MINT_UUID, []]] }))
+
+            await expect(service.copyLink("owner-1", "ws-1", "invite-1")).rejects.toMatchObject({
+                code: WorkspaceInvitesErrorCode.TokenUnavailable,
+            })
+        })
     })
 })
 

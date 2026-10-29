@@ -90,6 +90,16 @@ describe("GoogleStateClient / store", () => {
         expect(tokens.signState).toHaveBeenCalledWith(expect.objectContaining({ r: "/inbox?tab=1" }))
     })
 
+    it("lands on the root when no return address is requested or the requested one is not text", async () => {
+        const { target, tokens } = await build()
+
+        await begin(target, outbound().req, "v")
+        await begin(target, mock<Request>({ query: { next: ["/a", "/b"] }, res: mock<Response>(), headers: {} }), "v")
+
+        expect(tokens.signState).toHaveBeenNthCalledWith(1, expect.objectContaining({ r: "/" }))
+        expect(tokens.signState).toHaveBeenNthCalledWith(2, expect.objectContaining({ r: "/" }))
+    })
+
     it("lands on the root when the requested path leaves the site (no open redirect)", async () => {
         const { target, tokens } = await build()
 

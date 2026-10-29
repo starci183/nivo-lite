@@ -28,6 +28,12 @@ const answering = {
             this.error(error)
         },
     }),
+    rawFailure: (thrown: unknown): passport.Strategy => ({
+        name: "stand-in",
+        authenticate() {
+            this.error(thrown as Error)
+        },
+    }),
     silent: (): passport.Strategy => ({ name: "stand-in", authenticate() {} }),
 }
 
@@ -65,6 +71,23 @@ describe("PassportFlowsService / authenticateLocal", () => {
         passport.use("local", answering.failure(refusal))
 
         await expect(flows.authenticateLocal(exchange)).rejects.toBe(refusal)
+    })
+
+    it("lets a failure that is not an error through as a plain error", async () => {
+        const { flows, exchange } = await build()
+        passport.use("local", answering.rawFailure("wrong pair"))
+
+        await expect(flows.authenticateLocal(exchange)).rejects.toThrow(new Error("passport"))
+    })
+
+    it("reports the strategy as unavailable when passport builds no middleware", async () => {
+        const { flows, exchange } = await build()
+        const authenticate = jest.spyOn(passport, "authenticate").mockReturnValueOnce(undefined as never)
+
+        await expect(flows.authenticateLocal(exchange)).rejects.toMatchObject({
+            code: PassportErrorCode.GoogleUnavailable,
+        })
+        authenticate.mockRestore()
     })
 
     it("refuses a request that established nobody (no pair posted)", async () => {
@@ -119,5 +142,23 @@ describe("PassportFlowsService / google", () => {
         passport.use("google", answering.failure(new Error("consent")))
         failed.exchange.res.once.mockReset()
         await expect(failed.flows.beginGoogle(failed.exchange)).rejects.toThrow("consent")
+    })
+
+    it("fails either leg with a plain error when the strategy fails with something that is not one", async () => {
+        const started = await build({ clientId: "client" })
+        passport.use("google", answering.rawFailure("consent"))
+        started.exchange.res.once.mockReset()
+        await expect(started.flows.beginGoogle(started.exchange)).rejects.toThrow(new Error("passport"))
+
+        const completed = await build({ clientId: "client" })
+        await expect(completed.flows.completeGoogle(completed.exchange)).rejects.toThrow(new Error("passport"))
+    })
+
+    it("lets the error of the strategy through unchanged when the round trip fails", async () => {
+        const { flows, exchange } = await build({ clientId: "client" })
+        const failure = new Error("exchange")
+        passport.use("google", answering.failure(failure))
+
+        await expect(flows.completeGoogle(exchange)).rejects.toBe(failure)
     })
 })

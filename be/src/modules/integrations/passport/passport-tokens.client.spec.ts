@@ -1,10 +1,17 @@
 import { generateKeyPairSync } from "node:crypto"
+import { SignJWT, importPKCS8 } from "jose"
 import { Test } from "@nestjs/testing"
+import { deriveStateKey } from "@modules/platform/primitives"
 import { Secret } from "@modules/platform/config"
 import { PassportErrorCode } from "./errors/passport.error"
 import { PASSPORT_OPTIONS } from "./passport.decorators"
 import type { PassportOptions } from "./passport.options"
 import { PassportTokensClient } from "./passport-tokens.client"
+
+jest.mock("@modules/platform/primitives", () => {
+    const actual = jest.requireActual<typeof import("@modules/platform/primitives")>("@modules/platform/primitives")
+    return { ...actual, deriveStateKey: jest.fn(actual.deriveStateKey) }
+})
 
 const NOW = new Date("2026-11-09T10:00:00.000Z")
 
@@ -48,6 +55,16 @@ describe("PassportTokensClient / access tokens", () => {
         })
     })
 
+    it("verifies a token that carries no email", async () => {
+        const tokens = await build()
+        const issued = await tokens.sign({ sub: "u1", sessionId: "s1" }, NOW)
+
+        await expect(tokens.verify(issued.token, NOW)).resolves.toEqual({
+            kind: "ok",
+            value: { sub: "u1", sessionId: "s1" },
+        })
+    })
+
     it("refuses an expired token", async () => {
         const tokens = await build()
         const issued = await tokens.sign({ sub: "u1", sessionId: "s1" }, NOW)
@@ -75,6 +92,29 @@ describe("PassportTokensClient / access tokens", () => {
         await expect(mine.verify(foreign.token, NOW)).resolves.toMatchObject({ kind: "refused" })
         await expect(mine.verify(`${head}.${forgedBody}.${signature}`, NOW)).resolves.toMatchObject({ kind: "refused" })
         await expect(mine.verify("not-a-jwt", NOW)).resolves.toMatchObject({ kind: "refused" })
+    })
+
+    it.each([
+        { claims: { role: "anon", session_id: "s1" }, subject: "u1" },
+        { claims: { role: "authenticated" }, subject: "u1" },
+        { claims: { role: "authenticated", session_id: "s1" }, subject: undefined },
+    ])("refuses a token of our own key that lacks the claims of a session: %p", async ({ claims, subject }) => {
+        const pair = keyPair()
+        const tokens = await build({}, pair)
+        const unsigned = new SignJWT(claims)
+            .setProtectedHeader({ alg: "EdDSA" })
+            .setIssuer("nivo-test")
+            .setAudience("authenticated")
+            .setIssuedAt(Math.floor(NOW.getTime() / 1000))
+            .setExpirationTime(Math.floor(NOW.getTime() / 1000) + 900)
+        const token = await (subject === undefined ? unsigned : unsigned.setSubject(subject)).sign(
+            await importPKCS8(pair.privateKey, "EdDSA"),
+        )
+
+        await expect(tokens.verify(token, NOW)).resolves.toEqual({
+            kind: "refused",
+            code: PassportErrorCode.AccessTokenInvalid,
+        })
     })
 
     it("refuses a Google state value as an access token", async () => {
@@ -119,5 +159,14 @@ describe("PassportTokensClient / state", () => {
         expect(tokens.verifyState(signed, NOW)).toEqual(state)
         expect(tokens.verifyState(signed, new Date(NOW.getTime() + 601_000))).toBeNull()
         expect((await build()).verifyState(signed, NOW)).toBeNull()
+    })
+
+    it("fails loudly when no state key can be derived from the private key", async () => {
+        const tokens = await build()
+        jest.mocked(deriveStateKey).mockReturnValueOnce(null)
+
+        expect(() => tokens.signState({ w: "h", u: "v", r: "/", e: NOW.getTime(), p: "google" })).toThrow(
+            expect.objectContaining({ code: PassportErrorCode.KeyInvalid }),
+        )
     })
 })

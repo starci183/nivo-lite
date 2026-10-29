@@ -1,11 +1,9 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
+import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { VideoProjectEntity } from "./persistence/entities"
 import { VideoProjectScriptingService } from "./video-project-scripting.service"
-
-/** The any-function matcher, typed `unknown` so it flows into any slot. */
-const anyFunction = (): unknown => expect.any(Function)
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({ providers: [VideoProjectScriptingService] }).compile()
@@ -34,7 +32,9 @@ describe("VideoProjectScriptingService", () => {
             expect(tx.createQueryBuilder).toHaveBeenCalledWith(VideoProjectEntity, "v")
 
             expect(fake.callsOf("update")).toEqual([[]])
-            expect(fake.callsOf("set")).toEqual([[{ status: "scripting", lastError: null, scriptMeta: anyFunction() }]])
+            expect(fake.callsOf("set").map(([set]) => resolveFragments(set))).toEqual([
+                { status: "scripting", lastError: null, scriptMeta: "CAST(:meta AS jsonb)" },
+            ])
             expect(fake.callsOf("where")).toEqual([
                 [
                     "workspace_id = :workspaceId AND id = :projectId",
@@ -62,20 +62,18 @@ describe("VideoProjectScriptingService", () => {
                 }),
             ).resolves.toBeUndefined()
 
-            expect(fake.callsOf("set")).toEqual([
-                [
-                    {
-                        status: "draft",
-                        script: anyFunction(),
-                        scriptMs: 1200,
-                        title: anyFunction(),
-                        lastError: null,
-                        scriptMeta: anyFunction(),
-                        approvedAt: null,
-                        approvedByName: null,
-                        publishedAt: null,
-                    },
-                ],
+            expect(fake.callsOf("set").map(([set]) => resolveFragments(set))).toEqual([
+                {
+                    status: "draft",
+                    script: "CAST(:script AS jsonb)",
+                    scriptMs: 1200,
+                    title: "coalesce(CAST(:title AS text), title)",
+                    lastError: null,
+                    scriptMeta: "CAST(:meta AS jsonb)",
+                    approvedAt: null,
+                    approvedByName: null,
+                    publishedAt: null,
+                },
             ])
             expect(fake.callsOf("where")).toEqual([
                 [GUARD, { workspaceId: "workspace-1", projectId: "project-1", generationId: "generation-1" }],
@@ -101,8 +99,8 @@ describe("VideoProjectScriptingService failures", () => {
                 }),
             ).resolves.toBeUndefined()
 
-            expect(fake.callsOf("set")).toEqual([
-                [{ status: "draft", lastError: "code:VIDEO_SCRIPT_FAILED", scriptMeta: anyFunction() }],
+            expect(fake.callsOf("set").map(([set]) => resolveFragments(set))).toEqual([
+                { status: "draft", lastError: "code:VIDEO_SCRIPT_FAILED", scriptMeta: "CAST(:meta AS jsonb)" },
             ])
             expect(fake.callsOf("where")).toEqual([
                 [GUARD, { workspaceId: "workspace-1", projectId: "project-1", generationId: "generation-1" }],

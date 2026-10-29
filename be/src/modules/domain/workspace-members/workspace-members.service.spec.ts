@@ -1,3 +1,4 @@
+import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -261,19 +262,30 @@ describe("WorkspaceMembersService / join", () => {
         expect(em.createQueryBuilder).toHaveBeenCalledWith(WorkspaceMemberEntity, "workspace_members")
 
         expect(upsert.callsOf("insert")).toEqual([[]])
-        expect(upsert.callsOf("values")).toEqual([
-            [
-                {
-                    workspaceId: "ws-1",
-                    userId: "user-2",
-                    role: "staff",
-                    staffId: "staff-1",
-                    displayName: expect.any(Function),
-                },
-            ],
+        expect(upsert.callsOf("values").map(([row]) => resolveFragments(row))).toEqual([
+            {
+                workspaceId: "ws-1",
+                userId: "user-2",
+                role: "staff",
+                staffId: "staff-1",
+                displayName:
+                    "coalesce((SELECT s.name FROM public.staff s WHERE s.id = :staffId LIMIT 1), :displayName)",
+            },
         ])
         expect(upsert.callsOf("setParameters")).toEqual([[{ staffId: "staff-1", displayName: "Binh" }]])
         expect(upsert.callsOf("onConflict")).toHaveLength(1)
+    })
+
+    it("refuses a role the table does not allow before writing", async () => {
+        const em = mockEntityManager()
+        const upsert = fakeQueryBuilder({ execute: {} })
+        em.createQueryBuilder.mockReturnValue(upsert.builder)
+        const { service } = await build(em)
+
+        await expect(
+            service.join({ workspaceId: "ws-1", userId: "user-2", role: "guest", staffId: null, displayName: "Binh" }),
+        ).rejects.toThrow(new TypeError("guest is not a workspace role"))
+        expect(upsert.callsOf("execute")).toEqual([])
     })
 })
 
@@ -467,8 +479,8 @@ describe("WorkspaceMembersService / seat changes", () => {
         expect(events.record).not.toHaveBeenCalled()
     })
 
-    it("refuses when the target disappears before the update", async () => {
-        const em = mockEntityManager({ findOne: seats(), update: [WorkspaceMemberEntity, { affected: 0 }] })
+    it.each([{ affected: 0 }, {}])("refuses when the target disappears before the update: %p", async (written) => {
+        const em = mockEntityManager({ findOne: seats(), update: [WorkspaceMemberEntity, written] })
         const { service, events } = await build(em)
 
         await expect(service.changeRole("user-1", "ws-1", "user-2", "manager")).rejects.toMatchObject({

@@ -3,13 +3,11 @@ import { mockEntityManager } from "@starci/jest-preset"
 import { VideoBrandKitEntity } from "@modules/domain/video-brand-kits"
 import { VideoRenderEntity } from "@modules/domain/video-renders"
 import { WorkspaceEntity } from "@modules/domain/workspaces"
+import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { VideoProjectEntity } from "./persistence/entities"
 import { VideoProjectsService } from "./video-projects.service"
-
-/** The any-function matcher, typed `unknown` so it flows into any slot. */
-const anyFunction = (): unknown => expect.any(Function)
 
 const ROW = {
     id: "project-1",
@@ -95,20 +93,18 @@ describe("VideoProjectsService render lifecycle", () => {
             expect(manager.createQueryBuilder).toHaveBeenCalledWith(VideoProjectEntity, "v")
 
             expect(fake.callsOf("update")).toEqual([[]])
-            expect(fake.callsOf("set")).toEqual([
-                [
-                    {
-                        status: "rendering",
-                        renderId: "render-1",
-                        renderIds: anyFunction(),
-                        currentSpec: anyFunction(),
-                        version: anyFunction(),
-                        lastError: null,
-                        approvedAt: null,
-                        approvedByName: null,
-                        publishedAt: null,
-                    },
-                ],
+            expect(fake.callsOf("set").map(([set]) => resolveFragments(set))).toEqual([
+                {
+                    status: "rendering",
+                    renderId: "render-1",
+                    renderIds: "array_append(render_ids, CAST(:appendedRenderId AS uuid))",
+                    currentSpec: "CAST(:spec AS jsonb)",
+                    version: "version + 1",
+                    lastError: null,
+                    approvedAt: null,
+                    approvedByName: null,
+                    publishedAt: null,
+                },
             ])
             expect(fake.callsOf("where")).toEqual([["id = :projectId", { projectId: "project-1" }]])
             expect(fake.callsOf("setParameters")).toEqual([[{ appendedRenderId: "render-1", spec: '{"version":1}' }]])

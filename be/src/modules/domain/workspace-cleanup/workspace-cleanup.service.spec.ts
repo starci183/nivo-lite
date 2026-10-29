@@ -158,6 +158,16 @@ describe("WorkspaceCleanupService dry run", () => {
         expect(accounts.deleteUser).not.toHaveBeenCalled()
     })
 
+    it("refuses a removed workspace whose footprint the database does not answer", async () => {
+        const { cleanup, em, prune } = await build({ users: [] })
+        em.query.mockResolvedValue([])
+
+        await expect(cleanup.run({ keep: HAKUEN, dryRun: true })).rejects.toEqual(
+            refusedWith(WorkspaceCleanupErrorCode.FootprintInvalid),
+        )
+        expect(prune.prune).not.toHaveBeenCalled()
+    })
+
     it("reads no references when every account is kept", async () => {
         const { cleanup, em } = await build({ users: [OWNER, STAFF] })
 

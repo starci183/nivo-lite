@@ -116,9 +116,7 @@ export class WorkChainsService {
             where: { id: settled.thread_id },
         })
         const decider =
-            outcome.decidedBy === null
-                ? ""
-                : await this.nameOf(manager, outcome.workspaceId, "member", outcome.decidedBy)
+            outcome.decidedBy === null ? "" : await this.memberNameOf(manager, outcome.workspaceId, outcome.decidedBy)
         await this.events.record(
             {
                 workspaceId: outcome.workspaceId,
@@ -260,13 +258,11 @@ export class WorkChainsService {
         return stored
     }
 
-    private async nameOf(manager: EntityManager, workspaceId: string, kind: string, id: string): Promise<string> {
-        if (kind !== "agent" && kind !== "member") return ""
-        const column = kind === "agent" ? "name" : "display_name"
+    private async memberNameOf(manager: EntityManager, workspaceId: string, id: string): Promise<string> {
         const row = await manager
             .createQueryBuilder()
-            .select(`x.${column}`, "name")
-            .from(kind === "agent" ? "public.agents" : "public.workspace_members", "x")
+            .select("x.display_name", "name")
+            .from("public.workspace_members", "x")
             .where("x.workspace_id = :workspaceId AND x.id = :id", { workspaceId, id })
             .limit(1)
             .getRawOne<{ name: string }>()

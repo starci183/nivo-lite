@@ -74,4 +74,14 @@ describe("InviteSupportService", () => {
         await expect(support.reissue("ws-1", "i-9")).rejects.toMatchObject({ code: WorkspaceInvitesErrorCode.NotFound })
         expect(delivery.deliverInvite).not.toHaveBeenCalled()
     })
+
+    it("answers token unavailable when the database mints no uuid and sends nothing", async () => {
+        const { support, em, delivery } = await build([{ id: "i-1", email: "ha@nivo.vn", role: "staff" }])
+        em.query.mockResolvedValue([])
+
+        await expect(support.reissue("ws-1", "i-1")).rejects.toMatchObject({
+            code: WorkspaceInvitesErrorCode.TokenUnavailable,
+        })
+        expect(delivery.deliverInvite).not.toHaveBeenCalled()
+    })
 })

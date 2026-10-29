@@ -2,12 +2,13 @@ import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { VideoDelegationEntity } from "./persistence/entities"
 import { VideoDelegationsService } from "./video-delegations.service"
 
-/** The any-function matcher, typed `unknown` so it flows into any slot. */
-const anyFunction = (): unknown => expect.any(Function)
+/** The set of the first update, its SQL fragments resolved to their text. */
+const firstSet = (em: MockEntityManager): Record<string, unknown> => resolveFragments(em.update.mock.calls[0]?.[2])
 
 const ROW = { id: "delegation-1", project_id: "project-1" }
 const ENTITY = Object.assign(new VideoDelegationEntity(), { id: "delegation-1", projectId: "project-1" })
@@ -99,11 +100,8 @@ describe("VideoDelegationsService > writes", () => {
 
         await (await build(em)).linkRender("delegation-1", "render-1")
 
-        expect(em.update).toHaveBeenCalledWith(
-            VideoDelegationEntity,
-            { id: "delegation-1" },
-            { renderId: "render-1", updatedAt: anyFunction() },
-        )
+        expect(em.update.mock.calls[0]?.slice(0, 2)).toEqual([VideoDelegationEntity, { id: "delegation-1" }])
+        expect(firstSet(em)).toEqual({ renderId: "render-1", updatedAt: "now()" })
     })
 
     it("keeps the posted card as JSON", async () => {
@@ -111,26 +109,29 @@ describe("VideoDelegationsService > writes", () => {
 
         await (await build(em)).saveCard("delegation-1", "approval-1", { v: 1 })
 
-        expect(em.update).toHaveBeenCalledWith(
-            VideoDelegationEntity,
-            { id: "delegation-1" },
-            { approvalWorkItemId: "approval-1", card: { v: 1 }, updatedAt: anyFunction() },
-        )
+        expect(em.update.mock.calls[0]?.slice(0, 2)).toEqual([VideoDelegationEntity, { id: "delegation-1" }])
+        expect(firstSet(em)).toEqual({ approvalWorkItemId: "approval-1", card: { v: 1 }, updatedAt: "now()" })
     })
 
     it("answers true for the call that settled the delegation", async () => {
         const em = mockEntityManager({ update: [VideoDelegationEntity, { affected: 1 }] })
 
         await expect((await build(em)).markFailed("delegation-1", "boom")).resolves.toBe(true)
-        expect(em.update).toHaveBeenCalledWith(
+        expect(em.update.mock.calls[0]?.slice(0, 2)).toEqual([
             VideoDelegationEntity,
             { id: "delegation-1", status: "rendering" },
-            { status: "failed", error: "boom", updatedAt: anyFunction() },
-        )
+        ])
+        expect(firstSet(em)).toEqual({ status: "failed", error: "boom", updatedAt: "now()" })
     })
 
     it("answers false once the delegation was settled", async () => {
         const em = mockEntityManager({ update: [VideoDelegationEntity, { affected: 0 }] })
+
+        await expect((await build(em)).markReady("delegation-1")).resolves.toBe(false)
+    })
+
+    it("answers false when the driver does not report affected rows", async () => {
+        const em = mockEntityManager({ update: [VideoDelegationEntity, {}] })
 
         await expect((await build(em)).markReady("delegation-1")).resolves.toBe(false)
     })

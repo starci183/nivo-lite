@@ -122,11 +122,13 @@ describe("TelegramInboxService deferred effects", () => {
             where: { provider: "telegram", deliveryId: "c-1:77", processedAt: IsNull() },
             lock: { mode: "pessimistic_write" },
         })
+        const [, , set] = tx.em.update.mock.calls[0] as [unknown, unknown, { processedAt: () => string }]
         expect(tx.em.update).toHaveBeenCalledWith(
             TelegramInboxEntity,
             { id: "receipt-1" },
-            { processedAt: expect.any(Function) },
+            { processedAt: set.processedAt },
         )
+        expect(set.processedAt()).toBe("now()")
         expect(tx.commits).toBe(1)
     })
 

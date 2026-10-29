@@ -114,11 +114,13 @@ describe("ZaloInboxService deferred effects", () => {
             where: { provider: "zalo", deliveryId: "c-1:m-1", processedAt: IsNull() },
             lock: { mode: "pessimistic_write" },
         })
+        const [, , set] = tx.em.update.mock.calls[0] as [unknown, unknown, { processedAt: () => string }]
         expect(tx.em.update).toHaveBeenCalledWith(
             ZaloInboxEntity,
             { id: "receipt-1" },
-            { processedAt: expect.any(Function) },
+            { processedAt: set.processedAt },
         )
+        expect(set.processedAt()).toBe("now()")
         expect(tx.commits).toBe(1)
     })
 
