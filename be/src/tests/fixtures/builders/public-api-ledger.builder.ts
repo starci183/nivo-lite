@@ -1,5 +1,8 @@
 import { builder } from "@starci/jest-preset"
-import type { LedgerRecord, PublicApiEntity } from "@modules/domain/public-api"
+import { fakeQueryBuilder } from "./fake-query-builder.builder"
+import type { LedgerRecord, publicApiEntities } from "@modules/domain/public-api"
+
+type PublicApiEntity = InstanceType<(typeof publicApiEntities)[number]>
 
 /** The workspace the ledger specs write for. */
 export const LEDGER_WORKSPACE = "11111111-1111-4111-8111-111111111111"
@@ -42,8 +45,8 @@ interface LedgerCalls {
     readonly values: ReadonlyArray<unknown>
     /** The named parameters. */
     readonly parameters: ReadonlyArray<unknown>
-    /** The conflict clause. */
-    readonly onConflict: ReadonlyArray<unknown>
+    /** The ignore-on-conflict calls. */
+    readonly orIgnore: ReadonlyArray<unknown>
     /** The returned columns. */
     readonly returning: ReadonlyArray<unknown>
 }
@@ -61,7 +64,7 @@ const isValues = (value: unknown): value is Readonly<Record<string, unknown>> =>
 export const ledgerWritten = (write: CallRecorder): LedgerCalls => ({
     values: write.argsOf("values").map(([row]) => (isValues(row) ? { ...row, dedupeKey: typeof row.dedupeKey } : row)),
     parameters: write.argsOf("setParameters"),
-    onConflict: write.argsOf("onConflict"),
+    orIgnore: write.argsOf("orIgnore"),
     returning: write.argsOf("returning"),
 })
 
@@ -78,6 +81,17 @@ export const ledgerExpected = (expected: LedgerRecord): LedgerCalls => ({
         },
     ],
     parameters: [[{ prefix: expected.prefix, suffix: expected.suffix }]],
-    onConflict: [["(workspace_id, dedupe_key) DO UPDATE SET duplicates = public_api.duplicates + 1"]],
-    returning: [["id, lead_id, (xmax = 0) AS inserted"]],
+    orIgnore: [[]],
+    returning: [[["id", "lead_id"]]],
 })
+
+/**
+ * The query builders a ledger record runs: the insert, answering the rows given, or (when the first row is a repeat,
+ * `inserted: false`) an insert that wrote nothing followed by the counting update that answers that row.
+ */
+export const ledgerAnswers = (raw: ReadonlyArray<object>) => {
+    const [first] = raw
+    const repeat = first !== undefined && "inserted" in first && first.inserted === false
+    const write = fakeQueryBuilder({ execute: { raw: repeat ? [] : raw } })
+    return { write, builders: repeat ? [write, fakeQueryBuilder({ execute: { raw } })] : [write] }
+}

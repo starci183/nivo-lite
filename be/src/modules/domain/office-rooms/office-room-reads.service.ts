@@ -6,7 +6,12 @@ import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectRoomsAgents, InjectRoomsTestChats } from "./office-rooms.decorators"
 import type { RoomsAgentChats, RoomsAgents, RoomsChatLine, RoomsTestChats } from "./office-rooms.port"
-import type { AgentConversationFacts, ConversationUnreadFacts, RoomFacts, RoomSummaryFacts } from "./office-rooms.facts"
+import type {
+    AgentConversationFacts,
+    ConversationUnreadFacts,
+    RoomFacts,
+    RoomSummaryFacts,
+} from "./office-rooms.contracts"
 import {
     OfficeRoomEntity,
     OfficeRoomMemberEntity,

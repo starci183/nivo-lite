@@ -1,5 +1,5 @@
 /** The name of one department room. */
-export interface RoomLabel {
+export interface RoomName {
     /** The room key. */
     readonly key: string
     /** The display name. */
@@ -13,3 +13,6 @@ export interface UserSeatRoom {
     /** The room key. */
     readonly key: string
 }
+
+/** The department rooms a lookup narrows to, by key; null asks for every room. */
+export type OptionalRoomKeys = ReadonlyArray<string> | null

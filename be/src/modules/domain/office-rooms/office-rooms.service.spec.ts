@@ -14,8 +14,12 @@ import { OfficeRoomMembersService } from "./office-room-members.service"
 import { OFFICE_ROOMS_AGENTS, OFFICE_ROOMS_LEADS } from "./office-rooms.decorators"
 import type { RoomsAgents, RoomsLeads } from "./office-rooms.port"
 import { OfficeRoomReadsService } from "./office-room-reads.service"
-import type { RoomMembersView, RoomMemberPreviewView } from "./office-rooms.contracts"
-import type { AgentConversationFacts, RoomFacts } from "./office-rooms.facts"
+import type {
+    AgentConversationFacts,
+    RoomFacts,
+    RoomMembersView,
+    RoomMemberPreviewView,
+} from "./office-rooms.contracts"
 
 /** The statements `callDbFunction` runs. */
 const MARK_ROOM_READ = "SELECT * FROM public.mark_office_room_read($1, $2, $3)"
