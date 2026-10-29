@@ -1,5 +1,10 @@
 import { Test } from "@nestjs/testing"
-import { entityOf } from "@tests/fixtures/builders/entity.builder"
+import {
+    sentReplyInC1,
+    sentReplyOf,
+    sentReplyR1,
+    untriedTurnMessage,
+} from "@tests/fixtures/builders/agent-messages.builder"
 import { In } from "typeorm"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -14,11 +19,9 @@ const build = async (entityManager: MockEntityManager) => {
     return moduleRef.get(AgentMessageDeliveriesService)
 }
 
-const replyOf = entityOf(AgentMessageEntity, { id: "m1", deliveryStatus: "sent" })
-
 describe("AgentMessageDeliveriesService > humanReplyOf", () => {
     it("answers the delivery of the human reply", async () => {
-        const em = mockEntityManager({ findOne: [AgentMessageEntity, replyOf()] })
+        const em = mockEntityManager({ findOne: [AgentMessageEntity, sentReplyOf()] })
 
         await expect((await build(em)).humanReplyOf("ws", "c1", "m1")).resolves.toEqual({
             id: "m1",
@@ -39,7 +42,7 @@ describe("AgentMessageDeliveriesService > humanReplyOf", () => {
 
 describe("AgentMessageDeliveriesService > humanReplyById", () => {
     it("answers the human reply of the workspace with its conversation", async () => {
-        const em = mockEntityManager({ findOne: [AgentMessageEntity, replyOf({ conversationId: "c1" })] })
+        const em = mockEntityManager({ findOne: [AgentMessageEntity, sentReplyInC1()] })
 
         await expect((await build(em)).humanReplyById("ws", "m1")).resolves.toEqual({
             id: "m1",
@@ -62,7 +65,7 @@ describe("AgentMessageDeliveriesService > humanReplyById", () => {
 describe("AgentMessageDeliveriesService > turn messages", () => {
     it("answers the customer or agent message of the workspace with its conversation", async () => {
         const em = mockEntityManager({
-            findOne: [AgentMessageEntity, replyOf({ conversationId: "c1", role: "user", deliveryStatus: null })],
+            findOne: [AgentMessageEntity, untriedTurnMessage()],
         })
 
         await expect((await build(em)).turnMessageOf("ws", "m1")).resolves.toEqual({
@@ -84,7 +87,7 @@ describe("AgentMessageDeliveriesService > turn messages", () => {
     })
 
     it("answers the agent reply stored for a message, null for none", async () => {
-        const found = mockEntityManager({ findOne: [AgentMessageEntity, replyOf({ id: "r1" })] })
+        const found = mockEntityManager({ findOne: [AgentMessageEntity, sentReplyR1()] })
         const missing = mockEntityManager({ findOne: [AgentMessageEntity, null] })
 
         await expect((await build(found)).agentReplyTo("ws", "c1", "m1")).resolves.toEqual({

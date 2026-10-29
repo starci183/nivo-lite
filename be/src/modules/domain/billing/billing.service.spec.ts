@@ -58,7 +58,13 @@ const PLAN_DETAIL = {
     promo: false,
     listMonthlyVnd: 990000,
 }
-const build = async (entityManager: MockEntityManager, world: World = {}) => {
+const build = async (
+    world: World = {},
+    entityManager: MockEntityManager = mockEntityManager({
+        findOne: [PlanEntity, world.plan ?? null],
+        find: [PlanUsageTierEntity, world.tiers ?? []],
+    }),
+) => {
     const workspace = world.workspace ?? null
     const workspaceBilling = mock<WorkspaceBillingService>()
     workspaceBilling.factsOf.mockResolvedValue(workspace === null ? null : factsOf(workspace))
@@ -94,7 +100,15 @@ const build = async (entityManager: MockEntityManager, world: World = {}) => {
             { provide: PaymentOrderHistoryService, useValue: history },
         ],
     }).compile()
-    return { billing: moduleRef.get(BillingService), orders, seats, workspaceBilling, workspaceReads, history }
+    return {
+        billing: moduleRef.get(BillingService),
+        em: entityManager,
+        orders,
+        seats,
+        workspaceBilling,
+        workspaceReads,
+        history,
+    }
 }
 
 /** What the database holds for one scenario: a key present is read (the query builders answer in the order role, workspace, promo). */
@@ -113,13 +127,6 @@ interface World {
 
 const NO_PROMO = { full_price: 0, promo: 0 }
 
-/** A manager answering the plan and the tiers the scenario names. */
-const worldOf = (world: World) =>
-    mockEntityManager({
-        findOne: [PlanEntity, world.plan ?? null],
-        find: [PlanUsageTierEntity, world.tiers ?? []],
-    })
-
 /** A member who may pay and a workspace on the starter plan. */
 const pricedWorld = (plan: PlanEntity = starterPlan()): World => ({
     role: "owner",
@@ -130,7 +137,7 @@ const pricedWorld = (plan: PlanEntity = starterPlan()): World => ({
 
 describe("BillingService", () => {
     it("answers the configured bank account", async () => {
-        const { billing } = await build(mockEntityManager())
+        const { billing } = await build()
 
         await expect(billing.bankAccount()).resolves.toEqual(OPTIONS.bankAccount)
     })
@@ -142,7 +149,7 @@ describe("BillingService", () => {
                 [PlanUsageTierEntity, []],
             ],
         })
-        const { billing } = await build(em)
+        const { billing } = await build({}, em)
 
         await expect(billing.listPlans()).resolves.toMatchObject([{ code: "starter", priceVnd: 990000, listed: true }])
         expect(em.find).toHaveBeenCalledWith(PlanEntity, {
@@ -157,8 +164,8 @@ describe("BillingService", () => {
     })
 
     it("finds a plan, answers null for an unknown code and refuses to require it", async () => {
-        const { billing } = await build(worldOf({ plan: starterPlan() }), { plan: starterPlan() })
-        const { billing: none } = await build(worldOf({ plan: null }), { plan: null })
+        const { billing, em } = await build({ plan: starterPlan() })
+        const { billing: none } = await build({ plan: null })
 
         await expect(billing.findPlan("starter")).resolves.toMatchObject({ code: "starter" })
         await expect(billing.requirePlan("starter")).resolves.toMatchObject({ code: "starter" })
@@ -178,8 +185,8 @@ describe("BillingService", () => {
             billing_cycle: "monthly" as const,
             billed_monthly_vnd: 990000,
         }
-        const { billing } = await build(worldOf({ workspace: row }), { workspace: row })
-        const { billing: none } = await build(worldOf({ workspace: null }), { workspace: null })
+        const { billing } = await build({ workspace: row })
+        const { billing: none } = await build({ workspace: null })
 
         await expect(billing.findWorkspaceBilling("ws-1")).resolves.toEqual({
             status: "active",
@@ -196,7 +203,7 @@ describe("BillingService", () => {
 
 describe("BillingService > membership", () => {
     it.each(["owner", "manager"] as const)("lets an active %s manage and be a member", async (role) => {
-        const { billing, seats } = await build(mockEntityManager(), { role })
+        const { billing, seats } = await build({ role })
 
         await expect(billing.requireManager("person-1", "ws-1")).resolves.toBeUndefined()
         await expect(billing.requireMember("person-1", "ws-1")).resolves.toBeUndefined()
@@ -204,7 +211,7 @@ describe("BillingService > membership", () => {
     })
 
     it("lets staff read but not manage", async () => {
-        const { billing } = await build(mockEntityManager(), { role: "staff" })
+        const { billing } = await build({ role: "staff" })
 
         await expect(billing.requireMember("person-1", "ws-1")).resolves.toBeUndefined()
         await expect(billing.requireManager("person-1", "ws-1")).rejects.toMatchObject({
@@ -213,7 +220,7 @@ describe("BillingService > membership", () => {
     })
 
     it("refuses a person who is not a member", async () => {
-        const { billing } = await build(mockEntityManager(), { role: null })
+        const { billing } = await build({ role: null })
 
         await expect(billing.requireMember("person-1", "ws-1")).rejects.toMatchObject({
             code: BillingErrorCode.NotMember,
@@ -226,7 +233,7 @@ describe("BillingService > membership", () => {
 
 describe("BillingService > renew", () => {
     it("counts no payments when the workspace has no paid plan order yet", async () => {
-        const { billing, orders } = await build(worldOf({ ...pricedWorld(), promo: undefined }), {
+        const { billing, orders } = await build({
             ...pricedWorld(),
             promo: undefined,
         })
@@ -236,7 +243,7 @@ describe("BillingService > renew", () => {
     })
 
     it("orders the current plan of the workspace at its price", async () => {
-        const { billing, orders } = await build(worldOf(pricedWorld()), pricedWorld())
+        const { billing, orders } = await build(pricedWorld())
 
         await expect(billing.renew("person-1", { workspaceId: "ws-1" })).resolves.toEqual(PAYABLE)
         expect(orders.create).toHaveBeenCalledWith({
@@ -255,7 +262,7 @@ describe("BillingService > renew", () => {
             ...pricedWorld(annualPlan()),
             workspace: { ...WORKSPACE_ROW, seat_count: 4, billing_cycle: "annual" },
         }
-        const { billing, orders } = await build(worldOf(annual), annual)
+        const { billing, orders } = await build(annual)
 
         await expect(billing.renew("person-1", { workspaceId: "ws-1" })).resolves.toEqual(PAYABLE)
         expect(orders.create).toHaveBeenCalledWith(
@@ -269,7 +276,7 @@ describe("BillingService > renew", () => {
 
 describe("BillingService > renew", () => {
     it("refuses a workspace that does not exist or has no plan yet", async () => {
-        const missing = await build(worldOf({ role: "owner", workspace: null, plan: null }), {
+        const missing = await build({
             role: "owner",
             workspace: null,
             plan: null,
@@ -279,7 +286,7 @@ describe("BillingService > renew", () => {
             workspace: { ...WORKSPACE_ROW, status: "pending_payment", plan_code: null },
             plan: null,
         }
-        const unpaid = await build(worldOf(pending), pending)
+        const unpaid = await build(pending)
 
         await expect(missing.billing.renew("person-1", { workspaceId: "ws-1" })).rejects.toMatchObject({
             code: BillingErrorCode.WorkspaceNotFound,
@@ -290,7 +297,7 @@ describe("BillingService > renew", () => {
     })
 
     it("refuses a contract plan and writes no order", async () => {
-        const { billing, orders } = await build(worldOf(pricedWorld(customPlan())), pricedWorld(customPlan()))
+        const { billing, orders } = await build(pricedWorld(customPlan()))
 
         await expect(billing.renew("person-1", { workspaceId: "ws-1" })).rejects.toMatchObject({
             code: BillingErrorCode.PlanCustom,
@@ -299,8 +306,7 @@ describe("BillingService > renew", () => {
     })
 
     it("refuses a caller who is not a manager before reading anything else", async () => {
-        const em = worldOf({ role: null })
-        const { billing } = await build(em, { role: null })
+        const { billing, em } = await build({ role: null })
 
         await expect(billing.renew("person-1", { workspaceId: "ws-1" })).rejects.toMatchObject({
             code: BillingErrorCode.Forbidden,
@@ -313,7 +319,7 @@ describe("BillingService > renew", () => {
 describe("BillingService > orderPlan", () => {
     it("orders the plan the workspace chose", async () => {
         const world: World = { role: "manager", plan: starterPlan(), promo: NO_PROMO }
-        const { billing, orders } = await build(worldOf(world), world)
+        const { billing, orders } = await build(world)
 
         await expect(billing.orderPlan("person-1", { workspaceId: "ws-1", planCode: "starter" })).resolves.toEqual(
             PAYABLE,
@@ -325,7 +331,7 @@ describe("BillingService > orderPlan", () => {
 
     it("prices a per-seat plan from the level and the seats the caller picked", async () => {
         const world: World = { role: "manager", plan: teamPlan(), tiers: [teamTier()], promo: NO_PROMO }
-        const { billing, orders } = await build(worldOf(world), world)
+        const { billing, orders } = await build(world)
 
         await billing.orderPlan("person-1", {
             workspaceId: "ws-1",
@@ -355,7 +361,7 @@ describe("BillingService > orderPlan", () => {
         ["another plan", { ...WORKSPACE_ROW, plan_code: "growth" }],
         ["no workspace", null],
     ])("refuses an unlisted plan of %s", async (_label, workspace) => {
-        const { billing, orders } = await build(worldOf({ role: "manager", plan: unlistedPlan(), workspace }), {
+        const { billing, orders } = await build({
             role: "manager",
             plan: unlistedPlan(),
             workspace,
@@ -369,7 +375,7 @@ describe("BillingService > orderPlan", () => {
 
     it("lets a workspace pay again for the unlisted plan it already has", async () => {
         const world: World = { role: "manager", plan: unlistedPlan(), workspace: WORKSPACE_ROW, promo: NO_PROMO }
-        const { billing, orders } = await build(worldOf(world), world)
+        const { billing, orders } = await build(world)
 
         await expect(billing.orderPlan("person-1", { workspaceId: "ws-1", planCode: "starter" })).resolves.toEqual(
             PAYABLE,
@@ -378,7 +384,7 @@ describe("BillingService > orderPlan", () => {
     })
 
     it("refuses an unknown plan", async () => {
-        const { billing } = await build(worldOf({ role: "manager", plan: null }), { role: "manager", plan: null })
+        const { billing } = await build({ role: "manager", plan: null })
 
         await expect(billing.orderPlan("person-1", { workspaceId: "ws-1", planCode: "nope" })).rejects.toMatchObject({
             code: BillingErrorCode.PlanNotFound,
@@ -390,7 +396,7 @@ describe("BillingService > workspaces", () => {
     const row = { ...WORKSPACE_ROW, paid_until: "2026-11-01T00:00:00.000Z" }
 
     it("lists the caller's active workspaces", async () => {
-        const { billing, seats, workspaceReads } = await build(mockEntityManager(), { role: "owner", workspace: row })
+        const { billing, seats, workspaceReads } = await build({ role: "owner", workspace: row })
         seats.activeSeatsOfUser.mockResolvedValue([{ workspaceId: "ws-1", role: "owner" }])
 
         await expect(billing.workspaces("person-1")).resolves.toEqual([
@@ -412,15 +418,14 @@ describe("BillingService > workspaces", () => {
     })
 
     it("leaves out a workspace that is gone or has no name", async () => {
-        const { billing, seats } = await build(mockEntityManager())
+        const { billing, seats } = await build()
         seats.activeSeatsOfUser.mockResolvedValue([{ workspaceId: "ws-1", role: "owner" }])
 
         await expect(billing.workspaces("person-1")).resolves.toEqual([])
     })
 
     it("lists nothing for a caller with no active seat", async () => {
-        const em = mockEntityManager()
-        const { billing, seats, workspaceBilling } = await build(em)
+        const { billing, seats, workspaceBilling } = await build()
         seats.activeSeatsOfUser.mockResolvedValue([])
 
         await expect(billing.workspaces("person-1")).resolves.toEqual([])
@@ -428,8 +433,8 @@ describe("BillingService > workspaces", () => {
     })
 
     it("reads one workspace for a member and refuses anyone else", async () => {
-        const { billing } = await build(mockEntityManager(), { role: "owner", workspace: row })
-        const { billing: outsider } = await build(mockEntityManager(), { role: null })
+        const { billing } = await build({ role: "owner", workspace: row })
+        const { billing: outsider } = await build({ role: null })
 
         await expect(billing.workspace("person-1", "ws-1")).resolves.toMatchObject({
             id: "ws-1",
@@ -442,7 +447,7 @@ describe("BillingService > workspaces", () => {
     })
 
     it("refuses a member of a workspace that is gone", async () => {
-        const { billing } = await build(mockEntityManager(), { role: "owner" })
+        const { billing } = await build({ role: "owner" })
 
         await expect(billing.workspace("person-1", "ws-1")).rejects.toMatchObject({
             code: BillingErrorCode.NotMember,
@@ -452,7 +457,7 @@ describe("BillingService > workspaces", () => {
 
 describe("BillingService > quote", () => {
     it("prices the intro offer while the workspace has not paid full price", async () => {
-        const { billing } = await build(worldOf({ role: "staff", plan: promoPlan(), promo: NO_PROMO }), {
+        const { billing } = await build({
             role: "staff",
             plan: promoPlan(),
             promo: NO_PROMO,
@@ -472,8 +477,7 @@ describe("BillingService > quote", () => {
     })
 
     it("stops at membership and reads nothing else", async () => {
-        const em = worldOf({ role: null })
-        const { billing } = await build(em, { role: null })
+        const { billing, em } = await build({ role: null })
 
         await expect(billing.quote("person-1", { workspaceId: "ws-1", planCode: "starter" })).rejects.toMatchObject({
             code: BillingErrorCode.NotMember,

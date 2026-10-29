@@ -1,7 +1,12 @@
 // Read services lead the barrel: other capabilities import this barrel while it loads (import cycles), they must already be defined.
 export { AgentConversationsAutomationReadService } from "./agent-conversations-automation-read.service"
 export { AgentConversationsReadService } from "./agent-conversations-read.service"
-export type { ConnectionConversation, ConversationChannel, CustomerConversationRow, OptionalCustomerConversationRow } from "./agent-conversations-read.contracts"
+export type {
+    ConnectionConversation,
+    ConversationChannel,
+    CustomerConversationRow,
+    OptionalCustomerConversationRow,
+} from "./agent-conversations-read.contracts"
 export { AgentConversationsModule } from "./agent-conversations.module"
 export { AgentConversationReadService } from "./agent-conversation-reads.service"
 export { AgentConversationsService } from "./agent-conversations.service"

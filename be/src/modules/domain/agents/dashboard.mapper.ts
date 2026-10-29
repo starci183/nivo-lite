@@ -1,4 +1,4 @@
-import type { BoundConnectionView } from "./agents.port"
+import type { BoundConnectionView, OptionalInstallation } from "./agents.port"
 import type {
     DashboardAgent,
     OptionalId,
@@ -9,7 +9,6 @@ import type {
     OpenGaps,
 } from "./agents.contracts"
 import type { DashboardLine } from "./agents-reads.contracts"
-import type { OptionalInstallation } from "./agents.port"
 
 /** Work items whose lead, summary or customer carries this text are test runs and never counted. */
 export const TEST_RUN_PATTERN = "UAT|DBG"

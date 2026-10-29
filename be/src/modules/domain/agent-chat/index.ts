@@ -12,6 +12,7 @@ export type {
     AgentChatPageRequest,
     AgentChatTurnStatus,
     AgentChatTurnStatusRequest,
+    ChatTurnFacts,
     QueuedAgentChatTurn,
     SendAgentChatRequest,
     StartAgentChatRequest,

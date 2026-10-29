@@ -1,23 +1,15 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { entityOf } from "@tests/fixtures/builders/entity.builder"
+import {
+    expiredUnresolvedRequest,
+    historyRequestOf,
+    pendingHistoryRequest,
+} from "@tests/fixtures/builders/approval-requests.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { ApprovalRequestsHistoryReadService } from "./approval-requests-history-read.service"
-import { ApprovalRequestEntity } from "./persistence/entities"
 
 const AT = new Date("2026-10-12T03:00:00.000Z")
-const requestOf = entityOf(ApprovalRequestEntity, {
-    id: "r-1",
-    department: "sales",
-    action: "refund",
-    status: "approved",
-    resolvedBy: "m-1",
-    chainStepId: "c-1",
-    resolvedAt: AT,
-    createdAt: new Date("2026-10-11T03:00:00.000Z"),
-})
-
 const build = async (getMany: ReadonlyArray<unknown>) => {
     const em = mockEntityManager()
     const [fake] = queueQueryBuilders(em, [{ getMany }])
@@ -29,10 +21,7 @@ const build = async (getMany: ReadonlyArray<unknown>) => {
 
 describe("ApprovalRequestsHistoryReadService", () => {
     it("pages the ended requests newest first, narrowed by module and ending", async () => {
-        const { service, fake } = await build([
-            requestOf(),
-            requestOf({ id: "r-2", resolvedAt: null, status: "expired" }),
-        ])
+        const { service, fake } = await build([historyRequestOf(), expiredUnresolvedRequest()])
 
         await expect(
             service.resolvedPage("ws-1", { department: "sales", status: "approved", skip: 5, limit: 10 }),
@@ -65,7 +54,7 @@ describe("ApprovalRequestsHistoryReadService", () => {
     })
 
     it("does not narrow without filters and leaves out a pending row", async () => {
-        const { service, fake } = await build([requestOf({ status: "pending" })])
+        const { service, fake } = await build([pendingHistoryRequest()])
 
         await expect(
             service.resolvedPage("ws-1", { department: null, status: null, skip: 0, limit: 10 }),

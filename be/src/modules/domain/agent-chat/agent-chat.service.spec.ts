@@ -5,11 +5,16 @@ import {
     AgentConversationsReadService,
     AgentConversationsService,
 } from "@modules/domain/agent-conversations"
-import type { ChatConversation, ConversationTarget } from "@modules/domain/agent-conversations"
 import { AgentMessageDeliveriesService, AgentMessagesService } from "@modules/domain/agent-messages"
-import type { AgentThreadMessage } from "@modules/domain/agent-messages"
+import {
+    CONVERSATION,
+    PROFILE,
+    TARGET,
+    THREAD,
+    TURN,
+    turnOwnersOf,
+} from "@tests/fixtures/builders/agent-chat-turn.builder"
 import { AgentDirectoryService, AgentsService } from "@modules/domain/agents"
-import type { AgentProfile } from "@modules/domain/agents"
 import { EventsReadService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
@@ -38,66 +43,8 @@ const MEMBER: WorkspaceMember = {
 
 const AGENT: ChatAgentFacts = { id: "a1", module: "chatbot", status: "active", greeting: "Welcome" }
 
-const PROFILE: AgentProfile = {
-    id: "a1",
-    name: "Nivo",
-    handle: "nivo",
-    role: "receptionist",
-    instructions: "Be brief",
-    knowledge: "Open 9 to 6",
-    approval_rule: "owner",
-}
-
-const CONVERSATION: ChatConversation = {
-    id: "c1",
-    kind: "test",
-    channel: "website",
-    visitorName: "Lan",
-    leadId: null,
-    handledBy: null,
-    createdAt: NOW,
-}
-
-const TARGET: ConversationTarget = {
-    id: "c1",
-    workspaceId: "w1",
-    channel: "website",
-    externalId: null,
-    connectionId: null,
-}
-
-const THREAD: AgentThreadMessage = { id: "m1", role: "user", body: "Hi", createdAt: NOW }
-
-const TURN: ChatTurnFacts = {
-    id: "m1",
-    conversationId: "c1",
-    channel: "website",
-    role: "user",
-    deliveryStatus: null,
-    replyId: "r1",
-    replyDeliveryStatus: null,
-}
-
-/** The answer of a single-row raw read: the row, or nothing. */
-const row = (value: object | undefined): QueryBuilderAnswers => ({ getRawOne: value })
-
 const build = async (agent: ChatAgentFacts | null = null, turn: ChatTurnFacts | null = null) => {
-    const deliveries = mock<AgentMessageDeliveriesService>()
-    deliveries.turnMessageOf.mockResolvedValue(
-        turn === null
-            ? null
-            : {
-                  id: turn.id,
-                  conversationId: turn.conversationId,
-                  role: turn.role,
-                  deliveryStatus: turn.deliveryStatus,
-              },
-    )
-    deliveries.agentReplyTo.mockResolvedValue(
-        turn === null || turn.replyId === null ? null : { id: turn.replyId, deliveryStatus: turn.replyDeliveryStatus },
-    )
-    const conversationReads = mock<AgentConversationsReadService>()
-    conversationReads.channelOf.mockResolvedValue(turn?.channel ?? null)
+    const { deliveries, conversationReads } = turnOwnersOf(turn)
     const directory = mock<AgentDirectoryService>()
     directory.chatFactsOf.mockResolvedValue(agent)
     const tx = fakeTransaction(mockEntityManager())

@@ -216,3 +216,22 @@ export const ESCALATION_EXPIRY_SET = {
     resolvedAt: new Date(NOW),
     escalatedTo: "member-minh",
 }
+
+/** An approved sales refund resolved by member m-1 on step c-1, as the history reads see it. */
+export const historyRequestOf = builder<ApprovalRequestEntity>({
+    id: "r-1",
+    department: "sales",
+    action: "refund",
+    status: "approved",
+    resolvedBy: "m-1",
+    chainStepId: "c-1",
+    resolvedAt: new Date("2026-10-12T03:00:00.000Z"),
+    createdAt: new Date("2026-10-11T03:00:00.000Z"),
+})
+
+/** The request r-2 that expired without anybody resolving it. */
+export const expiredUnresolvedRequest = (): ApprovalRequestEntity =>
+    historyRequestOf({ id: "r-2", resolvedAt: null, status: "expired" })
+
+/** A history request still waiting. */
+export const pendingHistoryRequest = (): ApprovalRequestEntity => historyRequestOf({ status: "pending" })

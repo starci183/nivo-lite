@@ -65,6 +65,13 @@ const partOf = <R, T>(
     items: rows.slice(0, bound).map(itemOf),
 })
 
+/** The invoice, amount and customer line every renewal list shows. */
+const renewalLineOf = (row: RenewedInvoice) => ({
+    invoice_no: row.invoice.invoiceNo,
+    amount_vnd: row.invoice.amountVnd,
+    customer_name: row.contract.customerName,
+})
+
 /** The calendar day of an instant in Vietnam, `yyyy-mm-dd`. */
 const vnDayOf = (at: Date): string => new Date(at.getTime() + VN_OFFSET_MS).toISOString().slice(0, 10)
 
@@ -145,11 +152,7 @@ export class RenewalCashService {
         return partOf(
             await this.renewalsOf(query, invoices),
             (row) => row.invoice.amountVnd,
-            (row) => ({
-                invoice_no: row.invoice.invoiceNo,
-                amount_vnd: row.invoice.amountVnd,
-                customer_name: row.contract.customerName,
-            }),
+            renewalLineOf,
             query.bound,
         )
     }
@@ -161,9 +164,7 @@ export class RenewalCashService {
             await this.renewalsOf(query, invoices),
             (row) => row.invoice.amountVnd,
             (row) => ({
-                invoice_no: row.invoice.invoiceNo,
-                amount_vnd: row.invoice.amountVnd,
-                customer_name: row.contract.customerName,
+                ...renewalLineOf(row),
                 ends_on: row.contract.endsOn,
                 extended: row.invoice.periodEndsOn !== null && row.contract.endsOn > row.invoice.periodEndsOn,
             }),

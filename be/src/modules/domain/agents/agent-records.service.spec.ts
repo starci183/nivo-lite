@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { agentEntityOf } from "@tests/fixtures/builders/agents.builder"
+import { agentHoldingInstructions } from "@tests/fixtures/builders/agents.builder"
 import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentRecordsService } from "./agent-records.service"
@@ -63,7 +63,7 @@ describe("AgentRecordsService > ensureByHandle", () => {
     })
 
     it("locks the known agent and takes the given fields, keeping its setup block once after the given text", async () => {
-        const stored = agentEntityOf({ id: "a9", instructions: `Old text\n\n${BLOCK}` })
+        const stored = agentHoldingInstructions(`Old text\n\n${BLOCK}`)
         const { service, em } = await build({ inserted: [], stored })
 
         await expect(service.ensureByHandle({ ...AGENT, instructions: `New text\n\n\n\n${BLOCK}\n` })).resolves.toBe(
@@ -81,7 +81,7 @@ describe("AgentRecordsService > ensureByHandle", () => {
     })
 
     it("takes the given text alone when the known agent has no block", async () => {
-        const stored = agentEntityOf({ id: "a9", instructions: "Plain" })
+        const stored = agentHoldingInstructions("Plain")
         const { service, em } = await build({ inserted: [], stored })
 
         await service.ensureByHandle(AGENT)
@@ -94,7 +94,7 @@ describe("AgentRecordsService > ensureByHandle", () => {
     })
 
     it("keeps only the block when the given text is empty", async () => {
-        const stored = agentEntityOf({ id: "a9", instructions: BLOCK })
+        const stored = agentHoldingInstructions(BLOCK)
         const { service, em } = await build({ inserted: [], stored })
 
         await service.ensureByHandle({ ...AGENT, instructions: "  \n" })

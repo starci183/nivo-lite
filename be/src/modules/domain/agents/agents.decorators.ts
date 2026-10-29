@@ -19,7 +19,8 @@ export const AGENTS_MODULES: unique symbol = Symbol("domain.agents.modules")
 export const AGENTS_CONNECTIONS: unique symbol = Symbol("domain.agents.connections")
 
 /** Injects the agents options. Parameter type: AgentsRunOptions. */
-export const InjectAgentsRunOptions = (): TypedParameterDecorator<AgentsRunOptions> => injector<AgentsRunOptions>(AGENTS_OPTIONS)
+export const InjectAgentsRunOptions = (): TypedParameterDecorator<AgentsRunOptions> =>
+    injector<AgentsRunOptions>(AGENTS_OPTIONS)
 
 /** Injects the module installations port. Parameter type: InstallationDirectory. */
 export const InjectInstallations = (): TypedParameterDecorator<InstallationDirectory> =>

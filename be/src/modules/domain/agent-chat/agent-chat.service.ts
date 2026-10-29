@@ -219,10 +219,11 @@ export class AgentChatService {
             throw new AgentChatError({ code: AgentChatErrorCode.ConversationNotFound })
     }
 
-    private async isFoundingMember(workspaceId: string): Promise<boolean> {
+    private isFoundingMember(workspaceId: string): Promise<boolean> {
         const offer = AGENT_CHAT_FOUNDING_OFFER
         const now = this.clock.now().getTime()
-        if (!offer.enabled || now < Date.parse(offer.startsAt) || now > Date.parse(offer.endsAt)) return false
+        if (!offer.enabled || now < Date.parse(offer.startsAt) || now > Date.parse(offer.endsAt))
+            return Promise.resolve(false)
         return this.events.existsOfKindBetween(
             workspaceId,
             "module.purchased",

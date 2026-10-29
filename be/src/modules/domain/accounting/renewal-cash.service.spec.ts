@@ -41,15 +41,24 @@ const invoiceOf = builder<CashInvoice>({
     paidAt: null,
 })
 
-/** What the read services answer for the invoices, the contracts, the leads and the payments. */
-const build = async (reads: {
+/** The invoice period a renewal invoice covers, by contract. */
+interface RenewedPeriod {
+    readonly contractId: string
+    readonly periodEndsOn: string
+}
+
+/** What the read services answer for the invoices and the contracts. */
+interface CashReads {
     readonly issued?: ReadonlyArray<CashInvoice>
     readonly paid?: ReadonlyArray<CashInvoice>
     readonly unpaid?: ReadonlyArray<CashInvoice>
-    readonly renewed?: ReadonlyArray<{ readonly contractId: string; readonly periodEndsOn: string }>
+    readonly renewed?: ReadonlyArray<RenewedPeriod>
     readonly contracts?: ReadonlyArray<ContractFacts>
     readonly ending?: ReadonlyArray<ContractFacts>
-}) => {
+}
+
+/** What the read services answer for the invoices, the contracts, the leads and the payments. */
+const build = async (reads: CashReads) => {
     const invoices = mock<InvoicesCashReadService>()
     invoices.renewalsIssued.mockResolvedValue([...(reads.issued ?? [])])
     invoices.renewalsPaid.mockResolvedValue([...(reads.paid ?? [])])
