@@ -7,7 +7,6 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ApiKeysService } from "./api-keys.service"
@@ -22,6 +21,8 @@ import {
     loyaltyTillKey,
     revokedKey,
 } from "@tests/fixtures/builders/api-keys.builder"
+import { isSeatAnswer, memberOf } from "@tests/fixtures/builders/api-keys-seats.builder"
+import type { SeatAnswer } from "@tests/fixtures/builders/api-keys-seats.builder"
 import { ApiKeysErrorCode } from "./errors/api-keys.error"
 import { ApiKeyEntity } from "./persistence/entities"
 
@@ -109,18 +110,6 @@ describe("ApiKeysService authenticate", () => {
 
 /** Whatever FindOperator the active-key filter builds. */
 const ANYTHING: unknown = expect.anything()
-
-/** The answer of the active-member read: a member of this role, or none. */
-const memberOf = (role: WorkspaceRole | undefined, displayName = "Owner"): SeatAnswer => ({ seat: { role, displayName } })
-
-/** The seat the member read answers: a seat of this role, or none. */
-interface SeatAnswer {
-    readonly seat: { readonly role: WorkspaceRole | undefined; readonly displayName: string }
-}
-
-/** True when an answer stands for the member read, not for a query builder. */
-const isSeatAnswer = (answer: QueryBuilderAnswers | SeatAnswer | undefined): answer is SeatAnswer =>
-    answer !== undefined && "seat" in answer
 
 /** The answer of a write that returns `rows`. */
 const wrote = (...rows: Array<ApiKeyEntity>): QueryBuilderAnswers => ({ execute: { raw: rows } })
