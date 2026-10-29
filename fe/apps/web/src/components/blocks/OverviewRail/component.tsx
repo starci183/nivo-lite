@@ -42,6 +42,8 @@ interface OverviewRailBaseProps {
         readonly viewAllLabel: string
         readonly viewAllHref: string
         readonly activity: ReadonlyArray<OverviewRailActivity>
+        /** The dashboard is still read: both cards draw their own skeleton rows. */
+        readonly isSkeleton: boolean
     }
 }
 
@@ -52,6 +54,7 @@ export const OverviewRailBase = (props: OverviewRailBaseProps) => {
         <div className={RAIL_CLASS_NAME}>
             <SurfaceListCard
                 label={props.props.agentsTitle}
+                isLoading={props.props.isSkeleton}
                 footer={
                     props.props.buyChatbotLabel === null ? undefined : (
                         <Button intent="neutral" size="sm" href={props.props.buyChatbotHref}>
@@ -87,6 +90,7 @@ export const OverviewRailBase = (props: OverviewRailBaseProps) => {
             </SurfaceListCard>
             <SurfaceListCard
                 label={props.props.activityTitle}
+                isLoading={props.props.isSkeleton}
                 footer={
                     <TextAction href={props.props.viewAllHref} appearance="section">
                         {props.props.viewAllLabel}

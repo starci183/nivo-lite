@@ -1,6 +1,7 @@
 import type { useFormatter, useTranslations } from "next-intl"
 import type { CreditUsageSummaryType } from "@/hooks/swr"
 import { dayjs } from "@/modules/dayjs"
+import type { DataSlot } from "@/modules/types"
 
 type UsageTranslator = ReturnType<typeof useTranslations<"billing">>
 type UsageFormatter = ReturnType<typeof useFormatter>
@@ -32,28 +33,31 @@ interface UsageDaily {
     readonly series: ReadonlyArray<{ readonly day: string; readonly credits: number }>
 }
 
-/** The settled usage figures and callbacks supplied to the pure card. */
-export interface UsageCardView {
-    readonly state: { readonly isLoading: boolean; readonly error: string | undefined }
-    readonly props: {
+/** The settled words and figures of the usage card. */
+export interface UsageCardData {
+    readonly title: string
+    readonly description: string
+    readonly loading: string
+    readonly empty: string
+    readonly modulesTitle: string
+    readonly alert: {
+        readonly tone: "negative" | "cautionary"
         readonly title: string
-        readonly description: string
-        readonly loading: string
-        readonly errorTitle: string
-        readonly empty: string
-        readonly modulesTitle: string
-        readonly alert: {
-            readonly tone: "negative" | "cautionary"
-            readonly title: string
-            readonly actionLabel: string
-        } | null
-        readonly meters: ReadonlyArray<UsageMeter>
-        readonly facts: ReadonlyArray<UsageFact>
-        readonly modules: ReadonlyArray<{ readonly id: string; readonly label: string; readonly reading: string }>
-        readonly daily: UsageDaily | null
-    }
+        readonly actionLabel: string
+    } | null
+    readonly meters: ReadonlyArray<UsageMeter>
+    readonly facts: ReadonlyArray<UsageFact>
+    readonly modules: ReadonlyArray<{ readonly id: string; readonly label: string; readonly reading: string }>
+    readonly daily: UsageDaily | null
+}
+
+/** The usage read as a slot, the card's placeholder (its words with no figures) and the callbacks supplied to the pure card. */
+export interface UsageCardView {
+    readonly slot: DataSlot<UsageCardData>
+    readonly placeholder: UsageCardData
     readonly on: {
         readonly openCredits: () => void
+        readonly retry: () => void
         readonly formatDay: (value: unknown) => string
         readonly formatCredits: (value: unknown) => string
         readonly minimumBarSize: (value: number | null | undefined) => number
@@ -137,7 +141,7 @@ export const factsOf = (
 }
 
 /** Prepares the current allowance warning, when the backend reports one. */
-export const alertOf = (status: UsageStatus | null, t: UsageTranslator): UsageCardView["props"]["alert"] => {
+export const alertOf = (status: UsageStatus | null, t: UsageTranslator): UsageCardData["alert"] => {
     if (status?.level === "exceeded")
         return { tone: "negative", title: t("usageExceeded"), actionLabel: t("usageOpenCredits") }
     if (status?.level === "warn") {

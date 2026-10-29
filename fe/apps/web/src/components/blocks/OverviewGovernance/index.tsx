@@ -9,7 +9,7 @@ import {
     historyRowsOf,
     waitingItemsOf,
 } from "@/hooks/overviewGov"
-import { useOverviewGovernance } from "@/hooks/overview"
+import { useOverviewData, useOverviewGovernance } from "@/hooks/overview"
 import { goalLinesOf, statusRowsOf } from "@/hooks/overviewResults"
 import { CONSOLE_ROUTES } from "@/modules/routes"
 import { OverviewGovernanceBase } from "./component"
@@ -20,7 +20,20 @@ export const OverviewGovernance = () => {
     const g = useTranslations("governance")
     const format = useFormatter()
     const data = useOverviewGovernance()
-    if (data === undefined) return null
+    const { failed } = useOverviewData()
+    if (data === undefined) {
+        if (failed) return null
+        return (
+            <OverviewGovernanceBase
+                props={{
+                    unavailable: t("govUnavailable"),
+                    resultsTitle: t("resultsTitle"),
+                    figures: null,
+                    isSkeleton: true,
+                }}
+            />
+        )
+    }
     const { governance } = data
     const pending = governance.pendingDecisions
     const exceptionTotal = exceptionTotalOf(governance)
@@ -30,6 +43,7 @@ export const OverviewGovernance = () => {
             props={{
                 unavailable: t("govUnavailable"),
                 resultsTitle: t("resultsTitle"),
+                isSkeleton: false,
                 figures: {
                     summary: {
                         title: t("sumTitle"),

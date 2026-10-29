@@ -1,7 +1,7 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { useCreditsPayDrawer, useCreditsPaymentState } from "@/hooks/credits"
+import { useCreditsPayDrawer, useCreditsPaymentState, useRetainedWhileClosing } from "@/hooks/credits"
 import { PayDrawerBase } from "./component"
 import type { PayDrawerShape } from "./component"
 
@@ -42,45 +42,54 @@ export const PayDrawer = () => {
         })
     }
 
-    if (drawer.target === null) return null
+    const view =
+        drawer.target === null
+            ? null
+            : {
+                  shape,
+                  props: {
+                      isWaiting,
+                      isRegenerating: drawer.isRegenerating,
+                      isBankConfigured: Boolean(drawer.bank.account && drawer.bank.bank),
+                      hasOrder: drawer.order !== null,
+                      title,
+                      description: t("payText"),
+                      closeLabel: t("close"),
+                      paidTitle: t("paidTitle"),
+                      paidDescription,
+                      waitingLabel: t("waiting"),
+                      expiredTitle: t("expiredTitle"),
+                      expiredDescription: t("expiredText"),
+                      errorTitle: t("errGeneric"),
+                      regenerateError: drawer.regenerateError,
+                      regenerateLabel: t("regenerate"),
+                      scanLabel: t("scan"),
+                      qrAlt: t("qrAlt"),
+                      unconfiguredLabel: t("notConfigured"),
+                      countdown: left === null ? null : t("expiresIn", { time: clock(left) }),
+                      amountLabel: t("amount"),
+                      amount: drawer.order ? money(drawer.order.amount) : "",
+                      qrUrl: drawer.order?.qrUrl ?? "",
+                      proration,
+                      copyLabel: t("copy"),
+                      copiedLabel: t("copied"),
+                      details: [
+                          { id: "credits-pay-bank", label: t("bank"), value: drawer.bank.bank },
+                          { id: "credits-pay-account", label: t("account"), value: drawer.bank.account },
+                          { id: "credits-pay-holder", label: t("holder"), value: drawer.bank.holder },
+                          { id: "credits-pay-content", label: t("content"), value: drawer.order?.code ?? "" },
+                      ],
+                      contentWarning: t("contentWarn"),
+                  },
+              }
+    const shown = useRetainedWhileClosing(view)
+    if (shown.value === null) return null
 
     return (
         <PayDrawerBase
-            shape={shape}
-            props={{
-                isWaiting,
-                isRegenerating: drawer.isRegenerating,
-                isBankConfigured: Boolean(drawer.bank.account && drawer.bank.bank),
-                hasOrder: drawer.order !== null,
-                title,
-                description: t("payText"),
-                closeLabel: t("close"),
-                paidTitle: t("paidTitle"),
-                paidDescription,
-                waitingLabel: t("waiting"),
-                expiredTitle: t("expiredTitle"),
-                expiredDescription: t("expiredText"),
-                errorTitle: t("errGeneric"),
-                regenerateError: drawer.regenerateError,
-                regenerateLabel: t("regenerate"),
-                scanLabel: t("scan"),
-                qrAlt: t("qrAlt"),
-                unconfiguredLabel: t("notConfigured"),
-                countdown: left === null ? null : t("expiresIn", { time: clock(left) }),
-                amountLabel: t("amount"),
-                amount: drawer.order ? money(drawer.order.amount) : "",
-                qrUrl: drawer.order?.qrUrl ?? "",
-                proration,
-                copyLabel: t("copy"),
-                copiedLabel: t("copied"),
-                details: [
-                    { id: "credits-pay-bank", label: t("bank"), value: drawer.bank.bank },
-                    { id: "credits-pay-account", label: t("account"), value: drawer.bank.account },
-                    { id: "credits-pay-holder", label: t("holder"), value: drawer.bank.holder },
-                    { id: "credits-pay-content", label: t("content"), value: drawer.order?.code ?? "" },
-                ],
-                contentWarning: t("contentWarn"),
-            }}
+            shape={shown.value.shape}
+            isOpen={shown.isOpen}
+            props={shown.value.props}
             on={{ close: drawer.onClose, regenerate: drawer.onRegenerate }}
         />
     )

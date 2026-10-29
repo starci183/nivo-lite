@@ -1,2 +1,2 @@
 export { useUsageCard } from "./useUsageCard"
-export type { UsageCardView } from "./usageCard.shared"
+export type { UsageCardData, UsageCardView } from "./usageCard.shared"

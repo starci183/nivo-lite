@@ -83,6 +83,8 @@ export interface DatabaseWizardBaseProps {
         readonly save: () => void
         readonly finish: () => void
         readonly close: () => void
+        /** Reads the saved connection again after the read failed. */
+        readonly retry: () => void
         readonly tables: (keys: ReadonlyArray<string>) => void
         readonly mapEntity: (key: string, value: string | null) => void
         readonly mapIdColumn: (key: string, value: string | null) => void
@@ -194,7 +196,7 @@ const noteOf = (note: WizardNote | null) => (note === null ? null : <Alert tone=
 export const DatabaseWizardBase = (props: DatabaseWizardBaseProps) => {
     const { props: view, on } = props
     return (
-        <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels}>
+        <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels} onRetry={on.retry}>
             {(_resume, isSkeleton) => (
                 <WizardFrame
                     {...frameOf(view)}

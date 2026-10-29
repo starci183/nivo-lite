@@ -33,6 +33,9 @@ export interface PageWords {
     readonly emptyHint: string
     readonly automationsLink: string
     readonly automationsHref: string
+    /** The way out of the forbidden notice staff see in place of the board. */
+    readonly backLabel: string
+    readonly backHref: string
 }
 
 /** What the board draws once the workspace reads are in. */
@@ -193,21 +196,26 @@ export interface ConnectionsBoardRegionProps {
 export const ConnectionsBoardRegion = (props: ConnectionsBoardRegionProps) => {
     const { overview } = props
     return (
-        <SlotView
-            slot={overview.props.board}
-            placeholder={{ ...BOARD_PLACEHOLDER, view: overview.props.placeholderView }}
-            labels={overview.props.slotLabels}
-            forbidden="notice"
-            onRetry={overview.on.retry}
-        >
-            {(board, isSkeleton) => (
-                <>
-                    <BoardBody {...overview} board={board} isSkeleton={isSkeleton} />
-                    <TextAction href={overview.props.words.automationsHref}>
-                        {overview.props.words.automationsLink}
-                    </TextAction>
-                </>
-            )}
-        </SlotView>
+        <>
+            <SlotView
+                slot={overview.props.board}
+                placeholder={{ ...BOARD_PLACEHOLDER, view: overview.props.placeholderView }}
+                labels={overview.props.slotLabels}
+                forbidden="notice"
+                onRetry={overview.on.retry}
+            >
+                {(board, isSkeleton) => (
+                    <>
+                        <BoardBody {...overview} board={board} isSkeleton={isSkeleton} />
+                        <TextAction href={overview.props.words.automationsHref}>
+                            {overview.props.words.automationsLink}
+                        </TextAction>
+                    </>
+                )}
+            </SlotView>
+            {overview.props.board.isForbidden === true ? (
+                <TextAction href={overview.props.words.backHref}>{overview.props.words.backLabel}</TextAction>
+            ) : null}
+        </>
     )
 }

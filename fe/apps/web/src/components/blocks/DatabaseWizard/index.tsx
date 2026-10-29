@@ -42,8 +42,8 @@ export const DatabaseWizard = (props: DatabaseWizardProps) => {
     return (
         <DatabaseWizardBase
             props={{
-                resume: resumeSlotOfLoading(wizard.isLoading),
-                slotLabels: slotLabelsOf(""),
+                resume: resumeSlotOfLoading(wizard.isLoading, wizard.loadError),
+                slotLabels: { ...slotLabelsOf(""), ...(wizard.loadError === null ? {} : { error: wizard.loadError }) },
                 title: t("title"),
                 stepLabel: tw("stepOf", { n: wizard.index + 1, total: DB_STEPS.length }),
                 steps: [t("stepConnect"), t("stepTables"), t("stepSchedule"), t("stepAgent")],
@@ -87,6 +87,7 @@ export const DatabaseWizard = (props: DatabaseWizardProps) => {
                 save: on.save,
                 finish: on.finish,
                 close: on.close,
+                retry: on.retry,
                 tables: on.toggle,
                 mapEntity: on.setEntity,
                 mapIdColumn: on.setIdColumn,

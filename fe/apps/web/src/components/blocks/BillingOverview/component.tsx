@@ -16,7 +16,6 @@ export interface BillingOverviewBaseProps {
     readonly props: {
         /** The renewal order is being requested: the renew button is pending. */
         readonly isRenewing: boolean
-        readonly usageState: UsageCardProps["state"]
         readonly planLabel: string
         readonly statusLabel: string
         readonly paidUntilLabel: string
@@ -24,7 +23,9 @@ export interface BillingOverviewBaseProps {
         readonly renewalHint: string
         readonly plan: DataSlot<BillingPlanView>
         readonly planSlotLabels: SlotLabels
-        readonly usage: UsageCardProps["props"]
+        readonly usage: UsageCardProps["slot"]
+        readonly usagePlaceholder: UsageCardProps["placeholder"]
+        readonly usageSlotLabels: SlotLabels
         readonly historyTitle: string
         readonly historyEmpty: string
         readonly orders: DataSlot<ReadonlyArray<BillingHistoryRow>>
@@ -40,6 +41,7 @@ export interface BillingOverviewBaseProps {
         readonly retryPlan: () => void
         readonly retryOrders: () => void
         readonly retryReview: () => void
+        readonly retryUsage: () => void
         readonly openCredits: () => void
         readonly formatUsageDay: (value: unknown) => string
         readonly formatUsageCredits: (value: unknown) => string
@@ -75,9 +77,11 @@ export const BillingOverviewBase = (props: BillingOverviewBaseProps) => (
             {(plan) => renderCurrentBillingPlan(props, plan)}
         </SlotView>
         <UsageCard
-            state={props.props.usageState}
-            props={props.props.usage}
+            slot={props.props.usage}
+            placeholder={props.props.usagePlaceholder}
+            labels={props.props.usageSlotLabels}
             on={{
+                retry: props.on.retryUsage,
                 openCredits: props.on.openCredits,
                 formatDay: props.on.formatUsageDay,
                 formatCredits: props.on.formatUsageCredits,
