@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { In, IsNull, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { CustomerChatRef, OptionalCustomerChatRef, TestChatRef } from "./agent-conversations-read.contracts"
+import type { OptionalCustomerChatRef, TestChatRef } from "./agent-conversations-read.contracts"
 import { AgentConversationEntity } from "./persistence/entities"
 
 @Injectable()

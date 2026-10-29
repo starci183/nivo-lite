@@ -24,10 +24,7 @@ describe("AgentConversationsAutomationReadService", () => {
 
         await expect(service.conversation("ws-1", "c1")).resolves.toBe(row)
         expect(fakes[0]?.callsOf("where")).toEqual([
-            [
-                "c.workspace_id = :workspaceId AND c.id = :conversationId",
-                { workspaceId: "ws-1", conversationId: "c1" },
-            ],
+            ["c.workspace_id = :workspaceId AND c.id = :conversationId", { workspaceId: "ws-1", conversationId: "c1" }],
         ])
         expect(fakes[0]?.callsOf("limit")).toEqual([[1]])
     })

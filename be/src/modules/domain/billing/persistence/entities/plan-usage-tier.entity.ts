@@ -3,7 +3,7 @@ import { Column, Entity, PrimaryColumn } from "typeorm"
 /** Reads a bigint column as the number the contracts carry, and writes it as it is. */
 const numeric = {
     to: (value: number): number => value,
-    from: (value: string): number => Number(value),
+    from: Number,
 }
 
 @Entity({ schema: "public", name: "plan_usage_tiers" })

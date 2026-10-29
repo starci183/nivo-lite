@@ -1,3 +1,4 @@
+import type { AgentAccess, AgentPurpose } from "./agents-connections.contracts"
 import type { SyncFile } from "@modules/integrations/openclaw"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 
@@ -496,15 +497,3 @@ export interface AgentOwnership {
     /** The agents it may pass work to. */
     readonly canTag: ReadonlyArray<TagTarget>
 }
-
-/** An instant as ISO text, or null when there is none. */
-export type OptionalInstant = string | null
-
-/** Reads when the agent copies were last checked. */
-export type SyncCheckReader = () => Promise<OptionalInstant>
-
-/** What an agent may do through a connection. */
-export type AgentAccess = "read" | "ask" | "auto"
-
-/** What an agent uses a connection for. */
-export type AgentPurpose = "inbound_chat" | "outbound_chat" | "bank_feed" | "data_source" | "tool" | "lead_source"

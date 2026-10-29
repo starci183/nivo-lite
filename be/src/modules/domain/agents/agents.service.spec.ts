@@ -186,13 +186,6 @@ describe("AgentsService", () => {
 
             await expect(service.agentOfDepartment("w1", "chatbot", "i1")).resolves.toEqual({ id: "a1", name: "Bot" })
             expect(installations.byId).toHaveBeenCalledWith("w1", "i1")
-        })
-
-        it("asks the work item reads, the lenses and the bindings with the instance scope", async () => {
-            const { service, knowledge, bindings, work } = await build(stubs, memberOf(), DASHBOARD_LISTS)
-
-            await service.dashboard("u1", { workspaceId: "w1", module: "chatbot", installationId: "i1" })
-
             expect(em.findOne).toHaveBeenCalledWith(AgentEntity, {
                 where: { id: "a1", workspaceId: "w1", status: "active" },
             })
@@ -252,6 +245,13 @@ describe("AgentsService", () => {
             expect(data.connections).toEqual(CONNECTIONS_EXPECTED)
             expect(data.knowledge).toMatchObject({ ok: true, data: { audience: "customer", gaps: { openCount: 2 } } })
             expect(installations.byId).toHaveBeenCalledWith("w1", "i1")
+        })
+
+        it("asks the work item reads, the lenses and the bindings with the instance scope", async () => {
+            const { service, knowledge, bindings, work } = await build(stubs, memberOf(), DASHBOARD_LISTS)
+
+            await service.dashboard("u1", { workspaceId: "w1", module: "chatbot", installationId: "i1" })
+
             expect(work.dashboardList).toHaveBeenCalledWith({
                 workspaceId: "w1",
                 department: "chatbot",

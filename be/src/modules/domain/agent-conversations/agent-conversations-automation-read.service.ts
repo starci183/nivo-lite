@@ -1,7 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { AutomationConversationRead, OptionalAutomationConversation } from "./agent-conversations-automation-read.contracts"
+import type {
+    AutomationChatLead,
+    AutomationConversationRead,
+    OptionalAutomationConversation,
+} from "./agent-conversations-automation-read.contracts"
 import { AgentConversationEntity } from "./persistence/entities"
 
 /** The conversation columns an executor reads. */
