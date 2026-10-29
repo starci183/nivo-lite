@@ -1,8 +1,13 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager, ObjectLiteral, SelectQueryBuilder } from "typeorm"
-import { isOfficeRoomKey } from "@modules/domain/messages"
+import { AgentDirectoryService } from "@modules/domain/agents"
+import { ExecutionsService } from "@modules/domain/executions"
+import type { ExecutionRecord } from "@modules/domain/executions"
+import { LeadReadService } from "@modules/domain/leads"
+import { isOfficeRoomKey, MessagesReadService } from "@modules/domain/messages"
+import type { ThreadLine } from "@modules/domain/messages"
+import { ResponsibilityReadService } from "@modules/domain/responsibilities"
+import { WorkItemsService } from "@modules/domain/work-items"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import {
     OfficeCommandCandidatesError,
     OfficeCommandCandidatesErrorCode,
@@ -10,34 +15,40 @@ import {
 import type { ApprovalView, MessagePage, MessagePageQuery, MessageView } from "./office-command-candidates.contracts"
 import { toApprovalView } from "./office-thread.mapper"
 import type { ApprovalLine } from "./office-reads.contracts"
+import { cardRefOf, executionStateOf, isRecordId, workItemStateOf } from "./thread-card.policy"
+import type { CardRef, CardState } from "./thread-card.policy"
 import { clampPageSize, isValidCursor, splitPage } from "./thread-page.policy"
-
-/** The card state, read live from the execution or the work item the card names. */
-const CARD_STATE = `CASE
-    WHEN m.card IS NULL THEN NULL
-    WHEN m.card #>> '{ref,kind}' = 'execution' THEN COALESCE((
-        SELECT CASE x.status WHEN 'pending_approval' THEN 'pending' WHEN 'approved' THEN 'approved' ELSE 'declined' END
-        FROM public.executions x
-        WHERE x.id::text = m.card #>> '{ref,id}' AND x.workspace_id = m.workspace_id), 'info')
-    WHEN m.card #>> '{ref,kind}' = 'work_item' THEN COALESCE((
-        SELECT CASE r.status WHEN 'waiting_decision' THEN 'pending' WHEN 'done' THEN 'done'
-                             WHEN 'rejected' THEN 'declined' WHEN 'failed' THEN 'failed' ELSE 'queued' END
-        FROM public.work_items r
-        WHERE r.id::text = m.card #>> '{ref,id}' AND r.workspace_id = m.workspace_id), 'info')
-    ELSE 'info'
-END`
 
 /** The most waiting executions one call returns. */
 const PENDING_LIMIT = 100
 /** The decided executions the Office keeps in view. */
 const DECIDED_LIMIT = 8
 
+/** The status an approval line carries: the queries only select the three the contract names. */
+const approvalStatusOf = (status: string): ApprovalLine["status"] =>
+    status === "pending_approval" || status === "approved" ? status : "rejected"
+
+/** The ids of the records the cards of a page point at, by kind, in the form a lookup accepts. */
+const idsOfKind = (refs: ReadonlyArray<CardRef | null>, kind: string): Array<string> => [
+    ...new Set(refs.flatMap((ref) => (ref !== null && ref.kind === kind && isRecordId(ref.id) ? [ref.id] : []))),
+]
+
+/** The distinct ids among the given ones, none of them missing. */
+const distinct = (ids: ReadonlyArray<string | null>): Array<string> => [
+    ...new Set(ids.flatMap((id) => (id === null ? [] : [id]))),
+]
+
 @Injectable()
 /** The Office thread as the screen reads it: the lines, keyset paged, and the approval panels. Every call proves membership first. */
 export class OfficeThreadService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
+        private readonly lines: MessagesReadService,
+        private readonly leads: LeadReadService,
+        private readonly workItems: WorkItemsService,
+        private readonly executions: ExecutionsService,
+        private readonly steps: ResponsibilityReadService,
+        private readonly agents: AgentDirectoryService,
     ) {}
 
     /** One page of the thread, newest first; the cursor of the next, older page rides in the answer. */
@@ -47,94 +58,91 @@ export class OfficeThreadService {
         if ((before !== null && !isValidCursor(before)) || (query.room !== null && !isOfficeRoomKey(query.room)))
             throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.PageInvalid })
         const size = clampPageSize(query.limit)
-        const page = this.entityManager
-            .createQueryBuilder()
-            .select("m.id", "id")
-            .addSelect("m.author_kind", "author_kind")
-            .addSelect("m.author_name", "author_name")
-            .addSelect("m.author_user_id::text", "author_user_id")
-            .addSelect("m.agent_id", "agent_id")
-            .addSelect("m.staff_id", "staff_id")
-            .addSelect("m.body", "body")
-            .addSelect("m.lead_id", "lead_id")
-            .addSelect("m.work_item_id", "work_item_id")
-            .addSelect("l.contact_name", "lead_name")
-            .addSelect("w.department", "department")
-            .addSelect("m.room", "room")
-            .addSelect("m.card::text", "card_json")
-            .addSelect(CARD_STATE, "card_state")
-            .addSelect("to_json(m.created_at) #>> '{}'", "created_at")
-            .from("public.messages", "m")
-            .leftJoin("leads", "l", "l.id = m.lead_id AND l.workspace_id = m.workspace_id")
-            .leftJoin("work_items", "w", "w.id = m.work_item_id AND w.workspace_id = m.workspace_id")
-            .where("m.workspace_id = :workspaceId", { workspaceId })
-        if (query.room !== null) page.andWhere("m.room = :room", { room: query.room })
-        if (before !== null)
-            page.andWhere("(m.created_at, m.id) < (CAST(:beforeAt AS timestamptz), CAST(:beforeId AS uuid))", {
-                beforeAt: before.createdAt,
-                beforeId: before.id,
-            })
-        const rows = await page
-            .orderBy("m.created_at", "DESC")
-            .addOrderBy("m.id", "DESC")
-            .limit(size + 1)
-            .getRawMany<MessageView>()
-        return splitPage(rows, size)
+        const lines = await this.lines.page(workspaceId, { room: query.room, before, size })
+        return splitPage(await this.viewsOf(workspaceId, lines), size)
     }
 
     /** The executions waiting for a human decision, newest first. */
     async pendingApprovals(principalId: string, workspaceId: string): Promise<ReadonlyArray<ApprovalView>> {
         await this.members.require(principalId, workspaceId)
-        const rows = await this.approvalsOf(workspaceId)
-            .andWhere("x.status = 'pending_approval'")
-            .orderBy("x.created_at", "DESC")
-            .addOrderBy("x.id", "DESC")
-            .limit(PENDING_LIMIT)
-            .getRawMany<ApprovalLine>()
-        return rows.map(toApprovalView)
+        return this.approvalsOf(workspaceId, await this.executions.pendingApprovals(workspaceId, PENDING_LIMIT))
     }
 
     /** The most recently approved or rejected executions, newest decision first. */
     async decidedApprovals(principalId: string, workspaceId: string): Promise<ReadonlyArray<ApprovalView>> {
         await this.members.require(principalId, workspaceId)
-        const rows = await this.approvalsOf(workspaceId)
-            .andWhere("x.status IN ('approved', 'rejected')")
-            .orderBy("x.decided_at", "DESC", "NULLS LAST")
-            .addOrderBy("x.id", "DESC")
-            .limit(DECIDED_LIMIT)
-            .getRawMany<ApprovalLine>()
-        return rows.map(toApprovalView)
+        return this.approvalsOf(workspaceId, await this.executions.decidedApprovals(workspaceId, DECIDED_LIMIT))
     }
 
-    /** The executions of the workspace with the context an approval card shows. */
-    private approvalsOf(workspaceId: string): SelectQueryBuilder<ObjectLiteral> {
-        return this.entityManager
-            .createQueryBuilder()
-            .select([
-                "x.id AS id",
-                "x.responsibility_id AS responsibility_id",
-                "x.agent_id AS agent_id",
-                "x.kind AS kind",
-                "x.draft AS draft",
-                "x.status AS status",
-                "x.decided_by AS decided_by",
-                "x.work_item_id AS work_item_id",
-                "to_json(x.decided_at) #>> '{}' AS decided_at",
-                "to_json(x.created_at) #>> '{}' AS created_at",
-                "r.lead_id AS lead_id",
-                "r.next_action AS next_action",
-                "r.owner_name AS owner_name",
-                "l.contact_name AS contact_name",
-                "l.company AS company",
-                "l.channel AS channel",
-                "a.name AS agent_name",
-                "w.assigned_staff_id AS assigned_staff_id",
-            ])
-            .from("public.executions", "x")
-            .leftJoin("responsibilities", "r", "r.id = x.responsibility_id")
-            .leftJoin("leads", "l", "l.id = r.lead_id")
-            .leftJoin("agents", "a", "a.id = x.agent_id")
-            .leftJoin("work_items", "w", "w.id = x.work_item_id")
-            .where("x.workspace_id = :workspaceId", { workspaceId })
+    /** The lines with the customer's name, the department of the work item and the live state of the card each carries. */
+    private async viewsOf(workspaceId: string, lines: ReadonlyArray<ThreadLine>): Promise<Array<MessageView>> {
+        const refs = lines.map((line) => cardRefOf(line.card_json))
+        const workItemIds = distinct([...lines.map((line) => line.work_item_id), ...idsOfKind(refs, "work_item")])
+        const [customers, items, executions] = await Promise.all([
+            this.leads.cardsOf(workspaceId, distinct(lines.map((line) => line.lead_id))),
+            this.workItems.findMany(workItemIds, workItemIds.length),
+            this.executions.statusesOf(workspaceId, idsOfKind(refs, "execution")),
+        ])
+        const customerName = new Map(customers.map((customer) => [customer.id, customer.contactName]))
+        const own = items.filter((item) => item.workspace_id === workspaceId)
+        const department = new Map(own.map((item) => [item.id, item.department]))
+        const itemState = new Map(own.map((item) => [item.id, workItemStateOf(item.status)]))
+        const executionState = new Map(executions.map((card) => [card.id, executionStateOf(card.status)]))
+        const stateOf = (ref: CardRef | null): CardState | null => {
+            if (ref === null) return "info"
+            if (ref.kind === "execution") return executionState.get(ref.id) ?? "info"
+            return ref.kind === "work_item" ? (itemState.get(ref.id) ?? "info") : "info"
+        }
+        return lines.map((line, index): MessageView => ({
+            ...line,
+            lead_name: customerName.get(line.lead_id ?? "") ?? null,
+            department: department.get(line.work_item_id ?? "") ?? null,
+            card_state: line.card_json === null ? null : stateOf(refs[index] ?? null),
+        }))
+    }
+
+    /** The executions with the context an approval card shows: the step, the customer, the agent and the work item. */
+    private async approvalsOf(
+        workspaceId: string,
+        records: ReadonlyArray<ExecutionRecord>,
+    ): Promise<Array<ApprovalView>> {
+        const steps = await this.steps.stepsOf(
+            workspaceId,
+            records.map((record) => record.responsibility_id),
+        )
+        const workItemIds = distinct(records.map((record) => record.work_item_id))
+        const [customers, agents, items] = await Promise.all([
+            this.leads.cardsOf(workspaceId, distinct(steps.map((step) => step.leadId))),
+            this.agents.cardsOf(workspaceId, distinct(records.map((record) => record.agent_id))),
+            this.workItems.findMany(workItemIds, workItemIds.length),
+        ])
+        const stepOf = new Map(steps.map((step) => [step.id, step]))
+        const customerOf = new Map(customers.map((customer) => [customer.id, customer]))
+        const agentName = new Map(agents.map((agent) => [agent.id, agent.name]))
+        const staffOf = new Map(items.map((item) => [item.id, item.assigned_staff_id]))
+        return records.map((record) => {
+            const step = stepOf.get(record.responsibility_id)
+            const customer = customerOf.get(step?.leadId ?? "")
+            return toApprovalView({
+                id: record.id,
+                responsibility_id: record.responsibility_id,
+                agent_id: record.agent_id,
+                kind: record.kind,
+                draft: record.draft,
+                status: approvalStatusOf(record.status),
+                decided_by: record.decided_by,
+                work_item_id: record.work_item_id,
+                decided_at: record.decided_at,
+                created_at: record.created_at,
+                lead_id: step?.leadId ?? null,
+                next_action: step?.nextAction ?? null,
+                owner_name: step?.ownerName ?? null,
+                contact_name: customer?.contactName ?? null,
+                company: customer?.company ?? null,
+                channel: customer?.channel ?? null,
+                agent_name: agentName.get(record.agent_id ?? "") ?? null,
+                assigned_staff_id: staffOf.get(record.work_item_id ?? "") ?? null,
+            })
+        })
     }
 }

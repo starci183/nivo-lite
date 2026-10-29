@@ -9,6 +9,7 @@ import { ConnectionsModule } from "@modules/domain/connections"
 import { ConversationsService } from "@modules/domain/conversations"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { ZaloInboxModule } from "@modules/domain/zalo-inbox"
+import { PaymentOrdersService } from "@modules/domain/payment-orders"
 import { SepayTransactionsService } from "@modules/domain/sepay-transactions"
 import { PaymentProofService } from "@modules/domain/billing"
 import { PaymentSecretsService } from "../../modules/domain/billing/payment-secrets.service"
@@ -41,6 +42,7 @@ const billingOptions = (): BillingOptions => ({
         InboundEventsService,
         PaymentSecretsService,
         PaymentProofService,
+        PaymentOrdersService,
         SepayTransactionsService,
     ],
     exports: [ConversationsService, SepayTransactionsService, ZaloDeliveryQueue],

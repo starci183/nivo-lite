@@ -1,5 +1,7 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { builder, mock } from "@starci/jest-preset"
+import { BillingService } from "@modules/domain/billing"
+import type { Plan } from "@modules/domain/billing"
 import { AiQuotaOverridesService } from "@modules/domain/ai-quota-overrides"
 import { InviteSupportService } from "@modules/domain/workspace-invites"
 import { WorkspaceBillingService } from "@modules/domain/workspaces"
@@ -9,6 +11,30 @@ import { AdminSupportService } from "./admin-support.service"
 import { PlatformAdminError, PlatformAdminErrorCode } from "./errors/platform-admin.error"
 
 const ADMIN = { userId: "u-1", email: "team@nivo.vn" }
+/** The active plan the billing capability proves. */
+const ENTERPRISE = builder<Plan>({
+    code: "enterprise",
+    nameVi: "Doanh nghiep",
+    nameEn: "Enterprise",
+    priceVnd: 0,
+    period: "month",
+    seats: 50,
+    features: { vi: [], en: [] },
+    sort: 4,
+    aiCreditsPerMonth: 0,
+    isCustom: true,
+    priceAnnualVnd: null,
+    annualDiscountPct: null,
+    promoPriceVnd: null,
+    promoMonths: null,
+    storageGb: 100,
+    individual: false,
+    perSeat: false,
+    listed: false,
+    tiers: [],
+    packs: [],
+})()
+
 const PRINCIPAL: Principal = { id: "u-1", email: "team@nivo.vn", role: "authenticated" }
 
 const build = async () => {
@@ -16,6 +42,7 @@ const build = async () => {
     access.requireAdmin.mockReturnValue(ADMIN)
     access.audit.mockResolvedValue(undefined)
     const billing = mock<WorkspaceBillingService>()
+    const plans = mock<BillingService>()
     const quotas = mock<AiQuotaOverridesService>()
     const invites = mock<InviteSupportService>()
     const moduleRef = await Test.createTestingModule({
@@ -23,11 +50,12 @@ const build = async () => {
             AdminSupportService,
             { provide: AdminAccessService, useValue: access },
             { provide: WorkspaceBillingService, useValue: billing },
+            { provide: BillingService, useValue: plans },
             { provide: AiQuotaOverridesService, useValue: quotas },
             { provide: InviteSupportService, useValue: invites },
         ],
     }).compile()
-    return { support: moduleRef.get(AdminSupportService), access, billing, quotas, invites }
+    return { support: moduleRef.get(AdminSupportService), access, billing, plans, quotas, invites }
 }
 
 describe("AdminSupportService", () => {
@@ -64,7 +92,8 @@ describe("AdminSupportService", () => {
 
 describe("AdminSupportService", () => {
     it("moves the workspace to a plan with its own credits and audits it", async () => {
-        const { support, access, billing, quotas } = await build()
+        const { support, access, billing, plans, quotas } = await build()
+        plans.findPlan.mockResolvedValue(ENTERPRISE)
         billing.setPlan.mockResolvedValue({ from: "starter", to: "enterprise" })
 
         await expect(support.setPlan(PRINCIPAL, "ws-1", "enterprise", 5000)).resolves.toEqual({
@@ -72,6 +101,8 @@ describe("AdminSupportService", () => {
             creditsLimit: 5000,
         })
 
+        expect(plans.findPlan).toHaveBeenCalledWith("enterprise")
+        expect(billing.setPlan).toHaveBeenCalledWith("ws-1", ENTERPRISE)
         expect(quotas.setCreditsLimit).toHaveBeenCalledWith("ws-1", 5000)
         expect(access.audit).toHaveBeenCalledWith(ADMIN, "workspace.set_plan", "ws-1", {
             from: "starter",
@@ -83,7 +114,8 @@ describe("AdminSupportService", () => {
 
 describe("AdminSupportService", () => {
     it("sets no credits when the plan is refused", async () => {
-        const { support, quotas, billing } = await build()
+        const { support, quotas, billing, plans } = await build()
+        plans.findPlan.mockResolvedValue(null)
         billing.setPlan.mockRejectedValue(new Error("unknown plan"))
 
         await expect(support.setPlan(PRINCIPAL, "ws-1", "gone", null)).rejects.toThrow("unknown plan")

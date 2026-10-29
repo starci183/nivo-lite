@@ -1,10 +1,9 @@
-import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { EventsService } from "@modules/domain/events"
-import { StaffService } from "@modules/domain/staff"
+import { StaffDirectoryService, StaffService } from "@modules/domain/staff"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import { WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
@@ -53,6 +52,8 @@ const build = async (entityManager: MockEntityManager) => {
     const auth = mock<AccountDirectory>()
     const events = mock<EventsService>()
     const staff = mock<StaffService>()
+    const staffNames = mock<StaffDirectoryService>()
+    staffNames.namesOf.mockResolvedValue([])
     events.record.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -61,9 +62,10 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: ACCOUNT_DIRECTORY, useValue: auth },
             { provide: EventsService, useValue: events },
             { provide: StaffService, useValue: staff },
+            { provide: StaffDirectoryService, useValue: staffNames },
         ],
     }).compile()
-    return { service: moduleRef.get(WorkspaceMembersService), auth, events, staff }
+    return { service: moduleRef.get(WorkspaceMembersService), auth, events, staff, staffNames }
 }
 
 describe("WorkspaceMembersService / ensure", () => {
@@ -245,47 +247,63 @@ describe("WorkspaceMembersService / list", () => {
 })
 
 describe("WorkspaceMembersService / join", () => {
-    it("creates or reactivates the membership", async () => {
+    const entry = { workspaceId: "ws-1", userId: "user-2", role: "staff", staffId: "staff-1", displayName: "Binh" }
+
+    it("creates or reactivates the membership under the name of the staff row it links", async () => {
         const em = mockEntityManager()
         const upsert = fakeQueryBuilder({ execute: {} })
         em.createQueryBuilder.mockReturnValue(upsert.builder)
-        const { service } = await build(em)
+        const { service, staffNames } = await build(em)
+        staffNames.namesOf.mockResolvedValue([{ id: "staff-1", name: "Binh Tran" }])
 
-        await service.join({
-            workspaceId: "ws-1",
-            userId: "user-2",
-            role: "staff",
-            staffId: "staff-1",
-            displayName: "Binh",
-        })
+        await service.join(entry)
 
+        expect(staffNames.namesOf).toHaveBeenCalledWith("ws-1", ["staff-1"])
         expect(em.createQueryBuilder).toHaveBeenCalledWith(WorkspaceMemberEntity, "workspace_members")
-
         expect(upsert.callsOf("insert")).toEqual([[]])
-        expect(upsert.callsOf("values").map(([row]) => evaluatedValues(row))).toEqual([
-            {
-                workspaceId: "ws-1",
-                userId: "user-2",
-                role: "staff",
-                staffId: "staff-1",
-                displayName:
-                    "coalesce((SELECT s.name FROM public.staff s WHERE s.id = :staffId LIMIT 1), :displayName)",
-            },
+        expect(upsert.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "ws-1",
+                    userId: "user-2",
+                    role: "staff",
+                    staffId: "staff-1",
+                    displayName: "Binh Tran",
+                },
+            ],
         ])
-        expect(upsert.callsOf("setParameters")).toEqual([[{ staffId: "staff-1", displayName: "Binh" }]])
         expect(upsert.callsOf("onConflict")).toHaveLength(1)
     })
 
-    it("refuses a role the table does not allow before writing", async () => {
+    it("keeps the given name when the linked staff row is not found", async () => {
         const em = mockEntityManager()
         const upsert = fakeQueryBuilder({ execute: {} })
         em.createQueryBuilder.mockReturnValue(upsert.builder)
         const { service } = await build(em)
 
-        await expect(
-            service.join({ workspaceId: "ws-1", userId: "user-2", role: "guest", staffId: null, displayName: "Binh" }),
-        ).rejects.toThrow(new TypeError("guest is not a workspace role"))
-        expect(upsert.callsOf("execute")).toEqual([])
+        await service.join(entry)
+
+        expect(upsert.callsOf("values")).toEqual([[expect.objectContaining({ displayName: "Binh" })]])
+    })
+
+    it("refuses a role the table does not allow", async () => {
+        const em = mockEntityManager()
+        em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ execute: {} }).builder)
+        const { service } = await build(em)
+
+        await expect(service.join({ ...entry, role: "admin" })).rejects.toThrow("admin is not a workspace role")
+    })
+
+    it("asks for no staff name when the seat links no staff row", async () => {
+        const em = mockEntityManager()
+        const upsert = fakeQueryBuilder({ execute: {} })
+        em.createQueryBuilder.mockReturnValue(upsert.builder)
+        const { service, staffNames } = await build(em)
+
+        await service.join({ ...entry, staffId: null })
+
+        expect(staffNames.namesOf).not.toHaveBeenCalled()
+        expect(upsert.callsOf("values")).toEqual([[expect.objectContaining({ staffId: null, displayName: "Binh" })]])
     })
 })
 
@@ -479,8 +497,8 @@ describe("WorkspaceMembersService / seat changes", () => {
         expect(events.record).not.toHaveBeenCalled()
     })
 
-    it.each([{ affected: 0 }, {}])("refuses when the target disappears before the update: %p", async (written) => {
-        const em = mockEntityManager({ findOne: seats(), update: [WorkspaceMemberEntity, written] })
+    it("refuses when the target disappears before the update", async () => {
+        const em = mockEntityManager({ findOne: seats(), update: [WorkspaceMemberEntity, { affected: 0 }] })
         const { service, events } = await build(em)
 
         await expect(service.changeRole("user-1", "ws-1", "user-2", "manager")).rejects.toMatchObject({

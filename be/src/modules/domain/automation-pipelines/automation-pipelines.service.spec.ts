@@ -167,6 +167,19 @@ describe("AutomationPipelinesService", () => {
         })
     })
 
+    describe("enabledOfTemplate", () => {
+        it("reads the pipelines of one template that are on, by workspace id, bounded", async () => {
+            const em = mockEntityManager({ find: [AutomationPipelineEntity, [ENTITY]] })
+
+            await expect((await build(em)).enabledOfTemplate("shifts_shift_reminder", 7)).resolves.toEqual([ROW])
+            expect(em.find).toHaveBeenCalledWith(AutomationPipelineEntity, {
+                where: { enabled: true, templateKey: "shifts_shift_reminder" },
+                order: { workspaceId: "ASC" },
+                take: 7,
+            })
+        })
+    })
+
     describe("pipelineKeys", () => {
         it("reads the id and template key of each pipeline of a workspace", async () => {
             const em = mockEntityManager({

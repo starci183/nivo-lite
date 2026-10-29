@@ -9,21 +9,19 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { OfficeRoomsError, OfficeRoomsErrorCode } from "./errors/office-rooms.error"
 import type { AgentConversationView, ConversationUnreadListView, RoomChoice, RoomView } from "./office-rooms.contracts"
+import { InjectRoomsAgents, InjectRoomsLeads } from "./office-rooms.decorators"
+import type { RoomsAgents, RoomsLeads } from "./office-rooms.port"
 import { OfficeRoomMembersService } from "./office-room-members.service"
 import { OfficeRoomReadsService } from "./office-room-reads.service"
-import type { AgentConversationFacts, ConversationUnreadFacts, RoomSummaryFacts } from "./office-rooms.facts"
+import type { AgentConversationFacts, ConversationUnreadFacts } from "./office-rooms.facts"
 
 /** Only owners and managers open the department rooms of a workspace. */
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 /** The read marker key of the general Office room. */
 const OFFICE_READ_KEY = ""
 
-/** The table each direct conversation kind belongs to; undefined names a kind that is not one. */
-const tableOf = (kind: string) => {
-    if (kind === "agent") return "public.agents"
-    if (kind === "lead") return "public.leads"
-    return undefined
-}
+/** How a conversation id is written: the lowercase text of a uuid, as the stored ids render. */
+const CONVERSATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /** The function that records a read marker, and the one that opens the rooms of a workspace. */
 const MARK_READ = "public.mark_office_room_read"
@@ -42,15 +40,6 @@ const agentConversationOf = (row: AgentConversationFacts): AgentConversationView
             : { body: row.last_body ?? "", at: row.last_at, authorId: row.last_author_id, author: row.last_author },
 })
 
-const EMPTY_SUMMARY: RoomSummaryFacts = {
-    unread: 0,
-    unread_mention_bodies: [],
-    last_body: null,
-    last_author: null,
-    last_author_user_id: null,
-    last_at: null,
-}
-
 @Injectable()
 /** The Hub rooms: the general Office room first, then the department rooms, each with the caller's unread count. */
 export class OfficeRoomsService {
@@ -62,6 +51,8 @@ export class OfficeRoomsService {
         private readonly activity: ChatActivityService,
         private readonly reads: OfficeRoomReadsService,
         private readonly seats: OfficeRoomMembersService,
+        @InjectRoomsAgents() private readonly agents: RoomsAgents,
+        @InjectRoomsLeads() private readonly leads: RoomsLeads,
     ) {}
 
     /** The rooms the caller sees; a workspace without department rooms answers the Office room alone. */
@@ -77,7 +68,7 @@ export class OfficeRoomsService {
         )
         const emptyMembers = { count: 0, preview: [] }
         const office: RoomView = {
-            ...(summary ?? EMPTY_SUMMARY),
+            ...summary,
             key: null,
             name: "",
             position: 0,
@@ -103,22 +94,18 @@ export class OfficeRoomsService {
     /** Marks a direct conversation read by the caller up to now; a wrong kind or an id outside the workspace is refused. */
     async markConversationRead(principalId: string, workspaceId: string, kind: string, id: string): Promise<void> {
         const member = await this.members.require(principalId, workspaceId)
-        const table = tableOf(kind)
-        if (table === undefined)
+        if (!(await this.belongs(workspaceId, kind, id)))
             throw new OfficeRoomsError({ code: OfficeRoomsErrorCode.ConversationInvalid, params: { id } })
-        const marked = await this.entityManager.transaction(async (manager) => {
-            const belongs = await manager
-                .createQueryBuilder()
-                .select("1")
-                .from(table, "t")
-                .where("t.workspace_id = :workspaceId AND t.id::text = :id", { workspaceId, id })
-                .getExists()
-            if (!belongs) return false
-            await callDbFunction(manager, MARK_READ, [workspaceId, member.userId, `${kind}:${id}`])
-            return true
-        })
-        if (!marked) throw new OfficeRoomsError({ code: OfficeRoomsErrorCode.ConversationInvalid, params: { id } })
+        await callDbFunction(this.entityManager, MARK_READ, [workspaceId, member.userId, `${kind}:${id}`])
         await this.activity.unread(workspaceId, `${kind}:${id}`, member.userId)
+    }
+
+    /** Whether the agent or lead of the conversation is one of the workspace; the owner capability answers. */
+    private async belongs(workspaceId: string, kind: string, id: string): Promise<boolean> {
+        if (!CONVERSATION_ID.test(id)) return false
+        if (kind === "agent") return (await this.agents.find(workspaceId, id)) !== null
+        if (kind === "lead") return this.leads.exists(workspaceId, id)
+        return false
     }
 
     /** Marks a room (null = the Office room) read by the caller up to now. */

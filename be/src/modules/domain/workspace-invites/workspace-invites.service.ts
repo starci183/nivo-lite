@@ -4,8 +4,8 @@ import { IsNull, MoreThan } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { EntitlementsService } from "@modules/domain/billing"
 import { EventsService } from "@modules/domain/events"
-import { StaffEntity } from "@modules/domain/staff"
-import { WorkspaceEntity } from "@modules/domain/workspaces"
+import { StaffDirectoryService } from "@modules/domain/staff"
+import { WorkspacesService } from "@modules/domain/workspaces"
 import { InjectAccountDirectory, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { AccountDirectory, MemberListing } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
@@ -34,16 +34,16 @@ import { InjectInviteDelivery, InjectWorkspaceInvitesOptions } from "./workspace
 const DAY_MS = 86_400_000
 const PENDING_INVITES_MAX = 200
 
-/** The preview as the join selects it. */
+/** The preview as the invitation row selects it. */
 interface InvitePreviewRaw {
-    /** The name of the workspace the invitation is for. */
-    readonly workspace_name: string
+    /** The workspace the invitation is for. */
+    readonly workspace_id: string
     /** The invited address. */
     readonly email: string
     /** The role it grants. */
     readonly role: string
-    /** The name of the staff row it links, when any. */
-    readonly staff_name: string | null
+    /** The staff row it links, when any. */
+    readonly staff_id: string | null
     /** `pending`, `revoked`, `accepted` or `expired`. */
     readonly state: string
 }
@@ -62,6 +62,8 @@ export class WorkspaceInvitesService {
         private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
         private readonly entitlements: EntitlementsService,
+        private readonly workspaces: WorkspacesService,
+        private readonly staff: StaffDirectoryService,
     ) {}
 
     /** The invitations of the caller's workspace that can still be accepted; owner and manager only. */
@@ -202,12 +204,10 @@ export class WorkspaceInvitesService {
         }
         const row = await this.entityManager
             .createQueryBuilder(WorkspaceInviteEntity, "i")
-            .innerJoin(WorkspaceEntity, "w", "w.id = i.workspace_id")
-            .leftJoin(StaffEntity, "s", "s.id = i.staff_id")
-            .select("w.name", "workspace_name")
+            .select("i.workspace_id", "workspace_id")
             .addSelect("i.email", "email")
             .addSelect("i.role", "role")
-            .addSelect("s.name", "staff_name")
+            .addSelect("i.staff_id", "staff_id")
             .addSelect(
                 `CASE WHEN i.revoked_at IS NOT NULL THEN 'revoked'
                 WHEN i.accepted_at IS NOT NULL THEN 'accepted'
@@ -220,11 +220,15 @@ export class WorkspaceInvitesService {
             .limit(1)
             .getRawOne<InvitePreviewRaw>()
         if (row === undefined) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.Invalid })
+        const [workspaceName, linked] = await Promise.all([
+            this.workspaces.nameOf(row.workspace_id),
+            row.staff_id === null ? [] : this.staff.namesOf(row.workspace_id, [row.staff_id]),
+        ])
         return {
-            workspaceName: row.workspace_name,
+            workspaceName,
             email: row.email,
             role: row.role,
-            staffName: row.staff_name,
+            staffName: linked[0]?.name ?? null,
             state: row.state,
         }
     }

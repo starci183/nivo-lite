@@ -3,6 +3,7 @@ import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "
 import type { MockEntityManager, RecordingQueueOutbox } from "@starci/jest-preset"
 import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { ledgerExpected, ledgerWritten } from "@tests/fixtures/builders/public-api-ledger.builder"
+import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { ApiKeysService } from "@modules/domain/api-keys"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { PUBLIC_API_QUEUE, PublicApiQueue } from "@modules/queues/public-api"
@@ -28,13 +29,19 @@ const MESSAGE: AcceptMessageParams = {
 
 const RECORDED = { id: "request-1", lead_id: null, inserted: true }
 
-/** A transaction whose reads answer in call order: the conversation lookup, then the ledger insert. */
-const transactionOf = (conversation: object | undefined, ledger: ReadonlyArray<object>) => {
+/** The conversation the conversation reads answer, or none. */
+let primed: { readonly id: string; readonly lead_id: string | null } | undefined
+
+/** A transaction whose conversation lookups answer the given conversation and whose one query builder is the ledger insert. */
+const transactionOf = (
+    conversation: { readonly id: string; readonly lead_id: string | null } | undefined,
+    ledger: ReadonlyArray<object>,
+) => {
+    primed = conversation
     const em = mockEntityManager()
-    const lookup = fakeQueryBuilder({ getRawOne: conversation })
     const write = fakeQueryBuilder({ execute: { raw: ledger } })
-    answerQueryBuilders(em, lookup, write)
-    return Object.assign(fakeTransaction(em), { lookup, write })
+    answerQueryBuilders(em, write)
+    return Object.assign(fakeTransaction(em), { write })
 }
 
 const build = async (entityManager: MockEntityManager) => {
@@ -44,6 +51,10 @@ const build = async (entityManager: MockEntityManager) => {
     })
     const keys = mock<ApiKeysService>()
     keys.authenticate.mockResolvedValue(WHO)
+    const chats = mock<AgentConversationsReadService>()
+    const answer = () => Promise.resolve(primed === undefined ? null : { id: primed.id, leadId: primed.lead_id })
+    chats.customerChat.mockImplementation(answer)
+    chats.latestCustomerChatOfLead.mockImplementation(answer)
     const moduleRef = await Test.createTestingModule({
         providers: [
             PublicMessagesService,
@@ -51,16 +62,17 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: ApiKeysService, useValue: keys },
             PublicApiLedgerService,
             PublicConversationsService,
+            { provide: AgentConversationsReadService, useValue: chats },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
         ],
     }).compile()
-    return { service: moduleRef.get(PublicMessagesService), outbox, keys }
+    return { service: moduleRef.get(PublicMessagesService), outbox, keys, chats }
 }
 
 describe("PublicMessagesService / acceptMessage", () => {
     it("admits messages:write and queues the conversation message with its idempotency key", async () => {
         const tx = transactionOf({ id: "conv-1", lead_id: "lead-1" }, [RECORDED])
-        const { service, outbox, keys } = await build(tx.em)
+        const { service, outbox, keys, chats } = await build(tx.em)
 
         await expect(service.acceptMessage(MESSAGE)).resolves.toEqual({
             conversationId: "conv-1",
@@ -68,12 +80,7 @@ describe("PublicMessagesService / acceptMessage", () => {
         })
 
         expect(keys.authenticate).toHaveBeenCalledWith("messages:write", AUTH)
-        expect(tx.lookup.argsOf("where")).toEqual([
-            [
-                "c.workspace_id = :workspaceId AND c.kind = 'customer' AND c.id = :conversationId",
-                { workspaceId: "workspace-1", conversationId: "conv-1" },
-            ],
-        ])
+        expect(chats.customerChat).toHaveBeenCalledWith("workspace-1", "conv-1", expect.anything())
         expect(ledgerWritten(tx.write)).toEqual(
             ledgerExpected({
                 workspaceId: "workspace-1",
@@ -100,17 +107,11 @@ describe("PublicMessagesService / acceptMessage", () => {
 describe("PublicMessagesService / acceptMessage", () => {
     it("finds the latest conversation of a customer and keys a request without an idempotency key by nothing", async () => {
         const tx = transactionOf({ id: "conv-2", lead_id: "lead-1" }, [RECORDED])
-        const { service } = await build(tx.em)
+        const { service, chats } = await build(tx.em)
 
         await service.acceptMessage({ authorization: AUTH, text: "hello", leadId: "lead-1" })
 
-        expect(tx.lookup.argsOf("where")).toEqual([
-            [
-                "c.workspace_id = :workspaceId AND c.kind = 'customer' AND c.lead_id = :leadId",
-                { workspaceId: "workspace-1", leadId: "lead-1" },
-            ],
-        ])
-        expect(tx.lookup.argsOf("orderBy")).toEqual([["c.created_at", "DESC"]])
+        expect(chats.latestCustomerChatOfLead).toHaveBeenCalledWith("workspace-1", "lead-1", expect.anything())
         expect(ledgerWritten(tx.write)).toEqual(
             ledgerExpected({
                 workspaceId: "workspace-1",

@@ -1,11 +1,26 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { mock } from "@starci/jest-preset"
+import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
+import { AgentMessagesReadService, AgentTestChatsService } from "@modules/domain/agent-messages"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { EventsService } from "@modules/domain/events"
-import { OfficeCardsService } from "@modules/domain/messages"
-import { OfficeRoomMembersService, OfficeRoomReadsService, OfficeRoomsService } from "@modules/domain/office-rooms"
+import { LeadReadService } from "@modules/domain/leads"
+import { MessagesReadService, OfficeCardsService } from "@modules/domain/messages"
+import {
+    OFFICE_ROOMS_AGENTS,
+    OFFICE_ROOMS_LEADS,
+    OFFICE_ROOMS_TEST_CHATS,
+    OfficeRoomMembersService,
+    OfficeRoomReadsService,
+    OfficeRoomsService,
+} from "@modules/domain/office-rooms"
 import { StaffService } from "@modules/domain/staff"
-import { ACCOUNT_DIRECTORY, WorkspaceMembersService } from "@modules/domain/workspace-members"
+import {
+    ACCOUNT_DIRECTORY,
+    WorkspaceMembersReadService,
+    WorkspaceMembersService,
+} from "@modules/domain/workspace-members"
 import type { AccountDirectory } from "@modules/domain/workspace-members"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -16,6 +31,16 @@ import type { MessageCatalog } from "@modules/platform/i18n"
         OfficeRoomReadsService,
         OfficeRoomMembersService,
         WorkspaceMembersService,
+        WorkspaceMembersReadService,
+        MessagesReadService,
+        AgentDirectoryService,
+        AgentConversationsReadService,
+        AgentMessagesReadService,
+        AgentTestChatsService,
+        LeadReadService,
+        { provide: OFFICE_ROOMS_AGENTS, useExisting: AgentDirectoryService },
+        { provide: OFFICE_ROOMS_LEADS, useExisting: LeadReadService },
+        { provide: OFFICE_ROOMS_TEST_CHATS, useExisting: AgentTestChatsService },
         EventsService,
         StaffService,
         { provide: ACCOUNT_DIRECTORY, useFactory: () => mock<AccountDirectory>({ accountOf: jest.fn() }) },

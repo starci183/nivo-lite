@@ -1,15 +1,19 @@
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { AgentDirectoryService } from "@modules/domain/agents"
+import { ApprovalRequestsReadService } from "@modules/domain/approval-requests"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { ModuleCatalogService, WorkDrainService, WorkEngineService } from "@modules/domain/decisions"
 import type { ActionEntry } from "@modules/domain/decisions"
+import { LeadReadService } from "@modules/domain/leads"
 import { ThreadApprovalsService, ThreadMessagesService } from "@modules/domain/thread-messages"
 import type { ThreadMessage } from "@modules/domain/thread-messages"
+import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
+import { IsNull, Not } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { itemOf } from "@tests/fixtures/builders/work-decision.builder"
 import { ThreadWorkErrorCode } from "./errors/thread-work.error"
 import { ThreadWorkEntity } from "./persistence/entities"
@@ -88,31 +92,20 @@ const entityOf = (record: ThreadWorkRecord): ThreadWorkEntity =>
         missingFields: record.missing_fields,
     })
 
+const rowsByManager = new WeakMap<object, Rows>()
+
 /**
- * The manager double, overridable per spec: the waiting work is found by entity, the settled asks come from the join on the work
- * entity, and the agent, the customer and the decider are plain table reads answered by the table each one reads from.
+ * The manager double, overridable per spec: the waiting work and the asking work are found by entity; the agent, the customer, the
+ * decider and how each request ended are answered by the owners' services, which `build` makes from the same rows.
  */
 const managerOf = (rows: Rows = {}) => {
     const waiting = rows.waiting ?? [workRow()]
     const em = mockEntityManager({
         findOne: [ThreadWorkEntity, waiting[0] === undefined ? null : entityOf(waiting[0])],
+        find: [ThreadWorkEntity, (rows.settled ?? [settledRow()]).map(entityOf)],
     })
-    const settled = fakeQueryBuilder({ getRawMany: rows.settled ?? [settledRow()] })
-    const answers: Record<string, ReadonlyArray<unknown>> = {
-        "public.agents": rows.agents ?? [SALES_ROW],
-        "public.leads": rows.leads ?? [LEAD],
-        "public.workspace_members": rows.deciders ?? [MINH],
-    }
-    const reads: Array<ReturnType<typeof fakeQueryBuilder>> = []
-    em.createQueryBuilder.mockImplementation(((entity?: unknown) => {
-        if (entity === ThreadWorkEntity) return settled.builder
-        const read: ReturnType<typeof fakeQueryBuilder> = fakeQueryBuilder({
-            getRawOne: () => Promise.resolve(answers[String(read.callsOf("from")[0]?.[0])]?.[0]),
-        })
-        reads.push(read)
-        return read.builder
-    }) as never)
-    return { em, settled, reads }
+    rowsByManager.set(em, rows)
+    return { em }
 }
 
 const MESSAGE: ThreadMessage = {
@@ -150,7 +143,51 @@ const CARDED: ThreadMessage = {
 }
 
 const build = async (em: MockEntityManager, entry: ActionEntry | null = DISCOUNT) => {
+    const rows = rowsByManager.get(em) ?? {}
     const logger = mock<Logger>()
+    const [agentRow] = rows.agents ?? [SALES_ROW]
+    const agents = mock<AgentDirectoryService>()
+    agents.findActive.mockResolvedValue(
+        agentRow === undefined
+            ? null
+            : {
+                  id: agentRow.id,
+                  name: agentRow.name,
+                  module: agentRow.module,
+                  canTagAgentIds: agentRow.can_tag_agent_ids,
+              },
+    )
+    const [leadRow] = rows.leads ?? [LEAD]
+    const leads = mock<LeadReadService>()
+    leads.cardsOf.mockResolvedValue(
+        leadRow === undefined
+            ? []
+            : [
+                  {
+                      id: leadRow.id,
+                      contactName: leadRow.contact_name,
+                      company: "",
+                      channel: "",
+                      stage: "new",
+                      email: null,
+                  },
+              ],
+    )
+    const [deciderRow] = rows.deciders ?? [MINH]
+    const members = mock<WorkspaceMemberDirectoryService>()
+    members.find.mockResolvedValue(
+        deciderRow === undefined
+            ? null
+            : { id: deciderRow.id, displayName: deciderRow.display_name, role: deciderRow.role },
+    )
+    const requests = mock<ApprovalRequestsReadService>()
+    requests.settledOf.mockResolvedValue(
+        (rows.settled ?? [settledRow()]).map((row) => ({
+            id: row.approval_request_id ?? "",
+            status: row.request_status,
+            resolvedBy: row.resolved_by,
+        })),
+    )
     const engine = mock<WorkEngineService>({
         resumeWork: jest.fn().mockResolvedValue(itemOf({ status: "done" })),
     })
@@ -176,9 +213,25 @@ const build = async (em: MockEntityManager, entry: ActionEntry | null = DISCOUNT
             { provide: ThreadMessagesService, useValue: messages },
             { provide: ThreadApprovalsService, useValue: approvals },
             { provide: WorkDrainService, useValue: drain },
+            { provide: AgentDirectoryService, useValue: agents },
+            { provide: LeadReadService, useValue: leads },
+            { provide: WorkspaceMemberDirectoryService, useValue: members },
+            { provide: ApprovalRequestsReadService, useValue: requests },
         ],
     }).compile()
-    return { service: moduleRef.get(ThreadWorkService), logger, engine, rules, turns, messages, approvals }
+    return {
+        service: moduleRef.get(ThreadWorkService),
+        logger,
+        engine,
+        rules,
+        turns,
+        messages,
+        approvals,
+        agents,
+        leads,
+        members,
+        requests,
+    }
 }
 
 const START: ThreadWorkStart = {
@@ -197,15 +250,12 @@ const BY_MINH = { name: "Anh Minh", kind: "staff", memberId: "m-minh" }
 const registerStart = () => {
     describe("start", () => {
         it("runs the agent's first step about the customer, with the amount in the unit of the action's rule", async () => {
-            const harness = managerOf()
-            const { service, turns } = await build(harness.em)
+            const { service, turns, agents, leads } = await build(managerOf().em)
 
             await service.start(START)
 
-            expect(harness.reads.map((read) => read.callsOf("from")[0]?.[0])).toEqual(["public.agents", "public.leads"])
-            expect(harness.reads[1]?.callsOf("where")).toEqual([
-                ["l.workspace_id = :workspaceId AND l.id = :leadId", { workspaceId: "ws-1", leadId: "lead-thao" }],
-            ])
+            expect(agents.findActive).toHaveBeenCalledWith("ws-1", "agent-sales")
+            expect(leads.cardsOf).toHaveBeenCalledWith("ws-1", ["lead-thao"])
 
             expect(turns.run).toHaveBeenCalledWith({
                 workspaceId: "ws-1",
@@ -395,14 +445,17 @@ const registerSettled = () => {
     describe("resumeSettled", () => {
         it("resumes an approved request as the member who approved it, and the agent goes on", async () => {
             const harness = managerOf()
-            const { service, engine, turns } = await build(harness.em)
+            const { service, engine, turns, requests } = await build(harness.em)
 
             await expect(service.resumeSettled()).resolves.toBe(1)
 
-            expect(harness.em.createQueryBuilder).toHaveBeenCalledWith(ThreadWorkEntity, "w")
-            expect(harness.settled.callsOf("where")).toEqual([["w.state = 'asked' AND r.status <> 'pending'"]])
-            expect(harness.settled.callsOf("orderBy")).toEqual([["w.updated_at", "ASC"]])
-            expect(harness.settled.callsOf("limit")).toEqual([[20]])
+            expect(harness.em.find).toHaveBeenCalledWith(ThreadWorkEntity, {
+                where: { state: "asked", approvalRequestId: Not(IsNull()) },
+                order: { updatedAt: "ASC", id: "ASC" },
+                skip: 0,
+                take: 100,
+            })
+            expect(requests.settledOf).toHaveBeenCalledWith(["req-1"])
 
             expect(engine.resumeWork).toHaveBeenCalledWith(CTX, "item-1", "approved", {}, BY_MINH)
             expect(turns.react).toHaveBeenCalled()
@@ -430,6 +483,43 @@ const registerSettled = () => {
 
             expect(engine.resumeWork).not.toHaveBeenCalled()
             expect(turns.move).toHaveBeenCalledWith({ workspaceId: "ws-1", workId: "work-1" }, stoppedMove)
+        })
+
+        it("moves on the work of one request right after it is decided", async () => {
+            const harness = managerOf()
+            const { service, engine } = await build(harness.em)
+
+            await service.approvalSettled("req-1")
+
+            expect(harness.em.find).toHaveBeenCalledWith(ThreadWorkEntity, {
+                where: { state: "asked", approvalRequestId: "req-1" },
+                order: { updatedAt: "ASC", id: "ASC" },
+                skip: 0,
+                take: 1,
+            })
+            expect(engine.resumeWork).toHaveBeenCalledTimes(1)
+        })
+
+        it("looks past the asking work that is still pending, up to the settled batch, and skips work without a request", async () => {
+            const pending = Array.from({ length: 100 }, (_, index) =>
+                entityOf(settledRow({ id: `pending-${index}`, approval_request_id: `req-p${index}` })),
+            )
+            const noRequest = entityOf(settledRow({ id: "no-request", approval_request_id: null }))
+            const harness = managerOf()
+            harness.em.find.mockResolvedValueOnce(pending).mockResolvedValueOnce([noRequest, entityOf(settledRow())])
+            const { service, requests, engine } = await build(harness.em)
+            requests.settledOf
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([{ id: "req-1", status: "approved", resolvedBy: "m-minh" }])
+
+            await expect(service.resumeSettled()).resolves.toBe(1)
+
+            expect(harness.em.find).toHaveBeenCalledTimes(2)
+            expect(harness.em.find).toHaveBeenLastCalledWith(
+                ThreadWorkEntity,
+                expect.objectContaining({ skip: 100, take: 100 }),
+            )
+            expect(engine.resumeWork).toHaveBeenCalledTimes(1)
         })
 
         it("logs a request whose work cannot resume and stops it", async () => {

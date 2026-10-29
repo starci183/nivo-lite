@@ -1,7 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
-import { WorkThreadEntity } from "@modules/domain/work-threads"
+import { AgentDirectoryService } from "@modules/domain/agents"
+import type { AgentCard } from "@modules/domain/agents"
+import { WorkThreadsService } from "@modules/domain/work-threads"
+import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
+import type { DirectoryMember } from "@modules/domain/workspace-members"
+import { WorkspacesService } from "@modules/domain/workspaces"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -15,6 +20,7 @@ import type {
     ApprovalStepOutcome,
     ChainActor,
     ChainStep,
+    ChainStepRead,
     ChainStepRecord,
     ChainStepStatus,
     ChainView,
@@ -26,13 +32,30 @@ import { MAX_AUTOMATIC_STEPS } from "./work-chains.contracts"
 import { InjectChainOwnerDirectory } from "./work-chains.decorators"
 import type { ChainOwnerDirectory } from "./work-chains.port"
 import { WorkChainEntity } from "./persistence/entities"
-import { readStepById, selectStepsWithActor } from "./persistence/work-chain.query"
+import { readStepById, selectSteps } from "./persistence/work-chain.query"
 
 /** The most steps one chain read answers. */
 const CHAIN_STEPS_MAX = 500
 
 /** The most members one owner lookup checks. */
 const OWNER_CANDIDATES_MAX = 10
+
+/** The agents and members that acted in some steps, by id. */
+interface Actors {
+    readonly agents: ReadonlyMap<string, AgentCard>
+    readonly members: ReadonlyMap<string, DirectoryMember>
+}
+
+/** The step with the name and role of whoever acted: an agent name and module, or a member display name and role; empty when gone. */
+const namedBy = (row: ChainStepRead, actors: Actors): ChainStepRecord => {
+    const agent = row.actor_kind === "agent" ? actors.agents.get(row.actor_id) : undefined
+    const member = row.actor_kind === "member" ? actors.members.get(row.actor_id) : undefined
+    return {
+        ...row,
+        actor_name: agent?.name ?? member?.displayName ?? "",
+        actor_role: agent?.module ?? member?.role ?? "",
+    }
+}
 
 /** A step that tags a group is information, not a request one person answers: it ends as it begins. */
 const initialStatusOf = (step: NewChainStep): ChainStepStatus => {
@@ -50,6 +73,10 @@ export class WorkChainsService {
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectChainOwnerDirectory() private readonly owners: ChainOwnerDirectory,
         private readonly events: EventsService,
+        private readonly threads: WorkThreadsService,
+        private readonly agents: AgentDirectoryService,
+        private readonly members: WorkspaceMemberDirectoryService,
+        private readonly workspaces: WorkspacesService,
     ) {}
 
     /**
@@ -111,10 +138,7 @@ export class WorkChainsService {
             .execute()
         const [settled] = changed.raw as Array<{ thread_id: string; action: string }>
         if (settled === undefined) return
-        const thread = await manager.findOne(WorkThreadEntity, {
-            select: { id: true, leadId: true },
-            where: { id: settled.thread_id },
-        })
+        const thread = await this.threads.findIfAny(outcome.workspaceId, settled.thread_id, manager)
         const decider =
             outcome.decidedBy === null ? "" : await this.memberNameOf(manager, outcome.workspaceId, outcome.decidedBy)
         await this.events.record(
@@ -163,36 +187,18 @@ export class WorkChainsService {
         manager: EntityManager = this.entityManager,
     ): Promise<MentionRef> {
         const owner = await this.owners.ownerOf(agentId)
-        const active = await manager
-            .createQueryBuilder()
-            .select("m.id", "id")
-            .from("public.workspace_members", "m")
-            .where("m.workspace_id = :workspaceId AND m.status = 'active' AND m.id = ANY(:memberIds)", {
-                workspaceId,
-                memberIds: [owner.ownerMemberId, owner.fallbackMemberId],
-            })
-            .limit(OWNER_CANDIDATES_MAX)
-            .getRawMany<{ id: string }>()
-        const present = new Set(active.map((row) => row.id))
-        const chosen = [owner.ownerMemberId, owner.fallbackMemberId].find((id) => present.has(id))
+        const candidates = [owner.ownerMemberId, owner.fallbackMemberId]
+        const active = await this.members.activeAmong(workspaceId, candidates, OWNER_CANDIDATES_MAX, manager)
+        const present = new Set(active.map((member) => member.id))
+        const chosen = candidates.find((id) => present.has(id))
         if (chosen !== undefined) return { kind: "member", id: chosen }
-        const workspace = await manager
-            .createQueryBuilder()
-            .select("m.id", "id")
-            .from("public.workspace_members", "m")
-            .innerJoin("workspaces", "w", "w.id = m.workspace_id AND w.owner_id = m.user_id")
-            .where("m.workspace_id = :workspaceId", { workspaceId })
-            .limit(1)
-            .getRawOne<{ id: string }>()
-        return { kind: "member", id: workspace?.id ?? owner.fallbackMemberId }
+        const workspaceOwner = await this.workspaces.ownerIdOf(workspaceId)
+        const seat = workspaceOwner === null ? null : await this.members.idOfUser(workspaceId, workspaceOwner, manager)
+        return { kind: "member", id: seat ?? owner.fallbackMemberId }
     }
 
     private async recordIn(tx: EntityManager, step: NewChainStep): Promise<RecordedStep> {
-        const thread = await tx.findOne(WorkThreadEntity, {
-            select: { id: true, leadId: true },
-            where: { workspaceId: step.workspaceId, id: step.threadId },
-            lock: { mode: "pessimistic_write" },
-        })
+        const thread = await this.threads.lockIfAny(tx, step.workspaceId, step.threadId)
         if (thread === null) throw new WorkChainsError({ code: WorkChainsErrorCode.ThreadNotFound })
         const history = (await this.stepsOf(tx, step.workspaceId, step.threadId)).map(toChainStep)
         const verdict = judgeStep(history, step)
@@ -241,9 +247,9 @@ export class WorkChainsService {
             .execute()
         const [inserted] = result.raw as Array<{ id: string }>
         if (inserted === undefined) throw new WorkChainsError({ code: WorkChainsErrorCode.NotStored })
-        const row = await readStepById(tx, step.workspaceId, inserted.id)
-        if (row === undefined) throw new WorkChainsError({ code: WorkChainsErrorCode.NotStored })
-        const stored = toChainStep(row)
+        const read = await readStepById(tx, step.workspaceId, inserted.id)
+        if (read === undefined) throw new WorkChainsError({ code: WorkChainsErrorCode.NotStored })
+        const stored = toChainStep(await this.withActor(tx, step.workspaceId, read))
         await this.events.record(
             {
                 workspaceId: step.workspaceId,
@@ -258,22 +264,53 @@ export class WorkChainsService {
         return stored
     }
 
-    private async memberNameOf(manager: EntityManager, workspaceId: string, id: string): Promise<string> {
-        const row = await manager
-            .createQueryBuilder()
-            .select("x.display_name", "name")
-            .from("public.workspace_members", "x")
-            .where("x.workspace_id = :workspaceId AND x.id = :id", { workspaceId, id })
-            .limit(1)
-            .getRawOne<{ name: string }>()
-        return row?.name ?? ""
+    private async memberNameOf(manager: EntityManager, workspaceId: string, memberId: string): Promise<string> {
+        return (await this.members.find(workspaceId, memberId, manager))?.displayName ?? ""
     }
 
-    private stepsOf(manager: EntityManager, workspaceId: string, threadId: string): Promise<Array<ChainStepRecord>> {
-        return selectStepsWithActor(manager, workspaceId)
+    private async stepsOf(
+        manager: EntityManager,
+        workspaceId: string,
+        threadId: string,
+    ): Promise<Array<ChainStepRecord>> {
+        const rows = await selectSteps(manager, workspaceId)
             .andWhere("s.thread_id = :threadId", { threadId })
             .orderBy("s.seq", "ASC")
             .limit(CHAIN_STEPS_MAX)
-            .getRawMany<ChainStepRecord>()
+            .getRawMany<ChainStepRead>()
+        return this.withActors(manager, workspaceId, rows)
+    }
+
+    /** The steps with the name and role of whoever acted: an agent name and module, or a member display name and role. */
+    private async withActors(
+        manager: EntityManager,
+        workspaceId: string,
+        rows: ReadonlyArray<ChainStepRead>,
+    ): Promise<Array<ChainStepRecord>> {
+        const actors = await this.actorsOf(manager, workspaceId, rows)
+        return rows.map((row) => namedBy(row, actors))
+    }
+
+    /** One step with the name and role of whoever acted. */
+    private async withActor(manager: EntityManager, workspaceId: string, row: ChainStepRead): Promise<ChainStepRecord> {
+        return namedBy(row, await this.actorsOf(manager, workspaceId, [row]))
+    }
+
+    private async actorsOf(
+        manager: EntityManager,
+        workspaceId: string,
+        rows: ReadonlyArray<ChainStepRead>,
+    ): Promise<Actors> {
+        const idsOf = (kind: string): Array<string> => [
+            ...new Set(rows.filter((row) => row.actor_kind === kind).map((row) => row.actor_id)),
+        ]
+        const [agents, members] = await Promise.all([
+            this.agents.cardsOf(workspaceId, idsOf("agent")),
+            this.members.byIds(workspaceId, idsOf("member"), manager),
+        ])
+        return {
+            agents: new Map(agents.map((agent) => [agent.id, agent])),
+            members: new Map(members.map((member) => [member.id, member])),
+        }
     }
 }

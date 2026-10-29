@@ -1,7 +1,7 @@
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { AgentOwnershipService } from "@modules/domain/agents"
+import { AgentDirectoryService, AgentOwnershipService } from "@modules/domain/agents"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { ModuleCatalogService, WorkEngineService } from "@modules/domain/decisions"
 import { ThreadAgentPostsService } from "@modules/domain/thread-messages"
@@ -51,6 +51,12 @@ const objectLike = (shape: Record<string, unknown>): unknown => expect.objectCon
 /** The any-function matcher, typed `unknown` so it flows into any slot. */
 const anyFunction = (): unknown => expect.any(Function)
 
+/** What the `updatedAt` expression of a column change evaluates to. */
+const nowOf = (change: unknown): unknown =>
+    typeof change === "object" && change !== null && "updatedAt" in change && typeof change.updatedAt === "function"
+        ? change.updatedAt()
+        : undefined
+
 /** The match-anything matcher, typed `unknown` so it flows into any slot. */
 const anything = (): unknown => expect.anything()
 
@@ -59,12 +65,18 @@ const build = async (doubles: Doubles = {}) => {
     const em: MockEntityManager = mockEntityManager({
         update: [ThreadWorkEntity, { affected: 1, raw: [], generatedMaps: [] }],
     })
-    // One builder serves the insert of the work and the read of the agents it may tag.
-    const write = fakeQueryBuilder({
-        execute: { raw: doubles.inserted ?? [rowOf("running")] },
-        getRawMany: [ACCOUNTING_ROW],
-    })
+    const write = fakeQueryBuilder({ execute: { raw: doubles.inserted ?? [rowOf("running")] } })
     em.createQueryBuilder.mockReturnValue(write.builder as never)
+    const agents = mock<AgentDirectoryService>({
+        activeInOrder: jest.fn().mockResolvedValue([
+            {
+                id: ACCOUNTING_ROW.id,
+                name: ACCOUNTING_ROW.name,
+                module: ACCOUNTING_ROW.module,
+                canTagAgentIds: ACCOUNTING_ROW.can_tag_agent_ids,
+            },
+        ]),
+    })
     const catalog = mock<MessageCatalog>({
         get: jest.fn((key: string, params: Readonly<Record<string, string | number>>) => {
             if (key === "engine.field.tax_code") return "MST"
@@ -99,9 +111,10 @@ const build = async (doubles: Doubles = {}) => {
             { provide: ModuleCatalogService, useValue: modules },
             { provide: AuthorityRulesService, useValue: rules },
             { provide: AgentOwnershipService, useValue: ownership },
+            { provide: AgentDirectoryService, useValue: agents },
         ],
     }).compile()
-    return { service: moduleRef.get(ThreadWorkTurnsService), em, write, engine, posts, catalog, modules }
+    return { service: moduleRef.get(ThreadWorkTurnsService), em, write, engine, posts, catalog, modules, agents }
 }
 
 const registerRun = () => {
@@ -262,7 +275,7 @@ const registerMemberAsk = () => {
 const registerDone = () => {
     describe("react: the step is done", () => {
         it("hands the next action to the agent it may tag that performs it, then that agent runs it", async () => {
-            const { service, posts, engine, em } = await build()
+            const { service, posts, engine, em, agents } = await build()
             const done = itemOf({
                 id: "item-1",
                 action: "give_discount",
@@ -273,6 +286,7 @@ const registerDone = () => {
 
             await expect(service.react(PLACE, done)).resolves.toBe("done")
 
+            expect(agents.activeInOrder).toHaveBeenCalledWith("ws-1", ["agent-accounting"], 50)
             expect(posts.postAsAgent).toHaveBeenCalledWith(
                 objectLike({
                     body: `threadWork.handoff|${JSON.stringify({ receiver: ACCOUNTING_ROW.name, next: COMMANDS[0]?.description.vi })}`,
@@ -281,6 +295,7 @@ const registerDone = () => {
                 }),
             )
             expect(em.update).toHaveBeenCalledWith(...moved("done"))
+            expect(nowOf(em.update.mock.calls[0]?.[2])).toBe("now()")
             expect(engine.runWork).toHaveBeenCalledWith(
                 { workspaceId: "ws-1", actor: "AI Sales", locale: "vi" },
                 objectLike({

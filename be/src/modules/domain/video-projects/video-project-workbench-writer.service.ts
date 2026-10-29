@@ -182,7 +182,7 @@ export class VideoProjectWorkbenchWriterService {
         return (result.raw as Array<ProjectIdentity>).length > 0
     }
 
-    /** Records the authority performer's human approval of a finished render; a repeated decision keeps the first approver. */
+    /** Records the authority performer's human approval of a render the caller proved done; a repeated decision keeps the first approver. */
     async approve(workspaceId: string, projectId: string, renderId: string, approver: string): Promise<boolean> {
         const result = await this.entityManager
             .createQueryBuilder(VideoProjectEntity, "v")
@@ -193,10 +193,6 @@ export class VideoProjectWorkbenchWriterService {
                 projectId,
                 renderId,
             })
-            .andWhere(
-                "EXISTS (SELECT 1 FROM public.video_renders r WHERE r.id = video_projects.render_id " +
-                    "AND r.workspace_id = video_projects.workspace_id AND r.status = 'done')",
-            )
             .returning("id")
             .execute()
         return (result.raw as Array<ProjectIdentity>).length > 0

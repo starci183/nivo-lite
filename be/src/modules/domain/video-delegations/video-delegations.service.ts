@@ -7,15 +7,18 @@ import type {
     OptionalDelegationRender,
     OptionalFailureReason,
 } from "./video-delegations.contracts"
-import type { DelegationRenderRow } from "./persistence/video-delegations.rows"
-import { VideoProjectEntity } from "@modules/domain/video-projects"
-import { VideoRenderEntity } from "@modules/domain/video-renders"
+import { VideoProjectsService } from "@modules/domain/video-projects"
+import { VideoRendersService } from "@modules/domain/video-renders"
 import { VideoDelegationEntity } from "./persistence/entities"
 
 @Injectable()
 /** The owner of video_delegations: the scripts other agents delegated to AI Editor and how each one came back. */
 export class VideoDelegationsService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly projects: VideoProjectsService,
+        private readonly renders: VideoRendersService,
+    ) {}
 
     /** The delegation a work item already made, or null. */
     async ofWorkItem(workspaceId: string, workItemId: string): Promise<OptionalDelegationId> {
@@ -51,36 +54,43 @@ export class VideoDelegationsService {
 
     /** The still rendering delegation of a settled render, with what its cards show; null when nobody delegated it. */
     async ofSettledRender(renderId: string): Promise<OptionalDelegationRender> {
-        const row = await this.entityManager
-            .createQueryBuilder(VideoDelegationEntity, "d")
-            .select([
-                "d.id AS id",
-                "d.workspace_id AS workspace_id",
-                "d.work_item_id AS work_item_id",
-                "d.project_id AS project_id",
-                "d.source_module AS source_module",
-                "d.channels AS channels",
-                "p.title AS title",
-                "p.aspect AS aspect",
-                "p.script AS script",
-                "r.id AS render_id",
-                "r.status AS render_status",
-                "r.duration_ms AS duration_ms",
-                "r.output_path AS output_path",
-                "r.poster_path AS poster_path",
-                "r.meta ->> 'captions_path' AS captions_path",
-                "r.meta ->> 'captions_lang' AS captions_lang",
-                "r.meta ->> 'voiceover' AS voiceover",
-                "r.error AS error",
-            ])
-            .innerJoin(VideoProjectEntity, "p", "p.id = d.projectId AND p.workspaceId = d.workspaceId")
-            .innerJoin(VideoRenderEntity, "r", "r.id = d.renderId AND r.workspaceId = d.workspaceId")
-            .where("d.render_id = :renderId", { renderId })
-            .andWhere("d.status = :rendering", { rendering: "rendering" })
-            .andWhere("r.status IN (:...settled)", { settled: ["done", "failed"] })
-            .limit(1)
-            .getRawOne<DelegationRenderRow>()
-        return row ?? null
+        const delegation = await this.entityManager.findOne(VideoDelegationEntity, {
+            select: {
+                id: true,
+                workspaceId: true,
+                workItemId: true,
+                projectId: true,
+                sourceModule: true,
+                channels: true,
+            },
+            where: { renderId, status: "rendering" },
+        })
+        if (delegation === null) return null
+        const [project, render] = await Promise.all([
+            this.projects.cardFactsOf(delegation.workspaceId, delegation.projectId),
+            this.renders.settledOf(delegation.workspaceId, renderId),
+        ])
+        if (project === null || render === null) return null
+        return {
+            id: delegation.id,
+            workspace_id: delegation.workspaceId,
+            work_item_id: delegation.workItemId,
+            project_id: delegation.projectId,
+            source_module: delegation.sourceModule,
+            channels: delegation.channels,
+            title: project.title,
+            aspect: project.aspect,
+            script: project.script,
+            render_id: render.id,
+            render_status: render.status,
+            duration_ms: render.durationMs,
+            output_path: render.outputPath,
+            poster_path: render.posterPath,
+            captions_path: render.captionsPath,
+            captions_lang: render.captionsLang,
+            voiceover: render.voiceover,
+            error: render.error,
+        }
     }
 
     /** Settles a rendering delegation as ready (its cards go out); true only for the one call that settled it. */

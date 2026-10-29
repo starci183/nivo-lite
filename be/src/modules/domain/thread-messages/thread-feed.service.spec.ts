@@ -10,6 +10,8 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { MentionDirectoryService } from "./mention-directory.service"
+import { ThreadMessageAuthorsService } from "./thread-message-authors.service"
+import { passThroughAuthors } from "@tests/fixtures/builders/thread-message-authors.builder"
 import { ThreadMessageEntity } from "./persistence/entities"
 import { ThreadFeedService } from "./thread-feed.service"
 import type { ThreadMessageRecord } from "./thread-messages.contracts"
@@ -75,6 +77,7 @@ const build = async (em: ReturnType<typeof mockEntityManager>) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: MentionDirectoryService, useValue: directory },
+            { provide: ThreadMessageAuthorsService, useValue: passThroughAuthors() },
             { provide: WorkThreadsService, useValue: threads },
             { provide: WorkChainsService, useValue: chains },
         ],

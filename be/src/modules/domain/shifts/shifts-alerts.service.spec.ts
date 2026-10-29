@@ -1,6 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
+import type { PipelineRow } from "@modules/domain/automation-pipelines"
 import { ActionPerformerRegistry, ApprovalGate, OfficeLog } from "@modules/domain/module-ops"
 import type { PerformContext } from "@modules/domain/module-ops"
 import { WorkspacesService } from "@modules/domain/workspaces"
@@ -11,6 +13,7 @@ import type { Logger } from "@modules/platform/logging"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { routedQueryBuilder } from "@tests/fixtures/builders/routed-query.builder"
 import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { ShiftsSettingsEntity } from "./persistence/entities"
 import type { AlertShiftRead, ReminderWorkspaceRead } from "./persistence/shifts-alerts.reads"
 import { DEFAULT_SETTINGS } from "./policies/row-mappers.policy"
 import { ShiftsAlertsService } from "./shifts-alerts.service"
@@ -83,9 +86,36 @@ interface Answers {
     readonly failFor?: string
 }
 
-const fromOf = (fake: FakeQueryBuilder): unknown => fake.callsOf("from")[0]?.[0]
+/** The reminder pipeline the owner of automations answers; the specs set its switch and its workspace. */
+const PIPELINE: PipelineRow = {
+    id: "pipeline-1",
+    workspace_id: "ws-1",
+    template_key: "shifts_shift_reminder",
+    name: "Reminder",
+    module_key: "shifts",
+    enabled: true,
+    dismissed: false,
+    config: {},
+    body: null,
+    body_version: 0,
+    template_version: 1,
+    based_on_context: null,
+    approval_streak: 0,
+    trust_offered_at: null,
+    auto_send: false,
+    created_at: "2026-10-01T00:00:00.000Z",
+    updated_at: "2026-10-01T00:00:00.000Z",
+}
 
-/** Hands out one fake builder per read, answering by the table it reads, and answers back every builder it made. */
+/** What `answer` set up for a manager: the reminder switch and the workspaces the owner of automations lists. */
+interface Pipelines {
+    readonly enabled: boolean | null
+    readonly workspaces: ReadonlyArray<ReminderWorkspaceRead>
+}
+
+const pipelinesOfManager = new WeakMap<object, Pipelines>()
+
+/** Hands out one fake builder per read, answering the shifts, and answers back every builder it made. */
 const answer = (
     em: MockEntityManager,
     rows: ReadonlyArray<AlertShiftRead>,
@@ -93,12 +123,24 @@ const answer = (
     options: Answers = {},
 ): Array<FakeQueryBuilder> => {
     const built: Array<FakeQueryBuilder> = []
+    const workspaces = options.workspaces ?? [WORKSPACE]
+    pipelinesOfManager.set(em, { enabled, workspaces })
+    em.find.mockResolvedValue(
+        workspaces.flatMap((workspace) =>
+            workspace.remind_minutes === null || workspace.noshow_minutes === null
+                ? []
+                : [
+                      Object.assign(new ShiftsSettingsEntity(), {
+                          workspaceId: workspace.workspace_id,
+                          remindMinutes: workspace.remind_minutes,
+                          noshowMinutes: workspace.noshow_minutes,
+                      }),
+                  ],
+        ),
+    )
     em.createQueryBuilder.mockImplementation(() => {
         const fake: FakeQueryBuilder = routedQueryBuilder({
             getRawMany: (read) => {
-                if (fromOf(read) === "public.automation_pipelines") {
-                    return Promise.resolve(options.workspaces ?? [WORKSPACE])
-                }
                 if (read.callsOf("distinct").length > 0) return Promise.resolve(options.mates ?? [{ name: "Minh" }])
                 const where = read.callsOf("where")[0]?.[1] as { workspaceId?: string } | undefined
                 if (where?.workspaceId !== undefined && where.workspaceId === options.failFor) {
@@ -106,14 +148,7 @@ const answer = (
                 }
                 return Promise.resolve(rows)
             },
-            getRawOne: (read) =>
-                Promise.resolve(
-                    fromOf(read) === "public.automation_pipelines"
-                        ? enabled === null
-                            ? undefined
-                            : { enabled }
-                        : rows[0],
-                ),
+            getRawOne: () => Promise.resolve(rows[0]),
         })
         built.push(fake)
         return fake.builder as never
@@ -122,6 +157,16 @@ const answer = (
 }
 
 const build = async (em: MockEntityManager, now = NOW) => {
+    const stored = pipelinesOfManager.get(em) ?? { enabled: true, workspaces: [WORKSPACE] }
+    const pipelines = mock<AutomationPipelinesService>()
+    pipelines.enabledOfTemplate.mockResolvedValue(
+        stored.workspaces.map((workspace) => ({
+            ...PIPELINE,
+            workspace_id: workspace.workspace_id,
+            config: {},
+        })),
+    )
+    pipelines.findPipeline.mockResolvedValue(stored.enabled === null ? null : { ...PIPELINE, enabled: stored.enabled })
     const outbox = recordingQueueOutbox()
     const registry = mock<ActionPerformerRegistry>()
     const gate = mock<ApprovalGate>()
@@ -153,6 +198,7 @@ const build = async (em: MockEntityManager, now = NOW) => {
             { provide: ApprovalGate, useValue: gate },
             { provide: OfficeLog, useValue: office },
             { provide: WorkspacesService, useValue: workspaces },
+            { provide: AutomationPipelinesService, useValue: pipelines },
             { provide: ShiftsDataService, useValue: data },
             { provide: ShiftsMonthCloseService, useValue: monthClose },
             { provide: ShiftsNotifyService, useValue: notify },
@@ -169,6 +215,7 @@ const build = async (em: MockEntityManager, now = NOW) => {
         notify,
         logger,
         workspaces,
+        pipelines,
     }
 }
 
@@ -211,6 +258,16 @@ describe("ShiftsAlertsService scan", () => {
         ])
         expect(em.transaction).not.toHaveBeenCalled()
         expect(outbox.jobs).toEqual([])
+    })
+
+    it("falls back to the default minutes for a workspace that has no shifts rules yet", async () => {
+        const em = fakeTransaction(mockEntityManager()).em
+        answer(em, [row()], true, {
+            workspaces: [{ workspace_id: "ws-1", config: null, remind_minutes: null, noshow_minutes: null }],
+        })
+        const { service } = await build(em)
+
+        await expect(service.scan(new Date(NOW))).resolves.toEqual({ reminders: 1, noShows: 0 })
     })
 
     it("logs a failed workspace and queues both alert kinds for the next workspace", async () => {
@@ -389,17 +446,11 @@ describe("ShiftsAlertsService noShow", () => {
 
     it("skips when the enabled query has no row", async () => {
         const em = mockEntityManager()
-        const built = answer(em, [], null)
-        const { service, notify } = await build(em)
+        answer(em, [], null)
+        const { service, notify, pipelines } = await build(em)
 
         await expect(service.noShow("ws-1", "s-1", new Date(NOW))).resolves.toBe("skipped: automation off")
-        expect(built).toHaveLength(1)
-        expect(built[0]?.callsOf("where")).toEqual([
-            [
-                "p.workspace_id = :workspaceId AND p.template_key = :template",
-                { workspaceId: "ws-1", template: "shifts_shift_reminder" },
-            ],
-        ])
+        expect(pipelines.findPipeline).toHaveBeenCalledWith("ws-1", "shifts_shift_reminder")
         expect(notify.toManagers).not.toHaveBeenCalled()
     })
 

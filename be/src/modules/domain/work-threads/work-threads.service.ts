@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { LeadReadService } from "@modules/domain/leads"
+import { OrdersService } from "@modules/domain/orders"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { readConnection } from "@modules/platform/pagination"
 import type { Connection, PageRequest } from "@modules/platform/pagination"
@@ -18,17 +20,21 @@ import type {
 @Injectable()
 /** The work threads of a workspace as rows: opening, finding, locking and the status of each; the only writer of work_threads. */
 export class WorkThreadsService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly leads: LeadReadService,
+        private readonly orders: OrdersService,
+    ) {}
 
     /** Opens a thread for a member id the caller already proved is an active member of the workspace; it joins the caller's transaction when it hands one. */
     async createFor(input: NewMemberThread, manager: EntityManager = this.entityManager): Promise<WorkThread> {
         if (input.leadId !== null) {
-            const lead = await this.ownedId(manager, "public.leads", input.workspaceId, input.leadId)
-            if (lead === undefined) throw new WorkThreadsError({ code: WorkThreadsErrorCode.LeadNotFound })
+            if (!(await this.leads.exists(input.workspaceId, input.leadId)))
+                throw new WorkThreadsError({ code: WorkThreadsErrorCode.LeadNotFound })
         }
         if (input.orderId !== null) {
-            const order = await this.ownedId(manager, "public.orders", input.workspaceId, input.orderId)
-            if (order === undefined) throw new WorkThreadsError({ code: WorkThreadsErrorCode.OrderNotFound })
+            if (!(await this.orders.exists(input.workspaceId, input.orderId)))
+                throw new WorkThreadsError({ code: WorkThreadsErrorCode.OrderNotFound })
         }
         const result = await manager
             .createQueryBuilder(WorkThreadEntity, "w")
@@ -49,12 +55,22 @@ export class WorkThreadsService {
 
     /** The thread of the workspace, or a refusal when the workspace has no such thread. */
     async find(workspaceId: string, threadId: string): Promise<WorkThread> {
-        const row = await selectThreads(this.entityManager, workspaceId)
+        const thread = await this.findIfAny(workspaceId, threadId)
+        if (thread === null) throw new WorkThreadsError({ code: WorkThreadsErrorCode.ThreadNotFound })
+        return thread
+    }
+
+    /** The thread of the workspace, or null when there is none; reads inside the caller's transaction when it hands one. */
+    async findIfAny(
+        workspaceId: string,
+        threadId: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<WorkThread | null> {
+        const row = await selectThreads(manager, workspaceId)
             .andWhere("t.id = :threadId", { threadId })
             .limit(1)
             .getRawOne<WorkThreadRecord>()
-        if (row === undefined) throw new WorkThreadsError({ code: WorkThreadsErrorCode.ThreadNotFound })
-        return toThread(row)
+        return row === undefined ? null : toThread(row)
     }
 
     /** The newest threads of the workspace, optionally only those about one lead. */
@@ -85,13 +101,19 @@ export class WorkThreadsService {
 
     /** Locks the thread of the workspace for the rest of the caller's transaction, or refuses when it has no such thread. */
     async lock(manager: EntityManager, workspaceId: string, threadId: string): Promise<WorkThread> {
+        const thread = await this.lockIfAny(manager, workspaceId, threadId)
+        if (thread === null) throw new WorkThreadsError({ code: WorkThreadsErrorCode.ThreadNotFound })
+        return thread
+    }
+
+    /** Locks the thread of the workspace for the rest of the caller's transaction; null when the workspace has no such thread. */
+    async lockIfAny(manager: EntityManager, workspaceId: string, threadId: string): Promise<WorkThread | null> {
         const row = await selectThreads(manager, workspaceId)
             .andWhere("t.id = :threadId", { threadId })
             .limit(1)
             .setLock("pessimistic_write")
             .getRawOne<WorkThreadRecord>()
-        if (row === undefined) throw new WorkThreadsError({ code: WorkThreadsErrorCode.ThreadNotFound })
-        return toThread(row)
+        return row === undefined ? null : toThread(row)
     }
 
     /** Sets where a thread stands and marks it changed, inside the caller's transaction. */
@@ -102,20 +124,5 @@ export class WorkThreadsService {
         status: ThreadStatus,
     ): Promise<void> {
         await manager.update(WorkThreadEntity, { workspaceId, id: threadId }, { status, updatedAt: () => "now()" })
-    }
-
-    private ownedId(
-        manager: EntityManager,
-        table: "public.leads" | "public.orders",
-        workspaceId: string,
-        id: string,
-    ): Promise<{ id: string } | undefined> {
-        return manager
-            .createQueryBuilder()
-            .select("x.id", "id")
-            .from(table, "x")
-            .where("x.workspace_id = :workspaceId AND x.id = :id", { workspaceId, id })
-            .limit(1)
-            .getRawOne<{ id: string }>()
     }
 }

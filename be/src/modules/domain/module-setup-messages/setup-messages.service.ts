@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
+import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { ModuleSetupSessionEntity } from "@modules/domain/module-setup-sessions"
+import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { NewSetupMessage, OptionalSetupMessageRecord, SetupMessageRecord } from "./module-setup-messages.contracts"
 import { ModuleSetupMessageEntity } from "./persistence/entities"
@@ -21,18 +22,20 @@ const toRecord = (row: ModuleSetupMessageEntity): SetupMessageRecord => ({
 @Injectable()
 /** The setup chat of the installations: the only owner of the module_setup_messages table. */
 export class SetupMessagesService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly sessions: SetupSessionsService,
+    ) {}
 
     /** The whole chat of an installation across its revisions, oldest first. */
     async ofInstallation(installationId: string): Promise<ReadonlyArray<SetupMessageRecord>> {
-        const rows = await this.entityManager
-            .createQueryBuilder(ModuleSetupMessageEntity, "m")
-            .innerJoin(ModuleSetupSessionEntity, "s", "s.id = m.setupSessionId")
-            .where("s.installationId = :installationId", { installationId })
-            .orderBy("m.createdAt", "ASC")
-            .addOrderBy("m.id", "ASC")
-            .limit(CHAT_LIMIT)
-            .getMany()
+        const revisions = await this.sessions.revisions(installationId)
+        if (revisions.length === 0) return []
+        const rows = await this.entityManager.find(ModuleSetupMessageEntity, {
+            where: { setupSessionId: In(revisions.map((revision) => revision.id)) },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: CHAT_LIMIT,
+        })
         return rows.map(toRecord)
     }
 

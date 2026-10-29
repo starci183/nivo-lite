@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { In, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     McpToolGrantChange,
@@ -13,16 +14,11 @@ import { McpToolGrantEntity } from "./persistence/entities"
 /** The most grants one read answers. */
 const GRANT_LIMIT = 500
 
+/** The key of an agent within its workspace. */
+const agentKey = (workspaceId: string, agentId: string): string => `${workspaceId}\u0000${agentId}`
+
 /** The conflict target of a grant: one row per agent and tool. */
 const GRANT_KEY: Array<keyof McpToolGrantEntity> = ["agentId", "tool"]
-
-/** An agent of a workspace, read to prove a grant targets one of the workspace's own agents. */
-interface AgentOwnerRow {
-    /** The agent. */
-    readonly id: string
-    /** The workspace the agent belongs to. */
-    readonly workspace_id: string
-}
 
 @Injectable()
 /**
@@ -30,7 +26,10 @@ interface AgentOwnerRow {
  * Judging a call against a grant is the gateway's policy; this capability keeps the rows.
  */
 export class McpToolGrantsService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly agents: AgentDirectoryService,
+    ) {}
 
     /** The grant rows of one agent. */
     async listOfAgent(workspaceId: string, agentId: string): Promise<ReadonlyArray<McpToolGrantView>> {
@@ -48,22 +47,33 @@ export class McpToolGrantsService {
         }))
     }
 
-    /** Every grant row of a workspace with the agent's name. */
-    listOfWorkspace(workspaceId: string): Promise<ReadonlyArray<McpWorkspaceGrantView>> {
-        return this.entityManager
-            .createQueryBuilder(McpToolGrantEntity, "g")
-            .innerJoin("agents", "a", "a.id = g.agent_id")
-            .select("g.agent_id", "agent_id")
-            .addSelect("a.name", "agent_name")
-            .addSelect("g.tool", "tool")
-            .addSelect("g.mode", "mode")
-            .addSelect("g.limit_vnd", "limit_vnd")
-            .addSelect("g.constraints", "constraints")
-            .where("g.workspace_id = :workspaceId", { workspaceId })
-            .orderBy("a.name", "ASC")
-            .addOrderBy("g.tool", "ASC")
-            .limit(GRANT_LIMIT)
-            .getRawMany<McpWorkspaceGrantView>()
+    /** Every grant row of a workspace with the agent's name, by agent name and then tool; a grant of an agent that is gone is left out. */
+    async listOfWorkspace(workspaceId: string): Promise<ReadonlyArray<McpWorkspaceGrantView>> {
+        const grants = await this.entityManager.find(McpToolGrantEntity, {
+            select: { agentId: true, tool: true, mode: true, limitVnd: true, constraints: true },
+            where: { workspaceId },
+            order: { tool: "ASC" },
+            take: GRANT_LIMIT,
+        })
+        const cards = await this.agents.cardsOf(workspaceId, [...new Set(grants.map((grant) => grant.agentId))])
+        const names = new Map(cards.map((card) => [card.id, card.name]))
+        return grants
+            .flatMap((grant): Array<McpWorkspaceGrantView> => {
+                const agentName = names.get(grant.agentId)
+                return agentName === undefined
+                    ? []
+                    : [
+                          {
+                              agent_id: grant.agentId,
+                              agent_name: agentName,
+                              tool: grant.tool,
+                              mode: grant.mode,
+                              limit_vnd: grant.limitVnd,
+                              constraints: grant.constraints,
+                          },
+                      ]
+            })
+            .sort((left, right) => left.agent_name.localeCompare(right.agent_name))
     }
 
     /** The agents holding any of the tools (full names or `connector.*`) in a mode other than never, oldest grant first. */
@@ -79,7 +89,7 @@ export class McpToolGrantsService {
 
     /** Sets one grant a person chose; false when the agent is not one of the workspace (nothing is written). */
     async set(change: McpToolGrantChange): Promise<boolean> {
-        const owned = await this.ownedAgents(change.workspaceId, [change.agentId])
+        const owned = await this.agents.cardsOf(change.workspaceId, [change.agentId])
         if (owned.length === 0) return false
         await this.entityManager.upsert(
             McpToolGrantEntity,
@@ -106,8 +116,8 @@ export class McpToolGrantsService {
         const latest = new Map(rows.map((record) => [`${record.agentId}\u0000${record.tool}`, record]))
         if (latest.size === 0) return 0
         const records = [...latest.values()]
-        const agents = await this.agentsOf(records.map((record) => record.agentId))
-        const written = records.filter((record) => agents.get(record.agentId) === record.workspaceId)
+        const owned = await this.ownedAgentKeys(records)
+        const written = records.filter((record) => owned.has(agentKey(record.workspaceId, record.agentId)))
         if (written.length === 0) return 0
         await this.entityManager.upsert(
             McpToolGrantEntity,
@@ -126,21 +136,17 @@ export class McpToolGrantsService {
         return written.length
     }
 
-    /** The agents among `agentIds` that belong to the workspace. */
-    private async ownedAgents(workspaceId: string, agentIds: ReadonlyArray<string>): Promise<ReadonlyArray<string>> {
-        const agents = await this.agentsOf(agentIds)
-        return agentIds.filter((agentId) => agents.get(agentId) === workspaceId)
-    }
-
-    /** The workspace of each agent in `agentIds` (agents are another capability's table, joined by name). */
-    private async agentsOf(agentIds: ReadonlyArray<string>): Promise<ReadonlyMap<string, string>> {
-        const rows = await this.entityManager
-            .createQueryBuilder()
-            .select("a.id", "id")
-            .addSelect("a.workspace_id", "workspace_id")
-            .from("public.agents", "a")
-            .where("a.id IN (:...agentIds)", { agentIds: [...new Set(agentIds)] })
-            .getRawMany<AgentOwnerRow>()
-        return new Map(rows.map((row) => [row.id, row.workspace_id]))
+    /** The workspace and agent of each record whose agent belongs to the record's own workspace, as `agentKey`s. */
+    private async ownedAgentKeys(records: ReadonlyArray<McpToolGrantRecord>): Promise<ReadonlySet<string>> {
+        const byWorkspace = new Map<string, Set<string>>()
+        for (const record of records) {
+            byWorkspace.set(record.workspaceId, (byWorkspace.get(record.workspaceId) ?? new Set()).add(record.agentId))
+        }
+        const owned = await Promise.all(
+            [...byWorkspace].map(async ([workspaceId, agentIds]) =>
+                (await this.agents.cardsOf(workspaceId, [...agentIds])).map((card) => agentKey(workspaceId, card.id)),
+            ),
+        )
+        return new Set(owned.flat())
     }
 }

@@ -62,3 +62,18 @@ export interface SyncAsk {
     /** Also sync an installation that is not on OpenClaw yet; false when absent. */
     readonly force?: boolean
 }
+
+/** The OpenClaw copy of the agent of an installation, as far as its status is concerned. */
+export interface SyncCopy {
+    /** Whether the last sync worked. */
+    readonly status: "ok" | "error"
+    /** The context version the files were built from. */
+    readonly contextVersion: number | null
+    /** When the copy was last checked. */
+    readonly checkedAt: Date
+    /** The last failure. */
+    readonly error: string | null
+}
+
+/** The copy of an installation, or null when it has none. */
+export type OptionalSyncCopy = SyncCopy | null

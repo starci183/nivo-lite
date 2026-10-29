@@ -83,3 +83,49 @@ export interface CompletedRenderMedia {
     /** When the render was queued. */
     readonly createdAt: string
 }
+
+/** What the workbench shows of a render, as the render row states it. */
+export interface RenderFacts {
+    /** The render id. */
+    readonly id: string
+    /** The stored state. */
+    readonly status: string
+    /** The completed share, from zero through one hundred. */
+    readonly progress: number
+    /** The render stage code, when running. */
+    readonly stage: string | null
+    /** The video duration in milliseconds. */
+    readonly durationMs: number | null
+    /** The MP4 size in bytes. */
+    readonly sizeBytes: number | null
+    /** The MP4 path in the videos bucket. */
+    readonly outputPath: string | null
+    /** The poster path in the videos bucket. */
+    readonly posterPath: string | null
+    /** The caption artifact newer renders record; null on legacy rows. */
+    readonly captionsPath: string | null
+    /** The recorded caption locale, when known. */
+    readonly captionsLang: string | null
+}
+
+/** A finished or failed render with what a delegation card shows. */
+export interface SettledRender {
+    /** The render id. */
+    readonly id: string
+    /** The stored state: done or failed. */
+    readonly status: string
+    /** The video duration in milliseconds. */
+    readonly durationMs: number | null
+    /** The MP4 path in the videos bucket. */
+    readonly outputPath: string | null
+    /** The poster path in the videos bucket. */
+    readonly posterPath: string | null
+    /** The caption artifact path, when recorded. */
+    readonly captionsPath: string | null
+    /** The recorded caption locale, when known. */
+    readonly captionsLang: string | null
+    /** The voiceover the render used, when recorded. */
+    readonly voiceover: string | null
+    /** The failure text of a failed render. */
+    readonly error: string | null
+}

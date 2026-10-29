@@ -1,10 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
+import { IsNull, Not } from "typeorm"
+import type { EntityManager } from "typeorm"
+import { AgentDirectoryService } from "@modules/domain/agents"
+import { ApprovalRequestsReadService } from "@modules/domain/approval-requests"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { ModuleCatalogService, WorkDrainService, WorkEngineService } from "@modules/domain/decisions"
+import { LeadReadService } from "@modules/domain/leads"
 import { ThreadApprovalsService, ThreadMessagesService } from "@modules/domain/thread-messages"
 import type { ThreadCardDecision, ThreadMessage, UserPost } from "@modules/domain/thread-messages"
 import type { ResumeDecision, WorkContext, WorkEdits } from "@modules/domain/decisions"
+import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -16,7 +21,6 @@ import { toThreadWorkRecord } from "./thread-work.mapper"
 import { deciderOf, replyEdits, seedOf, workAgentOf } from "./thread-work.policy"
 import { ThreadWorkTurnsService } from "./thread-work-turns.service"
 import type {
-    DeciderRecord,
     MemberDecider,
     MemberReply,
     SettledAskRecord,
@@ -24,12 +28,14 @@ import type {
     ThreadWorkStart,
     ThreadWorkTick,
     WorkAgent,
-    WorkAgentRecord,
-    WorkLeadRecord,
 } from "./thread-work.contracts"
 
 /** The most settled approvals one tick moves on. */
 const SETTLED_BATCH = 20
+
+/** The asking work one read of the settled scan looks at, and the most it looks at in one tick. */
+const ASKED_PAGE = 100
+const ASKED_SCAN_MAX = 1000
 
 /** Who the runtime acts as when no person is acting. */
 const RUNTIME_ACTOR = "NIVO"
@@ -52,6 +58,10 @@ export class ThreadWorkService {
         private readonly messages: ThreadMessagesService,
         private readonly approvals: ThreadApprovalsService,
         private readonly drain: WorkDrainService,
+        private readonly leads: LeadReadService,
+        private readonly agents: AgentDirectoryService,
+        private readonly members: WorkspaceMemberDirectoryService,
+        private readonly requests: ApprovalRequestsReadService,
     ) {}
 
     /**
@@ -91,17 +101,9 @@ export class ThreadWorkService {
         if (entry?.moduleKey !== agent.module) {
             throw new ThreadWorkError({ code: ThreadWorkErrorCode.ActionNotOfAgent })
         }
-        const lead = await this.entityManager
-            .createQueryBuilder()
-            .select(["l.id AS id", "l.contact_name AS contact_name"])
-            .from("public.leads", "l")
-            .where("l.workspace_id = :workspaceId AND l.id = :leadId", {
-                workspaceId: input.workspaceId,
-                leadId: input.task.leadId,
-            })
-            .limit(1)
-            .getRawOne<WorkLeadRecord>()
-        if (lead === undefined) throw new ThreadWorkError({ code: ThreadWorkErrorCode.LeadNotFound })
+        const [card] = await this.leads.cardsOf(input.workspaceId, [input.task.leadId])
+        if (card === undefined) throw new ThreadWorkError({ code: ThreadWorkErrorCode.LeadNotFound })
+        const lead = { id: card.id, contact_name: card.contactName }
         const setup = await this.rules.approvalSetup(input.workspaceId, input.task.action)
         await this.turns.run({
             workspaceId: input.workspaceId,
@@ -139,19 +141,13 @@ export class ThreadWorkService {
 
     /** Moves on the work of one approval request once it is settled (right after a member decided it). */
     async approvalSettled(requestId: string): Promise<void> {
-        const rows = await this.settledAsks()
-            .andWhere("w.approval_request_id = :requestId", { requestId })
-            .limit(1)
-            .getRawMany<SettledAskRecord>()
+        const rows = await this.settledAsks(1, requestId)
         await eachInOrder(rows, (row) => this.settle(row))
     }
 
     /** The minute tick: moves on the work whose approval was settled by any door (a decision, the deadline). Answers how many. */
     async resumeSettled(): Promise<number> {
-        const rows = await this.settledAsks()
-            .orderBy("w.updated_at", "ASC")
-            .limit(SETTLED_BATCH)
-            .getRawMany<SettledAskRecord>()
+        const rows = await this.settledAsks(SETTLED_BATCH, null)
         await eachInOrder(rows, (row) => this.settle(row))
         return rows.length
     }
@@ -204,48 +200,49 @@ export class ThreadWorkService {
     }
 
     private async agentOf(workspaceId: string, agentId: string): Promise<WorkAgent | null> {
-        const row = await this.entityManager
-            .createQueryBuilder()
-            .select(["a.id AS id", "a.name AS name", "a.module AS module", "a.can_tag_agent_ids AS can_tag_agent_ids"])
-            .from("public.agents", "a")
-            .where("a.workspace_id = :workspaceId AND a.id = :agentId AND a.status = 'active'", {
-                workspaceId,
-                agentId,
-            })
-            .limit(1)
-            .getRawOne<WorkAgentRecord>()
-        return row === undefined ? null : workAgentOf(row)
+        const agent = await this.agents.findActive(workspaceId, agentId)
+        if (agent === null) return null
+        return workAgentOf({
+            id: agent.id,
+            name: agent.name,
+            module: agent.module,
+            can_tag_agent_ids: [...agent.canTagAgentIds],
+        })
     }
 
     private async deciderOf(workspaceId: string, memberId: string): Promise<MemberDecider | null> {
-        const row = await this.entityManager
-            .createQueryBuilder()
-            .select(["m.id AS id", "m.display_name AS display_name", "m.role AS role"])
-            .from("public.workspace_members", "m")
-            .where("m.workspace_id = :workspaceId AND m.id = :memberId", { workspaceId, memberId })
-            .limit(1)
-            .getRawOne<DeciderRecord>()
-        return row === undefined ? null : deciderOf(row)
+        const member = await this.members.find(workspaceId, memberId)
+        return member === null
+            ? null
+            : deciderOf({ id: member.id, display_name: member.displayName, role: member.role })
     }
 
-    /** The thread work that asked for an approval whose request has since been settled, with how it ended. */
-    private settledAsks(): SelectQueryBuilder<ThreadWorkEntity> {
-        return this.entityManager
-            .createQueryBuilder(ThreadWorkEntity, "w")
-            .innerJoin("approval_requests", "r", "r.id = w.approval_request_id")
-            .select([
-                "w.id AS id",
-                "w.workspace_id AS workspace_id",
-                "w.thread_id AS thread_id",
-                "w.work_item_id AS work_item_id",
-                "w.agent_id AS agent_id",
-                "w.state AS state",
-                "w.approval_request_id AS approval_request_id",
-                "w.waiting_member_id AS waiting_member_id",
-                "w.missing_fields AS missing_fields",
-                "r.status AS request_status",
-                "r.resolved_by AS resolved_by",
-            ])
-            .where("w.state = 'asked' AND r.status <> 'pending'")
+    /**
+     * The thread work that asked for an approval whose request has since been settled, with how it ended: the asking work oldest
+     * first (of one request when `requestId` names it), page by page, until `limit` of them are settled.
+     */
+    private async settledAsks(limit: number, requestId: string | null): Promise<Array<SettledAskRecord>> {
+        const found: Array<SettledAskRecord> = []
+        for (let skip = 0; skip < ASKED_SCAN_MAX && found.length < limit; skip += ASKED_PAGE) {
+            const asked = await this.entityManager.find(ThreadWorkEntity, {
+                where: { state: "asked", approvalRequestId: requestId ?? Not(IsNull()) },
+                order: { updatedAt: "ASC", id: "ASC" },
+                skip,
+                take: requestId === null ? ASKED_PAGE : 1,
+            })
+            const ended = new Map(
+                (await this.requests.settledOf(asked.flatMap((row) => row.approvalRequestId ?? []))).map((request) => [
+                    request.id,
+                    request,
+                ]),
+            )
+            for (const row of asked) {
+                const end = ended.get(row.approvalRequestId ?? "")
+                if (end === undefined) continue
+                found.push({ ...toThreadWorkRecord(row), request_status: end.status, resolved_by: end.resolvedBy })
+            }
+            if (requestId !== null || asked.length < ASKED_PAGE) break
+        }
+        return found.slice(0, limit)
     }
 }

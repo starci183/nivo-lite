@@ -1,11 +1,15 @@
 import assert from "node:assert/strict"
 import type { EntityManager } from "typeorm"
-import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { eachInOrder } from "@modules/platform/primitives"
 import { leadsEntities } from "@modules/domain/leads"
-import { OrderEntity } from "@modules/domain/orders"
+import { ordersEntities } from "@modules/domain/orders"
 import { WorkThreadEntity } from "@modules/domain/work-threads"
-import { WorkspaceEntity } from "@modules/domain/workspaces"
+import { workspacesEntities } from "@modules/domain/workspaces"
+
+const [WorkspaceEntity] = workspacesEntities
+const [WorkspaceMemberEntity] = workspaceMembersEntities
+const [OrderEntity] = ordersEntities
 
 const [LeadEntity] = leadsEntities
 

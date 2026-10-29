@@ -6,7 +6,9 @@ import type { SepayTransactionsService } from "@modules/domain/sepay-transaction
 import type { JobClaims, FencedProcessor } from "@modules/platform/jobs"
 import type { EntityManager } from "typeorm"
 import { ConnectionEntity } from "@modules/domain/connections"
-import { WorkspaceEntity } from "@modules/domain/workspaces"
+import { workspacesEntities } from "@modules/domain/workspaces"
+
+const [WorkspaceEntity] = workspacesEntities
 
 /** The receipt capabilities covered by the delivery processors. */
 export type DeliveryKind = "meta" | "telegram" | "sepay"

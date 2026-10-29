@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { McpGatewayService } from "@modules/domain/mcp-gateway"
+import { ContextVersionsService } from "@modules/domain/module-context-versions"
 import { InstallationRecordsService, lifecycleOf } from "@modules/domain/module-installations"
 import type { InstallationRecord, InstallationStatus } from "@modules/domain/module-installations"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
@@ -17,6 +19,8 @@ export class ModuleReadinessService {
         private readonly installations: InstallationRecordsService,
         private readonly catalog: ModulesService,
         private readonly gateway: McpGatewayService,
+        private readonly agents: AgentDirectoryService,
+        private readonly versions: ContextVersionsService,
     ) {}
 
     /** The required roles of a module that the workspace cannot play now, each with the connectors that could play it. */
@@ -28,10 +32,22 @@ export class ModuleReadinessService {
         return readiness.missing.map((role) => ({ role, providers: readiness.providers[role] }))
     }
 
-    /** An installation with what it still needs connected. */
+    /** An installation with its agent, the number of its active version and what it still needs connected. */
     async withNeeds(record: InstallationRecord): Promise<InstallationView> {
-        const connectionNeeds = await this.needsOf(record.workspaceId, record.moduleKey)
-        return { ...record, connectionNeeds, lifecycle: lifecycleOf(record, connectionNeeds.length) }
+        const [connectionNeeds, [identity], [version]] = await Promise.all([
+            this.needsOf(record.workspaceId, record.moduleKey),
+            this.agents.identitiesOf(record.workspaceId, record.agentId === null ? [] : [record.agentId]),
+            this.versions.numbersOf(record.activeContextVersionId === null ? [] : [record.activeContextVersionId]),
+        ])
+        return {
+            ...record,
+            agentName: identity?.name ?? "",
+            agentHandle: identity?.handle ?? record.moduleKey,
+            agentAvatarUrl: identity?.avatarUrl ?? null,
+            activeVersion: version?.version ?? null,
+            connectionNeeds,
+            lifecycle: lifecycleOf(record, connectionNeeds.length),
+        }
     }
 
     /**

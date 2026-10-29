@@ -1,5 +1,7 @@
 import type { EntityManager } from "typeorm"
-import { WorkspaceEntity } from "@modules/domain/workspaces"
+import { workspacesEntities } from "@modules/domain/workspaces"
+
+const [WorkspaceEntity] = workspacesEntities
 
 /** A fresh workspace and account owned by one inbound-input proof. */
 export interface InboundInputIdentity {

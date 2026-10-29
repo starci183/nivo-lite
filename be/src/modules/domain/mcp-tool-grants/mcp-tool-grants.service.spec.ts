@@ -1,19 +1,15 @@
 import { Test } from "@nestjs/testing"
-import { builder, mockEntityManager } from "@starci/jest-preset"
+import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In, Not } from "typeorm"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { McpToolGrantRecord, McpToolGrantView, McpWorkspaceGrantView } from "./mcp-tool-grants.contracts"
+import type { McpToolGrantRecord, McpToolGrantView } from "./mcp-tool-grants.contracts"
 import { McpToolGrantsService } from "./mcp-tool-grants.service"
 import { McpToolGrantEntity } from "./persistence/entities"
 
-/** The first upsert the manager was asked for: entity, rows as written and conflict keys. */
-const upsertedOf = (em: MockEntityManager): ReadonlyArray<unknown> => {
-    const [entity, rows, keys] = em.upsert.mock.calls[0] ?? []
-    return [entity, Array.isArray(rows) ? rows.map(evaluatedValues) : evaluatedValues(rows), keys]
-}
+/** Matches the `() => "now()"` function a write hands the database for a time column. */
+const ANY_FUNCTION: unknown = expect.any(Function)
 
 const grantOf = builder<McpToolGrantView>({ tool: "hakuen.*", mode: "auto", limit_vnd: null, constraints: [] })
 
@@ -38,29 +34,32 @@ const recordOf = builder<McpToolGrantRecord>({
     constraints: [{ arg: "discountPct", max: 5 }],
 })
 
-/** One grant row as written to the database, with any column overridden. */
-const writtenOf = builder<Record<string, unknown>>({
-    workspaceId: "ws-1",
-    agentId: "agent-1",
-    tool: "hakuen.booking.confirm",
-    mode: "auto",
-    limitVnd: null,
-    constraints: [{ arg: "discountPct", max: 5 }],
-    updatedBy: null,
-    updatedAt: "now()",
-})
-
-const build = async (entityManager: MockEntityManager): Promise<McpToolGrantsService> => {
-    const moduleRef = await Test.createTestingModule({
-        providers: [McpToolGrantsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
-    }).compile()
-    return moduleRef.get(McpToolGrantsService)
+/** The agents the agents owner finds, by workspace and id: `ws-1:agent-1` is the AI Sales agent of workspace ws-1. */
+const FOUND: Record<string, string> = {
+    "ws-1:agent-1": "AI Sales",
+    "ws-1:agent-2": "AI Care",
+    "ws-2:agent-3": "AI Shifts",
 }
 
-/** A manager whose query builder answers the given raw rows. */
-const managerAnswering = (em: MockEntityManager, rows: ReadonlyArray<unknown>) => {
-    const [fake] = queueQueryBuilders(em, [{ getRawMany: rows }])
-    return { em, fake }
+const build = async (entityManager: MockEntityManager) => {
+    const agents = mock<AgentDirectoryService>({
+        cardsOf: jest.fn((workspaceId: string, ids: ReadonlyArray<string>) =>
+            Promise.resolve(
+                ids.flatMap((id) => {
+                    const name = FOUND[`${workspaceId}:${id}`]
+                    return name === undefined ? [] : [{ id, name, module: "sales", canTagAgentIds: [] }]
+                }),
+            ),
+        ),
+    })
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            McpToolGrantsService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: AgentDirectoryService, useValue: agents },
+        ],
+    }).compile()
+    return Object.assign(moduleRef.get(McpToolGrantsService), { doubles: { agents } })
 }
 
 describe("McpToolGrantsService reads", () => {
@@ -77,17 +76,35 @@ describe("McpToolGrantsService reads", () => {
         })
     })
 
-    it("lists every grant of the workspace with the agent's name", async () => {
-        const row: McpWorkspaceGrantView = { ...grantOf(), agent_id: "agent-1", agent_name: "AI Sales" }
-        const { em, fake } = managerAnswering(mockEntityManager(), [row])
+    it("lists every grant of the workspace with the agent's name, by name and then tool, leaving out an agent that is gone", async () => {
+        const em = mockEntityManager({
+            find: [
+                McpToolGrantEntity,
+                [
+                    Object.assign(entityOf(), { agentId: "agent-2", tool: "a.tool" }),
+                    Object.assign(entityOf(), { agentId: "agent-1", tool: "b.tool" }),
+                    Object.assign(entityOf(), { agentId: "agent-1", tool: "c.tool" }),
+                    Object.assign(entityOf(), { agentId: "agent-gone", tool: "d.tool" }),
+                ],
+            ],
+        })
         const grants = await build(em)
 
-        await expect(grants.listOfWorkspace("ws-1")).resolves.toEqual([row])
-        expect(fake?.callsOf("innerJoin")).toEqual([["agents", "a", "a.id = g.agent_id"]])
-        expect(fake?.callsOf("where")).toEqual([["g.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
-        expect(fake?.callsOf("orderBy")).toEqual([["a.name", "ASC"]])
-        expect(fake?.callsOf("addOrderBy")).toEqual([["g.tool", "ASC"]])
-        expect(fake?.callsOf("limit")).toEqual([[500]])
+        const listed = await grants.listOfWorkspace("ws-1")
+
+        expect(listed.map((grant) => [grant.agent_name, grant.tool])).toEqual([
+            ["AI Care", "a.tool"],
+            ["AI Sales", "b.tool"],
+            ["AI Sales", "c.tool"],
+        ])
+        expect(listed[1]).toEqual({ ...grantOf(), tool: "b.tool", agent_id: "agent-1", agent_name: "AI Sales" })
+        expect(grants.doubles.agents.cardsOf).toHaveBeenCalledWith("ws-1", ["agent-2", "agent-1", "agent-gone"])
+        expect(em.find).toHaveBeenCalledWith(McpToolGrantEntity, {
+            select: { agentId: true, tool: true, mode: true, limitVnd: true, constraints: true },
+            where: { workspaceId: "ws-1" },
+            order: { tool: "ASC" },
+            take: 500,
+        })
     })
 
     it("answers each granted agent once, in grant order", async () => {
@@ -118,40 +135,47 @@ describe("McpToolGrantsService reads", () => {
 
 describe("McpToolGrantsService.set", () => {
     it("sets the grant with its constraints and the person who set it", async () => {
-        const { em } = managerAnswering(mockEntityManager({ upsert: [McpToolGrantEntity, {}] }), [
-            { id: "agent-1", workspace_id: "ws-1" },
-        ])
+        const em = mockEntityManager({ upsert: [McpToolGrantEntity, {}] })
         const grants = await build(em)
 
         await expect(grants.set({ ...recordOf({ limitVnd: 500000 }), updatedBy: "person-1" })).resolves.toBe(true)
-        expect(upsertedOf(em)).toEqual([
+        expect(em.upsert).toHaveBeenCalledWith(
             McpToolGrantEntity,
-            writtenOf({ limitVnd: 500000, updatedBy: "person-1" }),
+            {
+                workspaceId: "ws-1",
+                agentId: "agent-1",
+                tool: "hakuen.booking.confirm",
+                mode: "auto",
+                limitVnd: 500000,
+                constraints: [{ arg: "discountPct", max: 5 }],
+                updatedBy: "person-1",
+                updatedAt: ANY_FUNCTION,
+            },
             ["agentId", "tool"],
-        ])
+        )
     })
 
     it("answers false and writes nothing when the agent is not one of the workspace", async () => {
-        const { em } = managerAnswering(mockEntityManager(), [{ id: "agent-1", workspace_id: "ws-other" }])
+        const em = mockEntityManager()
         const grants = await build(em)
 
-        await expect(grants.set({ ...recordOf(), updatedBy: "person-1" })).resolves.toBe(false)
+        await expect(grants.set({ ...recordOf({ workspaceId: "ws-other" }), updatedBy: "person-1" })).resolves.toBe(
+            false,
+        )
         expect(em.upsert).not.toHaveBeenCalled()
     })
 
     it("answers false when the agent does not exist", async () => {
-        const { em } = managerAnswering(mockEntityManager(), [])
+        const em = mockEntityManager()
         const grants = await build(em)
 
-        await expect(grants.set({ ...recordOf(), updatedBy: "person-1" })).resolves.toBe(false)
+        await expect(grants.set({ ...recordOf({ agentId: "ghost" }), updatedBy: "person-1" })).resolves.toBe(false)
     })
 })
 
 describe("McpToolGrantsService.upsert", () => {
     it("writes many grants in one statement, the last record of an agent and tool winning", async () => {
-        const { em, fake } = managerAnswering(mockEntityManager({ upsert: [McpToolGrantEntity, {}] }), [
-            { id: "agent-1", workspace_id: "ws-1" },
-        ])
+        const em = mockEntityManager({ upsert: [McpToolGrantEntity, {}] })
         const grants = await build(em)
 
         await expect(
@@ -161,29 +185,56 @@ describe("McpToolGrantsService.upsert", () => {
                 recordOf({ mode: "never" }),
             ]),
         ).resolves.toBe(2)
-        expect(fake?.callsOf("where")).toEqual([["a.id IN (:...agentIds)", { agentIds: ["agent-1"] }]])
-        expect(upsertedOf(em)).toEqual([
+        expect(grants.doubles.agents.cardsOf).toHaveBeenCalledTimes(1)
+        expect(grants.doubles.agents.cardsOf).toHaveBeenCalledWith("ws-1", ["agent-1"])
+        expect(em.upsert).toHaveBeenCalledWith(
             McpToolGrantEntity,
-            [writtenOf({ mode: "never" }), writtenOf({ tool: "sepay.*", constraints: [] })],
+            [
+                {
+                    workspaceId: "ws-1",
+                    agentId: "agent-1",
+                    tool: "hakuen.booking.confirm",
+                    mode: "never",
+                    limitVnd: null,
+                    constraints: [{ arg: "discountPct", max: 5 }],
+                    updatedBy: null,
+                    updatedAt: ANY_FUNCTION,
+                },
+                {
+                    workspaceId: "ws-1",
+                    agentId: "agent-1",
+                    tool: "sepay.*",
+                    mode: "auto",
+                    limitVnd: null,
+                    constraints: [],
+                    updatedBy: null,
+                    updatedAt: ANY_FUNCTION,
+                },
+            ],
             ["agentId", "tool"],
-        ])
+        )
     })
 
     it("skips a record whose agent is not of its workspace", async () => {
-        const { em } = managerAnswering(mockEntityManager({ upsert: [McpToolGrantEntity, {}] }), [
-            { id: "agent-1", workspace_id: "ws-1" },
-            { id: "agent-2", workspace_id: "ws-other" },
-        ])
+        const em = mockEntityManager({ upsert: [McpToolGrantEntity, {}] })
         const grants = await build(em)
 
-        await expect(grants.upsert([recordOf(), recordOf({ agentId: "agent-2" })])).resolves.toBe(1)
+        await expect(
+            grants.upsert([
+                recordOf(),
+                recordOf({ agentId: "agent-3", tool: "sepay.*" }),
+                recordOf({ workspaceId: "ws-2", agentId: "agent-3", tool: "einvoice.*" }),
+            ]),
+        ).resolves.toBe(2)
+        expect(grants.doubles.agents.cardsOf).toHaveBeenCalledWith("ws-1", ["agent-1", "agent-3"])
+        expect(grants.doubles.agents.cardsOf).toHaveBeenCalledWith("ws-2", ["agent-3"])
     })
 
     it("writes nothing when no record has an agent of its workspace", async () => {
-        const { em } = managerAnswering(mockEntityManager(), [])
+        const em = mockEntityManager()
         const grants = await build(em)
 
-        await expect(grants.upsert([recordOf()])).resolves.toBe(0)
+        await expect(grants.upsert([recordOf({ agentId: "ghost" })])).resolves.toBe(0)
         expect(em.upsert).not.toHaveBeenCalled()
     })
 
@@ -192,6 +243,6 @@ describe("McpToolGrantsService.upsert", () => {
         const grants = await build(em)
 
         await expect(grants.upsert([])).resolves.toBe(0)
-        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+        expect(grants.doubles.agents.cardsOf).not.toHaveBeenCalled()
     })
 })

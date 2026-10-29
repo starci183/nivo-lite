@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { InboundEventsService } from "@modules/domain/inbound-events"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { TransactionsError, TransactionsErrorCode } from "./errors/transactions.error"
 import { TransactionEntity } from "./persistence/entities"
@@ -23,7 +24,7 @@ const TEXT_TIMESTAMP = (column: string): string => `to_json(${column}) #>> '{}'`
 /** The most payments one invoice read returns. */
 const INVOICE_TRANSACTIONS_MAX = 1000
 
-/** One accounting row as the join selects it, the input columns flat. */
+/** One accounting row as the statement selects it, before its input is attached. */
 interface AccountingRawRow {
     /** The transaction id. */
     readonly id: string
@@ -47,22 +48,15 @@ interface AccountingRawRow {
     readonly occurred_at: string
     /** When it was written, ISO text as `to_json` renders it. */
     readonly created_at: string
-    /** The joined input id, null when the input is gone. */
-    readonly inbound_id: string | null
-    /** The input's source channel. */
-    readonly inbound_channel: string | null
-    /** The channel's own event id. */
-    readonly inbound_event: string | null
-    /** The source text. */
-    readonly inbound_body: string | null
-    /** The sender's name. */
-    readonly inbound_sender_name: string | null
 }
 
 @Injectable()
 /** The payments of a workspace as the ledger sees them: the only writer of public.transactions. */
 export class TransactionsService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly inputs: InboundEventsService,
+    ) {}
 
     /** The transaction of the workspace, or null when there is none with that id. */
     async find(workspaceId: string, transactionId: string): Promise<OptionalTransaction> {
@@ -120,7 +114,6 @@ export class TransactionsService {
     async listAccounting(workspaceId: string, limit: number = 1000): Promise<Array<TransactionAccountingRow>> {
         const rows = await this.entityManager
             .createQueryBuilder(TransactionEntity, "t")
-            .leftJoin("inbound_events", "i", "i.id = t.inbound_event_id AND i.workspace_id = t.workspace_id")
             .select([
                 "t.id AS id",
                 "t.workspace_id AS workspace_id",
@@ -133,39 +126,42 @@ export class TransactionsService {
                 "t.status AS status",
                 `${TEXT_TIMESTAMP("t.occurred_at")} AS occurred_at`,
                 `${TEXT_TIMESTAMP("t.created_at")} AS created_at`,
-                "i.id AS inbound_id",
-                "i.channel AS inbound_channel",
-                "i.event_id AS inbound_event",
-                "i.body AS inbound_body",
-                "i.sender_name AS inbound_sender_name",
             ])
             .where("t.workspace_id = :workspaceId", { workspaceId })
             .orderBy("t.occurred_at", "DESC")
             .addOrderBy("t.id", "DESC")
             .limit(limit)
             .getRawMany<AccountingRawRow>()
-        return rows.map((row) => ({
-            id: row.id,
-            workspace_id: row.workspace_id,
-            inbound_event_id: row.inbound_event_id,
-            channel: row.channel,
-            amount_vnd: row.amount_vnd,
-            reference: row.reference,
-            payer: row.payer,
-            invoice_id: row.invoice_id,
-            status: row.status,
-            occurred_at: row.occurred_at,
-            created_at: row.created_at,
-            inbound:
-                row.inbound_id === null
-                    ? null
-                    : {
-                          channel: row.inbound_channel ?? "",
-                          event_id: row.inbound_event,
-                          body: row.inbound_body ?? "",
-                          sender_name: row.inbound_sender_name,
-                      },
-        }))
+        const inputs = await this.inputs.findMany(
+            workspaceId,
+            rows.flatMap((row) => (row.inbound_event_id === null ? [] : [row.inbound_event_id])),
+        )
+        const inputOf = new Map(inputs.map((input) => [input.id, input]))
+        return rows.map((row) => {
+            const input = inputOf.get(row.inbound_event_id ?? "")
+            return {
+                id: row.id,
+                workspace_id: row.workspace_id,
+                inbound_event_id: row.inbound_event_id,
+                channel: row.channel,
+                amount_vnd: row.amount_vnd,
+                reference: row.reference,
+                payer: row.payer,
+                invoice_id: row.invoice_id,
+                status: row.status,
+                occurred_at: row.occurred_at,
+                created_at: row.created_at,
+                inbound:
+                    input === undefined
+                        ? null
+                        : {
+                              channel: input.channel,
+                              event_id: input.event_id,
+                              body: input.body,
+                              sender_name: input.sender_name,
+                          },
+            }
+        })
     }
 
     /** The newest live bank credits of a workspace, optionally of one status and from an instant. */

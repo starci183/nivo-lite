@@ -19,8 +19,8 @@ import { Test } from "@nestjs/testing"
 import { IsNull, MoreThan } from "typeorm"
 import { EntitlementsService } from "@modules/domain/billing"
 import { EventsService } from "@modules/domain/events"
-import { StaffEntity } from "@modules/domain/staff"
-import { WorkspaceEntity } from "@modules/domain/workspaces"
+import { StaffDirectoryService } from "@modules/domain/staff"
+import { WorkspacesService } from "@modules/domain/workspaces"
 import { ACCOUNT_DIRECTORY, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { AccountDirectory } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -70,6 +70,10 @@ const build = async (entityManager: MockEntityManager) => {
     const events = mock<EventsService>()
     const accounts = mock<AccountDirectory>()
     const delivery = mock<InviteDeliveryPort>()
+    const workspaces = mock<WorkspacesService>()
+    workspaces.nameOf.mockResolvedValue("Quan")
+    const staff = mock<StaffDirectoryService>()
+    staff.namesOf.mockResolvedValue([])
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkspaceInvitesService,
@@ -81,9 +85,11 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: WorkspaceMembersService, useValue: members },
             { provide: EventsService, useValue: events },
             { provide: EntitlementsService, useValue: mock<EntitlementsService>() },
+            { provide: WorkspacesService, useValue: workspaces },
+            { provide: StaffDirectoryService, useValue: staff },
         ],
     }).compile()
-    return { service: moduleRef.get(WorkspaceInvitesService), members, events, accounts, delivery }
+    return { service: moduleRef.get(WorkspaceInvitesService), members, events, accounts, delivery, workspaces, staff }
 }
 
 /** A manager that finds the invitation (or none) behind the token, and mints `TOKEN` on request. */
@@ -356,15 +362,16 @@ describe("WorkspaceInvitesService", () => {
             const [read] = queueQueryBuilders(em, [
                 {
                     getRawOne: {
-                        workspace_name: "Quan",
+                        workspace_id: "ws-1",
                         email: "an@example.test",
                         role: "staff",
-                        staff_name: "An",
+                        staff_id: "staff-1",
                         state: "pending",
                     },
                 },
             ])
-            const { service } = await build(em)
+            const { service, workspaces, staff } = await build(em)
+            staff.namesOf.mockResolvedValue([{ id: "staff-1", name: "An" }])
 
             await expect(service.preview(TOKEN)).resolves.toEqual({
                 workspaceName: "Quan",
@@ -374,10 +381,29 @@ describe("WorkspaceInvitesService", () => {
                 state: "pending",
             })
             expect(em.createQueryBuilder).toHaveBeenCalledWith(WorkspaceInviteEntity, "i")
-            expect(read?.callsOf("innerJoin")).toEqual([[WorkspaceEntity, "w", "w.id = i.workspace_id"]])
-            expect(read?.callsOf("leftJoin")).toEqual([[StaffEntity, "s", "s.id = i.staff_id"]])
+            expect(workspaces.nameOf).toHaveBeenCalledWith("ws-1")
+            expect(staff.namesOf).toHaveBeenCalledWith("ws-1", ["staff-1"])
             expect(read?.callsOf("where")).toEqual([["i.token_hash = :tokenHash", { tokenHash: HASH }]])
             expect(read?.callsOf("setParameter")).toEqual([["now", new Date(NOW)]])
+        })
+
+        it("shows no staff name when the invitation links no staff row", async () => {
+            const em = mockEntityManager()
+            queueQueryBuilders(em, [
+                {
+                    getRawOne: {
+                        workspace_id: "ws-1",
+                        email: "an@example.test",
+                        role: "staff",
+                        staff_id: null,
+                        state: "pending",
+                    },
+                },
+            ])
+            const { service, staff } = await build(em)
+
+            await expect(service.preview(TOKEN)).resolves.toMatchObject({ staffName: null })
+            expect(staff.namesOf).not.toHaveBeenCalled()
         })
 
         it("refuses a token that matches no invitation", async () => {

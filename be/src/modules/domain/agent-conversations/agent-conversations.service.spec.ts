@@ -457,3 +457,30 @@ describe("AgentConversationsService connector party", () => {
         ])
     })
 })
+
+describe("AgentConversationsService installationIdOf", () => {
+    it("answers the installation a row of the workspace names", async () => {
+        const em = mockEntityManager({
+            findOne: [
+                AgentConversationEntity,
+                Object.assign(new AgentConversationEntity(), { installationId: "inst-1" }),
+            ],
+        })
+
+        await expect((await build(em)).service.installationIdOf("ws-1", "rec-1")).resolves.toBe("inst-1")
+        expect(em.findOne).toHaveBeenCalledWith(AgentConversationEntity, {
+            select: { installationId: true },
+            where: { workspaceId: "ws-1", id: "rec-1" },
+        })
+    })
+
+    it("answers null for a missing row and for a row that names no installation", async () => {
+        const em = mockEntityManager({ findOne: [AgentConversationEntity, null] })
+        await expect((await build(em)).service.installationIdOf("ws-1", "rec-1")).resolves.toBeNull()
+
+        const bare = mockEntityManager({
+            findOne: [AgentConversationEntity, Object.assign(new AgentConversationEntity(), { installationId: null })],
+        })
+        await expect((await build(bare)).service.installationIdOf("ws-1", "rec-1")).resolves.toBeNull()
+    })
+})

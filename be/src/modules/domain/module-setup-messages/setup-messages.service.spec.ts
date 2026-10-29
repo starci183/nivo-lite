@@ -1,7 +1,8 @@
-import { mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
+import { In } from "typeorm"
+import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { NewSetupMessage, SetupMessageRecord } from "./module-setup-messages.contracts"
 import { ModuleSetupMessageEntity } from "./persistence/entities"
@@ -30,26 +31,44 @@ const posted: NewSetupMessage = {
     body: "Noted",
 }
 
-const build = async (entityManager: MockEntityManager) => {
+const build = async (entityManager: MockEntityManager, sessions = mock<SetupSessionsService>()) => {
     const moduleRef = await Test.createTestingModule({
-        providers: [SetupMessagesService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            SetupMessagesService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: SetupSessionsService, useValue: sessions },
+        ],
     }).compile()
     return moduleRef.get(SetupMessagesService)
 }
 
 describe("SetupMessagesService", () => {
-    it("lists the chat of an installation", async () => {
+    it("lists the chat of an installation across its revisions", async () => {
+        const em = mockEntityManager({ find: [ModuleSetupMessageEntity, [row]] })
+        const sessions = mock<SetupSessionsService>()
+        sessions.revisions.mockResolvedValue([
+            { id: "ses-1", revision: 1, status: "applied" },
+            { id: "ses-2", revision: 2, status: "draft" },
+        ])
+
+        await expect((await build(em, sessions)).ofInstallation("inst-1")).resolves.toEqual([message])
+
+        expect(sessions.revisions).toHaveBeenCalledWith("inst-1")
+        expect(em.find).toHaveBeenCalledWith(ModuleSetupMessageEntity, {
+            where: { setupSessionId: In(["ses-1", "ses-2"]) },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: 2000,
+        })
+    })
+
+    it("lists nothing for an installation that never opened a session", async () => {
         const em = mockEntityManager()
-        const query = fakeQueryBuilder({ getMany: [row] })
-        answerQueryBuilders(em, query)
+        const sessions = mock<SetupSessionsService>()
+        sessions.revisions.mockResolvedValue([])
 
-        await expect((await build(em)).ofInstallation("inst-1")).resolves.toEqual([message])
+        await expect((await build(em, sessions)).ofInstallation("inst-1")).resolves.toEqual([])
 
-        expect(em.createQueryBuilder).toHaveBeenCalledWith(ModuleSetupMessageEntity, "m")
-        expect(query.argsOf("where")).toEqual([["s.installationId = :installationId", { installationId: "inst-1" }]])
-        expect(query.argsOf("orderBy")).toEqual([["m.createdAt", "ASC"]])
-        expect(query.argsOf("addOrderBy")).toEqual([["m.id", "ASC"]])
-        expect(query.argsOf("limit")).toEqual([[2000]])
+        expect(em.find).not.toHaveBeenCalled()
     })
 
     it("lists the chat of one session", async () => {

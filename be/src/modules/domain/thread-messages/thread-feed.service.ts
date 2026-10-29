@@ -8,14 +8,15 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { Connection, PageRequest } from "@modules/platform/pagination"
 import { MentionDirectoryService } from "./mention-directory.service"
+import { ThreadMessageAuthorsService } from "./thread-message-authors.service"
 import { ThreadMessageEntity } from "./persistence/entities"
-import { selectMessagesWithAuthor } from "./persistence/thread-message.query"
+import { selectMessages } from "./persistence/thread-message.query"
 import { toListing, toMessage } from "./thread.mapper"
 import type {
     NewThread,
     ThreadDigestRecord,
     ThreadListing,
-    ThreadMessageRecord,
+    ThreadMessageRead,
     ThreadView,
 } from "./thread-messages.contracts"
 
@@ -32,6 +33,7 @@ export class ThreadFeedService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
         private readonly directory: MentionDirectoryService,
+        private readonly authors: ThreadMessageAuthorsService,
         private readonly threads: WorkThreadsService,
         private readonly chains: WorkChainsService,
     ) {}
@@ -85,12 +87,13 @@ export class ThreadFeedService {
     async read(userId: string, workspaceId: string, threadId: string): Promise<ThreadView> {
         await this.members.require(userId, workspaceId)
         const thread = await this.threads.find(workspaceId, threadId)
-        const newestFirst = await selectMessagesWithAuthor(this.entityManager, workspaceId)
+        const read = await selectMessages(this.entityManager, workspaceId)
             .andWhere("m.thread_id = :threadId", { threadId })
             .orderBy("m.created_at", "DESC")
             .addOrderBy("m.id", "DESC")
             .limit(MESSAGE_PAGE)
-            .getRawMany<ThreadMessageRecord>()
+            .getRawMany<ThreadMessageRead>()
+        const newestFirst = await this.authors.withAuthors(this.entityManager, workspaceId, read)
         return { thread, messages: newestFirst.map(toMessage).reverse() }
     }
 

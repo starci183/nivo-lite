@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AgentOwnershipService } from "@modules/domain/agents"
+import { AgentDirectoryService, AgentOwnershipService } from "@modules/domain/agents"
 import { AuthorityRulesService, ruleAmountOf } from "@modules/domain/authority-rules"
 import type { ApprovalSetup } from "@modules/domain/authority-rules"
 import { ModuleCatalogService, WorkEngineService } from "@modules/domain/decisions"
@@ -18,7 +18,6 @@ import type {
     ThreadWorkRecord,
     ThreadWorkState,
     WorkAgent,
-    WorkAgentRecord,
     WorkPlace,
 } from "./thread-work.contracts"
 
@@ -60,6 +59,7 @@ export class ThreadWorkTurnsService {
         private readonly modules: ModuleCatalogService,
         private readonly rules: AuthorityRulesService,
         private readonly ownership: AgentOwnershipService,
+        private readonly agents: AgentDirectoryService,
     ) {}
 
     /**
@@ -268,21 +268,15 @@ export class ThreadWorkTurnsService {
 
     /** The active agents the agent may tag, in its order. */
     private async targetsOf(place: WorkPlace): Promise<ReadonlyArray<WorkAgent>> {
-        const rows = await this.entityManager
-            .createQueryBuilder()
-            .select(["a.id AS id", "a.name AS name", "a.module AS module", "a.can_tag_agent_ids AS can_tag_agent_ids"])
-            .from("public.agents", "a")
-            .innerJoin(
-                "(SELECT * FROM unnest(CAST(:agentIds AS uuid[])) WITH ORDINALITY AS u(id, position))",
-                "t",
-                "t.id = a.id",
-            )
-            .where("a.workspace_id = :workspaceId AND a.status = 'active'", { workspaceId: place.workspaceId })
-            .setParameter("agentIds", [...place.agent.canTag])
-            .orderBy("t.position", "ASC")
-            .limit(TARGETS_MAX)
-            .getRawMany<WorkAgentRecord>()
-        return rows.map(workAgentOf)
+        const agents = await this.agents.activeInOrder(place.workspaceId, place.agent.canTag, TARGETS_MAX)
+        return agents.map((agent) =>
+            workAgentOf({
+                id: agent.id,
+                name: agent.name,
+                module: agent.module,
+                can_tag_agent_ids: [...agent.canTagAgentIds],
+            }),
+        )
     }
 
     /** Why the receiving agent takes over, in the words of its catalog command. */

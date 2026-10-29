@@ -1,9 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
-import { WorkspaceEntity, WorkspacePruneService } from "@modules/domain/workspaces"
+import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
+import { WorkspacePruneService, WorkspacesService } from "@modules/domain/workspaces"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { WorkspaceCleanupErrorCode } from "./errors/workspace-cleanup.error"
 import { CLEANUP_RECEIPT_PREFIX } from "./messages/workspace-cleanup.messages"
 import type { UserReferenceRow, WorkspaceFootprintRow } from "./persistence/workspace-cleanup.rows"
@@ -56,23 +55,14 @@ const build = async (fixture: Fixture = {}) => {
         (row) => [WORKSPACE_USER_REFERENCES, [{ workspace_user_references: row.refs }]] as const,
     )
     const calls: ReadonlyArray<readonly [string, unknown]> = [...footprints, ...references]
-    const em = mockEntityManager({
-        find: [
-            WorkspaceEntity,
-            workspaces.map((row) => Object.assign(new WorkspaceEntity(), { id: row.id, name: row.name })),
-        ],
-        query: calls.length === 0 ? [["no statement expected", []]] : calls,
-    })
+    const em = mockEntityManager({ query: calls.length === 0 ? [["no statement expected", []]] : calls })
     const keptRows = fixture.kept ?? KEPT
-    const builders: Array<FakeQueryBuilder> = []
-    em.createQueryBuilder.mockImplementation((() => {
-        // the members read first, the owners read second, per survey
-        const fake = fakeQueryBuilder({
-            getRawMany: builders.length % 2 === 0 ? keptRows.slice(1) : keptRows.slice(0, 1),
-        })
-        builders.push(fake)
-        return fake.builder
-    }) as never)
+    const workspaceReads = mock<WorkspacesService>()
+    workspaceReads.list.mockResolvedValue(workspaces.map((row) => ({ id: row.id, name: row.name })))
+    // the first kept row is the owner, the others are plain members
+    workspaceReads.ownerIdsOf.mockResolvedValue(keptRows.slice(0, 1).map((row) => row.user_id))
+    const members = mock<WorkspaceMemberDirectoryService>()
+    members.userIdsOf.mockResolvedValue(keptRows.slice(1).map((row) => row.user_id))
     const prune = mock<WorkspacePruneService>()
     const accounts = mock<CleanupAccounts>()
     accounts.listUsers.mockResolvedValue({ data: { users: fixture.users ?? [OWNER, STAFF, ORPHAN] }, error: null })
@@ -83,11 +73,13 @@ const build = async (fixture: Fixture = {}) => {
             WorkspaceCleanupService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: WorkspacePruneService, useValue: prune },
+            { provide: WorkspacesService, useValue: workspaceReads },
+            { provide: WorkspaceMemberDirectoryService, useValue: members },
             { provide: CLEANUP_ACCOUNTS, useValue: accounts },
             { provide: WORKSPACE_CLEANUP_OPTIONS, useValue: { accounts: CLEANUP_ACCOUNTS, print } },
         ],
     }).compile()
-    return { cleanup: moduleRef.get(WorkspaceCleanupService), em, prune, accounts, print, builders }
+    return { cleanup: moduleRef.get(WorkspaceCleanupService), em, prune, accounts, print, workspaceReads, members }
 }
 
 const refusedWith = (code: WorkspaceCleanupErrorCode, params?: Record<string, string | number>) =>
@@ -125,7 +117,7 @@ describe("WorkspaceCleanupService dry run", () => {
     })
 
     it("prints the dry-run receipt with its digest and deletes nothing", async () => {
-        const { cleanup, em, prune, accounts, print, builders } = await build()
+        const { cleanup, em, prune, accounts, print, workspaceReads, members } = await build()
 
         const report = await cleanup.run({ keep: HAKUEN, dryRun: true })
 
@@ -140,19 +132,11 @@ describe("WorkspaceCleanupService dry run", () => {
             allowKeptCascade: false,
         })
         expect(print).toHaveBeenCalledWith(receiptLineOf(report))
-        expect(em.find).toHaveBeenCalledWith(WorkspaceEntity, {
-            select: { id: true, name: true },
-            order: { id: "ASC" },
-            take: 1000,
-        })
+        expect(workspaceReads.list).toHaveBeenCalledWith(1000)
         expect(em.query).toHaveBeenCalledWith(WORKSPACE_FOOTPRINT, [SPA])
         expect(em.query).not.toHaveBeenCalledWith(WORKSPACE_FOOTPRINT, [HAKUEN])
-        expect(em.createQueryBuilder).toHaveBeenCalledTimes(2)
-        expect(builders.map((fake) => fake.callsOf("where"))).toEqual([
-            [["m.workspace_id = ANY(CAST(:keep AS uuid[]))", { keep: [HAKUEN] }]],
-            [["w.id = ANY(CAST(:keep AS uuid[]))", { keep: [HAKUEN] }]],
-        ])
-        expect(builders.map((fake) => fake.callsOf("limit"))).toEqual([[[5000]], [[5000]]])
+        expect(members.userIdsOf).toHaveBeenCalledWith([HAKUEN], 5000)
+        expect(workspaceReads.ownerIdsOf).toHaveBeenCalledWith([HAKUEN], 5000)
         expect(em.query).toHaveBeenCalledWith(WORKSPACE_USER_REFERENCES, [ORPHAN.id, [HAKUEN]])
         expect(prune.prune).not.toHaveBeenCalled()
         expect(accounts.deleteUser).not.toHaveBeenCalled()

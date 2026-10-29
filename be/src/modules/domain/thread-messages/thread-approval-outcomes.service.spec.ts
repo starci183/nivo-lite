@@ -12,6 +12,8 @@ import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { MentionDirectoryService } from "./mention-directory.service"
+import { ThreadMessageAuthorsService } from "./thread-message-authors.service"
+import { passThroughAuthors } from "@tests/fixtures/builders/thread-message-authors.builder"
 import { ThreadMessageEntity } from "./persistence/entities"
 import { ThreadApprovalOutcomesService } from "./thread-approval-outcomes.service"
 import { ThreadMessagesService } from "./thread-messages.service"
@@ -110,6 +112,7 @@ const build = async (em: MockEntityManager, claimWon = true) => {
             { provide: INBOX, useValue: inbox },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: MentionDirectoryService, useValue: directory },
+            { provide: ThreadMessageAuthorsService, useValue: passThroughAuthors() },
             { provide: WorkThreadsService, useValue: threads },
             { provide: WorkChainsService, useValue: chains },
             { provide: ThreadMessagesService, useValue: messages },

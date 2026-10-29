@@ -25,3 +25,4 @@ export type {
 export { BillingReadService } from "./billing-read.service"
 export type { BillingPaymentOrder, BillingPaymentOrderLookup } from "./billing.contracts"
 export { PlanEntity, PlanUsageTierEntity, billingEntities } from "./persistence/entities"
+export { BillingEventsReadService } from "./billing-events-read.service"

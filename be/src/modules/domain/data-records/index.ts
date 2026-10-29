@@ -1,3 +1,5 @@
+export { DataRecordsReadService } from "./data-records-read.service"
+export type { MailAttachments } from "./data-records-read.contracts"
 export type { DataEntity, DataRecordInput } from "./data-records.contracts"
 export { DataRecordsModule } from "./data-records.module"
 export { DataRecordsService } from "./data-records.service"

@@ -245,8 +245,16 @@ export interface ConnectionNeed {
     readonly providers: ReadonlyArray<string>
 }
 
-/** An installation as the product shows it: the record and what it still needs connected to run (empty when ready). */
+/** An installation as the product shows it: the record with its agent and version, and what it still needs connected to run (empty when ready). */
 export interface InstallationView extends InstallationRecord {
+    /** The display name of the agent; empty when it has none. */
+    readonly agentName: string
+    /** The mention handle of the agent. */
+    readonly agentHandle: string
+    /** The HTTPS address of the agent's picture; null for the generated avatar or when there is no agent. */
+    readonly agentAvatarUrl: string | null
+    /** The number of the version in use; null before the first apply. */
+    readonly activeVersion: number | null
     /** The missing required roles, each with its possible providers. */
     readonly connectionNeeds: ReadonlyArray<ConnectionNeed>
     /** What the product may say about the installation, derived from the facts (see InstallationLifecycle). */

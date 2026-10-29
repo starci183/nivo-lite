@@ -58,3 +58,34 @@ describe("BookingChatLookupService", () => {
         })
     })
 })
+
+const lookupOver = async (entityManager: ReturnType<typeof mockEntityManager>) =>
+    (
+        await Test.createTestingModule({
+            providers: [BookingChatLookupService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        }).compile()
+    ).get(BookingChatLookupService)
+
+describe("BookingChatLookupService installationIdOf", () => {
+    it("answers the installation a row of the workspace names", async () => {
+        const em = mockEntityManager({
+            findOne: [BookingEntity, Object.assign(new BookingEntity(), { installationId: "inst-1" })],
+        })
+
+        await expect((await lookupOver(em)).installationIdOf("ws-1", "rec-1")).resolves.toBe("inst-1")
+        expect(em.findOne).toHaveBeenCalledWith(BookingEntity, {
+            select: { installationId: true },
+            where: { workspaceId: "ws-1", id: "rec-1" },
+        })
+    })
+
+    it("answers null for a missing row and for a row that names no installation", async () => {
+        const em = mockEntityManager({ findOne: [BookingEntity, null] })
+        await expect((await lookupOver(em)).installationIdOf("ws-1", "rec-1")).resolves.toBeNull()
+
+        const bare = mockEntityManager({
+            findOne: [BookingEntity, Object.assign(new BookingEntity(), { installationId: null })],
+        })
+        await expect((await lookupOver(bare)).installationIdOf("ws-1", "rec-1")).resolves.toBeNull()
+    })
+})

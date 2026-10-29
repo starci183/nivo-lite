@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { In, Like } from "typeorm"
 import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
 import { InjectClock } from "@modules/platform/clock"
@@ -67,6 +68,28 @@ export class WorkItemsService {
             take: LEAD_ITEMS_MAX,
         })
         return rows.map((row) => toWorkItem(toWorkItemRecord(row)))
+    }
+
+    /** The installation that owns a work item of the workspace; null when there is no such row or it names no installation. */
+    async installationIdOf(workspaceId: string, id: string): Promise<string | null> {
+        const row = await this.entityManager.findOne(WorkItemEntity, {
+            select: { installationId: true },
+            where: { workspaceId, id },
+        })
+        return row?.installationId ?? null
+    }
+
+    /** The items with these ids, at most `limit`; unknown ids are simply absent. */
+    async findMany(ids: ReadonlyArray<string>, limit: number): Promise<Array<WorkItem>> {
+        const rows = await this.entityManager.find(WorkItemEntity, { where: { id: In([...ids]) }, take: limit })
+        return rows.map((row) => toWorkItem(toWorkItemRecord(row)))
+    }
+
+    /** How many items of one action have a dedupe key that starts with the prefix. */
+    countByDedupePrefix(workspaceId: string, action: string, prefix: string): Promise<number> {
+        return this.entityManager.count(WorkItemEntity, {
+            where: { workspaceId, action, dedupeKey: Like(`${prefix}%`) },
+        })
     }
 
     /** Requeues a step only while it is in one of the caller's allowed failed states. */

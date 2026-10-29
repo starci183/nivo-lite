@@ -1,8 +1,10 @@
 import { Injectable } from "@nestjs/common"
 import { Between, In, IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { StaffEntity } from "@modules/domain/staff"
-import { WorkItemEntity } from "@modules/domain/work-items"
+import { StaffDirectoryService } from "@modules/domain/staff"
+import { WorkItemsService } from "@modules/domain/work-items"
+import type { WorkItem } from "@modules/domain/work-items"
+import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -61,8 +63,6 @@ const ATTENDANCE_MAX = 2000
 const POSTED_MAX = 2000
 /** The most shifts of the swap request lines one read answers. */
 const SWAP_SHIFTS_MAX = 500
-/** The most shop staff rows one read answers. */
-const SHOP_STAFF_MAX = 500
 /** Matches no person; filters the requests of a member without a shifts profile. */
 const UNLINKED_STAFF = "00000000-0000-0000-0000-000000000000"
 
@@ -84,14 +84,12 @@ const recordOf = (value: unknown): Record<string, unknown> =>
         ? Object.fromEntries(Object.entries(value))
         : {}
 
-const itemOf = (
-    row: Pick<WorkItemEntity, "id" | "status" | "proposal" | "result" | "decidedPath">,
-): ShiftsWorkItemView => ({
+const itemOf = (row: Pick<WorkItem, "id" | "status" | "proposal" | "result" | "decided_path">): ShiftsWorkItemView => ({
     id: row.id,
     status: row.status,
     summary: summaryOf(row.proposal) ?? "",
     resultSummary: summaryOf(row.result),
-    decidedPath: row.decidedPath,
+    decidedPath: row.decided_path,
 })
 
 const availView = (row: ShiftsAvailabilityEntity): ShiftsAvailabilityView => ({
@@ -143,6 +141,9 @@ export class ShiftsWorkbenchService {
         @InjectClock() private readonly clock: Clock,
         private readonly members: WorkspaceMembersService,
         private readonly data: ShiftsDataService,
+        private readonly workItemsOf: WorkItemsService,
+        private readonly staff: StaffDirectoryService,
+        private readonly pipelines: AutomationPipelinesService,
     ) {}
 
     /** The whole workbench of one week: setup, versions, requests, figures for a manager. */
@@ -155,7 +156,7 @@ export class ShiftsWorkbenchService {
         const [setup, myProfileId, reminderOn] = await Promise.all([
             this.data.loadSetup(workspaceId, isManager),
             this.profileOfMember(workspaceId, userId, member.staffId),
-            isReminderOn(this.entityManager, workspaceId),
+            isReminderOn(this.pipelines, workspaceId),
         ])
         const [weekView, requests, staffRows, allAvailability, figures] = await Promise.all([
             this.weekView(workspaceId, monday, setup, isManager),
@@ -386,11 +387,7 @@ export class ShiftsWorkbenchService {
 
     private async workItems(ids: ReadonlyArray<string>): Promise<Map<string, ShiftsWorkItemView>> {
         if (!ids.length) return new Map()
-        const rows = await this.entityManager.find(WorkItemEntity, {
-            select: { id: true, status: true, proposal: true, result: true, decidedPath: true },
-            where: { id: In([...new Set(ids)]) },
-            take: ITEMS_MAX,
-        })
+        const rows = await this.workItemsOf.findMany([...new Set(ids)], ITEMS_MAX)
         return new Map(rows.map((row) => [row.id, itemOf(row)]))
     }
 
@@ -434,12 +431,7 @@ export class ShiftsWorkbenchService {
     }
 
     private async shopStaff(workspaceId: string): Promise<Array<ShiftsStaffRowView>> {
-        const rows = await this.entityManager.find(StaffEntity, {
-            select: { id: true, name: true },
-            where: { workspaceId, active: true },
-            order: { createdAt: "ASC" },
-            take: SHOP_STAFF_MAX,
-        })
+        const rows = await this.staff.list(workspaceId)
         return rows.map((row) => ({ id: row.id, name: row.name }))
     }
 

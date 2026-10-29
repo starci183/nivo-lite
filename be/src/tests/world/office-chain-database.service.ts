@@ -1,7 +1,9 @@
 import type { EntityManager } from "typeorm"
 import { ApprovalRequestEntity } from "@modules/domain/approval-requests"
 import { eventsEntities } from "@modules/domain/events"
-import { WorkItemEntity } from "@modules/domain/work-items"
+import { workItemsEntities } from "@modules/domain/work-items"
+
+const [WorkItemEntity] = workItemsEntities
 
 const [EventEntity] = eventsEntities
 

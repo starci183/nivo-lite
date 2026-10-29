@@ -1,15 +1,16 @@
 import type { ClaimedJob, JobClaims } from "@modules/platform/jobs"
 import { Test } from "@nestjs/testing"
 import { IsNull } from "typeorm"
-import { fakeInbox, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import { BillingError, BillingErrorCode, PaymentProofService, parseJsonObject } from "@modules/domain/billing"
 import type { SepayDelivery } from "@modules/domain/billing"
+import { PaymentOrdersService } from "@modules/domain/payment-orders"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { SEPAY_DELIVERY_QUEUE } from "@modules/queues/sepay-delivery"
-import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { fakeRowInbox } from "@tests/fixtures/builders/row-claims.builder"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { SepayTransactionEntity } from "./persistence/entities"
 import { SepayTransactionsService } from "./sepay-transactions.service"
 
@@ -40,17 +41,6 @@ const COMPLETED = "completed" as const
 
 type Stub = readonly [string, unknown] | typeof PENDING | typeof UPDATE_SEPAY_RESULT | typeof COMPLETED
 
-/** A stored transfer of a workspace order, with any column overridden. */
-const transferOf = (over: Partial<SepayTransactionEntity> = {}): SepayTransactionEntity =>
-    Object.assign(new SepayTransactionEntity(), {
-        sepayId: 9001,
-        status: "underpaid",
-        transferAmount: 500000,
-        receivedAt: new Date("2026-10-13T09:00:00+07:00"),
-        content: null,
-        ...over,
-    })
-
 const build = async (stubs: ReadonlyArray<Stub>, patch: Record<string, unknown> = {}) => {
     const settles = stubs.flatMap((stub) =>
         typeof stub === "string" || stub[0] !== SETTLE_PAYMENT_ORDER ? [] : [stub],
@@ -73,11 +63,15 @@ const build = async (stubs: ReadonlyArray<Stub>, patch: Record<string, unknown> 
               }),
     )
     const proof = mock<PaymentProofService>()
-    const inbox = fakeInbox()
-    Object.assign(inbox, { claimRow: (source: string, eventId: string) => inbox.claim(source, eventId) })
+    const inbox = fakeRowInbox()
     const claims = mock<JobClaims>()
     claims.advance.mockResolvedValue(undefined)
     const outbox = recordingQueueOutbox()
+    const orders = mock<PaymentOrdersService>({
+        idsOfWorkspace: jest.fn((_workspaceId: string, ids: ReadonlyArray<string>) =>
+            Promise.resolve(ids.filter((id) => id !== "foreign")),
+        ),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             SepayTransactionsService,
@@ -85,9 +79,10 @@ const build = async (stubs: ReadonlyArray<Stub>, patch: Record<string, unknown> 
             { provide: PaymentProofService, useValue: proof },
             { provide: INBOX, useValue: inbox },
             { provide: QUEUE_OUTBOX, useValue: outbox },
+            { provide: PaymentOrdersService, useValue: orders },
         ],
     }).compile()
-    return { settlement: moduleRef.get(SepayTransactionsService), tx, proof, inbox, outbox, claims }
+    return { settlement: moduleRef.get(SepayTransactionsService), tx, proof, inbox, outbox, claims, orders }
 }
 
 describe("SepayTransactionsService", () => {
@@ -99,9 +94,34 @@ describe("SepayTransactionsService", () => {
             expect(tx.em.query).not.toHaveBeenCalled()
         })
 
-        it("maps the transfers of the workspace orders with an ISO receipt time", async () => {
+        it("reads nothing when none of the orders belongs to the workspace", async () => {
             const { settlement, tx } = await build([])
-            const [review] = queueQueryBuilders(tx.em, [{ getMany: [transferOf()] }])
+
+            await expect(settlement.review("ws-1", ["foreign"])).resolves.toEqual([])
+            expect(tx.em.createQueryBuilder).not.toHaveBeenCalled()
+        })
+
+        it("maps the transfers of the workspace orders with an ISO receipt time", async () => {
+            const { settlement, tx, orders } = await build([])
+            const review = fakeQueryBuilder({
+                getMany: [
+                    Object.assign(new SepayTransactionEntity(), {
+                        sepayId: 9001,
+                        status: "underpaid",
+                        transferAmount: 500000,
+                        receivedAt: new Date("2026-10-13T09:00:00+07:00"),
+                        content: null,
+                    }),
+                    Object.assign(new SepayTransactionEntity(), {
+                        sepayId: 9002,
+                        status: "unmatched",
+                        transferAmount: null,
+                        receivedAt: new Date("2026-10-13T08:00:00+07:00"),
+                        content: "chuyen khoan",
+                    }),
+                ],
+            })
+            tx.em.createQueryBuilder.mockReturnValue(review.builder as never)
 
             await expect(settlement.review("ws-1", ["order-1"])).resolves.toEqual([
                 {
@@ -111,27 +131,25 @@ describe("SepayTransactionsService", () => {
                     receivedAt: "2026-10-13T02:00:00.000Z",
                     content: null,
                 },
+                {
+                    id: 9002,
+                    status: "unmatched",
+                    transferAmount: 0,
+                    receivedAt: "2026-10-13T01:00:00.000Z",
+                    content: "chuyen khoan",
+                },
             ])
             expect(tx.em.createQueryBuilder).toHaveBeenCalledWith(SepayTransactionEntity, "t")
-            expect(review?.callsOf("where")).toEqual([["o.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
-            expect(review?.callsOf("andWhere")).toEqual([
-                ["o.id IN (:...orderIds)", { orderIds: ["order-1"] }],
+            expect(orders.idsOfWorkspace).toHaveBeenCalledWith("ws-1", ["order-1"])
+            expect(review.callsOf("where")).toEqual([["t.matchedOrderId IN (:...ownedIds)", { ownedIds: ["order-1"] }]])
+            expect(review.callsOf("andWhere")).toEqual([
                 ["t.status IN (:...statuses)", { statuses: ["underpaid", "expired", "unmatched"] }],
             ])
-            expect(review?.callsOf("orderBy")).toEqual([["t.receivedAt", "DESC"]])
-            expect(review?.callsOf("limit")).toEqual([[50]])
-        })
-
-        it("reads a transfer that carries no amount as zero", async () => {
-            const { settlement, tx } = await build([])
-            queueQueryBuilders(tx.em, [{ getMany: [transferOf({ transferAmount: null })] }])
-
-            await expect(settlement.review("ws-1", ["order-1"])).resolves.toMatchObject([{ transferAmount: 0 }])
+            expect(review.callsOf("orderBy")).toEqual([["t.receivedAt", "DESC"]])
+            expect(review.callsOf("limit")).toEqual([[50]])
         })
     })
-})
 
-describe("SepayTransactionsService delivery verification", () => {
     describe("verifySepayDelivery", () => {
         it.each([AUTHORIZATION, undefined])(
             "delegates the exact authorization %j without reading data",
@@ -179,14 +197,16 @@ describe("SepayTransactionsService", () => {
             expect(outbox.jobs).toEqual([{ queue: SEPAY_DELIVERY_QUEUE, payload: { deliveryId: "9001" } }])
             expect(outbox.allInTransaction).toBe(true)
             expect(tx.em.query).toHaveBeenCalledWith(SETTLE_PAYMENT_ORDER, ["NIVO8F3K2", 990000, 9001])
-            expect(evaluatedCalls(tx.em.update.mock.calls, 2)).toEqual([
-                [
-                    "SepayTransactionEntity",
-                    { sepayId: 9001 },
-                    { status: "paid", transferAmount: 990000, content: "nivo 8f3k2 chuyen tien" },
-                ],
-                ["SepayTransactionEntity", { id: "row-1" }, { processedAt: "now()" }],
-            ])
+            expect(tx.em.update).toHaveBeenCalledWith(
+                SepayTransactionEntity,
+                { sepayId: 9001 },
+                { status: "paid", transferAmount: 990000, content: "nivo 8f3k2 chuyen tien" },
+            )
+            expect(tx.em.update).toHaveBeenCalledWith(
+                SepayTransactionEntity,
+                { id: "row-1" },
+                { processedAt: expect.any(Function) },
+            )
         })
 
         it("touches nothing when the delivery is refused at the door", async () => {

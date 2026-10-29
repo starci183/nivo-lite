@@ -59,6 +59,11 @@ export class AuthorityActionsService {
         return { written: written.length, stale: held.map((row) => row.action).filter((action) => !keys.has(action)) }
     }
 
+    /** Whether the catalogue holds the action, read through the manager the caller hands in. */
+    exists(manager: EntityManager, action: string): Promise<boolean> {
+        return manager.exists(AuthorityActionEntity, { where: { action } })
+    }
+
     /** Every action of the catalogue, read through the manager the caller hands in. */
     async list(manager: EntityManager): Promise<Array<AuthorityActionRecord>> {
         const rows = await manager.find(AuthorityActionEntity, {

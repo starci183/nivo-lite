@@ -86,9 +86,9 @@ export const pendingInviteExpected = [
 
 /** The public preview of a revoked invitation. */
 export const revokedInvitePreview = {
-    workspace_name: "Shop",
+    workspace_id: "ws-1",
     email: "a@example.test",
     role: "staff",
-    staff_name: null,
+    staff_id: null,
     state: "revoked",
 }

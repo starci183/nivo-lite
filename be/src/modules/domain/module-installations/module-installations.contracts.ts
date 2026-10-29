@@ -17,7 +17,7 @@ export type OptionalInstallationStatus = InstallationStatus | null
 /** How an agent runs: it asks for everything (assist) or follows the authority rules alone (autopilot). */
 export type InstallationMode = "assist" | "autopilot"
 
-/** One installed agent of a workspace, with its agent and its active context version. */
+/** One installed agent of a workspace: its row, with the agent and the context version it points at by id. */
 export interface InstallationRecord {
     /** The installation. */
     readonly id: string
@@ -31,12 +31,6 @@ export interface InstallationRecord {
     readonly isMulti: boolean
     /** The agent of the instance; null when it has none. */
     readonly agentId: string | null
-    /** The display name of the agent; empty when it has none. */
-    readonly agentName: string
-    /** The mention handle of the agent. */
-    readonly agentHandle: string
-    /** The HTTPS address of the agent's picture; null for the generated avatar or when there is no agent. */
-    readonly agentAvatarUrl: string | null
     /** Where the installation stands. */
     readonly status: InstallationStatus
     /** How the agent runs. */
@@ -45,8 +39,6 @@ export interface InstallationRecord {
     readonly liveEnabled: boolean
     /** The version in use; null before the first apply. */
     readonly activeContextVersionId: string | null
-    /** The number of the version in use. */
-    readonly activeVersion: number | null
     /** The settings of the instance (reply timeout, holding message...). */
     readonly settings: InstallationSettings
     /** When it was installed, ISO 8601. */

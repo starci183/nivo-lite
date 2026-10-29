@@ -167,7 +167,7 @@ const registerPlainPosts = () => {
             await expect(service.postAsAgent(agentPost())).rejects.toMatchObject({
                 code: ThreadMessagesErrorCode.AgentNotFound,
             })
-            expect(directory.findAgent).toHaveBeenCalledWith(em, "ws-1", agentPost().agentId)
+            expect(directory.findAgent).toHaveBeenCalledWith("ws-1", agentPost().agentId)
         })
 
         it("writes a plain agent line as a step of its own and leaves the thread open", async () => {

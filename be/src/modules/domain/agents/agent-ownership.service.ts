@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager, UpdateResult } from "typeorm"
 import { WorkspaceMemberEntity, WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { OfficeRoomEntity, OfficeRoomMemberEntity } from "@modules/domain/office-rooms"
+import { OfficeRoomDirectoryService } from "@modules/domain/office-rooms"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import {
     ROOM_KEYS,
@@ -52,6 +52,7 @@ export class AgentOwnershipService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
+        private readonly rooms: OfficeRoomDirectoryService,
     ) {}
 
     /**
@@ -249,32 +250,12 @@ export class AgentOwnershipService {
 
     /** The names of the department rooms of a workspace by key. */
     private roomLabels(workspaceId: string, keys: ReadonlyArray<string>): Promise<ReadonlyArray<RoomLabel>> {
-        if (keys.length === 0) return Promise.resolve([])
-        return this.entityManager
-            .createQueryBuilder(OfficeRoomEntity, "r")
-            .select("r.key", "key")
-            .addSelect("r.name", "name")
-            .where("r.workspace_id = :workspaceId AND r.key IN (:...keys)", { workspaceId, keys })
-            .orderBy("r.position", "ASC")
-            .addOrderBy("r.key", "ASC")
-            .limit(ROOM_LIMIT)
-            .getRawMany<RoomLabel>()
+        return this.rooms.labelsOf(workspaceId, keys, ROOM_LIMIT)
     }
 
     /** The department rooms the given accounts sit in, the first room of each account first. */
     private seatRooms(workspaceId: string, userIds: ReadonlyArray<string>): Promise<ReadonlyArray<SeatRoomRow>> {
-        if (userIds.length === 0) return Promise.resolve([])
-        return this.entityManager
-            .createQueryBuilder(WorkspaceMemberEntity, "m")
-            .select("m.userId", "userId")
-            .addSelect("r.key", "key")
-            .innerJoin(OfficeRoomMemberEntity, "rm", "rm.user_id = m.user_id")
-            .innerJoin(OfficeRoomEntity, "r", "r.id = rm.room_id AND r.workspace_id = m.workspace_id")
-            .where("m.workspaceId = :workspaceId AND m.userId IN (:...userIds)", { workspaceId, userIds })
-            .orderBy("r.position", "ASC")
-            .addOrderBy("r.key", "ASC")
-            .limit(MEMBER_ROOMS_LIMIT)
-            .getRawMany<SeatRoomRow>()
+        return this.rooms.seatRoomsOf(workspaceId, userIds, MEMBER_ROOMS_LIMIT)
     }
 
     private expectChanged(result: UpdateResult, agentId: string): void {

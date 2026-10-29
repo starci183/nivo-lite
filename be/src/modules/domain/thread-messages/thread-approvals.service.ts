@@ -6,10 +6,11 @@ import { isDomainError } from "@modules/platform/errors"
 import { pendingOf, withVote } from "./approval-card.policy"
 import { ThreadMessagesError, ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { MentionDirectoryService } from "./mention-directory.service"
-import { selectMessagesWithAuthor } from "./persistence/thread-message.query"
+import { ThreadMessageAuthorsService } from "./thread-message-authors.service"
+import { selectMessages } from "./persistence/thread-message.query"
 import { toMessage } from "./thread.mapper"
 import { ThreadApprovalOutcomesService } from "./thread-approval-outcomes.service"
-import type { ThreadCardDecision, ThreadMessage, ThreadMessageRecord } from "./thread-messages.contracts"
+import type { ThreadCardDecision, ThreadMessage, ThreadMessageRead } from "./thread-messages.contracts"
 import { InjectApprovalGate } from "./thread-messages.decorators"
 import type { ThreadApprovalGate } from "./thread-messages.port"
 
@@ -27,6 +28,7 @@ export class ThreadApprovalsService {
         @InjectApprovalGate() private readonly gate: ThreadApprovalGate,
         private readonly members: WorkspaceMembersService,
         private readonly directory: MentionDirectoryService,
+        private readonly authors: ThreadMessageAuthorsService,
         private readonly outcomes: ThreadApprovalOutcomesService,
     ) {}
 
@@ -37,11 +39,12 @@ export class ThreadApprovalsService {
     async decide(input: ThreadCardDecision): Promise<ThreadMessage> {
         await this.members.require(input.userId, input.workspaceId)
         const memberId = await this.directory.memberIdOf(this.entityManager, input.workspaceId, input.userId)
-        const row = await selectMessagesWithAuthor(this.entityManager, input.workspaceId)
+        const read = await selectMessages(this.entityManager, input.workspaceId)
             .andWhere("m.id = :messageId", { messageId: input.messageId })
             .limit(1)
-            .getRawOne<ThreadMessageRecord>()
-        if (row === undefined) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.MessageNotFound })
+            .getRawOne<ThreadMessageRead>()
+        if (read === undefined) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.MessageNotFound })
+        const row = await this.authors.withAuthor(this.entityManager, input.workspaceId, read)
         const card = row.approval
         if (card === null) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.NoApproval })
         if (card.outcome === "expired") throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.ApprovalClosed })

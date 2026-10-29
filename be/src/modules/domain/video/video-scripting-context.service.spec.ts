@@ -1,12 +1,12 @@
 import { Test } from "@nestjs/testing"
-import { builder, mock, mockEntityManager } from "@starci/jest-preset"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { builder, mock } from "@starci/jest-preset"
 import { AuthorityService } from "@modules/domain/authority"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import type { FactRecord } from "@modules/domain/brain-facts"
 import { KnowledgeSearchService } from "@modules/domain/knowledge"
 import type { Passage } from "@modules/domain/knowledge"
 import type { ScriptProject } from "./video-stored.contracts"
+import { VideoScriptReadsService } from "./video-script-reads.service"
 import { VideoScriptingContextService } from "./video-scripting-context.service"
 import { VIDEO_SCRIPT_GOALS } from "./video-scripting.templates"
 
@@ -49,29 +49,31 @@ const build = async () => {
     authority.load.mockResolvedValue(null)
     const knowledge = mock<KnowledgeSearchService>()
     knowledge.passagesText.mockResolvedValue([])
+    const reads = mock<VideoScriptReadsService>()
+    reads.setupOf.mockResolvedValue([])
+    reads.baseRules.mockResolvedValue([])
     const moduleRef = await Test.createTestingModule({
         providers: [
             VideoScriptingContextService,
             { provide: BrainFactsService, useValue: facts },
             { provide: AuthorityService, useValue: authority },
             { provide: KnowledgeSearchService, useValue: knowledge },
+            { provide: VideoScriptReadsService, useValue: reads },
         ],
     }).compile()
-    return { context: moduleRef.get(VideoScriptingContextService), facts, authority, knowledge }
+    return { context: moduleRef.get(VideoScriptingContextService), facts, authority, knowledge, reads }
 }
 
 describe("VideoScriptingContextService", () => {
     describe("forProject", () => {
         it("answers nothing when the workspace has no rules, setup, voice, facts or documents", async () => {
             const { context } = await build()
-            const tx = mockEntityManager()
-            queueQueryBuilders(tx, [{ getRawMany: [] }, { getRawMany: [] }])
 
-            await expect(context.forProject(tx, WS, projectOf(), "")).resolves.toBe("")
+            await expect(context.forProject(WS, projectOf(), "")).resolves.toBe("")
         })
 
         it("assembles every section through the customer lens of the project's goal", async () => {
-            const { context, facts, authority, knowledge } = await build()
+            const { context, facts, authority, knowledge, reads } = await build()
             facts.search.mockResolvedValue([FACT])
             authority.load.mockResolvedValue({
                 policies: "",
@@ -83,13 +85,10 @@ describe("VideoScriptingContextService", () => {
                 passageOf(),
                 passageOf({ title: "Costs", content: "secret", visibility: "internal" }),
             ])
-            const tx = mockEntityManager()
-            queueQueryBuilders(tx, [
-                { getRawMany: [{ snapshot: { summary: "Sell bread" } }] },
-                { getRawMany: [{ title: "Honesty", body: "Never invent prices" }] },
-            ])
+            reads.setupOf.mockResolvedValue([{ snapshot: { summary: "Sell bread" } }])
+            reads.baseRules.mockResolvedValue([{ title: "Honesty", body: "Never invent prices" }])
 
-            const text = await context.forProject(tx, WS, projectOf(), "Menu source")
+            const text = await context.forProject(WS, projectOf(), "Menu source")
 
             expect(text).toBe(
                 [
@@ -108,14 +107,12 @@ describe("VideoScriptingContextService", () => {
                 6,
             )
             expect(authority.load).toHaveBeenCalledWith({ workspaceId: WS })
+            expect(reads.setupOf).toHaveBeenCalledWith(WS)
         })
 
         it("uses the custom goal for an unknown one", async () => {
             const { context, facts } = await build()
-            const tx = mockEntityManager()
-            queueQueryBuilders(tx, [{ getRawMany: [] }, { getRawMany: [] }])
-
-            await context.forProject(tx, WS, projectOf({ goal: "unknown", inputs: {} }), "")
+            await context.forProject(WS, projectOf({ goal: "unknown", inputs: {} }), "")
 
             expect(facts.search.mock.calls[0]?.[4]).toBe(`${VIDEO_SCRIPT_GOALS.custom.label.vi}  `)
         })

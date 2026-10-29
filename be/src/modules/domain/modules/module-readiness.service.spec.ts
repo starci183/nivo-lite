@@ -1,7 +1,9 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { McpGatewayService } from "@modules/domain/mcp-gateway"
 import type { RoleReadiness } from "@modules/domain/mcp-gateway"
+import { ContextVersionsService } from "@modules/domain/module-context-versions"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
 import { ACCOUNTING_MODULE } from "./accounting.contracts"
@@ -17,14 +19,10 @@ const recordOf = builder<InstallationRecord>({
     name: "Accounting",
     isMulti: false,
     agentId: "agent-1",
-    agentName: "AI Accounting",
-    agentHandle: "accounting",
-    agentAvatarUrl: null,
     status: "live",
     operatingMode: "assist",
     liveEnabled: true,
     activeContextVersionId: "version-1",
-    activeVersion: 1,
     settings: {},
     createdAt: "2026-10-20T00:00:00.000Z",
 })
@@ -51,15 +49,23 @@ const build = async () => {
     catalog.find.mockImplementation((key) => Promise.resolve(key === "accounting" ? ACCOUNTING_MODULE : CHATBOT_MODULE))
     const gateway = mock<McpGatewayService>()
     gateway.readiness.mockResolvedValue(readinessOf())
+    const agents = mock<AgentDirectoryService>()
+    agents.identitiesOf.mockResolvedValue([
+        { id: "agent-1", name: "AI Accounting", handle: "accounting", avatarUrl: "https://cdn.test/a.png" },
+    ])
+    const versions = mock<ContextVersionsService>()
+    versions.numbersOf.mockResolvedValue([{ id: "version-1", version: 3 }])
     const moduleRef = await Test.createTestingModule({
         providers: [
             ModuleReadinessService,
             { provide: InstallationRecordsService, useValue: installations },
             { provide: ModulesService, useValue: catalog },
             { provide: McpGatewayService, useValue: gateway },
+            { provide: AgentDirectoryService, useValue: agents },
+            { provide: ContextVersionsService, useValue: versions },
         ],
     }).compile()
-    return { readiness: moduleRef.get(ModuleReadinessService), installations, catalog, gateway }
+    return { readiness: moduleRef.get(ModuleReadinessService), installations, catalog, gateway, agents, versions }
 }
 
 describe("ModuleReadinessService.needsOf", () => {
@@ -89,14 +95,37 @@ describe("ModuleReadinessService.needsOf", () => {
         expect(gateway.readiness).not.toHaveBeenCalled()
     })
 
-    it("shows an installation with what it still needs connected", async () => {
-        const { readiness } = await build()
+    it("shows an installation with its agent, its version number and what it still needs connected", async () => {
+        const { readiness, agents, versions } = await build()
 
         await expect(readiness.withNeeds(recordOf())).resolves.toEqual({
             ...recordOf(),
+            agentName: "AI Accounting",
+            agentHandle: "accounting",
+            agentAvatarUrl: "https://cdn.test/a.png",
+            activeVersion: 3,
             connectionNeeds: [{ role: "payment.credits.list", providers: ["SePay"] }],
             lifecycle: "needs_connection",
         })
+        expect(agents.identitiesOf).toHaveBeenCalledWith("ws-1", ["agent-1"])
+        expect(versions.numbersOf).toHaveBeenCalledWith(["version-1"])
+    })
+
+    it("shows an installation without an agent or an applied version under the module's own handle", async () => {
+        const { readiness, agents, versions } = await build()
+        agents.identitiesOf.mockResolvedValue([])
+        versions.numbersOf.mockResolvedValue([])
+
+        await expect(
+            readiness.withNeeds(recordOf({ agentId: null, activeContextVersionId: null })),
+        ).resolves.toMatchObject({
+            agentName: "",
+            agentHandle: "accounting",
+            agentAvatarUrl: null,
+            activeVersion: null,
+        })
+        expect(agents.identitiesOf).toHaveBeenCalledWith("ws-1", [])
+        expect(versions.numbersOf).toHaveBeenCalledWith([])
     })
 })
 

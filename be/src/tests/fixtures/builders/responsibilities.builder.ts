@@ -94,15 +94,21 @@ export const stepOf = (overrides: Record<string, unknown> = {}) => ({
     ...overrides,
 })
 
-/** Queues the guarding customer read (held `FOR SHARE`) and the insert, after the builders already queued. */
+/** What the lead capability answers in the journal spec: the customer name and whether the guard holds the customer. */
+export const leadGuard: { held: boolean; name: { readonly contact_name: string } | undefined } = {
+    held: true,
+    name: undefined,
+}
+
+/** Primes the lead guard (held `FOR SHARE`) with `lead` and queues the insert, after the builders already queued. */
 export const answerInsert = (
     em: MockEntityManager,
     lead: unknown,
     inserted: ReadonlyArray<unknown>,
     ...before: Array<FakeQueryBuilder>
 ) => {
-    const read = fakeQueryBuilder({ getRawOne: lead })
+    leadGuard.held = lead !== undefined
     const write = fakeQueryBuilder({ execute: { raw: inserted } })
-    answerQueryBuilders(em, ...before, read, write)
-    return { read, write }
+    answerQueryBuilders(em, ...before, write)
+    return { write }
 }

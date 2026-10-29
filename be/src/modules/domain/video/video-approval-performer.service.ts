@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import { VideoProjectWorkbenchWriterService } from "@modules/domain/video-projects"
+import { VideoRendersService } from "@modules/domain/video-renders"
 import { InjectWorkPerformerRegistry } from "@modules/domain/decisions"
 import type {
     WorkPerformerRegistry,
@@ -19,6 +20,7 @@ import { VideoError, VideoErrorCode } from "./errors/video.error"
 export class VideoApprovalPerformerService implements WorkPerformer, OnModuleInit {
     constructor(
         private readonly writer: VideoProjectWorkbenchWriterService,
+        private readonly renders: VideoRendersService,
         @InjectWorkPerformerRegistry() private readonly registry: WorkPerformerRegistry,
     ) {}
 
@@ -32,7 +34,7 @@ export class VideoApprovalPerformerService implements WorkPerformer, OnModuleIni
         return Promise.resolve({ proposal: item.proposal })
     }
 
-    /** Validates the selected render and records the human approval once. */
+    /** Validates the selected render, which must be a finished one, and records the human approval once. */
     async perform(ctx: WorkContext, item: WorkItem, proposal: Proposal, by: PerformedBy): Promise<Performed> {
         const renderId = proposal.fields.render_id
         if (
@@ -44,7 +46,8 @@ export class VideoApprovalPerformerService implements WorkPerformer, OnModuleIni
         ) {
             throw new VideoError({ code: VideoErrorCode.NotApproved })
         }
-        const changed = await this.writer.approve(ctx.workspaceId, item.subject_id, renderId, by.name)
+        const finished = await this.renders.isDone(ctx.workspaceId, renderId)
+        const changed = finished && (await this.writer.approve(ctx.workspaceId, item.subject_id, renderId, by.name))
         if (!changed) throw new VideoError({ code: VideoErrorCode.NotApproved })
         return {
             summary: proposal.summary,

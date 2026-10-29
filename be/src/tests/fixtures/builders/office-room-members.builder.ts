@@ -2,12 +2,16 @@ import assert from "node:assert/strict"
 import type { EntityManager } from "typeorm"
 import { eachInOrder } from "@modules/platform/primitives"
 import { AgentEntity } from "@modules/domain/agents"
-import { OfficeRoomEntity, officeRoomsEntities } from "@modules/domain/office-rooms"
-import { StaffEntity } from "@modules/domain/staff"
-import { WorkspaceEntity } from "@modules/domain/workspaces"
-import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { officeRoomsEntities } from "@modules/domain/office-rooms"
+import { staffEntities } from "@modules/domain/staff"
+import { workspacesEntities } from "@modules/domain/workspaces"
+import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 
-const [, OfficeRoomMemberEntity] = officeRoomsEntities
+const [WorkspaceEntity] = workspacesEntities
+const [WorkspaceMemberEntity] = workspaceMembersEntities
+const [StaffEntity] = staffEntities
+
+const [OfficeRoomEntity, OfficeRoomMemberEntity] = officeRoomsEntities
 
 /** Narrows an indexed fixture id that the persisted story always provides. */
 const required = <T>(value: T | undefined): T => {

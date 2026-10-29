@@ -5,6 +5,8 @@ import { ApiKnowledgeSourcesService } from "./api-knowledge-sources.service"
 import { KNOWLEDGE_STORAGE } from "./knowledge-sources.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./knowledge-sources.module-definition"
 import { KnowledgeSourcesService } from "./knowledge-sources.service"
+import { KnowledgeSourcesAdminReadService } from "./knowledge-sources-admin-read.service"
+import { KnowledgeSourcesReadService } from "./knowledge-sources-read.service"
 
 @Module({})
 /** The documents of a workspace: their rows, their stages and the jobs that index them. */
@@ -17,11 +19,18 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
             imports: [...(base.imports ?? []), KnowledgeQueueModule.register({})],
             providers: [
                 ...(base.providers ?? []),
+                KnowledgeSourcesAdminReadService,
+                KnowledgeSourcesReadService,
                 { provide: KNOWLEDGE_STORAGE, useExisting: options.storage },
                 KnowledgeSourcesService,
                 ApiKnowledgeSourcesService,
             ],
-            exports: [KnowledgeSourcesService, ApiKnowledgeSourcesService],
+            exports: [
+                KnowledgeSourcesAdminReadService,
+                KnowledgeSourcesReadService,
+                KnowledgeSourcesService,
+                ApiKnowledgeSourcesService,
+            ],
         }
     }
 }

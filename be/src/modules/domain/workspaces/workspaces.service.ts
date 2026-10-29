@@ -1,9 +1,17 @@
 import { Injectable } from "@nestjs/common"
+import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
+import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager, advisoryXactLock } from "@modules/platform/database"
 import { WorkspacesError, WorkspacesErrorCode } from "./errors/workspaces.error"
 import { WorkspaceEntity } from "./persistence/entities"
-import type { CreatedWorkspace, FirstWorkspace, WorkspaceBrand, WorkspaceMembership } from "./workspaces.contracts"
+import type {
+    CreatedWorkspace,
+    FirstWorkspace,
+    WorkspaceBrand,
+    WorkspaceMembership,
+    WorkspaceName,
+} from "./workspaces.contracts"
 import type { WorkspacesOptions } from "./workspaces.options"
 import { FIRST_WORKSPACE_NAME } from "./workspaces.templates"
 import { InjectWorkspacesOptions } from "./workspaces.port"
@@ -11,46 +19,13 @@ import { InjectWorkspacesOptions } from "./workspaces.port"
 /** The most memberships one person reads. */
 const MEMBERSHIPS_MAX = 500
 
-/** A membership of the caller joined with its workspace, as the memberships read selects it. */
-interface MembershipRaw {
-    /** The workspace the membership belongs to. */
-    readonly workspace_id: string
-    /** The Auth user. */
-    readonly user_id: string
-    /** The staff row the account is, when it is one. */
-    readonly staff_id: string | null
-    /** The name Office and the decision history show. */
-    readonly display_name: string
-    /** Constrained by a CHECK in the table. */
-    readonly role: "owner" | "manager" | "staff"
-    /** Constrained by a CHECK in the table. */
-    readonly status: "active" | "disabled"
-    /** The workspace name. */
-    readonly workspace_name: string
-    /** The workspace status. */
-    readonly workspace_status: string
-    /** The Auth user who owns the workspace. */
-    readonly owner_id: string
-    /** When the workspace was created. */
-    readonly workspace_created_at: Date
-    /** The business type chosen at onboarding. */
-    readonly business_type: string | null
-}
-
-/** An owned name remains discoverable while disabled, so ensure cannot create a duplicate. */
-interface NamedWorkspaceRaw {
-    /** The existing workspace identity. */
-    readonly id: string
-    /** True only when the workspace and owner seat remain active. */
-    readonly active: boolean
-}
-
 @Injectable()
 /** The workspaces a person belongs to, and the creation of a free one where the environment allows it. */
 export class WorkspacesService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectWorkspacesOptions() private readonly options: WorkspacesOptions,
+        private readonly members: WorkspaceMemberDirectoryService,
     ) {}
 
     /** The name of a workspace, or an empty text when there is no such workspace. */
@@ -64,43 +39,63 @@ export class WorkspacesService {
 
     /** Every workspace the person belongs to, with their membership in it, oldest first. */
     async memberships(userId: string): Promise<ReadonlyArray<WorkspaceMembership>> {
+        const seats = await this.members.seatsOf(userId, MEMBERSHIPS_MAX)
+        if (seats.length === 0) return []
+        const found = await this.entityManager.find(WorkspaceEntity, {
+            where: { id: In(seats.map((seat) => seat.workspaceId)) },
+            take: seats.length,
+        })
+        const byId = new Map(found.map((workspace) => [workspace.id, workspace]))
+        return seats.flatMap((member) => {
+            const workspace = byId.get(member.workspaceId)
+            if (workspace === undefined) return []
+            return [
+                {
+                    member,
+                    workspace: {
+                        id: workspace.id,
+                        name: workspace.name,
+                        status: workspace.status,
+                        ownerId: workspace.ownerId,
+                        createdAt: workspace.createdAt.toISOString(),
+                        businessType: workspace.businessType,
+                    },
+                },
+            ]
+        })
+    }
+
+    /** Every workspace by id, bounded: its id and name. */
+    async list(limit: number): Promise<ReadonlyArray<WorkspaceName>> {
+        const rows = await this.entityManager.find(WorkspaceEntity, {
+            select: { id: true, name: true },
+            order: { id: "ASC" },
+            take: limit,
+        })
+        return rows.map((row) => ({ id: row.id, name: row.name }))
+    }
+
+    /** The accounts that own any of the workspaces, each once, in id order, bounded. */
+    async ownerIdsOf(workspaceIds: ReadonlyArray<string>, limit: number): Promise<ReadonlyArray<string>> {
+        if (workspaceIds.length === 0) return []
         const rows = await this.entityManager
             .createQueryBuilder(WorkspaceEntity, "w")
-            .innerJoin("workspace_members", "m", "m.workspace_id = w.id")
-            .select("m.workspace_id", "workspace_id")
-            .addSelect("m.user_id", "user_id")
-            .addSelect("m.role", "role")
-            .addSelect("m.staff_id", "staff_id")
-            .addSelect("m.display_name", "display_name")
-            .addSelect("m.status", "status")
-            .addSelect("w.name", "workspace_name")
-            .addSelect("w.status", "workspace_status")
-            .addSelect("w.owner_id", "owner_id")
-            .addSelect("w.created_at", "workspace_created_at")
-            .addSelect("w.business_type", "business_type")
-            .where("m.user_id = :userId", { userId })
-            .orderBy("m.created_at", "ASC")
-            .addOrderBy("m.id", "ASC")
-            .limit(MEMBERSHIPS_MAX)
-            .getRawMany<MembershipRaw>()
-        return rows.map((row) => ({
-            member: {
-                userId: row.user_id,
-                workspaceId: row.workspace_id,
-                role: row.role,
-                staffId: row.staff_id,
-                displayName: row.display_name,
-                status: row.status,
-            },
-            workspace: {
-                id: row.workspace_id,
-                name: row.workspace_name,
-                status: row.workspace_status,
-                ownerId: row.owner_id,
-                createdAt: row.workspace_created_at.toISOString(),
-                businessType: row.business_type,
-            },
-        }))
+            .select("w.ownerId", "owner_id")
+            .distinct(true)
+            .where("w.id IN (:...workspaceIds)", { workspaceIds: [...workspaceIds] })
+            .orderBy("w.ownerId")
+            .limit(limit)
+            .getRawMany<{ readonly owner_id: string }>()
+        return rows.map((row) => row.owner_id)
+    }
+
+    /** The account that owns the workspace, or none when there is no such workspace. */
+    async ownerIdOf(workspaceId: string): Promise<string | null> {
+        const row = await this.entityManager.findOne(WorkspaceEntity, {
+            select: { ownerId: true },
+            where: { id: workspaceId },
+        })
+        return row?.ownerId ?? null
     }
 
     /** Creates a free workspace owned by the person; only where the environment allows it. */
@@ -115,20 +110,14 @@ export class WorkspacesService {
             throw new WorkspacesError({ code: WorkspacesErrorCode.NameInvalid })
         return this.entityManager.transaction(async (tx) => {
             await advisoryXactLock(tx, `workspace-first:${userId}`)
-            const found = await tx
-                .createQueryBuilder(WorkspaceEntity, "w")
-                .leftJoin("workspace_members", "m", "m.workspace_id = w.id AND m.user_id = :userId", { userId })
-                .select("w.id", "id")
-                .addSelect(
-                    "coalesce(w.status = 'active' AND m.role = 'owner' AND m.status = 'active', false)",
-                    "active",
-                )
-                .where("w.owner_id = :userId AND w.name = :name", { userId, name })
-                .limit(2)
-                .getRawMany<NamedWorkspaceRaw>()
+            const found = await tx.find(WorkspaceEntity, {
+                select: { id: true, status: true },
+                where: { ownerId: userId, name },
+                take: 2,
+            })
             if (found.length > 1) throw new WorkspacesError({ code: WorkspacesErrorCode.NameAmbiguous })
             const existing = found[0]
-            if (existing !== undefined && !existing.active)
+            if (existing !== undefined && !(await this.isActiveOwned(tx, existing, userId)))
                 throw new WorkspacesError({ code: WorkspacesErrorCode.NameUnavailable })
             if (existing !== undefined) return { id: existing.id }
             if (!this.options.allowFreeWorkspace)
@@ -163,14 +152,19 @@ export class WorkspacesService {
 
     /** Whether the person already owns a workspace or holds any membership, active or not. */
     private async holdsAny(manager: EntityManager, userId: string): Promise<boolean> {
-        const member = await manager
-            .createQueryBuilder()
-            .select("1", "held")
-            .from("workspace_members", "m")
-            .where("m.user_id = :userId", { userId })
-            .limit(1)
-            .getRawOne<{ readonly held: number }>()
-        return member !== undefined || (await manager.exists(WorkspaceEntity, { where: { ownerId: userId } }))
+        return (
+            (await this.members.holdsAny(userId, manager)) ||
+            (await manager.exists(WorkspaceEntity, { where: { ownerId: userId } }))
+        )
+    }
+
+    /** True only when the workspace and the owner seat of the person remain active. */
+    private async isActiveOwned(
+        manager: EntityManager,
+        workspace: Pick<WorkspaceEntity, "id" | "status">,
+        userId: string,
+    ): Promise<boolean> {
+        return workspace.status === "active" && (await this.members.isActiveOwner(workspace.id, userId, manager))
     }
 
     /** Creates a free active workspace and answers its id; a trigger makes the creator its owner member. */

@@ -24,6 +24,11 @@ export class StaffDirectoryService {
         return staff.map(({ id, name }) => ({ id, name }))
     }
 
+    /** How many active staff members the workspace has. */
+    activeCount(workspaceId: string): Promise<number> {
+        return this.entityManager.count(StaffEntity, { where: { workspaceId, active: true } })
+    }
+
     /** The names of assigned people, including inactive staff. */
     async namesOf(workspaceId: string, ids: ReadonlyArray<string>): Promise<Array<StaffRecord>> {
         if (ids.length === 0) return []

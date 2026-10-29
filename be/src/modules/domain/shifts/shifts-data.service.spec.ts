@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { Between, In, IsNull, LessThanOrEqual, Like, MoreThanOrEqual, Not } from "typeorm"
-import { WorkItemEntity } from "@modules/domain/work-items"
+import { Between, In, IsNull, LessThanOrEqual, MoreThanOrEqual, Not } from "typeorm"
+import { WorkItemsService } from "@modules/domain/work-items"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import {
@@ -85,9 +85,15 @@ const shift: Shift = {
     status: "published",
 }
 
+const workItems = mock<WorkItemsService>()
+
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
-        providers: [ShiftsDataService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            ShiftsDataService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: WorkItemsService, useValue: workItems },
+        ],
     }).compile()
     return moduleRef.get(ShiftsDataService)
 }
@@ -394,13 +400,11 @@ describe("ShiftsDataService lookups", () => {
         })
     })
 
-    it("counts attempts using a prefix pattern", async () => {
-        const em = mockEntityManager({ count: [WorkItemEntity, 3] })
-        const service = await build(em)
+    it("counts attempts through the work items", async () => {
+        const service = await build(mockEntityManager())
+        workItems.countByDedupePrefix.mockResolvedValue(3)
 
         await expect(service.askAttempts("ws-1", "publish_schedule", "publish:schedule-1:")).resolves.toBe(3)
-        expect(em.count).toHaveBeenCalledWith(WorkItemEntity, {
-            where: { workspaceId: "ws-1", action: "publish_schedule", dedupeKey: Like("publish:schedule-1:%") },
-        })
+        expect(workItems.countByDedupePrefix).toHaveBeenCalledWith("ws-1", "publish_schedule", "publish:schedule-1:")
     })
 })

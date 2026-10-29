@@ -3,6 +3,8 @@ import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@s
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
+import { AGENT_DIRECTORY } from "@modules/domain/messages"
+import type { AgentDirectory } from "@modules/domain/messages"
 import { EventsService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -14,6 +16,8 @@ import { ResponsibilityEntity } from "./persistence/entities"
 import type { AddResponsibilityParams, AssignResponsibilityParams } from "./responsibilities.contracts"
 import { ResponsibilitiesService } from "./responsibilities.service"
 import type { ResolvedOwner } from "./responsibility-owner.policy"
+import { RESPONSIBILITY_LEAD_DESK } from "./responsibilities.decorators"
+import type { LeadDesk } from "./responsibilities.ports"
 import { ResponsibilityOwnersService } from "./responsibility-owners.service"
 
 const MEMBER_ID = "11111111-1111-4111-8111-111111111111"
@@ -70,6 +74,12 @@ const RESULT = {
     status: "open",
 }
 
+/** Whether the lead guard finds the lead of the workspace, set by the test through answerInsert. */
+let leadHeld = true
+
+/** The active Accounting agent the agent directory answers, or none. */
+let accountingAgent: { readonly id: string; readonly name: string } | null = null
+
 const build = async (entityManager: MockEntityManager, owner: ResolvedOwner | Error = MEMBER_OWNER) => {
     const messages = mock<MessageCatalog>()
     messages.get.mockImplementation((key, params) => `${key}:${JSON.stringify(params)}`)
@@ -89,9 +99,15 @@ const build = async (entityManager: MockEntityManager, owner: ResolvedOwner | Er
     const owners = mock<ResponsibilityOwnersService>()
     if (owner instanceof Error) owners.resolve.mockRejectedValue(owner)
     else owners.resolve.mockResolvedValue(owner)
+    const agents = mock<AgentDirectory>()
+    agents.agentOfDepartment.mockImplementation(() => Promise.resolve(accountingAgent))
+    const leads = mock<LeadDesk>()
+    leads.hold.mockImplementation(() => Promise.resolve(leadHeld))
     const moduleRef = await Test.createTestingModule({
         providers: [
             ResponsibilitiesService,
+            { provide: AGENT_DIRECTORY, useValue: agents },
+            { provide: RESPONSIBILITY_LEAD_DESK, useValue: leads },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: MESSAGE_CATALOG, useValue: messages },
             { provide: REQUEST_LOCALE, useValue: requestLocale },
@@ -101,7 +117,7 @@ const build = async (entityManager: MockEntityManager, owner: ResolvedOwner | Er
             { provide: ResponsibilityOwnersService, useValue: owners },
         ],
     }).compile()
-    return { responsibilities: moduleRef.get(ResponsibilitiesService), events, requestLocale, owners }
+    return { responsibilities: moduleRef.get(ResponsibilitiesService), events, requestLocale, owners, agents, leads }
 }
 
 const NEW_STEP = {
@@ -116,29 +132,26 @@ const NEW_STEP = {
     ownerMemberId: MEMBER_ID,
 }
 
-/** Answers the guarding lead read (held `FOR SHARE`) with `lead` and the insert with `inserted`, in that order. */
+/** Primes the lead guard (held `FOR SHARE`) with `lead` and answers the insert with `inserted`. */
 const answerInsert = (em: MockEntityManager, lead: unknown, inserted: ReadonlyArray<unknown>) => {
-    const read = fakeQueryBuilder({ getRawOne: lead })
+    leadHeld = lead !== undefined
     const write = fakeQueryBuilder({ execute: { raw: inserted } })
-    answerQueryBuilders(em, read, write)
-    return { read, write }
+    answerQueryBuilders(em, write)
+    return { write }
 }
 
 describe("ResponsibilitiesService > addResponsibility", () => {
     it("writes the step owned by the member and logs who owns it in the same transaction", async () => {
         const em = mockEntityManager()
-        const { read, write } = answerInsert(em, { id: "lead-1" }, [STEP])
+        const { write } = answerInsert(em, { id: "lead-1" }, [STEP])
         const tx = fakeTransaction(em)
-        const { responsibilities, events, owners } = await build(tx.em)
+        const { responsibilities, events, owners, leads } = await build(tx.em)
 
         await expect(responsibilities.addResponsibility(addOf())).resolves.toEqual(RESULT)
 
-        expect(owners.resolve.mock.calls).toEqual([[expect.anything(), "ws-1", MEMBER_ID]])
-        expect(isTransactionManager(owners.resolve.mock.calls[0]?.[0])).toBe(true)
-        expect(read.argsOf("where")).toEqual([
-            ["l.workspace_id = :workspaceId AND l.id = :leadId", { workspaceId: "ws-1", leadId: "lead-1" }],
-        ])
-        expect(read.argsOf("setLock")).toEqual([["pessimistic_read"]])
+        expect(owners.resolve.mock.calls).toEqual([["ws-1", MEMBER_ID]])
+        expect(leads.hold).toHaveBeenCalledWith("ws-1", "lead-1", expect.anything())
+        expect(isTransactionManager(leads.hold.mock.calls[0]?.[2])).toBe(true)
         expect(em.createQueryBuilder).toHaveBeenCalledWith(ResponsibilityEntity, "r")
         expect(write.callsOf("insert")).toEqual([[]])
         expect(write.argsOf("values")).toEqual([[NEW_STEP]])
@@ -216,6 +229,30 @@ describe("ResponsibilitiesService > addResponsibility, refusals", () => {
         expect(write.argsOf("values")).toEqual([])
         expect(events.record).not.toHaveBeenCalled()
         expect(tx.rollbacks).toBe(1)
+    })
+})
+
+describe("ResponsibilitiesService > due dates", () => {
+    it("writes a step without a due date as none", async () => {
+        const em = mockEntityManager()
+        const { write } = answerInsert(em, { id: "lead-1" }, [{ ...STEP, due_at: null }])
+        const { responsibilities } = await build(fakeTransaction(em).em)
+
+        await expect(responsibilities.addResponsibility(addOf({ dueAt: null }))).resolves.toMatchObject({ dueAt: null })
+        expect(write.argsOf("values")).toEqual([[expect.objectContaining({ dueAt: null })]])
+    })
+
+    it("reschedules a step to the due date it is handed", async () => {
+        const em = mockEntityManager()
+        const update = fakeQueryBuilder({ execute: { raw: [STEP] } })
+        answerQueryBuilders(em, update)
+        const { responsibilities } = await build(fakeTransaction(em).em)
+
+        await responsibilities.assignResponsibility(assignOf({ dueAt: "2026-10-20T00:00:00.000Z" }))
+
+        expect(update.argsOf("set")).toEqual([
+            [expect.objectContaining({ dueAt: new Date("2026-10-20T00:00:00.000Z") })],
+        ])
     })
 })
 
@@ -335,6 +372,8 @@ describe("ResponsibilitiesService > assignResponsibility, refusals", () => {
     })
 })
 
+const ACCOUNTING_AGENT = { id: "agent-9", name: "Accounting AI" }
+
 describe("ResponsibilitiesService > handToAccounting", () => {
     const handOf = (manager: MockEntityManager) => ({
         workspaceId: "ws-1",
@@ -346,18 +385,14 @@ describe("ResponsibilitiesService > handToAccounting", () => {
 
     it("hands the deal to the active Accounting agent as a step due the next day and logs it", async () => {
         const manager = mockEntityManager()
-        const lookup = fakeQueryBuilder({ getRawOne: { id: "agent-9", name: "Accounting AI" } })
-        const read = fakeQueryBuilder({ getRawOne: { id: "lead-1" } })
-        const write = fakeQueryBuilder({ execute: { raw: [] } })
-        answerQueryBuilders(manager, lookup, read, write)
-        const { responsibilities, events } = await build(manager)
+        accountingAgent = ACCOUNTING_AGENT
+        const { write } = answerInsert(manager, { id: "lead-1" }, [])
+        const { responsibilities, events, agents, leads } = await build(manager)
 
         await expect(responsibilities.handToAccounting(handOf(manager))).resolves.toBe(true)
 
-        expect(lookup.argsOf("from")).toEqual([["public.agents", "a"]])
-        expect(lookup.argsOf("orderBy")).toEqual([["a.created_at"]])
-        expect(lookup.argsOf("limit")).toEqual([[1]])
-        expect(read.argsOf("setLock")).toEqual([["pessimistic_read"]])
+        expect(agents.agentOfDepartment).toHaveBeenCalledWith("ws-1", "accounting", null)
+        expect(leads.hold).toHaveBeenCalledWith("ws-1", "lead-1", manager)
         expect(write.argsOf("values")).toEqual([
             [
                 {
@@ -384,21 +419,19 @@ describe("ResponsibilitiesService > handToAccounting", () => {
 
     it("writes nothing when the workspace has no active Accounting agent", async () => {
         const manager = mockEntityManager()
-        answerQueryBuilders(manager, fakeQueryBuilder({ getRawOne: undefined }))
-        const { responsibilities, events } = await build(manager)
+        accountingAgent = null
+        const { responsibilities, events, leads } = await build(manager)
 
         await expect(responsibilities.handToAccounting(handOf(manager))).resolves.toBe(false)
 
-        expect(manager.createQueryBuilder).toHaveBeenCalledTimes(1)
+        expect(leads.hold).not.toHaveBeenCalled()
         expect(events.record).not.toHaveBeenCalled()
     })
 
     it("writes no step but still records the hand-over when the lead is gone", async () => {
         const manager = mockEntityManager()
-        const lookup = fakeQueryBuilder({ getRawOne: { id: "agent-9", name: "Accounting AI" } })
-        const read = fakeQueryBuilder({ getRawOne: undefined })
-        const write = fakeQueryBuilder({ execute: { raw: [] } })
-        answerQueryBuilders(manager, lookup, read, write)
+        accountingAgent = ACCOUNTING_AGENT
+        const { write } = answerInsert(manager, undefined, [])
         const { responsibilities, events } = await build(manager)
 
         await expect(responsibilities.handToAccounting(handOf(manager))).resolves.toBe(true)

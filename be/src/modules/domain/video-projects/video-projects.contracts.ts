@@ -1,21 +1,5 @@
-/** The brand kit of the project's workspace; every field is null when the workspace saved none. */
-export interface ProjectBrand {
-    /** The shop name shown in the video. */
-    readonly shopName: string | null
-    /** The accent colour. */
-    readonly primary: string | null
-    /** The second colour. */
-    readonly secondary: string | null
-    /** The logo path in the media bucket. */
-    readonly logoPath: string | null
-    /** The music track id. */
-    readonly musicTrack: string | null
-    /** The voice name. */
-    readonly voice: string | null
-}
-
-/** The project a caller asks to render, with the caller's role and everything the spec needs. */
-export interface ProjectForRender {
+/** The project a caller asks to render, as its own row says it. */
+export interface LockedProject {
     /** The project id. */
     readonly id: string
     /** The workspace it belongs to. */
@@ -28,13 +12,12 @@ export interface ProjectForRender {
     readonly script: unknown
     /** The version the next render snapshots. */
     readonly version: number
-    /** The status of the render the project points at, or null. */
-    readonly renderStatus: string | null
-    /** The workspace name. */
-    readonly workspaceName: string
-    /** The brand kit. */
-    readonly brand: ProjectBrand
+    /** The render the project points at, or null. */
+    readonly renderId: string | null
 }
+
+/** The answer of looking a project up for a render: the project, or null when it does not exist. */
+export type LockedProjectLookup = LockedProject | null
 
 /** A project that starts a render. */
 export interface RenderStart {
@@ -46,5 +29,98 @@ export interface RenderStart {
     readonly spec: string
 }
 
-/** The answer of looking a project up for a render: the project, or null when it does not exist. */
-export type ProjectLookup = ProjectForRender | null
+/** One project of the workbench list, with the column names of the database. */
+export interface ProjectRow {
+    /** Identity. */
+    readonly id: string
+    /** Working title. */
+    readonly title: string
+    /** Goal. */
+    readonly goal: string
+    /** Shape. */
+    readonly aspect: string
+    /** Seconds. */
+    readonly target_seconds: number
+    /** State. */
+    readonly status: string
+    /** Stored inputs. */
+    readonly inputs: unknown
+    /** Stored script. */
+    readonly script: unknown
+    /** Version. */
+    readonly version: number
+    /** Script duration. */
+    readonly script_ms: number | null
+    /** Stored failure. */
+    readonly last_error: string | null
+    /** Latest render identity. */
+    readonly render_id: string | null
+    /** Historical render identities. */
+    readonly render_ids: ReadonlyArray<string>
+    /** Approval instant. */
+    readonly approved_at: Date | string | null
+    /** Approver name. */
+    readonly approved_by_name: string | null
+    /** Publication instant. */
+    readonly published_at: Date | string | null
+    /** Creation instant. */
+    readonly created_at: Date | string
+    /** Update instant. */
+    readonly updated_at: Date | string
+}
+
+/** A project as script generation reads it from its own row, with the column names of the database. */
+export interface ScriptProjectRow {
+    /** Project id. */
+    readonly id: string
+    /** Project title. */
+    readonly title: string
+    /** Business goal. */
+    readonly goal: string
+    /** Output aspect ratio. */
+    readonly aspect: string
+    /** Target duration. */
+    readonly target_seconds: number
+    /** Saved lifecycle state. */
+    readonly status: string
+    /** Selected sources, owner notes and media. */
+    readonly inputs: unknown
+    /** Durable operation and retry metadata. */
+    readonly script_meta: unknown
+    /** Last row change, used for old operation expiry. */
+    readonly updated_at: Date | string
+    /** The render the project points at, or null. */
+    readonly render_id: string | null
+}
+
+/** The projects of a workspace counted by state. */
+export interface ProjectCounts {
+    /** Projects rendering now. */
+    readonly rendering: number
+    /** Projects waiting for a script. */
+    readonly scripting: number
+    /** Projects ready to publish (ready or approved). */
+    readonly readyToPublish: number
+    /** Approved projects. */
+    readonly approved: number
+    /** Projects published in the last 30 days. */
+    readonly published30: number
+}
+
+/** The title of the newest project a render belongs to. */
+export interface RenderTitle {
+    /** The render. */
+    readonly renderId: string
+    /** The title of the newest project that holds it. */
+    readonly title: string
+}
+
+/** What a delegation card shows of a project. */
+export interface ProjectCardFacts {
+    /** The project title. */
+    readonly title: string
+    /** The output shape. */
+    readonly aspect: string
+    /** The scenes, as stored. */
+    readonly script: unknown
+}

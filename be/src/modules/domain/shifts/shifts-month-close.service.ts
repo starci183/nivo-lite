@@ -1,17 +1,18 @@
 import { Injectable } from "@nestjs/common"
 import { Like } from "typeorm"
 import type { EntityManager } from "typeorm"
+import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
 import { OfficeLog, OutboundMail } from "@modules/domain/module-ops"
-import { InjectAccountDirectory } from "@modules/domain/workspace-members"
+import { InjectAccountDirectory, WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import type { AccountDirectory } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { Logger } from "@modules/platform/logging"
 import { ShiftsNotificationEntity } from "./persistence/entities"
-import type { AlertShiftRead, MonthCloseWorkspaceRead, OwnerRead } from "./persistence/shifts-alerts.reads"
+import type { AlertShiftRead } from "./persistence/shifts-alerts.reads"
 import { selectAlertShifts } from "./persistence/shifts-alert-shift.query"
-import { MONTH_CLOSE_TEMPLATE, selectEnabledPipelines } from "./persistence/shifts-pipeline.query"
+import { MONTH_CLOSE_TEMPLATE, PIPELINES_MAX } from "./persistence/shifts-pipeline.query"
 import { money } from "./policies/labels.policy"
 import { monthCsvOf, monthLabel, monthSummaryOf, payrollMarker } from "./policies/month-summary.policy"
 import { monthToClose, toAlertShift } from "./policies/shift-alerts.policy"
@@ -53,14 +54,14 @@ export class ShiftsMonthCloseService {
         private readonly mail: OutboundMail,
         private readonly data: ShiftsDataService,
         private readonly notify: ShiftsNotifyService,
+        private readonly pipelines: AutomationPipelinesService,
+        private readonly members: WorkspaceMemberDirectoryService,
         private readonly words: ShiftsTextService,
     ) {}
 
     /** Closes the month in every workspace where it is due; answers how many closed now. A failing workspace is logged and retried next tick. */
     async tick(now: Date): Promise<number> {
-        const workspaces = await selectEnabledPipelines(this.entityManager, MONTH_CLOSE_TEMPLATE)
-            .select(["p.workspace_id AS workspace_id", "p.config AS config"])
-            .getRawMany<MonthCloseWorkspaceRead>()
+        const workspaces = await this.pipelines.enabledOfTemplate(MONTH_CLOSE_TEMPLATE, PIPELINES_MAX)
         const clock = clockVn(now)
         let closed = 0
         await eachInOrder(workspaces, async (workspace) => {
@@ -140,16 +141,9 @@ export class ShiftsMonthCloseService {
 
     /** Mails the summary with its CSV to the owner (an owner-facing notice); true only when the mail left. */
     private async mailOwner(workspaceId: string, month: string, text: string, summary: MonthSummary): Promise<boolean> {
-        const owner = await this.entityManager
-            .createQueryBuilder()
-            .select("m.user_id", "user_id")
-            .from("public.workspace_members", "m")
-            .where("m.workspace_id = :workspaceId AND m.role = 'owner' AND m.status = 'active'", { workspaceId })
-            .orderBy("m.created_at", "ASC")
-            .limit(1)
-            .getRawOne<OwnerRead>()
-        if (owner === undefined) return false
-        const account = await this.accounts.accountOf(owner.user_id)
+        const ownerId = await this.members.firstActiveOwnerUserId(workspaceId)
+        if (ownerId === null) return false
+        const account = await this.accounts.accountOf(ownerId)
         if (account.kind !== "ok" || account.value.email === "") return false
         const subject = this.words.text("shifts.payrollSubject", { month: monthLabel(month) })
         const csv = monthCsvOf(

@@ -1,4 +1,6 @@
-/** Shapes the video queries select: the stored columns of a project, its render, its brand kit and its sources, as the database names them. */
+import type { ProjectRow, ScriptProjectRow } from "@modules/domain/video-projects"
+
+/** Shapes the video reads answer: the stored columns of a project, its render, its brand kit and its sources, as the database names them. */
 
 /** One stored video render. */
 export interface StoredRender {
@@ -28,43 +30,7 @@ export interface StoredRender {
 export type MaybeStoredRender = StoredRender | null
 
 /** A project row joined to its current render. */
-export interface StoredProject {
-    /** Identity. */
-    readonly id: string
-    /** Working title. */
-    readonly title: string
-    /** Goal. */
-    readonly goal: string
-    /** Shape. */
-    readonly aspect: string
-    /** Seconds. */
-    readonly target_seconds: number
-    /** State. */
-    readonly status: string
-    /** Stored inputs. */
-    readonly inputs: unknown
-    /** Stored script. */
-    readonly script: unknown
-    /** Version. */
-    readonly version: number
-    /** Script duration. */
-    readonly script_ms: number | null
-    /** Stored failure. */
-    readonly last_error: string | null
-    /** Latest render identity. */
-    readonly render_id: string | null
-    /** Historical render identities. */
-    readonly render_ids: ReadonlyArray<string>
-    /** Approval instant. */
-    readonly approved_at: Date | string | null
-    /** Approver name. */
-    readonly approved_by_name: string | null
-    /** Publication instant. */
-    readonly published_at: Date | string | null
-    /** Creation instant. */
-    readonly created_at: Date | string
-    /** Update instant. */
-    readonly updated_at: Date | string
+export interface StoredProject extends ProjectRow {
     /** Joined render. */
     readonly render: MaybeStoredRender
 }
@@ -100,25 +66,7 @@ export interface StoredSource {
 }
 
 /** A project and brand name as script generation reads them. */
-export interface ScriptProject {
-    /** Project id. */
-    readonly id: string
-    /** Project title. */
-    readonly title: string
-    /** Business goal. */
-    readonly goal: string
-    /** Output aspect ratio. */
-    readonly aspect: string
-    /** Target duration. */
-    readonly target_seconds: number
-    /** Saved lifecycle state. */
-    readonly status: string
-    /** Selected sources, owner notes and media. */
-    readonly inputs: unknown
-    /** Durable operation and retry metadata. */
-    readonly script_meta: unknown
-    /** Last row change, used for old operation expiry. */
-    readonly updated_at: Date | string
+export interface ScriptProject extends Omit<ScriptProjectRow, "render_id"> {
     /** Current render state, if any. */
     readonly render_status: string | null
     /** Workspace name, used when a brand has no name. */

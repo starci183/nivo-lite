@@ -17,6 +17,7 @@ import { CommandPlannerService } from "./command-planner.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./decisions.module-definition"
 import { DecisionHistoryService } from "./decision-history.service"
 import { DecisionsService } from "./decisions.service"
+import { DecisionsFiguresService } from "./decisions-figures.service"
 import { EvidenceService } from "./evidence.service"
 import { ModuleCatalogService } from "./module-catalog.service"
 import { WorkApprovalService } from "./work-approval.service"
@@ -72,6 +73,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 CommandPlannerService,
                 DecisionHistoryService,
                 DecisionsService,
+                DecisionsFiguresService,
                 EvidenceService,
                 DurableWorkService,
                 ModuleCatalogService,
@@ -95,6 +97,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 CommandBusService,
                 DecisionJobsService,
                 DecisionsService,
+                DecisionsFiguresService,
                 EvidenceService,
                 DurableWorkService,
                 ModuleCatalogService,

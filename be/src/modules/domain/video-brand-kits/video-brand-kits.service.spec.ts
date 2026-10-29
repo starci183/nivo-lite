@@ -120,6 +120,8 @@ describe("VideoBrandKitsService (continued)", () => {
             expect(write.callsOf("orUpdate")).toEqual([
                 [["primary_color", "secondary_color", "shop_name", "updated_by", "updated_at"], ["workspace_id"]],
             ])
+            const values = write.callsOf("values")[0]?.[0] as { updatedAt: () => string } | undefined
+            expect(values?.updatedAt()).toBe("now()")
         })
 
         it("keeps the stored name when the brand has none", async () => {
@@ -159,6 +161,38 @@ describe("VideoBrandKitsService (continued)", () => {
                 select: { logoPath: true, shopName: true },
                 where: { workspaceId: "workspace-1" },
             })
+        })
+    })
+
+    describe("kitOf", () => {
+        it("answers the whole kit of the workspace, or null without one", async () => {
+            const kit = Object.assign(new VideoBrandKitEntity(), {
+                workspaceId: "workspace-1",
+                shopName: "HAKUEN",
+                primaryColor: "#112233",
+                secondaryColor: "#445566",
+                logoPath: "workspace-1/logo.png",
+                musicTrack: "calm-glow",
+                voice: "vi-VN-HoaiMyNeural",
+            })
+            const em = mockEntityManager({
+                findOne: [
+                    [VideoBrandKitEntity, kit],
+                    [VideoBrandKitEntity, null],
+                ],
+            })
+            const { service } = await build(em)
+
+            await expect(service.kitOf("workspace-1")).resolves.toEqual({
+                shopName: "HAKUEN",
+                primaryColor: "#112233",
+                secondaryColor: "#445566",
+                logoPath: "workspace-1/logo.png",
+                musicTrack: "calm-glow",
+                voice: "vi-VN-HoaiMyNeural",
+            })
+            await expect(service.kitOf("workspace-2")).resolves.toBeNull()
+            expect(em.findOne).toHaveBeenCalledWith(VideoBrandKitEntity, { where: { workspaceId: "workspace-1" } })
         })
     })
 })

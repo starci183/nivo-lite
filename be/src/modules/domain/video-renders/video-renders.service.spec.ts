@@ -1,9 +1,9 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In, LessThanOrEqual } from "typeorm"
-import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { VideoProjectsService } from "@modules/domain/video-projects"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { VideoRendersErrorCode } from "./errors/video-renders.error"
 import { VideoRenderEntity } from "./persistence/entities"
@@ -22,9 +22,16 @@ const DONE: RenderDone = {
 
 const OPEN = ["queued", "rendering"]
 
-const build = async (entityManager: MockEntityManager) => {
+const build = async (
+    entityManager: MockEntityManager,
+    projects: VideoProjectsService = mock<VideoProjectsService>(),
+) => {
     const moduleRef = await Test.createTestingModule({
-        providers: [VideoRendersService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            VideoRendersService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: VideoProjectsService, useValue: projects },
+        ],
     }).compile()
     return moduleRef.get(VideoRendersService)
 }
@@ -135,12 +142,15 @@ describe("VideoRendersService", () => {
                 ["id = :renderId AND status IN (:...open)", { renderId: "render-1", open: OPEN }],
             ])
             expect(update.callsOf("returning")).toEqual([[["id", "workspace_id", "spec", "meta"]]])
-            expect(evaluatedValues(update.callsOf("set")[0]?.[0])).toEqual({
+            expect(update.callsOf("set")[0]?.[0]).toMatchObject({
                 status: "rendering",
-                startedAt: "COALESCE(started_at, now())",
                 error: null,
-                meta: "jsonb_set(meta, '{attempts}', to_jsonb(COALESCE((meta ->> 'attempts')::int, 0) + 1))",
+                startedAt: expect.any(Function),
+                meta: expect.any(Function),
             })
+            const claimed = update.callsOf("set")[0]?.[0] as { startedAt: () => string; meta: () => string }
+            expect(claimed.startedAt()).toBe("COALESCE(started_at, now())")
+            expect(claimed.meta()).toContain("jsonb_set(meta, '{attempts}'")
         })
 
         it("answers nothing for a render that is already settled", async () => {
@@ -177,7 +187,7 @@ describe("VideoRendersService", () => {
 
             await renders.complete(manager, "render-1", DONE)
 
-            expect(evaluatedValues(update.callsOf("set")[0]?.[0])).toEqual({
+            expect(update.callsOf("set")[0]?.[0]).toMatchObject({
                 status: "done",
                 progress: 100,
                 stage: null,
@@ -186,13 +196,14 @@ describe("VideoRendersService", () => {
                 durationMs: 12000,
                 sizeBytes: "345",
                 error: null,
-                meta: "meta || CAST(:report AS jsonb)",
-                finishedAt: "now()",
             })
             expect(update.callsOf("where")).toEqual([
                 ["id = :renderId AND status IN (:...open)", { renderId: "render-1", open: OPEN }],
             ])
             expect(update.callsOf("setParameter")).toEqual([["report", '{"fps":30}']])
+            const settled = update.callsOf("set")[0]?.[0] as { meta: () => string; finishedAt: () => string }
+            expect(settled.meta()).toBe("meta || CAST(:report AS jsonb)")
+            expect(settled.finishedAt()).toBe("now()")
         })
 
         it("settles a render as failed in the caller's transaction", async () => {
@@ -202,11 +213,10 @@ describe("VideoRendersService", () => {
 
             await renders.fail(manager, "render-1", "boom")
 
-            expect(evaluatedValues(update.callsOf("set")[0]?.[0])).toEqual({
-                status: "failed",
-                error: "left(:reason, 300)",
-                finishedAt: "now()",
-            })
+            expect(update.callsOf("set")[0]?.[0]).toMatchObject({ status: "failed", error: expect.any(Function) })
+            const failed = update.callsOf("set")[0]?.[0] as { error: () => string; finishedAt: () => string }
+            expect(failed.error()).toBe("left(:reason, 300)")
+            expect(failed.finishedAt()).toBe("now()")
             expect(update.callsOf("setParameter")).toEqual([["reason", "boom"]])
             expect(update.callsOf("where")).toEqual([
                 ["id = :renderId AND status IN (:...open)", { renderId: "render-1", open: OPEN }],
@@ -276,17 +286,24 @@ describe("VideoRendersService", () => {
         const rows = [
             {
                 id: "render-1",
-                title: "Offer",
+                brand_name: "Brand",
                 output_path: "workspace-1/render-1/video.mp4",
                 duration_ms: 12000,
                 created_at: new Date("2026-10-13T09:00:00.000Z"),
             },
             {
                 id: "render-2",
-                title: "Bakery",
+                brand_name: "Bakery",
                 output_path: "workspace-1/render-2/video.mp4",
                 duration_ms: null,
                 created_at: "2026-10-14T09:00:00.000Z",
+            },
+            {
+                id: "render-3",
+                brand_name: null,
+                output_path: "workspace-1/render-3/video.mp4",
+                duration_ms: null,
+                created_at: "2026-10-15T09:00:00.000Z",
             },
         ]
 
@@ -305,21 +322,38 @@ describe("VideoRendersService", () => {
                 durationMs: null,
                 createdAt: "2026-10-14T09:00:00.000Z",
             },
+            {
+                id: "render-3",
+                title: "",
+                outputPath: "workspace-1/render-3/video.mp4",
+                durationMs: null,
+                createdAt: "2026-10-15T09:00:00.000Z",
+            },
         ]
 
-        it("lists ten completed media by default and normalizes stored timestamps", async () => {
+        /** The projects owner, naming a title for the first render only. */
+        const projectsTitling = () => {
+            const projects = mock<VideoProjectsService>()
+            projects.titlesOfRenders.mockResolvedValue([{ renderId: "render-1", title: "Offer" }])
+            return projects
+        }
+
+        it("lists ten completed media by default, titled by project, then brand, then empty", async () => {
             const read = fakeQueryBuilder({ getRawMany: rows })
             const em = managerWith(read)
-            const renders = await build(em)
+            const projects = projectsTitling()
+            const renders = await build(em, projects)
 
             await expect(renders.listCompletedMedia("workspace-1")).resolves.toEqual(media)
             expect(em.createQueryBuilder).toHaveBeenCalledWith(VideoRenderEntity, "r")
+            expect(read.callsOf("addSelect")).toContainEqual(["r.spec #>> '{brand,name}'", "brand_name"])
             expect(read.callsOf("where")).toEqual([["r.workspaceId = :workspaceId", { workspaceId: "workspace-1" }]])
             expect(read.callsOf("andWhere")).toEqual([
                 ["r.status = :done", { done: "done" }],
                 ["r.outputPath IS NOT NULL"],
             ])
             expect(read.callsOf("limit")).toEqual([[10]])
+            expect(projects.titlesOfRenders).toHaveBeenCalledWith("workspace-1", ["render-1", "render-2", "render-3"])
         })
 
         it.each([
@@ -328,7 +362,9 @@ describe("VideoRendersService", () => {
             [101, 100],
         ])("bounds a requested limit of %s to %s", async (limit, expected) => {
             const read = fakeQueryBuilder({ getRawMany: [] })
-            const renders = await build(managerWith(read))
+            const projects = mock<VideoProjectsService>()
+            projects.titlesOfRenders.mockResolvedValue([])
+            const renders = await build(managerWith(read), projects)
 
             await expect(renders.listCompletedMedia("workspace-1", limit)).resolves.toEqual([])
             expect(read.callsOf("limit")).toEqual([[expected]])
@@ -344,12 +380,165 @@ describe("VideoRendersService", () => {
 
         it("deduplicates and caps selected ids before mapping the completed media", async () => {
             const read = fakeQueryBuilder({ getRawMany: rows })
-            const renders = await build(managerWith(read))
+            const renders = await build(managerWith(read), projectsTitling())
             const ids = Array.from({ length: 81 }, (_entry, index) => `render-${index + 1}`)
 
             await expect(renders.findCompletedMedia("workspace-1", ["render-1", ...ids])).resolves.toEqual(media)
             expect(read.callsOf("andWhere")).toContainEqual(["r.id IN (:...ids)", { ids: ids.slice(0, 80) }])
             expect(read.callsOf("limit")).toEqual([[80]])
+        })
+    })
+})
+
+describe("VideoRendersService", () => {
+    describe("stateOf and isDone", () => {
+        it("answers the raw status of a render, or null without one", async () => {
+            const em = mockEntityManager({
+                findOne: [
+                    [VideoRenderEntity, Object.assign(new VideoRenderEntity(), { status: "rendering" })],
+                    [VideoRenderEntity, null],
+                ],
+            })
+            const renders = await build(em)
+
+            await expect(renders.stateOf("render-1")).resolves.toBe("rendering")
+            await expect(renders.stateOf("missing")).resolves.toBeNull()
+            expect(em.findOne).toHaveBeenCalledWith(VideoRenderEntity, {
+                select: { status: true },
+                where: { id: "render-1" },
+            })
+        })
+
+        it("asks whether a render of the workspace is done", async () => {
+            const em = mockEntityManager()
+            em.exists.mockResolvedValue(true)
+            const renders = await build(em)
+
+            await expect(renders.isDone("workspace-1", "render-1")).resolves.toBe(true)
+            expect(em.exists).toHaveBeenCalledWith(VideoRenderEntity, {
+                where: { id: "render-1", workspaceId: "workspace-1", status: "done" },
+            })
+        })
+    })
+
+    describe("factsOf", () => {
+        const stored = (over: Partial<VideoRenderEntity> = {}) =>
+            Object.assign(new VideoRenderEntity(), {
+                id: "render-1",
+                status: "done",
+                progress: 100,
+                stage: null,
+                durationMs: 12000,
+                sizeBytes: "2048",
+                outputPath: "w/r/video.mp4",
+                posterPath: "w/r/poster.jpg",
+                meta: { captions_path: "w/r/captions.vtt", captions_lang: "vi" },
+                ...over,
+            })
+
+        it("answers what the workbench shows of each render, once each", async () => {
+            const em = mockEntityManager({
+                find: [
+                    VideoRenderEntity,
+                    [stored(), stored({ id: "render-2", sizeBytes: null, meta: { captions_path: 3 } })],
+                ],
+            })
+            const renders = await build(em)
+
+            await expect(renders.factsOf("workspace-1", ["render-1", "render-2", "render-1"])).resolves.toEqual([
+                {
+                    id: "render-1",
+                    status: "done",
+                    progress: 100,
+                    stage: null,
+                    durationMs: 12000,
+                    sizeBytes: 2048,
+                    outputPath: "w/r/video.mp4",
+                    posterPath: "w/r/poster.jpg",
+                    captionsPath: "w/r/captions.vtt",
+                    captionsLang: "vi",
+                },
+                {
+                    id: "render-2",
+                    status: "done",
+                    progress: 100,
+                    stage: null,
+                    durationMs: 12000,
+                    sizeBytes: null,
+                    outputPath: "w/r/video.mp4",
+                    posterPath: "w/r/poster.jpg",
+                    captionsPath: null,
+                    captionsLang: null,
+                },
+            ])
+            expect(em.find).toHaveBeenCalledWith(VideoRenderEntity, {
+                select: {
+                    id: true,
+                    status: true,
+                    progress: true,
+                    stage: true,
+                    durationMs: true,
+                    sizeBytes: true,
+                    outputPath: true,
+                    posterPath: true,
+                    meta: true,
+                },
+                where: { workspaceId: "workspace-1", id: In(["render-1", "render-2"]) },
+            })
+        })
+
+        it("asks nothing for no renders", async () => {
+            const em = mockEntityManager()
+            const renders = await build(em)
+
+            await expect(renders.factsOf("workspace-1", [])).resolves.toEqual([])
+            expect(em.find).not.toHaveBeenCalled()
+        })
+    })
+
+    describe("settledOf", () => {
+        it("answers a done or failed render with what a delegation card shows", async () => {
+            const render = Object.assign(new VideoRenderEntity(), {
+                id: "render-1",
+                status: "failed",
+                durationMs: null,
+                outputPath: null,
+                posterPath: null,
+                error: "ffmpeg died",
+                meta: { voiceover: "vi-VN-HoaiMyNeural" },
+            })
+            const em = mockEntityManager({
+                findOne: [
+                    [VideoRenderEntity, render],
+                    [VideoRenderEntity, null],
+                ],
+            })
+            const renders = await build(em)
+
+            await expect(renders.settledOf("workspace-1", "render-1")).resolves.toEqual({
+                id: "render-1",
+                status: "failed",
+                durationMs: null,
+                outputPath: null,
+                posterPath: null,
+                captionsPath: null,
+                captionsLang: null,
+                voiceover: "vi-VN-HoaiMyNeural",
+                error: "ffmpeg died",
+            })
+            await expect(renders.settledOf("workspace-1", "open")).resolves.toBeNull()
+            expect(em.findOne).toHaveBeenCalledWith(VideoRenderEntity, {
+                select: {
+                    id: true,
+                    status: true,
+                    durationMs: true,
+                    outputPath: true,
+                    posterPath: true,
+                    error: true,
+                    meta: true,
+                },
+                where: { id: "render-1", workspaceId: "workspace-1", status: In(["done", "failed"]) },
+            })
         })
     })
 })

@@ -1,6 +1,8 @@
 import type { EntityManager } from "typeorm"
-import { WorkspaceEntity } from "@modules/domain/workspaces"
+import { workspacesEntities } from "@modules/domain/workspaces"
 import { sql } from "@modules/platform/database"
+
+const [WorkspaceEntity] = workspacesEntities
 
 const DELETE_AUTH_USERS = sql`DELETE FROM auth.users WHERE id = ANY($1::uuid[])`
 

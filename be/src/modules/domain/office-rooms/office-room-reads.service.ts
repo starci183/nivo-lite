@@ -1,6 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { MessagesReadService } from "@modules/domain/messages"
+import type { LineReader } from "@modules/domain/messages"
+import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectRoomsAgents, InjectRoomsTestChats } from "./office-rooms.decorators"
+import type { RoomsAgentChats, RoomsAgents, RoomsChatLine, RoomsTestChats } from "./office-rooms.port"
 import type { AgentConversationFacts, ConversationUnreadFacts, RoomFacts, RoomSummaryFacts } from "./office-rooms.facts"
 import {
     OfficeRoomEntity,
@@ -15,100 +20,51 @@ const ROOM_LIMIT = 20
 const AGENT_LIMIT = 100
 /** How many customer conversations the unread read answers. */
 const LEAD_LIMIT = 500
-/** The caller's own lines are recognised by account id, and by display name only on legacy lines that carry no account id. */
-const NOT_OWN_LINE =
-    "m.author_user_id IS DISTINCT FROM :userId AND NOT (m.author_user_id IS NULL AND m.author_kind = 'human' AND m.author_name = :displayName)"
-/** The text shape the room reads answer for a timestamp: the database JSON rendering, ISO 8601 with an offset. */
-const JSON_INSTANT = "to_json(m.created_at) #>> '{}'"
-/** Before any marker exists every line is unread. */
-const READ_AT = "COALESCE(rd.last_read_at, '-infinity'::timestamptz)"
+/** The read marker key prefixes of the direct conversations. */
+const AGENT_KEY = "agent:"
+const LEAD_KEY = "lead:"
+/** The text shape a marker instant is read in: the database JSON rendering, microsecond exact. */
+const MARK_INSTANT = "to_json(rd.last_read_at) #>> '{}'"
 
-/** Lines written after the instant the expression gives that the caller did not write. */
-const unreadLines = (readAt: string): string => `m.created_at > ${readAt} AND ${NOT_OWN_LINE}`
+/** One marker row: the key it was written for and the instant, as text. */
+interface MarkRaw {
+    readonly room: string
+    readonly read_at: string
+}
+
+/** One room row before its lines are attached. */
+type RoomRaw = Omit<RoomFacts, keyof RoomSummaryFacts> & { readonly read_at: string | null }
+
+/** A room nobody wrote in. */
+const SILENT: RoomSummaryFacts = {
+    unread: 0,
+    unread_mention_bodies: [],
+    last_body: null,
+    last_author: null,
+    last_author_user_id: null,
+    last_at: null,
+}
 
 @Injectable()
 /** The room list reads: unread counts, newest lines, seats and pins, scoped to one caller in one workspace. */
 export class OfficeRoomReadsService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly messages: MessagesReadService,
+        @InjectRoomsAgents() private readonly agents: RoomsAgents,
+        @InjectRoomsTestChats() private readonly testChats: RoomsTestChats,
+        private readonly members: WorkspaceMembersReadService,
+    ) {}
 
     /** The general Office room as the list shows it: every line of the workspace, read from the caller's `''` marker. */
-    summary(workspaceId: string, userId: string, displayName: string): Promise<RoomSummaryFacts | undefined> {
-        const query = this.entityManager.createQueryBuilder()
-        const marker = query
-            .subQuery()
-            .select("rd.last_read_at")
-            .from(OfficeRoomReadEntity, "rd")
-            .where("rd.workspace_id = :workspaceId AND rd.user_id = :userId AND rd.room = ''")
-            .limit(1)
-            .getQuery()
-        const lines = unreadLines(`COALESCE(${marker}, '-infinity'::timestamptz)`)
-        const count = query
-            .subQuery()
-            .select("count(*)")
-            .from("public.messages", "m")
-            .where("m.workspace_id = :workspaceId")
-            .andWhere(lines)
-            .getQuery()
-        const mentions = query
-            .subQuery()
-            .select("array_agg(DISTINCT m.body)")
-            .from("public.messages", "m")
-            .where("m.workspace_id = :workspaceId")
-            .andWhere(lines)
-            .andWhere("strpos(m.body, '@') > 0")
-            .getQuery()
-        const newest = (select: string): string =>
-            query
-                .subQuery()
-                .select(select)
-                .from("public.messages", "m")
-                .where("m.workspace_id = :workspaceId")
-                .orderBy("m.created_at", "DESC")
-                .addOrderBy("m.id", "DESC")
-                .limit(1)
-                .getQuery()
-        return query
-            .select(`LEAST(99, ${count})::int`, "unread")
-            .addSelect(`COALESCE(${mentions}, '{}'::text[])`, "unread_mention_bodies")
-            .addSelect(newest("m.body"), "last_body")
-            .addSelect(newest("m.author_name"), "last_author")
-            .addSelect(newest("m.author_user_id::text"), "last_author_user_id")
-            .addSelect(newest(JSON_INSTANT), "last_at")
-            .from("public.workspaces", "ws")
-            .where("ws.id = :workspaceId")
-            .setParameters({ workspaceId, userId, displayName })
-            .getRawOne<RoomSummaryFacts>()
+    async summary(workspaceId: string, userId: string, displayName: string): Promise<RoomSummaryFacts> {
+        const [mark] = await this.marksOf(workspaceId, userId, "rd.room = ''")
+        return this.messages.activityOfWorkspace(workspaceId, { userId, displayName }, mark?.read_at ?? null)
     }
 
     /** The department rooms of a workspace with the caller's unread count, newest line, seats and pins. */
-    rooms(workspaceId: string, userId: string, displayName: string): Promise<Array<RoomFacts>> {
+    async rooms(workspaceId: string, userId: string, displayName: string): Promise<Array<RoomFacts>> {
         const query = this.entityManager.createQueryBuilder(OfficeRoomEntity, "r")
-        const ofRoom = "m.workspace_id = r.workspace_id AND m.room = r.key"
-        const count = query
-            .subQuery()
-            .select("count(*)")
-            .from("public.messages", "m")
-            .where(ofRoom)
-            .andWhere(unreadLines(READ_AT))
-            .getQuery()
-        const mentions = query
-            .subQuery()
-            .select("array_agg(DISTINCT m.body)")
-            .from("public.messages", "m")
-            .where(ofRoom)
-            .andWhere(unreadLines(READ_AT))
-            .andWhere("strpos(m.body, '@') > 0")
-            .getQuery()
-        const newest = (select: string): string =>
-            query
-                .subQuery()
-                .select(select)
-                .from("public.messages", "m")
-                .where(ofRoom)
-                .orderBy("m.created_at", "DESC")
-                .addOrderBy("m.id", "DESC")
-                .limit(1)
-                .getQuery()
         const seats = (column: string, extra: string): string =>
             query
                 .subQuery()
@@ -124,20 +80,15 @@ export class OfficeRoomReadsService {
             .from(OfficeRoomPinEntity, "p")
             .where("p.room_id = r.id")
             .getQuery()
-        return query
+        const rows = await query
             .select("r.key", "key")
             .addSelect("r.name", "name")
             .addSelect("r.position", "position")
-            .addSelect(`LEAST(99, ${count})::int`, "unread")
-            .addSelect(`COALESCE(${mentions}, '{}'::text[])`, "unread_mention_bodies")
-            .addSelect(newest("m.body"), "last_body")
-            .addSelect(newest("m.author_name"), "last_author")
-            .addSelect(newest("m.author_user_id::text"), "last_author_user_id")
-            .addSelect(newest(JSON_INSTANT), "last_at")
             .addSelect(`COALESCE(${seats("agent_id", "")}, '{}'::text[])`, "agent_ids")
             .addSelect(`COALESCE(${seats("agent_id", " AND rm.is_home")}, '{}'::text[])`, "home_agent_ids")
             .addSelect(`COALESCE(${seats("user_id", "")}, '{}'::text[])`, "user_ids")
             .addSelect(`COALESCE(${pins}, '[]'::json)`, "pins")
+            .addSelect(MARK_INSTANT, "read_at")
             .leftJoin(
                 OfficeRoomReadEntity,
                 "rd",
@@ -147,84 +98,92 @@ export class OfficeRoomReadsService {
             .orderBy("r.position")
             .addOrderBy("r.key")
             .limit(ROOM_LIMIT)
-            .setParameters({ workspaceId, userId, displayName })
-            .getRawMany<RoomFacts>()
+            .setParameters({ workspaceId, userId })
+            .getRawMany<RoomRaw>()
+        const activity = await this.messages.activityOfRooms(
+            workspaceId,
+            { userId, displayName },
+            rows.map((row) => ({ key: row.key, readAt: row.read_at })),
+        )
+        return rows.map((row): RoomFacts => ({
+            ...(activity.get(row.key) ?? SILENT),
+            key: row.key,
+            name: row.name,
+            position: row.position,
+            agent_ids: row.agent_ids,
+            home_agent_ids: row.home_agent_ids,
+            user_ids: row.user_ids,
+            pins: row.pins,
+        }))
     }
 
     /** Every agent of the workspace with the caller's unread line count of its test chats and the newest line. */
-    agentConversations(
+    async agentConversations(
         workspaceId: string,
         userId: string,
         displayName: string,
     ): Promise<Array<AgentConversationFacts>> {
-        const query = this.entityManager.createQueryBuilder()
-        const ofAgent = "m.workspace_id = a.workspace_id AND c.agent_id = a.id AND c.kind = 'test'"
-        const chat = (select: string) =>
-            query
-                .subQuery()
-                .select(select)
-                .from("public.agent_messages", "m")
-                .innerJoin("agent_conversations", "c", "c.id = m.conversation_id AND c.workspace_id = m.workspace_id")
-        const count = chat("count(*)").where(ofAgent).andWhere(unreadLines(READ_AT)).getQuery()
-        const newest = (select: string): string =>
-            chat(select)
-                .leftJoin(
-                    "workspace_members",
-                    "wm",
-                    "wm.workspace_id = m.workspace_id AND wm.user_id = m.author_user_id",
-                )
-                .where(ofAgent)
-                .orderBy("m.created_at", "DESC")
-                .addOrderBy("m.id", "DESC")
-                .limit(1)
-                .getQuery()
-        return query
-            .select("a.id::text", "id")
-            .addSelect(`LEAST(99, ${count})::int`, "unread")
-            .addSelect(newest("m.body"), "last_body")
-            .addSelect(newest("m.author_user_id::text"), "last_author_id")
-            .addSelect(newest("COALESCE(m.author_name, wm.display_name)"), "last_author")
-            .addSelect(newest(JSON_INSTANT), "last_at")
-            .from("public.agents", "a")
-            .leftJoin(
-                OfficeRoomReadEntity,
-                "rd",
-                "rd.workspace_id = a.workspace_id AND rd.user_id = :userId AND rd.room = 'agent:' || a.id::text",
-            )
-            .where("a.workspace_id = :workspaceId")
-            .orderBy("a.id")
-            .limit(AGENT_LIMIT)
-            .setParameters({ workspaceId, userId, displayName })
-            .getRawMany<AgentConversationFacts>()
+        const agentIds = await this.agents.idsOf(workspaceId, AGENT_LIMIT)
+        const marks = new Map(
+            (await this.marksOf(workspaceId, userId, "rd.room LIKE 'agent:%'")).map((mark) => [
+                mark.room,
+                mark.read_at,
+            ]),
+        )
+        const chats = await this.testChats.activityOf(
+            workspaceId,
+            { userId, displayName },
+            agentIds.map((agentId) => ({ agentId, readAt: marks.get(`${AGENT_KEY}${agentId}`) ?? null })),
+        )
+        const authors = await this.members.namesOf(
+            workspaceId,
+            chats.flatMap(({ newest }) => (newest?.author_user_id ? [newest.author_user_id] : [])),
+        )
+        const names = new Map(authors.map((author) => [author.userId, author.displayName]))
+        return chats.map((chat): AgentConversationFacts => conversationFactsOf(chat, names))
     }
 
-    /** The caller's unread line counts of every lead of the workspace. */
-    leadConversations(
+    /** The caller's unread line counts of the customer conversations that have unread lines. */
+    async leadConversations(
         workspaceId: string,
         userId: string,
         displayName: string,
     ): Promise<Array<ConversationUnreadFacts>> {
-        const query = this.entityManager.createQueryBuilder()
-        const count = query
-            .subQuery()
-            .select("count(*)")
-            .from("public.messages", "m")
-            .where("m.workspace_id = l.workspace_id AND m.lead_id = l.id")
-            .andWhere(unreadLines(READ_AT))
-            .getQuery()
-        return query
-            .select("l.id::text", "id")
-            .addSelect(`LEAST(99, ${count})::int`, "unread")
-            .from("public.leads", "l")
-            .leftJoin(
-                OfficeRoomReadEntity,
-                "rd",
-                "rd.workspace_id = l.workspace_id AND rd.user_id = :userId AND rd.room = 'lead:' || l.id::text",
-            )
-            .where("l.workspace_id = :workspaceId")
-            .orderBy("l.id")
-            .limit(LEAD_LIMIT)
-            .setParameters({ workspaceId, userId, displayName })
-            .getRawMany<ConversationUnreadFacts>()
+        const marks = await this.marksOf(workspaceId, userId, "rd.room LIKE 'lead:%'")
+        const reader: LineReader = { userId, displayName }
+        const unread = await this.messages.unreadOfLeads(
+            workspaceId,
+            reader,
+            marks.map((mark) => ({ key: mark.room.slice(LEAD_KEY.length), readAt: mark.read_at })),
+            LEAD_LIMIT,
+        )
+        return unread.map((entry) => ({ id: entry.lead_id, unread: entry.unread }))
+    }
+
+    /** The caller's read markers of the workspace whose key matches the condition, with the instant as exact text. */
+    private marksOf(workspaceId: string, userId: string, condition: string): Promise<Array<MarkRaw>> {
+        return this.entityManager
+            .createQueryBuilder(OfficeRoomReadEntity, "rd")
+            .select("rd.room", "room")
+            .addSelect(MARK_INSTANT, "read_at")
+            .where("rd.workspace_id = :workspaceId AND rd.user_id = :userId", { workspaceId, userId })
+            .andWhere(condition)
+            .getRawMany<MarkRaw>()
     }
 }
+
+/** The name a line shows for its author: the name written on the line, else the member's display name. */
+const authorOf = (newest: RoomsChatLine, names: ReadonlyMap<string, string>): string | null => {
+    if (newest.author_name !== null) return newest.author_name
+    return newest.author_user_id === null ? null : (names.get(newest.author_user_id) ?? null)
+}
+
+/** One agent's direct conversation from the activity of its test chats. */
+const conversationFactsOf = (chat: RoomsAgentChats, names: ReadonlyMap<string, string>): AgentConversationFacts => ({
+    id: chat.agentId,
+    unread: chat.unread,
+    last_body: chat.newest?.body ?? null,
+    last_author_id: chat.newest?.author_user_id ?? null,
+    last_author: chat.newest === undefined ? null : authorOf(chat.newest, names),
+    last_at: chat.newest?.at ?? null,
+})

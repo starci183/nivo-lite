@@ -1,6 +1,7 @@
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { In } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { ContextVersionRecord, NewContextVersion } from "./module-context-versions.contracts"
 import { ModuleContextVersionEntity } from "./persistence/entities"
@@ -71,6 +72,25 @@ describe("ContextVersionsService", () => {
         const em = mockEntityManager({ findOne: [ModuleContextVersionEntity, null] })
 
         await expect((await build(em)).find("missing")).resolves.toBeNull()
+    })
+
+    it("reads the numbers of the given versions once each", async () => {
+        const em = mockEntityManager({ find: [ModuleContextVersionEntity, [row]] })
+
+        await expect((await build(em)).numbersOf(["ver-1", "ver-1"])).resolves.toEqual([{ id: "ver-1", version: 2 }])
+
+        expect(em.find).toHaveBeenCalledWith(ModuleContextVersionEntity, {
+            select: { id: true, version: true },
+            where: { id: In(["ver-1"]) },
+        })
+    })
+
+    it("reads no numbers for no versions", async () => {
+        const em = mockEntityManager()
+
+        await expect((await build(em)).numbersOf([])).resolves.toEqual([])
+
+        expect(em.find).not.toHaveBeenCalled()
     })
 
     it("finds the newest version of an installation", async () => {

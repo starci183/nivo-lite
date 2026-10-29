@@ -1,9 +1,21 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
+import type { EntityManager } from "typeorm"
+import { AiQuotaOverridesAdminReadService } from "@modules/domain/ai-quota-overrides"
+import { AppErrorsReadService } from "@modules/domain/app-errors"
+import { BillingEventsReadService } from "@modules/domain/billing"
+import { ConnectionsAdminReadService } from "@modules/domain/connections"
+import { KnowledgeSourcesAdminReadService } from "@modules/domain/knowledge-sources"
+import { ContextVersionsAdminReadService } from "@modules/domain/module-context-versions"
+import { ModuleInstallationsAdminReadService } from "@modules/domain/module-installations"
+import { AgentSyncAdminReadService } from "@modules/domain/openclaw-agent-sync"
+import { PaymentOrdersService } from "@modules/domain/payment-orders"
+import { SepayTransactionsAdminReadService } from "@modules/domain/sepay-transactions"
+import { MemberRosterService } from "@modules/domain/workspace-members"
+import { WorkspaceInvitesAdminReadService } from "@modules/domain/workspace-invites"
+import { WorkspaceAdminReadService } from "@modules/domain/workspaces"
+import type { WorkspaceAdminRow } from "@modules/domain/workspaces"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import type * as R from "./platform-admin.facts"
-/** A read of one table, the start of every console list. */
-type Read = SelectQueryBuilder<object>
 
 /** How many per-workspace count rows the list reads. */
 const STATS_LIMIT = 1000
@@ -16,6 +28,8 @@ const SIGNUPS_PER_DAY = "public.admin_signups_per_day"
 const USER_EMAILS = "be_access.user_emails"
 /** How many days of sign-ups the health view shows. */
 const SIGNUP_DAYS = 14
+/** How many payment orders the workspace detail lists. */
+const ORDER_LIMIT = 30
 
 /** A calendar day as the database renders it (YYYY-MM-DD); the driver hands a date column over as a local-midnight Date. */
 const dayText = (day: Date | string): string => {
@@ -25,31 +39,56 @@ const dayText = (day: Date | string): string => {
     return `${String(day.getFullYear())}-${month}-${date}`
 }
 
-/** The columns of a workspace the console lists. */
-const WORKSPACE_COLUMNS = ["id", "owner_id", "name", "status", "plan_code", "paid_until", "created_at"] as const
+/** An instant as the ISO text the facts carry. */
+const at = (instant: Date): string => instant.toISOString()
+
+/** An instant that may be missing as ISO text. */
+const atOrNull = (instant: Date | null): string | null => (instant === null ? null : at(instant))
+
+/** A workspace row as the facts the console lists. */
+const workspaceFacts = (row: WorkspaceAdminRow): R.WorkspaceFacts => ({
+    id: row.id,
+    owner_id: row.ownerId,
+    name: row.name,
+    status: row.status,
+    plan_code: row.planCode,
+    paid_until: atOrNull(row.paidUntil),
+    created_at: at(row.createdAt),
+})
 
 @Injectable()
 /**
- * The console's reads, each bounded as the former statement was. The workspaces, installations, connections, orders and
- * errors are table reads; the activity counts, quota, sign-ups and Auth emails come from database functions the database owns.
+ * The console's reads, each bounded as the former statement was. Every table belongs to a capability and is read through its
+ * read service; the activity counts, quota, sign-ups and Auth emails come from database functions the database owns.
  */
 export class AdminDirectoryReadsService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly workspaceReads: WorkspaceAdminReadService,
+        private readonly installations: ModuleInstallationsAdminReadService,
+        private readonly connectionReads: ConnectionsAdminReadService,
+        private readonly appErrors: AppErrorsReadService,
+        private readonly roster: MemberRosterService,
+        private readonly invites: WorkspaceInvitesAdminReadService,
+        private readonly paymentOrders: PaymentOrdersService,
+        private readonly billingEventReads: BillingEventsReadService,
+        private readonly contextVersionReads: ContextVersionsAdminReadService,
+        private readonly agentSyncReads: AgentSyncAdminReadService,
+        private readonly knowledge: KnowledgeSourcesAdminReadService,
+        private readonly transferReads: SepayTransactionsAdminReadService,
+        private readonly quotaOverrides: AiQuotaOverridesAdminReadService,
+    ) {}
 
     /** The newest customer workspaces. */
-    workspaces(): Promise<Array<R.WorkspaceFacts>> {
-        return this.workspaceColumns(this.of("public.workspaces", "w"))
-            .orderBy("w.created_at", "DESC")
-            .limit(1000)
-            .getRawMany<R.WorkspaceFacts>()
+    async workspaces(): Promise<Array<R.WorkspaceFacts>> {
+        const rows = await this.workspaceReads.newest(1000)
+        return rows.map((row) => workspaceFacts(row))
     }
 
     /** One workspace, or undefined when it does not exist. */
-    workspace(id: string): Promise<R.WorkspaceFacts | undefined> {
-        return this.workspaceColumns(this.of("public.workspaces", "w"))
-            .where("w.id = :id", { id })
-            .limit(1)
-            .getRawOne<R.WorkspaceFacts>()
+    async workspace(id: string): Promise<R.WorkspaceFacts | undefined> {
+        const row = await this.workspaceReads.find(id)
+        return row === undefined ? undefined : workspaceFacts(row)
     }
 
     /** The per-workspace counts the list needs (one row per workspace). */
@@ -60,37 +99,33 @@ export class AdminDirectoryReadsService {
     }
 
     /** The agent installations of every workspace. */
-    moduleInstalls(): Promise<Array<R.ModuleBadgeFacts>> {
-        return this.of("public.module_installations", "i")
-            .select("i.workspace_id", "workspace_id")
-            .addSelect("i.module_key", "module_key")
-            .addSelect("i.status", "status")
-            .addSelect("i.live_enabled", "live_enabled")
-            .limit(5000)
-            .getRawMany<R.ModuleBadgeFacts>()
+    async moduleInstalls(): Promise<Array<R.ModuleBadgeFacts>> {
+        const rows = await this.installations.badges(5000)
+        return rows.map((row) => ({
+            workspace_id: row.workspaceId,
+            module_key: row.moduleKey,
+            status: row.status,
+            live_enabled: row.liveEnabled,
+        }))
     }
 
     /** Every connection that is not disconnected. */
-    liveConnections(): Promise<Array<R.ConnectionBadgeFacts>> {
-        return this.of("public.connections", "c")
-            .select("c.workspace_id", "workspace_id")
-            .addSelect("c.provider", "provider")
-            .addSelect("c.status", "status")
-            .addSelect("c.environment", "environment")
-            .addSelect("c.last_event_at", "last_event_at")
-            .addSelect("c.created_at", "created_at")
-            .where("c.status <> 'disconnected'")
-            .limit(5000)
-            .getRawMany<R.ConnectionBadgeFacts>()
+    async liveConnections(): Promise<Array<R.ConnectionBadgeFacts>> {
+        const rows = await this.connectionReads.live(5000)
+        return rows.map((row) => ({
+            workspace_id: row.workspaceId,
+            provider: row.provider,
+            status: row.status,
+            environment: row.environment,
+            last_event_at: atOrNull(row.lastEventAt),
+            created_at: at(row.createdAt),
+        }))
     }
 
     /** The workspaces of the errors captured since an instant. */
-    errorWorkspaces(since: Date): Promise<Array<R.WorkspaceRefFacts>> {
-        return this.of("public.app_errors", "e")
-            .select("e.workspace_id", "workspace_id")
-            .where("e.created_at >= :since AND e.workspace_id IS NOT NULL", { since })
-            .limit(5000)
-            .getRawMany<R.WorkspaceRefFacts>()
+    async errorWorkspaces(since: Date): Promise<Array<R.WorkspaceRefFacts>> {
+        const workspaces = await this.appErrors.workspacesSince(since, 5000)
+        return workspaces.map((workspaceId) => ({ workspace_id: workspaceId }))
     }
 
     /** The emails of Auth users. */
@@ -101,145 +136,123 @@ export class AdminDirectoryReadsService {
     }
 
     /** The members of a workspace, oldest first. */
-    members(workspaceId: string): Promise<Array<R.MemberFacts>> {
-        return this.ofWorkspace("public.workspace_members", "m", workspaceId)
-            .select("m.user_id", "user_id")
-            .addSelect("m.role", "role")
-            .addSelect("m.display_name", "display_name")
-            .addSelect("m.status", "status")
-            .addSelect("m.created_at", "created_at")
-            .orderBy("m.created_at")
-            .limit(500)
-            .getRawMany<R.MemberFacts>()
+    async members(workspaceId: string): Promise<Array<R.MemberFacts>> {
+        const rows = await this.roster.oldestOf(workspaceId, 500)
+        return rows.map((row) => ({
+            user_id: row.userId,
+            role: row.role,
+            display_name: row.displayName,
+            status: row.status,
+            created_at: at(row.createdAt),
+        }))
     }
 
     /** The pending invitations of a workspace, newest first. */
-    pendingInvites(workspaceId: string): Promise<Array<R.InviteFacts>> {
-        return this.ofWorkspace("public.workspace_invites", "v", workspaceId)
-            .select("v.id", "id")
-            .addSelect("v.email", "email")
-            .addSelect("v.role", "role")
-            .addSelect("v.created_at", "created_at")
-            .addSelect("v.expires_at", "expires_at")
-            .andWhere("v.accepted_at IS NULL AND v.revoked_at IS NULL")
-            .orderBy("v.created_at", "DESC")
-            .limit(200)
-            .getRawMany<R.InviteFacts>()
+    async pendingInvites(workspaceId: string): Promise<Array<R.InviteFacts>> {
+        const rows = await this.invites.pendingOf(workspaceId, 200)
+        return rows.map((row) => ({
+            id: row.id,
+            email: row.email,
+            role: row.role,
+            created_at: at(row.createdAt),
+            expires_at: at(row.expiresAt),
+        }))
     }
 
     /** The newest payment orders of a workspace. */
-    orders(workspaceId: string): Promise<Array<R.OrderFacts>> {
-        return this.ofWorkspace("public.payment_orders", "o", workspaceId)
-            .select("o.id", "id")
-            .addSelect("o.order_code", "order_code")
-            .addSelect("o.plan_code", "plan_code")
-            .addSelect("o.amount_vnd", "amount_vnd")
-            .addSelect("o.status", "status")
-            .addSelect("o.created_at", "created_at")
-            .addSelect("o.paid_at", "paid_at")
-            .orderBy("o.created_at", "DESC")
-            .limit(30)
-            .getRawMany<R.OrderFacts>()
+    async orders(workspaceId: string): Promise<Array<R.OrderFacts>> {
+        const rows = await this.paymentOrders.list(workspaceId)
+        return rows.slice(0, ORDER_LIMIT).map((row) => ({
+            id: row.id,
+            order_code: row.orderCode,
+            plan_code: row.planCode,
+            amount_vnd: row.amountVnd,
+            status: row.status,
+            created_at: row.createdAt,
+            paid_at: row.paidAt,
+        }))
     }
 
     /** The newest billing events of a workspace. */
-    billingEvents(workspaceId: string): Promise<Array<R.BillingEventFacts>> {
-        return this.ofWorkspace("public.billing_events", "b", workspaceId)
-            .select("b.id", "id")
-            .addSelect("b.kind", "kind")
-            .addSelect("b.created_at", "created_at")
-            .orderBy("b.created_at", "DESC")
-            .limit(20)
-            .getRawMany<R.BillingEventFacts>()
+    async billingEvents(workspaceId: string): Promise<Array<R.BillingEventFacts>> {
+        const rows = await this.billingEventReads.latestOfWorkspace(workspaceId, 20)
+        return rows.map((row) => ({ id: row.id, kind: row.kind, created_at: at(row.createdAt) }))
     }
 
     /** The agent installations of a workspace. */
-    installs(workspaceId: string): Promise<Array<R.InstallFacts>> {
-        return this.ofWorkspace("public.module_installations", "i", workspaceId)
-            .select("i.id", "id")
-            .addSelect("i.module_key", "module_key")
-            .addSelect("i.status", "status")
-            .addSelect("i.operating_mode", "operating_mode")
-            .addSelect("i.live_enabled", "live_enabled")
-            .addSelect("i.active_context_version_id", "active_context_version_id")
-            .addSelect("i.settings ->> 'processor'", "processor")
-            .limit(50)
-            .getRawMany<R.InstallFacts>()
+    async installs(workspaceId: string): Promise<Array<R.InstallFacts>> {
+        const rows = await this.installations.ofWorkspace(workspaceId, 50)
+        return rows.map((row) => ({
+            id: row.id,
+            module_key: row.moduleKey,
+            status: row.status,
+            operating_mode: row.operatingMode,
+            live_enabled: row.liveEnabled,
+            active_context_version_id: row.activeContextVersionId,
+            processor: row.processor,
+        }))
     }
 
     /** The context versions of a workspace. */
-    contextVersions(workspaceId: string): Promise<Array<R.ContextVersionFacts>> {
-        return this.ofWorkspace("public.module_context_versions", "v", workspaceId)
-            .select("v.id", "id")
-            .addSelect("v.version", "version")
-            .addSelect("v.applied_at", "applied_at")
-            .limit(500)
-            .getRawMany<R.ContextVersionFacts>()
+    async contextVersions(workspaceId: string): Promise<Array<R.ContextVersionFacts>> {
+        const rows = await this.contextVersionReads.ofWorkspace(workspaceId, 500)
+        return rows.map((row) => ({ id: row.id, version: row.version, applied_at: at(row.appliedAt) }))
     }
 
     /** The OpenClaw sync state of a workspace's agents. */
-    agentSync(workspaceId: string): Promise<Array<R.AgentSyncFacts>> {
-        return this.ofWorkspace("public.openclaw_agent_sync", "s", workspaceId)
-            .select("s.installation_id", "installation_id")
-            .addSelect("s.agent_id", "agent_id")
-            .addSelect("s.context_version", "context_version")
-            .addSelect("s.checked_at", "checked_at")
-            .addSelect("s.status", "status")
-            .addSelect("s.error", "error")
-            .limit(50)
-            .getRawMany<R.AgentSyncFacts>()
+    async agentSync(workspaceId: string): Promise<Array<R.AgentSyncFacts>> {
+        const rows = await this.agentSyncReads.ofWorkspace(workspaceId, 50)
+        return rows.map((row) => ({
+            installation_id: row.installationId,
+            agent_id: row.agentId,
+            context_version: row.contextVersion,
+            checked_at: at(row.checkedAt),
+            status: row.status,
+            error: row.error,
+        }))
     }
 
     /** The connections of a workspace, oldest first. */
-    connections(workspaceId: string): Promise<Array<R.ConnectionFacts>> {
-        return this.ofWorkspace("public.connections", "c", workspaceId)
-            .select("c.id", "id")
-            .addSelect("c.provider", "provider")
-            .addSelect("c.name", "name")
-            .addSelect("c.status", "status")
-            .addSelect("c.environment", "environment")
-            .addSelect("c.last_event_at", "last_event_at")
-            .addSelect("c.last_error", "last_error")
-            .addSelect("c.created_at", "created_at")
-            .orderBy("c.created_at")
-            .limit(200)
-            .getRawMany<R.ConnectionFacts>()
+    async connections(workspaceId: string): Promise<Array<R.ConnectionFacts>> {
+        const rows = await this.connectionReads.ofWorkspace(workspaceId, 200)
+        return rows.map((row) => ({
+            id: row.id,
+            provider: row.provider,
+            name: row.name,
+            status: row.status,
+            environment: row.environment,
+            last_event_at: atOrNull(row.lastEventAt),
+            last_error: row.lastError,
+            created_at: at(row.createdAt),
+        }))
     }
 
     /** The newest captured errors of a workspace. */
-    workspaceErrors(workspaceId: string): Promise<Array<R.WorkspaceErrorFacts>> {
-        return this.ofWorkspace("public.app_errors", "e", workspaceId)
-            .select("e.id", "id")
-            .addSelect("e.scope", "scope")
-            .addSelect("e.message", "message")
-            .addSelect("e.created_at", "created_at")
-            .orderBy("e.created_at", "DESC")
-            .limit(20)
-            .getRawMany<R.WorkspaceErrorFacts>()
+    async workspaceErrors(workspaceId: string): Promise<Array<R.WorkspaceErrorFacts>> {
+        const rows = await this.appErrors.latestOfWorkspace(workspaceId, 20)
+        return rows.map((row) => ({
+            id: row.id,
+            scope: row.scope,
+            message: row.message,
+            created_at: at(row.createdAt),
+        }))
     }
 
     /** The kind and status of a workspace's knowledge sources. */
     knowledgeSources(workspaceId: string): Promise<Array<R.KnowledgeFacts>> {
-        return this.ofWorkspace("public.knowledge_sources", "k", workspaceId)
-            .select("k.kind", "kind")
-            .addSelect("k.status", "status")
-            .limit(5000)
-            .getRawMany<R.KnowledgeFacts>()
+        return this.knowledge.stagesOf(workspaceId, 5000)
     }
 
     /** The SePay transfers matched to the given orders, newest first. */
     async transfers(orderIds: ReadonlyArray<string>): Promise<Array<R.TransferFacts>> {
-        if (orderIds.length === 0) return []
-        return this.of("public.sepay_transactions", "t")
-            .select("t.sepay_id", "sepay_id")
-            .addSelect("t.transfer_amount", "transfer_amount")
-            .addSelect("t.content", "content")
-            .addSelect("t.status", "status")
-            .addSelect("t.received_at", "received_at")
-            .where("t.matched_order_id IN (:...orderIds)", { orderIds })
-            .orderBy("t.received_at", "DESC")
-            .limit(30)
-            .getRawMany<R.TransferFacts>()
+        const rows = await this.transferReads.matchedTo(orderIds, 30)
+        return rows.map((row) => ({
+            sepay_id: row.sepayId,
+            transfer_amount: row.transferAmount,
+            content: row.content,
+            status: row.status,
+            received_at: at(row.receivedAt),
+        }))
     }
 
     /** The activity counts of one workspace. */
@@ -266,11 +279,9 @@ export class AdminDirectoryReadsService {
     }
 
     /** The own credit allowance of a workspace. */
-    quotaOverride(workspaceId: string): Promise<R.QuotaOverrideFacts | undefined> {
-        return this.ofWorkspace("public.ai_quota_overrides", "q", workspaceId)
-            .select("q.credits_limit", "credits_limit")
-            .limit(1)
-            .getRawOne<R.QuotaOverrideFacts>()
+    async quotaOverride(workspaceId: string): Promise<R.QuotaOverrideFacts | undefined> {
+        const row = await this.quotaOverrides.creditsOf(workspaceId)
+        return row === undefined ? undefined : { credits_limit: row.creditsLimit }
     }
 
     /** The sign-ups of the last 14 days. */
@@ -281,82 +292,47 @@ export class AdminDirectoryReadsService {
     }
 
     /** The newest SePay transfers. */
-    recentTransfers(): Promise<Array<R.RecentTransferFacts>> {
-        return this.of("public.sepay_transactions", "t")
-            .select("t.status", "status")
-            .addSelect("t.transfer_amount", "transfer_amount")
-            .addSelect("t.content", "content")
-            .addSelect("t.received_at", "received_at")
-            .orderBy("t.received_at", "DESC")
-            .limit(25)
-            .getRawMany<R.RecentTransferFacts>()
+    async recentTransfers(): Promise<Array<R.RecentTransferFacts>> {
+        const rows = await this.transferReads.latest(25)
+        return rows.map((row) => ({
+            status: row.status,
+            transfer_amount: row.transferAmount,
+            content: row.content,
+            received_at: at(row.receivedAt),
+        }))
     }
 
     /** The newest billing events. */
-    recentBillingEvents(): Promise<Array<R.RecentBillingEventFacts>> {
-        return this.of("public.billing_events", "b")
-            .select("b.id", "id")
-            .addSelect("b.workspace_id", "workspace_id")
-            .addSelect("b.kind", "kind")
-            .addSelect("b.created_at", "created_at")
-            .orderBy("b.created_at", "DESC")
-            .limit(25)
-            .getRawMany<R.RecentBillingEventFacts>()
+    async recentBillingEvents(): Promise<Array<R.RecentBillingEventFacts>> {
+        const rows = await this.billingEventReads.latest(25)
+        return rows.map((row) => ({
+            id: row.id,
+            workspace_id: row.workspaceId,
+            kind: row.kind,
+            created_at: at(row.createdAt),
+        }))
     }
 
     /** The newest captured errors. */
-    recentErrors(): Promise<Array<R.RecentErrorFacts>> {
-        return this.of("public.app_errors", "e")
-            .select("e.id", "id")
-            .addSelect("e.scope", "scope")
-            .addSelect("e.message", "message")
-            .addSelect("e.workspace_id", "workspace_id")
-            .addSelect("e.created_at", "created_at")
-            .orderBy("e.created_at", "DESC")
-            .limit(50)
-            .getRawMany<R.RecentErrorFacts>()
+    async recentErrors(): Promise<Array<R.RecentErrorFacts>> {
+        const rows = await this.appErrors.latest(50)
+        return rows.map((row) => ({
+            id: row.id,
+            scope: row.scope,
+            message: row.message,
+            workspace_id: row.workspaceId,
+            created_at: at(row.createdAt),
+        }))
     }
 
     /** The errors captured since an instant, counted by scope. */
-    errorScopes(since: Date): Promise<Array<R.CountFacts>> {
-        return this.of("public.app_errors", "e")
-            .select("e.scope", "key")
-            .addSelect("(count(*))::int", "count")
-            .where("e.created_at >= :since", { since })
-            .groupBy("e.scope")
-            .orderBy("count", "DESC")
-            .addOrderBy("e.scope")
-            .limit(100)
-            .getRawMany<R.CountFacts>()
+    async errorScopes(since: Date): Promise<Array<R.CountFacts>> {
+        const rows = await this.appErrors.scopesSince(since, 100)
+        return rows.map((row) => ({ key: row.scope, count: row.count }))
     }
 
     /** The names of workspaces. */
-    async workspaceNames(ids: ReadonlyArray<string>): Promise<Array<R.WorkspaceNameFacts>> {
-        if (ids.length === 0) return []
-        return this.of("public.workspaces", "w")
-            .select("w.id", "id")
-            .addSelect("w.name", "name")
-            .where("w.id IN (:...ids)", { ids })
-            .limit(500)
-            .getRawMany<R.WorkspaceNameFacts>()
-    }
-
-    /** A read of one table. */
-    private of(table: string, alias: string): Read {
-        return this.entityManager.createQueryBuilder().from(table, alias)
-    }
-
-    /** A read of one table scoped to a workspace. */
-    private ofWorkspace(table: string, alias: string, workspaceId: string): Read {
-        return this.of(table, alias).where(`${alias}.workspace_id = :workspaceId`, { workspaceId })
-    }
-
-    /** Selects the workspace columns of the console lists. */
-    private workspaceColumns(read: Read): Read {
-        return WORKSPACE_COLUMNS.reduce(
-            (selected, column, index) =>
-                index === 0 ? selected.select(`w.${column}`, column) : selected.addSelect(`w.${column}`, column),
-            read,
-        )
+    workspaceNames(ids: ReadonlyArray<string>): Promise<Array<R.WorkspaceNameFacts>> {
+        return this.workspaceReads.namesOf(ids, 500)
     }
 }

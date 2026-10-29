@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./email-messages.module-definition"
 import { EmailMessagesService } from "./email-messages.service"
+import { EmailMessagesLedgerService } from "./email-messages-ledger.service"
 import { SmtpWizardService } from "./smtp-wizard.service"
 import { WorkspaceMailService } from "./workspace-mail.service"
 
@@ -13,8 +14,14 @@ export class EmailMessagesModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), EmailMessagesService, WorkspaceMailService, SmtpWizardService],
-            exports: [EmailMessagesService, WorkspaceMailService, SmtpWizardService],
+            providers: [
+                ...(base.providers ?? []),
+                EmailMessagesService,
+                EmailMessagesLedgerService,
+                WorkspaceMailService,
+                SmtpWizardService,
+            ],
+            exports: [EmailMessagesService, EmailMessagesLedgerService, WorkspaceMailService, SmtpWizardService],
         }
     }
 }

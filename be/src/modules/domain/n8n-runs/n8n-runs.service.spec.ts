@@ -3,6 +3,8 @@ import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder
 import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { FakeClock, fakeIds, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
+import type { PipelineRow } from "@modules/domain/automation-pipelines"
 import { N8N_CLIENT, N8nError, N8nErrorCode } from "@modules/integrations/n8n"
 import type { N8nClient } from "@modules/integrations/n8n"
 import { CLOCK } from "@modules/platform/clock"
@@ -65,7 +67,7 @@ const PAYLOAD = {
     data: {},
 }
 
-const build = async (em: MockEntityManager) => {
+const build = async (em: MockEntityManager, pipelines = mock<AutomationPipelinesService>()) => {
     const n8n = mock<N8nClient>()
     const queue = mock<N8nQueue>()
     const catalog = mock<MessageCatalog>()
@@ -83,16 +85,15 @@ const build = async (em: MockEntityManager) => {
             { provide: LOGGER, useValue: logger },
             { provide: N8N_CLIENT, useValue: n8n },
             { provide: N8nQueue, useValue: queue },
+            { provide: AutomationPipelinesService, useValue: pipelines },
         ],
     }).compile()
     return { runs: moduleRef.get(N8nRunsService), n8n, queue, logger }
 }
 
-/** What the pipeline query answers: the settings and the wording of the run's template. */
-interface PipelineAnswer {
-    readonly config: Record<string, unknown>
-    readonly body: string | null
-}
+/** The pipeline the owner answers: the settings and the wording of the run's template. */
+const pipelineOf = (config: PipelineRow["config"], body: string | null): PipelineRow =>
+    mock<PipelineRow>({ config, body })
 
 describe("N8nRunsService", () => {
     describe("startRun", () => {
@@ -245,11 +246,9 @@ describe("N8nRunsService", () => {
 
         it("answers the context of the run with its settings and wording", async () => {
             const em = mockEntityManager({ findOne: [N8nRunEntity, stored()] })
-            answerQueryBuilders(
-                em,
-                fakeQueryBuilder({ getRawOne: { config: { time: "08:00" }, body: "Hello" } satisfies PipelineAnswer }),
-            )
-            const { runs } = await build(em)
+            const pipelines = mock<AutomationPipelinesService>()
+            pipelines.findPipeline.mockResolvedValue(pipelineOf({ time: "08:00" }, "Hello"))
+            const { runs } = await build(em, pipelines)
 
             await expect(runs.verifyRun({ authorization: `Bearer ${TOKEN}`, expectedRunId: RUN_ID })).resolves.toEqual({
                 runId: RUN_ID,
@@ -262,13 +261,12 @@ describe("N8nRunsService", () => {
         it("answers the settings alone when the pipeline has no wording or does not exist", async () => {
             const withBody = mockEntityManager({ findOne: [N8nRunEntity, stored()] })
             const without = mockEntityManager({ findOne: [N8nRunEntity, stored()] })
-            answerQueryBuilders(
-                withBody,
-                fakeQueryBuilder({ getRawOne: { config: { a: 1 }, body: null } satisfies PipelineAnswer }),
-            )
-            answerQueryBuilders(without, fakeQueryBuilder({ getRawOne: undefined }))
-            const { runs } = await build(withBody)
-            const { runs: bare } = await build(without)
+            const withPipelines = mock<AutomationPipelinesService>()
+            withPipelines.findPipeline.mockResolvedValue(pipelineOf({ a: 1 }, null))
+            const withoutPipelines = mock<AutomationPipelinesService>()
+            withoutPipelines.findPipeline.mockResolvedValue(null)
+            const { runs } = await build(withBody, withPipelines)
+            const { runs: bare } = await build(without, withoutPipelines)
 
             await expect(
                 runs.verifyRun({ authorization: `Bearer ${TOKEN}`, expectedRunId: undefined }),
@@ -369,6 +367,12 @@ describe("N8nRunsService", () => {
 
         it("fails when the run cannot be closed", async () => {
             const { runs } = await build(mockEntityManager({ update: [N8nRunEntity, { affected: 0 }] }))
+
+            await expect(runs.completeRun(run, {})).rejects.toMatchObject({ code: N8nRunsErrorCode.NotClosed })
+        })
+
+        it("fails when the close reports no affected count at all", async () => {
+            const { runs } = await build(mockEntityManager({ update: [N8nRunEntity, {}] }))
 
             await expect(runs.completeRun(run, {})).rejects.toMatchObject({ code: N8nRunsErrorCode.NotClosed })
         })

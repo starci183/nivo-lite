@@ -13,4 +13,4 @@ export type {
 } from "./work-chains.contracts"
 export { WorkChainsModule } from "./work-chains.module"
 export { WorkChainsService } from "./work-chains.service"
-export type { ChainStepRecord } from "./work-chains.contracts"
+export type { ChainStepRead, ChainStepRecord } from "./work-chains.contracts"

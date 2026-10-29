@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { In, IsNull, Like, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
+import { LeadReadService } from "@modules/domain/leads"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -12,6 +13,7 @@ import type {
     OptionalOrder,
     OrderConfirmation,
     OrderLabel,
+    OrderRef,
     OptionalOrdersWorkbench,
     OrdersWorkbenchRow,
     SalesOrderListRow,
@@ -102,6 +104,7 @@ export class OrdersService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
+        private readonly leads: LeadReadService,
     ) {}
 
     /** The order of the workspace, or null when there is none with that id. */
@@ -110,22 +113,42 @@ export class OrdersService {
         return order === null ? null : toOrderRow(order)
     }
 
+    /** Whether the workspace has an order with this id. */
+    exists(workspaceId: string, orderId: string): Promise<boolean> {
+        return this.entityManager.exists(OrderEntity, { where: { workspaceId, id: orderId } })
+    }
+
     /** The newest orders with customer labels for the workspace's workbenches. */
     async list(workspaceId: string, limit: number = 200): Promise<Array<SalesOrderListRow>> {
-        const { entities, raw } = await this.entityManager
-            .createQueryBuilder(OrderEntity, "o")
-            .leftJoin("leads", "l", "l.id = o.leadId AND l.workspace_id = o.workspaceId")
-            .addSelect("l.contact_name", "contactName")
-            .addSelect("l.company", "company")
-            .where("o.workspaceId = :workspaceId", { workspaceId })
-            .orderBy("o.createdAt", "DESC")
-            .limit(Math.min(LIST_MAX, Math.max(1, limit)))
-            .getRawAndEntities<{ contactName: string | null; company: string | null }>()
-        return entities.map((order, index) => ({
-            ...toOrderRow(order),
-            contact_name: raw[index]?.contactName ?? null,
-            company: raw[index]?.company ?? null,
-        }))
+        const orders = await this.entityManager.find(OrderEntity, {
+            where: { workspaceId },
+            order: { createdAt: "DESC" },
+            take: Math.min(LIST_MAX, Math.max(1, limit)),
+        })
+        const customers = await this.leads.cardsOf(
+            workspaceId,
+            orders.flatMap((order) => (order.leadId === null ? [] : [order.leadId])),
+        )
+        const customerOf = new Map(customers.map((customer) => [customer.id, customer]))
+        return orders.map((order) => {
+            const customer = customerOf.get(order.leadId ?? "")
+            return {
+                ...toOrderRow(order),
+                contact_name: customer?.contactName ?? null,
+                company: customer?.company ?? null,
+            }
+        })
+    }
+
+    /** The newest orders of any status reduced to the number and customer a message may name, bounded by the caller. */
+    async recentRefs(workspaceId: string, limit: number): Promise<Array<OrderRef>> {
+        const orders = await this.entityManager.find(OrderEntity, {
+            select: { id: true, orderNo: true, leadId: true },
+            where: { workspaceId },
+            order: { createdAt: "DESC", id: "DESC" },
+            take: limit,
+        })
+        return orders.map((order) => ({ id: order.id, orderNo: order.orderNo, leadId: order.leadId }))
     }
 
     /** A bounded page of orders in immutable creation and id order. */

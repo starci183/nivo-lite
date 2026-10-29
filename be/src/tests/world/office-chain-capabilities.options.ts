@@ -7,6 +7,7 @@ import {
     ApprovalRequestsModule,
     ApprovalRequestsService,
 } from "@modules/domain/approval-requests"
+import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import {
     AUTHORITY_RULES_ERROR_KINDS,
     AUTHORITY_RULES_MESSAGES,
@@ -14,6 +15,7 @@ import {
 } from "@modules/domain/authority-rules"
 import { EventsModule } from "@modules/domain/events"
 import { MEMBER_GRANTS_ERROR_KINDS, MEMBER_GRANTS_MESSAGES, MemberGrantsModule } from "@modules/domain/member-grants"
+import { OfficeRoomDirectoryService } from "@modules/domain/office-rooms"
 import { StaffModule } from "@modules/domain/staff"
 import {
     THREAD_MESSAGES_ERROR_KINDS,
@@ -48,8 +50,13 @@ class OfficeAgentOwnersModule {
         return {
             module: OfficeAgentOwnersModule,
             global: true,
-            providers: [AgentOwnershipService, { provide: OFFICE_ACCOUNTS, useClass: UnreadAccountDirectory }],
-            exports: [AgentOwnershipService, OFFICE_ACCOUNTS],
+            providers: [
+                AgentOwnershipService,
+                OfficeRoomDirectoryService,
+                AuthorityActionsService,
+                { provide: OFFICE_ACCOUNTS, useClass: UnreadAccountDirectory },
+            ],
+            exports: [AgentOwnershipService, OfficeRoomDirectoryService, AuthorityActionsService, OFFICE_ACCOUNTS],
         }
     }
 }

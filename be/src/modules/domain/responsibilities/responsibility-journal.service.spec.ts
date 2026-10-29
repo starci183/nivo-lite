@@ -2,7 +2,6 @@ import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jes
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { Not } from "typeorm"
-import type { EntityManager } from "typeorm"
 import {
     LEAD,
     agentOwner,
@@ -10,6 +9,7 @@ import {
     assignedEvent,
     ctx,
     inputOf,
+    leadGuard,
     memberOf,
     personOf,
     rowOf,
@@ -26,15 +26,12 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ResponsibilitiesError, ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
+import { RESPONSIBILITY_LEAD_DESK } from "./responsibilities.decorators"
+import type { LeadDesk } from "./responsibilities.ports"
 import { ResponsibilityOwnersService } from "./responsibility-owners.service"
 import type { ResponsibilityListing } from "./responsibility-journal.contracts"
 import { ResponsibilityEntity } from "./persistence/entities"
 import { ResponsibilityJournalService } from "./responsibility-journal.service"
-
-/** The responsibility `resp-1` of the workspace was changed to these values. */
-const expectChanged = (em: MockEntityManager, changes: object): void => {
-    expect(em.update).toHaveBeenCalledWith(ResponsibilityEntity, { workspaceId: "ws-1", id: "resp-1" }, changes)
-}
 
 const registerEnsureFor = () => {
     describe("ensureFor", () => {
@@ -51,11 +48,15 @@ const registerEnsureFor = () => {
                 leadStage: "new",
             }
             const em = mockEntityManager()
-            const read = fakeQueryBuilder({ getRawMany: [listing] })
+            const read = fakeQueryBuilder({ getRawMany: [rowOf(), rowOf({ id: "resp-2", lead_id: "lead-gone" })] })
             answerQueryBuilders(em, read)
-            const { service, members } = await build(em)
+            const { service, members, leadDesk } = await build(em)
+            leadDesk.cardsOf.mockResolvedValue([
+                { id: "lead-1", contactName: "Binh", company: "Binh Co", stage: "new" },
+            ])
 
             await expect(service.list("user-1", "ws-1")).resolves.toEqual([listing])
+            expect(leadDesk.cardsOf).toHaveBeenCalledWith("ws-1", ["lead-1", "lead-gone"])
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
             expect(read.argsOf("where")).toEqual([["r.workspaceId = :workspaceId", { workspaceId: "ws-1" }]])
         })
@@ -67,18 +68,15 @@ const registerCreate = () => {
         it("adds a responsibility owned by the member the caller names and logs it", async () => {
             const created = rowOf({ owner_kind: "human", owner_agent_id: null, owner_name: "An", next_action: "Call" })
             const em = mockEntityManager()
-            const { read, write } = answerInsert(em, { id: "lead-1" }, [created])
+            const { write } = answerInsert(em, { id: "lead-1" }, [created])
             const tx = fakeTransaction(em)
-            const { service, events, owners } = await build(tx.em)
+            const { service, events, owners, leadDesk } = await build(tx.em)
             owners.resolve.mockResolvedValue(personOf())
 
             await expect(service.create("user-1", "ws-1", inputOf())).resolves.toEqual(created)
 
-            expect(owners.resolve.mock.calls).toEqual([[em, "ws-1", "member-1"]])
-            expect(read.argsOf("where")).toEqual([
-                ["l.workspace_id = :workspaceId AND l.id = :leadId", { workspaceId: "ws-1", leadId: "lead-1" }],
-            ])
-            expect(read.argsOf("setLock")).toEqual([["pessimistic_read"]])
+            expect(owners.resolve.mock.calls).toEqual([["ws-1", "member-1"]])
+            expect(leadDesk.hold).toHaveBeenCalledWith("ws-1", "lead-1", expect.anything())
             expect(em.createQueryBuilder).toHaveBeenCalledWith(ResponsibilityEntity, "r")
             expect(write.callsOf("insert")).toEqual([[]])
             expect(write.argsOf("values")).toEqual([[stepOf()]])
@@ -156,7 +154,11 @@ const registerUpdateStatus = () => {
 
             await service.markWaitingApproval(ctx, "resp-1")
 
-            expectChanged(em, { status: "waiting_approval" })
+            expect(em.update).toHaveBeenCalledWith(
+                ResponsibilityEntity,
+                { workspaceId: "ws-1", id: "resp-1" },
+                { status: "waiting_approval" },
+            )
         })
     })
 }
@@ -312,7 +314,11 @@ const registerEngineUpdates = () => {
             const { service } = await build(em)
 
             await expect(service.setStatus(ctx, "resp-1", "done")).resolves.toBeUndefined()
-            expectChanged(em, { status: "done" })
+            expect(em.update).toHaveBeenCalledWith(
+                ResponsibilityEntity,
+                { workspaceId: "ws-1", id: "resp-1" },
+                { status: "done" },
+            )
         })
 
         it("sets a status inside the supplied transaction", async () => {
@@ -321,7 +327,11 @@ const registerEngineUpdates = () => {
             const { service } = await build(em)
 
             await expect(service.setStatus(ctx, "resp-1", "waiting_approval", transaction)).resolves.toBeUndefined()
-            expectChanged(transaction, { status: "waiting_approval" })
+            expect(transaction.update).toHaveBeenCalledWith(
+                ResponsibilityEntity,
+                { workspaceId: "ws-1", id: "resp-1" },
+                { status: "waiting_approval" },
+            )
             expect(em.update).not.toHaveBeenCalled()
         })
 
@@ -330,7 +340,11 @@ const registerEngineUpdates = () => {
             const { service } = await build(em)
 
             await expect(service.setNextAction(ctx, "resp-1", "Send quote")).resolves.toBeUndefined()
-            expectChanged(em, { nextAction: "Send quote" })
+            expect(em.update).toHaveBeenCalledWith(
+                ResponsibilityEntity,
+                { workspaceId: "ws-1", id: "resp-1" },
+                { nextAction: "Send quote" },
+            )
         })
     })
 }
@@ -343,16 +357,12 @@ const registerAgentAssignment = () => {
         const { service, members, events, owners } = await build(em)
         owners.resolve.mockResolvedValue(agentOwner())
 
-        let open: EntityManager | undefined
-        const created = await transaction.transaction((view) => {
-            open = view
-            return service.create("user-1", "ws-1", inputOf({ owner: "agent-1" }), view)
-        })
-
-        expect(created).toEqual(rowOf())
+        await expect(service.create("user-1", "ws-1", inputOf({ owner: "agent-1" }), transaction)).resolves.toEqual(
+            rowOf(),
+        )
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-        expect(owners.resolve.mock.calls).toEqual([[open, "ws-1", "agent-1"]])
-        expect(events.record).toHaveBeenCalledWith(assignedEvent("Sales Agent: Classify"), open)
+        expect(owners.resolve.mock.calls).toEqual([["ws-1", "agent-1"]])
+        expect(events.record).toHaveBeenCalledWith(assignedEvent("Sales Agent: Classify"), transaction)
         expect(write.argsOf("values")).toHaveLength(1)
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
@@ -454,19 +464,24 @@ const answerCustomerLookups = (
     lead: typeof LEAD | undefined,
     inserted: ReadonlyArray<unknown> = [],
     guard: { readonly id: string } | null = { id: "lead-1" },
-) =>
-    answerInsert(
-        em,
-        guard ?? undefined,
-        inserted,
-        fakeQueryBuilder({ getRawOne: undefined }),
-        fakeQueryBuilder({ getRawOne: lead }),
-    )
+) => {
+    leadGuard.name = lead
+    return answerInsert(em, guard ?? undefined, inserted, fakeQueryBuilder({ getRawOne: undefined }))
+}
 
 const build = async (entityManager: MockEntityManager, sales: OptionalAgentIdentity = null) => {
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(memberOf()) })
     const events = mock<EventsService>({ record: jest.fn().mockResolvedValue(undefined) })
     const directory = mock<AgentDirectory>({ agentOfDepartment: jest.fn().mockResolvedValue(sales) })
+    const leadDesk = mock<LeadDesk>()
+    leadDesk.hold.mockImplementation(() => Promise.resolve(leadGuard.held))
+    leadDesk.cardsOf.mockImplementation(() =>
+        Promise.resolve(
+            leadGuard.name === undefined
+                ? []
+                : [{ id: "lead-1", contactName: leadGuard.name.contact_name, company: "", stage: "new" }],
+        ),
+    )
     const owners = mock<ResponsibilityOwnersService>()
     owners.workspaceOwner.mockResolvedValue(personOf())
     owners.memberNamed.mockResolvedValue(null)
@@ -483,9 +498,17 @@ const build = async (entityManager: MockEntityManager, sales: OptionalAgentIdent
             { provide: WorkspaceMembersService, useValue: members },
             { provide: EventsService, useValue: events },
             { provide: ResponsibilityOwnersService, useValue: owners },
+            { provide: RESPONSIBILITY_LEAD_DESK, useValue: leadDesk },
         ],
     }).compile()
-    return { service: moduleRef.get(ResponsibilityJournalService), members, events, directory, owners }
+    return {
+        service: moduleRef.get(ResponsibilityJournalService),
+        members,
+        events,
+        directory,
+        owners,
+        leadDesk,
+    }
 }
 
 describe("ResponsibilityJournalService", () => {

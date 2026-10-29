@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./ai-quota-overrides.module-definition"
 import { AiQuotaOverridesService } from "./ai-quota-overrides.service"
+import { AiQuotaOverridesAdminReadService } from "./ai-quota-overrides-admin-read.service"
 
 @Module({})
 /** The per-workspace AI allowances over the primary connection. */
@@ -11,8 +12,8 @@ export class AiQuotaOverridesModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), AiQuotaOverridesService],
-            exports: [AiQuotaOverridesService],
+            providers: [...(base.providers ?? []), AiQuotaOverridesAdminReadService, AiQuotaOverridesService],
+            exports: [AiQuotaOverridesAdminReadService, AiQuotaOverridesService],
         }
     }
 }

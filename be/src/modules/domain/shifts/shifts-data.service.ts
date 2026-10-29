@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { Between, In, IsNull, LessThanOrEqual, Like, MoreThanOrEqual, Not } from "typeorm"
+import { Between, In, IsNull, LessThanOrEqual, MoreThanOrEqual, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { WorkItemEntity } from "@modules/domain/work-items"
+import { WorkItemsService } from "@modules/domain/work-items"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { Env, Setup, Shift } from "./shifts.contracts"
 import type { ShiftWithSchedule } from "./shifts-records.contracts"
@@ -52,7 +52,10 @@ const STAFF_SHIFTS_MAX = 500
 @Injectable()
 /** Reads what the shifts rules run against: the setup of the shop, the approved availability and leave, and the shifts of a schedule. */
 export class ShiftsDataService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly workItems: WorkItemsService,
+    ) {}
 
     /** The positions, people (with pay when asked), coverage blocks and rules of a workspace. */
     async loadSetup(workspaceId: string, withPay: boolean): Promise<Setup> {
@@ -208,8 +211,6 @@ export class ShiftsDataService {
 
     /** How many times an action was asked for one subject, so a repeated ask gets a fresh dedupe key. */
     askAttempts(workspaceId: string, action: string, prefix: string): Promise<number> {
-        return this.entityManager.count(WorkItemEntity, {
-            where: { workspaceId, action, dedupeKey: Like(`${prefix}%`) },
-        })
+        return this.workItems.countByDedupePrefix(workspaceId, action, prefix)
     }
 }

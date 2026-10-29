@@ -191,6 +191,18 @@ export class ConnectionsService {
         return rows.map(toConnectionRecord)
     }
 
+    /** The providers the workspace is connected to (one entry each, a disconnected connection does not count), at most `limit`. */
+    async connectedProviders(workspaceId: string, limit: number): Promise<ReadonlyArray<string>> {
+        const rows = await this.entityManager
+            .createQueryBuilder(ConnectionEntity, "c")
+            .select("c.provider", "provider")
+            .distinct(true)
+            .where("c.workspaceId = :workspaceId AND c.status <> 'disconnected'", { workspaceId })
+            .limit(limit)
+            .getRawMany<{ provider: string }>()
+        return rows.map((row) => row.provider)
+    }
+
     /** The connections of one provider, oldest first. */
     async listByProvider(
         workspaceId: string,

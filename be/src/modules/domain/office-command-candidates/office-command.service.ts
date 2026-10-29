@@ -1,10 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
 import type { EntityManager, SelectQueryBuilder } from "typeorm"
-import { AgentEntity } from "@modules/domain/agents"
+import { AgentDirectoryService } from "@modules/domain/agents"
+import type { AgentHandleCard } from "@modules/domain/agents"
 import { CommandBusService, ModuleCatalogService } from "@modules/domain/decisions"
-import { OrderEntity } from "@modules/domain/orders"
-import { OfficeLinesService } from "@modules/domain/messages"
+import { LeadReadService } from "@modules/domain/leads"
+import type { LeadName } from "@modules/domain/leads"
+import { MessagesReadService, OfficeLinesService } from "@modules/domain/messages"
+import type { LineText } from "@modules/domain/messages"
+import { OrdersService } from "@modules/domain/orders"
+import type { OrderRef as StoredOrderRef } from "@modules/domain/orders"
 import type { CommandResult, SendCommandInput, WorkContext } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
 import { isManagerRole, WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -46,7 +50,6 @@ import {
     resolveCandidate,
     subjectRowOf,
 } from "./office-command.policy"
-import type { LeadPoolLine, MessageText } from "./office-reads.contracts"
 import { OfficeCommandCandidateEntity } from "./persistence/entities"
 
 /** Only owners and managers compose commands: the receiver's own gate still decides what happens next. */
@@ -58,8 +61,8 @@ const MAX_REFS = 5
 /** How many candidates the thread shows. */
 const CANDIDATE_LIST_LIMIT = 60
 
-const toLeadRef = (row: LeadPoolLine): LeadRef => ({ id: row.id, name: row.contact_name, company: row.company })
-const toOrderRef = (row: Pick<OrderEntity, "id" | "orderNo" | "leadId">): OrderRef => ({
+const toLeadRef = (row: LeadName): LeadRef => ({ id: row.id, name: row.contactName, company: row.company })
+const toOrderRef = (row: StoredOrderRef): OrderRef => ({
     id: row.id,
     orderNo: row.orderNo,
     leadId: row.leadId,
@@ -90,6 +93,10 @@ export class OfficeCommandService {
         private readonly bus: CommandBusService,
         @InjectCommandReader() private readonly reader: CommandReader,
         private readonly events: EventsService,
+        private readonly messages: MessagesReadService,
+        private readonly agents: AgentDirectoryService,
+        private readonly leads: LeadReadService,
+        private readonly orders: OrdersService,
     ) {}
 
     /**
@@ -250,16 +257,8 @@ export class OfficeCommandService {
             .getRawOne<CandidateView>()
     }
 
-    private async messageOf(workspaceId: string, messageId: string): Promise<MessageText> {
-        const message = await this.entityManager
-            .createQueryBuilder()
-            .select("m.id", "id")
-            .addSelect("m.author_kind", "author_kind")
-            .addSelect("m.body", "body")
-            .from("public.messages", "m")
-            .where("m.workspace_id = :workspaceId AND m.id = :messageId", { workspaceId, messageId })
-            .limit(1)
-            .getRawOne<MessageText>()
+    private async messageOf(workspaceId: string, messageId: string): Promise<LineText> {
+        const message = await this.messages.textOf(workspaceId, messageId)
         if (message === undefined)
             throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.MessageNotFound })
         if (message.author_kind !== "human")
@@ -275,41 +274,18 @@ export class OfficeCommandService {
     }
 
     /** The one active agent the message mentions; none when it mentions no agent, several, or a handle nobody has. */
-    private async mentionedAgent(
-        workspaceId: string,
-        body: string,
-    ): Promise<Pick<AgentEntity, "id" | "handle" | "module" | "name"> | undefined> {
+    private async mentionedAgent(workspaceId: string, body: string): Promise<AgentHandleCard | undefined> {
         const handles = mentionedHandles(body)
         if (handles.length !== 1) return undefined
-        const agents = await this.entityManager.find(AgentEntity, {
-            select: { id: true, handle: true, module: true, name: true },
-            where: { workspaceId, status: "active", handle: In(handles) },
-            order: { handle: "ASC" },
-            take: HANDLE_LIMIT,
-        })
+        const agents = await this.agents.activeByHandles(workspaceId, handles, HANDLE_LIMIT)
         return agents.length === 1 ? agents[0] : undefined
     }
 
     /** Names and numbers the message could mean: matched deterministically against the workspace's recent customers and orders. */
     private async referencesIn(workspaceId: string, body: string): Promise<ReferencePool> {
         const [leadRows, orderRows] = await Promise.all([
-            this.entityManager
-                .createQueryBuilder()
-                .select("l.id", "id")
-                .addSelect("l.contact_name", "contact_name")
-                .addSelect("l.company", "company")
-                .from("public.leads", "l")
-                .where("l.workspace_id = :workspaceId", { workspaceId })
-                .orderBy("l.created_at", "DESC")
-                .addOrderBy("l.id", "DESC")
-                .limit(REF_POOL)
-                .getRawMany<LeadPoolLine>(),
-            this.entityManager.find(OrderEntity, {
-                select: { id: true, orderNo: true, leadId: true },
-                where: { workspaceId },
-                order: { createdAt: "DESC", id: "DESC" },
-                take: REF_POOL,
-            }),
+            this.leads.recentNames(workspaceId, REF_POOL),
+            this.orders.recentRefs(workspaceId, REF_POOL),
         ])
         const leads = leadRows.map(toLeadRef)
         return {

@@ -102,3 +102,11 @@ export interface NivoHit {
     /** The relevance, higher first. */
     readonly score: number
 }
+
+/** The title and text of one base-knowledge item, as an agent reads it as a rule. */
+export interface NivoRule {
+    /** The title. */
+    readonly title: string
+    /** The text. */
+    readonly body: string
+}

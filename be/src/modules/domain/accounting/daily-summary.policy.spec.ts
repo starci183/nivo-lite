@@ -339,7 +339,8 @@ describe("daily-summary.policy renewal gaps", () => {
     it("adds the story to a card that has no fields or lines yet", async () => {
         const subject = await buildRenewal()
         const card = buildDailySummary(input())
-        const bare = { ...card, hub: { ...card.hub, fields: undefined, lines: undefined } }
+        const { fields: _fields, lines: _lines, ...hub } = card.hub
+        const bare = { ...card, hub }
         const report = subject.renewalReport(subject.renewalStoryOf(undefined, "2026-10-27", "2026-11-26"))
 
         const told = subject.withRenewal(bare, report)

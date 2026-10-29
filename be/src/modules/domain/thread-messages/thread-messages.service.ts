@@ -9,6 +9,7 @@ import { eachInOrder, unwrapOutcome } from "@modules/platform/primitives"
 import { ThreadMessagesError, ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { vetMentions, vetQuotes } from "./mention.policy"
 import { MentionDirectoryService } from "./mention-directory.service"
+import { ThreadMessageAuthorsService } from "./thread-message-authors.service"
 import { ThreadMessageEntity } from "./persistence/entities"
 import { readMessageById } from "./persistence/thread-message.query"
 import { toMessage } from "./thread.mapper"
@@ -33,6 +34,7 @@ export class ThreadMessagesService {
         @InjectAgentRules() private readonly rules: AgentRules,
         private readonly members: WorkspaceMembersService,
         private readonly directory: MentionDirectoryService,
+        private readonly authors: ThreadMessageAuthorsService,
         private readonly threads: WorkThreadsService,
         private readonly chains: WorkChainsService,
     ) {}
@@ -119,7 +121,7 @@ export class ThreadMessagesService {
         if (inserted === undefined) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.NotStored })
         const row = await readMessageById(tx, line.workspaceId, inserted.id)
         if (row === undefined) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.NotStored })
-        return toMessage(row)
+        return toMessage(await this.authors.withAuthor(tx, line.workspaceId, row))
     }
 
     /** Asks the agents capability about every agent the message tags and refuses at the first one it does not allow. */

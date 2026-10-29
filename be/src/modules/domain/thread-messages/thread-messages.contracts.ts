@@ -378,7 +378,7 @@ export const MAX_QUOTE_LENGTH = 2000
 export const MAX_STEP_TITLE = 80
 
 /** One message joined with the name of its author, as the thread reads select it. */
-export interface ThreadMessageRecord {
+export interface ThreadMessageRead {
     /** The message id. */
     readonly id: string
     /** The thread. */
@@ -389,10 +389,6 @@ export interface ThreadMessageRecord {
     readonly author_kind: string
     /** The author id. */
     readonly author_id: string
-    /** The author's display name, or empty. */
-    readonly author_name: string
-    /** The member's role or the agent's module, or empty. */
-    readonly author_role: string
     /** The text. */
     readonly body: string
     /** The quoted customer words. */
@@ -403,6 +399,14 @@ export interface ThreadMessageRecord {
     readonly approval: ApprovalCard | null
     /** When it was written. */
     readonly created_at: Date
+}
+
+/** One message with the name of its author, as the thread reads present it. */
+export interface ThreadMessageRecord extends ThreadMessageRead {
+    /** The author's display name, or empty. */
+    readonly author_name: string
+    /** The member's role or the agent's module, or empty. */
+    readonly author_role: string
 }
 
 /** The newest line, the count and the pending flag of one thread. */

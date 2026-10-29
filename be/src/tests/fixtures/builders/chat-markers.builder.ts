@@ -4,14 +4,17 @@ import { AgentConversationEntity } from "@modules/domain/agent-conversations"
 import { AgentEntity } from "@modules/domain/agents"
 import { AgentMessageEntity } from "@modules/domain/agent-messages"
 import { messagesEntities } from "@modules/domain/messages"
-import { OfficeRoomEntity, officeRoomsEntities } from "@modules/domain/office-rooms"
-import { WorkspaceEntity } from "@modules/domain/workspaces"
+import { officeRoomsEntities } from "@modules/domain/office-rooms"
+import { workspacesEntities } from "@modules/domain/workspaces"
 import { chatMarkersEntities } from "@modules/domain/chat-markers"
-import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { workspaceMembersEntities } from "@modules/domain/workspace-members"
+
+const [WorkspaceEntity] = workspacesEntities
+const [WorkspaceMemberEntity] = workspaceMembersEntities
 
 const [ChatMarkerEntity] = chatMarkersEntities
 const [MessageEntity] = messagesEntities
-const [, , , OfficeRoomReadEntity] = officeRoomsEntities
+const [OfficeRoomEntity, , , OfficeRoomReadEntity] = officeRoomsEntities
 
 /** Fresh identities for one isolated receipt and preference proof. */
 export interface ChatMarkersIdentity {

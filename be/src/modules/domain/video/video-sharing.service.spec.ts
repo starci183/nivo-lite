@@ -1,7 +1,5 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { MockEntityManager } from "@starci/jest-preset"
 import { ConnectionSecretsErrorCode, ConnectionSecretsService } from "@modules/domain/connection-secrets"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
@@ -15,6 +13,7 @@ import { ok, refused } from "@modules/platform/primitives"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
 import type { StoredProject, StoredRender } from "./video-stored.contracts"
 import { VideoMediaService } from "./video-media.service"
+import { VideoWorkbenchReadsService } from "./video-workbench-reads.service"
 import { VideoSharingService } from "./video-sharing.service"
 import type { WorkbenchProject } from "./video-workbench.contracts"
 import { VideoWorkbenchService } from "./video-workbench.service"
@@ -102,15 +101,18 @@ const connectionOf = builder<ConnectionRecord>({
     createdAt: "2026-10-01T00:00:00.000Z",
 })
 
-/** A manager whose first query builder answers the workbench list with `rows`; the fake records how it was asked. */
-const emOf = (rows: ReadonlyArray<unknown>) => {
-    const em = mockEntityManager()
-    const fake = fakeQueryBuilder({ getRawMany: rows })
-    em.createQueryBuilder.mockReturnValueOnce(fake.builder)
-    return { em, fake }
+/** A reads double that answers the workbench list with `rows`. */
+const readsOf = (rows: ReadonlyArray<StoredProject>) => {
+    const reads = mock<VideoWorkbenchReadsService>()
+    reads.projectsOf.mockResolvedValue([...rows])
+    return reads
 }
 
-const build = async (em: MockEntityManager = emOf([rowOf()]).em, project: WorkbenchProject = projectOf()) => {
+const build = async (
+    reads: VideoWorkbenchReadsService = readsOf([rowOf()]),
+    project: WorkbenchProject = projectOf(),
+) => {
+    const em = mockEntityManager()
     const telegram = mock<TelegramClient>()
     telegram.sendMessage.mockResolvedValue(undefined)
     const workbench = mock<VideoWorkbenchService>()
@@ -130,6 +132,7 @@ const build = async (em: MockEntityManager = emOf([rowOf()]).em, project: Workbe
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: TELEGRAM, useValue: telegram },
             { provide: VideoWorkbenchService, useValue: workbench },
+            { provide: VideoWorkbenchReadsService, useValue: reads },
             { provide: VideoMediaService, useValue: media },
             { provide: ConnectionsService, useValue: connections },
             { provide: ConnectionSecretsService, useValue: secrets },
@@ -140,6 +143,7 @@ const build = async (em: MockEntityManager = emOf([rowOf()]).em, project: Workbe
     return {
         sharing: moduleRef.get(VideoSharingService),
         em,
+        reads,
         telegram,
         media,
         connections,
@@ -152,18 +156,12 @@ const build = async (em: MockEntityManager = emOf([rowOf()]).em, project: Workbe
 describe("VideoSharingService", () => {
     describe("share", () => {
         it("posts the download link to Office and the owner's Telegram chat and records the share", async () => {
-            const { em, fake } = emOf([rowOf()])
-            const { sharing, telegram, media, connections, messages, events } = await build(em)
+            const { sharing, em, reads, telegram, media, connections, messages, events } = await build()
 
             await expect(sharing.share("person-1", WS, "project-1")).resolves.toEqual({ office: true, telegram: true })
 
             const text = `Spring offer\n${LINK}`
-            expect(fake.callsOf("where")).toEqual([
-                [expect.stringContaining("p.workspace_id"), { workspaceId: WS, projectId: "project-1" }],
-            ])
-            expect(fake.callsOf("andWhere")).toEqual([
-                [expect.stringContaining("includeArchived"), { includeArchived: true }],
-            ])
+            expect(reads.projectsOf).toHaveBeenCalledWith(WS, "project-1", true)
             expect(media.shareLink).toHaveBeenCalledWith(WS, OUTPUT)
             expect(messages.postSystem).toHaveBeenCalledWith({ manager: em, workspaceId: WS, leadId: null, body: text })
             expect(connections.listByProvider).toHaveBeenCalledWith(WS, "telegram", { includeDisconnected: false })
@@ -217,7 +215,7 @@ describe("VideoSharingService", () => {
             ["an unfinished render", [rowOf({ render: renderOf({ status: "rendering" }) })]],
             ["a render with no video", [rowOf({ render: renderOf({ output_path: null }) })]],
         ])("refuses %s to share", async (_label, rows) => {
-            const { sharing, media, events } = await build(emOf(rows).em)
+            const { sharing, media, events } = await build(readsOf(rows))
 
             await expect(sharing.share("person-1", WS, "project-1")).rejects.toMatchObject({
                 code: VideoErrorCode.NotApproved,

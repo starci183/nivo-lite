@@ -103,6 +103,16 @@ export class AutomationPipelinesService {
         return rows.map(toRow)
     }
 
+    /** The pipelines of one template that are on, in every workspace, oldest workspace id first, bounded. */
+    async enabledOfTemplate(templateKey: string, limit: number): Promise<ReadonlyArray<PipelineRow>> {
+        const rows = await this.entityManager.find(AutomationPipelineEntity, {
+            where: { enabled: true, templateKey },
+            order: { workspaceId: "ASC" },
+            take: limit,
+        })
+        return rows.map(toRow)
+    }
+
     /** The id and template key of every pipeline of a workspace. */
     async pipelineKeys(workspaceId: string): Promise<ReadonlyArray<PipelineKey>> {
         const rows = await this.entityManager.find(AutomationPipelineEntity, {

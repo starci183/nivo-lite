@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -10,6 +11,7 @@ import { bankDedupeKey, eventDedupeKey } from "./inbound-dedupe.policy"
 import type {
     BankPaymentEvent,
     BankPaymentRecorded,
+    InboundEventDetail,
     InboundInput,
     OrderHandoff,
     OptionalEventStatus,
@@ -36,6 +38,22 @@ const insertOnce = async (manager: EntityManager, event: NewInboundEvent): Promi
         .execute()
     return (result.raw as Array<{ id: string }>)[0]?.id
 }
+
+/** A stored inbound event as the contract reads it. */
+const toDetail = (event: InboundEventEntity): InboundEventDetail => ({
+    id: event.id,
+    workspace_id: event.workspaceId,
+    channel: event.channel,
+    kind: event.kind,
+    sender_name: event.senderName,
+    sender_contact: event.senderContact,
+    body: event.body,
+    amount_vnd: event.amountVnd,
+    external_ref: event.externalRef,
+    event_id: event.eventId,
+    lead_id: event.leadId,
+    status: event.status,
+})
 
 @Injectable()
 /** The inbound events: the only writer of public.inbound_events. A credit is one event per workspace and provider transaction id. */
@@ -92,21 +110,16 @@ export class InboundEventsService {
         manager: EntityManager = this.entityManager,
     ): Promise<OptionalInboundEvent> {
         const event = await manager.findOne(InboundEventEntity, { where: { workspaceId, id: eventId } })
-        if (event === null) return null
-        return {
-            id: event.id,
-            workspace_id: event.workspaceId,
-            channel: event.channel,
-            kind: event.kind,
-            sender_name: event.senderName,
-            sender_contact: event.senderContact,
-            body: event.body,
-            amount_vnd: event.amountVnd,
-            external_ref: event.externalRef,
-            event_id: event.eventId,
-            lead_id: event.leadId,
-            status: event.status,
-        }
+        return event === null ? null : toDetail(event)
+    }
+
+    /** The given inbound events of the workspace (a missing event is missing from the answer). */
+    async findMany(workspaceId: string, eventIds: ReadonlyArray<string>): Promise<Array<InboundEventDetail>> {
+        if (eventIds.length === 0) return []
+        const events = await this.entityManager.find(InboundEventEntity, {
+            where: { workspaceId, id: In([...new Set(eventIds)]) },
+        })
+        return events.map(toDetail)
     }
 
     /** Sets where an event stands (null keeps it) and links the customer the engine found (null keeps it). */

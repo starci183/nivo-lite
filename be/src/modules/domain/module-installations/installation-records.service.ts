@@ -1,11 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import { Not, IsNull } from "typeorm"
-import type { EntityManager, SelectQueryBuilder, UpdateResult } from "typeorm"
+import type { EntityManager, UpdateResult } from "typeorm"
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
-import { ModuleContextVersionEntity } from "@modules/domain/module-context-versions"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
-    AgentSyncStatus,
     InstallationMode,
     InstallationRecord,
     InstallationSettings,
@@ -13,35 +11,19 @@ import type {
     InstanceName,
     NewInstallation,
     OpenclawInstallation,
-    RecordInstallation,
-    OptionalAgentSyncStatus,
     OptionalRowId,
     OptionalInstallationRecord,
     OptionalInstallationStatus,
-    RequirementFacts,
 } from "./module-installations.contracts"
 import { ModuleInstallationEntity } from "./persistence/entities"
 
 const UNIQUE_VIOLATION = "23505"
-const RECORD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-/** Tables that hold records naming an installation: the owner of a record id is found in one of them. */
-const RECORD_TABLES: ReadonlyArray<string> = [
-    "public.work_items",
-    "public.agent_conversations",
-    "public.bookings",
-    "public.lead_flows",
-    "public.leads",
-]
 
 /** How many installations of a workspace are listed at once. */
 const INSTALLATIONS_LIMIT = 200
 
 /** How many instance labels, bound agents or workspaces are read at once. */
 const SMALL_LIST_LIMIT = 1000
-
-/** How many connected providers are read at once. */
-const PROVIDERS_LIMIT = 200
 
 const isUniqueViolation = (cause: unknown): boolean =>
     typeof cause === "object" && cause !== null && "code" in cause && cause.code === UNIQUE_VIOLATION
@@ -52,30 +34,23 @@ const liveStatusOf = (live: boolean, waitingForConnection: boolean): Installatio
     return waitingForConnection ? "needs_connection" : "live"
 }
 
-/** The installation with its agent and its active version as the read query selects them. */
-interface InstallationProjection extends Omit<InstallationRecord, "createdAt"> {
-    /** When it was installed. */
-    readonly createdAt: Date
-}
-
-/** The OpenClaw copy of an installation as the status query selects it. */
-interface SyncProjection {
-    /** The stored sync status text; null when the installation has no copy yet. */
-    readonly state: string | null
-    /** The context version OpenClaw holds. */
-    readonly syncedVersion: number | null
-    /** The context version that is active in the database. */
-    readonly activeVersion: number | null
-    /** When the copy was last checked. */
-    readonly checkedAt: Date | null
-    /** The last failure. */
-    readonly error: string | null
-}
-
-const toRecord = (row: InstallationProjection): InstallationRecord => ({
-    ...row,
+const toRecord = (row: ModuleInstallationEntity): InstallationRecord => ({
+    id: row.id,
+    workspaceId: row.workspaceId,
+    moduleKey: row.moduleKey,
+    name: row.name,
+    isMulti: row.isMulti,
+    agentId: row.agentId,
+    status: row.status,
+    operatingMode: row.operatingMode,
+    liveEnabled: row.liveEnabled,
+    activeContextVersionId: row.activeContextVersionId,
+    settings: row.settings,
     createdAt: row.createdAt.toISOString(),
 })
+
+/** The installations in the order every list reads them: oldest first, ties by id. */
+const OLDEST_FIRST = { createdAt: "ASC", id: "ASC" } as const
 
 /** What a write on an installation did: it changed the row, found no such row, or hit a unique index. */
 export type InstallationWrite = "done" | "missing" | "taken"
@@ -87,66 +62,35 @@ export class InstallationRecordsService {
 
     /** Every installation of a workspace, oldest first. */
     async list(workspaceId: string): Promise<ReadonlyArray<InstallationRecord>> {
-        const rows = await this.projection()
-            .where("i.workspaceId = :workspaceId AND i.status <> 'removed'", { workspaceId })
-            .orderBy("i.createdAt", "ASC")
-            .addOrderBy("i.id", "ASC")
-            .limit(INSTALLATIONS_LIMIT)
-            .getRawMany<InstallationProjection>()
+        const rows = await this.entityManager.find(ModuleInstallationEntity, {
+            where: { workspaceId, status: Not("removed") },
+            order: OLDEST_FIRST,
+            take: INSTALLATIONS_LIMIT,
+        })
         return rows.map(toRecord)
-    }
-
-    /**
-     * The installation that owns a work item, conversation, booking, lead flow or lead of the workspace.
-     * Null when the id is not one of those rows, or the row names no installation.
-     */
-    async installationOfRecord(workspaceId: string, recordId: string): Promise<RecordInstallation> {
-        if (!RECORD_ID.test(recordId)) return { installationId: null }
-        const found = await Promise.all(
-            RECORD_TABLES.map((table) =>
-                this.entityManager
-                    .createQueryBuilder()
-                    .select("t.installation_id", "installationId")
-                    .from(table, "t")
-                    .where("t.workspace_id = :workspaceId AND t.id = :recordId", { workspaceId, recordId })
-                    .andWhere("t.installation_id IS NOT NULL")
-                    .limit(1)
-                    .getRawOne<RecordInstallation>(),
-            ),
-        )
-        return { installationId: found.find((row) => row !== undefined)?.installationId ?? null }
     }
 
     /** One installation of a workspace by id; null when there is none. */
     async find(workspaceId: string, installationId: string): Promise<OptionalInstallationRecord> {
-        const row = await this.projection()
-            .where("i.workspaceId = :workspaceId AND i.id = :installationId", { workspaceId, installationId })
-            .limit(1)
-            .getRawOne<InstallationProjection>()
-        return row === undefined ? null : toRecord(row)
+        const row = await this.entityManager.findOne(ModuleInstallationEntity, {
+            where: { workspaceId, id: installationId },
+        })
+        return row === null ? null : toRecord(row)
     }
 
     /** One installation by id, whatever its workspace; null when there is none. */
     async findById(installationId: string): Promise<OptionalInstallationRecord> {
-        const row = await this.projection()
-            .where("i.id = :installationId", { installationId })
-            .limit(1)
-            .getRawOne<InstallationProjection>()
-        return row === undefined ? null : toRecord(row)
+        const row = await this.entityManager.findOne(ModuleInstallationEntity, { where: { id: installationId } })
+        return row === null ? null : toRecord(row)
     }
 
     /** The oldest installation of a module in a workspace; null when the module is not installed. */
     async firstOfModule(workspaceId: string, moduleKey: string): Promise<OptionalInstallationRecord> {
-        const row = await this.projection()
-            .where("i.workspaceId = :workspaceId AND i.moduleKey = :moduleKey AND i.status <> 'removed'", {
-                workspaceId,
-                moduleKey,
-            })
-            .orderBy("i.createdAt", "ASC")
-            .addOrderBy("i.id", "ASC")
-            .limit(1)
-            .getRawOne<InstallationProjection>()
-        return row === undefined ? null : toRecord(row)
+        const row = await this.entityManager.findOne(ModuleInstallationEntity, {
+            where: { workspaceId, moduleKey, status: Not("removed") },
+            order: OLDEST_FIRST,
+        })
+        return row === null ? null : toRecord(row)
     }
 
     /** The workspaces where a module is installed, whatever their state. */
@@ -164,11 +108,8 @@ export class InstallationRecordsService {
 
     /** The installation that owns an agent; null when the agent drives none. */
     async ofAgent(workspaceId: string, agentId: string): Promise<OptionalInstallationRecord> {
-        const row = await this.projection()
-            .where("i.workspaceId = :workspaceId AND i.agentId = :agentId", { workspaceId, agentId })
-            .limit(1)
-            .getRawOne<InstallationProjection>()
-        return row === undefined ? null : toRecord(row)
+        const row = await this.entityManager.findOne(ModuleInstallationEntity, { where: { workspaceId, agentId } })
+        return row === null ? null : toRecord(row)
     }
 
     /** The labels of the instances of a type, except one when `exceptId` names it. */
@@ -335,71 +276,6 @@ export class InstallationRecordsService {
         return row?.status ?? null
     }
 
-    /** Where the OpenClaw copy of the agent of an installation stands; null when the installation is not of the workspace. */
-    async syncStatus(workspaceId: string, installationId: string): Promise<OptionalAgentSyncStatus> {
-        const row = await this.entityManager
-            .createQueryBuilder(ModuleInstallationEntity, "i")
-            .leftJoin(ModuleContextVersionEntity, "v", "v.id = i.activeContextVersionId")
-            .leftJoin("openclaw_agent_sync", "s", "s.installation_id = i.id")
-            .select("s.status", "state")
-            .addSelect("s.context_version", "syncedVersion")
-            .addSelect("v.version", "activeVersion")
-            .addSelect("s.checked_at", "checkedAt")
-            .addSelect("s.error", "error")
-            .where("i.workspaceId = :workspaceId AND i.id = :installationId", { workspaceId, installationId })
-            .limit(1)
-            .getRawOne<SyncProjection>()
-        if (row === undefined) return null
-        const status: AgentSyncStatus = {
-            state: row.state === "ok" || row.state === "error" ? row.state : "none",
-            syncedVersion: row.syncedVersion,
-            activeVersion: row.activeVersion,
-            checkedAt: row.checkedAt === null ? null : row.checkedAt.toISOString(),
-            error: row.error,
-        }
-        return status
-    }
-
-    /** What the workspace has for the requirements of a module: connected providers and head counts. */
-    async requirementFacts(workspaceId: string): Promise<RequirementFacts> {
-        const [providers, chatAgents, staff, members] = await Promise.all([
-            this.entityManager
-                .createQueryBuilder()
-                .select("c.provider", "provider")
-                .distinct(true)
-                .from("public.connections", "c")
-                .where("c.workspace_id = :workspaceId AND c.status <> 'disconnected'", { workspaceId })
-                .limit(PROVIDERS_LIMIT)
-                .getRawMany<{ provider: string }>(),
-            this.entityManager
-                .createQueryBuilder()
-                .select("count(*)::int", "total")
-                .from("public.agents", "a")
-                .where("a.workspace_id = :workspaceId AND a.module IN ('chatbot', 'booking') AND a.status = 'active'", {
-                    workspaceId,
-                })
-                .getRawOne<{ total: number }>(),
-            this.entityManager
-                .createQueryBuilder()
-                .select("count(*)::int", "total")
-                .from("public.staff", "s")
-                .where("s.workspace_id = :workspaceId AND s.active", { workspaceId })
-                .getRawOne<{ total: number }>(),
-            this.entityManager
-                .createQueryBuilder()
-                .select("count(*)::int", "total")
-                .from("public.workspace_members", "m")
-                .where("m.workspace_id = :workspaceId AND m.status = 'active'", { workspaceId })
-                .getRawOne<{ total: number }>(),
-        ])
-        return {
-            providers: providers.map((row) => row.provider),
-            chatAgents: chatAgents?.total ?? 0,
-            staff: staff?.total ?? 0,
-            members: members?.total ?? 0,
-        }
-    }
-
     /** Up to `limit` installations that run on OpenClaw, of one workspace or of all when `workspaceId` is null. */
     onOpenclaw(workspaceId: OptionalRowId, limit: number): Promise<ReadonlyArray<OpenclawInstallation>> {
         const query = this.entityManager
@@ -414,30 +290,6 @@ export class InstallationRecordsService {
             .addOrderBy("i.id", "ASC")
             .limit(limit)
             .getRawMany<OpenclawInstallation>()
-    }
-
-    /** The installation with its agent and its active context version, ready for a where clause. */
-    private projection(): SelectQueryBuilder<ModuleInstallationEntity> {
-        return this.entityManager
-            .createQueryBuilder(ModuleInstallationEntity, "i")
-            .leftJoin("agents", "a", "a.id = i.agentId")
-            .leftJoin(ModuleContextVersionEntity, "v", "v.id = i.activeContextVersionId")
-            .select("i.id", "id")
-            .addSelect("i.workspaceId", "workspaceId")
-            .addSelect("i.moduleKey", "moduleKey")
-            .addSelect("i.name", "name")
-            .addSelect("i.isMulti", "isMulti")
-            .addSelect("i.agentId", "agentId")
-            .addSelect("COALESCE(a.name, '')", "agentName")
-            .addSelect("COALESCE(a.handle, i.module_key)", "agentHandle")
-            .addSelect("a.avatar_url", "agentAvatarUrl")
-            .addSelect("i.status", "status")
-            .addSelect("i.operatingMode", "operatingMode")
-            .addSelect("i.liveEnabled", "liveEnabled")
-            .addSelect("i.activeContextVersionId", "activeContextVersionId")
-            .addSelect("v.version", "activeVersion")
-            .addSelect("i.settings", "settings")
-            .addSelect("i.createdAt", "createdAt")
     }
 
     private async write(run: () => Promise<UpdateResult>): Promise<InstallationWrite> {

@@ -2,6 +2,10 @@ export { INVOICES_ERROR_KINDS } from "./errors/invoices.error"
 export { INVOICES_MESSAGES } from "./messages/invoices.messages"
 export { InvoicesModule } from "./invoices.module"
 export { InvoicesService } from "./invoices.service"
+export { InvoicesLedgerService } from "./invoices-ledger.service"
+export { InvoicesFiguresService } from "./invoices-figures.service"
+export type { InvoiceFigure } from "./invoices-figures.contracts"
+export type { InvoiceTally, LedgerInvoice, OverdueInvoice, ReceiptInvoice } from "./invoices-ledger.contracts"
 export type {
     InvoiceAccountingRecord,
     InvoiceRecord,

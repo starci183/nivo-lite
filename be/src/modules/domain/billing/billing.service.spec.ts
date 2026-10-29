@@ -81,7 +81,7 @@ interface World {
     /** The usage tiers of every plan. */
     readonly tiers?: ReadonlyArray<PlanUsageTierEntity>
     /** What the workspace already paid for plan months. */
-    readonly promo?: { readonly full_price: number; readonly promo: number }
+    readonly promo?: { readonly full_price: number; readonly promo: number } | undefined
 }
 
 const NO_PROMO = { full_price: 0, promo: 0 }

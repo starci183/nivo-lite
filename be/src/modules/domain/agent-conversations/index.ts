@@ -1,3 +1,6 @@
+// Read services lead the barrel: other capabilities import this barrel while it loads (import cycles), they must already be defined.
+export { AgentConversationsReadService } from "./agent-conversations-read.service"
+export type { CustomerChatRef, TestChatRef } from "./agent-conversations-read.contracts"
 export { AgentConversationsModule } from "./agent-conversations.module"
 export { AgentConversationReadService } from "./agent-conversation-reads.service"
 export { AgentConversationsService } from "./agent-conversations.service"

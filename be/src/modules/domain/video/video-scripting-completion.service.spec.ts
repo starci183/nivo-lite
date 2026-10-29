@@ -1,6 +1,5 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { AiGenerationsError, GenerationsService } from "@modules/domain/ai-generations"
 import type { GenerationState } from "@modules/domain/ai-generations"
 import { EventsService } from "@modules/domain/events"
@@ -13,6 +12,7 @@ import type { Inbox } from "@modules/platform/inbox"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
 import type { ScriptProject } from "./video-stored.contracts"
+import { VideoScriptReadsService } from "./video-script-reads.service"
 import { VideoScriptingCompletionService } from "./video-scripting-completion.service"
 import { VIDEO_SCRIPT_RETRY } from "./video-scripting.templates"
 
@@ -73,9 +73,9 @@ const CLAIM = { consumer: "ai_generation_completed__video", dedupeKey: "generati
 
 const build = async (state: GenerationState | null, project: ScriptProject | null = projectOf(), claimWon = true) => {
     const inbox = mock<Inbox>({ claim: jest.fn().mockResolvedValue(claimWon) })
-    const em = mockEntityManager()
-    queueQueryBuilders(em, [{ getRawOne: project ?? undefined }])
-    const tx = fakeTransaction(em)
+    const tx = fakeTransaction(mockEntityManager())
+    const reads = mock<VideoScriptReadsService>()
+    reads.projectOf.mockResolvedValue(project ?? undefined)
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, params) => `${key}:${JSON.stringify(params)}`)
     const generations = mock<GenerationsService>()
@@ -93,9 +93,18 @@ const build = async (state: GenerationState | null, project: ScriptProject | nul
             { provide: GenerationsService, useValue: generations },
             { provide: EventsService, useValue: events },
             { provide: VideoProjectScriptingService, useValue: projectWriter },
+            { provide: VideoScriptReadsService, useValue: reads },
         ],
     }).compile()
-    return { completion: moduleRef.get(VideoScriptingCompletionService), inbox, tx, generations, events, projectWriter }
+    return {
+        completion: moduleRef.get(VideoScriptingCompletionService),
+        inbox,
+        tx,
+        generations,
+        events,
+        projectWriter,
+        reads,
+    }
 }
 
 describe("VideoScriptingCompletionService", () => {

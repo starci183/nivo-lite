@@ -4,6 +4,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./sepay-transactions.module-definition"
 import { SepayReviewService } from "./sepay-review.service"
 import { SepayTransactionsService } from "./sepay-transactions.service"
+import { SepayTransactionsAdminReadService } from "./sepay-transactions-admin-read.service"
 
 @Module({})
 /** The sepay-transactions capability over the primary Supabase connection. */
@@ -15,11 +16,12 @@ export class SepayTransactionsModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
+                SepayTransactionsAdminReadService,
                 { provide: INBOX, useClass: InboxService },
                 SepayTransactionsService,
                 SepayReviewService,
             ],
-            exports: [SepayTransactionsService, SepayReviewService],
+            exports: [SepayTransactionsAdminReadService, SepayTransactionsService, SepayReviewService],
         }
     }
 }

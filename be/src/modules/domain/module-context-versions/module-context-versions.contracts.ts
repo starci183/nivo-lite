@@ -70,3 +70,11 @@ export interface NewContextVersion {
     /** Who applied it. */
     readonly appliedBy: string
 }
+
+/** The number a version row carries. */
+export interface VersionNumber {
+    /** The version row. */
+    readonly id: string
+    /** The number of the version, from 1. */
+    readonly version: number
+}

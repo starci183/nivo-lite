@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { IsNull, Not } from "typeorm"
 import type { EntityManager, FindOptionsWhere } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { LeadFlowsError, LeadFlowsErrorCode } from "./errors/lead-flows.error"
@@ -34,6 +35,15 @@ export class LeadFlowStoreService {
         const flow = await this.byLead(workspaceId, leadId)
         if (flow === null) throw new LeadFlowsError({ code: LeadFlowsErrorCode.NoFlow })
         return flow
+    }
+
+    /** The installation that owns a flow of the workspace; null when there is no such flow or it names none. */
+    async installationIdOf(workspaceId: string, flowId: string): Promise<string | null> {
+        const flow = await this.entityManager.findOne(LeadFlowEntity, {
+            select: { installationId: true },
+            where: { workspaceId, id: flowId, installationId: Not(IsNull()) },
+        })
+        return flow?.installationId ?? null
     }
 
     /** The flows any key of the identity matches; `matchFlow` picks the strongest. */

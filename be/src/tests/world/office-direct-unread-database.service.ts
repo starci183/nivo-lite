@@ -6,8 +6,11 @@ import { AgentEntity } from "@modules/domain/agents"
 import { leadsEntities } from "@modules/domain/leads"
 import { messagesEntities } from "@modules/domain/messages"
 import { officeRoomsEntities } from "@modules/domain/office-rooms"
-import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
-import { WorkspaceEntity } from "@modules/domain/workspaces"
+import { workspaceMembersEntities } from "@modules/domain/workspace-members"
+import { workspacesEntities } from "@modules/domain/workspaces"
+
+const [WorkspaceEntity] = workspacesEntities
+const [WorkspaceMemberEntity] = workspaceMembersEntities
 
 const [LeadEntity] = leadsEntities
 const [MessageEntity] = messagesEntities

@@ -1,8 +1,9 @@
 import { Test } from "@nestjs/testing"
-import { builder, FakeClock, mockEntityManager } from "@starci/jest-preset"
+import { builder, FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In, IsNull, Like, Not } from "typeorm"
 import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
+import { LeadReadService } from "@modules/domain/leads"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { normalizePage } from "@modules/platform/pagination"
@@ -69,15 +70,22 @@ const writtenOf = (row: SalesOrderRow) => ({
     shipped_at: dateOf(row.shipped_at),
 })
 
-const build = async (entityManager: MockEntityManager) => {
+const MINH = { id: "lead-1", contactName: "Minh", company: "Tea Co", channel: "web", stage: "new", email: null }
+
+const build = async (
+    entityManager: MockEntityManager,
+    cards: ReadonlyArray<typeof MINH> = [MINH],
+    leads = mock<LeadReadService>({ cardsOf: jest.fn(() => Promise.resolve([...cards])) }),
+) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             OrdersService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
+            { provide: LeadReadService, useValue: leads },
         ],
     }).compile()
-    return moduleRef.get(OrdersService)
+    return Object.assign(moduleRef.get(OrdersService), { doubles: { leads } })
 }
 
 const registerListPage = () => {
@@ -174,22 +182,47 @@ const registerReads = () => {
         })
     })
 
+    describe("exists", () => {
+        it("asks whether the workspace has the order", async () => {
+            const em = mockEntityManager({ exists: [OrderEntity, true] })
+
+            await expect((await build(em)).exists("ws-1", "order-1")).resolves.toBe(true)
+            expect(em.exists).toHaveBeenCalledWith(OrderEntity, { where: { workspaceId: "ws-1", id: "order-1" } })
+        })
+    })
+
     describe("list", () => {
-        it("caps a large page at 500 orders", async () => {
-            const row: SalesOrderListRow = { ...orderOf(), contact_name: "Minh", company: null }
-            const em = mockEntityManager()
+        it("caps a large page at 500 orders and names the customers from the leads owner", async () => {
+            const row: SalesOrderListRow = { ...orderOf(), contact_name: "Minh", company: "Tea Co" }
+            const em = mockEntityManager({ find: [OrderEntity, [entityOf(orderOf())]] })
             const orders = await build(em)
-            const entities = [entityOf(orderOf())]
-            const withLabels = fakeQueryBuilder({
-                getRawAndEntities: { entities, raw: [{ contactName: "Minh", company: null }] },
-            })
-            answerQueryBuilders(em, withLabels)
 
             await expect(orders.list("ws-1", 9999)).resolves.toEqual([row])
-            expect(withLabels.argsOf("limit")).toEqual([[500]])
-            expect(withLabels.argsOf("leftJoin")).toEqual([
-                ["leads", "l", "l.id = o.leadId AND l.workspace_id = o.workspaceId"],
+            expect(em.find).toHaveBeenCalledWith(OrderEntity, {
+                where: { workspaceId: "ws-1" },
+                order: { createdAt: "DESC" },
+                take: 500,
+            })
+            expect(orders.doubles.leads.cardsOf).toHaveBeenCalledWith("ws-1", ["lead-1"])
+        })
+
+        it("leaves the customer unnamed for an order without one or whose lead is gone", async () => {
+            const em = mockEntityManager({
+                find: [
+                    OrderEntity,
+                    [
+                        entityOf(orderOf({ id: "o-1", lead_id: null })),
+                        entityOf(orderOf({ id: "o-2", lead_id: "gone" })),
+                    ],
+                ],
+            })
+            const orders = await build(em, [])
+
+            await expect(orders.list("ws-1")).resolves.toEqual([
+                expect.objectContaining({ id: "o-1", contact_name: null, company: null }),
+                expect.objectContaining({ id: "o-2", contact_name: null, company: null }),
             ])
+            expect(orders.doubles.leads.cardsOf).toHaveBeenCalledWith("ws-1", ["gone"])
         })
 
         it("lists an order with no amount and no customer labels as nulls", async () => {
@@ -203,17 +236,30 @@ const registerReads = () => {
         })
 
         it("reads at least one order and 200 by default", async () => {
-            const em = mockEntityManager()
-            const small = fakeQueryBuilder({ getRawAndEntities: { entities: [], raw: [] } })
-            const usual = fakeQueryBuilder({ getRawAndEntities: { entities: [], raw: [] } })
-            answerQueryBuilders(em, small, usual)
+            const em = mockEntityManager({ find: [OrderEntity, []] })
             const orders = await build(em)
 
             await orders.list("ws-1", 0)
             await orders.list("ws-1")
 
-            expect(small.argsOf("limit")).toEqual([[1]])
-            expect(usual.argsOf("limit")).toEqual([[200]])
+            expect(em.find).toHaveBeenNthCalledWith(1, OrderEntity, expect.objectContaining({ take: 1 }))
+            expect(em.find).toHaveBeenNthCalledWith(2, OrderEntity, expect.objectContaining({ take: 200 }))
+        })
+    })
+
+    describe("recentRefs", () => {
+        it("reads the newest orders of any status as number and customer, bounded", async () => {
+            const em = mockEntityManager({ find: [OrderEntity, [entityOf(orderOf())]] })
+
+            await expect((await build(em)).recentRefs("ws-1", 300)).resolves.toEqual([
+                { id: "order-1", orderNo: "DH-20261013-0001", leadId: "lead-1" },
+            ])
+            expect(em.find).toHaveBeenCalledWith(OrderEntity, {
+                select: { id: true, orderNo: true, leadId: true },
+                where: { workspaceId: "ws-1" },
+                order: { createdAt: "DESC", id: "DESC" },
+                take: 300,
+            })
         })
     })
 }

@@ -5,6 +5,8 @@ import { VideoDelegationsModule } from "@modules/domain/video-delegations"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { VideoRenderModule } from "@modules/queues/video-render"
 import { VideoMediaService } from "./video-media.service"
+import { VideoScriptReadsService } from "./video-script-reads.service"
+import { VideoWorkbenchReadsService } from "./video-workbench-reads.service"
 import { VideoWorkbenchService } from "./video-workbench.service"
 import { VideoProjectEditorService } from "./video-project-editor.service"
 import { VideoApprovalService } from "./video-approval.service"
@@ -47,6 +49,8 @@ export class VideoModule extends ConfigurableModuleClass {
                 VideoRenderService,
                 VideoMediaService,
                 VideoWorkbenchService,
+                VideoWorkbenchReadsService,
+                VideoScriptReadsService,
                 VideoProjectEditorService,
                 VideoApprovalService,
                 VideoApprovalPerformerService,

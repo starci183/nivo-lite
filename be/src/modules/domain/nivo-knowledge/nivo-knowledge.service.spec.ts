@@ -1,6 +1,5 @@
 import { Test } from "@nestjs/testing"
 import { In } from "typeorm"
-import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { builder, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -21,28 +20,6 @@ const rowOf = builder<NivoKnowledgeItemEntity>({
     updatedAt: new Date("2026-04-01T00:00:00.000Z"),
     embeddingModel: null,
 })
-
-/** The voice row, revised once and stamped in shop time. */
-const revisedRowOf = builder<NivoKnowledgeItemEntity>({
-    ...rowOf(),
-    updatedAt: new Date("2026-04-01T10:30:00+07:00"),
-    version: 2,
-})
-
-/** The care playbook of the chatbot module. */
-const careRowOf = builder<NivoKnowledgeItemEntity>({
-    ...rowOf(),
-    id: "n2",
-    module: "chatbot",
-    slug: "care",
-    title: "Care",
-    body: "Answer fast.",
-    kind: "playbook",
-    updatedAt: new Date("2026-04-02T01:02:03.456Z"),
-})
-
-/** A row whose body is far past the text the embedder takes. */
-const longRowOf = builder<NivoKnowledgeItemEntity>({ ...rowOf(), title: "T", body: "x".repeat(9000) })
 
 const item = (slug: string): NivoItemInput => ({
     module: "core",
@@ -98,7 +75,7 @@ describe("NivoKnowledgeService", () => {
             await expect(service.countFor(["chatbot", "core"])).resolves.toBe(4)
 
             expect(em.count).toHaveBeenCalledWith(NivoKnowledgeItemEntity, {
-                where: { module: In(["chatbot", "core"]) },
+                where: { module: expect.objectContaining({ _value: ["chatbot", "core"] }) },
             })
         })
 
@@ -121,9 +98,26 @@ describe("NivoKnowledgeService", () => {
             await expect(service.countForModule(module)).resolves.toBe(7)
 
             expect(em.count).toHaveBeenCalledWith(NivoKnowledgeItemEntity, {
-                where: { module: In(folders) },
+                where: { module: expect.objectContaining({ _value: folders }) },
             })
             expect(em.count).toHaveBeenCalledTimes(1)
+        })
+    })
+})
+
+describe("NivoKnowledgeService rulesOf", () => {
+    it("reads the title and text of the items of the modules and kinds, bounded", async () => {
+        const em = mockEntityManager({ find: [NivoKnowledgeItemEntity, [rowOf()]] })
+
+        await expect((await build(em)).rulesOf(["video", "core"], ["tone"], 20)).resolves.toEqual([
+            { title: "Voice", body: "Warm." },
+        ])
+
+        expect(em.find).toHaveBeenCalledWith(NivoKnowledgeItemEntity, {
+            select: { title: true, body: true },
+            where: { module: In(["video", "core"]), kind: In(["tone"]) },
+            order: { module: "DESC", slug: "ASC" },
+            take: 20,
         })
     })
 })
@@ -131,7 +125,21 @@ describe("NivoKnowledgeService", () => {
 describe("NivoKnowledgeService list", () => {
     it("maps every stored field and serializes timestamps as UTC ISO strings", async () => {
         const em = mockEntityManager({
-            find: [NivoKnowledgeItemEntity, [revisedRowOf(), careRowOf()]],
+            find: [
+                NivoKnowledgeItemEntity,
+                [
+                    rowOf({ updatedAt: new Date("2026-04-01T10:30:00+07:00"), version: 2 }),
+                    rowOf({
+                        id: "n2",
+                        module: "chatbot",
+                        slug: "care",
+                        title: "Care",
+                        body: "Answer fast.",
+                        kind: "playbook",
+                        updatedAt: new Date("2026-04-02T01:02:03.456Z"),
+                    }),
+                ],
+            ],
         })
         const service = await build(em)
 
@@ -191,7 +199,9 @@ describe("NivoKnowledgeService", () => {
     describe("unembedded", () => {
         it("names the items that need a vector with the text to embed, cut at the limit", async () => {
             const em = mockEntityManager()
-            const read = queueQueryBuilders(em, [{ getMany: [longRowOf()] }])[0]
+            const read = queueQueryBuilders(em, [
+                { getMany: [rowOf({ id: "n1", title: "T", body: "x".repeat(9000) })] },
+            ])[0]
             const service = await build(em)
 
             const found = await service.unembedded("m1", 32)
@@ -213,16 +223,9 @@ describe("NivoKnowledgeService", () => {
             expect(em.createQueryBuilder).toHaveBeenCalledWith(NivoKnowledgeItemEntity, "n")
 
             expect(write?.callsOf("update")).toEqual([[]])
-            expect(write?.callsOf("set").map((args) => args.map((values) => evaluatedValues(values)))).toEqual([
-                [
-                    {
-                        embedding:
-                            '(SELECT t.embedding::extensions.vector FROM unnest(CAST(:ids AS uuid[]), CAST(:vectors AS text[])) AS t(id, embedding) WHERE t.id = "nivo_knowledge"."id")',
-                        embeddingModel: "m1",
-                    },
-                ],
-            ])
             expect(write?.callsOf("setParameters")).toEqual([[{ ids: ["n1"], vectors: ["[1]"] }]])
+            const set = write?.callsOf("set")[0]?.[0] as { embedding: () => string } | undefined
+            expect(set?.embedding()).toContain("unnest(CAST(:ids AS uuid[])")
         })
     })
 })

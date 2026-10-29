@@ -6,6 +6,7 @@ import { eachInOrder } from "@modules/platform/primitives"
 import type {
     NivoEntry,
     NivoItemInput,
+    NivoRule,
     NivoUnembedded,
     NivoVectorWrite,
     NivoWriteResult,
@@ -82,6 +83,21 @@ export class NivoKnowledgeService {
     /** How many base-knowledge items belong to the named modules. */
     async countFor(modules: ReadonlyArray<string>): Promise<number> {
         return this.entityManager.count(NivoKnowledgeItemEntity, { where: { module: In([...modules]) } })
+    }
+
+    /** The title and text of the items of the named modules and kinds, the later module name first, then by slug, at most `limit`. */
+    async rulesOf(
+        modules: ReadonlyArray<string>,
+        kinds: ReadonlyArray<string>,
+        limit: number,
+    ): Promise<ReadonlyArray<NivoRule>> {
+        const rows = await this.entityManager.find(NivoKnowledgeItemEntity, {
+            select: { title: true, body: true },
+            where: { module: In([...modules]), kind: In([...kinds]) },
+            order: { module: "DESC", slug: "ASC" },
+            take: limit,
+        })
+        return rows.map((row) => ({ title: row.title, body: row.body }))
     }
 
     /** Every item of the base knowledge, for the Knowledge page; any signed-in person may read it. */

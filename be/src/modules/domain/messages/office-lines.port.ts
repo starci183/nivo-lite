@@ -11,4 +11,7 @@ export interface AgentDirectory {
         department: string,
         installationId: OptionalInstallationId,
     ): Promise<OptionalAgentIdentity>
+
+    /** The agent of the workspace with this id, active or paused; null when the workspace has none. */
+    agentById(workspaceId: string, agentId: string): Promise<OptionalAgentIdentity>
 }
