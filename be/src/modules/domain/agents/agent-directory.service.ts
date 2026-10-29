@@ -4,6 +4,7 @@ import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     AgentCard,
+    AgentCreation,
     AgentHandleCard,
     AgentIdentityCard,
     AgentSeat,
@@ -84,6 +85,37 @@ export class AgentDirectoryService {
         })
         const byId = new Map(agents.map((agent) => [agent.id, toCard(agent)]))
         return agentIds.flatMap((id) => byId.get(id) ?? []).slice(0, limit)
+    }
+
+    /** The active agents among the given ids with the moment each was created, oldest first, at most `limit`. */
+    async activeCreatedAmong(
+        workspaceId: string,
+        agentIds: ReadonlyArray<string>,
+        limit: number,
+    ): Promise<Array<AgentCreation>> {
+        if (agentIds.length === 0) return []
+        const agents = await this.entityManager.find(AgentEntity, {
+            select: { id: true, module: true, name: true, createdAt: true },
+            where: { workspaceId, status: "active", id: In([...new Set(agentIds)]) },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: limit,
+        })
+        return agents.map((agent) => ({
+            id: agent.id,
+            module: agent.module,
+            name: agent.name,
+            createdAt: agent.createdAt,
+        }))
+    }
+
+    /** Whether the workspace holds the agent; the row is read with a shared lock so it stays until the transaction ends. */
+    async holds(workspaceId: string, agentId: string, manager: EntityManager): Promise<boolean> {
+        const agent = await manager.findOne(AgentEntity, {
+            select: { id: true },
+            where: { id: agentId, workspaceId },
+            lock: { mode: "pessimistic_read" },
+        })
+        return agent !== null
     }
 
     /** One agent of the workspace by id, active or paused; null when there is none. */

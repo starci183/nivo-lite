@@ -1,9 +1,8 @@
 import * as facts from "@tests/fixtures/builders/brain-facts.builder"
 
 import { Test } from "@nestjs/testing"
-import { FakeClock, mockEntityManager } from "@starci/jest-preset"
+import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder.builder"
@@ -18,7 +17,6 @@ const build = async (em: MockEntityManager) => {
             BrainFactsMaintenanceService,
             BrainFactsReadService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
-            { provide: CLOCK, useValue: new FakeClock(facts.AT) },
         ],
     }).compile()
     return moduleRef.get(BrainFactsMaintenanceService)

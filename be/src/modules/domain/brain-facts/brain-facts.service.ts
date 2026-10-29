@@ -22,7 +22,7 @@ import type {
     MaybeFact,
     ProposeResult,
 } from "./brain-facts.contracts"
-import { RETURNED, keyOf, returnedFacts } from "./fact-columns.policy"
+import { RETURNED, factKeyOf, returnedFacts } from "./fact-columns.policy"
 import type { FactChanges, NewFact } from "./fact-columns.policy"
 import { SUPERSEDE, activateChanges, decisionOf, scheduleChanges } from "./fact-write.policy"
 import { BrainFactEntity } from "./persistence/entities"
@@ -108,7 +108,7 @@ export class BrainFactsService {
                 await em.update(
                     BrainFactEntity,
                     {
-                        ...keyOf(workspaceId, normal.subjectKey, normal.attribute, scopeId),
+                        ...factKeyOf(workspaceId, normal.subjectKey, normal.attribute, scopeId),
                         status: "proposed",
                         proposalKind: "retire",
                     },
@@ -402,7 +402,7 @@ export class BrainFactsService {
         // Only one scheduled change per key: a newer approval replaces an older plan.
         await tx.update(
             BrainFactEntity,
-            { ...keyOf(workspaceId, fact.subjectKey, fact.attribute, fact.installationId), status: "scheduled" },
+            { ...factKeyOf(workspaceId, fact.subjectKey, fact.attribute, fact.installationId), status: "scheduled" },
             { status: "rejected", decisionNote: "Replaced by a newer schedule", updatedAt: () => "now()" },
         )
         if (currentId !== null) {

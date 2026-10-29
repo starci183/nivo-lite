@@ -5,7 +5,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./connections.module-defi
 import { ConnectionsUpkeepService } from "./connections-upkeep.service"
 import { ConnectionsService } from "./connections.service"
 import { ConnectionsAdminReadService } from "./connections-admin-read.service"
-import { ConnectionFeedReadsService } from "./connection-feed-reads.service"
+import { ConnectionBindingsReadService } from "./connection-bindings-read.service"
 import { ConnectionSecretReadsService } from "./connection-secret-reads.service"
 
 @Module({})
@@ -19,16 +19,16 @@ export class ConnectionsModule extends ConfigurableModuleClass {
             imports: [...(base.imports ?? []), ConnectorInterestModule.register({})],
             providers: [
                 ...(base.providers ?? []),
-                ConnectionFeedReadsService,
                 ConnectionsAdminReadService,
                 ConnectionSecretReadsService,
+                ConnectionBindingsReadService,
                 ConnectionsService,
                 ConnectionsUpkeepService,
             ],
             exports: [
-                ConnectionFeedReadsService,
                 ConnectionsAdminReadService,
                 ConnectionSecretReadsService,
+                ConnectionBindingsReadService,
                 ConnectionsService,
             ],
         }

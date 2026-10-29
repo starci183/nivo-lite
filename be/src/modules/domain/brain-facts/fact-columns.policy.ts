@@ -52,7 +52,7 @@ export const scopeOf = (installationId: InstallationScope): string | FindOperato
     installationId === null ? IsNull() : installationId
 
 /** The facts of one key waiting to be decided, the part of a condition every decision shares. */
-export const keyOf = (
+export const factKeyOf = (
     workspaceId: string,
     subjectKey: string,
     attribute: string,

@@ -18,7 +18,7 @@ import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/da
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { createHash } from "node:crypto"
-import { AgentConnectionEntity } from "@modules/domain/agent-connections"
+import { AgentBindingsService } from "@modules/domain/agent-connections"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
@@ -37,8 +37,7 @@ import { PaymentProofService } from "./payment-proof.service"
 import { payosBodyOf, readPayosDelivery } from "./payos.policy"
 import { isSepayPing, sepayPayloadOf } from "./sepay.policy"
 import { parseJsonObject } from "./webhook-body.policy"
-import { ConnectionFeedReadsService } from "@modules/domain/connections"
-import { AgentEntity } from "@modules/domain/agents"
+import { ConnectionBindingsReadService } from "@modules/domain/connections"
 
 /** The locale of the lines billing writes into the shared records: the workspace owners read them in Vietnamese. */
 const RECORD_LOCALE = "vi"
@@ -85,8 +84,9 @@ export class BankFeedService {
         private readonly transactions: TransactionsService,
         private readonly bankFeedInbox: BankFeedReceiptService,
         private readonly sepayPage: SepayConnectionService,
-        private readonly connections: ConnectionFeedReadsService,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
+        private readonly bindings: AgentBindingsService,
+        private readonly connections: ConnectionBindingsReadService,
     ) {}
 
     /**
@@ -208,7 +208,7 @@ export class BankFeedService {
             if (pending === undefined) return []
             const workspaceId = await this.connections.workspaceOf(pending.payload.connection, manager)
             const answers: Array<FeedCreditAnswer> = []
-            if (workspaceId !== undefined) {
+            if (workspaceId !== null) {
                 const connection = { connectionId: pending.payload.connection, workspaceId }
                 await eachInOrder(pending.payload.credits, async (credit) => {
                     answers.push(await this.feedInTransaction(manager, connection, credit))
@@ -253,17 +253,7 @@ export class BankFeedService {
             JSON.stringify({ amount: Math.round(credit.amount), content: credit.content, at: at.toISOString() }),
         ])
         if (state?.environment === "test") return { status: "refused", code: "test_environment" }
-        const agent = await tx
-            .createQueryBuilder(AgentConnectionEntity, "ac")
-            .select("a.id", "id")
-            .innerJoin(AgentEntity, "a", "a.id = ac.agentId")
-            .where(
-                "ac.connectionId = :connectionId AND ac.purpose = 'bank_feed' AND a.status = 'active' AND a.module = 'accounting'",
-                { connectionId: connection.connectionId },
-            )
-            .orderBy("a.created_at", "ASC")
-            .limit(1)
-            .getRawOne<{ id: string }>()
+        const [agent] = await this.bindings.agentsFor(connection.connectionId, "bank_feed", { modules: ["accounting"] })
         if (agent === undefined) return { status: "unbound" }
         if (credit.direction === "debit") return this.debit(tx, connection, credit)
         const duplicate = await this.book(tx, {

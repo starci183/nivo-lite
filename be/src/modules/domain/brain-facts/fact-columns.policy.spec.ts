@@ -1,5 +1,44 @@
+import { Test } from "@nestjs/testing"
+import {
+    isBrainFactEntity as isBrainFactEntityReal,
+    factKeyOf as factKeyOfReal,
+    RETURNED as RETURNEDReal,
+    returnedFacts as returnedFactsReal,
+    scopeOf as scopeOfReal,
+} from "./fact-columns.policy"
 import { IsNull } from "typeorm"
-import { isBrainFactEntity, keyOf, RETURNED, returnedFacts, scopeOf } from "./fact-columns.policy"
+
+const SUBJECT = Symbol("fact-columns.policy")
+
+let isBrainFactEntity: typeof isBrainFactEntityReal
+let factKeyOf: typeof factKeyOfReal
+let RETURNED: typeof RETURNEDReal
+let returnedFacts: typeof returnedFactsReal
+let scopeOf: typeof scopeOfReal
+
+beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    isBrainFactEntity: isBrainFactEntityReal,
+                    factKeyOf: factKeyOfReal,
+                    RETURNED: RETURNEDReal,
+                    returnedFacts: returnedFactsReal,
+                    scopeOf: scopeOfReal,
+                },
+            },
+        ],
+    }).compile()
+    ;({ isBrainFactEntity, factKeyOf, RETURNED, returnedFacts, scopeOf } = moduleRef.get<{
+        isBrainFactEntity: typeof isBrainFactEntityReal
+        factKeyOf: typeof factKeyOfReal
+        RETURNED: typeof RETURNEDReal
+        returnedFacts: typeof returnedFactsReal
+        scopeOf: typeof scopeOfReal
+    }>(SUBJECT))
+})
 
 const row = (id: string, subjectKey: string): Record<string, unknown> => ({ id, subjectKey, attribute: "price" })
 
@@ -60,9 +99,9 @@ describe("fact-columns.policy", () => {
         })
     })
 
-    describe("keyOf", () => {
+    describe("factKeyOf", () => {
         it("builds the condition of one key in an installation", () => {
-            expect(keyOf("ws-1", "menu", "price", "inst-1")).toEqual({
+            expect(factKeyOf("ws-1", "menu", "price", "inst-1")).toEqual({
                 workspaceId: "ws-1",
                 subjectKey: "menu",
                 attribute: "price",
@@ -71,7 +110,7 @@ describe("fact-columns.policy", () => {
         })
 
         it("scopes a workspace-wide key with IS NULL", () => {
-            expect(keyOf("ws-1", "menu", "price", null)).toEqual({
+            expect(factKeyOf("ws-1", "menu", "price", null)).toEqual({
                 workspaceId: "ws-1",
                 subjectKey: "menu",
                 attribute: "price",

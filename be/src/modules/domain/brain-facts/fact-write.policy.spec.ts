@@ -1,4 +1,39 @@
-import { activateChanges, decisionOf, scheduleChanges, SUPERSEDE } from "./fact-write.policy"
+import { Test } from "@nestjs/testing"
+import {
+    activateChanges as activateChangesReal,
+    decisionOf as decisionOfReal,
+    scheduleChanges as scheduleChangesReal,
+    SUPERSEDE as SUPERSEDEReal,
+} from "./fact-write.policy"
+
+const SUBJECT = Symbol("fact-write.policy")
+
+let activateChanges: typeof activateChangesReal
+let decisionOf: typeof decisionOfReal
+let scheduleChanges: typeof scheduleChangesReal
+let SUPERSEDE: typeof SUPERSEDEReal
+
+beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    activateChanges: activateChangesReal,
+                    decisionOf: decisionOfReal,
+                    scheduleChanges: scheduleChangesReal,
+                    SUPERSEDE: SUPERSEDEReal,
+                },
+            },
+        ],
+    }).compile()
+    ;({ activateChanges, decisionOf, scheduleChanges, SUPERSEDE } = moduleRef.get<{
+        activateChanges: typeof activateChangesReal
+        decisionOf: typeof decisionOfReal
+        scheduleChanges: typeof scheduleChangesReal
+        SUPERSEDE: typeof SUPERSEDEReal
+    }>(SUBJECT))
+})
 
 /** Resolves the SQL of every instant-valued change, so a comparison reads plain values. */
 const resolved = (changes: object): Record<string, unknown> =>

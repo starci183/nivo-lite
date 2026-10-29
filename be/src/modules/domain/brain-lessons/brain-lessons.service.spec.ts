@@ -109,7 +109,11 @@ const registerDecide = () => {
             expect(setOf(decide)).toMatchObject({ status: "rejected", decidedBy: "u2" })
             expect(em.update).not.toHaveBeenCalled()
         })
+    })
+}
 
+const registerDecideRefusals = () => {
+    describe("decide refusals", () => {
         it("refuses a lesson when the statement hands back no rows at all", async () => {
             const em = mockEntityManager()
             queueQueryBuilders(em, [{ execute: {} }])
@@ -350,4 +354,5 @@ const build = async (em: ReturnType<typeof mockEntityManager>) => {
 describe("BrainLessonsService", () => {
     registerLessonListing()
     registerDecide()
+    registerDecideRefusals()
 })
