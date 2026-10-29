@@ -1,3 +1,4 @@
+import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
 import { textOf, textOrNull } from "./lead-flow-identity.policy"
 import { EMPTY_SIGNALS, cleanSignals, recordOf } from "./lead-flow-score.policy"
 import { parseAnalysis } from "./lead-flow-steps.policy"
@@ -125,7 +126,7 @@ export const toLeadFlow = (row: LeadFlowEntity): LeadFlow => ({
 })
 
 /** Every mutable column of a flow, as the values an update writes (the key columns stay out). */
-export const saveValues = (flow: LeadFlow): Partial<LeadFlowEntity> => ({
+export const saveValues = (flow: LeadFlow): QueryDeepPartialEntity<LeadFlowEntity> => ({
     leadId: flow.lead_id,
     connectionId: flow.connection_id,
     conversationId: flow.conversation_id,

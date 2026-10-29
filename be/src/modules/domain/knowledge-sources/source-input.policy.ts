@@ -1,8 +1,10 @@
+import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import { KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import { MAX_SOURCE_CHARS, SOURCE_KINDS } from "./knowledge-sources.contracts"
 import type { AddSourceInput, SourceKind, UpdateSourceInput } from "./knowledge-sources.contracts"
+import type { KnowledgeSourceEntity } from "./persistence/entities"
 
 /** A new source after its input was checked and tidied. */
 export interface NormalizedSource {
@@ -43,6 +45,16 @@ export interface NormalizedUpdate {
     /** The new visibility. */
     readonly visibility: "public" | "internal" | null
 }
+
+/** The columns a change of metadata writes: a null keeps the stored value, an empty topic or module clears it. */
+export const metaChanges = (change: NormalizedUpdate): QueryDeepPartialEntity<KnowledgeSourceEntity> => ({
+    ...(change.title === null ? {} : { title: change.title }),
+    ...(change.topic === null ? {} : { topic: change.topic === "" ? null : change.topic }),
+    ...(change.tags === null ? {} : { tags: [...change.tags] }),
+    ...(change.module === null ? {} : { module: change.module === "" ? null : change.module }),
+    ...(change.visibility === null ? {} : { visibility: change.visibility }),
+    updatedAt: () => "now()",
+})
 
 /** The result of checking the input of a new source. */
 export type NormalizedSourceOutcome = Outcome<NormalizedSource, KnowledgeSourcesErrorCode>

@@ -1,6 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import { Brackets, In } from "typeorm"
+import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { EntitlementsService } from "@modules/domain/billing"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
+import type { InstallationRecord } from "@modules/domain/module-installations"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
@@ -13,6 +16,8 @@ import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { KnowledgeSourceIndexedEvent } from "@modules/events/api"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
+import { InjectIds } from "@modules/platform/ids"
+import type { Ids } from "@modules/platform/ids"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import { KNOWLEDGE_UPLOAD_BUCKET, STORAGE_OBJECT_MISSING } from "./knowledge-sources.contracts"
@@ -35,41 +40,33 @@ import type {
 } from "./knowledge-sources.contracts"
 import { InjectKnowledgeStorage } from "./knowledge-sources.decorators"
 import { KnowledgeSourcesLogEvent } from "./knowledge-sources.log-events"
-import type {
-    GeneratedIdRow,
-    KnowledgeInstallationRow,
-    KnowledgeSourcesRow,
-    ReadableCountRow,
-    ReadableSourceRow,
-    SourceIdRow,
-    SourceListRow,
-    SourceTitleRow,
-} from "./persistence/knowledge-sources.rows"
-import {
-    COUNT_READABLE_SOURCES,
-    DELETE_SOURCE,
-    INSERT_SOURCE,
-    LIST_READABLE_SOURCES,
-    LIST_SOURCES,
-    MARK_BLOCKED,
-    MARK_EXTRACTING,
-    MARK_FACTS_BLOCKED,
-    MARK_FAILED,
-    MARK_INDEXED,
-    MARK_INDEXING,
-    MARK_READING,
-    MARK_READY,
-    REQUEUE_FAILED_SOURCE,
-    REQUEUE_SOURCE,
-    SELECT_INSTALLATION,
-    SELECT_NEW_ID,
-    SELECT_SOURCE,
-    SELECT_SOURCE_DETAIL,
-    SET_PROGRESS,
-    UPDATE_SOURCE_META,
-} from "./persistence/knowledge-sources.sql"
-import { normalizeSource, normalizeUpdate, replacementContent, safeFileName } from "./source-input.policy"
+import { KnowledgeSourceEntity } from "./persistence/entities"
+import { removedTitle } from "./persistence/knowledge-source-projection"
+import type { ReadableSourceProjection } from "./persistence/knowledge-source-projection"
+import { metaChanges, normalizeSource, normalizeUpdate, replacementContent, safeFileName } from "./source-input.policy"
 import { toSourceDetail, toSourceRecord, toSourceSummary } from "./source-record.mapper"
+
+/** The most documents the Knowledge page lists. */
+const LIST_MAX = 500
+
+/** The columns of a document the list shows: everything but the text. */
+const SUMMARY_COLUMNS = {
+    id: true,
+    workspaceId: true,
+    module: true,
+    installationId: true,
+    kind: true,
+    topic: true,
+    tags: true,
+    visibility: true,
+    title: true,
+    status: true,
+    error: true,
+    chunkCount: true,
+    progress: true,
+    createdAt: true,
+    updatedAt: true,
+} as const
 
 /** Who may change the knowledge of a workspace. */
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
@@ -86,23 +83,30 @@ export class KnowledgeSourcesService {
         private readonly queue: KnowledgeQueue,
         @InjectEventBus() private readonly bus: EventBus,
         private readonly entitlements: EntitlementsService,
+        private readonly installations: InstallationRecordsService,
+        @InjectIds() private readonly ids: Ids,
     ) {}
 
     /** The documents of a workspace, newest first and without their text; any member may read them. */
     async list(userId: string, workspaceId: string, module?: string): Promise<ReadonlyArray<SourceSummary>> {
         await this.members.require(userId, workspaceId)
-        const rows = await this.entityManager.query<Array<SourceListRow>>(LIST_SOURCES, [workspaceId, module ?? null])
+        const rows = await this.entityManager.find(KnowledgeSourceEntity, {
+            select: SUMMARY_COLUMNS,
+            where: module === undefined ? { workspaceId } : { workspaceId, module },
+            order: { createdAt: "DESC" },
+            take: LIST_MAX,
+        })
         return rows.map(toSourceSummary)
     }
 
     /** One document of a workspace with its text; any member may read it. */
     async detail(userId: string, workspaceId: string, sourceId: string): Promise<SourceDetail> {
         await this.members.require(userId, workspaceId)
-        const [row] = await this.entityManager.query<Array<SourceListRow>>(SELECT_SOURCE_DETAIL, [
-            workspaceId,
-            sourceId,
-        ])
-        if (row === undefined) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
+        const row = await this.entityManager.findOne(KnowledgeSourceEntity, {
+            select: { ...SUMMARY_COLUMNS, content: true },
+            where: { workspaceId, id: sourceId },
+        })
+        if (row === null) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
         return toSourceDetail(row)
     }
 
@@ -112,22 +116,26 @@ export class KnowledgeSourcesService {
         const source = unwrapOutcome(normalizeSource(workspaceId, input), KnowledgeSourcesError)
         const instance = await this.instanceOf(workspaceId, source.installationId)
         return this.entityManager.transaction(async (tx) => {
-            const [row] = await tx.query<Array<SourceIdRow>>(INSERT_SOURCE, [
+            const inserted = await tx.insert(KnowledgeSourceEntity, {
                 workspaceId,
-                instance?.module_key ?? source.module,
-                instance?.id ?? null,
-                source.kind,
-                source.topic,
-                [...source.tags],
-                source.visibility,
-                source.title,
-                source.content,
-                source.storagePath,
-                source.sourceUrl,
-                source.origin,
-                userId,
-            ])
-            if (row === undefined) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
+                module: instance?.moduleKey ?? source.module,
+                installationId: instance?.id ?? null,
+                kind: source.kind,
+                topic: source.topic,
+                tags: [...source.tags],
+                visibility: source.visibility,
+                title: source.title,
+                content: source.content,
+                status: "queued",
+                progress: 0,
+                storagePath: source.storagePath,
+                sourceUrl: source.sourceUrl,
+                origin: source.origin,
+                createdBy: userId,
+            })
+            const [row] = inserted.identifiers
+            if (typeof row?.id !== "string")
+                throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
             await this.queue.enqueueIndex({ sourceId: row.id, workspaceId }, tx)
             return { id: row.id }
         })
@@ -137,8 +145,12 @@ export class KnowledgeSourcesService {
     async retrySource(userId: string, workspaceId: string, sourceId: string): Promise<SourceRef> {
         await this.members.require(userId, workspaceId, MANAGERS)
         await this.entityManager.transaction(async (tx) => {
-            const requeued = await tx.query<Array<SourceIdRow>>(REQUEUE_FAILED_SOURCE, [sourceId, workspaceId])
-            if (requeued.length === 0) return
+            const requeued = await tx.update(
+                KnowledgeSourceEntity,
+                { id: sourceId, workspaceId, status: In(["failed", "blocked_credits"]) },
+                { status: "queued", progress: 0, error: null, updatedAt: () => "now()" },
+            )
+            if (requeued.affected === 0) return
             await this.queue.enqueueIndex({ sourceId, workspaceId }, tx, this.clock.now().getTime())
         })
         return { id: sourceId }
@@ -149,8 +161,18 @@ export class KnowledgeSourcesService {
         await this.members.require(userId, workspaceId, MANAGERS)
         const content = unwrapOutcome(replacementContent(input.content), KnowledgeSourcesError)
         await this.entityManager.transaction(async (tx) => {
-            const requeued = await tx.query<Array<SourceIdRow>>(REQUEUE_SOURCE, [input.sourceId, workspaceId, content])
-            if (requeued.length === 0)
+            const requeued = await tx.update(
+                KnowledgeSourceEntity,
+                { id: input.sourceId, workspaceId },
+                {
+                    status: "queued",
+                    progress: 0,
+                    error: null,
+                    ...(content === null ? {} : { content }),
+                    updatedAt: () => "now()",
+                },
+            )
+            if (requeued.affected === 0)
                 throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
             await this.queue.enqueueIndex({ sourceId: input.sourceId, workspaceId }, tx, this.clock.now().getTime())
         })
@@ -161,24 +183,26 @@ export class KnowledgeSourcesService {
     async updateSource(userId: string, workspaceId: string, input: UpdateSourceInput): Promise<void> {
         await this.members.require(userId, workspaceId, MANAGERS)
         const change = normalizeUpdate(input)
-        const changed = await this.entityManager.query<Array<SourceIdRow>>(UPDATE_SOURCE_META, [
-            input.sourceId,
-            workspaceId,
-            change.title,
-            change.topic,
-            change.tags === null ? null : [...change.tags],
-            change.module,
-            change.visibility,
-        ])
-        if (changed.length === 0) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
+        const changed = await this.entityManager.update(
+            KnowledgeSourceEntity,
+            { id: input.sourceId, workspaceId },
+            metaChanges(change),
+        )
+        if (changed.affected === 0) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
     }
 
     /** Deletes a source with its passages; answers its title so the brain can note what it withdraws. */
     async removeSource(userId: string, workspaceId: string, sourceId: string): Promise<DeletedSource> {
         await this.members.require(userId, workspaceId, MANAGERS)
-        const [row] = await this.entityManager.query<Array<SourceTitleRow>>(DELETE_SOURCE, [sourceId, workspaceId])
-        if (row === undefined) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
-        return { title: row.title }
+        const removed = await this.entityManager
+            .createQueryBuilder(KnowledgeSourceEntity, "ks")
+            .delete()
+            .where({ id: sourceId, workspaceId })
+            .returning("title")
+            .execute()
+        const title = removedTitle(removed.raw)
+        if (title === undefined) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
+        return { title }
     }
 
     /** An address a browser uploads one document to: `<workspaceId>/<uuid>/<filename>` in the private bucket. */
@@ -187,8 +211,7 @@ export class KnowledgeSourcesService {
         if (filename.trim() === "")
             throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.FileNameRequired })
         await this.entitlements.requireStorageFor(workspaceId, 0)
-        const ids = await this.entityManager.query<Array<GeneratedIdRow>>(SELECT_NEW_ID)
-        const path = ids.map((row) => `${workspaceId}/${row.id}/${safeFileName(filename)}`).join("")
+        const path = `${workspaceId}/${this.ids.next()}/${safeFileName(filename)}`
         const signed = await this.storage.signedUpload(KNOWLEDGE_UPLOAD_BUCKET, path)
         if (signed.kind === "refused") {
             throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.UploadUnavailable })
@@ -211,8 +234,8 @@ export class KnowledgeSourcesService {
 
     /** A source of a workspace as the jobs read it; null when it is gone. */
     async sourceOf(workspaceId: string, sourceId: string): Promise<MaybeSource> {
-        const [row] = await this.entityManager.query<Array<KnowledgeSourcesRow>>(SELECT_SOURCE, [sourceId, workspaceId])
-        return row === undefined ? null : toSourceRecord(row)
+        const row = await this.entityManager.findOne(KnowledgeSourceEntity, { where: { id: sourceId, workspaceId } })
+        return row === null ? null : toSourceRecord(row)
     }
 
     /** The bytes of an uploaded document; null when the object is not in storage. Any other storage failure is thrown for the queue to retry. */
@@ -225,70 +248,114 @@ export class KnowledgeSourcesService {
 
     /** The worker starts reading the source. */
     async begin(workspaceId: string, sourceId: string): Promise<void> {
-        await this.entityManager.query(MARK_READING, [sourceId, workspaceId])
+        await this.entityManager.update(
+            KnowledgeSourceEntity,
+            { id: sourceId, workspaceId },
+            { status: "reading", error: null, progress: 5, updatedAt: () => "now()" },
+        )
     }
 
     /** The text of the source is known: it is stored with its title and the source moves to indexing. */
     async startIndexing(workspaceId: string, sourceId: string, content: string, title: string): Promise<void> {
-        await this.entityManager.query(MARK_INDEXING, [sourceId, workspaceId, content, title])
+        await this.entityManager.update(
+            KnowledgeSourceEntity,
+            { id: sourceId, workspaceId },
+            { status: "indexing", content, title, progress: 20, updatedAt: () => "now()" },
+        )
     }
 
     /** Moves the progress bar of a source; never fails the job. */
     async advance(workspaceId: string, sourceId: string, percent: number): Promise<void> {
         const clamped = Math.max(0, Math.min(100, Math.round(percent)))
-        await this.entityManager.query(SET_PROGRESS, [sourceId, workspaceId, clamped]).catch((cause: unknown) => {
-            this.logger.error(KnowledgeSourcesLogEvent.ProgressFailed, cause, { sourceId })
-        })
+        await this.entityManager
+            .update(
+                KnowledgeSourceEntity,
+                { id: sourceId, workspaceId },
+                { progress: clamped, updatedAt: () => "now()" },
+            )
+            .catch((cause: unknown) => {
+                this.logger.error(KnowledgeSourcesLogEvent.ProgressFailed, cause, { sourceId })
+            })
     }
 
     /** Closes a source as failed with the stored code the front end shows its own text for. */
     async fail(workspaceId: string, sourceId: string, note: string): Promise<void> {
-        await this.entityManager.query(MARK_FAILED, [sourceId, workspaceId, note])
+        await this.entityManager.update(
+            KnowledgeSourceEntity,
+            { id: sourceId, workspaceId },
+            { status: "failed", error: note, updatedAt: () => "now()" },
+        )
     }
 
     /** The passages are stored: the source records them and a note, and `knowledge_source_indexed` is published with the move to that stage in one transaction. */
     async finishIndexing(workspaceId: string, sourceId: string, note: MaybeNote, chunks: number): Promise<void> {
         await this.entityManager.transaction(async (tx) => {
-            await tx.query(MARK_INDEXED, [sourceId, workspaceId, note, chunks])
+            await tx.update(
+                KnowledgeSourceEntity,
+                { id: sourceId, workspaceId },
+                { error: note, chunkCount: chunks, progress: 80, updatedAt: () => "now()" },
+            )
             const indexed = KnowledgeSourceIndexedEvent.create({
                 sourceId,
                 workspaceId,
                 indexedAt: this.clock.now().getTime(),
             })
             await this.bus.publish(indexed, tx, indexed.eventId)
-            await tx.query(MARK_EXTRACTING, [sourceId, workspaceId])
+            await tx.update(
+                KnowledgeSourceEntity,
+                { id: sourceId, workspaceId },
+                { status: "extracting_facts", progress: 85, updatedAt: () => "now()" },
+            )
         })
     }
 
     /** The passages are stored without vectors and the source waits for credits. */
     async blockIndexing(workspaceId: string, sourceId: string, note: StoredNote, chunks: number): Promise<void> {
-        await this.entityManager.query(MARK_BLOCKED, [sourceId, workspaceId, note, chunks])
+        await this.entityManager.update(
+            KnowledgeSourceEntity,
+            { id: sourceId, workspaceId },
+            { status: "blocked_credits", error: note, chunkCount: chunks, progress: 80, updatedAt: () => "now()" },
+        )
     }
 
     /** The facts are read (or could not be): the source is ready, with a stored note when the reading failed. */
     async ready(workspaceId: string, sourceId: string, note: MaybeNote): Promise<void> {
-        await this.entityManager.query(MARK_READY, [sourceId, workspaceId, note])
+        await this.entityManager.update(
+            KnowledgeSourceEntity,
+            { id: sourceId, workspaceId },
+            { status: "ready", progress: 100, ...(note === null ? {} : { error: note }), updatedAt: () => "now()" },
+        )
     }
 
     /** The facts cannot be read because the workspace has no credits left: the source waits for them. */
     async blockFacts(workspaceId: string, sourceId: string, note: StoredNote): Promise<void> {
-        await this.entityManager.query(MARK_FACTS_BLOCKED, [sourceId, workspaceId, note])
+        await this.entityManager.update(
+            KnowledgeSourceEntity,
+            { id: sourceId, workspaceId },
+            { status: "blocked_credits", error: note, updatedAt: () => "now()" },
+        )
     }
 
     /** The indexed documents an agent's view may read, oldest first; a customer view gets public documents only. */
     async readableFor(scope: ReadableScope, limit: number): Promise<ReadonlyArray<ReadableSource>> {
-        const rows = await this.entityManager.query<Array<ReadableSourceRow>>(LIST_READABLE_SOURCES, [
-            scope.workspaceId,
-            scope.module,
-            scope.installationId,
-            scope.audience,
-            limit,
-        ])
+        const rows = await this.readable(scope)
+            .select("ks.id", "id")
+            .addSelect("ks.title", "title")
+            .addSelect("ks.topic", "topic")
+            .addSelect("ks.kind", "kind")
+            .addSelect("ks.visibility", "visibility")
+            .addSelect("ks.content", "content")
+            .addSelect("ks.module", "module")
+            .addSelect("ks.installationId", "installationId")
+            .addSelect("ks.updated_at::text", "updatedAt")
+            .orderBy("ks.createdAt", "ASC")
+            .limit(limit)
+            .getRawMany<ReadableSourceProjection>()
         return rows
             .filter(
                 (row) =>
                     (row.module === null || row.module === scope.module) &&
-                    (row.installation_id === null || row.installation_id === scope.installationId) &&
+                    (row.installationId === null || row.installationId === scope.installationId) &&
                     (scope.audience === "internal" || row.visibility === "public"),
             )
             .map((row) => ({
@@ -297,7 +364,7 @@ export class KnowledgeSourcesService {
                 topic: row.topic,
                 kind: row.kind,
                 visibility: row.visibility === "public" ? "public" : "internal",
-                updatedAt: row.updated_at,
+                updatedAt: row.updatedAt,
                 content: row.content ?? "",
             }))
     }
@@ -305,26 +372,34 @@ export class KnowledgeSourcesService {
     /** How many indexed documents of one visibility an agent's view may read; a customer view never counts internal ones. */
     async countReadable(scope: ReadableScope, visibility: DocumentVisibility): Promise<number> {
         if (scope.audience === "customer" && visibility === "internal") return 0
-        const [row] = await this.entityManager.query<Array<ReadableCountRow>>(COUNT_READABLE_SOURCES, [
-            scope.workspaceId,
-            scope.module,
-            scope.installationId,
-            visibility,
-        ])
-        return row?.count ?? 0
+        return this.readable(scope).andWhere({ visibility }).getCount()
+    }
+
+    /** The indexed documents of the workspace that the view of the scope may read: its module or every module, its instance or every instance. */
+    private readable(scope: ReadableScope): SelectQueryBuilder<KnowledgeSourceEntity> {
+        const query = this.entityManager
+            .createQueryBuilder(KnowledgeSourceEntity, "ks")
+            .where({ workspaceId: scope.workspaceId, status: In(["ready", "extracting_facts"]) })
+            .andWhere(
+                new Brackets((own) =>
+                    own.where("ks.module IS NULL").orWhere("ks.module = :module", { module: scope.module }),
+                ),
+            )
+            .andWhere(
+                new Brackets((own) =>
+                    own
+                        .where("ks.installationId IS NULL")
+                        .orWhere("ks.installationId = :installationId", { installationId: scope.installationId }),
+                ),
+            )
+        return scope.audience === "internal" ? query : query.andWhere({ visibility: "public" })
     }
 
     /** The agent instance a document is kept for, which must belong to the workspace; null when the document is for every instance. */
-    private async instanceOf(
-        workspaceId: string,
-        installationId: string | null,
-    ): Promise<KnowledgeInstallationRow | null> {
+    private async instanceOf(workspaceId: string, installationId: string | null): Promise<InstallationRecord | null> {
         if (installationId === null) return null
-        const [row] = await this.entityManager.query<Array<KnowledgeInstallationRow>>(SELECT_INSTALLATION, [
-            workspaceId,
-            installationId,
-        ])
-        if (row === undefined) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.InstanceUnknown })
-        return row
+        const found = await this.installations.find(workspaceId, installationId)
+        if (found === null) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.InstanceUnknown })
+        return found
     }
 }

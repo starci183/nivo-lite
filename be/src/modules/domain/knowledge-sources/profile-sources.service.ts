@@ -6,9 +6,8 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import type { ProfileSourceInput, ProfileSourceOutcome } from "./knowledge-sources.contracts"
-import type { ProfileSourceRow, SourceIdRow } from "./persistence/knowledge-sources.rows"
-import { INSERT_SOURCE, REQUEUE_SOURCE, UPDATE_SOURCE_META } from "./persistence/knowledge-sources.sql"
-import { FIND_PROFILE_SOURCE } from "./persistence/profile-sources.sql"
+import { KnowledgeSourceEntity } from "./persistence/entities"
+import { metaChanges } from "./source-input.policy"
 
 @Injectable()
 /**
@@ -27,49 +26,60 @@ export class ProfileSourcesService {
     keep(source: ProfileSourceInput): Promise<ProfileSourceOutcome> {
         const { workspaceId } = source
         return this.entityManager.transaction(async (tx) => {
-            const [found] = await tx.query<Array<ProfileSourceRow>>(FIND_PROFILE_SOURCE, [
-                workspaceId,
-                source.origin,
-                source.title,
-            ])
-            if (found === undefined) {
+            const found = await tx.findOne(KnowledgeSourceEntity, {
+                select: { id: true, content: true },
+                where: { workspaceId, origin: source.origin, title: source.title },
+                order: { createdAt: "ASC" },
+                lock: { mode: "pessimistic_write" },
+            })
+            if (found === null) {
                 const sourceId = await this.insert(tx, source)
                 await this.queue.enqueueIndex({ sourceId, workspaceId }, tx)
                 return "inserted"
             }
             if (found.content === source.content) return "unchanged"
-            await tx.query(REQUEUE_SOURCE, [found.id, workspaceId, source.content])
-            await tx.query(UPDATE_SOURCE_META, [
-                found.id,
-                workspaceId,
-                null,
-                source.topic,
-                null,
-                source.module ?? "",
-                source.visibility,
-            ])
+            await tx.update(
+                KnowledgeSourceEntity,
+                { id: found.id, workspaceId },
+                { status: "queued", progress: 0, error: null, content: source.content, updatedAt: () => "now()" },
+            )
+            await tx.update(
+                KnowledgeSourceEntity,
+                { id: found.id, workspaceId },
+                metaChanges({
+                    title: null,
+                    topic: source.topic,
+                    tags: null,
+                    module: source.module ?? "",
+                    visibility: source.visibility,
+                }),
+            )
             await this.queue.enqueueIndex({ sourceId: found.id, workspaceId }, tx, this.clock.now().getTime())
             return "requeued"
         })
     }
 
     private async insert(tx: EntityManager, source: ProfileSourceInput): Promise<string> {
-        const [row] = await tx.query<Array<SourceIdRow>>(INSERT_SOURCE, [
-            source.workspaceId,
-            source.module,
-            null,
-            "text",
-            source.topic,
-            [],
-            source.visibility,
-            source.title,
-            source.content,
-            null,
-            null,
-            source.origin,
-            source.ownerId,
-        ])
-        if (row === undefined) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
+        const inserted = await tx.insert(KnowledgeSourceEntity, {
+            workspaceId: source.workspaceId,
+            module: source.module,
+            installationId: null,
+            kind: "text",
+            topic: source.topic,
+            tags: [],
+            visibility: source.visibility,
+            title: source.title,
+            content: source.content,
+            status: "queued",
+            progress: 0,
+            storagePath: null,
+            sourceUrl: null,
+            origin: source.origin,
+            createdBy: source.ownerId,
+        })
+        const [row] = inserted.identifiers
+        if (typeof row?.id !== "string")
+            throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
         return row.id
     }
 }

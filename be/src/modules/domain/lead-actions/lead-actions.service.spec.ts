@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import type { MockEntityManager } from "@starci/jest-preset"
 import { Brackets, In } from "typeorm"
 import type { WorkContext } from "@modules/domain/decisions"
 import { LeadRecordsService } from "@modules/domain/leads"
@@ -84,9 +85,9 @@ const FENCE = {
 
 const build = async (
     statements: ReadonlyArray<QueryBuilderAnswers> = [],
-    stubs: Parameters<typeof mockEntityManager>[0] = {},
+    em: MockEntityManager = mockEntityManager(),
 ) => {
-    const tx = fakeTransaction(mockEntityManager(stubs))
+    const tx = fakeTransaction(em)
     const fakes = queueQueryBuilders(tx.em, statements)
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(memberOf())
@@ -168,9 +169,12 @@ describe("LeadActionsService", () => {
     })
 
     it("enqueues a validated capture and answers the queued run", async () => {
-        const { actions, queue, tx } = await build([], {
-            insert: [LeadActionEntity, { identifiers: [{ id: "run-1" }] }],
-        })
+        const { actions, queue, tx } = await build(
+            [],
+            mockEntityManager({
+                insert: [LeadActionEntity, { identifiers: [{ id: "run-1" }] }],
+            }),
+        )
 
         await expect(actions.request("user-1", "ws-1", "create", createInput, "vi")).resolves.toEqual({
             id: "run-1",
@@ -201,7 +205,7 @@ describe("LeadActionsService", () => {
             result: { leadId: LEAD, contextSummary: "brief" },
             errorCode: null,
         })
-        const { actions, tx } = await build([], { findOne: [LeadActionEntity, row] })
+        const { actions, tx } = await build([], mockEntityManager({ findOne: [LeadActionEntity, row] }))
 
         await expect(actions.status("user-1", "ws-1", "run-1")).resolves.toEqual({
             id: "run-1",
@@ -216,7 +220,7 @@ describe("LeadActionsService", () => {
     })
 
     it("refuses a run the workspace does not have", async () => {
-        const { actions } = await build([], { findOne: [LeadActionEntity, null] })
+        const { actions } = await build([], mockEntityManager({ findOne: [LeadActionEntity, null] }))
 
         await expect(actions.status("user-1", "ws-1", "missing")).rejects.toMatchObject({
             code: LeadActionsErrorCode.NotFound,
@@ -248,7 +252,10 @@ describe("LeadActionsService", () => {
     })
 
     it("rolls back when insertion returns no run", async () => {
-        const { actions, tx, queue } = await build([], { insert: [LeadActionEntity, { identifiers: [] }] })
+        const { actions, tx, queue } = await build(
+            [],
+            mockEntityManager({ insert: [LeadActionEntity, { identifiers: [] }] }),
+        )
 
         await expect(actions.request("user-1", "ws-1", "create", createInput, "vi")).rejects.toMatchObject({
             code: LeadActionsErrorCode.NotFound,
@@ -258,9 +265,12 @@ describe("LeadActionsService", () => {
     })
 
     it("proves a responsibility target and stores only its normalized id", async () => {
-        const { actions, responsibilities, tx, members, locale } = await build([], {
-            insert: [LeadActionEntity, { identifiers: [{ id: "run-1" }] }],
-        })
+        const { actions, responsibilities, tx, members, locale } = await build(
+            [],
+            mockEntityManager({
+                insert: [LeadActionEntity, { identifiers: [{ id: "run-1" }] }],
+            }),
+        )
         const target = mock<ResponsibilityRecord>({ id: RESPONSIBILITY, lead_id: LEAD })
         responsibilities.find.mockResolvedValue(target)
 
@@ -295,9 +305,12 @@ describe("LeadActionsService", () => {
     it.each(["refresh-context", "suggest-owner", "settle-won"] as const)(
         "proves the lead before enqueueing %s",
         async (action) => {
-            const { actions, leads, queue } = await build([], {
-                insert: [LeadActionEntity, { identifiers: [{ id: "run-1" }] }],
-            })
+            const { actions, leads, queue } = await build(
+                [],
+                mockEntityManager({
+                    insert: [LeadActionEntity, { identifiers: [{ id: "run-1" }] }],
+                }),
+            )
             leads.require.mockResolvedValue(leadOf({ stage: "won" }))
 
             await expect(actions.request("user-1", "ws-1", action, { leadId: LEAD }, "vi")).resolves.toEqual({

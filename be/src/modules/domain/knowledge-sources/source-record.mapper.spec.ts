@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
-import type { KnowledgeSourcesRow } from "./persistence/knowledge-sources.rows"
+import type { KnowledgeSourceEntity } from "./persistence/entities"
 import { toSourceRecord, toSourceSummary, toSourceDetail } from "./source-record.mapper"
 
 const SUBJECT = Symbol("source-record.mapper")
@@ -25,11 +25,11 @@ const buildSubject = async () => {
     return moduleRef.get<Subject>(SUBJECT)
 }
 
-const rowOf = builder<KnowledgeSourcesRow>({
+const rowOf = builder<KnowledgeSourceEntity>({
     id: "s1",
-    workspace_id: "w1",
+    workspaceId: "w1",
     module: null,
-    installation_id: null,
+    installationId: null,
     kind: "url",
     topic: "t",
     tags: [],
@@ -38,14 +38,14 @@ const rowOf = builder<KnowledgeSourcesRow>({
     content: "https://x.test",
     status: "queued",
     error: null,
-    chunk_count: 0,
+    chunkCount: 0,
     progress: 0,
-    storage_path: null,
-    source_url: "https://x.test",
+    storagePath: null,
+    sourceUrl: "https://x.test",
     origin: null,
-    created_by: "u1",
-    created_at: "2026-10-01T00:00:00.000Z",
-    updated_at: "2026-10-02T00:00:00.000Z",
+    createdBy: "u1",
+    createdAt: new Date("2026-10-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-10-02T00:00:00.000Z"),
 })
 
 describe("toSourceRecord", () => {
@@ -72,10 +72,10 @@ describe("toSourceRecord", () => {
 })
 
 describe("toSourceRecord instants", () => {
-    it("answers updatedAt as an ISO string when the driver gives a Date", async () => {
+    it("answers updatedAt as an ISO string", async () => {
         const subject = await buildSubject()
 
-        const record = subject.toSourceRecord(rowOf({ updated_at: new Date("2026-10-02T00:00:00.000Z") }))
+        const record = subject.toSourceRecord(rowOf({ updatedAt: new Date("2026-10-02T00:00:00.000Z") }))
 
         expect(record.updatedAt).toBe("2026-10-02T00:00:00.000Z")
     })

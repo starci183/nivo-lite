@@ -97,7 +97,7 @@ export class LeadFlowEntity {
 
     /** The last turn's reading (jsonb, read through the mapper). */
     @Column({ name: "analysis", type: "jsonb", nullable: true })
-    analysis!: unknown
+    analysis!: object | null
 
     /** When the person last wrote. */
     @Column({ name: "last_user_at", type: "timestamptz", nullable: true })

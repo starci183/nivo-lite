@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder, mockEntityManager } from "@starci/jest-preset"
+import type { MockEntityManager } from "@starci/jest-preset"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -76,10 +77,9 @@ const SOURCE: LeadSource = {
 }
 
 const build = async (
-    stubs: Parameters<typeof mockEntityManager>[0] = {},
+    entityManager: MockEntityManager = mockEntityManager(),
     statements: ReadonlyArray<QueryBuilderAnswers> = [],
 ) => {
-    const entityManager = mockEntityManager(stubs)
     const fakes = queueQueryBuilders(entityManager, statements)
     const moduleRef = await Test.createTestingModule({
         providers: [LeadFlowStoreService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
@@ -89,12 +89,14 @@ const build = async (
 
 describe("LeadFlowStoreService", () => {
     it("reads the flow of a lead and refuses a lead without one", async () => {
-        const { store, entityManager } = await build({
-            findOne: [
-                [LeadFlowEntity, rowOf()],
-                [LeadFlowEntity, null],
-            ],
-        })
+        const { store, entityManager } = await build(
+            mockEntityManager({
+                findOne: [
+                    [LeadFlowEntity, rowOf()],
+                    [LeadFlowEntity, null],
+                ],
+            }),
+        )
 
         await expect(store.requireByLead("ws-1", "lead-1")).resolves.toEqual(toLeadFlow(rowOf()))
         await expect(store.requireByLead("ws-1", "lead-2")).rejects.toMatchObject({ code: LeadFlowsErrorCode.NoFlow })
@@ -114,7 +116,7 @@ describe("LeadFlowStoreService", () => {
         expect(entityManager.find).not.toHaveBeenCalled()
     })
     it("finds the candidate flows by every identity key that is set, oldest first", async () => {
-        const { store, entityManager } = await build({ find: [LeadFlowEntity, [rowOf()]] })
+        const { store, entityManager } = await build(mockEntityManager({ find: [LeadFlowEntity, [rowOf()]] }))
 
         await expect(store.candidates("ws-1", { ...NOBODY, psid: "person-1" })).resolves.toEqual([toLeadFlow(rowOf())])
         await store.candidates("ws-1", { psid: "p", igsid: "i", phone: "0", email: "e@x" })
@@ -150,7 +152,7 @@ describe("LeadFlowStoreService", () => {
             lastUserAt: SOURCE.at,
             lastUserText: "Hello",
         }
-        const { store, fakes } = await build({}, [returned(rowOf()), { execute: { raw: [] } }])
+        const { store, fakes } = await build(mockEntityManager(), [returned(rowOf()), { execute: { raw: [] } }])
 
         await expect(store.open(opening)).resolves.toEqual(toLeadFlow(rowOf()))
         await expect(store.open(opening)).resolves.toBeNull()
@@ -189,7 +191,7 @@ describe("LeadFlowStoreService", () => {
             lastUserAt: null,
             lastUserText: null,
         }
-        const { store, fakes } = await build({}, [returned(rowOf())])
+        const { store, fakes } = await build(mockEntityManager(), [returned(rowOf())])
 
         await store.open(opening)
 
@@ -200,7 +202,10 @@ describe("LeadFlowStoreService", () => {
 describe("LeadFlowStoreService", () => {
     it("saves a patched flow and refuses a save that returns no row", async () => {
         const flow = toLeadFlow(rowOf())
-        const { store, fakes } = await build({}, [returned(rowOf({ state: "greeted" })), { execute: { raw: [] } }])
+        const { store, fakes } = await build(mockEntityManager(), [
+            returned(rowOf({ state: "greeted" })),
+            { execute: { raw: [] } },
+        ])
 
         await expect(store.patch(flow, { state: "greeted" })).resolves.toEqual(toLeadFlow(rowOf({ state: "greeted" })))
         await expect(store.patch(flow, { state: "closed" })).rejects.toMatchObject({

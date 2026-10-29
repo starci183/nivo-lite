@@ -5,9 +5,7 @@ import { KnowledgeQueue } from "@modules/queues/knowledge"
 import type { ApiTextSourceInput } from "./api-knowledge-sources.contracts"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import type { SourceRef } from "./knowledge-sources.contracts"
-import { INSERT_API_TEXT_SOURCE } from "./persistence/api-knowledge-sources.sql"
-import type { SourceIdRow } from "./persistence/knowledge-sources.rows"
-import { SELECT_SOURCE } from "./persistence/knowledge-sources.sql"
+import { KnowledgeSourceEntity } from "./persistence/entities"
 import { normalizeSource } from "./source-input.policy"
 
 @Injectable()
@@ -29,25 +27,34 @@ export class ApiKnowledgeSourcesService {
             }),
             KnowledgeSourcesError,
         )
-        const [row] = await tx.query<Array<SourceIdRow>>(INSERT_API_TEXT_SOURCE, [
-            input.sourceId,
-            input.workspaceId,
-            source.topic,
-            [...source.tags],
-            source.visibility,
-            source.title,
-            source.content,
-            source.origin,
-        ])
-        if (row === undefined) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
+        const inserted = await tx.insert(KnowledgeSourceEntity, {
+            id: input.sourceId,
+            workspaceId: input.workspaceId,
+            kind: "text",
+            topic: source.topic,
+            tags: [...source.tags],
+            visibility: source.visibility,
+            title: source.title,
+            content: source.content,
+            status: "queued",
+            progress: 0,
+            origin: source.origin,
+            createdBy: null,
+        })
+        const [row] = inserted.identifiers
+        if (typeof row?.id !== "string")
+            throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
         await this.queue.enqueueIndex({ sourceId: row.id, workspaceId: input.workspaceId }, tx)
         return { id: row.id }
     }
 
     /** Historical inline jobs already own a source; index that exact workspace-scoped row. */
     async indexExisting(workspaceId: string, sourceId: string, tx: EntityManager): Promise<void> {
-        const [row] = await tx.query<Array<SourceIdRow>>(SELECT_SOURCE, [sourceId, workspaceId])
-        if (row === undefined) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
+        const row = await tx.findOne(KnowledgeSourceEntity, {
+            select: { id: true },
+            where: { id: sourceId, workspaceId },
+        })
+        if (row === null) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
         await this.queue.enqueueIndex({ sourceId: row.id, workspaceId }, tx)
     }
 }

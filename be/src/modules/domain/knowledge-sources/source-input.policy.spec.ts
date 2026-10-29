@@ -2,13 +2,21 @@ import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import type { AddSourceInput } from "./knowledge-sources.contracts"
-import { tagsOf, normalizeSource, normalizeUpdate, replacementContent, safeFileName } from "./source-input.policy"
+import {
+    metaChanges,
+    tagsOf,
+    normalizeSource,
+    normalizeUpdate,
+    replacementContent,
+    safeFileName,
+} from "./source-input.policy"
 
 const SUBJECT = Symbol("source-input.policy")
 type Subject = {
     tagsOf: typeof tagsOf
     normalizeSource: typeof normalizeSource
     normalizeUpdate: typeof normalizeUpdate
+    metaChanges: typeof metaChanges
     replacementContent: typeof replacementContent
     safeFileName: typeof safeFileName
 }
@@ -21,6 +29,7 @@ const buildSubject = async () => {
                     tagsOf,
                     normalizeSource,
                     normalizeUpdate,
+                    metaChanges,
                     replacementContent,
                     safeFileName,
                 },
@@ -234,5 +243,34 @@ describe("safeFileName", () => {
 
         expect(subject.safeFileName("///")).toBe("file")
         expect(subject.safeFileName(`${"a".repeat(200)}.pdf`)).toHaveLength(120)
+    })
+})
+
+describe("metaChanges", () => {
+    it("writes only what the change names, and the instant of the change", async () => {
+        const subject = await buildSubject()
+        const none = { title: null, topic: null, tags: null, module: null, visibility: null }
+
+        expect(subject.metaChanges(none)).toEqual({ updatedAt: expect.any(Function) })
+        expect(subject.metaChanges({ title: "T", topic: "x", tags: ["a"], module: "m", visibility: "public" })).toEqual(
+            {
+                title: "T",
+                topic: "x",
+                tags: ["a"],
+                module: "m",
+                visibility: "public",
+                updatedAt: expect.any(Function),
+            },
+        )
+    })
+
+    it("clears a topic and a module that are empty text", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.metaChanges({ title: null, topic: "", tags: null, module: "", visibility: null })).toEqual({
+            topic: null,
+            module: null,
+            updatedAt: expect.any(Function),
+        })
     })
 })
