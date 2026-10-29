@@ -1,4 +1,3 @@
-import assert from "node:assert/strict"
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
 import { PublicLeadsService } from "@modules/domain/public-api"
 import { persistPublicApiLead } from "../../fixtures/builders/public-api.builder"
@@ -10,7 +9,7 @@ import { apiLead } from "../../world/public-api-database.service"
 
 describe("Public API won customer (persisted local integration)", () => {
     const world = useTestWorld({ modules: [...PUBLIC_API_PROOF_MODULES, ProcessPublicApiQueueModule.register({})] })
-    const { fixture, deliver, requestForLead, outbox } = preparePublicApiProof(world)
+    const { fixture, deliver, requestForLead, outbox, dealsWon } = preparePublicApiProof(world)
 
     it("queues the invoice for the returned customer and publishes deal.won once across replay", async () => {
         const identity = await fixture()
@@ -45,20 +44,15 @@ describe("Public API won customer (persisted local integration)", () => {
             },
         ])
         const publications = await outbox(identity.workspaceId)
-        const won = publications.filter((item) => item.payload["event"] === "deal.won")
+        const won = await dealsWon(identity.workspaceId)
         expect(won).toHaveLength(1)
-        const [event] = won
-        assert(event !== undefined)
-        expect(event.queue).toBe("automation")
-        expect(event.name).toBe("automation.tick")
-        expect(event.dedupe_key).toBe(`deal.won:${leadId}`)
-        expect(event.payload).toEqual({
-            kind: "business_event",
-            event: "deal.won",
-            workspaceId: identity.workspaceId,
-            dedupe: `deal.won:${leadId}`,
-            data: {
-                lead_id: leadId,
+        expect(won[0]).toMatchObject({
+            eventName: "deal_won",
+            eventId: `deal.won:${leadId}`,
+            payload: {
+                dedupeKey: `deal.won:${leadId}`,
+                workspaceId: identity.workspaceId,
+                leadId,
                 name: "Existing API customer",
                 company: "Won API company",
                 channel: "API",
@@ -72,6 +66,7 @@ describe("Public API won customer (persisted local integration)", () => {
         await deliver(payload)
         expect(await publicApiWork(world, identity.workspaceId)).toEqual(work)
         expect(await outbox(identity.workspaceId)).toEqual(publications)
+        expect(await dealsWon(identity.workspaceId)).toEqual(won)
         expect(await publicApiRequest(world, identity.workspaceId, request.id)).toEqual(completed)
     })
 })
