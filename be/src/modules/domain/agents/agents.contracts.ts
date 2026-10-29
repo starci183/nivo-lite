@@ -1,4 +1,3 @@
-import type { Access, Purpose } from "@modules/domain/agent-connections"
 import type { SyncFile } from "@modules/integrations/openclaw"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 
@@ -133,9 +132,9 @@ export interface ConnectionItem {
     /** connected, error or pending. */
     readonly status: "connected" | "error" | "pending"
     /** What the agent may do through it. */
-    readonly access: Access
+    readonly access: AgentAccess
     /** What the agent uses it for. */
-    readonly purpose: Purpose
+    readonly purpose: AgentPurpose
 }
 
 /** Who the agent talks to: customers or the team. */
@@ -503,3 +502,9 @@ export type OptionalInstant = string | null
 
 /** Reads when the agent copies were last checked. */
 export type SyncCheckReader = () => Promise<OptionalInstant>
+
+/** What an agent may do through a connection. */
+export type AgentAccess = "read" | "ask" | "auto"
+
+/** What an agent uses a connection for. */
+export type AgentPurpose = "inbound_chat" | "outbound_chat" | "bank_feed" | "data_source" | "tool" | "lead_source"

@@ -1,5 +1,5 @@
 import type { Type } from "@nestjs/common"
-import type { InstallationDirectory, KnowledgeLens, ModuleProfiles } from "./agents.port"
+import type { AgentConnectionsDirectory, InstallationDirectory, KnowledgeLens, ModuleProfiles } from "./agents.port"
 
 /** The ports the setup mode binds: the installations and the module definitions, without the knowledge lens. */
 export interface AgentsSetupPorts {
@@ -7,6 +7,8 @@ export interface AgentsSetupPorts {
     readonly installations: Type<InstallationDirectory>
     /** Implements the module definitions port. */
     readonly modules: Type<ModuleProfiles>
+    /** Implements the agent connections port; an existing provider of the app. */
+    readonly connections: Type<AgentConnectionsDirectory>
 }
 
 /** The classes that implement the ports of the other lanes; the app root passes them and the module binds each token to them. */

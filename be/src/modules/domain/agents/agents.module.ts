@@ -7,7 +7,13 @@ import { AgentDirectoryService } from "./agent-directory.service"
 import { AgentIdentityService } from "./agent-identity.service"
 import { AgentLensesService } from "./agent-lenses.service"
 import { AgentOwnershipService } from "./agent-ownership.service"
-import { AGENTS_INSTALLATIONS, AGENTS_KNOWLEDGE, AGENTS_MODULES, AGENTS_OPTIONS } from "./agents.decorators"
+import {
+    AGENTS_CONNECTIONS,
+    AGENTS_INSTALLATIONS,
+    AGENTS_KNOWLEDGE,
+    AGENTS_MODULES,
+    AGENTS_OPTIONS,
+} from "./agents.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agents.module-definition"
 import { AgentsService } from "./agents.service"
 import { EngineStatusService } from "./engine-status.service"
@@ -27,6 +33,7 @@ export class AgentsModule extends ConfigurableModuleClass {
             { provide: AGENTS_OPTIONS, useValue: parsed },
             { provide: AGENTS_INSTALLATIONS, useClass: options.ports.installations },
             { provide: AGENTS_MODULES, useClass: options.ports.modules },
+            { provide: AGENTS_CONNECTIONS, useExisting: options.ports.connections },
             PauseClient,
             AgentsService,
             AgentDirectoryService,

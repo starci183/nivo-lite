@@ -1,6 +1,6 @@
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
-import type { InstallationDirectory, KnowledgeLens, ModuleProfiles } from "./agents.port"
+import type { AgentConnectionsDirectory, InstallationDirectory, KnowledgeLens, ModuleProfiles } from "./agents.port"
 import type { AgentsOptions } from "./agents.options"
 
 /** Token of the agents options, exported so a spec can provide it. */
@@ -15,6 +15,9 @@ export const AGENTS_KNOWLEDGE: unique symbol = Symbol("domain.agents.knowledge")
 /** Token of the module definitions port (modules lane). */
 export const AGENTS_MODULES: unique symbol = Symbol("domain.agents.modules")
 
+/** Token of the agent connections port (agent-connections lane). */
+export const AGENTS_CONNECTIONS: unique symbol = Symbol("domain.agents.connections")
+
 /** Injects the agents options. Parameter type: AgentsOptions. */
 export const InjectAgentsOptions = (): TypedParameterDecorator<AgentsOptions> => injector<AgentsOptions>(AGENTS_OPTIONS)
 
@@ -28,3 +31,7 @@ export const InjectKnowledge = (): TypedParameterDecorator<KnowledgeLens> => inj
 /** Injects the module definitions port. Parameter type: ModuleProfiles. */
 export const InjectModuleProfiles = (): TypedParameterDecorator<ModuleProfiles> =>
     injector<ModuleProfiles>(AGENTS_MODULES)
+
+/** Injects the agent connections port. Parameter type: AgentConnectionsDirectory. */
+export const InjectAgentConnections = (): TypedParameterDecorator<AgentConnectionsDirectory> =>
+    injector<AgentConnectionsDirectory>(AGENTS_CONNECTIONS)

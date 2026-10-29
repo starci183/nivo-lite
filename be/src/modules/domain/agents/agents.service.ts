@@ -1,14 +1,12 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager, UpdateResult } from "typeorm"
 import { WorkItemsActivityService } from "@modules/domain/work-items"
-import type { BoundConnection } from "@modules/domain/agent-connections"
 import { WorkspaceMembersService, isManagerRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { AgentBindingsService } from "@modules/domain/agent-connections"
 import type {
     AgentDashboardData,
     AgentOwners,
@@ -25,11 +23,17 @@ import type {
     WaitingData,
 } from "./agents.contracts"
 import { AgentOwnershipService } from "./agent-ownership.service"
-import { InjectInstallations, InjectKnowledge } from "./agents.decorators"
+import { InjectAgentConnections, InjectInstallations, InjectKnowledge } from "./agents.decorators"
 import { AgentsLogEvent } from "./agents.log-events"
 import { firstProfileOf, refOf, summaryOf } from "./agents.mapper"
 import type { AgentRecord } from "./agents.mapper"
-import type { InstallationDirectory, KnowledgeLens, OptionalInstallation } from "./agents.port"
+import type {
+    AgentConnectionsDirectory,
+    BoundConnectionView,
+    InstallationDirectory,
+    KnowledgeLens,
+    OptionalInstallation,
+} from "./agents.port"
 import {
     GAP_LIMIT,
     LIST_LIMIT,
@@ -73,7 +77,7 @@ export class AgentsService {
         @InjectLogger() private readonly logger: Logger,
         @InjectInstallations() private readonly installations: InstallationDirectory,
         private readonly members: WorkspaceMembersService,
-        private readonly bindings: AgentBindingsService,
+        @InjectAgentConnections() private readonly bindings: AgentConnectionsDirectory,
         private readonly ownership: AgentOwnershipService,
         private readonly work: WorkItemsActivityService,
         @Optional() @InjectKnowledge() private readonly knowledge: KnowledgeLens | null = null,
@@ -289,7 +293,7 @@ export class AgentsService {
         }
     }
 
-    private connectionsOf(agentId: OptionalId): Promise<ReadonlyArray<BoundConnection>> {
+    private connectionsOf(agentId: OptionalId): Promise<ReadonlyArray<BoundConnectionView>> {
         return agentId === null ? Promise.resolve([]) : this.bindings.connectionsFor(agentId, DASHBOARD_PURPOSES)
     }
 

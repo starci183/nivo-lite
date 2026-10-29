@@ -1,6 +1,8 @@
 import type { AskAsAgentInput, AskedPassage } from "./agent-ask.contracts"
 import type {
+    AgentAccess,
     AgentAudience,
+    AgentPurpose,
     LensCounts,
     LensLanes,
     OptionalId,
@@ -156,4 +158,30 @@ export interface ModuleProfiles {
     applicationClause(): string
     /** The JSON member of the hiring application that the base contract embeds ("" when none). */
     applicationShape(): string
+}
+
+/** A connection an agent is bound to, as the dashboard of the agents capability reads it. */
+export interface BoundConnectionView {
+    /** The connection. */
+    readonly id: string
+    /** The provider (telegram, zalo_oa...). */
+    readonly provider: string
+    /** The display name. */
+    readonly name: string
+    /** The bot username, when the provider has one. */
+    readonly botUsername: string | null
+    /** The masked bank account, when the connection is a bank feed. */
+    readonly accountMasked: string | null
+    /** connected, error, pending or disconnected. */
+    readonly status: string
+    /** What the agent may do through the connection. */
+    readonly access: AgentAccess
+    /** What the agent uses the connection for. */
+    readonly purpose: AgentPurpose
+}
+
+/** The connections bound to agents: the port the agent-connections capability implements for the agents dashboard. */
+export interface AgentConnectionsDirectory {
+    /** The connections an agent is bound to for the purposes, oldest connection first. */
+    connectionsFor(agentId: string, purposes: ReadonlyArray<AgentPurpose>): Promise<ReadonlyArray<BoundConnectionView>>
 }

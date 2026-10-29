@@ -23,11 +23,10 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { AgentBindingsService } from "@modules/domain/agent-connections"
 import { AgentOwnershipService } from "./agent-ownership.service"
-import { AGENTS_INSTALLATIONS, AGENTS_KNOWLEDGE } from "./agents.decorators"
+import { AGENTS_CONNECTIONS, AGENTS_INSTALLATIONS, AGENTS_KNOWLEDGE } from "./agents.decorators"
 import { AgentsLogEvent } from "./agents.log-events"
-import type { InstallationDirectory, KnowledgeLens } from "./agents.port"
+import type { AgentConnectionsDirectory, InstallationDirectory, KnowledgeLens } from "./agents.port"
 import { AgentsService } from "./agents.service"
 import { AgentsErrorCode } from "./errors/agents.error"
 import { AgentEntity } from "./persistence/entities"
@@ -53,7 +52,7 @@ const build = async (
         countsFor: jest.fn(() => Promise.resolve(AGENT_LENS_COUNTS)),
         openGapsOf: jest.fn(() => Promise.resolve(AGENT_OPEN_GAPS)),
     })
-    const bindings = mock<AgentBindingsService>({
+    const bindings = mock<AgentConnectionsDirectory>({
         connectionsFor: jest.fn(() => Promise.resolve([AGENT_BOUND_CONNECTION])),
     })
     const logger = mock<Logger>()
@@ -67,7 +66,7 @@ const build = async (
             { provide: AGENTS_INSTALLATIONS, useValue: installations },
             { provide: AGENTS_KNOWLEDGE, useValue: bindKnowledge ? knowledge : null },
             { provide: WorkspaceMembersService, useValue: members },
-            { provide: AgentBindingsService, useValue: bindings },
+            { provide: AGENTS_CONNECTIONS, useValue: bindings },
             { provide: AgentOwnershipService, useValue: ownership },
             { provide: WorkItemsActivityService, useValue: work },
         ],

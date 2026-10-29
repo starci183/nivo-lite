@@ -1,5 +1,6 @@
 import type { DynamicModule } from "@nestjs/common"
 import { AGENTS_SYNC_FRESH_MS, AgentsModule } from "@modules/domain/agents"
+import { AgentBindingsService } from "@modules/domain/agent-connections"
 import { ModuleProfilesService } from "@modules/domain/agent-knowledge"
 import { BrainFactsModule } from "@modules/domain/brain-facts"
 import { KnowledgeGapsModule } from "@modules/domain/knowledge-gaps"
@@ -17,7 +18,11 @@ export const cliSetupModules = (options: CliAppOptions): Array<DynamicModule> =>
     AgentsModule.register({
         isGlobal: true,
         setupOnly: true,
-        ports: { installations: InstallationDirectoryService, modules: ModuleProfilesService },
+        ports: {
+            installations: InstallationDirectoryService,
+            modules: ModuleProfilesService,
+            connections: AgentBindingsService,
+        },
         syncFreshMs: AGENTS_SYNC_FRESH_MS,
     }),
     OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
