@@ -34,7 +34,7 @@ class LocalDatabaseModule {
             global: true,
             providers: [
                 { provide: PRIMARY_ENTITY_MANAGER, useFactory: () => manager },
-                { provide: INBOX, useFactory: () => new InboxService(manager) },
+                { provide: INBOX, useFactory: () => new InboxService() },
             ],
             exports: [PRIMARY_ENTITY_MANAGER, INBOX],
         }
