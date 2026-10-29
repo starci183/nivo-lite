@@ -64,11 +64,11 @@ export interface WaitingReplyRow {
     /** The subject (the conversation) it concerns. */
     readonly subject_id: string | null
     /** The proposal, as stored. */
-    readonly proposal: unknown
+    readonly proposal: Readonly<Record<string, unknown>> | null
     /** The staff member it is assigned to, or null. */
     readonly assigned_staff_id: string | null
     /** When it was raised. */
-    readonly created_at: string | Date
+    readonly created_at: Date | string
 }
 
 /** How far a customer-reply work item got: its state and the stored answer's delivery. */
