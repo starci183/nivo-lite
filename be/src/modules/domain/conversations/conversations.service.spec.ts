@@ -81,32 +81,19 @@ const registerTelegramGuards = () => {
         expect(queue.enqueueChatTurn).not.toHaveBeenCalled()
     })
 
-    it(
-        "opens a new visit on /start: archives the old conversation and delivers the greeting of the agent " +
-            "without an AI call",
-        async () => {
-            const manager = mockEntityManager()
-            const { service, queue, conversations, messages } = await build({}, [FRONT_AGENT])
+    it("opens a new visit on /start: archives the old conversation and greets without an AI call", async () => {
+        const manager = mockEntityManager()
+        const { service, queue, conversations, messages } = await build({}, [FRONT_AGENT])
 
-            await expect(
-                service.acceptTelegram(CONNECTION, telegram({ text: "/start", isStart: true }), manager),
-            ).resolves.toBeUndefined()
-            expect(conversations.archive).toHaveBeenCalledWith(
-                "ws-1",
-                "telegram",
-                CONNECTION,
-                "555",
-                `555:${NOW}`,
-                manager,
-            )
-            expect(messages.storeGreeting).toHaveBeenCalledWith("ws-1", "conv-1", "Welcome!", manager)
-            expect(messages.storeCustomer).not.toHaveBeenCalled()
-            expect(queue.enqueueChatTurn).toHaveBeenCalledWith(
-                queuedTurn({ kind: "deliver", messageId: "greet-1" }),
-                manager,
-            )
-        },
-    )
+        await expect(
+            service.acceptTelegram(CONNECTION, telegram({ text: "/start", isStart: true }), manager),
+        ).resolves.toBeUndefined()
+        expect(conversations.archive).toHaveBeenCalledWith("ws-1", "telegram", CONNECTION, "555", `555:${NOW}`, manager)
+        expect(messages.storeGreeting).toHaveBeenCalledWith("ws-1", "conv-1", "Welcome!", manager)
+        expect(messages.storeCustomer).not.toHaveBeenCalled()
+        const greeting = queuedTurn({ kind: "deliver", messageId: "greet-1" })
+        expect(queue.enqueueChatTurn).toHaveBeenCalledWith(greeting, manager)
+    })
 
     it("greets with the default line when the agent has no greeting of its own", async () => {
         const manager = mockEntityManager()

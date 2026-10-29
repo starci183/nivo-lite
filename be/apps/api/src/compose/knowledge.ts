@@ -25,7 +25,7 @@ export const knowledgeModules = (options: ApiOptions): Array<DynamicModule> => [
     AiGatewayModule.register({ isGlobal: true, ...options.aiGateway }),
     AiModule.register({ isGlobal: true, ...options.aiTasks.endpoint }),
     DocumentsModule.register({ isGlobal: true, ...options.documents }),
-    KnowledgeQueueModule.register({}),
+    KnowledgeQueueModule.register({ isGlobal: true }),
     KnowledgeSourcesModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
     KnowledgeChunksModule.register({ isGlobal: true }),
     KnowledgeSuggestionStateModule.register({ isGlobal: true }),

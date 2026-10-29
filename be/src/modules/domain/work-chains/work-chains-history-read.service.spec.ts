@@ -4,6 +4,7 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { entityOf } from "@tests/fixtures/builders/entity.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { CompletedTask } from "./work-chains-history-read.contracts"
 import { WorkChainEntity } from "./persistence/entities"
 import { WorkChainsHistoryReadService } from "./work-chains-history-read.service"
 
@@ -19,6 +20,18 @@ const stepOf = entityOf(WorkChainEntity, {
     decidedBy: "m-1",
     startedAt: STARTED,
     finishedAt: FINISHED,
+})
+
+const taskOf = (overrides: Partial<CompletedTask> = {}): CompletedTask => ({
+    id: "c-1",
+    threadId: "t-1",
+    actorKind: "agent",
+    actorId: "a-1",
+    action: "hand_off",
+    rule: null,
+    decidedBy: "m-1",
+    at: FINISHED,
+    ...overrides,
 })
 
 const build = async (em: MockEntityManager) => {
@@ -45,26 +58,8 @@ describe("WorkChainsHistoryReadService", () => {
         ])
 
         await expect((await build(em)).completedTasks("ws-1", 4, 8)).resolves.toEqual([
-            {
-                id: "c-1",
-                threadId: "t-1",
-                actorKind: "agent",
-                actorId: "a-1",
-                action: "hand_off",
-                rule: null,
-                decidedBy: "m-1",
-                at: FINISHED,
-            },
-            {
-                id: "c-2",
-                threadId: "t-1",
-                actorKind: "agent",
-                actorId: "a-1",
-                action: "hand_off",
-                rule: null,
-                decidedBy: "m-1",
-                at: STARTED,
-            },
+            taskOf(),
+            taskOf({ id: "c-2", at: STARTED }),
         ])
         expect(fake?.callsOf("offset")).toEqual([[4]])
         expect(fake?.callsOf("limit")).toEqual([[8]])

@@ -1,3 +1,4 @@
+export { AutomationEngineService } from "./automation-engine.service"
 export { AutomationTickService } from "./automation-tick.service"
 export { AutomationExtensionsService } from "./automation-extensions.service"
 export type { ExecutorContext, ExecutorPayload } from "./automation-ports.contracts"

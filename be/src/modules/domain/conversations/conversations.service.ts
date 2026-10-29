@@ -16,6 +16,8 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { ChatTurnQueue } from "@modules/queues/chat-turn"
 import type { FrontAgent, MetaInbound, TelegramInbound, ZaloInbound } from "./conversations.contracts"
 
+const LOCALE = "vi"
+
 /** Where a customer was met, and who answers them. */
 interface Meeting {
     readonly workspaceId: string
