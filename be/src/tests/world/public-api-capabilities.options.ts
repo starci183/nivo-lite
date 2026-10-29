@@ -128,7 +128,7 @@ class PublicApiProofPeersModule {
         return {
             module: PublicApiProofPeersModule,
             global: true,
-            imports: [KnowledgeQueueModule.register({ isGlobal: true })],
+            imports: [KnowledgeQueueModule.register({})],
             providers: [
                 ...services,
                 { provide: AGENT_DIRECTORY, useExisting: PublicApiProofDirectory },

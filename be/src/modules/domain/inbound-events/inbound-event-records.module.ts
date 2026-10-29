@@ -8,5 +8,5 @@ import { InboundEventsService } from "./inbound-events.service"
     providers: [InboundEventsService, InboundPaymentsReadService, { provide: INBOX, useClass: InboxService }],
     exports: [InboundEventsService, InboundPaymentsReadService],
 })
-/** The inbound event ledger other capabilities read and write through, registrable on its own by an app that serves no member feed. */
+/** The inbound event ledger other capabilities read and write through, imported and exported by the inbound-events module. */
 export class InboundEventRecordsModule extends ConfigurableModuleClass {}

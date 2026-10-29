@@ -1,2 +1,2 @@
-/** The inbound event ledger takes no options; the app root decides whether it is global. */
+/** The inbound event ledger takes no options. */
 export type InboundEventRecordsOptions = Record<never, never>

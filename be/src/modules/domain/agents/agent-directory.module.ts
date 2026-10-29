@@ -6,5 +6,5 @@ import { AgentDirectoryService } from "./agent-directory.service"
     providers: [AgentDirectoryService],
     exports: [AgentDirectoryService],
 })
-/** The agent lookups other capabilities read through, registrable on its own by an app that composes no agent lifecycle. */
+/** The agent lookups other capabilities read through, imported and exported by the agents module. */
 export class AgentDirectoryModule extends ConfigurableModuleClass {}

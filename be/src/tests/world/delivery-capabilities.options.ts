@@ -19,7 +19,7 @@ import { ConversationsService, CONVERSATIONS_MESSAGES } from "@modules/domain/co
 import { ZaloCredentialsService } from "@modules/domain/channels"
 import { AgentConversationsModule } from "@modules/domain/agent-conversations"
 import { AgentMessagesModule } from "@modules/domain/agent-messages"
-import { InboundEventRecordsModule, InboundEventsModule } from "@modules/domain/inbound-events"
+import { InboundEventsModule } from "@modules/domain/inbound-events"
 import { EventsModule } from "@modules/domain/events"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
@@ -145,7 +145,6 @@ const domainModules = (tokenKey: Secret): Array<DynamicModule> => [
     }),
     AgentConversationsModule.register({ isGlobal: true }),
     AgentMessagesModule.register({ isGlobal: true }),
-    { ...InboundEventRecordsModule.register({}), global: true },
     InboundEventsModule.register({ isGlobal: true }),
     EventsModule.register({ isGlobal: true }),
     StaffModule.register({ isGlobal: true }),
