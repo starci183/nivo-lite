@@ -45,13 +45,20 @@ const UNREADABLE = "SELECT 1"
 const SEEN = new WeakMap<MockEntityManager, TableAnswers>()
 
 const rowsAt = (queries: Queries, key: string): ReadonlyArray<Record<string, unknown>> => {
-    const rows = queries.find(([name]) => name === key)?.[1]
-    return Array.isArray(rows) ? rows : []
+    const rows: unknown = queries.find(([name]) => name === key)?.[1]
+    return Array.isArray(rows)
+        ? rows.filter((row): row is Record<string, unknown> => typeof row === "object" && row !== null)
+        : []
+}
+
+/** The manager a spec runs against, with the reads it answers. */
+interface Served {
+    readonly em: MockEntityManager
 }
 
 /** A manager that answers the named reads with their rows; with no reads it is strict and answers nothing. */
-const serve = (queries: Queries = []): MockEntityManager => {
-    if (queries.length === 0) return mockEntityManager()
+const serve = (queries: Queries = []): Served => {
+    if (queries.length === 0) return { em: mockEntityManager() }
     const resolved = rowsAt(queries, RESOLVE_INSTALLATION)
     const em = queries.some(([key]) => key === RESOLVE_INSTALLATION)
         ? mockEntityManager({
@@ -80,7 +87,7 @@ const serve = (queries: Queries = []): MockEntityManager => {
             "public.invoices": label,
         }),
     )
-    return em
+    return { em }
 }
 
 /** The queries of one table that a manager built by `serve` saw. */
@@ -182,19 +189,10 @@ describe("CommandPlannerService", () => {
                 [CHAIN_REPEATS_COMMAND, [{ repeats: false }]],
                 [FIND_GIVEN_INSTALLATION, [{ id: "inst-1", name: "Main" }]],
                 [FIND_SUBJECT_LABEL, [{ label: "Lan" }]],
-            ])
+            ]).em
             const built = await build(em)
-            const plan = planned(
-                await built.service.plan(
-                    ctx,
-                    replyOf({
-                        from: AGENT_ID,
-                        parentId: "parent-1",
-                        installationId: "inst-1",
-                    }),
-                    manager,
-                ),
-            )
+            const input = replyOf({ from: AGENT_ID, parentId: "parent-1", installationId: "inst-1" })
+            const plan = planned(await built.service.plan(ctx, input, manager))
 
             await plan.spec.onInserted?.(rowOf())
 
@@ -221,30 +219,21 @@ describe("CommandPlannerService", () => {
 describe("CommandPlannerService", () => {
     describe("refusals", () => {
         it.each(refusalCases)("refuses %s", async (_name, input, expected, queries) => {
-            const built = await build(serve(queries))
+            const built = await build(serve(queries).em)
             expect(await built.service.plan(ctx, input)).toEqual(expected)
             expect(built.log).toHaveBeenCalledTimes(1)
             const evidence = { kind: "command.refused", actor: "NIVO", evidence: expected.detail }
             expect(built.log).toHaveBeenCalledWith(ctx, expect.objectContaining(evidence), built.em)
-            if (input.to === "mystery")
-                expect(built.log).toHaveBeenCalledWith(
-                    ctx,
-                    expect.objectContaining({
-                        summary: "owner -> mystery.classify_lead: unknown_module",
-                    }),
-                    built.em,
-                )
-            if (expected.refused === "cycle")
-                expect(
-                    readsOf(built.em, "public.work_items").map((query) => query.callsOf("where")[0]?.[1]),
-                ).toContainEqual({
-                    workspaceId: "ws-1",
-                    chainId: "chain-1",
-                    action: "classify_lead",
-                    subjectType: "lead",
-                    dedupeKey: "cmd:classify_lead:lead:lead-1",
-                    subjectId: "lead-1",
-                })
+            const summary: unknown = expect.objectContaining({
+                summary: "owner -> mystery.classify_lead: unknown_module",
+            })
+            if (input.to === "mystery") expect(built.log).toHaveBeenCalledWith(ctx, summary, built.em)
+            const cycle = {
+                ...{ workspaceId: "ws-1", chainId: "chain-1", action: "classify_lead", subjectType: "lead" },
+                ...{ dedupeKey: "cmd:classify_lead:lead:lead-1", subjectId: "lead-1" },
+            }
+            const wheres = readsOf(built.em, "public.work_items").map((query) => query.callsOf("where")[0]?.[1])
+            if (expected.refused === "cycle") expect(wheres).toContainEqual(cycle)
         })
     })
 })
@@ -264,39 +253,20 @@ describe("CommandPlannerService", () => {
         it("becomes a spec addressed to the receiver, with the payload fields in the seed", async () => {
             const built = await build(mockEntityManager({}))
 
-            const input = inputOf({
-                payload: { subject_type: "lead", subject_id: "lead-1", lead_id: "lead-1", note: "vip" },
-                seed: { summary: "S", fields: { a: 1 } },
-                inboundEventId: "in-1",
-                queue: true,
-                preset: true,
-                noChain: true,
-                forceAsk: "unclear_outcome",
-                dedupeKey: "key-1",
-            })
+            const payload = { subject_type: "lead", subject_id: "lead-1", lead_id: "lead-1", note: "vip" }
+            const input = inputOf({ payload, seed: { summary: "S", fields: { a: 1 } }, inboundEventId: "in-1" })
+            Object.assign(input, { queue: true, preset: true, noChain: true, forceAsk: "unclear_outcome" })
+            Object.assign(input, { dedupeKey: "key-1" })
             const plan = planned(await built.service.plan(ctx, input))
 
             expect(plan.depth).toBe(0)
             expect(plan.inserted()).toBe(false)
-            expect(plan.spec).toEqual(
-                expect.objectContaining({
-                    action: "classify_lead",
-                    subject_type: "lead",
-                    subject_id: "lead-1",
-                    lead_id: "lead-1",
-                    inbound_event_id: "in-1",
-                    parent_id: null,
-                    dedupeKey: "key-1",
-                    seed: { summary: "S", fields: { a: 1, note: "vip" } },
-                    queue: true,
-                    preset: true,
-                    noChain: true,
-                    forceAsk: "unclear_outcome",
-                    chainId: null,
-                    depth: 0,
-                    installationId: null,
-                }),
-            )
+            const address = { action: "classify_lead", subject_type: "lead", subject_id: "lead-1", lead_id: "lead-1" }
+            const flags = { queue: true, preset: true, noChain: true, forceAsk: "unclear_outcome" }
+            const place = { chainId: null, depth: 0, installationId: null, parent_id: null }
+            const seed = { summary: "S", fields: { a: 1, note: "vip" } }
+            const keys = { inbound_event_id: "in-1", dedupeKey: "key-1" }
+            expect(plan.spec).toEqual(expect.objectContaining({ ...address, ...flags, ...place, ...keys, seed }))
         })
 
         it.each<readonly [string, SendCommandInput, string | null, string]>([
@@ -341,7 +311,7 @@ describe("CommandPlannerService", () => {
                 [sql, rows],
                 [CHAIN_REPEATS_COMMAND, repeats === null ? [] : [{ repeats }]],
             ]
-            const built = await build(serve(query))
+            const built = await build(serve(query).em)
             const plan = planned(await built.service.plan(ctx, input))
             expect(plan.depth).toBe(depth)
             expect(plan.spec.chainId).toBe(chainId)
@@ -398,7 +368,7 @@ describe("CommandPlannerService", () => {
                 ["ws-1", "chatbot", null, "lead-9", null],
             ),
         ])("chooses %s", async (_name, input, id, query, sql, params) => {
-            const built = await build(serve(query))
+            const built = await build(serve(query).em)
             const plan = planned(await built.service.plan(ctx, input))
             expect(plan.spec.installationId).toBe(id)
             if (sql === RESOLVE_INSTALLATION) expect(built.em.query).toHaveBeenCalledWith(sql, params)
@@ -411,14 +381,13 @@ describe("CommandPlannerService", () => {
         })
 
         it("leaves the database trigger to attribute the item when the lookup fails", async () => {
-            const built = await build(serve([[UNREADABLE, []]]))
+            const built = await build(serve([[UNREADABLE, []]]).em)
 
             const plan = planned(await built.service.plan(ctx, replyOf()))
 
             expect(plan.spec.installationId).toBeNull()
-            expect(built.error).toHaveBeenCalledWith(WorkEngineLogEvent.InstanceUnresolved, expect.any(Error), {
-                to: "chatbot",
-            })
+            const unresolved = WorkEngineLogEvent.InstanceUnresolved
+            expect(built.error).toHaveBeenCalledWith(unresolved, expect.any(Error), { to: "chatbot" })
         })
     })
 })
@@ -439,31 +408,14 @@ describe("CommandPlannerService", () => {
         ) => [name, body, inputOf(input), query, failed] as const
         const subject = (kind: string) => ({ lead_id: "lead-1", subject_type: kind, subject_id: `${kind}-1` })
         it("announces a command that became an item, once inserted", async () => {
-            const built = await inserted(serve([[FIND_SUBJECT_LABEL, [{ label: "Lan" }]]]), inputOf())
+            const built = await inserted(serve([[FIND_SUBJECT_LABEL, [{ label: "Lan" }]]]).em, inputOf())
 
             expect(built.plan.inserted()).toBe(true)
-            expect(built.post).toHaveBeenCalledWith(
-                ctx,
-                {
-                    command: true,
-                    body: "@Sales <- Owner: classify for customer Lan",
-                    lead_id: "lead-1",
-                    work_item_id: "item-1",
-                },
-                built.em,
-            )
-            expect(built.log).toHaveBeenCalledWith(
-                ctx,
-                {
-                    lead_id: "lead-1",
-                    work_item_id: "item-1",
-                    kind: "command.sent",
-                    actor: "Owner",
-                    summary: "sales.classify_lead",
-                    evidence: "handoff",
-                },
-                built.em,
-            )
+            const ids = { lead_id: "lead-1", work_item_id: "item-1" }
+            const body = "@Sales <- Owner: classify for customer Lan"
+            const sent = { kind: "command.sent", actor: "Owner", summary: "sales.classify_lead", evidence: "handoff" }
+            expect(built.post).toHaveBeenCalledWith(ctx, { command: true, body, ...ids }, built.em)
+            expect(built.log).toHaveBeenCalledWith(ctx, { ...ids, ...sent }, built.em)
             expect(readsOf(built.em, "public.leads").map((query) => query.callsOf("where")[0]?.[1])).toEqual([
                 { workspaceId: "ws-1", subjectId: "lead-1" },
             ])
@@ -492,7 +444,7 @@ describe("CommandPlannerService", () => {
             mirror("no label row", "Owner: classify"),
             mirror("an unreadable label", "Owner: classify", {}, [[UNREADABLE, []]], true),
         ])("mirrors %s", async (_name, body, input, query, failed) => {
-            const built = await inserted(serve(query), input)
+            const built = await inserted(serve(query).em, input)
             expect(built.post.mock.calls[0]?.[1]?.body).toBe(`@Sales <- ${body}`)
             if (failed)
                 expect(built.error).toHaveBeenCalledWith(WorkEngineLogEvent.SubjectLabelUnreadable, expect.any(Error), {
@@ -504,37 +456,32 @@ describe("CommandPlannerService", () => {
 
 describe("CommandPlannerService", () => {
     describe("the Office mirror and the sent evidence", () => {
-        it("records the instance that was chosen and how", async () => {
-            const named = await inserted(
-                serve([[FIND_GIVEN_INSTALLATION, [{ id: "inst-1", name: "Branch 1" }]]]),
-                replyOf({ installationId: "inst-1" }),
-            )
-            const unnamed = await inserted(
-                serve([[RESOLVE_INSTALLATION, [{ installation_id: "inst-2", via: "first", name: null }]]]),
-                replyOf(),
-            )
+        it.each([
+            [
+                "named",
+                serve([[FIND_GIVEN_INSTALLATION, [{ id: "inst-1", name: "Branch 1" }]]]).em,
+                { installationId: "inst-1" },
+            ],
+            [
+                "resolved",
+                serve([[RESOLVE_INSTALLATION, [{ installation_id: "inst-2", via: "first", name: null }]]]).em,
+                {},
+            ],
+        ])("records the instance that was chosen and how: %s", async (kind, manager, changes) => {
+            const built = await inserted(manager, replyOf(changes))
+            const [summary, evidence] =
+                kind === "named"
+                    ? ["chatbot[Branch 1].reply_customer", "handoff · instance inst-1 (given)"]
+                    : ["chatbot[inst-2].reply_customer", "handoff · instance inst-2 (first)"]
 
-            expect(named.post.mock.calls[0]?.[1]?.body).toBe("@Chatbot \u2013 Branch 1 <- Owner: reply")
-            expect(named.log).toHaveBeenCalledWith(
-                ctx,
-                expect.objectContaining({
-                    summary: "chatbot[Branch 1].reply_customer",
-                    evidence: "handoff \u00b7 instance inst-1 (given)",
-                }),
-                named.em,
+            expect(built.post.mock.calls[0]?.[1]?.body).toBe(
+                kind === "named" ? "@Chatbot – Branch 1 <- Owner: reply" : "@Chatbot <- Owner: reply",
             )
-            expect(unnamed.log).toHaveBeenCalledWith(
-                ctx,
-                expect.objectContaining({
-                    summary: "chatbot[inst-2].reply_customer",
-                    evidence: "handoff \u00b7 instance inst-2 (first)",
-                }),
-                unnamed.em,
-            )
+            expect(built.log).toHaveBeenCalledWith(ctx, expect.objectContaining({ summary, evidence }), built.em)
         })
 
         it("lets neither the Office nor the evidence log block the command", async () => {
-            const built = await build(serve([[FIND_SUBJECT_LABEL, []]]))
+            const built = await build(serve([[FIND_SUBJECT_LABEL, []]]).em)
             built.post.mockRejectedValue(new RangeError("office"))
             built.log.mockRejectedValue(new RangeError("log"))
             const plan = planned(await built.service.plan(ctx, inputOf()))
