@@ -1,15 +1,26 @@
 import { builder } from "@starci/jest-preset"
-import {
-    InventoryItemEntity,
+import { inventoryEntities } from "@modules/domain/inventory"
+
+const [
     InventoryLocationEntity,
+    InventorySupplierEntity,
+    InventoryItemEntity,
+    InventoryStockLevelEntity,
     InventoryMovementEntity,
-    InventoryPoLineEntity,
-    InventoryPurchaseOrderEntity,
     InventoryRecipeEntity,
     InventoryRecipeLineEntity,
-    InventoryStockLevelEntity,
-    InventorySupplierEntity,
-} from "@modules/domain/inventory"
+    InventoryPurchaseOrderEntity,
+    InventoryPoLineEntity,
+] = inventoryEntities
+type InventoryLocationEntity = InstanceType<typeof InventoryLocationEntity>
+type InventorySupplierEntity = InstanceType<typeof InventorySupplierEntity>
+type InventoryItemEntity = InstanceType<typeof InventoryItemEntity>
+type InventoryStockLevelEntity = InstanceType<typeof InventoryStockLevelEntity>
+type InventoryMovementEntity = InstanceType<typeof InventoryMovementEntity>
+type InventoryRecipeEntity = InstanceType<typeof InventoryRecipeEntity>
+type InventoryRecipeLineEntity = InstanceType<typeof InventoryRecipeLineEntity>
+type InventoryPurchaseOrderEntity = InstanceType<typeof InventoryPurchaseOrderEntity>
+type InventoryPoLineEntity = InstanceType<typeof InventoryPoLineEntity>
 
 const AT = new Date("2026-10-01T00:00:00.000Z")
 

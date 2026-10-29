@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { And, In, LessThan, MoreThanOrEqual } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { WorkItemEntity } from "@modules/domain/work-items"
-import { WorkspaceMemberEntity, WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { WorkItemsDecisionsReadService } from "@modules/domain/work-items"
+import { MemberRosterService, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -80,7 +80,14 @@ export class HiringWorkbenchService {
         private readonly settings: HiringSettingsService,
         private readonly links: HiringLinksService,
         private readonly candidates: HiringCandidatesService,
+        private readonly roster: MemberRosterService,
+        private readonly decisions: WorkItemsDecisionsReadService,
     ) {}
+
+    private async activeMembers(workspaceId: string) {
+        const rows = await this.roster.oldestOf(workspaceId, MEMBERS_LIMIT)
+        return rows.filter((row) => row.status === "active")
+    }
 
     /** The whole workbench; only an owner or a manager may read it. */
     async bench(userId: string, workspaceId: string): Promise<HiringBenchView> {
@@ -113,15 +120,9 @@ export class HiringWorkbenchService {
                     order: { sort: "ASC" },
                     take: ONBOARDING_LIMIT,
                 }),
-                this.entityManager.find(WorkspaceMemberEntity, {
-                    where: { workspaceId, status: "active" },
-                    order: { createdAt: "ASC" },
-                    take: MEMBERS_LIMIT,
-                }),
+                this.activeMembers(workspaceId),
                 this.entityManager.find(HiringAvailabilityEntity, { where: { workspaceId }, take: WINDOWS_LIMIT }),
-                this.entityManager.count(WorkItemEntity, {
-                    where: { workspaceId, department: "hiring", status: "waiting_decision" },
-                }),
+                this.decisions.countWaiting(workspaceId, "hiring"),
                 this.figures(workspaceId),
             ])
         const windowsByMember = new Map<string, Array<{ weekday: number; startMin: number; endMin: number }>>()

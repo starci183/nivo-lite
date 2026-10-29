@@ -236,6 +236,20 @@ export class InventoryImportService {
                 }
             },
         )
+        const recipes = await this.saveStarterRecipes(workspaceId, request, itemIds)
+        await this.office.logEvidence(workspaceId, {
+            kind: "inventory.template",
+            actor,
+            summary: this.text("inventory.starterSummary", { name: request.name, items, suppliers, recipes }),
+        })
+        return { items, suppliers, recipes }
+    }
+
+    private async saveStarterRecipes(
+        workspaceId: string,
+        request: ApplyStarterParams,
+        itemIds: ReadonlyMap<string, string>,
+    ): Promise<number> {
         const recipeNames = new Set(
             (
                 await this.entityManager.find(InventoryRecipeEntity, {
@@ -264,12 +278,7 @@ export class InventoryImportService {
                 recipes += 1
             },
         )
-        await this.office.logEvidence(workspaceId, {
-            kind: "inventory.template",
-            actor,
-            summary: this.text("inventory.starterSummary", { name: request.name, items, suppliers, recipes }),
-        })
-        return { items, suppliers, recipes }
+        return recipes
     }
 
     private async loadStarterSuppliers(
