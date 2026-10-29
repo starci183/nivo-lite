@@ -1,5 +1,8 @@
 import { builder } from "@starci/jest-preset"
-import { AuthorityEntity } from "@modules/domain/authority"
+import { authorityEntities } from "@modules/domain/authority"
+
+const [AuthorityEntity] = authorityEntities
+type AuthorityEntity = InstanceType<typeof AuthorityEntity>
 
 /** The stored authority sheet of workspace `ws-1`, with the goals empty. */
 export const entityOf = builder<AuthorityEntity>({

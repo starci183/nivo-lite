@@ -1,14 +1,18 @@
 import type { EntityManager } from "typeorm"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
-import { AgentConnectionEntity } from "@modules/domain/agent-connections"
-import { AgentConversationEntity } from "@modules/domain/agent-conversations"
-import { AgentEntity } from "@modules/domain/agents"
+import { agentConnectionsEntities } from "@modules/domain/agent-connections"
+import { agentConversationsEntities } from "@modules/domain/agent-conversations"
+import { agentsEntities } from "@modules/domain/agents"
 import { automationPipelinesEntities } from "@modules/domain/automation-pipelines"
 import { connectionsEntities } from "@modules/domain/connections"
 import { contractsEntities } from "@modules/domain/contracts"
 import { leadsEntities } from "@modules/domain/leads"
 import { moduleInstallationsEntities } from "@modules/domain/module-installations"
 import { workspacesEntities } from "@modules/domain/workspaces"
+
+const [AgentEntity] = agentsEntities
+const [AgentConversationEntity] = agentConversationsEntities
+const [AgentConnectionEntity] = agentConnectionsEntities
 const [AutomationPipelineEntity] = automationPipelinesEntities
 
 const [WorkspaceEntity] = workspacesEntities

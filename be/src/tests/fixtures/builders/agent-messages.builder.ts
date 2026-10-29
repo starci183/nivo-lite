@@ -1,5 +1,8 @@
 import { builder } from "@starci/jest-preset"
-import { AgentMessageEntity } from "@modules/domain/agent-messages"
+import { agentMessagesEntities } from "@modules/domain/agent-messages"
+
+const [AgentMessageEntity] = agentMessagesEntities
+type AgentMessageEntity = InstanceType<typeof AgentMessageEntity>
 
 /** A stored conversation message, with the fields a spec rarely changes filled. */
 export const messageOf = builder<AgentMessageEntity>({

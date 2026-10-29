@@ -1,7 +1,9 @@
 import type { EntityManager } from "typeorm"
-import { AgentEntity } from "@modules/domain/agents"
+import { agentsEntities } from "@modules/domain/agents"
 import { mcpToolGrantsEntities } from "@modules/domain/mcp-tool-grants"
 import { workspacesEntities } from "@modules/domain/workspaces"
+
+const [AgentEntity] = agentsEntities
 
 const [WorkspaceEntity] = workspacesEntities
 

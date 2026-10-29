@@ -1,7 +1,10 @@
 import { builder } from "@starci/jest-preset"
-import { AgentEntity } from "@modules/domain/agents"
+import { agentsEntities } from "@modules/domain/agents"
 import type { Installation } from "@modules/domain/agents"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
+
+const [AgentEntity] = agentsEntities
+type AgentEntity = InstanceType<typeof AgentEntity>
 
 /** An agent row of the agents spec workspace (a chatbot named Bot, active, owned by nobody yet). */
 export const agentEntityOf = builder<AgentEntity>({

@@ -1,10 +1,9 @@
 import { builder } from "@starci/jest-preset"
-import type {
-    AuthorityRule,
-    AuthorityRuleEntity,
-    AuthorityRuleRecord,
-    RuleChange,
-} from "@modules/domain/authority-rules"
+import type { AuthorityRule, AuthorityRuleRecord, RuleChange } from "@modules/domain/authority-rules"
+import { authorityRulesEntities } from "@modules/domain/authority-rules"
+
+const [AuthorityRuleEntity] = authorityRulesEntities
+type AuthorityRuleEntity = InstanceType<typeof AuthorityRuleEntity>
 
 /** When the rules of a spec were saved last. */
 export const UPDATED = new Date("2026-10-12T10:00:00.000Z")

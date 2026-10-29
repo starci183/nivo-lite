@@ -2,10 +2,12 @@ import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { callDbFunction } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import { AgentEntity } from "@modules/domain/agents"
+import { agentsEntities } from "@modules/domain/agents"
 import { leadsEntities } from "@modules/domain/leads"
 import { workspacesEntities } from "@modules/domain/workspaces"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
+
+const [AgentEntity] = agentsEntities
 
 const [WorkspaceEntity] = workspacesEntities
 const [WorkspaceMemberEntity] = workspaceMembersEntities

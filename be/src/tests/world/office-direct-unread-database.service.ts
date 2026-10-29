@@ -1,13 +1,17 @@
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { AgentConversationEntity } from "@modules/domain/agent-conversations"
-import { AgentMessageEntity } from "@modules/domain/agent-messages"
-import { AgentEntity } from "@modules/domain/agents"
+import { agentConversationsEntities } from "@modules/domain/agent-conversations"
+import { agentMessagesEntities } from "@modules/domain/agent-messages"
+import { agentsEntities } from "@modules/domain/agents"
 import { leadsEntities } from "@modules/domain/leads"
 import { messagesEntities } from "@modules/domain/messages"
 import { officeRoomsEntities } from "@modules/domain/office-rooms"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { workspacesEntities } from "@modules/domain/workspaces"
+
+const [AgentEntity] = agentsEntities
+const [AgentConversationEntity] = agentConversationsEntities
+const [AgentMessageEntity] = agentMessagesEntities
 
 const [WorkspaceEntity] = workspacesEntities
 const [WorkspaceMemberEntity] = workspaceMembersEntities

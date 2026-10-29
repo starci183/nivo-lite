@@ -1,13 +1,17 @@
 import { createHash } from "node:crypto"
 import type { EntityManager } from "typeorm"
 import { publicApiEntities } from "@modules/domain/public-api"
-import { AgentConversationEntity } from "@modules/domain/agent-conversations"
-import { AgentEntity } from "@modules/domain/agents"
+import { agentConversationsEntities } from "@modules/domain/agent-conversations"
+import { agentsEntities } from "@modules/domain/agents"
 import { apiKeysEntities } from "@modules/domain/api-keys"
-import { AuthorityRuleEntity } from "@modules/domain/authority-rules"
+import { authorityRulesEntities } from "@modules/domain/authority-rules"
 import { inboundEventsEntities } from "@modules/domain/inbound-events"
 import { leadsEntities } from "@modules/domain/leads"
 import { workspacesEntities } from "@modules/domain/workspaces"
+
+const [AgentEntity] = agentsEntities
+const [AgentConversationEntity] = agentConversationsEntities
+const [AuthorityRuleEntity] = authorityRulesEntities
 
 const [PublicApiEntity] = publicApiEntities
 
