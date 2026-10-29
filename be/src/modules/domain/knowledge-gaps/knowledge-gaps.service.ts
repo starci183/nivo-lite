@@ -2,9 +2,9 @@ import { Injectable } from "@nestjs/common"
 import { In, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { keyOf } from "@modules/domain/brain-facts"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedRows } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import { toGapRecord } from "./gap-record.mapper"
+import { isGapReturned, toGapFields, toGapRecord } from "./gap-record.mapper"
 import type { GapFields } from "./gap-record.mapper"
 import { answers, keywordsOf, sameQuestion, splitTopic, wordSet } from "./gap-keywords.policy"
 import type {
@@ -98,8 +98,8 @@ export class KnowledgeGapsService {
             .orIgnore()
             .returning(GAP_RETURNING)
             .execute()
-        const [created] = inserted.raw as Array<GapFields>
-        if (created !== undefined) return { gap: toGapRecord(created), isNew: true, reopened: false }
+        const [created] = returnedRows(inserted.raw, isGapReturned)
+        if (created !== undefined) return { gap: toGapRecord(toGapFields(created)), isNew: true, reopened: false }
         // Two turns of the same question at once: the second insert lost, so it counts on the first one.
         const again = await find()
         return again === undefined ? null : bump(again)
@@ -185,6 +185,7 @@ export class KnowledgeGapsService {
             .setParameters({ subject, attribute, conversationId })
             .returning(GAP_RETURNING)
             .execute()
-        return (result.raw as Array<GapFields>)[0]
+        const [changed] = returnedRows(result.raw, isGapReturned)
+        return changed === undefined ? undefined : toGapFields(changed)
     }
 }

@@ -22,3 +22,4 @@ export type {
     ReconcileInvoiceRecord as ReconcileInvoiceRow,
 } from "./invoices.contracts"
 export { invoicesEntities } from "./persistence/entities"
+export { InvoicesAutomationReadService } from "./invoices-automation-read.service"

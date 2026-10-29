@@ -8,7 +8,7 @@ import {
     toCandidate as toCandidateImplementation,
     toInterview as toInterviewImplementation,
     toOffer as toOfferImplementation,
-} from "./row-mappers.policy"
+} from "./row-mappers-records.policy"
 
 const CREATED = new Date("2026-10-01T00:00:00.000Z")
 
@@ -172,6 +172,9 @@ describe("row mappers policy", () => {
         })
     })
 
+})
+
+describe("row mappers policy interviews", () => {
     describe("toInterview", () => {
         it("maps every interview column and proposed slot", async () => {
             const subject = await buildSubject()

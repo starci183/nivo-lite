@@ -7,11 +7,7 @@ import {
     isStage as isStageImplementation,
     questionsJson as questionsJsonImplementation,
     requirementsJson as requirementsJsonImplementation,
-    termsJson as termsJsonImplementation,
-    toCandidate as toCandidateImplementation,
-    toInterview as toInterviewImplementation,
     toJob as toJobImplementation,
-    toOffer as toOfferImplementation,
     toSettings as toSettingsImplementation,
 } from "./row-mappers.policy"
 
@@ -65,11 +61,7 @@ type Subject = {
     isStage: typeof isStageImplementation
     questionsJson: typeof questionsJsonImplementation
     requirementsJson: typeof requirementsJsonImplementation
-    termsJson: typeof termsJsonImplementation
-    toCandidate: typeof toCandidateImplementation
-    toInterview: typeof toInterviewImplementation
     toJob: typeof toJobImplementation
-    toOffer: typeof toOfferImplementation
     toSettings: typeof toSettingsImplementation
 }
 
@@ -82,11 +74,7 @@ const buildSubject = async () => {
                     isStage: isStageImplementation,
                     questionsJson: questionsJsonImplementation,
                     requirementsJson: requirementsJsonImplementation,
-                    termsJson: termsJsonImplementation,
-                    toCandidate: toCandidateImplementation,
-                    toInterview: toInterviewImplementation,
                     toJob: toJobImplementation,
-                    toOffer: toOfferImplementation,
                     toSettings: toSettingsImplementation,
                 },
             },

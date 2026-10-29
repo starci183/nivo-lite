@@ -4,7 +4,7 @@ import type { EntityManager } from "typeorm"
 import { LeadReadService } from "@modules/domain/leads"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import { readConnection } from "@modules/platform/pagination"
 import type { Connection, PageRequest } from "@modules/platform/pagination"
 import { OrdersError, OrdersErrorCode } from "./errors/orders.error"
@@ -54,23 +54,26 @@ const toOrderRow = (order: OrderEntity): SalesOrderRow => ({
     tracking_code: order.trackingCode,
 })
 
-/** The columns a write answers with `RETURNING *`, bigint and instants as the driver gives them. */
-interface WrittenOrder {
-    readonly id: string
-    readonly workspace_id: string
-    readonly lead_id: string | null
-    readonly inbound_event_id: string | null
-    readonly order_no: string
-    readonly items: string
-    readonly amount_vnd: string | number | null
-    readonly status: string
-    readonly confirmed_by: string | null
-    readonly confirmed_at: Date | null
-    readonly created_at: Date
-    readonly shipped_at: Date | null
-    readonly carrier: string | null
-    readonly tracking_code: string | null
-}
+/** The guard of the columns a write answers with `RETURNING *`, bigint and instants as the driver gives them. */
+const isWrittenOrder = rowShape({
+    id: "string",
+    workspace_id: "string",
+    lead_id: "string?",
+    inbound_event_id: "string?",
+    order_no: "string",
+    items: "string",
+    amount_vnd: "json",
+    status: "string",
+    confirmed_by: "string?",
+    confirmed_at: "date?",
+    created_at: "date",
+    shipped_at: "date?",
+    carrier: "string?",
+    tracking_code: "string?",
+})
+
+/** One row a write answered with. */
+type WrittenOrder = typeof isWrittenOrder extends (value: unknown) => value is infer Row ? Row : never
 
 /** Maps the answer of a write to the order contract. */
 const fromWritten = (row: WrittenOrder): SalesOrderRow => ({
@@ -89,6 +92,12 @@ const fromWritten = (row: WrittenOrder): SalesOrderRow => ({
     carrier: row.carrier,
     tracking_code: row.tracking_code,
 })
+
+/** The first order a write answered with, or null when it changed nothing. */
+const firstWritten = (raw: unknown): SalesOrderRow | null => {
+    const [row] = returnedRows(raw, isWrittenOrder)
+    return row === undefined ? null : fromWritten(row)
+}
 
 /** The keyset page columns: instants stay the database's own text, so a cursor keeps every microsecond. */
 interface PagedOrder extends Omit<SalesOrderRow, "created_at" | "confirmed_at" | "shipped_at" | "amount_vnd"> {
@@ -129,15 +138,13 @@ export class OrdersService {
             workspaceId,
             orders.flatMap((order) => (order.leadId === null ? [] : [order.leadId])),
         )
-        const customerOf = new Map(customers.map((customer) => [customer.id, customer]))
-        return orders.map((order) => {
-            const customer = customerOf.get(order.leadId ?? "")
-            return {
-                ...toOrderRow(order),
-                contact_name: customer?.contactName ?? null,
-                company: customer?.company ?? null,
-            }
-        })
+        const nameOf = new Map(customers.map((customer) => [customer.id, customer.contactName]))
+        const companyOf = new Map(customers.map((customer) => [customer.id, customer.company]))
+        return orders.map((order) => ({
+            ...toOrderRow(order),
+            contact_name: nameOf.get(order.leadId ?? "") ?? null,
+            company: companyOf.get(order.leadId ?? "") ?? null,
+        }))
     }
 
     /** The newest orders of any status reduced to the number and customer a message may name, bounded by the caller. */
@@ -216,8 +223,7 @@ export class OrdersService {
             .where({ workspaceId, id: orderId, status: In([...SHIPPABLE]), shippedAt: IsNull() })
             .returning("*")
             .execute()
-        const [row] = shipped.raw as Array<WrittenOrder>
-        return row === undefined ? null : fromWritten(row)
+        return firstWritten(shipped.raw)
     }
 
     /** The number and items of the given orders. */
@@ -259,8 +265,7 @@ export class OrdersService {
             .where({ workspaceId: confirmation.workspaceId, id: confirmation.orderId, status: "draft" })
             .returning("*")
             .execute()
-        const [row] = confirmed.raw as Array<WrittenOrder>
-        return row === undefined ? null : fromWritten(row)
+        return firstWritten(confirmed.raw)
     }
 
     /** Cancels a draft and answers it; null when the order is no longer a draft. */
@@ -272,8 +277,7 @@ export class OrdersService {
             .where({ workspaceId, id: orderId, status: "draft" })
             .returning("*")
             .execute()
-        const [row] = cancelled.raw as Array<WrittenOrder>
-        return row === undefined ? null : fromWritten(row)
+        return firstWritten(cancelled.raw)
     }
 
     /** The order has an invoice. */
@@ -316,7 +320,7 @@ export class OrdersService {
             .orIgnore()
             .returning("*")
             .execute()
-        const [row] = inserted.raw as Array<WrittenOrder>
+        const [row] = returnedRows(inserted.raw, isWrittenOrder)
         return row === undefined ? this.insertDraft(input, prefix, taken, attempt + 1) : fromWritten(row)
     }
 }

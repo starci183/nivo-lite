@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -7,28 +7,11 @@ import type { RunResult } from "@modules/domain/automation-runs"
 import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { AutomationCareExecutorsService } from "./automation-care-executors.service"
 import { AutomationMessagesService } from "./automation-messages.service"
+import { AutomationReadsService } from "./automation-reads.service"
 import { AUTOMATION_OFFICE } from "./automations.decorators"
 import type { AutomationOffice, ExecutorContext, ExecutorMap, ExecutorPayload } from "./automation-ports.contracts"
 import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/builders/automations.builder"
-import type { LeadRead } from "./automation-reads.contracts"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { FakeQueryBuilder, QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-
-const READS = new WeakMap<object, ReadonlyArray<FakeQueryBuilder>>()
-
-/** The manager of {@link readingOf}. */
-interface ReadingManager {
-    /** The manager whose reads answer the given results. */
-    readonly em: MockEntityManager
-}
-
-/** A manager whose reads (and the snapshot transaction around some of them) answer `answers`, one fake statement each, in order. */
-const readingOf = (...answers: Array<QueryBuilderAnswers>): ReadingManager => {
-    const em = mockEntityManager()
-    fakeTransaction(em)
-    READS.set(em, queueQueryBuilders(em, answers))
-    return { em }
-}
+import type { ConversationRead, LeadRead } from "./automation-reads.contracts"
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 
@@ -60,7 +43,13 @@ const runner =
     (key: string, ctx: ExecutorContext, payload: ExecutorPayload): Promise<RunResult> =>
         executors[key]?.(ctx, payload) ?? Promise.reject(new TypeError(`no executor for ${key}`))
 
-const build = async (em: MockEntityManager = mockEntityManager(), care: string | null = null) => {
+const build = async (
+    em: MockEntityManager = mockEntityManager(),
+    care: string | null = null,
+    conversation: ConversationRead | undefined = undefined,
+) => {
+    const reads = mock<AutomationReadsService>()
+    reads.conversation.mockResolvedValue(conversation)
     const work = mock<WorkItemsActivityService>()
     work.builtInCareOf.mockResolvedValue(care)
     const office = mock<AutomationOffice>()
@@ -87,6 +76,7 @@ const build = async (em: MockEntityManager = mockEntityManager(), care: string |
             { provide: AUTOMATION_OFFICE, useValue: office },
             { provide: AutomationMessagesService, useValue: messages },
             { provide: WorkItemsActivityService, useValue: work },
+            { provide: AutomationReadsService, useValue: reads },
         ],
     }).compile()
     const service = moduleRef.get(AutomationCareExecutorsService)
@@ -320,7 +310,7 @@ describe("AutomationCareExecutorsService debt_reminder", () => {
 describe("AutomationCareExecutorsService after_hours", () => {
     const payload = { conversation_id: "cv-1", dedupe: "after:cv-1", text: "t".repeat(300) }
     it("answers a lead outside the opening hours, opens a call-back task and tells the owner", async () => {
-        const { run, messages, office } = await build(readingOf({ getRawOne: { ...CONVERSATION, lead_id: "l-1" } }).em)
+        const { run, messages, office } = await build(undefined, null, { ...CONVERSATION, lead_id: "l-1" })
 
         const result = await run("after_hours", context(), payload)
 
@@ -352,7 +342,7 @@ describe("AutomationCareExecutorsService after_hours", () => {
     })
 
     it("takes the lead from the payload, a standard staff name and the action without a phone", async () => {
-        const { run, messages, office } = await build(readingOf({ getRawOne: CONVERSATION }).em)
+        const { run, messages, office } = await build(undefined, null, CONVERSATION)
         messages.leadOf.mockResolvedValue({ ...LEAD, phone: null })
         messages.firstStaffName.mockResolvedValue(null)
 
@@ -371,7 +361,7 @@ describe("AutomationCareExecutorsService after_hours", () => {
 describe("AutomationCareExecutorsService after_hours", () => {
     const payload = { conversation_id: "cv-1", dedupe: "after:cv-1", text: "t".repeat(300) }
     it("replies without a lead to a visitor, and skips the call-back task", async () => {
-        const { run, messages, office } = await build(readingOf({ getRawOne: CONVERSATION }).em)
+        const { run, messages, office } = await build(undefined, null, CONVERSATION)
         messages.leadOf.mockResolvedValue(null)
         messages.replyWithoutLead.mockResolvedValue({ status: "waiting_approval", steps: [], evidence: undefined })
 
@@ -396,7 +386,7 @@ describe("AutomationCareExecutorsService after_hours", () => {
     })
 
     it("calls an unnamed visitor by a standard word", async () => {
-        const { run, messages } = await build(readingOf({ getRawOne: { ...CONVERSATION, visitor_name: null } }).em)
+        const { run, messages } = await build(undefined, null, { ...CONVERSATION, visitor_name: null })
         messages.leadOf.mockResolvedValue(null)
         messages.replyWithoutLead.mockResolvedValue(SENT)
 
@@ -409,8 +399,8 @@ describe("AutomationCareExecutorsService after_hours", () => {
     })
 
     it("skips a conversation that is gone or that a person took over", async () => {
-        const gone = await build(readingOf({ getRawOne: undefined }).em)
-        const taken = await build(readingOf({ getRawOne: { ...CONVERSATION, handled_by: "u-1" } }).em)
+        const gone = await build(undefined, null, undefined)
+        const taken = await build(undefined, null, { ...CONVERSATION, handled_by: "u-1" })
 
         await expect(gone.run("after_hours", context(), payload)).resolves.toMatchObject({ status: "skipped" })
         await expect(taken.run("after_hours", context(), payload)).resolves.toMatchObject({ status: "skipped" })

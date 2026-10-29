@@ -4,6 +4,7 @@ import { AutomationCareExecutorsService } from "./automation-care-executors.serv
 import { AutomationEngineService } from "./automation-engine.service"
 import { AutomationExtensionsService } from "./automation-extensions.service"
 import { AutomationMessagesService } from "./automation-messages.service"
+import { AutomationReadsService } from "./automation-reads.service"
 import { AutomationReactionsService } from "./automation-reactions.service"
 import { AutomationOperationsExecutorsService } from "./automation-operations-executors.service"
 import { AutomationRenewalPaymentService } from "./automation-renewal-payment.service"
@@ -29,6 +30,7 @@ export class AutomationsModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 { provide: INBOX, useClass: InboxService },
                 AutomationShopService,
+                AutomationReadsService,
                 AutomationScansService,
                 AutomationExtensionsService,
                 AutomationMessagesService,

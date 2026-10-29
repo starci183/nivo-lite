@@ -3,7 +3,7 @@ import { LoyaltyCustomerLinksService } from "@modules/domain/loyalty-customer-li
 import type { ChatCustomerRef } from "@modules/domain/loyalty-customer-links"
 import { LoyaltyLedgerService, expiringSoon } from "@modules/domain/loyalty-ledger"
 import type { LoyaltyMember } from "@modules/domain/loyalty-ledger"
-import { LoyaltyProgramsService, tierOf } from "@modules/domain/loyalty-programs"
+import { LoyaltyProgramsService, tierByKey } from "@modules/domain/loyalty-programs"
 import type { LoyaltyConfig } from "@modules/domain/loyalty-programs"
 import { LoyaltyRewardsService, redeemBlock } from "@modules/domain/loyalty-rewards"
 import type { LoyaltyReward } from "@modules/domain/loyalty-rewards"
@@ -82,7 +82,7 @@ export class LoyaltyChatService {
             ...lines,
             this.text("loyalty.chat.member", {
                 name: member.name,
-                tier: tierOf(config, member.tierKey)?.name ?? "-",
+                tier: tierByKey(config, member.tierKey)?.name ?? "-",
                 points: member.points,
                 spend: member.lifetimeSpendVnd,
                 visits: member.visits,

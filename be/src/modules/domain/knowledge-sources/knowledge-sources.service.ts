@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { Brackets, In } from "typeorm"
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
+import { In } from "typeorm"
+import type { EntityManager } from "typeorm"
 import { EntitlementsService } from "@modules/domain/billing"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
@@ -23,13 +23,10 @@ import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowl
 import { KNOWLEDGE_UPLOAD_BUCKET, STORAGE_OBJECT_MISSING } from "./knowledge-sources.contracts"
 import type {
     AddSourceInput,
-    DocumentVisibility,
     DeletedSource,
     MaybeNote,
     MaybeSource,
     MaybeUploadedFile,
-    ReadableScope,
-    ReadableSource,
     ReindexInput,
     SourceBrief,
     SourceDetail,
@@ -43,7 +40,6 @@ import { InjectKnowledgeStorage } from "./knowledge-sources.decorators"
 import { KnowledgeSourcesLogEvent } from "./knowledge-sources.log-events"
 import { KnowledgeSourceEntity } from "./persistence/entities"
 import { removedTitle } from "./persistence/knowledge-source.projection"
-import type { ReadableSourceProjection } from "./persistence/knowledge-source.projection"
 import {
     NOW,
     metaChanges,
@@ -349,65 +345,6 @@ export class KnowledgeSourcesService {
             { id: sourceId, workspaceId },
             { status: "blocked_credits", error: note, updatedAt: NOW },
         )
-    }
-
-    /** The indexed documents an agent's view may read, oldest first; a customer view gets public documents only. */
-    async readableFor(scope: ReadableScope, limit: number): Promise<ReadonlyArray<ReadableSource>> {
-        const rows = await this.readable(scope)
-            .select("ks.id", "id")
-            .addSelect("ks.title", "title")
-            .addSelect("ks.topic", "topic")
-            .addSelect("ks.kind", "kind")
-            .addSelect("ks.visibility", "visibility")
-            .addSelect("ks.content", "content")
-            .addSelect("ks.module", "module")
-            .addSelect("ks.installationId", "installationId")
-            .addSelect("ks.updated_at::text", "updatedAt")
-            .orderBy("ks.createdAt", "ASC")
-            .limit(limit)
-            .getRawMany<ReadableSourceProjection>()
-        return rows
-            .filter(
-                (row) =>
-                    (row.module === null || row.module === scope.module) &&
-                    (row.installationId === null || row.installationId === scope.installationId) &&
-                    (scope.audience === "internal" || row.visibility === "public"),
-            )
-            .map((row) => ({
-                id: row.id,
-                title: row.title,
-                topic: row.topic,
-                kind: row.kind,
-                visibility: row.visibility === "public" ? "public" : "internal",
-                updatedAt: row.updatedAt,
-                content: row.content ?? "",
-            }))
-    }
-
-    /** How many indexed documents of one visibility an agent's view may read; a customer view never counts internal ones. */
-    countReadable(scope: ReadableScope, visibility: DocumentVisibility): Promise<number> {
-        if (scope.audience === "customer" && visibility === "internal") return Promise.resolve(0)
-        return this.readable(scope).andWhere({ visibility }).getCount()
-    }
-
-    /** The indexed documents of the workspace that the view of the scope may read: its module or every module, its instance or every instance. */
-    private readable(scope: ReadableScope): SelectQueryBuilder<KnowledgeSourceEntity> {
-        const query = this.entityManager
-            .createQueryBuilder(KnowledgeSourceEntity, "ks")
-            .where({ workspaceId: scope.workspaceId, status: In(["ready", "extracting_facts"]) })
-            .andWhere(
-                new Brackets((own) =>
-                    own.where("ks.module IS NULL").orWhere("ks.module = :module", { module: scope.module }),
-                ),
-            )
-            .andWhere(
-                new Brackets((own) =>
-                    own
-                        .where("ks.installationId IS NULL")
-                        .orWhere("ks.installationId = :installationId", { installationId: scope.installationId }),
-                ),
-            )
-        return scope.audience === "internal" ? query : query.andWhere({ visibility: "public" })
     }
 
     /** The agent instance a document is kept for, which must belong to the workspace; null when the document is for every instance. */

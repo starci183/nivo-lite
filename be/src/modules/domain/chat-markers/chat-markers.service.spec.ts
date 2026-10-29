@@ -75,17 +75,8 @@ const build = async (em: MockEntityManager, roster: ReadonlyArray<ActiveUserReco
             { provide: OfficeRoomReadersService, useValue: roomReaders },
         ],
     }).compile()
-    return {
-        service: moduleRef.get(ChatMarkersService),
-        members,
-        roomReads,
-        tx,
-        activity,
-        seats,
-        rooms,
-        conversations,
-        roomReaders,
-    }
+    const service = moduleRef.get(ChatMarkersService)
+    return { service, members, roomReads, tx, activity, seats, rooms, conversations, roomReaders }
 }
 
 describe("ChatMarkersService admission", () => {
@@ -147,8 +138,7 @@ describe("ChatMarkersService admission", () => {
 /** The stored marker of a member, muted or not. */
 const markerOf = (muted: boolean): ChatMarkerEntity => Object.assign(new ChatMarkerEntity(), { muted })
 
-const OWN_ROW = { id: "message", createdAt: PERSISTED_AT }
-const WITH_OWN: Cursors = { own: OWN_ROW }
+const WITH_OWN: Cursors = { own: { id: "message", createdAt: PERSISTED_AT } }
 const READER_LATER: RoomReaderStanding = { userId: "reader", standing: "later" }
 
 describe("ChatMarkersService state", () => {
@@ -307,9 +297,7 @@ const receiptEm = () => {
 const FETCHED: Cursors = { created: PERSISTED_AT }
 
 /** The lookup of a message instant, whichever owner answers it. */
-interface InstantLookup {
-    readonly createdAtOf: unknown
-}
+interface InstantLookup { readonly createdAtOf: unknown }
 
 const expectResolvedCursorWrite = (
     lookups: InstantLookup,
