@@ -1,5 +1,5 @@
 import { mockEntityManager } from "@starci/jest-preset"
-import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
+import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { Test } from "@nestjs/testing"
 import { IsNull, Not } from "typeorm"
 import {
@@ -28,201 +28,327 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
     return { service: moduleRef.get(AgentConversationsService), em }
 }
 
-describe("AgentConversationsService", () => {
-    describe("chat", () => {
-        const chat = {
-            id: "chat-1",
-            kind: "customer",
-            channel: "website",
-            visitorName: "Minh",
+const chat = {
+    id: "chat-1",
+    kind: "customer",
+    channel: "website",
+    visitorName: "Minh",
+    leadId: "lead-1",
+    handledBy: "Lan",
+    createdAt: "2026-10-13T02:00:00.000Z",
+}
+
+const chatInput = (kind: "customer" | "test", visitorName: string | null) => ({
+    workspaceId: "ws-1",
+    agentId: "agent-1",
+    kind,
+    visitorName,
+})
+
+const REFUSED = { kind: "refused", code: AgentConversationsErrorCode.NotFound }
+
+describe("AgentConversationsService chat", () => {
+    it("maps customer and test history, including nullable visitor and handling fields", async () => {
+        const { service, em } = await build(
+            mockEntityManager({ find: [AgentConversationEntity, [heldWebsiteChat(), quietTestChat()]] }),
+        )
+
+        await expect(service.listChat("ws-1", "agent-1")).resolves.toEqual([
+            chat,
+            { ...chat, id: "chat-2", kind: "test", visitorName: null, leadId: null, handledBy: null },
+        ])
+        expect(em.find).toHaveBeenCalledWith(
+            AgentConversationEntity,
+            expect.objectContaining({
+                where: { workspaceId: "ws-1", agentId: "agent-1" },
+                order: { createdAt: "DESC", id: "DESC" },
+                take: 100,
+            }),
+        )
+    })
+
+    it("opens the chat through the supplied transaction and maps its returned row", async () => {
+        const { service, em } = await build()
+        const inside = mockEntityManager()
+        const [fake] = queueQueryBuilders(inside, [{ execute: { raw: [insertedChatRow] } }])
+
+        await expect(service.openChat(chatInput("customer", "Minh"), inside)).resolves.toEqual(chat)
+        expect(fake?.callsOf("values")).toEqual([[chatInput("customer", "Minh")]])
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+    })
+
+    it("reads any kind other than customer as a test chat", async () => {
+        const { service } = await build()
+        const inside = mockEntityManager()
+        queueQueryBuilders(inside, [{ execute: { raw: [{ ...insertedChatRow, kind: "test" }] } }])
+
+        await expect(service.openChat(chatInput("test", "Minh"), inside)).resolves.toEqual({ ...chat, kind: "test" })
+    })
+
+    it("refuses a chat insert that returned no row", async () => {
+        const { service } = await build()
+        const inside = mockEntityManager()
+        const [fake] = queueQueryBuilders(inside, [{ execute: { raw: [] } }])
+
+        await expect(service.openChat(chatInput("test", null), inside)).rejects.toMatchObject({
+            code: AgentConversationsErrorCode.NotStored,
+        })
+        expect(fake?.callsOf("values")).toEqual([[chatInput("test", null)]])
+    })
+})
+
+describe("AgentConversationsService chat locks", () => {
+    it("locks a scoped chat through the supplied transaction", async () => {
+        const { service, em } = await build()
+        const inside = mockEntityManager({ findOne: [AgentConversationEntity, heldWebsiteChat()] })
+
+        await expect(service.lockChat("ws-1", "chat-1", inside)).resolves.toEqual(chat)
+        expect(inside.findOne).toHaveBeenCalledWith(
+            AgentConversationEntity,
+            expect.objectContaining({
+                where: { workspaceId: "ws-1", id: "chat-1" },
+                lock: { mode: "pessimistic_write" },
+            }),
+        )
+        expect(em.findOne).not.toHaveBeenCalled()
+    })
+
+    it("refuses to lock a chat that is absent from the workspace", async () => {
+        const { service } = await build()
+        const inside = mockEntityManager({ findOne: [AgentConversationEntity, null] })
+
+        await expect(service.lockChat("ws-1", "chat-1", inside)).rejects.toMatchObject({
+            code: AgentConversationsErrorCode.NotFound,
+        })
+    })
+
+    it("sets and clears the chat holder through the supplied transaction", async () => {
+        const { service, em } = await build()
+        const inside = mockEntityManager({ update: [AgentConversationEntity, { affected: 1 }] })
+
+        await service.setChatHolder("ws-1", "chat-1", "Lan", inside)
+        await service.setChatHolder("ws-1", "chat-1", null, inside)
+
+        const where = { workspaceId: "ws-1", id: "chat-1" }
+        expect(evaluatedCalls(inside.update.mock.calls, 2)).toEqual([
+            ["AgentConversationEntity", where, { handledBy: "Lan", handledAt: "now()" }],
+            ["AgentConversationEntity", where, { handledBy: null, handledAt: null }],
+        ])
+        expect(em.update).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentConversationsService customer leads", () => {
+    it("lists customer lead conversations using the default or requested bound", async () => {
+        const { service, em } = await build(
+            mockEntityManager({ find: [AgentConversationEntity, [leadConversation()]] }),
+        )
+        const rows = [{ id: "conv-1", lead_id: "lead-1", handled_by: "Lan" }]
+
+        await expect(service.listCustomerLeadConversations("ws-1")).resolves.toEqual(rows)
+        await expect(service.listCustomerLeadConversations("ws-1", 12)).resolves.toEqual(rows)
+        expect(em.find).toHaveBeenNthCalledWith(
+            1,
+            AgentConversationEntity,
+            expect.objectContaining({
+                where: { workspaceId: "ws-1", kind: "customer", leadId: Not(IsNull()) },
+                order: { createdAt: "DESC", id: "DESC" },
+                take: 200,
+            }),
+        )
+        expect(em.find).toHaveBeenNthCalledWith(2, AgentConversationEntity, expect.objectContaining({ take: 12 }))
+    })
+
+    it("maps the newest lead conversation while forwarding its optional channel", async () => {
+        const { service, em } = await build(
+            mockEntityManager({ findOne: [AgentConversationEntity, leadConversation()] }),
+        )
+        const expected = { id: "conv-1", agentId: "agent-1", channel: "telegram", visitorName: "Minh" }
+
+        await expect(service.latestOfLead("ws-1", "lead-1", null)).resolves.toEqual(expected)
+        await expect(service.latestOfLead("ws-1", "lead-1", "telegram")).resolves.toEqual(expected)
+        const lead = { workspaceId: "ws-1", leadId: "lead-1", kind: "customer" }
+        expect(em.findOne).toHaveBeenNthCalledWith(1, AgentConversationEntity, expect.objectContaining({ where: lead }))
+        expect(em.findOne).toHaveBeenNthCalledWith(
+            2,
+            AgentConversationEntity,
+            expect.objectContaining({ where: { ...lead, channel: "telegram" }, order: { createdAt: "DESC" } }),
+        )
+    })
+
+    it("answers null when the lead has no matching conversation", async () => {
+        const { service } = await build(mockEntityManager({ findOne: [AgentConversationEntity, null] }))
+
+        await expect(service.latestOfLead("ws-1", "lead-1", "zalo")).resolves.toBeNull()
+    })
+})
+
+describe("AgentConversationsService human handling", () => {
+    const where = { workspaceId: "ws-1", id: "conv-1" }
+
+    it("maps the locked customer conversation and its current holder", async () => {
+        const { service, em } = await build()
+        const inside = mockEntityManager({ findOne: [AgentConversationEntity, leadConversation()] })
+
+        await expect(service.lockForHuman("ws-1", "conv-1", inside)).resolves.toEqual({
+            id: "conv-1",
+            workspaceId: "ws-1",
+            channel: "telegram",
+            externalId: "555",
+            connectionId: "c-1",
             leadId: "lead-1",
             handledBy: "Lan",
-            createdAt: "2026-10-13T02:00:00.000Z",
-        }
-
-        it("maps customer and test history, including nullable visitor and handling fields", async () => {
-            const { service, em } = await build(
-                mockEntityManager({ find: [AgentConversationEntity, [heldWebsiteChat(), quietTestChat()]] }),
-            )
-
-            await expect(service.listChat("ws-1", "agent-1")).resolves.toEqual([
-                chat,
-                { ...chat, id: "chat-2", kind: "test", visitorName: null, leadId: null, handledBy: null },
-            ])
-            expect(em.find).toHaveBeenCalledWith(
-                AgentConversationEntity,
-                expect.objectContaining({
-                    where: { workspaceId: "ws-1", agentId: "agent-1" },
-                    order: { createdAt: "DESC", id: "DESC" },
-                    take: 100,
-                }),
-            )
         })
+        expect(inside.findOne).toHaveBeenCalledWith(
+            AgentConversationEntity,
+            expect.objectContaining({ where: { ...where, kind: "customer" }, lock: { mode: "pessimistic_write" } }),
+        )
+        expect(em.findOne).not.toHaveBeenCalled()
+    })
 
-        it("opens the chat through the supplied transaction and maps its returned row", async () => {
-            const { service, em } = await build()
-            const inside = mockEntityManager()
-            const [fake] = queueQueryBuilders(inside, [{ execute: { raw: [insertedChatRow] } }])
+    it("answers null when no scoped customer conversation can be locked", async () => {
+        const { service } = await build()
+        const inside = mockEntityManager({ findOne: [AgentConversationEntity, null] })
 
-            await expect(
-                service.openChat(
-                    { workspaceId: "ws-1", agentId: "agent-1", kind: "customer", visitorName: "Minh" },
-                    inside,
-                ),
-            ).resolves.toEqual(chat)
-            expect(fake?.callsOf("values")).toEqual([
-                [{ workspaceId: "ws-1", agentId: "agent-1", kind: "customer", visitorName: "Minh" }],
-            ])
-            expect(em.createQueryBuilder).not.toHaveBeenCalled()
+        await expect(service.lockForHuman("ws-1", "conv-1", inside)).resolves.toBeNull()
+    })
+
+    it("persists a handover and captured lead in the primary manager", async () => {
+        const { service, em } = await build(mockEntityManager({ update: [AgentConversationEntity, { affected: 1 }] }))
+
+        await service.handToPerson("ws-1", "conv-1", "Lan")
+        await service.attachLead("ws-1", "conv-1", "lead-1")
+
+        expect(evaluatedCalls(em.update.mock.calls, 2)).toEqual([
+            ["AgentConversationEntity", where, { handledBy: "Lan", handledAt: "now()" }],
+            ["AgentConversationEntity", where, { leadId: "lead-1" }],
+        ])
+    })
+
+    it("updates human handling using the manager that locked the conversation", async () => {
+        const { service, em } = await build()
+        const inside = mockEntityManager({ update: [AgentConversationEntity, { affected: 1 }] })
+
+        await service.setHumanHandling("ws-1", "conv-1", "Lan", inside)
+        await service.setHumanHandling("ws-1", "conv-1", null, inside)
+
+        const customer = { ...where, kind: "customer" }
+        expect(evaluatedCalls(inside.update.mock.calls, 2)).toEqual([
+            ["AgentConversationEntity", customer, { handledBy: "Lan", handledAt: "now()" }],
+            ["AgentConversationEntity", customer, { handledBy: null, handledAt: null }],
+        ])
+        expect(em.update).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentConversationsService find and open", () => {
+    const input = {
+        workspaceId: "ws-1",
+        agentId: "agent-1",
+        channel: "telegram",
+        customerId: "555",
+        visitor: "Minh",
+        connectionId: "c-1",
+    }
+
+    it("answers the conversation of a customer on a connection", async () => {
+        const { service, em } = await build(
+            mockEntityManager({ findOne: [AgentConversationEntity, telegramConversation()] }),
+        )
+
+        await expect(service.find("ws-1", "telegram", "c-1", "555")).resolves.toEqual({
+            kind: "ok",
+            value: { id: "conv-1", agentId: "agent-1", leadId: null, handledBy: null, visitorName: "Minh" },
         })
+        expect(em.findOne).toHaveBeenCalledWith(
+            AgentConversationEntity,
+            expect.objectContaining({
+                where: { workspaceId: "ws-1", channel: "telegram", connectionId: "c-1", externalId: "555" },
+                order: { createdAt: "DESC" },
+            }),
+        )
+    })
 
-        it("reads any kind other than customer as a test chat", async () => {
-            const { service } = await build()
-            const inside = mockEntityManager()
-            queueQueryBuilders(inside, [{ execute: { raw: [{ ...insertedChatRow, kind: "test" }] } }])
+    it("refuses when the customer never wrote, and reads through the manager it is given", async () => {
+        const { service } = await build(mockEntityManager({ findOne: [AgentConversationEntity, null] }))
+        const inside = mockEntityManager({ findOne: [AgentConversationEntity, telegramConversation()] })
 
-            await expect(
-                service.openChat(
-                    { workspaceId: "ws-1", agentId: "agent-1", kind: "test", visitorName: "Minh" },
-                    inside,
-                ),
-            ).resolves.toEqual({ ...chat, kind: "test" })
-        })
+        await expect(service.find("ws-1", "telegram", "c-1", "555")).resolves.toMatchObject(REFUSED)
+        await expect(service.find("ws-1", "telegram", "c-1", "555", inside)).resolves.toMatchObject({ kind: "ok" })
+    })
 
-        it("refuses a chat insert that returned no row", async () => {
-            const { service } = await build()
-            const inside = mockEntityManager()
-            const [fake] = queueQueryBuilders(inside, [{ execute: { raw: [] } }])
+    it("opens the conversation in the given transaction and answers it", async () => {
+        const { service } = await build()
+        const inside = mockEntityManager()
+        const [fake] = queueQueryBuilders(inside, [{ execute: { raw: [insertedRefRow] } }])
 
-            await expect(
-                service.openChat({ workspaceId: "ws-1", agentId: "agent-1", kind: "test", visitorName: null }, inside),
-            ).rejects.toMatchObject({ code: AgentConversationsErrorCode.NotStored })
-            expect(fake?.callsOf("values")).toEqual([
-                [{ workspaceId: "ws-1", agentId: "agent-1", kind: "test", visitorName: null }],
-            ])
-        })
+        await expect(service.open(input, inside)).resolves.toMatchObject({ id: "conv-1" })
+        expect(fake?.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "ws-1",
+                    agentId: "agent-1",
+                    kind: "customer",
+                    channel: "telegram",
+                    externalId: "555",
+                    visitorName: "Minh",
+                    connectionId: "c-1",
+                },
+            ],
+        ])
+    })
 
-        it("locks a scoped chat through the supplied transaction", async () => {
-            const { service, em } = await build()
-            const inside = mockEntityManager({ findOne: [AgentConversationEntity, heldWebsiteChat()] })
+    it("fails loudly when the insert answers no row", async () => {
+        const { service } = await build()
+        const inside = mockEntityManager()
+        queueQueryBuilders(inside, [{ execute: { raw: [] } }])
 
-            await expect(service.lockChat("ws-1", "chat-1", inside)).resolves.toEqual(chat)
-            expect(inside.findOne).toHaveBeenCalledWith(
-                AgentConversationEntity,
-                expect.objectContaining({
-                    where: { workspaceId: "ws-1", id: "chat-1" },
-                    lock: { mode: "pessimistic_write" },
-                }),
-            )
-            expect(em.findOne).not.toHaveBeenCalled()
+        await expect(service.open(input, inside)).rejects.toMatchObject({
+            code: AgentConversationsErrorCode.NotStored,
         })
     })
 })
 
-describe("AgentConversationsService", () => {
-    describe("chat", () => {
-        it("refuses to lock a chat that is absent from the workspace", async () => {
-            const { service } = await build()
-            const inside = mockEntityManager({ findOne: [AgentConversationEntity, null] })
+describe("AgentConversationsService writes and targets", () => {
+    it("archives, rebinds and renames", async () => {
+        const { service, em } = await build(mockEntityManager({ update: [AgentConversationEntity, { affected: 1 }] }))
+        const inside = mockEntityManager({ update: [AgentConversationEntity, { affected: 1 }] })
 
-            await expect(service.lockChat("ws-1", "chat-1", inside)).rejects.toMatchObject({
-                code: AgentConversationsErrorCode.NotFound,
-            })
-            expect(inside.findOne).toHaveBeenCalledWith(
-                AgentConversationEntity,
-                expect.objectContaining({ where: { workspaceId: "ws-1", id: "chat-1" } }),
-            )
+        await service.archive("ws-1", "telegram", "c-1", "555", "555:1", inside)
+        await service.rebind("conv-1", "agent-2", inside)
+        await service.rename("conv-1", "Minh Tran")
+
+        const where = { workspaceId: "ws-1", channel: "telegram", connectionId: "c-1", externalId: "555" }
+        expect(evaluatedCalls(inside.update.mock.calls)).toEqual([
+            ["AgentConversationEntity", where, { externalId: "555:1" }],
+            ["AgentConversationEntity", { id: "conv-1" }, { agentId: "agent-2" }],
+        ])
+        expect(evaluatedCalls(em.update.mock.calls)).toEqual([
+            ["AgentConversationEntity", { id: "conv-1" }, { visitorName: "Minh Tran" }],
+        ])
+    })
+
+    it("answers where the replies go, or a refusal for a conversation that does not exist", async () => {
+        const found = await build(mockEntityManager({ findOne: [AgentConversationEntity, telegramConversation()] }))
+        const missing = await build(mockEntityManager({ findOne: [AgentConversationEntity, null] }))
+
+        await expect(found.service.targetOf("conv-1")).resolves.toEqual({
+            kind: "ok",
+            value: { id: "conv-1", workspaceId: "ws-1", channel: "telegram", externalId: "555", connectionId: "c-1" },
         })
-
-        it("sets and clears the chat holder through the supplied transaction", async () => {
-            const { service, em } = await build()
-            const inside = mockEntityManager({ update: [AgentConversationEntity, { affected: 1 }] })
-
-            await expect(service.setChatHolder("ws-1", "chat-1", "Lan", inside)).resolves.toBeUndefined()
-            await expect(service.setChatHolder("ws-1", "chat-1", null, inside)).resolves.toBeUndefined()
-            expect(inside.update).toHaveBeenNthCalledWith(
-                1,
-                AgentConversationEntity,
-                { workspaceId: "ws-1", id: "chat-1" },
-                { handledBy: "Lan", handledAt: expect.any(Function) },
-            )
-            expect(inside.update).toHaveBeenNthCalledWith(
-                2,
-                AgentConversationEntity,
-                { workspaceId: "ws-1", id: "chat-1" },
-                { handledBy: null, handledAt: null },
-            )
-            expect(em.update).not.toHaveBeenCalled()
-        })
+        await expect(missing.service.targetOf("conv-1")).resolves.toMatchObject(REFUSED)
     })
 })
 
-describe("AgentConversationsService", () => {
-    describe("customer leads", () => {
-        it("lists customer lead conversations using the default or requested bound", async () => {
-            const { service, em } = await build(
-                mockEntityManager({ find: [AgentConversationEntity, [leadConversation()]] }),
-            )
-            const rows = [{ id: "conv-1", lead_id: "lead-1", handled_by: "Lan" }]
+describe("AgentConversationsService turnOf", () => {
+    it("answers the conversation with the agent that speaks in it", async () => {
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ getRawOne: turnRow }])
+        const { service } = await build(em)
 
-            await expect(service.listCustomerLeadConversations("ws-1")).resolves.toEqual(rows)
-            await expect(service.listCustomerLeadConversations("ws-1", 12)).resolves.toEqual(rows)
-            expect(em.find).toHaveBeenNthCalledWith(
-                1,
-                AgentConversationEntity,
-                expect.objectContaining({
-                    where: { workspaceId: "ws-1", kind: "customer", leadId: Not(IsNull()) },
-                    order: { createdAt: "DESC", id: "DESC" },
-                    take: 200,
-                }),
-            )
-            expect(em.find).toHaveBeenNthCalledWith(2, AgentConversationEntity, expect.objectContaining({ take: 12 }))
-        })
-
-        it("maps the newest lead conversation while forwarding its optional channel", async () => {
-            const { service, em } = await build(
-                mockEntityManager({ findOne: [AgentConversationEntity, leadConversation()] }),
-            )
-            const expected = { id: "conv-1", agentId: "agent-1", channel: "telegram", visitorName: "Minh" }
-
-            await expect(service.latestOfLead("ws-1", "lead-1", null)).resolves.toEqual(expected)
-            await expect(service.latestOfLead("ws-1", "lead-1", "telegram")).resolves.toEqual(expected)
-            expect(em.findOne).toHaveBeenNthCalledWith(
-                1,
-                AgentConversationEntity,
-                expect.objectContaining({ where: { workspaceId: "ws-1", leadId: "lead-1", kind: "customer" } }),
-            )
-            expect(em.findOne).toHaveBeenNthCalledWith(
-                2,
-                AgentConversationEntity,
-                expect.objectContaining({
-                    where: { workspaceId: "ws-1", leadId: "lead-1", kind: "customer", channel: "telegram" },
-                    order: { createdAt: "DESC" },
-                }),
-            )
-        })
-
-        it("answers null when the lead has no matching conversation", async () => {
-            const { service, em } = await build(mockEntityManager({ findOne: [AgentConversationEntity, null] }))
-
-            await expect(service.latestOfLead("ws-1", "lead-1", "zalo")).resolves.toBeNull()
-            expect(em.findOne).toHaveBeenCalledWith(
-                AgentConversationEntity,
-                expect.objectContaining({
-                    where: { workspaceId: "ws-1", leadId: "lead-1", kind: "customer", channel: "zalo" },
-                }),
-            )
-        })
-    })
-})
-
-describe("AgentConversationsService", () => {
-    describe("human handling", () => {
-        it("maps the locked customer conversation and its current holder", async () => {
-            const { service, em } = await build()
-            const inside = mockEntityManager({ findOne: [AgentConversationEntity, leadConversation()] })
-
-            await expect(service.lockForHuman("ws-1", "conv-1", inside)).resolves.toEqual({
+        await expect(service.turnOf("conv-1")).resolves.toEqual({
+            kind: "ok",
+            value: {
                 id: "conv-1",
                 workspaceId: "ws-1",
                 channel: "telegram",
@@ -230,250 +356,29 @@ describe("AgentConversationsService", () => {
                 connectionId: "c-1",
                 leadId: "lead-1",
                 handledBy: "Lan",
-            })
-            expect(inside.findOne).toHaveBeenCalledWith(
-                AgentConversationEntity,
-                expect.objectContaining({
-                    where: { workspaceId: "ws-1", id: "conv-1", kind: "customer" },
-                    lock: { mode: "pessimistic_write" },
-                }),
-            )
-            expect(em.findOne).not.toHaveBeenCalled()
-        })
-
-        it("answers null when no scoped customer conversation can be locked", async () => {
-            const { service } = await build()
-            const inside = mockEntityManager({ findOne: [AgentConversationEntity, null] })
-
-            await expect(service.lockForHuman("ws-1", "conv-1", inside)).resolves.toBeNull()
-            expect(inside.findOne).toHaveBeenCalledWith(
-                AgentConversationEntity,
-                expect.objectContaining({ where: { workspaceId: "ws-1", id: "conv-1", kind: "customer" } }),
-            )
-        })
-
-        it("persists a handover and captured lead in the primary manager", async () => {
-            const { service, em } = await build(
-                mockEntityManager({ update: [AgentConversationEntity, { affected: 1 }] }),
-            )
-
-            await expect(service.handToPerson("ws-1", "conv-1", "Lan")).resolves.toBeUndefined()
-            await expect(service.attachLead("ws-1", "conv-1", "lead-1")).resolves.toBeUndefined()
-            expect(em.update).toHaveBeenNthCalledWith(
-                1,
-                AgentConversationEntity,
-                { workspaceId: "ws-1", id: "conv-1" },
-                { handledBy: "Lan", handledAt: expect.any(Function) },
-            )
-            expect(em.update).toHaveBeenNthCalledWith(
-                2,
-                AgentConversationEntity,
-                { workspaceId: "ws-1", id: "conv-1" },
-                { leadId: "lead-1" },
-            )
-        })
-
-        it("updates human handling using the manager that locked the conversation", async () => {
-            const { service, em } = await build()
-            const inside = mockEntityManager({ update: [AgentConversationEntity, { affected: 1 }] })
-
-            await expect(service.setHumanHandling("ws-1", "conv-1", "Lan", inside)).resolves.toBeUndefined()
-            await expect(service.setHumanHandling("ws-1", "conv-1", null, inside)).resolves.toBeUndefined()
-            expect(inside.update).toHaveBeenNthCalledWith(
-                1,
-                AgentConversationEntity,
-                { workspaceId: "ws-1", id: "conv-1", kind: "customer" },
-                { handledBy: "Lan", handledAt: expect.any(Function) },
-            )
-            expect(inside.update).toHaveBeenNthCalledWith(
-                2,
-                AgentConversationEntity,
-                { workspaceId: "ws-1", id: "conv-1", kind: "customer" },
-                { handledBy: null, handledAt: null },
-            )
-            expect(em.update).not.toHaveBeenCalled()
-        })
-    })
-})
-
-describe("AgentConversationsService", () => {
-    describe("find", () => {
-        it("answers the conversation of a customer on a connection", async () => {
-            const { service, em } = await build(
-                mockEntityManager({ findOne: [AgentConversationEntity, telegramConversation()] }),
-            )
-
-            await expect(service.find("ws-1", "telegram", "c-1", "555")).resolves.toEqual({
-                kind: "ok",
-                value: { id: "conv-1", agentId: "agent-1", leadId: null, handledBy: null, visitorName: "Minh" },
-            })
-            expect(em.findOne).toHaveBeenCalledWith(
-                AgentConversationEntity,
-                expect.objectContaining({
-                    where: { workspaceId: "ws-1", channel: "telegram", connectionId: "c-1", externalId: "555" },
-                    order: { createdAt: "DESC" },
-                }),
-            )
-        })
-
-        it("refuses when the customer never wrote, and reads through the manager it is given", async () => {
-            const { service } = await build(mockEntityManager({ findOne: [AgentConversationEntity, null] }))
-            const inside = mockEntityManager({ findOne: [AgentConversationEntity, telegramConversation()] })
-
-            await expect(service.find("ws-1", "telegram", "c-1", "555")).resolves.toMatchObject({
-                kind: "refused",
-                code: AgentConversationsErrorCode.NotFound,
-            })
-            await expect(service.find("ws-1", "telegram", "c-1", "555", inside)).resolves.toMatchObject({ kind: "ok" })
-        })
-    })
-
-    describe("open", () => {
-        const input = {
-            workspaceId: "ws-1",
-            agentId: "agent-1",
-            channel: "telegram",
-            customerId: "555",
-            visitor: "Minh",
-            connectionId: "c-1",
-        }
-
-        it("opens the conversation in the given transaction and answers it", async () => {
-            const { service } = await build()
-            const inside = mockEntityManager()
-            const [fake] = queueQueryBuilders(inside, [{ execute: { raw: [insertedRefRow] } }])
-
-            await expect(service.open(input, inside)).resolves.toMatchObject({ id: "conv-1" })
-            expect(fake?.callsOf("values")).toEqual([
-                [
-                    {
-                        workspaceId: "ws-1",
-                        agentId: "agent-1",
-                        kind: "customer",
-                        channel: "telegram",
-                        externalId: "555",
-                        visitorName: "Minh",
-                        connectionId: "c-1",
-                    },
-                ],
-            ])
-        })
-
-        it("fails loudly when the insert answers no row", async () => {
-            const { service } = await build()
-            const inside = mockEntityManager()
-            queueQueryBuilders(inside, [{ execute: { raw: [] } }])
-
-            await expect(service.open(input, inside)).rejects.toMatchObject({
-                code: AgentConversationsErrorCode.NotStored,
-            })
-        })
-    })
-})
-
-describe("AgentConversationsService", () => {
-    describe("writes", () => {
-        it("archives and rebinds through the given transaction", async () => {
-            const { service } = await build()
-            const inside = mockEntityManager({ update: [AgentConversationEntity, { affected: 1 }] })
-
-            await service.archive("ws-1", "telegram", "c-1", "555", "555:1", inside)
-            await service.rebind("conv-1", "agent-2", inside)
-
-            expect(inside.update).toHaveBeenCalledWith(
-                AgentConversationEntity,
-                { workspaceId: "ws-1", channel: "telegram", connectionId: "c-1", externalId: "555" },
-                { externalId: "555:1" },
-            )
-            expect(inside.update).toHaveBeenCalledWith(
-                AgentConversationEntity,
-                { id: "conv-1" },
-                { agentId: "agent-2" },
-            )
-        })
-
-        it("renames the customer", async () => {
-            const { service, em } = await build(
-                mockEntityManager({ update: [AgentConversationEntity, { affected: 1 }] }),
-            )
-
-            await service.rename("conv-1", "Minh Tran")
-
-            expect(em.update).toHaveBeenCalledWith(
-                AgentConversationEntity,
-                { id: "conv-1" },
-                { visitorName: "Minh Tran" },
-            )
-        })
-    })
-
-    describe("targetOf", () => {
-        it("answers where the replies go, or a refusal for a conversation that does not exist", async () => {
-            const found = await build(mockEntityManager({ findOne: [AgentConversationEntity, telegramConversation()] }))
-            const missing = await build(mockEntityManager({ findOne: [AgentConversationEntity, null] }))
-
-            await expect(found.service.targetOf("conv-1")).resolves.toEqual({
-                kind: "ok",
-                value: {
-                    id: "conv-1",
-                    workspaceId: "ws-1",
-                    channel: "telegram",
-                    externalId: "555",
-                    connectionId: "c-1",
+                visitorName: "Minh",
+                installationId: "inst-1",
+                agent: {
+                    id: "agent-1",
+                    name: "Chatbot",
+                    handle: "chatbot",
+                    role: "Customer chat",
+                    module: "chatbot",
+                    instructions: "Be kind",
+                    knowledge: "Tea",
+                    approvalRule: "ask",
+                    greeting: "Hi",
                 },
-            })
-            await expect(missing.service.targetOf("conv-1")).resolves.toMatchObject({
-                kind: "refused",
-                code: AgentConversationsErrorCode.NotFound,
-            })
+            },
         })
     })
-})
 
-describe("AgentConversationsService", () => {
-    describe("turnOf", () => {
-        it("answers the conversation with the agent that speaks in it", async () => {
-            const em = mockEntityManager()
-            queueQueryBuilders(em, [{ getRawOne: turnRow }])
-            const { service } = await build(em)
+    it("refuses a conversation that does not exist", async () => {
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ getRawOne: undefined }])
+        const { service } = await build(em)
 
-            await expect(service.turnOf("conv-1")).resolves.toEqual({
-                kind: "ok",
-                value: {
-                    id: "conv-1",
-                    workspaceId: "ws-1",
-                    channel: "telegram",
-                    externalId: "555",
-                    connectionId: "c-1",
-                    leadId: "lead-1",
-                    handledBy: "Lan",
-                    visitorName: "Minh",
-                    installationId: "inst-1",
-                    agent: {
-                        id: "agent-1",
-                        name: "Chatbot",
-                        handle: "chatbot",
-                        role: "Customer chat",
-                        module: "chatbot",
-                        instructions: "Be kind",
-                        knowledge: "Tea",
-                        approvalRule: "ask",
-                        greeting: "Hi",
-                    },
-                },
-            })
-        })
-
-        it("refuses a conversation that does not exist", async () => {
-            const em = mockEntityManager()
-            queueQueryBuilders(em, [{ getRawOne: undefined }])
-            const { service } = await build(em)
-
-            await expect(service.turnOf("conv-1")).resolves.toMatchObject({
-                kind: "refused",
-                code: AgentConversationsErrorCode.NotFound,
-            })
-        })
+        await expect(service.turnOf("conv-1")).resolves.toMatchObject(REFUSED)
     })
 })
 
@@ -490,7 +395,9 @@ describe("AgentConversationsService hand-over", () => {
         await expect(service.handToAgent({ ...move, installationId: "inst-2" })).resolves.toBe(true)
         await expect(service.handToAgent({ ...move, installationId: null })).resolves.toBe(false)
         expect(moved?.callsOf("set")).toEqual([[{ agentId: "agent-2", installationId: "inst-2" }]])
-        expect(evaluatedValues(stayed?.callsOf("set")[0]?.[0]).installationId).toBe("installation_id")
+        expect(evaluatedCalls(stayed?.callsOf("set") ?? [], 0)).toEqual([
+            [{ agentId: "agent-2", installationId: "installation_id" }],
+        ])
         expect(moved?.callsOf("where")).toEqual([
             [
                 "workspace_id = :workspaceId AND id = :conversationId AND handled_by IS NULL AND agent_id <> :agentId",
@@ -537,39 +444,16 @@ describe("AgentConversationsService connector party", () => {
 
     it("remembers the party the connector answered", async () => {
         const { service, em } = await build(mockEntityManager({ update: [AgentConversationEntity, { affected: 1 }] }))
-        await expect(
-            service.rememberParty({
-                workspaceId: "ws-1",
-                conversationId: "conv-1",
-                party: { partyId: "p1", name: "Lan" },
-            }),
-        ).resolves.toBeUndefined()
-        expect(em.update).toHaveBeenCalledWith(
-            AgentConversationEntity,
-            { workspaceId: "ws-1", id: "conv-1" },
-            { connectorPartyId: "p1", connectorPartyName: "Lan", connectorPartyAt: expect.any(Function) },
-        )
-    })
-})
+        const party = { partyId: "p1", name: "Lan" }
 
-describe("AgentConversationsService database clock", () => {
-    it("stamps the hand-over, the chat holder, the human handling and the party with the database time", async () => {
-        const { service, em } = await build(mockEntityManager({ update: [AgentConversationEntity, { affected: 1 }] }))
-        const inside = mockEntityManager({ update: [AgentConversationEntity, { affected: 1 }] })
-        const inside2 = mockEntityManager({ update: [AgentConversationEntity, { affected: 1 }] })
+        await service.rememberParty({ workspaceId: "ws-1", conversationId: "conv-1", party })
 
-        await service.handToPerson("ws-1", "conv-1", "Lan")
-        await service.setChatHolder("ws-1", "chat-1", "Lan", inside)
-        await service.setHumanHandling("ws-1", "conv-1", "Lan", inside2)
-        await service.rememberParty({
-            workspaceId: "ws-1",
-            conversationId: "conv-1",
-            party: { partyId: "p1", name: "L" },
-        })
-
-        expect(evaluatedValues(inside.update.mock.calls[0]?.[2]).handledAt).toBe("now()")
-        expect(evaluatedValues(inside2.update.mock.calls[0]?.[2]).handledAt).toBe("now()")
-        expect(evaluatedValues(em.update.mock.calls[0]?.[2]).handledAt).toBe("now()")
-        expect(evaluatedValues(em.update.mock.calls[1]?.[2]).connectorPartyAt).toBe("now()")
+        expect(evaluatedCalls(em.update.mock.calls, 2)).toEqual([
+            [
+                "AgentConversationEntity",
+                { workspaceId: "ws-1", id: "conv-1" },
+                { connectorPartyId: "p1", connectorPartyName: "Lan", connectorPartyAt: "now()" },
+            ],
+        ])
     })
 })

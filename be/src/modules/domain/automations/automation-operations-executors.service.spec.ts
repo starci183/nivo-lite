@@ -133,15 +133,16 @@ const build = async (em: MockEntityManager = mockEntityManager(), useNullChat = 
     return { office, records, chat, messages, renewal, desk, run: runner(service.executors()) }
 }
 
+const figures = {
+    new_leads: 3,
+    confirmed_orders: 2,
+    confirmed_total: "900000",
+    money_in: "500000",
+    won_leads: 4,
+    waiting: ["a".repeat(120), null, "c", "d"],
+}
+
 describe("AutomationOperationsExecutorsService daily_report", () => {
-    const figures = {
-        new_leads: 3,
-        confirmed_orders: 2,
-        confirmed_total: "900000",
-        money_in: "500000",
-        won_leads: 4,
-        waiting: ["a".repeat(120), null, "c", "d"],
-    }
     it("posts the day to Office with the deals, the money and what waits", async () => {
         const em = readingOf(...dayFiguresAnswers(figures)).em
         const { run, office, desk } = await build(em)
@@ -202,43 +203,21 @@ describe("AutomationOperationsExecutorsService daily_report", () => {
         expect(result.steps[1]).toEqual({ label: "report.chatSent{}", status: "done" })
     })
 
-    it("says the chat was skipped when it cannot be reached", async () => {
-        const em = readingOf(...dayFiguresAnswers(figures)).em
-        const unreachable = await build(em)
+    it("says the chat was skipped when it cannot be reached or the null chat adapter is registered", async () => {
+        const unreachable = await build(readingOf(...dayFiguresAnswers(figures)).em)
         unreachable.chat.sendToOwner.mockResolvedValue(false)
+        const nullChat = await build(readingOf(...dayFiguresAnswers(figures)).em, true)
+        const skipped = { label: "report.chatSkipped{}", status: "skipped", detail: "report.chatSkippedDetail{}" }
 
-        const result = await unreachable.run("daily_report", context({ toOwnerChat: true }), {})
+        const first = await unreachable.run("daily_report", context({ toOwnerChat: true }), {})
+        const second = await nullChat.run("daily_report", context({ toOwnerChat: true }), {})
 
-        expect(result.steps[1]).toEqual({
-            label: "report.chatSkipped{}",
-            status: "skipped",
-            detail: "report.chatSkippedDetail{}",
-        })
+        expect(first.steps[1]).toEqual(skipped)
+        expect(second.steps[1]).toEqual(skipped)
+        expect(nullChat.office.postLine).toHaveBeenCalledWith("ws-1", expect.stringContaining("report.title"), null)
     })
 })
-describe("AutomationOperationsExecutorsService daily_report", () => {
-    const figures = {
-        new_leads: 3,
-        confirmed_orders: 2,
-        confirmed_total: "900000",
-        money_in: "500000",
-        won_leads: 4,
-        waiting: ["a".repeat(120), null, "c", "d"],
-    }
-    it("keeps the report in Office when the null chat adapter is registered", async () => {
-        const em = readingOf(...dayFiguresAnswers(figures)).em
-        const { run, office } = await build(em, true)
 
-        const result = await run("daily_report", context({ toOwnerChat: true }), {})
-
-        expect(office.postLine).toHaveBeenCalledWith("ws-1", expect.stringContaining("report.title"), null)
-        expect(result.steps[1]).toEqual({
-            label: "report.chatSkipped{}",
-            status: "skipped",
-            detail: "report.chatSkippedDetail{}",
-        })
-    })
-})
 describe("AutomationOperationsExecutorsService delivery_notice", () => {
     const order = {
         id: "o-1",
