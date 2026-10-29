@@ -120,16 +120,15 @@ describe("ContentItemsService", () => {
             expect(fakes[0]?.callsOf("returning")).toEqual([["id, variants, channels"]])
         })
 
-        it.each([[[]], [["broken"]], [[{ id: "item-1", variants: null, channels: [] }]]])(
-            "fails when nothing usable was stored (%j)",
-            async (raw) => {
-                const { items } = await build([{ execute: { raw } }])
+        it.each([
+            [[], { code: ContentItemsErrorCode.NotWritten }],
+            [["broken"], { code: "DATABASE_RETURNING_ROW_REJECTED" }],
+            [[{ id: "item-1", variants: null, channels: [] }], { code: ContentItemsErrorCode.NotWritten }],
+        ])("fails when nothing usable was stored (%j)", async (raw, refusal) => {
+            const { items } = await build([{ execute: { raw } }])
 
-                await expect(items.createAgentDraft(draft)).rejects.toMatchObject({
-                    code: ContentItemsErrorCode.NotWritten,
-                })
-            },
-        )
+            await expect(items.createAgentDraft(draft)).rejects.toMatchObject(refusal)
+        })
     })
 })
 

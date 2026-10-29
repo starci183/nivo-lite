@@ -1,4 +1,5 @@
 import type { SelectQueryBuilder, UpdateQueryBuilder } from "typeorm"
+import { returnedRows, rowShape } from "@modules/platform/database"
 import type { ConnectionEntity } from "./entities"
 
 /** A timestamp column as the ISO text the contracts carry (UTC, millisecond precision). */
@@ -55,20 +56,13 @@ export const projectConnections = (query: SelectQueryBuilder<ConnectionEntity>):
 /** The changes one connection update carries. */
 export type ConnectionChanges = Parameters<UpdateQueryBuilder<ConnectionEntity>["set"]>[0]
 
-/** The rows an `UPDATE ... RETURNING` or `DELETE ... RETURNING` answered, each as a plain record. */
-export const returnedRows = (raw: unknown): ReadonlyArray<object> =>
-    Array.isArray(raw) ? raw.filter((row): row is object => typeof row === "object" && row !== null) : []
-
 /** The ids a write returned. */
 export const returnedIds = (raw: unknown): ReadonlyArray<string> =>
-    returnedRows(raw)
-        .map((row): unknown => Reflect.get(row, "id"))
-        .filter((id): id is string => typeof id === "string")
+    returnedRows(raw, rowShape({ id: "string" })).map((row) => row.id)
 
 /** The id and workspace of each connection a write returned (`RETURNING id, workspace_id`). */
 export const returnedOwners = (raw: unknown): ReadonlyArray<{ id: string; workspaceId: string }> =>
-    returnedRows(raw).flatMap((row) => {
-        const id: unknown = Reflect.get(row, "id")
-        const workspaceId: unknown = Reflect.get(row, "workspace_id")
-        return typeof id === "string" && typeof workspaceId === "string" ? [{ id, workspaceId }] : []
-    })
+    returnedRows(raw, rowShape({ id: "string", workspace_id: "string" })).map((row) => ({
+        id: row.id,
+        workspaceId: row.workspace_id,
+    }))

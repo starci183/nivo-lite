@@ -140,7 +140,7 @@ describe("ContractLinkService", () => {
             const company: CustomerRecordRead = {
                 ...RECORD,
                 source: null,
-                data: { ...RECORD.data, "Khách hàng": "Công ty" },
+                data: { ...RECORD.data, "Kh\u00e1ch h\u00e0ng": "C\u00f4ng ty" },
             }
             const { tx, relinkSets } = linkRunOf(company, [contractOf()], [{ id: "contract-1" }])
             const { links, leads } = await build(tx.em)
@@ -152,8 +152,8 @@ describe("ContractLinkService", () => {
             expect(leads.capture).toHaveBeenCalledWith(
                 {
                     workspaceId: "ws-1",
-                    contactName: "HÀ TRUNG LƯU",
-                    company: "HÀ TRUNG LƯU",
+                    contactName: "H\u00c0 TRUNG L\u01afU",
+                    company: "H\u00c0 TRUNG L\u01afU",
                     channel: "contracts.linkChannel:{}",
                     need: 'contracts.linkNeed:{"plan":"Hosting"}',
                     phone: PHONE,

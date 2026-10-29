@@ -1,4 +1,5 @@
 import type { AgentDraftRef } from "../content-items.contracts"
+import { returnedRows, rowShape } from "@modules/platform/database"
 import { ContentItemEntity } from "./entities"
 
 /** A timestamp column as the ISO text the contracts carry (UTC, millisecond precision). */
@@ -28,10 +29,6 @@ export interface DueChannelProjection extends ScheduleProjection {
     /** The channel's reference. */
     readonly ref: string
 }
-
-/** The rows an `INSERT/UPDATE ... RETURNING` answered, each as a plain record. */
-export const returnedRows = (raw: unknown): ReadonlyArray<object> =>
-    Array.isArray(raw) ? raw.filter((row): row is object => typeof row === "object" && row !== null) : []
 
 /** The snapshot of a stored draft out of a returned row; undefined when the row lacks one of its parts. */
 export const draftRefOf = (row: object): AgentDraftRef | undefined => {
@@ -74,7 +71,7 @@ const COLUMNS: ReadonlyArray<readonly [string, string]> = [
 
 /** The first post a `RETURNING *` write answered, read as an entity; undefined when the write answered nothing. */
 export const contentItemOfRaw = (raw: unknown): ContentItemEntity | undefined => {
-    const [row] = returnedRows(raw)
+    const [row] = returnedRows(raw, rowShape({ id: "string" }))
     return row === undefined
         ? undefined
         : Object.assign(

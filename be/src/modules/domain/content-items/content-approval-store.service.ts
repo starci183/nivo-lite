@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import type {
     ContentApprovalDraft,
     ContentPublishedResult,
@@ -8,7 +8,6 @@ import type {
 } from "./content-approval-store.contracts"
 import type { ContentEvidence, PublishMark } from "./content-editor.contracts"
 import { ContentItemsError, ContentItemsErrorCode } from "./errors/content-items.error"
-import { returnedRows } from "./persistence/content-item.projection"
 import { ContentItemEntity } from "./persistence/entities"
 
 /** The history with one more line, kept to its newest sixty lines. */
@@ -124,16 +123,12 @@ export class ContentApprovalStoreService {
             })
             .returning(`id, status = 'published' AS "allDone"`)
             .execute()
-        const [row] = returnedRows(published.raw)
-        const rowId: unknown = row === undefined ? undefined : Reflect.get(row, "id")
-        const allDone: unknown = row === undefined ? undefined : Reflect.get(row, "allDone")
-        if (typeof rowId !== "string" || typeof allDone !== "boolean") {
-            throw new ContentItemsError({ code: ContentItemsErrorCode.WrongStatus })
-        }
-        return { id: rowId, allDone }
+        const [row] = returnedRows(published.raw, rowShape({ id: "string", allDone: "boolean" }))
+        if (row === undefined) throw new ContentItemsError({ code: ContentItemsErrorCode.WrongStatus })
+        return { id: row.id, allDone: row.allDone }
     }
 
     private requireWritten(raw: unknown): void {
-        if (returnedRows(raw).length === 0) throw new ContentItemsError({ code: ContentItemsErrorCode.WrongStatus })
+        if (returnedRows(raw, rowShape({ id: "string" })).length === 0) throw new ContentItemsError({ code: ContentItemsErrorCode.WrongStatus })
     }
 }
