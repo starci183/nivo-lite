@@ -263,18 +263,19 @@ describe("ContentConfigurationService", () => {
 
     it("switches one automation and keeps fifteen distinct hashtags", async () => {
         const em = mockEntityManager({ findOne: [ContentSettingsEntity, settingsRow()] })
-        const [automation, brand] = queueQueryBuilders(em, [{ execute: {} }, { execute: {} }])
+        const [ensure, automation, brand] = queueQueryBuilders(em, [{ execute: {} }, { execute: {} }, { execute: {} }])
         const { settings } = await build(em)
         await expect(settings.setAutomation("user-1", "ws-1", "offer_draft", true)).resolves.toMatchObject({
             workspaceId: "ws-1",
             brandVoice: "warm",
         })
         expect(automation?.callsOf("setParameter")).toEqual([["automation", JSON.stringify({ offer_draft: true })]])
-        expect(automation?.callsOf("onConflict")).toHaveLength(1)
-        expect(evaluatedValues(automation?.callsOf("values")[0]?.[0])).toEqual({
-            workspaceId: "ws-1",
-            automations: ":automation::jsonb",
+        expect(ensure?.callsOf("values")).toEqual([[{ workspaceId: "ws-1" }]])
+        expect(ensure?.callsOf("orIgnore")).toEqual([[]])
+        expect(evaluatedValues(automation?.callsOf("set")[0]?.[0])).toEqual({
+            automations: '"automations" || :automation::jsonb',
         })
+        expect(automation?.callsOf("where")).toEqual([["workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
 
         const tags = ["###", "#tag0", "#tag0", ...Array.from({ length: 16 }, (_, index) => `#tag${index + 1}`)].join(
             " ",
@@ -288,7 +289,7 @@ describe("ContentConfigurationService", () => {
 
     it("answers the default brand when the switched workspace has no saved row", async () => {
         const em = mockEntityManager({ findOne: [ContentSettingsEntity, null] })
-        queueQueryBuilders(em, [{ execute: {} }])
+        queueQueryBuilders(em, [{ execute: {} }, { execute: {} }])
         const { settings } = await build(em)
 
         await expect(settings.setAutomation("user-1", "ws-1", "today_reminder", false)).resolves.toMatchObject({
