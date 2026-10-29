@@ -6,7 +6,7 @@ import { randomSecret } from "@modules/domain/connection-secrets"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, Provider } from "@modules/domain/connections"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
-import { AgentEntity } from "@modules/domain/agents"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectChannelProvisioningOptions } from "./channel-provisioning.decorators"
 import type { ProvisionFlags } from "./channel-provisioning.contracts"
@@ -14,22 +14,6 @@ import type { ChannelProvisioningOptions } from "./channel-provisioning.options"
 
 /** The most agents one bind reaches. */
 const AGENT_LIMIT = 500
-
-/** One agent of a workspace and the module it works for. */
-interface AgentRow {
-    /** The agent row id a channel binding points at. */
-    readonly id: string
-    /** The product module the agent serves, used to pick the agent a new channel is bound to. */
-    readonly module: string
-}
-
-const isAgentRow = (value: unknown): value is AgentRow =>
-    typeof value === "object" &&
-    value !== null &&
-    "id" in value &&
-    typeof value.id === "string" &&
-    "module" in value &&
-    typeof value.module === "string"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
 
@@ -54,6 +38,7 @@ export class ChannelProvisioningService {
         private readonly grants: ConnectionGrantsService,
         private readonly connections: ConnectionsService,
         private readonly members: WorkspaceMemberDirectoryService,
+        private readonly agents: AgentDirectoryService,
     ) {}
 
     /** Connects the channel `kind` to the workspace of the flags; a missing flag or secret refuses the run before anything is stored. */
@@ -132,15 +117,8 @@ export class ChannelProvisioningService {
         flags: ProvisionFlags,
     ): Promise<void> {
         if (flags.bind !== true) return
-        const rows: ReadonlyArray<unknown> = await this.entityManager
-            .createQueryBuilder(AgentEntity, "a")
-            .select("a.id", "id")
-            .addSelect("a.module", "module")
-            .where("a.workspace_id = :workspaceId", { workspaceId: actor.workspaceId })
-            .orderBy("a.created_at")
-            .limit(AGENT_LIMIT)
-            .getRawMany()
-        const eligible = rows.filter(isAgentRow).filter((agent) => purposeFor(agent.module, provider) !== null)
+        const agents = await this.agents.moduleRefsOf(actor.workspaceId, AGENT_LIMIT)
+        const eligible = agents.filter((agent) => purposeFor(agent.module, provider) !== null)
         await this.grants.setConnectionAgents(
             actor,
             connectionId,

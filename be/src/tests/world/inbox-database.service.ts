@@ -1,5 +1,5 @@
 import type { EntityManager } from "typeorm"
-import { AgentEntity } from "@modules/domain/agents"
+import { agentsEntities } from "@modules/domain/agents"
 import { eventsEntities } from "@modules/domain/events"
 import { inboundEventsEntities } from "@modules/domain/inbound-events"
 import { mcpCallLogEntities } from "@modules/domain/mcp-call-log"
@@ -7,6 +7,8 @@ import { mcpConnectorsEntities } from "@modules/domain/mcp-connectors"
 import { messagesEntities } from "@modules/domain/messages"
 import { inboxEntities } from "@modules/platform/inbox"
 import { sql } from "@modules/platform/database"
+
+const [AgentEntity] = agentsEntities
 
 const [InboxEntity] = inboxEntities
 

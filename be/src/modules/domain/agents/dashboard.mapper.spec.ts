@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
-import type { BoundConnection } from "@modules/domain/agent-connections"
+import type { BoundConnectionView as BoundConnection } from "./agents.port"
 import type { LensCounts } from "./agents.contracts"
 import type { Installation } from "./agents.port"
 import {

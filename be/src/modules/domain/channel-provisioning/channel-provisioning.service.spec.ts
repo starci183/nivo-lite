@@ -6,14 +6,13 @@ import { ConnectionGrantsService } from "@modules/domain/connection-grants"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { Secret } from "@modules/platform/config"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { ProvisionFlags } from "./channel-provisioning.contracts"
 import { CHANNEL_PROVISIONING_OPTIONS } from "./channel-provisioning.decorators"
 import type { ChannelProvisioningOptions } from "./channel-provisioning.options"
 import { ChannelProvisioningService } from "./channel-provisioning.service"
-import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
-import type { TableAnswers } from "@tests/fixtures/builders/table-query-builder.builder"
 
 const WORKSPACE = "12345678-1234-5678-9abc-123456789abc"
 const ACTOR = { principalId: "owner-1", workspaceId: WORKSPACE }
@@ -38,11 +37,15 @@ const TELEGRAM: ConnectionRecord = {
 /** What a spec states about the database: the manager, the queries it answered and the account the directory names as owner. */
 interface Scenario {
     readonly entityManager: MockEntityManager
-    readonly seen: TableAnswers
+    readonly agents: ReadonlyArray<{ readonly id: string; readonly module: string }>
     readonly owner: string | null
 }
 
 /** A scenario whose agents table answers the given rows and whose workspace has the given owners (the first one is the oldest). */
+/** Whether a stubbed row names an agent and its module. */
+const isAgentRef = (value: unknown): value is { readonly id: string; readonly module: string } =>
+    typeof value === "object" && value !== null && "id" in value && "module" in value
+
 const scenarioOf = (
     owners: ReadonlyArray<{ readonly userId: string }> = [{ userId: "owner-1" }],
     agents: ReadonlyArray<unknown> = [],
@@ -50,13 +53,11 @@ const scenarioOf = (
     const entityManager = mockEntityManager()
     return {
         entityManager,
-        seen: answerByTable(entityManager, { "public.agents": agents }),
+        agents: agents.flatMap((agent) => (isAgentRef(agent) ? [agent] : [])),
         owner: owners[0]?.userId ?? null,
     }
 }
 
-/** The tables the subject read through the manager, in order. */
-const tablesRead = (seen: TableAnswers): ReadonlyArray<string> => seen.queries.map((query) => query.table)
 
 const build = async (
     overrides: Partial<ChannelProvisioningOptions> = {},
@@ -90,6 +91,8 @@ const build = async (
     const connections = mock<ConnectionsService>()
     connections.create.mockResolvedValue("zalo-1")
     connections.webhookUrl.mockReturnValue("https://nivo.vn/api/connections/zalo/zalo-1")
+    const agentDirectory = mock<AgentDirectoryService>()
+    agentDirectory.moduleRefsOf.mockResolvedValue([...scenario.agents])
     const directory = mock<WorkspaceMemberDirectoryService>()
     directory.firstActiveOwnerUserId.mockResolvedValue(scenario.owner)
     const print = jest.fn<void, [string]>()
@@ -109,12 +112,13 @@ const build = async (
             { provide: ConnectionGrantsService, useValue: grants },
             { provide: ConnectionsService, useValue: connections },
             { provide: WorkspaceMemberDirectoryService, useValue: directory },
+            { provide: AgentDirectoryService, useValue: agentDirectory },
         ],
     }).compile()
     return {
         service: moduleRef.get(ChannelProvisioningService),
         entityManager: scenario.entityManager,
-        seen: scenario.seen,
+        agentDirectory,
         channels,
         grants,
         print,
@@ -196,22 +200,20 @@ describe("ChannelProvisioningService refusals and telegram", () => {
     )
 
     it("refuses a workspace without an owner", async () => {
-        const { service, seen, channels, print } = await build({}, scenarioOf([]))
+        const { service, channels, print } = await build({}, scenarioOf([]))
 
         await expect(service.run("telegram", { workspace: WORKSPACE })).rejects.toEqual(
             new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id: WORKSPACE } }),
         )
-        expect(tablesRead(seen)).toEqual([])
         expect(channels.connectTelegram).not.toHaveBeenCalled()
         expect(print).not.toHaveBeenCalled()
     })
 
     it.each(["unknown"])("refuses the unknown kind %s after finding the owner", async (kind) => {
-        const { service, seen, channels, print } = await build()
+        const { service, channels, print } = await build()
 
         await expect(service.run(kind, { workspace: WORKSPACE })).rejects.toEqual(invalid("kind"))
 
-        expect(tablesRead(seen)).toEqual([])
         expect(channels.connectTelegram).not.toHaveBeenCalled()
         expect(channels.startMoneyConnection).not.toHaveBeenCalled()
         expect(print).not.toHaveBeenCalled()
@@ -227,12 +229,11 @@ describe("ChannelProvisioningService refusals and telegram", () => {
     })
 
     it("connects Telegram as the owner with its default name and prints the registered webhook", async () => {
-        const { service, seen, channels, grants, print } = await build()
+        const { service, channels, grants, print } = await build()
 
         await expect(service.run("telegram", { workspace: WORKSPACE })).resolves.toBeUndefined()
 
         expect(channels.connectTelegram.mock.calls).toEqual([[ACTOR, { name: "Bot Telegram", token: TOKEN }]])
-        expect(tablesRead(seen)).toEqual([])
         expect(print.mock.calls).toEqual([["telegram connection telegram-1 (Bot Telegram); webhook registered"]])
         expect(grants.setConnectionAgents).not.toHaveBeenCalled()
     })
@@ -240,7 +241,7 @@ describe("ChannelProvisioningService refusals and telegram", () => {
 
 describe("ChannelProvisioningService", () => {
     it("keeps the Telegram name and reports an unbound webhook when binding is disabled", async () => {
-        const { service, seen, channels, grants, print } = await build()
+        const { service, channels, grants, print } = await build()
         channels.connectTelegram.mockResolvedValue({
             connection: { ...TELEGRAM, name: "Shop bot" },
             botUsername: "shop_bot",
@@ -251,7 +252,6 @@ describe("ChannelProvisioningService", () => {
         await service.run("telegram", { workspace: WORKSPACE, name: "Shop bot", bind: false })
 
         expect(channels.connectTelegram.mock.calls).toEqual([[ACTOR, { name: "Shop bot", token: TOKEN }]])
-        expect(tablesRead(seen)).toEqual([])
         expect(print.mock.calls).toEqual([
             ["telegram connection telegram-1 (Shop bot); webhook not registered (the site is not public https)"],
         ])
@@ -275,7 +275,7 @@ describe("ChannelProvisioningService", () => {
     })
 
     it("starts SePay with its default environment and name and prints the webhook url and API key", async () => {
-        const { service, seen, channels, grants, print } = await build()
+        const { service, channels, grants, print } = await build()
 
         await expect(service.run("sepay", { workspace: WORKSPACE, ...BANK })).resolves.toBeUndefined()
 
@@ -292,7 +292,6 @@ describe("ChannelProvisioningService", () => {
                 },
             ],
         ])
-        expect(tablesRead(seen)).toEqual([])
         expect(print.mock.calls).toEqual([
             [
                 "sepay connection sepay-1; paste into SePay: url " +
@@ -305,14 +304,11 @@ describe("ChannelProvisioningService", () => {
 
 describe("ChannelProvisioningService", () => {
     it("binds only the agents whose modules can use Telegram, preserving their order", async () => {
-        const { service, seen, grants, print } = await build({}, scenarioOf(undefined, AGENT_ROWS))
+        const { service, agentDirectory, grants, print } = await build({}, scenarioOf(undefined, AGENT_ROWS))
 
         await service.run("telegram", { workspace: WORKSPACE, bind: true })
 
-        expect(tablesRead(seen)).toEqual(["public.agents"])
-        expect(seen.queries[0]?.callsOf("where")).toEqual([
-            ["a.workspace_id = :workspaceId", { workspaceId: WORKSPACE }],
-        ])
+        expect(agentDirectory.moduleRefsOf).toHaveBeenCalledWith(WORKSPACE, 500)
         expect(grants.setConnectionAgents.mock.calls).toEqual([
             [ACTOR, "telegram-1", [{ agentId: "chat-1" }, { agentId: "booking-1" }, { agentId: "chat-2" }]],
         ])
@@ -323,7 +319,7 @@ describe("ChannelProvisioningService", () => {
     })
 
     it("uses the supplied SePay name and environment and binds only accounting agents", async () => {
-        const { service, seen, channels, grants, print } = await build({}, scenarioOf(undefined, AGENT_ROWS))
+        const { service, channels, grants, print } = await build({}, scenarioOf(undefined, AGENT_ROWS))
 
         await service.run("sepay", {
             workspace: WORKSPACE,
@@ -346,10 +342,7 @@ describe("ChannelProvisioningService", () => {
                 },
             ],
         ])
-        expect(tablesRead(seen)).toEqual(["public.agents"])
-        expect(seen.queries[0]?.callsOf("where")).toEqual([
-            ["a.workspace_id = :workspaceId", { workspaceId: WORKSPACE }],
-        ])
+        expect(agentDirectory.moduleRefsOf).toHaveBeenCalledWith(WORKSPACE, 500)
         expect(grants.setConnectionAgents.mock.calls).toEqual([[ACTOR, "sepay-1", [{ agentId: "bank-1" }]]])
         expect(print.mock.calls).toEqual([
             [

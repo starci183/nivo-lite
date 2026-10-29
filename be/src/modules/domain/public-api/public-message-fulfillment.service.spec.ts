@@ -10,7 +10,7 @@ import type { MessageRequestBody } from "./public-api.contracts"
 import { PublicApiLogEvent } from "./public-api.log-events"
 import { MESSAGE_AUTO_SEND_WINDOW_MS } from "./public-api.policy"
 import { PublicConversationsService } from "./public-conversations.service"
-import type { ConversationRef } from "./public-conversations.service"
+import type { PublicConversationRef } from "./public-conversations.service"
 import { PublicMessageFulfillmentService } from "./public-message-fulfillment.service"
 
 const body: MessageRequestBody = {
@@ -26,9 +26,9 @@ const RECENT = new Date("2026-10-25T11:00:00.000Z")
 const CONVERSATION = { id: "conversation-1", lead_id: "lead-1" }
 
 /** A manager for a request whose conversation read answers the given conversation, or none. */
-const managerWith = (conversation: ConversationRef | undefined) => ({ tx: mockEntityManager(), conversation })
+const managerWith = (conversation: PublicConversationRef | undefined) => ({ tx: mockEntityManager(), conversation })
 
-const build = async (conversation: ConversationRef | undefined) => {
+const build = async (conversation: PublicConversationRef | undefined) => {
     const work = mock<DurableWorkService>({
         enqueueWork: jest.fn().mockResolvedValue(mock<WorkItem>({ id: "work-1" })),
     })

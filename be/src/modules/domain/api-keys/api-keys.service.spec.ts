@@ -6,6 +6,7 @@ import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jes
 import type { MockEntityManager } from "@starci/jest-preset"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -40,7 +41,9 @@ const thrownBy = (run: () => unknown): unknown => {
     return undefined
 }
 
-const build = async (entityManager: MockEntityManager) => {
+const build = async (entityManager: MockEntityManager, agentStatus: string | null = "active") => {
+    const agents = mock<AgentDirectoryService>()
+    agents.statusOf.mockResolvedValue(agentStatus)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ApiKeysService,
@@ -48,6 +51,7 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: CLOCK, useValue: new FakeClock("2026-10-12T10:00:20.000Z") },
             { provide: EventsService, useValue: mock<EventsService>() },
             { provide: WorkspaceMemberSeatsService, useValue: mock<WorkspaceMemberSeatsService>() },
+            { provide: AgentDirectoryService, useValue: agents },
         ],
     }).compile()
     return moduleRef.get(ApiKeysService)
@@ -117,7 +121,10 @@ const wrote = (...rows: Array<ApiKeyEntity>): QueryBuilderAnswers => ({ execute:
 const buildManagement = async (
     entityManager: MockEntityManager,
     answers: ReadonlyArray<QueryBuilderAnswers | SeatAnswer>,
+    holdsAgent = true,
 ) => {
+    const agents = mock<AgentDirectoryService>()
+    agents.holds.mockResolvedValue(holdsAgent)
     const transaction = fakeTransaction(entityManager)
     const [first, ...rest] = answers
     const seats = mock<WorkspaceMemberSeatsService>()
@@ -159,9 +166,10 @@ const buildManagement = async (
             { provide: CLOCK, useValue: new FakeClock("2026-10-12T10:00:20.000Z") },
             { provide: EventsService, useValue: events },
             { provide: WorkspaceMemberSeatsService, useValue: seats },
+            { provide: AgentDirectoryService, useValue: agents },
         ],
     }).compile()
-    return { service: moduleRef.get(ApiKeysService), events, transaction, managers, fakes, seats }
+    return { service: moduleRef.get(ApiKeysService), events, transaction, managers, fakes, seats, agents }
 }
 
 const REVOKE_WHERE = "id = :keyId AND workspace_id = :workspaceId AND revoked_at IS NULL"
@@ -401,20 +409,16 @@ describe("ApiKeysService credential admission", () => {
 describe("ApiKeysService agent keys", () => {
     it("creates a key bound to an agent of the workspace with only the tools:call scope", async () => {
         const em = mockEntityManager({ count: [ApiKeyEntity, 0] })
-        const { service, events, transaction, fakes } = await buildManagement(em, [
+        const { service, events, transaction, fakes, agents } = await buildManagement(em, [
             memberOf("owner"),
-            { getRawOne: { id: "agent-1" } },
             wrote(agentBoundKey()),
         ])
 
         const created = await service.createKey("principal-1", "workspace-1", "Desk agent", "agent-1")
 
         expect(created.item).toEqual({ ...keyView, agentId: "agent-1" })
-        expect(fakes[0]?.callsOf("setLock")).toEqual([["pessimistic_read"]])
-        expect(fakes[0]?.callsOf("where")).toEqual([
-            ["a.id = :agentId AND a.workspace_id = :workspaceId", { agentId: "agent-1", workspaceId: "workspace-1" }],
-        ])
-        expect(fakes[1]?.callsOf("values")).toEqual([
+        expect(agents.holds).toHaveBeenCalledWith("workspace-1", "agent-1", expect.anything())
+        expect(fakes[0]?.callsOf("values")).toEqual([
             [
                 {
                     workspaceId: "workspace-1",
@@ -433,15 +437,12 @@ describe("ApiKeysService agent keys", () => {
 
     it("refuses an agent that is not of the workspace and records nothing", async () => {
         const em = mockEntityManager({ count: [ApiKeyEntity, 0] })
-        const { service, events, transaction } = await buildManagement(em, [
-            memberOf("owner"),
-            { getRawOne: undefined },
-        ])
+        const { service, events, transaction } = await buildManagement(em, [memberOf("owner")], false)
 
         await expect(service.createKey("principal-1", "workspace-1", "Desk agent", "agent-9")).rejects.toMatchObject({
             code: ApiKeysErrorCode.AgentNotFound,
         })
-        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
         expect(events.record).not.toHaveBeenCalled()
         expect(transaction.outcomes).toEqual(["rollback"])
     })
@@ -458,7 +459,6 @@ describe("ApiKeysService agent keys", () => {
                     agent_id: "agent-1",
                     scopes: ["tools:call"],
                     revoked: false,
-                    agent_status: "active",
                 },
             },
         ])
@@ -488,7 +488,6 @@ describe("ApiKeysService agent keys", () => {
                     agent_id: "agent-1",
                     scopes: [],
                     revoked: true,
-                    agent_status: null,
                 },
             },
         ])

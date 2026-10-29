@@ -1,5 +1,8 @@
 import { builder } from "@starci/jest-preset"
-import type { AgentConversationEntity } from "@modules/domain/agent-conversations"
+import { agentConversationsEntities } from "@modules/domain/agent-conversations"
+
+const [AgentConversationEntity] = agentConversationsEntities
+type AgentConversationEntity = InstanceType<typeof AgentConversationEntity>
 
 /** A customer's Telegram conversation with the fields a spec rarely changes filled. */
 export const conversationOf = builder<AgentConversationEntity>({

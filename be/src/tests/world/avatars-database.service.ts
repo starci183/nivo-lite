@@ -1,7 +1,9 @@
 import type { EntityManager } from "typeorm"
-import { AgentEntity } from "@modules/domain/agents"
+import { agentsEntities } from "@modules/domain/agents"
 import { callDbFunction, sql } from "@modules/platform/database"
 import type { LiteWorld } from "./lite-world.service"
+
+const [AgentEntity] = agentsEntities
 
 /** Only the backend may write an agent picture; the browser roles hold no privilege on the column. */
 const AGENT_AVATAR_PRIVILEGES = sql`

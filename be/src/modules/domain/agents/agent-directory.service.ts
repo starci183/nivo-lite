@@ -5,6 +5,8 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     AgentCard,
     AgentCreation,
+    AgentModuleRef,
+    OptionalAgentStatus,
     AgentHandleCard,
     AgentIdentityCard,
     AgentSeat,
@@ -116,6 +118,26 @@ export class AgentDirectoryService {
             lock: { mode: "pessimistic_read" },
         })
         return agent !== null
+    }
+
+    /** The status of the agent in the workspace; null when the workspace has no such agent. */
+    async statusOf(workspaceId: string, agentId: string): Promise<OptionalAgentStatus> {
+        const agent = await this.entityManager.findOne(AgentEntity, {
+            select: { id: true, status: true },
+            where: { id: agentId, workspaceId },
+        })
+        return agent?.status ?? null
+    }
+
+    /** The agents of the workspace with the module each serves, whatever their status, oldest first, at most `limit`. */
+    async moduleRefsOf(workspaceId: string, limit: number): Promise<Array<AgentModuleRef>> {
+        const agents = await this.entityManager.find(AgentEntity, {
+            select: { id: true, module: true },
+            where: { workspaceId },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: limit,
+        })
+        return agents.map((agent) => ({ id: agent.id, module: agent.module }))
     }
 
     /** One agent of the workspace by id, active or paused; null when there is none. */

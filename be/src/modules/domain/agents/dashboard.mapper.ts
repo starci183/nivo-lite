@@ -1,4 +1,4 @@
-import type { BoundConnection } from "@modules/domain/agent-connections"
+import type { BoundConnectionView } from "./agents.port"
 import type {
     DashboardAgent,
     OptionalId,
@@ -56,7 +56,7 @@ const statusOf = (status: string): ConnectionItem["status"] => {
 }
 
 /** The connections bound to the agent, each once, as dashboard lines. */
-export const connectionItemsOf = (bound: ReadonlyArray<BoundConnection>): ReadonlyArray<ConnectionItem> => {
+export const connectionItemsOf = (bound: ReadonlyArray<BoundConnectionView>): ReadonlyArray<ConnectionItem> => {
     const seen = new Set<string>()
     return bound.flatMap((connection) => {
         if (seen.has(connection.id)) return []

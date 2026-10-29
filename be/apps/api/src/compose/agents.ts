@@ -2,7 +2,7 @@ import { InstallationDirectoryService } from "@modules/domain/modules"
 import { AgentKnowledgeLensService, ModuleProfilesService } from "@modules/domain/agent-knowledge"
 import type { DynamicModule } from "@nestjs/common"
 import { UsageGateService } from "@modules/domain/ai-usage-events"
-import { AgentConnectionsModule } from "@modules/domain/agent-connections"
+import { AgentBindingsService, AgentConnectionsModule } from "@modules/domain/agent-connections"
 import { AgentToolsModule } from "@modules/domain/agent-tools"
 import { AgentProfileModule } from "@modules/domain/agent-profile"
 import { AGENTS_SYNC_FRESH_MS, AgentsModule, AgentsService } from "@modules/domain/agents"
@@ -30,6 +30,7 @@ export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
         isGlobal: true,
         ports: {
             installations: InstallationDirectoryService,
+            connections: AgentBindingsService,
             knowledge: AgentKnowledgeLensService,
             modules: ModuleProfilesService,
         },

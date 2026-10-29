@@ -1,11 +1,13 @@
 import assert from "node:assert/strict"
 import type { EntityManager } from "typeorm"
 import { eachInOrder } from "@modules/platform/primitives"
-import { AgentEntity } from "@modules/domain/agents"
+import { agentsEntities } from "@modules/domain/agents"
 import { officeRoomsEntities } from "@modules/domain/office-rooms"
 import { staffEntities } from "@modules/domain/staff"
 import { workspacesEntities } from "@modules/domain/workspaces"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
+
+const [AgentEntity] = agentsEntities
 
 const [WorkspaceEntity] = workspacesEntities
 const [WorkspaceMemberEntity] = workspaceMembersEntities

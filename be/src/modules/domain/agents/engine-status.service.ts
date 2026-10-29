@@ -46,11 +46,7 @@ export class EngineStatusService {
      * The engine status for the Agents page; any member may look. `lastSyncCheck` reads when the agent copies were last checked (the sync
      * capability owns that), and runs only after membership is proved.
      */
-    async status(
-        userId: string,
-        workspaceId: string,
-        lastSyncCheck: SyncCheckReader,
-    ): Promise<EngineStatus> {
+    async status(userId: string, workspaceId: string, lastSyncCheck: SyncCheckReader): Promise<EngineStatus> {
         await this.members.require(userId, workspaceId)
         const lastSyncCheckAt = await lastSyncCheck()
         return {
