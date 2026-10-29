@@ -1,6 +1,7 @@
 import type { DynamicModule } from "@nestjs/common"
 import { AgentSyncMessageModule } from "@features/reactors/agent-sync"
 import { BookingEffectsMessageModule } from "@features/reactors/booking-effects"
+import { ContractRenewalMessageModule } from "@features/reactors/contract-renewal"
 import { SourceFactsMessageModule } from "@features/reactors/source-facts"
 import { ThreadOutcomesMessageModule } from "@features/reactors/thread-outcomes"
 
@@ -8,6 +9,7 @@ import { ThreadOutcomesMessageModule } from "@features/reactors/thread-outcomes"
 export const API_REACTORS: Array<DynamicModule> = [
     AgentSyncMessageModule.register({}),
     BookingEffectsMessageModule.register({}),
+    ContractRenewalMessageModule.register({}),
     SourceFactsMessageModule.register({}),
     ThreadOutcomesMessageModule.register({}),
 ]
