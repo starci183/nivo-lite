@@ -10,7 +10,7 @@ import type { Connection, PageRequest } from "@modules/platform/pagination"
 import { MentionDirectoryService } from "./mention-directory.service"
 import { ThreadMessageAuthorsService } from "./thread-message-authors.service"
 import { ThreadMessageEntity } from "./persistence/entities"
-import { selectMessages } from "./persistence/thread-message.query"
+import { selectMessageColumns } from "./persistence/thread-message.query"
 import { toListing, toMessage } from "./thread.mapper"
 import type {
     NewThread,
@@ -87,7 +87,10 @@ export class ThreadFeedService {
     async read(userId: string, workspaceId: string, threadId: string): Promise<ThreadView> {
         await this.members.require(userId, workspaceId)
         const thread = await this.threads.find(workspaceId, threadId)
-        const read = await selectMessages(this.entityManager, workspaceId)
+        const read = await selectMessageColumns(
+            this.entityManager.createQueryBuilder(ThreadMessageEntity, "m"),
+            workspaceId,
+        )
             .andWhere("m.thread_id = :threadId", { threadId })
             .orderBy("m.created_at", "DESC")
             .addOrderBy("m.id", "DESC")

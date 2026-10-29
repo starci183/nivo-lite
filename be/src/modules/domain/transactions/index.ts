@@ -4,8 +4,6 @@ export { TransactionsModule } from "./transactions.module"
 export { TransactionsService } from "./transactions.service"
 export { TransactionsLedgerService } from "./transactions-ledger.service"
 export { TransactionsFiguresService } from "./transactions-figures.service"
-export type { CreditFigure } from "./transactions-figures.contracts"
-export type { LedgerPayment, PaymentTally, ReceiptPayment } from "./transactions-ledger.contracts"
 export type {
     BankCreditRow,
     OptionalTransaction,

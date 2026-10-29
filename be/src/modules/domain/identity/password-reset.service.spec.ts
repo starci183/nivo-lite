@@ -35,15 +35,16 @@ const OPTIONS: IdentityAuthOptions = {
     resetAttempts: 2,
     attemptWindowMs: 60_000,
 }
-const tokenOf = builder<IdentityPasswordTokenEntity>({
-    id: "p1",
-    userId: "u1",
-    tokenHash: "hash",
-    purpose: "reset",
-    createdAt: new Date("2026-11-09T09:00:00.000Z"),
-    expiresAt: new Date("2026-11-09T12:00:00.000Z"),
-    usedAt: null,
-})
+const passwordTokenFor = (purpose: IdentityPasswordTokenEntity["purpose"]): IdentityPasswordTokenEntity =>
+    builder<IdentityPasswordTokenEntity>({
+        id: "p1",
+        userId: "u1",
+        tokenHash: "hash",
+        purpose,
+        createdAt: new Date("2026-11-09T09:00:00.000Z"),
+        expiresAt: new Date("2026-11-09T12:00:00.000Z"),
+        usedAt: null,
+    })()
 
 const ACCOUNT = {
     id: "u1",
@@ -140,7 +141,7 @@ describe("IdentityPasswordResetService / complete", () => {
                 [SET_PASSWORD, []],
                 [CLOSE_USER_SESSIONS, [{ be_auth_close_user_sessions: 2 }]],
             ],
-            token: tokenOf(),
+            token: passwordTokenFor("reset"),
         })
 
         await service.complete("a".repeat(40), "a-new-password")
@@ -164,7 +165,7 @@ describe("IdentityPasswordResetService / complete", () => {
                 [SET_PASSWORD, []],
                 [CLOSE_USER_SESSIONS, [{ be_auth_close_user_sessions: 0 }]],
             ],
-            token: tokenOf({ purpose: "invite" }),
+            token: passwordTokenFor("invite"),
         })
 
         await service.complete("d".repeat(40), "a-new-password")

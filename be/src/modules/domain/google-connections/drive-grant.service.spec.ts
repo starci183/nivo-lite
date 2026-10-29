@@ -10,23 +10,16 @@ import {
     GoogleError,
     GoogleErrorCode,
 } from "@modules/integrations/google"
-import type { GoogleClient, GoogleTokenSet } from "@modules/integrations/google"
+import type { GoogleClient } from "@modules/integrations/google"
 import { DriveGrantService } from "./drive-grant.service"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "./errors/google-connections.error"
 import { GoogleTokensService } from "./google-tokens.service"
+import { driveTokens as tokens, stored, tokensWithoutRenewal } from "@tests/fixtures/builders/google-connections.builder"
 import { runRealGoogleTokens } from "@tests/fixtures/builders/google-tokens.builder"
 
 const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "ws-1" }
 const NOW = new Date("2026-10-12T03:00:00.000Z")
 const EXPIRES = NOW.getTime() + 3_600_000
-const tokens: GoogleTokenSet = {
-    accessToken: "access-new",
-    refreshToken: "refresh-new",
-    expiresAt: EXPIRES,
-    idToken: null,
-    scope: DRIVE_READ_SCOPE,
-}
-const stored = { access_token: "access-old", refresh_token: "refresh-old", expires_at: EXPIRES }
 
 const record = (overrides: Partial<ConnectionRecord> = {}): ConnectionRecord => ({
     id: "d1",
@@ -151,12 +144,12 @@ describe("DriveGrantService / complete", () => {
 
     it("keeps the old refresh token when Google sends none", async () => {
         const { service, connections, google } = await build()
-        google.exchangeCode.mockResolvedValue({ ...tokens, refreshToken: null })
+        google.exchangeCode.mockResolvedValue(tokensWithoutRenewal)
 
         await service.complete("ws-1", "owner-1", "code-1")
         expect(connections.writeSecret).toHaveBeenCalledWith(
             "d1",
-            JSON.stringify({ access_token: "access-new", refresh_token: "refresh-old", expires_at: EXPIRES }),
+            JSON.stringify({ access_token: "access-new", renewal_token: "refresh-old", expires_at: EXPIRES }),
         )
     })
 
@@ -173,7 +166,7 @@ describe("DriveGrantService / complete", () => {
             provider: "google_drive",
             name: "Google Drive",
             meta: { email: "" },
-            tokens: { access_token: "access-new", refresh_token: "refresh-new", expires_at: EXPIRES },
+            tokens: { access_token: "access-new", renewal_token: "refresh-new", expires_at: EXPIRES },
         })
         expect(connections.patch).toHaveBeenCalledWith("ws-1", "d1", {
             name: "Google Drive",
@@ -190,7 +183,7 @@ describe("DriveGrantService / complete", () => {
             new GoogleConnectionsError({ code: GoogleConnectionsErrorCode.ScopeMissing }),
         )
         connections.listByProvider.mockResolvedValue([])
-        google.exchangeCode.mockResolvedValueOnce({ ...tokens, refreshToken: null })
+        google.exchangeCode.mockResolvedValueOnce(tokensWithoutRenewal)
         await expect(service.complete("ws-1", "owner-1", "code-1")).rejects.toEqual(
             new GoogleConnectionsError({ code: GoogleConnectionsErrorCode.Missing }),
         )

@@ -37,7 +37,7 @@ every table is written by its owning capability:
 
 1. `WorkspaceSeedService.seedOwned`: accounts, workspace, memberships (unchanged behavior), plus the authenticated owner.
 2. Brand: `WorkspacesService.setBrand` as that owner writes `workspaces.display_name` and `workspaces.logo_url =
-/brand/hakuen-logo.jpg` (migration `supabase/migrations/20261101000700_workspace-branding.sql`).
+/brand/hakuen-logo.jpg` (migration `db/migrations/20261101000700_workspace-branding.sql`).
 3. Five agents by handle through `AgentRecordsService.ensureByHandle` (`ai-marketing` content, `ai-editor` video, `ai-sales`
    chatbot, `ai-cskh` chatbot, `ai-ke-toan` accounting) and one installation each through `InstallationRecordsService.insert`
    (status `setup`, mode `assist`) when none drives the agent.
@@ -54,7 +54,7 @@ every table is written by its owning capability:
 6. Documents (layer 2) through `ProfileSourcesService.keep`, queued into the ingestion in the same transaction; a changed text is
    re-queued, an unchanged one is left alone.
 7. Hub rooms when `public.ensure_office_rooms` exists; each agent with a home room is moved there with
-   `public.move_office_agent_home` (migration `supabase/migrations/20261101000800_office-room-home.sql`), AI Sales to `sales`.
+   `public.move_office_agent_home` (migration `db/migrations/20261101000800_office-room-home.sql`), AI Sales to `sales`.
 8. Authority rules (`AuthorityRulesService.save`) for content, video, chatbot, booking and accounting actions of the registry.
 
 ## Production run

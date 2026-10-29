@@ -9,13 +9,16 @@ export interface QuotaOverrideRow {
     readonly creditsLimit: string | null
 }
 
+/** The own credit allowance of a workspace, or undefined when it has no override row. */
+export type FoundQuotaOverride = QuotaOverrideRow | undefined
+
 @Injectable()
 /** Allowance reads for the platform team console. */
 export class AiQuotaOverridesAdminReadService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** The own credit allowance of a workspace; undefined when it has no override row. */
-    async creditsOf(workspaceId: string): Promise<QuotaOverrideRow | undefined> {
+    async creditsOf(workspaceId: string): Promise<FoundQuotaOverride> {
         const row = await this.entityManager.findOne(AiQuotaOverrideEntity, {
             select: { creditsLimit: true },
             where: { workspaceId },

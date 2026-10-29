@@ -44,15 +44,16 @@ const unconfirmed = {
     disabled: false,
 }
 
-const tokenOf = builder<IdentityPasswordTokenEntity>({
-    id: "p1",
-    userId: "u1",
-    tokenHash: "hash",
-    purpose: "confirm",
-    createdAt: new Date("2026-11-09T09:00:00.000Z"),
-    expiresAt: new Date("2026-11-09T12:00:00.000Z"),
-    usedAt: null,
-})
+const passwordTokenFor = (purpose: IdentityPasswordTokenEntity["purpose"]): IdentityPasswordTokenEntity =>
+    builder<IdentityPasswordTokenEntity>({
+        id: "p1",
+        userId: "u1",
+        tokenHash: "hash",
+        purpose,
+        createdAt: new Date("2026-11-09T09:00:00.000Z"),
+        expiresAt: new Date("2026-11-09T12:00:00.000Z"),
+        usedAt: null,
+    })()
 
 const build = async (
     stubs: ReadonlyArray<readonly [string, unknown]>,
@@ -180,7 +181,7 @@ describe("IdentitySignupService / resend and confirm", () => {
     })
 
     it("confirms the mailbox when a confirmation link is spent", async () => {
-        const { service, em } = await build([[CONFIRM_EMAIL, []]], true, tokenOf())
+        const { service, em } = await build([[CONFIRM_EMAIL, []]], true, passwordTokenFor("confirm"))
 
         await service.confirm("a".repeat(40))
 
@@ -202,7 +203,7 @@ describe("IdentitySignupService / resend and confirm", () => {
             code: IdentityErrorCode.ResetTokenInvalid,
         })
 
-        const wrong = await build([], true, tokenOf({ purpose: "reset" }))
+        const wrong = await build([], true, passwordTokenFor("reset"))
         await expect(wrong.service.confirm("c".repeat(40))).rejects.toMatchObject({
             code: IdentityErrorCode.ResetTokenInvalid,
         })

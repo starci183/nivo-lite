@@ -1,5 +1,6 @@
 export { INBOUND_EVENTS_ERROR_KINDS } from "./errors/inbound-events.error"
 export { INBOUND_EVENTS_MESSAGES } from "./messages/inbound-events.messages"
+export { InboundEventRecordsModule } from "./inbound-event-records.module"
 export { InboundEventsModule } from "./inbound-events.module"
 export { InboundEventsService } from "./inbound-events.service"
 export { InboxFeedService } from "./inbox-feed.service"

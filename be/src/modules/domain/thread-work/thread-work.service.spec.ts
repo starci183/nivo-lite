@@ -8,13 +8,27 @@ import { ModuleCatalogService, WorkDrainService, WorkEngineService } from "@modu
 import type { ActionEntry } from "@modules/domain/decisions"
 import { LeadReadService } from "@modules/domain/leads"
 import { ThreadApprovalsService, ThreadMessagesService } from "@modules/domain/thread-messages"
-import type { ThreadMessage } from "@modules/domain/thread-messages"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { IsNull, Not } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { itemOf } from "@tests/fixtures/builders/work-decision.builder"
+import {
+    agentFoundOf,
+    CARDED,
+    DISCOUNT,
+    LEAD,
+    leadCardsOf,
+    memberFoundOf,
+    MESSAGE,
+    MINH,
+    SALES_AI,
+    SALES_ROW,
+    settledRequestsOf,
+    settledRow,
+    workRow,
+} from "@tests/fixtures/builders/thread-work-service.builder"
 import { ThreadWorkErrorCode } from "./errors/thread-work.error"
 import { ThreadWorkEntity } from "./persistence/entities"
 import { ThreadWorkLogEvent } from "./thread-work.log-events"
@@ -32,44 +46,6 @@ import type {
 /** A partial-object matcher, typed `unknown` so it flows into any slot. */
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 
-const SALES_ROW: WorkAgentRecord = {
-    id: "agent-sales",
-    name: "AI Sales",
-    module: "sales",
-    can_tag_agent_ids: ["agent-accounting"],
-}
-const SALES_AI = { id: "agent-sales", name: "AI Sales", module: "sales", canTag: ["agent-accounting"] }
-const LEAD: WorkLeadRecord = { id: "lead-thao", contact_name: "Chi Thao" }
-const MINH: DeciderRecord = { id: "m-minh", display_name: "Anh Minh", role: "manager" }
-
-const DISCOUNT: ActionEntry = {
-    action: "give_discount",
-    moduleKey: "sales",
-    maxMode: null,
-    next: [],
-    label: { vi: "Giam gia", en: "Give discount" },
-}
-
-const workRow = (overrides: Partial<ThreadWorkRecord> = {}): ThreadWorkRecord => ({
-    id: "work-1",
-    workspace_id: "ws-1",
-    thread_id: "thread-1",
-    work_item_id: "item-1",
-    agent_id: "agent-sales",
-    state: "waiting_member",
-    approval_request_id: null,
-    waiting_member_id: "m-van",
-    missing_fields: ["tax_code"],
-    ...overrides,
-})
-
-const settledRow = (overrides: Partial<SettledAskRecord> = {}): SettledAskRecord => ({
-    ...workRow({ state: "asked", approval_request_id: "req-1", waiting_member_id: null, missing_fields: [] }),
-    request_status: "approved",
-    resolved_by: "m-minh",
-    ...overrides,
-})
-
 interface Rows {
     readonly agents?: ReadonlyArray<WorkAgentRecord>
     readonly leads?: ReadonlyArray<WorkLeadRecord>
@@ -79,7 +55,7 @@ interface Rows {
 }
 
 /** The stored piece of work a record stands for. */
-const entityOf = (record: ThreadWorkRecord): ThreadWorkEntity =>
+const threadWorkEntityOf = (record: ThreadWorkRecord): ThreadWorkEntity =>
     Object.assign(new ThreadWorkEntity(), {
         id: record.id,
         workspaceId: record.workspace_id,
@@ -101,93 +77,24 @@ const rowsByManager = new WeakMap<object, Rows>()
 const managerOf = (rows: Rows = {}) => {
     const waiting = rows.waiting ?? [workRow()]
     const em = mockEntityManager({
-        findOne: [ThreadWorkEntity, waiting[0] === undefined ? null : entityOf(waiting[0])],
-        find: [ThreadWorkEntity, (rows.settled ?? [settledRow()]).map(entityOf)],
+        findOne: [ThreadWorkEntity, waiting[0] === undefined ? null : threadWorkEntityOf(waiting[0])],
+        find: [ThreadWorkEntity, (rows.settled ?? [settledRow()]).map(threadWorkEntityOf)],
     })
     rowsByManager.set(em, rows)
     return { em }
 }
 
-const MESSAGE: ThreadMessage = {
-    id: "msg-1",
-    threadId: "thread-1",
-    authorKind: "member",
-    authorId: "m-van",
-    authorName: "Van",
-    authorRole: "staff",
-    body: "0312345678",
-    quoted: [],
-    mentions: [],
-    approval: null,
-    createdAt: "2026-10-22T09:44:00.000Z",
-}
-
-const CARDED: ThreadMessage = {
-    ...MESSAGE,
-    approval: {
-        requestId: "req-1",
-        action: "Giam gia 8%",
-        amount: 8,
-        unit: "percent",
-        rule: "Giam gia",
-        policy: "any",
-        expiresAt: "2026-10-22T10:11:00.000Z",
-        approvers: [],
-        excluded: [],
-        outcome: "approved",
-        decidedBy: "m-minh",
-        decidedByName: "Anh Minh",
-        decidedAt: "2026-10-22T09:42:00.000Z",
-        owner: null,
-    },
-}
-
 const build = async (em: MockEntityManager, entry: ActionEntry | null = DISCOUNT) => {
     const rows = rowsByManager.get(em) ?? {}
     const logger = mock<Logger>()
-    const [agentRow] = rows.agents ?? [SALES_ROW]
     const agents = mock<AgentDirectoryService>()
-    agents.findActive.mockResolvedValue(
-        agentRow === undefined
-            ? null
-            : {
-                  id: agentRow.id,
-                  name: agentRow.name,
-                  module: agentRow.module,
-                  canTagAgentIds: agentRow.can_tag_agent_ids,
-              },
-    )
-    const [leadRow] = rows.leads ?? [LEAD]
+    agents.findActive.mockResolvedValue(agentFoundOf((rows.agents ?? [SALES_ROW])[0]))
     const leads = mock<LeadReadService>()
-    leads.cardsOf.mockResolvedValue(
-        leadRow === undefined
-            ? []
-            : [
-                  {
-                      id: leadRow.id,
-                      contactName: leadRow.contact_name,
-                      company: "",
-                      channel: "",
-                      stage: "new",
-                      email: null,
-                  },
-              ],
-    )
-    const [deciderRow] = rows.deciders ?? [MINH]
+    leads.cardsOf.mockResolvedValue(leadCardsOf((rows.leads ?? [LEAD])[0]))
     const members = mock<WorkspaceMemberDirectoryService>()
-    members.find.mockResolvedValue(
-        deciderRow === undefined
-            ? null
-            : { id: deciderRow.id, displayName: deciderRow.display_name, role: deciderRow.role },
-    )
+    members.find.mockResolvedValue(memberFoundOf((rows.deciders ?? [MINH])[0]))
     const requests = mock<ApprovalRequestsReadService>()
-    requests.settledOf.mockResolvedValue(
-        (rows.settled ?? [settledRow()]).map((row) => ({
-            id: row.approval_request_id ?? "",
-            status: row.request_status,
-            resolvedBy: row.resolved_by,
-        })),
-    )
+    requests.settledOf.mockResolvedValue(settledRequestsOf(rows.settled ?? [settledRow()]))
     const engine = mock<WorkEngineService>({
         resumeWork: jest.fn().mockResolvedValue(itemOf({ status: "done" })),
     })
@@ -432,7 +339,7 @@ const registerReplies = () => {
 
 const stoppedMove = { state: "stopped", requestId: "req-1", memberId: null, missing: [] }
 
-const registerSettled = () => {
+const registerTick = () => {
     describe("tick", () => {
         it("drains the queued steps, then moves on the settled approvals, and answers how many of each", async () => {
             const { service, engine } = await build(managerOf().em)
@@ -441,7 +348,9 @@ const registerSettled = () => {
             expect(engine.resumeWork).toHaveBeenCalledTimes(1)
         })
     })
+}
 
+const registerResumeSettled = () => {
     describe("resumeSettled", () => {
         it("resumes an approved request as the member who approved it, and the agent goes on", async () => {
             const harness = managerOf()
@@ -452,8 +361,7 @@ const registerSettled = () => {
             expect(harness.em.find).toHaveBeenCalledWith(ThreadWorkEntity, {
                 where: { state: "asked", approvalRequestId: Not(IsNull()) },
                 order: { updatedAt: "ASC", id: "ASC" },
-                skip: 0,
-                take: 100,
+                take: 1000,
             })
             expect(requests.settledOf).toHaveBeenCalledWith(["req-1"])
 
@@ -494,31 +402,29 @@ const registerSettled = () => {
             expect(harness.em.find).toHaveBeenCalledWith(ThreadWorkEntity, {
                 where: { state: "asked", approvalRequestId: "req-1" },
                 order: { updatedAt: "ASC", id: "ASC" },
-                skip: 0,
                 take: 1,
             })
             expect(engine.resumeWork).toHaveBeenCalledTimes(1)
         })
+    })
+}
 
-        it("looks past the asking work that is still pending, up to the settled batch, and skips work without a request", async () => {
+const registerResumeScan = () => {
+    describe("resumeSettled scan", () => {
+        it("looks past the asking work that is still pending, in one bounded read, and skips work without a request", async () => {
             const pending = Array.from({ length: 100 }, (_, index) =>
-                entityOf(settledRow({ id: `pending-${index}`, approval_request_id: `req-p${index}` })),
+                threadWorkEntityOf(settledRow({ id: `pending-${index}`, approval_request_id: `req-p${index}` })),
             )
-            const noRequest = entityOf(settledRow({ id: "no-request", approval_request_id: null }))
+            const noRequest = threadWorkEntityOf(settledRow({ id: "no-request", approval_request_id: null }))
             const harness = managerOf()
-            harness.em.find.mockResolvedValueOnce(pending).mockResolvedValueOnce([noRequest, entityOf(settledRow())])
+            harness.em.find.mockResolvedValueOnce([...pending, noRequest, threadWorkEntityOf(settledRow())])
             const { service, requests, engine } = await build(harness.em)
-            requests.settledOf
-                .mockResolvedValueOnce([])
-                .mockResolvedValueOnce([{ id: "req-1", status: "approved", resolvedBy: "m-minh" }])
+            requests.settledOf.mockResolvedValueOnce([{ id: "req-1", status: "approved", resolvedBy: "m-minh" }])
 
             await expect(service.resumeSettled()).resolves.toBe(1)
 
-            expect(harness.em.find).toHaveBeenCalledTimes(2)
-            expect(harness.em.find).toHaveBeenLastCalledWith(
-                ThreadWorkEntity,
-                expect.objectContaining({ skip: 100, take: 100 }),
-            )
+            expect(harness.em.find).toHaveBeenCalledTimes(1)
+            expect(harness.em.find).toHaveBeenLastCalledWith(ThreadWorkEntity, expect.objectContaining({ take: 1000 }))
             expect(engine.resumeWork).toHaveBeenCalledTimes(1)
         })
 
@@ -540,5 +446,7 @@ describe("ThreadWorkService", () => {
     registerStartCases()
     registerDoors()
     registerReplies()
-    registerSettled()
+    registerTick()
+    registerResumeSettled()
+    registerResumeScan()
 })

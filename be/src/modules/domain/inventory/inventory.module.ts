@@ -16,6 +16,7 @@ import { InventoryDeductionService } from "./inventory-deduction.service"
 import { OrderConfirmedInventoryConsumer } from "./order-confirmed-inventory.consumer"
 import { InventoryStockService } from "./inventory-stock.service"
 import { InventoryWorkbenchService } from "./inventory-workbench.service"
+import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./inventory.module-definition"
 
 @Module({})
@@ -29,6 +30,7 @@ export class InventoryModule extends ConfigurableModuleClass {
             imports: [...(base.imports ?? []), InventoryReplenishModule.register({})],
             providers: [
                 ...(base.providers ?? []),
+                { provide: INBOX, useClass: InboxService },
                 InventoryLocationsService,
                 InventoryMovementsService,
                 InventoryOrderMessageService,

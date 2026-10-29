@@ -15,4 +15,4 @@ export type {
 export type { ContentPillar, ContentPillarDraft } from "@modules/domain/content-pillars"
 export type { ContentCadence, ContentCadenceDraft, ContentChannel } from "@modules/domain/content-cadence"
 export { ContentAutomationMarksMapper } from "./content-configuration.mapper"
-export { ContentSettingsEntity, contentSettingsEntities } from "./persistence/entities"
+export { contentSettingsEntities } from "./persistence/entities"

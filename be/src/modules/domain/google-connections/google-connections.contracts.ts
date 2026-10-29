@@ -30,8 +30,8 @@ export interface GoogleCallbackInput {
 export interface StoredGoogleTokens {
     /** The short-lived access token. */
     readonly access_token: string
-    /** The refresh token. */
-    readonly refresh_token: string
+    /** The renewal grant Google issued for the account (sealed in the connection secret; never sent to a client). */
+    readonly renewal_token: string
     /** When the access token stops working, epoch milliseconds. */
     readonly expires_at: number
 }

@@ -1,7 +1,7 @@
 # Hub rooms + agent result cards: contract v1 (branch demo/hub)
 
 How the Hub (`/chat`, OfficeMessenger) is split into department rooms and how agents post result cards into them.
-Migration: `supabase/migrations/20261101000100_hub-rooms.sql`.
+Migration: `db/migrations/20261101000100_hub-rooms.sql`.
 
 ## 1. Rooms
 

@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { Not, Raw } from "typeorm"
-import type { EntityManager } from "typeorm"
+import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
 import { ConnectorInterestService } from "@modules/domain/connector-interest"
 import type { OptionalStoredSecret } from "@modules/domain/connection-secrets"
@@ -47,8 +47,8 @@ import { ConnectionsLogEvent } from "./connections.log-events"
 import type { ConnectionsOptions } from "./connections.options"
 import { ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
 import { ConnectionEntity } from "./persistence/entities"
-import { returnedIds, returnedRows, selectConnections } from "./persistence/connection-projection"
-import type { ConnectionProjection } from "./persistence/connection-projection"
+import { returnedIds, returnedRows, projectConnections } from "./persistence/connection.projection"
+import type { ConnectionProjection } from "./persistence/connection.projection"
 
 /** The most rows any list of connections returns. */
 const LIST_MAX = 500
@@ -113,13 +113,17 @@ export class ConnectionsService {
         return { role: row.role, displayName: row.displayName }
     }
 
+    private selectConnections(manager: EntityManager): SelectQueryBuilder<ConnectionEntity> {
+        return projectConnections(manager.createQueryBuilder(ConnectionEntity, "c"))
+    }
+
     /** One connection of the workspace, or null. */
     async find(
         workspaceId: string,
         id: string,
         manager: EntityManager = this.entityManager,
     ): Promise<OptionalConnectionRecord> {
-        const row = await selectConnections(manager)
+        const row = await this.selectConnections(manager)
             .where("c.workspaceId = :workspaceId AND c.id = :id", { workspaceId, id })
             .limit(1)
             .getRawOne<ConnectionProjection>()
@@ -139,7 +143,7 @@ export class ConnectionsService {
         ids: ReadonlyArray<string>,
         manager: EntityManager = this.entityManager,
     ): Promise<ReadonlyArray<ConnectionRecord>> {
-        const rows = await selectConnections(manager)
+        const rows = await this.selectConnections(manager)
             .where("c.workspaceId = :workspaceId AND c.id = ANY(:ids)", { workspaceId, ids: [...ids] })
             .orderBy("c.createdAt")
             .limit(LIST_MAX)
@@ -183,7 +187,7 @@ export class ConnectionsService {
 
     /** Every connection of the workspace, oldest first. */
     async list(workspaceId: string): Promise<ReadonlyArray<ConnectionRecord>> {
-        const rows = await selectConnections(this.entityManager)
+        const rows = await this.selectConnections(this.entityManager)
             .where("c.workspaceId = :workspaceId AND c.provider <> 'google_drive'", { workspaceId })
             .orderBy("c.createdAt")
             .limit(LIST_MAX)
@@ -209,7 +213,7 @@ export class ConnectionsService {
         provider: Provider,
         options: ListByProviderOptions,
     ): Promise<ReadonlyArray<ConnectionRecord>> {
-        const rows = await selectConnections(this.entityManager)
+        const rows = await this.selectConnections(this.entityManager)
             .where("c.workspaceId = :workspaceId AND c.provider = :provider", { workspaceId, provider })
             .andWhere(options.includeDisconnected ? "true" : "c.status <> 'disconnected'")
             .orderBy("c.createdAt")
@@ -218,11 +222,7 @@ export class ConnectionsService {
         return rows.map(toConnectionRecord)
     }
 
-    /**
-     * Creates a connection and its sealed secret in one transaction (inside the caller transaction when one is handed
-     * in), so
-     * a secret that cannot be stored leaves no connection behind. Answers the id.
-     */
+    /** Creates a connection and its sealed secret in one transaction (the caller's when handed in); answers the id. */
     create(input: CreateConnectionInput, manager?: EntityManager): Promise<string> {
         const name = cleanConnectionName(input.name)
         if (name === null) throw new ConnectionsError({ code: ConnectionsErrorCode.NameInvalid })
@@ -286,10 +286,7 @@ export class ConnectionsService {
         }
     }
 
-    /**
-     * Seals and stores the credential; the webhook secret changes only when one is given (a new row gets a random
-     * one).
-     */
+    /** Seals and stores the credential; the webhook secret changes only when one is given (a new row gets a random one). */
     writeSecret(connectionId: string, plain: string, webhookSecret?: string): Promise<void> {
         return this.secrets.write(connectionId, plain, webhookSecret)
     }
@@ -299,9 +296,7 @@ export class ConnectionsService {
         return this.secrets.wipe(connectionId)
     }
 
-    /**
-     * Deletes a connection of the workspace (its secret and bindings go with it); a missing one is a typed not-found.
-     */
+    /** Deletes a connection of the workspace (its secret and bindings go with it); a missing one is a typed not-found. */
     async remove(workspaceId: string, id: string): Promise<void> {
         const deleted = await this.entityManager
             .createQueryBuilder(ConnectionEntity, "co")

@@ -3,8 +3,7 @@ import { builder, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { StaffErrorCode } from "./errors/staff.error"
-import type { StaffWrite } from "./staff.contracts"
-import type { StaffRow } from "./persistence/staff.rows"
+import type { StaffRow, StaffWrite } from "./staff.contracts"
 import { StaffEntity } from "./persistence/entities"
 import { StaffService } from "./staff.service"
 
@@ -58,6 +57,7 @@ describe("StaffService list", () => {
         })
     })
 })
+
 describe("StaffService nameOf", () => {
     it("finds the name in the selected workspace", async () => {
         const em = mockEntityManager({ findOne: [StaffEntity, entityOf(rowOf())] })
@@ -79,6 +79,7 @@ describe("StaffService nameOf", () => {
         })
     })
 })
+
 describe("StaffService save", () => {
     it("inserts collapsed names and roles, trimmed email, and the explicit inactive flag", async () => {
         const row = rowOf({ name: "Mai Lan", role: "sales manager", email: "mai@example.test", active: false })
@@ -120,7 +121,9 @@ describe("StaffService save", () => {
             expect.objectContaining({ workspaceId: "ws-1", name: "Mai", role: "cashier", email: null, active: true }),
         )
     })
+})
 
+describe("StaffService save, updating", () => {
     it("updates the workspace-scoped row and passes the active flag", async () => {
         const row = rowOf({ role: "manager" })
         const em = mockEntityManager({

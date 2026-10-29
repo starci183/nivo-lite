@@ -1,10 +1,9 @@
 import { Test } from "@nestjs/testing"
-import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { AgentIdentityService, AgentsService } from "@modules/domain/agents"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { EventsService } from "@modules/domain/events"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { AgentSyncStatus } from "@modules/domain/module-installations"
 import { InstallationChangesService } from "./installation-changes.service"
 import { InstallationFactsService } from "./installation-facts.service"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -13,32 +12,11 @@ import { ACCOUNTING_MODULE } from "./accounting.contracts"
 import { CHATBOT_MODULE } from "./chatbot.contracts"
 import { ModulesErrorCode } from "./errors/modules.error"
 import { ModuleInstallService } from "./module-install.service"
-import type { InstallRequest } from "./module-installs.contracts"
 import { ModuleReadinessService } from "./module-readiness.service"
 import { ModulesService } from "./modules.service"
 import { RecordInstallationService } from "./record-installation.service"
-import {
-    INSTALLING_MEMBER as MEMBER,
-    installAgentOf as agentOf,
-    installationRecordOf as recordOf,
-} from "@tests/fixtures/builders/module-install.builder"
-
-const VIEWED = {
-    agentName: "Chatbot",
-    agentHandle: "chatbot",
-    agentAvatarUrl: null,
-    activeVersion: 1,
-    connectionNeeds: [],
-    lifecycle: "ready",
-} as const
-
-const requestOf = builder<InstallRequest>({
-    workspaceId: "ws-1",
-    moduleKey: "chatbot",
-    locale: "en",
-    newInstance: false,
-    name: null,
-})
+import { INSTALLING_MEMBER as MEMBER, installAgentOf as agentOf, installationRecordOf as recordOf } from "@tests/fixtures/builders/module-install.builder"
+import { INSTALL_VIEWED as VIEWED, installRequestOf as requestOf, SYNCED_AGENT_COPY } from "@tests/fixtures/builders/module-install-service.builder"
 
 const build = async () => {
     const tx = fakeTransaction(mockEntityManager())
@@ -154,7 +132,7 @@ describe("ModuleInstallService > install", () => {
     })
 })
 
-describe("ModuleInstallService > install", () => {
+describe("ModuleInstallService > install, named instances", () => {
     it("adds a named instance on a new agent with a free handle", async () => {
         const { service, installations, agents, events } = await build()
         installations.instanceNames.mockResolvedValue([{ id: "inst-1", name: CHATBOT_MODULE.name.en }])
@@ -346,16 +324,9 @@ describe("ModuleInstallService > saveSetting", () => {
 describe("ModuleInstallService > syncStatus", () => {
     it("answers the status of the copy", async () => {
         const { service, facts } = await build()
-        const status: AgentSyncStatus = {
-            state: "ok",
-            syncedVersion: 1,
-            activeVersion: 1,
-            checkedAt: null,
-            error: null,
-        }
-        facts.syncStatus.mockResolvedValue(status)
+        facts.syncStatus.mockResolvedValue(SYNCED_AGENT_COPY)
 
-        await expect(service.syncStatus("u1", "ws-1", "inst-1")).resolves.toEqual(status)
+        await expect(service.syncStatus("u1", "ws-1", "inst-1")).resolves.toEqual(SYNCED_AGENT_COPY)
     })
 
     it("refuses an installation of another workspace", async () => {
@@ -366,9 +337,7 @@ describe("ModuleInstallService > syncStatus", () => {
             code: ModulesErrorCode.InstallationNotFound,
         })
     })
-})
 
-describe("ModuleInstallService > reads", () => {
     it("answers the installations of the workspace to any member", async () => {
         const { service, installations, members } = await build()
         installations.list.mockResolvedValue([recordOf()])
@@ -458,7 +427,7 @@ describe("ModuleInstallService lifecycle and reads", () => {
     })
 })
 
-describe("ModuleInstallService lifecycle and reads", () => {
+describe("ModuleInstallService > concurrent writes and reads", () => {
     it("reports an instance name taken by a concurrent rename", async () => {
         const { service, installations } = await build()
         installations.find.mockResolvedValue(recordOf())
