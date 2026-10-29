@@ -2,95 +2,28 @@ import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { BillingService } from "@modules/domain/billing"
-import type { PayableOrder, Plan, WorkspaceBilling } from "@modules/domain/billing"
+import type { Plan } from "@modules/domain/billing"
 import { PaymentOrdersService } from "@modules/domain/payment-orders"
-import type { PaymentOrder } from "@modules/domain/payment-orders"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { CreditsService } from "./credits.service"
 import { CreditsError, CreditsErrorCode } from "./errors/credits.error"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { CreditPackEntity, CreditTopupEntity } from "./persistence/entities"
+import {
+    CURRENT,
+    NOW,
+    ORDER,
+    PAID_UNTIL,
+    PAYABLE,
+    TARGET,
+    UPGRADE_ORDER,
+    UPGRADE_PAYABLE,
+    UPGRADE_RESULT,
+    WORKSPACE,
+} from "@tests/fixtures/builders/credits.builder"
 
-const NOW = "2026-10-12T10:00:00.000Z"
-const PAID_UNTIL = "2026-10-27T10:00:00.000Z"
 const PACK_ROW = { code: "credits_1000", credits: 1000, priceVnd: 299000, sort: 2, active: true }
-const CURRENT: Plan = {
-    code: "starter",
-    nameVi: "Khoi dau",
-    nameEn: "Starter",
-    priceVnd: 990000,
-    period: "month",
-    seats: 3,
-    features: { vi: ["a"], en: ["b"] },
-    sort: 1,
-    aiCreditsPerMonth: 3000,
-    isCustom: false,
-    priceAnnualVnd: null,
-    annualDiscountPct: null,
-    promoPriceVnd: null,
-    promoMonths: null,
-    storageGb: null,
-    individual: false,
-    perSeat: false,
-    listed: false,
-    tiers: [],
-    packs: [],
-}
-const TARGET: Plan = { ...CURRENT, code: "growth", priceVnd: 1990000, sort: 2, listed: true }
-const WORKSPACE: WorkspaceBilling = {
-    status: "active",
-    planCode: "starter",
-    paidUntil: PAID_UNTIL,
-    tierCredits: null,
-    seatCount: null,
-    billingCycle: null,
-    billedMonthlyVnd: null,
-}
-const ORDER: PaymentOrder = {
-    id: "order-1",
-    workspaceId: "ws-1",
-    planCode: "starter",
-    amountVnd: 299000,
-    orderCode: "NIVO8F3K2",
-    status: "pending",
-    expiresAt: "2026-10-12T10:30:00.000Z",
-    paidAt: null,
-    createdAt: NOW,
-    kind: "topup",
-    packCode: "credits_1000",
-    detail: { credits: 1000 },
-}
-const PAYABLE: PayableOrder = {
-    order: ORDER,
-    qrUrl: "https://qr.sepay.vn/img?acc=0123&bank=MB&amount=299000&des=NIVO8F3K2&template=compact",
-    bank: { account: "0123", bank: "MB", holder: "NIVO" },
-}
-const UPGRADE_ORDER: PaymentOrder = {
-    ...ORDER,
-    planCode: "growth",
-    amountVnd: 1495000,
-    kind: "upgrade",
-    packCode: null,
-    detail: {
-        from: "starter",
-        to: "growth",
-        fromPrice: 990000,
-        toPrice: 1990000,
-        credit: 495000,
-        daysLeft: 15,
-        paidUntil: PAID_UNTIL,
-    },
-}
-const UPGRADE_PAYABLE: PayableOrder = {
-    ...PAYABLE,
-    order: UPGRADE_ORDER,
-    qrUrl: "https://qr.sepay.vn/img?acc=0123&bank=MB&amount=1495000&des=NIVO8F3K2&template=compact",
-}
-const UPGRADE_RESULT = {
-    payable: UPGRADE_PAYABLE,
-    quote: { amount: 1495000, credit: 495000, daysLeft: 15, fromCode: "starter" },
-}
 const TOPUP = { workspaceId: "ws-1", packCode: "credits_1000" }
 const UPGRADE = { workspaceId: "ws-1", planCode: "growth" }
 

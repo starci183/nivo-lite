@@ -15,7 +15,7 @@ import { WorkspaceInvitesAdminReadService } from "@modules/domain/workspace-invi
 import { WorkspaceAdminReadService } from "@modules/domain/workspaces"
 import type { WorkspaceAdminRow } from "@modules/domain/workspaces"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
-import type * as R from "./platform-admin.facts"
+import type * as R from "./platform-admin-facts.contracts"
 
 /** How many per-workspace count rows the list reads. */
 const STATS_LIMIT = 1000
@@ -113,12 +113,12 @@ export class AdminDirectoryReadsService {
     async liveConnections(): Promise<Array<R.ConnectionBadgeFacts>> {
         const rows = await this.connectionReads.live(5000)
         return rows.map((row) => ({
+            created_at: at(row.createdAt),
+            last_event_at: atOrNull(row.lastEventAt),
             workspace_id: row.workspaceId,
             provider: row.provider,
             status: row.status,
             environment: row.environment,
-            last_event_at: atOrNull(row.lastEventAt),
-            created_at: at(row.createdAt),
         }))
     }
 
@@ -175,8 +175,11 @@ export class AdminDirectoryReadsService {
 
     /** The newest billing events of a workspace. */
     async billingEvents(workspaceId: string): Promise<Array<R.BillingEventFacts>> {
-        const rows = await this.billingEventReads.latestOfWorkspace(workspaceId, 20)
-        return rows.map((row) => ({ id: row.id, kind: row.kind, created_at: at(row.createdAt) }))
+        return (await this.billingEventReads.latestOfWorkspace(workspaceId, 20)).map((row) => ({
+            created_at: at(row.createdAt),
+            id: row.id,
+            kind: row.kind,
+        }))
     }
 
     /** The agent installations of a workspace. */
@@ -216,14 +219,14 @@ export class AdminDirectoryReadsService {
     async connections(workspaceId: string): Promise<Array<R.ConnectionFacts>> {
         const rows = await this.connectionReads.ofWorkspace(workspaceId, 200)
         return rows.map((row) => ({
+            created_at: at(row.createdAt),
+            last_event_at: atOrNull(row.lastEventAt),
+            last_error: row.lastError,
             id: row.id,
             provider: row.provider,
             name: row.name,
             status: row.status,
             environment: row.environment,
-            last_event_at: atOrNull(row.lastEventAt),
-            last_error: row.lastError,
-            created_at: at(row.createdAt),
         }))
     }
 

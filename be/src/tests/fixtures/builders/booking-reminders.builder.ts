@@ -56,12 +56,6 @@ export const SENT_SETTLEMENT = {
 /** What settling `r1` as skipped with the given note writes. */
 export const skippedSettlement = (note: string) => ({ status: "skipped", workItemId: null, sentAt: null, note })
 
-/** The filter of the enabled appointment-reminder card of workspace `ws-1`. */
-export const CARD_WHERE = { workspaceId: "ws-1", templateKey: "appointment_reminder", enabled: true }
-
-/** The read of only the hour offsets of the reminder card. */
-export const CARD_CONFIG_READ = { select: { config: true }, where: CARD_WHERE }
-
 /** The filter of the open reminders of booking `b1`. */
 export const OPEN_REMINDERS_OF_B1 = { bookingId: "b1", status: In(["scheduled", "waiting"]) }
 
