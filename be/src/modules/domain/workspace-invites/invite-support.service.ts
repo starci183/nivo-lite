@@ -4,9 +4,10 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { WorkspaceInvitesError, WorkspaceInvitesErrorCode } from "./errors/workspace-invites.error"
-import { hashInviteToken } from "./invite-token.policy"
+import { firstChangedInvite } from "./changed-invite.policy"
+import { hashInviteToken, mintedTokenOf, uuidOfRow } from "./invite-token.policy"
 import { WorkspaceInviteEntity } from "./persistence/entities"
-import type { ChangedInvite, InviteDeliveryPort, InviteResult, MintedToken } from "./workspace-invites.contracts"
+import type { InviteDeliveryPort, InviteResult, MintedToken } from "./workspace-invites.contracts"
 import type { WorkspaceInvitesOptions } from "./workspace-invites.options"
 import { InjectInviteDelivery, InjectWorkspaceInvitesOptions } from "./workspace-invites.port"
 
@@ -29,29 +30,27 @@ export class InviteSupportService {
         const result = await this.entityManager
             .createQueryBuilder(WorkspaceInviteEntity, "i")
             .update()
+            .returning("id, email, role")
             .set({ tokenHash: hashInviteToken(minted.token), expiresAt })
             .where("id = :inviteId AND workspace_id = :workspaceId AND accepted_at IS NULL AND revoked_at IS NULL", {
                 inviteId,
                 workspaceId,
             })
-            .returning("id, email, role")
             .execute()
-        const [invite] = result.raw as Array<ChangedInvite>
+        const invite = firstChangedInvite(result.raw)
         if (invite === undefined) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.NotFound })
         const redirectTo = `${this.options.siteUrl}/auth/confirm?next=${encodeURIComponent("/invite/" + minted.token)}`
         const delivery = await this.delivery.deliverInvite(invite.email, redirectTo)
         return { email: invite.email, link: `${this.options.siteUrl}/invite/${minted.token}`, delivery }
     }
 
-    /** Mints an invitation token from two random uuids of the database (its strong random source), dashes removed; only its hash is ever stored. */
     private async mintToken(): Promise<MintedToken> {
         const [first, second] = await Promise.all([this.uuid(), this.uuid()])
-        return { token: `${first}${second}`.replaceAll("-", "") }
+        return mintedTokenOf(first, second)
     }
 
     private async uuid(): Promise<string> {
-        const [row] = await callDbFunction<{ gen_random_uuid: string }>(this.entityManager, "gen_random_uuid", [])
-        if (row === undefined) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.TokenUnavailable })
-        return row.gen_random_uuid
+        const rows = await callDbFunction<{ gen_random_uuid: string }>(this.entityManager, "gen_random_uuid", [])
+        return uuidOfRow(rows.at(0))
     }
 }

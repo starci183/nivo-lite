@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
-import { InjectInbox } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
+import { InjectEntityInbox } from "@modules/platform/inbox"
+import type { EntityInbox } from "@modules/platform/inbox"
 import { Injectable } from "@nestjs/common"
 import { IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
@@ -19,7 +19,6 @@ import { InjectMetaEventTaker } from "./meta-inbox.decorators"
 import type { MetaEventTaker } from "./meta-inbox.port"
 import type { DeliverySignature, MetaDeliveryRecorded, MetaInboundJob, RawDelivery } from "./meta-inbox.contracts"
 import { MetaInboxEntity } from "./persistence/entities"
-import { INSERT_META_INBOX } from "./persistence/meta-inbox.sql"
 
 @Injectable()
 /**
@@ -30,7 +29,7 @@ export class MetaInboxService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly receipts: MetaReceiptPolicy,
-        @InjectInbox() private readonly inbox: Inbox,
+        @InjectEntityInbox() private readonly inbox: EntityInbox,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
         private readonly connections: ConnectionsService,
         private readonly conversations: ConversationsService,
@@ -52,9 +51,9 @@ export class MetaInboxService {
                     ? ""
                     : createHash("sha256").update(rawBody).digest("hex")
             if (
-                !(await this.inbox.claim("meta", deliveryId, manager, {
-                    insert: INSERT_META_INBOX,
-                    payload: decoded.payload,
+                !(await this.inbox.claimRow("meta", deliveryId, manager, {
+                    entity: MetaInboxEntity,
+                    row: { provider: "meta", deliveryId, payload: decoded.payload },
                 }))
             )
                 return

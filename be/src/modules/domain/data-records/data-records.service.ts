@@ -47,8 +47,8 @@ export class DataRecordsService {
     }
 
     /** How many of these source ids the connection already holds for the entity (what a re-import will update). One statement: the ids travel as a single array parameter. */
-    async countExisting(connectionId: string, entity: DataEntity, externalIds: ReadonlyArray<string>): Promise<number> {
-        if (externalIds.length === 0) return 0
+    countExisting(connectionId: string, entity: DataEntity, externalIds: ReadonlyArray<string>): Promise<number> {
+        if (externalIds.length === 0) return Promise.resolve(0)
         return this.entityManager
             .createQueryBuilder(DataRecordEntity, "d")
             .where("d.connection_id = :connectionId AND d.entity = :entity", { connectionId, entity })

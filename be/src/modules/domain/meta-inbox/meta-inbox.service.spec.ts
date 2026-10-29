@@ -42,15 +42,15 @@ import { parseWebhook } from "@modules/integrations/meta"
 import type { MetaClient, MetaEvent } from "@modules/integrations/meta"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
+import type { EntityInbox } from "@modules/platform/inbox"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { META_INBOUND_QUEUE, META_DELIVERY_QUEUE } from "./meta-inbox.contracts"
 import { META_EVENT_TAKER } from "./meta-inbox.decorators"
 import type { MetaEventTaker } from "./meta-inbox.port"
 import type { MetaInboundJob } from "./meta-inbox.contracts"
-import { attachReceiptClaim } from "@tests/fixtures/builders/receipt-claim-inbox.builder"
+import type { RowClaim } from "@tests/fixtures/builders/row-claims.builder"
 import { MetaInboxService } from "./meta-inbox.service"
 import { MetaInboxEntity } from "./persistence/entities"
-import { INSERT_META_INBOX } from "./persistence/meta-inbox.sql"
 
 const FIND_CALL = [
     MetaInboxEntity,
@@ -60,6 +60,11 @@ const FIND_CALL = [
         lock: { mode: "pessimistic_write" },
     },
 ]
+const RECEIPT_CLAIM = {
+    source: "meta",
+    eventId: DELIVERY_ID,
+    receipt: { entity: MetaInboxEntity, row: { provider: "meta", deliveryId: DELIVERY_ID, payload: BODY } },
+}
 const COMPLETE_CALL = ["MetaInboxEntity", { id: "inbox-1" }, { processedAt: "now()" }]
 
 const pendingReceipt = (payload: object) => Object.assign(new MetaInboxEntity(), { id: "inbox-1", payload })
@@ -81,13 +86,12 @@ const objectLike = (shape: Record<string, unknown>): unknown => expect.objectCon
 
 const build = async (
     events: ReadonlyArray<MetaEvent> = [],
-    claimed = [{ id: "inbox-1" }],
+    claimed = true,
     pending: MetaInboxEntity | null = pendingReceipt(BODY),
     realParsing = false,
 ) => {
     const tx = fakeTransaction(
         mockEntityManager({
-            query: [INSERT_META_INBOX, claimed],
             findOne: [MetaInboxEntity, pending],
             update: [MetaInboxEntity, {}],
         }),
@@ -108,7 +112,12 @@ const build = async (
     const taker = mock<MetaEventTaker>()
     taker.take.mockResolvedValue(false)
     const inbox = fakeInbox()
-    attachReceiptClaim(inbox)
+    const rowClaims: Array<RowClaim> = []
+    const claimRow: EntityInbox["claimRow"] = (source, eventId, _manager, receipt) => {
+        rowClaims.push({ source, eventId, receipt })
+        return claimed && eventId !== "" ? inbox.claim(source, eventId) : Promise.resolve(false)
+    }
+    Object.assign(inbox, { claimRow })
     const moduleRef = await Test.createTestingModule({
         providers: [
             MetaInboxService,
@@ -125,6 +134,7 @@ const build = async (
     }).compile()
     return {
         inbox,
+        rowClaims,
         service: moduleRef.get(MetaInboxService),
         tx,
         meta,
@@ -140,13 +150,13 @@ const build = async (
 
 describe("MetaInboxService receipt intake", () => {
     it("records a receipt and publishes only its reference before any business effect", async () => {
-        const { service, tx, meta, connections, write } = await build([event()])
+        const { service, tx, meta, connections, write, rowClaims } = await build([event()])
 
         await service.accept(RAW_BODY, SIGNATURE)
 
         const manager = write.mock.calls[0]?.[0]
         expect(isTransactionManager(manager)).toBe(true)
-        expect(tx.em.query).toHaveBeenCalledWith(INSERT_META_INBOX, ["meta", DELIVERY_ID, JSON.stringify(BODY)])
+        expect(rowClaims).toEqual([RECEIPT_CLAIM])
         expect(write).toHaveBeenCalledWith(
             manager,
             META_DELIVERY_QUEUE,
@@ -172,14 +182,14 @@ describe("MetaInboxService receipt intake", () => {
     )
 
     it("acknowledges a duplicate without another outbox message", async () => {
-        const { service, outbox, connections, meta, tx } = await build([event()], [])
+        const { service, outbox, connections, meta, tx, rowClaims } = await build([event()], false)
         await expect(service.accept(RAW_BODY, SIGNATURE)).resolves.toBeUndefined()
         expect(outbox.jobs).toEqual([])
         expect(meta.parse).not.toHaveBeenCalled()
         expect(connections.findLiveByMeta).not.toHaveBeenCalled()
         expect(connections.recordEvent).not.toHaveBeenCalled()
         expect(tx.commits).toBe(1)
-        expect(tx.em.query.mock.calls).toEqual([[INSERT_META_INBOX, ["meta", DELIVERY_ID, JSON.stringify(BODY)]]])
+        expect(rowClaims).toEqual([RECEIPT_CLAIM])
     })
 
     it("rolls back a receipt when publication fails", async () => {
@@ -194,14 +204,14 @@ describe("MetaInboxService receipt intake", () => {
 
 describe("MetaInboxService empty receipts", () => {
     it("defers parsing a signed body without events and completes it without downstream effects", async () => {
-        const { service, tx, meta, connections, outbox } = await build()
+        const { service, tx, meta, connections, outbox, rowClaims } = await build()
 
         await expect(service.accept(RAW_BODY, SIGNATURE)).resolves.toBeUndefined()
         expect(meta.parse).not.toHaveBeenCalled()
 
         await expect(service.processRecordedDelivery({ deliveryId: DELIVERY_ID })).resolves.toBeUndefined()
         expect(meta.parse).toHaveBeenCalledWith(BODY)
-        expect(tx.em.query.mock.calls).toEqual([[INSERT_META_INBOX, ["meta", DELIVERY_ID, JSON.stringify(BODY)]]])
+        expect(rowClaims).toEqual([RECEIPT_CLAIM])
         expectConsumed(tx)
         expect(connections.findLiveByMeta).not.toHaveBeenCalled()
         expect(connections.recordEvent).not.toHaveBeenCalled()
@@ -326,7 +336,7 @@ describe("MetaInboxService deliver", () => {
 describe("MetaInboxService consumer transaction", () => {
     it("retries a real parsed receipt after rollback and ignores a completed replay", async () => {
         const payload = replayReceiptBody
-        const { service, tx, connections, outbox } = await build([], [], pendingReceipt(payload), true)
+        const { service, tx, connections, outbox } = await build([], true, pendingReceipt(payload), true)
         const failure = new Error("connection failed")
         connections.recordEvent.mockRejectedValueOnce(failure)
         await expect(service.processRecordedDelivery({ deliveryId: DELIVERY_ID })).rejects.toBe(failure)
@@ -449,7 +459,7 @@ describe("MetaInboxService deliver", () => {
 
 describe("MetaInboxService deferred delivery", () => {
     it("leaves an already processed receipt alone", async () => {
-        const { service, tx, meta, outbox } = await build([], [], null)
+        const { service, tx, meta, outbox } = await build([], true, null)
         await expect(service.processRecordedDelivery({ deliveryId: DELIVERY_ID })).resolves.toBeUndefined()
         expectLockedOnly(tx)
         expect(meta.parse).not.toHaveBeenCalled()

@@ -199,7 +199,9 @@ describe("HandoffLeadPerformerService perform", () => {
         expect(bus.allInTransaction).toBe(true)
         expect(tx.commits).toBe(1)
     })
+})
 
+describe("HandoffLeadPerformerService perform rollback", () => {
     it("rolls the capture back when lead_captured cannot be sent", async () => {
         const failure = new Error("bus down")
         const { service, bus, tx, inbound } = await build()

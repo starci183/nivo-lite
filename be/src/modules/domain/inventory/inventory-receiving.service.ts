@@ -14,7 +14,7 @@ import { InventoryOrdersService } from "./inventory-orders.service"
 import { clip, uuidOrNull } from "./policies/input-text.policy"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { formatMoney, parseNumber } from "./policies/number-format.policy"
-import { ModuleInstallationEntity } from "@modules/domain/module-installations"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
 
 /** Limits of the receive form. */
 const INVOICE_MAX = 60
@@ -22,10 +22,6 @@ const NOTE_MAX = 300
 
 /** The price difference that counts as a changed price. */
 const PRICE_CHANGE_MIN = 1
-
-interface IdRow {
-    readonly id: string
-}
 
 interface OpenedReceiptRow {
     readonly inventory_open_receipt: string | null
@@ -54,6 +50,7 @@ export class InventoryReceivingService {
         private readonly movements: InventoryMovementsService,
         private readonly locations: InventoryLocationsService,
         private readonly orders: InventoryOrdersService,
+        private readonly installations: InstallationRecordsService,
     ) {}
 
     private text(key: string, params: Record<string, string | number>): string {
@@ -150,16 +147,7 @@ export class InventoryReceivingService {
     }
 
     private async accountingInstalled(workspaceId: string): Promise<boolean> {
-        const row = await this.entityManager
-            .createQueryBuilder(ModuleInstallationEntity, "m")
-            .select("m.id", "id")
-            .where("m.workspace_id = :workspaceId AND m.module_key = :moduleKey", {
-                workspaceId,
-                moduleKey: "accounting",
-            })
-            .limit(1)
-            .getRawOne<IdRow>()
-        return row !== undefined
+        return (await this.installations.firstOfModule(workspaceId, "accounting")) !== null
     }
 
     private async handToAccounting(

@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { isRecord } from "@modules/platform/primitives"
 import { WorkspacesErrorCode } from "./errors/workspaces.error"
 import { WorkspaceEntity } from "./persistence/entities"
 import { WorkspacePruneService } from "./workspace-prune.service"
@@ -140,8 +141,9 @@ describe("WorkspacePruneService", () => {
             find: [WorkspaceEntity, storedOf(NIVO, SPA, BUN)],
             count: [WorkspaceEntity, 2],
         })
-        em.delete.mockImplementation(((_target: unknown, criteria: Partial<WorkspaceEntity>) =>
-            criteria.id === "ws-spa" ? Promise.reject(cause) : Promise.resolve(DELETED)) as never)
+        em.delete.mockImplementation((_target, criteria) =>
+            isRecord(criteria) && criteria.id === "ws-spa" ? Promise.reject(cause) : Promise.resolve(DELETED),
+        )
         const { prune, terminal } = await build(em)
 
         await expect(prune.prune({ yes: true }, terminal)).rejects.toMatchObject({
