@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import type { RunResult, RunStep } from "@modules/domain/automation-runs"
 import type { TemplateDefinition } from "@modules/domain/automation-templates"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { AutomationGate, AutomationOffice, AutomationText, ExecutorContext } from "./automation-ports.contracts"
@@ -18,7 +16,7 @@ import type { MessageVariables, TextParams } from "./automations.contracts"
 import { InjectAutomationGate, InjectAutomationOffice, InjectAutomationText } from "./automations.decorators"
 import { AutomationsError, AutomationsErrorCode } from "./errors/automations.error"
 import { StaffDirectoryService } from "@modules/domain/staff"
-import { readLatestConversation, readLead } from "./automation-reads.query"
+import { AutomationReadsService } from "./automation-reads.service"
 import { acceptableMessage, fillBody, stripQuotes, withTail } from "./policies/config.policy"
 import { CLASSIFY_SYSTEM, FEEDBACK_MAX, caseSystem, shopBlock } from "./policies/prompt.policy"
 import { NEUTRAL_VARIABLES } from "./words.contracts"
@@ -39,7 +37,7 @@ export class AutomationMessagesService {
     private negative: RegExp | undefined
 
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly reads: AutomationReadsService,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectAutomationGate() private readonly gate: AutomationGate,
         @InjectAutomationOffice() private readonly office: AutomationOffice,
@@ -69,7 +67,7 @@ export class AutomationMessagesService {
 
     /** One lead of a workspace, or none. */
     async lead(workspaceId: string, leadId: string): Promise<LeadOrNone> {
-        return (await readLead(this.entityManager, workspaceId, leadId)) ?? null
+        return (await this.reads.lead(workspaceId, leadId)) ?? null
     }
 
     /** The lead of an id the trigger carried; none when it carried none. */
@@ -79,7 +77,7 @@ export class AutomationMessagesService {
 
     /** The latest real conversation of a lead: where a message to the customer leaves. */
     async conversationOf(workspaceId: string, leadId: string): Promise<ConversationOrNone> {
-        return (await readLatestConversation(this.entityManager, workspaceId, leadId)) ?? null
+        return (await this.reads.latestConversation(workspaceId, leadId)) ?? null
     }
 
     /** The name of the first active staff member, or none. */

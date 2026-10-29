@@ -54,18 +54,10 @@ const ENTITY = Object.assign(new AutomationPipelineEntity(), {
     updatedAt: new Date("2026-10-12T00:00:00.000Z"),
 })
 
-/** The row the saving statement hands back: the driver delivers the instants as Dates. */
-const RAW = {
-    ...ROW,
-    trust_offered_at: null,
-    created_at: new Date("2026-10-12T00:00:00.000Z"),
-    updated_at: new Date("2026-10-12T00:00:00.000Z"),
-}
-
-/** A manager whose saving statement answers `raw`. */
-const saving = (raw: ReadonlyArray<unknown>) => {
-    const em = mockEntityManager()
-    const fake = fakeQueryBuilder({ execute: { raw } })
+/** A manager whose saving statement runs and whose read-back answers `stored`. */
+const saving = (stored: AutomationPipelineEntity | null) => {
+    const em = mockEntityManager({ findOne: [AutomationPipelineEntity, stored] })
+    const fake = fakeQueryBuilder({ execute: {} })
     em.createQueryBuilder.mockReturnValue(fake.builder)
     return { em, fake }
 }
@@ -196,8 +188,8 @@ describe("AutomationPipelinesService", () => {
 
 describe("AutomationPipelinesService", () => {
     describe("savePipeline", () => {
-        it("writes the template and the columns in one statement and answers the stored row", async () => {
-            const { em, fake } = saving([RAW])
+        it("writes the template and the columns in one statement and answers the row read back", async () => {
+            const { em, fake } = saving(ENTITY)
 
             await expect((await build(em)).savePipeline("ws-1", "user-1", DEFINITION, WRITE)).resolves.toEqual(ROW)
 
@@ -227,11 +219,13 @@ describe("AutomationPipelinesService", () => {
             expect(fake.callsOf("orUpdate")).toEqual([
                 [expect.arrayContaining(["name", "updated_at"]), ["workspace_id", "template_key"]],
             ])
-            expect(fake.callsOf("returning")).toEqual([[expect.stringContaining("created_at")]])
+            expect(em.findOne).toHaveBeenCalledWith(AutomationPipelineEntity, {
+                where: { workspaceId: "ws-1", templateKey: "thank_payment" },
+            })
         })
 
         it("fails when the database stores nothing", async () => {
-            const { em } = saving([])
+            const { em } = saving(null)
 
             await expect((await build(em)).savePipeline("ws-1", "user-1", DEFINITION, WRITE)).rejects.toMatchObject({
                 code: AutomationPipelinesErrorCode.NotSaved,
@@ -272,7 +266,7 @@ describe("AutomationPipelinesService trust offer and clock", () => {
     })
 
     it("stores and answers the trust offer instant and stamps the save with the database time", async () => {
-        const { em, fake } = saving([{ ...RAW, trust_offered_at: new Date(OFFERED) }])
+        const { em, fake } = saving(Object.assign(new AutomationPipelineEntity(), { ...ENTITY, trustOfferedAt: new Date(OFFERED) }))
 
         await expect(
             (await build(em)).savePipeline("ws-1", "user-1", DEFINITION, { ...WRITE, trustOfferedAt: OFFERED }),
@@ -281,15 +275,6 @@ describe("AutomationPipelinesService trust offer and clock", () => {
         const values = fake.callsOf("values")[0]?.[0]
         expect(evaluatedValues(values).trustOfferedAt).toEqual(new Date(OFFERED))
         expect(evaluatedValues(values).updatedAt).toBe("now()")
-    })
-
-    it("fails when the save answers no row list", async () => {
-        const em = mockEntityManager()
-        em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ execute: { raw: undefined } }).builder)
-
-        await expect((await build(em)).savePipeline("ws-1", "user-1", DEFINITION, WRITE)).rejects.toMatchObject({
-            code: AutomationPipelinesErrorCode.NotSaved,
-        })
     })
 
     it("clears the offer of the ladder and stamps it with the database time", async () => {
