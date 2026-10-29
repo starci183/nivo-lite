@@ -24,6 +24,9 @@ const build = async (entityManager: MockEntityManager, at: string = IN_OFFER) =>
     return { promo: moduleRef.get(PromoService), members }
 }
 
+/** Narrows the sub query a join was handed to the function that builds it. */
+const isJoinSource = (value: unknown): value is (sub: unknown) => unknown => typeof value === "function"
+
 const stateRow = {
     chatbot_id: "agent-1",
     has_knowledge: true,
@@ -155,6 +158,10 @@ describe("PromoService state", () => {
                     },
                 ],
             ])
+            const [joinSource] = read.argsOf("innerJoin")[0] ?? []
+            expect(isJoinSource(joinSource) ? joinSource(read.builder) : null).toBe(read.builder)
+            expect(read.argsOf("from")).toContainEqual(["public.events", "e"])
+            expect(read.argsOf("groupBy")).toEqual([["e.lead_id"]])
             expect(read.argsOf("addSelect").map((call) => call[1])).toEqual(
                 expect.arrayContaining([
                     "has_knowledge",

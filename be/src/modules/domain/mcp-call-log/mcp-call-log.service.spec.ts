@@ -2,7 +2,8 @@ import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { CallLogLine, CallLogRecord } from "./mcp-call-log.contracts"
 import { McpCallLogService } from "./mcp-call-log.service"
@@ -28,13 +29,10 @@ const build = async (entityManager: MockEntityManager): Promise<McpCallLogServic
     return moduleRef.get(McpCallLogService)
 }
 
-/** What an insert query builder was told to write; a function value is read as its source text. */
-const writtenBy = (fake: FakeQueryBuilder): Record<string, unknown> => {
-    const [values] = fake.callsOf("values")[0] ?? []
-    const written = typeof values === "object" && values !== null ? values : {}
-    return Object.fromEntries(
-        Object.entries(written).map(([key, value]) => [key, typeof value === "function" ? String(value) : value]),
-    )
+/** What an insert query builder was told to write; a function value is read by calling it. */
+const writtenBy = (fake: FakeQueryBuilder | undefined): Record<string, unknown> => {
+    const [values] = fake?.callsOf("values")[0] ?? []
+    return evaluatedValues(values)
 }
 
 const LINE: CallLogLine = {
@@ -55,15 +53,14 @@ const LINE: CallLogLine = {
 
 describe("McpCallLogService", () => {
     it("appends one audit line with every column, the masked arguments cast to jsonb by the database", async () => {
-        const fake = fakeQueryBuilder({ execute: { raw: [] } })
         const em = mockEntityManager()
-        em.createQueryBuilder.mockReturnValue(fake.builder as never)
+        const [fake] = queueQueryBuilders(em, [{ execute: { raw: [] } }])
         const log = await build(em)
 
         await expect(log.append(LINE)).resolves.toBeUndefined()
 
         const { argsMasked, ...columns } = writtenBy(fake)
-        expect(String(argsMasked)).toContain("CAST(:argsMaskedJson AS jsonb)")
+        expect(argsMasked).toBe("CAST(:argsMaskedJson AS jsonb)")
         expect(columns).toEqual({
             workspaceId: "ws-1",
             connector: "hakuen",
@@ -78,32 +75,30 @@ describe("McpCallLogService", () => {
             durationMs: 12,
             approvedBy: "person-1",
         })
-        expect(fake.callsOf("insert")).toEqual([[]])
-        expect(fake.callsOf("setParameter")).toEqual([["argsMaskedJson", '{"code":"***"}']])
+        expect(fake?.callsOf("insert")).toEqual([[]])
+        expect(fake?.callsOf("setParameter")).toEqual([["argsMaskedJson", '{"code":"***"}']])
     })
 
     it("hands the masked arguments over as text and leaves reading them to the database", async () => {
-        const fake = fakeQueryBuilder({ execute: { raw: [] } })
         const em = mockEntityManager()
-        em.createQueryBuilder.mockReturnValue(fake.builder as never)
+        const [fake] = queueQueryBuilders(em, [{ execute: { raw: [] } }])
         const log = await build(em)
 
         await expect(log.append({ ...LINE, argsMaskedJson: "{not json" })).resolves.toBeUndefined()
 
-        expect(fake.callsOf("setParameter")).toEqual([["argsMaskedJson", "{not json"]])
+        expect(fake?.callsOf("setParameter")).toEqual([["argsMaskedJson", "{not json"]])
     })
 
     it("reads the newest lines of the workspace within the page", async () => {
-        const fake = fakeQueryBuilder({ getRawMany: [ROW] })
         const em = mockEntityManager()
-        em.createQueryBuilder.mockReturnValue(fake.builder as never)
+        const [fake] = queueQueryBuilders(em, [{ getRawMany: [ROW] }])
         const log = await build(em)
 
         await expect(log.latest({ workspaceId: "ws-1", limit: 50 })).resolves.toEqual([ROW])
         expect(em.createQueryBuilder).toHaveBeenCalledWith(McpCallLogEntity, "l")
-        expect(fake.callsOf("leftJoin")).toEqual([["agents", "a", "a.id = l.agent_id"]])
-        expect(fake.callsOf("where")).toEqual([["l.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
-        expect(fake.callsOf("orderBy")).toEqual([["l.created_at", "DESC"]])
-        expect(fake.callsOf("limit")).toEqual([[50]])
+        expect(fake?.callsOf("leftJoin")).toEqual([["agents", "a", "a.id = l.agent_id"]])
+        expect(fake?.callsOf("where")).toEqual([["l.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
+        expect(fake?.callsOf("orderBy")).toEqual([["l.created_at", "DESC"]])
+        expect(fake?.callsOf("limit")).toEqual([[50]])
     })
 })

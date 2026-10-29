@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { FakeClock, fakeIds, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -25,6 +26,9 @@ const objectLike = (shape: Record<string, unknown>): unknown => expect.objectCon
 /** The match-anything matcher, typed `unknown` so it flows into any slot. */
 const anything = (): unknown => expect.anything()
 
+/** The updates the manager was asked for, the database expressions of their values run. */
+const updatesOf = (em: MockEntityManager): unknown => evaluatedCalls(em.update.mock.calls, 2)
+
 /** What `run` throws, read as `unknown`; the matcher then judges its fields. */
 const thrownBy = (run: () => unknown): unknown => {
     try {
@@ -37,6 +41,9 @@ const thrownBy = (run: () => unknown): unknown => {
 
 const NOW = "2026-10-12T10:00:00.000Z"
 const RUN_ID = "11111111-2222-4333-8444-555555555555"
+
+/** The criteria of the update that closes the run. */
+const CLOSING_RUN = { id: RUN_ID, workspaceId: "ws-1" }
 const TOKEN = `${RUN_ID}.secret`
 /** The first id of `fakeIds()` is the run, the next two make the secret of its token. */
 const STARTED_ID = "00000000-0000-4000-8000-000000000001"
@@ -212,11 +219,13 @@ describe("N8nRunsService", () => {
                 runId: RUN_ID,
                 code: N8nErrorCode.TargetRefused,
             })
-            expect(em.update).toHaveBeenCalledWith(
-                N8nRunEntity,
-                { id: RUN_ID, workspaceId: "ws-1" },
-                { status: "failed", summary: "Bi tu choi", result: null, finishedAt: anything() },
-            )
+            expect(updatesOf(em)).toEqual([
+                [
+                    "N8nRunEntity",
+                    CLOSING_RUN,
+                    { status: "failed", summary: "Bi tu choi", result: null, finishedAt: "now()" },
+                ],
+            ])
         })
     })
 })
@@ -323,11 +332,13 @@ describe("N8nRunsService", () => {
 
             await runs.completeRun(run, { status: "failed", summary: "oops", result: { n: 1 } })
 
-            expect(em.update).toHaveBeenCalledWith(
-                N8nRunEntity,
-                { id: RUN_ID, workspaceId: "ws-1" },
-                { status: "failed", summary: "oops", result: { n: 1 }, finishedAt: anything() },
-            )
+            expect(updatesOf(em)).toEqual([
+                [
+                    "N8nRunEntity",
+                    CLOSING_RUN,
+                    { status: "failed", summary: "oops", result: { n: 1 }, finishedAt: "now()" },
+                ],
+            ])
         })
 
         it("words the counters when no summary came, and knows an unnamed counter by its key", async () => {
@@ -336,16 +347,24 @@ describe("N8nRunsService", () => {
 
             await runs.completeRun(run, { result: { counts: { sent: 2, other: 1 } } })
 
-            expect(em.update).toHaveBeenCalledWith(
-                N8nRunEntity,
-                { id: RUN_ID, workspaceId: "ws-1" },
-                {
-                    status: "done",
-                    summary: "Da gui: 2 · other: 1",
-                    result: { counts: { sent: 2, other: 1 } },
-                    finishedAt: anything(),
-                },
-            )
+            expect(updatesOf(em)).toEqual([
+                [
+                    "N8nRunEntity",
+                    CLOSING_RUN,
+                    {
+                        status: "done",
+                        summary: "Da gui: 2 · other: 1",
+                        result: { counts: { sent: 2, other: 1 } },
+                        finishedAt: "now()",
+                    },
+                ],
+            ])
+        })
+
+        it("fails when the database does not report how many rows closed", async () => {
+            const { runs } = await build(mockEntityManager({ update: [N8nRunEntity, {}] }))
+
+            await expect(runs.completeRun(run, {})).rejects.toMatchObject({ code: N8nRunsErrorCode.NotClosed })
         })
 
         it("fails when the run cannot be closed", async () => {

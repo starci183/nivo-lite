@@ -3,6 +3,7 @@ import { IsNull, Not } from "typeorm"
 import { builder, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { McpConnectorRecord } from "./mcp-connectors.contracts"
@@ -57,13 +58,10 @@ const build = async (entityManager: MockEntityManager): Promise<McpConnectorsSer
     return moduleRef.get(McpConnectorsService)
 }
 
-/** What an update query builder was told to set; a function value is read as its source text. */
+/** What an update query builder was told to set; a function value is read by calling it. */
 const setBy = (fake: FakeQueryBuilder | undefined): Record<string, unknown> => {
     const [values] = fake?.callsOf("set")[0] ?? []
-    const written = typeof values === "object" && values !== null ? values : {}
-    return Object.fromEntries(
-        Object.entries(written).map(([key, value]) => [key, typeof value === "function" ? "<expression>" : value]),
-    )
+    return evaluatedValues(values)
 }
 
 describe("McpConnectorsService rows", () => {
@@ -169,11 +167,11 @@ describe("McpConnectorsService registration", () => {
         ).resolves.toBeUndefined()
 
         expect(setBy(update)).toEqual({
-            toolCatalog: "<expression>",
+            toolCatalog: "CAST(:catalogJson AS jsonb)",
             catalogHash: "abc",
             status: "active",
-            checkedAt: "<expression>",
-            updatedAt: "<expression>",
+            checkedAt: "now()",
+            updatedAt: "now()",
         })
         expect(update?.callsOf("setParameter")).toEqual([["catalogJson", "[]"]])
         expect(update?.callsOf("where")).toEqual([
@@ -198,8 +196,8 @@ describe("McpConnectorsService credential", () => {
             credentialState: "set",
             credentialSealed: "sealed-text",
             credentialSetBy: "person-1",
-            credentialSetAt: "<expression>",
-            updatedAt: "<expression>",
+            credentialSetAt: "now()",
+            updatedAt: "now()",
         })
         expect(written?.callsOf("where")).toEqual([
             ["workspace_id = :workspaceId AND key = :key AND kind = 'remote'", { workspaceId: "ws-1", key: "hakuen" }],
@@ -261,10 +259,10 @@ describe("McpConnectorsService approval and health", () => {
         await expect(connectors.approveCatalog(approval)).resolves.toBe(true)
         await expect(connectors.approveCatalog(approval)).resolves.toBe(false)
         expect(setBy(approved)).toEqual({
-            approvedCatalog: "<expression>",
+            approvedCatalog: "CAST(:approvedJson AS jsonb)",
             approvedBy: "person-1",
-            approvedAt: "<expression>",
-            updatedAt: "<expression>",
+            approvedAt: "now()",
+            updatedAt: "now()",
         })
         expect(approved?.callsOf("where")).toEqual([
             [

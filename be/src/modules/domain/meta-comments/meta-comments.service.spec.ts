@@ -2,13 +2,12 @@ import { builder, mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { IsNull } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { PageComment } from "./meta-comments.contracts"
 import { MetaCommentsService } from "./meta-comments.service"
 import { MetaCommentEntity } from "./persistence/entities"
 
-/** Matches the function a write hands the database for a time column. */
-const ANY_FUNCTION: unknown = expect.any(Function)
 /** The criterion of a private reply nobody took. */
 const NOT_REPLIED: unknown = IsNull()
 
@@ -33,18 +32,17 @@ const entityOf = builder<MetaCommentEntity>({
 describe("MetaCommentsService", () => {
     it("notes the comment once in the given transaction", async () => {
         const primary = mockEntityManager()
-        const fake = fakeQueryBuilder({ execute: {} })
         const tx = mockEntityManager()
-        tx.createQueryBuilder.mockReturnValue(fake.builder as never)
+        const [fake] = queueQueryBuilders(tx, [{ execute: {} }])
         const comment = { connectionId: "c-1", commentId: "cm-1", platform: "instagram", at: COMMENT_AT }
 
         await expect((await serviceOf(primary)).note(comment, tx)).resolves.toBeUndefined()
 
-        expect(fake.callsOf("insert")).toEqual([[]])
-        expect(fake.callsOf("values")).toEqual([
+        expect(fake?.callsOf("insert")).toEqual([[]])
+        expect(fake?.callsOf("values")).toEqual([
             [{ connectionId: "c-1", commentId: "cm-1", platform: "instagram", commentAt: new Date(COMMENT_AT) }],
         ])
-        expect(fake.callsOf("orIgnore")).toHaveLength(1)
+        expect(fake?.callsOf("orIgnore")).toHaveLength(1)
         expect(primary.createQueryBuilder).not.toHaveBeenCalled()
     })
 
@@ -87,18 +85,21 @@ describe("MetaCommentsService claims", () => {
             update: [
                 [MetaCommentEntity, { affected: 1 }],
                 [MetaCommentEntity, { affected: 0 }],
+                [MetaCommentEntity, {}],
             ],
         })
         const comments = await serviceOf(primary)
 
         await expect(comments.claim(COMMENT)).resolves.toBe(true)
         await expect(comments.claim(COMMENT)).resolves.toBe(false)
+        await expect(comments.claim(COMMENT)).resolves.toBe(false)
 
-        expect(primary.update).toHaveBeenCalledWith(
-            MetaCommentEntity,
-            { connectionId: "c-1", commentId: "cm-1", privateRepliedAt: NOT_REPLIED },
-            { privateRepliedAt: ANY_FUNCTION },
-        )
+        const claimed = [
+            "MetaCommentEntity",
+            { ...COMMENT, privateRepliedAt: NOT_REPLIED },
+            { privateRepliedAt: "now()" },
+        ]
+        expect(evaluatedCalls(primary.update.mock.calls, 2)).toEqual([claimed, claimed, claimed])
     })
 
     it("gives the private reply back", async () => {

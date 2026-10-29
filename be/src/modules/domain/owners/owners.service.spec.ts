@@ -77,6 +77,32 @@ describe("OwnersService", () => {
         expect(lines).toEqual(["owner password updated"])
     })
 
+    it("hashes with no salt when the database hands none back", async () => {
+        const { service, em } = await build([
+            [FIND_ACCOUNT, []],
+            [GEN_SALT, []],
+            [CRYPT, [{ crypt: HASH }]],
+            [CREATE_OWNER, [{ be_auth_create_user: CREATED }]],
+        ])
+
+        await service.createOwner("owner@example.test", "a-long-password")
+
+        expect(em.query).toHaveBeenCalledWith(CRYPT, ["a-long-password", undefined])
+    })
+
+    it("stops when the database does not hash the password", async () => {
+        const { service, lines } = await build([
+            [FIND_ACCOUNT, []],
+            [GEN_SALT, [{ gen_salt: SALT }]],
+            [CRYPT, []],
+        ])
+
+        await expect(service.createOwner("owner@example.test", "a-long-password")).rejects.toThrow(
+            "the database did not hash the password",
+        )
+        expect(lines).toEqual([])
+    })
+
     it("refuses a password outside the policy before it reads or writes anything", async () => {
         const { service, em, lines } = await build([])
 

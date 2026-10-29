@@ -173,6 +173,22 @@ describe("ResponsibilitiesService > addResponsibility", () => {
     })
 })
 
+describe("ResponsibilitiesService > addResponsibility without a due date", () => {
+    it("writes the step with no due date when none is given", async () => {
+        const em = mockEntityManager()
+        const { write } = answerInsert(em, { id: "lead-1" }, [{ ...STEP, due_at: null }])
+        const tx = fakeTransaction(em)
+        const { responsibilities } = await build(tx.em)
+
+        await expect(responsibilities.addResponsibility(addOf({ dueAt: null }))).resolves.toEqual({
+            ...RESULT,
+            dueAt: null,
+        })
+
+        expect(write.argsOf("values")).toEqual([[{ ...NEW_STEP, dueAt: null }]])
+    })
+})
+
 describe("ResponsibilitiesService > addResponsibility, refusals", () => {
     it("refuses an owner that is neither a member nor an agent and writes nothing", async () => {
         const tx = fakeTransaction(mockEntityManager())
@@ -262,6 +278,31 @@ describe("ResponsibilitiesService > assignResponsibility", () => {
                     dueAt: null,
                     ownerMemberId: null,
                     title: "Renewal",
+                },
+            ],
+        ])
+    })
+})
+
+describe("ResponsibilitiesService > assignResponsibility with a due date", () => {
+    it("moves the step to the given due date", async () => {
+        const em = mockEntityManager()
+        const update = fakeQueryBuilder({ execute: { raw: [STEP] } })
+        answerQueryBuilders(em, update)
+        const tx = fakeTransaction(em)
+        const { responsibilities } = await build(tx.em)
+
+        await responsibilities.assignResponsibility(assignOf({ dueAt: "2026-10-25T00:00:00.000Z" }))
+
+        expect(update.argsOf("set")).toEqual([
+            [
+                {
+                    ownerKind: "human",
+                    ownerAgentId: null,
+                    ownerName: "Anh Minh",
+                    nextAction: "Call back",
+                    dueAt: new Date("2026-10-25T00:00:00.000Z"),
+                    ownerMemberId: MEMBER_ID,
                 },
             ],
         ])

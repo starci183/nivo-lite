@@ -1,10 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
-import {
-    ANY_FUNCTION,
-    answerQueryBuilders,
-    fakeQueryBuilder,
-} from "@tests/fixtures/builders/fake-query-builder.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
+import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { ledgerExpected, ledgerWritten } from "@tests/fixtures/builders/public-api-ledger.builder"
 import { PublicApiEntity } from "./persistence/entities"
 import { PublicApiLedgerService } from "./public-api-ledger.service"
@@ -42,6 +39,9 @@ describe("PublicApiLedgerService / record", () => {
 
         expect(write.callsOf("insert")).toEqual([[]])
         expect(ledgerWritten(write)).toEqual(ledgerExpected(RECORD))
+        expect(evaluatedValues(write.argsOf("values")[0]?.[0])).toMatchObject({
+            dedupeKey: "(:prefix::text || COALESCE(NULLIF(:suffix::text, ''), gen_random_uuid()::text))",
+        })
     })
 
     it("answers the row of an earlier identical request as not inserted", async () => {
@@ -95,7 +95,10 @@ describe("PublicApiLedgerService / lock, complete and link", () => {
         expect(em.createQueryBuilder).toHaveBeenCalledWith(PublicApiEntity, "p")
 
         expect(update.callsOf("update")).toEqual([[]])
-        expect(update.argsOf("set")[0]?.[0]).toEqual({ processedAt: ANY_FUNCTION, leadId: ANY_FUNCTION })
+        expect(evaluatedValues(update.argsOf("set")[0]?.[0])).toEqual({
+            processedAt: "now()",
+            leadId: "COALESCE(:leadId::uuid, lead_id)",
+        })
         expect(update.argsOf("where")).toEqual([
             [
                 "workspace_id = :workspaceId AND id = :requestId AND processed_at IS NULL",

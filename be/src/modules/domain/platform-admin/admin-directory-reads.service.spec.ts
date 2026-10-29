@@ -137,6 +137,20 @@ describe("AdminDirectoryReadsService single rows and guards", () => {
         expect(read?.argsOf("limit")).toEqual([[500]])
     })
 
+    it("reads the workspaces of the errors since an instant, bounded", async () => {
+        const em = mockEntityManager()
+        const [read] = queueSubQueryBuilders(em, [{ getRawMany: [{ workspace_id: "ws-1" }] }])
+        const service = await build(em)
+        const since = new Date("2026-10-12T00:00:00.000Z")
+
+        await expect(service.errorWorkspaces(since)).resolves.toEqual([{ workspace_id: "ws-1" }])
+        expect(read?.argsOf("where")).toContainEqual([
+            "e.created_at >= :since AND e.workspace_id IS NOT NULL",
+            { since },
+        ])
+        expect(read?.argsOf("limit")).toEqual([[5000]])
+    })
+
     it("counts the errors since an instant by scope, most first", async () => {
         const em = mockEntityManager()
         const [read] = queueSubQueryBuilders(em, [{ getRawMany: [{ key: "api.x", count: 2 }] }])
@@ -184,7 +198,9 @@ describe("AdminDirectoryReadsService database functions", () => {
         await expect(service.workspaceActivity("ws-9")).resolves.toBeUndefined()
         expect(em.query).toHaveBeenCalledWith(WORKSPACE_STATS, [])
     })
+})
 
+describe("AdminDirectoryReadsService account functions", () => {
     it("reads the Auth emails of the given accounts", async () => {
         const em = mockEntityManager({ query: [USER_EMAILS, [{ id: "u-1", email: "a@b.c" }]] })
         const service = await build(em)
@@ -205,6 +221,13 @@ describe("AdminDirectoryReadsService database functions", () => {
             cost_usd: "0.1",
         })
         expect(em.query).toHaveBeenCalledWith(QUOTA_STATUS, ["ws-1"])
+    })
+
+    it("answers no quota status when the function answers nothing", async () => {
+        const em = mockEntityManager({ query: [QUOTA_STATUS, []] })
+        const service = await build(em)
+
+        await expect(service.quotaStatus("ws-1")).resolves.toBeUndefined()
     })
 
     it("reads the sign-ups of the last 14 days as calendar day text", async () => {
