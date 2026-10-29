@@ -587,6 +587,22 @@
         {
           "name": "public.knowledge_fold",
           "reason": "folds Vietnamese text to its unaccented lower-case search form"
+        },
+        {
+          "name": "pgmq.send",
+          "reason": "sends one envelope to a pgmq queue in the cutover proofs"
+        },
+        {
+          "name": "pgmq.archive",
+          "reason": "archives one pgmq message in the cutover proofs"
+        },
+        {
+          "name": "pgmq.delete",
+          "reason": "deletes one pgmq message in the cutover proofs"
+        },
+        {
+          "name": "pgmq.create",
+          "reason": "creates a pgmq queue in the cutover proofs"
         }
       ]
     },

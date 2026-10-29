@@ -4,7 +4,7 @@ import {
     type ConnectionSecret,
     ConnectionSecretsErrorCode,
 } from "@modules/domain/connection-secrets"
-import type { ConnectionsService } from "@modules/domain/connections"
+import type { ConnectionSecretReadsService, ConnectionsService } from "@modules/domain/connections"
 import { ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
 import { ok, refused } from "@modules/platform/primitives"
 import type { ZaloCredentialsService } from "@modules/domain/channels"
@@ -48,13 +48,14 @@ export const tokens = { accessToken: "access-2", renewalToken: "refresh-2", expi
 /** Configure fresh kit doubles with the normal credential persistence responses. */
 export const configureCredentialDoubles = (
     secrets: MockOf<ConnectionSecretsService>,
+    secretReads: MockOf<ConnectionSecretReadsService>,
     connections: MockOf<ConnectionsService>,
 ): void => {
     secrets.seal.mockImplementation((plain) => `sealed:${plain}`)
     secrets.save.mockResolvedValue(undefined)
     secrets.takeLease.mockResolvedValue(true)
     secrets.releaseLease.mockResolvedValue(undefined)
-    secrets.dueZalo.mockResolvedValue([])
+    secretReads.dueZalo.mockResolvedValue([])
     connections.markFailing.mockResolvedValue(undefined)
     connections.applyZaloAuthorization.mockResolvedValue(undefined)
 }

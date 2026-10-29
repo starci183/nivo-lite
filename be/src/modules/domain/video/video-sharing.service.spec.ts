@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
-import { ConnectionSecretsErrorCode, ConnectionSecretsService } from "@modules/domain/connection-secrets"
-import { ConnectionsService } from "@modules/domain/connections"
+import { ConnectionSecretsErrorCode } from "@modules/domain/connection-secrets"
+import { ConnectionSecretReadsService, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { EventsService } from "@modules/domain/events"
 import { MessagesService } from "@modules/domain/messages"
@@ -113,7 +113,7 @@ const build = async (rows: ReadonlyArray<StoredProject> = [rowOf()], project: Wo
     media.shareLink.mockResolvedValue(LINK)
     const connections = mock<ConnectionsService>()
     connections.listByProvider.mockResolvedValue([connectionOf()])
-    const secrets = mock<ConnectionSecretsService>()
+    const secrets = mock<ConnectionSecretReadsService>()
     secrets.botToken.mockResolvedValue(ok("bot-token"))
     const messages = mock<MessagesService>()
     messages.postSystem.mockResolvedValue(undefined)
@@ -127,7 +127,7 @@ const build = async (rows: ReadonlyArray<StoredProject> = [rowOf()], project: Wo
             { provide: VideoWorkbenchReadsService, useValue: reads },
             { provide: VideoMediaService, useValue: media },
             { provide: ConnectionsService, useValue: connections },
-            { provide: ConnectionSecretsService, useValue: secrets },
+            { provide: ConnectionSecretReadsService, useValue: secrets },
             { provide: MessagesService, useValue: messages },
             { provide: EventsService, useValue: events },
         ],

@@ -1,6 +1,6 @@
 import { isIP } from "node:net"
 import { openMssqlSession, openMysqlSession, openPostgresSession, selectRows } from "@modules/platform/database"
-import type { CustomerSession, CustomerSessionTarget } from "@modules/platform/database"
+import type { CustomerSession, PostgresSessionTarget } from "@modules/platform/database"
 import type { DatabaseSession, DatabaseTarget, DatabaseTlsOptions } from "./database-session.contracts"
 import { toRows } from "./database-values.policy"
 
@@ -15,7 +15,7 @@ const tlsOf = (target: DatabaseTarget): DatabaseTlsOptions => ({
     ...(isIP(target.host) ? {} : { servername: target.host }),
 })
 
-const sessionTargetOf = (target: DatabaseTarget, address: string): CustomerSessionTarget => ({
+const sessionTargetOf = (target: DatabaseTarget, address: string): PostgresSessionTarget => ({
     host: address,
     port: target.port,
     user: target.user,

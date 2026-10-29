@@ -13,7 +13,7 @@ import { refused } from "@modules/platform/primitives"
 import { ZaloModule, ZALO } from "@modules/integrations/zalo"
 import type { ZaloClient } from "@modules/integrations/zalo"
 import { MetaModule } from "@modules/integrations/meta"
-import { ConnectionsModule, ConnectionsService } from "@modules/domain/connections"
+import { ConnectionSecretReadsService, ConnectionsModule, ConnectionsService } from "@modules/domain/connections"
 import { ConnectionSecretsModule, ConnectionSecretsService } from "@modules/domain/connection-secrets"
 import { ConversationsService, CONVERSATIONS_MESSAGES } from "@modules/domain/conversations"
 import { ZaloCredentialsService } from "@modules/domain/channels"
@@ -72,6 +72,7 @@ class DeliveryPeersModule {
                         logger: Logger,
                         secrets: ConnectionSecretsService,
                         connections: ConnectionsService,
+                        secretReads: ConnectionSecretReadsService,
                     ) =>
                         new ZaloCredentialsService(
                             clock,
@@ -80,8 +81,9 @@ class DeliveryPeersModule {
                             logger,
                             secrets,
                             connections,
+                            secretReads,
                         ),
-                    inject: [CLOCK, ZALO, LOGGER, ConnectionSecretsService, ConnectionsService],
+                    inject: [CLOCK, ZALO, LOGGER, ConnectionSecretsService, ConnectionsService, ConnectionSecretReadsService],
                 },
             ],
             exports: [ConversationsService, DeferredMetaEvents, ProofAccounts],

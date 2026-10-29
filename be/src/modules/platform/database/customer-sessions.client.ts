@@ -76,6 +76,13 @@ export const openMysqlSession = async (target: PostgresSessionTarget): Promise<C
 
 /** Opens a read intent SQL Server session through the TypeORM client; parameters bind as `@0`, `@1`, ... */
 export const openMssqlSession = async (target: PostgresSessionTarget): Promise<CustomerSession> => {
+    /** The driver reads `serverName` for the TLS name of an encrypted host; the TypeORM option type does not list it. */
+    const driverOptions = {
+        encrypt: target.ssl !== false,
+        trustServerCertificate: true,
+        readOnlyIntent: true,
+        serverName: target.ssl === false ? undefined : target.ssl.servername,
+    }
     const source = new DataSource({
         type: "mssql",
         host: target.host,
@@ -86,12 +93,7 @@ export const openMssqlSession = async (target: PostgresSessionTarget): Promise<C
         connectionTimeout: target.connectMs,
         requestTimeout: target.queryMs,
         pool: { max: 1, min: 0 },
-        options: {
-            encrypt: target.ssl !== false,
-            trustServerCertificate: true,
-            readOnlyIntent: true,
-            serverName: target.ssl === false ? undefined : target.ssl.servername,
-        },
+        options: driverOptions,
         synchronize: false,
     })
     await source.initialize()

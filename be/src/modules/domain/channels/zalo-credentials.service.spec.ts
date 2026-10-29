@@ -3,7 +3,7 @@ import type { Logger } from "@modules/platform/logging"
 import { FakeClock, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
-import { ConnectionsService } from "@modules/domain/connections"
+import { ConnectionSecretReadsService, ConnectionsService } from "@modules/domain/connections"
 import { ZALO, ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
 import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
@@ -28,10 +28,11 @@ const matching = (pattern: RegExp): unknown => expect.stringMatching(pattern)
 
 const build = async (siteUrl: string = "https://nivo.test") => {
     const secrets = mock<ConnectionSecretsService>()
+    const secretReads = mock<ConnectionSecretReadsService>()
     const connections = mock<ConnectionsService>()
     const zalo = mock<ZaloClient>()
     const logger = mock<Logger>()
-    configureCredentialDoubles(secrets, connections)
+    configureCredentialDoubles(secrets, secretReads, connections)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ZaloCredentialsService,
@@ -40,10 +41,11 @@ const build = async (siteUrl: string = "https://nivo.test") => {
             { provide: ZALO, useValue: zalo },
             { provide: LOGGER, useValue: logger },
             { provide: ConnectionSecretsService, useValue: secrets },
+            { provide: ConnectionSecretReadsService, useValue: secretReads },
             { provide: ConnectionsService, useValue: connections },
         ],
     }).compile()
-    return { service: moduleRef.get(ZaloCredentialsService), secrets, connections, zalo, logger }
+    return { service: moduleRef.get(ZaloCredentialsService), secrets, secretReads, connections, zalo, logger }
 }
 describe("ZaloCredentialsService", () => {
     describe("callbackUrl", () => {
@@ -55,18 +57,18 @@ describe("ZaloCredentialsService", () => {
 describe("ZaloCredentialsService", () => {
     describe("load", () => {
         it("answers the parsed credential with the end of its access token", async () => {
-            const { service, secrets } = await build()
-            secrets.secretOf.mockResolvedValue(stored(secretOf()))
+            const { service, secretReads } = await build()
+            secretReads.secretOf.mockResolvedValue(stored(secretOf()))
             await expect(service.load("c-1")).resolves.toEqual({
                 kind: "ok",
                 value: { secret: secretOf(), expiresAt: NOW + HOUR, workspaceId: "ws-1" },
             })
-            expect(secrets.secretOf).toHaveBeenCalledWith("c-1", "zalo_oa")
+            expect(secretReads.secretOf).toHaveBeenCalledWith("c-1", "zalo_oa")
         })
 
         it("answers a null expiry when none is stored", async () => {
-            const { service, secrets } = await build()
-            secrets.secretOf.mockResolvedValue(stored(secretOf(), null))
+            const { service, secretReads } = await build()
+            secretReads.secretOf.mockResolvedValue(stored(secretOf(), null))
             await expect(service.load("c-1")).resolves.toMatchObject({ value: { expiresAt: null } })
         })
 
@@ -74,20 +76,20 @@ describe("ZaloCredentialsService", () => {
             ['"refreshToken":"old"', "old"],
             ['"refreshToken":"old","renewalToken":"new"', "new"],
         ])("reads the legacy refreshToken key of a stored secret as the renewal token (%s)", async (keys, token) => {
-            const { service, secrets } = await build()
-            secrets.secretOf.mockResolvedValue(stored(`{"appId":"a","appSecret":"s","oaSecret":"o",${keys}}`))
+            const { service, secretReads } = await build()
+            secretReads.secretOf.mockResolvedValue(stored(`{"appId":"a","appSecret":"s","oaSecret":"o",${keys}}`))
             await expect(service.load("c-1")).resolves.toMatchObject({ value: { secret: { renewalToken: token } } })
         })
 
         it("refuses a missing connection and a credential that is not the Zalo document", async () => {
-            const { service, secrets } = await build()
-            secrets.secretOf.mockResolvedValueOnce(missing)
-            secrets.secretOf.mockResolvedValueOnce(stored("not json"))
-            secrets.secretOf.mockResolvedValueOnce(stored('{"appId":"a"}'))
-            secrets.secretOf.mockResolvedValueOnce(stored("null"))
-            secrets.secretOf.mockResolvedValueOnce(stored('"text"'))
-            secrets.secretOf.mockResolvedValueOnce(stored('{"appId":"a","appSecret":1,"oaSecret":"o"}'))
-            secrets.secretOf.mockResolvedValueOnce(stored('{"appId":"a","appSecret":"s","oaSecret":1}'))
+            const { service, secretReads } = await build()
+            secretReads.secretOf.mockResolvedValueOnce(missing)
+            secretReads.secretOf.mockResolvedValueOnce(stored("not json"))
+            secretReads.secretOf.mockResolvedValueOnce(stored('{"appId":"a"}'))
+            secretReads.secretOf.mockResolvedValueOnce(stored("null"))
+            secretReads.secretOf.mockResolvedValueOnce(stored('"text"'))
+            secretReads.secretOf.mockResolvedValueOnce(stored('{"appId":"a","appSecret":1,"oaSecret":"o"}'))
+            secretReads.secretOf.mockResolvedValueOnce(stored('{"appId":"a","appSecret":"s","oaSecret":1}'))
             await expect(service.load("c-1")).resolves.toEqual({
                 kind: "refused",
                 code: "CHANNELS_CONNECTION_NOT_FOUND",
@@ -108,8 +110,8 @@ describe("ZaloCredentialsService", () => {
 describe("ZaloCredentialsService", () => {
     describe("beginAuthorization", () => {
         it("stores a verifier with a one-time nonce and answers the permission page", async () => {
-            const { service, secrets, zalo } = await build()
-            secrets.secretOf.mockResolvedValue(stored(secretOf()))
+            const { service, secretReads, secrets, zalo } = await build()
+            secretReads.secretOf.mockResolvedValue(stored(secretOf()))
             zalo.authorizeUrl.mockReturnValue("https://oauth.test/permission")
             const result = await service.beginAuthorization("ws-1", "c-1")
             expect(result).toEqual({
@@ -133,12 +135,12 @@ describe("ZaloCredentialsService", () => {
         })
 
         it("refuses a connection of another workspace and a missing one", async () => {
-            const { service, secrets } = await build()
-            secrets.secretOf.mockResolvedValueOnce({
+            const { service, secretReads } = await build()
+            secretReads.secretOf.mockResolvedValueOnce({
                 ...stored(secretOf()),
                 value: { ...stored(secretOf()).value, workspaceId: "ws-2" },
             })
-            secrets.secretOf.mockResolvedValueOnce(missing)
+            secretReads.secretOf.mockResolvedValueOnce(missing)
             await expect(service.beginAuthorization("ws-1", "c-1")).rejects.toMatchObject({
                 code: ChannelsErrorCode.ConnectionNotFound,
             })
@@ -153,8 +155,8 @@ describe("ZaloCredentialsService", () => {
         const started = secretOf({ pkce: { verifier: "verifier-1", nonce: "nonce-1", exp: NOW + 60_000 } })
 
         it("exchanges the code, stores the tokens without the verifier and records the OA", async () => {
-            const { service, secrets, zalo, connections } = await build()
-            secrets.secretOf.mockResolvedValue(stored(started))
+            const { service, secretReads, secrets, zalo, connections } = await build()
+            secretReads.secretOf.mockResolvedValue(stored(started))
             zalo.exchangeCode.mockResolvedValue(tokens)
             await expect(
                 service.completeAuthorization("ws-1", { state: "c-1.nonce-1", code: "code-1", oaId: "oa-9" }),
@@ -173,9 +175,9 @@ describe("ZaloCredentialsService", () => {
         })
 
         it("refuses a return that does not match a started authorization", async () => {
-            const { service, secrets, zalo } = await build()
-            secrets.secretOf.mockResolvedValueOnce(stored(secretOf()))
-            secrets.secretOf.mockResolvedValueOnce(stored(started))
+            const { service, secretReads, zalo } = await build()
+            secretReads.secretOf.mockResolvedValueOnce(stored(secretOf()))
+            secretReads.secretOf.mockResolvedValueOnce(stored(started))
             await expect(
                 service.completeAuthorization("ws-1", { state: "c-1.nonce-1", code: "x" }),
             ).rejects.toMatchObject({ code: ChannelsErrorCode.ZaloStateRejected })
@@ -186,11 +188,11 @@ describe("ZaloCredentialsService", () => {
         })
 
         it("refuses an authorization older than its time, and a state without a connection", async () => {
-            const { service, secrets } = await build()
-            secrets.secretOf.mockResolvedValueOnce(
+            const { service, secretReads } = await build()
+            secretReads.secretOf.mockResolvedValueOnce(
                 stored(secretOf({ pkce: { verifier: "v", nonce: "nonce-1", exp: NOW - 1 } })),
             )
-            secrets.secretOf.mockResolvedValueOnce(missing)
+            secretReads.secretOf.mockResolvedValueOnce(missing)
             await expect(
                 service.completeAuthorization("ws-1", { state: "c-1.nonce-1", code: "x" }),
             ).rejects.toMatchObject({ code: ChannelsErrorCode.ZaloStateExpired })
@@ -207,10 +209,10 @@ describe("ZaloCredentialsService", () => {
         it.each([undefined, null, "tick", [], {}, { ...payload, code: 1 }])(
             "ignores a payload that is not an authorization return: %p",
             async (input) => {
-                const { service, secrets, zalo, connections, logger } = await build()
+                const { service, secretReads, zalo, connections, logger } = await build()
 
                 await expect(service.completeFromJob(input)).resolves.toBeUndefined()
-                expect(secrets.secretOf).not.toHaveBeenCalled()
+                expect(secretReads.secretOf).not.toHaveBeenCalled()
                 expect(zalo.exchangeCode).not.toHaveBeenCalled()
                 expect(connections.applyZaloAuthorization).not.toHaveBeenCalled()
                 expect(connections.markFailing).not.toHaveBeenCalled()
@@ -219,8 +221,8 @@ describe("ZaloCredentialsService", () => {
         )
 
         it.each(["oa-9", null])("completes the queued authorization with OA %p", async (oaId) => {
-            const { service, secrets, zalo, connections, logger } = await build()
-            secrets.secretOf.mockResolvedValue(
+            const { service, secretReads, zalo, connections, logger } = await build()
+            secretReads.secretOf.mockResolvedValue(
                 stored(secretOf({ pkce: { verifier: "verifier-1", nonce: "nonce-1", exp: NOW + 60_000 } })),
             )
             zalo.exchangeCode.mockResolvedValue(tokens)
@@ -232,9 +234,9 @@ describe("ZaloCredentialsService", () => {
         })
 
         it("logs a channels refusal and marks the connection before the first dot failing", async () => {
-            const { service, secrets, connections, logger } = await build()
+            const { service, secretReads, connections, logger } = await build()
             const failure = new ChannelsError({ code: ChannelsErrorCode.SecretUnreadable })
-            secrets.secretOf.mockRejectedValue(failure)
+            secretReads.secretOf.mockRejectedValue(failure)
             await expect(service.completeFromJob({ ...payload, state: "c-1.nonce-1.extra" })).resolves.toBeUndefined()
             expect(logger.error.mock.calls).toEqual([
                 ["channels.zalo.authorization-refused", failure, { connectionId: "c-1" }],
@@ -243,8 +245,8 @@ describe("ZaloCredentialsService", () => {
         })
 
         it("logs a Zalo refusal and marks its connection failing", async () => {
-            const { service, secrets, zalo, connections, logger } = await build()
-            secrets.secretOf.mockResolvedValue(
+            const { service, secretReads, secrets, zalo, connections, logger } = await build()
+            secretReads.secretOf.mockResolvedValue(
                 stored(secretOf({ pkce: { verifier: "verifier-1", nonce: "nonce-1", exp: NOW + 60_000 } })),
             )
             const failure = zaloRefusal(-118)
@@ -263,8 +265,8 @@ describe("ZaloCredentialsService", () => {
         const payload = { workspaceId: "ws-1", state: "c-1.nonce-1", code: "code-1", oaId: "oa-9" }
 
         it("rethrows other failures for retry without logging or marking the connection", async () => {
-            const { service, secrets, zalo, connections, logger } = await build()
-            secrets.secretOf.mockResolvedValue(
+            const { service, secretReads, zalo, connections, logger } = await build()
+            secretReads.secretOf.mockResolvedValue(
                 stored(secretOf({ pkce: { verifier: "verifier-1", nonce: "nonce-1", exp: NOW + 60_000 } })),
             )
             const failure = new ZaloError({ code: ZaloErrorCode.Unavailable })
@@ -275,11 +277,11 @@ describe("ZaloCredentialsService", () => {
         })
 
         it("records an empty connection id for an empty state", async () => {
-            const { service, secrets, connections, logger } = await build()
+            const { service, secretReads, connections, logger } = await build()
             const failure = new ChannelsError({ code: ChannelsErrorCode.ConnectionNotFound })
-            secrets.secretOf.mockRejectedValue(failure)
+            secretReads.secretOf.mockRejectedValue(failure)
             await expect(service.completeFromJob({ ...payload, state: "" })).resolves.toBeUndefined()
-            expect(secrets.secretOf.mock.calls).toEqual([["", "zalo_oa"]])
+            expect(secretReads.secretOf.mock.calls).toEqual([["", "zalo_oa"]])
             expect(logger.error.mock.calls).toEqual([
                 ["channels.zalo.authorization-refused", failure, { connectionId: "" }],
             ])
@@ -287,9 +289,9 @@ describe("ZaloCredentialsService", () => {
         })
 
         it("defaults to an empty connection id when the state split has no fields", async () => {
-            const { service, secrets, connections, logger } = await build()
+            const { service, secretReads, connections, logger } = await build()
             const failure = new ChannelsError({ code: ChannelsErrorCode.ConnectionNotFound })
-            secrets.secretOf.mockRejectedValue(failure)
+            secretReads.secretOf.mockRejectedValue(failure)
             const split = jest
                 .spyOn(String.prototype, "split")
                 .mockReturnValueOnce([])
@@ -297,7 +299,7 @@ describe("ZaloCredentialsService", () => {
                 .mockReturnValueOnce([])
             try {
                 await expect(service.completeFromJob(payload)).resolves.toBeUndefined()
-                expect(secrets.secretOf.mock.calls).toEqual([["", "zalo_oa"]])
+                expect(secretReads.secretOf.mock.calls).toEqual([["", "zalo_oa"]])
                 expect(logger.error.mock.calls).toEqual([
                     ["channels.zalo.authorization-refused", failure, { connectionId: "" }],
                 ])
@@ -311,18 +313,18 @@ describe("ZaloCredentialsService", () => {
 describe("ZaloCredentialsService", () => {
     describe("refreshFromJob", () => {
         it("uses the payload horizon to select due credentials", async () => {
-            const { service, secrets } = await build()
+            const { service, secretReads } = await build()
             await expect(service.refreshFromJob({ withinMs: 2 * HOUR })).resolves.toEqual({ refreshed: 0, failed: 0 })
-            expect(secrets.dueZalo.mock.calls).toEqual([[new Date("2026-10-12T12:00:00.000Z")]])
+            expect(secretReads.dueZalo.mock.calls).toEqual([[new Date("2026-10-12T12:00:00.000Z")]])
         })
 
         it.each([undefined, null, "tick", [], {}, { withinMs: "2" }])(
             "defaults to seven hours for a non-refresh payload: %p",
             async (payload) => {
-                const { service, secrets } = await build()
+                const { service, secretReads } = await build()
 
                 await expect(service.refreshFromJob(payload)).resolves.toEqual({ refreshed: 0, failed: 0 })
-                expect(secrets.dueZalo.mock.calls).toEqual([[new Date("2026-10-12T17:00:00.000Z")]])
+                expect(secretReads.dueZalo.mock.calls).toEqual([[new Date("2026-10-12T17:00:00.000Z")]])
             },
         )
     })
@@ -330,23 +332,23 @@ describe("ZaloCredentialsService", () => {
 describe("ZaloCredentialsService", () => {
     describe("accessToken", () => {
         it("answers the stored token while it has more than five minutes left", async () => {
-            const { service, secrets } = await build()
-            secrets.secretOf.mockResolvedValue(stored(secretOf()))
+            const { service, secretReads, secrets } = await build()
+            secretReads.secretOf.mockResolvedValue(stored(secretOf()))
             await expect(service.accessToken("c-1")).resolves.toBe("access-1")
             expect(secrets.takeLease).not.toHaveBeenCalled()
         })
 
         it("refuses a connection that does not exist", async () => {
-            const { service, secrets } = await build()
-            secrets.secretOf.mockResolvedValue(missing)
+            const { service, secretReads } = await build()
+            secretReads.secretOf.mockResolvedValue(missing)
             await expect(service.accessToken("c-1")).rejects.toMatchObject({
                 code: ChannelsErrorCode.ConnectionNotFound,
             })
         })
 
         it("renews a token that is about to end, saves the new pair with its expiry and takes the lease for 30 seconds", async () => {
-            const { service, secrets, zalo } = await build()
-            secrets.secretOf.mockResolvedValue(stored(secretOf(), NOW + 60_000))
+            const { service, secretReads, secrets, zalo } = await build()
+            secretReads.secretOf.mockResolvedValue(stored(secretOf(), NOW + 60_000))
             zalo.refreshTokens.mockResolvedValue({ ...tokens, expiresInSeconds: 7200 })
             await expect(service.accessToken("c-1")).resolves.toBe("access-2")
             expect(zalo.refreshTokens).toHaveBeenCalledWith("app-1", "app-secret", "refresh-1")
@@ -359,8 +361,8 @@ describe("ZaloCredentialsService", () => {
         })
 
         it("renews a token Zalo just rejected, or on demand, though its clock says it is fine", async () => {
-            const { service, secrets, zalo } = await build()
-            secrets.secretOf.mockResolvedValue(stored(secretOf()))
+            const { service, secretReads, zalo } = await build()
+            secretReads.secretOf.mockResolvedValue(stored(secretOf()))
             zalo.refreshTokens.mockResolvedValue(tokens)
             await expect(service.accessToken("c-1", { stale: "access-1" })).resolves.toBe("access-2")
             await expect(service.accessToken("c-1", { force: true })).resolves.toBe("access-2")
@@ -368,15 +370,15 @@ describe("ZaloCredentialsService", () => {
         })
 
         it("renews a connection that has a refresh token but no access token yet", async () => {
-            const { service, secrets, zalo } = await build()
-            secrets.secretOf.mockResolvedValue(stored(secretOf({ accessToken: undefined }), null))
+            const { service, secretReads, zalo } = await build()
+            secretReads.secretOf.mockResolvedValue(stored(secretOf({ accessToken: undefined }), null))
             zalo.refreshTokens.mockResolvedValue(tokens)
             await expect(service.accessToken("c-1")).resolves.toBe("access-2")
         })
 
         it("says to authorize first when the connection holds no refresh token", async () => {
-            const { service, secrets } = await build()
-            secrets.secretOf.mockResolvedValue(
+            const { service, secretReads } = await build()
+            secretReads.secretOf.mockResolvedValue(
                 stored(secretOf({ accessToken: undefined, renewalToken: undefined }), null),
             )
             await expect(service.accessToken("c-1")).rejects.toMatchObject({
@@ -388,38 +390,38 @@ describe("ZaloCredentialsService", () => {
 describe("ZaloCredentialsService", () => {
     describe("accessToken", () => {
         it("uses the token another caller renewed while this one waited for the lease", async () => {
-            const { service, secrets, zalo } = await build()
+            const { service, secretReads, secrets, zalo } = await build()
             secrets.takeLease.mockResolvedValue(false)
-            secrets.secretOf.mockResolvedValueOnce(stored(secretOf(), NOW + 60_000))
-            secrets.secretOf.mockResolvedValueOnce(stored(secretOf({ accessToken: "access-9" })))
+            secretReads.secretOf.mockResolvedValueOnce(stored(secretOf(), NOW + 60_000))
+            secretReads.secretOf.mockResolvedValueOnce(stored(secretOf({ accessToken: "access-9" })))
             await expect(service.accessToken("c-1")).resolves.toBe("access-9")
             expect(zalo.refreshTokens).not.toHaveBeenCalled()
         })
 
         it("asks to try again when the lease is taken and no fresh token is there, even on a forced renewal", async () => {
-            const { service, secrets } = await build()
+            const { service, secretReads, secrets } = await build()
             secrets.takeLease.mockResolvedValue(false)
-            secrets.secretOf.mockResolvedValue(stored(secretOf(), NOW + 60_000))
+            secretReads.secretOf.mockResolvedValue(stored(secretOf(), NOW + 60_000))
             await expect(service.accessToken("c-1")).rejects.toMatchObject({ code: ChannelsErrorCode.ZaloRefreshBusy })
-            secrets.secretOf.mockResolvedValue(stored(secretOf()))
+            secretReads.secretOf.mockResolvedValue(stored(secretOf()))
             await expect(service.accessToken("c-1", { force: true })).rejects.toMatchObject({
                 code: ChannelsErrorCode.ZaloRefreshBusy,
             })
         })
 
         it("reads again under the lease and spares the refresh token when someone renewed in between", async () => {
-            const { service, secrets, zalo } = await build()
-            secrets.secretOf.mockResolvedValueOnce(stored(secretOf(), NOW + 60_000))
-            secrets.secretOf.mockResolvedValueOnce(stored(secretOf({ accessToken: "access-9" })))
+            const { service, secretReads, secrets, zalo } = await build()
+            secretReads.secretOf.mockResolvedValueOnce(stored(secretOf(), NOW + 60_000))
+            secretReads.secretOf.mockResolvedValueOnce(stored(secretOf({ accessToken: "access-9" })))
             await expect(service.accessToken("c-1")).resolves.toBe("access-9")
             expect(zalo.refreshTokens).not.toHaveBeenCalled()
             expect(secrets.releaseLease).toHaveBeenCalledWith("c-1")
         })
 
         it("stops when the refresh token vanished under the lease, and frees the lease", async () => {
-            const { service, secrets } = await build()
-            secrets.secretOf.mockResolvedValueOnce(stored(secretOf(), NOW + 60_000))
-            secrets.secretOf.mockResolvedValueOnce(stored(secretOf({ renewalToken: undefined }), NOW + 60_000))
+            const { service, secretReads, secrets } = await build()
+            secretReads.secretOf.mockResolvedValueOnce(stored(secretOf(), NOW + 60_000))
+            secretReads.secretOf.mockResolvedValueOnce(stored(secretOf({ renewalToken: undefined }), NOW + 60_000))
             await expect(service.accessToken("c-1")).rejects.toMatchObject({
                 code: ChannelsErrorCode.ZaloNotAuthorized,
             })
@@ -427,8 +429,8 @@ describe("ZaloCredentialsService", () => {
         })
 
         it("marks the connection for reconnection when Zalo refuses the refresh token, and frees the lease", async () => {
-            const { service, secrets, zalo, connections } = await build()
-            secrets.secretOf.mockResolvedValue(stored(secretOf(), NOW + 60_000))
+            const { service, secretReads, secrets, zalo, connections } = await build()
+            secretReads.secretOf.mockResolvedValue(stored(secretOf(), NOW + 60_000))
             const refusal = zaloRefusal(-118)
             zalo.refreshTokens.mockRejectedValue(refusal)
             await expect(service.accessToken("c-1")).rejects.toBe(refusal)
@@ -437,8 +439,8 @@ describe("ZaloCredentialsService", () => {
         })
 
         it("leaves the connection alone when Zalo simply did not answer", async () => {
-            const { service, secrets, zalo, connections } = await build()
-            secrets.secretOf.mockResolvedValue(stored(secretOf(), NOW + 60_000))
+            const { service, secretReads, zalo, connections } = await build()
+            secretReads.secretOf.mockResolvedValue(stored(secretOf(), NOW + 60_000))
             zalo.refreshTokens.mockRejectedValue(new ZaloError({ code: ZaloErrorCode.Unavailable }))
             await expect(service.accessToken("c-1")).rejects.toMatchObject({ code: ZaloErrorCode.Unavailable })
             expect(connections.markFailing).not.toHaveBeenCalled()
@@ -449,8 +451,8 @@ const SEALED = 'sealed:{"appId":"app-1","appSecret":"app-secret","oaSecret":"oa-
 describe("ZaloCredentialsService", () => {
     describe("accessToken", () => {
         it("saves a second time when the first save fails, because the old refresh token is already spent", async () => {
-            const { service, secrets, zalo, logger } = await build()
-            secrets.secretOf.mockResolvedValue(stored(secretOf(), NOW + 60_000))
+            const { service, secretReads, secrets, zalo, logger } = await build()
+            secretReads.secretOf.mockResolvedValue(stored(secretOf(), NOW + 60_000))
             zalo.refreshTokens.mockResolvedValue(tokens)
             const failure = new Error("connection reset")
             secrets.save.mockRejectedValueOnce(failure)
@@ -462,8 +464,8 @@ describe("ZaloCredentialsService", () => {
         })
 
         it("frees the lease and reports the failure when both saves fail, logging a lease that cannot be freed", async () => {
-            const { service, secrets, zalo, logger } = await build()
-            secrets.secretOf.mockResolvedValue(stored(secretOf(), NOW + 60_000))
+            const { service, secretReads, secrets, zalo, logger } = await build()
+            secretReads.secretOf.mockResolvedValue(stored(secretOf(), NOW + 60_000))
             zalo.refreshTokens.mockResolvedValue(tokens)
             const failure = new Error("database down")
             secrets.save.mockRejectedValue(failure)
@@ -476,14 +478,14 @@ describe("ZaloCredentialsService", () => {
 describe("ZaloCredentialsService", () => {
     describe("refreshDue", () => {
         it("renews every due connection and counts the ones that failed", async () => {
-            const { service, secrets, zalo, logger } = await build()
-            secrets.dueZalo.mockResolvedValue(["c-1", "c-2"])
-            secrets.secretOf.mockResolvedValueOnce(stored(secretOf()))
-            secrets.secretOf.mockResolvedValueOnce(stored(secretOf()))
-            secrets.secretOf.mockResolvedValueOnce(missing)
+            const { service, secretReads, zalo, logger } = await build()
+            secretReads.dueZalo.mockResolvedValue(["c-1", "c-2"])
+            secretReads.secretOf.mockResolvedValueOnce(stored(secretOf()))
+            secretReads.secretOf.mockResolvedValueOnce(stored(secretOf()))
+            secretReads.secretOf.mockResolvedValueOnce(missing)
             zalo.refreshTokens.mockResolvedValue(tokens)
             await expect(service.refreshDue(7 * HOUR)).resolves.toEqual({ refreshed: 1, failed: 1 })
-            expect(secrets.dueZalo).toHaveBeenCalledWith(new Date(NOW + 7 * HOUR))
+            expect(secretReads.dueZalo).toHaveBeenCalledWith(new Date(NOW + 7 * HOUR))
             expect(logger.error).toHaveBeenCalledWith("channels.zalo.refresh-failed", expect.anything(), {
                 connectionId: "c-2",
             })

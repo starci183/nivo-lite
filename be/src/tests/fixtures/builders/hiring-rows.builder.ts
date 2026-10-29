@@ -1,5 +1,5 @@
 import { hiringEntities } from "@modules/domain/hiring"
-import { CREATED } from "./hiring-data.builder"
+import { CREATED, LINK_TOKEN } from "./hiring-data.builder"
 
 const NOW = "2026-10-15T03:00:00.000Z"
 import { entityRowBuilder } from "./entity-row.builder"
