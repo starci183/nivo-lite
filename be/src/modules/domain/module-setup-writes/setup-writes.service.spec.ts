@@ -2,12 +2,14 @@ import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { In, Not } from "typeorm"
-import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
-import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
+import { writeExpressionOf } from "@tests/fixtures/builders/write-expression.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import type { CardClosing, FactCardRecord, ProposedCardRecord } from "./module-setup-writes.contracts"
+import type { CardClosing, FactCardRecord, ProposedCardRecord, RuleCardPayload } from "./module-setup-writes.contracts"
 import { ModuleSetupWriteEntity } from "./persistence/entities"
 import { SetupWritesService } from "./setup-writes.service"
+
+/** Stands for the `() => "now()"` expression a write hands the database. */
+const SQL_EXPRESSION: unknown = expect.any(Function)
 
 const payload: FactCardRecord["payload"] = {
     subjectType: "business",
@@ -155,52 +157,56 @@ describe("SetupWritesService", () => {
     })
 })
 
-describe("SetupWritesService", () => {
+describe("SetupWritesService > close", () => {
     it("closes a waiting card", async () => {
         const closed: FactCardRecord = { ...card, status: "applied", result: closing.result, decidedBy: "Lan" }
-        const em = mockEntityManager()
-        const update = fakeQueryBuilder({
-            execute: {
-                raw: [
-                    {
-                        id: "card-1",
-                        workspace_id: "ws-1",
-                        setup_session_id: "ses-1",
-                        source_message_id: "msg-1",
-                        gate_key: "facts",
-                        kind: "fact",
-                        target_key: "fact:city",
-                        payload,
-                        status: "applied",
-                        result: closing.result,
-                        decided_by: "Lan",
-                        created_at: new Date(card.createdAt),
-                    },
-                ],
-            },
+        const em = mockEntityManager({
+            update: [ModuleSetupWriteEntity, { affected: 1 }],
+            findOne: [
+                ModuleSetupWriteEntity,
+                Object.assign(new ModuleSetupWriteEntity(), row, closed, { createdAt: row.createdAt }),
+            ],
         })
-        answerQueryBuilders(em, update)
 
         await expect((await build(em)).close("ws-1", "card-1", closing)).resolves.toEqual(closed)
 
-        expect(update.argsOf("set").map((args) => args.map((values) => evaluatedValues(values)))).toEqual([
-            [
-                {
-                    status: "applied",
-                    payload,
-                    result: closing.result,
-                    decidedBy: "Lan",
-                    decidedAt: "now()",
-                },
-            ],
-        ])
-        expect(update.argsOf("where")).toEqual([[{ id: "card-1", workspaceId: "ws-1", status: "proposed" }]])
+        expect(em.update).toHaveBeenCalledWith(
+            ModuleSetupWriteEntity,
+            { id: "card-1", workspaceId: "ws-1", status: "proposed" },
+            { status: "applied", payload, result: closing.result, decidedBy: "Lan", decidedAt: SQL_EXPRESSION },
+        )
+        expect(writeExpressionOf(em.update.mock.calls[0]?.[2], "decidedAt")).toBe("now()")
+    })
+
+    it("closes a rule card", async () => {
+        const rulePayload: RuleCardPayload = { action: "refund", field: "mode", mode: "ask", limitVnd: null }
+        const ruleCard = Object.assign(new ModuleSetupWriteEntity(), row, {
+            kind: "rule" as const,
+            payload: rulePayload,
+        })
+        const em = mockEntityManager({
+            update: [ModuleSetupWriteEntity, { affected: 1 }],
+            findOne: [ModuleSetupWriteEntity, ruleCard],
+        })
+
+        await expect((await build(em)).close("ws-1", "card-1", closing)).resolves.toMatchObject({
+            kind: "rule",
+            payload: rulePayload,
+        })
     })
 
     it("answers nothing when the card was decided already", async () => {
-        const em = mockEntityManager()
-        answerQueryBuilders(em, fakeQueryBuilder({ execute: { raw: [] } }))
+        const em = mockEntityManager({ update: [ModuleSetupWriteEntity, {}] })
 
         await expect((await build(em)).close("ws-1", "card-1", { ...closing, status: "rejected" })).resolves.toBeNull()
+    })
+
+    it("answers nothing when the card vanished after the update", async () => {
+        const em = mockEntityManager({
+            update: [ModuleSetupWriteEntity, { affected: 1 }],
+            findOne: [ModuleSetupWriteEntity, null],
+        })
+
+        await expect((await build(em)).close("ws-1", "card-1", closing)).resolves.toBeNull()
     })
 })

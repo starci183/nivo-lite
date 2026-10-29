@@ -2,9 +2,9 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager, EntityTarget, ObjectLiteral, SelectQueryBuilder } from "typeorm"
 import { AgentEntity } from "@modules/domain/agents"
 import { LeadEntity } from "@modules/domain/leads"
-import { ModuleInstallationEntity } from "@modules/domain/module-installations"
+import { InstallationOperationsService } from "@modules/domain/module-installations"
 import { StaffDirectoryService } from "@modules/domain/staff"
-import { WorkItemEntity } from "@modules/domain/work-items"
+import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { ModulesService } from "@modules/domain/modules"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -24,7 +24,6 @@ import { waitingConversationId } from "./conversation.policy"
 import type {
     AgentIdRow,
     ConversationRow,
-    ChatbotInstallationRow,
     LeadBriefRow,
     LeadRow,
     LensRow,
@@ -70,6 +69,8 @@ export class ChatbotWorkbenchService {
         private readonly knowledgeGaps: KnowledgeGapsService,
         private readonly modules: ModulesService,
         private readonly staff: StaffDirectoryService,
+        private readonly work: WorkItemsActivityService,
+        private readonly installs: InstallationOperationsService,
     ) {}
 
     /** The selected installation's customer conversations with activity and capture figures. */
@@ -211,16 +212,10 @@ export class ChatbotWorkbenchService {
     /** Multiple installations each use their own agent; a single installation also includes legacy Chatbot agents. */
     private async agentIds(request: ChatbotOverviewRequest): Promise<Array<string>> {
         if (request.installationId !== null && request.installationId !== undefined) {
-            const installations = await readFrom(this.entityManager, ModuleInstallationEntity, "m", ["id", "agent_id"])
-                .where("m.workspace_id = :workspaceId AND m.module_key = 'chatbot'", {
-                    workspaceId: request.workspaceId,
-                })
-                .orderBy("m.created_at")
-                .limit(100)
-                .getRawMany<ChatbotInstallationRow>()
+            const installations = await this.installs.agentLinksOf(request.workspaceId, "chatbot", 100)
             const own = installations.find((row) => row.id === request.installationId)
             if (own === undefined) return []
-            if (installations.length > 1) return own.agent_id === null ? [] : [own.agent_id]
+            if (installations.length > 1) return own.agentId === null ? [] : [own.agentId]
         }
         const agents = await readFrom(this.entityManager, AgentEntity, "a", ["id"])
             .where("a.workspace_id = :workspaceId AND a.module = 'chatbot'", { workspaceId: request.workspaceId })
@@ -231,18 +226,6 @@ export class ChatbotWorkbenchService {
 
     /** The customer-reply work items waiting for a decision, oldest first. */
     private waiting(workspaceId: string): Promise<Array<WaitingRow>> {
-        return readFrom(this.entityManager, WorkItemEntity, "w", [
-            "id",
-            "subject_id",
-            "proposal",
-            "assigned_staff_id",
-            "created_at",
-        ])
-            .where("w.workspace_id = :workspaceId AND w.action = 'reply_customer' AND w.status = 'waiting_decision'", {
-                workspaceId,
-            })
-            .orderBy("w.created_at")
-            .limit(200)
-            .getRawMany<WaitingRow>()
+        return this.work.waitingReplies(workspaceId, 200)
     }
 }

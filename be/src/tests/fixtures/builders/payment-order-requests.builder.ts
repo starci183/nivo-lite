@@ -1,5 +1,8 @@
 import type { PayableOrder } from "@modules/domain/billing"
-import { PaymentOrderRequestEntity } from "@modules/domain/payment-order-requests"
+import { paymentOrderRequestsEntities } from "@modules/domain/payment-order-requests"
+
+const [PaymentOrderRequestEntity] = paymentOrderRequestsEntities
+type PaymentOrderRequestEntity = InstanceType<typeof PaymentOrderRequestEntity>
 
 export const PAYLOAD = { requestId: "request-1", workspaceId: "ws-1" }
 /** A stored request as the specs write it. */

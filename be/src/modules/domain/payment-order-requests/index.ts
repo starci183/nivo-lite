@@ -9,4 +9,4 @@ export { PAYMENT_ORDER_REQUESTS_ERROR_KINDS } from "./errors/payment-order-reque
 export { PAYMENT_ORDER_REQUESTS_MESSAGES } from "./messages/payment-order-requests.messages"
 export { PaymentOrderRequestsModule } from "./payment-order-requests.module"
 export { PaymentOrderRequestsService } from "./payment-order-requests.service"
-export { PaymentOrderRequestEntity, paymentOrderRequestsEntities } from "./persistence/entities"
+export { paymentOrderRequestsEntities } from "./persistence/entities"

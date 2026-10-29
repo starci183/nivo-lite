@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import { ContentItemsError, ContentItemsErrorCode } from "./errors/content-items.error"
 import type {
     AgentDraft,
@@ -12,7 +12,7 @@ import type {
     ScheduleView,
     ScheduledChannelMark,
 } from "./content-items.contracts"
-import { ISO_TEXT, draftRefOf, returnedRows } from "./persistence/content-item.projection"
+import { ISO_TEXT, draftRefOf } from "./persistence/content-item.projection"
 import type { DueChannelProjection, ScheduleProjection } from "./persistence/content-item.projection"
 import { ContentItemEntity } from "./persistence/entities"
 
@@ -76,10 +76,9 @@ export class ContentItemsService {
             .setParameter("evidence", idea.evidence)
             .returning("id")
             .execute()
-        const [row] = returnedRows(inserted.raw)
-        const id: unknown = row === undefined ? undefined : Reflect.get(row, "id")
-        if (typeof id !== "string") throw new ContentItemsError({ code: ContentItemsErrorCode.NotWritten })
-        return id
+        const [row] = returnedRows(inserted.raw, rowShape({ id: "string" }))
+        if (row === undefined) throw new ContentItemsError({ code: ContentItemsErrorCode.NotWritten })
+        return row.id
     }
 
     /** Stores a post an agent drafted, with its images, as a `draft`; answers the snapshot its submission is checked against. */
@@ -114,7 +113,7 @@ export class ContentItemsService {
             })
             .returning("id, variants, channels")
             .execute()
-        const [row] = returnedRows(inserted.raw)
+        const [row] = returnedRows(inserted.raw, rowShape({ id: "string", variants: "json", channels: "json" }))
         const stored = row === undefined ? undefined : draftRefOf(row)
         if (stored === undefined) throw new ContentItemsError({ code: ContentItemsErrorCode.NotWritten })
         return stored

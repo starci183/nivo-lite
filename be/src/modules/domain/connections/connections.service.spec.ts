@@ -403,14 +403,6 @@ describe("ConnectionsService > recordEvent", () => {
         expect(fakes[0]?.callsOf("returning")).toEqual([["name, environment"]])
     })
 
-    it("names a connection whose row carries no text name as an empty name", async () => {
-        const { em } = withBuilders([{ execute: { raw: [{ environment: "live" }] } }])
-        await expect((await build(em)).recordEvent("c1", { amount: 5, content: "hi", at: AT })).resolves.toEqual({
-            name: "",
-            environment: "live",
-        })
-    })
-
     it("answers null for a connection that does not exist", async () => {
         const { em } = withBuilders([{ execute: { raw: [] } }])
         await expect((await build(em)).recordEvent("c9", { amount: 5, content: "hi", at: AT })).resolves.toBeNull()

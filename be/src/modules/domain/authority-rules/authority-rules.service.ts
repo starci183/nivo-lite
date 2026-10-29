@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AuthorityActionsService } from "@modules/domain/authority-actions"
-import { ModuleInstallationEntity } from "@modules/domain/module-installations"
+import { InstallationOperationsService } from "@modules/domain/module-installations"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     AuthorityRuleRecord,
@@ -91,6 +91,7 @@ export class AuthorityRulesService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly actions: AuthorityActionsService,
+        private readonly operations: InstallationOperationsService,
     ) {}
 
     /**
@@ -112,20 +113,8 @@ export class AuthorityRulesService {
         const rule = toRule(stored)
         if (rule.mode !== "auto") return rule
         // The handling instance: the named one, else the oldest of the module.
-        const installed = this.entityManager
-            .createQueryBuilder(ModuleInstallationEntity, "i")
-            .select("i.operating_mode", "operatingMode")
-            .where("i.workspace_id = :workspaceId AND i.module_key = :department", {
-                workspaceId: scope.workspaceId,
-                department: stored.department,
-            })
-        if (installationId !== null) installed.andWhere("i.id = :installationId", { installationId })
-        const mode = await installed
-            .orderBy("i.created_at", "ASC")
-            .addOrderBy("i.id", "ASC")
-            .limit(1)
-            .getRawOne<{ operatingMode: string }>()
-        return applyOperatingMode(rule, mode?.operatingMode)
+        const mode = await this.operations.operatingModeOf(scope.workspaceId, stored.department, installationId)
+        return applyOperatingMode(rule, mode ?? undefined)
     }
 
     /** The approval side of the rule of an action, or null when the owner granted none. */

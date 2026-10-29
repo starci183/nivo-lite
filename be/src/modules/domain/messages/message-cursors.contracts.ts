@@ -1,0 +1,10 @@
+/** One message as a receipt measures it: its id and its creation instant in the database's own text. */
+export interface MessageCursor {
+    /** The message id. */
+    readonly id: string
+    /** The creation instant, in the database's own text, so no precision is lost. */
+    readonly createdAt: string
+}
+
+/** A message position, or null when there is none. */
+export type OptionalMessageCursor = MessageCursor | null

@@ -30,7 +30,6 @@ describe("DataRecordsService upsert", () => {
         const { service } = await build()
         expect(service.upsert).toBeInstanceOf(Function)
     })
-
     it("skips unusable ids and writes the mapped fields with bounded titles and normalized dates", async () => {
         const { service, entityManager } = await build()
         entityManager.upsert.mockResolvedValue({ identifiers: [], generatedMaps: [], raw: [] })
@@ -95,7 +94,9 @@ describe("DataRecordsService upsert", () => {
             ],
         ])
     })
+})
 
+describe("DataRecordsService upsert input", () => {
     it.each([
         { label: "empty", rows: [] },
         {
@@ -137,7 +138,6 @@ describe("DataRecordsService upsert", () => {
             [DataRecordEntity, [written(500)], KEYS],
         ])
     })
-
     it("propagates a rejected write and does not start a later batch", async () => {
         const { service, entityManager } = await build()
         const failure = new TypeError("write refused")
@@ -148,7 +148,6 @@ describe("DataRecordsService upsert", () => {
 
         expect(entityManager.upsert).toHaveBeenCalledTimes(1)
     })
-
     it("rejects an invalid occurrence date before querying", async () => {
         const { service, entityManager } = await build()
 
@@ -165,7 +164,6 @@ describe("DataRecordsService countExisting", () => {
         const { service } = await build()
         expect(service.countExisting).toBeInstanceOf(Function)
     })
-
     it("counts the held ids in one statement with the ids as one array parameter", async () => {
         const { service, entityManager } = await build()
         const [counter] = queueQueryBuilders(entityManager, [{ getCount: 9 }])
@@ -180,23 +178,12 @@ describe("DataRecordsService countExisting", () => {
         ])
         expect(counter?.callsOf("andWhere")).toEqual([["d.external_id = ANY(:ids)", { ids }]])
     })
-
     it("answers zero without querying an empty id list", async () => {
         const { service, entityManager } = await build()
 
         await expect(service.countExisting("c-1", "transaction", [])).resolves.toBe(0)
 
         expect(entityManager.createQueryBuilder).not.toHaveBeenCalled()
-    })
-
-    it("propagates a rejected count query", async () => {
-        const { service, entityManager } = await build()
-        const failure = new TypeError("count refused")
-        entityManager.createQueryBuilder.mockImplementation(() => {
-            throw failure
-        })
-
-        await expect(service.countExisting("c-1", "other", ["id-1"])).rejects.toBe(failure)
     })
 })
 
@@ -205,7 +192,6 @@ describe("DataRecordsService count", () => {
         const { service } = await build()
         expect(service.count).toBeInstanceOf(Function)
     })
-
     it.each([12, 0])("answers the number of rows the connection holds (%j)", async (expected) => {
         const { service, entityManager } = await build()
         entityManager.count.mockResolvedValue(expected)

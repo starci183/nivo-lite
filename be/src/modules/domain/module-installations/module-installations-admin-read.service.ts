@@ -33,8 +33,14 @@ export interface InstallationAdminRow {
     readonly processor: string | null
 }
 
+/** The settings of an installation, of which only the reply processor is read here. */
+interface ProcessorSettings {
+    /** The reply processor, when the owner set one. */
+    readonly processor?: unknown
+}
+
 /** The text of the processor setting, or null when it is not text. */
-const processorOf = (settings: { readonly processor?: unknown }): string | null =>
+const processorOf = (settings: ProcessorSettings): string | null =>
     typeof settings.processor === "string" ? settings.processor : null
 
 @Injectable()

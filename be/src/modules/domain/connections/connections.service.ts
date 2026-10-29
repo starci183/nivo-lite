@@ -6,7 +6,7 @@ import { ConnectorInterestService } from "@modules/domain/connector-interest"
 import type { OptionalStoredSecret } from "@modules/domain/connection-secrets"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { AgentConnectionEntity } from "@modules/domain/agent-connections"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ok, refused } from "@modules/platform/primitives"
@@ -47,7 +47,7 @@ import { ConnectionsLogEvent } from "./connections.log-events"
 import type { ConnectionsOptions } from "./connections.options"
 import { ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
 import { ConnectionEntity } from "./persistence/entities"
-import { returnedIds, returnedRows, projectConnections } from "./persistence/connection.projection"
+import { returnedIds, projectConnections } from "./persistence/connection.projection"
 import type { ConnectionProjection } from "./persistence/connection.projection"
 
 /** The most rows any list of connections returns. */
@@ -67,9 +67,9 @@ export class ConnectionsService {
         @InjectConnectionsOptions() options: ConnectionsOptions,
         @InjectLogger() private readonly logger: Logger,
         private readonly secrets: ConnectionSecretsService,
+        private readonly seats: WorkspaceMemberSeatsService,
         private readonly interest: ConnectorInterestService,
         private readonly upkeep: ConnectionsUpkeepService,
-        private readonly seats: WorkspaceMemberSeatsService,
     ) {
         this.siteUrl = options.publicSiteUrl ?? options.siteUrl
         this.providerUrl = options.publicApiUrl ?? options.publicSiteUrl
@@ -332,13 +332,9 @@ export class ConnectionsService {
             .setParameters({ at: event.at, first: JSON.stringify(first) })
             .returning("name, environment")
             .execute()
-        const [row] = returnedRows(recorded.raw)
+        const [row] = returnedRows(recorded.raw, rowShape({ name: "string", environment: "string?" }))
         if (row === undefined) return null
-        const name: unknown = Reflect.get(row, "name")
-        return {
-            name: typeof name === "string" ? name : "",
-            environment: Reflect.get(row, "environment") === "test" ? "test" : "live",
-        }
+        return { name: row.name, environment: row.environment === "test" ? "test" : "live" }
     }
 
     /** The wizard polling: has the first event arrived for this connection (manager). */
