@@ -6,8 +6,11 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ApprovalRequestsReadService } from "./approval-requests-read.service"
 import { ApprovalRequestEntity } from "./persistence/entities"
 
-const requestOf = (record: Pick<ApprovalRequestEntity, "id" | "status" | "resolvedBy">): ApprovalRequestEntity =>
-    Object.assign(new ApprovalRequestEntity(), record)
+const requestOf = (
+    id: string,
+    status: ApprovalRequestEntity["status"],
+    resolvedBy: string | null,
+): ApprovalRequestEntity => Object.assign(new ApprovalRequestEntity(), { id, status, resolvedBy })
 
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
@@ -30,9 +33,9 @@ describe("ApprovalRequestsReadService", () => {
                 find: [
                     ApprovalRequestEntity,
                     [
-                        requestOf({ id: "r1", status: "approved", resolvedBy: "m1" }),
-                        requestOf({ id: "r2", status: "expired", resolvedBy: null }),
-                        requestOf({ id: "r3", status: "pending", resolvedBy: null }),
+                        requestOf("r1", "approved", "m1"),
+                        requestOf("r2", "expired", null),
+                        requestOf("r3", "pending", null),
                     ],
                 ],
             })
