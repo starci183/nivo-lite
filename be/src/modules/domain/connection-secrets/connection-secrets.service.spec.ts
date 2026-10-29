@@ -21,7 +21,12 @@ const textLike: unknown = expect.stringContaining("Error")
 const hex64: unknown = expect.stringMatching(/^[a-f0-9]{64}$/u)
 
 /** What the owner of a connection tells the secret check about it. */
-const factsOf = builder<ConnectionSecretFacts>({ id: "c-1", workspaceId: "ws-1", provider: "telegram", status: "connected" })
+const factsOf = builder<ConnectionSecretFacts>({
+    id: "c-1",
+    workspaceId: "ws-1",
+    provider: "telegram",
+    status: "connected",
+})
 
 /** One stored secret of a connection. */
 const storedOf = entityRowBuilder<ConnectionSecretEntity>({
@@ -131,7 +136,12 @@ describe("ConnectionSecretsService", () => {
 
 const registerOpenFor = () => {
     it("opens the credential of a connected connection of the provider", async () => {
-        const em = mockEntityManager({ findOne: [ConnectionSecretEntity, storedOf({ ciphertext: sealSecret(KEY, "123:token"), webhookSecret: "hook-secret" })] })
+        const em = mockEntityManager({
+            findOne: [
+                ConnectionSecretEntity,
+                storedOf({ ciphertext: sealSecret(KEY, "123:token"), webhookSecret: "hook-secret" }),
+            ],
+        })
 
         await expect((await build(em)).openFor(factsOf(), "telegram")).resolves.toEqual({
             kind: "ok",
@@ -140,7 +150,10 @@ const registerOpenFor = () => {
         expect(evaluatedCalls(em.findOne.mock.calls)).toEqual([
             [
                 "ConnectionSecretEntity",
-                { select: { ciphertext: true, webhookSecret: true, tokenExpiresAt: true }, where: { connectionId: "c-1" } },
+                {
+                    select: { ciphertext: true, webhookSecret: true, tokenExpiresAt: true },
+                    where: { connectionId: "c-1" },
+                },
             ],
         ])
     })
@@ -234,7 +247,9 @@ const registerLease = () => {
     })
 
     it("answers the ids of the connections whose token ends before the horizon", async () => {
-        const em = mockEntityManager({ find: [ConnectionSecretEntity, [storedOf(), storedOf({ connectionId: "c-2" })]] })
+        const em = mockEntityManager({
+            find: [ConnectionSecretEntity, [storedOf(), storedOf({ connectionId: "c-2" })]],
+        })
         const horizon = new Date("2026-10-12T17:00:00.000Z")
 
         await expect((await build(em)).expiringBefore(horizon, 500)).resolves.toEqual(["c-1", "c-2"])
