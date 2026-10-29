@@ -18,7 +18,6 @@ import {
     claimOf,
     effectsOf,
     eventOf,
-    expectUntouched,
     feeWritten,
     found,
     namesCleared,
@@ -113,6 +112,18 @@ const build = async (steps: ReadonlyArray<QueryBuilderAnswers> = [], settings = 
         trace: () => traceOf(fakes),
         sets: () => fakes.map((fake) => evaluatedValues(fake.callsOf("set")[0]?.[0])),
     }
+}
+
+interface MockCalls {
+    readonly calls: ReadonlyArray<unknown>
+}
+interface Called {
+    readonly mock: MockCalls
+}
+
+/** Every given double was never called. */
+const expectUntouched = (...doubles: ReadonlyArray<Called>): void => {
+    for (const double of doubles) expect(double.mock.calls).toEqual([])
 }
 
 describe("BookingEffectsService", () => {
