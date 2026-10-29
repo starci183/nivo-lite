@@ -9,7 +9,7 @@ import { inventoryItemOf, inventoryLocationOf, inventoryMovementOf } from "@test
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { WorkItemEntity } from "@modules/domain/work-items"
+import { WorkItemsDecisionsReadService } from "@modules/domain/work-items"
 import { InventoryLogEvent } from "./inventory.log-events"
 import { InventoryWorkbenchService } from "./inventory-workbench.service"
 import {
@@ -29,7 +29,7 @@ const MEMBER = { userId: "u-1", workspaceId: "ws-1", staffId: null, displayName:
 const item = (id: string): InventoryItemEntity =>
     inventoryItemOf({ id, sku: id, name: id, unit: "piece", costVnd: "0" })
 
-/** The reads of one workbench: a stub for every entity the workbench lists, and the two table-name reads (orders, work). */
+/** The reads of one workbench: a stub for every entity the workbench lists, and the table-name read of the orders. */
 const workbenchReads = (
     stockOuts: ReadonlyArray<InventoryMovementEntity>,
     items: ReadonlyArray<InventoryItemEntity> = [],
@@ -47,8 +47,8 @@ const workbenchReads = (
             [InventoryMovementEntity, stockOuts],
         ],
     })
-    const [orders, work] = queueQueryBuilders(em, [{ getRawMany: [] }, { getRawMany: [] }])
-    return { em, orders, work }
+    const [orders] = queueQueryBuilders(em, [{ getRawMany: [] }])
+    return { em, orders }
 }
 
 const movementRow = (
@@ -60,6 +60,8 @@ const build = async (entityManager: MockEntityManager, role: "owner" | "staff") 
     members.require.mockResolvedValue({ ...MEMBER, role })
     const clock = new FakeClock(NOW)
     const logger = mock<Logger>()
+    const decisions = mock<WorkItemsDecisionsReadService>()
+    decisions.waiting.mockResolvedValue([])
     const moduleRef = await Test.createTestingModule({
         providers: [
             InventoryWorkbenchService,
@@ -67,18 +69,19 @@ const build = async (entityManager: MockEntityManager, role: "owner" | "staff") 
             { provide: CLOCK, useValue: clock },
             { provide: LOGGER, useValue: logger },
             { provide: WorkspaceMembersService, useValue: members },
+            { provide: WorkItemsDecisionsReadService, useValue: decisions },
         ],
     }).compile()
-    return { service: moduleRef.get(InventoryWorkbenchService), members, logger }
+    return { service: moduleRef.get(InventoryWorkbenchService), members, logger, decisions }
 }
 
 describe("InventoryWorkbenchService", () => {
     it("reads the workbench of a manager with the stock-outs of the last seven days", async () => {
-        const { em, orders, work } = workbenchReads(
+        const { em, orders } = workbenchReads(
             [movementRow({ itemId: "i-1" }), movementRow({ itemId: "i-2" })],
             [item("i-1"), item("i-2")],
         )
-        const { service, members } = await build(em, "owner")
+        const { service, members, decisions } = await build(em, "owner")
 
         const view = await service.workbench("u-1", "ws-1")
 
@@ -96,8 +99,7 @@ describe("InventoryWorkbenchService", () => {
         })
         expect(orders?.callsOf("where")).toEqual([["p.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
         expect(orders?.callsOf("limit")).toEqual([[200]])
-        expect(em.createQueryBuilder).toHaveBeenCalledWith(WorkItemEntity, "w")
-        expect(work?.callsOf("limit")).toEqual([[100]])
+        expect(decisions.waiting).toHaveBeenCalledWith("ws-1", "inventory", 100)
     })
 
     it("answers a member who cannot manage, and no stock-out figure when that history cannot be read", async () => {

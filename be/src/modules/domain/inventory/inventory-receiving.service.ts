@@ -8,6 +8,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InventoryError, InventoryErrorCode } from "./errors/inventory.error"
 import type { ReceivePoOutput, ReceivePoParams } from "./inventory-operations.contracts"
+import type { PoLine } from "./inventory.contracts"
 import { InventoryLocationsService } from "./inventory-locations.service"
 import { InventoryMovementsService } from "./inventory-movements.service"
 import { InventoryOrdersService } from "./inventory-orders.service"
@@ -109,15 +110,7 @@ export class InventoryReceivingService {
             value += qty * cost
             touched.push(line.itemId)
             await callDbFunction(this.entityManager, "public.inventory_receive_po_line", [line.id, qty, cost])
-            if (Math.abs(cost - line.unitCost) >= PRICE_CHANGE_MIN) {
-                priceChanges.push(
-                    this.text("inventory.priceChange", {
-                        name: line.itemName ?? this.text("inventory.itemFallback", {}),
-                        from: formatMoney(line.unitCost),
-                        to: formatMoney(cost),
-                    }),
-                )
-            }
+            if (Math.abs(cost - line.unitCost) >= PRICE_CHANGE_MIN) priceChanges.push(this.priceChangeNote(line, cost))
         })
         if (touched.length === 0) {
             await callDbFunction(this.entityManager, "public.inventory_discard_receipt", [receiptId])
@@ -144,6 +137,14 @@ export class InventoryReceivingService {
             await this.handToAccounting(workspaceId, po.supplier?.name ?? null, po.poNo, invoiceNo, value)
         await this.movements.replenishLater(workspaceId, touched)
         return { status, received: touched.length, priceChanges, payableVnd: Math.round(value), handedToAccounting }
+    }
+
+    private priceChangeNote(line: PoLine, cost: number): string {
+        return this.text("inventory.priceChange", {
+            name: line.itemName ?? this.text("inventory.itemFallback", {}),
+            from: formatMoney(line.unitCost),
+            to: formatMoney(cost),
+        })
     }
 
     private async accountingInstalled(workspaceId: string): Promise<boolean> {
