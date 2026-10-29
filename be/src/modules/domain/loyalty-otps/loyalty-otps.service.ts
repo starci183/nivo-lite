@@ -46,8 +46,9 @@ export class LoyaltyOtpsService {
             codeHash: this.hashCode(customerId, code),
             expiresAt: new Date(expiresIso),
         })
-        const id = (result.identifiers[0] as { readonly id?: string } | undefined)?.id
-        if (id === undefined) throw new LoyaltyOtpsError({ code: LoyaltyOtpsErrorCode.NotIssued })
+        const [identifier] = result.identifiers
+        const id: unknown = identifier?.id
+        if (typeof id !== "string") throw new LoyaltyOtpsError({ code: LoyaltyOtpsErrorCode.NotIssued })
         return { id, code }
     }
 

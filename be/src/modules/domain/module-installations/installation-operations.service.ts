@@ -1,7 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { InstallationAgentLink } from "./installation-operations.contracts"
+import type {
+    InstallationAgentLink,
+    OptionalInstallationId,
+    OptionalOperatingMode,
+} from "./installation-operations.contracts"
 import { ModuleInstallationEntity } from "./persistence/entities"
 
 @Injectable()
@@ -16,8 +20,8 @@ export class InstallationOperationsService {
     async operatingModeOf(
         workspaceId: string,
         moduleKey: string,
-        installationId: string | null,
-    ): Promise<string | null> {
+        installationId: OptionalInstallationId,
+    ): Promise<OptionalOperatingMode> {
         const installed = this.entityManager
             .createQueryBuilder(ModuleInstallationEntity, "i")
             .select("i.operating_mode", "operatingMode")

@@ -4,6 +4,7 @@ import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import { IsNull } from "typeorm"
 import { ConversationsService } from "@modules/domain/conversations"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { INBOX } from "@modules/platform/inbox"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
@@ -123,13 +124,9 @@ describe("TelegramInboxService deferred effects", () => {
             where: { provider: "telegram", deliveryId: "c-1:77", processedAt: IsNull() },
             lock: { mode: "pessimistic_write" },
         })
-        const [, , set] = tx.em.update.mock.calls[0] as [unknown, unknown, { processedAt: () => string }]
-        expect(tx.em.update).toHaveBeenCalledWith(
-            TelegramInboxEntity,
-            { id: "receipt-1" },
-            { processedAt: set.processedAt },
-        )
-        expect(set.processedAt()).toBe("now()")
+        expect(evaluatedCalls(tx.em.update.mock.calls, 2)).toEqual([
+            ["TelegramInboxEntity", { id: "receipt-1" }, { processedAt: "now()" }],
+        ])
         expect(tx.commits).toBe(1)
     })
 
