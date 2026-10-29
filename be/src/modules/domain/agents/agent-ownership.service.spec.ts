@@ -35,24 +35,22 @@ interface SeatWorld {
     readonly counted?: number
 }
 
-const WORLD = new WeakMap<MockEntityManager, SeatWorld>()
-
-/** The manager, with the member reads it stands for. */
-const seated = (em: MockEntityManager, world: SeatWorld): MockEntityManager => {
-    WORLD.set(em, world)
-    return em
+/** Who sits in the department rooms of the workspace. */
+interface SeatRoom {
+    readonly userId: string
+    readonly key: string
 }
 
-/** The department rooms of the workspace: who sits in them and what they are called. */
-const roomsOf = (seatRooms: ReadonlyArray<{ userId: string; key: string }> = [{ userId: "u-lan", key: "sales" }]) =>
-    mock<OfficeRoomDirectoryService>({
+const build = async (
+    entityManager: MockEntityManager,
+    world: SeatWorld = {},
+    seatRooms: ReadonlyArray<SeatRoom> = [{ userId: "u-lan", key: "sales" }],
+) => {
+    const rooms = mock<OfficeRoomDirectoryService>({
         labelsOf: jest.fn(() => Promise.resolve([{ key: "sales", name: "Sales" }])),
         seatRoomsOf: jest.fn(() => Promise.resolve([...seatRooms])),
     })
-
-const build = async (entityManager: MockEntityManager, rooms: OfficeRoomDirectoryService = roomsOf()) => {
     const members = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(memberOf())) })
-    const world = WORLD.get(entityManager) ?? {}
     const seats = mock<WorkspaceMemberSeatsService>()
     seats.activeIdsAmong.mockResolvedValue([...(world.active ?? [])])
     seats.seatById.mockResolvedValue(world.seatById ?? null)
@@ -70,30 +68,32 @@ const build = async (entityManager: MockEntityManager, rooms: OfficeRoomDirector
             { provide: WorkspaceMemberDirectoryService, useValue: directory },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentOwnershipService), members, seats, directory }
+    return { service: moduleRef.get(AgentOwnershipService), members, seats, directory, rooms }
 }
 
-const OWNERSHIP = agentEntityOf({
-    id: "a1",
-    workspaceId: "w1",
-    name: "AI Sales",
-    ownerMemberId: "m-minh",
-    fallbackMemberId: "m-nam",
-    assignableRoles: ["owner", "manager"],
-    assignableRooms: ["sales"],
-    canTagAgentIds: ["a2"],
-})
+/** The agent the ownership scenarios start from, changed by what a scenario needs. */
+const ownershipOf = (changes: Partial<AgentEntity> = {}) =>
+    agentEntityOf({
+        id: "a1",
+        workspaceId: "w1",
+        name: "AI Sales",
+        ownerMemberId: "m-minh",
+        fallbackMemberId: "m-nam",
+        assignableRoles: ["owner", "manager"],
+        assignableRooms: ["sales"],
+        canTagAgentIds: ["a2"],
+        ...changes,
+    })
+
+const OWNERSHIP = ownershipOf()
 
 describe("AgentOwnershipService ownerOf", () => {
     it("answers the owner and the fallback while both are active", async () => {
-        const em = seated(
-            mockEntityManager({
-                findOne: [AgentEntity, OWNERSHIP],
-                query: [FIND_WORKSPACE_OWNER, ownerRow("m-nam")],
-            }),
-            { active: ["m-minh", "m-nam"] },
-        )
-        const { service, seats } = await build(em)
+        const em = mockEntityManager({
+            findOne: [AgentEntity, OWNERSHIP],
+            query: [FIND_WORKSPACE_OWNER, ownerRow("m-nam")],
+        })
+        const { service, seats } = await build(em, { active: ["m-minh", "m-nam"] })
 
         await expect(service.ownerOf("a1")).resolves.toEqual({ ownerMemberId: "m-minh", fallbackMemberId: "m-nam" })
         expect(em.findOne).toHaveBeenCalledWith(AgentEntity, { where: { id: "a1" } })
@@ -102,27 +102,27 @@ describe("AgentOwnershipService ownerOf", () => {
     })
 
     it("falls back when the owner left the workspace", async () => {
-        const em = seated(
-            mockEntityManager({ findOne: [AgentEntity, OWNERSHIP], query: [FIND_WORKSPACE_OWNER, ownerRow("m-nam")] }),
-            { active: ["m-nam"] },
-        )
-        const { service } = await build(em)
+        const em = mockEntityManager({
+            findOne: [AgentEntity, OWNERSHIP],
+            query: [FIND_WORKSPACE_OWNER, ownerRow("m-nam")],
+        })
+        const { service } = await build(em, { active: ["m-nam"] })
 
         await expect(service.ownerOf("a1")).resolves.toEqual({ ownerMemberId: "m-nam", fallbackMemberId: null })
     })
 
     it("falls back to the workspace owner when the owner and the fallback are both gone", async () => {
-        const em = seated(
-            mockEntityManager({ findOne: [AgentEntity, OWNERSHIP], query: [FIND_WORKSPACE_OWNER, ownerRow("m-ceo")] }),
-            { active: [] },
-        )
-        const { service } = await build(em)
+        const em = mockEntityManager({
+            findOne: [AgentEntity, OWNERSHIP],
+            query: [FIND_WORKSPACE_OWNER, ownerRow("m-ceo")],
+        })
+        const { service } = await build(em, { active: [] })
 
         await expect(service.ownerOf("a1")).resolves.toEqual({ ownerMemberId: "m-ceo", fallbackMemberId: null })
     })
 
     it("asks the active list only about the members the agent names", async () => {
-        const legacy = { ...OWNERSHIP, ownerMemberId: null, fallbackMemberId: null }
+        const legacy = ownershipOf({ ownerMemberId: null, fallbackMemberId: null })
         const em = mockEntityManager({
             findOne: [AgentEntity, legacy],
             query: [FIND_WORKSPACE_OWNER, ownerRow("m-ceo")],
@@ -179,18 +179,23 @@ describe("AgentOwnershipService canTag", () => {
     })
 })
 
-const OPEN_AGENT = agentEntityOf({
-    id: "a1",
-    workspaceId: "w1",
-    assignableRoles: ["owner", "manager"],
-    assignableRooms: ["sales"],
-})
+/** The agent a member may be handed work for, open to the owner and manager roles and the sales room. */
+const openAgentOf = (changes: Partial<AgentEntity> = {}) =>
+    agentEntityOf({
+        id: "a1",
+        workspaceId: "w1",
+        assignableRoles: ["owner", "manager"],
+        assignableRooms: ["sales"],
+        ...changes,
+    })
+
+const OPEN_AGENT = openAgentOf()
 const LAN = seatOf({ memberId: "m-lan", userId: "u-lan", role: "staff" })
 
 describe("AgentOwnershipService canAssign", () => {
     it("admits a staff member who sits in an open room", async () => {
-        const em = seated(mockEntityManager({ findOne: [AgentEntity, OPEN_AGENT] }), { seatById: LAN })
-        const { service, seats } = await build(em)
+        const em = mockEntityManager({ findOne: [AgentEntity, OPEN_AGENT] })
+        const { service, seats } = await build(em, { seatById: LAN })
 
         await expect(service.canAssign("m-lan", "a1")).resolves.toBe(true)
         expect(em.findOne).toHaveBeenCalledWith(AgentEntity, { where: { id: "a1" } })
@@ -198,17 +203,17 @@ describe("AgentOwnershipService canAssign", () => {
     })
 
     it("refuses once the room was revoked from the agent", async () => {
-        const em = seated(mockEntityManager({ findOne: [AgentEntity, { ...OPEN_AGENT, assignableRooms: [] }] }), {
-            seatById: LAN,
-        })
-        const { service } = await build(em)
+        const em = mockEntityManager({ findOne: [AgentEntity, openAgentOf({ assignableRooms: [] })] })
+        const { service } = await build(em, { seatById: LAN })
 
         await expect(service.canAssign("m-lan", "a1")).resolves.toBe(false)
     })
 
     it("refuses a member or agent that does not exist", async () => {
-        const absentMember = seated(mockEntityManager({ findOne: [AgentEntity, OPEN_AGENT] }), { seatById: null })
-        await expect((await build(absentMember)).service.canAssign("ghost", "a1")).resolves.toBe(false)
+        const absentMember = mockEntityManager({ findOne: [AgentEntity, OPEN_AGENT] })
+        await expect((await build(absentMember, { seatById: null })).service.canAssign("ghost", "a1")).resolves.toBe(
+            false,
+        )
         const { service } = await build(mockEntityManager({ findOne: [AgentEntity, null] }))
 
         await expect(service.canAssign("m-lan", "ghost")).resolves.toBe(false)
@@ -217,7 +222,7 @@ describe("AgentOwnershipService canAssign", () => {
 
 describe("AgentOwnershipService memberIdOf", () => {
     it("answers the member row of the signed-in account", async () => {
-        const { service, members, directory } = await build(seated(mockEntityManager(), { idOfUser: "m-minh" }))
+        const { service, members, directory } = await build(mockEntityManager(), { idOfUser: "m-minh" })
 
         await expect(service.memberIdOf("u1", "w1")).resolves.toBe("m-minh")
         expect(members.require).toHaveBeenCalledWith("u1", "w1")
@@ -225,7 +230,7 @@ describe("AgentOwnershipService memberIdOf", () => {
     })
 
     it("refuses an account whose row cannot be read back", async () => {
-        const { service } = await build(seated(mockEntityManager(), { idOfUser: null }))
+        const { service } = await build(mockEntityManager(), { idOfUser: null })
 
         await expect(service.memberIdOf("u1", "w1")).rejects.toMatchObject({
             code: AgentsErrorCode.OwnershipInvalid,
@@ -244,21 +249,22 @@ const ownershipWorld = (
     owner: string | null,
     agent: AgentEntity = OWNERSHIP,
 ) => {
-    const em = seated(
-        mockEntityManager({
-            findOne: [AgentEntity, agent],
-            find: [AgentEntity, [TARGET]],
-            query: [FIND_WORKSPACE_OWNER, ownerRow(owner)],
-        }),
-        { seatsByIds: seats, active: seats.filter((seat) => seat.status === "active").map((seat) => seat.memberId) },
-    )
-    return { em, rooms: roomsOf([{ userId: "u-minh", key: "sales" }]) }
+    const em = mockEntityManager({
+        findOne: [AgentEntity, agent],
+        find: [AgentEntity, [TARGET]],
+        query: [FIND_WORKSPACE_OWNER, ownerRow(owner)],
+    })
+    const world: SeatWorld = {
+        seatsByIds: seats,
+        active: seats.filter((seat) => seat.status === "active").map((seat) => seat.memberId),
+    }
+    return { em, world, seatRooms: [{ userId: "u-minh", key: "sales" }] }
 }
 
 describe("AgentOwnershipService ownershipOf", () => {
     it("shows the owner, the fallback, who may give the agent work and whom it may tag", async () => {
-        const { em, rooms } = ownershipWorld([MINH, NAM], "m-nam")
-        const { service, members } = await build(em, rooms)
+        const { em, world, seatRooms } = ownershipWorld([MINH, NAM], "m-nam")
+        const { service, members, rooms } = await build(em, world, seatRooms)
 
         await expect(service.ownershipOf("u1", "w1", "a1")).resolves.toEqual({
             agentId: "a1",
@@ -276,8 +282,8 @@ describe("AgentOwnershipService ownershipOf", () => {
     })
 
     it("shows a disabled owner as inactive and answers through the fallback", async () => {
-        const { em, rooms } = ownershipWorld([{ ...MINH, status: "disabled" }, NAM], "m-nam")
-        const { service } = await build(em, rooms)
+        const { em, world, seatRooms } = ownershipWorld([{ ...MINH, status: "disabled" }, NAM], "m-nam")
+        const { service } = await build(em, world, seatRooms)
 
         await expect(service.ownershipOf("u1", "w1", "a1")).resolves.toMatchObject({
             owner: { memberId: "m-minh", active: false },
@@ -286,8 +292,8 @@ describe("AgentOwnershipService ownershipOf", () => {
     })
 
     it("shows no card for a member who left", async () => {
-        const { em, rooms } = ownershipWorld([NAM], "m-nam")
-        const { service } = await build(em, rooms)
+        const { em, world, seatRooms } = ownershipWorld([NAM], "m-nam")
+        const { service } = await build(em, world, seatRooms)
 
         await expect(service.ownershipOf("u1", "w1", "a1")).resolves.toMatchObject({
             owner: null,
@@ -297,8 +303,8 @@ describe("AgentOwnershipService ownershipOf", () => {
     })
 
     it("refuses when the whole chain is gone", async () => {
-        const { em, rooms } = ownershipWorld([], null)
-        const { service } = await build(em, rooms)
+        const { em, world, seatRooms } = ownershipWorld([], null)
+        const { service } = await build(em, world, seatRooms)
 
         await expect(service.ownershipOf("u1", "w1", "a1")).rejects.toMatchObject({
             code: AgentsErrorCode.OwnerUnavailable,
@@ -306,7 +312,7 @@ describe("AgentOwnershipService ownershipOf", () => {
     })
 
     it("refuses an agent of another workspace", async () => {
-        const other = { ...OWNERSHIP, workspaceId: "w2" }
+        const other = ownershipOf({ workspaceId: "w2" })
         const { service } = await build(mockEntityManager({ findOne: [AgentEntity, other] }))
 
         await expect(service.ownershipOf("u1", "w1", "a1")).rejects.toMatchObject({
@@ -331,19 +337,25 @@ const CHANGE = {
     canTagAgentIds: ["a2", "a2"],
 }
 /** A manager world: both owners are active members, the tag target exists, and the update lands on one row. */
-const writable = (counts: { members?: number; agents?: number; affected?: number } = {}) =>
-    seated(
-        mockEntityManager({
-            count: [AgentEntity, counts.agents ?? 1],
-            update: [AgentEntity, { affected: counts.affected ?? 1 }],
-        }),
-        { counted: counts.members ?? 2 },
-    )
+interface WritableCounts {
+    readonly members?: number
+    readonly agents?: number
+    readonly affected?: number
+}
+
+const writable = (counts: WritableCounts = {}) =>
+    mockEntityManager({
+        count: [AgentEntity, counts.agents ?? 1],
+        update: [AgentEntity, { affected: counts.affected ?? 1 }],
+    })
+
+/** The active members the member read counts in that scenario. */
+const countedOf = (counts: WritableCounts = {}): SeatWorld => ({ counted: counts.members ?? 2 })
 
 describe("AgentOwnershipService setOwnership", () => {
     it("replaces the ownership of an agent with each id once; a manager only", async () => {
         const em = writable()
-        const { service, members, seats } = await build(em)
+        const { service, members, seats } = await build(em, countedOf())
 
         await service.setOwnership("u1", "w1", "a1", CHANGE)
 
@@ -367,7 +379,7 @@ describe("AgentOwnershipService setOwnership", () => {
 
     it("accepts an owner who is also the fallback and an empty tag list without counting agents", async () => {
         const em = writable({ members: 1 })
-        const { service, seats } = await build(em)
+        const { service, seats } = await build(em, countedOf({ members: 1 }))
 
         await service.setOwnership("u1", "w1", "a1", { ...CHANGE, fallbackMemberId: "m-minh", canTagAgentIds: [] })
 
@@ -376,7 +388,7 @@ describe("AgentOwnershipService setOwnership", () => {
     })
 
     it("refuses an owner who is not an active member of the workspace", async () => {
-        const { service } = await build(writable({ members: 1 }))
+        const { service } = await build(writable({ members: 1 }), countedOf({ members: 1 }))
 
         await expect(service.setOwnership("u1", "w1", "a1", CHANGE)).rejects.toMatchObject({
             code: AgentsErrorCode.OwnershipInvalid,
@@ -385,7 +397,7 @@ describe("AgentOwnershipService setOwnership", () => {
     })
 
     it("refuses a count the database cannot answer", async () => {
-        const { service } = await build(writable({ members: 0 }))
+        const { service } = await build(writable({ members: 0 }), countedOf({ members: 0 }))
 
         await expect(service.setOwnership("u1", "w1", "a1", CHANGE)).rejects.toMatchObject({
             params: { field: "owner" },
@@ -395,7 +407,7 @@ describe("AgentOwnershipService setOwnership", () => {
 
 describe("AgentOwnershipService setOwnership refusals", () => {
     it("refuses a role that does not exist", async () => {
-        const { service } = await build(writable())
+        const { service } = await build(writable(), countedOf())
 
         await expect(
             service.setOwnership("u1", "w1", "a1", { ...CHANGE, assignableRoles: ["boss"] }),
@@ -403,7 +415,7 @@ describe("AgentOwnershipService setOwnership refusals", () => {
     })
 
     it("refuses a room that does not exist", async () => {
-        const { service } = await build(writable())
+        const { service } = await build(writable(), countedOf())
 
         await expect(
             service.setOwnership("u1", "w1", "a1", { ...CHANGE, assignableRooms: ["garage"] }),
@@ -411,7 +423,7 @@ describe("AgentOwnershipService setOwnership refusals", () => {
     })
 
     it("refuses an agent that tags itself", async () => {
-        const { service } = await build(writable())
+        const { service } = await build(writable(), countedOf())
 
         await expect(
             service.setOwnership("u1", "w1", "a1", { ...CHANGE, canTagAgentIds: ["a1"] }),
@@ -419,7 +431,7 @@ describe("AgentOwnershipService setOwnership refusals", () => {
     })
 
     it("refuses a tag target of another workspace", async () => {
-        const { service } = await build(writable({ agents: 0 }))
+        const { service } = await build(writable({ agents: 0 }), countedOf())
 
         await expect(service.setOwnership("u1", "w1", "a1", CHANGE)).rejects.toMatchObject({
             params: { field: "canTagAgentIds" },
@@ -427,7 +439,7 @@ describe("AgentOwnershipService setOwnership refusals", () => {
     })
 
     it("refuses an agent that is not in the workspace", async () => {
-        const { service } = await build(writable({ affected: 0 }))
+        const { service } = await build(writable({ affected: 0 }), countedOf())
 
         await expect(service.setOwnership("u1", "w1", "ghost", CHANGE)).rejects.toMatchObject({
             code: AgentsErrorCode.AgentNotFound,
