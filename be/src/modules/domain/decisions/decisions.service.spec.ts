@@ -21,7 +21,6 @@ import { WorkItemViewsService } from "./work-item-views.service"
 import { DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
 import type { WorkItemViewRow } from "./work-item-views.rows"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 
 const CURSOR_AT = "2026-10-12T10:00:00.123456+00:00"
 
@@ -66,13 +65,6 @@ const itemOf = builder<WorkItem>({
 })
 
 const viewOf = (id: string): WorkItemViewRow => ({ ...itemOf({ id }), cursor_at: CURSOR_AT })
-
-/** A manager whose one query answers the raw view row of an item. */
-const managerWithView = (item: WorkItem) => {
-    const em = mockEntityManager()
-    queueQueryBuilders(em, [{ getRawOne: { ...item, cursor_at: CURSOR_AT } }])
-    return em
-}
 
 const profileOf = builder<AuthorityProfile>({
     policies: "P",
@@ -145,7 +137,9 @@ const invoiceOf = builder<ReconcileInvoiceRow>({
     due_at: null,
 })
 
-const build = async (entityManager: MockEntityManager) => {
+const build = async (entityManager: MockEntityManager = mockEntityManager()) => {
+    const views = mock<WorkItemViewsService>()
+    const history = mock<DecisionHistoryService>()
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(memberOf()) })
     const evidence = mock<EvidenceService>({ log: jest.fn().mockResolvedValue(undefined) })
     const authority = mock<AuthorityService>({ profileOf: jest.fn(), save: jest.fn() })
@@ -160,8 +154,8 @@ const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             DecisionsService,
-            DecisionHistoryService,
-            WorkItemViewsService,
+            { provide: DecisionHistoryService, useValue: history },
+            { provide: WorkItemViewsService, useValue: views },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: EvidenceService, useValue: evidence },
@@ -172,40 +166,35 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: TransactionsService, useValue: transactions },
         ],
     }).compile()
-    return { service: moduleRef.get(DecisionsService), members, evidence, authority, rules, invoices, transactions }
+    return {
+        service: moduleRef.get(DecisionsService),
+        members,
+        evidence,
+        authority,
+        rules,
+        invoices,
+        transactions,
+        views,
+        history,
+    }
 }
 
 describe("DecisionsService", () => {
     describe("listAccountingWaiting", () => {
-        it.each([undefined, 12])(
-            "reads waiting accounting work with limit %s and normalizes proposals",
-            async (limit) => {
-                const raw = {
-                    ...itemOf(),
-                    proposal: { summary: "Legacy" },
-                    lead_row_id: "lead-1",
-                    lead_contact_name: "Minh",
-                    lead_company: "Tea",
-                    lead_channel: "zalo",
-                    assigned_staff_name: "Binh",
-                }
-                const em = mockEntityManager()
-                const [read] = queueQueryBuilders(em, [{ getRawMany: [raw] }])
-                const { service, members } = await build(em)
+        it.each([undefined, 12])("reads waiting accounting work with limit %s", async (limit) => {
+            const { service, members, views } = await build()
+            const row = {
+                ...itemOf(),
+                proposal: { summary: "Legacy", fields: {} },
+                lead: { id: "lead-1", contact_name: "Minh", company: "Tea", channel: "zalo" },
+                assigned_staff_name: "Binh",
+            }
+            views.accountingWaiting.mockResolvedValue([row])
 
-                await expect(service.listAccountingWaiting("user-1", "ws-1", limit)).resolves.toEqual([
-                    {
-                        ...itemOf(),
-                        proposal: { summary: "Legacy", fields: {} },
-                        lead: { id: "lead-1", contact_name: "Minh", company: "Tea", channel: "zalo" },
-                        assigned_staff_name: "Binh",
-                    },
-                ])
-                expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-                expect(read?.callsOf("limit")).toEqual([[limit ?? 500]])
-                expect(read?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1" })
-            },
-        )
+            await expect(service.listAccountingWaiting("user-1", "ws-1", limit)).resolves.toEqual([row])
+            expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
+            expect(views.accountingWaiting).toHaveBeenCalledWith("ws-1", limit ?? 500)
+        })
     })
 
     describe("listDecisionHistory", () => {
@@ -219,86 +208,14 @@ describe("DecisionsService", () => {
             { kind: "policy", deciders: ["policy"], outcome: null },
             { kind: "rejected", deciders: null, outcome: "rejected" },
         ])("filters $kind history with a bounded page size", async ({ kind, deciders, outcome }) => {
-            const em = mockEntityManager()
-            const [logged] = queueQueryBuilders(em, [{ getRawMany: [] }, { getRawMany: [] }, { getRawMany: [] }])
-            const { service, members } = await build(em)
+            const { service, members, history } = await build()
+            history.list.mockResolvedValue([])
 
             await expect(
                 service.listDecisionHistory("user-1", "ws-1", { kind, department: "sales", limit: 1000 }),
             ).resolves.toEqual([])
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-            expect(logged?.callsOf("andWhere")).toEqual([
-                ...(deciders === null ? [] : [["d.deciderKind IN (:...deciders)", { deciders }]]),
-                ...(outcome === null ? [] : [["d.outcome = :outcome", { outcome }]]),
-                ["d.department = :department", { department: "sales" }],
-            ])
-            expect(logged?.callsOf("limit")).toEqual([[100]])
-        })
-    })
-})
-
-describe("DecisionsService", () => {
-    describe("listDecisionHistory merge", () => {
-        const line = (id: string, sortKey: string, leadId: string | null) => ({
-            id,
-            lead_id: leadId,
-            department: "sales",
-            action: "send_follow_up",
-            decided_by: "An",
-            decidedByMemberId: null,
-            decider_kind: "owner",
-            outcome: "approved",
-            note: "",
-            created_at: "2026-10-12T10:00:00+00:00",
-            sort_key: sortKey,
-            work_item_id: null,
-            reason: null,
-        })
-
-        it("merges the three sources newest first, ties by id, keeps one page and names the customers", async () => {
-            const em = mockEntityManager()
-            const [, , , names] = queueQueryBuilders(em, [
-                {
-                    getRawMany: [
-                        line("a", "20261012100000.000002", "lead-1"),
-                        line("c", "20261012090000.000000", null),
-                    ],
-                },
-                { getRawMany: [line("b", "20261012100000.000002", "lead-2")] },
-                { getRawMany: [line("d", "20261012080000.000000", "lead-1")] },
-                {
-                    getRawMany: [
-                        { id: "lead-1", name: "Minh" },
-                        { id: "lead-2", name: null },
-                    ],
-                },
-            ])
-            const { service } = await build(em)
-
-            const history = await service.listDecisionHistory("user-1", "ws-1", {
-                kind: "all",
-                department: null,
-                limit: 3,
-            })
-
-            expect(history.map((entry) => [entry.id, entry.leadName])).toEqual([
-                ["b", null],
-                ["a", "Minh"],
-                ["c", null],
-            ])
-            expect(names?.callsOf("where")).toEqual([["l.id IN (:...leadIds)", { leadIds: ["lead-2", "lead-1"] }]])
-            expect(history[0]).not.toHaveProperty("sort_key")
-        })
-
-        it("skips the thread tasks when only another outcome is asked for", async () => {
-            const em = mockEntityManager()
-            queueQueryBuilders(em, [{ getRawMany: [] }, { getRawMany: [] }])
-            const { service } = await build(em)
-
-            await expect(
-                service.listDecisionHistory("user-1", "ws-1", { kind: "rejected", department: null, limit: 5 }),
-            ).resolves.toEqual([])
-            expect(em.createQueryBuilder).toHaveBeenCalledTimes(2)
+            expect(history.list).toHaveBeenCalledWith("ws-1", { deciders, outcome, department: "sales", limit: 100 })
         })
     })
 })
@@ -306,75 +223,55 @@ describe("DecisionsService", () => {
 describe("DecisionsService", () => {
     describe("listWorkItems", () => {
         it("answers a page and the cursor of the next one", async () => {
-            const em = mockEntityManager()
-            const [read] = queueQueryBuilders(em, [{ getRawMany: [viewOf("a"), viewOf("b"), viewOf("c")] }])
-            const { service, members } = await build(em)
+            const { service, members, views } = await build()
+            views.list.mockResolvedValue([viewOf("a"), viewOf("b"), viewOf("c")])
 
             await expect(service.listWorkItems("user-1", "ws-1", queryOf())).resolves.toEqual({
                 items: [itemOf({ id: "a" }), itemOf({ id: "b" })],
                 next: { createdAt: CURSOR_AT, id: "b" },
             })
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-            expect(read?.callsOf("where")).toEqual([["w.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
-            expect(read?.callsOf("andWhere")).toEqual([
-                ["w.status IN (:...statuses)", { statuses: ["waiting_decision"] }],
-            ])
-            expect(read?.callsOf("limit")).toEqual([[3]])
+            expect(views.list).toHaveBeenCalledWith("ws-1", {
+                statuses: ["waiting_decision"],
+                after: null,
+                action: null,
+                limit: 3,
+            })
         })
 
-        it("continues after a cursor and clamps the page size", async () => {
-            const em = mockEntityManager()
-            const [read] = queueQueryBuilders(em, [{ getRawMany: [viewOf("z")] }])
-            const { service } = await build(em)
+        it("continues after a cursor, clamps the page size and passes an action filter", async () => {
+            const { service, views } = await build()
+            views.list.mockResolvedValue([viewOf("z")])
             const after = { createdAt: "2026-10-12T00:00:00Z", id: "y" }
 
             await expect(
-                service.listWorkItems("user-1", "ws-1", queryOf({ statuses: [], after, limit: 1000 })),
+                service.listWorkItems(
+                    "user-1",
+                    "ws-1",
+                    queryOf({ statuses: [], after, action: "issue_invoice", limit: 1000 }),
+                ),
             ).resolves.toEqual({ items: [itemOf({ id: "z" })], next: null })
-            expect(read?.callsOf("andWhere")).toEqual([
-                [
-                    "(w.created_at, w.id) < (CAST(:afterCreatedAt AS timestamptz), CAST(:afterId AS uuid))",
-                    { afterCreatedAt: "2026-10-12T00:00:00Z", afterId: "y" },
-                ],
-            ])
-            expect(read?.callsOf("limit")).toEqual([[101]])
-        })
-
-        it("passes an action filter to the workspace query", async () => {
-            const em = mockEntityManager()
-            const [read] = queueQueryBuilders(em, [{ getRawMany: [] }])
-            const { service } = await build(em)
-
-            await expect(
-                service.listWorkItems("user-1", "ws-1", queryOf({ action: "issue_invoice" })),
-            ).resolves.toEqual({
-                items: [],
-                next: null,
+            expect(views.list).toHaveBeenCalledWith("ws-1", {
+                statuses: [],
+                after,
+                action: "issue_invoice",
+                limit: 101,
             })
-            expect(read?.callsOf("andWhere")).toEqual([
-                ["w.status IN (:...statuses)", { statuses: ["waiting_decision"] }],
-                ["w.action = :action", { action: "issue_invoice" }],
-            ])
-            expect(read?.callsOf("limit")).toEqual([[3]])
         })
     })
 
     describe("getWorkItem", () => {
         it("answers the item", async () => {
-            const em = mockEntityManager()
-            const [read] = queueQueryBuilders(em, [{ getRawOne: viewOf("item-1") }])
-            const { service } = await build(em)
+            const { service, views } = await build()
+            views.find.mockResolvedValue(viewOf("item-1"))
 
             await expect(service.getWorkItem("user-1", "ws-1", "item-1")).resolves.toEqual(itemOf())
-            expect(read?.callsOf("where")).toEqual([
-                ["w.workspace_id = :workspaceId AND w.id = :workItemId", { workspaceId: "ws-1", workItemId: "item-1" }],
-            ])
+            expect(views.find).toHaveBeenCalledWith("ws-1", "item-1")
         })
 
         it("refuses an item that is not in the workspace", async () => {
-            const em = mockEntityManager()
-            queueQueryBuilders(em, [{ getRawOne: undefined }])
-            const { service } = await build(em)
+            const { service, views } = await build()
+            views.find.mockResolvedValue(undefined)
 
             await expect(service.getWorkItem("user-1", "ws-1", "item-9")).rejects.toMatchObject({
                 code: DecisionsErrorCode.NotFound,
