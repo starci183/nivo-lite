@@ -1,12 +1,10 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import { OfficeLog, ModuleTextGenerator } from "@modules/domain/module-ops"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { ComposedMessage, LoadedPo } from "./inventory.contracts"
 import { formatDay, formatMoney, formatQty } from "./policies/number-format.policy"
-import { AuthorityEntity } from "@modules/domain/authority"
+import { AuthorityService } from "@modules/domain/authority"
 
 /** How long the text generator may take before the plain template is used. */
 const GENERATE_TIMEOUT_MS = 40_000
@@ -20,19 +18,14 @@ const MESSAGE_MAX = 1800
 /** The longest brand voice handed to the generator. */
 const VOICE_MAX = 300
 
-interface VoiceRow {
-    readonly brand_voice: string
-    readonly reply_style: string
-}
-
 @Injectable()
 /** The message a supplier receives for an order or a reminder: the text generator writes it in the shop's voice, a plain template covers a failure. */
 export class InventoryOrderMessageService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly office: OfficeLog,
         private readonly generator: ModuleTextGenerator,
+        private readonly authority: AuthorityService,
     ) {}
 
     private text(key: string, params: Record<string, string | number>): string {
@@ -69,14 +62,8 @@ export class InventoryOrderMessageService {
                       list,
                       expected: due === "" ? "" : this.text("inventory.orderExpected", { date: due }),
                   })
-        const voiceRow = await this.entityManager
-            .createQueryBuilder(AuthorityEntity, "a")
-            .select("a.brand_voice", "brand_voice")
-            .addSelect("a.reply_style", "reply_style")
-            .where("a.workspace_id = :workspaceId", { workspaceId })
-            .limit(1)
-            .getRawOne<VoiceRow>()
-        const voice = [voiceRow?.brand_voice, voiceRow?.reply_style].filter(Boolean).join(" ").slice(0, VOICE_MAX)
+        const profile = await this.authority.profileOf(workspaceId)
+        const voice = [profile?.brand_voice, profile?.reply_style].filter(Boolean).join(" ").slice(0, VOICE_MAX)
         const facts = [
             this.text("inventory.ai.factShop", { shop }),
             this.text("inventory.ai.factSupplier", {

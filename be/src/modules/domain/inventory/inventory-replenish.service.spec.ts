@@ -10,6 +10,9 @@ import {
     inventoryPoLineOf,
     inventoryPurchaseOrderOf,
 } from "@tests/fixtures/builders/inventory.builder"
+import { AuthorityRulesService } from "@modules/domain/authority-rules"
+import type { RuleMode } from "@modules/domain/authority-rules"
+import { ruleOf } from "@tests/fixtures/builders/authority-rules.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -52,7 +55,9 @@ const poLineRow = (
     overrides: { [K in keyof InventoryPoLineEntity]?: InventoryPoLineEntity[K] } = {},
 ): InventoryPoLineEntity => inventoryPoLineOf(overrides)
 
-const build = async (entityManager: MockEntityManager) => {
+const build = async (entityManager: MockEntityManager, ruleMode: RuleMode | null = null) => {
+    const rules = mock<AuthorityRulesService>()
+    rules.ruleFor.mockResolvedValue(ruleMode === null ? null : ruleOf({ mode: ruleMode }))
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, params) => text(key, params))
     const office = mock<OfficeLog>()
@@ -84,9 +89,19 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: InventoryMovementsService, useValue: movements },
             { provide: InventoryOrdersService, useValue: orders },
             { provide: InventoryDispatchService, useValue: dispatch },
+            { provide: AuthorityRulesService, useValue: rules },
         ],
     }).compile()
-    return { service: moduleRef.get(InventoryReplenishService), office, logger, members, movements, orders, dispatch }
+    return {
+        service: moduleRef.get(InventoryReplenishService),
+        office,
+        logger,
+        members,
+        movements,
+        orders,
+        dispatch,
+        rules,
+    }
 }
 
 describe("InventoryReplenishService / lowItems", () => {
@@ -147,7 +162,7 @@ describe("InventoryReplenishService / draftLowStock", () => {
                 [InventoryPurchaseOrderEntity, purchaseOrderRow({ poNo: "PO-1", totalVnd: "120000" })],
             ],
         })
-        queueQueryBuilders(em, [{ getRawOne: undefined }, { getRawMany: [] }])
+        queueQueryBuilders(em, [{ getRawMany: [] }])
         const { service, members } = await build(em)
 
         await expect(service.draftLowStock("user-1", "ws-1")).resolves.toEqual({ drafted: 1, low: 1 })
@@ -192,8 +207,7 @@ describe("InventoryReplenishService / draftLow", () => {
         const em = mockEntityManager({
             find: [InventoryItemEntity, [itemRow()]],
         })
-        queueQueryBuilders(em, [{ getRawOne: { mode: "never" } }])
-        const { service } = await build(em)
+        const { service } = await build(em, "never")
 
         await expect(service.draftLow("ws-1")).resolves.toEqual({ poIds: [], lowCount: 1, skipped: ["Tea"] })
     })
@@ -202,8 +216,8 @@ describe("InventoryReplenishService / draftLow", () => {
         const em = mockEntityManager({
             find: [InventoryItemEntity, [itemRow()]],
         })
-        queueQueryBuilders(em, [{ getRawOne: { mode: "ask" } }, { getRawMany: [{ item_id: "item-1", qty: "20.000" }] }])
-        const { service, orders } = await build(em)
+        queueQueryBuilders(em, [{ getRawMany: [{ item_id: "item-1", qty: "20.000" }] }])
+        const { service, orders } = await build(em, "ask")
 
         await expect(service.draftLow("ws-1")).resolves.toEqual({ poIds: [], lowCount: 1, skipped: ["Tea"] })
 
@@ -228,7 +242,7 @@ describe("InventoryReplenishService / draftLow", () => {
                 [InventoryPurchaseOrderEntity, null],
             ],
         })
-        queueQueryBuilders(em, [{ getRawOne: undefined }, { getRawMany: [] }])
+        queueQueryBuilders(em, [{ getRawMany: [] }])
         const { service, movements, orders, office, dispatch } = await build(em)
         movements.totals.mockResolvedValue(
             new Map([
@@ -297,7 +311,7 @@ describe("InventoryReplenishService / draftLow", () => {
                 [InventoryPurchaseOrderEntity, purchaseOrderRow({ poNo: "PO-7", totalVnd: "1" })],
             ],
         })
-        queueQueryBuilders(em, [{ getRawOne: undefined }, { getRawMany: [] }])
+        queueQueryBuilders(em, [{ getRawMany: [] }])
         const { service, movements, orders } = await build(em)
         movements.totals.mockResolvedValue(new Map())
 
@@ -319,7 +333,7 @@ describe("InventoryReplenishService / draftLow", () => {
                 [InventoryPurchaseOrderEntity, purchaseOrderRow({ poNo: "PO-7", totalVnd: "1" })],
             ],
         })
-        queueQueryBuilders(em, [{ getRawOne: undefined }, { getRawMany: [] }])
+        queueQueryBuilders(em, [{ getRawMany: [] }])
         const { service, orders } = await build(em)
 
         await service.draftLow("ws-1", { requestApproval: false })

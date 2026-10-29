@@ -1,12 +1,10 @@
 import { Test } from "@nestjs/testing"
-import { mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
+import { mock } from "@starci/jest-preset"
 import { OfficeLog, ModuleTextGenerator } from "@modules/domain/module-ops"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { AuthorityEntity } from "@modules/domain/authority"
+import { AuthorityService } from "@modules/domain/authority"
+import type { AuthorityProfile } from "@modules/domain/authority"
 import type { LoadedPo } from "./inventory.contracts"
 import { InventoryOrderMessageService } from "./inventory-order-message.service"
 
@@ -47,7 +45,28 @@ const poOf = (overrides: Partial<LoadedPo> = {}): LoadedPo => ({
     ...overrides,
 })
 
-const build = async (entityManager: MockEntityManager) => {
+/** The voice the owner set on the authority sheet. */
+interface Voice {
+    readonly brand_voice: string
+    readonly reply_style: string
+}
+
+/** The authority sheet that carries this voice and nothing else. */
+const profileOf = (voice: Voice): AuthorityProfile => ({
+    policies: "",
+    limits_note: "",
+    goal_revenue_vnd: null,
+    goal_new_customers: null,
+    goal_first_reply_minutes: null,
+    goal_note: "",
+    updated_by: null,
+    updated_at: "2026-10-01T00:00:00.000Z",
+    ...voice,
+})
+
+const build = async (voice: Voice | null) => {
+    const authority = mock<AuthorityService>()
+    authority.profileOf.mockResolvedValue(voice === null ? null : profileOf(voice))
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, params) => text(key, params))
     const office = mock<OfficeLog>()
@@ -57,27 +76,24 @@ const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             InventoryOrderMessageService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: AuthorityService, useValue: authority },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: OfficeLog, useValue: office },
             { provide: ModuleTextGenerator, useValue: generator },
         ],
     }).compile()
-    return { service: moduleRef.get(InventoryOrderMessageService), generator }
+    return { service: moduleRef.get(InventoryOrderMessageService), generator, authority }
 }
 
 describe("InventoryOrderMessageService.compose", () => {
     it("uses the text the generator wrote, trimmed and cut, and hands it the facts of the order", async () => {
-        const em = mockEntityManager()
-        const [voice] = queueQueryBuilders(em, [{ getRawOne: { brand_voice: "warm", reply_style: "short" } }])
-        const { service, generator } = await build(em)
+        const { service, generator, authority } = await build({ brand_voice: "warm", reply_style: "short" })
         generator.generate.mockResolvedValue({ ok: true, output: `  ${"x".repeat(2000)}  ` })
 
         const message = await service.compose("ws-1", poOf(), "order")
 
         expect(message).toEqual({ text: "x".repeat(1800), generated: true })
-        expect(em.createQueryBuilder).toHaveBeenCalledWith(AuthorityEntity, "a")
-        expect(voice?.callsOf("where")).toEqual([["a.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
+        expect(authority.profileOf).toHaveBeenCalledWith("ws-1")
         expect(generator.generate).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             purpose: "inventory_po_message",
@@ -95,9 +111,7 @@ describe("InventoryOrderMessageService.compose", () => {
     })
 
     it("falls back to the order template when the generator wrote nothing or too little", async () => {
-        const em = mockEntityManager()
-        queueQueryBuilders(em, [{ getRawOne: undefined }, { getRawOne: undefined }])
-        const { service, generator } = await build(em)
+        const { service, generator } = await build(null)
         generator.generate.mockResolvedValueOnce({ ok: true, output: "short" })
 
         const tooShort = await service.compose("ws-1", poOf(), "order")
@@ -114,9 +128,7 @@ describe("InventoryOrderMessageService.compose", () => {
     })
 
     it("writes a reminder for what is still missing, without the total or a due day when there is none", async () => {
-        const em = mockEntityManager()
-        queueQueryBuilders(em, [{ getRawOne: undefined }])
-        const { service, generator } = await build(em)
+        const { service, generator } = await build(null)
 
         const message = await service.compose("ws-1", poOf({ expectedAt: null }), "reminder")
 
@@ -140,9 +152,7 @@ describe("InventoryOrderMessageService.compose", () => {
 
 describe("InventoryOrderMessageService.compose", () => {
     it("writes a reminder with the due day", async () => {
-        const em = mockEntityManager()
-        queueQueryBuilders(em, [{ getRawOne: undefined }])
-        const { service } = await build(em)
+        const { service } = await build(null)
 
         const message = await service.compose("ws-1", poOf(), "reminder")
 
@@ -150,9 +160,7 @@ describe("InventoryOrderMessageService.compose", () => {
     })
 
     it("uses the supplier name or a polite fallback and defaults to email", async () => {
-        const em = mockEntityManager()
-        queueQueryBuilders(em, [{ getRawOne: undefined }, { getRawOne: undefined }])
-        const { service, generator } = await build(em)
+        const { service, generator } = await build(null)
 
         const byName = await service.compose(
             "ws-1",
