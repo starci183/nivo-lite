@@ -1,8 +1,10 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InstallationChangedEvent } from "@modules/events/api"
+import { InstallationChangedEvent, whenPresent } from "@modules/events/api"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectEventBus } from "@modules/platform/event-bus"
+import { InjectIds } from "@modules/platform/ids"
+import type { Ids } from "@modules/platform/ids"
 import type { EventBus } from "@modules/platform/event-bus"
 
 /** What changed: one installation, or the whole workspace when `installationId` is null. */
@@ -21,11 +23,19 @@ export class InstallationChangesService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectEventBus() private readonly bus: EventBus,
+        @InjectIds() private readonly ids: Ids,
     ) {}
 
     /** Publishes the change in the transaction of the write that made it, so a rolled-back change announces nothing. */
     async announce(change: InstallationChange, tx: EntityManager): Promise<void> {
-        const event = InstallationChangedEvent.create(change)
+        const event = InstallationChangedEvent.create(
+            {
+                workspaceId: change.workspaceId,
+                ...whenPresent("installationId", change.installationId),
+                force: change.force,
+            },
+            this.ids.next(),
+        )
         await this.bus.publish(event, tx, event.eventId)
     }
 

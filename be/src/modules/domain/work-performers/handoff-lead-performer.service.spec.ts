@@ -194,7 +194,6 @@ describe("HandoffLeadPerformerService perform", () => {
                 channel: "Telegram",
                 need: "50 tea boxes",
                 phone: "84901234567",
-                email: null,
             },
         ])
         expect(bus.allInTransaction).toBe(true)

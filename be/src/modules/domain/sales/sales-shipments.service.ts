@@ -6,7 +6,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { OrderShippedEvent } from "@modules/events/api"
+import { OrderShippedEvent, whenPresent } from "@modules/events/api"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
 import type { SalesShipment, SalesShipmentRequest } from "./sales.contracts"
@@ -56,7 +56,7 @@ export class SalesShipmentsService {
                     userId: principalId,
                     orderId: order.id,
                     orderNo: order.order_no,
-                    leadId: order.lead_id,
+                    ...whenPresent("leadId", order.lead_id),
                     carrier,
                     trackingCode,
                     shippedAt: order.shipped_at,

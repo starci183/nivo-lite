@@ -51,7 +51,6 @@ const lead = LeadCapturedEvent.create({
     channel: "Zalo",
     need: "tea",
     phone: "84901234567",
-    email: null,
 })
 
 const deal = DealWonEvent.create({
@@ -96,8 +95,6 @@ const paymentOf = (): PaymentReconciledEvent =>
             leadId: "lead-1",
             customer: "Lan",
             channel: "Zalo",
-            contractId: null,
-            periodEndsOn: null,
         },
     }) as PaymentReconciledEvent
 
@@ -359,5 +356,66 @@ describe("AutomationReactionsService", () => {
             },
         })
         expect(webhooks.publish).not.toHaveBeenCalled()
+    })
+
+    it("reads a fact the door did not know as null in the event data", async () => {
+        const { reactions, engine } = await build()
+        const bareLead = LeadCapturedEvent.create({
+            workspaceId: "ws-1",
+            leadId: "lead-3",
+            contactName: "Cuc",
+            company: "Tea Co",
+            channel: "Zalo",
+            need: "tea",
+        })
+        const bareDeal = DealWonEvent.create({ workspaceId: "ws-1", leadId: "lead-3", name: "Cuc" })
+        const bareDecision = DecisionMadeEvent.create({
+            workspaceId: "ws-1",
+            workItemId: "wi-2",
+            action: "send_quote",
+            department: "sales",
+            outcome: "approved",
+            decidedBy: "Lan",
+            summary: "Sent",
+        })
+
+        await reactions.onLeadCaptured(deliveryOf("lead_captured__automations", bareLead))
+        await reactions.onDealWon(deliveryOf("deal_won__automations", bareDeal))
+        await reactions.onDecisionMade(deliveryOf("decision_made__automations", bareDecision))
+
+        const [captured, won, decided] = engine.onBusinessEvent.mock.calls.map(([call]) => call.data)
+        expect(captured).toMatchObject({ phone: null, email: null })
+        expect(won).toMatchObject({ company: null, channel: null, need: null })
+        expect(decided).toMatchObject({ lead_id: null })
+    })
+
+    it("reads a payment fact the invoice did not carry as null, and starts no receipt without a transaction", async () => {
+        const { reactions, engine } = await build()
+        const { payload } = paymentOf()
+        const bare: PaymentReconciledEvent = {
+            ...paymentOf(),
+            payload: {
+                dedupeKey: payload.dedupeKey,
+                workspaceId: payload.workspaceId,
+                invoiceId: payload.invoiceId,
+                invoiceNo: payload.invoiceNo,
+                workItemId: payload.workItemId,
+                customer: payload.customer,
+            },
+        }
+
+        await reactions.onPaymentReconciled(deliveryOf("payment_reconciled__automations", bare))
+        await reactions.onPaymentReceipt(deliveryOf("payment_reconciled__payment_receipts", bare))
+
+        expect(engine.onBusinessEvent.mock.calls[0]?.[0].data).toMatchObject({
+            transaction_id: null,
+            order_id: null,
+            order_no: null,
+            lead_id: null,
+            amount_vnd: null,
+            paid_at: null,
+            channel: null,
+        })
+        expect(engine.startPaymentReceipt).toHaveBeenCalledWith("ws-1", null, "inv-1")
     })
 })

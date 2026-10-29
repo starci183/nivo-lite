@@ -1,7 +1,6 @@
-import { randomUUID } from "node:crypto"
 import { BaseEvent } from "@modules/platform/event-bus"
 import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
-import { isKey, isTextOrNull, openEnvelope } from "./money-event.policy"
+import { isKey, isTextOrAbsent, whenPresent, openEnvelope } from "./money-event.policy"
 
 /**
  * The payload of the `installation_changed` event: an installation (or the workspace's shared business knowledge) changed in a way the
@@ -12,7 +11,7 @@ export interface InstallationChangedInput {
     /** The workspace. */
     readonly workspaceId: string
     /** The installation that changed; null when the change touches the whole workspace (its business knowledge). */
-    readonly installationId: string | null
+    readonly installationId?: string
     /** True to rebuild the copy even when the installation does not run on OpenClaw (an install asks for it). */
     readonly force: boolean
 }
@@ -34,8 +33,8 @@ export class InstallationChangedEvent extends BaseEvent {
         super()
     }
 
-    /** Each change is its own fact: it gets a fresh id, which is also its dedupe key. */
-    static create(payload: InstallationChangedInput, changeId: string = randomUUID()): InstallationChangedEvent {
+    /** Each change is its own fact: the caller mints its id from the `Ids` port, and it is also the dedupe key. */
+    static create(payload: InstallationChangedInput, changeId: string): InstallationChangedEvent {
         return new InstallationChangedEvent(changeId, { ...payload, dedupeKey: changeId })
     }
 
@@ -44,11 +43,10 @@ export class InstallationChangedEvent extends BaseEvent {
         const opened = openEnvelope(envelope)
         if (opened === null) return null
         const { body } = opened
-        const installationId = body.installationId === undefined ? null : body.installationId
         if (
             !isKey(body.dedupeKey) ||
             typeof body.workspaceId !== "string" ||
-            !isTextOrNull(installationId) ||
+            !isTextOrAbsent(body.installationId) ||
             typeof body.force !== "boolean"
         ) {
             return null
@@ -56,7 +54,7 @@ export class InstallationChangedEvent extends BaseEvent {
         return new InstallationChangedEvent(opened.eventId, {
             dedupeKey: body.dedupeKey,
             workspaceId: body.workspaceId,
-            installationId,
+            ...whenPresent("installationId", body.installationId),
             force: body.force,
         })
     }

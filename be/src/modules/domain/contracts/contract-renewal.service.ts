@@ -32,7 +32,7 @@ export class ContractRenewalService {
      * term that moved change nothing. The payment itself stands whatever happens here: a failure leaves the message to be retried.
      */
     async renewForPaidInvoice(consumer: string, dedupeKey: string, payment: PaymentReconciledPayload): Promise<void> {
-        if (payment.contractId === null || payment.periodEndsOn === null) return
+        if (payment.contractId === undefined || payment.periodEndsOn === undefined) return
         const { contractId, periodEndsOn } = payment
         await this.entityManager.transaction(async (tx) => {
             if (!(await this.inbox.claim(consumer, dedupeKey, tx))) return
@@ -47,7 +47,7 @@ export class ContractRenewalService {
             await this.events.record(
                 {
                     workspaceId: payment.workspaceId,
-                    leadId: payment.leadId,
+                    leadId: payment.leadId ?? null,
                     workItemId: payment.workItemId,
                     kind: "contract.renewed",
                     actor: SYSTEM_ACTOR,

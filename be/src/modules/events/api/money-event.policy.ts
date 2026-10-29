@@ -1,3 +1,5 @@
+import { EventsError, EventsErrorCode } from "./errors/events.error"
+
 /** The envelope of a delivered event once its id and payload object are checked. */
 export interface OpenedEnvelope {
     /** The stable event id. */
@@ -6,10 +8,10 @@ export interface OpenedEnvelope {
     readonly body: Readonly<Record<string, unknown>>
 }
 
-/** The own fields of an object as a read-only record of unknown values. */
+/** The own fields of an object that hold a value (a null field is an absent one on the wire) as a read-only record of unknown values. */
 const recordOf = (source: object): Readonly<Record<string, unknown>> => {
     const record: Record<string, unknown> = {}
-    for (const [name, value] of Object.entries(source)) record[name] = value
+    for (const [name, value] of Object.entries(source)) if (value !== null) record[name] = value
     return record
 }
 
@@ -31,15 +33,30 @@ export const isKey = (value: unknown): value is string => typeof value === "stri
 /** True when the field is text. */
 export const isText = (value: unknown): value is string => typeof value === "string"
 
-/** True when the field is text or null. */
-export const isTextOrNull = (value: unknown): value is string | null => value === null || typeof value === "string"
+/** The listed value `value` equals, else the events error that names the field: a value outside its set never reaches a reactor. */
+export const memberOf = <Member extends string>(
+    members: ReadonlyArray<Member>,
+    value: string,
+    field: string,
+): Member => {
+    for (const member of members) if (member === value) return member
+    throw new EventsError({ code: EventsErrorCode.ValueOutsideSet, params: { field } })
+}
 
-/** True when the field is a finite number or null. */
-export const isAmountOrNull = (value: unknown): value is number | null =>
-    value === null || (typeof value === "number" && Number.isFinite(value))
+/** True when the field is absent or text: an optional text field of a payload. */
+export const isTextOrAbsent = (value: unknown): value is string | undefined =>
+    value === undefined || typeof value === "string"
 
-/** True when the field is one of the listed texts. */
-export const isMember = <Member extends string>(members: ReadonlyArray<Member>, value: unknown): value is Member => {
-    for (const member of members) if (member === value) return true
-    return false
+/** True when the field is absent or a finite number: an optional amount of a payload. */
+export const isAmountOrAbsent = (value: unknown): value is number | undefined =>
+    value === undefined || (typeof value === "number" && Number.isFinite(value))
+
+/** A one-field object holding `value` under `name`, or an empty one when the value is absent (undefined or null), to spread into an optional payload field. */
+export const whenPresent = <Name extends string, Value>(
+    name: Name,
+    value: Value | null | undefined,
+): Partial<Record<Name, Value>> => {
+    const field: Partial<Record<Name, Value>> = {}
+    if (value !== undefined && value !== null) field[name] = value
+    return field
 }

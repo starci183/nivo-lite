@@ -1,7 +1,8 @@
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
+import { fakeIds, fakeTransaction, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { EVENT_BUS } from "@modules/platform/event-bus"
+import { IDS } from "@modules/platform/ids"
 import { InstallationChangesService } from "./installation-changes.service"
 
 const CHANGE = { workspaceId: "ws-1", installationId: "inst-1", force: true }
@@ -14,6 +15,7 @@ const build = async () => {
             InstallationChangesService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: EVENT_BUS, useValue: bus },
+            { provide: IDS, useValue: fakeIds() },
         ],
     }).compile()
     return { service: moduleRef.get(InstallationChangesService), tx, bus }
@@ -29,7 +31,8 @@ describe("InstallationChangesService", () => {
         expect(bus.writes).toHaveLength(2)
         const [first, second] = bus.writes
         expect(first).toMatchObject({ payload: CHANGE })
-        expect(first?.eventId).not.toBe(second?.eventId)
+        expect(first?.eventId).toBe("00000000-0000-4000-8000-000000000001")
+        expect(second?.eventId).toBe("00000000-0000-4000-8000-000000000002")
         expect(bus.entries.map((entry) => entry.tx)).toEqual([tx.em, tx.em])
     })
 
@@ -39,7 +42,8 @@ describe("InstallationChangesService", () => {
         await service.announceNow({ ...CHANGE, installationId: null, force: false })
 
         expect(tx.commits).toBe(1)
-        expect(bus.writes).toMatchObject([{ payload: { installationId: null, force: false } }])
+        expect(bus.writes).toMatchObject([{ payload: { force: false } }])
+        expect(bus.writes[0]).not.toHaveProperty("payload.installationId")
         expect(bus.allInTransaction).toBe(true)
     })
 
