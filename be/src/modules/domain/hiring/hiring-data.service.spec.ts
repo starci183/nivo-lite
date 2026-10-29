@@ -8,6 +8,7 @@ import {
     offer as offerFixture,
 } from "@tests/fixtures/builders/hiring-data.builder"
 import { settingsRow, jobRow, candidateRow, interviewRow, offerRow, availabilityRow } from "@tests/fixtures/builders/hiring-rows.builder"
+import { candidateRowsOf, unslottedInterviewRow } from "@tests/fixtures/builders/hiring-data-rows.builder"
 import { namedCalls } from "@tests/fixtures/builders/entity-row.builder"
 import { Test } from "@nestjs/testing"
 import { Between, In, IsNull, LessThan } from "typeorm"
@@ -169,15 +170,15 @@ describe("HiringDataService", () => {
         await expect(service.heads("candidate-2", "job-1")).resolves.toBeUndefined()
         await expect(service.heads("candidate-1", "job-2")).resolves.toBeUndefined()
         await expect(service.heads("candidate-2", "job-2")).resolves.toBeUndefined()
-        expect(em.findOne.mock.calls.map(([entity, options]) => [entity.name, options?.where])).toEqual([
-            ["HiringCandidateEntity", { id: "candidate-1" }],
-            ["HiringJobEntity", { id: "job-1" }],
-            ["HiringCandidateEntity", { id: "candidate-2" }],
-            ["HiringJobEntity", { id: "job-1" }],
-            ["HiringCandidateEntity", { id: "candidate-1" }],
-            ["HiringJobEntity", { id: "job-2" }],
-            ["HiringCandidateEntity", { id: "candidate-2" }],
-            ["HiringJobEntity", { id: "job-2" }],
+        expect(namedCalls(em.findOne.mock.calls)).toEqual([
+            ["HiringCandidateEntity", expect.objectContaining({ where: { id: "candidate-1" } })],
+            ["HiringJobEntity", expect.objectContaining({ where: { id: "job-1" } })],
+            ["HiringCandidateEntity", expect.objectContaining({ where: { id: "candidate-2" } })],
+            ["HiringJobEntity", expect.objectContaining({ where: { id: "job-1" } })],
+            ["HiringCandidateEntity", expect.objectContaining({ where: { id: "candidate-1" } })],
+            ["HiringJobEntity", expect.objectContaining({ where: { id: "job-2" } })],
+            ["HiringCandidateEntity", expect.objectContaining({ where: { id: "candidate-2" } })],
+            ["HiringJobEntity", expect.objectContaining({ where: { id: "job-2" } })],
         ])
     })
 })
@@ -260,6 +261,9 @@ describe("HiringDataService lists", () => {
         ])
     })
 
+})
+
+describe("HiringDataService member lists", () => {
     it("maps the weekly availability windows of a member", async () => {
         const em = mockEntityManager({
             find: [
@@ -299,7 +303,6 @@ describe("HiringDataService lists", () => {
         ])
         expect(roster.oldestOf).toHaveBeenCalledWith("ws-1", 20)
     })
-
 })
 
 describe("HiringDataService job and retention lists", () => {
@@ -308,7 +311,7 @@ describe("HiringDataService job and retention lists", () => {
         const em = mockEntityManager({
             find: [
                 [HiringJobEntity, [jobRow({ id: "job-1" }), jobRow({ id: "job-2" })]],
-                [HiringCandidateEntity, [candidateRow({ id: "candidate-1" }), candidateRow({ id: "candidate-2" })]],
+                [HiringCandidateEntity, candidateRowsOf(["candidate-1", "candidate-2"])],
             ],
         })
         const service = await build(em)
@@ -381,7 +384,7 @@ describe("HiringDataService lists", () => {
                     interviewRow({ ...confirmed, status: "proposed", proposedSlots: [second] }),
                     interviewRow({ ...confirmed, slotStart: null, proposedSlots: [third] }),
                     interviewRow({ ...confirmed, slotEnd: null, proposedSlots: [fourth] }),
-                    interviewRow({ status: "proposed", slotStart: null, slotEnd: null, proposedSlots: null }),
+                    unslottedInterviewRow(),
                 ],
             ],
         })

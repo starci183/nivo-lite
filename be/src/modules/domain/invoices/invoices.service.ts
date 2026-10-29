@@ -80,6 +80,13 @@ const WORKBENCH_LIMIT = 500
 /** The most invoices one customer shows. */
 const LEAD_LIMIT = 1000
 
+/** True when a RETURNING row carries the invoice shape the returning clause gives it. */
+const isInvoiceRow = (value: unknown): value is InvoiceRow =>
+    typeof value === "object" && value !== null && "id" in value && typeof value.id === "string"
+
+/** The invoice rows a write answered; the driver answers a list of rows. */
+const returnedInvoices = (raw: unknown): Array<InvoiceRow> => [raw].flat().filter(isInvoiceRow)
+
 @Injectable()
 /** The invoices of a workspace: the only writer of public.invoices. */
 export class InvoicesService {
@@ -274,8 +281,7 @@ export class InvoicesService {
             .where("workspace_id = :workspaceId AND id = :invoiceId AND status <> 'paid'", { workspaceId, invoiceId })
             .returning(INVOICE_RETURNING)
             .execute()
-        const returned: Array<InvoiceRow> = result.raw
-        const [paid] = returned
+        const [paid] = returnedInvoices(result.raw)
         if (paid !== undefined) return paid
         const standing = await selectColumns(manager.createQueryBuilder(InvoiceEntity, "i"), INVOICE_COLUMNS)
             .where("i.workspaceId = :workspaceId AND i.id = :invoiceId", { workspaceId, invoiceId })
@@ -326,8 +332,7 @@ export class InvoicesService {
             .orIgnore()
             .returning(INVOICE_RETURNING)
             .execute()
-        const returned: Array<InvoiceRow> = result.raw
-        return returned
+        return returnedInvoices(result.raw)
     }
 
     private async numbered(attempt: InvoiceInsertAttempt): Promise<IssuedInvoice> {

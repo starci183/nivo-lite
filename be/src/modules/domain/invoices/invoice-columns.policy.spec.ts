@@ -1,23 +1,20 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { InvoiceColumn } from "./invoice-columns.policy"
-import * as policy from "./invoice-columns.policy"
-import { InvoiceEntity } from "./persistence/entities"
+import { INVOICE_COLUMNS, INVOICE_RETURNING, INVOICE_VIEW_COLUMNS, selectColumns } from "./invoice-columns.policy"
 
 const SUBJECT = Symbol("invoice-columns.policy")
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: policy }],
+        providers: [{ provide: SUBJECT, useValue: { INVOICE_COLUMNS, INVOICE_VIEW_COLUMNS, INVOICE_RETURNING, selectColumns } }],
     }).compile()
-    return moduleRef.get<typeof policy>(SUBJECT)
+    return moduleRef.get<typeof import("./invoice-columns.policy")>(SUBJECT)
 }
 
 const queryOf = () => {
-    const entityManager = mockEntityManager()
-    const [fake] = queueQueryBuilders(entityManager, [{}])
-    return { query: entityManager.createQueryBuilder(InvoiceEntity, "i"), fake }
+    const fake = fakeQueryBuilder()
+    return { query: fake.builder, fake }
 }
 
 describe("invoice columns", () => {
@@ -80,8 +77,8 @@ describe("selectColumns", () => {
         const result = selectColumns(query, columns)
 
         expect(result).toBe(query)
-        expect(fake?.callsOf("select")).toEqual([["i.id", "id"]])
-        expect(fake?.callsOf("addSelect")).toEqual([
+        expect(fake.callsOf("select")).toEqual([["i.id", "id"]])
+        expect(fake.callsOf("addSelect")).toEqual([
             ["i.status", "status"],
             ["i.invoiceNo", "invoice_no"],
         ])
@@ -92,6 +89,6 @@ describe("selectColumns", () => {
         const { query, fake } = queryOf()
 
         expect(selectColumns(query, [])).toBe(query)
-        expect(fake?.calls).toEqual([])
+        expect(fake.calls).toEqual([])
     })
 })

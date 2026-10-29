@@ -1,4 +1,3 @@
-import type { SelectQueryBuilder } from "typeorm"
 
 /** One selected column: the expression and the name it answers under. */
 export type InvoiceColumn = readonly [expression: string, alias: string]
@@ -40,11 +39,19 @@ export const INVOICE_VIEW_COLUMNS: ReadonlyArray<InvoiceColumn> = [
 export const INVOICE_RETURNING =
     "id, workspace_id, order_id, lead_id, invoice_no, amount_vnd::float8 AS amount_vnd, status, issued_by, paid_at::text AS paid_at, contract_id, period_ends_on::text AS period_ends_on"
 
+/** The part of a typeorm select query that picks columns: each call answers the query itself. */
+export interface ColumnSelection<Query> {
+    /** Replaces the selection. */
+    select(expression: string, alias: string): Query
+    /** Adds to the selection. */
+    addSelect(expression: string, alias: string): Query
+}
+
 /** Selects the columns on a query, the first one replacing any earlier selection. */
-export const selectColumns = <Entity extends object>(
-    query: SelectQueryBuilder<Entity>,
+export const selectColumns = <Query extends ColumnSelection<Query>>(
+    query: Query,
     columns: ReadonlyArray<InvoiceColumn>,
-): SelectQueryBuilder<Entity> =>
+): Query =>
     columns.reduce(
         (selected, [expression, alias], index) =>
             index === 0 ? selected.select(expression, alias) : selected.addSelect(expression, alias),
