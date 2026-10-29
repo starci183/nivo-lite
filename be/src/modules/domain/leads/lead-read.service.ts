@@ -62,6 +62,11 @@ export class LeadReadService {
         return lead
     }
 
+    /** True when the lead belongs to the workspace; `manager` joins the caller's transaction. */
+    async isOwn(workspaceId: string, leadId: string, manager: EntityManager = this.entityManager): Promise<boolean> {
+        return manager.exists(LeadEntity, { where: { workspaceId, id: leadId } })
+    }
+
     /** The leads of a workspace, selected as board views with the creation time as ISO text. */
     private viewQuery(workspaceId: string): SelectQueryBuilder<LeadEntity> {
         return this.entityManager

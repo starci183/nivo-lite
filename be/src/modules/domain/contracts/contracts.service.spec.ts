@@ -3,6 +3,7 @@ import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { EventsService } from "@modules/domain/events"
+import { LeadReadService } from "@modules/domain/leads"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG, REQUEST_LOCALE } from "@modules/platform/i18n"
@@ -75,6 +76,8 @@ const build = async (entityManager: MockEntityManager) => {
     events.record.mockResolvedValue(undefined)
     const links = mock<ContractLinkService>()
     links.linkCustomers.mockResolvedValue({ linked: 1, created: 0, unmatched: [] })
+    const leads = mock<LeadReadService>()
+    leads.isOwn.mockResolvedValue(true)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ContractsService,
@@ -84,17 +87,18 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: WorkspaceMembersService, useValue: members },
             { provide: EventsService, useValue: events },
             { provide: ContractLinkService, useValue: links },
+            { provide: LeadReadService, useValue: leads },
         ],
     }).compile()
-    return { members, contracts: moduleRef.get(ContractsService), events, requestLocale, links }
+    return { members, contracts: moduleRef.get(ContractsService), events, requestLocale, links, leads }
 }
 
 describe("ContractsService", () => {
     describe("saveContract", () => {
         it("adds a contract linked to a lead of the workspace and logs it in the same transaction", async () => {
             const tx = fakeTransaction(mockEntityManager())
-            const [lead, insert] = queueQueryBuilders(tx.em, [{ getRawOne: { id: "lead-1" } }, { execute: { raw: [ROW] } }])
-            const { contracts, events, requestLocale } = await build(tx.em)
+            const [insert] = queueQueryBuilders(tx.em, [{ execute: { raw: [ROW] } }])
+            const { contracts, events, requestLocale, leads } = await build(tx.em)
 
             await expect(contracts.saveContract(paramsOf())).resolves.toEqual({
                 id: "contract-1",
@@ -108,7 +112,8 @@ describe("ContractsService", () => {
                 note: "",
             })
 
-            expect(lead?.callsOf("setLock")).toEqual([["pessimistic_read"]])
+            expect(leads.isOwn).toHaveBeenCalledWith("ws-1", "lead-1", expect.anything())
+            expect(isTransactionManager(leads.isOwn.mock.calls[0]?.[2])).toBe(true)
             expect(insert?.callsOf("values")).toEqual([[{ workspaceId: "ws-1", ...FIELDS }]])
             expect(requestLocale.of).toHaveBeenCalledWith("en")
             expect(events.record).toHaveBeenCalledWith(
@@ -117,7 +122,7 @@ describe("ContractsService", () => {
                     leadId: "lead-1",
                     kind: "contract.created",
                     actor: "Linh",
-                    summary: "contracts.created:{\"who\":\"Linh\",\"customer\":\"Anh Minh\"}",
+                    summary: 'contracts.created:{"who":"Linh","customer":"Anh Minh"}',
                     evidence: "2026-10-01 → 2027-09-30",
                 },
                 expect.anything(),
@@ -135,19 +140,18 @@ describe("ContractsService", () => {
                 contracts.saveContract(paramsOf({ contractId: "contract-1", leadId: null })),
             ).resolves.toMatchObject({ id: "contract-1", leadId: null })
 
-            expect(update?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", contractId: "contract-1", leadId: null })
+            expect(update?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", contractId: "contract-1" })
             expect(update?.callsOf("set")[0]?.[0]).toMatchObject({ ...FIELDS, leadId: null })
             expect(events.record).toHaveBeenCalledWith(
                 expect.objectContaining({
                     leadId: null,
                     kind: "contract.updated",
-                    summary: "contracts.updated:{\"who\":\"Linh\",\"customer\":\"Anh Minh\"}",
+                    summary: 'contracts.updated:{"who":"Linh","customer":"Anh Minh"}',
                 }),
                 expect.anything(),
             )
             expect(isTransactionManager(events.record.mock.calls[0]?.[1])).toBe(true)
         })
-
     })
 })
 
@@ -182,8 +186,9 @@ describe("ContractsService", () => {
     describe("saveContract refusals", () => {
         it("refuses a lead the workspace does not have", async () => {
             const tx = fakeTransaction(mockEntityManager())
-            const [, insert] = queueQueryBuilders(tx.em, [{ getRawOne: undefined }, { execute: { raw: [] } }])
-            const { contracts, events } = await build(tx.em)
+            const [insert] = queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
+            const { contracts, events, leads } = await build(tx.em)
+            leads.isOwn.mockResolvedValue(false)
 
             await expect(contracts.saveContract(paramsOf())).rejects.toMatchObject({
                 code: ContractsErrorCode.LeadNotFound,
@@ -192,6 +197,18 @@ describe("ContractsService", () => {
 
             expect(insert?.callsOf("execute")).toEqual([])
             expect(events.record).not.toHaveBeenCalled()
+        })
+
+        it("refuses an edit that names a lead the workspace does not have", async () => {
+            const tx = fakeTransaction(mockEntityManager())
+            const [update] = queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
+            const { contracts, leads } = await build(tx.em)
+            leads.isOwn.mockResolvedValue(false)
+
+            await expect(contracts.saveContract(paramsOf({ contractId: "contract-1" }))).rejects.toMatchObject({
+                code: ContractsErrorCode.NotFound,
+            })
+            expect(update?.callsOf("execute")).toEqual([])
         })
 
         it("refuses an edit of a contract the workspace does not have", async () => {
@@ -212,8 +229,20 @@ describe("ContractsService", () => {
             const { contracts, members } = await build(em)
 
             await expect(contracts.attachLead("ws-1", "contract-1", "lead-9")).resolves.toBeUndefined()
-            expect(attach?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", contractId: "contract-1", leadId: "lead-9" })
+            expect(attach?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", contractId: "contract-1" })
             expect(members.require).not.toHaveBeenCalled()
+        })
+    })
+
+    describe("attachLead refusals", () => {
+        it("links nothing when the lead is not the workspace own", async () => {
+            const em = mockEntityManager()
+            const [attach] = queueQueryBuilders(em, [{ execute: {} }])
+            const { contracts, leads } = await build(em)
+            leads.isOwn.mockResolvedValue(false)
+
+            await expect(contracts.attachLead("ws-1", "contract-1", "lead-9")).resolves.toBeUndefined()
+            expect(attach?.callsOf("execute")).toEqual([])
         })
     })
 
@@ -308,7 +337,7 @@ describe("ContractsService", () => {
                 startsOn: "2027-01-01",
                 endsOn: "2028-01-01",
                 status: "active",
-                note: "VIP\ncontracts.renewalNote:{\"until\":\"01/01/2028\",\"no\":\"INV-202612-0001\"}",
+                note: 'VIP\ncontracts.renewalNote:{"until":"01/01/2028","no":"INV-202612-0001"}',
                 updatedAt: "function",
             })
             expect(events.record).toHaveBeenCalledWith(
@@ -317,8 +346,7 @@ describe("ContractsService", () => {
                     leadId: "lead-1",
                     kind: "contract.updated",
                     actor: "NIVO",
-                    summary:
-                        "contracts.renewed:{\"customer\":\"Anh Minh\",\"until\":\"01/01/2028\",\"no\":\"INV-202612-0001\"}",
+                    summary: 'contracts.renewed:{"customer":"Anh Minh","until":"01/01/2028","no":"INV-202612-0001"}',
                     evidence: "2027-01-01 → 2028-01-01",
                 },
                 expect.anything(),
@@ -326,7 +354,6 @@ describe("ContractsService", () => {
             expect(isTransactionManager(events.record.mock.calls[0]?.[1])).toBe(true)
             expect(members.require).not.toHaveBeenCalled()
         })
-
     })
 })
 

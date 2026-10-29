@@ -165,4 +165,18 @@ describe("LeadReadService", () => {
         expect(fakes[0]?.callsOf("andWhere")).toEqual([["l.id = ANY(:leadIds)", { leadIds: ids }]])
         expect(fakes[0]?.callsOf("limit")).toEqual([[1000]])
     })
+
+    it("answers whether a lead belongs to the workspace, on the caller's manager when given", async () => {
+        const own = mockEntityManager({ exists: [LeadEntity, true] })
+        const { leads, em } = await build([])
+        const tx = mockEntityManager({ exists: [LeadEntity, false] })
+        em.exists.mockResolvedValue(true)
+
+        await expect(leads.isOwn("ws-1", "lead-1")).resolves.toBe(true)
+        await expect(leads.isOwn("ws-1", "lead-1", tx)).resolves.toBe(false)
+
+        expect(own.exists).not.toHaveBeenCalled()
+        expect(em.exists).toHaveBeenCalledWith(LeadEntity, { where: { workspaceId: "ws-1", id: "lead-1" } })
+        expect(tx.exists).toHaveBeenCalledWith(LeadEntity, { where: { workspaceId: "ws-1", id: "lead-1" } })
+    })
 })
