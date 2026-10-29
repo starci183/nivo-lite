@@ -46,6 +46,9 @@ export interface NormalizedUpdate {
     readonly visibility: "public" | "internal" | null
 }
 
+/** The database instant of a write, for the `updated_at` column. */
+export const NOW = (): string => "now()"
+
 /** The columns a change of metadata writes: a null keeps the stored value, an empty topic or module clears it. */
 export const metaChanges = (change: NormalizedUpdate): QueryDeepPartialEntity<KnowledgeSourceEntity> => ({
     ...(change.title === null ? {} : { title: change.title }),
@@ -53,7 +56,7 @@ export const metaChanges = (change: NormalizedUpdate): QueryDeepPartialEntity<Kn
     ...(change.tags === null ? {} : { tags: [...change.tags] }),
     ...(change.module === null ? {} : { module: change.module === "" ? null : change.module }),
     ...(change.visibility === null ? {} : { visibility: change.visibility }),
-    updatedAt: () => "now()",
+    updatedAt: NOW,
 })
 
 /** The result of checking the input of a new source. */

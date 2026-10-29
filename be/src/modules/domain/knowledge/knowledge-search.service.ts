@@ -1,15 +1,17 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { toVector } from "@modules/domain/knowledge-chunks"
+import { KnowledgeChunksService, toVector } from "@modules/domain/knowledge-chunks"
+import type { ChunkHit } from "@modules/domain/knowledge-chunks"
+import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
+import { MODULE_CATALOG } from "@modules/domain/modules"
+import { NivoKnowledgeSearchService } from "@modules/domain/nivo-knowledge"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { EmbeddingService } from "./embedding.service"
 import { KnowledgeError, KnowledgeErrorCode } from "./errors/knowledge.error"
 import type { AgentSearch, AskInput, Lens, Passage } from "./knowledge.contracts"
 import { lensOf } from "./lens.policy"
-import { toPassage } from "./passage.mapper"
-import type { ModuleAudienceRow, PassageRow } from "./persistence/search.rows"
-import { MATCH_KNOWLEDGE, SELECT_MODULE_AUDIENCE } from "./persistence/search.sql"
+import { businessPassage, rankPassages, tsqueryOf } from "./passage.mapper"
 
 /** The longest question that is searched. */
 const QUESTION_MAX_CHARS = 500
@@ -27,6 +29,9 @@ export class KnowledgeSearchService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
         private readonly embeddings: EmbeddingService,
+        private readonly chunks: KnowledgeChunksService,
+        private readonly sources: KnowledgeSourcesService,
+        private readonly nivo: NivoKnowledgeSearchService,
     ) {}
 
     /** "Try asking": what an agent would retrieve for a question. Any member may try; the customer audience shows public passages only. */
@@ -47,15 +52,15 @@ export class KnowledgeSearchService {
      * The lens is the same as in `ask`: a customer-facing module or audience sees public passages only, and the instance joins its
      * own notes to the shared ones. A blank question finds nothing and spends nothing.
      */
-    async forAgent(request: AgentSearch): Promise<ReadonlyArray<Passage>> {
+    forAgent(request: AgentSearch): Promise<ReadonlyArray<Passage>> {
         const question = request.question.trim().slice(0, QUESTION_MAX_CHARS)
-        const [row] = await this.entityManager.query<Array<ModuleAudienceRow>>(SELECT_MODULE_AUDIENCE, [request.module])
-        if (row === undefined) throw new KnowledgeError({ code: KnowledgeErrorCode.ModuleUnknown })
-        if (question === "") return []
+        const entry = MODULE_CATALOG.find((candidate) => candidate.key === request.module)
+        if (entry === undefined) return Promise.reject(new KnowledgeError({ code: KnowledgeErrorCode.ModuleUnknown }))
+        if (question === "") return Promise.resolve([])
         const lens = lensOf({
             workspaceId: request.workspaceId,
             module: request.module,
-            moduleAudience: row.audience === "customer" ? "customer" : "internal",
+            moduleAudience: entry.audience === "customer" ? "customer" : "internal",
             requestedAudience: request.audience,
             installationId: request.installationId,
         })
@@ -91,16 +96,34 @@ export class KnowledgeSearchService {
         limit: number,
         vector: string | null,
     ): Promise<ReadonlyArray<Passage>> {
-        const rows = await this.entityManager.query<Array<PassageRow>>(MATCH_KNOWLEDGE, [
-            lens.workspaceId,
-            lens.module,
-            vector,
+        const [folded] = await callDbFunction<{ knowledge_fold: string }>(this.entityManager, "public.knowledge_fold", [
             query,
-            limit,
-            lens.audience,
-            vector === null ? null : this.embeddings.model(),
-            lens.installationId,
         ])
-        return rows.map(toPassage)
+        const search = {
+            vector,
+            model: vector === null ? null : this.embeddings.model(),
+            tsquery: tsqueryOf(folded?.knowledge_fold ?? ""),
+            limit,
+        }
+        const [business, base] = await Promise.all([
+            this.chunks.search({
+                workspaceId: lens.workspaceId,
+                module: lens.module,
+                audience: lens.audience,
+                installationId: lens.installationId,
+                ...search,
+            }),
+            this.nivo.search({ module: lens.module, ...search }),
+        ])
+        return rankPassages(await this.withSources(lens.workspaceId, business), base, limit)
+    }
+
+    /** The passages of the business documents, each with the kind, title and topic of its source. */
+    private async withSources(workspaceId: string, hits: ReadonlyArray<ChunkHit>): Promise<ReadonlyArray<Passage>> {
+        const briefs = await this.sources.briefsOf(workspaceId, [...new Set(hits.map((hit) => hit.sourceId))])
+        return hits.flatMap((hit) => {
+            const brief = briefs.find((candidate) => candidate.id === hit.sourceId)
+            return brief === undefined ? [] : [businessPassage(hit, brief)]
+        })
     }
 }

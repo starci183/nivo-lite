@@ -3,6 +3,7 @@ import { builder } from "@starci/jest-preset"
 import { KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import type { AddSourceInput } from "./knowledge-sources.contracts"
 import {
+    NOW,
     metaChanges,
     tagsOf,
     normalizeSource,
@@ -272,5 +273,11 @@ describe("metaChanges", () => {
             module: null,
             updatedAt: expect.any(Function),
         })
+    })
+})
+
+describe("NOW", () => {
+    it("is the database instant", () => {
+        expect(NOW()).toBe("now()")
     })
 })

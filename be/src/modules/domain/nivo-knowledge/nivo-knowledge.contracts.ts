@@ -72,3 +72,33 @@ export interface NivoEntry {
     /** Last change, ISO 8601. */
     readonly updatedAt: string
 }
+
+/** What a search of the base knowledge asks. */
+export interface NivoQuery {
+    /** The module of the reader: its own items and those of the core folder. */
+    readonly module: string
+    /** The query vector in the pgvector text form, or null. */
+    readonly vector: string | null
+    /** The model the vector comes from; items of another model score by words only. */
+    readonly model: string | null
+    /** The words of the query as a tsquery text (`a | b`), or null. */
+    readonly tsquery: string | null
+    /** The most items wanted. */
+    readonly limit: number
+}
+
+/** One item of the base knowledge a search found. */
+export interface NivoHit {
+    /** The item id. */
+    readonly id: string
+    /** The module folder, or core. */
+    readonly module: string
+    /** The kind of the item. */
+    readonly kind: string
+    /** The title. */
+    readonly title: string
+    /** The markdown body. */
+    readonly content: string
+    /** The relevance, higher first. */
+    readonly score: number
+}

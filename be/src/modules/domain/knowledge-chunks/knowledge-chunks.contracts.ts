@@ -16,6 +16,8 @@ export interface ChunkWrite {
     readonly module: string | null
     /** public or internal. */
     readonly visibility: string
+    /** The agent instance the source is kept for, or null for every instance. */
+    readonly installationId: string | null
     /** The model that made the vectors. */
     readonly model: string
     /** The passages in order. */
@@ -66,3 +68,41 @@ export interface PassageView {
 
 /** The dimensions of every stored vector (the pgvector column size); the embeddings provider is asked for exactly this many. */
 export const EMBEDDING_DIMENSIONS = 1536
+
+/** What a passage search asks: the lens of the reader and the two halves of the query. */
+export interface ChunkQuery {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The module of the reader: its own passages and those for every module. */
+    readonly module: string
+    /** customer sees public passages only. */
+    readonly audience: "customer" | "internal"
+    /** The agent instance whose own passages join the shared ones; null = the shared ones only. */
+    readonly installationId: string | null
+    /** The query vector in the pgvector text form, or null. */
+    readonly vector: string | null
+    /** The model the vector comes from; passages of another model score by words only. */
+    readonly model: string | null
+    /** The words of the query as a tsquery text (`a | b`), or null. */
+    readonly tsquery: string | null
+    /** The most passages wanted. */
+    readonly limit: number
+}
+
+/** One passage a search found. */
+export interface ChunkHit {
+    /** The passage id. */
+    readonly id: string
+    /** The source the passage was cut from. */
+    readonly sourceId: string
+    /** The module the passage is for, or null. */
+    readonly module: string | null
+    /** The text. */
+    readonly content: string
+    /** The relevance, higher first. */
+    readonly score: number
+    /** public or internal. */
+    readonly visibility: string
+    /** The order of the passage in its source. */
+    readonly order: number
+}

@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { builder, mockEntityManager } from "@starci/jest-preset"
+import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
@@ -8,45 +8,9 @@ import { LeadFlowsErrorCode } from "./errors/lead-flows.error"
 import { saveValues, toLeadFlow } from "./lead-flow.mapper"
 import { LeadFlowStoreService } from "./lead-flow-store.service"
 import type { Identity, LeadSource, NewLeadFlow } from "./lead-flows.contracts"
+import { storedFlowOf } from "@tests/fixtures/builders/lead-flows.builder"
 import { LeadFlowEntity } from "./persistence/entities"
-
-const rowOf = builder<LeadFlowEntity>({
-    id: "flow-1",
-    workspaceId: "ws-1",
-    leadId: "lead-1",
-    connectionId: "connection-1",
-    conversationId: null,
-    platform: "facebook",
-    psid: "person-1",
-    igsid: null,
-    phone: null,
-    email: null,
-    name: "Lan",
-    state: "new",
-    resumeState: null,
-    source: null,
-    touches: [],
-    answers: [],
-    asked: 0,
-    pendingQuestion: null,
-    contactAskedAt: null,
-    signals: null,
-    score: null,
-    scoreReasons: [],
-    scoredAt: null,
-    analysis: null,
-    lastUserAt: null,
-    lastUserText: null,
-    greetedAt: null,
-    handedOffAt: null,
-    followedUpAt: null,
-    closedAt: null,
-    escalatedAt: null,
-    escalationReason: null,
-    createdAt: new Date("2026-10-12T10:00:00.000Z"),
-    updatedAt: new Date("2026-10-12T10:00:00.000Z"),
-    installationId: null,
-})
+import { NOW } from "./persistence/lead-flow.projection"
 
 /** The RETURNING row of a write that answered this flow, as the database names its columns. */
 const returned = (flow: LeadFlowEntity): QueryBuilderAnswers => ({
@@ -62,6 +26,7 @@ const returned = (flow: LeadFlowEntity): QueryBuilderAnswers => ({
     },
 })
 
+const GREETED = { state: "greeted" }
 const NOBODY: Identity = { psid: null, igsid: null, phone: null, email: null }
 
 const SOURCE: LeadSource = {
@@ -92,19 +57,21 @@ describe("LeadFlowStoreService", () => {
         const { store, entityManager } = await build(
             mockEntityManager({
                 findOne: [
-                    [LeadFlowEntity, rowOf()],
+                    [LeadFlowEntity, storedFlowOf()],
                     [LeadFlowEntity, null],
                 ],
             }),
         )
 
-        await expect(store.requireByLead("ws-1", "lead-1")).resolves.toEqual(toLeadFlow(rowOf()))
+        await expect(store.requireByLead("ws-1", "lead-1")).resolves.toEqual(toLeadFlow(storedFlowOf()))
         await expect(store.requireByLead("ws-1", "lead-2")).rejects.toMatchObject({ code: LeadFlowsErrorCode.NoFlow })
 
-        expect(entityManager.findOne.mock.calls).toEqual([
-            [LeadFlowEntity, { where: { workspaceId: "ws-1", leadId: "lead-1" } }],
-            [LeadFlowEntity, { where: { workspaceId: "ws-1", leadId: "lead-2" } }],
-        ])
+        expect(entityManager.findOne).toHaveBeenNthCalledWith(1, LeadFlowEntity, {
+            where: { workspaceId: "ws-1", leadId: "lead-1" },
+        })
+        expect(entityManager.findOne).toHaveBeenNthCalledWith(2, LeadFlowEntity, {
+            where: { workspaceId: "ws-1", leadId: "lead-2" },
+        })
     })
     it("answers no flow for a missing lead and no candidates for an empty identity without a query", async () => {
         const { store, entityManager } = await build()
@@ -116,9 +83,11 @@ describe("LeadFlowStoreService", () => {
         expect(entityManager.find).not.toHaveBeenCalled()
     })
     it("finds the candidate flows by every identity key that is set, oldest first", async () => {
-        const { store, entityManager } = await build(mockEntityManager({ find: [LeadFlowEntity, [rowOf()]] }))
+        const { store, entityManager } = await build(mockEntityManager({ find: [LeadFlowEntity, [storedFlowOf()]] }))
 
-        await expect(store.candidates("ws-1", { ...NOBODY, psid: "person-1" })).resolves.toEqual([toLeadFlow(rowOf())])
+        await expect(store.candidates("ws-1", { ...NOBODY, psid: "person-1" })).resolves.toEqual([
+            toLeadFlow(storedFlowOf()),
+        ])
         await store.candidates("ws-1", { psid: "p", igsid: "i", phone: "0", email: "e@x" })
 
         expect(entityManager.find).toHaveBeenNthCalledWith(1, LeadFlowEntity, {
@@ -152,9 +121,9 @@ describe("LeadFlowStoreService", () => {
             lastUserAt: SOURCE.at,
             lastUserText: "Hello",
         }
-        const { store, fakes } = await build(mockEntityManager(), [returned(rowOf()), { execute: { raw: [] } }])
+        const { store, fakes } = await build(mockEntityManager(), [returned(storedFlowOf()), { execute: { raw: [] } }])
 
-        await expect(store.open(opening)).resolves.toEqual(toLeadFlow(rowOf()))
+        await expect(store.open(opening)).resolves.toEqual(toLeadFlow(storedFlowOf()))
         await expect(store.open(opening)).resolves.toBeNull()
 
         expect(fakes[0]?.callsOf("values")).toEqual([
@@ -191,7 +160,7 @@ describe("LeadFlowStoreService", () => {
             lastUserAt: null,
             lastUserText: null,
         }
-        const { store, fakes } = await build(mockEntityManager(), [returned(rowOf())])
+        const { store, fakes } = await build(mockEntityManager(), [returned(storedFlowOf())])
 
         await store.open(opening)
 
@@ -201,20 +170,18 @@ describe("LeadFlowStoreService", () => {
 
 describe("LeadFlowStoreService", () => {
     it("saves a patched flow and refuses a save that returns no row", async () => {
-        const flow = toLeadFlow(rowOf())
+        const flow = toLeadFlow(storedFlowOf())
         const { store, fakes } = await build(mockEntityManager(), [
-            returned(rowOf({ state: "greeted" })),
+            returned(storedFlowOf(GREETED)),
             { execute: { raw: [] } },
         ])
 
-        await expect(store.patch(flow, { state: "greeted" })).resolves.toEqual(toLeadFlow(rowOf({ state: "greeted" })))
+        await expect(store.patch(flow, { state: "greeted" })).resolves.toEqual(toLeadFlow(storedFlowOf(GREETED)))
         await expect(store.patch(flow, { state: "closed" })).rejects.toMatchObject({
             code: LeadFlowsErrorCode.NotStored,
         })
 
-        expect(fakes[0]?.callsOf("set")).toEqual([
-            [{ ...saveValues({ ...flow, state: "greeted" }), updatedAt: expect.any(Function) }],
-        ])
+        expect(fakes[0]?.callsOf("set")).toEqual([[{ ...saveValues({ ...flow, state: "greeted" }), updatedAt: NOW }]])
         expect(fakes[0]?.callsOf("where")).toEqual([[{ id: "flow-1", workspaceId: "ws-1" }]])
         expect(fakes[0]?.callsOf("returning")).toEqual([["*"]])
     })

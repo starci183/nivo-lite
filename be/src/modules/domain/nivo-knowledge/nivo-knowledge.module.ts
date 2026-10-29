@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { NivoFolderClient } from "./nivo-folder.client"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./nivo-knowledge.module-definition"
+import { NivoKnowledgeSearchService } from "./nivo-knowledge-search.service"
 import { NivoKnowledgeService } from "./nivo-knowledge.service"
 import { NivoSeedService } from "./nivo-seed.service"
 
@@ -13,8 +14,14 @@ export class NivoKnowledgeModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), NivoKnowledgeService, NivoFolderClient, NivoSeedService],
-            exports: [NivoKnowledgeService, NivoSeedService],
+            providers: [
+                ...(base.providers ?? []),
+                NivoKnowledgeService,
+                NivoKnowledgeSearchService,
+                NivoFolderClient,
+                NivoSeedService,
+            ],
+            exports: [NivoKnowledgeService, NivoKnowledgeSearchService, NivoSeedService],
         }
     }
 }

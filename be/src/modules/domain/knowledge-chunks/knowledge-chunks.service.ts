@@ -1,8 +1,18 @@
 import { Injectable } from "@nestjs/common"
+import { Brackets } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import type { ChunkWrite, EmbeddedChunk, PassageView, StaleChunk, VectorWrite } from "./knowledge-chunks.contracts"
+import { hybridHit, hybridScore } from "./hybrid-score.policy"
+import type {
+    ChunkHit,
+    ChunkQuery,
+    ChunkWrite,
+    EmbeddedChunk,
+    PassageView,
+    StaleChunk,
+    VectorWrite,
+} from "./knowledge-chunks.contracts"
 import { KnowledgeChunkEntity } from "./persistence/entities"
 
 /** The most passages one source lists or reports as embedded. */
@@ -12,6 +22,20 @@ const PASSAGE_LIMIT = 500
 /** The vector of each id, picked from the two arrays the write carries. */
 const VECTOR_OF_ID =
     '(SELECT t.embedding::extensions.vector FROM unnest(CAST(:ids AS uuid[]), CAST(:vectors AS text[])) AS t(id, embedding) WHERE t.id = "knowledge_chunks"."id")'
+
+/** The most passages one search answers. */
+const SEARCH_MAX = 40
+
+/** A passage row as the search names its columns. */
+interface ChunkHitRow {
+    readonly id: string
+    readonly sourceId: string
+    readonly module: string | null
+    readonly content: string
+    readonly score: number
+    readonly visibility: string
+    readonly ord: number
+}
 
 /** How many passages one insert statement stores. */
 const INSERT_BATCH = 50
@@ -38,6 +62,7 @@ export class KnowledgeChunksService {
                         sourceId: write.sourceId,
                         module: write.module,
                         visibility: write.visibility,
+                        installationId: write.installationId,
                         ord: from + offset,
                         content: draft.text,
                         embedding: draft.vector,
@@ -46,6 +71,52 @@ export class KnowledgeChunksService {
                 )
             })
         })
+    }
+
+    /**
+     * The best passages of a workspace for a query, filtered by the lens (module, instance, audience) in SQL: the vector half scores
+     * only passages of the query model, the word half every passage; a passage must be close or match a word to count.
+     */
+    async search(query: ChunkQuery): Promise<ReadonlyArray<ChunkHit>> {
+        const terms = { vector: query.vector !== null && query.model !== null, text: query.tsquery !== null }
+        if (!terms.vector && !terms.text) return []
+        const found = this.entityManager
+            .createQueryBuilder(KnowledgeChunkEntity, "c")
+            .select("c.id", "id")
+            .addSelect("c.sourceId", "sourceId")
+            .addSelect("c.module", "module")
+            .addSelect("c.content", "content")
+            .addSelect(hybridScore("c", terms), "score")
+            .addSelect("c.visibility", "visibility")
+            .addSelect("c.ord", "ord")
+            .where({ workspaceId: query.workspaceId })
+            .andWhere(
+                new Brackets((own) =>
+                    own.where("c.module IS NULL").orWhere("c.module = :module", { module: query.module }),
+                ),
+            )
+            .andWhere(
+                new Brackets((own) =>
+                    own
+                        .where("c.installationId IS NULL")
+                        .orWhere("c.installationId = :installationId", { installationId: query.installationId }),
+                ),
+            )
+            .andWhere(hybridHit("c", terms))
+            .setParameters({ vector: query.vector, model: query.model, tsquery: query.tsquery })
+        const rows = await (query.audience === "customer" ? found.andWhere({ visibility: "public" }) : found)
+            .orderBy("score", "DESC")
+            .limit(Math.max(1, Math.min(query.limit, SEARCH_MAX)))
+            .getRawMany<ChunkHitRow>()
+        return rows.map((row) => ({
+            id: row.id,
+            sourceId: row.sourceId,
+            module: row.module,
+            content: row.content,
+            score: row.score,
+            visibility: row.visibility,
+            order: row.ord,
+        }))
     }
 
     /** The stored passages of a source in order, for the Knowledge page; the caller has proven the workspace. */
