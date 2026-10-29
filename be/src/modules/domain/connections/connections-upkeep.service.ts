@@ -13,7 +13,7 @@ import type {
     SyncSchedule,
 } from "./connections.contracts"
 import { ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
-import { isoText, returnedIds, returnedOwners } from "./persistence/connection-projection"
+import { isoText, returnedIds, returnedOwners } from "./persistence/connection.projection"
 import { ConnectionEntity } from "./persistence/entities"
 
 /** The id every real id sorts after. */
