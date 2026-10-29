@@ -23,3 +23,9 @@ export interface ConnectionState {
     /** The environment the connection runs in. */
     readonly environment: string
 }
+
+/** The workspace that owns a connection, or null when there is no such connection. */
+export type OptionalConnectionWorkspace = string | null
+
+/** The state of a connection, or null when there is no such connection. */
+export type OptionalConnectionState = ConnectionState | null
