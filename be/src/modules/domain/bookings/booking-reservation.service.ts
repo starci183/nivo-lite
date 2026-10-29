@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { In, LessThan, MoreThan, Not } from "typeorm"
 import type { EntityManager, FindOptionsWhere } from "typeorm"
-import { BookingResourceEntity } from "@modules/domain/booking-resources"
+import { BookingResourcesReadService } from "@modules/domain/booking-resources"
+import type { BookingResourceCapacity } from "@modules/domain/booking-resources"
 import { toTakenSpan } from "./booking-model.mapper"
 import { ACTIVE_STATUSES } from "./bookings.contracts"
 import type { BookingStatus } from "./bookings.contracts"
@@ -103,6 +104,8 @@ export interface RelocateParams {
 @Injectable()
 /** Writes bookings under a lock on the resource, so two requests at the same instant cannot take the same place. */
 export class BookingReservationService {
+    constructor(private readonly resources: BookingResourcesReadService) {}
+
     /** Writes a booking if its resource still has room (or `force`); a booking that does not hold its slot always goes in. */
     async reserve(params: ReserveParams): Promise<ReserveOutcome> {
         const { manager, booking } = params
@@ -196,12 +199,8 @@ export class BookingReservationService {
         manager: EntityManager,
         resourceId: string,
         workspaceId: string,
-    ): Promise<Pick<BookingResourceEntity, "capacity"> | null> {
-        return manager.findOne(BookingResourceEntity, {
-            select: { capacity: true },
-            where: { id: resourceId, workspaceId },
-            lock: { mode: "pessimistic_write" },
-        })
+    ): Promise<BookingResourceCapacity | null> {
+        return this.resources.lockCapacity(manager, workspaceId, resourceId)
     }
 
     /** The bookings that hold one resource between two instants, optionally leaving one out. */

@@ -1,3 +1,5 @@
 export { BookingExceptionsModule } from "./booking-exceptions.module"
 export { BookingExceptionsService } from "./booking-exceptions.service"
-export { BookingExceptionEntity, bookingExceptionsEntities } from "./persistence/entities"
+export { bookingExceptionsEntities } from "./persistence/entities"
+export { BookingExceptionsReadService } from "./booking-exceptions-read.service"
+export type { BookingExceptionRecord } from "./booking-exceptions-read.contracts"

@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { BookingServicesModule } from "@modules/domain/booking-services"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./booking-waitlist.module-definition"
+import { BookingWaitlistReadService } from "./booking-waitlist-read.service"
 import { BookingWaitlistService } from "./booking-waitlist.service"
 
 @Module({})
@@ -11,8 +13,9 @@ export class BookingWaitlistModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), BookingWaitlistService],
-            exports: [BookingWaitlistService],
+            imports: [...(base.imports ?? []), BookingServicesModule.register({})],
+            providers: [...(base.providers ?? []), BookingWaitlistService, BookingWaitlistReadService],
+            exports: [BookingWaitlistService, BookingWaitlistReadService],
         }
     }
 }

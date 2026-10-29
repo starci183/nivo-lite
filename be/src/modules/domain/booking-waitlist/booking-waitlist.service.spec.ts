@@ -1,8 +1,7 @@
 import { Test } from "@nestjs/testing"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { BookingServiceEntity } from "@modules/domain/booking-services"
-import { builder, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { BookingServicesService } from "@modules/domain/booking-services"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { BookingWaitlistService } from "./booking-waitlist.service"
 import type { WaitlistEntry } from "./booking-waitlist.contracts"
@@ -43,18 +42,22 @@ const savedOf = (overrides: Record<string, unknown> = {}) => ({
     ...overrides,
 })
 
-/** A manager whose join runs in a transaction that first locks the service row, then checks and inserts. */
+/** A manager whose join runs in a transaction that first has the service row locked, then checks and inserts. */
 const joining = (waiting: boolean) => {
     const em = mockEntityManager({ exists: [BookingWaitlistEntity, waiting], insert: [BookingWaitlistEntity, {}] })
-    const lock = fakeQueryBuilder({ getOne: { id: "service-1" } })
-    em.createQueryBuilder.mockReturnValue(lock.builder)
     fakeTransaction(em)
-    return { em, lock }
+    return em
 }
+
+const services = mock<BookingServicesService>({ lock: jest.fn(() => Promise.resolve([{ id: "service-1" }])) })
 
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
-        providers: [BookingWaitlistService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            BookingWaitlistService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: BookingServicesService, useValue: services },
+        ],
     }).compile()
     return moduleRef.get(BookingWaitlistService)
 }
@@ -90,13 +93,12 @@ describe("BookingWaitlistService cancel", () => {
 })
 describe("BookingWaitlistService join", () => {
     it("joins a customer to the service window and answers true when an entry was added", async () => {
-        const { em, lock } = joining(false)
+        const em = joining(false)
         const waitlist = await build(em)
 
         await expect(waitlist.join(entryOf())).resolves.toBe(true)
 
-        expect(em.createQueryBuilder).toHaveBeenCalledWith(BookingServiceEntity, "s")
-        expect(lock.callsOf("setLock")).toEqual([["pessimistic_write"]])
+        expect(services.lock).toHaveBeenCalledWith("ws-1", "service-1", expect.anything())
         expect(em.exists).toHaveBeenCalledWith(BookingWaitlistEntity, {
             where: [
                 { ...WINDOW, conversationId: "conversation-1" },
@@ -107,7 +109,7 @@ describe("BookingWaitlistService join", () => {
     })
 
     it("answers false when the customer is already waiting for that service window", async () => {
-        const { em } = joining(true)
+        const em = joining(true)
         const waitlist = await build(em)
 
         await expect(waitlist.join(entryOf())).resolves.toBe(false)
@@ -116,7 +118,7 @@ describe("BookingWaitlistService join", () => {
     })
 
     it("preserves absent customer links and phone in the waitlist entry", async () => {
-        const { em } = joining(false)
+        const em = joining(false)
         const waitlist = await build(em)
 
         await expect(waitlist.join(entryOf({ leadId: null, conversationId: null, customerPhone: null }))).resolves.toBe(
@@ -132,7 +134,7 @@ describe("BookingWaitlistService join", () => {
 })
 describe("BookingWaitlistService join", () => {
     it("trims the customer name and note before limiting their lengths", async () => {
-        const { em } = joining(false)
+        const em = joining(false)
         const waitlist = await build(em)
 
         await expect(
@@ -153,7 +155,7 @@ describe("BookingWaitlistService join", () => {
         { supplied: 200.49, saved: 200 },
         { supplied: 201, saved: 200 },
     ])("rounds and clamps a party of $supplied to $saved", async ({ supplied, saved }) => {
-        const { em } = joining(false)
+        const em = joining(false)
         const waitlist = await build(em)
 
         await expect(waitlist.join(entryOf({ partySize: supplied }))).resolves.toBe(true)

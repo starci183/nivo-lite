@@ -56,6 +56,20 @@ export interface CancellableFacts {
     readonly start_ms: number
 }
 
+/** The booking of a status event as the table holds it, before its service and resource are named. */
+export interface EffectsBaseFacts extends Omit<EffectsRow, "service_name" | "resource_name"> {
+    /** The service of the booking. */
+    readonly service_id: string
+    /** The resource of the booking. */
+    readonly resource_id: string
+}
+
+/** The cancellable booking as the table holds it, before its service is named. */
+export interface CancellableRowFacts extends Omit<CancellableFacts, "service_name"> {
+    /** The service of the booking. */
+    readonly service_id: string
+}
+
 /** One locked booking with the timing of its service. */
 export interface BookingStateFacts {
     /** The id. */
@@ -72,6 +86,12 @@ export interface BookingStateFacts {
     readonly buffer_min: number
     /** The start ms. */
     readonly start_ms: number
+}
+
+/** One locked booking as the table holds it, before the timing of its service is added. */
+export interface BookingStateRowFacts extends Omit<BookingStateFacts, "duration_min" | "buffer_min"> {
+    /** The service of the booking. */
+    readonly service_id: string
 }
 
 /** The published page that owns a slug, with the shop name. */

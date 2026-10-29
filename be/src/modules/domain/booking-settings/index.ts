@@ -1,3 +1,5 @@
 export { BookingSettingsModule } from "./booking-settings.module"
 export { BookingSettingsService } from "./booking-settings.service"
-export { BookingSettingEntity, bookingSettingsEntities } from "./persistence/entities"
+export { bookingSettingsEntities } from "./persistence/entities"
+export { BookingSettingsReadService } from "./booking-settings-read.service"
+export type { BookingPublishedSetting, BookingSettingRecord } from "./booking-settings-read.contracts"
