@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import { ConnectionEntity } from "@modules/domain/connections"
-import { DataRecordEntity } from "@modules/domain/data-records"
+import { ConnectionsService } from "@modules/domain/connections"
+import { DataRecordsReadService } from "@modules/domain/data-records"
 import { LeadRecordsService } from "@modules/domain/leads"
 import type { LeadRecordRow } from "@modules/domain/leads"
 import { advisoryXactLock, InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -28,11 +28,8 @@ const isContractLinkRead = (value: unknown): value is ContractLinkRead =>
     value !== null &&
     ["id", "customerName", "plan", "note"].every((field) => typeof Reflect.get(value, field) === "string")
 
-/** True when a raw row holds the text fields of a customer record read. */
-const isCustomerRecordRead = (value: unknown): value is CustomerRecordRead =>
-    typeof value === "object" &&
-    value !== null &&
-    ["externalId", "title"].every((field) => typeof Reflect.get(value, field) === "string")
+/** The most customer rows one link run reads. */
+const CUSTOMER_RECORDS_MAX = 5000
 
 /** The locale of the lead a link creates: the workspace owners read it in Vietnamese. */
 const RECORD_LOCALE = "vi"
@@ -60,6 +57,8 @@ export class ContractLinkService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
+        private readonly records: DataRecordsReadService,
+        private readonly connections: ConnectionsService,
         private readonly leads: LeadRecordsService,
         private readonly conversations: AgentConversationsService,
     ) {}
@@ -74,7 +73,7 @@ export class ContractLinkService {
         return this.entityManager.transaction(async (tx) => {
             await advisoryXactLock(tx, `contracts.link:${workspaceId}`)
             const contracts = await this.contractsToLink(tx, workspaceId)
-            const records = await this.customerRecords(tx, workspaceId)
+            const records = await this.customerRecords(workspaceId)
             const index = indexCustomers(records.map(customerRecordOf))
             const steps: Array<LinkStep> = []
             await eachInOrder(contracts, async (contract) => {
@@ -103,20 +102,16 @@ export class ContractLinkService {
         return rows.filter(isContractLinkRead)
     }
 
-    private async customerRecords(tx: EntityManager, workspaceId: string): Promise<Array<CustomerRecordRead>> {
-        const rows: ReadonlyArray<unknown> = await tx
-            .createQueryBuilder(DataRecordEntity, "r")
-            .select("r.external_id", "externalId")
-            .addSelect("r.title", "title")
-            .addSelect("r.data", "data")
-            .addSelect("s.name", "source")
-            .leftJoin(ConnectionEntity, "s", "s.workspace_id = r.workspace_id AND s.id = r.connection_id")
-            .where("r.workspace_id = :workspaceId AND r.entity = 'customer'", { workspaceId })
-            .orderBy("r.synced_at", "DESC")
-            .addOrderBy("r.id", "ASC")
-            .limit(5000)
-            .getRawMany()
-        return rows.filter(isCustomerRecordRead)
+    private async customerRecords(workspaceId: string): Promise<Array<CustomerRecordRead>> {
+        const rows = await this.records.customerRecords(workspaceId, CUSTOMER_RECORDS_MAX)
+        const sources = await this.connections.findMany(workspaceId, [...new Set(rows.map((row) => row.connectionId))])
+        const names = new Map(sources.map((source) => [source.id, source.name]))
+        return rows.map((row) => ({
+            externalId: row.externalId,
+            title: row.title,
+            data: row.data,
+            source: names.get(row.connectionId) ?? null,
+        }))
     }
 
     private async linkContract(
