@@ -60,7 +60,7 @@ export interface LinePageQuery {
 }
 
 /** One line of the thread as it is stored. */
-export interface ThreadLine {
+export interface OfficeThreadLine {
     /** The message id. */
     readonly id: string
     /** Who wrote it. */

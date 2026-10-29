@@ -4,7 +4,7 @@ import { ExecutionsService } from "@modules/domain/executions"
 import type { ExecutionRecordRow } from "@modules/domain/executions"
 import { LeadReadService } from "@modules/domain/leads"
 import { isOfficeRoomKey, MessagesReadService } from "@modules/domain/messages"
-import type { ThreadLine } from "@modules/domain/messages"
+import type { OfficeThreadLine } from "@modules/domain/messages"
 import { ResponsibilityReadService } from "@modules/domain/responsibilities"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -75,7 +75,7 @@ export class OfficeThreadService {
     }
 
     /** The lines with the customer's name, the department of the work item and the live state of the card each carries. */
-    private async viewsOf(workspaceId: string, lines: ReadonlyArray<ThreadLine>): Promise<Array<MessageView>> {
+    private async viewsOf(workspaceId: string, lines: ReadonlyArray<OfficeThreadLine>): Promise<Array<MessageView>> {
         const refs = lines.map((line) => cardRefOf(line.card_json))
         const workItemIds = distinct([...lines.map((line) => line.work_item_id), ...idsOfKind(refs, "work_item")])
         const [customers, items, executions] = await Promise.all([

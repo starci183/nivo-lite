@@ -5,7 +5,7 @@ import { ExecutionsService } from "@modules/domain/executions"
 import type { ExecutionRecordRow } from "@modules/domain/executions"
 import { LeadReadService } from "@modules/domain/leads"
 import { MessagesReadService } from "@modules/domain/messages"
-import type { ThreadLine } from "@modules/domain/messages"
+import type { OfficeThreadLine } from "@modules/domain/messages"
 import { ResponsibilityReadService } from "@modules/domain/responsibilities"
 import { WorkItemsService } from "@modules/domain/work-items"
 import type { WorkItem } from "@modules/domain/work-items"
@@ -27,7 +27,7 @@ const EXEC_ID = "0b6f0c5e-2d41-4f55-9c9a-7a1c2f3e4d5b"
 const ITEM_ID = "1b6f0c5e-2d41-4f55-9c9a-7a1c2f3e4d5b"
 const OTHER_ID = "2b6f0c5e-2d41-4f55-9c9a-7a1c2f3e4d5b"
 
-const lineOf = builder<ThreadLine>({
+const lineOf = builder<OfficeThreadLine>({
     id: "m-1",
     author_kind: "human",
     author_name: "An",
@@ -70,7 +70,7 @@ const itemOf = (id: string, status: WorkItem["status"], extra: Partial<WorkItem>
 
 /** What the owner capabilities answer; every read defaults to nothing. */
 interface Answers {
-    readonly lines?: Array<ThreadLine>
+    readonly lines?: Array<OfficeThreadLine>
     readonly records?: Array<ExecutionRecordRow>
     readonly statuses?: Array<{ id: string; status: string }>
     readonly items?: Array<WorkItem>

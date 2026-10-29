@@ -118,7 +118,13 @@ export class ZaloPageService {
         const connection = await this.zaloOf(actor, connectionId)
         const body = text.trim()
         if (body.length === 0 || body.length > TEXT_MAX) invalid("text")
-        const recipients = await this.recipientsOf(actor.workspaceId, connection.id)
+        const conversations = await this.conversations.onConnection(
+            actor.workspaceId,
+            connection.id,
+            ZALO_CHANNEL,
+            CONVERSATIONS_MAX,
+        )
+        const recipients = await this.recipientsOf(conversations)
         if (!recipients.some((one) => one.userId === recipientId)) invalid("recipientId")
         return this.delivery
             .sendToPerson({
@@ -191,7 +197,7 @@ export class ZaloPageService {
         const byId = new Map(conversations.map((conversation) => [conversation.id, conversation]))
         const rows = writes.flatMap((write): Array<RecipientRow> => {
             const conversation = byId.get(write.conversationId)
-            return conversation === undefined || conversation.externalId === null
+            return conversation?.externalId === undefined || conversation.externalId === null
                 ? []
                 : [
                       {
