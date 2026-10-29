@@ -3,8 +3,10 @@ import type { EntityManager } from "typeorm"
 import { agentMessagesEntities } from "@modules/domain/agent-messages"
 import { chatMarkersEntities } from "@modules/domain/chat-markers"
 import { messagesEntities } from "@modules/domain/messages"
-import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { sql } from "@modules/platform/database"
+
+const [WorkspaceMemberEntity] = workspaceMembersEntities
 
 const [AgentMessageEntity] = agentMessagesEntities
 const [ChatMarkerEntity] = chatMarkersEntities

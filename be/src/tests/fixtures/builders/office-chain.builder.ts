@@ -4,8 +4,11 @@ import { callDbFunction } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { AgentEntity } from "@modules/domain/agents"
 import { leadsEntities } from "@modules/domain/leads"
-import { WorkspaceEntity } from "@modules/domain/workspaces"
-import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { workspacesEntities } from "@modules/domain/workspaces"
+import { workspaceMembersEntities } from "@modules/domain/workspace-members"
+
+const [WorkspaceEntity] = workspacesEntities
+const [WorkspaceMemberEntity] = workspaceMembersEntities
 
 const [LeadEntity] = leadsEntities
 

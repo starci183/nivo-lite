@@ -3,9 +3,13 @@ import type { EntityManager } from "typeorm"
 import { eachInOrder } from "@modules/platform/primitives"
 import { AgentEntity } from "@modules/domain/agents"
 import { officeRoomsEntities } from "@modules/domain/office-rooms"
-import { StaffEntity } from "@modules/domain/staff"
-import { WorkspaceEntity } from "@modules/domain/workspaces"
-import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { staffEntities } from "@modules/domain/staff"
+import { workspacesEntities } from "@modules/domain/workspaces"
+import { workspaceMembersEntities } from "@modules/domain/workspace-members"
+
+const [WorkspaceEntity] = workspacesEntities
+const [WorkspaceMemberEntity] = workspaceMembersEntities
+const [StaffEntity] = staffEntities
 
 const [OfficeRoomEntity, OfficeRoomMemberEntity] = officeRoomsEntities
 

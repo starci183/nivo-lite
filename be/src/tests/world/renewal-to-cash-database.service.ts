@@ -7,10 +7,12 @@ import { eventsEntities } from "@modules/domain/events"
 import { inboundEventsEntities } from "@modules/domain/inbound-events"
 import { invoicesEntities } from "@modules/domain/invoices"
 import { transactionsEntities } from "@modules/domain/transactions"
-import { WorkItemEntity } from "@modules/domain/work-items"
+import { workItemsEntities } from "@modules/domain/work-items"
 import { sql } from "@modules/platform/database"
 import { inboxEntities } from "@modules/platform/inbox"
 import { jobsEntities } from "@modules/platform/jobs"
+
+const [WorkItemEntity] = workItemsEntities
 
 const [InboxEntity] = inboxEntities
 const [JobEntity] = jobsEntities

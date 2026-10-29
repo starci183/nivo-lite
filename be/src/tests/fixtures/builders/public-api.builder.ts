@@ -7,7 +7,9 @@ import { ApiKeyEntity } from "@modules/domain/api-keys"
 import { AuthorityRuleEntity } from "@modules/domain/authority-rules"
 import { inboundEventsEntities } from "@modules/domain/inbound-events"
 import { leadsEntities } from "@modules/domain/leads"
-import { WorkspaceEntity } from "@modules/domain/workspaces"
+import { workspacesEntities } from "@modules/domain/workspaces"
+
+const [WorkspaceEntity] = workspacesEntities
 
 const [InboundEventEntity] = inboundEventsEntities
 const [LeadEntity] = leadsEntities

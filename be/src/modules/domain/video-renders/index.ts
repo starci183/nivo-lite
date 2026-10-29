@@ -10,4 +10,4 @@ export type {
     RenderStatus,
     SettledRender,
 } from "./video-renders.contracts"
-export { VideoRenderEntity, videoRendersEntities } from "./persistence/entities"
+export { videoRendersEntities } from "./persistence/entities"

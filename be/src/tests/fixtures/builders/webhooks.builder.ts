@@ -20,7 +20,9 @@ import { META_CLIENT } from "@modules/integrations/meta"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import type { EntityManager } from "typeorm"
-import { WorkspaceEntity } from "@modules/domain/workspaces"
+import { workspacesEntities } from "@modules/domain/workspaces"
+
+const [WorkspaceEntity] = workspacesEntities
 
 /** Explicit identities and signing/queue options supplied by the test composition root. */
 export interface WebhookBuilderOptions {

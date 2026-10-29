@@ -1,4 +1,4 @@
-export { VideoProjectEntity, videoProjectsEntities } from "./persistence/entities"
+export { videoProjectsEntities } from "./persistence/entities"
 export { VideoProjectsModule } from "./video-projects.module"
 export { VideoProjectsService } from "./video-projects.service"
 export { VideoProjectWorkbenchWriterService } from "./video-project-workbench-writer.service"

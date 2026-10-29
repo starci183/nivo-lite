@@ -1,7 +1,10 @@
 import { builder, mockEntityManager, fakeQueryBuilder } from "@starci/jest-preset"
 import type { MockEntityManager, FakeQueryBuilder, QueryBuilderAnswers } from "@starci/jest-preset"
-import { WorkItemEntity } from "@modules/domain/work-items"
+import { workItemsEntities } from "@modules/domain/work-items"
 import type { NewWorkItem, Proposal, WorkItemRecord } from "@modules/domain/work-items"
+
+const [WorkItemEntity] = workItemsEntities
+type WorkItemEntity = InstanceType<typeof WorkItemEntity>
 
 /** The any-function matcher, typed `unknown` so it flows into any slot. */
 export const anyFunction = (): unknown => expect.any(Function)
