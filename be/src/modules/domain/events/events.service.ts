@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { EventEntry, EventLine, EventListFilter, EventRecord } from "./events.contracts"
+import type { EventEntry, EventLine, EventListFilter, EventRecordRow } from "./events.contracts"
 import { EventEntity } from "./persistence/entities"
 
 @Injectable()
@@ -34,7 +34,7 @@ export class EventsService {
     }
 
     /** Lists the workspace's evidence history with caller-provided filters and a row limit; the time is selected as the ISO text the log always answered. */
-    list(workspaceId: string, filter: EventListFilter): Promise<Array<EventRecord>> {
+    list(workspaceId: string, filter: EventListFilter): Promise<Array<EventRecordRow>> {
         const query = this.entityManager
             .createQueryBuilder(EventEntity, "e")
             .select("e.id", "id")
@@ -55,6 +55,6 @@ export class EventsService {
             .orderBy("e.createdAt", filter.oldestFirst ? "ASC" : "DESC")
             .addOrderBy("e.id", "ASC")
             .limit(filter.limit)
-            .getRawMany<EventRecord>()
+            .getRawMany<EventRecordRow>()
     }
 }

@@ -13,7 +13,6 @@ import { InventoryPerformersService } from "./inventory-performers.service"
 import { InventoryReceivingService } from "./inventory-receiving.service"
 import { InventoryReplenishService } from "./inventory-replenish.service"
 import { InventoryDeductionService } from "./inventory-deduction.service"
-import { OrderConfirmedInventoryConsumer } from "./order-confirmed-inventory.consumer"
 import { InventoryStockService } from "./inventory-stock.service"
 import { InventoryWorkbenchService } from "./inventory-workbench.service"
 import { INBOX, InboxService } from "@modules/platform/inbox"
@@ -41,7 +40,6 @@ export class InventoryModule extends ConfigurableModuleClass {
                 InventoryCatalogService,
                 InventoryImportService,
                 InventoryDeductionService,
-                OrderConfirmedInventoryConsumer,
                 InventoryStockService,
                 InventoryAutomationService,
                 InventoryPerformersService,

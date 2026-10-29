@@ -1,6 +1,6 @@
 import { Injectable, Optional } from "@nestjs/common"
-import type { EntityManager, SelectQueryBuilder, UpdateResult } from "typeorm"
-import { WorkItemEntity } from "@modules/domain/work-items"
+import type { EntityManager, UpdateResult } from "typeorm"
+import { WorkItemsActivityService } from "@modules/domain/work-items"
 import type { BoundConnection } from "@modules/domain/agent-connections"
 import { WorkspaceMembersService, isManagerRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
@@ -9,7 +9,6 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
-import { LeadEntity } from "@modules/domain/leads"
 import type {
     AgentDashboardData,
     AgentOwners,
@@ -45,7 +44,6 @@ import {
 } from "./dashboard.mapper"
 import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
 import { AgentEntity } from "./persistence/entities"
-import type { DashboardLine } from "./agents-reads.contracts"
 
 const DAY_MS = 86_400_000
 const DONE_WINDOW_DAYS = 7
@@ -55,11 +53,6 @@ const GOVERNORS = ["owner", "manager"] as const
 
 /** The most agents a workspace lists. */
 const AGENT_LIMIT = 200
-
-/** The dashboard's lead name, test runs and customer label, as the lists fold them in. */
-const CUSTOMER_EXPRESSION = "COALESCE(l.contact_name, w.proposal->'fields'->>'customer')"
-const TEST_RUN_TEXT =
-    "concat_ws(' ', l.contact_name, l.company, w.proposal->>'summary', w.proposal->'fields'->>'contact_name', w.proposal->'fields'->>'customer')"
 
 /** The agents newest columns the lists and finders order by: oldest first, the id as tie-break. */
 const OLDEST_FIRST = { createdAt: "ASC", id: "ASC" } as const
@@ -78,6 +71,7 @@ export class AgentsService {
         private readonly members: WorkspaceMembersService,
         private readonly bindings: AgentBindingsService,
         private readonly ownership: AgentOwnershipService,
+        private readonly work: WorkItemsActivityService,
         @Optional() @InjectKnowledge() private readonly knowledge: KnowledgeLens | null = null,
     ) {}
 
@@ -255,12 +249,15 @@ export class AgentsService {
         scopeId: string | null,
         installationId: string | null,
     ): Promise<WaitingData> {
-        const rows = await this.itemsOf(query, scopeId, "w.created_at", "w.proposal->>'summary'", "NULL::text")
-            .andWhere("w.status = 'waiting_decision'")
-            .orderBy("w.createdAt", "ASC")
-            .addOrderBy("w.id", "ASC")
-            .limit(LIST_LIMIT)
-            .getRawMany<DashboardLine>()
+        const rows = await this.work.dashboardList({
+            workspaceId: query.workspaceId,
+            department: query.module,
+            installationId: scopeId,
+            kind: "waiting",
+            since: null,
+            testRunPattern: TEST_RUN_PATTERN,
+            limit: LIST_LIMIT,
+        })
         return {
             total: totalOf(rows),
             items: rows.map((row) => itemOf(row, decisionHrefOf(query.module, installationId, row.id))),
@@ -273,52 +270,19 @@ export class AgentsService {
         installationId: string | null,
     ): Promise<DoneData> {
         const since = new Date(this.clock.now().getTime() - DONE_WINDOW_DAYS * DAY_MS)
-        const rows = await this.itemsOf(
-            query,
-            scopeId,
-            "COALESCE(w.completed_at, w.updated_at)",
-            "COALESCE(NULLIF(w.result->>'summary', ''), w.proposal->>'summary')",
-            "w.result->>'href'",
-        )
-            .andWhere("w.status = 'done' AND w.decidedPath = 'auto' AND w.completedAt >= :since", { since })
-            .orderBy("w.completedAt", "DESC")
-            .addOrderBy("w.id", "ASC")
-            .limit(LIST_LIMIT)
-            .getRawMany<DashboardLine>()
+        const rows = await this.work.dashboardList({
+            workspaceId: query.workspaceId,
+            department: query.module,
+            installationId: scopeId,
+            kind: "done",
+            since,
+            testRunPattern: TEST_RUN_PATTERN,
+            limit: LIST_LIMIT,
+        })
         return {
             count: totalOf(rows),
             items: rows.map((row) => itemOf(row, decisionHrefOf(query.module, installationId, row.id))),
         }
-    }
-
-    /**
-     * The work items of a department for the dashboard lists, test runs left out, the lead's name folded in and the total before
-     * the limit on every row; a multi-instance type narrows to its own instance.
-     */
-    private itemsOf(
-        query: DashboardQuery,
-        scopeId: string | null,
-        atExpression: string,
-        summaryExpression: string,
-        hrefExpression: string,
-    ): SelectQueryBuilder<WorkItemEntity> {
-        const items = this.entityManager
-            .createQueryBuilder(WorkItemEntity, "w")
-            .select("w.id", "id")
-            .addSelect("w.action", "action")
-            .addSelect("w.leadId", "leadId")
-            .addSelect(`to_json(${atExpression}) #>> '{}'`, "at")
-            .addSelect(summaryExpression, "summary")
-            .addSelect(CUSTOMER_EXPRESSION, "customer")
-            .addSelect(hrefExpression, "resultHref")
-            .addSelect("count(*) OVER ()", "total")
-            .leftJoin(LeadEntity, "l", "l.id = w.lead_id")
-            .where("w.workspaceId = :workspaceId AND w.department = :department", {
-                workspaceId: query.workspaceId,
-                department: query.module,
-            })
-            .andWhere(`NOT (${TEST_RUN_TEXT} ~ :pattern)`, { pattern: TEST_RUN_PATTERN })
-        return scopeId === null ? items : items.andWhere("w.installationId = :scopeId", { scopeId })
     }
 
     private connectionsOf(agentId: OptionalId): Promise<ReadonlyArray<BoundConnection>> {

@@ -39,7 +39,7 @@ export interface EventListFilter {
 }
 
 /** An evidence-log line selected for a workspace history view. */
-export interface EventRecord {
+export interface EventRecordRow {
     /** The evidence line. */
     readonly id: string
     /** The lead the line describes, when there is one. */

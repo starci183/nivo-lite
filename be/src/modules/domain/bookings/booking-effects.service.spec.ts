@@ -5,6 +5,8 @@ import type { FakeQueryBuilder, QueryBuilderAnswers } from "@tests/fixtures/buil
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import { BookingRemindersService } from "@modules/domain/booking-reminders"
+import { BookingResourcesReadService } from "@modules/domain/booking-resources"
+import { BookingServicesReadService } from "@modules/domain/booking-services"
 import { EventsService } from "@modules/domain/events"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { CLOCK } from "@modules/platform/clock"
@@ -31,7 +33,14 @@ const START = Date.UTC(2026, 9, 15, 2, 30)
 const HOUR = 3_600_000
 
 /** The answers of the statements a booking event runs, in order: the locked read, the fee, the claims and the release. */
-const found = (row: EffectsRow = rowOf()): QueryBuilderAnswers => ({ getRawOne: row })
+const SERVICE_NAMES = new Map<string, string>()
+const RESOURCE_NAMES = new Map<string, string>()
+/** The locked read of the booking as the table holds it; the names of its service and resource are answered by the owner reads. */
+const found = (row: EffectsRow = rowOf()): QueryBuilderAnswers => {
+    SERVICE_NAMES.set("service-1", row.service_name)
+    RESOURCE_NAMES.set("resource-1", row.resource_name)
+    return { getRawOne: { ...row, service_id: "service-1", resource_id: "resource-1" } }
+}
 const MISSING: QueryBuilderAnswers = { getRawOne: undefined }
 const CLAIMED: QueryBuilderAnswers = { execute: { raw: [{ id: BOOKING_ID }] } }
 const ALREADY_CLAIMED: QueryBuilderAnswers = { execute: { raw: [] } }
@@ -82,6 +91,10 @@ const build = async (steps: ReadonlyArray<QueryBuilderAnswers> = [], settings = 
     notices.factsOf.mockResolvedValue(FACTS)
     notices.textOf.mockReturnValue("Notice text")
     notices.subjectOf.mockReturnValue("Notice subject")
+    const servicesRead = mock<BookingServicesReadService>({ namesOf: jest.fn(() => Promise.resolve(SERVICE_NAMES)) })
+    const resourcesRead = mock<BookingResourcesReadService>({
+        namesOf: jest.fn(() => Promise.resolve(RESOURCE_NAMES)),
+    })
     const messages = mock<MessageCatalog>()
     messages.get.mockImplementation((key, params, locale) => `${locale}:${key}:${JSON.stringify(params)}`)
     const moduleRef = await Test.createTestingModule({
@@ -97,6 +110,8 @@ const build = async (steps: ReadonlyArray<QueryBuilderAnswers> = [], settings = 
             { provide: BookingRemindersService, useValue: reminders },
             { provide: EventsService, useValue: events },
             { provide: InboundEventsService, useValue: inbound },
+            { provide: BookingServicesReadService, useValue: servicesRead },
+            { provide: BookingResourcesReadService, useValue: resourcesRead },
         ],
     }).compile()
     const service = moduleRef.get(BookingEffectsService)
@@ -117,6 +132,11 @@ const build = async (steps: ReadonlyArray<QueryBuilderAnswers> = [], settings = 
 }
 
 describe("BookingEffectsService", () => {
+    beforeEach(() => {
+        SERVICE_NAMES.clear()
+        RESOURCE_NAMES.clear()
+    })
+
     it.each([
         { workspaceId: "", bookingId: BOOKING_ID },
         { workspaceId: WORKSPACE, bookingId: "" },
@@ -136,6 +156,17 @@ describe("BookingEffectsService", () => {
         expect(inbound.handOffOrder).not.toHaveBeenCalled()
         expect(notifier.notify).not.toHaveBeenCalled()
         expect(messages.get).not.toHaveBeenCalled()
+    })
+
+    it("returns no effects when the service of the booking is gone", async () => {
+        const answers = found()
+        SERVICE_NAMES.clear()
+        const { service, reminders, trace } = await build([answers])
+
+        await expect(service.apply(eventOf(), CLAIM)).resolves.toEqual(NO_EFFECTS)
+
+        expect(trace()).toEqual([SELECTED])
+        expect(reminders.schedule).not.toHaveBeenCalled()
     })
 
     it("returns no effects when the booking no longer exists", async () => {

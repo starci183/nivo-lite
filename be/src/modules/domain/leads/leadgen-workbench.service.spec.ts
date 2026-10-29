@@ -1,5 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
+import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { AgentMessagesService } from "@modules/domain/agent-messages"
+import { WorkItemsService } from "@modules/domain/work-items"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -7,22 +10,14 @@ import { LeadsError, LeadsErrorCode } from "./errors/leads.error"
 import { LeadGenWorkbenchService } from "./leadgen-workbench.service"
 import type { LeadGenLeadRecord } from "./leadgen-workbench.contracts"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 
 const NOW = Date.parse("2026-10-12T03:00:00.000Z")
 const SINCE = new Date(NOW - 90 * 86_400_000).toISOString()
 
-/** Four empty datasets, in the order the workbench reads them: leads, work items, conversations, messages. */
-const EMPTY: ReadonlyArray<QueryBuilderAnswers> = [
-    { getRawMany: [] },
-    { getRawMany: [] },
-    { getRawMany: [] },
-    { getRawMany: [] },
-]
-
-const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = EMPTY) => {
+/** A workbench over the given lead rows; work items, conversations and messages start empty. */
+const build = async (leadRows: ReadonlyArray<LeadGenLeadRecord> = []) => {
     const em = mockEntityManager()
-    const fakes = queueQueryBuilders(em, answers)
+    const fakes = queueQueryBuilders(em, [{ getRawMany: leadRows }])
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue({
         userId: "user-1",
@@ -32,20 +27,29 @@ const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = EMPTY) => {
         displayName: "An",
         status: "active",
     })
+    const items = mock<WorkItemsService>()
+    items.listForWorkbench.mockResolvedValue([])
+    const conversations = mock<AgentConversationsService>()
+    conversations.listCustomerLeadConversations.mockResolvedValue([])
+    const messages = mock<AgentMessagesService>()
+    messages.listForConversations.mockResolvedValue([])
     const moduleRef = await Test.createTestingModule({
         providers: [
             LeadGenWorkbenchService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: WorkspaceMembersService, useValue: members },
+            { provide: WorkItemsService, useValue: items },
+            { provide: AgentConversationsService, useValue: conversations },
+            { provide: AgentMessagesService, useValue: messages },
         ],
     }).compile()
-    return { bench: moduleRef.get(LeadGenWorkbenchService), em, members, fakes }
+    return { bench: moduleRef.get(LeadGenWorkbenchService), em, members, fakes, items, conversations, messages }
 }
 
 describe("LeadGenWorkbenchService", () => {
     it("answers an empty workbench for a workspace with no lead-gen rows", async () => {
-        const { bench, fakes, members } = await build()
+        const { bench, members, items, conversations, messages } = await build()
 
         await expect(bench.read("user-1", "ws-1", null)).resolves.toEqual({
             metrics: {
@@ -65,12 +69,13 @@ describe("LeadGenWorkbenchService", () => {
         })
 
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-        expect(fakes[3]?.callsOf("where")).toEqual([
-            [
-                "m.workspace_id = :workspaceId AND m.created_at >= CAST(:since AS timestamptz)",
-                { workspaceId: "ws-1", since: SINCE },
-            ],
-        ])
+        expect(items.listForWorkbench).toHaveBeenCalledWith("ws-1", 600)
+        expect(conversations.listCustomerLeadConversations).toHaveBeenCalledWith("ws-1", 1000)
+        expect(messages.listForConversations).toHaveBeenCalledWith("ws-1", [], {
+            since: SINCE,
+            limit: 8000,
+            oldestFirst: true,
+        })
     })
 })
 
@@ -92,9 +97,14 @@ describe("LeadGenWorkbenchService", () => {
             contact_name: undefined,
             company: undefined,
         })
-        const { bench, em, fakes } = await build([
-            { getRawMany: [normal, testContact, testCompany, absentNames] },
-            ...EMPTY.slice(1),
+        const { bench, em, fakes, conversations, messages } = await build([
+            normal,
+            testContact,
+            testCompany,
+            absentNames,
+        ])
+        conversations.listCustomerLeadConversations.mockResolvedValue([
+            { id: "conv-1", lead_id: "normal", handled_by: null },
         ])
 
         const result = await bench.read("user-1", "ws-1", undefined)
@@ -124,11 +134,9 @@ describe("LeadGenWorkbenchService", () => {
             },
         ])
         expect(result.metrics.newToday).toBe(2)
-        expect(em.createQueryBuilder).toHaveBeenCalledTimes(4)
-        expect(fakes.map((fake) => fake.callsOf("limit"))).toEqual([[[500]], [[600]], [[1000]], [[8000]]])
-        expect(fakes[1]?.callsOf("from")).toEqual([["public.work_items", "w"]])
-        expect(fakes[2]?.callsOf("from")).toEqual([["public.agent_conversations", "c"]])
-        expect(fakes[3]?.callsOf("from")).toEqual([["public.agent_messages", "m"]])
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
+        expect(fakes[0]?.callsOf("limit")).toEqual([[500]])
+        expect(messages.listForConversations).toHaveBeenCalledWith("ws-1", ["conv-1"], expect.anything())
     })
 })
 
@@ -145,7 +153,7 @@ describe("LeadGenWorkbenchService", () => {
             created_at: "2026-10-12T02:00:00.000Z",
         })
         const other = mock<LeadGenLeadRecord>({ ...own, id: "other", installation_id: "agent-2" })
-        const { bench } = await build([{ getRawMany: [own, other] }, ...EMPTY.slice(1)])
+        const { bench } = await build([own, other])
 
         const result = await bench.read("user-1", "ws-1", "agent-1")
 
@@ -165,14 +173,12 @@ describe("LeadGenWorkbenchService", () => {
     })
 
     it("propagates a failed dataset read", async () => {
-        const { bench, em } = await build(EMPTY.slice(0, 1))
+        const { bench, items, messages } = await build()
         const failure = new LeadsError({ code: LeadsErrorCode.NotFound, params: { id: "database" } })
-        em.createQueryBuilder.mockImplementationOnce(() => {
-            throw failure
-        })
+        items.listForWorkbench.mockRejectedValueOnce(failure)
 
         await expect(bench.read("user-1", "ws-1", null)).rejects.toBe(failure)
 
-        expect(em.createQueryBuilder).toHaveBeenCalledTimes(2)
+        expect(messages.listForConversations).not.toHaveBeenCalled()
     })
 })

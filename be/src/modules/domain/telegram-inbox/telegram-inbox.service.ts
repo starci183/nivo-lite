@@ -1,4 +1,4 @@
-import { InjectInbox } from "@modules/platform/inbox"
+import { InjectEntityInbox } from "@modules/platform/inbox"
 import type { EntityInbox } from "@modules/platform/inbox"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
@@ -20,23 +20,22 @@ export class TelegramInboxService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly conversations: ConversationsService,
-        @InjectInbox() private readonly inbox: EntityInbox,
+        @InjectEntityInbox() private readonly inbox: EntityInbox,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
     ) {}
 
     /** A redelivered update is acknowledged without being processed again; an update the chat does not answer is acknowledged and dropped. */
     acceptTelegramDelivery(rawBody: TelegramRawDelivery, connection: string): Promise<void> {
         return this.entityManager.transaction(async (manager) => {
-            const payload = { connection, rawBody: rawBody?.toString("utf8") }
+            const payload = { connection, rawBody: rawBody?.toString("utf8") ?? "" }
             const inbound = readTelegramUpdate(`[${this.catalog.get("conversations.photoSent", {}, "vi")}]`, rawBody)
             const deliveryId = inbound.kind === "ok" ? `${payload.connection}:${inbound.value.updateId}` : ""
-            if (
-                !(await this.inbox.claimRow("telegram", deliveryId, manager, {
-                    entity: TelegramInboxEntity,
-                    row: { provider: "telegram", deliveryId, payload },
-                }))
-            )
-                return
+            if (deliveryId === "") return
+            const receiptId = await this.inbox.claimRow("telegram", deliveryId, manager, {
+                entity: TelegramInboxEntity,
+                row: (id) => ({ provider: "telegram", deliveryId: id, payload }),
+            })
+            if (receiptId === undefined) return
             const message: TelegramDeliveryRecorded = { deliveryId }
             await this.outbox.write(manager, TELEGRAM_DELIVERY_QUEUE, message, {
                 dedupeKey: `${TELEGRAM_DELIVERY_QUEUE}:${deliveryId}`,
@@ -47,16 +46,20 @@ export class TelegramInboxService {
     /** Resolves and processes a committed receipt atomically; retries leave a failed receipt pending. */
     processRecordedDelivery(message: TelegramDeliveryRecorded): Promise<void> {
         return this.entityManager.transaction(async (manager) => {
-            const pending = await manager.findOne(TelegramInboxEntity, {
-                where: { provider: "telegram", deliveryId: message.deliveryId, processedAt: IsNull() },
-                lock: { mode: "pessimistic_write" },
-            })
+            const pending = await this.lockPending(manager, message.deliveryId)
             if (pending === null) return
             const rawBody = Buffer.from(pending.payload.rawBody, "utf8")
             const inbound = readTelegramUpdate(`[${this.catalog.get("conversations.photoSent", {}, "vi")}]`, rawBody)
             if (inbound.kind === "ok")
                 await this.conversations.acceptTelegram(pending.payload.connection, inbound.value, manager)
             await manager.update(TelegramInboxEntity, { id: pending.id }, { processedAt: () => "now()" })
+        })
+    }
+
+    private lockPending(manager: EntityManager, deliveryId: string): Promise<TelegramInboxEntity | null> {
+        return manager.findOne(TelegramInboxEntity, {
+            where: { provider: "telegram", deliveryId, processedAt: IsNull() },
+            lock: { mode: "pessimistic_write" },
         })
     }
 }

@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { APPROVAL_RESOLVED_OUTCOMES, memberOf } from "@modules/events/api"
+import { APPROVAL_RESOLVED_OUTCOMES, listedValue } from "@modules/events/api"
 import { WorkChainsService } from "@modules/domain/work-chains"
 import { WorkThreadsService } from "@modules/domain/work-threads"
 import { InjectClock } from "@modules/platform/clock"
@@ -66,7 +66,8 @@ export class ThreadApprovalOutcomesService {
      * delivery is claimed in the inbox in the transaction of the effect, so a redelivery settles nothing twice.
      */
     async resolved(event: ApprovalResolved, claim: InboxClaim): Promise<void> {
-        const outcome = memberOf(APPROVAL_RESOLVED_OUTCOMES, event.outcome, "outcome")
+        const outcome = listedValue(APPROVAL_RESOLVED_OUTCOMES, event.outcome, "outcome")
+        const decidedBy = event.decidedBy ?? null
         const found = await this.entityManager.findOne(ThreadMessageEntity, {
             select: { id: true, workspaceId: true },
             where: { approvalRequestId: event.requestId },
@@ -77,9 +78,8 @@ export class ThreadApprovalOutcomesService {
             const locked = await this.lock(tx, found.workspaceId, found.id)
             const pending = pendingOf(locked)
             if (pending === null) return
-            const card =
-                event.decidedBy === null ? pending.card : withVote(pending.card, event.decidedBy, verdictOf(event))
-            await this.settle(tx, locked, card, { outcome, decidedBy: event.decidedBy }, RESOLVED_LINE_LOCALE)
+            const card = decidedBy === null ? pending.card : withVote(pending.card, decidedBy, verdictOf(event))
+            await this.settle(tx, locked, card, { outcome, decidedBy }, RESOLVED_LINE_LOCALE)
         })
     }
 

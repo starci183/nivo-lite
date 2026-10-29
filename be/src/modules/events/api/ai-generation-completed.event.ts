@@ -1,6 +1,6 @@
 import { BaseEvent } from "@modules/platform/event-bus"
 import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
-import { isKey, memberOf, openEnvelope } from "./money-event.policy"
+import { isKey, listedValue, openEnvelope } from "./money-event.policy"
 
 /**
  * The payload of the `ai_generation_completed` event: the runner wrote the end of a generation on its row. Each consumer reads the
@@ -40,7 +40,7 @@ export class AiGenerationCompletedEvent extends BaseEvent {
 
     /** The generation id is the identity of the fact: a generation ends once. */
     static create(payload: AiGenerationCompletedInput): AiGenerationCompletedEvent {
-        memberOf(AI_GENERATION_COMPLETED_STATUSES, payload.status, "status")
+        listedValue(AI_GENERATION_COMPLETED_STATUSES, payload.status, "status")
         return new AiGenerationCompletedEvent(payload.generationId, { ...payload, dedupeKey: payload.generationId })
     }
 
@@ -62,7 +62,7 @@ export class AiGenerationCompletedEvent extends BaseEvent {
             generationId: body.generationId,
             workspaceId: body.workspaceId,
             purpose: body.purpose,
-            status: memberOf(AI_GENERATION_COMPLETED_STATUSES, body.status, "status"),
+            status: listedValue(AI_GENERATION_COMPLETED_STATUSES, body.status, "status"),
         })
     }
 }

@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { EventsService } from "./events.service"
+import { EventsActivityReadService } from "./events-activity-read.service"
 import { EventsReadService } from "./events-read.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./events.module-definition"
 
@@ -12,8 +13,8 @@ export class EventsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), EventsService, EventsReadService],
-            exports: [EventsService, EventsReadService],
+            providers: [...(base.providers ?? []), EventsService, EventsReadService, EventsActivityReadService],
+            exports: [EventsService, EventsReadService, EventsActivityReadService],
         }
     }
 }

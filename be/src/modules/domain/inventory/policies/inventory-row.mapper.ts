@@ -15,7 +15,7 @@ import type {
     WorkbenchRecipeInput,
     WorkbenchRecipeLineInput,
     WorkbenchSupplierInput,
-} from "./inventory-workbench.inputs"
+} from "./inventory-workbench.input"
 import type { ItemRowColumns } from "./item-row.policy"
 
 /** The most catalogue items one read answers. */

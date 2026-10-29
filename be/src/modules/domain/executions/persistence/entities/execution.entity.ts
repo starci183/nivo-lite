@@ -1,7 +1,7 @@
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
 
 /** The decision states of an approval card. */
-export type ExecutionStatus = "pending_approval" | "approved" | "rejected"
+export type ExecutionStatusLine = "pending_approval" | "approved" | "rejected"
 
 @Entity({ schema: "public", name: "executions" })
 /** An approval card of a drafted action. */
@@ -32,7 +32,7 @@ export class ExecutionEntity {
 
     /** `pending_approval`, `approved` or `rejected`. */
     @Column({ name: "status", type: "text", default: () => "'pending_approval'" })
-    status!: ExecutionStatus
+    status!: ExecutionStatusLine
 
     /** The person that decided the card, when decided. */
     @Column({ name: "decided_by", type: "text", nullable: true })

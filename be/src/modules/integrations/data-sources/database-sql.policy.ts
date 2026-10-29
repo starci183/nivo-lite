@@ -1,3 +1,4 @@
+import { selectRows } from "@modules/platform/database"
 import { DATABASE_MAX_ROWS } from "./database-session.contracts"
 import type {
     DatabaseEngine,
@@ -70,7 +71,7 @@ export const buildSelect = (
     if (hasUpdated) columns.push(`${castText(engine, q(selection.updatedColumn))} AS ${q(DATABASE_CURSOR)}`)
     const cursor = options.cursor ?? null
     const incremental = hasUpdated && cursor !== null && cursor !== ""
-    let marker = "@p0"
+    let marker = "@0"
     if (engine === "postgres") marker = "$1"
     else if (engine === "mysql") marker = "?"
     const where = incremental ? ` WHERE ${q(selection.updatedColumn)} >= ${marker}` : ""
@@ -99,7 +100,7 @@ export const listTables = async (session: DatabaseSession): Promise<ReadonlyArra
     let sql = LIST_POSTGRES
     if (session.engine === "mysql") sql = LIST_MYSQL
     else if (session.engine === "mssql") sql = LIST_MSSQL
-    const rows = await session.query(sql)
+    const rows = await selectRows(session, sql)
     const tables = new Map<string, { schema: string; name: string; columns: Array<{ name: string; type: string }> }>()
     for (const row of rows) {
         const schema = pick(row, "s")

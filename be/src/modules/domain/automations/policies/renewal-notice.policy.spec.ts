@@ -1,7 +1,8 @@
 import { builder } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import type { ContractFacts } from "@modules/domain/contracts"
 import type { RenewalPayment } from "../automations.contracts"
-import type { ContractRead, LeadRead } from "../automation-reads.contracts"
+import type { LeadRead } from "../automation-reads.contracts"
 import { renewalNoticeFields as realRenewalNoticeFields } from "./renewal-notice.policy"
 
 const SUBJECT = Symbol("renewal-notice.policy")
@@ -14,13 +15,13 @@ const buildSubject = async () => {
     return moduleRef.get<Subject>(SUBJECT)
 }
 
-const contractOf = builder<ContractRead>({
+const contractOf = builder<ContractFacts>({
     id: "c-1",
-    customer_name: "Binh",
-    lead_id: "l-1",
+    customerName: "Binh",
+    leadId: "l-1",
     plan: " Pro ",
-    ends_on: "2026-11-30",
-    amount_vnd: 990000,
+    endsOn: "2026-11-30",
+    amountVnd: 990000,
     status: "active",
 })
 const leadOf = builder<LeadRead>({

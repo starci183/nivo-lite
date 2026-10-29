@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { INBOX, InboxService } from "@modules/platform/inbox"
-import { ApprovalResolvedConsumer } from "./approval-resolved.consumer"
 import { MentionDirectoryService } from "./mention-directory.service"
 import { ThreadMessageAuthorsService } from "./thread-message-authors.service"
 import { ThreadApprovalOutcomesService } from "./thread-approval-outcomes.service"
@@ -30,7 +29,6 @@ export class ThreadMessagesModule extends ConfigurableModuleClass {
                 ThreadMessageAuthorsService,
                 ThreadMessagesService,
                 ThreadApprovalOutcomesService,
-                ApprovalResolvedConsumer,
                 ThreadApprovalsService,
                 ThreadAgentPostsService,
                 ThreadAssignmentsService,

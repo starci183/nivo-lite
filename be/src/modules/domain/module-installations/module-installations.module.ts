@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./module-installations.module-definition"
+import { InstallationOperationsService } from "./installation-operations.service"
 import { InstallationRecordsService } from "./installation-records.service"
 import { ModuleInstallationsAdminReadService } from "./module-installations-admin-read.service"
 
@@ -12,8 +13,13 @@ export class ModuleInstallationsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ModuleInstallationsAdminReadService, InstallationRecordsService],
-            exports: [ModuleInstallationsAdminReadService, InstallationRecordsService],
+            providers: [
+                ...(base.providers ?? []),
+                ModuleInstallationsAdminReadService,
+                InstallationRecordsService,
+                InstallationOperationsService,
+            ],
+            exports: [ModuleInstallationsAdminReadService, InstallationRecordsService, InstallationOperationsService],
         }
     }
 }

@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { HttpResponse } from "@modules/platform/http"
-import { DOCUMENT_TEXT_MAX_CHARS, DRIVE_MAX_BYTES } from "./documents.contracts"
+import { DOCUMENT_TEXT_MAX_CHARS, DRIVE_MAX_BYTES, RENEWAL_GRANT_FIELD } from "./documents.contracts"
 import type { DriveFileText, GoogleAccessToken } from "./documents.contracts"
 import { InjectDocumentsOptions } from "./documents.decorators"
 import type { DocumentsOptions } from "./documents.options"
@@ -68,15 +68,15 @@ export class DriveApiClient {
         return { name, text: text.slice(0, DOCUMENT_TEXT_MAX_CHARS) }
     }
 
-    /** A new access token for a refresh token. */
-    async refreshAccessToken(refreshToken: string): Promise<GoogleAccessToken> {
+    /** A new access token for a provider renewal token. */
+    async refreshAccessToken(renewalToken: string): Promise<GoogleAccessToken> {
         const google = this.options.google
         if (google === null) throw new DocumentsError({ code: DocumentsErrorCode.GoogleNotConfigured })
         const base = this.options.oauthBase ?? "https://oauth2.googleapis.com"
         const response = await this.http.postForm(
             `${base}/token`,
             {
-                refresh_token: refreshToken,
+                [RENEWAL_GRANT_FIELD]: renewalToken,
                 client_id: google.clientId,
                 client_secret: google.clientSecret.reveal(),
                 grant_type: "refresh_token",
@@ -95,7 +95,7 @@ export class DriveApiClient {
         const expiresIn = fieldOf(body, "expires_in")
         return {
             accessToken,
-            refreshToken: textOf(fieldOf(body, "refresh_token")) ?? null,
+            renewalToken: textOf(fieldOf(body, RENEWAL_GRANT_FIELD)) ?? null,
             expiresInSeconds: typeof expiresIn === "number" ? expiresIn : 3600,
         }
     }

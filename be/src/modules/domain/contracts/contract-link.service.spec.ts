@@ -1,9 +1,11 @@
-import { ConnectionEntity } from "@modules/domain/connections"
 import { Test } from "@nestjs/testing"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { ConnectionsService } from "@modules/domain/connections"
+import type { ConnectionRecord } from "@modules/domain/connections"
+import { DataRecordsReadService } from "@modules/domain/data-records"
 import { LeadRecordsService } from "@modules/domain/leads"
 import type { LeadRecordRow } from "@modules/domain/leads"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -18,7 +20,21 @@ import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builde
 /** The statement `advisoryXactLock` sends. */
 const LOCK_CONTRACT_LINKING = "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))"
 
+/** The customer record each run's manager is paired with. */
+const recordsOf = new WeakMap<MockEntityManager, CustomerRecordRead>()
+
 const build = async (entityManager: MockEntityManager) => {
+    const record = recordsOf.get(entityManager)
+    const dataRecords = mock<DataRecordsReadService>()
+    dataRecords.customerRecords.mockResolvedValue(
+        record === undefined
+            ? []
+            : [{ connectionId: "conn-1", externalId: record.externalId, title: record.title, data: record.data }],
+    )
+    const connections = mock<ConnectionsService>()
+    connections.findMany.mockResolvedValue(
+        record?.source == null ? [] : [mock<ConnectionRecord>({ id: "conn-1", name: record.source })],
+    )
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, params) => `${key}:${JSON.stringify(params)}`)
     const leads = mock<LeadRecordsService>()
@@ -29,6 +45,8 @@ const build = async (entityManager: MockEntityManager) => {
             ContractLinkService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: DataRecordsReadService, useValue: dataRecords },
+            { provide: ConnectionsService, useValue: connections },
             { provide: LeadRecordsService, useValue: leads },
             { provide: AgentConversationsService, useValue: conversations },
         ],
@@ -80,11 +98,10 @@ const linkRunOf = (
 ) => {
     const tx = fakeTransaction(mockEntityManager({ query: [LOCK_CONTRACT_LINKING, []] }))
     let relinked = 0
+    recordsOf.set(tx.em, record)
     const seen = answerByTable(tx.em, {
-        "": (query: TableQuery) => {
-            if (query.callsOf("leftJoin").some(([target]) => target === ConnectionEntity)) return [record]
-            return query.callsOf("update").length > 0 ? (relinks[relinked++] ?? []) : contracts
-        },
+        "": (query: TableQuery) =>
+            query.callsOf("update").length > 0 ? (relinks[relinked++] ?? []) : contracts,
     })
     const relinkQueries = () => seen.queries.filter((query) => query.callsOf("update").length > 0)
     return {

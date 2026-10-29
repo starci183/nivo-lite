@@ -3,7 +3,7 @@ import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { OfficeLog } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { PRIMARY_ENTITY_MANAGER, callDbFunction } from "@modules/platform/database"
 import { inventoryItemOf, inventoryRecipeOf, inventorySupplierOf } from "@tests/fixtures/builders/inventory.builder"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -62,7 +62,7 @@ const build = async (entityManager: MockEntityManager) => {
     catalogue.writeSupplier.mockImplementation((_workspaceId, fields) =>
         savedId(
             idColumn(
-                entityManager.query<Array<Record<string, string | null>>>(SAVE_SUPPLIER, [fields.name]),
+                callDbFunction<Record<string, string | null>>(entityManager, "public.inventory_save_supplier", [fields.name, ...Array<null>(10).fill(null)]),
                 "inventory_save_supplier",
             ),
             InventoryErrorCode.SupplierNotFound,

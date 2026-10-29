@@ -1,11 +1,10 @@
 import { randomBytes } from "node:crypto"
 import { Injectable } from "@nestjs/common"
-import { Between, In, IsNull, LessThan, Like } from "typeorm"
+import { Between, In, IsNull, LessThan } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { AgentConversationEntity } from "@modules/domain/agent-conversations"
-import { WorkItemEntity } from "@modules/domain/work-items"
-import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
-import { WorkspaceEntity } from "@modules/domain/workspaces"
+import { WorkItemsDecisionsReadService } from "@modules/domain/work-items"
+import { MemberRosterService, WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     AvailabilityWindow,
@@ -24,7 +23,8 @@ import {
     HiringOfferEntity,
     HiringSettingEntity,
 } from "./persistence/entities"
-import { toCandidate, toInterview, toJob, toOffer, toSettings } from "./policies/row-mappers.policy"
+import { toJob, toSettings } from "./policies/row-mappers.policy"
+import { toCandidate, toInterview, toOffer } from "./policies/row-mappers-records.policy"
 import { hiringIsoOf } from "./policies/vn-time.policy"
 
 /** How many chat jobs the chat offers an applicant. */
@@ -52,20 +52,15 @@ export interface Interviewer {
     readonly isOwner: boolean
 }
 
-/** One member row of the interviewer query as the database answers it. */
-interface InterviewerRaw {
-    /** The account. */
-    readonly user_id: string
-    /** The display name. */
-    readonly display_name: string
-    /** Whether the member owns the workspace. */
-    readonly is_owner: boolean
-}
-
 @Injectable()
 /** Reads what the hiring flows run against: settings, jobs, candidates, interviews, offers and the members who interview. */
 export class HiringDataService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly seats: WorkspaceMemberSeatsService,
+        private readonly roster: MemberRosterService,
+        private readonly decisions: WorkItemsDecisionsReadService,
+    ) {}
 
     /** The settings of a workspace, or undefined before they are created. */
     async settings(workspaceId: string): Promise<HiringSettings | undefined> {
@@ -228,28 +223,22 @@ export class HiringDataService {
         workspaceId: string,
         userId: string,
     ): Promise<{ userId: string; displayName: string } | undefined> {
-        const row = await this.entityManager.findOne(WorkspaceMemberEntity, {
-            select: { userId: true, displayName: true },
-            where: { workspaceId, userId, status: "active" },
-        })
-        return row === null ? undefined : { userId: row.userId, displayName: row.displayName }
+        const seat = await this.seats.activeSeatOfUser(workspaceId, userId)
+        return seat === null ? undefined : { userId: seat.userId, displayName: seat.displayName }
     }
 
     /** The active members, the owner first. */
     async interviewers(workspaceId: string): Promise<Array<Interviewer>> {
-        const rows = await this.entityManager
-            .createQueryBuilder(WorkspaceMemberEntity, "member")
-            .innerJoin(WorkspaceEntity, "workspace", "workspace.id = member.workspaceId")
-            .select("member.userId", "user_id")
-            .addSelect("member.displayName", "display_name")
-            .addSelect("member.userId = workspace.ownerId", "is_owner")
-            .where("member.workspaceId = :workspaceId", { workspaceId })
-            .andWhere("member.status = :status", { status: "active" })
-            .orderBy("is_owner", "DESC")
-            .addOrderBy("member.createdAt", "ASC")
-            .limit(INTERVIEWERS_LIMIT)
-            .getRawMany<InterviewerRaw>()
-        return rows.map((row) => ({ userId: row.user_id, name: row.display_name, isOwner: row.is_owner }))
+        const rows = (await this.roster.oldestOf(workspaceId, INTERVIEWERS_LIMIT)).filter(
+            (member) => member.status === "active",
+        )
+        const owners = rows.filter((member) => member.role === "owner")
+        const others = rows.filter((member) => member.role !== "owner")
+        return [...owners, ...others].map((member) => ({
+            userId: member.userId,
+            name: member.displayName,
+            isOwner: member.role === "owner",
+        }))
     }
 
     /** One offer, or undefined. */
@@ -287,8 +276,6 @@ export class HiringDataService {
 
     /** How many times an action was asked with one dedupe prefix, so a repeated ask gets a fresh key. */
     askAttempts(workspaceId: string, action: string, prefix: string): Promise<number> {
-        return this.entityManager.count(WorkItemEntity, {
-            where: { workspaceId, action, dedupeKey: Like(`${prefix}%`) },
-        })
+        return this.decisions.countWithKeyPrefix(workspaceId, prefix, action)
     }
 }

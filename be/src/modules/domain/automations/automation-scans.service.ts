@@ -1,15 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import { AutomationRunsService } from "@modules/domain/automation-runs"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { LoadedPipeline } from "./automations.contracts"
-import {
-    readDebtInvoices,
-    readExpiringContracts,
-    readLeadActivity,
-    readLeadsWithChat,
-    readScanLeads,
-} from "./automation-reads.query"
+import { AutomationReadsService } from "./automation-reads.service"
 import type { ScanLead } from "./automation-reads.contracts"
 import { instantOf, automationIsoOf } from "./policies/format.policy"
 import {
@@ -35,7 +27,7 @@ const NURTURE_STAGES: ReadonlyArray<string> = ["new", "qualified", "proposal"]
  */
 export class AutomationScansService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly reads: AutomationReadsService,
         private readonly runs: AutomationRunsService,
     ) {}
 
@@ -66,7 +58,7 @@ export class AutomationScansService {
         batch: number,
     ): Promise<ScanPlans> {
         const workspaceId = item.pipeline.workspace_id
-        const leads = await readScanLeads(this.entityManager, {
+        const leads = await this.reads.scanLeads({
             workspaceId,
             since: lookbackIso(now, kind),
             stages: kind === "nurture" ? NURTURE_STAGES : null,
@@ -96,7 +88,7 @@ export class AutomationScansService {
 
     private async scanDebts(item: LoadedPipeline, now: Date, batch: number): Promise<ScanPlans> {
         const workspaceId = item.pipeline.workspace_id
-        const invoices = await readDebtInvoices(this.entityManager, workspaceId, debtCutoffIso(now, item.config))
+        const invoices = await this.reads.debtInvoices(workspaceId, debtCutoffIso(now, item.config))
         const leadIds = invoices.flatMap((invoice) => (invoice.lead_id === null ? [] : [invoice.lead_id]))
         const [withChat, prior] = await Promise.all([
             this.chatsOf(workspaceId, leadIds),
@@ -127,7 +119,7 @@ export class AutomationScansService {
     /** The contracts ending soon that this pipeline has not announced for their current end date. */
     private async scanContracts(item: LoadedPipeline, now: Date, batch: number): Promise<ScanPlans> {
         const { today, horizon } = contractWindow(now, item.config)
-        const contracts = await readExpiringContracts(this.entityManager, item.pipeline.workspace_id, today, horizon)
+        const contracts = await this.reads.expiringContracts(item.pipeline.workspace_id, today, horizon)
         if (contracts.length === 0) return NO_SCAN
         const prior = await this.runs.priorRuns(
             item.pipeline.id,
@@ -136,7 +128,7 @@ export class AutomationScansService {
         return {
             runs: [],
             events: planContractScan(
-                contracts.map((contract) => ({ id: contract.id, endsOn: contract.ends_on })),
+                contracts.map((contract) => ({ id: contract.id, endsOn: contract.endsOn })),
                 priorRunsOf(prior).used,
                 today,
                 batch,
@@ -150,8 +142,7 @@ export class AutomationScansService {
         leads: ReadonlyArray<ScanLead>,
     ): Promise<ReadonlyMap<string, number>> {
         const activity = new Map(leads.map((lead) => [lead.id, instantOf(lead.created_at)]))
-        const rows = await readLeadActivity(
-            this.entityManager,
+        const rows = await this.reads.leadActivity(
             workspaceId,
             leads.map((lead) => lead.id),
         )
@@ -162,7 +153,7 @@ export class AutomationScansService {
 
     private async chatsOf(workspaceId: string, leadIds: ReadonlyArray<string>): Promise<ReadonlySet<string>> {
         if (leadIds.length === 0) return new Set()
-        const rows = await readLeadsWithChat(this.entityManager, workspaceId, leadIds)
+        const rows = await this.reads.leadsWithChat(workspaceId, leadIds)
         return new Set(rows.map((row) => row.lead_id))
     }
 }

@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { selectRows } from "@modules/platform/database"
 import { InjectPublicHost } from "./data-sources.decorators"
 import { openMssql, openMysql, openPostgres } from "./database-drivers.client"
 import { toDatabaseError } from "./database-errors.policy"
@@ -35,7 +36,7 @@ export class DatabaseClient {
                 { ...selection, updatedColumn: "" },
                 { limit: PREVIEW_ROWS, ordered: false },
             )
-            const rows = await session.query(sql)
+            const rows = await selectRows(session, sql)
             const columns = wantedColumns(selection)
             return { columns, rows: previewCells(columns, rows) }
         })
@@ -47,7 +48,7 @@ export class DatabaseClient {
             run({
                 readTable: async (selection, options): Promise<DatabasePage> => {
                     const { sql, params } = buildSelect(session.engine, selection, options)
-                    const rows = await session.query(sql, params)
+                    const rows = await selectRows(session, sql, params)
                     const records = rows.flatMap((row) => {
                         const record = toRecord(selection, row)
                         return record === null ? [] : [record]

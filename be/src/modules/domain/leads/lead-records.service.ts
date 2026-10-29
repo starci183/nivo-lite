@@ -1,16 +1,17 @@
 import { Injectable } from "@nestjs/common"
 import { Not } from "typeorm"
 import type { EntityManager, SelectQueryBuilder } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import type { ContactParts } from "./contact.policy"
 import { LeadsError, LeadsErrorCode } from "./errors/leads.error"
 import type {
     ContactFill,
     LeadClassification,
     LeadMatch,
-    LeadName,
-    LeadRecord,
+    LeadLabel,
+    LeadRecordRow,
     NewLead,
+    OptionalInstallationId,
     OptionalLeadRecord,
     PublicLeadFactsPatch,
 } from "./lead-records.contracts"
@@ -18,6 +19,20 @@ import { LeadEntity } from "./persistence/entities"
 
 /** The `RETURNING` clause of a statement that answers the lead it wrote. */
 const LEAD_RETURNING = "id, workspace_id, contact_name, company, channel, need, stage, context_summary, phone, email"
+
+/** The columns a lead write answers, as the database returns them. */
+const isLeadReturned = rowShape({
+    id: "string",
+    workspace_id: "string",
+    contact_name: "string",
+    company: "string",
+    channel: "string",
+    need: "string",
+    stage: "string",
+    context_summary: "string?",
+    phone: "string?",
+    email: "string?",
+})
 
 /** The most leads one contact lookup answers. */
 const CONTACT_LIMIT = 20
@@ -31,7 +46,7 @@ export class LeadRecordsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** The installation that owns a lead of the workspace; null when there is no such row or it names no installation. */
-    async installationIdOf(workspaceId: string, id: string): Promise<string | null> {
+    async installationIdOf(workspaceId: string, id: string): Promise<OptionalInstallationId> {
         const row = await this.entityManager.findOne(LeadEntity, {
             select: { installationId: true },
             where: { workspaceId, id },
@@ -48,12 +63,12 @@ export class LeadRecordsService {
         const lead = await this.recordQuery(manager, workspaceId)
             .andWhere("l.id = :leadId", { leadId })
             .limit(1)
-            .getRawOne<LeadRecord>()
+            .getRawOne<LeadRecordRow>()
         return lead ?? null
     }
 
     /** The lead of the workspace; refused when there is none. */
-    async require(workspaceId: string, leadId: string): Promise<LeadRecord> {
+    async require(workspaceId: string, leadId: string): Promise<LeadRecordRow> {
         const lead = await this.find(workspaceId, leadId)
         if (lead === null) throw new LeadsError({ code: LeadsErrorCode.NotFound, params: { id: leadId } })
         return lead
@@ -77,7 +92,7 @@ export class LeadRecordsService {
             .addOrderBy("l.created_at", "ASC")
             .setParameters({ phone: match.phone, email: match.email, name, channel: match.channel })
             .limit(1)
-            .getRawOne<LeadRecord>()
+            .getRawOne<LeadRecordRow>()
         return lead ?? null
     }
 
@@ -89,7 +104,7 @@ export class LeadRecordsService {
         workspaceId: string,
         contact: ContactParts,
         manager: EntityManager = this.entityManager,
-    ): Promise<Array<LeadRecord>> {
+    ): Promise<Array<LeadRecordRow>> {
         if (contact.phone === null && contact.email === null) return Promise.resolve([])
         const alternatives: Array<string> = []
         if (contact.phone !== null) alternatives.push("l.phone = :phone")
@@ -101,11 +116,11 @@ export class LeadRecordsService {
             .addOrderBy("l.id", "ASC")
             .setParameters({ phone: contact.phone, email: contact.email })
             .limit(CONTACT_LIMIT)
-            .getRawMany<LeadRecord>()
+            .getRawMany<LeadRecordRow>()
     }
 
     /** Captures a new customer, in the caller's transaction when one is given. */
-    async capture(lead: NewLead, manager: EntityManager = this.entityManager): Promise<LeadRecord> {
+    async capture(lead: NewLead, manager: EntityManager = this.entityManager): Promise<LeadRecordRow> {
         const result = await manager
             .createQueryBuilder(LeadEntity, "l")
             .insert()
@@ -120,7 +135,7 @@ export class LeadRecordsService {
             })
             .returning(LEAD_RETURNING)
             .execute()
-        const [created] = result.raw as Array<LeadRecord>
+        const [created] = returnedRows(result.raw, isLeadReturned)
         if (created === undefined) throw new LeadsError({ code: LeadsErrorCode.NotFound, params: { id: "new" } })
         return created
     }
@@ -221,7 +236,7 @@ export class LeadRecordsService {
             .setParameter("stage", stage)
             .returning(LEAD_RETURNING)
             .execute()
-        const [changed] = result.raw as Array<LeadRecord>
+        const [changed] = returnedRows(result.raw, isLeadReturned)
         return changed ?? null
     }
 
@@ -236,7 +251,7 @@ export class LeadRecordsService {
     }
 
     /** The names of the given leads. */
-    namesOf(workspaceId: string, leadIds: ReadonlyArray<string>): Promise<Array<LeadName>> {
+    namesOf(workspaceId: string, leadIds: ReadonlyArray<string>): Promise<Array<LeadLabel>> {
         if (leadIds.length === 0) return Promise.resolve([])
         return this.entityManager
             .createQueryBuilder(LeadEntity, "l")
@@ -244,7 +259,7 @@ export class LeadRecordsService {
             .addSelect("l.contactName", "contact_name")
             .where("l.workspaceId = :workspaceId AND l.id = ANY(:leadIds)", { workspaceId, leadIds: [...leadIds] })
             .limit(NAME_LIMIT)
-            .getRawMany<LeadName>()
+            .getRawMany<LeadLabel>()
     }
 
     /** The leads of a workspace, selected as lead records. */

@@ -7,7 +7,8 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { AutomationMessagesService } from "./automation-messages.service"
 import type { AutomationOffice, ExecutorContext, ExecutorMap, ExecutorPayload } from "./automation-ports.contracts"
 import { InjectAutomationOffice } from "./automations.decorators"
-import { readBuiltInCare, readConversation } from "./automation-reads.query"
+import { WorkItemsActivityService } from "@modules/domain/work-items"
+import { AutomationReadsService } from "./automation-reads.service"
 import { instantOf, vndText } from "./policies/format.policy"
 import { DAY_MS, textOf } from "./policies/trigger.policy"
 
@@ -27,6 +28,8 @@ export class AutomationCareExecutorsService {
         @InjectClock() private readonly clock: Clock,
         @InjectAutomationOffice() private readonly office: AutomationOffice,
         private readonly messages: AutomationMessagesService,
+        private readonly work: WorkItemsActivityService,
+        private readonly reads: AutomationReadsService,
     ) {}
 
     /** The executors of the templates this service runs, by template key. */
@@ -60,13 +63,13 @@ export class AutomationCareExecutorsService {
         const since = new Date(
             Number.isNaN(thankedAt) ? this.clock.now().getTime() - TWENTY_MINUTES_MS : thankedAt - TEN_MINUTES_MS,
         ).toISOString()
-        const existing = await readBuiltInCare(this.entityManager, context.workspaceId, lead.id, since)
-        if (existing !== undefined) {
+        const existing = await this.work.builtInCareOf(context.workspaceId, lead.id, since, this.entityManager)
+        if (existing !== null) {
             const step: RunStep = {
                 label: say("step.skipped"),
                 status: "skipped",
                 detail: say("thank.alreadyThanked"),
-                workItemId: existing.id,
+                workItemId: existing,
             }
             return { status: "skipped", steps: [step] }
         }
@@ -191,11 +194,7 @@ export class AutomationCareExecutorsService {
 
     private async afterHours(context: ExecutorContext, payload: ExecutorPayload): Promise<RunResult> {
         const say = (key: string, params = {}): string => this.messages.say(key, params)
-        const conversation = await readConversation(
-            this.entityManager,
-            context.workspaceId,
-            textOf(payload.conversation_id),
-        )
+        const conversation = await this.reads.conversation(context.workspaceId, textOf(payload.conversation_id))
         if (conversation === undefined) return this.messages.skipped(say("after.noConversation"))
         if (conversation.handled_by) return this.messages.skipped(say("after.handled"))
         const lead = await this.messages.leadOf(

@@ -47,7 +47,7 @@ export interface LeadActivity {
     /** The lead. */
     readonly lead_id: string
     /** The instant of its last event. */
-    readonly last_at: string
+    readonly last_at: string | Date
 }
 
 /** The figures of the day report. */
@@ -96,26 +96,22 @@ export interface OrderRead {
     readonly tracking_code: string | null
 }
 
-/** The columns of a contract the renewal reminder reads. */
-export interface ContractRead {
-    /** The contract id. */
-    readonly id: string
-    /** The customer's name. */
-    readonly customer_name: string
-    /** The customer. */
-    readonly lead_id: string | null
-    /** The plan. */
-    readonly plan: string
-    /** The end date, `yyyy-mm-dd`. */
-    readonly ends_on: string
-    /** The renewal amount, VND, or null when the contract has none. */
-    readonly amount_vnd: number | null
-    /** The status. */
-    readonly status: string
-}
-
 /** The instant a customer last wrote in a conversation. */
 export interface LastCustomerMessage {
     /** When it was written. */
     readonly created_at: string | Date
+}
+
+/** What the scan of leads is asked: the leads created after an instant, in some stages or in every stage but one. */
+export interface ScanLeadsQuery {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The instant the leads were created after, ISO. */
+    readonly since: string
+    /** The stages to read, or null for every stage. */
+    readonly stages: ReadonlyArray<string> | null
+    /** The stage to leave out, or null. */
+    readonly except: string | null
+    /** The most leads read. */
+    readonly limit: number
 }

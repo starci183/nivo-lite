@@ -67,7 +67,9 @@ describe("EventsReadService", () => {
         await expect(service.firstAtByLead("ws-1", [], ["l1"])).resolves.toEqual([])
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
+})
 
+describe("EventsReadService first and listed lines", () => {
     it("answers when the customer first reached a kind, or null", async () => {
         const em = mockEntityManager({
             findOne: [

@@ -397,7 +397,9 @@ describe("ConfirmOrderPerformerService perform", () => {
             },
         ])
     })
+})
 
+describe("ConfirmOrderPerformerService perform publications", () => {
     it("publishes the won deal with the stored customer details", async () => {
         const { service, orders, leads, bus } = await build()
         orders.confirm.mockResolvedValue(orderOf({ status: "confirmed" }))

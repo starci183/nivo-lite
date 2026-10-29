@@ -1,12 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import { In, LessThan, MoreThan } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { BookingExceptionEntity } from "@modules/domain/booking-exceptions"
-import { BookingHourEntity } from "@modules/domain/booking-hours"
-import { BookingResourceEntity } from "@modules/domain/booking-resources"
-import { BookingServiceEntity } from "@modules/domain/booking-services"
-import { BookingSettingEntity } from "@modules/domain/booking-settings"
-import { ShiftsLeaveRequestEntity, ShiftsStaffEntity } from "@modules/domain/shifts"
+import { BookingExceptionsReadService } from "@modules/domain/booking-exceptions"
+import { BookingHoursReadService } from "@modules/domain/booking-hours"
+import { BookingResourcesReadService } from "@modules/domain/booking-resources"
+import { BookingServicesReadService } from "@modules/domain/booking-services"
+import { BookingSettingsReadService } from "@modules/domain/booking-settings"
+import { ShiftsLeaveReadService } from "@modules/domain/shifts"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { LeaveDayFacts } from "./booking-facts.contracts"
 import {
@@ -24,21 +24,24 @@ import { BookingEntity } from "./persistence/entities"
 import { leaveBlocks } from "./policies/booking-rules.policy"
 import { localDate } from "./policies/zoned-time.policy"
 
-const SERVICES_LIMIT = 200
-const RESOURCES_LIMIT = 200
-const HOURS_LIMIT = 2000
-const EXCEPTIONS_LIMIT = 1000
 const SPANS_LIMIT = 5000
-const LEAVE_LIMIT = 500
 
 @Injectable()
 /** Reads the calendar of a workspace: its settings, services, resources, hours, exceptions and the spans already taken. */
 export class BookingModelService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly leave: ShiftsLeaveReadService,
+        private readonly settingsRead: BookingSettingsReadService,
+        private readonly servicesRead: BookingServicesReadService,
+        private readonly resourcesRead: BookingResourcesReadService,
+        private readonly hoursRead: BookingHoursReadService,
+        private readonly exceptionsRead: BookingExceptionsReadService,
+    ) {}
 
     /** The settings of a workspace, the defaults when it never saved any. */
     async settings(workspaceId: string): Promise<BookingSettings> {
-        const saved = await this.entityManager.findOneBy(BookingSettingEntity, { workspaceId })
+        const saved = await this.settingsRead.of(workspaceId)
         return saved === null ? DEFAULT_SETTINGS : toSettings(saved)
     }
 
@@ -46,18 +49,10 @@ export class BookingModelService {
     async model(workspaceId: string): Promise<BookingModel> {
         const [settings, services, resources, hours, exceptions] = await Promise.all([
             this.settings(workspaceId),
-            this.entityManager.find(BookingServiceEntity, {
-                where: { workspaceId },
-                order: { sortOrder: "ASC", createdAt: "ASC" },
-                take: SERVICES_LIMIT,
-            }),
-            this.entityManager.find(BookingResourceEntity, {
-                where: { workspaceId },
-                order: { sortOrder: "ASC", createdAt: "ASC" },
-                take: RESOURCES_LIMIT,
-            }),
-            this.entityManager.find(BookingHourEntity, { where: { workspaceId }, take: HOURS_LIMIT }),
-            this.entityManager.find(BookingExceptionEntity, { where: { workspaceId }, take: EXCEPTIONS_LIMIT }),
+            this.servicesRead.catalogue(workspaceId),
+            this.resourcesRead.catalogue(workspaceId),
+            this.hoursRead.week(workspaceId),
+            this.exceptionsRead.list(workspaceId, null),
         ])
         return {
             settings,
@@ -93,24 +88,21 @@ export class BookingModelService {
     }
 
     /** The approved leave days of staff linked to a resource that touch two local dates. */
-    private leaveDays(workspaceId: string, from: string, to: string): Promise<Array<LeaveDayFacts>> {
-        return this.entityManager
-            .createQueryBuilder(BookingResourceEntity, "r")
-            .select("r.id", "resource_id")
-            .addSelect("l.staff_id", "leave_staff")
-            .addSelect("CAST(l.from_date AS text)", "from_date")
-            .addSelect("CAST(l.to_date AS text)", "to_date")
-            .innerJoin(ShiftsStaffEntity, "p", "p.staff_id = r.staffId AND p.workspace_id = r.workspaceId")
-            .innerJoin(ShiftsLeaveRequestEntity, "l", "l.staff_id = p.id AND l.workspace_id = r.workspaceId")
-            .where("r.workspaceId = :workspaceId", { workspaceId })
-            .andWhere(
-                "l.status = 'approved' AND l.from_date <= CAST(:to AS date) AND l.to_date >= CAST(:from AS date)",
-                {
-                    from,
-                    to,
-                },
-            )
-            .limit(LEAVE_LIMIT)
-            .getRawMany<LeaveDayFacts>()
+    private async leaveDays(workspaceId: string, from: string, to: string): Promise<Array<LeaveDayFacts>> {
+        const linked = await this.resourcesRead.staffLinked(workspaceId)
+        const staffIds = [
+            ...new Set(linked.flatMap((resource) => (resource.staffId === null ? [] : [resource.staffId]))),
+        ]
+        const leaves = await this.leave.approvedLeave({ workspaceId, staffIds, from, to })
+        return leaves.flatMap((leave) =>
+            linked
+                .filter((resource) => resource.staffId === leave.staffId)
+                .map((resource) => ({
+                    resource_id: resource.id,
+                    leave_staff: leave.staffId,
+                    from_date: leave.fromDate,
+                    to_date: leave.toDate,
+                })),
+        )
     }
 }

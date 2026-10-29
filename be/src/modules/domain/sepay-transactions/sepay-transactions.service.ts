@@ -4,13 +4,13 @@ import {
     SEPAY_DELIVERY_QUEUE,
     type SepayDeliveryRecorded,
 } from "@modules/queues/sepay-delivery"
-import { InjectInbox } from "@modules/platform/inbox"
+import { InjectEntityInbox } from "@modules/platform/inbox"
 import type { EntityInbox } from "@modules/platform/inbox"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 import { Injectable } from "@nestjs/common"
 import { IsNull } from "typeorm"
-import type { EntityManager } from "typeorm"
+import type { EntityManager, ObjectLiteral } from "typeorm"
 import { PaymentProofService, parseJsonObject, sepayPayloadOf } from "@modules/domain/billing"
 import type { SepayDelivery, SepayPayload } from "@modules/domain/billing"
 import { orderCodesIn, PaymentOrdersService } from "@modules/domain/payment-orders"
@@ -38,7 +38,7 @@ export class SepayTransactionsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly proof: PaymentProofService,
-        @InjectInbox() private readonly inbox: EntityInbox,
+        @InjectEntityInbox() private readonly inbox: EntityInbox,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
         private readonly orders: PaymentOrdersService,
     ) {}
@@ -79,13 +79,11 @@ export class SepayTransactionsService {
         const payload = sepayPayloadOf(body)
         const deliveryId = String(payload.id)
         await this.entityManager.transaction(async (manager) => {
-            if (
-                !(await this.inbox.claimRow(SEPAY_PROVIDER, deliveryId, manager, {
-                    entity: SepayTransactionEntity,
-                    row: { sepayId: payload.id, payload: body },
-                }))
-            )
-                return
+            const receiptId = await this.inbox.claimRow<ObjectLiteral>(SEPAY_PROVIDER, deliveryId, manager, {
+                entity: SepayTransactionEntity,
+                row: () => ({ sepayId: payload.id, payload: body }),
+            })
+            if (receiptId === undefined) return
             const message: SepayDeliveryRecorded = { deliveryId }
             await this.outbox.write(manager, SEPAY_DELIVERY_QUEUE, message, {
                 dedupeKey: `${SEPAY_DELIVERY_QUEUE}:${deliveryId}`,

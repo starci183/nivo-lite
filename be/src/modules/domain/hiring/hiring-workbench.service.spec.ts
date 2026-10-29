@@ -1,13 +1,14 @@
+import { benchJobRow, benchCandidateRow, benchInterviewRow, benchOfferRow } from "@tests/fixtures/builders/hiring-rows.builder"
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { And, LessThan, MoreThanOrEqual } from "typeorm"
-import { WorkItemEntity } from "@modules/domain/work-items"
-import { WorkspaceMemberEntity, WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { WorkItemsDecisionsReadService } from "@modules/domain/work-items"
+import { MemberRosterService, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { CREATED, memberEntity } from "@tests/fixtures/builders/hiring-data.builder"
+import { CREATED } from "@tests/fixtures/builders/hiring-data.builder"
 import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
 import { HiringCandidatesService } from "./hiring-candidates.service"
 import { HiringLinksService } from "./hiring-links.service"
@@ -24,6 +25,8 @@ import {
     HiringOfferEntity,
     HiringOnboardingEntity,
 } from "./persistence/entities"
+
+type RosterMember = Awaited<ReturnType<MemberRosterService["oldestOf"]>>[number]
 
 const NOW = "2026-10-15T03:00:00.000Z"
 
@@ -67,9 +70,13 @@ const CANDIDATE: CandidateRecord = {
 
 const cvOf = builder<CandidateCvOutput>({ url: "https://files.test/cv", name: "cv-minh.pdf", mime: "application/pdf" })
 
-const build = async (em: MockEntityManager) => {
+const build = async (em: MockEntityManager, waiting = 0, members: ReadonlyArray<RosterMember> = []) => {
     const clock = new FakeClock(NOW)
-    const members = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(MEMBER)) })
+    const roster = mock<MemberRosterService>()
+    roster.oldestOf.mockResolvedValue([...members])
+    const decisions = mock<WorkItemsDecisionsReadService>()
+    decisions.countWaiting.mockResolvedValue(waiting)
+    const memberService = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(MEMBER)) })
     const settings = mock<HiringSettingsService>({ ensure: jest.fn(() => Promise.resolve(SETTINGS)) })
     const links = mock<HiringLinksService>({ siteOrigin: jest.fn(() => "https://nivo.vn") })
     const candidates = mock<HiringCandidatesService>({
@@ -81,13 +88,15 @@ const build = async (em: MockEntityManager) => {
             HiringWorkbenchService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: clock },
-            { provide: WorkspaceMembersService, useValue: members },
+            { provide: WorkspaceMembersService, useValue: memberService },
+            { provide: MemberRosterService, useValue: roster },
+            { provide: WorkItemsDecisionsReadService, useValue: decisions },
             { provide: HiringSettingsService, useValue: settings },
             { provide: HiringLinksService, useValue: links },
             { provide: HiringCandidatesService, useValue: candidates },
         ],
     }).compile()
-    return { service: moduleRef.get(HiringWorkbenchService), members, candidates, links }
+    return { service: moduleRef.get(HiringWorkbenchService), members: memberService, candidates, links }
 }
 
 const onboarding = entityRowBuilder<HiringOnboardingEntity>({
@@ -126,9 +135,8 @@ const bounds = {
 }
 
 /** The counts the ribbon and the approvals read, in the order the service asks for them. */
-const counts = (waiting: number, figures: ReadonlyArray<number>) =>
+const counts = (figures: ReadonlyArray<number>) =>
     [
-        [WorkItemEntity, waiting],
         [HiringJobEntity, figures[0] ?? 0],
         [HiringJobEntity, figures[1] ?? 0],
         [HiringCandidateEntity, figures[2] ?? 0],
@@ -136,6 +144,12 @@ const counts = (waiting: number, figures: ReadonlyArray<number>) =>
         [HiringOfferEntity, figures[4] ?? 0],
         [HiringOfferEntity, figures[5] ?? 0],
     ] as const
+
+const ROSTER: ReadonlyArray<RosterMember> = [
+    { userId: "u-1", displayName: "Lan", role: "owner", status: "active", createdAt: CREATED },
+    { userId: "u-2", displayName: "Nam", role: "manager", status: "active", createdAt: CREATED },
+    { userId: "u-3", displayName: "Gone", role: "staff", status: "disabled", createdAt: CREATED },
+]
 
 const workbenchData = () =>
     ({
@@ -152,25 +166,18 @@ const workbenchData = () =>
                 ],
             ],
             [
-                WorkspaceMemberEntity,
-                [
-                    memberEntity({ userId: "u-1", displayName: "Lan", role: "owner" }),
-                    memberEntity({ userId: "u-2", displayName: "Nam", role: "manager" }),
-                ],
-            ],
-            [
                 HiringAvailabilityEntity,
                 [windowRow(), windowRow({ id: "window-2", weekday: 3, startMin: 780, endMin: 1020 })],
             ],
         ],
-        count: counts(4, [2, 3, 7, 1, 0, 2]),
+        count: counts([2, 3, 7, 1, 0, 2]),
     }) as const
 
 describe("HiringWorkbenchService", () => {
     describe("bench", () => {
         it("answers the workbench with members' windows, onboarding, approvals and this week's figures", async () => {
             const em = mockEntityManager(workbenchData())
-            const { service, members, links } = await build(em)
+            const { service, members, links } = await build(em, 4, ROSTER)
 
             await expect(service.bench("u-1", "ws-1")).resolves.toEqual({
                 nowIso: NOW,
@@ -248,14 +255,9 @@ describe("HiringWorkbenchService", () => {
                 [HiringInterviewEntity, { where: { workspaceId: "ws-1" }, order: { createdAt: "DESC" }, take: 300 }],
                 [HiringOfferEntity, { where: { workspaceId: "ws-1" }, order: { createdAt: "DESC" }, take: 300 }],
                 [HiringOnboardingEntity, { where: { workspaceId: "ws-1" }, order: { sort: "ASC" }, take: 2000 }],
-                [
-                    WorkspaceMemberEntity,
-                    { where: { workspaceId: "ws-1", status: "active" }, order: { createdAt: "ASC" }, take: 500 },
-                ],
                 [HiringAvailabilityEntity, { where: { workspaceId: "ws-1" }, take: 2000 }],
             ])
             expect(em.count.mock.calls.map(([entity, options]) => [entity, options?.where])).toEqual([
-                [WorkItemEntity, { workspaceId: "ws-1", department: "hiring", status: "waiting_decision" }],
                 [HiringJobEntity, { workspaceId: "ws-1", status: "open" }],
                 [HiringJobEntity, { workspaceId: "ws-1" }],
                 [HiringCandidateEntity, expect.objectContaining({ workspaceId: "ws-1" })],
@@ -277,10 +279,9 @@ describe("HiringWorkbenchService", () => {
                     [HiringInterviewEntity, []],
                     [HiringOfferEntity, []],
                     [HiringOnboardingEntity, []],
-                    [WorkspaceMemberEntity, []],
                     [HiringAvailabilityEntity, []],
                 ],
-                count: counts(0, []),
+                count: counts([]),
             })
             const { service } = await build(em)
 
@@ -377,5 +378,63 @@ describe("HiringWorkbenchService", () => {
 
             await expect(service.candidateDetail("u-1", "ws-1", "cand-1")).resolves.toEqual({ events: [], cv: null })
         })
+    })
+})
+
+describe("HiringWorkbenchService populated views", () => {
+    it.each([true, false])("maps additional workbench fields with reasons=%s", async (screened) => {
+        const em = mockEntityManager({
+            find: [
+                [HiringJobEntity, [benchJobRow()]],
+                [HiringCandidateEntity, [benchCandidateRow(screened ? {} : { scoreReasons: null })]],
+                [HiringInterviewEntity, [benchInterviewRow()]],
+                [HiringOfferEntity, [benchOfferRow()]],
+                [HiringOnboardingEntity, []],
+                [HiringAvailabilityEntity, []],
+            ],
+            count: counts([]),
+        })
+        const { service, links } = await build(em)
+        links.job.mockReturnValue("https://nivo.vn/tiem-ca-phe/cashier")
+
+        const bench = await service.bench("u-1", "ws-1")
+
+        expect(bench.jobs).toEqual([
+            expect.objectContaining({
+                id: "job-1",
+                adVariants: { page: "Join us" },
+                createdAt: NOW,
+                updatedAt: NOW,
+                publicUrl: "https://nivo.vn/tiem-ca-phe/cashier",
+            }),
+        ])
+        expect(bench.candidates).toEqual([
+            expect.objectContaining({
+                id: "cand-1",
+                cvSize: 123,
+                score: 90,
+                scoreLabel: "fit",
+                scoreReasons: screened ? [{ criterion: "POS", status: "met", note: "Yes" }] : [],
+                scoreSummary: "Ready",
+                screenedAt: NOW,
+                stageChangedAt: NOW,
+                rejectedReason: null,
+                notes: "Call",
+                createdAt: NOW,
+            }),
+        ])
+        expect(bench.interviews).toEqual([
+            expect.objectContaining({ id: "int-1", reminderSentAt: NOW, createdAt: NOW }),
+        ])
+        expect(bench.offers).toEqual([
+            expect.objectContaining({
+                id: "offer-1",
+                sentVia: "email",
+                sentAt: NOW,
+                respondedAt: NOW,
+                createdAt: NOW,
+            }),
+        ])
+        expect(links.job.mock.calls).toEqual([["tiem-ca-phe", "cashier"]])
     })
 })

@@ -4,15 +4,25 @@ import { EventsService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { MessagesService } from "@modules/domain/messages"
 import { ResponsibilitiesService } from "@modules/domain/responsibilities"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import { InjectMessageCatalog, InjectRequestLocale } from "@modules/platform/i18n"
 import type { MessageCatalog, RequestLocale } from "@modules/platform/i18n"
 import { LeadsError, LeadsErrorCode } from "./errors/leads.error"
-import type { RecordOutcomeParams, RecordedOutcome, StagedLead } from "./leads.contracts"
+import type { RecordOutcomeParams, RecordedOutcome } from "./leads.contracts"
 import { LeadEntity } from "./persistence/entities"
 
 /** The evidence-log kind of a recorded outcome. */
 const OUTCOME_KIND = "outcome.recorded"
+
+/** The lead a stage change answers, as the database returns it. */
+const isStagedLead = rowShape({
+    id: "string",
+    contact_name: "string",
+    company: "string",
+    channel: "string",
+    need: "string",
+    stage: "string",
+})
 
 /** The columns a stage change answers about the lead it moved. */
 const STAGED_LEAD_RETURNING = "id, contact_name, company, channel, need, stage"
@@ -48,7 +58,7 @@ export class LeadsService {
                 })
                 .returning(STAGED_LEAD_RETURNING)
                 .execute()
-            const [lead] = moved.raw as Array<StagedLead>
+            const [lead] = returnedRows(moved.raw, isStagedLead)
             if (lead === undefined) {
                 throw new LeadsError({ code: LeadsErrorCode.NotFound, params: { id: params.leadId } })
             }

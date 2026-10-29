@@ -34,17 +34,13 @@ const build = async () => {
     return moduleRef.get(AuthorityActionsService)
 }
 
-/** A manager whose catalogue read answers `held` and whose upsert stores `stored` rows. */
-const syncing = (held: ReadonlyArray<AuthorityActionEntity>, stored: ReadonlyArray<{ action: string }>) => {
-    const em = mockEntityManager({ find: [AuthorityActionEntity, held] })
-    em.upsert.mockResolvedValue({ identifiers: [...stored], generatedMaps: [], raw: [] })
-    return em
-}
-
 describe("AuthorityActionsService", () => {
     describe("upsertAll", () => {
         it("upserts the records in one statement in the given transaction and reports nothing stale", async () => {
-            const em = syncing([ROW], [{ action: "issue_invoice" }])
+            const em = mockEntityManager({
+                find: [AuthorityActionEntity, [ROW]],
+                upsert: [AuthorityActionEntity, { identifiers: [{ action: "issue_invoice" }], generatedMaps: [] }],
+            })
 
             await expect((await build()).upsertAll(em, [RECORD])).resolves.toEqual({ written: 1, stale: [] })
             expect(em.upsert).toHaveBeenCalledWith(
@@ -67,10 +63,13 @@ describe("AuthorityActionsService", () => {
         })
 
         it("reports the actions the database holds that were not written, and deletes nothing", async () => {
-            const em = syncing(
-                [ROW, Object.assign(new AuthorityActionEntity(), { action: "retired_action" })],
-                [{ action: "issue_invoice" }],
-            )
+            const em = mockEntityManager({
+                find: [
+                    AuthorityActionEntity,
+                    [ROW, Object.assign(new AuthorityActionEntity(), { action: "retired_action" })],
+                ],
+                upsert: [AuthorityActionEntity, { identifiers: [{ action: "issue_invoice" }], generatedMaps: [] }],
+            })
 
             await expect((await build()).upsertAll(em, [RECORD])).resolves.toEqual({
                 written: 1,

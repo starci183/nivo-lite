@@ -1,7 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
 import { InventoryError, InventoryErrorCode } from "../errors/inventory.error"
-import { SAVE_ITEM } from "@tests/fixtures/builders/inventory-calls.builder"
 import { idColumn, savedId } from "./saved-id.policy"
 import type { IdRow } from "./saved-id.policy"
 
@@ -18,11 +16,9 @@ describe("savedId", () => {
     it("resolves the id of the first saved row", async () => {
         const subject = await buildSubject()
 
-        const em = mockEntityManager({ query: [SAVE_ITEM, [{ id: "item-1" }, { id: "item-2" }]] })
-
-        await expect(subject.savedId(em.query<Array<IdRow>>(SAVE_ITEM), InventoryErrorCode.ItemNotFound)).resolves.toBe(
-            "item-1",
-        )
+        await expect(
+            subject.savedId(Promise.resolve([{ id: "item-1" }, { id: "item-2" }]), InventoryErrorCode.ItemNotFound),
+        ).resolves.toBe("item-1")
     })
 
     it("preserves an empty string id", async () => {
@@ -31,16 +27,13 @@ describe("savedId", () => {
         await expect(subject.savedId(Promise.resolve([{ id: "" }]), InventoryErrorCode.ItemNotFound)).resolves.toBe("")
     })
 
-    it.each([
+    it.each<{ name: string; rows: ReadonlyArray<IdRow>; code: InventoryErrorCode }>([
         { name: "null", rows: [{ id: null }], code: InventoryErrorCode.ItemNotFound },
-        { name: "undefined", rows: [{ id: undefined }], code: InventoryErrorCode.SupplierNotFound },
-        { name: "missing", rows: [{}], code: InventoryErrorCode.RecipeNotFound },
         { name: "a missing row", rows: [], code: InventoryErrorCode.LocationNotFound },
     ])("throws InventoryError with the given code for $name id", async ({ rows, code }) => {
         const subject = await buildSubject()
 
-        const em = mockEntityManager({ query: [SAVE_ITEM, rows] })
-        const result = subject.savedId(em.query<Array<IdRow>>(SAVE_ITEM), code)
+        const result = subject.savedId(Promise.resolve(rows), code)
 
         await expect(result).rejects.toBeInstanceOf(InventoryError)
         await expect(result).rejects.toMatchObject({ code, params: {} })

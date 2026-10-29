@@ -108,7 +108,7 @@ const registerBuildSelect = () => {
                 sql:
                     "SELECT TOP (25) [id], [title], [updated_at], [note], CONVERT(nvarchar(40), " +
                     "[updated_at], 126) AS [__nivo_cursor] FROM [public].[orders] WHERE [updated_at] >= " +
-                    "@p0 ORDER BY [updated_at] ASC",
+                    "@0 ORDER BY [updated_at] ASC",
                 params: ["2026-01-02"],
             })
         })

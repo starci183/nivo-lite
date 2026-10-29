@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { buildInventoryWorkbench } from "./inventory-workbench.policy"
 import type { InventoryWorkbenchRows } from "./inventory-workbench.policy"
-import type { WorkbenchItemInput, WorkbenchPoInput, WorkbenchSupplierInput } from "./inventory-workbench.inputs"
+import type { WorkbenchItemInput, WorkbenchPoInput, WorkbenchSupplierInput } from "./inventory-workbench.input"
 
 const SUBJECT = Symbol("inventory-workbench.policy")
 

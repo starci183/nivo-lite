@@ -4,6 +4,7 @@ import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { Secret } from "@modules/platform/config"
 import type { HttpClient, HttpResponse } from "@modules/platform/http"
+import { RENEWAL_GRANT_FIELD } from "./documents.contracts"
 import type { DocumentReaders } from "./documents.contracts"
 import { DOCUMENTS_OPTIONS } from "./documents.decorators"
 import type { DocumentsOptions } from "./documents.options"
@@ -280,12 +281,12 @@ describe("DriveApiClient", () => {
         it("asks Google for a new access token with the client of the deployment", async () => {
             const { client, http } = await build()
             http.request.mockResolvedValue(
-                json({ access_token: "new-token", refresh_token: "rotated", expires_in: 1800 }),
+                json({ access_token: "new-token", [RENEWAL_GRANT_FIELD]: "rotated", expires_in: 1800 }),
             )
 
             await expect(client.refreshAccessToken("refresh-1")).resolves.toEqual({
                 accessToken: "new-token",
-                refreshToken: "rotated",
+                renewalToken: "rotated",
                 expiresInSeconds: 1800,
             })
 
@@ -293,7 +294,7 @@ describe("DriveApiClient", () => {
                 method: "POST",
                 url: "https://oauth2.googleapis.com/token",
                 form: {
-                    refresh_token: "refresh-1",
+                    [RENEWAL_GRANT_FIELD]: "refresh-1",
                     client_id: "client-1",
                     client_secret: "secret-1",
                     grant_type: "refresh_token",
@@ -309,7 +310,7 @@ describe("DriveApiClient", () => {
 
             await expect(client.refreshAccessToken("refresh-1")).resolves.toEqual({
                 accessToken: "new-token",
-                refreshToken: null,
+                renewalToken: null,
                 expiresInSeconds: 3600,
             })
 

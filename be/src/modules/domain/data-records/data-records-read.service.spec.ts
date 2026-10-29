@@ -59,4 +59,22 @@ describe("DataRecordsReadService", () => {
 
         await expect((await build(em)).mailAttachments("ws-1", "rec-9")).resolves.toBeUndefined()
     })
+
+    it("reads the newest customer rows, bounded, with the connection each came from", async () => {
+        const row = Object.assign(new DataRecordEntity(), {
+            connectionId: "c-1",
+            externalId: "HTL-1",
+            title: "Mai",
+            data: { code: "HTL-1" },
+        })
+        const em = mockEntityManager({ find: [DataRecordEntity, [row]] })
+
+        await expect((await build(em)).customerRecords("ws-1", 50)).resolves.toEqual([
+            { connectionId: "c-1", externalId: "HTL-1", title: "Mai", data: { code: "HTL-1" } },
+        ])
+        expect(em.find).toHaveBeenCalledWith(
+            DataRecordEntity,
+            expect.objectContaining({ where: { workspaceId: "ws-1", entity: "customer" }, take: 50 }),
+        )
+    })
 })

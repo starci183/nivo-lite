@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { advisoryXactLock, notify } from "@modules/platform/database"
+import { advisoryXactLock, notify, returnedRows, rowShape } from "@modules/platform/database"
 import { writerOf } from "./realtime-connection.policy"
 import { RealtimeSubscriptionsPolicy } from "./realtime-subscriptions.policy"
 import type { Entry, Replay } from "./realtime-subscriptions.policy"
@@ -15,6 +15,9 @@ export type EventFacts = Pick<RealtimeEventEntity, "seq" | "topic" | "payload">
 
 /** The entry a loaded row stands for. */
 export const entryOf = (row: EventFacts): Entry => ({ position: row.seq, topic: row.topic, frame: row.payload })
+
+/** The row an insert of a retained frame returns: its sequence number, which the driver returns as text. */
+const isSeqRow = rowShape({ seq: "string" })
 
 /** Orders table sequence numbers, which the driver returns as text. */
 const comparePositions = (left: string, right: string): number => Number(left) - Number(right)
@@ -55,7 +58,7 @@ export class PostgresReplayHubService extends SubscribedRealtimeHub {
                 .values({ topic: topic.name, eventId: idOf(frame), payload: frame })
                 .returning("seq")
                 .execute()
-            const seq = Number((written.raw as ReadonlyArray<{ seq: string }>)[0]?.seq)
+            const seq = Number(returnedRows(written.raw, isSeqRow)[0]?.seq)
             await notify(transaction, NOTIFY_CHANNEL, JSON.stringify({ topic: topic.name, seq }))
         }
         if (within === undefined) await this.writer().transaction(write)

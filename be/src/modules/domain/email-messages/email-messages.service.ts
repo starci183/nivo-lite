@@ -7,6 +7,15 @@ import { EmailMessagesError, EmailMessagesErrorCode } from "./errors/email-messa
 import { EmailMessageEntity } from "./persistence/entities"
 import type { EmailMessageRefs } from "./persistence/entities"
 
+const isRefValue = (value: unknown): value is EmailMessageRefs[string] =>
+    value === null || ["string", "number", "boolean", "object"].includes(typeof value)
+
+/** The stored form of the refs of a mail: JSON values only, whatever else a caller passed is dropped. */
+const jsonRefs = (refs: Readonly<Record<string, unknown>>): EmailMessageRefs =>
+    Object.fromEntries(
+        Object.entries(refs).filter((entry): entry is [string, EmailMessageRefs[string]] => isRefValue(entry[1])),
+    )
+
 @Injectable()
 /** The log of every email attempt of a workspace: the only writer of public.email_messages. */
 export class EmailMessagesService {
@@ -24,10 +33,10 @@ export class EmailMessagesService {
             via: entry.via,
             providerMessageId: entry.providerMessageId,
             error: entry.error === null ? null : entry.error.slice(0, 600),
-            refs: { ...entry.refs } as EmailMessageRefs,
+            refs: jsonRefs(entry.refs),
         })
-        const id = (result.identifiers[0] as { readonly id?: string } | undefined)?.id
-        if (id === undefined) throw new EmailMessagesError({ code: EmailMessagesErrorCode.NotRecorded })
+        const id: unknown = result.identifiers[0]?.id
+        if (typeof id !== "string") throw new EmailMessagesError({ code: EmailMessagesErrorCode.NotRecorded })
         return id
     }
 

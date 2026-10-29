@@ -1,29 +1,37 @@
 import { Test } from "@nestjs/testing"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
+import { BookingServicesReadService } from "@modules/domain/booking-services"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { BookingChatLookupService } from "./booking-chat-lookup.service"
-import type { CancellableFacts } from "./booking-facts.contracts"
+import type { CancellableRowFacts } from "./booking-facts.contracts"
 import { BookingEntity } from "./persistence/entities"
 
 const WORKSPACE = "ws-1"
 const CONVERSATION = "conversation-1"
 const NOW = Date.UTC(2026, 9, 11, 5, 0)
 const MONDAY_NINE = "2026-10-12T02:00:00.000Z"
-const NEXT_ROW: CancellableFacts = {
+const NEXT_ROW: CancellableRowFacts = {
     id: "b-next",
     lead_id: "lead-1",
     customer_name: "Mai",
-    service_name: "Cut",
+    service_id: "service-1",
     start_ms: Date.parse(MONDAY_NINE),
 }
 
-const build = async (row?: CancellableFacts) => {
+const servicesNamed = (names: ReadonlyMap<string, string>) =>
+    mock<BookingServicesReadService>({ namesOf: jest.fn(() => Promise.resolve(names)) })
+
+const build = async (row?: CancellableRowFacts, names: ReadonlyMap<string, string> = new Map([["service-1", "Cut"]])) => {
     const entityManager = mockEntityManager()
     const fake = fakeQueryBuilder({ getRawOne: row })
     entityManager.createQueryBuilder.mockReturnValue(fake.builder)
     const moduleRef = await Test.createTestingModule({
-        providers: [BookingChatLookupService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+        providers: [
+            BookingChatLookupService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: BookingServicesReadService, useValue: servicesNamed(names) },
+        ],
     }).compile()
     return { service: moduleRef.get(BookingChatLookupService), entityManager, fake }
 }
@@ -56,13 +64,24 @@ describe("BookingChatLookupService", () => {
             ).resolves.toBeNull()
             expect(entityManager.createQueryBuilder).toHaveBeenCalledTimes(1)
         })
+
+        it("answers null when the service of the booking is gone", async () => {
+            const { service } = await build(NEXT_ROW, new Map())
+            await expect(
+                service.nextOfChat({ workspaceId: WORKSPACE, leadId: "lead-1", conversationId: CONVERSATION }, NOW),
+            ).resolves.toBeNull()
+        })
     })
 })
 
 const lookupOver = async (entityManager: ReturnType<typeof mockEntityManager>) =>
     (
         await Test.createTestingModule({
-            providers: [BookingChatLookupService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+            providers: [
+                BookingChatLookupService,
+                { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+                { provide: BookingServicesReadService, useValue: servicesNamed(new Map()) },
+            ],
         }).compile()
     ).get(BookingChatLookupService)
 

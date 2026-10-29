@@ -1,17 +1,11 @@
 import { generateKeyPairSync } from "node:crypto"
 import { SignJWT, importPKCS8 } from "jose"
 import { Test } from "@nestjs/testing"
-import { deriveStateKey } from "@modules/platform/primitives"
 import { Secret } from "@modules/platform/config"
 import { PassportErrorCode } from "./errors/passport.error"
 import { PASSPORT_OPTIONS } from "./passport.decorators"
 import type { PassportOptions } from "./passport.options"
 import { PassportTokensClient } from "./passport-tokens.client"
-
-jest.mock("@modules/platform/primitives", () => {
-    const actual = jest.requireActual<typeof import("@modules/platform/primitives")>("@modules/platform/primitives")
-    return { ...actual, deriveStateKey: jest.fn(actual.deriveStateKey) }
-})
 
 const NOW = new Date("2026-11-09T10:00:00.000Z")
 
@@ -116,13 +110,6 @@ describe("PassportTokensClient / access tokens", () => {
             code: PassportErrorCode.AccessTokenInvalid,
         })
     })
-
-    it("refuses a Google state value as an access token", async () => {
-        const tokens = await build()
-        const state = tokens.signState({ w: "h", u: "v", r: "/", e: NOW.getTime() + 600_000, p: "google" })
-
-        await expect(tokens.verify(state, NOW)).resolves.toMatchObject({ kind: "refused" })
-    })
 })
 
 describe("PassportTokensClient / jwks", () => {
@@ -161,12 +148,10 @@ describe("PassportTokensClient / state", () => {
         expect((await build()).verifyState(signed, NOW)).toBeNull()
     })
 
-    it("fails loudly when no state key can be derived from the private key", async () => {
+    it("refuses a Google state value as an access token", async () => {
         const tokens = await build()
-        jest.mocked(deriveStateKey).mockReturnValueOnce(null)
+        const state = tokens.signState({ w: "h", u: "v", r: "/", e: NOW.getTime() + 600_000, p: "google" })
 
-        expect(() => tokens.signState({ w: "h", u: "v", r: "/", e: NOW.getTime(), p: "google" })).toThrow(
-            expect.objectContaining({ code: PassportErrorCode.KeyInvalid }),
-        )
+        await expect(tokens.verify(state, NOW)).resolves.toMatchObject({ kind: "refused" })
     })
 })

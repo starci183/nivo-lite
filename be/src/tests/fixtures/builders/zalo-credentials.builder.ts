@@ -19,7 +19,7 @@ export const secretOf = (patch: Partial<ZaloSecret> = {}): ZaloSecret => ({
     appSecret: "app-secret",
     oaSecret: "oa-secret",
     accessToken: "access-1",
-    refreshToken: "refresh-1",
+    renewalToken: "refresh-1",
     ...patch,
 })
 /** Wrap the credential in the connection-secret read result. */
@@ -43,7 +43,7 @@ export const missing = refused(ConnectionSecretsErrorCode.NotFound)
 /** Build a provider rejection carrying the requested Zalo error code. */
 export const zaloRefusal = (zaloCode: number) =>
     new ZaloError({ code: ZaloErrorCode.Rejected, params: { path: "/v4/oa/access_token", reason: "no", zaloCode } })
-export const tokens = { accessToken: "access-2", refreshToken: "refresh-2", expiresInSeconds: 3600 }
+export const tokens = { accessToken: "access-2", renewalToken: "refresh-2", expiresInSeconds: 3600 }
 
 /** Configure fresh kit doubles with the normal credential persistence responses. */
 export const configureCredentialDoubles = (

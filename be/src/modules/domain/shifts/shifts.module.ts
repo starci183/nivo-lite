@@ -4,6 +4,7 @@ import { ShiftsAlertsService } from "./shifts-alerts.service"
 import { ShiftsCoverService } from "./shifts-cover.service"
 import { ShiftsDataService } from "./shifts-data.service"
 import { ShiftsImportService } from "./shifts-import.service"
+import { ShiftsLeaveReadService } from "./shifts-leave-read.service"
 import { ShiftsMonthCloseService } from "./shifts-month-close.service"
 import { ShiftsNotifyService } from "./shifts-notify.service"
 import { ShiftsPerformersService } from "./shifts-performers.service"
@@ -35,10 +36,12 @@ export class ShiftsModule extends ConfigurableModuleClass {
                 ShiftsSetupService,
                 ShiftsWorkbenchService,
                 ShiftsAlertsService,
+                ShiftsLeaveReadService,
                 ShiftsMonthCloseService,
             ],
             exports: [
                 ShiftsAlertsService,
+                ShiftsLeaveReadService,
                 ShiftsScheduleService,
                 ShiftsRequestsService,
                 ShiftsImportService,

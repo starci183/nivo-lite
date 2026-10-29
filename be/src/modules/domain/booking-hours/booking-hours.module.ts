@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./booking-hours.module-definition"
+import { BookingHoursReadService } from "./booking-hours-read.service"
 import { BookingHoursService } from "./booking-hours.service"
 
 @Module({})
@@ -11,8 +12,8 @@ export class BookingHoursModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), BookingHoursService],
-            exports: [BookingHoursService],
+            providers: [...(base.providers ?? []), BookingHoursService, BookingHoursReadService],
+            exports: [BookingHoursService, BookingHoursReadService],
         }
     }
 }

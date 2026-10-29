@@ -1,15 +1,6 @@
-import { Test } from "@nestjs/testing"
-import { fakeTransaction, mock, mockEntityManager, fakeQueryBuilder } from "@starci/jest-preset"
-import type { QueryBuilderAnswers, MockEntityManager } from "@starci/jest-preset"
-import { LOGGER } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import type { MockEntityManager, MockOf } from "@starci/jest-preset"
 import type { Timer } from "@modules/platform/retry"
-import {
-    PostgresReloadingHubService,
-    REALTIME_LISTENER,
-    REALTIME_MANAGERS,
-    REALTIME_TIMER,
-} from "@modules/platform/realtime"
 import type { ListenHandlers, NotificationListener, RealtimeTopic } from "@modules/platform/realtime"
 import {
     SELECT_EVENT,
@@ -49,17 +40,23 @@ export type Answer = (args: ReadonlyArray<unknown>) => unknown
 /** One committed event row of the scripted table. */
 export type Row = ReturnType<typeof rowOf>
 
+/** A list argument of a scripted statement, or an empty list for anything else. */
+const listOf = (value: unknown): ReadonlyArray<unknown> => (Array.isArray(value) ? value : [])
+
 /** The strings of an unknown argument list. */
 export const strings = (value: unknown): ReadonlyArray<string> =>
-    Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []
+    listOf(value).filter((item): item is string => typeof item === "string")
 
 /** The numbers of an unknown argument list. */
 export const numbers = (value: unknown): ReadonlyArray<number> =>
-    Array.isArray(value) ? value.filter((item): item is number => typeof item === "number") : []
+    listOf(value).filter((item): item is number => typeof item === "number")
+
+/** Does nothing. */
+const noop = (): void => undefined
 
 /** A gate a proof opens to release a held read. */
 export const gateOf = () => {
-    let open: () => void = () => undefined
+    let open: () => void = noop
     const opened = new Promise<void>((resolve) => {
         open = resolve
     })
@@ -71,11 +68,33 @@ export interface CapturedHandlers {
     current: ListenHandlers
 }
 
+/** One read the hub ran: the statement key and the arguments it carried. */
+export interface ReadRecord {
+    readonly key: string
+    readonly args: ReadonlyArray<unknown>
+}
+
+/** A timer entry the hub scheduled. */
+export interface ScheduledTimer {
+    readonly callback: () => void
+    readonly delayMs: number
+    cancelled: boolean
+}
+
+/** Whether a table row sits after the cursor of its own topic; a topic with no cursor has none after it. */
+const missedBy = (names: ReadonlyArray<string>, after: ReadonlyArray<number>, row: Row): boolean =>
+    Number(row.seq) > (after[names.indexOf(row.topic)] ?? Infinity)
+
 /**
- * The hub on a scripted database. `table` holds the committed rows; the statements the hub runs answer from it: the highest sequence of
- * a topic, the row a notification names, and the rows after each topic's cursor. A statement the spec did not script answers no rows.
+ * The world of the Postgres reloading hub on a scripted database: the entity manager, the committed `table`, the statements the hub
+ * runs (the highest sequence of a topic, the row a notification names, the rows after each topic's cursor; one the spec did not
+ * script answers no rows), the listener whose handlers the proof drives, and the providers a testing module holds for the hub.
  */
-export const build = async (watermarks: Readonly<Record<string, number>> = {}) => {
+export const reloadingHubWorld = (
+    watermarks: Readonly<Record<string, number>>,
+    listener: MockOf<NotificationListener>,
+    timer: MockOf<Timer>,
+) => {
     const em: MockEntityManager = mockEntityManager()
     const table: Array<Row> = []
     const answers = new Map<string, Answer>([
@@ -87,16 +106,18 @@ export const build = async (watermarks: Readonly<Record<string, number>> = {}) =
                 const names = strings(topics)
                 const after = numbers(cursors)
                 return table
-                    .filter((row) => Number(row.seq) > (after[names.indexOf(row.topic)] ?? Infinity))
+                    .filter((row) => missedBy(names, after, row))
                     .sort((left, right) => Number(left.seq) - Number(right.seq))
                     .slice(0, Number(limit))
             },
         ],
     ])
-    em.query.mockImplementation((sql: string, args: Array<unknown> = []) =>
-        Promise.resolve(answers.get(sql)?.(args) ?? []),
-    )
-    scriptRealtimeReads(em)
+    const reads: Array<ReadRecord> = []
+    em.query.mockResolvedValue([])
+    const fakes = scriptRealtimeReads(em, (key, args) => {
+        reads.push({ key, args })
+        return Promise.resolve(answers.get(key)?.(args) ?? []).then(listOf)
+    })
     const transactions = fakeTransaction(em)
     const handlers: CapturedHandlers = {
         current: {
@@ -106,13 +127,11 @@ export const build = async (watermarks: Readonly<Record<string, number>> = {}) =
             resumed: () => undefined,
         },
     }
-    const listener = mock<NotificationListener>()
     listener.start.mockImplementation((given) => {
         handlers.current = given
         return Promise.resolve()
     })
-    const scheduled: Array<{ readonly callback: () => void; readonly delayMs: number; cancelled: boolean }> = []
-    const timer = mock<Timer>()
+    const scheduled: Array<ScheduledTimer> = []
     timer.schedule.mockImplementation((callback, delayMs) => {
         const entry = { callback, delayMs, cancelled: false }
         scheduled.push(entry)
@@ -120,19 +139,7 @@ export const build = async (watermarks: Readonly<Record<string, number>> = {}) =
             entry.cancelled = true
         }
     })
-    const logger = mock<Logger>()
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            PostgresReloadingHubService,
-            { provide: REALTIME_MANAGERS, useValue: [em] },
-            { provide: REALTIME_LISTENER, useValue: listener },
-            { provide: LOGGER, useValue: logger },
-            { provide: REALTIME_TIMER, useValue: timer },
-        ],
-    }).compile()
-    const hub = moduleRef.get(PostgresReloadingHubService)
-    await hub.onModuleInit()
-    return { hub, em, table, answers, listener, logger, handlers, transactions, scheduled }
+    return { em, table, answers, reads, handlers, transactions, scheduled, fakes }
 }
 
 /** Drops the listener connection and brings it back, as a network blip would. */
@@ -140,21 +147,4 @@ export const dropAndResume = async (handlers: CapturedHandlers): Promise<void> =
     handlers.current.lost()
     handlers.current.resumed()
     await settle()
-}
-
-/** The hub over a manager whose query builders answer the given terminals, in the order of the builders it asks for. */
-export const buildReads = async (...answers: ReadonlyArray<QueryBuilderAnswers>) => {
-    const em = mockEntityManager()
-    const fakes = answers.map((answer) => fakeQueryBuilder(answer))
-    for (const fake of fakes) em.createQueryBuilder.mockReturnValueOnce(fake.builder as never)
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            PostgresReloadingHubService,
-            { provide: REALTIME_MANAGERS, useValue: [em] },
-            { provide: REALTIME_LISTENER, useValue: mock<NotificationListener>() },
-            { provide: LOGGER, useValue: mock<Logger>() },
-            { provide: REALTIME_TIMER, useValue: mock<Timer>() },
-        ],
-    }).compile()
-    return { hub: moduleRef.get(PostgresReloadingHubService), em, fakes }
 }

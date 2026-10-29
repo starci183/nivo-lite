@@ -1,14 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager, SelectQueryBuilder } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import type {
-    ExecutionCard,
-    ExecutionStatus,
+    ExecutionRow,
+    ExecutionStatusLine,
     ExecutionListFilter,
-    ExecutionRecord,
+    ExecutionRecordRow,
     ExecutionSettlement,
     NewExecution,
     OptionalExecution,
@@ -20,8 +20,11 @@ import { ExecutionEntity } from "./persistence/entities"
 /** The columns a settled card answers. */
 const CARD_COLUMNS = "id, status, work_item_id, draft"
 
+/** Maps a stored card to its status line. */
+const toStatusLine = (card: ExecutionEntity): ExecutionStatusLine => ({ id: card.id, status: card.status })
+
 /** Maps a stored card to the decision-flow contract. */
-const toCard = (entity: ExecutionEntity): ExecutionCard => ({
+const toCard = (entity: ExecutionEntity): ExecutionRow => ({
     id: entity.id,
     status: entity.status,
     work_item_id: entity.workItemId,
@@ -85,12 +88,12 @@ export class ExecutionsService {
         const record = await recordQuery(manager, workspaceId)
             .andWhere("x.id = :executionId", { executionId })
             .limit(1)
-            .getRawOne<ExecutionRecord>()
+            .getRawOne<ExecutionRecordRow>()
         return record ?? null
     }
 
     /** Lists the workspace's approval cards, oldest first, with a caller-provided row limit. */
-    list(workspaceId: string, filter: ExecutionListFilter): Promise<Array<ExecutionRecord>> {
+    list(workspaceId: string, filter: ExecutionListFilter): Promise<Array<ExecutionRecordRow>> {
         const query = recordQuery(this.entityManager, workspaceId)
         if (filter.responsibilityIds !== undefined) {
             query.andWhere("x.responsibilityId = ANY(:responsibilityIds)", {
@@ -102,37 +105,39 @@ export class ExecutionsService {
             .orderBy("x.createdAt", "ASC")
             .addOrderBy("x.id", "ASC")
             .limit(filter.limit)
-            .getRawMany<ExecutionRecord>()
+            .getRawMany<ExecutionRecordRow>()
     }
 
     /** The cards waiting for a decision, newest first, bounded by the caller. */
-    pendingApprovals(workspaceId: string, limit: number): Promise<Array<ExecutionRecord>> {
+    pendingApprovals(workspaceId: string, limit: number): Promise<Array<ExecutionRecordRow>> {
         return recordQuery(this.entityManager, workspaceId)
             .andWhere("x.status = 'pending_approval'")
             .orderBy("x.createdAt", "DESC")
             .addOrderBy("x.id", "DESC")
             .limit(limit)
-            .getRawMany<ExecutionRecord>()
+            .getRawMany<ExecutionRecordRow>()
     }
 
     /** The most recently approved or rejected cards, newest decision first, bounded by the caller. */
-    decidedApprovals(workspaceId: string, limit: number): Promise<Array<ExecutionRecord>> {
+    decidedApprovals(workspaceId: string, limit: number): Promise<Array<ExecutionRecordRow>> {
         return recordQuery(this.entityManager, workspaceId)
             .andWhere("x.status IN ('approved', 'rejected')")
             .orderBy("x.decidedAt", "DESC", "NULLS LAST")
             .addOrderBy("x.id", "DESC")
             .limit(limit)
-            .getRawMany<ExecutionRecord>()
+            .getRawMany<ExecutionRecordRow>()
     }
 
     /** The status of each given card of the workspace (a missing card is missing from the answer). */
-    async statusesOf(workspaceId: string, executionIds: ReadonlyArray<string>): Promise<Array<ExecutionStatus>> {
+    async statusesOf(workspaceId: string, executionIds: ReadonlyArray<string>): Promise<Array<ExecutionStatusLine>> {
         if (executionIds.length === 0) return []
+        const ids = [...new Set(executionIds)]
         const cards = await this.entityManager.find(ExecutionEntity, {
             select: { id: true, status: true },
-            where: { workspaceId, id: In([...new Set(executionIds)]) },
+            where: { workspaceId, id: In(ids) },
+            take: ids.length,
         })
-        return cards.map((card) => ({ id: card.id, status: card.status }))
+        return cards.map(toStatusLine)
     }
 
     /** Settles a card that still waits; answers null when somebody decided it first, so a double click settles once. */
@@ -155,7 +160,10 @@ export class ExecutionsService {
             })
             .returning(CARD_COLUMNS)
             .execute()
-        const rows = result.raw as Array<ExecutionCard>
-        return rows[0] ?? null
+        const [card] = returnedRows(
+            result.raw,
+            rowShape({ id: "string", status: "string", work_item_id: "string?", draft: "string" }),
+        )
+        return card ?? null
     }
 }

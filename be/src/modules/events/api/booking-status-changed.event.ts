@@ -1,6 +1,6 @@
 import { BaseEvent } from "@modules/platform/event-bus"
 import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
-import { isKey, isTextOrAbsent, memberOf, whenPresent, openEnvelope } from "./money-event.policy"
+import { isKey, isTextOrAbsent, listedValue, whenPresent, openEnvelope } from "./money-event.policy"
 
 /**
  * The payload of the `booking_status_changed` event. The AFTER trigger `bookings_notify` of `public.bookings` publishes it in the
@@ -46,7 +46,7 @@ export class BookingStatusChangedEvent extends BaseEvent {
 
     /** The change is identified by the key the trigger builds: booking, kind, status and the transaction. */
     static create(payload: BookingStatusChangedInput, transactionId: string): BookingStatusChangedEvent {
-        memberOf(BOOKING_STATUS_CHANGED_KINDS, payload.kind, "kind")
+        listedValue(BOOKING_STATUS_CHANGED_KINDS, payload.kind, "kind")
         const key = `${payload.bookingId}:${payload.kind}:${payload.status}:${transactionId}`
         return new BookingStatusChangedEvent(key, { ...payload, dedupeKey: key })
     }
@@ -70,7 +70,7 @@ export class BookingStatusChangedEvent extends BaseEvent {
             dedupeKey: body.dedupeKey,
             workspaceId: body.workspaceId,
             bookingId: body.bookingId,
-            kind: memberOf(BOOKING_STATUS_CHANGED_KINDS, body.kind, "kind"),
+            kind: listedValue(BOOKING_STATUS_CHANGED_KINDS, body.kind, "kind"),
             status: body.status,
             ...whenPresent("previous", body.previous),
         })

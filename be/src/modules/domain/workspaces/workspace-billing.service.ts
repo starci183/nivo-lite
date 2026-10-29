@@ -6,7 +6,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { extendedPaidUntil } from "./billing.policy"
 import { WorkspacesError, WorkspacesErrorCode } from "./errors/workspaces.error"
 import { WorkspaceEntity } from "./persistence/entities"
-import type { ActivePlan, BillingChange, SupportStatus } from "./workspaces.contracts"
+import type { BillingChange, OptionalActivePlan, OptionalBillingFacts, SupportStatus } from "./workspaces.contracts"
 
 @Injectable()
 /** The billing facts of a workspace (status, plan, paid-until) as support changes them by hand; the only writer of those columns. */
@@ -35,7 +35,7 @@ export class WorkspaceBillingService {
      * Moves the workspace to an active plan; paid-until is untouched, extending handles the period. The caller proves the plan with the
      * capability that owns plans and hands it over; none (an unknown or retired plan) is refused.
      */
-    async setPlan(workspaceId: string, plan: ActivePlan | null): Promise<BillingChange> {
+    async setPlan(workspaceId: string, plan: OptionalActivePlan): Promise<BillingChange> {
         if (plan === null) throw new WorkspacesError({ code: WorkspacesErrorCode.PlanUnknown })
         const before = await this.billingOf(workspaceId)
         await this.entityManager.update(
@@ -44,6 +44,32 @@ export class WorkspaceBillingService {
             { planCode: plan.code, tierCredits: null, seatCount: null },
         )
         return { from: before.planCode, to: plan.code }
+    }
+
+    /** The billing columns of a workspace for the billing capability; null when there is no such workspace. */
+    async factsOf(workspaceId: string): Promise<OptionalBillingFacts> {
+        const row = await this.entityManager.findOne(WorkspaceEntity, {
+            select: {
+                status: true,
+                planCode: true,
+                paidUntil: true,
+                tierCredits: true,
+                seatCount: true,
+                billingCycle: true,
+                billedMonthlyVnd: true,
+            },
+            where: { id: workspaceId },
+        })
+        if (row === null) return null
+        return {
+            status: row.status,
+            planCode: row.planCode,
+            paidUntil: row.paidUntil,
+            tierCredits: row.tierCredits === null ? null : Number(row.tierCredits),
+            seatCount: row.seatCount,
+            billingCycle: row.billingCycle,
+            billedMonthlyVnd: row.billedMonthlyVnd === null ? null : Number(row.billedMonthlyVnd),
+        }
     }
 
     private async billingOf(workspaceId: string): Promise<WorkspaceEntity> {

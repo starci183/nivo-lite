@@ -1,4 +1,5 @@
-import type { MockEntityManager } from "@starci/jest-preset"
+import { queueQueryBuilders } from "@starci/jest-preset"
+import type { FakeQueryBuilder, MockEntityManager, QueryBuilderCall } from "@starci/jest-preset"
 
 /** The key of the read that loads the row a notification names. */
 export const SELECT_EVENT = "realtime:select-event"
@@ -12,26 +13,31 @@ export const SELECT_MISSED_EVENTS = "realtime:select-missed-events"
 /** The key of the read that notes where a topic stands. */
 export const SELECT_TOPIC_HIGHEST_SEQ = "realtime:select-topic-highest-seq"
 
-/** One call chained on a scripted builder. */
-interface Chained {
-    readonly method: string
+/** How many query builders a scripted manager hands out; a spec that asks for more is asking for a runaway loop. */
+const BUILDERS_QUEUED = 256
+
+/** A statement key with the arguments its chain of builder calls carried. */
+interface ReadOf {
+    readonly key: string
     readonly args: ReadonlyArray<unknown>
 }
 
-const argOf = (calls: ReadonlyArray<Chained>, method: string, index: number): unknown =>
+const argOf = (calls: ReadonlyArray<QueryBuilderCall>, method: string, index: number): unknown =>
     calls.findLast((call) => call.method === method)?.args[index]
 
-const parametersOf = (calls: ReadonlyArray<Chained>): Readonly<Record<string, unknown>> => {
+const isObject = (value: unknown): value is object => typeof value === "object" && value !== null
+
+const parametersOf = (calls: ReadonlyArray<QueryBuilderCall>): Readonly<Record<string, unknown>> => {
     const given = calls.flatMap((call) =>
         (call.method === "where" && call.args[1] !== undefined) || call.method === "setParameters"
             ? [call.args[call.method === "where" ? 1 : 0]]
             : [],
     )
-    return Object.assign({}, ...given.filter((value): value is object => typeof value === "object" && value !== null))
+    return given.filter(isObject).reduce<Record<string, unknown>>((all, item) => ({ ...all, ...item }), {})
 }
 
 /** Names the read a chain of builder calls stands for and the arguments it carries, in the order the statement took them. */
-const readOf = (calls: ReadonlyArray<Chained>): { readonly key: string; readonly args: ReadonlyArray<unknown> } => {
+const readOf = (calls: ReadonlyArray<QueryBuilderCall>): ReadOf => {
     const parameters = parametersOf(calls)
     if (
         calls.some(
@@ -46,34 +52,35 @@ const readOf = (calls: ReadonlyArray<Chained>): { readonly key: string; readonly
     return { key: SELECT_TOPIC_HIGHEST_SEQ, args: [parameters.topic] }
 }
 
+/** The sequence number a `findOne` of a notified row asks for. */
+const seqOf = (options: unknown): unknown => {
+    if (!isObject(options)) return undefined
+    const where: unknown = Reflect.get(options, "where")
+    return isObject(where) ? Reflect.get(where, "seq") : undefined
+}
+
+/** Answers the read a statement key and its arguments stand for. */
+export type ReadStatement = (key: string, args: ReadonlyArray<unknown>) => Promise<ReadonlyArray<unknown>>
+
 /**
- * Scripts the reads of the Postgres hub on an entity manager whose `query` is already scripted by statement key: a query builder
- * chain is named by its shape and its terminal calls `em.query(key, args)`, and `findOne` of a notified row calls
- * `em.query(SELECT_EVENT, [seq])`. The specs script and assert the reads through `em.query`, as they did when the hub ran raw SQL.
+ * Scripts the reads of the Postgres hub on an entity manager: a query builder chain is named by its shape and its terminal asks
+ * `read(key, args)`, and `findOne` of a notified row asks `read(SELECT_EVENT, [seq])`. The specs script and assert the reads through
+ * `read`, as they did when the hub ran raw SQL. Answers the builders handed out, so a spec can read the calls each one took.
  */
-export const scriptRealtimeReads = (em: MockEntityManager): void => {
-    em.findOne.mockImplementation((async (_entity: unknown, options: { readonly where: { readonly seq: string } }) => {
-        const rows = (await em.query(SELECT_EVENT, [options.where.seq])) as ReadonlyArray<unknown>
+export const scriptRealtimeReads = (em: MockEntityManager, read: ReadStatement): ReadonlyArray<FakeQueryBuilder> => {
+    em.findOne.mockImplementation(async (_entity, options) => {
+        const rows = await read(SELECT_EVENT, [seqOf(options)])
         return rows[0] ?? null
-    }) as never)
-    em.createQueryBuilder.mockImplementation((() => {
-        const calls: Array<Chained> = []
-        const builder: object = new Proxy(
-            {},
-            {
-                get: (_target, property) => {
-                    if (typeof property !== "string") return undefined
-                    return (...args: Array<unknown>) => {
-                        calls.push({ method: property, args })
-                        if (property !== "getRawOne" && property !== "getRawMany") return builder
-                        const { key, args: statementArgs } = readOf(calls)
-                        return (em.query(key, [...statementArgs]) as Promise<ReadonlyArray<unknown>>).then((rows) =>
-                            property === "getRawOne" ? rows[0] : rows,
-                        )
-                    }
-                },
-            },
-        )
-        return builder
-    }) as never)
+    })
+    const handedOut: Array<FakeQueryBuilder> = []
+    const rowsOf = (index: number): Promise<ReadonlyArray<unknown>> => {
+        const { key, args } = readOf(handedOut[index]?.calls ?? [])
+        return read(key, args)
+    }
+    const answers = Array.from({ length: BUILDERS_QUEUED }, (_, index) => ({
+        getRawOne: async () => (await rowsOf(index))[0],
+        getRawMany: () => rowsOf(index),
+    }))
+    handedOut.push(...queueQueryBuilders(em, answers))
+    return handedOut
 }

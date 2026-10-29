@@ -9,7 +9,7 @@ import type { AgentHandleCard } from "@modules/domain/agents"
 import { LeadReadService } from "@modules/domain/leads"
 import type { LeadName } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
-import type { OrderRef } from "@modules/domain/orders"
+import type { OrderNameRef } from "@modules/domain/orders"
 import { CommandBusService, ModuleCatalogService } from "@modules/domain/decisions"
 import { MessagesReadService, OfficeLinesService } from "@modules/domain/messages"
 import type { LineText } from "@modules/domain/messages"
@@ -41,7 +41,7 @@ interface Plan {
     /** The recent customers the reference pool reads. */
     readonly leads?: ReadonlyArray<LeadName>
     /** The recent orders the reference pool reads. */
-    readonly orders?: ReadonlyArray<OrderRef>
+    readonly orders?: ReadonlyArray<OrderNameRef>
 }
 
 const manager: WorkspaceMember = {
@@ -68,7 +68,7 @@ const accounting: ModuleEntry = {
 }
 const humanMessage: LineText = { id: "m-1", author_kind: "human", body: "@ke-toan phieu thu cho don #DH-1" }
 const agentRow: AgentHandleCard = { id: "a-1", handle: "ke-toan", module: "accounting", name: "Mai" }
-const orderRow: OrderRef = { id: "o-1", orderNo: "DH-1", leadId: "l-1" }
+const orderRow: OrderNameRef = { id: "o-1", orderNo: "DH-1", leadId: "l-1" }
 const leadRow: LeadName = { id: "l-1", contactName: "Lan", company: "" }
 /** The world before proposing: the message, no candidate yet, the agent, the two reference pools and the answer of the insert. */
 const reaching = (message: LineText = humanMessage, insert: ReadonlyArray<CandidateView> = []): Plan => ({

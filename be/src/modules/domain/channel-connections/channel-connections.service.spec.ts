@@ -430,7 +430,7 @@ describe("ChannelConnectionsService check", () => {
         connections.get.mockResolvedValueOnce(record({ provider: "zalo_oa", status: "error" }))
         connections.get.mockResolvedValueOnce(record({ provider: "zalo_oa", status: "connected" }))
         connections.readSecret.mockResolvedValue({
-            plain: zaloSecret({ refreshToken: "rt", refreshExpiresAt: "2027-01-01T00:00:00.000Z" }),
+            plain: zaloSecret({ renewalToken: "rt", refreshExpiresAt: "2027-01-01T00:00:00.000Z" }),
             webhookSecret: "h",
         })
         await expect(service.check(actor, "c1")).resolves.toMatchObject({ provider: "zalo_oa", webhookOk: true })
@@ -438,7 +438,7 @@ describe("ChannelConnectionsService check", () => {
         expect(connections.patch).toHaveBeenNthCalledWith(1, "ws-1", "c1", { status: "connected", lastError: null })
         expect(connections.patch).toHaveBeenNthCalledWith(2, "ws-1", "c1", { lastError: null })
     })
-    it.each([zaloSecret(), zaloSecret({ refreshToken: "rt", refreshExpiresAt: "2026-01-01T00:00:00.000Z" })])(
+    it.each([zaloSecret(), zaloSecret({ renewalToken: "rt", refreshExpiresAt: "2026-01-01T00:00:00.000Z" })])(
         "marks Zalo broken for missing or expired tokens %s",
         async (plain) => {
             const { service, connections } = await build()

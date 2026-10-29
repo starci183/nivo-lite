@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { In, LessThan, LessThanOrEqual, MoreThanOrEqual } from "typeorm"
 import type { EntityManager } from "typeorm"
-import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
-import { AutomationPipelineEntity } from "@modules/domain/automation-pipelines"
+import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -39,11 +38,27 @@ const LATER_THRESHOLD_MS = 1000
 const PRIOR_LIMIT = 5000
 const WAITING_LIMIT = 50
 
-/** A payload as a query builder write accepts it: the index signature of `unknown` is not a deep-partial entity value. */
-type RunPayloadWrite = NonNullable<QueryDeepPartialEntity<AutomationRunEntity>["payload"]>
+/** The statement fragment that stores the bound payload text as jsonb. */
+const PAYLOAD_JSON = () => "CAST(:payload AS jsonb)"
 
-/** The raw rows of a query builder `RETURNING` clause. */
-const rowsOf = <Row>(raw: unknown): Array<Row> => (Array.isArray(raw) ? (raw as Array<Row>) : [])
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
+
+/** The id and attempts of the first row of a `RETURNING` clause, or none. */
+const startedOf = (raw: unknown): { id: string; attempts: number } | undefined => {
+    const [row] = Array.isArray(raw) ? raw : []
+    return isRecord(row) && typeof row.id === "string" && typeof row.attempts === "number"
+        ? { id: row.id, attempts: row.attempts }
+        : undefined
+}
+
+/** The claimed run of the first row of a `RETURNING` clause, or none. */
+const claimedOf = (raw: unknown): ClaimedRun | undefined => {
+    const started = startedOf(raw)
+    const [row] = Array.isArray(raw) ? raw : []
+    return started === undefined || !isRecord(row) || !isRecord(row.payload)
+        ? undefined
+        : { ...started, payload: row.payload }
+}
 
 @Injectable()
 /** The run records of public.automation_runs: one row per trigger, unique per pipeline and dedupe key, executed at most once per attempt. */
@@ -53,6 +68,7 @@ export class AutomationRunsService {
         @InjectClock() private readonly clock: Clock,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectLogger() private readonly logger: Logger,
+        private readonly pipelines: AutomationPipelinesService,
     ) {}
 
     /**
@@ -70,15 +86,16 @@ export class AutomationRunsService {
                 workspaceId: params.workspaceId,
                 triggerRef: params.triggerRef,
                 dedupeKey: params.dedupe,
-                payload: params.payload as RunPayloadWrite,
+                payload: PAYLOAD_JSON,
                 status: later ? "queued" : "running",
                 attempts: later ? 0 : 1,
                 runAt: params.runAt ?? now,
             })
+            .setParameter("payload", JSON.stringify(params.payload))
             .orIgnore()
             .returning(["id", "attempts"])
             .execute()
-        const [row] = rowsOf<{ id: string; attempts: number }>(inserted.raw)
+        const row = startedOf(inserted.raw)
         return row === undefined || later ? null : { id: row.id, attempts: row.attempts, payload: params.payload }
     }
 
@@ -107,8 +124,7 @@ export class AutomationRunsService {
             .where({ id: runId, status: In(["queued", "failed"]) })
             .returning(["id", "attempts", "payload"])
             .execute()
-        const [row] = rowsOf<ClaimedRun>(claimed.raw)
-        return row ?? null
+        return claimedOf(claimed.raw) ?? null
     }
 
     /** Runs one execution for one claimed run: any exception becomes a failed run that is retried with backoff. */
@@ -156,13 +172,18 @@ export class AutomationRunsService {
 
     /** The latest runs of a workspace, optionally of one template, newest first. */
     async runsOf(query: RunsQuery): Promise<ReadonlyArray<RunRow>> {
-        const builder = this.entityManager
-            .createQueryBuilder(AutomationRunEntity, "r")
-            .innerJoin(AutomationPipelineEntity, "p", "p.id = r.pipelineId")
-            .where("r.workspaceId = :workspaceId", { workspaceId: query.workspaceId })
-        if (query.templateKey !== null)
-            builder.andWhere("p.templateKey = :templateKey", { templateKey: query.templateKey })
-        const rows = await builder.orderBy("r.createdAt", "DESC").limit(query.limit).getMany()
+        const pipelineIds =
+            query.templateKey === null
+                ? null
+                : (await this.pipelines.pipelineKeys(query.workspaceId))
+                      .filter((key) => key.template_key === query.templateKey)
+                      .map((key) => key.id)
+        if (pipelineIds?.length === 0) return []
+        const rows = await this.entityManager.find(AutomationRunEntity, {
+            where: pipelineIds === null ? { workspaceId: query.workspaceId } : { workspaceId: query.workspaceId, pipelineId: In(pipelineIds) },
+            order: { createdAt: "DESC" },
+            take: query.limit,
+        })
         return rows.map((row) => ({
             id: row.id,
             pipeline_id: row.pipelineId,
@@ -221,7 +242,13 @@ export class AutomationRunsService {
 
     /** Replaces the payload of a run. */
     async markPayload(runId: string, payload: RunPayload): Promise<void> {
-        await this.entityManager.update(AutomationRunEntity, { id: runId }, { payload: payload as RunPayloadWrite })
+        await this.entityManager
+            .createQueryBuilder(AutomationRunEntity, "ar")
+            .update()
+            .set({ payload: PAYLOAD_JSON })
+            .where({ id: runId })
+            .setParameter("payload", JSON.stringify(payload))
+            .execute()
     }
 
     private async failRun(run: ClaimedRun, message: string): Promise<void> {

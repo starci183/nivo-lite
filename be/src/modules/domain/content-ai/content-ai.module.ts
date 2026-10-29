@@ -12,7 +12,6 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./content-ai.module-defin
 import { ContentAiService } from "./content-ai.service"
 import { ContentBrandService } from "./content-brand.service"
 import { ContentAiCompletionService } from "./content-ai-completion.service"
-import { ContentGenerationCompletionService } from "./content-generation-completion.service"
 import { ContentScheduleService } from "./content-schedule.service"
 import { MarketingCardsService } from "./marketing-cards.service"
 import { MarketingDraftService } from "./marketing-draft.service"
@@ -47,7 +46,6 @@ export class ContentAiModule extends ConfigurableModuleClass {
                 ContentAiService,
                 ContentBrandService,
                 ContentAiCompletionService,
-                ContentGenerationCompletionService,
                 BrandKitService,
                 BrandImagesService,
                 MarketingCardsService,

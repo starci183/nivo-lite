@@ -23,3 +23,6 @@ export interface ApiEvent {
     /** When it happened, ISO 8601 in UTC with milliseconds. */
     readonly createdAt: string
 }
+
+/** An instant, or null when it never happened. */
+export type OptionalInstant = Date | null

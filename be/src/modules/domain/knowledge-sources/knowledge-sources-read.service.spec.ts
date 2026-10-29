@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { fakeQueryBuilder, queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { KnowledgeSourcesReadService } from "./knowledge-sources-read.service"
@@ -17,8 +17,7 @@ const build = async (entityManager: MockEntityManager) =>
 /** A manager whose only query builder answers the given terminals and records the chain. */
 const managerAnswering = (answers: QueryBuilderAnswers) => {
     const em = mockEntityManager()
-    const fake = fakeQueryBuilder(answers)
-    em.createQueryBuilder.mockReturnValue(fake.builder as never)
+    const [fake = fakeQueryBuilder(answers)] = queueQueryBuilders(em, [answers])
     return { em, fake }
 }
 
@@ -75,7 +74,13 @@ describe("KnowledgeSourcesReadService", () => {
 
     describe("changedPublicSince", () => {
         it("lists the documents changed after an instant, oldest change first, and drops malformed rows", async () => {
-            const good = { id: "s1", title: "Menu", topic: null, excerpt: "Tea", changedAt: "2026-10-01T00:00:00.000000Z" }
+            const good = {
+                id: "s1",
+                title: "Menu",
+                topic: null,
+                excerpt: "Tea",
+                changedAt: "2026-10-01T00:00:00.000000Z",
+            }
             const { em, fake } = managerAnswering({ getRawMany: [good, { id: "s2" }, null] })
 
             await expect(
@@ -83,7 +88,10 @@ describe("KnowledgeSourcesReadService", () => {
             ).resolves.toEqual([good])
 
             expectSharedPublic(fake, em)
-            expect(fake.callsOf("andWhere")[2]).toEqual(["s.updated_at > :since::timestamptz", { since: "2026-09-01T00:00:00Z" }])
+            expect(fake.callsOf("andWhere")[2]).toEqual([
+                "s.updated_at > :since::timestamptz",
+                { since: "2026-09-01T00:00:00Z" },
+            ])
             expect(fake.callsOf("setParameter")).toEqual([["excerptChars", 400]])
             expect(fake.callsOf("orderBy")).toEqual([["s.updated_at"]])
             expect(fake.callsOf("limit")).toEqual([[5]])

@@ -1,3 +1,5 @@
 export { BookingWaitlistModule } from "./booking-waitlist.module"
 export { BookingWaitlistService } from "./booking-waitlist.service"
-export { BookingWaitlistEntity, bookingWaitlistEntities } from "./persistence/entities"
+export { bookingWaitlistEntities } from "./persistence/entities"
+export { BookingWaitlistReadService } from "./booking-waitlist-read.service"
+export type { BookingWaitRecord } from "./booking-waitlist-read.contracts"

@@ -8,11 +8,11 @@ import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builde
 import type { FakeQueryBuilder, QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { LeadsErrorCode } from "./errors/leads.error"
-import type { LeadRecord } from "./lead-records.contracts"
+import type { LeadRecordRow } from "./lead-records.contracts"
 import { LeadRecordsService } from "./lead-records.service"
 import { LeadEntity } from "./persistence/entities"
 
-const ROW: LeadRecord = {
+const ROW: LeadRecordRow = {
     id: "lead-1",
     workspace_id: "ws-1",
     contact_name: "An",
@@ -25,7 +25,7 @@ const ROW: LeadRecord = {
     email: null,
 }
 
-const found = (row: LeadRecord | undefined): QueryBuilderAnswers => ({ getRawOne: row })
+const found = (row: LeadRecordRow | undefined): QueryBuilderAnswers => ({ getRawOne: row })
 const written = (rows: ReadonlyArray<unknown> = []): QueryBuilderAnswers => ({ execute: { raw: rows } })
 
 /** A service over a manager that hands out one query builder per statement, answering `answers` in order. */
@@ -97,6 +97,21 @@ describe("LeadRecordsService", () => {
             records.match({ workspaceId: "ws-1", phone: "84912000701", email: null, name: null, channel: null }),
         ).resolves.toBeNull()
     })
+})
+
+describe("LeadRecordsService hand over", () => {
+    it("hands over the package as the lead's need", async () => {
+        const { records, fakes } = await build([written()])
+        const need = "Annual sales package"
+
+        await expect(records.handOver("ws-1", "lead-1", need)).resolves.toBeUndefined()
+
+        expect(setBy(fakes[0])).toEqual({ need, contextSummary: "COALESCE(context_summary, CAST(:need AS text))" })
+        expect(fakes[0]?.callsOf("setParameter")).toEqual([["need", need]])
+        expect(fakes[0]?.callsOf("where")).toEqual([
+            ["workspace_id = :workspaceId AND id = :leadId", { workspaceId: "ws-1", leadId: "lead-1" }],
+        ])
+    })
 
     it("captures a customer and answers the inserted row", async () => {
         const { records, fakes } = await build([written([ROW])])
@@ -129,20 +144,23 @@ describe("LeadRecordsService", () => {
         ])
         expect(fakes[0]?.callsOf("returning")[0]?.[0]).toContain("context_summary")
     })
-})
 
-describe("LeadRecordsService hand over", () => {
-    it("hands over the package as the lead's need", async () => {
+    it("refuses a capture that did not insert a row", async () => {
         const { records, fakes } = await build([written()])
-        const need = "Annual sales package"
 
-        await expect(records.handOver("ws-1", "lead-1", need)).resolves.toBeUndefined()
+        await expect(
+            records.capture({
+                workspaceId: "ws-1",
+                contactName: "An",
+                company: "ACME",
+                channel: "Zalo",
+                need: "price",
+                phone: null,
+                email: "an@example.test",
+            }),
+        ).rejects.toMatchObject({ code: LeadsErrorCode.NotFound, params: { id: "new" } })
 
-        expect(setBy(fakes[0])).toEqual({ need, contextSummary: "COALESCE(context_summary, CAST(:need AS text))" })
-        expect(fakes[0]?.callsOf("setParameter")).toEqual([["need", need]])
-        expect(fakes[0]?.callsOf("where")).toEqual([
-            ["workspace_id = :workspaceId AND id = :leadId", { workspaceId: "ws-1", leadId: "lead-1" }],
-        ])
+        expect(fakes[0]?.callsOf("values")[0]?.[0]).toMatchObject({ phone: null, email: "an@example.test" })
     })
 })
 
@@ -208,24 +226,6 @@ describe("LeadRecordsService matching", () => {
 
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
-
-    it("refuses a capture that did not insert a row", async () => {
-        const { records, fakes } = await build([written()])
-
-        await expect(
-            records.capture({
-                workspaceId: "ws-1",
-                contactName: "An",
-                company: "ACME",
-                channel: "Zalo",
-                need: "price",
-                phone: null,
-                email: "an@example.test",
-            }),
-        ).rejects.toMatchObject({ code: LeadsErrorCode.NotFound, params: { id: "new" } })
-
-        expect(fakes[0]?.callsOf("values")[0]?.[0]).toMatchObject({ phone: null, email: "an@example.test" })
-    })
 })
 
 describe("LeadRecordsService writes", () => {
@@ -277,17 +277,6 @@ describe("LeadRecordsService writes", () => {
             { workspaceId: "ws-1", id: "lead-1" },
             { contextSummary: "Transaction context" },
         )
-        expect(em.update).not.toHaveBeenCalled()
-    })
-
-    it("marks a won lead through the manager of the caller's transaction", async () => {
-        const em = mockEntityManager()
-        const callers = mockEntityManager({ update: [LeadEntity, {}] })
-        const { records } = await build([], em)
-
-        await expect(records.markWon("ws-1", "lead-1", callers)).resolves.toBeUndefined()
-
-        expect(callers.update).toHaveBeenCalledTimes(1)
         expect(em.update).not.toHaveBeenCalled()
     })
 
@@ -400,6 +389,17 @@ describe("LeadRecordsService for the contract link", () => {
 
         expect(caller.createQueryBuilder).toHaveBeenCalledTimes(3)
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
+    })
+
+    it("marks a won lead through the manager of the caller's transaction", async () => {
+        const em = mockEntityManager()
+        const callers = mockEntityManager({ update: [LeadEntity, {}] })
+        const { records } = await build([], em)
+
+        await expect(records.markWon("ws-1", "lead-1", callers)).resolves.toBeUndefined()
+
+        expect(callers.update).toHaveBeenCalledTimes(1)
+        expect(em.update).not.toHaveBeenCalled()
     })
 })
 

@@ -29,6 +29,16 @@ export interface InboxClaim {
     readonly dedupeKey: string
 }
 
+/** A change of an installation as the event bus delivers it: no installation means the whole workspace. */
+export interface InstallationChange {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The one installation; the whole workspace when none. */
+    readonly installationId?: string | null | undefined
+    /** Also sync an installation that is not on OpenClaw yet. */
+    readonly force: boolean
+}
+
 /** Which copy of the OpenClaw agents to rebuild. */
 export interface SyncRequest {
     /** The workspace. */
