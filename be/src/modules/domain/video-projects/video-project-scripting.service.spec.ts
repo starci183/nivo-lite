@@ -1,28 +1,53 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
-import { FAIL_SCRIPT_PROJECT, FINISH_SCRIPT_PROJECT, START_SCRIPT_PROJECT } from "./persistence/video-scripting.sql"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { VideoProjectEntity } from "./persistence/entities"
 import { VideoProjectScriptingService } from "./video-project-scripting.service"
+
+/** The any-function matcher, typed `unknown` so it flows into any slot. */
+const anyFunction = (): unknown => expect.any(Function)
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({ providers: [VideoProjectScriptingService] }).compile()
     return moduleRef.get(VideoProjectScriptingService)
 }
 
+/** A transaction double whose only query builder records the chain. */
+const transaction = () => {
+    const tx = mockEntityManager()
+    const fake = fakeQueryBuilder({ execute: { raw: [] } })
+    tx.createQueryBuilder.mockReturnValue(fake.builder as never)
+    return { tx, fake }
+}
+
+const GUARD =
+    "workspace_id = :workspaceId AND id = :projectId AND status = 'scripting' AND script_meta ->> 'generation_id' = :generationId"
+
 describe("VideoProjectScriptingService", () => {
     describe("start", () => {
         it("stores the operation metadata in the caller's transaction", async () => {
-            const tx = mockEntityManager({ query: [START_SCRIPT_PROJECT, []] })
+            const { tx, fake } = transaction()
             const service = await build()
 
             await expect(service.start(tx, "workspace-1", "project-1", '{"attempts":1}')).resolves.toBeUndefined()
 
-            expect(tx.query).toHaveBeenCalledWith(START_SCRIPT_PROJECT, ["workspace-1", "project-1", '{"attempts":1}'])
+            expect(tx.createQueryBuilder).toHaveBeenCalledWith(VideoProjectEntity, "v")
+
+            expect(fake.callsOf("update")).toEqual([[]])
+            expect(fake.callsOf("set")).toEqual([[{ status: "scripting", lastError: null, scriptMeta: anyFunction() }]])
+            expect(fake.callsOf("where")).toEqual([
+                [
+                    "workspace_id = :workspaceId AND id = :projectId",
+                    { workspaceId: "workspace-1", projectId: "project-1" },
+                ],
+            ])
+            expect(fake.callsOf("setParameter")).toEqual([["meta", '{"attempts":1}']])
         })
     })
 
     describe("finish", () => {
-        it("stores the scenes, the timing and the automatic title of the owning generation", async () => {
-            const tx = mockEntityManager({ query: [FINISH_SCRIPT_PROJECT, []] })
+        it("stores the scenes, the timing and the automatic title of the owning generation and drops the approval", async () => {
+            const { tx, fake } = transaction()
             const service = await build()
 
             await expect(
@@ -37,21 +62,33 @@ describe("VideoProjectScriptingService", () => {
                 }),
             ).resolves.toBeUndefined()
 
-            expect(tx.query).toHaveBeenCalledWith(FINISH_SCRIPT_PROJECT, [
-                "workspace-1",
-                "project-1",
-                "generation-1",
-                "[]",
-                1200,
-                "Spring offer",
-                "{}",
+            expect(fake.callsOf("set")).toEqual([
+                [
+                    {
+                        status: "draft",
+                        script: anyFunction(),
+                        scriptMs: 1200,
+                        title: anyFunction(),
+                        lastError: null,
+                        scriptMeta: anyFunction(),
+                        approvedAt: null,
+                        approvedByName: null,
+                        publishedAt: null,
+                    },
+                ],
             ])
+            expect(fake.callsOf("where")).toEqual([
+                [GUARD, { workspaceId: "workspace-1", projectId: "project-1", generationId: "generation-1" }],
+            ])
+            expect(fake.callsOf("setParameters")).toEqual([[{ script: "[]", title: "Spring offer", meta: "{}" }]])
         })
     })
+})
 
+describe("VideoProjectScriptingService failures", () => {
     describe("fail", () => {
         it("stores the stable failure code of the owning generation", async () => {
-            const tx = mockEntityManager({ query: [FAIL_SCRIPT_PROJECT, []] })
+            const { tx, fake } = transaction()
             const service = await build()
 
             await expect(
@@ -64,13 +101,13 @@ describe("VideoProjectScriptingService", () => {
                 }),
             ).resolves.toBeUndefined()
 
-            expect(tx.query).toHaveBeenCalledWith(FAIL_SCRIPT_PROJECT, [
-                "workspace-1",
-                "project-1",
-                "generation-1",
-                "code:VIDEO_SCRIPT_FAILED",
-                "{}",
+            expect(fake.callsOf("set")).toEqual([
+                [{ status: "draft", lastError: "code:VIDEO_SCRIPT_FAILED", scriptMeta: anyFunction() }],
             ])
+            expect(fake.callsOf("where")).toEqual([
+                [GUARD, { workspaceId: "workspace-1", projectId: "project-1", generationId: "generation-1" }],
+            ])
+            expect(fake.callsOf("setParameter")).toEqual([["meta", "{}"]])
         })
     })
 })

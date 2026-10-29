@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common"
+import { And, In, LessThan, MoreThanOrEqual } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { WorkItemEntity } from "@modules/domain/work-items"
+import { WorkspaceMemberEntity, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -18,32 +20,36 @@ import type {
     HiringOfferView,
 } from "./hiring-workbench.contracts"
 import {
-    COUNT_WAITING_APPROVALS,
-    SELECT_ALL_AVAILABILITY,
-    SELECT_CANDIDATE_EVENTS,
-    SELECT_FIGURES,
-    SELECT_WORKBENCH_CANDIDATES,
-    SELECT_WORKBENCH_INTERVIEWS,
-    SELECT_WORKBENCH_JOBS,
-    SELECT_WORKBENCH_MEMBERS,
-    SELECT_WORKBENCH_OFFERS,
-    SELECT_WORKBENCH_ONBOARDING,
-} from "./persistence/hiring-workbench.sql"
-import type {
-    CountRow,
-    HiringEventRow,
-    HiringFiguresRow,
-    WorkbenchAvailabilityRow,
-    WorkbenchCandidateRow,
-    WorkbenchInterviewRow,
-    WorkbenchJobRow,
-    WorkbenchMemberRow,
-    WorkbenchOfferRow,
-    WorkbenchOnboardingRow,
-} from "./persistence/hiring-workbench.rows"
+    HiringAvailabilityEntity,
+    HiringCandidateEntity,
+    HiringEventEntity,
+    HiringInterviewEntity,
+    HiringJobEntity,
+    HiringOfferEntity,
+    HiringOnboardingEntity,
+} from "./persistence/entities"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { toCandidate, toInterview, toJob, toOffer } from "./policies/row-mappers.policy"
 import { addDays, hiringIsoOf, isoOrNull, vnInstant, vnClockParts } from "./policies/vn-time.policy"
+
+/** How many jobs the workbench shows. */
+const JOBS_LIMIT = 500
+/** How many candidates the workbench shows. */
+const CANDIDATES_LIMIT = 1000
+/** How many interviews the workbench shows. */
+const INTERVIEWS_LIMIT = 300
+/** How many offers the workbench shows. */
+const OFFERS_LIMIT = 300
+/** How many onboarding steps the workbench shows. */
+const ONBOARDING_LIMIT = 2000
+/** How many members the workbench shows. */
+const MEMBERS_LIMIT = 500
+/** How many availability windows the workbench shows. */
+const WINDOWS_LIMIT = 2000
+/** How many events the candidate drawer shows. */
+const EVENTS_LIMIT = 60
+/** The stages that still move through the pipeline. */
+const PIPELINE_STAGES = ["applied", "screening", "shortlisted", "interview", "offer"] as const
 
 const iso = isoOrNull
 const isoS = (value: Date | string): string => hiringIsoOf(value)
@@ -82,21 +88,47 @@ export class HiringWorkbenchService {
         const settings = await this.settings.ensure(workspaceId)
         const [jobs, candidates, interviews, offers, onboarding, memberRows, availability, waiting, figures] =
             await Promise.all([
-                this.entityManager.query<Array<WorkbenchJobRow>>(SELECT_WORKBENCH_JOBS, [workspaceId]),
-                this.entityManager.query<Array<WorkbenchCandidateRow>>(SELECT_WORKBENCH_CANDIDATES, [workspaceId]),
-                this.entityManager.query<Array<WorkbenchInterviewRow>>(SELECT_WORKBENCH_INTERVIEWS, [workspaceId]),
-                this.entityManager.query<Array<WorkbenchOfferRow>>(SELECT_WORKBENCH_OFFERS, [workspaceId]),
-                this.entityManager.query<Array<WorkbenchOnboardingRow>>(SELECT_WORKBENCH_ONBOARDING, [workspaceId]),
-                this.entityManager.query<Array<WorkbenchMemberRow>>(SELECT_WORKBENCH_MEMBERS, [workspaceId]),
-                this.entityManager.query<Array<WorkbenchAvailabilityRow>>(SELECT_ALL_AVAILABILITY, [workspaceId]),
-                this.entityManager.query<Array<CountRow>>(COUNT_WAITING_APPROVALS, [workspaceId]),
+                this.entityManager.find(HiringJobEntity, {
+                    where: { workspaceId },
+                    order: { createdAt: "DESC" },
+                    take: JOBS_LIMIT,
+                }),
+                this.entityManager.find(HiringCandidateEntity, {
+                    where: { workspaceId },
+                    order: { createdAt: "DESC" },
+                    take: CANDIDATES_LIMIT,
+                }),
+                this.entityManager.find(HiringInterviewEntity, {
+                    where: { workspaceId },
+                    order: { createdAt: "DESC" },
+                    take: INTERVIEWS_LIMIT,
+                }),
+                this.entityManager.find(HiringOfferEntity, {
+                    where: { workspaceId },
+                    order: { createdAt: "DESC" },
+                    take: OFFERS_LIMIT,
+                }),
+                this.entityManager.find(HiringOnboardingEntity, {
+                    where: { workspaceId },
+                    order: { sort: "ASC" },
+                    take: ONBOARDING_LIMIT,
+                }),
+                this.entityManager.find(WorkspaceMemberEntity, {
+                    where: { workspaceId, status: "active" },
+                    order: { createdAt: "ASC" },
+                    take: MEMBERS_LIMIT,
+                }),
+                this.entityManager.find(HiringAvailabilityEntity, { where: { workspaceId }, take: WINDOWS_LIMIT }),
+                this.entityManager.count(WorkItemEntity, {
+                    where: { workspaceId, department: "hiring", status: "waiting_decision" },
+                }),
                 this.figures(workspaceId),
             ])
         const windowsByMember = new Map<string, Array<{ weekday: number; startMin: number; endMin: number }>>()
         for (const row of availability) {
-            const list = windowsByMember.get(row.member_user_id) ?? []
-            list.push({ weekday: row.weekday, startMin: row.start_min, endMin: row.end_min })
-            windowsByMember.set(row.member_user_id, list)
+            const list = windowsByMember.get(row.memberUserId) ?? []
+            list.push({ weekday: row.weekday, startMin: row.startMin, endMin: row.endMin })
+            windowsByMember.set(row.memberUserId, list)
         }
         return {
             nowIso: this.clock.now().toISOString(),
@@ -108,19 +140,19 @@ export class HiringWorkbenchService {
             offers: offers.map((row) => this.offerView(row)),
             onboarding: onboarding.map((row) => ({
                 id: row.id,
-                candidateId: row.candidate_id,
+                candidateId: row.candidateId,
                 title: row.title,
                 done: row.done,
-                doneAt: iso(row.done_at),
+                doneAt: iso(row.doneAt),
                 sort: row.sort,
             })),
             members: memberRows.map((row) => ({
-                userId: row.user_id,
-                name: row.display_name,
+                userId: row.userId,
+                name: row.displayName,
                 role: row.role,
-                windows: windowsByMember.get(row.user_id) ?? [],
+                windows: windowsByMember.get(row.userId) ?? [],
             })),
-            waitingApprovals: Number(waiting[0]?.n ?? 0),
+            waitingApprovals: waiting,
             figures,
             meUserId: userId,
         }
@@ -135,7 +167,11 @@ export class HiringWorkbenchService {
         await this.members.require(userId, workspaceId, MANAGER_ROLES)
         const candidate = await this.candidates.requireCandidate(workspaceId, candidateId)
         const [events, cv] = await Promise.all([
-            this.entityManager.query<Array<HiringEventRow>>(SELECT_CANDIDATE_EVENTS, [workspaceId, candidate.id]),
+            this.entityManager.find(HiringEventEntity, {
+                where: { workspaceId, candidateId: candidate.id },
+                order: { createdAt: "DESC" },
+                take: EVENTS_LIMIT,
+            }),
             this.candidates.cv(userId, workspaceId, { id: candidate.id }),
         ])
         return {
@@ -144,7 +180,7 @@ export class HiringWorkbenchService {
                 kind: row.kind,
                 actor: row.actor,
                 summary: row.summary,
-                createdAt: isoS(row.created_at),
+                createdAt: isoS(row.createdAt),
             })),
             cv: cv.url === null ? null : { url: cv.url, name: cv.name ?? "cv", mime: cv.mime ?? "application/pdf" },
         }
@@ -152,62 +188,64 @@ export class HiringWorkbenchService {
 
     private async figures(workspaceId: string): Promise<HiringFiguresView> {
         const week = weekBounds(this.clock.now())
-        const [row] = await this.entityManager.query<Array<HiringFiguresRow>>(SELECT_FIGURES, [
-            workspaceId,
-            week.from.toISOString(),
-            week.to.toISOString(),
+        const [openRoles, totalRoles, pipeline, interviewsWeek, offersWaiting, offersSent] = await Promise.all([
+            this.entityManager.count(HiringJobEntity, { where: { workspaceId, status: "open" } }),
+            this.entityManager.count(HiringJobEntity, { where: { workspaceId } }),
+            this.entityManager.count(HiringCandidateEntity, { where: { workspaceId, stage: In(PIPELINE_STAGES) } }),
+            this.entityManager.count(HiringInterviewEntity, {
+                where: {
+                    workspaceId,
+                    status: "confirmed",
+                    slotStart: And(MoreThanOrEqual(week.from), LessThan(week.to)),
+                },
+            }),
+            this.entityManager.count(HiringOfferEntity, { where: { workspaceId, status: "waiting" } }),
+            this.entityManager.count(HiringOfferEntity, { where: { workspaceId, status: "sent" } }),
         ])
-        return {
-            openRoles: Number(row?.open_roles ?? 0),
-            totalRoles: Number(row?.total_roles ?? 0),
-            pipeline: Number(row?.pipeline ?? 0),
-            interviewsWeek: Number(row?.interviews_week ?? 0),
-            offersWaiting: Number(row?.offers_waiting ?? 0),
-            offersSent: Number(row?.offers_sent ?? 0),
-        }
+        return { openRoles, totalRoles, pipeline, interviewsWeek, offersWaiting, offersSent }
     }
 
-    private jobView(row: WorkbenchJobRow, publicSlug: string): HiringJobView {
+    private jobView(row: HiringJobEntity, publicSlug: string): HiringJobView {
         return {
             ...toJob(row),
-            adVariants: row.ad_variants,
-            createdAt: isoS(row.created_at),
-            updatedAt: isoS(row.updated_at),
+            adVariants: row.adVariants,
+            createdAt: isoS(row.createdAt),
+            updatedAt: isoS(row.updatedAt),
             publicUrl: this.links.job(publicSlug, row.slug),
         }
     }
 
-    private candidateView(row: WorkbenchCandidateRow): HiringCandidateView {
+    private candidateView(row: HiringCandidateEntity): HiringCandidateView {
         return {
             ...toCandidate(row),
-            cvSize: row.cv_size,
+            cvSize: row.cvSize,
             score: row.score,
-            scoreLabel: row.score_label,
-            scoreReasons: row.score_reasons ?? [],
-            scoreSummary: row.score_summary,
-            screenedAt: iso(row.screened_at),
-            stageChangedAt: isoS(row.stage_changed_at),
-            rejectedReason: row.rejected_reason,
+            scoreLabel: row.scoreLabel,
+            scoreReasons: row.scoreReasons ?? [],
+            scoreSummary: row.scoreSummary,
+            screenedAt: iso(row.screenedAt),
+            stageChangedAt: isoS(row.stageChangedAt),
+            rejectedReason: row.rejectedReason,
             notes: row.notes,
-            createdAt: isoS(row.created_at),
+            createdAt: isoS(row.createdAt),
         }
     }
 
-    private interviewView(row: WorkbenchInterviewRow): HiringInterviewView {
+    private interviewView(row: HiringInterviewEntity): HiringInterviewView {
         return {
             ...toInterview(row),
-            reminderSentAt: iso(row.reminder_sent_at),
-            createdAt: isoS(row.created_at),
+            reminderSentAt: iso(row.reminderSentAt),
+            createdAt: isoS(row.createdAt),
         }
     }
 
-    private offerView(row: WorkbenchOfferRow): HiringOfferView {
+    private offerView(row: HiringOfferEntity): HiringOfferView {
         return {
             ...toOffer(row),
-            sentVia: row.sent_via,
-            sentAt: iso(row.sent_at),
-            respondedAt: iso(row.responded_at),
-            createdAt: isoS(row.created_at),
+            sentVia: row.sentVia,
+            sentAt: iso(row.sentAt),
+            respondedAt: iso(row.respondedAt),
+            createdAt: isoS(row.createdAt),
         }
     }
 }

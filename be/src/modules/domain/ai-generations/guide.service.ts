@@ -3,15 +3,14 @@ import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService, isManagerRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { advisoryXactLock, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { GenerationEnqueued, GuideAsk, GuideWords } from "./ai-generations.contracts"
 import { AiGenerationsError, AiGenerationsErrorCode } from "./errors/ai-generations.error"
 import { GenerationsService } from "./generations.service"
 import { GUIDE_ASKS_PER_WINDOW, GUIDE_TIMEOUT_MS, GUIDE_WINDOW_MS, guideAskerKey, guidePrompt } from "./guide.policy"
-import type { GuideAskCountRow } from "./persistence/ai-generations.rows"
-import { COUNT_GUIDE_ASKS, LOCK_GUIDE_ASKER } from "./persistence/ai-generations.sql"
+import { AiGenerationEntity } from "./persistence/entities"
 
 @Injectable()
 /**
@@ -36,9 +35,16 @@ export class GuideService {
         const messages = guidePrompt(ask, isManagerRole(member.role), words)
         const since = new Date(this.clock.now().getTime() - GUIDE_WINDOW_MS)
         return this.entityManager.transaction(async (tx) => {
-            await tx.query(LOCK_GUIDE_ASKER, [guideAskerKey(ask.workspaceId, userId)])
-            const [row] = await tx.query<Array<GuideAskCountRow>>(COUNT_GUIDE_ASKS, [ask.workspaceId, userId, since])
-            if (Number(row?.asked ?? 0) >= GUIDE_ASKS_PER_WINDOW) {
+            await advisoryXactLock(tx, guideAskerKey(ask.workspaceId, userId))
+            const asked = await tx
+                .createQueryBuilder(AiGenerationEntity, "g")
+                .where("g.workspace_id = :workspaceId AND g.usage_kind = 'guide' AND g.created_at >= :since", {
+                    workspaceId: ask.workspaceId,
+                    since,
+                })
+                .andWhere("g.input -> 'context' ->> 'requestedBy' = :userId", { userId })
+                .getCount()
+            if (asked >= GUIDE_ASKS_PER_WINDOW) {
                 throw new AiGenerationsError({ code: AiGenerationsErrorCode.GuideRateLimited })
             }
             return this.generations.request(

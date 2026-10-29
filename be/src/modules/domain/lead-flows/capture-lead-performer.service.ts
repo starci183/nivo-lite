@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
-import { BusinessEventsService } from "@modules/domain/automations"
+import type { EntityManager } from "typeorm"
 import { InjectWorkPerformerRegistry } from "@modules/domain/decisions"
 import type {
     Performed,
@@ -15,6 +15,10 @@ import { InboundEventsService } from "@modules/domain/inbound-events"
 import { LeadRecordsService } from "@modules/domain/leads"
 import type { LeadRecordRow } from "@modules/domain/leads"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
+import { LeadCapturedEvent } from "@modules/events/api"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectEventBus } from "@modules/platform/event-bus"
+import type { EventBus } from "@modules/platform/event-bus"
 import { LeadFlowsError, LeadFlowsErrorCode } from "./errors/lead-flows.error"
 import { channelKeyOf, field, identityOf, sourceOf } from "./lead-flow-fields.policy"
 import type { FlowFields } from "./lead-flow-fields.policy"
@@ -39,7 +43,8 @@ export class CaptureLeadPerformerService implements WorkPerformer, OnModuleInit 
         private readonly leads: LeadRecordsService,
         private readonly inbound: InboundEventsService,
         private readonly responsibilities: ResponsibilityJournalService,
-        private readonly events: BusinessEventsService,
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectEventBus() private readonly eventBus: EventBus,
     ) {}
 
     /** Registers the performer with the work engine. */
@@ -118,17 +123,37 @@ export class CaptureLeadPerformerService implements WorkPerformer, OnModuleInit 
             )
             return { lead: known, matched: true }
         }
-        const lead = await this.leads.capture({
-            workspaceId: ctx.workspaceId,
-            contactName: field(fields, "contact_name") || this.kit.text(ctx.locale, `guest.${source.platform}`),
-            company: field(fields, "company") || this.kit.text(ctx.locale, "not-shared"),
-            channel: field(fields, "channel_label") || this.kit.text(ctx.locale, `channel.${channelKeyOf(source)}`),
-            need: field(fields, "need") || clip(text, 300) || sourceLine,
-            phone: id.phone,
-            email: id.email,
+        const lead = await this.entityManager.transaction(async (manager) => {
+            const created = await this.leads.capture(
+                {
+                    workspaceId: ctx.workspaceId,
+                    contactName: field(fields, "contact_name") || this.kit.text(ctx.locale, `guest.${source.platform}`),
+                    company: field(fields, "company") || this.kit.text(ctx.locale, "not-shared"),
+                    channel:
+                        field(fields, "channel_label") || this.kit.text(ctx.locale, `channel.${channelKeyOf(source)}`),
+                    need: field(fields, "need") || clip(text, 300) || sourceLine,
+                    phone: id.phone,
+                    email: id.email,
+                },
+                manager,
+            )
+            await this.eventBus.publish(
+                LeadCapturedEvent.create({
+                    workspaceId: ctx.workspaceId,
+                    leadId: created.id,
+                    contactName: created.contact_name,
+                    company: created.company,
+                    channel: created.channel,
+                    need: created.need,
+                    phone: created.phone,
+                    email: created.email,
+                }),
+                manager,
+                `lead-captured:${created.id}`,
+            )
+            return created
         })
         await this.responsibilities.ensureFor(ctx, lead.id)
-        await this.events.leadCreated(ctx.workspaceId, lead)
         await this.logLead(
             ctx,
             item,

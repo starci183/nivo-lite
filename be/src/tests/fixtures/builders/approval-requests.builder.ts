@@ -1,7 +1,12 @@
 import { builder } from "@starci/jest-preset"
 import type { ApprovalSetup } from "@modules/domain/authority-rules"
 import type { ApproverRef, DirectoryMember, MemberGrant } from "@modules/domain/member-grants"
-import type { OpenApprovalParams, ApprovalRequestRow, ApprovalVerdictRow } from "@modules/domain/approval-requests"
+import { ApprovalRequestEntity } from "@modules/domain/approval-requests"
+import type {
+    OpenApprovalParams,
+    ApprovalRequestRecord,
+    ApprovalVerdictRecord,
+} from "@modules/domain/approval-requests"
 
 /** The moment the specs of the approval requests run at. */
 export const NOW = "2026-10-22T09:30:00.000Z"
@@ -88,7 +93,7 @@ export const openOf = builder<OpenApprovalParams>({
 })
 
 /** A pending request opened {@link NOW}, with Anh Minh tagged. */
-export const approvalRequestOf = builder<ApprovalRequestRow>({
+export const approvalRequestOf = builder<ApprovalRequestRecord>({
     id: "request-1",
     workspace_id: "ws-1",
     chain_step_id: "step-1",
@@ -100,6 +105,7 @@ export const approvalRequestOf = builder<ApprovalRequestRow>({
     policy: "any",
     status: "pending",
     approvers: [MINH_REF],
+    verdicts: [],
     excluded: [],
     timeout_minutes: 30,
     expires_at: IN_30_MINUTES,
@@ -110,8 +116,36 @@ export const approvalRequestOf = builder<ApprovalRequestRow>({
     created_at: NOW,
 })
 
+/** The stored row of {@link approvalRequestOf}: a pending request opened {@link NOW}, with Anh Minh tagged. */
+export const approvalRequestEntityOf = builder<ApprovalRequestEntity>({
+    id: "request-1",
+    workspaceId: "ws-1",
+    chainStepId: "step-1",
+    department: "sales",
+    action: "give_discount",
+    amount: 10,
+    unit: "percent",
+    requestedByAgentId: AGENT,
+    policy: "any",
+    status: "pending",
+    approvers: [MINH_REF],
+    excluded: [],
+    verdicts: [],
+    timeoutMinutes: 30,
+    expiresAt: new Date(IN_30_MINUTES),
+    remindedAt: null,
+    resolvedBy: null,
+    resolvedAt: null,
+    escalatedTo: null,
+    createdAt: new Date(NOW),
+})
+
 /** The approve verdict of Anh Minh. */
-export const verdictOf = builder<ApprovalVerdictRow>({ member_id: "member-minh", verdict: "approve", decided_at: NOW })
+export const verdictOf = builder<ApprovalVerdictRecord>({
+    member_id: "member-minh",
+    verdict: "approve",
+    decided_at: NOW,
+})
 
 /** What a spec arranges about the rule and the people. */
 export interface Arrangement {
@@ -126,3 +160,56 @@ export interface Arrangement {
 /** The rule a spec arranged: the discount rule unless it named another one, or none (null). */
 export const setupFor = (arrangement: Arrangement): ApprovalSetup | null =>
     arrangement.setup === undefined ? setupOf() : arrangement.setup
+
+/** A request that ran out of time and was settled as expired at {@link NOW}. */
+export const expiredRequestSettledNow = (): ApprovalRequestEntity =>
+    approvalRequestEntityOf({ status: "expired", resolvedAt: new Date(NOW) })
+
+/** A pending request whose time ran out one second before it is read. */
+export const requestPastItsTime = (): ApprovalRequestEntity =>
+    approvalRequestEntityOf({ expiresAt: new Date("2026-10-22T09:00:00.000Z") })
+
+/** A pending request tagged to Anh Minh and Ha. */
+export const requestForMinhAndHa = (): ApprovalRequestEntity =>
+    approvalRequestEntityOf({ approvers: [MINH_REF, HA_REF] })
+
+/** A pending request that Anh Minh and Ha answer one after the other. */
+export const sequentialRequestForMinhAndHa = (): ApprovalRequestEntity =>
+    approvalRequestEntityOf({ policy: "sequential", approvers: [MINH_REF, HA_REF] })
+
+/** A pending request that asks its approvers in order, tagging only Anh Minh. */
+export const sequentialRequest = (): ApprovalRequestEntity => approvalRequestEntityOf({ policy: "sequential" })
+
+/** A pending request that carries no amount. */
+export const requestWithoutAmount = (): ApprovalRequestEntity => approvalRequestEntityOf({ amount: null })
+
+/** A pending request for Anh Minh and Ha that left Lan out for lack of a grant. */
+export const requestExcludingLan = (): ApprovalRequestEntity =>
+    approvalRequestEntityOf({
+        approvers: [MINH_REF, HA_REF],
+        excluded: [{ memberId: "member-lan", reason: "no_grant" }],
+    })
+
+/** A pending request with nobody tagged that expires at {@link NOW}. */
+export const requestWithoutApproversExpiringNow = (): ApprovalRequestEntity =>
+    approvalRequestEntityOf({ approvers: [], expiresAt: new Date(NOW) })
+
+/** A pending request that expires one minute before {@link NOW}. */
+export const requestExpiredBeforeNow = (): ApprovalRequestEntity =>
+    approvalRequestEntityOf({ expiresAt: new Date("2026-10-22T09:29:00.000Z") })
+
+/** A second pending request, of the chain step `step-2`. */
+export const requestOfSecondStep = (): ApprovalRequestEntity =>
+    approvalRequestEntityOf({ id: "request-2", chainStepId: "step-2" })
+
+/** An all-approve request for Anh Minh and Ha where Anh Minh already approved. */
+export const allApproveRequestMinhApproved = (): ApprovalRequestEntity =>
+    approvalRequestEntityOf({ policy: "all", approvers: [MINH_REF, HA_REF], verdicts: [verdictOf()] })
+
+/** What the escalation writes onto a request it expires toward Anh Minh. */
+export const ESCALATION_EXPIRY_SET = {
+    status: "expired",
+    resolvedBy: null,
+    resolvedAt: new Date(NOW),
+    escalatedTo: "member-minh",
+}

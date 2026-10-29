@@ -1,12 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import type { EntityManager, UpdateResult } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { AGENT_DISPLAY_NAME_LIMITS, cleanAgentName, isAgentAvatarUrl } from "./agent-name.policy"
 import type { OptionalAvatarUrl } from "./agents.contracts"
 import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
-import type { IdRow } from "./persistence/agents.rows"
-import { RENAME_AGENT, SET_AGENT_AVATAR } from "./persistence/agents.sql"
+import { AgentEntity } from "./persistence/entities"
 
 const GOVERNORS = ["owner", "manager"] as const
 
@@ -25,7 +24,7 @@ export class AgentIdentityService {
         if (clean === null)
             throw new AgentsError({ code: AgentsErrorCode.NameInvalid, params: AGENT_DISPLAY_NAME_LIMITS })
         this.expectChanged(
-            await this.entityManager.query<Array<IdRow>>(RENAME_AGENT, [agentId, workspaceId, clean]),
+            await this.entityManager.update(AgentEntity, { id: agentId, workspaceId }, { name: clean }),
             agentId,
         )
     }
@@ -37,12 +36,13 @@ export class AgentIdentityService {
             throw new AgentsError({ code: AgentsErrorCode.AvatarInvalid })
         }
         this.expectChanged(
-            await this.entityManager.query<Array<IdRow>>(SET_AGENT_AVATAR, [agentId, workspaceId, avatarUrl]),
+            await this.entityManager.update(AgentEntity, { id: agentId, workspaceId }, { avatarUrl }),
             agentId,
         )
     }
 
-    private expectChanged(rows: ReadonlyArray<IdRow>, agentId: string): void {
-        if (rows.length === 0) throw new AgentsError({ code: AgentsErrorCode.AgentNotFound, params: { id: agentId } })
+    private expectChanged(result: UpdateResult, agentId: string): void {
+        if ((result.affected ?? 0) === 0)
+            throw new AgentsError({ code: AgentsErrorCode.AgentNotFound, params: { id: agentId } })
     }
 }

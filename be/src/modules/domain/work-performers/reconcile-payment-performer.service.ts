@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { AutomationBusinessEventsService } from "@modules/domain/automations"
-import { ContractsService, displayDayOf } from "@modules/domain/contracts"
+import type { EntityManager } from "typeorm"
 import { DecisionsError, DecisionsErrorCode, EvidenceService } from "@modules/domain/decisions"
 import type {
     Performed,
@@ -20,13 +19,14 @@ import { OrdersService } from "@modules/domain/orders"
 import { TransactionsService } from "@modules/domain/transactions"
 import type { OptionalTransaction } from "@modules/domain/transactions"
 import { WorkItemsService } from "@modules/domain/work-items"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { PaymentReconciledEvent } from "@modules/events/api"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectEventBus } from "@modules/platform/event-bus"
+import type { EventBus } from "@modules/platform/event-bus"
 import { PerformerKitService } from "./performer-kit.service"
 import { leadHref, numberOf, textOf } from "./performer.policy"
 import { bankNameOf, candidateOf, claimKeyOf, matchPayment } from "./payment-match.policy"
 import type { MatchableInvoice } from "./payment-match.policy"
-import { WorkPerformersLogEvent } from "./work-performers.log-events"
 
 /** How many of the newest issued invoices a payment is matched against. */
 const ISSUED_WINDOW = 50
@@ -34,6 +34,13 @@ const ISSUED_WINDOW = 50
 /** The text a payment is matched on: its reference and the body of the input it came from. */
 const contentOf = (reference: string | null, event: OptionalInboundEvent): string =>
     `${reference ?? ""} ${event?.body ?? ""}`
+
+/** The display facts of the parties to a payment: the customer, the channel and the order it settles. */
+interface PaymentParties {
+    readonly customer: string | null
+    readonly channel: string | null
+    readonly orderNo: string | null
+}
 
 @Injectable()
 /**
@@ -50,9 +57,8 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
         private readonly workItems: WorkItemsService,
         private readonly evidence: EvidenceService,
         private readonly leads: LeadRecordsService,
-        private readonly events: AutomationBusinessEventsService,
-        private readonly contracts: ContractsService,
-        @InjectLogger() private readonly logger: Logger,
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectEventBus() private readonly bus: EventBus,
     ) {}
 
     /**
@@ -109,111 +115,105 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
         }
     }
 
-    /** Marks the chosen invoice paid, links the payment, and closes the customer's "I paid" checks the bank credit just made redundant. */
+    /**
+     * Marks the chosen invoice paid, links the payment, tells the evidence log and publishes `payment_reconciled`, all in one
+     * transaction (the contract renewal, the automations and the care step react to the fact once it commits), then closes the
+     * customer's "I paid" checks the bank credit just made redundant.
+     */
     async perform(ctx: WorkContext, item: WorkItem, proposal: Proposal, by: PerformedBy): Promise<Performed> {
         const [chosen] = proposal.candidates ?? []
         if (chosen === undefined || proposal.candidates?.length !== 1) {
             throw new DecisionsError({ code: DecisionsErrorCode.ChooseCandidate })
         }
-        const invoice = await this.invoices.markPaid(ctx.workspaceId, chosen.id)
-        // A customer's "I paid" claim has no bank transaction of its own (its subject is the invoice).
-        if (item.subject_type === "transaction" && item.subject_id !== null) {
-            await this.transactions.match(ctx.workspaceId, item.subject_id, invoice.id)
-        }
-        if (invoice.order_id !== null) await this.orders.markPaid(ctx.workspaceId, invoice.order_id)
-        if (item.inbound_event_id !== null)
-            await this.inbound.mark(ctx.workspaceId, item.inbound_event_id, null, invoice.lead_id)
-        await this.renewContract(ctx, item, invoice)
-        const matched = this.kit.text(ctx, "paymentMatched", {
-            amount: this.kit.money(ctx, proposal.amount_vnd ?? null),
-            no: invoice.invoice_no,
+        const payer = await this.payerOf(ctx, chosen.id)
+        const settled = await this.entityManager.transaction(async (tx) => {
+            const invoice = await this.invoices.markPaid(ctx.workspaceId, chosen.id, tx)
+            // A customer's "I paid" claim has no bank transaction of its own (its subject is the invoice).
+            if (item.subject_type === "transaction" && item.subject_id !== null) {
+                await this.transactions.match(ctx.workspaceId, item.subject_id, invoice.id, tx)
+            }
+            if (invoice.order_id !== null) await this.orders.markPaid(ctx.workspaceId, invoice.order_id, tx)
+            if (item.inbound_event_id !== null)
+                await this.inbound.mark(ctx.workspaceId, item.inbound_event_id, null, invoice.lead_id, tx)
+            const matched = this.kit.text(ctx, "paymentMatched", {
+                amount: this.kit.money(ctx, proposal.amount_vnd ?? null),
+                no: invoice.invoice_no,
+            })
+            const summary = textOf(proposal.fields.bank) === "" ? matched : `${proposal.summary} · ${matched}`
+            const how = textOf(proposal.fields.match)
+            const reference = textOf(proposal.fields.reference)
+            await this.evidence.log(
+                ctx,
+                {
+                    lead_id: invoice.lead_id,
+                    work_item_id: item.id,
+                    kind: "payment.matched",
+                    actor: by.name,
+                    summary,
+                    evidence: [how, reference].filter((part) => part !== "").join(" · ") || null,
+                },
+                tx,
+            )
+            await this.publishReconciled(ctx, item, invoice, proposal, payer, tx)
+            return { invoice, summary, how }
         })
-        const summary = textOf(proposal.fields.bank) === "" ? matched : `${proposal.summary} · ${matched}`
-        const how = textOf(proposal.fields.match)
-        const reference = textOf(proposal.fields.reference)
-        await this.evidence.log(ctx, {
-            lead_id: invoice.lead_id,
-            work_item_id: item.id,
-            kind: "payment.matched",
-            actor: by.name,
-            summary,
-            evidence: [how, reference].filter((part) => part !== "").join(" · ") || null,
-        })
-        await this.settleClaims(ctx, item, invoice)
-        await this.publishReceived(ctx, item, invoice, proposal)
+        await this.settleClaims(ctx, item, settled.invoice)
         return {
-            summary,
+            summary: settled.summary,
             evidence: "verified",
-            href: leadHref(invoice.lead_id),
-            lead_id: invoice.lead_id,
-            detail: how === "" ? null : how,
+            href: leadHref(settled.invoice.lead_id),
+            lead_id: settled.invoice.lead_id,
+            detail: settled.how === "" ? null : settled.how,
+        }
+    }
+
+    /** The customer and order the chosen invoice names, read before the settlement for the fact's display fields. */
+    private async payerOf(ctx: WorkContext, invoiceId: string): Promise<PaymentParties> {
+        const invoice = await this.invoices.find(ctx.workspaceId, invoiceId)
+        const lead = invoice?.lead_id == null ? null : await this.leads.find(ctx.workspaceId, invoice.lead_id)
+        const order = invoice?.order_id == null ? null : await this.orders.find(ctx.workspaceId, invoice.order_id)
+        return {
+            customer: lead?.contact_name ?? null,
+            channel: lead?.channel ?? null,
+            orderNo: order?.order_no ?? null,
         }
     }
 
     /**
-     * `payment.received` for the settled invoice: the pipelines (thank-you, review request, sheet) and webhooks listening hear it. The
-     * bank transaction rides along so the receipt pipeline keys this payment the same way the chain's own receipt does (one email).
+     * `payment_reconciled` for the settled invoice, in the transaction that paid it: the pipelines (thank-you, review request, sheet),
+     * the webhooks, the payment receipt, the contract renewal and the care step react to it once it commits. The bank transaction
+     * rides along so the receipt keys this payment the same way the chain's own receipt does (one email).
      */
-    private async publishReceived(
+    private async publishReconciled(
         ctx: WorkContext,
         item: WorkItem,
         invoice: InvoiceRow,
         proposal: Proposal,
+        parties: PaymentParties,
+        tx: EntityManager,
     ): Promise<void> {
-        const payer = invoice.lead_id === null ? null : await this.leads.find(ctx.workspaceId, invoice.lead_id)
-        const order = invoice.order_id === null ? null : await this.orders.find(ctx.workspaceId, invoice.order_id)
-        await this.events.publish(
-            ctx.workspaceId,
-            "payment.received",
-            {
-                invoice_id: invoice.id,
-                transaction_id: item.subject_type === "transaction" ? item.subject_id : null,
-                invoice_no: invoice.invoice_no,
-                order_id: invoice.order_id,
-                order_no: order?.order_no ?? null,
-                lead_id: invoice.lead_id,
-                customer: payer?.contact_name ?? textOf(proposal.fields.payer),
-                amount_vnd: proposal.amount_vnd ?? invoice.amount_vnd,
-                paid_at: invoice.paid_at,
-                channel: payer?.channel ?? null,
-            },
-            `payment.received:${invoice.id}`,
-        )
-    }
-
-    /**
-     * A paid renewal invoice moves its contract to the next term and says so in the evidence log. The payment stands whatever
-     * happens here: a renewal that fails is logged for the operators, and one already applied (or for a term that moved) changes
-     * nothing.
-     */
-    private async renewContract(ctx: WorkContext, item: WorkItem, invoice: InvoiceRow): Promise<void> {
-        if (invoice.contract_id === null || invoice.period_ends_on === null) return
-        try {
-            const renewal = await this.contracts.extendForPaidRenewal(
-                ctx.workspaceId,
-                invoice.contract_id,
-                invoice.period_ends_on,
-                invoice.invoice_no,
-            )
-            if (!renewal.extended) return
-            await this.evidence.log(ctx, {
-                lead_id: invoice.lead_id,
-                work_item_id: item.id,
-                kind: "contract.renewed",
-                actor: "NIVO",
-                summary: this.kit.text(ctx, "contractRenewed", {
-                    no: invoice.invoice_no,
-                    until: displayDayOf(renewal.contract.endsOn),
-                }),
-                evidence: `${renewal.previousEndsOn} → ${renewal.contract.endsOn}`,
-            })
-        } catch (cause) {
-            this.logger.error(WorkPerformersLogEvent.ContractRenewalFailed, cause, {
-                workItemId: item.id,
+        await this.bus.publish(
+            PaymentReconciledEvent.create({
+                workspaceId: ctx.workspaceId,
                 invoiceId: invoice.id,
+                invoiceNo: invoice.invoice_no,
+                amountVnd: proposal.amount_vnd ?? invoice.amount_vnd,
+                paidAt: invoice.paid_at,
+                transactionId: item.subject_type === "transaction" ? item.subject_id : null,
+                workItemId: item.id,
+                subjectType: item.subject_type,
+                subjectId: item.subject_id,
+                orderId: invoice.order_id,
+                orderNo: parties.orderNo,
+                leadId: invoice.lead_id,
+                customer: parties.customer ?? textOf(proposal.fields.payer),
+                channel: parties.channel,
                 contractId: invoice.contract_id,
-            })
-        }
+                periodEndsOn: invoice.period_ends_on,
+            }),
+            tx,
+            `payment_reconciled:${invoice.id}`,
+        )
     }
 
     /** A rejected payment goes back to the owner's review list. */

@@ -32,7 +32,11 @@ import { HiringLinksService } from "./hiring-links.service"
 import { HiringNotifyService } from "./hiring-notify.service"
 import { HiringOffersService } from "./hiring-offers.service"
 import { HiringTextService } from "./hiring-text.service"
-import { ANSWER_OFFER, CANCEL_OFFER, CREATE_OFFER, LINK_OFFER, MARK_OFFER_SENT } from "./persistence/hiring.sql"
+const ANSWER_OFFER = "SELECT * FROM public.hiring_offer_answer($1, $2, $3, $4, $5)"
+const CANCEL_OFFER = "SELECT * FROM public.hiring_offer_cancel($1, $2, $3, $4, $5)"
+const CREATE_OFFER = "SELECT * FROM public.hiring_offer_create($1, $2, $3, $4, $5, $6)"
+const LINK_OFFER = "SELECT * FROM public.hiring_offer_link($1, $2, $3, $4)"
+const MARK_OFFER_SENT = "SELECT * FROM public.hiring_offer_sent($1, $2, $3, $4, $5, $6, $7)"
 const publicNotFound = { code: HiringErrorCode.PublicNotFound }
 
 const requestOf = builder<RequestOfferParams>({ candidateId: "candidate-1", ...termsOf() })
@@ -200,7 +204,7 @@ describe("HiringOffersService", () => {
         async ({ input, terms, ok, output, status, stored, draft, summaryKey, email, contact, title }) => {
             const em = mockEntityManager({
                 query: [
-                    [CREATE_OFFER, [{ id: "offer-1" }]],
+                    [CREATE_OFFER, [{ hiring_offer_create: "offer-1" }]],
                     [LINK_OFFER, []],
                 ],
             })
@@ -245,15 +249,18 @@ describe("HiringOffersService", () => {
         expect(gate.request).not.toHaveBeenCalled()
     })
 
-    it.each([{ rows: [] }, { rows: [{ id: null }] }])("refuses created rows $rows", async ({ rows }) => {
-        const em = mockEntityManager({ query: [CREATE_OFFER, rows] })
-        const { service, generator, gate } = await build(em)
-        await expect(service.request("user-1", "ws-1", requestOf())).rejects.toMatchObject({
-            code: HiringErrorCode.OfferNotFound,
-        })
-        expect(generator.generate).not.toHaveBeenCalled()
-        expect(gate.request).not.toHaveBeenCalled()
-    })
+    it.each([{ rows: [] }, { rows: [{ hiring_offer_create: null }] }])(
+        "refuses created rows $rows",
+        async ({ rows }) => {
+            const em = mockEntityManager({ query: [CREATE_OFFER, rows] })
+            const { service, generator, gate } = await build(em)
+            await expect(service.request("user-1", "ws-1", requestOf())).rejects.toMatchObject({
+                code: HiringErrorCode.OfferNotFound,
+            })
+            expect(generator.generate).not.toHaveBeenCalled()
+            expect(gate.request).not.toHaveBeenCalled()
+        },
+    )
 })
 
 describe("HiringOffersService", () => {
@@ -274,7 +281,7 @@ describe("HiringOffersService", () => {
         })),
         { draft: null, title: "", body: template(termsOf({ title: "Barista" })), delivery: deliveryOf(), detail: {} },
     ])("perform sends '$draft'", async ({ draft, title, body, delivery, detail }) => {
-        const em = mockEntityManager({ query: [MARK_OFFER_SENT, [{ value: true }]] })
+        const em = mockEntityManager({ query: [MARK_OFFER_SENT, [{ hiring_offer_sent: true }]] })
         const { service, data, candidates, notify, links } = await build(em)
         data.offer.mockResolvedValue(offerOf({ terms: termsOf({ title }) }))
         notify.toCandidate.mockResolvedValue(delivery)
@@ -413,7 +420,7 @@ describe("HiringOffersService", () => {
         const suffix = accept ? "Accepted" : "Declined"
         const name = accept ? "Alice" : ""
         const title = accept ? "Barista" : ""
-        const em = mockEntityManager({ query: [ANSWER_OFFER, [{ value }]] })
+        const em = mockEntityManager({ query: [ANSWER_OFFER, [{ hiring_offer_answer: value }]] })
         const { service, data, office, candidates } = await build(em)
         data.offerByToken.mockResolvedValue(offerOf({ expiresAt: accept ? "2026-10-12T00:00:00.000Z" : null }))
         data.candidateHead.mockResolvedValue(accept ? { id: "candidate-1", name: "Alice" } : undefined)

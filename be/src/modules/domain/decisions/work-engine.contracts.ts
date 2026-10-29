@@ -114,14 +114,6 @@ export type CommandRefused = Extract<CommandResult, { readonly ok: false }>
 /** The planner's answer: a plan to run, or a refusal. */
 export type CommandPlan = PlannedCommand | CommandRefused
 
-/** What the chain tells the receipt pipeline about a reconciled payment. */
-export interface PaymentReceiptRequest {
-    /** The transaction, when the item is about one. */
-    readonly transactionId: string | null
-    /** The invoice the payment settled, when it is known. */
-    readonly invoiceId: string | null
-}
-
 /** Where a command sits in its chain: the chain it joins (null for a new one) and the depth its item gets. */
 export interface ChainPosition {
     /** The chain, or null when the item starts its own. */
@@ -200,12 +192,6 @@ export interface ProposalSeed {
     readonly outcome?: "clear" | "unclear"
     /** The invoices a payment may settle. */
     readonly candidates?: ReadonlyArray<ProposalCandidate>
-}
-
-/** The data a published decision carries. */
-export interface DecisionPayload {
-    /** Any value the decision carries (work item, action, department, outcome, decider, lead, summary). */
-    readonly [name: string]: unknown
 }
 
 /** Display text of a catalog key with its placeholders filled, in the language of the reader. */

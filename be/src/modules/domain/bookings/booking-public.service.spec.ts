@@ -1,5 +1,4 @@
 import type { NewBooking } from "./booking-reservation.service"
-import { DEFAULT_SETTINGS } from "./persistence/booking.rows"
 import {
     HOUR,
     WORKSPACE,
@@ -16,6 +15,7 @@ import {
     failureOf,
 } from "../../../tests/fixtures/builders/booking-public.builder"
 import { Test } from "@nestjs/testing"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -23,11 +23,24 @@ import { BookingModelService } from "./booking-model.service"
 import { BookingPublicService } from "./booking-public.service"
 import { BookingRemindersService } from "@modules/domain/booking-reminders"
 import { BookingReservationService } from "./booking-reservation.service"
+import { DEFAULT_SETTINGS } from "./bookings.contracts"
 import type { BookableService, BookingModel, TakenSpan } from "./bookings.contracts"
 import { BookingsErrorCode } from "./errors/bookings.error"
-import { SELECT_PAGE_BY_SLUG } from "./persistence/booking-model.sql"
-import { SELECT_BOOKING_BY_KEY, SELECT_NEXT_CANCELLABLE_BOOKING } from "./persistence/booking-write.sql"
-import type { CancellableBookingRow, KeyedBookingRow } from "./persistence/booking.rows"
+import type { CancellableFacts } from "./booking-facts.contracts"
+import { BookingEntity } from "./persistence/entities"
+
+/** The booking an idempotency key found, as the keyed read selects it. */
+interface KeyedRow {
+    readonly id: string
+    readonly status: BookingEntity["status"]
+    readonly holdsSlot: boolean
+}
+
+/** The keyed read of a booking with a key. */
+const keyedLookup = (key: string): [typeof BookingEntity, unknown] => [
+    BookingEntity,
+    expect.objectContaining({ where: { workspaceId: WORKSPACE, idempotencyKey: key } }),
+]
 
 const anything = (): unknown => expect.anything()
 
@@ -108,7 +121,7 @@ const SCHEDULE = {
     nowMs: NOW,
     defaultHours: [24, 2],
 }
-const NEXT_ROW: CancellableBookingRow = {
+const NEXT_ROW: CancellableFacts = {
     id: "b-next",
     lead_id: "lead-1",
     customer_name: "Mai",
@@ -118,24 +131,28 @@ const NEXT_ROW: CancellableBookingRow = {
 
 interface BuildOptions {
     readonly page?: boolean
-    readonly keyed?: ReadonlyArray<KeyedBookingRow>
-    readonly concurrentKeyed?: ReadonlyArray<KeyedBookingRow>
-    readonly cancellable?: ReadonlyArray<CancellableBookingRow>
+    readonly keyed?: ReadonlyArray<KeyedRow>
+    readonly concurrentKeyed?: ReadonlyArray<KeyedRow>
+    readonly cancellable?: ReadonlyArray<CancellableFacts>
     readonly model?: BookingModel
     readonly spans?: ReadonlyArray<TakenSpan>
 }
 
 const build = async (options: BuildOptions = {}) => {
+    const keyedOf = (row: KeyedRow | undefined): BookingEntity | null =>
+        row === undefined ? null : Object.assign(new BookingEntity(), row)
     const tx = fakeTransaction(
         mockEntityManager({
-            query: [
-                [SELECT_PAGE_BY_SLUG, options.page === false ? [] : [PAGE]],
-                [SELECT_BOOKING_BY_KEY, options.keyed ?? []],
-                [SELECT_BOOKING_BY_KEY, options.concurrentKeyed ?? options.keyed ?? []],
-                [SELECT_NEXT_CANCELLABLE_BOOKING, options.cancellable ?? []],
+            findOne: [
+                [BookingEntity, keyedOf(options.keyed?.[0])],
+                [BookingEntity, keyedOf((options.concurrentKeyed ?? options.keyed)?.[0])],
             ],
         }),
     )
+    const read = fakeQueryBuilder({
+        getRawOne: options.cancellable?.[0] ?? (options.page === false ? undefined : PAGE),
+    })
+    tx.em.createQueryBuilder.mockReturnValue(read.builder)
     const models = mock<BookingModelService>()
     models.model.mockResolvedValue(options.model ?? modelOf())
     models.spans.mockResolvedValue(options.spans ?? [])
@@ -224,7 +241,8 @@ describe("BookingPublicService", () => {
             expect(result.times[0]).toBe(ALTERNATIVES[0])
             expect(result.times).not.toContain(MONDAY_NINE)
             expect(models.model).toHaveBeenCalledWith(WORKSPACE)
-            expect(tx.em.query).not.toHaveBeenCalled()
+            expect(tx.em.findOne).not.toHaveBeenCalled()
+            expect(tx.em.createQueryBuilder).not.toHaveBeenCalled()
         })
     })
 })
@@ -237,8 +255,8 @@ describe("BookingPublicService", () => {
             await expect(service.nextCancellable(WORKSPACE, "0912 345 678", NOW)).resolves.toEqual(
                 nextReplyOf("lead-1"),
             )
-            const query = [WORKSPACE, "84912345678", new Date(NOW).toISOString()]
-            expect(tx.em.query).toHaveBeenCalledWith(SELECT_NEXT_CANCELLABLE_BOOKING, query)
+            expect(tx.em.createQueryBuilder).toHaveBeenCalledTimes(1)
+            expect(tx.em.createQueryBuilder).toHaveBeenCalledWith(BookingEntity, "b")
         })
     })
 
@@ -285,7 +303,7 @@ describe("BookingPublicService", () => {
                   : publicBookingOf(params.booking)
             expect(reservation.reserve).toHaveBeenCalledTimes(1)
             expect(reservation.reserve).toHaveBeenCalledWith(reserveOf(booking))
-            if (chat) expect(tx.em.query).toHaveBeenCalledWith(SELECT_BOOKING_BY_KEY, [WORKSPACE, CHAT_KEY])
+            if (chat) expect(tx.em.findOne).toHaveBeenCalledWith(...keyedLookup(CHAT_KEY))
             if (params.scheduled) expect(reminders.schedule).toHaveBeenCalledWith(SCHEDULE)
             else expect(reminders.schedule).not.toHaveBeenCalled()
             expect(tx.commits).toBe(1)
@@ -300,17 +318,17 @@ describe("BookingPublicService", () => {
             await expect(
                 service.requestIn(workspaceRequestOf({ token: "", conversationId: null, leadId: null })),
             ).resolves.toEqual(replyOf())
-            expect(tx.em.query).not.toHaveBeenCalled()
+            expect(tx.em.findOne).not.toHaveBeenCalled()
             expect(reservation.reserve).toHaveBeenCalledWith(reserveOf(bookingOf({ sourceChannel: "chat" })))
         })
 
         it("answers an existing chat request without reserving it again", async () => {
             const { service, models, reservation, reminders, tx } = await build({
-                keyed: [{ id: "b-existing", status: "confirmed", holds_slot: true }],
+                keyed: [{ id: "b-existing", status: "confirmed", holdsSlot: true }],
             })
             await expect(service.requestIn(workspaceRequestOf())).resolves.toEqual(replyOf({ bookingId: "b-existing" }))
-            expect(tx.em.query).toHaveBeenCalledWith(SELECT_BOOKING_BY_KEY, [WORKSPACE, CHAT_KEY])
-            expect(tx.em.query).toHaveBeenCalledTimes(1)
+            expect(tx.em.findOne).toHaveBeenCalledWith(...keyedLookup(CHAT_KEY))
+            expect(tx.em.findOne).toHaveBeenCalledTimes(1)
             expect(tx.em.transaction).not.toHaveBeenCalled()
             expect(models.spans).not.toHaveBeenCalled()
             expect(reservation.reserve).not.toHaveBeenCalled()
@@ -323,15 +341,15 @@ describe("BookingPublicService", () => {
             { code: "wrapped", driverError: { code: "23505" } },
         ])("answers the concurrent chat booking after unique failure %j", async (cause) => {
             const { service, reservation, reminders, tx } = await build({
-                concurrentKeyed: [{ id: "b-concurrent", status: "confirmed", holds_slot: true }],
+                concurrentKeyed: [{ id: "b-concurrent", status: "confirmed", holdsSlot: true }],
             })
             reservation.reserve.mockRejectedValueOnce(cause)
             await expect(service.requestIn(workspaceRequestOf())).resolves.toEqual(
                 replyOf({ bookingId: "b-concurrent" }),
             )
-            expect(tx.em.query).toHaveBeenNthCalledWith(1, SELECT_BOOKING_BY_KEY, [WORKSPACE, CHAT_KEY])
-            expect(tx.em.query).toHaveBeenNthCalledWith(2, SELECT_BOOKING_BY_KEY, [WORKSPACE, CHAT_KEY])
-            expect(tx.em.query).toHaveBeenCalledTimes(2)
+            expect(tx.em.findOne).toHaveBeenNthCalledWith(1, ...keyedLookup(CHAT_KEY))
+            expect(tx.em.findOne).toHaveBeenNthCalledWith(2, ...keyedLookup(CHAT_KEY))
+            expect(tx.em.findOne).toHaveBeenCalledTimes(2)
             expect(reservation.reserve).toHaveBeenCalledTimes(1)
             expect(tx.rollbacks).toBe(1)
             expect(tx.commits).toBe(0)
@@ -366,8 +384,8 @@ describe("BookingPublicService", () => {
             const { service, reservation, tx } = await build()
             reservation.reserve.mockRejectedValueOnce(cause)
             await expect(service.requestIn(request)).rejects.toBe(cause)
-            expect(tx.em.query).toHaveBeenCalledTimes(reads)
-            if (key !== null) expect(tx.em.query).toHaveBeenCalledWith(SELECT_BOOKING_BY_KEY, [WORKSPACE, key])
+            expect(tx.em.findOne).toHaveBeenCalledTimes(reads)
+            if (key !== null) expect(tx.em.findOne).toHaveBeenCalledWith(...keyedLookup(key))
             expect(tx.rollbacks).toBe(1)
         })
     })
@@ -409,16 +427,16 @@ describe("BookingPublicService", () => {
         })
 
         it.each([
-            { row: { id: "b7", status: "confirmed", holds_slot: true }, reply: replyOf({ bookingId: "b7" }) },
+            { row: { id: "b7", status: "confirmed", holdsSlot: true }, reply: replyOf({ bookingId: "b7" }) },
             {
-                row: { id: "b8", status: "requested", holds_slot: true },
+                row: { id: "b8", status: "requested", holdsSlot: true },
                 reply: replyOf({ state: "waiting", code: "received_free", bookingId: "b8" }),
             },
             {
-                row: { id: "b9", status: "requested", holds_slot: false },
+                row: { id: "b9", status: "requested", holdsSlot: false },
                 reply: replyOf({ state: "waiting", code: "received_taken", bookingId: "b9" }),
             },
-        ])("answers a repeated form from existing booking $row.id", async ({ row, reply }) => {
+        ] as const)("answers a repeated form from existing booking $row.id", async ({ row, reply }) => {
             const { service, reservation } = await build({ keyed: [row] })
             await expect(service.book(bookingRequestOf({ token: "form-token-1" }))).resolves.toEqual(reply)
             expect(reservation.reserve).not.toHaveBeenCalled()

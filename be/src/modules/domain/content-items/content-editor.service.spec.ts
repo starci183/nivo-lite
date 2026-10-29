@@ -3,9 +3,8 @@ import {
     member,
     row,
     item,
-    saveBindings,
-    createdPillarBindings,
-    monthBindings,
+    editedEvidence,
+    createdEvidence,
     legacyAttachments,
     completedRenderAttachments,
     selectedPillarInput,
@@ -13,202 +12,79 @@ import {
 } from "../../../tests/fixtures/builders/content-editor.builder"
 import { Test } from "@nestjs/testing"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import type { MockEntityManager } from "@starci/jest-preset"
+import { And, In, LessThan, MoreThanOrEqual } from "typeorm"
+import { ContentPillarEntity } from "@modules/domain/content-pillars"
 import { VideoRendersService } from "@modules/domain/video-renders"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
+import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder.builder"
+import { namedCalls, stampedValues } from "@tests/fixtures/builders/entity-row.builder"
 import { ContentEditorService } from "./content-editor.service"
 import { ContentItemsErrorCode } from "./errors/content-items.error"
-import {
-    CONTENT_FIGURES,
-    CREATE_CONTENT_ITEM,
-    LAST_CONTENT_PLAN,
-    TRANSITION_CONTENT_ITEM,
-    FIND_CONTENT_PILLAR,
-    DELETE_CONTENT_ITEM,
-    FIND_CONTENT_ITEM,
-    LIST_CONTENT_ITEMS,
-    LOCK_CONTENT_ITEM,
-    NEXT_CONTENT_ITEM,
-    SAVE_CONTENT_ITEM,
-} from "./persistence/content-editor.sql"
+import { ContentItemEntity } from "./persistence/entities"
 
-const build = async () => {
+const ID = "00000000-0000-0000-0000-000000000001"
+const rawRow = (patch: Record<string, unknown> = {}) => ({
+    id: "item-1",
+    workspace_id: "workspace-1",
+    plan_id: null,
+    title: "Launch",
+    brief: "Explain launch",
+    pillar_id: null,
+    channels: ["facebook"],
+    scheduled_at: null,
+    status: "idea",
+    variants: {},
+    hashtags: [],
+    media: [],
+    links: [],
+    holiday_key: null,
+    evidence: [],
+    published: {},
+    work_item_id: null,
+    drafted_at: null,
+    approved_by: null,
+    approved_at: null,
+    published_at: null,
+    source: "manual",
+    created_by: "Mai",
+    created_at: new Date(at),
+    updated_at: new Date(at),
+    ...patch,
+})
+const written = (patch: Record<string, unknown> = {}): QueryBuilderAnswers => ({ execute: { raw: [rawRow(patch)] } })
+
+const build = async (em: MockEntityManager = mockEntityManager(), answers: ReadonlyArray<QueryBuilderAnswers> = []) => {
     const clock = new FakeClock("2026-01-01T00:00:00.000Z")
-    const entityManager = mockEntityManager()
     const members = mock<WorkspaceMembersService>()
     const renders = mock<VideoRendersService>()
     members.require.mockResolvedValue(member)
-    const transaction = fakeTransaction(entityManager)
+    const transaction = fakeTransaction(em)
+    const fakes = queueQueryBuilders(em, answers)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ContentEditorService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: clock },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: VideoRendersService, useValue: renders },
         ],
     }).compile()
-    return { service: moduleRef.get(ContentEditorService), clock, entityManager, members, renders, transaction }
+    return {
+        service: moduleRef.get(ContentEditorService),
+        clock,
+        entityManager: em,
+        members,
+        renders,
+        transaction,
+        fakes,
+    }
 }
 
-describe("ContentEditorService", () => {
-    describe("actor", () => {
-        it("actor has its first case written", async () => {
-            const { service } = await build()
-            await expect(service.actor("user-1", "workspace-1")).resolves.toEqual({
-                workspaceId: "workspace-1",
-                name: "Mai",
-                canManage: true,
-            })
-            expect(service.actor).toBeInstanceOf(Function)
-        })
-    })
-})
-
-describe("ContentEditorService", () => {
-    describe("list", () => {
-        it("list exercises its first behavior through the compiled module", async () => {
-            const { service, entityManager, members } = await build()
-            entityManager.query.mockResolvedValue([row()])
-            await expect(service.list("user-1", "workspace-1")).resolves.toEqual([item])
-            expect(members.require).toHaveBeenCalledWith("user-1", "workspace-1")
-            expect(entityManager.query).toHaveBeenCalledWith(LIST_CONTENT_ITEMS, ["workspace-1", null, null])
-
-            expect(service.list).toBeInstanceOf(Function)
-        })
-    })
-})
-
-describe("ContentEditorService", () => {
-    describe("get", () => {
-        it("get exercises its first behavior through the compiled module", async () => {
-            const { service, entityManager } = await build()
-            entityManager.query.mockResolvedValue([])
-            await expect(service.get("workspace-1", "missing")).rejects.toMatchObject({
-                code: ContentItemsErrorCode.NotFound,
-            })
-
-            expect(service.get).toBeInstanceOf(Function)
-        })
-    })
-})
-
-describe("ContentEditorService", () => {
-    describe("getForUser", () => {
-        it("getForUser exercises its first behavior through the compiled module", async () => {
-            const { service, entityManager, members } = await build()
-            entityManager.query.mockResolvedValue([row()])
-            await expect(service.getForUser("user-1", "workspace-1", "item-1")).resolves.toEqual(item)
-            expect(members.require).toHaveBeenCalledWith("user-1", "workspace-1")
-            expect(entityManager.query).toHaveBeenCalledWith(FIND_CONTENT_ITEM, ["workspace-1", "item-1"])
-
-            expect(service.getForUser).toBeInstanceOf(Function)
-        })
-    })
-})
-
-describe("ContentEditorService", () => {
-    describe("create", () => {
-        it("create exercises its first behavior through the compiled module", async () => {
-            const { service, entityManager } = await build()
-            entityManager.query.mockResolvedValue([])
-            await expect(
-                service.create("user-1", "workspace-1", { title: "Launch", channels: ["facebook"], scheduledAt: null }),
-            ).rejects.toMatchObject({ code: ContentItemsErrorCode.NotWritten })
-
-            expect(service.create).toBeInstanceOf(Function)
-        })
-    })
-})
-
-describe("ContentEditorService", () => {
-    describe("save", () => {
-        it("save exercises its first behavior through the compiled module", async () => {
-            const { service, entityManager, renders, transaction } = await build()
-            entityManager.query.mockResolvedValue([row()])
-            renders.findCompletedMedia.mockResolvedValue([])
-            await expect(
-                service.save("user-1", "workspace-1", "item-1", {
-                    media: [{ kind: "video_render", name: "Video", id: "00000000-0000-0000-0000-000000000001" }],
-                }),
-            ).rejects.toMatchObject({ code: ContentItemsErrorCode.InvalidInput })
-            expect(entityManager.query).toHaveBeenCalledTimes(1)
-            expect(transaction.outcomes).toEqual(["rollback"])
-
-            expect(service.save).toBeInstanceOf(Function)
-        })
-    })
-})
-
-describe("ContentEditorService", () => {
-    describe("move", () => {
-        it("move exercises its first behavior through the compiled module", async () => {
-            const { service, entityManager, transaction, members } = await build()
-            entityManager.query.mockResolvedValueOnce([row()]).mockResolvedValueOnce([row()])
-            await expect(service.move("user-1", "workspace-1", "item-1", "2026-02-01")).resolves.toEqual(item)
-            expect(members.require).toHaveBeenCalledWith("user-1", "workspace-1", ["owner", "manager"])
-            expect(entityManager.query).toHaveBeenNthCalledWith(1, LOCK_CONTENT_ITEM, ["workspace-1", "item-1"])
-            expect(entityManager.query).toHaveBeenLastCalledWith(
-                SAVE_CONTENT_ITEM,
-                saveBindings({ schedule: "2026-02-01" }),
-            )
-            expect(transaction.outcomes).toEqual(["commit"])
-
-            expect(service.move).toBeInstanceOf(Function)
-        })
-    })
-})
-
-describe("ContentEditorService", () => {
-    describe("transition", () => {
-        it("transition exercises its first behavior through the compiled module", async () => {
-            const { service, entityManager, transaction } = await build()
-            entityManager.query.mockResolvedValueOnce([row()]).mockResolvedValueOnce([])
-            await expect(service.transition("user-1", "workspace-1", "item-1", "delete")).resolves.toEqual({
-                id: "item-1",
-            })
-            expect(entityManager.query).toHaveBeenLastCalledWith(DELETE_CONTENT_ITEM, ["workspace-1", "item-1"])
-            expect(transaction.outcomes).toEqual(["commit"])
-
-            expect(service.transition).toBeInstanceOf(Function)
-        })
-    })
-})
-
-describe("ContentEditorService", () => {
-    describe("figures", () => {
-        it("figures exercises its first behavior through the compiled module", async () => {
-            const { service, entityManager } = await build()
-            entityManager.query
-                .mockResolvedValueOnce([{ awaiting_approval: 2, published_30: 4, covered: 3, total: 5 }])
-                .mockResolvedValueOnce([row({ scheduled_at: new Date("2026-01-02T00:00:00Z") })])
-            await expect(service.figures("user-1", "workspace-1")).resolves.toEqual({
-                awaitingApproval: 2,
-                published30: 4,
-                next: { at: "2026-01-02T00:00:00.000Z", title: "Launch" },
-                pillars: { covered: 3, total: 5 },
-            })
-            expect(entityManager.query).toHaveBeenNthCalledWith(1, CONTENT_FIGURES, monthBindings)
-            expect(entityManager.query).toHaveBeenNthCalledWith(2, NEXT_CONTENT_ITEM, ["workspace-1", at])
-
-            expect(service.figures).toBeInstanceOf(Function)
-        })
-    })
-})
-
-describe("ContentEditorService", () => {
-    describe("workbench", () => {
-        it("workbench has its first case written", async () => {
-            const { service, entityManager } = await build()
-            entityManager.query.mockResolvedValue([])
-            await expect(service.workbench("user-1", "workspace-1")).resolves.toEqual(workbenchExpected())
-            expect(service.workbench).toBeInstanceOf(Function)
-        })
-    })
-})
-
-describe("ContentEditorService behavior", () => {
+describe("ContentEditorService actor and reads", () => {
     it.each([
         ["owner", true],
         ["manager", true],
@@ -216,39 +92,45 @@ describe("ContentEditorService behavior", () => {
     ] as const)("derives the %s member's management permission", async (role, canManage) => {
         const { service, members } = await build()
         members.require.mockResolvedValue({ ...member, role })
-        const actor = { workspaceId: "workspace-1", name: "Mai", canManage }
-        await expect(service.actor("user-1", "workspace-1")).resolves.toEqual(actor)
+        await expect(service.actor("user-1", "workspace-1")).resolves.toEqual({
+            workspaceId: "workspace-1",
+            name: "Mai",
+            canManage,
+        })
         expect(members.require).toHaveBeenCalledWith("user-1", "workspace-1")
     })
-})
 
-describe("ContentEditorService behavior", () => {
     it("lists mapped posts using the default unbounded window", async () => {
-        const { service, entityManager, members } = await build()
-        entityManager.query.mockResolvedValue([row()])
+        const em = mockEntityManager({ find: [ContentItemEntity, [row()]] })
+        const { service, members } = await build(em)
         await expect(service.list("user-1", "workspace-1")).resolves.toEqual([item])
         expect(members.require).toHaveBeenCalledWith("user-1", "workspace-1")
-        expect(entityManager.query).toHaveBeenCalledWith(LIST_CONTENT_ITEMS, ["workspace-1", null, null])
+        expect(namedCalls(em.find.mock.calls)).toEqual([
+            [
+                "ContentItemEntity",
+                {
+                    where: { workspaceId: "workspace-1" },
+                    order: { scheduledAt: { direction: "ASC", nulls: "LAST" }, createdAt: "DESC" },
+                    take: 500,
+                },
+            ],
+        ])
     })
-})
 
-describe("ContentEditorService behavior", () => {
-    it.each([{ from: "2026-01-01" }, { to: "2026-02-01" }, { from: "2026-01-01", to: "2026-02-01" }])(
-        "passes the validated calendar window %j",
-        async (range) => {
-            const { service, entityManager } = await build()
-            entityManager.query.mockResolvedValue([])
-            await expect(service.list("user-1", "workspace-1", range)).resolves.toEqual([])
-            expect(entityManager.query).toHaveBeenCalledWith(LIST_CONTENT_ITEMS, [
-                "workspace-1",
-                range.from ?? null,
-                range.to ?? null,
-            ])
+    it.each([
+        { range: { from: "2026-01-01" }, window: And(MoreThanOrEqual(new Date("2026-01-01"))) },
+        { range: { to: "2026-02-01" }, window: And(LessThan(new Date("2026-02-01"))) },
+        {
+            range: { from: "2026-01-01", to: "2026-02-01" },
+            window: And(MoreThanOrEqual(new Date("2026-01-01")), LessThan(new Date("2026-02-01"))),
         },
-    )
-})
+    ])("passes the validated calendar window %j", async ({ range, window }) => {
+        const em = mockEntityManager({ find: [ContentItemEntity, []] })
+        const { service } = await build(em)
+        await expect(service.list("user-1", "workspace-1", range)).resolves.toEqual([])
+        expect(em.find.mock.calls[0]?.[1]).toMatchObject({ where: { workspaceId: "workspace-1", scheduledAt: window } })
+    })
 
-describe("ContentEditorService behavior", () => {
     it.each([{ from: "invalid" }, { to: "invalid" }, { from: "2026-02-01", to: "2026-01-01" }])(
         "rejects an invalid window before reading %j",
         async (range) => {
@@ -256,243 +138,253 @@ describe("ContentEditorService behavior", () => {
             await expect(service.list("user-1", "workspace-1", range)).rejects.toMatchObject({
                 code: ContentItemsErrorCode.InvalidInput,
             })
-            expect(entityManager.query).not.toHaveBeenCalled()
+            expect(entityManager.find).not.toHaveBeenCalled()
         },
     )
-})
 
-describe("ContentEditorService behavior", () => {
     it("reads a workspace-scoped item after proving the requesting member", async () => {
-        const { service, entityManager, members } = await build()
-        entityManager.query.mockResolvedValue([row()])
+        const em = mockEntityManager({ findOne: [ContentItemEntity, row()] })
+        const { service, members } = await build(em)
         await expect(service.getForUser("user-1", "workspace-1", "item-1")).resolves.toEqual(item)
         expect(members.require).toHaveBeenCalledWith("user-1", "workspace-1")
-        expect(entityManager.query).toHaveBeenCalledWith(FIND_CONTENT_ITEM, ["workspace-1", "item-1"])
+        expect(em.findOne.mock.calls).toEqual([
+            [ContentItemEntity, { where: { workspaceId: "workspace-1", id: "item-1" } }],
+        ])
     })
-})
 
-describe("ContentEditorService behavior", () => {
     it("reports a missing workspace item", async () => {
-        const { service, entityManager } = await build()
-        entityManager.query.mockResolvedValue([])
+        const { service } = await build(mockEntityManager({ findOne: [ContentItemEntity, null] }))
         await expect(service.get("workspace-1", "missing")).rejects.toMatchObject({
             code: ContentItemsErrorCode.NotFound,
         })
     })
 })
-describe("ContentEditorService behavior", () => {
-    it("verifies a selected pillar and preserves a supplied schedule", async () => {
-        const { service, entityManager } = await build()
-        entityManager.query.mockResolvedValueOnce([{ id: "pillar-1" }]).mockResolvedValueOnce([row()])
-        await expect(service.create("user-1", "workspace-1", selectedPillarInput)).resolves.toEqual(item)
-        expect(entityManager.query).toHaveBeenNthCalledWith(1, FIND_CONTENT_PILLAR, ["workspace-1", "pillar-1"])
-        expect(entityManager.query).toHaveBeenNthCalledWith(2, CREATE_CONTENT_ITEM, createdPillarBindings)
-    })
-})
 
-describe("ContentEditorService behavior", () => {
-    it("refuses a missing create result", async () => {
-        const { service, entityManager } = await build()
-        entityManager.query.mockResolvedValue([])
+describe("ContentEditorService create", () => {
+    it("verifies a selected pillar and preserves a supplied schedule", async () => {
+        const em = mockEntityManager({ exists: [ContentPillarEntity, true] })
+        const { service, fakes } = await build(em, [written()])
+        await expect(service.create("user-1", "workspace-1", selectedPillarInput)).resolves.toEqual(item)
+        expect(em.exists.mock.calls).toEqual([
+            [ContentPillarEntity, { where: { workspaceId: "workspace-1", id: "pillar-1" } }],
+        ])
+        expect(stampedValues(fakes[0]?.callsOf("values")[0]?.[0])).toEqual({
+            workspaceId: "workspace-1",
+            title: "x".repeat(200),
+            channels: ["zalo"],
+            scheduledAt: "function",
+            pillarId: "pillar-1",
+            status: "idea",
+            source: "manual",
+            createdBy: "Mai",
+            evidence: "function",
+        })
+        expect(fakes[0]?.callsOf("setParameters")).toEqual([
+            [{ scheduledAt: "2026-02-01", evidence: JSON.stringify(createdEvidence) }],
+        ])
+    })
+
+    it.each([[[]], [[null]]])("refuses a missing create result (%j)", async (raw) => {
+        const { service } = await build(mockEntityManager(), [{ execute: { raw } }])
         await expect(
             service.create("user-1", "workspace-1", { title: "Launch", channels: ["facebook"], scheduledAt: null }),
         ).rejects.toMatchObject({ code: ContentItemsErrorCode.NotWritten })
     })
-})
 
-describe("ContentEditorService behavior", () => {
     it("refuses a pillar outside the workspace", async () => {
-        const { service, entityManager } = await build()
-        entityManager.query.mockResolvedValue([])
+        const em = mockEntityManager({ exists: [ContentPillarEntity, false] })
+        const { service, fakes } = await build(em)
         await expect(
             service.create("user-1", "workspace-1", { title: "Launch", channels: ["facebook"], pillarId: "missing" }),
         ).rejects.toMatchObject({ code: ContentItemsErrorCode.InvalidInput })
-        expect(entityManager.query).toHaveBeenCalledTimes(1)
+        expect(fakes).toEqual([])
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 })
 
-describe("ContentEditorService behavior", () => {
-    it.each([null, "2025-12-01T00:00:00.000Z"])("retains draft time %s", async (draftedAt) => {
-        const { service, entityManager } = await build()
+describe("ContentEditorService save and move", () => {
+    it.each([null, new Date("2025-12-01T00:00:00.000Z")])("retains draft time %s", async (draftedAt) => {
+        const em = mockEntityManager({ findOne: [ContentItemEntity, row({ status: "draft", draftedAt })] })
+        const { service, fakes } = await build(em, [written()])
         const variants = { facebook: { text: "Draft", hashtags: [], note: "" } }
-        entityManager.query
-            .mockResolvedValueOnce([row({ status: "draft", drafted_at: draftedAt })])
-            .mockResolvedValueOnce([row()])
         await expect(service.save("user-1", "workspace-1", "item-1", { variants, media: [] })).resolves.toEqual(item)
-        expect(entityManager.query).toHaveBeenLastCalledWith(
-            SAVE_CONTENT_ITEM,
-            saveBindings({
-                variants: JSON.stringify(variants),
-                status: "draft",
-                draftedAt: draftedAt ?? at,
-            }),
-        )
+        expect(fakes[0]?.callsOf("setParameters")).toEqual([
+            [
+                {
+                    scheduledAt: null,
+                    variants: JSON.stringify(variants),
+                    links: "[]",
+                    media: "[]",
+                    draftedAt: draftedAt === null ? at : draftedAt.toISOString(),
+                    evidence: JSON.stringify(editedEvidence),
+                },
+            ],
+        ])
+        expect(stampedValues(fakes[0]?.callsOf("set")[0]?.[0])).toMatchObject({ status: "draft", title: "Launch" })
+        expect(fakes[0]?.callsOf("where")).toEqual([[{ workspaceId: "workspace-1", id: "item-1" }]])
     })
-})
 
-describe("ContentEditorService behavior", () => {
     it("checks completed renders once for distinct identifiers before saving attachments", async () => {
-        const { service, entityManager, renders } = await build()
-        const id = "00000000-0000-0000-0000-000000000001"
+        const em = mockEntityManager({ findOne: [ContentItemEntity, row()] })
+        const { service, renders, fakes } = await build(em, [written()])
         const media = completedRenderAttachments
-        entityManager.query.mockResolvedValueOnce([row()]).mockResolvedValueOnce([row()])
         renders.findCompletedMedia.mockResolvedValue([
-            { id, title: "Video", outputPath: "video.mp4", durationMs: 10, createdAt: at },
+            { id: ID, title: "Video", outputPath: "video.mp4", durationMs: 10, createdAt: at },
         ])
         await expect(service.save("user-1", "workspace-1", "item-1", { media })).resolves.toEqual(item)
-        expect(renders.findCompletedMedia).toHaveBeenCalledWith("workspace-1", [id, id])
-        expect(entityManager.query).toHaveBeenLastCalledWith(
-            SAVE_CONTENT_ITEM,
-            saveBindings({ media: JSON.stringify(media) }),
-        )
+        expect(renders.findCompletedMedia).toHaveBeenCalledWith("workspace-1", [ID, ID])
+        expect(fakes[0]?.callsOf("setParameters")[0]?.[0]).toMatchObject({ media: JSON.stringify(media) })
     })
-})
 
-describe("ContentEditorService behavior", () => {
     it("allows a schedule move with legacy attachments that have no completed-render identifier", async () => {
-        const { service, entityManager, renders } = await build()
         const media = legacyAttachments
-        entityManager.query.mockResolvedValueOnce([row({ status: "approved", media })]).mockResolvedValueOnce([row()])
+        const em = mockEntityManager({ findOne: [ContentItemEntity, row({ status: "approved", media })] })
+        const { service, renders, fakes } = await build(em, [written()])
         await expect(
             service.save("user-1", "workspace-1", "item-1", { scheduledAt: "2026-02-01", media: [] }),
         ).resolves.toEqual(item)
         expect(renders.findCompletedMedia).not.toHaveBeenCalled()
-        expect(entityManager.query).toHaveBeenLastCalledWith(
-            SAVE_CONTENT_ITEM,
-            saveBindings({
-                schedule: "2026-02-01",
-                media: JSON.stringify(media.map((attachment) => ({ ...attachment, suggested: false }))),
-                status: "approved",
-            }),
-        )
+        expect(fakes[0]?.callsOf("setParameters")[0]?.[0]).toMatchObject({
+            scheduledAt: "2026-02-01",
+            media: JSON.stringify(media.map((attachment) => ({ ...attachment, suggested: false }))),
+        })
+        expect(stampedValues(fakes[0]?.callsOf("set")[0]?.[0])).toMatchObject({ status: "approved" })
     })
-})
 
-describe("ContentEditorService behavior", () => {
     it("rolls back when an attachment is not a completed workspace render", async () => {
-        const { service, entityManager, renders, transaction } = await build()
-        entityManager.query.mockResolvedValue([row()])
+        const em = mockEntityManager({ findOne: [ContentItemEntity, row()] })
+        const { service, renders, transaction, fakes } = await build(em)
         renders.findCompletedMedia.mockResolvedValue([])
         await expect(
             service.save("user-1", "workspace-1", "item-1", {
-                media: [{ kind: "video_render", name: "Video", id: "00000000-0000-0000-0000-000000000001" }],
+                media: [{ kind: "video_render", name: "Video", id: ID }],
             }),
         ).rejects.toMatchObject({ code: ContentItemsErrorCode.InvalidInput })
-        expect(entityManager.query).toHaveBeenCalledTimes(1)
+        expect(fakes).toEqual([])
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
         expect(transaction.outcomes).toEqual(["rollback"])
     })
-})
 
-describe("ContentEditorService behavior", () => {
     it.each([true, false])("distinguishes a missing lock from a missing save result: %s", async (missingLock) => {
-        const { service, entityManager, transaction } = await build()
-        entityManager.query.mockResolvedValueOnce(missingLock ? [] : [row()]).mockResolvedValueOnce([])
+        const em = mockEntityManager({ findOne: [ContentItemEntity, missingLock ? null : row()] })
+        const { service, transaction } = await build(em, [{ execute: { raw: [] } }])
         await expect(service.save("user-1", "workspace-1", "item-1", {})).rejects.toMatchObject({
             code: missingLock ? ContentItemsErrorCode.NotFound : ContentItemsErrorCode.NotWritten,
         })
         expect(transaction.outcomes).toEqual(["rollback"])
     })
-})
 
-describe("ContentEditorService behavior", () => {
-    it("moves by saving only the new calendar instant", async () => {
-        const { service, entityManager, transaction, members } = await build()
-        entityManager.query.mockResolvedValueOnce([row()]).mockResolvedValueOnce([row()])
+    it("moves by saving only the new calendar instant under the row lock", async () => {
+        const em = mockEntityManager({ findOne: [ContentItemEntity, row()] })
+        const { service, members, transaction, fakes } = await build(em, [written()])
         await expect(service.move("user-1", "workspace-1", "item-1", "2026-02-01")).resolves.toEqual(item)
         expect(members.require).toHaveBeenCalledWith("user-1", "workspace-1", ["owner", "manager"])
-        expect(entityManager.query).toHaveBeenNthCalledWith(1, LOCK_CONTENT_ITEM, ["workspace-1", "item-1"])
-        expect(entityManager.query).toHaveBeenLastCalledWith(
-            SAVE_CONTENT_ITEM,
-            saveBindings({ schedule: "2026-02-01" }),
-        )
+        expect(em.findOne.mock.calls).toEqual([
+            [
+                ContentItemEntity,
+                { where: { workspaceId: "workspace-1", id: "item-1" }, lock: { mode: "pessimistic_write" } },
+            ],
+        ])
+        expect(fakes[0]?.callsOf("setParameters")[0]?.[0]).toMatchObject({ scheduledAt: "2026-02-01" })
         expect(transaction.outcomes).toEqual(["commit"])
     })
 })
 
-describe("ContentEditorService behavior", () => {
+describe("ContentEditorService transition", () => {
     it("deletes a permitted idea under the transaction lock", async () => {
-        const { service, entityManager, transaction } = await build()
-        entityManager.query.mockResolvedValueOnce([row()]).mockResolvedValueOnce([])
+        const em = mockEntityManager({
+            findOne: [ContentItemEntity, row()],
+            delete: [ContentItemEntity, { affected: 1 }],
+        })
+        const { service, transaction } = await build(em)
         await expect(service.transition("user-1", "workspace-1", "item-1", "delete")).resolves.toEqual({ id: "item-1" })
-        expect(entityManager.query).toHaveBeenLastCalledWith(DELETE_CONTENT_ITEM, ["workspace-1", "item-1"])
+        expect(em.delete.mock.calls).toEqual([
+            [ContentItemEntity, { workspaceId: "workspace-1", id: "item-1", status: In(["idea", "draft", "skipped"]) }],
+        ])
         expect(transaction.outcomes).toEqual(["commit"])
     })
-})
 
-describe("ContentEditorService behavior", () => {
     it("refuses deletion after approval", async () => {
-        const { service, entityManager, transaction } = await build()
-        entityManager.query.mockResolvedValue([row({ status: "approved" })])
+        const em = mockEntityManager({ findOne: [ContentItemEntity, row({ status: "approved" })] })
+        const { service, transaction } = await build(em)
         await expect(service.transition("user-1", "workspace-1", "item-1", "delete")).rejects.toMatchObject({
             code: ContentItemsErrorCode.WrongStatus,
         })
-        expect(entityManager.query).toHaveBeenCalledTimes(1)
+        expect(em.findOne).toHaveBeenCalledTimes(1)
         expect(transaction.outcomes).toEqual(["rollback"])
     })
-})
 
-describe("ContentEditorService behavior", () => {
     it.each([
         ["drop an idea aside", "skip", "idea", "skipped", false],
         ["bring an approved item back", "reopen", "approved", "draft", true],
     ] as const)("records the transition that would %s", async (_label, kind, status, next, reopen) => {
-        const { service, entityManager } = await build()
-        entityManager.query.mockResolvedValueOnce([row({ status })]).mockResolvedValueOnce([])
+        const em = mockEntityManager({ findOne: [ContentItemEntity, row({ status })] })
+        const { service, fakes } = await build(em, [{ execute: {} }])
         await expect(service.transition("user-1", "workspace-1", "item-1", kind)).resolves.toEqual({ id: "item-1" })
-        expect(entityManager.query).toHaveBeenLastCalledWith(TRANSITION_CONTENT_ITEM, [
-            "workspace-1",
-            "item-1",
-            next,
-            JSON.stringify([{ at, kind, by: "Mai", text: kind }]),
-            reopen,
+        expect(stampedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({
+            status: next,
+            evidence: "function",
+            ...(reopen ? { approvedBy: null, approvedAt: null } : {}),
+        })
+        expect(fakes[0]?.callsOf("setParameter")).toEqual([
+            ["evidence", JSON.stringify([{ at, kind, by: "Mai", text: kind }])],
         ])
     })
 })
 
-describe("ContentEditorService behavior", () => {
+describe("ContentEditorService figures and workbench", () => {
+    const figuresEm = (upcoming: ContentItemEntity | null, counts: [number, number, number]) =>
+        mockEntityManager({
+            count: [
+                [ContentItemEntity, counts[0]],
+                [ContentItemEntity, counts[1]],
+                [ContentPillarEntity, counts[2]],
+            ],
+            findOne: [ContentItemEntity, upcoming],
+            find: [ContentItemEntity, []],
+        })
+
     it("computes Vietnam month boundaries and maps live figures and the upcoming post", async () => {
-        const { service, entityManager } = await build()
-        entityManager.query
-            .mockResolvedValueOnce([{ awaiting_approval: 2, published_30: 4, covered: 3, total: 5 }])
-            .mockResolvedValueOnce([row({ scheduled_at: new Date("2026-01-02T00:00:00Z") })])
+        const em = figuresEm(row({ scheduledAt: new Date("2026-01-02T00:00:00Z") }), [2, 4, 5])
+        const { service, fakes } = await build(em, [{ getCount: 3 }])
         await expect(service.figures("user-1", "workspace-1")).resolves.toEqual({
             awaitingApproval: 2,
             published30: 4,
             next: { at: "2026-01-02T00:00:00.000Z", title: "Launch" },
             pillars: { covered: 3, total: 5 },
         })
-        expect(entityManager.query).toHaveBeenNthCalledWith(1, CONTENT_FIGURES, monthBindings)
-        expect(entityManager.query).toHaveBeenNthCalledWith(2, NEXT_CONTENT_ITEM, ["workspace-1", at])
+        expect(fakes[0]?.callsOf("andWhere")[0]?.[1]).toEqual({
+            from: new Date("2025-12-31T17:00:00.000Z"),
+            to: new Date("2026-01-31T17:00:00.000Z"),
+        })
+        expect(em.count.mock.calls[1]?.[1]).toMatchObject({
+            where: {
+                workspaceId: "workspace-1",
+                status: "published",
+                publishedAt: MoreThanOrEqual(new Date("2025-12-02T00:00:00.000Z")),
+            },
+        })
+        expect(em.findOne.mock.calls[0]?.[1]).toMatchObject({
+            where: { workspaceId: "workspace-1", status: "approved", scheduledAt: MoreThanOrEqual(new Date(at)) },
+        })
     })
-})
 
-describe("ContentEditorService behavior", () => {
-    it.each([{ upcoming: [] }, { upcoming: [row()] }])(
-        "returns empty figures when counts or a scheduled post are absent: %j",
-        async ({ upcoming }) => {
-            const { service, entityManager } = await build()
-            entityManager.query.mockResolvedValueOnce([]).mockResolvedValueOnce(upcoming)
-            await expect(service.figures("user-1", "workspace-1")).resolves.toEqual({
-                awaitingApproval: 0,
-                published30: 0,
-                next: null,
-                pillars: { covered: 0, total: 0 },
-            })
-        },
-    )
-})
+    it.each([null, row()])("has no next post when none is scheduled: %j", async (upcoming) => {
+        const { service } = await build(figuresEm(upcoming, [0, 0, 0]), [{ getCount: 0 }])
+        await expect(service.figures("user-1", "workspace-1")).resolves.toEqual({
+            awaitingApproval: 0,
+            published30: 0,
+            next: null,
+            pillars: { covered: 0, total: 0 },
+        })
+    })
 
-describe("ContentEditorService behavior", () => {
     it.each([true, false])("assembles the authorized workbench with an optional last plan: %s", async (hasPlan) => {
-        const { service, entityManager } = await build()
-        entityManager.query.mockImplementation((sql) =>
-            Promise.resolve(
-                sql === LAST_CONTENT_PLAN && hasPlan
-                    ? [{ month: "2025-12", idea_count: 8, ai_ms: 45, created_at: new Date(at) }]
-                    : [],
-            ),
+        const { service } = await build(figuresEm(null, [0, 0, 0]), [{ getCount: 0 }])
+        const readPlan = jest.fn(() =>
+            Promise.resolve(hasPlan ? { month: "2025-12", ideas: 8, ms: 45, createdAt: new Date(at) } : undefined),
         )
-        await expect(service.workbench("user-1", "workspace-1")).resolves.toEqual(workbenchExpected(hasPlan))
-        expect(entityManager.query).toHaveBeenCalledWith(LAST_CONTENT_PLAN, ["workspace-1"])
+        await expect(service.workbench("user-1", "workspace-1", readPlan)).resolves.toEqual(workbenchExpected(hasPlan))
+        expect(readPlan).toHaveBeenCalledWith("workspace-1")
     })
 })

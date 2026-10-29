@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
@@ -26,11 +27,11 @@ export class ApprovalEvidenceService {
         private readonly events: EventsService,
     ) {}
 
-    /** Writes `approval.resolved` into the evidence log. */
-    async resolved(event: ApprovalResolved): Promise<void> {
+    /** Writes `approval.resolved` into the evidence log, inside the caller's transaction when it hands one. */
+    async resolved(event: ApprovalResolved, tx?: EntityManager): Promise<void> {
         const nobody = event.outcome === "expired" && event.escalatedTo === null
         const key = nobody ? "approvals.resolved-expired-nobody" : RESOLVED_KEY[event.outcome]
-        await this.events.record({
+        const entry = {
             workspaceId: event.workspaceId,
             kind: "approval.resolved",
             actor: event.decidedByName ?? NIVO_ACTOR,
@@ -42,7 +43,9 @@ export class ApprovalEvidenceService {
                 decidedBy: event.decidedBy,
                 escalatedTo: event.escalatedTo?.memberId ?? null,
             }),
-        })
+        }
+        if (tx === undefined) await this.events.record(entry)
+        else await this.events.record(entry, tx)
     }
 
     /** Writes `approval.reminder` into the evidence log. */

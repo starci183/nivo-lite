@@ -1,18 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { StaffEntity } from "@modules/domain/staff"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { firstBooleanResult } from "@modules/platform/primitives"
-import type { BooleanResultRow } from "@modules/platform/primitives"
 import type { BookingResourceSaved, BookingResourceWrite } from "./booking-resources.contracts"
-import {
-    DELETE_RESOURCE,
-    INSERT_RESOURCE,
-    LOCK_RESOURCE,
-    LOCK_STAFF,
-    RETIRE_RESOURCE,
-    SELECT_RESOURCE_USAGE,
-    UPDATE_RESOURCE,
-} from "./persistence/booking-resources.sql"
+import { BookingResourceEntity } from "./persistence/entities"
+
+/** The ids a statement with `returning id` hands back. */
+const savedOf = (raw: unknown): Array<BookingResourceSaved> =>
+    Array.isArray(raw) ? (raw as Array<BookingResourceSaved>).slice(0, 1).map((row) => ({ id: row.id })) : []
 
 @Injectable()
 /** Owns resource persistence; callers authorize setup writes and supply their atomic calendar transaction. */
@@ -20,38 +15,97 @@ export class BookingResourcesService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** Saves one resource inside the setup transaction after any staff link has been proven. */
-    save(
+    async save(
         params: BookingResourceWrite,
         manager: EntityManager = this.entityManager,
     ): Promise<ReadonlyArray<BookingResourceSaved>> {
-        const values = [params.workspaceId, params.name, params.kind, params.capacity, params.active, params.staffId]
-        const statement = params.id === null ? INSERT_RESOURCE : UPDATE_RESOURCE
-        if (params.id !== null) values.push(params.id)
-        return manager.query<Array<BookingResourceSaved>>(statement, values)
+        const values = {
+            name: params.name,
+            kind: params.kind,
+            capacity: params.capacity,
+            active: params.active,
+            staffId: params.staffId,
+        }
+        if (params.id === null) {
+            const created = await manager
+                .createQueryBuilder(BookingResourceEntity, "br")
+                .insert()
+                .values({ workspaceId: params.workspaceId, ...values })
+                .returning("id")
+                .execute()
+            return savedOf(created.raw)
+        }
+        const changed = await manager
+            .createQueryBuilder(BookingResourceEntity, "br")
+            .update()
+            .set(values)
+            .where({ workspaceId: params.workspaceId, id: params.id })
+            .returning("id")
+            .execute()
+        return savedOf(changed.raw)
     }
 
     /** Holds the owned resource until its setup transaction finishes. */
-    lock(workspaceId: string, id: string, manager: EntityManager): Promise<ReadonlyArray<BookingResourceSaved>> {
-        return manager.query<Array<BookingResourceSaved>>(LOCK_RESOURCE, [workspaceId, id])
+    async lock(workspaceId: string, id: string, manager: EntityManager): Promise<ReadonlyArray<BookingResourceSaved>> {
+        const held = await manager.findOne(BookingResourceEntity, {
+            select: { id: true },
+            where: { workspaceId, id },
+            lock: { mode: "pessimistic_write" },
+        })
+        return held === null ? [] : [{ id: held.id }]
     }
 
     /** Proves and holds a staff link within the same workspace as the resource. */
-    lockStaff(workspaceId: string, id: string, manager: EntityManager): Promise<ReadonlyArray<BookingResourceSaved>> {
-        return manager.query<Array<BookingResourceSaved>>(LOCK_STAFF, [workspaceId, id])
+    async lockStaff(
+        workspaceId: string,
+        id: string,
+        manager: EntityManager,
+    ): Promise<ReadonlyArray<BookingResourceSaved>> {
+        const held = await manager
+            .createQueryBuilder(StaffEntity, "s")
+            .select("s.id", "id")
+            .where("s.workspace_id = :workspaceId AND s.id = :id", { workspaceId, id })
+            .limit(1)
+            .setLock("pessimistic_read")
+            .getRawOne<BookingResourceSaved>()
+        return held === undefined ? [] : [{ id: held.id }]
     }
 
     /** Reports whether booking or waitlist history still references the resource. */
-    used(workspaceId: string, id: string, manager: EntityManager): Promise<boolean> {
-        return manager.query<Array<BooleanResultRow>>(SELECT_RESOURCE_USAGE, [workspaceId, id]).then(firstBooleanResult)
+    async used(workspaceId: string, id: string, manager: EntityManager): Promise<boolean> {
+        const referenced = await manager
+            .createQueryBuilder(BookingResourceEntity, "o")
+            .select("o.id", "id")
+            .where("o.workspaceId = :workspaceId AND o.id = :id", { workspaceId, id })
+            .andWhere(
+                "(EXISTS (SELECT 1 FROM public.bookings b WHERE b.workspace_id = :workspaceId AND b.resource_id = :id) OR EXISTS (SELECT 1 FROM public.booking_waitlist w WHERE w.workspace_id = :workspaceId AND w.resource_id = :id))",
+            )
+            .getRawOne<{ id: string }>()
+        return referenced !== undefined
     }
 
     /** Deletes an unused locked resource, or retires it when its history must remain. */
-    remove(
+    async remove(
         workspaceId: string,
         id: string,
         retire: boolean,
         manager: EntityManager,
     ): Promise<ReadonlyArray<BookingResourceSaved>> {
-        return manager.query<Array<BookingResourceSaved>>(retire ? RETIRE_RESOURCE : DELETE_RESOURCE, [workspaceId, id])
+        const where = { workspaceId, id }
+        const changed = retire
+            ? await manager
+                  .createQueryBuilder(BookingResourceEntity, "br")
+                  .update()
+                  .set({ active: false })
+                  .where(where)
+                  .returning("id")
+                  .execute()
+            : await manager
+                  .createQueryBuilder(BookingResourceEntity, "br")
+                  .delete()
+                  .where(where)
+                  .returning("id")
+                  .execute()
+        return savedOf(changed.raw)
     }
 }

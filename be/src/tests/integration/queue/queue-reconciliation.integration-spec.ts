@@ -1,6 +1,5 @@
 import assert from "node:assert/strict"
-import { LOCK_RECONCILE_JOB } from "../../fixtures/persistence/queue-reconciliation.sql"
-import { reconciliationProof } from "../../world/queue-reconciliation-proof.service"
+import { reconciliationProof, lockReconcileJob } from "../../world/queue-reconciliation-proof.service"
 import { useTestWorld } from "../../world/use-test-world"
 
 describe("Queue reconciliation claims (private local Supabase)", () => {
@@ -34,7 +33,7 @@ describe("Queue reconciliation claims (private local Supabase)", () => {
         const [locked, available] = rows
         assert(locked && available)
         await world.db.primary.transaction(async (tx) => {
-            await tx.query(LOCK_RECONCILE_JOB, [locked.id])
+            await lockReconcileJob(tx, locked.id)
             const selected = await claim(500)
             expect(selected.map((row) => row.id)).not.toContain(locked.id)
             expect(selected.map((row) => row.id)).toContain(available.id)

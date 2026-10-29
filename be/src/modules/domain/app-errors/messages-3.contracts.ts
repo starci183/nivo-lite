@@ -3,6 +3,7 @@ import { LEAD_FLOWS_MESSAGES } from "@modules/domain/lead-flows"
 import { CONTRACTS_MESSAGES } from "@modules/domain/contracts"
 import { LIVENESS_MESSAGES } from "@modules/domain/liveness"
 import { IDENTITY_MESSAGES } from "@modules/domain/identity"
+import { PASSPORT_MESSAGES } from "@modules/integrations/passport"
 import { INVENTORY_MESSAGES } from "@modules/domain/inventory"
 import { SHIFTS_MESSAGES } from "@modules/domain/shifts"
 import { HIRING_MESSAGES } from "@modules/domain/hiring"
@@ -34,6 +35,7 @@ import { VIDEO_MESSAGES } from "@modules/domain/video"
 /** App-wide messages catalog, preserving registration order. */
 export const API_MESSAGES_3 = [
     IDENTITY_MESSAGES,
+    PASSPORT_MESSAGES,
     INVENTORY_MESSAGES,
     SHIFTS_MESSAGES,
     HIRING_MESSAGES,

@@ -1,34 +1,29 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { And, LessThan, MoreThanOrEqual } from "typeorm"
+import { WorkItemEntity } from "@modules/domain/work-items"
+import { WorkspaceMemberEntity, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { CREATED, memberEntity } from "@tests/fixtures/builders/hiring-data.builder"
+import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
 import { HiringCandidatesService } from "./hiring-candidates.service"
 import { HiringLinksService } from "./hiring-links.service"
 import { HiringSettingsService } from "./hiring-settings.service"
 import { HiringWorkbenchService } from "./hiring-workbench.service"
 import type { CandidateRecord, HiringSettings } from "./hiring.contracts"
 import type { CandidateCvOutput } from "./hiring-operations.contracts"
-import type {
-    WorkbenchCandidateRow,
-    WorkbenchInterviewRow,
-    WorkbenchJobRow,
-    WorkbenchOfferRow,
-} from "./persistence/hiring-workbench.rows"
 import {
-    COUNT_WAITING_APPROVALS,
-    SELECT_ALL_AVAILABILITY,
-    SELECT_CANDIDATE_EVENTS,
-    SELECT_FIGURES,
-    SELECT_WORKBENCH_CANDIDATES,
-    SELECT_WORKBENCH_INTERVIEWS,
-    SELECT_WORKBENCH_JOBS,
-    SELECT_WORKBENCH_MEMBERS,
-    SELECT_WORKBENCH_OFFERS,
-    SELECT_WORKBENCH_ONBOARDING,
-} from "./persistence/hiring-workbench.sql"
+    HiringAvailabilityEntity,
+    HiringCandidateEntity,
+    HiringEventEntity,
+    HiringInterviewEntity,
+    HiringJobEntity,
+    HiringOfferEntity,
+    HiringOnboardingEntity,
+} from "./persistence/entities"
 
 const NOW = "2026-10-15T03:00:00.000Z"
 
@@ -95,63 +90,80 @@ const build = async (em: MockEntityManager) => {
     return { service: moduleRef.get(HiringWorkbenchService), members, candidates, links }
 }
 
+const onboarding = entityRowBuilder<HiringOnboardingEntity>({
+    id: "on-1",
+    workspaceId: "ws-1",
+    candidateId: "cand-1",
+    title: "Sign the contract",
+    done: false,
+    doneAt: null,
+    sort: 1,
+    createdAt: CREATED,
+})
+
+const windowRow = entityRowBuilder<HiringAvailabilityEntity>({
+    id: "window-1",
+    workspaceId: "ws-1",
+    memberUserId: "u-1",
+    weekday: 1,
+    startMin: 540,
+    endMin: 720,
+})
+
+const eventOf = entityRowBuilder<HiringEventEntity>({
+    id: "ev-1",
+    workspaceId: "ws-1",
+    candidateId: "cand-1",
+    kind: "applied",
+    actor: "Minh",
+    summary: "Applied for Barista",
+    createdAt: new Date("2026-10-13T01:00:00.000Z"),
+})
+
+const bounds = {
+    from: new Date("2026-10-11T17:00:00.000Z"),
+    to: new Date("2026-10-18T17:00:00.000Z"),
+}
+
+/** The counts the ribbon and the approvals read, in the order the service asks for them. */
+const counts = (waiting: number, figures: ReadonlyArray<number>) =>
+    [
+        [WorkItemEntity, waiting],
+        [HiringJobEntity, figures[0] ?? 0],
+        [HiringJobEntity, figures[1] ?? 0],
+        [HiringCandidateEntity, figures[2] ?? 0],
+        [HiringInterviewEntity, figures[3] ?? 0],
+        [HiringOfferEntity, figures[4] ?? 0],
+        [HiringOfferEntity, figures[5] ?? 0],
+    ] as const
+
 const workbenchData = () =>
     ({
-        query: [
-            [SELECT_WORKBENCH_JOBS, []],
-            [SELECT_WORKBENCH_CANDIDATES, []],
-            [SELECT_WORKBENCH_INTERVIEWS, []],
-            [SELECT_WORKBENCH_OFFERS, []],
+        find: [
+            [HiringJobEntity, []],
+            [HiringCandidateEntity, []],
+            [HiringInterviewEntity, []],
+            [HiringOfferEntity, []],
             [
-                SELECT_WORKBENCH_ONBOARDING,
+                HiringOnboardingEntity,
                 [
-                    {
-                        id: "on-1",
-                        candidate_id: "cand-1",
-                        title: "Sign the contract",
-                        done: true,
-                        done_at: new Date("2026-10-14T02:00:00.000Z"),
-                        sort: 1,
-                    },
-                    {
-                        id: "on-2",
-                        candidate_id: "cand-1",
-                        title: "Collect the uniform",
-                        done: false,
-                        done_at: null,
-                        sort: 2,
-                    },
+                    onboarding({ done: true, doneAt: new Date("2026-10-14T02:00:00.000Z") }),
+                    onboarding({ id: "on-2", title: "Collect the uniform", sort: 2 }),
                 ],
             ],
             [
-                SELECT_WORKBENCH_MEMBERS,
+                WorkspaceMemberEntity,
                 [
-                    { user_id: "u-1", display_name: "Lan", role: "owner" },
-                    { user_id: "u-2", display_name: "Nam", role: "manager" },
+                    memberEntity({ userId: "u-1", displayName: "Lan", role: "owner" }),
+                    memberEntity({ userId: "u-2", displayName: "Nam", role: "manager" }),
                 ],
             ],
             [
-                SELECT_ALL_AVAILABILITY,
-                [
-                    { member_user_id: "u-1", weekday: 1, start_min: 540, end_min: 720 },
-                    { member_user_id: "u-1", weekday: 3, start_min: 780, end_min: 1020 },
-                ],
-            ],
-            [COUNT_WAITING_APPROVALS, [{ n: "4" }]],
-            [
-                SELECT_FIGURES,
-                [
-                    {
-                        open_roles: "2",
-                        total_roles: 3,
-                        pipeline: "7",
-                        interviews_week: 1,
-                        offers_waiting: "0",
-                        offers_sent: 2,
-                    },
-                ],
+                HiringAvailabilityEntity,
+                [windowRow(), windowRow({ id: "window-2", weekday: 3, startMin: 780, endMin: 1020 })],
             ],
         ],
+        count: counts(4, [2, 3, 7, 1, 0, 2]),
     }) as const
 
 describe("HiringWorkbenchService", () => {
@@ -210,11 +222,13 @@ describe("HiringWorkbenchService", () => {
                 meUserId: "u-1",
             })
             expect(members.require).toHaveBeenCalledWith("u-1", "ws-1", ["owner", "manager"])
-            expect(em.query).toHaveBeenCalledWith(SELECT_FIGURES, [
-                "ws-1",
-                "2026-10-11T17:00:00.000Z",
-                "2026-10-18T17:00:00.000Z",
-            ])
+            expect(em.count).toHaveBeenCalledWith(HiringInterviewEntity, {
+                where: {
+                    workspaceId: "ws-1",
+                    status: "confirmed",
+                    slotStart: And(MoreThanOrEqual(bounds.from), LessThan(bounds.to)),
+                },
+            })
             expect(links.job).not.toHaveBeenCalled()
         })
     })
@@ -222,19 +236,51 @@ describe("HiringWorkbenchService", () => {
 
 describe("HiringWorkbenchService", () => {
     describe("bench", () => {
-        it("answers zero figures and approvals when the counts are missing", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_WORKBENCH_JOBS, []],
-                    [SELECT_WORKBENCH_CANDIDATES, []],
-                    [SELECT_WORKBENCH_INTERVIEWS, []],
-                    [SELECT_WORKBENCH_OFFERS, []],
-                    [SELECT_WORKBENCH_ONBOARDING, []],
-                    [SELECT_WORKBENCH_MEMBERS, []],
-                    [SELECT_ALL_AVAILABILITY, []],
-                    [COUNT_WAITING_APPROVALS, []],
-                    [SELECT_FIGURES, []],
+        it("reads each list newest first and within the bounds of the old queries", async () => {
+            const em = mockEntityManager(workbenchData())
+            const { service } = await build(em)
+
+            await service.bench("u-1", "ws-1")
+
+            expect(em.find.mock.calls).toEqual([
+                [HiringJobEntity, { where: { workspaceId: "ws-1" }, order: { createdAt: "DESC" }, take: 500 }],
+                [HiringCandidateEntity, { where: { workspaceId: "ws-1" }, order: { createdAt: "DESC" }, take: 1000 }],
+                [HiringInterviewEntity, { where: { workspaceId: "ws-1" }, order: { createdAt: "DESC" }, take: 300 }],
+                [HiringOfferEntity, { where: { workspaceId: "ws-1" }, order: { createdAt: "DESC" }, take: 300 }],
+                [HiringOnboardingEntity, { where: { workspaceId: "ws-1" }, order: { sort: "ASC" }, take: 2000 }],
+                [
+                    WorkspaceMemberEntity,
+                    { where: { workspaceId: "ws-1", status: "active" }, order: { createdAt: "ASC" }, take: 500 },
                 ],
+                [HiringAvailabilityEntity, { where: { workspaceId: "ws-1" }, take: 2000 }],
+            ])
+            expect(em.count.mock.calls.map(([entity, options]) => [entity, options?.where])).toEqual([
+                [WorkItemEntity, { workspaceId: "ws-1", department: "hiring", status: "waiting_decision" }],
+                [HiringJobEntity, { workspaceId: "ws-1", status: "open" }],
+                [HiringJobEntity, { workspaceId: "ws-1" }],
+                [HiringCandidateEntity, expect.objectContaining({ workspaceId: "ws-1" })],
+                [HiringInterviewEntity, expect.objectContaining({ workspaceId: "ws-1", status: "confirmed" })],
+                [HiringOfferEntity, { workspaceId: "ws-1", status: "waiting" }],
+                [HiringOfferEntity, { workspaceId: "ws-1", status: "sent" }],
+            ])
+        })
+    })
+})
+
+describe("HiringWorkbenchService", () => {
+    describe("bench", () => {
+        it("answers zero figures and approvals when there is nothing to count", async () => {
+            const em = mockEntityManager({
+                find: [
+                    [HiringJobEntity, []],
+                    [HiringCandidateEntity, []],
+                    [HiringInterviewEntity, []],
+                    [HiringOfferEntity, []],
+                    [HiringOnboardingEntity, []],
+                    [WorkspaceMemberEntity, []],
+                    [HiringAvailabilityEntity, []],
+                ],
+                count: counts(0, []),
             })
             const { service } = await build(em)
 
@@ -259,7 +305,8 @@ describe("HiringWorkbenchService", () => {
             members.require.mockRejectedValue(refused)
 
             await expect(service.bench("u-9", "ws-1")).rejects.toBe(refused)
-            expect(em.query).not.toHaveBeenCalled()
+            expect(em.find).not.toHaveBeenCalled()
+            expect(em.count).not.toHaveBeenCalled()
         })
     })
 })
@@ -268,23 +315,17 @@ describe("HiringWorkbenchService", () => {
     describe("candidateDetail", () => {
         it("answers the candidate's timeline and CV link", async () => {
             const em = mockEntityManager({
-                query: [
-                    SELECT_CANDIDATE_EVENTS,
+                find: [
+                    HiringEventEntity,
                     [
-                        {
-                            id: "ev-1",
-                            kind: "applied",
-                            actor: "Minh",
-                            summary: "Applied for Barista",
-                            created_at: new Date("2026-10-13T01:00:00.000Z"),
-                        },
-                        {
+                        eventOf({}),
+                        eventOf({
                             id: "ev-2",
                             kind: "screened",
                             actor: "NIVO",
                             summary: "82/100",
-                            created_at: "2026-10-13T01:05:00Z",
-                        },
+                            createdAt: new Date("2026-10-13T01:05:00Z"),
+                        }),
                     ],
                 ],
             })
@@ -311,11 +352,15 @@ describe("HiringWorkbenchService", () => {
             })
             expect(candidates.requireCandidate).toHaveBeenCalledWith("ws-1", "cand-1")
             expect(candidates.cv).toHaveBeenCalledWith("u-1", "ws-1", { id: "cand-1" })
-            expect(em.query).toHaveBeenCalledWith(SELECT_CANDIDATE_EVENTS, ["ws-1", "cand-1"])
+            expect(em.find).toHaveBeenCalledWith(HiringEventEntity, {
+                where: { workspaceId: "ws-1", candidateId: "cand-1" },
+                order: { createdAt: "DESC" },
+                take: 60,
+            })
         })
 
         it("falls back to a default name and type for an unnamed CV", async () => {
-            const em = mockEntityManager({ query: [SELECT_CANDIDATE_EVENTS, []] })
+            const em = mockEntityManager({ find: [HiringEventEntity, []] })
             const { service, candidates } = await build(em)
             candidates.cv.mockResolvedValue(cvOf({ name: null, mime: null }))
 
@@ -326,168 +371,11 @@ describe("HiringWorkbenchService", () => {
         })
 
         it("answers no CV when the candidate has none", async () => {
-            const em = mockEntityManager({ query: [SELECT_CANDIDATE_EVENTS, []] })
+            const em = mockEntityManager({ find: [HiringEventEntity, []] })
             const { service, candidates } = await build(em)
             candidates.cv.mockResolvedValue(cvOf({ url: null, name: null, mime: null }))
 
             await expect(service.candidateDetail("u-1", "ws-1", "cand-1")).resolves.toEqual({ events: [], cv: null })
         })
-    })
-})
-
-const job: WorkbenchJobRow = {
-    id: "job-1",
-    workspace_id: "ws-1",
-    slug: "cashier",
-    title: "Cashier",
-    position: "Counter",
-    employment_type: "part_time",
-    schedule: "Evenings",
-    pay_min_vnd: "30000",
-    pay_max_vnd: 40000,
-    pay_unit: "hour",
-    location: "Market",
-    headcount: 2,
-    description: "Serve customers",
-    requirements: {
-        skills: ["POS"],
-        experience_years: 1,
-        experience_note: "Retail",
-        availability: ["Evenings"],
-        must_have: ["Payments"],
-        nice_to_have: ["Stock"],
-    },
-    questions: [{ id: "q-1", text: "POS?", type: "yesno", required: true, expect: "yes" }],
-    status: "open",
-    channels: ["page"],
-    ad_variants: { page: "Join us" },
-    closes_at: null,
-    created_at: new Date(NOW),
-    updated_at: NOW,
-}
-const candidate: WorkbenchCandidateRow = {
-    id: "cand-1",
-    workspace_id: "ws-1",
-    job_id: "job-1",
-    name: "Minh",
-    phone: "0901000000",
-    email: "minh@example.test",
-    source: "page",
-    conversation_id: null,
-    cv_path: "ws-1/cv.pdf",
-    cv_name: "cv.pdf",
-    cv_mime: "application/pdf",
-    cv_size: 123,
-    answers: [{ question_id: "q-1", question: "POS?", answer: "yes" }],
-    availability: "Evenings",
-    score: 90,
-    score_label: "fit",
-    score_reasons: [{ criterion: "POS", status: "met", note: "Yes" }],
-    score_summary: "Ready",
-    screened_at: NOW,
-    stage: "shortlisted",
-    stage_changed_at: new Date(NOW),
-    rejected_reason: null,
-    notes: "Call",
-    staff_id: null,
-    created_at: NOW,
-}
-const interview: WorkbenchInterviewRow = {
-    id: "int-1",
-    workspace_id: "ws-1",
-    candidate_id: "cand-1",
-    job_id: "job-1",
-    interviewer_user_id: "u-1",
-    interviewer_name: "Lan",
-    mode: "online",
-    location: "https://meet.test",
-    duration_min: 30,
-    proposed_slots: [{ start: NOW, end: "2026-10-15T03:30:00.000Z" }],
-    slot_start: NOW,
-    slot_end: "2026-10-15T03:30:00.000Z",
-    status: "confirmed",
-    token: "token-1",
-    work_item_id: "work-1",
-    reminder_sent_at: new Date(NOW),
-    note: "Bring CV",
-    created_at: NOW,
-}
-const offer: WorkbenchOfferRow = {
-    id: "offer-1",
-    workspace_id: "ws-1",
-    candidate_id: "cand-1",
-    job_id: "job-1",
-    terms: { title: "Cashier", pay: "40000/hour", start_date: "2026-11-01", probation: "1 month", note: "Welcome" },
-    draft: "Offer letter",
-    status: "accepted",
-    token: "offer-token",
-    work_item_id: "work-2",
-    sent_via: "email",
-    sent_at: NOW,
-    expires_at: "2026-11-01T03:00:00.000Z",
-    responded_at: new Date(NOW),
-    created_at: NOW,
-}
-
-describe("HiringWorkbenchService populated views", () => {
-    it.each([true, false])("maps additional workbench fields with reasons=%s", async (screened) => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_WORKBENCH_JOBS, [job]],
-                [
-                    SELECT_WORKBENCH_CANDIDATES,
-                    [{ ...candidate, score_reasons: screened ? candidate.score_reasons : null }],
-                ],
-                [SELECT_WORKBENCH_INTERVIEWS, [interview]],
-                [SELECT_WORKBENCH_OFFERS, [offer]],
-                [SELECT_WORKBENCH_ONBOARDING, []],
-                [SELECT_WORKBENCH_MEMBERS, []],
-                [SELECT_ALL_AVAILABILITY, []],
-                [COUNT_WAITING_APPROVALS, []],
-                [SELECT_FIGURES, []],
-            ],
-        })
-        const { service, links } = await build(em)
-        links.job.mockReturnValue("https://nivo.vn/tiem-ca-phe/cashier")
-
-        const bench = await service.bench("u-1", "ws-1")
-
-        expect(bench.jobs).toEqual([
-            expect.objectContaining({
-                id: "job-1",
-                adVariants: { page: "Join us" },
-                createdAt: NOW,
-                updatedAt: NOW,
-                publicUrl: "https://nivo.vn/tiem-ca-phe/cashier",
-            }),
-        ])
-        expect(bench.candidates).toEqual([
-            expect.objectContaining({
-                id: "cand-1",
-                cvSize: 123,
-                score: 90,
-                scoreLabel: "fit",
-                scoreReasons: screened ? [{ criterion: "POS", status: "met", note: "Yes" }] : [],
-                scoreSummary: "Ready",
-                screenedAt: NOW,
-                stageChangedAt: NOW,
-                rejectedReason: null,
-                notes: "Call",
-                createdAt: NOW,
-            }),
-        ])
-        expect(bench.interviews).toEqual([
-            expect.objectContaining({ id: "int-1", reminderSentAt: NOW, createdAt: NOW }),
-        ])
-        expect(bench.offers).toEqual([
-            expect.objectContaining({
-                id: "offer-1",
-                sentVia: "email",
-                sentAt: NOW,
-                respondedAt: NOW,
-                createdAt: NOW,
-            }),
-        ])
-        expect(links.job.mock.calls).toEqual([["tiem-ca-phe", "cashier"]])
     })
 })

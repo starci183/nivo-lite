@@ -1,5 +1,4 @@
-import type { SalesOrderRow } from "./persistence/orders.rows"
-import type { SalesOrderView } from "./orders.contracts"
+import type { SalesOrderRow, SalesOrderView } from "./orders.contracts"
 
 const instantOf = (value: string | Date): string => (value instanceof Date ? value.toISOString() : value)
 const optionalInstantOf = (value: string | Date | null): string | null => (value === null ? null : instantOf(value))

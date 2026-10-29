@@ -18,3 +18,4 @@ export type {
     OverdueInvoices,
     OwnerEmail,
 } from "./n8n-runs.contracts"
+export { n8nRunsEntities } from "./persistence/entities"

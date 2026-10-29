@@ -10,35 +10,35 @@ import {
     workspace,
 } from "@tests/fixtures/builders/platform-admin.builder"
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { PlatformAuditService } from "@modules/domain/platform-audit"
 import { AdminAccessService } from "./admin-access.service"
 import { AdminDirectoryService } from "./admin-directory.service"
 import { PlatformAdminError, PlatformAdminErrorCode } from "./errors/platform-admin.error"
 import { detailStubs } from "@tests/fixtures/builders/platform-admin-detail.builder"
 import type { Stubs } from "@tests/fixtures/builders/platform-admin-detail.builder"
-import {
-    FIND_WORKSPACE,
-    LIST_ERROR_SCOPES,
-    LIST_ERROR_WORKSPACES,
-    LIST_LIVE_CONNECTIONS,
-    LIST_MODULE_INSTALLS,
-    LIST_RECENT_BILLING_EVENTS,
-    LIST_RECENT_ERRORS,
-    LIST_RECENT_TRANSFERS,
-    LIST_SIGNUPS,
-    LIST_TRANSFERS,
-    LIST_USER_EMAILS,
-    LIST_WORKSPACES,
-    LIST_WORKSPACE_NAMES,
-    LIST_WORKSPACE_STATS,
-} from "./persistence/platform-admin.sql"
+import { READ } from "@tests/fixtures/builders/platform-admin-reads.builder"
+import { AdminDirectoryReadsService } from "./admin-directory-reads.service"
 
-const build = async (em: MockEntityManager, auditRows: ReadonlyArray<typeof AUDIT> = [AUDIT]) => {
+const FIRST = new Set<string>([READ.workspace, READ.workspaceActivity, READ.quotaStatus, READ.quotaOverride])
+
+/** The stubbed answers of a spec; no stub means no rows. */
+const stubbing = (answers: Stubs = { query: [] }): Stubs => answers
+
+/** The directory reads double answering what the stubs say, one row for the reads that answer one. */
+const readsOf = (answers: Stubs) => {
+    const rowsOf = (name: string): ReadonlyArray<unknown> => {
+        const rows = answers.query.find(([key]) => key === name)?.[1]
+        return Array.isArray(rows) ? rows : []
+    }
+    const answer = (name: string) => jest.fn().mockResolvedValue(FIRST.has(name) ? rowsOf(name)[0] : rowsOf(name))
+    return mock<AdminDirectoryReadsService>(Object.fromEntries(Object.values(READ).map((name) => [name, answer(name)])))
+}
+
+const build = async (answers: Stubs, auditRows: ReadonlyArray<typeof AUDIT> = [AUDIT]) => {
+    const reads = readsOf(answers)
     const access = mock<AdminAccessService>()
     access.requireAdmin.mockReturnValue(ADMIN)
     access.audit.mockResolvedValue(undefined)
@@ -47,23 +47,23 @@ const build = async (em: MockEntityManager, auditRows: ReadonlyArray<typeof AUDI
     const moduleRef = await Test.createTestingModule({
         providers: [
             AdminDirectoryService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: AdminDirectoryReadsService, useValue: reads },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: AdminAccessService, useValue: access },
             { provide: PlatformAuditService, useValue: audits },
         ],
     }).compile()
-    return { directory: moduleRef.get(AdminDirectoryService), access }
+    return { directory: moduleRef.get(AdminDirectoryService), access, reads }
 }
 
 const stubs = {
     query: [
         [
-            LIST_WORKSPACES,
+            READ.workspaces,
             [workspace(WS_A, "o-1", "Spa Hoa Mai"), workspace(WS_B, "o-2", "Quan Bun", { paid_until: STALE })],
         ],
         [
-            LIST_WORKSPACE_STATS,
+            READ.workspaceStats,
             [
                 {
                     workspace_id: WS_A,
@@ -74,9 +74,9 @@ const stubs = {
                 },
             ],
         ],
-        [LIST_MODULE_INSTALLS, [{ workspace_id: WS_A, module_key: "chatbot", status: "live", live_enabled: true }]],
+        [READ.moduleInstalls, [{ workspace_id: WS_A, module_key: "chatbot", status: "live", live_enabled: true }]],
         [
-            LIST_LIVE_CONNECTIONS,
+            READ.liveConnections,
             [
                 {
                     workspace_id: WS_A,
@@ -96,21 +96,21 @@ const stubs = {
                 },
             ],
         ],
-        [LIST_ERROR_WORKSPACES, [{ workspace_id: WS_A }, { workspace_id: WS_A }]],
-        [LIST_USER_EMAILS, [{ id: "o-1", email: "mai@nivo.vn" }]],
+        [READ.errorWorkspaces, [{ workspace_id: WS_A }, { workspace_id: WS_A }]],
+        [READ.userEmails, [{ id: "o-1", email: "mai@nivo.vn" }]],
     ],
 } as const
 
 describe("AdminDirectoryService", () => {
     describe("session", () => {
         it("answers the admin identity", async () => {
-            const { directory } = await build(mockEntityManager())
+            const { directory } = await build(stubbing())
 
             await expect(directory.session(PRINCIPAL)).resolves.toEqual(ADMIN)
         })
 
         it("refuses a caller who is not an admin", async () => {
-            const { directory, access } = await build(mockEntityManager())
+            const { directory, access } = await build(stubbing())
             access.requireAdmin.mockImplementation(() => {
                 throw new PlatformAdminError({ code: PlatformAdminErrorCode.NotFound })
             })
@@ -123,7 +123,7 @@ describe("AdminDirectoryService", () => {
 describe("AdminDirectoryService", () => {
     describe("listWorkspaces", () => {
         it("lists every workspace with its facts, flags and the size of each filter, and audits the view", async () => {
-            const { directory, access } = await build(mockEntityManager(stubs))
+            const { directory, access } = await build(stubbing(stubs))
 
             const list = await directory.listWorkspaces(PRINCIPAL, { filter: "all", query: "" })
 
@@ -174,7 +174,7 @@ describe("AdminDirectoryService", () => {
 describe("AdminDirectoryService", () => {
     describe("listWorkspaces", () => {
         it("keeps only what the filter and the search match", async () => {
-            const { directory } = await build(mockEntityManager(stubs))
+            const { directory } = await build(stubbing(stubs))
 
             const list = await directory.listWorkspaces(PRINCIPAL, { filter: "unpaid", query: "bun" })
 
@@ -187,23 +187,23 @@ describe("AdminDirectoryService", () => {
 describe("AdminDirectoryService", () => {
     describe("listWorkspaces", () => {
         it("asks Auth for no emails when there is no workspace", async () => {
-            const em = mockEntityManager({
+            const answers = stubbing({
                 query: [
-                    [LIST_WORKSPACES, []],
-                    [LIST_WORKSPACE_STATS, []],
-                    [LIST_MODULE_INSTALLS, []],
-                    [LIST_LIVE_CONNECTIONS, []],
-                    [LIST_ERROR_WORKSPACES, []],
+                    [READ.workspaces, []],
+                    [READ.workspaceStats, []],
+                    [READ.moduleInstalls, []],
+                    [READ.liveConnections, []],
+                    [READ.errorWorkspaces, []],
                 ],
             })
-            const { directory } = await build(em)
+            const { directory, reads } = await build(answers)
 
             await expect(directory.listWorkspaces(PRINCIPAL, { filter: "all", query: "" })).resolves.toEqual({
                 total: 0,
                 counts: { all: 0, attention: 0, unpaid: 0, idle: 0 },
                 items: [],
             })
-            expect(em.query).not.toHaveBeenCalledWith(LIST_USER_EMAILS, expect.anything())
+            expect(reads.userEmails).not.toHaveBeenCalled()
         })
     })
 })
@@ -211,8 +211,8 @@ describe("AdminDirectoryService", () => {
 describe("AdminDirectoryService", () => {
     describe("listWorkspaces", () => {
         it("reads nothing for a caller who is not an admin", async () => {
-            const em = mockEntityManager()
-            const { directory, access } = await build(em)
+            const answers = stubbing()
+            const { directory, access, reads } = await build(answers)
             access.requireAdmin.mockImplementation(() => {
                 throw new PlatformAdminError({ code: PlatformAdminErrorCode.NotFound })
             })
@@ -220,7 +220,7 @@ describe("AdminDirectoryService", () => {
             await expect(directory.listWorkspaces(PRINCIPAL, { filter: "all", query: "" })).rejects.toMatchObject({
                 code: PlatformAdminErrorCode.NotFound,
             })
-            expect(em.query).not.toHaveBeenCalled()
+            expect(reads.workspaces).not.toHaveBeenCalled()
         })
     })
 })
@@ -228,8 +228,8 @@ describe("AdminDirectoryService", () => {
 describe("AdminDirectoryService", () => {
     describe("workspaceDetail", () => {
         it("answers the full overview and audits the view", async () => {
-            const em = mockEntityManager(detailStubs())
-            const { directory, access } = await build(em)
+            const answers = stubbing(detailStubs())
+            const { directory, access, reads } = await build(answers)
 
             const detail = await directory.workspaceDetail(PRINCIPAL, WS_A)
 
@@ -281,7 +281,7 @@ describe("AdminDirectoryService", () => {
                 },
             ])
             expect(detail.activity).toEqual({ messages7d: 4, lastCustomerMessageAt: AT, openDecisions: 1 })
-            expect(em.query).toHaveBeenCalledWith(LIST_TRANSFERS, [["ord-1"]])
+            expect(reads.transfers).toHaveBeenCalledWith(["ord-1"])
             expect(access.audit).toHaveBeenCalledWith(ADMIN, "view.workspace", WS_A)
         })
     })
@@ -290,15 +290,15 @@ describe("AdminDirectoryService", () => {
 describe("AdminDirectoryService", () => {
     describe("workspaceDetail", () => {
         it("skips the transfers of a workspace with no orders and shows zero activity without stats", async () => {
-            const em = mockEntityManager(detailStubs({ orders: [], installs: [], stats: [], emails: [] }))
-            const { directory } = await build(em)
+            const answers = stubbing(detailStubs({ orders: [], installs: [], stats: [], emails: [] }))
+            const { directory, reads } = await build(answers)
 
             const detail = await directory.workspaceDetail(PRINCIPAL, WS_A)
 
             expect(detail.transfers).toEqual([])
             expect(detail.workspace.ownerEmail).toBeNull()
             expect(detail.activity).toEqual({ messages7d: 0, lastCustomerMessageAt: null, openDecisions: 0 })
-            expect(em.query).not.toHaveBeenCalledWith(LIST_TRANSFERS, expect.anything())
+            expect(reads.transfers).not.toHaveBeenCalled()
         })
     })
 })
@@ -306,13 +306,14 @@ describe("AdminDirectoryService", () => {
 describe("AdminDirectoryService", () => {
     describe("workspaceDetail", () => {
         it("answers not found for a workspace that does not exist and audits nothing", async () => {
-            const em = mockEntityManager({ query: [FIND_WORKSPACE, []] })
-            const { directory, access } = await build(em)
+            const answers = stubbing({ query: [[READ.workspace, []]] })
+            const { directory, access, reads } = await build(answers)
 
             await expect(directory.workspaceDetail(PRINCIPAL, WS_A)).rejects.toMatchObject({
                 code: PlatformAdminErrorCode.WorkspaceNotFound,
             })
             expect(access.audit).not.toHaveBeenCalled()
+            expect(reads.members).not.toHaveBeenCalled()
         })
     })
 })
@@ -321,26 +322,26 @@ describe("AdminDirectoryService", () => {
     describe("health", () => {
         const healthStubs = (errors: Array<unknown>): Stubs => ({
             query: [
-                [LIST_SIGNUPS, [{ day: "2026-10-11", signups: 3 }]],
+                [READ.signups, [{ day: "2026-10-11", signups: 3 }]],
                 [
-                    LIST_RECENT_TRANSFERS,
+                    READ.recentTransfers,
                     [
                         { status: "paid", transfer_amount: "590000", content: "NIVO1", received_at: AT },
                         { status: "paid", transfer_amount: null, content: null, received_at: AT },
                         { status: "unmatched", transfer_amount: "1", content: null, received_at: AT },
                     ],
                 ],
-                [LIST_RECENT_BILLING_EVENTS, [{ id: "b-1", workspace_id: WS_A, kind: "paid", created_at: AT }]],
-                [LIST_RECENT_ERRORS, errors],
-                [LIST_ERROR_SCOPES, [{ key: "api.x", count: 2 }]],
-                [LIST_WORKSPACE_NAMES, [{ id: WS_A, name: "Spa Hoa Mai" }]],
+                [READ.recentBillingEvents, [{ id: "b-1", workspace_id: WS_A, kind: "paid", created_at: AT }]],
+                [READ.recentErrors, errors],
+                [READ.errorScopes, [{ key: "api.x", count: 2 }]],
+                [READ.workspaceNames, [{ id: WS_A, name: "Spa Hoa Mai" }]],
             ],
         })
 
         it("answers the platform health with the names of the workspaces it links to, and audits the view", async () => {
             const errors = [{ id: "e-1", scope: "api.x", message: "boom", workspace_id: WS_B, created_at: AT }]
-            const em = mockEntityManager(healthStubs(errors))
-            const { directory, access } = await build(em)
+            const answers = stubbing(healthStubs(errors))
+            const { directory, access, reads } = await build(answers)
 
             const health = await directory.health(PRINCIPAL)
 
@@ -354,20 +355,20 @@ describe("AdminDirectoryService", () => {
             expect(health.errors[0]).toMatchObject({ id: "e-1", workspaceId: WS_B })
             expect(health.audits[0]).toMatchObject({ id: "a-1", actorEmail: "team@nivo.vn" })
             expect(health.billingEvents[0]).toMatchObject({ id: "b-1" })
-            expect(em.query).toHaveBeenCalledWith(LIST_WORKSPACE_NAMES, [expect.arrayContaining([WS_A, WS_B])])
+            expect(reads.workspaceNames).toHaveBeenCalledWith(expect.arrayContaining([WS_A, WS_B]))
             expect(access.audit).toHaveBeenCalledWith(ADMIN, "view.health", null)
         })
 
         it("asks for no names when nothing links to a workspace", async () => {
-            const em = mockEntityManager({
+            const answers = stubbing({
                 query: healthStubs([]).query.map((pair) =>
-                    pair[0] === LIST_RECENT_BILLING_EVENTS ? [pair[0], []] : pair,
+                    pair[0] === READ.recentBillingEvents ? [pair[0], []] : pair,
                 ),
             })
-            const { directory } = await build(em, [])
+            const { directory, reads } = await build(answers, [])
 
             await expect(directory.health(PRINCIPAL)).resolves.toMatchObject({ workspaceNames: [] })
-            expect(em.query).not.toHaveBeenCalledWith(LIST_WORKSPACE_NAMES, expect.anything())
+            expect(reads.workspaceNames).not.toHaveBeenCalled()
         })
     })
 })

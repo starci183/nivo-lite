@@ -7,12 +7,11 @@ import type { AccountDirectory } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import {
-    SELECT_MONTH_CLOSE_WORKSPACES,
-    SELECT_MONTH_SHIFTS,
-    SELECT_OWNER,
-    SELECT_PAYROLL_DONE,
-} from "./persistence/shifts-alerts.sql"
+import { routedQueryBuilder } from "@tests/fixtures/builders/routed-query.builder"
+import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { Like } from "typeorm"
+import { ShiftsNotificationEntity } from "./persistence/entities"
+import type { AlertShiftRead } from "./persistence/shifts-alerts.reads"
 import { DEFAULT_SETTINGS } from "./policies/row-mappers.policy"
 import type { Setup } from "./shifts.contracts"
 import { ShiftsDataService } from "./shifts-data.service"
@@ -44,31 +43,43 @@ const SETUP: Setup = {
     settings: DEFAULT_SETTINGS,
 }
 
-const answer = (em: MockEntityManager, done: boolean | null, owner: boolean) => {
-    em.query.mockImplementation((sql: string) => {
-        if (sql === SELECT_MONTH_CLOSE_WORKSPACES)
-            return Promise.resolve([{ workspace_id: "ws-1", config: { day: 1, time: "09:00" } }])
-        if (sql === SELECT_PAYROLL_DONE) return Promise.resolve(done === null ? [] : [{ done }])
-        if (sql === SELECT_MONTH_SHIFTS)
-            return Promise.resolve([
-                {
-                    id: "s-1",
-                    schedule_id: "sch",
-                    shift_date: "2026-09-03",
-                    start_time: "08:00",
-                    end_time: "12:00",
-                    position_id: "pos",
-                    staff_id: "p-1",
-                    status: "published",
-                    checked_in: true,
-                    reminded: false,
-                    alerted: false,
-                },
-            ])
-        if (sql === SELECT_OWNER) return Promise.resolve(owner ? [{ user_id: "u-1" }] : [])
-        return Promise.resolve([])
-    })
+const WORKSPACES = [{ workspace_id: "ws-1", config: { day: 1, time: "09:00" } }]
+
+const SHIFT: AlertShiftRead = {
+    id: "s-1",
+    schedule_id: "sch",
+    shift_date: "2026-09-03",
+    start_time: "08:00",
+    end_time: "12:00",
+    position_id: "pos",
+    staff_id: "p-1",
+    status: "published",
+    checked_in: true,
+    reminded: false,
+    alerted: false,
 }
+
+/** Whether the month was closed already (null: no marker line yet) and whether the workspace has an owner; the builders made are answered back. */
+const answer = (
+    done: boolean | null,
+    owner: boolean,
+    workspaces: ReadonlyArray<object> = WORKSPACES,
+): { readonly em: MockEntityManager; readonly built: Array<FakeQueryBuilder> } => {
+    const em = mockEntityManager({ exists: [ShiftsNotificationEntity, done === true] })
+    const built: Array<FakeQueryBuilder> = []
+    em.createQueryBuilder.mockImplementation(() => {
+        const fake: FakeQueryBuilder = routedQueryBuilder({
+            getRawMany: (read) =>
+                Promise.resolve(fromOf(read) === "public.automation_pipelines" ? workspaces : [SHIFT]),
+            getRawOne: () => Promise.resolve(owner ? { user_id: "u-1" } : undefined),
+        })
+        built.push(fake)
+        return fake.builder as never
+    })
+    return { em, built }
+}
+
+const fromOf = (fake: FakeQueryBuilder): unknown => fake.callsOf("from")[0]?.[0]
 
 const build = async (em: MockEntityManager) => {
     const accounts = mock<AccountDirectory>()
@@ -105,8 +116,7 @@ const build = async (em: MockEntityManager) => {
 
 describe("ShiftsMonthCloseService", () => {
     it("closes the month: the CSV to the owner, the summary to Office and the evidence for Accounting", async () => {
-        const em = mockEntityManager()
-        answer(em, false, true)
+        const { em } = answer(false, true)
         const { service, mail, notify, office } = await build(em)
 
         await expect(service.close("ws-1", "2026-09")).resolves.toEqual({ done: true, emailed: true, total: 120000 })
@@ -128,8 +138,7 @@ describe("ShiftsMonthCloseService", () => {
     })
 
     it("closes a month once", async () => {
-        const em = mockEntityManager()
-        answer(em, true, true)
+        const { em } = answer(true, true)
         const { service, notify } = await build(em)
 
         await expect(service.close("ws-1", "2026-09")).resolves.toEqual({ done: false, emailed: false, total: 0 })
@@ -137,8 +146,7 @@ describe("ShiftsMonthCloseService", () => {
     })
 
     it("still posts the summary when there is no owner to mail", async () => {
-        const em = mockEntityManager()
-        answer(em, false, false)
+        const { em } = answer(false, false)
         const { service, mail, notify } = await build(em)
 
         await expect(service.close("ws-1", "2026-09")).resolves.toMatchObject({ done: true, emailed: false })
@@ -147,8 +155,7 @@ describe("ShiftsMonthCloseService", () => {
     })
 
     it("on a tick closes the previous month of every workspace past its day and time", async () => {
-        const em = mockEntityManager()
-        answer(em, false, false)
+        const { em } = answer(false, false)
         const { service } = await build(em)
 
         await expect(service.tick(new Date("2026-10-01T03:00:00.000Z"))).resolves.toBe(1)
@@ -159,8 +166,7 @@ describe("ShiftsMonthCloseService", () => {
         { kind: "refused" as const, code: "missing" },
         { kind: "ok" as const, value: { email: "", lastSignInAt: null, displayName: "Owner" } },
     ])("closes without mail when the owner account cannot receive it: %j", async (account) => {
-        const em = mockEntityManager()
-        answer(em, false, true)
+        const { em } = answer(false, true)
         const { service, accounts, mail, notify } = await build(em)
         accounts.accountOf.mockResolvedValue(account)
 
@@ -174,8 +180,7 @@ describe("ShiftsMonthCloseService", () => {
 
 describe("ShiftsMonthCloseService", () => {
     it("builds the payroll text, CSV and evidence even when mail fails and no prior marker exists", async () => {
-        const em = mockEntityManager()
-        answer(em, null, true)
+        const { em, built } = answer(null, true)
         const { service, words, mail, office, notify, data } = await build(em)
         words.text.mockImplementation((key, params) => {
             if (key === "shifts.payrollOffice") return `${params?.marker}  Monthly wages  `
@@ -185,9 +190,17 @@ describe("ShiftsMonthCloseService", () => {
 
         await expect(service.close("ws-1", "2026-09")).resolves.toEqual({ done: true, emailed: false, total: 120000 })
 
-        expect(em.query).toHaveBeenCalledWith(SELECT_PAYROLL_DONE, ["ws-1", "[payroll:2026-09]%"])
-        expect(em.query).toHaveBeenCalledWith(SELECT_MONTH_SHIFTS, ["ws-1", "2026-09-01", "2026-09-30"])
-        expect(em.query).toHaveBeenCalledWith(SELECT_OWNER, ["ws-1"])
+        expect(em.exists).toHaveBeenCalledWith(ShiftsNotificationEntity, {
+            where: { workspaceId: "ws-1", kind: "payroll", body: Like("[payroll:2026-09]%") },
+        })
+        expect(built.flatMap((fake) => fake.callsOf("andWhere"))).toContainEqual([
+            "s.shift_date BETWEEN :from AND :to",
+            { from: "2026-09-01", to: "2026-09-30" },
+        ])
+        expect(built.flatMap((fake) => fake.callsOf("where"))).toContainEqual([
+            "m.workspace_id = :workspaceId AND m.role = 'owner' AND m.status = 'active'",
+            { workspaceId: "ws-1" },
+        ])
         expect(data.loadSetup).toHaveBeenCalledWith("ws-1", true)
         expect(words.text).toHaveBeenCalledWith("shifts.payrollLine", {
             name: "Lan",
@@ -234,8 +247,7 @@ describe("ShiftsMonthCloseService", () => {
 
 describe("ShiftsMonthCloseService", () => {
     it("counts only new closes and continues after a workspace fails", async () => {
-        const em = mockEntityManager()
-        em.query.mockResolvedValue([
+        const { em } = answer(null, false, [
             { workspace_id: "ws-closed", config: { day: 1, time: "09:00" } },
             { workspace_id: "ws-failed", config: { day: 1, time: "09:00" } },
             { workspace_id: "ws-new", config: { day: 1, time: "09:00" } },

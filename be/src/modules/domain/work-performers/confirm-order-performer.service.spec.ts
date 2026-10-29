@@ -1,103 +1,28 @@
-import { builder, mock } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AgentsService } from "@modules/domain/agents"
-import { AutomationBusinessEventsService, BusinessEventsService } from "@modules/domain/automations"
 import { EvidenceService } from "@modules/domain/decisions"
-import type { Proposal, WorkContext, WorkItem } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
-import type { OptionalInboundEvent } from "@modules/domain/inbound-events"
 import { LeadRecordsService } from "@modules/domain/leads"
-import type { LeadRecordRow } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
-import type { OptionalOrder } from "@modules/domain/orders"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
+import { DealWonEvent, LeadCapturedEvent, OrderConfirmedEvent } from "@modules/events/api"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { EVENT_BUS } from "@modules/platform/event-bus"
+import type { BaseEvent } from "@modules/platform/event-bus"
+import {
+    ctx,
+    eventOf,
+    itemOf,
+    leadOf,
+    orderOf,
+    proposalOf,
+} from "@tests/fixtures/builders/confirm-order-performer.builder"
 import { ConfirmOrderPerformerService } from "./confirm-order-performer.service"
 import { WorkPerformersErrorCode } from "./errors/work-performers.error"
 import { PerformerKitService } from "./performer-kit.service"
 import { PROMPT_WRITER } from "./work-performers.decorators"
 import type { PromptWriter } from "./work-performers.port"
-
-const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
-
-const itemOf = builder<WorkItem>({
-    id: "item-1",
-    workspace_id: "ws-1",
-    department: "sales",
-    action: "confirm_order",
-    subject_type: "order",
-    subject_id: "ord-1",
-    lead_id: "lead-1",
-    inbound_event_id: null,
-    parent_id: null,
-    chain_id: "item-1",
-    depth: 0,
-    status: "queued",
-    decided_path: null,
-    reason: null,
-    reasons: [],
-    missing_fields: [],
-    proposal: { summary: "Order", fields: { items: "2 tea boxes", amount_vnd: 300000 } },
-    result: null,
-    error: null,
-    evidence_state: "pending",
-    assigned_staff_id: null,
-    execution_id: null,
-    created_at: "2026-10-12T09:00:00.000Z",
-    updated_at: "2026-10-12T09:00:00.000Z",
-    completed_at: null,
-    installation_id: null,
-})
-
-const leadOf = builder<LeadRecordRow>({
-    id: "lead-1",
-    workspace_id: "ws-1",
-    contact_name: "Lan",
-    company: "Hue Tea",
-    channel: "Telegram",
-    need: "tea",
-    stage: "proposal",
-    context_summary: null,
-    phone: "84901234567",
-    email: null,
-})
-
-const orderOf = builder<NonNullable<OptionalOrder>>({
-    id: "ord-1",
-    workspace_id: "ws-1",
-    lead_id: "lead-1",
-    inbound_event_id: null,
-    order_no: "SO-1",
-    items: "2 tea boxes",
-    amount_vnd: 300000,
-    status: "draft",
-    confirmed_by: null,
-    confirmed_at: null,
-    created_at: "2026-10-12T09:00:00.000Z",
-    shipped_at: null,
-    carrier: null,
-    tracking_code: null,
-})
-
-const eventOf = builder<NonNullable<OptionalInboundEvent>>({
-    id: "ev-1",
-    workspace_id: "ws-1",
-    channel: "telegram",
-    kind: "order",
-    sender_name: "Lan",
-    sender_contact: "0901234567",
-    body: " 2 boxes of tea please ",
-    amount_vnd: null,
-    external_ref: " REF-1 ",
-    event_id: "tg:1",
-    lead_id: null,
-    status: "new",
-})
-
-const proposalOf = (fields: Proposal["fields"], amount?: number | null): Proposal => ({
-    summary: "Order",
-    amount_vnd: amount,
-    fields,
-})
 
 const build = async () => {
     const kit = mock<PerformerKitService>()
@@ -120,8 +45,8 @@ const build = async () => {
     const writer = mock<PromptWriter>()
     writer.extractOrder.mockResolvedValue({ items: "2 tea boxes", amount_vnd: 280000, confidence: 0.9 })
     const evidence = mock<EvidenceService>()
-    const events = mock<BusinessEventsService>()
-    const automationEvents = mock<AutomationBusinessEventsService>()
+    const bus = recordingEventBus<BaseEvent>()
+    const tx = fakeTransaction(mockEntityManager())
     const moduleRef = await Test.createTestingModule({
         providers: [
             ConfirmOrderPerformerService,
@@ -133,8 +58,8 @@ const build = async () => {
             { provide: ResponsibilityJournalService, useValue: responsibilities },
             { provide: PROMPT_WRITER, useValue: writer },
             { provide: EvidenceService, useValue: evidence },
-            { provide: BusinessEventsService, useValue: events },
-            { provide: AutomationBusinessEventsService, useValue: automationEvents },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: EVENT_BUS, useValue: bus },
         ],
     }).compile()
     return {
@@ -146,8 +71,8 @@ const build = async () => {
         responsibilities,
         writer,
         evidence,
-        events,
-        automationEvents,
+        bus,
+        tx,
     }
 }
 
@@ -213,7 +138,7 @@ describe("ConfirmOrderPerformerService prepare", () => {
 
 describe("ConfirmOrderPerformerService prepare", () => {
     it.each([null, "", undefined])("captures unnamed sender %p and logs it", async (senderName) => {
-        const { service, orders, leads, inbound, agents, responsibilities, evidence, events } = await build()
+        const { service, orders, leads, inbound, agents, responsibilities, evidence, bus, tx } = await build()
         const event = eventOf({ sender_name: null, sender_contact: null, amount_vnd: 150000 })
         Reflect.set(event, "sender_name", senderName)
         inbound.find.mockResolvedValue(event)
@@ -229,25 +154,36 @@ describe("ConfirmOrderPerformerService prepare", () => {
 
         expect(prepared.proposal.amount_vnd).toBe(150000)
         expect(prepared.proposal.fields.items).toBe("2 boxes of tea please")
-        expect(leads.capture).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            contactName: "notShared",
-            company: "notShared",
-            channel: "channel.telegram",
-            need: "2 boxes of tea please",
-            phone: null,
-            email: null,
-        })
+        expect(leads.capture).toHaveBeenCalledWith(
+            {
+                workspaceId: "ws-1",
+                contactName: "notShared",
+                company: "notShared",
+                channel: "channel.telegram",
+                need: "2 boxes of tea please",
+                phone: null,
+                email: null,
+            },
+            expect.anything(),
+        )
         expect(responsibilities.ensureFor).toHaveBeenCalledWith(ctx, "lead-2")
-        expect(events.leadCreated).toHaveBeenCalledWith("ws-1", expect.objectContaining({ id: "lead-2" }))
-        expect(evidence.log).toHaveBeenCalledWith(ctx, {
-            lead_id: "lead-2",
-            work_item_id: "item-1",
-            kind: "lead.captured",
-            actor: "Mai",
-            summary: "capturedFrom|channel.zalo",
-            evidence: " 2 boxes of tea please ",
-        })
+        expect(bus.eventsOf(LeadCapturedEvent).map((event) => event.payload)).toEqual([
+            expect.objectContaining({ dedupeKey: "lead.created:lead-2", leadId: "lead-2", workspaceId: "ws-1" }),
+        ])
+        expect(bus.allInTransaction).toBe(true)
+        expect(tx.commits).toBe(1)
+        expect(evidence.log).toHaveBeenCalledWith(
+            ctx,
+            {
+                lead_id: "lead-2",
+                work_item_id: "item-1",
+                kind: "lead.captured",
+                actor: "Mai",
+                summary: "capturedFrom|channel.zalo",
+                evidence: " 2 boxes of tea please ",
+            },
+            expect.anything(),
+        )
         expect(orders.draft.mock.calls[0]?.[0].orderNo).toBe("SO-77")
     })
 
@@ -314,20 +250,24 @@ describe("ConfirmOrderPerformerService prepare", () => {
         expect(prepared.patch).toEqual({ subject_type: "order", subject_id: "ord-2", lead_id: "lead-2" })
         expect(leads.capture.mock.calls[0]?.[0].contactName).toBe("Lan")
         expect(writer.extractOrder).not.toHaveBeenCalled()
-        expect(evidence.log).toHaveBeenCalledWith(ctx, {
-            lead_id: "lead-2",
-            work_item_id: "item-1",
-            kind: "lead.captured",
-            actor: "Chatbot",
-            summary: "capturedFrom|channel.zalo",
-            evidence: null,
-        })
+        expect(evidence.log).toHaveBeenCalledWith(
+            ctx,
+            {
+                lead_id: "lead-2",
+                work_item_id: "item-1",
+                kind: "lead.captured",
+                actor: "Chatbot",
+                summary: "capturedFrom|channel.zalo",
+                evidence: null,
+            },
+            expect.anything(),
+        )
     })
 })
 
 describe("ConfirmOrderPerformerService perform", () => {
     it("confirms the draft, marks the deal won and leaves the evidence line", async () => {
-        const { service, orders, leads, evidence } = await build()
+        const { service, orders, leads, evidence, tx } = await build()
         orders.confirm.mockResolvedValue(orderOf({ status: "confirmed" }))
 
         await expect(
@@ -338,22 +278,30 @@ describe("ConfirmOrderPerformerService perform", () => {
             href: "/leads/lead-1",
             lead_id: "lead-1",
         })
-        expect(orders.confirm).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            orderId: "ord-1",
-            amountVnd: 300000,
-            items: "2 tea boxes",
-            confirmedBy: "Mai",
-        })
-        expect(leads.markWon).toHaveBeenCalledWith("ws-1", "lead-1")
-        expect(evidence.log).toHaveBeenCalledWith(ctx, {
-            lead_id: "lead-1",
-            work_item_id: "item-1",
-            kind: "order.confirmed",
-            actor: "Mai",
-            summary: "orderConfirmed|SO-1|300000 VND",
-            evidence: "2 tea boxes",
-        })
+        expect(orders.confirm).toHaveBeenCalledWith(
+            {
+                workspaceId: "ws-1",
+                orderId: "ord-1",
+                amountVnd: 300000,
+                items: "2 tea boxes",
+                confirmedBy: "Mai",
+            },
+            expect.anything(),
+        )
+        expect(leads.markWon).toHaveBeenCalledWith("ws-1", "lead-1", expect.anything())
+        expect(evidence.log).toHaveBeenCalledWith(
+            ctx,
+            {
+                lead_id: "lead-1",
+                work_item_id: "item-1",
+                kind: "order.confirmed",
+                actor: "Mai",
+                summary: "orderConfirmed|SO-1|300000 VND",
+                evidence: "2 tea boxes",
+            },
+            expect.anything(),
+        )
+        expect(tx.commits).toBe(1)
     })
 
     it("confirms an order without customer or goods and reads the amount from the fields", async () => {
@@ -405,8 +353,8 @@ describe("ConfirmOrderPerformerService perform", () => {
         ).rejects.toMatchObject({ code: WorkPerformersErrorCode.SubjectMissing })
     })
 
-    it("publishes the confirmed order and won deal with the stored customer details", async () => {
-        const { service, orders, leads, automationEvents } = await build()
+    it("publishes the confirmed order and the won deal in the confirming transaction", async () => {
+        const { service, orders, leads, bus } = await build()
         orders.confirm.mockResolvedValue(orderOf({ status: "confirmed" }))
         leads.find.mockResolvedValue(leadOf())
 
@@ -421,38 +369,86 @@ describe("ConfirmOrderPerformerService perform", () => {
             lead_id: "lead-1",
         })
         expect(leads.find).toHaveBeenCalledWith("ws-1", "lead-1")
-        expect(automationEvents.publish.mock.calls).toEqual([
-            [
-                "ws-1",
-                "order.confirmed",
-                {
-                    order_id: "ord-1",
-                    order_no: "SO-1",
-                    lead_id: "lead-1",
-                    customer: "Lan",
-                    items: "2 tea boxes",
-                    amount_vnd: 300000,
-                    channel: "Telegram",
-                    confirmed_by: "Mai",
-                    status: "confirmed",
-                },
-                "order.confirmed:ord-1",
-            ],
-            [
-                "ws-1",
-                "deal.won",
-                {
-                    lead_id: "lead-1",
-                    name: "Lan",
-                    company: "Hue Tea",
-                    channel: "Telegram",
-                    need: "tea",
-                    order_no: "SO-1",
-                    amount_vnd: 300000,
-                },
-                "deal.won:lead-1",
-            ],
+        expect(bus.writes.map((event) => event.constructor)).toEqual([OrderConfirmedEvent, DealWonEvent])
+        expect(bus.allInTransaction).toBe(true)
+    })
+
+    it("publishes the order with the stored customer details", async () => {
+        const { service, orders, leads, bus } = await build()
+        orders.confirm.mockResolvedValue(orderOf({ status: "confirmed" }))
+        leads.find.mockResolvedValue(leadOf())
+
+        await service.perform(ctx, itemOf(), proposalOf({ customer: "Proposal name", items: "2 tea boxes" }, 300000), {
+            name: "Mai",
+        })
+
+        expect(bus.eventsOf(OrderConfirmedEvent).map((event) => event.payload)).toEqual([
+            {
+                dedupeKey: "ord-1",
+                workspaceId: "ws-1",
+                orderId: "ord-1",
+                orderNo: "SO-1",
+                leadId: "lead-1",
+                customer: "Lan",
+                items: "2 tea boxes",
+                amountVnd: 300000,
+                channel: "Telegram",
+                confirmedBy: "Mai",
+            },
         ])
+    })
+
+    it("publishes the won deal with the stored customer details", async () => {
+        const { service, orders, leads, bus } = await build()
+        orders.confirm.mockResolvedValue(orderOf({ status: "confirmed" }))
+        leads.find.mockResolvedValue(leadOf())
+
+        await service.perform(ctx, itemOf(), proposalOf({ customer: "Proposal name" }, 300000), { name: "Mai" })
+
+        expect(bus.eventsOf(DealWonEvent).map((event) => event.payload)).toEqual([
+            {
+                dedupeKey: "deal.won:lead-1",
+                workspaceId: "ws-1",
+                leadId: "lead-1",
+                name: "Lan",
+                company: "Hue Tea",
+                channel: "Telegram",
+                need: "tea",
+                orderNo: "SO-1",
+                amountVnd: 300000,
+            },
+        ])
+    })
+
+    it("publishes only the confirmed order for an order without a customer", async () => {
+        const { service, orders, bus } = await build()
+        orders.confirm.mockResolvedValue(orderOf({ lead_id: null }))
+
+        await service.perform(ctx, itemOf(), proposalOf({ customer: "Walk-in" }, 90000), { name: "Mai" })
+
+        expect(bus.writes.map((event) => event.constructor)).toEqual([OrderConfirmedEvent])
+        expect(bus.writes[0]?.payload).toMatchObject({ customer: "Walk-in", leadId: null, channel: null })
+    })
+
+    it("publishes nothing and answers the standing order when the draft was already confirmed", async () => {
+        const { service, orders, bus } = await build()
+        orders.confirm.mockResolvedValue(null)
+        orders.find.mockResolvedValue(orderOf({ status: "confirmed" }))
+
+        await service.perform(ctx, itemOf(), proposalOf({}), { name: "Mai" })
+
+        expect(bus.writes).toEqual([])
+    })
+
+    it("rolls the confirmation back when the publish fails", async () => {
+        const failure = new Error("bus down")
+        const { service, orders, bus, tx } = await build()
+        orders.confirm.mockResolvedValue(orderOf({ status: "confirmed" }))
+        bus.failNext("publish", failure)
+
+        await expect(service.perform(ctx, itemOf(), proposalOf({}), { name: "Mai" })).rejects.toBe(failure)
+
+        expect(tx.rollbacks).toBe(1)
     })
 })
 

@@ -3,7 +3,7 @@ import type { OnModuleInit } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ActionPerformerRegistry, OfficeLog } from "@modules/domain/module-ops"
 import type { PerformContext, PerformResult } from "@modules/domain/module-ops"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { ShiftsError, ShiftsErrorCode } from "./errors/shifts.error"
 import { ShiftsCoverService } from "./shifts-cover.service"
 import { ShiftsDataService } from "./shifts-data.service"
@@ -11,7 +11,6 @@ import { ShiftsNotifyService } from "./shifts-notify.service"
 import { ShiftsRequestsService } from "./shifts-requests.service"
 import { ShiftsTextService } from "./shifts-text.service"
 import type { Shift } from "./shifts.contracts"
-import { DECIDE_LEAVE, DECIDE_SWAP, PUBLISH_SCHEDULE } from "./persistence/shifts.sql"
 import { fieldText } from "./policies/gate-fields.policy"
 import { nameOf } from "./policies/labels.policy"
 import { toMin } from "./policies/time.policy"
@@ -70,7 +69,7 @@ export class ShiftsPerformersService implements OnModuleInit {
         const { workspaceId } = context
         const schedule = await this.data.scheduleRow(workspaceId, fieldText(context.fields, "schedule_id"))
         if (schedule === undefined) throw new ShiftsError({ code: ShiftsErrorCode.ScheduleNotFound })
-        const week = this.words.week(schedule.week_start)
+        const week = this.words.week(schedule.weekStart)
         if (schedule.status === "published") {
             return { summary: this.words.text("shifts.publishAlready", { week }), evidence: "captured" }
         }
@@ -79,7 +78,7 @@ export class ShiftsPerformersService implements OnModuleInit {
             ...(isRecord(schedule.evidence) ? schedule.evidence : {}),
             publish: { by: context.actor, workItemId: context.workItemId },
         }
-        await this.entityManager.query(PUBLISH_SCHEDULE, [
+        await callDbFunction(this.entityManager, "public.shifts_publish", [
             workspaceId,
             schedule.id,
             JSON.stringify(evidence),
@@ -160,8 +159,8 @@ export class ShiftsPerformersService implements OnModuleInit {
         const kind = request.kind === "claim" ? "claim" : "swap"
         const checked = await this.requests.checkSwap(
             workspaceId,
-            { kind, fromStaffId: request.from_staff_id, toStaffId: request.to_staff_id },
-            request.shift_id,
+            { kind, fromStaffId: request.fromStaffId, toStaffId: request.toStaffId },
+            request.shiftId,
         )
         const hard = checked.findings.filter((finding) => HARD_FINDINGS.has(finding.code))
         if (hard.length > 0 || checked.shift === undefined) {
@@ -171,27 +170,25 @@ export class ShiftsPerformersService implements OnModuleInit {
             })
         }
         const sentences = this.words.findings(checked.findings)
-        const [settled] = await this.entityManager.query<Array<{ settled: boolean }>>(DECIDE_SWAP, [
-            workspaceId,
-            request.id,
-            "approved",
-            context.actor,
-            JSON.stringify(sentences),
-            context.workItemId,
-        ])
-        if (settled?.settled !== true) return { summary: this.words.text("shifts.swapHandled"), evidence: "pending" }
+        const [settled] = await callDbFunction<{ shifts_decide_swap: boolean }>(
+            this.entityManager,
+            "public.shifts_decide_swap",
+            [workspaceId, request.id, "approved", context.actor, JSON.stringify(sentences), context.workItemId],
+        )
+        if (settled?.shifts_decide_swap !== true)
+            return { summary: this.words.text("shifts.swapHandled"), evidence: "pending" }
         const line = this.words.line(checked.setup, checked.shift)
-        const to = nameOf(checked.setup, request.to_staff_id)
+        const to = nameOf(checked.setup, request.toStaffId)
         const kindText = this.words.text(`shifts.swapKind.${kind}`)
         await this.notify.toStaff(workspaceId, {
-            staffId: request.to_staff_id,
+            staffId: request.toStaffId,
             kind: "swap",
             shiftId: checked.shift.id,
             body: this.words.text("shifts.swapDoneTo", { line }),
         })
-        if (request.from_staff_id !== null) {
+        if (request.fromStaffId !== null) {
             await this.notify.toStaff(workspaceId, {
-                staffId: request.from_staff_id,
+                staffId: request.fromStaffId,
                 kind: "swap",
                 shiftId: checked.shift.id,
                 body: this.words.text("shifts.swapDoneFrom", { line, to }),
@@ -213,7 +210,7 @@ export class ShiftsPerformersService implements OnModuleInit {
             this.data.swapRow(workspaceId, id),
         )
         if (request === undefined) return
-        await this.entityManager.query(DECIDE_SWAP, [
+        await callDbFunction(this.entityManager, "public.shifts_decide_swap", [
             context.workspaceId,
             request.id,
             "declined",
@@ -222,7 +219,7 @@ export class ShiftsPerformersService implements OnModuleInit {
             context.workItemId,
         ])
         await this.notify.toStaff(context.workspaceId, {
-            staffId: request.from_staff_id ?? request.to_staff_id,
+            staffId: request.fromStaffId ?? request.toStaffId,
             kind: "swap",
             body: this.words.text("shifts.swapDeclined"),
         })
@@ -238,24 +235,28 @@ export class ShiftsPerformersService implements OnModuleInit {
         if (request.status !== "pending")
             return { summary: this.words.text("shifts.leaveHandled"), evidence: "pending" }
         const setup = await this.data.loadSetup(workspaceId, false)
-        const name = nameOf(setup, request.staff_id)
-        const range = this.words.range(request.from_date, request.to_date)
-        const [decided] = await this.entityManager.query<Array<{ opened: Array<string> | null }>>(DECIDE_LEAVE, [
-            workspaceId,
-            request.id,
-            "approved",
-            context.actor,
-            context.workItemId,
-            this.words.text("shifts.leaveNote", { name }),
-        ])
-        const opened = decided?.opened ?? []
+        const name = nameOf(setup, request.staffId)
+        const range = this.words.range(request.fromDate, request.toDate)
+        const [decided] = await callDbFunction<{ shifts_decide_leave: Array<string> | null }>(
+            this.entityManager,
+            "public.shifts_decide_leave",
+            [
+                workspaceId,
+                request.id,
+                "approved",
+                context.actor,
+                context.workItemId,
+                this.words.text("shifts.leaveNote", { name }),
+            ],
+        )
+        const opened = decided?.shifts_decide_leave ?? []
         await this.notify.toStaff(workspaceId, {
-            staffId: request.staff_id,
+            staffId: request.staffId,
             kind: "leave",
             body: this.words.text("shifts.leaveDoneStaff", { range }),
         })
         if (opened.length > 0) {
-            const lines = await this.cover.suggestions(workspaceId, opened, request.staff_id)
+            const lines = await this.cover.suggestions(workspaceId, opened, request.staffId)
             await this.notify.toManagers(
                 workspaceId,
                 this.words.text("shifts.leaveGapOffice", { name, count: opened.length, lines: lines.join("; ") }),
@@ -280,8 +281,8 @@ export class ShiftsPerformersService implements OnModuleInit {
             this.data.leaveRow(workspaceId, id),
         )
         if (request === undefined) return
-        const range = this.words.range(request.from_date, request.to_date)
-        await this.entityManager.query(DECIDE_LEAVE, [
+        const range = this.words.range(request.fromDate, request.toDate)
+        await callDbFunction(this.entityManager, "public.shifts_decide_leave", [
             context.workspaceId,
             request.id,
             "declined",
@@ -290,7 +291,7 @@ export class ShiftsPerformersService implements OnModuleInit {
             "",
         ])
         await this.notify.toStaff(context.workspaceId, {
-            staffId: request.staff_id,
+            staffId: request.staffId,
             kind: "leave",
             body: this.words.text("shifts.leaveDeclined", { range }),
         })

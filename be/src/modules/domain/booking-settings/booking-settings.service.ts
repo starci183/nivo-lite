@@ -1,17 +1,14 @@
 import { Injectable } from "@nestjs/common"
+import { Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     BookingSettingsPublicSlug,
+    BookingSettingsSaved,
     SaveBookingSettingsPolicyParams,
     SaveBookingSettingsPublicPageParams,
 } from "./booking-settings.contracts"
-import type { BookingSettingsIdRow } from "./persistence/booking-settings.rows"
-import {
-    SELECT_SETUP_SLUG_OWNER,
-    UPSERT_SETUP_POLICY,
-    UPSERT_SETUP_PUBLIC_PAGE,
-} from "./persistence/booking-settings.sql"
+import { BookingSettingEntity } from "./persistence/entities"
 
 @Injectable()
 /** Owns booking settings persistence and joins the transaction supplied by its caller. */
@@ -19,47 +16,62 @@ export class BookingSettingsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** Saves booking policy while preserving the workspace's publishing values. */
-    savePolicy(
+    async savePolicy(
         params: SaveBookingSettingsPolicyParams,
         manager: EntityManager = this.entityManager,
-    ): Promise<ReadonlyArray<BookingSettingsIdRow>> {
-        return manager.query<Array<BookingSettingsIdRow>>(UPSERT_SETUP_POLICY, [
-            params.workspaceId,
-            params.cancelWindowHours,
-            params.depositPct,
-            params.lateCancelFeePct,
-            params.noShowFeeVnd,
-            params.minLeadMin,
-            params.maxAdvanceDays,
-            params.slotStepMin,
-            params.autoConfirm,
-            params.handoffOrder,
-            params.address,
-            params.timezone,
-            params.updatedAt,
-        ])
+    ): Promise<ReadonlyArray<BookingSettingsSaved>> {
+        await manager.upsert(
+            BookingSettingEntity,
+            {
+                workspaceId: params.workspaceId,
+                cancelWindowHours: params.cancelWindowHours,
+                depositPct: params.depositPct,
+                lateCancelFeePct: params.lateCancelFeePct,
+                noShowFeeVnd: String(params.noShowFeeVnd),
+                minLeadMin: params.minLeadMin,
+                maxAdvanceDays: params.maxAdvanceDays,
+                slotStepMin: params.slotStepMin,
+                autoConfirm: params.autoConfirm,
+                handoffOrder: params.handoffOrder,
+                address: params.address,
+                timezone: params.timezone,
+                updatedAt: new Date(params.updatedAt),
+            },
+            ["workspaceId"],
+        )
+        return [{ id: params.workspaceId }]
     }
 
     /** Finds a different workspace that already owns the normalized public slug. */
-    slugOwner(
+    async slugOwner(
         workspaceId: string,
         slug: BookingSettingsPublicSlug,
         manager: EntityManager = this.entityManager,
-    ): Promise<ReadonlyArray<BookingSettingsIdRow>> {
-        return manager.query<Array<BookingSettingsIdRow>>(SELECT_SETUP_SLUG_OWNER, [workspaceId, slug])
+    ): Promise<ReadonlyArray<BookingSettingsSaved>> {
+        if (slug === null) return []
+        const owner = await manager.findOne(BookingSettingEntity, {
+            select: { workspaceId: true },
+            where: { workspaceId: Not(workspaceId), publicSlug: slug },
+        })
+        return owner === null ? [] : [{ id: owner.workspaceId }]
     }
 
     /** Saves publishing values while preserving the workspace's booking policy. */
-    savePublicPage(
+    async savePublicPage(
         params: SaveBookingSettingsPublicPageParams,
         manager: EntityManager = this.entityManager,
-    ): Promise<ReadonlyArray<BookingSettingsIdRow>> {
-        return manager.query<Array<BookingSettingsIdRow>>(UPSERT_SETUP_PUBLIC_PAGE, [
-            params.workspaceId,
-            params.enabled,
-            params.slug,
-            params.note,
-            params.updatedAt,
-        ])
+    ): Promise<ReadonlyArray<BookingSettingsSaved>> {
+        await manager.upsert(
+            BookingSettingEntity,
+            {
+                workspaceId: params.workspaceId,
+                publicEnabled: params.enabled,
+                publicSlug: params.slug,
+                publicNote: params.note,
+                updatedAt: new Date(params.updatedAt),
+            },
+            ["workspaceId"],
+        )
+        return [{ id: params.workspaceId }]
     }
 }

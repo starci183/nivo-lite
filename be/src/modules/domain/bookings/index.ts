@@ -25,4 +25,5 @@ export {
 export { toRequestPublicBookingRequest, toRequestPublicBookingType } from "./public-booking-graphql.mapper"
 export { BookingNoticesService } from "./booking-notices.service"
 export type { BookingNotice, BookingNoticeResult, BookingNotifier } from "./booking-notice.contracts"
-export type { EffectsRow } from "./persistence/booking.rows"
+export type { EffectsRow } from "./booking-facts.contracts"
+export { BookingEntity, bookingsEntities } from "./persistence/entities"

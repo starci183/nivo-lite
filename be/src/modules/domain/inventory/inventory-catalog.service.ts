@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { OfficeLog } from "@modules/domain/module-ops"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InventoryError, InventoryErrorCode } from "./errors/inventory.error"
@@ -21,8 +21,7 @@ import { InventoryMovementsService } from "./inventory-movements.service"
 import { isUniqueViolation } from "./policies/database-error.policy"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { channelOf } from "./policies/supplier-channel.policy"
-import { savedId } from "./policies/saved-id.policy"
-import type { IdRow } from "./policies/saved-id.policy"
+import { idColumn, savedId } from "./policies/saved-id.policy"
 import {
     clip,
     deriveSku,
@@ -32,7 +31,6 @@ import {
     uuidOrNull,
 } from "./policies/input-text.policy"
 import { parseNumber } from "./policies/number-format.policy"
-import { DELETE_RECIPE, SAVE_ITEM, SAVE_RECIPE, SAVE_SUPPLIER, SET_ITEM_ACTIVE } from "./persistence/inventory.sql"
 
 /** Field limits of the catalogue forms. */
 const NAME_MAX = 120
@@ -76,8 +74,8 @@ export class InventoryCatalogService {
         const typedSku = clip(request.sku, SKU_MAX)
         const sku = existing === null ? (typedSku || deriveSku(name)).toUpperCase() : typedSku
         const sellText = request.sell.trim()
-        const rows = this.entityManager
-            .query<Array<IdRow>>(SAVE_ITEM, [
+        const rows = idColumn(
+            callDbFunction(this.entityManager, "public.inventory_save_item", [
                 workspaceId,
                 existing,
                 sku,
@@ -91,11 +89,12 @@ export class InventoryCatalogService {
                 Math.max(0, parseNumber(request.reorderQty)),
                 uuidOrNull(request.supplierId),
                 parseCommaList(request.aliases),
-            ])
-            .catch((cause: unknown) => {
-                if (!isUniqueViolation(cause)) throw cause
-                throw new InventoryError({ code: InventoryErrorCode.ItemSkuTaken, params: { sku }, cause })
-            })
+            ]),
+            "inventory_save_item",
+        ).catch((cause: unknown) => {
+            if (!isUniqueViolation(cause)) throw cause
+            throw new InventoryError({ code: InventoryErrorCode.ItemSkuTaken, params: { sku }, cause })
+        })
         const id = await savedId(rows, InventoryErrorCode.ItemNotFound)
         const opening = parseNumber(request.openingQty)
         if (existing === null) {
@@ -131,25 +130,32 @@ export class InventoryCatalogService {
     /** Switches an item on or off; a switched-off item leaves the stock views and the low-stock check. */
     async setItemActive(userId: string, workspaceId: string, request: SetItemActiveParams): Promise<void> {
         await this.members.require(userId, workspaceId, MANAGER_ROLES)
-        await this.entityManager.query(SET_ITEM_ACTIVE, [workspaceId, request.id, request.active])
+        await callDbFunction(this.entityManager, "public.inventory_set_item_active", [
+            workspaceId,
+            request.id,
+            request.active,
+        ])
     }
 
     /** Writes one supplier row (a new one when `id` is null) and answers its id; a refusal when the supplier to update is missing. */
     writeSupplier(workspaceId: string, fields: SupplierFields): Promise<string> {
         return savedId(
-            this.entityManager.query<Array<IdRow>>(SAVE_SUPPLIER, [
-                workspaceId,
-                fields.id,
-                fields.name,
-                fields.contact,
-                fields.email,
-                fields.phone,
-                fields.zalo,
-                fields.channel,
-                fields.leadTime,
-                fields.terms,
-                fields.note,
-            ]),
+            idColumn(
+                callDbFunction(this.entityManager, "public.inventory_save_supplier", [
+                    workspaceId,
+                    fields.id,
+                    fields.name,
+                    fields.contact,
+                    fields.email,
+                    fields.phone,
+                    fields.zalo,
+                    fields.channel,
+                    fields.leadTime,
+                    fields.terms,
+                    fields.note,
+                ]),
+                "inventory_save_supplier",
+            ),
             InventoryErrorCode.SupplierNotFound,
         )
     }
@@ -193,14 +199,17 @@ export class InventoryCatalogService {
         })
         if (lines.length === 0) throw new InventoryError({ code: InventoryErrorCode.RecipeLinesRequired })
         const id = await savedId(
-            this.entityManager.query<Array<IdRow>>(SAVE_RECIPE, [
-                workspaceId,
-                uuidOrNull(request.id),
-                name,
-                parseCommaList(request.aliases),
-                lines.map((line) => line.itemId),
-                lines.map((line) => line.qty),
-            ]),
+            idColumn(
+                callDbFunction(this.entityManager, "public.inventory_save_recipe", [
+                    workspaceId,
+                    uuidOrNull(request.id),
+                    name,
+                    parseCommaList(request.aliases),
+                    lines.map((line) => line.itemId),
+                    lines.map((line) => line.qty),
+                ]),
+                "inventory_save_recipe",
+            ),
             InventoryErrorCode.RecipeNotFound,
         )
         return { id }
@@ -209,6 +218,6 @@ export class InventoryCatalogService {
     /** Deletes one recipe with its lines. */
     async deleteRecipe(userId: string, workspaceId: string, request: DeleteRecipeParams): Promise<void> {
         await this.members.require(userId, workspaceId, MANAGER_ROLES)
-        await this.entityManager.query(DELETE_RECIPE, [workspaceId, request.id])
+        await callDbFunction(this.entityManager, "public.inventory_delete_recipe", [workspaceId, request.id])
     }
 }

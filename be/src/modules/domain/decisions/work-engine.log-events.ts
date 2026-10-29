@@ -9,7 +9,6 @@ export enum WorkEngineLogEvent {
     /** The status of an inbound event could not be set; the work goes on. */
     InboundStatusFailed = "decisions.inbound_status_failed",
     /** The `decision.made` event could not be published; the decision stands. */
-    DecisionEventFailed = "decisions.decision_event_failed",
     /** A command subject label could not be read; the Office line goes without it. */
     SubjectLabelUnreadable = "decisions.subject_label_unreadable",
     /** The receiving instance of a command could not be resolved; the database trigger still attributes the item. */

@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import type { ShiftsShiftRow } from "./persistence/shifts.rows"
+import type { ShiftWithSchedule } from "./shifts-records.contracts"
 import { ShiftsCoverService } from "./shifts-cover.service"
 import { ShiftsDataService } from "./shifts-data.service"
 import { ShiftsTextService } from "./shifts-text.service"
@@ -26,17 +26,17 @@ const person = (id: string, name: string, overrides: Partial<ShiftStaff> = {}): 
     ...overrides,
 })
 
-const rowOf = (id: string, overrides: Partial<ShiftsShiftRow> = {}): ShiftsShiftRow => ({
+const rowOf = (id: string, overrides: Partial<ShiftWithSchedule> = {}): ShiftWithSchedule => ({
     id,
-    schedule_id: "schedule-1",
-    shift_date: "2026-10-15",
-    start_time: "09:00:00",
-    end_time: "13:00:00",
-    position_id: "position-1",
-    staff_id: "leaver",
+    scheduleId: "schedule-1",
+    shiftDate: "2026-10-15",
+    startTime: "09:00:00",
+    endTime: "13:00:00",
+    positionId: "position-1",
+    staffId: "leaver",
     status: "published",
-    schedule_status: "published",
-    week_start: "2026-10-12",
+    scheduleStatus: "published",
+    weekStart: "2026-10-12",
     ...overrides,
 })
 

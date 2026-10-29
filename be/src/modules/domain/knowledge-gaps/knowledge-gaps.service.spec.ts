@@ -1,41 +1,40 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { builder, mockEntityManager } from "@starci/jest-preset"
+import { In, Not } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { GapInput } from "./knowledge-gaps.contracts"
 import { KnowledgeGapsService } from "./knowledge-gaps.service"
-import type { KnowledgeGapRow } from "./persistence/knowledge-gaps.rows"
-import {
-    ANSWER_GAP,
-    BUMP_GAP,
-    COUNT_OPEN_GAPS,
-    COUNT_OPEN_GAPS_OF_MODULE,
-    DISMISS_GAP,
-    INSERT_GAP,
-    SELECT_GAPS,
-    SELECT_GAP_CANDIDATES,
-    SELECT_OPEN_GAPS,
-    SELECT_OPEN_GAPS_OF_MODULE,
-} from "./persistence/knowledge-gaps.sql"
+import { KnowledgeGapEntity } from "./persistence/entities"
 
 const WS = "11111111-1111-4111-8111-111111111111"
-const AT = "2026-10-12T10:00:00.000Z"
+const AT = new Date("2026-10-12T10:00:00.000Z")
 
-const rowOf = (changes: Partial<KnowledgeGapRow> = {}): KnowledgeGapRow => ({
+const rowOf = builder<KnowledgeGapEntity>({
     id: "g1",
+    workspaceId: WS,
     module: "chatbot",
     question: "Tea price?",
-    question_key: "tea-price",
+    questionKey: "tea-price",
     keywords: ["tea", "price"],
     topic: "Tea",
-    attribute_guess: "Price",
+    attributeGuess: "Price",
     count: 1,
-    first_seen_at: AT,
-    last_seen_at: AT,
-    example_conversation_id: null,
+    firstSeenAt: AT,
+    lastSeenAt: AT,
+    exampleConversationId: null,
+    source: "model",
     status: "open",
-    reopened_count: 0,
-    ...changes,
+    answeredAt: null,
+    answeredBy: null,
+    dismissedAt: null,
+    dismissedBy: null,
+    reopenedCount: 0,
+    updatedAt: AT,
 })
+
+/** Hands a literal to an expectation as a plain object, so it is not mistaken for a hand-built entity row. */
+const plain = (value: object): object => value
 
 const gap = {
     id: "g1",
@@ -44,12 +43,18 @@ const gap = {
     topic: "Tea",
     attributeGuess: "Price",
     count: 1,
-    firstSeenAt: AT,
-    lastSeenAt: AT,
+    firstSeenAt: AT.toISOString(),
+    lastSeenAt: AT.toISOString(),
     exampleConversationId: null,
     status: "open",
     reopenedCount: 0,
 }
+
+const CANDIDATES_QUERY = (module = "chatbot") => [
+    KnowledgeGapEntity,
+    { where: { workspaceId: WS, module }, order: { lastSeenAt: "DESC" }, take: 300 },
+]
+const NOW: unknown = expect.any(Function)
 
 const inputOf = (changes: Partial<GapInput> = {}): GapInput => ({
     module: "chatbot",
@@ -65,17 +70,51 @@ const build = async (em: ReturnType<typeof mockEntityManager>) => {
     return moduleRef.get(KnowledgeGapsService)
 }
 
+const INSERTED = (row: KnowledgeGapEntity) => ({ execute: { raw: [row] } })
+const NOTHING = { execute: { raw: [] } }
+
+const BUMP_SET = {
+    count: NOW,
+    lastSeenAt: NOW,
+    updatedAt: NOW,
+    topic: NOW,
+    attributeGuess: NOW,
+    exampleConversationId: NOW,
+    status: NOW,
+    answeredAt: NOW,
+    answeredBy: NOW,
+    reopenedCount: NOW,
+}
+
+const BUMP_WHERE = ["workspace_id = :workspaceId AND id = :id", { workspaceId: WS, id: "g1" }]
+
+const nullKeywords = null as unknown as Array<string>
+
 describe("KnowledgeGapsService", () => {
     it("lists mapped gaps with the requested statuses and caps the limit at 200", async () => {
-        const em = mockEntityManager({ query: [SELECT_GAPS, [rowOf()]] })
+        const em = mockEntityManager({ find: [KnowledgeGapEntity, [rowOf()]] })
         const service = await build(em)
 
         await expect(service.list(WS, ["open", "answered"], 250)).resolves.toEqual([gap])
         await expect(service.list(WS, ["dismissed"], 10)).resolves.toEqual([gap])
 
-        expect(em.query.mock.calls).toEqual([
-            [SELECT_GAPS, [WS, ["open", "answered"], 200]],
-            [SELECT_GAPS, [WS, ["dismissed"], 10]],
+        expect(em.find.mock.calls).toEqual([
+            [
+                KnowledgeGapEntity,
+                {
+                    where: { workspaceId: WS, status: In(["open", "answered"]) },
+                    order: { count: "DESC", lastSeenAt: "DESC" },
+                    take: 200,
+                },
+            ],
+            [
+                KnowledgeGapEntity,
+                plain({
+                    where: { workspaceId: WS, status: In(["dismissed"]) },
+                    order: { count: "DESC", lastSeenAt: "DESC" },
+                    take: 10,
+                }),
+            ],
         ])
     })
 })
@@ -88,16 +127,13 @@ describe("KnowledgeGapsService", () => {
 
             await expect(service.record(WS, inputOf({ question: " hello please how are you " }))).resolves.toBeNull()
 
-            expect(em.query).not.toHaveBeenCalled()
+            expect(em.find).not.toHaveBeenCalled()
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
 
         it("starts a normalized question with topic parts, conversation and source", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_GAP_CANDIDATES, []],
-                    [INSERT_GAP, [rowOf()]],
-                ],
-            })
+            const em = mockEntityManager({ find: [KnowledgeGapEntity, []] })
+            const [insert] = queueQueryBuilders(em, [INSERTED(rowOf())])
             const service = await build(em)
 
             await expect(
@@ -107,37 +143,49 @@ describe("KnowledgeGapsService", () => {
                 ),
             ).resolves.toEqual({ gap, isNew: true, reopened: false })
 
-            expect(em.query.mock.calls).toEqual([
-                [SELECT_GAP_CANDIDATES, [WS, "chatbot", 300]],
+            expect(em.find.mock.calls).toEqual([CANDIDATES_QUERY()])
+            expect(insert?.callsOf("insert")).toEqual([[]])
+            expect(insert?.callsOf("values")).toEqual([
                 [
-                    INSERT_GAP,
-                    [WS, "chatbot", "Tea price?", "tea-price", ["tea", "price"], "Tea", "Price", "c1", "model"],
+                    {
+                        workspaceId: WS,
+                        module: "chatbot",
+                        question: "Tea price?",
+                        questionKey: "tea-price",
+                        keywords: ["tea", "price"],
+                        topic: "Tea",
+                        attributeGuess: "Price",
+                        exampleConversationId: "c1",
+                        source: "model",
+                    },
                 ],
             ])
+            expect(insert?.callsOf("orIgnore")).toHaveLength(1)
+            expect(insert?.callsOf("returning")).toHaveLength(1)
         })
 
         it("caps the stored question and defaults an absent topic and conversation to null", async () => {
             const question = "t".repeat(301)
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_GAP_CANDIDATES, []],
-                    [INSERT_GAP, [rowOf()]],
-                ],
-            })
+            const em = mockEntityManager({ find: [KnowledgeGapEntity, []] })
+            const [insert] = queueQueryBuilders(em, [INSERTED(rowOf())])
             const service = await build(em)
 
             await service.record(WS, inputOf({ question, source: "retrieval" }))
 
-            expect(em.query).toHaveBeenCalledWith(INSERT_GAP, [
-                WS,
-                "chatbot",
-                "t".repeat(300),
-                "t".repeat(120),
-                ["t".repeat(120)],
-                null,
-                null,
-                null,
-                "retrieval",
+            expect(insert?.callsOf("values")).toEqual([
+                [
+                    {
+                        workspaceId: WS,
+                        module: "chatbot",
+                        question: "t".repeat(300),
+                        questionKey: "t".repeat(120),
+                        keywords: ["t".repeat(120)],
+                        topic: null,
+                        attributeGuess: null,
+                        exampleConversationId: null,
+                        source: "retrieval",
+                    },
+                ],
             ])
         })
     })
@@ -147,14 +195,15 @@ describe("KnowledgeGapsService", () => {
     describe("record", () => {
         it("prefers an exact key over a similar question and reopens an answered gap", async () => {
             const em = mockEntityManager({
-                query: [
+                find: [
+                    KnowledgeGapEntity,
                     [
-                        SELECT_GAP_CANDIDATES,
-                        [rowOf({ id: "similar", question_key: "tea-price-please" }), rowOf({ status: "answered" })],
+                        Object.assign(rowOf(), { id: "similar", questionKey: "tea-price-please" }),
+                        Object.assign(rowOf(), { status: "answered" }),
                     ],
-                    [BUMP_GAP, [rowOf({ count: 2, reopened_count: 1 })]],
                 ],
             })
+            const [bump] = queueQueryBuilders(em, [INSERTED(Object.assign(rowOf(), { count: 2, reopenedCount: 1 }))])
             const service = await build(em)
 
             await expect(service.record(WS, inputOf({ topic: "Tea | Price", conversationId: "c1" }))).resolves.toEqual({
@@ -163,37 +212,42 @@ describe("KnowledgeGapsService", () => {
                 reopened: true,
             })
 
-            expect(em.query).toHaveBeenCalledWith(BUMP_GAP, [WS, "g1", "Tea", "Price", "c1"])
-            expect(em.query).toHaveBeenCalledTimes(2)
+            expect(bump?.callsOf("update")).toEqual([[]])
+            expect(bump?.callsOf("set")).toEqual([[BUMP_SET]])
+            expect(bump?.callsOf("where")).toEqual([BUMP_WHERE])
+            expect(bump?.callsOf("setParameters")).toEqual([
+                [{ subject: "Tea", attribute: "Price", conversationId: "c1" }],
+            ])
+            expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
         })
 
         it("matches stored significant words and falls back to the existing row when the bump returns none", async () => {
             const em = mockEntityManager({
-                query: [
-                    [SELECT_GAP_CANDIDATES, [rowOf({ question_key: "old-key" })]],
-                    [BUMP_GAP, []],
-                ],
+                find: [KnowledgeGapEntity, [Object.assign(rowOf(), { questionKey: "old-key" })]],
             })
+            const [bump] = queueQueryBuilders(em, [NOTHING])
             const service = await build(em)
 
             await expect(service.record(WS, inputOf())).resolves.toEqual({ gap, isNew: false, reopened: false })
 
-            expect(em.query).toHaveBeenCalledWith(BUMP_GAP, [WS, "g1", null, null, null])
+            expect(bump?.callsOf("setParameters")).toEqual([[{ subject: null, attribute: null, conversationId: null }]])
         })
 
         it("derives missing candidate keywords and skips an unrelated candidate", async () => {
             const em = mockEntityManager({
-                query: [
+                find: [
+                    KnowledgeGapEntity,
                     [
-                        SELECT_GAP_CANDIDATES,
-                        [
-                            rowOf({ id: "other", question_key: "coffee-stock", keywords: ["coffee", "stock"] }),
-                            rowOf({ question_key: "old-key", keywords: null }),
-                        ],
+                        Object.assign(rowOf(), {
+                            id: "other",
+                            questionKey: "coffee-stock",
+                            keywords: ["coffee", "stock"],
+                        }),
+                        Object.assign(rowOf(), { questionKey: "old-key", keywords: nullKeywords }),
                     ],
-                    [BUMP_GAP, [rowOf({ count: 2 })]],
                 ],
             })
+            queueQueryBuilders(em, [INSERTED(Object.assign(rowOf(), { count: 2 }))])
             const service = await build(em)
 
             await expect(service.record(WS, inputOf())).resolves.toEqual({
@@ -209,13 +263,12 @@ describe("KnowledgeGapsService", () => {
     describe("record", () => {
         it("counts on the competing gap when an insert loses the uniqueness race", async () => {
             const em = mockEntityManager({
-                query: [
-                    [SELECT_GAP_CANDIDATES, []],
-                    [SELECT_GAP_CANDIDATES, [rowOf()]],
-                    [INSERT_GAP, []],
-                    [BUMP_GAP, [rowOf({ count: 2 })]],
+                find: [
+                    [KnowledgeGapEntity, []],
+                    [KnowledgeGapEntity, [rowOf()]],
                 ],
             })
+            const [insert, bump] = queueQueryBuilders(em, [NOTHING, INSERTED(Object.assign(rowOf(), { count: 2 }))])
             const service = await build(em)
 
             await expect(service.record(WS, inputOf())).resolves.toEqual({
@@ -224,63 +277,73 @@ describe("KnowledgeGapsService", () => {
                 reopened: false,
             })
 
-            expect(em.query.mock.calls).toEqual([
-                [SELECT_GAP_CANDIDATES, [WS, "chatbot", 300]],
-                [INSERT_GAP, [WS, "chatbot", "Tea price?", "tea-price", ["tea", "price"], null, null, null, "model"]],
-                [SELECT_GAP_CANDIDATES, [WS, "chatbot", 300]],
-                [BUMP_GAP, [WS, "g1", null, null, null]],
-            ])
+            expect(em.find.mock.calls).toEqual([CANDIDATES_QUERY(), CANDIDATES_QUERY()])
+            expect(insert?.callsOf("orIgnore")).toHaveLength(1)
+            expect(bump?.callsOf("where")).toEqual([BUMP_WHERE])
         })
 
         it("returns null when both the insert and the second lookup find no gap", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_GAP_CANDIDATES, []],
-                    [INSERT_GAP, []],
-                ],
-            })
+            const em = mockEntityManager({ find: [KnowledgeGapEntity, []] })
+            queueQueryBuilders(em, [NOTHING])
             const service = await build(em)
 
             await expect(service.record(WS, inputOf())).resolves.toBeNull()
 
-            expect(em.query).toHaveBeenCalledTimes(3)
+            expect(em.find).toHaveBeenCalledTimes(2)
+            expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
         })
     })
 
     it("stamps dismissals and answers with the caller's reason", async () => {
-        const em = mockEntityManager({
-            query: [
-                [DISMISS_GAP, []],
-                [ANSWER_GAP, []],
-            ],
-        })
+        const em = mockEntityManager({ update: [KnowledgeGapEntity, {}] })
         const service = await build(em)
 
         await expect(service.dismiss(WS, "g1", "u1")).resolves.toBeUndefined()
         await expect(service.answer(WS, "g2", "owner")).resolves.toBeUndefined()
 
-        expect(em.query.mock.calls).toEqual([
-            [DISMISS_GAP, [WS, "g1", "u1"]],
-            [ANSWER_GAP, [WS, "g2", "owner"]],
+        expect(em.update.mock.calls).toEqual([
+            [
+                KnowledgeGapEntity,
+                plain({ workspaceId: WS, id: "g1", status: Not("answered") }),
+                plain({ status: "dismissed", dismissedAt: NOW, dismissedBy: "u1", updatedAt: NOW }),
+            ],
+            [
+                KnowledgeGapEntity,
+                plain({ workspaceId: WS, id: "g2", status: "open" }),
+                plain({ status: "answered", answeredAt: NOW, answeredBy: "owner", updatedAt: NOW }),
+            ],
         ])
     })
 })
 
+const OPEN_QUERY = [
+    KnowledgeGapEntity,
+    plain({
+        select: { id: true, module: true, keywords: true, question: true },
+        where: { workspaceId: WS, status: "open" },
+        take: 300,
+    }),
+]
+
+const ANSWERED = (id: string, by: string) => [
+    KnowledgeGapEntity,
+    plain({ workspaceId: WS, id, status: "open" }),
+    plain({ status: "answered", answeredAt: NOW, answeredBy: by, updatedAt: NOW }),
+]
+
 describe("KnowledgeGapsService", () => {
     it("answers matching questions of one module in their stored order", async () => {
         const em = mockEntityManager({
-            query: [
+            find: [
+                KnowledgeGapEntity,
                 [
-                    SELECT_OPEN_GAPS,
-                    [
-                        rowOf({ id: "g1" }),
-                        rowOf({ id: "wrong-module", module: "sales" }),
-                        rowOf({ id: "wrong-question", keywords: ["coffee", "stock"] }),
-                        rowOf({ id: "g2", keywords: null }),
-                    ],
+                    Object.assign(rowOf(), { id: "g1" }),
+                    Object.assign(rowOf(), { id: "wrong-module", module: "sales" }),
+                    Object.assign(rowOf(), { id: "wrong-question", keywords: ["coffee", "stock"] }),
+                    Object.assign(rowOf(), { id: "g2", keywords: nullKeywords }),
                 ],
-                [ANSWER_GAP, []],
             ],
+            update: [KnowledgeGapEntity, {}],
         })
         const service = await build(em)
 
@@ -288,19 +351,14 @@ describe("KnowledgeGapsService", () => {
             service.resolve(WS, { text: "Tea price is 5", module: "chatbot", minimum: 0.6, by: "fact:f1" }),
         ).resolves.toBe(2)
 
-        expect(em.query.mock.calls).toEqual([
-            [SELECT_OPEN_GAPS, [WS, 300]],
-            [ANSWER_GAP, [WS, "g1", "fact:f1"]],
-            [ANSWER_GAP, [WS, "g2", "fact:f1"]],
-        ])
+        expect(em.find.mock.calls).toEqual([OPEN_QUERY])
+        expect(em.update.mock.calls).toEqual([ANSWERED("g1", "fact:f1"), ANSWERED("g2", "fact:f1")])
     })
 
     it("resolves across every module and leaves uncovered questions open", async () => {
         const em = mockEntityManager({
-            query: [
-                [SELECT_OPEN_GAPS, [rowOf({ module: "sales" })]],
-                [ANSWER_GAP, []],
-            ],
+            find: [KnowledgeGapEntity, [Object.assign(rowOf(), { module: "sales" })]],
+            update: [KnowledgeGapEntity, {}],
         })
         const service = await build(em)
 
@@ -311,23 +369,15 @@ describe("KnowledgeGapsService", () => {
             service.resolve(WS, { text: "coffee", module: null, minimum: 0.75, by: "document:d2" }),
         ).resolves.toBe(0)
 
-        expect(em.query.mock.calls).toEqual([
-            [SELECT_OPEN_GAPS, [WS, 300]],
-            [ANSWER_GAP, [WS, "g1", "document:d1"]],
-            [SELECT_OPEN_GAPS, [WS, 300]],
-        ])
+        expect(em.find.mock.calls).toEqual([OPEN_QUERY, OPEN_QUERY])
+        expect(em.update.mock.calls).toEqual([ANSWERED("g1", "document:d1")])
     })
 })
 
 describe("KnowledgeGapsService", () => {
     describe("openOfModule", () => {
         it("returns the total and mapped open gaps of the requested module with a capped limit", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_OPEN_GAPS_OF_MODULE, [rowOf()]],
-                    [COUNT_OPEN_GAPS_OF_MODULE, [{ total: 7 }]],
-                ],
-            })
+            const em = mockEntityManager({ find: [KnowledgeGapEntity, [rowOf()]], count: [KnowledgeGapEntity, 7] })
             const service = await build(em)
 
             await expect(service.openOfModule(WS, "chatbot", 250)).resolves.toEqual({
@@ -335,35 +385,36 @@ describe("KnowledgeGapsService", () => {
                 items: [gap],
             })
 
-            expect(em.query.mock.calls).toEqual([
-                [SELECT_OPEN_GAPS_OF_MODULE, [WS, "chatbot", 200]],
-                [COUNT_OPEN_GAPS_OF_MODULE, [WS, "chatbot"]],
+            expect(em.find.mock.calls).toEqual([
+                [
+                    KnowledgeGapEntity,
+                    plain({
+                        where: { workspaceId: WS, module: "chatbot", status: "open" },
+                        order: { count: "DESC", lastSeenAt: "DESC" },
+                        take: 200,
+                    }),
+                ],
+            ])
+            expect(em.count.mock.calls).toEqual([
+                [KnowledgeGapEntity, plain({ where: { workspaceId: WS, module: "chatbot", status: "open" } })],
             ])
         })
 
         it("defaults a missing total to zero and keeps a smaller requested limit", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_OPEN_GAPS_OF_MODULE, []],
-                    [COUNT_OPEN_GAPS_OF_MODULE, []],
-                ],
-            })
+            const em = mockEntityManager({ find: [KnowledgeGapEntity, []], count: [KnowledgeGapEntity, 0] })
             const service = await build(em)
 
             await expect(service.openOfModule(WS, "sales", 10)).resolves.toEqual({ openCount: 0, items: [] })
 
-            expect(em.query.mock.calls).toEqual([
-                [SELECT_OPEN_GAPS_OF_MODULE, [WS, "sales", 10]],
-                [COUNT_OPEN_GAPS_OF_MODULE, [WS, "sales"]],
-            ])
+            expect(em.find.mock.calls[0]?.[1]).toMatchObject({ take: 10 })
         })
     })
 
     it("returns the open count or zero when the database returns no count row", async () => {
         const em = mockEntityManager({
-            query: [
-                [COUNT_OPEN_GAPS, [{ total: 7 }]],
-                [COUNT_OPEN_GAPS, []],
+            count: [
+                [KnowledgeGapEntity, 7],
+                [KnowledgeGapEntity, 0],
             ],
         })
         const service = await build(em)
@@ -371,9 +422,9 @@ describe("KnowledgeGapsService", () => {
         await expect(service.countOpen(WS)).resolves.toBe(7)
         await expect(service.countOpen(WS)).resolves.toBe(0)
 
-        expect(em.query.mock.calls).toEqual([
-            [COUNT_OPEN_GAPS, [WS]],
-            [COUNT_OPEN_GAPS, [WS]],
+        expect(em.count.mock.calls).toEqual([
+            [KnowledgeGapEntity, plain({ where: { workspaceId: WS, status: "open" } })],
+            [KnowledgeGapEntity, plain({ where: { workspaceId: WS, status: "open" } })],
         ])
     })
 })

@@ -1,6 +1,5 @@
 export { ContentAiModule } from "./content-ai.module"
 export { ContentAiService } from "./content-ai.service"
-export { ContentGenerationCompletionService } from "./content-generation-completion.service"
 export { CONTENT_AI_ERROR_KINDS } from "./errors/content-ai.error"
 export { CONTENT_AI_MESSAGES } from "./messages/content-ai.messages"
 export type { ContentAiRequested, ContentAiStatus } from "./content-ai.contracts"

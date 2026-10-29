@@ -4,11 +4,13 @@ import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@s
 import type { MockEntityManager } from "@starci/jest-preset"
 import { EntitlementsService } from "@modules/domain/billing"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { SupabaseObjectsPort } from "@modules/integrations/supabase"
+import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { EVENT_BUS } from "@modules/platform/event-bus"
+import type { EventBus } from "@modules/platform/event-bus"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import { StoredNote } from "./knowledge-sources.contracts"
@@ -51,7 +53,9 @@ const inputOf = builder<AddSourceInput>({ kind: "text", title: "Hours", content:
 const build = async (em: MockEntityManager) => {
     const members = mock<WorkspaceMembersService>()
     const queue = mock<KnowledgeQueue>()
-    const storage = mock<SupabaseObjectsPort>()
+    const bus = mock<EventBus>()
+    bus.publish.mockResolvedValue(undefined)
+    const storage = mock<StorageObjectsPort>()
     const logger = mock<Logger>()
     const entitlements = mock<EntitlementsService>()
     const moduleRef = await Test.createTestingModule({
@@ -62,11 +66,12 @@ const build = async (em: MockEntityManager) => {
             { provide: KNOWLEDGE_STORAGE, useValue: storage },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: KnowledgeQueue, useValue: queue },
+            { provide: EVENT_BUS, useValue: bus },
             { provide: EntitlementsService, useValue: entitlements },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { service: moduleRef.get(KnowledgeSourcesService), members, queue, storage, logger }
+    return { service: moduleRef.get(KnowledgeSourcesService), members, queue, bus, storage, logger }
 }
 describe("KnowledgeSourcesService", () => {
     it("counts documents allowed for each audience and defaults an absent count to zero", async () => {
@@ -250,7 +255,7 @@ describe("KnowledgeSourcesService createUpload", () => {
 
     it("refuses an empty name and a storage that cannot sign", async () => {
         const { service, storage } = await build(mockEntityManager({ query: [SELECT_NEW_ID, [{ id: "uuid-1" }]] }))
-        storage.signedUpload.mockResolvedValue({ kind: "refused", code: "SUPABASE_PROVIDER_UNAVAILABLE" })
+        storage.signedUpload.mockResolvedValue({ kind: "refused", code: "OBJECT_STORAGE_UNAVAILABLE" })
         await expect(service.createUpload("u1", WS, " ")).rejects.toMatchObject({ code: codes.FileNameRequired })
         await expect(service.createUpload("u1", WS, "a.pdf")).rejects.toMatchObject({
             code: codes.UploadUnavailable,
@@ -298,13 +303,13 @@ describe("KnowledgeSourcesService readUpload", () => {
 
     it("answers null for an object that is not in storage", async () => {
         const { service, storage } = await build(mockEntityManager())
-        storage.download.mockResolvedValue({ kind: "refused", code: "SUPABASE_OBJECT_NOT_FOUND" })
+        storage.download.mockResolvedValue({ kind: "refused", code: "OBJECT_STORAGE_NOT_FOUND" })
         await expect(service.readUpload("p")).resolves.toBeNull()
     })
 
     it("throws for any other storage failure so the queue retries", async () => {
         const { service, storage } = await build(mockEntityManager())
-        storage.download.mockResolvedValue({ kind: "refused", code: "SUPABASE_PROVIDER_UNAVAILABLE" })
+        storage.download.mockResolvedValue({ kind: "refused", code: "OBJECT_STORAGE_UNAVAILABLE" })
         await expect(service.readUpload("p")).rejects.toMatchObject({ code: codes.UploadUnavailable })
     })
 })
@@ -361,7 +366,7 @@ describe("KnowledgeSourcesService the stages a worker moves a source through", (
         expect(em.query).toHaveBeenCalledWith(MARK_FAILED, ["s1", WS, "CODE"])
     })
 
-    it("records the stored passages, queues the facts and moves on in one transaction", async () => {
+    it("records the stored passages, publishes knowledge_source_indexed and moves on in one transaction", async () => {
         const tx = fakeTransaction(
             mockEntityManager({
                 query: [
@@ -370,10 +375,19 @@ describe("KnowledgeSourcesService the stages a worker moves a source through", (
                 ],
             }),
         )
-        const { service, queue } = await build(tx.em)
+        const { service, queue, bus } = await build(tx.em)
         await service.finishIndexing(WS, "s1", StoredNote.KeywordOnly, 3)
         expect(tx.em.query).toHaveBeenCalledWith(MARK_INDEXED, ["s1", WS, StoredNote.KeywordOnly, 3])
-        expect(queue.enqueueFacts).toHaveBeenCalledWith(job, expect.anything(), Date.parse(AT))
+        expect(queue.enqueueFacts).not.toHaveBeenCalled()
+        const key = "s1:" + Date.parse(AT)
+        expect(bus.publish).toHaveBeenCalledWith(
+            expect.objectContaining({
+                eventName: "knowledge_source_indexed",
+                payload: { ...job, indexedAt: Date.parse(AT), dedupeKey: key },
+            }),
+            expect.anything(),
+            key,
+        )
         expect(tx.em.query).toHaveBeenCalledWith(MARK_EXTRACTING, ["s1", WS])
         expect(tx.commits).toBe(1)
     })

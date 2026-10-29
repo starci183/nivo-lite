@@ -40,6 +40,7 @@ import {
     trimmedText,
 } from "./content-ai-prompt.policy"
 import type { BrandMaterial } from "./content-ai-prompt.policy"
+import type { InboxClaim } from "./content-ai.contracts"
 import { ContentAiError, ContentAiErrorCode } from "./errors/content-ai.error"
 
 type DraftItem = Pick<
@@ -275,8 +276,8 @@ export class ContentAiService {
     }
 
     /** Applies an engine result through the completion capability. */
-    complete(workspaceId: string, generationId: string): Promise<void> {
-        return this.completion.complete(workspaceId, generationId)
+    complete(workspaceId: string, generationId: string, claim: InboxClaim): Promise<void> {
+        return this.completion.complete(workspaceId, generationId, claim)
     }
 
     private async draftingBlocked(workspaceId: string): Promise<boolean> {

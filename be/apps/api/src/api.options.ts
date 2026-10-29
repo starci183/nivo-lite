@@ -2,7 +2,6 @@ import { AgentsService } from "@modules/domain/agents"
 import { KnowledgeSearchToolService } from "@modules/domain/agent-knowledge"
 import { TurnGatewayToolsService, TurnHandoffService } from "@modules/domain/customer-turns"
 import { ApprovalRequesterService, ModuleApprovalGateService, ModulePerformersService } from "@modules/domain/decisions"
-import { AutomationBusinessEventsService, AutomationPaymentReceiptsService } from "@modules/domain/automations"
 import {
     BookingToolsService,
     ConversationLeadsService,
@@ -58,8 +57,6 @@ export const AGENT_TOOLS_PORTS = {
 export const DECISIONS_PORTS = {
     agentDirectory: AgentsService,
     inboundEventStatus: InboundStatusService,
-    decisionEvents: AutomationBusinessEventsService,
-    paymentReceipts: AutomationPaymentReceiptsService,
     leadDirectory: LeadReadService,
     leadGenFlow: LeadFlowChainService,
     outboundAccessGate: OutboundAccessService,

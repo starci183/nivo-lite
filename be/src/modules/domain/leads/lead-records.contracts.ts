@@ -1,7 +1,5 @@
-import type { LeadRecordRow } from "./persistence/lead-records.rows"
-
 /** A lead, or null when the workspace has no such lead. */
-export type OptionalLeadRecord = LeadRecordRow | null
+export type OptionalLeadRecord = LeadRecord | null
 
 /** Nonempty public API facts to patch on an existing customer inside its request transaction. */
 export interface PublicLeadFactsPatch {
@@ -76,5 +74,29 @@ export interface ContactFill {
     /** The normalised phone, or null. */
     readonly phone: string | null
     /** The normalised email, or null. */
+    readonly email: string | null
+}
+
+/** public.leads as the lead records read it. */
+export interface LeadRecord {
+    /** The lead id. */
+    readonly id: string
+    /** The workspace. */
+    readonly workspace_id: string
+    /** The customer's name. */
+    readonly contact_name: string
+    /** The company. */
+    readonly company: string
+    /** The channel label. */
+    readonly channel: string
+    /** What the customer needs. */
+    readonly need: string
+    /** `new`, `qualified`, `proposal`, `won` or `lost`. */
+    readonly stage: string
+    /** The context brief, or null. */
+    readonly context_summary: string | null
+    /** The phone, or null. */
+    readonly phone: string | null
+    /** The email, or null. */
     readonly email: string | null
 }

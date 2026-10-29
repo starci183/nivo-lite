@@ -179,3 +179,13 @@ export interface RememberPartyParams {
     /** The party the connector answered. */
     readonly party: ConversationParty
 }
+
+/** A customer conversation linked to a lead: its id, the lead and who holds it. */
+export interface CustomerLeadConversation {
+    /** The conversation id. */
+    readonly id: string
+    /** The lead the customer became. */
+    readonly lead_id: string | null
+    /** The person who holds the conversation, or null while the agent answers. */
+    readonly handled_by: string | null
+}

@@ -14,20 +14,21 @@ import {
     OWNER,
     OWNER_REF,
     approvalRequestOf,
+    ESCALATION_EXPIRY_SET,
 } from "@tests/fixtures/builders/approval-requests.builder"
 import { ApprovalEscalationService } from "./approval-escalation.service"
 import { ApprovalLogEvent } from "./approval-requests.log-events"
 import { APPROVAL_AGENT_OWNERS } from "./approval-requests.decorators"
 import type { AgentOwnerRef, ApprovalAgentOwners } from "./approval-requests.port"
-import { FIND_OWNER_SEAT, RESOLVE_REQUEST } from "./persistence/approval-requests.sql"
+import { ApprovalRequestEntity } from "./persistence/entities"
+
+const FIND_OWNER_SEAT = "SELECT * FROM public.workspace_owner_member($1)"
 
 const build = async (owners: AgentOwnerRef | Error, seat: string | null = "member-owner") => {
     const tx = fakeTransaction(
         mockEntityManager({
-            query: [
-                [FIND_OWNER_SEAT, seat === null ? [] : [{ id: seat }]],
-                [RESOLVE_REQUEST, [{ id: "request-1" }]],
-            ],
+            query: [FIND_OWNER_SEAT, seat === null ? [] : [{ workspace_owner_member: seat }]],
+            update: [ApprovalRequestEntity, { affected: 1 }],
         }),
     )
     const agentOwners = mock<ApprovalAgentOwners>()
@@ -51,7 +52,7 @@ const expireWith = async (
     const built = await build(owners, options.seat)
     const row = approvalRequestOf()
     const event = await built.service.expire(built.tx.em, row, options.directory ?? DIRECTORY, new Date(NOW))
-    return { ...built, event, resolved: built.tx.em.query.mock.calls.at(-1)?.[1] }
+    return { ...built, event, resolved: built.tx.em.update.mock.calls.at(-1) }
 }
 
 describe("ApprovalEscalationService > expire", () => {
@@ -71,7 +72,7 @@ describe("ApprovalEscalationService > expire", () => {
             chainStepId: "step-1",
             escalatedTo: MINH_REF,
         })
-        expect(resolved).toEqual(["request-1", "expired", null, NOW, "member-minh"])
+        expect(resolved).toEqual([ApprovalRequestEntity, { id: "request-1", status: "pending" }, ESCALATION_EXPIRY_SET])
         expect(agentOwners.ownerOf).toHaveBeenCalledWith(AGENT)
     })
 
@@ -110,14 +111,14 @@ describe("ApprovalEscalationService > expire", () => {
         )
 
         expect(event.escalatedTo).toBeNull()
-        expect(resolved?.[4]).toBeNull()
+        expect(resolved?.[2]).toMatchObject({ escalatedTo: null })
     })
 
     it("leaves the request with nobody when the workspace has no owner seat at all", async () => {
         const { event, resolved } = await expireWith({ ownerMemberId: null, fallbackMemberId: null }, { seat: null })
 
         expect(event.escalatedTo).toBeNull()
-        expect(resolved?.[4]).toBeNull()
+        expect(resolved?.[2]).toMatchObject({ escalatedTo: null })
     })
 
     it("does not ask the agents when the agent that asked was deleted", async () => {

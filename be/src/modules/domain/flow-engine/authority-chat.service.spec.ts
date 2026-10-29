@@ -8,8 +8,8 @@ import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { AuthorityRuleRecord } from "@modules/domain/authority-rules"
 import { EvidenceService, ModuleCatalogService } from "@modules/domain/decisions"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
-import { DEEPSEEK_CLIENT } from "@modules/integrations/deepseek"
-import type { DeepseekClient } from "@modules/integrations/deepseek"
+import { AI_TASKS } from "@modules/domain/ai-tasks"
+import type { AiTasksService } from "@modules/domain/ai-tasks"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -399,7 +399,7 @@ const ruleOf = builder<AuthorityRuleRecord>({
     timeout_minutes: 30,
 })
 
-type Change = Awaited<ReturnType<DeepseekClient["parseAuthorityChat"]>>
+type Change = Awaited<ReturnType<AiTasksService["parseAuthorityChat"]>>
 
 const NOTHING: Change = {
     goals: {},
@@ -440,7 +440,7 @@ const build = async (actions: ReadonlyArray<AuthorityActionRecord> = [actionOf()
     const actionCatalog = mock<AuthorityActionsService>({ list: jest.fn().mockResolvedValue(actions) })
     const modules = mock<ModuleCatalogService>({ nameOf: jest.fn().mockResolvedValue("Sales") })
     const evidence = mock<EvidenceService>({ decide, log })
-    const ai = mock<DeepseekClient>({ parseAuthorityChat })
+    const ai = mock<AiTasksService>({ parseAuthorityChat })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AuthorityChatService,
@@ -451,7 +451,7 @@ const build = async (actions: ReadonlyArray<AuthorityActionRecord> = [actionOf()
             { provide: AuthorityActionsService, useValue: actionCatalog },
             { provide: ModuleCatalogService, useValue: modules },
             { provide: EvidenceService, useValue: evidence },
-            { provide: DEEPSEEK_CLIENT, useValue: ai },
+            { provide: AI_TASKS, useValue: ai },
         ],
     }).compile()
     return {

@@ -8,18 +8,16 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectInbox } from "@modules/platform/inbox"
+import type { Inbox } from "@modules/platform/inbox"
 import { BookingModelService } from "./booking-model.service"
 import { BookingNoticesService } from "./booking-notices.service"
 import type { BookingNotifier } from "./booking-notice.contracts"
-import type { BookingEffects, BookingEvent, BookingSettings } from "./bookings.contracts"
+import type { BookingEffects, BookingEvent, BookingSettings, InboxClaim } from "./bookings.contracts"
 import { InjectBookingNotifier } from "./bookings.decorators"
-import {
-    CLAIM_EFFECT,
-    RELEASE_EFFECT,
-    SELECT_BOOKING_FOR_EFFECTS,
-    SET_BOOKING_FEE,
-} from "./persistence/booking-effects.sql"
-import type { EffectsRow } from "./persistence/booking.rows"
+import { effectsQuery } from "./booking-effects.query"
+import type { EffectsRow } from "./booking-facts.contracts"
+import { BookingEntity } from "./persistence/entities"
 import { feeOf, noticeMark, noticeOf, remindersOf } from "./policies/booking-effects.policy"
 import type { NoticeKind } from "./policies/booking-effects.policy"
 
@@ -34,8 +32,9 @@ interface Applied {
 
 @Injectable()
 /**
- * What a change of a booking sets going that only the back end does. The change itself (a desk click, a customer's request, a chat) is a plain write the
- * database sends here on the booking_status queue; each effect is taken once with a mark on the booking, so a message delivered twice changes nothing twice:
+ * What a change of a booking sets going that only the back end does. The change itself (a desk click, a customer's request, a chat) is a plain write whose
+ * trigger publishes `booking_status_changed` in the same transaction; this is the `booking_effects` reactor. The delivery is claimed in the inbox in the
+ * transaction of the effects and the notice keeps its own mark, so a message delivered twice changes nothing twice and a notice that failed is tried again:
  * reminders are planned for a live booking and stopped for a closed one, the fee of a late cancellation or a no-show is recorded, a finished booking with a
  * price goes to the order chain, the evidence log gets its line and the customer is told in the chat the booking came from.
  */
@@ -44,6 +43,7 @@ export class BookingEffectsService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         @InjectMessageCatalog() private readonly messages: MessageCatalog,
+        @InjectInbox() private readonly inbox: Inbox,
         @InjectBookingNotifier() private readonly notifier: BookingNotifier,
         private readonly models: BookingModelService,
         private readonly notices: BookingNoticesService,
@@ -52,11 +52,17 @@ export class BookingEffectsService {
         private readonly inbound: InboundEventsService,
     ) {}
 
-    /** Applies the effects of one booking event. */
-    async apply(event: BookingEvent): Promise<BookingEffects> {
+    /**
+     * Applies the effects of one booking event, reading the booking as it is now under its row lock. The reminders, the fee, the order
+     * hand-off and the evidence line run once per delivery key; the notice to the customer, which comes last with the fee it states, is
+     * taken with its own mark on the booking, so a delivery whose notice failed after the effects committed sends it on the retry.
+     */
+    async apply(event: BookingEvent, claim: InboxClaim): Promise<BookingEffects> {
         if (event.workspaceId === "" || event.bookingId === "") return NO_EFFECTS
         const settings = await this.models.settings(event.workspaceId)
-        const applied = await this.entityManager.transaction((manager) => this.inTransaction(manager, event, settings))
+        const applied = await this.entityManager.transaction((manager) =>
+            this.inTransaction(manager, event, settings, claim),
+        )
         if (applied === null) return NO_EFFECTS
         const notified = await this.tell(event, applied.row, settings, applied.effects.feeVnd)
         return { ...applied.effects, notified }
@@ -66,12 +72,19 @@ export class BookingEffectsService {
         manager: EntityManager,
         event: BookingEvent,
         settings: BookingSettings,
+        claim: InboxClaim,
     ): Promise<Applied | null> {
-        const [row] = await manager.query<Array<EffectsRow>>(SELECT_BOOKING_FOR_EFFECTS, [
-            event.workspaceId,
-            event.bookingId,
-        ])
+        const row = await effectsQuery(manager, event.workspaceId, event.bookingId)
+            .setLock("pessimistic_write", undefined, ["b"])
+            .getRawOne<EffectsRow>()
         if (row === undefined) return null
+        if (!(await this.inbox.claim(claim.consumer, claim.dedupeKey, manager))) {
+            // A delivery this reactor already applied: nothing changes twice, the notice still has its own mark.
+            return {
+                row,
+                effects: { found: true, reminders: "none", feeVnd: row.cancel_fee_vnd, handedOff: false },
+            }
+        }
         const nowMs = this.clock.now().getTime()
         const live = row.status === "confirmed" || row.status === "rescheduled"
         const closed = row.status === "done" || row.status === "no_show" || row.status === "cancelled"
@@ -103,12 +116,14 @@ export class BookingEffectsService {
     ): Promise<number> {
         const fee = feeOf(row, settings)
         if (fee <= 0) return row.cancel_fee_vnd
-        const set = await manager.query<Array<{ id: string }>>(SET_BOOKING_FEE, [
-            event.workspaceId,
-            event.bookingId,
-            fee,
-        ])
-        return set.length > 0 ? fee : row.cancel_fee_vnd
+        const set = await manager
+            .createQueryBuilder(BookingEntity, "bo")
+            .update()
+            .set({ cancelFeeVnd: String(fee) })
+            .where({ workspaceId: event.workspaceId, id: event.bookingId, cancelFeeVnd: "0" })
+            .returning("id")
+            .execute()
+        return Array.isArray(set.raw) && set.raw.length > 0 ? fee : row.cancel_fee_vnd
     }
 
     private handOff(
@@ -133,12 +148,8 @@ export class BookingEffectsService {
     }
 
     private async logEvidence(manager: EntityManager, event: BookingEvent, row: EffectsRow): Promise<void> {
-        const first = await manager.query<Array<{ id: string }>>(CLAIM_EFFECT, [
-            event.workspaceId,
-            event.bookingId,
-            `evidence:${row.status}`,
-        ])
-        if (first.length === 0) return
+        const first = await this.claim(manager, event, `evidence:${row.status}`)
+        if (!first) return
         await this.events.record(
             {
                 workspaceId: event.workspaceId,
@@ -164,12 +175,8 @@ export class BookingEffectsService {
         const notice: NoticeKind | null = noticeOf(event.kind, row.status)
         if (notice === null) return false
         const mark = noticeMark(notice, row.reschedule_count)
-        const claimed = await this.entityManager.query<Array<{ id: string }>>(CLAIM_EFFECT, [
-            event.workspaceId,
-            event.bookingId,
-            mark,
-        ])
-        if (claimed.length === 0) return false
+        const claimed = await this.claim(this.entityManager, event, mark)
+        if (!claimed) return false
         let kept = false
         try {
             const facts = await this.notices.factsOf(event.workspaceId, row, settings, feeVnd)
@@ -187,7 +194,32 @@ export class BookingEffectsService {
             kept = result.kept
             return result.delivered
         } finally {
-            if (!kept) await this.entityManager.query(RELEASE_EFFECT, [event.workspaceId, event.bookingId, mark])
+            if (!kept) await this.release(event, mark)
         }
+    }
+
+    /** Takes a mark on a booking once: true the first time and false after, in one statement. */
+    private async claim(manager: EntityManager, event: BookingEvent, mark: string): Promise<boolean> {
+        const claimed = await manager
+            .createQueryBuilder(BookingEntity, "bo")
+            .update()
+            .set({ effects: () => "effects || jsonb_build_object(CAST(:mark AS text), true)" })
+            .where({ workspaceId: event.workspaceId, id: event.bookingId })
+            .andWhere("NOT (effects ? CAST(:mark AS text))")
+            .setParameter("mark", mark)
+            .returning("id")
+            .execute()
+        return Array.isArray(claimed.raw) && claimed.raw.length > 0
+    }
+
+    /** Gives a mark back, so a notice that did not reach the customer is tried again. */
+    private async release(event: BookingEvent, mark: string): Promise<void> {
+        await this.entityManager
+            .createQueryBuilder(BookingEntity, "bo")
+            .update()
+            .set({ effects: () => "effects - CAST(:mark AS text)" })
+            .where({ workspaceId: event.workspaceId, id: event.bookingId })
+            .setParameter("mark", mark)
+            .execute()
     }
 }

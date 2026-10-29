@@ -5,20 +5,30 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { KNOWLEDGE_QUEUE } from "@modules/queues/knowledge"
+import { entityRowBuilder, namedCalls } from "@tests/fixtures/builders/entity-row.builder"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { BrainCommandsService } from "./brain-commands.service"
-import {
-    BEGIN_COMMAND,
-    FAIL_COMMAND,
-    FINISH_COMMAND,
-    INSERT_COMMAND,
-    SELECT_COMMAND,
-    SELECT_COMMAND_STATE,
-} from "./persistence/brain-commands.sql"
+import { BrainCommandEntity } from "./persistence/entities"
+
+const rowOf = entityRowBuilder<BrainCommandEntity>({
+    id: "cmd-1",
+    workspaceId: "ws-1",
+    requestedBy: "user-1",
+    kind: "reindex",
+    payload: {},
+    status: "queued",
+    result: null,
+    errorCode: null,
+    createdAt: new Date("2026-10-13T02:00:00.000Z"),
+    finishedAt: null,
+})
 
 const build = async (entityManager: MockEntityManager) => {
     const tx = fakeTransaction(entityManager)
     const primary = mockEntityManager()
-    primary.query.mockImplementation(entityManager.query)
+    primary.findOne.mockImplementation(entityManager.findOne)
+    primary.update.mockImplementation(entityManager.update)
+    primary.createQueryBuilder.mockImplementation(entityManager.createQueryBuilder)
     primary.transaction.mockImplementation(tx.em.transaction)
     const members = mock<WorkspaceMembersService>()
     const outbox = recordingQueueOutbox()
@@ -36,14 +46,19 @@ const build = async (entityManager: MockEntityManager) => {
 describe("BrainCommandsService request", () => {
     it("writes the command and its job in one transaction and answers its id", async () => {
         const { commands, tx, primary, members, outbox } = await build(
-            mockEntityManager({ query: [INSERT_COMMAND, [{ id: "cmd-1" }]] }),
+            mockEntityManager({ insert: [BrainCommandEntity, { identifiers: [{ id: "cmd-1" }] }] }),
         )
 
         await expect(commands.request("user-1", "ws-1", "reindex", { source: "s-1" })).resolves.toBe("cmd-1")
 
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-        expect(tx.em.query.mock.calls).toEqual([[INSERT_COMMAND, ["ws-1", "user-1", "reindex", '{"source":"s-1"}']]])
-        expect(primary.query).not.toHaveBeenCalled()
+        expect(namedCalls(tx.em.insert.mock.calls)).toEqual([
+            [
+                "BrainCommandEntity",
+                { workspaceId: "ws-1", requestedBy: "user-1", kind: "reindex", payload: { source: "s-1" } },
+            ],
+        ])
+        expect(primary.insert).not.toHaveBeenCalled()
         expect(tx.outcomes).toEqual(["commit"])
         expect(outbox.jobsOf(KNOWLEDGE_QUEUE)).toEqual([
             { queue: KNOWLEDGE_QUEUE, payload: { commandId: "cmd-1", workspaceId: "ws-1" } },
@@ -64,9 +79,9 @@ describe("BrainCommandsService request", () => {
 describe("BrainCommandsService stateOf", () => {
     it("answers how the command of the person stands, or nothing for a command they did not ask", async () => {
         const em = mockEntityManager({
-            query: [
-                [SELECT_COMMAND_STATE, [{ status: "failed", result: null, error_code: "BRAIN_FAILED" }]],
-                [SELECT_COMMAND_STATE, []],
+            findOne: [
+                [BrainCommandEntity, rowOf({ status: "failed", result: null, errorCode: "BRAIN_FAILED" })],
+                [BrainCommandEntity, null],
             ],
         })
         const { commands } = await build(em)
@@ -77,27 +92,18 @@ describe("BrainCommandsService stateOf", () => {
             errorCode: "BRAIN_FAILED",
         })
         await expect(commands.stateOf("user-2", "ws-1", "cmd-1")).resolves.toBeNull()
-        expect(em.query).toHaveBeenCalledWith(SELECT_COMMAND_STATE, ["ws-1", "cmd-1", "user-2"])
+        expect(em.findOne).toHaveBeenCalledWith(BrainCommandEntity, {
+            select: { status: true, result: true, errorCode: true },
+            where: { workspaceId: "ws-1", id: "cmd-1", requestedBy: "user-2" },
+        })
     })
 })
 describe("BrainCommandsService get", () => {
     it("answers the command, or nothing when it is not there", async () => {
         const em = mockEntityManager({
-            query: [
-                [
-                    SELECT_COMMAND,
-                    [
-                        {
-                            id: "cmd-1",
-                            workspace_id: "ws-1",
-                            requested_by: "user-1",
-                            kind: "reindex",
-                            payload: { source: "s-1" },
-                            status: "queued",
-                        },
-                    ],
-                ],
-                [SELECT_COMMAND, []],
+            findOne: [
+                [BrainCommandEntity, rowOf({ payload: { source: "s-1" } })],
+                [BrainCommandEntity, null],
             ],
         })
         const { commands } = await build(em)
@@ -116,9 +122,9 @@ describe("BrainCommandsService get", () => {
 describe("BrainCommandsService begin, finish and fail", () => {
     it("takes an open command and refuses a closed one", async () => {
         const em = mockEntityManager({
-            query: [
-                [BEGIN_COMMAND, [{ id: "cmd-1" }]],
-                [BEGIN_COMMAND, []],
+            update: [
+                [BrainCommandEntity, { affected: 1 }],
+                [BrainCommandEntity, { affected: 0 }],
             ],
         })
         const { commands } = await build(em)
@@ -127,21 +133,32 @@ describe("BrainCommandsService begin, finish and fail", () => {
         await expect(commands.begin("ws-1", "cmd-1")).resolves.toBe(false)
     })
 
-    it("closes a command with its result or its stored code", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FINISH_COMMAND, []],
-                [FAIL_COMMAND, []],
-            ],
-        })
+    it("closes a command with its result, the jsonb null when it has none, or its stored code", async () => {
+        const em = mockEntityManager({ update: [BrainCommandEntity, { affected: 1 }] })
+        const [withResult, withNone] = queueQueryBuilders(em, [{ execute: {} }, { execute: {} }])
         const { commands } = await build(em)
 
         await commands.finish("ws-1", "cmd-1", { facts: 3 })
+        await commands.finish("ws-1", "cmd-3", null)
         await commands.fail("ws-1", "cmd-2", "BRAIN_FAILED")
 
-        expect(em.query.mock.calls).toEqual([
-            [FINISH_COMMAND, ["ws-1", "cmd-1", '{"facts":3}']],
-            [FAIL_COMMAND, ["ws-1", "cmd-2", "BRAIN_FAILED"]],
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(BrainCommandEntity, "bc")
+        expect(withResult?.callsOf("where")).toEqual([[{ workspaceId: "ws-1", id: "cmd-1" }]])
+        expect(withResult?.callsOf("setParameter")).toEqual([["result", '{"facts":3}']])
+        expect(withNone?.callsOf("setParameter")).toEqual([["result", "null"]])
+        expect(withResult?.callsOf("set")[0]?.[0]).toMatchObject({ status: "done", errorCode: null })
+        expect(namedCalls(em.update.mock.calls, 2)).toEqual([
+            [
+                "BrainCommandEntity",
+                { workspaceId: "ws-1", id: "cmd-2" },
+                {
+                    status: "failed",
+                    result: null,
+                    errorCode: "BRAIN_FAILED",
+                    payload: "function",
+                    finishedAt: "function",
+                },
+            ],
         ])
     })
 })

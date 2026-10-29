@@ -5,13 +5,14 @@ import { ApprovalGate, OfficeLog } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { inventoryItemOf, inventoryLocationOf } from "@tests/fixtures/builders/inventory.builder"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InventoryErrorCode } from "./errors/inventory.error"
 import { InventoryLocationsService } from "./inventory-locations.service"
 import { InventoryMovementsService } from "./inventory-movements.service"
 import { InventoryStockService } from "./inventory-stock.service"
-import { SELECT_ITEM, SELECT_ITEM_LABEL, SELECT_LOCATION_NAMES } from "./persistence/inventory.sql"
+import { InventoryItemEntity, InventoryLocationEntity } from "./persistence/entities"
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 const textLike = (text: string): unknown => expect.stringContaining(text)
@@ -20,22 +21,27 @@ const UUID = "0b8c1f0e-3a49-4b7e-9d3f-2c1f6a5d7e90"
 
 const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
 
-const itemRow = (overrides: Record<string, unknown> = {}) => ({
-    id: "item-1",
-    sku: "TEA",
-    name: "Tea",
-    unit: "kg",
-    units: [{ unit: "box", factor: 10 }],
-    category: "",
-    cost_vnd: "20000.00",
-    sell_price_vnd: null,
-    reorder_point: "0",
-    reorder_qty: "0",
-    supplier_id: null,
-    aliases: [],
-    active: true,
-    ...overrides,
-})
+const itemRow = (overrides: { [K in keyof InventoryItemEntity]?: InventoryItemEntity[K] } = {}): InventoryItemEntity =>
+    inventoryItemOf({
+        id: "item-1",
+        sku: "TEA",
+        name: "Tea",
+        unit: "kg",
+        units: [{ unit: "box", factor: 10 }],
+        category: "",
+        costVnd: "20000.00",
+        sellPriceVnd: null,
+        reorderPoint: "0",
+        reorderQty: "0",
+        supplierId: null,
+        aliases: [],
+        active: true,
+        ...overrides,
+    })
+
+const locationRow = (
+    overrides: { [K in keyof InventoryLocationEntity]?: InventoryLocationEntity[K] } = {},
+): InventoryLocationEntity => inventoryLocationOf(overrides)
 
 const build = async (entityManager: MockEntityManager) => {
     const catalog = mock<MessageCatalog>()
@@ -74,7 +80,7 @@ const build = async (entityManager: MockEntityManager) => {
 
 describe("InventoryStockService / adjustStock", () => {
     it("applies a small change at once, logs it and queues the low-stock check", async () => {
-        const em = mockEntityManager({ query: [SELECT_ITEM, [itemRow()]] })
+        const em = mockEntityManager({ findOne: [InventoryItemEntity, itemRow()] })
         const { service, movements, office, members } = await build(em)
 
         const result = await service.adjustStock("user-1", "ws-1", {
@@ -104,7 +110,7 @@ describe("InventoryStockService / adjustStock", () => {
     })
 
     it("sets the level to a counted quantity and names the default reason when none is typed", async () => {
-        const em = mockEntityManager({ query: [SELECT_ITEM, [itemRow({ cost_vnd: "0" })]] })
+        const em = mockEntityManager({ findOne: [InventoryItemEntity, itemRow({ costVnd: "0" })] })
         const { service, movements, locations } = await build(em)
 
         await service.adjustStock("user-1", "ws-1", { itemId: "item-1", counted: 13, reason: "" })
@@ -117,7 +123,7 @@ describe("InventoryStockService / adjustStock", () => {
     })
 
     it("names the manual reason when a change is typed without one", async () => {
-        const em = mockEntityManager({ query: [SELECT_ITEM, [itemRow()]] })
+        const em = mockEntityManager({ findOne: [InventoryItemEntity, itemRow()] })
         const { service, movements } = await build(em)
 
         await service.adjustStock("user-1", "ws-1", { itemId: "item-1", delta: 1, reason: "" })
@@ -129,7 +135,7 @@ describe("InventoryStockService / adjustStock", () => {
     })
 
     it("reads an input with neither a change nor a count as no change", async () => {
-        const em = mockEntityManager({ query: [SELECT_ITEM, [itemRow()]] })
+        const em = mockEntityManager({ findOne: [InventoryItemEntity, itemRow()] })
         const { service, movements } = await build(em)
 
         await expect(service.adjust("ws-1", "Lan", { itemId: "item-1", reason: "x" })).resolves.toEqual({
@@ -144,7 +150,7 @@ describe("InventoryStockService / adjustStock", () => {
 
 describe("InventoryStockService / adjustStock", () => {
     it("changes nothing when the count equals the level", async () => {
-        const em = mockEntityManager({ query: [SELECT_ITEM, [itemRow()]] })
+        const em = mockEntityManager({ findOne: [InventoryItemEntity, itemRow()] })
         const { service, movements } = await build(em)
 
         await expect(
@@ -155,7 +161,7 @@ describe("InventoryStockService / adjustStock", () => {
     })
 
     it("asks the owner for a big change and answers that it waits", async () => {
-        const em = mockEntityManager({ query: [SELECT_ITEM, [itemRow()]] })
+        const em = mockEntityManager({ findOne: [InventoryItemEntity, itemRow()] })
         const { service, gate, movements } = await build(em)
         gate.request.mockResolvedValue({ status: "waiting_decision", workItemId: "work-1" })
 
@@ -186,7 +192,7 @@ describe("InventoryStockService / adjustStock", () => {
     })
 
     it("words a big change on a free item without a value and answers applied when the gate let it through", async () => {
-        const em = mockEntityManager({ query: [SELECT_ITEM, [itemRow({ cost_vnd: "0" })]] })
+        const em = mockEntityManager({ findOne: [InventoryItemEntity, itemRow({ costVnd: "0" })] })
         const { service, gate, movements } = await build(em)
         gate.request.mockResolvedValue({ status: "done", workItemId: "work-1" })
         movements.levelAt.mockResolvedValueOnce(10).mockResolvedValueOnce(30)
@@ -207,7 +213,7 @@ describe("InventoryStockService / adjustStock", () => {
     })
 
     it("refuses an unknown item", async () => {
-        const em = mockEntityManager({ query: [SELECT_ITEM, []] })
+        const em = mockEntityManager({ findOne: [InventoryItemEntity, null] })
         const { service } = await build(em)
 
         await expect(
@@ -219,10 +225,10 @@ describe("InventoryStockService / adjustStock", () => {
 describe("InventoryStockService / stockTake", () => {
     it("counts each line and sums what was applied, waits and matched", async () => {
         const em = mockEntityManager({
-            query: [
-                [SELECT_ITEM, [itemRow()]],
-                [SELECT_ITEM, [itemRow()]],
-                [SELECT_ITEM, [itemRow()]],
+            findOne: [
+                [InventoryItemEntity, itemRow()],
+                [InventoryItemEntity, itemRow()],
+                [InventoryItemEntity, itemRow()],
             ],
         })
         const { service, gate, movements } = await build(em)
@@ -268,15 +274,10 @@ describe("InventoryStockService / transferStock", () => {
     }
     it("moves the goods out of one location and into the other under one key", async () => {
         const em = mockEntityManager({
-            query: [
-                [SELECT_ITEM_LABEL, [{ name: "Tea", unit: "kg" }]],
-                [
-                    SELECT_LOCATION_NAMES,
-                    [
-                        { id: "loc-1", name: "Main" },
-                        { id: "loc-2", name: "Shop" },
-                    ],
-                ],
+            findOne: [InventoryItemEntity, itemRow({ name: "Tea", unit: "kg" })],
+            find: [
+                InventoryLocationEntity,
+                [locationRow({ id: "loc-1", name: "Main" }), locationRow({ id: "loc-2", name: "Shop" })],
             ],
         })
         const { service, movements, office } = await build(em)
@@ -322,15 +323,10 @@ describe("InventoryStockService / transferStock", () => {
     }
     it("words the reason without a note", async () => {
         const em = mockEntityManager({
-            query: [
-                [SELECT_ITEM_LABEL, [{ name: "Tea", unit: "kg" }]],
-                [
-                    SELECT_LOCATION_NAMES,
-                    [
-                        { id: "loc-1", name: "Main" },
-                        { id: "loc-2", name: "Shop" },
-                    ],
-                ],
+            findOne: [InventoryItemEntity, itemRow({ name: "Tea", unit: "kg" })],
+            find: [
+                InventoryLocationEntity,
+                [locationRow({ id: "loc-1", name: "Main" }), locationRow({ id: "loc-2", name: "Shop" })],
             ],
         })
         const { service, movements } = await build(em)
@@ -347,12 +343,14 @@ describe("InventoryStockService / transferStock", () => {
 
     it("refuses the same location twice, a quantity that is not positive, an unknown item and an unknown location", async () => {
         const em = mockEntityManager({
-            query: [
-                [SELECT_ITEM_LABEL, []],
-                [SELECT_ITEM_LABEL, [{ name: "Tea", unit: "kg" }]],
-                [SELECT_LOCATION_NAMES, [{ id: "loc-1", name: "Main" }]],
-                [SELECT_ITEM_LABEL, [{ name: "Tea", unit: "kg" }]],
-                [SELECT_LOCATION_NAMES, [{ id: "loc-2", name: "Shop" }]],
+            findOne: [
+                [InventoryItemEntity, null],
+                [InventoryItemEntity, itemRow({ name: "Tea", unit: "kg" })],
+                [InventoryItemEntity, itemRow({ name: "Tea", unit: "kg" })],
+            ],
+            find: [
+                [InventoryLocationEntity, [locationRow({ id: "loc-1", name: "Main" })]],
+                [InventoryLocationEntity, [locationRow({ id: "loc-2", name: "Shop" })]],
             ],
         })
         const { service } = await build(em)
@@ -394,7 +392,7 @@ describe("InventoryStockService / performAdjustStock", () => {
         },
     }
     it("applies the approved change as a movement and queues the check", async () => {
-        const em = mockEntityManager({ query: [SELECT_ITEM_LABEL, [{ name: "Tea", unit: "kg" }]] })
+        const em = mockEntityManager({ findOne: [InventoryItemEntity, itemRow({ name: "Tea", unit: "kg" })] })
         const { service, movements } = await build(em)
 
         const result = await service.performAdjustStock(context)
@@ -415,7 +413,7 @@ describe("InventoryStockService / performAdjustStock", () => {
     })
 
     it("falls back to the default reason, the default location and a manual reference", async () => {
-        const em = mockEntityManager({ query: [SELECT_ITEM_LABEL, [{ name: "Tea", unit: "kg" }]] })
+        const em = mockEntityManager({ findOne: [InventoryItemEntity, itemRow({ name: "Tea", unit: "kg" })] })
         const { service, movements } = await build(em)
 
         await service.performAdjustStock({ ...context, fields: { item_id: "item-1", delta: 2 } })
@@ -433,7 +431,7 @@ describe("InventoryStockService / performAdjustStock", () => {
     })
 
     it("refuses an unknown item", async () => {
-        const em = mockEntityManager({ query: [SELECT_ITEM_LABEL, []] })
+        const em = mockEntityManager({ findOne: [InventoryItemEntity, null] })
         const { service } = await build(em)
 
         await expect(service.performAdjustStock(context)).rejects.toMatchObject({

@@ -5,7 +5,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { EmbeddingService } from "./embedding.service"
 import { KnowledgeError, KnowledgeErrorCode } from "./errors/knowledge.error"
-import type { AskInput, Lens, Passage } from "./knowledge.contracts"
+import type { AgentSearch, AskInput, Lens, Passage } from "./knowledge.contracts"
 import { lensOf } from "./lens.policy"
 import { toPassage } from "./passage.mapper"
 import type { ModuleAudienceRow, PassageRow } from "./persistence/search.rows"
@@ -32,18 +32,34 @@ export class KnowledgeSearchService {
     /** "Try asking": what an agent would retrieve for a question. Any member may try; the customer audience shows public passages only. */
     async ask(userId: string, workspaceId: string, input: AskInput): Promise<ReadonlyArray<Passage>> {
         await this.members.require(userId, workspaceId)
-        const question = input.question.trim().slice(0, QUESTION_MAX_CHARS)
-        const [row] = await this.entityManager.query<Array<ModuleAudienceRow>>(SELECT_MODULE_AUDIENCE, [input.module])
+        return this.forAgent({
+            workspaceId,
+            module: input.module,
+            audience: input.audience === "customer" ? "customer" : "internal",
+            installationId: input.installationId ?? null,
+            question: input.question,
+            limit: ASK_LIMIT,
+        })
+    }
+
+    /**
+     * What an agent lane may read for a question, with no member check: the retrieval step of a task the system runs for the agent.
+     * The lens is the same as in `ask`: a customer-facing module or audience sees public passages only, and the instance joins its
+     * own notes to the shared ones. A blank question finds nothing and spends nothing.
+     */
+    async forAgent(request: AgentSearch): Promise<ReadonlyArray<Passage>> {
+        const question = request.question.trim().slice(0, QUESTION_MAX_CHARS)
+        const [row] = await this.entityManager.query<Array<ModuleAudienceRow>>(SELECT_MODULE_AUDIENCE, [request.module])
         if (row === undefined) throw new KnowledgeError({ code: KnowledgeErrorCode.ModuleUnknown })
         if (question === "") return []
         const lens = lensOf({
-            workspaceId,
-            module: input.module,
+            workspaceId: request.workspaceId,
+            module: request.module,
             moduleAudience: row.audience === "customer" ? "customer" : "internal",
-            requestedAudience: input.audience === "customer" ? "customer" : "internal",
-            installationId: input.installationId ?? null,
+            requestedAudience: request.audience,
+            installationId: request.installationId,
         })
-        return this.passages(lens, question, ASK_LIMIT)
+        return this.passages(lens, question, request.limit)
     }
 
     /** Hybrid search over both layers, filtered by the lens in SQL; the embedding of the query is metered against the workspace. */

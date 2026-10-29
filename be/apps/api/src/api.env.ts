@@ -1,6 +1,5 @@
 import { parseBillingConfig } from "@modules/domain/billing"
-import type { EnvSource } from "@modules/platform/config"
-import { parseServerConfig } from "@modules/platform/config"
+import { parseServerConfig, type EnvSource } from "@modules/platform/config"
 import { parsePrimaryDatabaseConfig } from "@modules/platform/database"
 import { parseHttpSecurityConfig } from "@modules/platform/http-security"
 import { parseJobsConfig } from "@modules/platform/jobs"
@@ -21,13 +20,16 @@ import { parsePlatformAdminConfig } from "@modules/domain/platform-admin"
 import { parseWorkspaceInvitesConfig } from "@modules/domain/workspace-invites"
 import { parseWorkspacesConfig } from "@modules/domain/workspaces"
 import { parseDocumentsConfig } from "@modules/integrations/documents"
-import { parseAiPoolConfig } from "@modules/integrations/ai-pool"
+import { parseAiGatewayConfig } from "@modules/integrations/ai-gateway"
+import { parseAiConfig } from "@modules/integrations/ai"
 import { parseN8nConfig } from "@modules/integrations/n8n"
-import { parseDeepseekConfig } from "@modules/integrations/deepseek"
+import { parseAiTasksConfig } from "@modules/domain/ai-tasks"
 import { parseOpenclawConfig } from "@modules/integrations/openclaw"
 import { parseVideoConfig } from "@modules/domain/video"
 import { parseFfmpegConfig } from "@modules/integrations/ffmpeg"
-import { parseSupabaseConfig } from "@modules/integrations/supabase"
+import { parseObjectStorageConfig } from "@modules/integrations/object-storage"
+import { parseIdentityAuthConfig } from "@modules/domain/identity"
+import { parsePassportConfig } from "@modules/integrations/passport"
 import { parseConnectionsConfig } from "@modules/domain/connections"
 import { parseWebhookConnectionsConfig } from "@modules/domain/webhook-connections"
 import { parseChannelSetupConfig } from "@modules/integrations/channel-setup"
@@ -42,12 +44,16 @@ export interface ApiOptions {
     readonly server: ReturnType<typeof parseServerConfig>
     /** The origin allowlist and rate limits. */
     readonly httpSecurity: ReturnType<typeof parseHttpSecurityConfig>
-    /** The least-privilege PostgreSQL connection to the Supabase project. */
+    /** The least-privilege PostgreSQL connection. */
     readonly database: ReturnType<typeof parsePrimaryDatabaseConfig>
-    /** Supabase Auth, Storage and token-verification configuration. */
-    readonly supabase: ReturnType<typeof parseSupabaseConfig>
-    /** The AI pool: the DeepSeek and OpenRouter chat keys and the embeddings endpoint. */
-    readonly aiPool: ReturnType<typeof parseAiPoolConfig>
+    /** The S3 object store (MinIO) files live in. */
+    readonly storage: ReturnType<typeof parseObjectStorageConfig>
+    /** The AI pool: the upstream key, the profiles over it and the in-process gateway. */
+    readonly aiGateway: ReturnType<typeof parseAiGatewayConfig>
+    /** Our own access-token keys and the Google sign-in client. */
+    readonly passport: ReturnType<typeof parsePassportConfig>
+    /** The web origin, cookie domain and lifetimes of sign-in. */
+    readonly identityAuth: ReturnType<typeof parseIdentityAuthConfig>
     /** The Google Drive reader and the readers of office files and PDFs. */
     readonly documents: ReturnType<typeof parseDocumentsConfig>
     /** Whether a person with no workspace may create a free one. */
@@ -58,8 +64,8 @@ export interface ApiOptions {
     readonly billing: ReturnType<typeof parseBillingConfig>
     /** The OpenClaw gateway and the agent workspaces. */
     readonly openclaw: ReturnType<typeof parseOpenclawConfig>
-    /** The prompt library tunables. */
-    readonly deepseek: ReturnType<typeof parseDeepseekConfig>
+    /** The prompt library tunables and the AI endpoint it calls. */
+    readonly aiTasks: ReturnType<typeof parseAiTasksConfig>
     /** The key that seals the credentials of the connections. */
     readonly connectionSecrets: ReturnType<typeof parseConnectionSecretsConfig>
     /** The dedicated secret mixed into loyalty one-time code hashes. */
@@ -115,15 +121,17 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     server: parseServerConfig(env),
     httpSecurity: { ...parseHttpSecurityConfig(env), webhooks: {} },
     database: parsePrimaryDatabaseConfig(env),
-    supabase: parseSupabaseConfig(env),
-    aiPool: parseAiPoolConfig(env),
+    storage: parseObjectStorageConfig(env),
+    aiGateway: parseAiGatewayConfig(env),
+    passport: parsePassportConfig(env),
+    identityAuth: parseIdentityAuthConfig(env),
     documents: parseDocumentsConfig(env),
     platformAdmin: parsePlatformAdminConfig(env),
     workspaces: parseWorkspacesConfig(env),
     workspaceInvites: parseWorkspaceInvitesConfig(env),
     billing: parseBillingConfig(env),
     openclaw: parseOpenclawConfig(env),
-    deepseek: parseDeepseekConfig(env),
+    aiTasks: parseAiTasksConfig(env, parseAiConfig(env)),
     connectionSecrets: parseConnectionSecretsConfig(env),
     loyaltyOtps: parseLoyaltyOtpsConfig(env),
     channels: parseChannelsConfig(env),

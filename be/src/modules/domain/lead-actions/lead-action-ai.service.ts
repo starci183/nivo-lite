@@ -7,8 +7,8 @@ import { LeadRecordsService } from "@modules/domain/leads"
 import { MessagesService } from "@modules/domain/messages"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectDeepseekClient } from "@modules/integrations/deepseek"
-import type { DeepseekClient } from "@modules/integrations/deepseek"
+import { InjectAiTasks } from "@modules/domain/ai-tasks"
+import type { AiTasksService } from "@modules/domain/ai-tasks"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -36,7 +36,7 @@ export class LeadActionAiService {
         private readonly responsibilities: ResponsibilityJournalService,
         private readonly messages: MessagesService,
         private readonly members: WorkspaceMembersService,
-        @InjectDeepseekClient() private readonly ai: DeepseekClient,
+        @InjectAiTasks() private readonly ai: AiTasksService,
     ) {}
 
     /** Regenerates the customer's brief and records the brief and evidence together after the model answers. */

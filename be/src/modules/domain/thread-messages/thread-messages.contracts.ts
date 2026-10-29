@@ -251,7 +251,16 @@ export interface ThreadApprovalDecisionResult {
     readonly status: ApprovalOutcome
 }
 
-/** The event the approval capability raises when a request ends. */
+/** What a delivery of the event bus gives the inbox: the consumer's queue and the business key, claimed once per effect. */
+export interface InboxClaim {
+    /** The reactor's queue, the first half of the inbox key. */
+    readonly consumer: string
+    /** The business key of the fact, the second half. */
+    readonly dedupeKey: string
+}
+
+/** The fact the approval capability published when a request ended (`approval_resolved`). */
+
 export interface ApprovalResolved {
     /** The approval request. */
     readonly requestId: string
@@ -367,3 +376,56 @@ export const MAX_QUOTE_LENGTH = 2000
 
 /** The longest chain step title a message makes. */
 export const MAX_STEP_TITLE = 80
+
+/** One message joined with the name of its author, as the thread reads select it. */
+export interface ThreadMessageRecord {
+    /** The message id. */
+    readonly id: string
+    /** The thread. */
+    readonly thread_id: string
+    /** The workspace. */
+    readonly workspace_id: string
+    /** member or agent. */
+    readonly author_kind: string
+    /** The author id. */
+    readonly author_id: string
+    /** The author's display name, or empty. */
+    readonly author_name: string
+    /** The member's role or the agent's module, or empty. */
+    readonly author_role: string
+    /** The text. */
+    readonly body: string
+    /** The quoted customer words. */
+    readonly quoted: ReadonlyArray<string>
+    /** The tags with their chip names. */
+    readonly mentions: ReadonlyArray<MentionView>
+    /** The approval card, or null. */
+    readonly approval: ApprovalCard | null
+    /** When it was written. */
+    readonly created_at: Date
+}
+
+/** The newest line, the count and the pending flag of one thread. */
+export interface ThreadDigestRecord {
+    /** The thread. */
+    readonly thread_id: string
+    /** The newest message's text. */
+    readonly last_body: string
+    /** The newest message's instant. */
+    readonly last_at: Date
+    /** The number of messages. */
+    readonly message_count: number
+    /** Whether an approval card of the thread is pending. */
+    readonly waiting_approval: boolean
+}
+
+/** An agent of the workspace as a tag or a post names it. */
+export interface ThreadAgentRef {
+    /** The agent id. */
+    readonly id: string
+    /** The agent display name. */
+    readonly name: string
+}
+
+/** The agent a tag or a post names, or null when the workspace has none with that id. */
+export type OptionalThreadAgent = ThreadAgentRef | null

@@ -1,12 +1,12 @@
 import type { ContentCadence } from "./content-cadence.contracts"
-import type { ContentCadenceRow } from "./persistence/content-cadence.rows"
+import type { ContentCadenceEntity } from "./persistence/entities"
 
 /** Maps a stored posting rhythm. */
-export const toContentCadence = (row: ContentCadenceRow): ContentCadence => ({
+export const toContentCadence = (row: ContentCadenceEntity): ContentCadence => ({
     id: row.id,
-    workspaceId: row.workspace_id,
+    workspaceId: row.workspaceId,
     channel: row.channel,
-    postsPerWeek: row.posts_per_week,
+    postsPerWeek: row.postsPerWeek,
     days: row.days,
-    time: row.post_time,
+    time: row.postTime,
 })

@@ -8,11 +8,7 @@ import type { Inbox } from "@modules/platform/inbox"
 import { McpGatewayReceiptsError, McpGatewayReceiptsErrorCode } from "./errors/mcp-gateway-receipts.error"
 import { GatewayReceiptsService } from "./gateway-receipts.service"
 import type { GatewayCallResult } from "./mcp-gateway-receipts.contracts"
-import {
-    INSERT_GATEWAY_RECEIPT,
-    SELECT_GATEWAY_RECEIPT,
-    UPDATE_GATEWAY_RECEIPT,
-} from "./persistence/gateway-receipts.sql"
+import { McpGatewayReceiptEntity } from "./persistence/entities"
 
 const WORKSPACE = "workspace-1"
 const KEY = "message-1:hakuen.booking.hold"
@@ -21,14 +17,28 @@ const PENDING: GatewayCallResult = { ok: false, code: "unknown_outcome", detail:
 const SEALED = "sealed-result"
 const SEALED_PENDING = "sealed-pending"
 
-const build = async (rows = [{ result_sealed: SEALED }]) => {
+const receipt = (resultSealed: string) => Object.assign(new McpGatewayReceiptEntity(), { resultSealed })
+
+const INSERT_CALL = (workspaceId: string, resultSealed: string) => [
+    McpGatewayReceiptEntity,
+    { workspaceId, operationKey: KEY, resultSealed },
+]
+const UPDATE_CALL = (workspaceId: string, resultSealed: string) => [
+    McpGatewayReceiptEntity,
+    { workspaceId, operationKey: KEY },
+    { resultSealed },
+]
+const SELECT_CALL = [
+    McpGatewayReceiptEntity,
+    { select: { resultSealed: true }, where: { workspaceId: WORKSPACE, operationKey: KEY } },
+]
+
+const build = async (row: McpGatewayReceiptEntity | null = receipt(SEALED)) => {
     const tx = fakeTransaction(
         mockEntityManager({
-            query: [
-                [INSERT_GATEWAY_RECEIPT, []],
-                [UPDATE_GATEWAY_RECEIPT, []],
-                [SELECT_GATEWAY_RECEIPT, rows],
-            ],
+            insert: [McpGatewayReceiptEntity, {}],
+            update: [McpGatewayReceiptEntity, {}],
+            findOne: [McpGatewayReceiptEntity, row],
         }),
     )
     const inbox: Inbox = fakeInbox()
@@ -63,24 +73,23 @@ describe("GatewayReceiptsService intent", () => {
             expect(claim).toHaveBeenCalledWith("mcp.gateway", `${WORKSPACE}:${KEY}`, expect.anything())
             expect(isTransactionManager(claim.mock.calls[0]?.[2])).toBe(true)
             expect(tx.commits).toBe(1)
-            expect(tx.em.query.mock.calls).toEqual([[INSERT_GATEWAY_RECEIPT, [WORKSPACE, KEY, SEALED_PENDING]]])
+            expect(tx.em.insert.mock.calls).toEqual([INSERT_CALL(WORKSPACE, SEALED_PENDING)])
+            expect(tx.em.update).not.toHaveBeenCalled()
             return Promise.resolve(RESULT)
         })
         await expect(service.run(WORKSPACE, KEY, operation)).resolves.toEqual(RESULT)
         expect(operation).toHaveBeenCalledTimes(1)
         expect(secrets.seal).toHaveBeenCalledWith(JSON.stringify(RESULT))
-        expect(tx.em.query.mock.calls).toEqual([
-            [INSERT_GATEWAY_RECEIPT, [WORKSPACE, KEY, SEALED_PENDING]],
-            [UPDATE_GATEWAY_RECEIPT, [WORKSPACE, KEY, SEALED]],
-        ])
-        expect(JSON.stringify(tx.em.query.mock.calls)).not.toContain("private-result")
+        expect(tx.em.insert.mock.calls).toEqual([INSERT_CALL(WORKSPACE, SEALED_PENDING)])
+        expect(tx.em.update.mock.calls).toEqual([UPDATE_CALL(WORKSPACE, SEALED)])
+        expect(JSON.stringify([tx.em.insert.mock.calls, tx.em.update.mock.calls])).not.toContain("private-result")
         expect(tx.commits).toBe(1)
     })
 })
 
 describe("GatewayReceiptsService concurrent replay", () => {
     it("returns pending intent to a concurrent gateway instance without a second hold", async () => {
-        const { service, another, claim, tx, secrets } = await build([{ result_sealed: SEALED_PENDING }])
+        const { service, another, claim, tx, secrets } = await build(receipt(SEALED_PENDING))
         const other = await another()
         let finishOperation = () => {}
         const released = new Promise<void>((resolve) => {
@@ -104,11 +113,9 @@ describe("GatewayReceiptsService concurrent replay", () => {
         finishOperation()
         await expect(first).resolves.toEqual(RESULT)
         expect(operation).toHaveBeenCalledTimes(1)
-        expect(tx.em.query.mock.calls).toEqual([
-            [INSERT_GATEWAY_RECEIPT, [WORKSPACE, KEY, SEALED_PENDING]],
-            [SELECT_GATEWAY_RECEIPT, [WORKSPACE, KEY]],
-            [UPDATE_GATEWAY_RECEIPT, [WORKSPACE, KEY, SEALED]],
-        ])
+        expect(tx.em.insert.mock.calls).toEqual([INSERT_CALL(WORKSPACE, SEALED_PENDING)])
+        expect(tx.em.findOne.mock.calls).toEqual([SELECT_CALL])
+        expect(tx.em.update.mock.calls).toEqual([UPDATE_CALL(WORKSPACE, SEALED)])
         expect(tx.commits).toBe(2)
     })
 
@@ -132,12 +139,11 @@ describe("GatewayReceiptsService workspace and unsuccessful outcomes", () => {
         expect(operation).toHaveBeenCalledTimes(2)
         expect(claim).toHaveBeenNthCalledWith(1, "mcp.gateway", `${WORKSPACE}:${KEY}`, expect.anything())
         expect(claim).toHaveBeenNthCalledWith(2, "mcp.gateway", `workspace-2:${KEY}`, expect.anything())
-        expect(tx.em.query.mock.calls).toEqual([
-            [INSERT_GATEWAY_RECEIPT, [WORKSPACE, KEY, SEALED_PENDING]],
-            [UPDATE_GATEWAY_RECEIPT, [WORKSPACE, KEY, SEALED]],
-            [INSERT_GATEWAY_RECEIPT, ["workspace-2", KEY, SEALED_PENDING]],
-            [UPDATE_GATEWAY_RECEIPT, ["workspace-2", KEY, SEALED]],
+        expect(tx.em.insert.mock.calls).toEqual([
+            INSERT_CALL(WORKSPACE, SEALED_PENDING),
+            INSERT_CALL("workspace-2", SEALED_PENDING),
         ])
+        expect(tx.em.update.mock.calls).toEqual([UPDATE_CALL(WORKSPACE, SEALED), UPDATE_CALL("workspace-2", SEALED)])
     })
 
     it.each<GatewayCallResult>([
@@ -159,7 +165,7 @@ describe("GatewayReceiptsService workspace and unsuccessful outcomes", () => {
 
 describe("GatewayReceiptsService operation failure", () => {
     it("keeps pending intent when an operation throws so its retry cannot act again", async () => {
-        const { service, tx, claim } = await build([{ result_sealed: SEALED_PENDING }])
+        const { service, tx, claim } = await build(receipt(SEALED_PENDING))
         const failure = fault("operation failed before its outcome")
         const operation = jest.fn<Promise<GatewayCallResult>, []>().mockRejectedValue(failure)
         claim.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
@@ -168,10 +174,9 @@ describe("GatewayReceiptsService operation failure", () => {
         expect(operation).toHaveBeenCalledTimes(1)
         expect(tx.rollbacks).toBe(0)
         expect(tx.commits).toBe(2)
-        expect(tx.em.query.mock.calls).toEqual([
-            [INSERT_GATEWAY_RECEIPT, [WORKSPACE, KEY, SEALED_PENDING]],
-            [SELECT_GATEWAY_RECEIPT, [WORKSPACE, KEY]],
-        ])
+        expect(tx.em.insert.mock.calls).toEqual([INSERT_CALL(WORKSPACE, SEALED_PENDING)])
+        expect(tx.em.findOne.mock.calls).toEqual([SELECT_CALL])
+        expect(tx.em.update).not.toHaveBeenCalled()
     })
 })
 
@@ -185,14 +190,14 @@ describe("GatewayReceiptsService failed intent", () => {
         const operation = jest.fn(() => Promise.resolve(RESULT))
         await expect(service.run(WORKSPACE, KEY, operation)).rejects.toBe(failure)
         expect(tx.rollbacks).toBe(1)
-        expect(tx.em.query).not.toHaveBeenCalled()
+        expect(tx.em.insert).not.toHaveBeenCalled()
         expect(operation).not.toHaveBeenCalled()
     })
 
     it("does not issue the operation when pending intent cannot be persisted", async () => {
         const { service, tx } = await build()
         const failure = fault("intent write failed")
-        tx.em.query.mockRejectedValueOnce(failure)
+        tx.em.insert.mockRejectedValueOnce(failure)
         const operation = jest.fn(() => Promise.resolve(RESULT))
         await expect(service.run(WORKSPACE, KEY, operation)).rejects.toBe(failure)
         expect(operation).not.toHaveBeenCalled()
@@ -202,7 +207,7 @@ describe("GatewayReceiptsService failed intent", () => {
 
 describe("GatewayReceiptsService failed completion", () => {
     it("keeps pending intent when final sealing fails so a retry cannot call twice", async () => {
-        const { service, tx, claim, secrets } = await build([{ result_sealed: SEALED_PENDING }])
+        const { service, tx, claim, secrets } = await build(receipt(SEALED_PENDING))
         const failure = fault("final sealing failed")
         secrets.seal.mockReturnValueOnce(SEALED_PENDING).mockImplementationOnce(() => {
             throw failure
@@ -216,12 +221,9 @@ describe("GatewayReceiptsService failed completion", () => {
     })
 
     it("keeps pending intent when the final update fails so a retry cannot call twice", async () => {
-        const { service, tx, claim } = await build([{ result_sealed: SEALED_PENDING }])
+        const { service, tx, claim } = await build(receipt(SEALED_PENDING))
         const failure = fault("receipt write failed")
-        tx.em.query
-            .mockResolvedValueOnce([])
-            .mockRejectedValueOnce(failure)
-            .mockResolvedValueOnce([{ result_sealed: SEALED_PENDING }])
+        tx.em.update.mockRejectedValueOnce(failure)
         claim.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
         const operation = jest.fn(() => Promise.resolve(RESULT))
         await expect(service.run(WORKSPACE, KEY, operation)).rejects.toBe(failure)
@@ -233,7 +235,7 @@ describe("GatewayReceiptsService failed completion", () => {
 
 describe("GatewayReceiptsService unreadable receipts", () => {
     it("refuses a claim without a completed receipt instead of acting again", async () => {
-        const { service, tx, claim, secrets } = await build([])
+        const { service, tx, claim, secrets } = await build(null)
         claim.mockResolvedValue(false)
         const operation = jest.fn(() => Promise.resolve(RESULT))
         await expect(service.run(WORKSPACE, KEY, operation)).rejects.toMatchObject({

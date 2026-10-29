@@ -15,7 +15,7 @@ import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
 import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
 import { SetupWritesService } from "@modules/domain/module-setup-writes"
 import type { CardRecord, FactCardPayload, RuleCardPayload } from "@modules/domain/module-setup-writes"
-import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
+import { InstallationChangesService } from "./installation-changes.service"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { ACCOUNTING_MODULE } from "./accounting.contracts"
@@ -134,7 +134,7 @@ const build = async () => {
     const actions = mock<AuthorityActionsService>({ list: jest.fn().mockResolvedValue(REGISTRY) })
     const gaps = mock<KnowledgeGapsService>()
     const events = mock<EventsService>()
-    const sync = mock<AgentSyncService>()
+    const sync = mock<InstallationChangesService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             SetupCardsService,
@@ -151,7 +151,7 @@ const build = async () => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: mockEntityManager() },
             { provide: KnowledgeGapsService, useValue: gaps },
             { provide: EventsService, useValue: events },
-            { provide: AgentSyncService, useValue: sync },
+            { provide: InstallationChangesService, useValue: sync },
         ],
     }).compile()
     return {
@@ -387,7 +387,7 @@ describe("SetupCardsService > decide", () => {
             ],
             installationId: "inst-1",
         })
-        expect(sync.requestNow).toHaveBeenCalledWith({ workspaceId: "ws-1", installationId: null, force: false })
+        expect(sync.announceNow).toHaveBeenCalledWith({ workspaceId: "ws-1", installationId: null, force: false })
         expect(writes.close.mock.calls[0]?.[2]).toEqual({
             status: "applied",
             payload: { ...FACT, scope: "restricted" },

@@ -20,6 +20,7 @@ import { META_CLIENT } from "@modules/integrations/meta"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import type { EntityManager } from "typeorm"
+import { WorkspaceEntity } from "@modules/domain/workspaces"
 
 /** Explicit identities and signing/queue options supplied by the test composition root. */
 export interface WebhookBuilderOptions {
@@ -67,7 +68,7 @@ export const webhooksBuilder = (manager: EntityManager, meta: MetaClient, option
         const { userId, workspaceId, connectionId } = options
         await manager.transaction(async (tx) => {
             await tx.insert("auth.users", { id: userId })
-            await tx.insert("public.workspaces", { id: workspaceId, owner_id: userId, name: "Meta integration proof" })
+            await tx.insert(WorkspaceEntity, { id: workspaceId, ownerId: userId, name: "Meta integration proof" })
         })
         const build = async () => {
             // The actual provider client verifies and parses; business effects are observed at their module boundaries.

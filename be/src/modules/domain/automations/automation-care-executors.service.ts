@@ -1,29 +1,19 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AutomationRunsService } from "@modules/domain/automation-runs"
 import type { RunResult, RunStep } from "@modules/domain/automation-runs"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { AutomationMessagesService } from "./automation-messages.service"
-import type {
-    AutomationOffice,
-    ExecutorContext,
-    ExecutorMap,
-    ExecutorPayload,
-    FeedbackCheck,
-} from "./automation-ports.contracts"
+import type { AutomationOffice, ExecutorContext, ExecutorMap, ExecutorPayload } from "./automation-ports.contracts"
 import { InjectAutomationOffice } from "./automations.decorators"
-import { SELECT_BUILT_IN_CARE, SELECT_CONVERSATION } from "./persistence/automation-readers.sql"
-import type { ConversationReadRow } from "./persistence/automations.rows"
+import { readBuiltInCare, readConversation } from "./automation-reads.query"
 import { instantOf, vndText } from "./policies/format.policy"
 import { DAY_MS, textOf } from "./policies/trigger.policy"
 
 const TEN_MINUTES_MS = 600_000
 const TWENTY_MINUTES_MS = 1_200_000
 const AFTER_HOURS_CALLBACK_UTC_HOUR = 2
-const FEEDBACK_EXCERPT = 300
-const FEEDBACK_LINE = 200
 const OFFICE_EXCERPT = 160
 
 @Injectable()
@@ -36,7 +26,6 @@ export class AutomationCareExecutorsService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         @InjectAutomationOffice() private readonly office: AutomationOffice,
-        private readonly runs: AutomationRunsService,
         private readonly messages: AutomationMessagesService,
     ) {}
 
@@ -50,34 +39,6 @@ export class AutomationCareExecutorsService {
             debt_reminder: (context, payload) => this.debtReminder(context, payload),
             after_hours: (context, payload) => this.afterHours(context, payload),
         }
-    }
-
-    /**
-     * After a review request, the customer's next message is read for feedback: a negative one tags the owner in Office.
-     * Answers true when it raised an alert.
-     */
-    async checkFeedback(check: FeedbackCheck): Promise<boolean> {
-        const { context, leadId, feedback } = check
-        if (!(await this.messages.isNegative(feedback, context.workspaceId))) return false
-        await this.runs.markPayload(check.runId, {
-            ...check.runPayload,
-            alerted: { text: feedback.slice(0, FEEDBACK_EXCERPT), at: this.clock.now().toISOString() },
-        })
-        const lead = await this.messages.lead(context.workspaceId, leadId)
-        const name = lead?.contact_name ?? this.messages.say("customer")
-        await this.office.postLine(
-            context.workspaceId,
-            this.messages.say("feedback.line", { name, text: feedback.slice(0, FEEDBACK_LINE) }),
-            leadId,
-        )
-        await this.office.logEvidence(context.workspaceId, {
-            leadId,
-            kind: "automation.negative_review",
-            actor: this.messages.say("feedback.actor"),
-            summary: this.messages.say("feedback.summary", { name }),
-            evidence: feedback.slice(0, FEEDBACK_EXCERPT),
-        })
-        return true
     }
 
     private async thankPayment(context: ExecutorContext, payload: ExecutorPayload): Promise<RunResult> {
@@ -99,11 +60,7 @@ export class AutomationCareExecutorsService {
         const since = new Date(
             Number.isNaN(thankedAt) ? this.clock.now().getTime() - TWENTY_MINUTES_MS : thankedAt - TEN_MINUTES_MS,
         ).toISOString()
-        const [existing] = await this.entityManager.query<Array<{ id: string }>>(SELECT_BUILT_IN_CARE, [
-            context.workspaceId,
-            lead.id,
-            since,
-        ])
+        const existing = await readBuiltInCare(this.entityManager, context.workspaceId, lead.id, since)
         if (existing !== undefined) {
             const step: RunStep = {
                 label: say("step.skipped"),
@@ -234,10 +191,11 @@ export class AutomationCareExecutorsService {
 
     private async afterHours(context: ExecutorContext, payload: ExecutorPayload): Promise<RunResult> {
         const say = (key: string, params = {}): string => this.messages.say(key, params)
-        const [conversation] = await this.entityManager.query<Array<ConversationReadRow>>(SELECT_CONVERSATION, [
+        const conversation = await readConversation(
+            this.entityManager,
             context.workspaceId,
             textOf(payload.conversation_id),
-        ])
+        )
         if (conversation === undefined) return this.messages.skipped(say("after.noConversation"))
         if (conversation.handled_by) return this.messages.skipped(say("after.handled"))
         const lead = await this.messages.leadOf(

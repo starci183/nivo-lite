@@ -1,7 +1,7 @@
 import { negotiateLocale } from "@nivo-lite/i18n/proxy"
 import { NextRequest, NextResponse } from "next/server"
 import { sessionCookieOptions } from "./modules/config"
-import { onPublicOrigin, refreshSession } from "./modules/auth/server"
+import { checkSession, onPublicOrigin } from "./modules/auth"
 import { LOCALES, LOCALE_COOKIE } from "./modules/i18n"
 
 // The two destinations the proxy redirects to; the proxy cannot evaluate the routes barrel, so it names them itself.
@@ -30,9 +30,9 @@ const PUBLIC_PATHS = [
     "/health",
 ] // /b/<slug> and /api/b/<slug>: the public booking page (rate limited, honeypot, gate)
 
-// Roots the locale rewrite never touches: handlers, the auth return route, liveness and framework files. Every other path is served
+// Roots the locale rewrite never touches: handlers, liveness and framework files. Every other path is served
 // from /<locale>/... while the URL stays unprefixed (localePrefix "never"; the NIVO_LOCALE cookie decides).
-const UNNEGOTIATED_ROOTS: ReadonlySet<string> = new Set(["api", "auth", "health", "_next", "_vercel"])
+const UNNEGOTIATED_ROOTS: ReadonlySet<string> = new Set(["api", "health", "_next", "_vercel"])
 
 /** Segment-aware prefix match, so "/auth" never swallows "/authority". */
 const isPublicPath = (pathname: string): boolean =>
@@ -41,18 +41,6 @@ const isPublicPath = (pathname: string): boolean =>
 /** Only same-site paths may come back through `?next=`. */
 const safeNext = (value: string | null): string | null =>
     value && value.startsWith("/") && !value.startsWith("//") ? value : null
-
-type ResponseCookie = ReturnType<NextResponse["cookies"]["getAll"]>[number]
-
-/** Copies a cookie onto another response with every security attribute stated (the session cookies stay readable by the browser client). */
-const carryCookie = (target: NextResponse, cookie: ResponseCookie): void => {
-    target.cookies.set(cookie.name, cookie.value, {
-        ...sessionCookieOptions,
-        path: cookie.path ?? "/",
-        ...(cookie.maxAge === undefined ? {} : { maxAge: cookie.maxAge }),
-        ...(cookie.expires === undefined ? {} : { expires: cookie.expires }),
-    })
-}
 
 /**
  * The request the proxy and the locale negotiation see: no Accept-Language (a first visit stays Vietnamese-first, the reader opts
@@ -79,30 +67,19 @@ const adoptLocale = (request: NextRequest, locale: (typeof LOCALES)[number]): Ne
     return out
 }
 
-/** Refreshes the session, applies the locale rewrite, gates private paths with verified claims (a disabled seat is refused by the back end). */
+/** Checks the session with the back end (cookies forwarded), applies the locale rewrite, gates private paths (a disabled seat is refused by the back end). */
 export const proxy = async (original: NextRequest): Promise<NextResponse> => {
     const request = incomingOf(original)
     const { pathname } = request.nextUrl
     const handedOver = handedOverLocale(request)
     if (handedOver !== null) return adoptLocale(request, handedOver)
     const stamped = (): NextResponse => negotiateLocale(request, UNNEGOTIATED_ROOTS)
-    let response = stamped()
-    const cookiesBefore = request.headers.get("cookie")
-    const principal = await refreshSession(request, response)
-    if (request.headers.get("cookie") !== cookiesBefore) {
-        // A token refresh rewrote the request cookies: the page render must see the fresh ones, so the response is built again from them.
-        const rebuilt = stamped()
-        for (const cookie of response.cookies.getAll()) carryCookie(rebuilt, cookie)
-        response = rebuilt
-    }
+    const response = stamped()
+    const principal = await checkSession(request)
     const isPublic = isPublicPath(pathname)
 
-    /** A redirect (on the public origin, never the server bind address) that keeps any cookies the session refresh or sign-out just wrote. */
-    const redirectTo = (url: URL): NextResponse => {
-        const out = NextResponse.redirect(onPublicOrigin(request, url))
-        for (const cookie of response.cookies.getAll()) carryCookie(out, cookie)
-        return out
-    }
+    /** A redirect on the public origin, never the server bind address. */
+    const redirectTo = (url: URL): NextResponse => NextResponse.redirect(onPublicOrigin(request, url))
     const loginUrl = (): URL => {
         const url = request.nextUrl.clone()
         url.pathname = LOGIN_PATH

@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectSupabaseObjects } from "@modules/integrations/supabase"
-import type { SupabaseObjectsPort } from "@modules/integrations/supabase"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectStorageObjects } from "@modules/integrations/object-storage"
+import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { EntitlementsService } from "@modules/domain/billing"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
@@ -14,9 +14,7 @@ import type {
     VideoMediaItem,
     VideoMediaTicket,
 } from "./video-workbench.contracts"
-import type { MaybeWorkbenchRenderRow } from "./persistence/video-workbench.rows"
-import type { MediaIdentityRow } from "./persistence/video-media.rows"
-import { SELECT_VIDEO_MEDIA_ID } from "./persistence/video-media.sql"
+import type { MaybeStoredRender } from "./video-stored.contracts"
 import { workspaceMediaPath } from "./video-workbench.policy"
 
 const LINK_SECONDS = 3600
@@ -34,7 +32,7 @@ const MEDIA_MIME: ReadonlySet<string> = new Set([
 export class VideoMediaService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectSupabaseObjects() private readonly storage: SupabaseObjectsPort,
+        @InjectStorageObjects() private readonly storage: StorageObjectsPort,
         private readonly members: WorkspaceMembersService,
         private readonly entitlements: EntitlementsService,
     ) {}
@@ -72,18 +70,18 @@ export class VideoMediaService {
                 .replace(/[^a-zA-Z0-9.-]+/gu, "-")
                 .replace(/^[-.]+/u, "")
                 .slice(-80) || "file"
-        const [identity] = await this.entityManager.query<Array<MediaIdentityRow>>(SELECT_VIDEO_MEDIA_ID)
+        const [identity] = await callDbFunction<{ gen_random_uuid: string }>(this.entityManager, "gen_random_uuid", [])
         if (identity === undefined) {
             throw new VideoError({ code: VideoErrorCode.StorageFailed, params: { path: workspaceId } })
         }
-        const path = `${workspaceId}/${identity.id}-${filename}`
+        const path = `${workspaceId}/${identity.gen_random_uuid}-${filename}`
         const signed = await this.storage.signedUpload(MEDIA_BUCKET, path)
         if (signed.kind !== "ok") throw new VideoError({ code: VideoErrorCode.StorageFailed, params: { path } })
         return { path: signed.value.path, token: signed.value.token, signedUrl: signed.value.signedUrl }
     }
 
     /** Adds workspace checked playback addresses to a saved render. */
-    async render(row: MaybeWorkbenchRenderRow, workspaceId: string, title: string): Promise<MaybeWorkbenchRender> {
+    async render(row: MaybeStoredRender, workspaceId: string, title: string): Promise<MaybeWorkbenchRender> {
         if (row === null) return null
         const paths =
             row.status === "done"

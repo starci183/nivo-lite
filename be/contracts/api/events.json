@@ -1,0 +1,146 @@
+{
+  "events": {
+    "ai_generation_completed": {
+      "payload": {
+        "dedupeKey": "string",
+        "generationId": "string",
+        "purpose": "string",
+        "status": "done|error|cancelled",
+        "workspaceId": "string"
+      },
+      "version": 1
+    },
+    "approval_resolved": {
+      "payload": {
+        "action": "string",
+        "chainStepId": "string",
+        "decidedBy": "string|null",
+        "dedupeKey": "string",
+        "outcome": "approved|rejected|expired",
+        "requestId": "string",
+        "workspaceId": "string"
+      },
+      "version": 1
+    },
+    "bank_credit_booked": {
+      "payload": { "amountVnd": "number", "dedupeKey": "string", "inboundEventId": "string", "workspaceId": "string" },
+      "version": 1
+    },
+    "booking_status_changed": {
+      "payload": {
+        "bookingId": "string",
+        "dedupeKey": "string",
+        "kind": "created|status|moved",
+        "previous": "string|null",
+        "status": "string",
+        "workspaceId": "string"
+      },
+      "version": 1
+    },
+    "deal_won": {
+      "payload": {
+        "amountVnd": "number|null",
+        "channel": "string|null",
+        "company": "string|null",
+        "dedupeKey": "string",
+        "evidence": "string|null",
+        "leadId": "string",
+        "name": "string",
+        "need": "string|null",
+        "orderNo": "string|null",
+        "source": "string",
+        "workspaceId": "string"
+      },
+      "version": 1
+    },
+    "decision_made": {
+      "payload": {
+        "action": "string",
+        "decidedBy": "string",
+        "dedupeKey": "string",
+        "department": "string",
+        "leadId": "string|null",
+        "outcome": "string",
+        "summary": "string",
+        "workItemId": "string",
+        "workspaceId": "string"
+      },
+      "version": 1
+    },
+    "installation_changed": {
+      "payload": { "dedupeKey": "string", "force": "boolean", "installationId": "string|null", "workspaceId": "string" },
+      "version": 1
+    },
+    "knowledge_source_indexed": {
+      "payload": { "dedupeKey": "string", "indexedAt": "number", "sourceId": "string", "workspaceId": "string" },
+      "version": 1
+    },
+    "lead_captured": {
+      "payload": {
+        "channel": "string",
+        "company": "string",
+        "contactName": "string",
+        "dedupeKey": "string",
+        "email": "string|null",
+        "leadId": "string",
+        "need": "string",
+        "phone": "string|null",
+        "workspaceId": "string"
+      },
+      "version": 1
+    },
+    "order_confirmed": {
+      "payload": {
+        "amountVnd": "number|null",
+        "channel": "string|null",
+        "confirmedBy": "string",
+        "customer": "string",
+        "dedupeKey": "string",
+        "items": "string",
+        "leadId": "string|null",
+        "orderId": "string",
+        "orderNo": "string",
+        "workspaceId": "string"
+      },
+      "version": 1
+    },
+    "order_shipped": {
+      "payload": {
+        "carrier": "string",
+        "dedupeKey": "string",
+        "leadId": "string|null",
+        "orderId": "string",
+        "orderNo": "string",
+        "shippedAt": "string",
+        "trackingCode": "string",
+        "userId": "string",
+        "workspaceId": "string"
+      },
+      "version": 1
+    },
+    "payment_reconciled": {
+      "payload": {
+        "amountVnd": "number|null",
+        "channel": "string|null",
+        "contractId": "string|null",
+        "customer": "string",
+        "dedupeKey": "string",
+        "invoiceId": "string",
+        "invoiceNo": "string",
+        "leadId": "string|null",
+        "orderId": "string|null",
+        "orderNo": "string|null",
+        "paidAt": "string|null",
+        "periodEndsOn": "string|null",
+        "subjectId": "string|null",
+        "subjectType": "string|null",
+        "transactionId": "string|null",
+        "workItemId": "string",
+        "workspaceId": "string"
+      },
+      "version": 1
+    }
+  },
+  "schema": "starci/event-contract@1",
+  "service": "api"
+}

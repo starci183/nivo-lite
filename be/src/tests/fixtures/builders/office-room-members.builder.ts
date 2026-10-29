@@ -1,5 +1,19 @@
+import assert from "node:assert/strict"
 import type { EntityManager } from "typeorm"
 import { eachInOrder } from "@modules/platform/primitives"
+import { AgentEntity } from "@modules/domain/agents"
+import { OfficeRoomEntity, officeRoomsEntities } from "@modules/domain/office-rooms"
+import { StaffEntity } from "@modules/domain/staff"
+import { WorkspaceEntity } from "@modules/domain/workspaces"
+import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+
+const [, OfficeRoomMemberEntity] = officeRoomsEntities
+
+/** Narrows an indexed fixture id that the persisted story always provides. */
+const required = <T>(value: T | undefined): T => {
+    assert(value !== undefined)
+    return value
+}
 
 /** The accounts, memberships and room seats of one isolated room-list proof. */
 export interface OfficeRoomMembersIdentity {
@@ -77,51 +91,51 @@ const persistPeople = async (tx: EntityManager, identity: OfficeRoomMembersIdent
     await eachInOrder(identity.userIds, async (id, index) => {
         await tx.insert("auth.users", { id, raw_user_meta_data: PROFILE_METADATA[index] })
     })
-    await tx.insert("public.workspaces", {
+    await tx.insert(WorkspaceEntity, {
         id: identity.workspaceId,
-        owner_id: identity.ownerId,
+        ownerId: identity.ownerId,
         name: "Room members proof",
     })
-    await tx.insert("public.workspaces", {
+    await tx.insert(WorkspaceEntity, {
         id: identity.foreignWorkspaceId,
-        owner_id: identity.foreignUserId,
+        ownerId: identity.foreignUserId,
         name: "Foreign room members proof",
     })
     await tx.update(
-        "public.workspace_members",
-        { workspace_id: identity.workspaceId, user_id: identity.ownerId },
+        WorkspaceMemberEntity,
+        { workspaceId: identity.workspaceId, userId: identity.ownerId },
         {
-            display_name: "Owner",
-            created_at: LATER_JOIN,
+            displayName: "Owner",
+            createdAt: LATER_JOIN,
         },
     )
     await eachInOrder(identity.userIds, async (userId, index) => {
         const times = [FIRST_JOIN, SECOND_JOIN, THIRD_JOIN, LATER_JOIN, FIRST_JOIN]
-        await tx.insert("public.workspace_members", {
-            id: identity.memberIds[index],
-            workspace_id: identity.workspaceId,
-            user_id: userId,
+        await tx.insert(WorkspaceMemberEntity, {
+            id: required(identity.memberIds[index]),
+            workspaceId: identity.workspaceId,
+            userId: userId,
             role: index === 4 ? "manager" : "staff",
-            display_name: `Person ${index + 1}`,
+            displayName: `Person ${index + 1}`,
             status: index === 4 ? "disabled" : "active",
-            created_at: times[index],
+            createdAt: required(times[index]),
         })
     })
 }
 
 /** Unseated managers are fallback members; unlinked staff remain outside chat membership. */
 const persistFallbackPeople = async (tx: EntityManager, identity: OfficeRoomMembersIdentity): Promise<void> => {
-    await tx.insert("public.workspace_members", {
-        workspace_id: identity.workspaceId,
-        user_id: identity.managerId,
+    await tx.insert(WorkspaceMemberEntity, {
+        workspaceId: identity.workspaceId,
+        userId: identity.managerId,
         role: "manager",
-        display_name: "Manager",
+        displayName: "Manager",
         status: "active",
-        created_at: MANAGER_JOIN,
+        createdAt: MANAGER_JOIN,
     })
-    await tx.insert("public.staff", {
+    await tx.insert(StaffEntity, {
         id: identity.unlinkedStaffId,
-        workspace_id: identity.workspaceId,
+        workspaceId: identity.workspaceId,
         name: "Staff without an account",
         active: true,
     })
@@ -133,17 +147,17 @@ export const OFFICE_AGENT_AVATAR = "https://images.example.test/agent-one.png"
 /** Persists active and paused agents in both workspaces; only the first agent has a picture of its own. */
 const persistAgents = async (tx: EntityManager, identity: OfficeRoomMembersIdentity): Promise<void> => {
     await eachInOrder([...identity.agentIds, identity.foreignAgentId], async (id, index) => {
-        await tx.insert("public.agents", {
+        await tx.insert(AgentEntity, {
             id,
-            workspace_id: index === 4 ? identity.foreignWorkspaceId : identity.workspaceId,
+            workspaceId: index === 4 ? identity.foreignWorkspaceId : identity.workspaceId,
             module: "sales",
             name: index === 4 ? "Foreign agent" : `Agent ${index + 1}`,
             handle: `member-proof-${id}`,
             role: "Room preview proof",
             instructions: "Persisted room preview proof.",
             status: index === 3 ? "paused" : "active",
-            avatar_url: index === 0 ? OFFICE_AGENT_AVATAR : null,
-            created_at: index === 0 ? FIRST_JOIN : LATER_JOIN,
+            avatarUrl: index === 0 ? OFFICE_AGENT_AVATAR : null,
+            createdAt: index === 0 ? FIRST_JOIN : LATER_JOIN,
         })
     })
 }
@@ -153,29 +167,29 @@ const persistSeats = async (tx: EntityManager, identity: OfficeRoomMembersIdenti
     const people = identity.userIds
     const agents = identity.agentIds
     const seated = [
-        { user_id: people[0] },
-        { agent_id: agents[0] },
-        { user_id: people[1] },
-        { user_id: people[2] },
-        { user_id: people[3] },
-        { agent_id: agents[1] },
-        { user_id: people[4] },
-        { agent_id: agents[3] },
-        { user_id: identity.foreignUserId },
-        { agent_id: identity.foreignAgentId },
+        { userId: people[0] },
+        { agentId: agents[0] },
+        { userId: people[1] },
+        { userId: people[2] },
+        { userId: people[3] },
+        { agentId: agents[1] },
+        { userId: people[4] },
+        { agentId: agents[3] },
+        { userId: identity.foreignUserId },
+        { agentId: identity.foreignAgentId },
     ]
     const rows = seated.map((seat, index) => ({
-        id: identity.seatIds[index],
-        room_id: identity.roomIds[0],
-        created_at: index < 4 || index >= 6 ? FIRST_JOIN : LATER_JOIN,
+        id: required(identity.seatIds[index]),
+        roomId: identity.roomIds[0],
+        createdAt: index < 4 || index >= 6 ? FIRST_JOIN : LATER_JOIN,
         ...seat,
     }))
     await eachInOrder([...rows].reverse(), async (row) => {
-        await tx.insert("public.office_rooms_members", row)
+        await tx.insert(OfficeRoomMemberEntity, row)
     })
-    await tx.insert("public.office_rooms_members", { room_id: identity.roomIds[2], user_id: identity.foreignUserId })
-    await tx.insert("public.office_rooms_members", { room_id: identity.roomIds[2], agent_id: identity.foreignAgentId })
-    await tx.insert("public.office_rooms_members", { room_id: identity.roomIds[3], user_id: identity.userIds[4] })
+    await tx.insert(OfficeRoomMemberEntity, { roomId: identity.roomIds[2], userId: identity.foreignUserId })
+    await tx.insert(OfficeRoomMemberEntity, { roomId: identity.roomIds[2], agentId: identity.foreignAgentId })
+    await tx.insert(OfficeRoomMemberEntity, { roomId: identity.roomIds[3], userId: identity.userIds[4] })
 }
 
 /** Persists three groups and a foreign workspace, each under fresh ids owned by this proof. */
@@ -184,30 +198,30 @@ export const persistOfficeRoomMembers = (manager: EntityManager, identity: Offic
         await persistPeople(tx, identity)
         await persistFallbackPeople(tx, identity)
         await persistAgents(tx, identity)
-        await tx.insert("public.office_rooms", {
+        await tx.insert(OfficeRoomEntity, {
             id: identity.roomIds[0],
-            workspace_id: identity.workspaceId,
+            workspaceId: identity.workspaceId,
             key: "sales",
             name: "Sales",
             position: 1,
         })
-        await tx.insert("public.office_rooms", {
+        await tx.insert(OfficeRoomEntity, {
             id: identity.roomIds[1],
-            workspace_id: identity.workspaceId,
+            workspaceId: identity.workspaceId,
             key: "marketing",
             name: "Empty",
             position: 2,
         })
-        await tx.insert("public.office_rooms", {
+        await tx.insert(OfficeRoomEntity, {
             id: identity.roomIds[2],
-            workspace_id: identity.foreignWorkspaceId,
+            workspaceId: identity.foreignWorkspaceId,
             key: "sales",
             name: "Foreign sales",
             position: 1,
         })
-        await tx.insert("public.office_rooms", {
+        await tx.insert(OfficeRoomEntity, {
             id: identity.roomIds[3],
-            workspace_id: identity.workspaceId,
+            workspaceId: identity.workspaceId,
             key: "care",
             name: "Disabled person seat",
             position: 3,

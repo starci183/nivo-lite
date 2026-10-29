@@ -22,7 +22,10 @@ import { HiringJobsService } from "./hiring-jobs.service"
 import { HiringLinksService } from "./hiring-links.service"
 import { HiringSettingsService } from "./hiring-settings.service"
 import { HiringTextService } from "./hiring-text.service"
-import { CREATE_JOB, SET_JOB_ADS, SET_JOB_STATUS, UPDATE_JOB } from "./persistence/hiring.sql"
+const CREATE_JOB = "SELECT * FROM public.hiring_job_create($1, $2, $3, $4)"
+const UPDATE_JOB = "SELECT * FROM public.hiring_job_update($1, $2, $3)"
+const SET_JOB_STATUS = "SELECT * FROM public.hiring_job_status($1, $2, $3)"
+const SET_JOB_ADS = "SELECT * FROM public.hiring_job_ads($1, $2, $3)"
 const commonFields: Omit<JobRecord, "id" | "workspaceId" | "slug" | "status"> = {
     title: "Cashier",
     position: "",
@@ -198,7 +201,7 @@ const cases: Array<{ status: SetJobStatusParams["status"]; job: JobRecord; setti
 
 describe("HiringJobsService", () => {
     it.each(createCases)("creates $slug with cleaned fields", async ({ request, slug, fields }) => {
-        const em = mockEntityManager({ query: [CREATE_JOB, [{ id: "job-1" }]] })
+        const em = mockEntityManager({ query: [CREATE_JOB, [{ hiring_job_create: "job-1" }]] })
         const { service, members } = await build(em)
         await expect(service.saveJob("user-1", "ws-1", request)).resolves.toEqual({ id: "job-1", slug })
         expect(members.require.mock.calls).toEqual([["user-1", "ws-1", ["owner", "manager"]]])
@@ -208,7 +211,7 @@ describe("HiringJobsService", () => {
 
 describe("HiringJobsService", () => {
     it("cleans supplied fields and stores requirements and questions in row format", async () => {
-        const em = mockEntityManager({ query: [CREATE_JOB, [{ id: "job-1" }]] })
+        const em = mockEntityManager({ query: [CREATE_JOB, [{ hiring_job_create: "job-1" }]] })
         const { service } = await build(em)
         const request = requestOf({
             title: "Shop Cashier",
@@ -277,7 +280,11 @@ describe("HiringJobsService", () => {
 
 describe("HiringJobsService", () => {
     it.each([
-        { rows: [[], [{ id: null }], [{ id: "job-3" }]], result: { id: "job-3", slug: "cashier-3" }, count: 3 },
+        {
+            rows: [[], [{ hiring_job_create: null }], [{ hiring_job_create: "job-3" }]],
+            result: { id: "job-3", slug: "cashier-3" },
+            count: 3,
+        },
         { rows: [[]], result: null, count: 30 },
     ])("retries unavailable slugs exactly $count times", async ({ rows, result, count }) => {
         const em = mockEntityManager({ query: rows.map((row): [string, unknown] => [CREATE_JOB, row]) })
@@ -291,10 +298,10 @@ describe("HiringJobsService", () => {
     })
 
     it.each([
-        { rows: [{ value: true }], job: jobOf({ slug: "original-cashier" }), reads: [["ws-1", "job-1"]] },
+        { rows: [{ hiring_job_update: true }], job: jobOf({ slug: "original-cashier" }), reads: [["ws-1", "job-1"]] },
         { rows: [], job: undefined, reads: [] },
-        { rows: [{ value: false }], job: undefined, reads: [] },
-        { rows: [{ value: true }], job: undefined, reads: [["ws-1", "job-1"]] },
+        { rows: [{ hiring_job_update: false }], job: undefined, reads: [] },
+        { rows: [{ hiring_job_update: true }], job: undefined, reads: [["ws-1", "job-1"]] },
     ])("updates or refuses an unavailable job with result $rows", async ({ rows, job, reads }) => {
         const em = mockEntityManager({ query: [UPDATE_JOB, rows] })
         const { service, data } = await build(em)
@@ -348,7 +355,7 @@ describe("HiringJobsService", () => {
     })
 
     it.each(cases)("sets $status and ensures settings", async ({ status, job, settings: calls }) => {
-        const em = mockEntityManager({ query: [SET_JOB_STATUS, [{ value: true }]] })
+        const em = mockEntityManager({ query: [SET_JOB_STATUS, [{ hiring_job_status: true }]] })
         const { service, members, data, settings } = await build(em)
         data.job.mockResolvedValue(job)
         await expect(service.setStatus("user-1", "ws-1", { id: "job-1", status })).resolves.toEqual({ status })
@@ -426,7 +433,7 @@ describe("HiringJobsService", () => {
 
 describe("HiringJobsService", () => {
     it("fills every placeholder, appends missing links and stores exact elapsed time", async () => {
-        const em = mockEntityManager({ query: [SET_JOB_ADS, [{ value: true }]] })
+        const em = mockEntityManager({ query: [SET_JOB_ADS, [{ hiring_job_ads: true }]] })
         const { service, members, data, settings, office, links, generator, clock } = await build(em)
         generator.generate.mockImplementation(() => {
             clock.advance(250)
@@ -456,7 +463,7 @@ describe("HiringJobsService", () => {
     })
 
     it.each(retries)("retries %s with exact feedback and sanitising", async (first, second, feedback, sanitised) => {
-        const em = mockEntityManager({ query: [SET_JOB_ADS, [{ value: true }]] })
+        const em = mockEntityManager({ query: [SET_JOB_ADS, [{ hiring_job_ads: true }]] })
         const { service, generator } = await build(em)
         generator.generate
             .mockResolvedValueOnce({ ok: true, output: first })

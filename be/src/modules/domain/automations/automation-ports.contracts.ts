@@ -205,20 +205,6 @@ export type ScanOutcome = number | null
 /** Starts a run of the pipeline being scanned. */
 export type StartScanRun = (dedupe: string, triggerRef: string, payload: ExecutorPayload) => Promise<void>
 
-/** A customer's reply to read for feedback after a review request. */
-export interface FeedbackCheck {
-    /** The review pipeline. */
-    readonly context: ExecutorContext
-    /** The run that asked for the review. */
-    readonly runId: string
-    /** What that run was executed from. */
-    readonly runPayload: ExecutorPayload
-    /** What the customer wrote. */
-    readonly feedback: string
-    /** The customer. */
-    readonly leadId: string
-}
-
 /** What a scan of one pipeline gets. */
 export interface ScanContext extends ExecutorContext {
     /** The instant of the tick. */

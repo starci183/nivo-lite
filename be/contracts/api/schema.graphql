@@ -1774,6 +1774,11 @@ input ChangeMemberRoleInput {
   userId: ID! @inputBounds(maxLength: 36)
 }
 
+input ChangePasswordInput {
+  currentPassword: String! @inputBounds(maxLength: 128)
+  newPassword: String! @inputBounds(maxLength: 128)
+}
+
 input ChangeSmtpPasswordInput {
   connectionId: ID! @inputBounds(maxLength: 64)
   password: String! @inputBounds(maxLength: 500)
@@ -5031,6 +5036,7 @@ type Mutation {
   cancelOfficeCommand(input: OfficeCandidateIdInput!): OfficeAckType!
   cancelTelegramLogin(input: CancelTelegramLoginInput!): Boolean!
   changeMemberRole(input: ChangeMemberRoleInput!): Boolean!
+  changePassword(input: ChangePasswordInput!): Boolean!
   changeSmtpPassword(input: ChangeSmtpPasswordInput!): Boolean!
   checkConnection(input: CheckConnectionInput!): ConnectionCheckType!
   checkInBooking(input: CheckInBookingInput!): CheckInBookingType!
@@ -5093,6 +5099,7 @@ type Mutation {
   keepCurrentBrainFact(input: KeepCurrentBrainFactInput!): Int!
   linkContractCustomers: LinkContractCustomersType!
   linkHiringStaff(input: HiringCandidateRefInput!): LinkStaffType!
+  logoutOtherSessions: Boolean!
   maintainBrain: Boolean!
   markBookingNoShow(input: MarkBookingNoShowInput!): MarkBookingNoShowType!
   markChatDelivered(input: ChatReceiptInput!): ChatMarkerAckType!

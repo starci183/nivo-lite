@@ -6,9 +6,9 @@ import type { Connection, PageRequest } from "@modules/platform/pagination"
 import { eachInOrder } from "@modules/platform/primitives"
 import { persistPaginationChange, persistPaginationRows } from "../../fixtures/builders/pagination.builder"
 import type { PaginationFixture, PaginationIdentity } from "../../fixtures/builders/pagination.builder"
-import { CLEAN_USER, CLEAN_WORKSPACE } from "../../fixtures/persistence/proof.sql"
 import { PaginationProofModule } from "../../world/pagination-proof.module"
 import { useTestWorld } from "../../world/use-test-world"
+import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 
 const world = useTestWorld({ modules: [PaginationProofModule.register()] })
 
@@ -42,10 +42,10 @@ const seed = (): Promise<PaginationFixture> => {
         await eachInOrder(
             [identity.workspaceId, identity.foreignWorkspaceId, identity.emptyWorkspaceId],
             async (workspaceId) => {
-                await world.db.primary.query(CLEAN_WORKSPACE, [workspaceId])
+                await removeWorkspace(world.db.primary, workspaceId)
             },
         )
-        await world.db.primary.query(CLEAN_USER, [identity.userId])
+        await removeAuthUsers(world.db.primary, [identity.userId])
     })
     return persistPaginationRows(world.db.primary, identity)
 }

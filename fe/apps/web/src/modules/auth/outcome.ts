@@ -1,33 +1,31 @@
 import type { GraphQLResponse } from "@/modules/types"
 
-/** Failure kinds an Auth call can end with (carried as the `message` of a failed outcome; the provider code is its `error`). */
+/** Failure kinds an Auth call can end with (carried as the `message` of a failed outcome; the back end code is its `error`). */
 export type AuthFailureKind = "refused" | "not-found" | "invalid" | "unavailable"
 
 /** Wraps a value as a successful outcome. */
 export const authOk = <T>(value: T): GraphQLResponse<T> => ({ success: true, message: "ok", data: value })
 
-/** Builds an expected failure: the kind as the message, the provider code as the error. */
+/** Builds an expected failure: the kind as the message, the back end code as the error. */
 export const authFailure = <T = never>(kind: AuthFailureKind, code: string): GraphQLResponse<T> => ({
     success: false,
     message: kind,
     error: code,
 })
 
-/** The structural part of a Supabase Auth error this module interprets. */
-interface SupabaseAuthFailure {
-    readonly code?: string | undefined
-    readonly status?: number | undefined
-    readonly message: string
+/** The failure kind an HTTP status of the back end auth doors stands for. */
+const kindOfStatus = (status: number): AuthFailureKind => {
+    if (status === 401 || status === 403) return "refused"
+    if (status === 404) return "not-found"
+    return status === 400 || status === 409 || status === 410 || status === 422 ? "invalid" : "unavailable"
 }
 
-const REFUSED: ReadonlySet<string> = new Set(["401", "403", "invalid_credentials"])
+/** Codes a status falls back to when the body names none, so the friendly copy can pick its sentence. */
+export type StatusCodes = Readonly<Record<number, string>>
 
-/** Maps the error of a Supabase Auth call (null when it succeeded) into a failed outcome. */
-export const failureOf = <T = never>(error: SupabaseAuthFailure | null): GraphQLResponse<T> | undefined => {
-    if (error === null) return undefined
-    const code = error.code ?? String(error.status ?? "transport")
-    const signals = [error.code, error.status === undefined ? undefined : String(error.status)]
-    return signals.some((signal) => signal !== undefined && REFUSED.has(signal))
-        ? authFailure("refused", code)
-        : authFailure("unavailable", code)
-}
+/** Maps a non-ok answer of an auth door (status plus the optional `code` of its JSON body) into a failed outcome. */
+export const failureOfStatus = <T = never>(
+    status: number,
+    code: string | undefined,
+    fallbacks: StatusCodes = {},
+): GraphQLResponse<T> => authFailure(kindOfStatus(status), code ?? fallbacks[status] ?? String(status))

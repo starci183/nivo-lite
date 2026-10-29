@@ -19,7 +19,8 @@ import { PLATFORM_ADMIN_ERROR_KINDS } from "@modules/domain/platform-admin"
 import { MODULES_ERROR_KINDS } from "@modules/domain/modules"
 import { NIVO_KNOWLEDGE_ERROR_KINDS } from "@modules/domain/nivo-knowledge"
 import { PUBLIC_API_ERROR_KINDS } from "@modules/domain/public-api"
-import { SUPABASE_ERROR_KINDS } from "@modules/integrations/supabase"
+import { OBJECT_STORAGE_ERROR_KINDS } from "@modules/integrations/object-storage"
+import { PASSPORT_ERROR_KINDS } from "@modules/integrations/passport"
 import { BOOKINGS_ERROR_KINDS } from "@modules/domain/bookings"
 import { LOYALTY_CAMPAIGNS_ERROR_KINDS } from "@modules/domain/loyalty-campaigns"
 import { LOYALTY_ERROR_KINDS } from "@modules/domain/loyalty"
@@ -50,7 +51,8 @@ export const API_ERROR_KINDS_3 = [
     MODULES_ERROR_KINDS,
     NIVO_KNOWLEDGE_ERROR_KINDS,
     PUBLIC_API_ERROR_KINDS,
-    SUPABASE_ERROR_KINDS,
+    PASSPORT_ERROR_KINDS,
+    OBJECT_STORAGE_ERROR_KINDS,
     BOOKINGS_ERROR_KINDS,
     LOYALTY_CAMPAIGNS_ERROR_KINDS,
     LOYALTY_ERROR_KINDS,

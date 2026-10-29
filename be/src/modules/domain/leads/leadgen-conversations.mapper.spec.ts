@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { conversationFacts, median, vnDayStart } from "./leadgen-conversations.mapper"
-import type { LeadGenMessageRow, LeadGenWorkbenchRow } from "./persistence/leadgen-workbench.rows"
+import type { LeadGenMessageRecord, LeadGenWorkbenchInput } from "./leadgen-workbench.contracts"
 
 const SUBJECT = Symbol("leadgen-conversations.mapper")
 
@@ -13,7 +13,7 @@ const buildSubject = async () => {
 }
 
 const NOW = Date.parse("2026-10-12T12:00:00.000Z")
-const rowsOf = builder<LeadGenWorkbenchRow>({
+const rowsOf = builder<LeadGenWorkbenchInput>({
     nowMs: NOW,
     installationId: null,
     leads: [],
@@ -22,7 +22,7 @@ const rowsOf = builder<LeadGenWorkbenchRow>({
     messages: [],
     isTestRun: () => false,
 })
-const messageOf = builder<LeadGenMessageRow>({
+const messageOf = builder<LeadGenMessageRecord>({
     conversation_id: "conversation-1",
     role: "user",
     body: "Hello",

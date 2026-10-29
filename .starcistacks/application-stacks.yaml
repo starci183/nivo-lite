@@ -489,7 +489,7 @@ environments:
         nivo-web-app:
           app: web
           buildArgs:
-            values: {NEXT_PUBLIC_SITE_URL: "https://app.nivo.vn", NEXT_PUBLIC_LANDING_URL: "https://nivo.vn", NEXT_PUBLIC_API_URL: "https://api.nivo.vn", NEXT_PUBLIC_DEVELOPER_API_URL: "https://api.nivo.vn", NEXT_PUBLIC_SUPABASE_URL: "https://lytjlbytgqqykenajhgr.supabase.co", NEXT_PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_cOdpl9nzOJ3-a014rKmB6w_SzLbWRSI"}
+            values: {NEXT_PUBLIC_SITE_URL: "https://app.nivo.vn", NEXT_PUBLIC_LANDING_URL: "https://nivo.vn", NEXT_PUBLIC_API_URL: "https://api.nivo.vn", NEXT_PUBLIC_DEVELOPER_API_URL: "https://api.nivo.vn"}
         nivo-landing:
           app: landing
           buildArgs:

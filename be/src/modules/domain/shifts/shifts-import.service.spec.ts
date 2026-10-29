@@ -5,11 +5,12 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ShiftsErrorCode } from "./errors/shifts.error"
-import { APPLY_IMPORT } from "./persistence/shifts.sql"
 import { ShiftsDataService } from "./shifts-data.service"
 import { ShiftsImportService } from "./shifts-import.service"
 import { ShiftsTextService } from "./shifts-text.service"
 import type { Setup } from "./shifts.contracts"
+
+const APPLY_IMPORT = "SELECT * FROM public.shifts_import_apply($1, $2, $3, $4)"
 
 const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
 
@@ -121,7 +122,9 @@ describe("ShiftsImportService applyImport", () => {
 
 describe("ShiftsImportService applyImport", () => {
     it("writes the exact parsed setup and cycles position colors after the existing positions", async () => {
-        const em = mockEntityManager({ query: [APPLY_IMPORT, [{ counts: { positions: 2, staff: 2, blocks: 2 } }]] })
+        const em = mockEntityManager({
+            query: [APPLY_IMPORT, [{ shifts_import_apply: { positions: 2, staff: 2, blocks: 2 } }]],
+        })
         const { service, members, data, words } = await build(em)
 
         const result = await service.applyImport("user-1", "ws-1", {
@@ -199,7 +202,7 @@ describe("ShiftsImportService applyImport", () => {
     })
 
     it("imports only coverage using existing positions and returns zero counts when counts are null", async () => {
-        const em = mockEntityManager({ query: [APPLY_IMPORT, [{ counts: null }]] })
+        const em = mockEntityManager({ query: [APPLY_IMPORT, [{ shifts_import_apply: null }]] })
         const { service } = await build(em)
 
         const result = await service.applyImport("user-1", "ws-1", {

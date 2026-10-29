@@ -6,7 +6,7 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { ComposedMessage, LoadedPo } from "./inventory.contracts"
 import { formatDay, formatMoney, formatQty } from "./policies/number-format.policy"
-import { SELECT_BRAND_VOICE } from "./persistence/inventory.sql"
+import { AuthorityEntity } from "@modules/domain/authority"
 
 /** How long the text generator may take before the plain template is used. */
 const GENERATE_TIMEOUT_MS = 40_000
@@ -69,7 +69,13 @@ export class InventoryOrderMessageService {
                       list,
                       expected: due === "" ? "" : this.text("inventory.orderExpected", { date: due }),
                   })
-        const [voiceRow] = await this.entityManager.query<Array<VoiceRow>>(SELECT_BRAND_VOICE, [workspaceId])
+        const voiceRow = await this.entityManager
+            .createQueryBuilder(AuthorityEntity, "a")
+            .select("a.brand_voice", "brand_voice")
+            .addSelect("a.reply_style", "reply_style")
+            .where("a.workspace_id = :workspaceId", { workspaceId })
+            .limit(1)
+            .getRawOne<VoiceRow>()
         const voice = [voiceRow?.brand_voice, voiceRow?.reply_style].filter(Boolean).join(" ").slice(0, VOICE_MAX)
         const facts = [
             this.text("inventory.ai.factShop", { shop }),

@@ -8,16 +8,12 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
+import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
 import { ContentConfigurationService } from "./content-configuration.service"
 import { CONTENT_CADENCE_PRESETS } from "./content-configuration.templates"
 import { ContentSettingsErrorCode } from "./errors/content-settings.error"
-import {
-    ENSURE_CONFIGURATION,
-    LOCK_CONFIGURATION,
-    SAVE_CONFIGURATION_BRAND,
-    SELECT_CONFIGURATION_BRAND,
-    SET_CONFIGURATION_AUTOMATION,
-} from "./persistence/content-configuration.sql"
+import { ContentSettingsEntity } from "./persistence/entities"
 
 const EMPTY_SETTINGS = {
     workspaceId: "ws-1",
@@ -29,27 +25,34 @@ const EMPTY_SETTINGS = {
     marks: {},
 }
 
+const settingsRow = entityRowBuilder<ContentSettingsEntity>({
+    workspaceId: "ws-1",
+    brandVoice: "warm",
+    avoid: "slang",
+    cta: "Book",
+    hashtags: ["#tea", "#coffee"],
+    automations: { today_reminder: true },
+    marks: { reminder_day: "2026-10-12" },
+    updatedAt: new Date("2026-10-12T00:00:00.000Z"),
+    brandColors: [],
+    brandFonts: [],
+    brandTone: "",
+    brandImagery: [],
+    brandSource: "",
+})
+
+const STORED = {
+    workspaceId: "ws-1",
+    brandVoice: "warm",
+    avoid: "slang",
+    cta: "Book",
+    hashtags: ["#tea", "#coffee"],
+    automations: { today_reminder: true, offer_draft: false, weekly_summary: false },
+    marks: { reminder_day: "2026-10-12" },
+}
+
 const build = async (
-    em: MockEntityManager = mockEntityManager({
-        query: [
-            [SAVE_CONFIGURATION_BRAND, []],
-            [SET_CONFIGURATION_AUTOMATION, []],
-            [
-                SELECT_CONFIGURATION_BRAND,
-                [
-                    {
-                        workspace_id: "ws-1",
-                        brand_voice: "warm",
-                        avoid: "slang",
-                        cta: "Book",
-                        hashtags: ["#tea", "#coffee"],
-                        automations: { today_reminder: true },
-                        marks: { week: "2026-10-12" },
-                    },
-                ],
-            ],
-        ],
-    }),
+    em: MockEntityManager = mockEntityManager({ findOne: [ContentSettingsEntity, settingsRow()] }),
 ) => {
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue({
@@ -79,6 +82,13 @@ const build = async (
     return { settings: moduleRef.get(ContentConfigurationService), em, members, pillars, cadence, catalog }
 }
 
+/** A transaction whose lock statements both answer. */
+const lockedTransaction = () => {
+    const tx = fakeTransaction(mockEntityManager())
+    const fakes = queueQueryBuilders(tx.em, Array.from({ length: 4 }, () => [{ execute: {} }, { getOne: null }]).flat())
+    return { tx, fakes }
+}
+
 describe("ContentConfigurationService", () => {
     it("reads empty themes and the stored brand after membership is proved", async () => {
         const { settings, members } = await build()
@@ -93,7 +103,7 @@ describe("ContentConfigurationService", () => {
                 cta: "Book",
                 hashtags: ["#tea", "#coffee"],
                 automations: { today_reminder: true, offer_draft: false, weekly_summary: false },
-                marks: { week: "2026-10-12" },
+                marks: { reminder_day: "2026-10-12" },
             },
         })
 
@@ -112,7 +122,9 @@ describe("ContentConfigurationService", () => {
     })
 
     it("saves the brand voice and at most the distinct hashtags", async () => {
-        const { settings, em } = await build()
+        const em = mockEntityManager({ findOne: [ContentSettingsEntity, settingsRow()] })
+        const [insert] = queueQueryBuilders(em, [{ execute: {} }])
+        const { settings } = await build(em)
 
         await expect(
             settings.saveBrand("user-1", "ws-1", {
@@ -121,29 +133,19 @@ describe("ContentConfigurationService", () => {
                 cta: " Book ",
                 hashtags: "tea coffee tea",
             }),
-        ).resolves.toEqual({
-            workspaceId: "ws-1",
-            brandVoice: "warm",
-            avoid: "slang",
-            cta: "Book",
-            hashtags: ["#tea", "#coffee"],
-            automations: { today_reminder: true, offer_draft: false, weekly_summary: false },
-            marks: { week: "2026-10-12" },
-        })
+        ).resolves.toEqual(STORED)
 
-        expect(em.query).toHaveBeenCalledWith(SAVE_CONFIGURATION_BRAND, [
-            "ws-1",
-            "warm",
-            "slang",
-            "Book",
-            ["#tea", "#coffee"],
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(ContentSettingsEntity, "cs")
+        expect(insert?.callsOf("values")).toEqual([
+            [{ workspaceId: "ws-1", brandVoice: "warm", avoid: "slang", cta: "Book", hashtags: ["#tea", "#coffee"] }],
         ])
+        expect(insert?.callsOf("orUpdate")).toEqual([[["brand_voice", "avoid", "cta", "hashtags"], ["workspace_id"]]])
     })
 })
 
 describe("ContentConfigurationService", () => {
     it("answers blank brand settings when none are stored", async () => {
-        const em = mockEntityManager({ query: [SELECT_CONFIGURATION_BRAND, []] })
+        const em = mockEntityManager({ findOne: [ContentSettingsEntity, null] })
         const members = mock<WorkspaceMembersService>()
         members.require.mockResolvedValue({
             userId: "user-1",
@@ -178,14 +180,7 @@ describe("ContentConfigurationService", () => {
     })
 
     it("replaces themes when every kept id still exists", async () => {
-        const tx = fakeTransaction(
-            mockEntityManager({
-                query: [
-                    [ENSURE_CONFIGURATION, []],
-                    [LOCK_CONFIGURATION, []],
-                ],
-            }),
-        )
+        const { tx, fakes } = lockedTransaction()
         const { settings, pillars } = await build(tx.em)
         pillars.list.mockResolvedValue([
             { id: "p1", workspaceId: "ws-1", name: "Tea", description: "", weight: 1, sort: 0, active: true },
@@ -197,22 +192,18 @@ describe("ContentConfigurationService", () => {
 
         await expect(settings.savePillars("user-1", "ws-1", rows)).resolves.toEqual({ count: 2 })
         expect(pillars.replace).toHaveBeenCalledWith(expect.anything(), "ws-1", rows)
-        expect(tx.em.query).toHaveBeenCalledWith(ENSURE_CONFIGURATION, ["ws-1"])
-        expect(tx.em.query).toHaveBeenCalledWith(LOCK_CONFIGURATION, ["ws-1"])
+        const [ensure, lock] = fakes
+        expect(ensure?.callsOf("values")).toEqual([[{ workspaceId: "ws-1" }]])
+        expect(ensure?.callsOf("orIgnore")).toEqual([[]])
+        expect(lock?.callsOf("where")).toEqual([["settings.workspaceId = :workspaceId", { workspaceId: "ws-1" }]])
+        expect(lock?.callsOf("setLock")).toEqual([["pessimistic_write"]])
         expect(tx.commits).toBe(1)
     })
 })
 
 describe("ContentConfigurationService", () => {
     it("refuses a repeated theme id and an id the workspace does not have", async () => {
-        const tx = fakeTransaction(
-            mockEntityManager({
-                query: [
-                    [ENSURE_CONFIGURATION, []],
-                    [LOCK_CONFIGURATION, []],
-                ],
-            }),
-        )
+        const { tx } = lockedTransaction()
         const { settings, pillars } = await build(tx.em)
         pillars.list.mockResolvedValue([])
         const same = { id: "p1", name: "Tea", description: "", weight: 1, active: true }
@@ -227,14 +218,7 @@ describe("ContentConfigurationService", () => {
     })
 
     it("adds the suggested themes only when the workspace has none", async () => {
-        const tx = fakeTransaction(
-            mockEntityManager({
-                query: [
-                    [ENSURE_CONFIGURATION, []],
-                    [LOCK_CONFIGURATION, []],
-                ],
-            }),
-        )
+        const { tx } = lockedTransaction()
         const { settings, pillars, catalog } = await build(tx.em)
         await expect(settings.applyPillarPresets("user-1", "ws-1")).resolves.toEqual({ count: 5 })
         expect(catalog.get).toHaveBeenCalledWith("content.preset.0.name", {}, "vi")
@@ -254,14 +238,7 @@ describe("ContentConfigurationService", () => {
     })
 
     it("replaces the cadence and refuses a repeated channel", async () => {
-        const tx = fakeTransaction(
-            mockEntityManager({
-                query: [
-                    [ENSURE_CONFIGURATION, []],
-                    [LOCK_CONFIGURATION, []],
-                ],
-            }),
-        )
+        const { tx } = lockedTransaction()
         const { settings, cadence } = await build(tx.em)
         const row: ContentCadenceDraft = { channel: "facebook", postsPerWeek: 2, days: [1], time: "09:00" }
         const rows = [row]
@@ -275,14 +252,7 @@ describe("ContentConfigurationService", () => {
 
 describe("ContentConfigurationService", () => {
     it("applies the suggested Facebook and Zalo cadence", async () => {
-        const tx = fakeTransaction(
-            mockEntityManager({
-                query: [
-                    [ENSURE_CONFIGURATION, []],
-                    [LOCK_CONFIGURATION, []],
-                ],
-            }),
-        )
+        const { tx } = lockedTransaction()
         const { settings, cadence } = await build(tx.em)
         await expect(settings.applyCadencePresets("user-1", "ws-1")).resolves.toEqual({
             count: CONTENT_CADENCE_PRESETS.length,
@@ -291,21 +261,23 @@ describe("ContentConfigurationService", () => {
     })
 
     it("switches one automation and keeps fifteen distinct hashtags", async () => {
-        const { settings, em } = await build()
+        const em = mockEntityManager({ findOne: [ContentSettingsEntity, settingsRow()] })
+        const [automation, brand] = queueQueryBuilders(em, [{ execute: {} }, { execute: {} }])
+        const { settings } = await build(em)
         await expect(settings.setAutomation("user-1", "ws-1", "offer_draft", true)).resolves.toMatchObject({
             workspaceId: "ws-1",
             brandVoice: "warm",
         })
-        expect(em.query).toHaveBeenCalledWith(SET_CONFIGURATION_AUTOMATION, [
-            "ws-1",
-            JSON.stringify({ offer_draft: true }),
-        ])
+        expect(automation?.callsOf("setParameter")).toEqual([["automation", JSON.stringify({ offer_draft: true })]])
+        expect(automation?.callsOf("onConflict")).toHaveLength(1)
 
         const tags = ["###", "#tag0", "#tag0", ...Array.from({ length: 16 }, (_, index) => `#tag${index + 1}`)].join(
             " ",
         )
         await settings.saveBrand("user-1", "ws-1", { brandVoice: "v", avoid: "a", cta: "c", hashtags: tags })
-        const saved: unknown = em.query.mock.calls.find((call) => call[0] === SAVE_CONFIGURATION_BRAND)?.[1]?.[4]
-        expect(saved).toEqual(["#tag0", ...Array.from({ length: 12 }, (_, index) => `#tag${index + 1}`)])
+        const saved: unknown = brand?.callsOf("values")[0]?.[0]
+        expect(saved).toMatchObject({
+            hashtags: ["#tag0", ...Array.from({ length: 12 }, (_, index) => `#tag${index + 1}`)],
+        })
     })
 })

@@ -1,21 +1,6 @@
-/** Database answer sequences used by fact scenarios. */
-type FactDatabaseStubs = Record<"query", readonly [string, unknown] | ReadonlyArray<readonly [string, unknown]>>
-
-import {
-    INSERT_FACT,
-    SELECT_FACT,
-    SELECT_FACTS,
-    SELECT_FACTS_BY_KEY,
-    SUPERSEDE_FACT,
-    CLOSE_RETIRE_PROPOSAL,
-    EXPIRE_DUE_FACTS,
-    PROMOTE_FACT,
-    RETIRE_FACT,
-    SELECT_DUE_FACTS,
-} from "../../../modules/domain/brain-facts/persistence/brain-facts.sql"
 import { builder } from "@starci/jest-preset"
-import type { Evidence, FactInput, FactRecord } from "@modules/domain/brain-facts"
-import type { BrainFactRow } from "../../../modules/domain/brain-facts/persistence/brain-facts.rows"
+import type { BrainFactEntity, Evidence, FactInput, FactRecord } from "@modules/domain/brain-facts"
+import { entityRowBuilder } from "./entity-row.builder"
 
 /** Shared, complete test data for the capability cases. */
 export const WS = "ws-1"
@@ -39,34 +24,35 @@ export const inputOf = builder<FactInput>({
 })
 
 /** Shared, complete test data for the capability cases. */
-export const rowOf = builder<BrainFactRow>({
+export const rowOf = entityRowBuilder<BrainFactEntity>({
     id: "f1",
-    workspace_id: WS,
-    installation_id: null,
-    subject_type: "business",
-    subject_key: "shop",
-    subject_label: "Shop",
+    workspaceId: WS,
+    installationId: null,
+    subjectType: "business",
+    subjectKey: "shop",
+    subjectLabel: "Shop",
     attribute: "hours",
-    attribute_label: "Hours",
+    attributeLabel: "Hours",
     value: "8h",
-    value_number: 8,
+    valueNumber: "8",
     unit: null,
     scope: "internal",
     modules: [],
     status: "proposed",
-    source_kind: "staff",
+    sourceKind: "staff",
     trust: 60,
-    valid_from: null,
-    valid_to: null,
-    supersedes_id: null,
-    conflict_with: null,
-    proposal_kind: "set",
+    validFrom: null,
+    validTo: null,
+    supersedesId: null,
+    conflictWith: null,
+    proposalKind: "set",
     evidence: [],
-    proposed_by: "u1",
-    proposed_at: AT,
-    decided_by: null,
-    decided_at: null,
-    decision_note: null,
+    proposedBy: "u1",
+    proposedAt: new Date(AT),
+    decidedBy: null,
+    decidedAt: null,
+    decisionNote: null,
+    updatedAt: new Date(AT),
 })
 
 /** Shared, complete test data for the capability cases. */
@@ -105,14 +91,10 @@ export const OTHER: Evidence = { kind: "manual", ref: "doc-1", label: "Owner" }
 /** Shared, complete test data for the capability cases. */
 export const withdrawalRows = [
     rowOf({ evidence: [PROOF] }),
-    rowOf({ id: "orphan", status: "active", source_kind: "document", evidence: [PROOF] }),
-    rowOf({ id: "owner", status: "active", source_kind: "owner", evidence: [PROOF] }),
+    rowOf({ id: "orphan", status: "active", sourceKind: "document", evidence: [PROOF] }),
+    rowOf({ id: "owner", status: "active", sourceKind: "owner", evidence: [PROOF] }),
     rowOf({ id: "scheduled", status: "scheduled", evidence: [PROOF] }),
-    rowOf({
-        id: "supported",
-        status: "active",
-        evidence: [PROOF, OTHER, { ...PROOF, ref: "doc-2" }],
-    }),
+    rowOf({ id: "supported", status: "active", evidence: [PROOF, OTHER, { ...PROOF, ref: "doc-2" }] }),
 ]
 
 /** Shared, complete test data for the capability cases. */
@@ -133,151 +115,132 @@ export const splitProposal = {
     autoApply: true,
 }
 
-/** Shared, complete test data for the capability cases. */
-export const retirementInsert = [
-    WS,
-    "business",
-    "shop",
-    "Shop",
-    "hours",
-    "Hours",
-    "8h",
-    8,
-    null,
-    "internal",
-    ["sales"],
-    "document",
-    75,
-    null,
-    null,
-    "f1",
-    JSON.stringify([PROOF]),
-    "u2",
-    "i1",
-    "retire",
-]
+/** The values of an inserted proposal, as a spec reads them back. */
+interface InsertedValues {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The subject type. */
+    readonly subjectType: string
+    /** The subject key. */
+    readonly subjectKey: string
+    /** The subject label. */
+    readonly subjectLabel: string
+    /** The attribute. */
+    readonly attribute: string
+    /** The attribute label. */
+    readonly attributeLabel: string
+    /** The value. */
+    readonly value: string
+    /** The numeric value as text. */
+    readonly valueNumber: string | null
+    /** The unit. */
+    readonly unit: string | null
+    /** The scope. */
+    readonly scope: string
+    /** The modules. */
+    readonly modules: Array<string>
+    /** The source kind. */
+    readonly sourceKind: string
+    /** The trust. */
+    readonly trust: number
+    /** The fact it disagrees with. */
+    readonly conflictWith: string | null
+    /** Who proposed it. */
+    readonly proposedBy: string
+    /** The installation. */
+    readonly installationId: string | null
+    /** The proposal kind. */
+    readonly proposalKind: string
+    /** The status. */
+    readonly status: string
+    /** The start instant, named as a function. */
+    readonly validFrom: string
+    /** The end instant, named as a function. */
+    readonly validTo: string
+    /** The evidence, named as a function. */
+    readonly evidence: string
+}
 
-/** Shared, complete test data for the capability cases. */
-export const explicitInsert = [
-    WS,
-    "product",
-    "shop",
-    "Shop",
-    "hours",
-    "Hours",
-    "8h",
-    8,
-    "hours",
-    "restricted",
-    ["chatbot"],
-    "staff",
-    60,
-    AT,
-    LATER,
-    null,
-    JSON.stringify([PROOF]),
-    "u1",
-    "i1",
-    "set",
-]
+/** The parameters that carry an insert's instants and evidence. */
+interface InsertParameters {
+    /** The start instant text. */
+    readonly validFrom: string | null
+    /** The end instant text. */
+    readonly validTo: string | null
+    /** The evidence JSON. */
+    readonly evidence: string
+}
 
-/** Shared, complete test data for the capability cases. */
-export const orphanInsert = [
-    WS,
-    "business",
-    "shop",
-    "Shop",
-    "hours",
-    "Hours",
-    "8h",
-    8,
-    null,
-    "internal",
-    [],
-    "document",
-    75,
-    null,
-    null,
-    "file",
-    JSON.stringify([PROOF]),
-    "NIVO",
-    null,
-    "retire",
-]
+/** The values a new proposal is inserted with; the three instants and the evidence are named as functions, their text is a parameter. */
+export const insertedOf = entityRowBuilder<InsertedValues>({
+    workspaceId: WS,
+    subjectType: "business",
+    subjectKey: "shop",
+    subjectLabel: "Shop",
+    attribute: "hours",
+    attributeLabel: "Hours",
+    value: "8h",
+    valueNumber: "8",
+    unit: null,
+    scope: "internal",
+    modules: [],
+    sourceKind: "staff",
+    trust: 60,
+    conflictWith: null,
+    proposedBy: "u1",
+    installationId: null,
+    proposalKind: "set",
+    status: "proposed",
+    validFrom: "function",
+    validTo: "function",
+    evidence: "function",
+})
 
-/** Shared, complete test data for the capability cases. */
-export const conflictInsert = [
-    WS,
-    "service",
-    "shop",
-    "Shop",
-    "hours",
-    "Hours",
-    "8h",
-    8,
-    "hour",
-    "restricted",
-    ["sales"],
-    "staff",
-    60,
-    null,
-    null,
-    "old",
-    "[]",
-    "u1",
-    null,
-    "set",
-]
+/** The parameters that carry the instants and the evidence of an insert. */
+export const insertParametersOf = entityRowBuilder<InsertParameters>({ validFrom: null, validTo: null, evidence: "[]" })
 
-/** Shared, complete test data for the capability cases. */
-export const restrictedInsert = [
-    WS,
-    "business",
-    "shop",
-    "Shop",
-    "hours",
-    "Hours",
-    "8h",
-    8,
-    null,
-    "restricted",
-    [],
-    "staff",
-    60,
-    null,
-    null,
-    null,
-    "[]",
-    "u1",
-    null,
-    "set",
-]
+/** The retirement the document filing writes for an active value. */
+export const retirementInsert = insertedOf({
+    modules: ["sales"],
+    sourceKind: "document",
+    trust: 75,
+    conflictWith: "f1",
+    proposedBy: "u2",
+    installationId: "i1",
+    proposalKind: "retire",
+})
 
-/** Shared, complete test data for the capability cases. */
-export const ordinaryInsert = [
-    WS,
-    "business",
-    "shop",
-    "Shop",
-    "hours",
-    "Hours",
-    "8h",
-    8,
-    null,
-    "internal",
-    [],
-    "staff",
-    60,
-    null,
-    null,
-    null,
-    "[]",
-    "u1",
-    null,
-    "set",
-]
+/** The values of a proposal written with every field explicit. */
+export const explicitInsert = insertedOf({
+    subjectType: "product",
+    unit: "hours",
+    scope: "restricted",
+    modules: ["chatbot"],
+    installationId: "i1",
+})
 
-/** Shared, complete test data for the capability cases. */
+/** The values of a retirement filed for an orphan. */
+export const orphanInsert = insertedOf({
+    sourceKind: "document",
+    trust: 75,
+    conflictWith: "file",
+    proposedBy: "NIVO",
+    proposalKind: "retire",
+})
+
+/** The values of a conflicting proposal that inherits the active value. */
+export const conflictInsert = insertedOf({
+    subjectType: "service",
+    unit: "hour",
+    scope: "restricted",
+    modules: ["sales"],
+    conflictWith: "old",
+})
+
+/** The values of a restricted proposal with no modules. */
+export const restrictedInsert = insertedOf({ scope: "restricted" })
+
+/** The input that sets every field of a proposal. */
 export const explicitInput = {
     subjectType: "product",
     scope: "restricted",
@@ -290,67 +253,11 @@ export const explicitInput = {
     autoApply: true,
 } satisfies Partial<FactInput>
 
-/** Fresh database answers for one complete fact scenario. */
-export const orphanStubs = (): FactDatabaseStubs => ({
-    query: [
-        [SELECT_FACT, []],
-        [SELECT_FACT, [rowOf()]],
-        [SELECT_FACT, [rowOf({ status: "active", evidence: [PROOF] })]],
-        [SELECT_FACT, [rowOf({ status: "active", id: "value" })]],
-        [SELECT_FACT, [rowOf({ status: "active", id: "retire" })]],
-        [SELECT_FACT, [rowOf({ status: "active", id: "file" })]],
-        [SELECT_FACTS_BY_KEY, [rowOf()]],
-        [SELECT_FACTS_BY_KEY, [rowOf({ proposal_kind: "retire" })]],
-        [SELECT_FACTS_BY_KEY, [rowOf({ proposal_kind: "retire" })]],
-        [SELECT_FACTS_BY_KEY, []],
-        [SELECT_FACTS_BY_KEY, []],
-        [INSERT_FACT, []],
-    ],
-})
-
-/** Fresh database answers for one complete fact scenario. */
-export const maintenanceStubs = (): FactDatabaseStubs => ({
-    query: [
-        [SELECT_DUE_FACTS, [rowOf(), rowOf({ id: "f2" })]],
-        [SELECT_FACTS_BY_KEY, [rowOf({ id: "old1" }), rowOf({ id: "old2" })]],
-        [SELECT_FACTS_BY_KEY, []],
-        [SUPERSEDE_FACT, []],
-        [PROMOTE_FACT, [rowOf({ status: "active" })]],
-        [PROMOTE_FACT, []],
-        [EXPIRE_DUE_FACTS, [{ id: "e1" }, { id: "e2" }]],
-    ],
-})
-
-/** Fresh database answers for one complete fact scenario. */
-export const retirementStubs = (): FactDatabaseStubs => ({
-    query: [
-        [SELECT_FACT, [rowOf({ proposal_kind: "retire" })]],
-        [SELECT_FACTS_BY_KEY, [rowOf({ id: "old" })]],
-        [RETIRE_FACT, [rowOf({ status: "expired" })]],
-        [CLOSE_RETIRE_PROPOSAL, [rowOf({ status: "expired" })]],
-    ],
-})
-
-/** Fresh database answers for one complete fact scenario. */
-export const viewStubs = (): FactDatabaseStubs => ({
-    query: [
-        SELECT_FACTS,
-        [
-            rowOf({ scope: "public", status: "active" }),
-            rowOf({ id: "future", valid_from: LATER }),
-            rowOf({ id: "private", scope: "internal" }),
-        ],
-    ],
-})
-
-/** Exact arguments when a source confirms the current value again. */
-export const confirmedValue = [WS, "shop", "hours", null, "A source confirmed this value again"]
-
 /** The active restricted value inherited by a conflicting proposal. */
 export const conflictingActive = rowOf({
     id: "old",
     value: "9h",
-    subject_type: "service",
+    subjectType: "service",
     scope: "restricted",
     modules: ["sales"],
     unit: "hour",

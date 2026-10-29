@@ -3,18 +3,23 @@ import { FakeClock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { WorkspacesErrorCode } from "./errors/workspaces.error"
-import {
-    FIND_ACTIVE_PLAN,
-    FIND_BILLING,
-    UPDATE_PAID_UNTIL,
-    UPDATE_PLAN,
-    UPDATE_STATUS,
-} from "./persistence/workspace-billing.sql"
+import { WorkspaceEntity } from "./persistence/entities"
 import { WorkspaceBillingService } from "./workspace-billing.service"
 
 const NOW = new Date("2026-10-12T00:00:00.000Z")
-const BILLING = [{ paid_until: "2026-12-01T00:00:00.000Z", status: "active", plan_code: "starter" }]
+
+/** The stored billing facts of a workspace. */
+const billingOf = (patch: Partial<WorkspaceEntity> = {}): WorkspaceEntity =>
+    Object.assign(new WorkspaceEntity(), {
+        paidUntil: new Date("2026-12-01T00:00:00.000Z"),
+        status: "active",
+        planCode: "starter",
+        ...patch,
+    })
+
+const UPDATED = { affected: 1, raw: [], generatedMaps: [] }
 
 const build = async (em: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
@@ -31,25 +36,29 @@ describe("WorkspaceBillingService", () => {
     describe("extend", () => {
         it("adds the days to the current end and answers from and to", async () => {
             const em = mockEntityManager({
-                query: [
-                    [FIND_BILLING, BILLING],
-                    [UPDATE_PAID_UNTIL, []],
-                ],
+                findOne: [WorkspaceEntity, billingOf()],
+                update: [WorkspaceEntity, UPDATED],
             })
 
             await expect((await build(em)).extend("ws-1", 10)).resolves.toEqual({
                 from: "2026-12-01T00:00:00.000Z",
                 to: "2026-12-11T00:00:00.000Z",
             })
-            expect(em.query).toHaveBeenCalledWith(UPDATE_PAID_UNTIL, ["ws-1", "2026-12-11T00:00:00.000Z"])
+            expect(em.findOne).toHaveBeenCalledWith(WorkspaceEntity, {
+                select: { paidUntil: true, status: true, planCode: true },
+                where: { id: "ws-1" },
+            })
+            expect(em.update).toHaveBeenCalledWith(
+                WorkspaceEntity,
+                { id: "ws-1" },
+                { paidUntil: new Date("2026-12-11T00:00:00.000Z") },
+            )
         })
 
         it("counts from now for a workspace that never paid", async () => {
             const em = mockEntityManager({
-                query: [
-                    [FIND_BILLING, [{ paid_until: null, status: "pending_payment", plan_code: null }]],
-                    [UPDATE_PAID_UNTIL, []],
-                ],
+                findOne: [WorkspaceEntity, billingOf({ paidUntil: null, status: "pending_payment", planCode: null })],
+                update: [WorkspaceEntity, UPDATED],
             })
 
             await expect((await build(em)).extend("ws-1", 1)).resolves.toEqual({
@@ -59,58 +68,64 @@ describe("WorkspaceBillingService", () => {
         })
 
         it("answers not found for a workspace that does not exist and writes nothing", async () => {
-            const em = mockEntityManager({ query: [FIND_BILLING, []] })
+            const em = mockEntityManager({ findOne: [WorkspaceEntity, null] })
 
             await expect((await build(em)).extend("ws-9", 1)).rejects.toMatchObject({
                 code: WorkspacesErrorCode.NotFound,
             })
-            expect(em.query).not.toHaveBeenCalledWith(UPDATE_PAID_UNTIL, expect.anything())
+            expect(em.update).not.toHaveBeenCalled()
         })
     })
 
     describe("setStatus", () => {
         it("sets the status and answers from and to", async () => {
             const em = mockEntityManager({
-                query: [
-                    [FIND_BILLING, BILLING],
-                    [UPDATE_STATUS, []],
-                ],
+                findOne: [WorkspaceEntity, billingOf()],
+                update: [WorkspaceEntity, UPDATED],
             })
 
             await expect((await build(em)).setStatus("ws-1", "past_due")).resolves.toEqual({
                 from: "active",
                 to: "past_due",
             })
-            expect(em.query).toHaveBeenCalledWith(UPDATE_STATUS, ["ws-1", "past_due"])
+            expect(em.update).toHaveBeenCalledWith(WorkspaceEntity, { id: "ws-1" }, { status: "past_due" })
         })
     })
 })
 
 describe("WorkspaceBillingService", () => {
     describe("setPlan", () => {
-        it("moves the workspace to an active plan", async () => {
+        it("moves the workspace to an active plan and drops the tier and seats bought on the old one", async () => {
+            const plan = fakeQueryBuilder({ getRawOne: { code: "enterprise" } })
             const em = mockEntityManager({
-                query: [
-                    [FIND_ACTIVE_PLAN, [{ code: "enterprise" }]],
-                    [FIND_BILLING, BILLING],
-                    [UPDATE_PLAN, []],
-                ],
+                findOne: [WorkspaceEntity, billingOf()],
+                update: [WorkspaceEntity, UPDATED],
             })
+            em.createQueryBuilder.mockReturnValue(plan.builder as never)
 
             await expect((await build(em)).setPlan("ws-1", "enterprise")).resolves.toEqual({
                 from: "starter",
                 to: "enterprise",
             })
-            expect(em.query).toHaveBeenCalledWith(UPDATE_PLAN, ["ws-1", "enterprise"])
+            expect(plan.callsOf("from")).toEqual([["plans", "p"]])
+            expect(plan.callsOf("where")).toEqual([
+                ["p.code = :planCode AND p.active = true", { planCode: "enterprise" }],
+            ])
+            expect(em.update).toHaveBeenCalledWith(
+                WorkspaceEntity,
+                { id: "ws-1" },
+                { planCode: "enterprise", tierCredits: null, seatCount: null },
+            )
         })
 
         it("refuses an unknown or retired plan and changes nothing", async () => {
-            const em = mockEntityManager({ query: [FIND_ACTIVE_PLAN, []] })
+            const em = mockEntityManager()
+            em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ getRawOne: undefined }).builder as never)
 
             await expect((await build(em)).setPlan("ws-1", "gone")).rejects.toMatchObject({
                 code: WorkspacesErrorCode.PlanUnknown,
             })
-            expect(em.query).not.toHaveBeenCalledWith(UPDATE_PLAN, expect.anything())
+            expect(em.update).not.toHaveBeenCalled()
         })
     })
 })

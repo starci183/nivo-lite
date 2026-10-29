@@ -3,3 +3,4 @@ export { OPENCLAW_AGENT_SYNC_MESSAGES } from "./messages/openclaw-agent-sync.mes
 export { AgentSyncService } from "./agent-sync.service"
 export { OPENCLAW_RELOAD_SETTLE_MS } from "./openclaw-agent-sync.options"
 export { OpenclawAgentSyncModule } from "./openclaw-agent-sync.module"
+export { openclawAgentSyncEntities } from "./persistence/entities"

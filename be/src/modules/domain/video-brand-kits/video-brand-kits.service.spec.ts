@@ -1,21 +1,24 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
+import type { MockEntityManager } from "@starci/jest-preset"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { SAVE_GUIDELINE_COLORS, SAVE_WORKBENCH_BRAND, SELECT_KIT_LOGO } from "./persistence/video-brand-kits.sql"
+import { VideoBrandKitEntity } from "./persistence/entities"
 import { VideoBrandKitsService } from "./video-brand-kits.service"
 
-const build = async () => {
-    const em = mockEntityManager({ query: [SAVE_WORKBENCH_BRAND, [{ workspace_id: "workspace-1" }]] })
+const build = async (em: MockEntityManager = mockEntityManager()) => {
+    const write = fakeQueryBuilder({ execute: { raw: [] } })
+    em.createQueryBuilder.mockReturnValue(write.builder as never)
     const moduleRef = await Test.createTestingModule({
         providers: [VideoBrandKitsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
     }).compile()
-    return { service: moduleRef.get(VideoBrandKitsService), em }
+    return { service: moduleRef.get(VideoBrandKitsService), em, write }
 }
 
 describe("VideoBrandKitsService", () => {
     describe("save", () => {
         it("upserts the kit of the workspace with the manager as its last editor", async () => {
-            const { service, em } = await build()
+            const { service, em: manager, write } = await build()
 
             await expect(
                 service.save("workspace-1", "person-1", {
@@ -28,20 +31,41 @@ describe("VideoBrandKitsService", () => {
                 }),
             ).resolves.toBeUndefined()
 
-            expect(em.query).toHaveBeenCalledWith(SAVE_WORKBENCH_BRAND, [
-                "workspace-1",
-                "Bakery",
-                "#16a34a",
-                "#0f172a",
-                "workspace-1/logo.png",
-                "calm-glow",
-                "vi-VN-HoaiMyNeural",
-                "person-1",
+            expect(manager.createQueryBuilder).toHaveBeenCalledWith(VideoBrandKitEntity, "v")
+
+            expect(write.callsOf("insert")).toEqual([[]])
+            expect(write.callsOf("values")).toEqual([
+                [
+                    {
+                        workspaceId: "workspace-1",
+                        shopName: "Bakery",
+                        primaryColor: "#16a34a",
+                        secondaryColor: "#0f172a",
+                        logoPath: "workspace-1/logo.png",
+                        musicTrack: "calm-glow",
+                        voice: "vi-VN-HoaiMyNeural",
+                        updatedBy: "person-1",
+                    },
+                ],
+            ])
+            expect(write.callsOf("orUpdate")).toEqual([
+                [
+                    [
+                        "shop_name",
+                        "primary_color",
+                        "secondary_color",
+                        "logo_path",
+                        "music_track",
+                        "voice",
+                        "updated_by",
+                    ],
+                    ["workspace_id"],
+                ],
             ])
         })
 
-        it("passes missing colors as null so the stored defaults stay", async () => {
-            const { service, em } = await build()
+        it("leaves missing colors out so the stored values and defaults stay", async () => {
+            const { service, write } = await build()
 
             await service.save("workspace-1", "person-1", {
                 shopName: "Bakery",
@@ -52,15 +76,20 @@ describe("VideoBrandKitsService", () => {
                 voice: "vi-VN-NamMinhNeural",
             })
 
-            expect(em.query.mock.calls[0]?.[1]).toEqual([
-                "workspace-1",
-                "Bakery",
-                null,
-                null,
-                null,
-                null,
-                "vi-VN-NamMinhNeural",
-                "person-1",
+            expect(write.callsOf("values")).toEqual([
+                [
+                    {
+                        workspaceId: "workspace-1",
+                        shopName: "Bakery",
+                        logoPath: null,
+                        musicTrack: null,
+                        voice: "vi-VN-NamMinhNeural",
+                        updatedBy: "person-1",
+                    },
+                ],
+            ])
+            expect(write.callsOf("orUpdate")).toEqual([
+                [["shop_name", "logo_path", "music_track", "voice", "updated_by"], ["workspace_id"]],
             ])
         })
     })
@@ -69,43 +98,68 @@ describe("VideoBrandKitsService", () => {
 describe("VideoBrandKitsService (continued)", () => {
     describe("guideline brand", () => {
         it("writes the guideline colors and the bounded name", async () => {
-            const em = mockEntityManager({ query: [SAVE_GUIDELINE_COLORS, []] })
-            const moduleRef = await Test.createTestingModule({
-                providers: [VideoBrandKitsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
-            }).compile()
+            const { service, write } = await build()
 
-            await moduleRef.get(VideoBrandKitsService).saveGuidelineColors("workspace-1", "person-1", {
+            await service.saveGuidelineColors("workspace-1", "person-1", {
                 primary: "#c2996b",
                 secondary: "#5a4632",
                 shopName: "H".repeat(70),
             })
 
-            expect(em.query).toHaveBeenCalledWith(SAVE_GUIDELINE_COLORS, [
-                "workspace-1",
-                "#c2996b",
-                "#5a4632",
-                "H".repeat(60),
-                "person-1",
+            expect(write.callsOf("values")).toEqual([
+                [
+                    {
+                        workspaceId: "workspace-1",
+                        primaryColor: "#c2996b",
+                        secondaryColor: "#5a4632",
+                        shopName: "H".repeat(60),
+                        updatedBy: "person-1",
+                        updatedAt: expect.any(Function),
+                    },
+                ],
+            ])
+            expect(write.callsOf("orUpdate")).toEqual([
+                [["primary_color", "secondary_color", "shop_name", "updated_by", "updated_at"], ["workspace_id"]],
+            ])
+        })
+
+        it("keeps the stored name when the brand has none", async () => {
+            const { service, write } = await build()
+
+            await service.saveGuidelineColors("workspace-1", "person-1", {
+                primary: "#c2996b",
+                secondary: "#5a4632",
+                shopName: "",
+            })
+
+            expect(write.callsOf("orUpdate")).toEqual([
+                [["primary_color", "secondary_color", "updated_by", "updated_at"], ["workspace_id"]],
             ])
         })
 
         it("answers the logo and name, empty without a kit", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_KIT_LOGO, [{ logo_path: "workspace-1/logo.png", shop_name: "HAKUEN" }]],
-                    [SELECT_KIT_LOGO, []],
-                ],
+            const kit = Object.assign(new VideoBrandKitEntity(), {
+                logoPath: "workspace-1/logo.png",
+                shopName: "HAKUEN",
             })
-            const moduleRef = await Test.createTestingModule({
-                providers: [VideoBrandKitsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
-            }).compile()
-            const service = moduleRef.get(VideoBrandKitsService)
+            const { service, em } = await build(
+                mockEntityManager({
+                    findOne: [
+                        [VideoBrandKitEntity, kit],
+                        [VideoBrandKitEntity, null],
+                    ],
+                }),
+            )
 
             await expect(service.identityOf("workspace-1")).resolves.toEqual({
                 logoPath: "workspace-1/logo.png",
                 shopName: "HAKUEN",
             })
             await expect(service.identityOf("workspace-1")).resolves.toEqual({ logoPath: null, shopName: "" })
+            expect(em.findOne).toHaveBeenCalledWith(VideoBrandKitEntity, {
+                select: { logoPath: true, shopName: true },
+                where: { workspaceId: "workspace-1" },
+            })
         })
     })
 })

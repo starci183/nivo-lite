@@ -6,8 +6,10 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { LeadDecisionRecord } from "./decision-history.contracts"
 import type { DecisionEntry, EvidenceEntry, WorkContext } from "./decisions.contracts"
 import { EvidenceService } from "./evidence.service"
-import { INSERT_DECISION, LIST_ACCOUNTING_DECISIONS } from "./persistence/decision-log.sql"
-import { LIST_LEAD_DECISION_HISTORY } from "./persistence/decision-history.sql"
+import { DecisionEntity } from "./persistence/entities"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
+
+const INSERTED = { identifiers: [], generatedMaps: [], raw: [] }
 
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "An", locale: "vi" }
 
@@ -80,13 +82,12 @@ describe("EvidenceService", () => {
         })
 
         it("names the member who decided", async () => {
-            const em = mockEntityManager({ query: [INSERT_DECISION, []] })
+            const em = mockEntityManager({ insert: [DecisionEntity, INSERTED] })
             const { service } = await build(em)
 
             await service.decide(ctx, decisionOf({ before: null, decided_by_member_id: "member-1" }))
 
-            const params = em.query.mock.calls[0]?.[1]
-            expect(params?.[12]).toBe("member-1")
+            expect(em.insert.mock.calls[0]?.[1]).toMatchObject({ decidedByMemberId: "member-1" })
         })
 
         it("writes null for what the caller left out", async () => {
@@ -115,8 +116,8 @@ describe("EvidenceService", () => {
 
 describe("EvidenceService", () => {
     describe("decide", () => {
-        it("appends the decision with the proposals serialised", async () => {
-            const em = mockEntityManager({ query: [INSERT_DECISION, []] })
+        it("appends the decision with the proposals as jsonb", async () => {
+            const em = mockEntityManager({ insert: [DecisionEntity, INSERTED] })
             const { service } = await build(em)
             const proposal = { summary: "Send", fields: {} }
 
@@ -132,44 +133,44 @@ describe("EvidenceService", () => {
                 ),
             ).resolves.toBeUndefined()
 
-            expect(em.query).toHaveBeenCalledWith(INSERT_DECISION, [
-                "ws-1",
-                "item-1",
-                "lead-1",
-                "sales",
-                "send_follow_up",
-                "An",
-                "owner",
-                "approved",
-                "over_authority",
-                "ok",
-                JSON.stringify(proposal),
-                JSON.stringify({ ...proposal, draft: "Hi" }),
-                null,
-            ])
+            expect(em.insert).toHaveBeenCalledWith(DecisionEntity, {
+                workspaceId: "ws-1",
+                workItemId: "item-1",
+                leadId: "lead-1",
+                department: "sales",
+                action: "send_follow_up",
+                decidedBy: "An",
+                deciderKind: "owner",
+                outcome: "approved",
+                reason: "over_authority",
+                note: "ok",
+                before: proposal,
+                after: { ...proposal, draft: "Hi" },
+                decidedByMemberId: null,
+            })
         })
 
         it("writes null for what the caller left out", async () => {
-            const em = mockEntityManager({ query: [INSERT_DECISION, []] })
+            const em = mockEntityManager({ insert: [DecisionEntity, INSERTED] })
             const { service } = await build(em)
 
             await expect(service.decide(ctx, decisionOf({ before: null }))).resolves.toBeUndefined()
 
-            expect(em.query).toHaveBeenCalledWith(INSERT_DECISION, [
-                "ws-1",
-                "item-1",
-                "lead-1",
-                "sales",
-                "send_follow_up",
-                "An",
-                "owner",
-                "approved",
-                null,
-                null,
-                null,
-                null,
-                null,
-            ])
+            expect(em.insert).toHaveBeenCalledWith(DecisionEntity, {
+                workspaceId: "ws-1",
+                workItemId: "item-1",
+                leadId: "lead-1",
+                department: "sales",
+                action: "send_follow_up",
+                decidedBy: "An",
+                deciderKind: "owner",
+                outcome: "approved",
+                reason: null,
+                note: null,
+                before: null,
+                after: null,
+                decidedByMemberId: null,
+            })
         })
     })
 })
@@ -177,41 +178,64 @@ describe("EvidenceService", () => {
 describe("EvidenceService", () => {
     describe("listDecisions", () => {
         it("answers the history of a customer, oldest first when asked", async () => {
-            const em = mockEntityManager({ query: [LIST_LEAD_DECISION_HISTORY, [recordOf()]] })
+            const em = mockEntityManager()
+            const [read] = queueQueryBuilders(em, [{ getRawMany: [recordOf()] }])
             const { service } = await build(em)
 
             await expect(
                 service.listDecisions("ws-1", { leadId: "lead-1", limit: 20, oldestFirst: true }),
             ).resolves.toEqual([recordOf()])
-            expect(em.query).toHaveBeenCalledWith(LIST_LEAD_DECISION_HISTORY, ["ws-1", "lead-1", null, true, 20])
+
+            expect(read?.callsOf("where")).toEqual([["d.workspaceId = :workspaceId", { workspaceId: "ws-1" }]])
+            expect(read?.callsOf("andWhere")).toEqual([["d.leadId = :leadId", { leadId: "lead-1" }]])
+            expect(read?.callsOf("orderBy")).toEqual([["d.createdAt", "ASC"]])
+            expect(read?.callsOf("addOrderBy")).toEqual([["d.id", "ASC"]])
+            expect(read?.callsOf("limit")).toEqual([[20]])
+        })
+
+        it("filters one department's human decisions, newest first", async () => {
+            const em = mockEntityManager()
+            const [read] = queueQueryBuilders(em, [{ getRawMany: [] }])
+            const { service } = await build(em)
+
+            await expect(service.listDecisions("ws-1", { humanDepartment: "sales", limit: 5 })).resolves.toEqual([])
+
+            expect(read?.callsOf("andWhere")).toEqual([
+                ["d.department = :department AND d.deciderKind IN ('owner', 'staff')", { department: "sales" }],
+            ])
+            expect(read?.callsOf("orderBy")).toEqual([["d.createdAt", "DESC"]])
         })
 
         it("keeps the page between one and a thousand whole rows", async () => {
-            const em = mockEntityManager({ query: [LIST_LEAD_DECISION_HISTORY, []] })
+            const em = mockEntityManager()
+            const [big, small] = queueQueryBuilders(em, [{ getRawMany: [] }, { getRawMany: [] }])
             const { service } = await build(em)
 
             await expect(service.listDecisions("ws-1", { humanDepartment: "sales", limit: 5000 })).resolves.toEqual([])
             await expect(service.listDecisions("ws-1", { limit: 0.4 })).resolves.toEqual([])
 
-            expect(em.query.mock.calls).toEqual([
-                [LIST_LEAD_DECISION_HISTORY, ["ws-1", null, "sales", false, 1000]],
-                [LIST_LEAD_DECISION_HISTORY, ["ws-1", null, null, false, 1]],
-            ])
+            expect(big?.callsOf("limit")).toEqual([[1000]])
+            expect(small?.callsOf("limit")).toEqual([[1]])
+            expect(small?.callsOf("andWhere")).toEqual([])
         })
     })
 
     describe("listAccounting", () => {
         it("answers the newest accounting decisions, five hundred by default", async () => {
-            const em = mockEntityManager({ query: [LIST_ACCOUNTING_DECISIONS, []] })
+            const em = mockEntityManager()
+            const [first, second] = queueQueryBuilders(em, [{ getRawMany: [] }, { getRawMany: [] }])
             const { service } = await build(em)
 
             await expect(service.listAccounting("ws-1")).resolves.toEqual([])
             await expect(service.listAccounting("ws-1", 10)).resolves.toEqual([])
 
-            expect(em.query.mock.calls).toEqual([
-                [LIST_ACCOUNTING_DECISIONS, ["ws-1", 500]],
-                [LIST_ACCOUNTING_DECISIONS, ["ws-1", 10]],
+            expect(first?.callsOf("limit")).toEqual([[500]])
+            expect(second?.callsOf("limit")).toEqual([[10]])
+            expect(first?.callsOf("where")).toEqual([
+                ["d.workspaceId = :workspaceId AND d.department = 'accounting'", { workspaceId: "ws-1" }],
             ])
+            expect(first?.callsOf("orderBy")).toEqual([["d.createdAt", "DESC"]])
+            expect(first?.callsOf("addOrderBy")).toEqual([["d.id", "DESC"]])
         })
     })
 })

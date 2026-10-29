@@ -4,8 +4,16 @@ import { formatVnd } from "@modules/domain/decisions"
 import type { MentionRef } from "@modules/domain/work-chains"
 import type { ProposalFieldValue } from "@modules/domain/work-items"
 import type { Locale } from "@modules/platform/i18n"
-import type { DeciderRow, WorkAgentRow, WorkLeadRow } from "./persistence/thread-work.rows"
-import type { AssignedTask, MemberDecider, NextStep, StepSeed, WorkAgent } from "./thread-work.contracts"
+import type {
+    AssignedTask,
+    DeciderRecord,
+    MemberDecider,
+    NextStep,
+    StepSeed,
+    WorkAgent,
+    WorkAgentRecord,
+    WorkLeadRecord,
+} from "./thread-work.contracts"
 
 /** The proposal field that carries an amount in each unit the rules count in. */
 const AMOUNT_FIELD: Readonly<Record<RuleUnit, string>> = {
@@ -15,7 +23,7 @@ const AMOUNT_FIELD: Readonly<Record<RuleUnit, string>> = {
 }
 
 /** An agent row as the runtime reads it. */
-export const workAgentOf = (row: WorkAgentRow): WorkAgent => ({
+export const workAgentOf = (row: WorkAgentRecord): WorkAgent => ({
     id: row.id,
     name: row.name,
     module: row.module,
@@ -23,7 +31,7 @@ export const workAgentOf = (row: WorkAgentRow): WorkAgent => ({
 })
 
 /** A member as the work engine takes their decision: the workspace owner decides as the owner, everyone else as staff. */
-export const deciderOf = (row: DeciderRow): MemberDecider => ({
+export const deciderOf = (row: DeciderRecord): MemberDecider => ({
     name: row.display_name,
     kind: row.role === "owner" ? "owner" : "staff",
     memberId: row.id,
@@ -49,7 +57,7 @@ export const amountText = (amount: number, unit: RuleUnit, locale: Locale): stri
 }
 
 /** What a member hands an agent becomes the step's starting point: the customer, the amount in the rule's unit and the deal value. */
-export const seedOf = (summary: string, task: AssignedTask, lead: WorkLeadRow, unit: RuleUnit): StepSeed => {
+export const seedOf = (summary: string, task: AssignedTask, lead: WorkLeadRecord, unit: RuleUnit): StepSeed => {
     const fields: Record<string, ProposalFieldValue> = { customer: lead.contact_name, note: summary }
     if (task.amountVnd !== null) fields.amount_vnd = task.amountVnd
     if (task.amount !== null) fields[AMOUNT_FIELD[unit]] = task.amount

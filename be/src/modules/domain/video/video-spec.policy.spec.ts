@@ -103,6 +103,14 @@ describe("mediaPathOf", () => {
         expect(subject.mediaPathOf(url, WORKSPACE)).toBe(`${WORKSPACE}/my photo.jpg`)
     })
 
+    it("reads the path out of a presigned S3 URL of the media bucket", async () => {
+        const subject = await buildSubject()
+
+        const url = `https://minio.example.org/nivo-media/${WORKSPACE}/my%20photo.jpg?X-Amz-Signature=abc`
+        expect(subject.mediaPathOf(url, WORKSPACE)).toBe(`${WORKSPACE}/my photo.jpg`)
+        expect(subject.mediaPathOf(`https://minio.example.org/nivo-videos/${WORKSPACE}/a.jpg`)).toBeNull()
+    })
+
     it("turns bytes that are not UTF-8 into the replacement character", async () => {
         const subject = await buildSubject()
 

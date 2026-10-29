@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common"
+import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { INSERT_EVAL_CASES } from "./persistence/brain-eval-cases.sql"
+import { BrainEvalCaseEntity } from "./persistence/entities"
 
 /** One known-good answer to keep: an owner's correction of an agent's draft. */
 export interface EvalCaseDraft {
@@ -21,13 +22,25 @@ export class BrainEvalCasesService {
     /** Keeps each case once; answers how many were new. */
     async keep(workspaceId: string, module: string, cases: ReadonlyArray<EvalCaseDraft>): Promise<number> {
         if (cases.length === 0) return 0
-        const rows = await this.entityManager.query<Array<{ id: string }>>(INSERT_EVAL_CASES, [
-            workspaceId,
-            module,
-            cases.map((item) => item.originRef),
-            cases.map((item) => JSON.stringify(item.input)),
-            cases.map((item) => JSON.stringify(item.expected)),
-        ])
-        return rows.length
+        const known = await this.entityManager.find(BrainEvalCaseEntity, {
+            select: { originRef: true },
+            where: { workspaceId, originRef: In(cases.map((item) => item.originRef)) },
+            take: cases.length,
+        })
+        const kept = new Set(known.map((item) => item.originRef))
+        const fresh = cases.filter((item) => !kept.has(item.originRef))
+        if (fresh.length === 0) return 0
+        const inserted = await this.entityManager.insert(
+            BrainEvalCaseEntity,
+            fresh.map((item) => ({
+                workspaceId,
+                module,
+                kind: "draft" as const,
+                input: item.input,
+                expected: item.expected,
+                originRef: item.originRef,
+            })),
+        )
+        return inserted.identifiers.length
     }
 }

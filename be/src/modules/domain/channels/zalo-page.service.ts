@@ -2,6 +2,9 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
+import { ZaloInboxEntity } from "@modules/domain/zalo-inbox/persistence/entities"
+import { AgentMessageEntity } from "@modules/domain/agent-messages"
+import { AgentConversationEntity } from "@modules/domain/agent-conversations"
 import { zaloFailureOf } from "@modules/integrations/zalo"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -19,13 +22,13 @@ import type {
     MessageEventRow,
     RecipientRow,
 } from "./persistence/zalo-page.rows"
-import {
-    FIND_LAST_ZALO_REPLY,
-    FIND_ZALO_INBOX_FACTS,
-    LIST_ZALO_FOLLOW_EVENTS,
-    LIST_ZALO_MESSAGE_EVENTS,
-    LIST_ZALO_RECIPIENTS,
-} from "./persistence/zalo-page.sql"
+
+/** The Zalo conversations of a connection, which both message reads filter by. */
+const ZALO_CONVERSATION = "c.workspace_id = :workspaceId AND c.connection_id = :connectionId AND c.channel = 'zalo'"
+
+/** The webhook body test for one event name, as the inbox stores the raw body. */
+const eventNamed = (event: string): string =>
+    `i.payload->>'rawBody' ~ '"event_name"[[:space:]]*:[[:space:]]*"${event}"'`
 import type { ZaloPageEvent, ZaloPageView, ZaloTestSendResult } from "./zalo-page.contracts"
 import { checksOf, eventsOf, maskTail, recipientsOf, sendBlockOf, tokenUsable, tokenViewOf } from "./zalo-page.policy"
 import { ZALO_FREE_WINDOW_MS } from "./zalo-delivery.service"
@@ -67,11 +70,30 @@ export class ZaloPageService {
         const connection = await this.zaloOf(actor, connectionId)
         const token = await this.tokenOf(connection)
         const [messages, follows] = await Promise.all([
-            this.entityManager.query<Array<MessageEventRow>>(LIST_ZALO_MESSAGE_EVENTS, [
-                actor.workspaceId,
-                connection.id,
-            ]),
-            this.entityManager.query<Array<FollowEventRow>>(LIST_ZALO_FOLLOW_EVENTS, [connection.id]),
+            this.entityManager
+                .createQueryBuilder(AgentMessageEntity, "m")
+                .select("m.id", "id")
+                .addSelect("m.role", "role")
+                .addSelect("m.body", "body")
+                .addSelect("m.created_at::text", "created_at")
+                .addSelect("m.delivery_status", "delivery_status")
+                .addSelect("m.delivery_error", "delivery_error")
+                .addSelect("c.visitor_name", "visitor_name")
+                .innerJoin(AgentConversationEntity, "c", "c.id = m.conversation_id")
+                .where(ZALO_CONVERSATION, { workspaceId: actor.workspaceId, connectionId: connection.id })
+                .andWhere("m.role IN ('user', 'agent')")
+                .orderBy("m.created_at", "DESC")
+                .limit(40)
+                .getRawMany<MessageEventRow>(),
+            this.entityManager
+                .createQueryBuilder(ZaloInboxEntity, "i")
+                .select("i.id", "id")
+                .addSelect("i.received_at::text", "received_at")
+                .where("i.payload->>'connection' = :connectionId", { connectionId: connection.id })
+                .andWhere(eventNamed("follow"))
+                .orderBy("i.received_at", "DESC")
+                .limit(20)
+                .getRawMany<FollowEventRow>(),
         ])
         return eventsOf(messages, follows, token.view)
     }
@@ -132,10 +154,23 @@ export class ZaloPageService {
         const [recipients, inbox, lastReply, agentIds] = await Promise.all([
             this.recipientsOf(actor.workspaceId, connection.id),
             this.entityManager
-                .query<Array<InboxFactsRow>>(FIND_ZALO_INBOX_FACTS, [connection.id])
+                .createQueryBuilder(ZaloInboxEntity, "i")
+                .select("max(i.received_at)::text", "last_at")
+                .addSelect(`coalesce(bool_or(${eventNamed("user_send_text")}), false)`, "has_text")
+                .addSelect(`coalesce(bool_or(${eventNamed("follow")}), false)`, "has_follow")
+                .where("i.payload->>'connection' = :connectionId", { connectionId: connection.id })
+                .getRawMany<InboxFactsRow>()
                 .then((rows) => rows[0] ?? null),
             this.entityManager
-                .query<Array<LastReplyRow>>(FIND_LAST_ZALO_REPLY, [actor.workspaceId, connection.id])
+                .createQueryBuilder(AgentMessageEntity, "m")
+                .select("m.delivery_status", "delivery_status")
+                .addSelect("m.delivery_error", "delivery_error")
+                .innerJoin(AgentConversationEntity, "c", "c.id = m.conversation_id")
+                .where(ZALO_CONVERSATION, { workspaceId: actor.workspaceId, connectionId: connection.id })
+                .andWhere("m.role = 'agent' AND m.delivery_status IS NOT NULL")
+                .orderBy("m.created_at", "DESC")
+                .limit(1)
+                .getRawMany<LastReplyRow>()
                 .then((rows) => rows[0] ?? null),
             this.connections.agentIds(actor.workspaceId, connection.id),
         ])
@@ -164,11 +199,18 @@ export class ZaloPageService {
 
     private async recipientsOf(workspaceId: string, connectionId: string) {
         const since = new Date(this.clock.now().getTime() - ZALO_FREE_WINDOW_MS).toISOString()
-        const rows = await this.entityManager.query<Array<RecipientRow>>(LIST_ZALO_RECIPIENTS, [
-            workspaceId,
-            connectionId,
-            since,
-        ])
+        const rows = await this.entityManager
+            .createQueryBuilder(AgentConversationEntity, "c")
+            .select("c.external_id", "external_id")
+            .addSelect("c.visitor_name", "visitor_name")
+            .addSelect("max(m.created_at)::text", "last_at")
+            .innerJoin(AgentMessageEntity, "m", "m.conversation_id = c.id AND m.role = 'user'")
+            .where(ZALO_CONVERSATION, { workspaceId, connectionId })
+            .andWhere("c.external_id IS NOT NULL AND m.created_at > :since::timestamptz", { since })
+            .groupBy("c.id")
+            .orderBy("max(m.created_at)", "DESC")
+            .limit(40)
+            .getRawMany<RecipientRow>()
         return recipientsOf(rows)
     }
 

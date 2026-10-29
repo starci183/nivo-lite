@@ -9,11 +9,12 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { CreditsService } from "./credits.service"
 import { CreditsError, CreditsErrorCode } from "./errors/credits.error"
-import { SELECT_ACTIVE_PACKS, SELECT_MONTH_PACK_PURCHASES, SELECT_TOPUP_LOTS } from "./persistence/credits.sql"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
+import { CreditPackEntity, CreditTopupEntity } from "./persistence/entities"
 
 const NOW = "2026-10-12T10:00:00.000Z"
 const PAID_UNTIL = "2026-10-27T10:00:00.000Z"
-const PACK_ROW = { code: "credits_1000", credits: 1000, price_vnd: 299000, sort: 2 }
+const PACK_ROW = { code: "credits_1000", credits: 1000, priceVnd: 299000, sort: 2, active: true }
 const CURRENT: Plan = {
     code: "starter",
     nameVi: "Khoi dau",
@@ -94,7 +95,7 @@ const TOPUP = { workspaceId: "ws-1", packCode: "credits_1000" }
 const UPGRADE = { workspaceId: "ws-1", planCode: "growth" }
 
 const build = async (
-    entityManager: MockEntityManager = mockEntityManager({ query: [SELECT_ACTIVE_PACKS, [PACK_ROW]] }),
+    entityManager: MockEntityManager = mockEntityManager({ find: [CreditPackEntity, [PACK_ROW]] }),
 ) => {
     const billing = mock<BillingService>()
     billing.requireManager.mockResolvedValue(undefined)
@@ -121,9 +122,9 @@ const build = async (
 describe("CreditsService", () => {
     it("lists every active pack in the database display order", async () => {
         const em = mockEntityManager({
-            query: [
-                SELECT_ACTIVE_PACKS,
-                [PACK_ROW, { code: "credits_5000", credits: 5000, price_vnd: 999000, sort: 3 }],
+            find: [
+                CreditPackEntity,
+                [PACK_ROW, { ...PACK_ROW, code: "credits_5000", credits: 5000, priceVnd: 999000, sort: 3 }],
             ],
         })
         const { credits } = await build(em)
@@ -132,11 +133,15 @@ describe("CreditsService", () => {
             { code: "credits_1000", credits: 1000, priceVnd: 299000, sort: 2 },
             { code: "credits_5000", credits: 5000, priceVnd: 999000, sort: 3 },
         ])
-        expect(em.query).toHaveBeenCalledWith(SELECT_ACTIVE_PACKS)
+        expect(em.find).toHaveBeenCalledWith(CreditPackEntity, {
+            where: { active: true },
+            order: { sort: "ASC" },
+            take: 50,
+        })
     })
 
     it("answers an empty catalogue when there are no active packs", async () => {
-        const { credits } = await build(mockEntityManager({ query: [SELECT_ACTIVE_PACKS, []] }))
+        const { credits } = await build(mockEntityManager({ find: [CreditPackEntity, []] }))
 
         await expect(credits.listPacks()).resolves.toEqual([])
     })
@@ -237,7 +242,7 @@ describe("CreditsService", () => {
             billing.requireManager.mockRejectedValue(forbidden)
 
             await expect(credits.topup("person-1", TOPUP)).rejects.toBe(forbidden)
-            expect(em.query).not.toHaveBeenCalled()
+            expect(em.find).not.toHaveBeenCalled()
             expect(orders.create).not.toHaveBeenCalled()
         })
     })
@@ -399,15 +404,19 @@ describe("CreditsService", () => {
 
     describe("topupLots", () => {
         const row = {
+            id: "t-1",
+            workspaceId: "ws-1",
+            orderId: "o-1",
+            packCode: null,
             credits: 1000,
-            price_vnd: 299000,
-            purchased_at: NOW,
-            expires_at: PAID_UNTIL,
-            credits_remaining: 800,
+            priceVnd: 299000,
+            purchasedAt: new Date(NOW),
+            expiresAt: new Date(PAID_UNTIL),
+            creditsRemaining: 800,
         }
 
         it("lists the purchased lots for a manager", async () => {
-            const em = mockEntityManager({ query: [SELECT_TOPUP_LOTS, [row]] })
+            const em = mockEntityManager({ find: [CreditTopupEntity, [row]] })
             const { credits, billing } = await build(em)
 
             await expect(credits.topupLots("person-1", "ws-1")).resolves.toEqual([
@@ -420,22 +429,32 @@ describe("CreditsService", () => {
                 },
             ])
             expect(billing.requireManager).toHaveBeenCalledWith("person-1", "ws-1")
-            expect(em.query).toHaveBeenCalledWith(SELECT_TOPUP_LOTS, ["ws-1"])
+            expect(em.find).toHaveBeenCalledWith(CreditTopupEntity, {
+                where: { workspaceId: "ws-1" },
+                order: { purchasedAt: "DESC" },
+                take: 200,
+            })
         })
     })
 
     describe("packsBought", () => {
         it("lists the add-on packs paid this month for a member", async () => {
-            const em = mockEntityManager({
-                query: [SELECT_MONTH_PACK_PURCHASES, [{ credits: 1000, price_vnd: 299000, purchased_at: NOW }]],
-            })
+            const em = mockEntityManager()
+            const [month] = queueQueryBuilders(em, [
+                { getMany: [{ credits: 1000, priceVnd: 299000, purchasedAt: new Date(NOW) }] },
+            ])
             const { credits, billing } = await build(em)
 
             await expect(credits.packsBought("person-1", "ws-1")).resolves.toEqual([
                 { credits: 1000, priceVnd: 299000, purchasedAt: NOW },
             ])
             expect(billing.requireMember).toHaveBeenCalledWith("person-1", "ws-1")
-            expect(em.query).toHaveBeenCalledWith(SELECT_MONTH_PACK_PURCHASES, ["ws-1"])
+            expect(month?.callsOf("where")).toEqual([["p.workspaceId = :workspaceId", { workspaceId: "ws-1" }]])
+            expect(month?.callsOf("andWhere")).toEqual([
+                ["p.period = date_trunc('month', now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date"],
+            ])
+            expect(month?.callsOf("orderBy")).toEqual([["p.purchasedAt", "DESC"]])
+            expect(month?.callsOf("limit")).toEqual([[200]])
         })
     })
 })

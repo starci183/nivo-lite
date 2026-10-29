@@ -1,17 +1,13 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { VideoErrorCode } from "./errors/video.error"
-import type { WorkbenchBrandRow, WorkbenchProjectRow } from "./persistence/video-workbench.rows"
-import {
-    LIST_VIDEO_SOURCES,
-    LIST_WORKBENCH_PROJECTS,
-    READ_VIDEO_FIGURES,
-    READ_WORKBENCH_BRAND,
-} from "./persistence/video-workbench.sql"
+import type { StoredBrand, StoredProject } from "./video-stored.contracts"
 import type { WorkbenchRender } from "./video-workbench.contracts"
 import { VideoMediaService } from "./video-media.service"
 import { VideoWorkbenchService } from "./video-workbench.service"
@@ -27,7 +23,7 @@ const memberOf = builder<WorkspaceMember>({
     status: "active",
 })
 
-const rowOf = builder<WorkbenchProjectRow>({
+const rowOf = builder<StoredProject>({
     id: "project-1",
     title: "Spring offer",
     goal: "offer",
@@ -85,6 +81,16 @@ const PROJECT = {
     updatedAt: "2026-10-13T11:00:00.000Z",
 }
 
+/** The statement `callDbFunction` sends for the credit value. */
+const CREDIT_USD_VALUE = "SELECT * FROM public.credit_usd_value()"
+
+/** A manager whose query builders answer in order, the way the query under test asks for them. */
+const emOf = (...answers: ReadonlyArray<QueryBuilderAnswers>) => {
+    const em = mockEntityManager({ query: [CREDIT_USD_VALUE, [{ credit_usd_value: "0.01" }]] })
+    const fakes = queueQueryBuilders(em, answers)
+    return { em, fakes }
+}
+
 const build = async (em: MockEntityManager = mockEntityManager()) => {
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(memberOf())
@@ -119,34 +125,46 @@ describe("VideoWorkbenchService", () => {
 
     describe("list", () => {
         it("answers the projects with their render links", async () => {
-            const em = mockEntityManager({ query: [LIST_WORKBENCH_PROJECTS, [rowOf()]] })
+            const { em, fakes } = emOf({ getRawMany: [rowOf()] })
             const { workbench, media } = await build(em)
 
             await expect(workbench.list("person-1", WS)).resolves.toEqual([PROJECT])
-            expect(em.query).toHaveBeenCalledWith(LIST_WORKBENCH_PROJECTS, [WS, null, false])
+            expect(fakes[0]?.callsOf("where")).toEqual([
+                [expect.stringContaining("p.workspace_id"), { workspaceId: WS, projectId: null }],
+            ])
+            expect(fakes[0]?.callsOf("andWhere")).toEqual([
+                [expect.stringContaining("includeArchived"), { includeArchived: false }],
+            ])
             expect(media.render).toHaveBeenCalledWith(null, WS, "Spring offer")
         })
 
         it("includes archived projects on request", async () => {
-            const em = mockEntityManager({ query: [LIST_WORKBENCH_PROJECTS, []] })
+            const { em, fakes } = emOf({ getRawMany: [] })
             const { workbench } = await build(em)
 
             await expect(workbench.list("person-1", WS, true)).resolves.toEqual([])
-            expect(em.query).toHaveBeenCalledWith(LIST_WORKBENCH_PROJECTS, [WS, null, true])
+            expect(fakes[0]?.callsOf("andWhere")).toEqual([
+                [expect.stringContaining("includeArchived"), { includeArchived: true }],
+            ])
         })
     })
 
     describe("get", () => {
         it("answers one project of the workspace", async () => {
-            const em = mockEntityManager({ query: [LIST_WORKBENCH_PROJECTS, [rowOf()]] })
+            const { em, fakes } = emOf({ getRawMany: [rowOf()] })
             const { workbench } = await build(em)
 
             await expect(workbench.get("person-1", WS, "project-1")).resolves.toEqual(PROJECT)
-            expect(em.query).toHaveBeenCalledWith(LIST_WORKBENCH_PROJECTS, [WS, "project-1", true])
+            expect(fakes[0]?.callsOf("where")).toEqual([
+                [expect.stringContaining("p.workspace_id"), { workspaceId: WS, projectId: "project-1" }],
+            ])
+            expect(fakes[0]?.callsOf("andWhere")).toEqual([
+                [expect.stringContaining("includeArchived"), { includeArchived: true }],
+            ])
         })
 
         it("refuses a project the workspace does not have", async () => {
-            const em = mockEntityManager({ query: [LIST_WORKBENCH_PROJECTS, []] })
+            const { em } = emOf({ getRawMany: [] })
             const { workbench } = await build(em)
 
             await expect(workbench.get("person-1", WS, "project-9")).rejects.toMatchObject({
@@ -160,7 +178,7 @@ describe("VideoWorkbenchService", () => {
 describe("VideoWorkbenchService", () => {
     describe("managed", () => {
         it("answers the manager's membership with the project", async () => {
-            const em = mockEntityManager({ query: [LIST_WORKBENCH_PROJECTS, [rowOf()]] })
+            const { em } = emOf({ getRawMany: [rowOf()] })
             const { workbench, members } = await build(em)
 
             await expect(workbench.managed("person-1", WS, "project-1")).resolves.toEqual({
@@ -174,7 +192,7 @@ describe("VideoWorkbenchService", () => {
 
 describe("VideoWorkbenchService", () => {
     describe("brand", () => {
-        const brandRow: WorkbenchBrandRow = {
+        const brandRow: StoredBrand = {
             workspace_name: " Bakery ",
             shop_name: null,
             primary_color: null,
@@ -185,7 +203,7 @@ describe("VideoWorkbenchService", () => {
         }
 
         it("falls back to the workspace name and the default colors and voice", async () => {
-            const em = mockEntityManager({ query: [READ_WORKBENCH_BRAND, [brandRow]] })
+            const { em } = emOf({ getRawOne: brandRow })
             const { workbench } = await build(em)
 
             await expect(workbench.brand("person-1", WS)).resolves.toEqual({
@@ -199,7 +217,7 @@ describe("VideoWorkbenchService", () => {
         })
 
         it("answers the saved kit", async () => {
-            const saved: WorkbenchBrandRow = {
+            const saved: StoredBrand = {
                 workspace_name: "Bakery",
                 shop_name: " Bakery Shop ",
                 primary_color: "#111111",
@@ -208,7 +226,7 @@ describe("VideoWorkbenchService", () => {
                 music_track: "calm-glow",
                 voice: "vi-VN-NamMinhNeural",
             }
-            const em = mockEntityManager({ query: [READ_WORKBENCH_BRAND, [saved]] })
+            const { em } = emOf({ getRawOne: saved })
             const { workbench } = await build(em)
 
             await expect(workbench.brand("person-1", WS)).resolves.toEqual({
@@ -222,7 +240,7 @@ describe("VideoWorkbenchService", () => {
         })
 
         it("refuses a workspace that does not exist", async () => {
-            const em = mockEntityManager({ query: [READ_WORKBENCH_BRAND, []] })
+            const { em } = emOf({ getRawOne: undefined })
             const { workbench } = await build(em)
 
             await expect(workbench.brand("person-1", WS)).rejects.toMatchObject({
@@ -237,25 +255,27 @@ describe("VideoWorkbenchService", () => {
     describe("sources", () => {
         it("answers the public sources of the workspace", async () => {
             const sources = [{ id: "source-1", title: "Menu", topic: null, excerpt: "Bread" }]
-            const em = mockEntityManager({ query: [LIST_VIDEO_SOURCES, sources] })
+            const { em, fakes } = emOf({ getRawMany: sources })
             const { workbench } = await build(em)
 
             await expect(workbench.sources("person-1", WS)).resolves.toEqual(sources)
-            expect(em.query).toHaveBeenCalledWith(LIST_VIDEO_SOURCES, [WS])
+            expect(fakes[0]?.callsOf("where")).toEqual([
+                [expect.stringContaining("s.workspace_id"), { workspaceId: WS }],
+            ])
         })
     })
 
     describe("figures", () => {
         it("answers the month's figures", async () => {
             const figures = { rendering: 1, scripting: 0, readyToPublish: 2, approved: 1, published30: 3, credits30: 9 }
-            const em = mockEntityManager({ query: [READ_VIDEO_FIGURES, [figures]] })
+            const { em } = emOf({ getRawOne: { credits30: 9 } }, { getRawOne: { ...figures, credits30: undefined } })
             const { workbench } = await build(em)
 
             await expect(workbench.figures("person-1", WS)).resolves.toEqual(figures)
         })
 
         it("fails when the figures row is missing", async () => {
-            const em = mockEntityManager({ query: [READ_VIDEO_FIGURES, []] })
+            const { em } = emOf({ getRawOne: undefined }, { getRawOne: undefined })
             const { workbench } = await build(em)
 
             await expect(workbench.figures("person-1", WS)).rejects.toMatchObject({ code: VideoErrorCode.InputInvalid })

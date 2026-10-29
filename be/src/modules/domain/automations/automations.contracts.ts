@@ -299,20 +299,6 @@ export interface BusinessEvent {
     readonly dedupe: string
 }
 
-/** A run started from code for one workspace. */
-export interface FireTemplate {
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The template to run. */
-    readonly templateKey: string
-    /** Unique per occurrence. */
-    readonly dedupe: string
-    /** What the run is about. */
-    readonly triggerRef: string
-    /** What the run is executed from. */
-    readonly payload: EventData
-}
-
 /** What a tick did. */
 export interface TickResult {
     /** How many pipelines were on. */
@@ -339,24 +325,6 @@ export interface BusinessEventInput {
     readonly data: object
     /** Unique per occurrence. */
     readonly dedupe: string
-}
-
-/** A lead another capability just created, as the `lead.created` event carries it. */
-export interface CreatedLead {
-    /** The lead. */
-    readonly id: string
-    /** The customer's name. */
-    readonly contact_name: string
-    /** The company. */
-    readonly company: string
-    /** The channel label. */
-    readonly channel: string
-    /** What the customer needs. */
-    readonly need: string
-    /** The phone, or null. */
-    readonly phone: string | null
-    /** The email, or null. */
-    readonly email: string | null
 }
 
 /** What a renewal message carries for payment: the invoice of the period and how to pay it. */

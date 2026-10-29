@@ -9,9 +9,8 @@ import type { LeadRequestBody } from "./public-api.contracts"
 import { PublicLeadCompletionService } from "./public-lead-completion.service"
 import { PublicLeadFulfillmentService } from "./public-lead-fulfillment.service"
 import { publicLeadMetadata } from "./public-lead-metadata.policy"
-import { LOCK_PUBLIC_API_REQUEST } from "./persistence/public-api-processing.sql"
-import { LINK_PUBLIC_API_LEAD } from "./persistence/public-lead-completion.sql"
-import type { PublicApiProcessingRow } from "./persistence/public-api-processing.rows"
+import { PublicApiEntity } from "./persistence/entities"
+import { PublicApiLedgerService } from "./public-api-ledger.service"
 
 const requestId = "11111111-1111-4111-8111-111111111111"
 const inboundId = "22222222-2222-4222-8222-222222222222"
@@ -42,14 +41,18 @@ const event = {
     lead_id: null,
     status: "received",
 }
-const row: PublicApiProcessingRow = {
+const row: PublicApiEntity = {
     id: requestId,
+    workspaceId: ctx.workspaceId,
+    keyId: "key-1",
     kind: "lead",
+    dedupeKey: "lead:key-1:crm-10",
     payload: body,
-    need_supplied: false,
-    lead_id: null,
-    processed_at: new Date("2026-10-25T00:00:00Z"),
-    created_at: new Date("2026-10-24T23:00:00Z"),
+    needSupplied: false,
+    leadId: null,
+    duplicates: 0,
+    processedAt: new Date("2026-10-25T00:00:00Z"),
+    createdAt: new Date("2026-10-24T23:00:00Z"),
 }
 const item = (ledgerRequestId: string | null = requestId) =>
     mock<WorkItem>({
@@ -66,13 +69,11 @@ const item = (ledgerRequestId: string | null = requestId) =>
         },
     })
 
-const build = async (rows: ReadonlyArray<PublicApiProcessingRow> = [row]) => {
+const build = async (rows: ReadonlyArray<PublicApiEntity> = [row]) => {
     const tx = fakeTransaction(
         mockEntityManager({
-            query: [
-                [LOCK_PUBLIC_API_REQUEST, rows],
-                [LINK_PUBLIC_API_LEAD, []],
-            ],
+            findOne: [PublicApiEntity, rows[0] ?? null],
+            update: [PublicApiEntity, { affected: 1 }],
         }),
     )
     const inbox = fakeInbox()
@@ -86,6 +87,7 @@ const build = async (rows: ReadonlyArray<PublicApiProcessingRow> = [row]) => {
             { provide: INBOX, useValue: inbox },
             { provide: InboundEventsService, useValue: inbound },
             { provide: PublicLeadFulfillmentService, useValue: fulfillment },
+            PublicApiLedgerService,
         ],
     }).compile()
     return { service: moduleRef.get(PublicLeadCompletionService), tx, inbox, inbound, fulfillment }
@@ -123,12 +125,16 @@ describe("PublicLeadCompletionService", () => {
             capturedDetails,
             manager,
         )
-        expect(tx.em.query).toHaveBeenCalledWith(LINK_PUBLIC_API_LEAD, [ctx.workspaceId, requestId, "lead-1"])
+        expect(tx.em.update).toHaveBeenCalledWith(
+            PublicApiEntity,
+            { workspaceId: ctx.workspaceId, id: requestId, kind: "lead" },
+            { leadId: "lead-1" },
+        )
     })
 
     it("uses the authoritative ledger body and presence flag rather than a copied proposal body", async () => {
         const admitted = { ...body, note: "Authoritative note", needSupplied: true }
-        const { service, fulfillment } = await build([{ ...row, payload: admitted, need_supplied: true }])
+        const { service, fulfillment } = await build([{ ...row, payload: admitted, needSupplied: true }])
 
         await complete(service, item(), "lead-1")
 
@@ -143,7 +149,7 @@ describe("PublicLeadCompletionService", () => {
 
         expect(tx.outcomes).toEqual(["commit"])
         expect(fulfillment.applyDetails).not.toHaveBeenCalled()
-        expect(tx.em.query).not.toHaveBeenCalledWith(LINK_PUBLIC_API_LEAD, expect.anything())
+        expect(tx.em.update).not.toHaveBeenCalled()
     })
 })
 
@@ -177,17 +183,18 @@ describe("PublicLeadCompletionService handoff validation", () => {
         },
     )
 
-    it.each([{ rows: [] }, { rows: [{ ...row, kind: "message" }] }, { rows: [{ ...row, processed_at: null }] }])(
-        "refuses an unavailable or uncommitted ledger admission: %p",
-        async ({ rows }) => {
-            const { service, tx, inbox } = await build(rows)
+    it.each([
+        { rows: [] },
+        { rows: [{ ...row, kind: "message" as const }] },
+        { rows: [{ ...row, processedAt: null }] },
+    ])("refuses an unavailable or uncommitted ledger admission: %p", async ({ rows }) => {
+        const { service, tx, inbox } = await build(rows)
 
-            await expect(complete(service, item(), "lead-1")).rejects.toThrow(PublicApiErrorCode.RequestInvalid)
+        await expect(complete(service, item(), "lead-1")).rejects.toThrow(PublicApiErrorCode.RequestInvalid)
 
-            expect(tx.outcomes).toEqual(["rollback"])
-            expect(inbox.claim).not.toHaveBeenCalled()
-        },
-    )
+        expect(tx.outcomes).toEqual(["rollback"])
+        expect(inbox.claim).not.toHaveBeenCalled()
+    })
 
     it.each([{ event_id: "wrong-request" }, { external_ref: "api:SomeoneElse" }])(
         "refuses a ledger admission that does not own the handoff input: %p",
@@ -219,7 +226,7 @@ describe("PublicLeadCompletionService historical handoff", () => {
             capturedDetails,
             expect.anything(),
         )
-        expect(tx.em.query).not.toHaveBeenCalled()
+        expect(tx.em.findOne).not.toHaveBeenCalled()
         expect(tx.outcomes).toEqual(["commit"])
     })
 
@@ -265,7 +272,7 @@ describe("PublicLeadCompletionService historical handoff", () => {
         await expect(complete(service, item(), "lead-1")).rejects.toThrow(PublicApiErrorCode.NotWritten)
 
         expect(tx.outcomes).toEqual(["rollback"])
-        expect(tx.em.query).not.toHaveBeenCalledWith(LINK_PUBLIC_API_LEAD, expect.anything())
+        expect(tx.em.update).not.toHaveBeenCalled()
     })
 })
 
@@ -291,7 +298,7 @@ describe("PublicLeadCompletionService approved facts", () => {
         async (needSupplied, need, expected) => {
             const payload = { ...body, need, ...(needSupplied === undefined ? {} : { needSupplied }) }
             if (needSupplied === undefined) delete payload.needSupplied
-            const { service, fulfillment } = await build([{ ...row, payload, need_supplied: needSupplied ?? null }])
+            const { service, fulfillment } = await build([{ ...row, payload, needSupplied: needSupplied ?? null }])
             const approved = { summary: "Edited", fields: { company: "Approved company", need: "Approved need" } }
 
             await service.complete(ctx, item(), "lead-1", approved, true)

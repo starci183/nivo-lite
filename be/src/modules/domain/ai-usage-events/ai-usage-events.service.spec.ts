@@ -1,33 +1,30 @@
 import { Test } from "@nestjs/testing"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import type { QuotaStatus, UsageInput, UsageKind } from "./ai-usage-events.contracts"
+import type { QuotaRecord, QuotaStatus, UsageInput, UsageKind } from "./ai-usage-events.contracts"
 import { AiUsageEventsLogEvent } from "./ai-usage-events.log-events"
 import { AiUsageEventsService } from "./ai-usage-events.service"
-import type { QuotaRow } from "./persistence/ai-usage-events.rows"
-import {
-    INSERT_USAGE_EVENT,
-    POST_USAGE_NOTICE,
-    SELECT_MONTHLY_USAGE,
-    SELECT_QUOTA_STATUS,
-    SELECT_RECENT_COST,
-} from "./persistence/ai-usage-events.sql"
+import { AiUsageEventEntity } from "./persistence/entities"
 
-const ROW: QuotaRow = {
+const SELECT_QUOTA_STATUS = "SELECT * FROM public.ai_quota_status($1)"
+const POST_USAGE_NOTICE = "SELECT * FROM public.usage_notice_post($1, $2, $3, $4)"
+/** The row as the driver answers it: bigint and numeric columns as text. */
+const ROW: QuotaRecord = {
     period_start: "2026-10-01",
-    messages_used: 80,
-    tokens_used: 1000,
-    cost_usd: 0.4,
+    messages_used: "80",
+    tokens_used: "1000",
+    cost_usd: "0.4",
     messages_limit: 100,
-    tokens_limit: 10000,
+    tokens_limit: "10000",
     fallback_reply: "  Vui l\u00f2ng ch\u1edd  ",
-    credits_used: 100,
-    credits_limit: 200,
-    credits_carried: 20,
-    topup_balance: 50,
+    credits_used: "100",
+    credits_limit: "200",
+    credits_carried: "20",
+    topup_balance: "50",
 }
 const STATUS: QuotaStatus = {
     periodStart: "2026-10-01",
@@ -97,15 +94,11 @@ describe("AiUsageEventsService", () => {
     })
 
     it("maps monthly rollups with the quota into the billing summary", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_QUOTA_STATUS, [ROW]],
-                [
-                    SELECT_MONTHLY_USAGE,
-                    [{ day: "2026-10-02", module: "sales", calls: 2, tokens: 40, cost_usd: 0.00113 }],
-                ],
-            ],
+        const em = mockEntityManager({ query: [SELECT_QUOTA_STATUS, [ROW]] })
+        const monthly = fakeQueryBuilder({
+            getRawMany: [{ day: "2026-10-02", module: "sales", calls: 2, tokens: 40, cost_usd: 0.00113 }],
         })
+        em.createQueryBuilder.mockReturnValue(monthly.builder)
         const { usage } = await build(em)
 
         await expect(usage.usageSummary("ws-1")).resolves.toEqual({
@@ -113,31 +106,43 @@ describe("AiUsageEventsService", () => {
             byModule: [{ module: "sales", calls: 2, tokens: 40, costUsd: 0.00113, credits: 1 }],
             daily: [{ day: "2026-10-02", tokens: 40, credits: 1 }],
         })
-        expect(em.query.mock.calls).toEqual([
-            [SELECT_QUOTA_STATUS, ["ws-1"]],
-            [SELECT_MONTHLY_USAGE, ["ws-1"]],
-        ])
+        expect(em.query.mock.calls).toEqual([[SELECT_QUOTA_STATUS, ["ws-1"]]])
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(AiUsageEventEntity, "e")
+        expect(monthly.callsOf("where")).toEqual([["e.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
+        expect(monthly.callsOf("limit")).toEqual([[2000]])
     })
 
     it("reads recent cost from the requested day and defaults an absent row to zero", async () => {
         const em = mockEntityManager()
-        em.query.mockResolvedValueOnce([{ cost_usd: 0.42 }]).mockResolvedValueOnce([])
+        const first = fakeQueryBuilder({ getRawOne: { cost_usd: 0.42 } })
+        const second = fakeQueryBuilder({ getRawOne: undefined })
+        em.createQueryBuilder.mockReturnValueOnce(first.builder).mockReturnValueOnce(second.builder)
         const { usage } = await build(em)
 
         await expect(usage.recentCostUsd("ws-1", "2026-10-01")).resolves.toBe(0.42)
         await expect(usage.recentCostUsd("ws-2", "2026-10-02")).resolves.toBe(0)
-        expect(em.query.mock.calls).toEqual([
-            [SELECT_RECENT_COST, ["ws-1", "2026-10-01"]],
-            [SELECT_RECENT_COST, ["ws-2", "2026-10-02"]],
-        ])
+        expect(first.callsOf("andWhere")[1]).toEqual([expect.stringContaining(":from"), { from: "2026-10-01" }])
+        expect(second.callsOf("andWhere")[1]).toEqual([expect.stringContaining(":from"), { from: "2026-10-02" }])
     })
+})
+
+const BOOKED = (overrides: Record<string, unknown> = {}) => ({
+    workspaceId: "ws-1",
+    kind: "chat_reply",
+    module: "sales",
+    model: "deepseek-chat",
+    promptTokens: 100,
+    completionTokens: 20,
+    costUsd: "0.01234568",
+    estimated: false,
+    ...overrides,
 })
 
 describe("AiUsageEventsService > record", () => {
     it("books provider figures, truncates the model name and posts the monthly warning", async () => {
         const em = mockEntityManager({
+            insert: [AiUsageEventEntity, {}],
             query: [
-                [INSERT_USAGE_EVENT, []],
                 [SELECT_QUOTA_STATUS, [ROW]],
                 [POST_USAGE_NOTICE, [{ posted: true }]],
             ],
@@ -146,8 +151,8 @@ describe("AiUsageEventsService > record", () => {
 
         await expect(usage.record({ ...INPUT, model: "x".repeat(121) })).resolves.toBeUndefined()
 
+        expect(em.insert.mock.calls).toEqual([[AiUsageEventEntity, BOOKED({ model: "x".repeat(120) })]])
         expect(em.query.mock.calls).toEqual([
-            [INSERT_USAGE_EVENT, ["ws-1", "chat_reply", "sales", "x".repeat(120), 100, 20, 0.01234568, false]],
             [SELECT_QUOTA_STATUS, ["ws-1"]],
             [POST_USAGE_NOTICE, ["ws-1", "2026-10-01", "warn", WARN_BODY]],
         ])
@@ -155,47 +160,38 @@ describe("AiUsageEventsService > record", () => {
     })
 
     it("books estimated figures and sends no notice when no quota row is returned", async () => {
-        const em = mockEntityManager({
-            query: [
-                [INSERT_USAGE_EVENT, []],
-                [SELECT_QUOTA_STATUS, []],
-            ],
-        })
+        const em = mockEntityManager({ insert: [AiUsageEventEntity, {}], query: [SELECT_QUOTA_STATUS, []] })
         const { usage, logger } = await build(em)
 
         await expect(usage.record({ ...INPUT, usage: null })).resolves.toBeUndefined()
 
-        expect(em.query.mock.calls).toEqual([
-            [INSERT_USAGE_EVENT, ["ws-1", "chat_reply", "sales", "deepseek-chat", 100, 20, 0.0000196, true]],
-            [SELECT_QUOTA_STATUS, ["ws-1"]],
-        ])
+        expect(em.insert.mock.calls).toEqual([[AiUsageEventEntity, BOOKED({ costUsd: "0.0000196", estimated: true })]])
+        expect(em.query.mock.calls).toEqual([[SELECT_QUOTA_STATUS, ["ws-1"]]])
         expect(logger.error).not.toHaveBeenCalled()
     })
 
     it("sends no notice for a quota below its warning level", async () => {
         const em = mockEntityManager({
-            query: [
-                [INSERT_USAGE_EVENT, []],
-                [SELECT_QUOTA_STATUS, [{ ...ROW, messages_used: 10 }]],
-            ],
+            insert: [AiUsageEventEntity, {}],
+            query: [SELECT_QUOTA_STATUS, [{ ...ROW, messages_used: "10" }]],
         })
         const { usage, logger } = await build(em)
 
         await expect(usage.record(INPUT)).resolves.toBeUndefined()
 
-        expect(em.query).toHaveBeenCalledTimes(2)
+        expect(em.query).toHaveBeenCalledTimes(1)
         expect(logger.error).not.toHaveBeenCalled()
     })
 
     it("logs a write failure without failing the model reply or reading its quota", async () => {
         const em = mockEntityManager()
         const failure = new Error("usage insert failed")
-        em.query.mockRejectedValueOnce(failure)
+        em.insert.mockRejectedValueOnce(failure)
         const { usage, logger } = await build(em)
 
         await expect(usage.record(INPUT)).resolves.toBeUndefined()
 
-        expect(em.query).toHaveBeenCalledTimes(1)
+        expect(em.query).not.toHaveBeenCalled()
         expect(logger.error.mock.calls).toEqual([
             [AiUsageEventsLogEvent.RecordFailed, failure, { workspaceId: "ws-1" }],
         ])
@@ -204,14 +200,14 @@ describe("AiUsageEventsService > record", () => {
 
 describe("AiUsageEventsService > record", () => {
     it("keeps a successfully booked call when reading its quota fails", async () => {
-        const em = mockEntityManager()
+        const em = mockEntityManager({ insert: [AiUsageEventEntity, {}] })
         const failure = new Error("quota read failed")
-        em.query.mockResolvedValueOnce([]).mockRejectedValueOnce(failure)
+        em.query.mockRejectedValueOnce(failure)
         const { usage, logger } = await build(em)
 
         await expect(usage.record(INPUT)).resolves.toBeUndefined()
 
-        expect(em.query).toHaveBeenCalledTimes(2)
+        expect(em.query).toHaveBeenCalledTimes(1)
         expect(logger.error.mock.calls).toEqual([
             [AiUsageEventsLogEvent.StatusFailed, failure, { workspaceId: "ws-1" }],
         ])
@@ -290,7 +286,7 @@ describe("AiUsageEventsService > blockedBy", () => {
         async (kind) => {
             const em = mockEntityManager({
                 query: [
-                    [SELECT_QUOTA_STATUS, [{ ...ROW, messages_used: 100 }]],
+                    [SELECT_QUOTA_STATUS, [{ ...ROW, messages_used: "100" }]],
                     [POST_USAGE_NOTICE, [{ posted: true }]],
                 ],
             })
@@ -313,7 +309,7 @@ describe("AiUsageEventsService > blockedBy", () => {
     )
 
     it("lets bulk embeddings proceed when only messages are exhausted", async () => {
-        const em = mockEntityManager({ query: [SELECT_QUOTA_STATUS, [{ ...ROW, messages_used: 100 }]] })
+        const em = mockEntityManager({ query: [SELECT_QUOTA_STATUS, [{ ...ROW, messages_used: "100" }]] })
         const { usage } = await build(em)
 
         await expect(usage.blockedBy("ws-1", "embedding", true)).resolves.toBeNull()

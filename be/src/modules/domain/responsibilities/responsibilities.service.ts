@@ -9,15 +9,14 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog, InjectRequestLocale } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog, RequestLocale } from "@modules/platform/i18n"
 import { ResponsibilitiesError, ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
-import type { AgentsRow, ResponsibilitiesRow } from "./persistence/responsibilities.rows"
-import { FIND_ACCOUNTING_AGENT, INSERT_RESPONSIBILITY, UPDATE_RESPONSIBILITY } from "./persistence/responsibilities.sql"
+import { ResponsibilityEntity } from "./persistence/entities"
 import type {
     AddResponsibilityParams,
     AssignResponsibilityParams,
     HandToAccountingParams,
     ResponsibilityResult,
 } from "./responsibilities.contracts"
-import type { ResolvedOwner } from "./responsibility-owner.policy"
+import type { OwnerAgent } from "./responsibility-owner.policy"
 import { ResponsibilityOwnersService } from "./responsibility-owners.service"
 
 /** The evidence-log kind of a new owner. */
@@ -27,32 +26,37 @@ const SALES_AGENT_ACTOR = "Sales Agent"
 /** A hand-over to Accounting is due one day later. */
 const DAY_MS = 86_400_000
 
-type StepRow = Pick<
-    ResponsibilitiesRow,
-    | "id"
-    | "lead_id"
-    | "title"
-    | "owner_kind"
-    | "owner_agent_id"
-    | "owner_member_id"
-    | "owner_name"
-    | "next_action"
-    | "due_at"
-    | "status"
->
-interface StepColumns {
-    readonly nextAction: string
-    readonly dueAt: string | null
+/** A step as the writes answer it, its due date as ISO text. */
+interface StepRow {
+    readonly id: string
+    readonly lead_id: string
+    readonly title: string
+    readonly owner_kind: string
+    readonly owner_agent_id: string | null
+    readonly owner_member_id: string | null
+    readonly owner_name: string
+    readonly next_action: string
+    readonly due_at: string | null
+    readonly status: string
 }
+/** The columns of a step the insert writes. */
+type NewStep = Pick<
+    ResponsibilityEntity,
+    | "workspaceId"
+    | "leadId"
+    | "title"
+    | "ownerKind"
+    | "ownerAgentId"
+    | "ownerName"
+    | "nextAction"
+    | "dueAt"
+    | "ownerMemberId"
+>
 
-/** The owner, next action and due date columns a write binds, in the order both statements take them (the member comes last). */
-const ownerColumns = (owner: ResolvedOwner, step: StepColumns): ReadonlyArray<string | null> => [
-    owner.kind,
-    owner.agentId,
-    owner.name,
-    step.nextAction,
-    step.dueAt,
-]
+/** The columns a write answers, the due date as the ISO text of a UTC instant the contract always carried. */
+const STEP_RETURNING =
+    "id, lead_id, title, owner_kind, owner_agent_id, owner_member_id, owner_name, next_action, status, " +
+    "to_char(due_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"') AS due_at"
 
 const toResult = (row: StepRow): ResponsibilityResult => ({
     id: row.id,
@@ -85,13 +89,17 @@ export class ResponsibilitiesService {
         const member = await this.members.require(params.userId, params.workspaceId)
         return this.entityManager.transaction(async (tx) => {
             const owner = await this.owners.resolve(tx, params.workspaceId, params.owner)
-            const [row] = await tx.query<Array<StepRow>>(INSERT_RESPONSIBILITY, [
-                params.workspaceId,
-                params.leadId,
-                params.title,
-                ...ownerColumns(owner, params),
-                owner.memberId,
-            ])
+            const row = await this.insertForLead(tx, {
+                workspaceId: params.workspaceId,
+                leadId: params.leadId,
+                title: params.title,
+                ownerKind: owner.kind,
+                ownerAgentId: owner.agentId,
+                ownerName: owner.name,
+                nextAction: params.nextAction,
+                dueAt: params.dueAt === null ? null : new Date(params.dueAt),
+                ownerMemberId: owner.memberId,
+            })
             if (row === undefined) {
                 throw new ResponsibilitiesError({
                     code: ResponsibilitiesErrorCode.LeadNotFound,
@@ -108,13 +116,22 @@ export class ResponsibilitiesService {
         const member = await this.members.require(params.userId, params.workspaceId)
         return this.entityManager.transaction(async (tx) => {
             const owner = await this.owners.resolve(tx, params.workspaceId, params.owner)
-            const [row] = await tx.query<Array<StepRow>>(UPDATE_RESPONSIBILITY, [
-                params.workspaceId,
-                params.responsibilityId,
-                ...ownerColumns(owner, params),
-                params.title,
-                owner.memberId,
-            ])
+            const updated = await tx
+                .createQueryBuilder(ResponsibilityEntity, "r")
+                .update()
+                .set({
+                    ownerKind: owner.kind,
+                    ownerAgentId: owner.agentId,
+                    ownerName: owner.name,
+                    nextAction: params.nextAction,
+                    dueAt: params.dueAt === null ? null : new Date(params.dueAt),
+                    ownerMemberId: owner.memberId,
+                    ...(params.title === null ? {} : { title: params.title }),
+                })
+                .where({ workspaceId: params.workspaceId, id: params.responsibilityId })
+                .returning(STEP_RETURNING)
+                .execute()
+            const [row]: Array<StepRow> = updated.raw
             if (row === undefined) {
                 throw new ResponsibilitiesError({
                     code: ResponsibilitiesErrorCode.NotFound,
@@ -132,19 +149,29 @@ export class ResponsibilitiesService {
      */
     async handToAccounting(params: HandToAccountingParams): Promise<boolean> {
         const { manager, locale } = params
-        const [agent] = await manager.query<Array<AgentsRow>>(FIND_ACCOUNTING_AGENT, [params.workspaceId])
+        const agent = await manager
+            .createQueryBuilder()
+            .select("a.id", "id")
+            .addSelect("a.name", "name")
+            .from("public.agents", "a")
+            .where("a.workspace_id = :workspaceId AND a.module = 'accounting' AND a.status = 'active'", {
+                workspaceId: params.workspaceId,
+            })
+            .orderBy("a.created_at")
+            .limit(1)
+            .getRawOne<OwnerAgent>()
         if (agent === undefined) return false
-        await manager.query(INSERT_RESPONSIBILITY, [
-            params.workspaceId,
-            params.leadId,
-            this.messages.get("responsibilities.invoice-title", { name: params.contactName }, locale),
-            "agent",
-            agent.id,
-            agent.name,
-            this.messages.get("responsibilities.invoice-next", {}, locale),
-            new Date(this.clock.now().getTime() + DAY_MS).toISOString(),
-            null,
-        ])
+        await this.insertForLead(manager, {
+            workspaceId: params.workspaceId,
+            leadId: params.leadId,
+            title: this.messages.get("responsibilities.invoice-title", { name: params.contactName }, locale),
+            ownerKind: "agent",
+            ownerAgentId: agent.id,
+            ownerName: agent.name,
+            nextAction: this.messages.get("responsibilities.invoice-next", {}, locale),
+            dueAt: new Date(this.clock.now().getTime() + DAY_MS),
+            ownerMemberId: null,
+        })
         await this.events.record(
             {
                 workspaceId: params.workspaceId,
@@ -156,6 +183,33 @@ export class ResponsibilitiesService {
             manager,
         )
         return true
+    }
+
+    /**
+     * Writes one open step of a lead of the workspace and answers it, or answers undefined when the workspace has no such lead:
+     * the lead row is held `FOR SHARE` in the caller's transaction so it cannot go away between the check and the insert.
+     */
+    private async insertForLead(manager: EntityManager, step: NewStep): Promise<StepRow | undefined> {
+        const lead = await manager
+            .createQueryBuilder()
+            .select("l.id", "id")
+            .from("public.leads", "l")
+            .where("l.workspace_id = :workspaceId AND l.id = :leadId", {
+                workspaceId: step.workspaceId,
+                leadId: step.leadId,
+            })
+            .limit(1)
+            .setLock("pessimistic_read")
+            .getRawOne<{ id: string }>()
+        if (lead === undefined) return undefined
+        const inserted = await manager
+            .createQueryBuilder(ResponsibilityEntity, "r")
+            .insert()
+            .values(step)
+            .returning(STEP_RETURNING)
+            .execute()
+        const [row]: [StepRow] = inserted.raw
+        return row
     }
 
     private logOwner(

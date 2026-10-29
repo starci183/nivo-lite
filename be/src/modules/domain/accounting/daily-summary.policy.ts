@@ -16,7 +16,7 @@ import type {
 import type { PaymentCredit } from "./accounting-gateway.port"
 import { toolSources } from "./card-sources.policy"
 import { CARD_COPY, RENEWAL_COPY, SUMMARY_COPY, kindText } from "./messages/accounting-desk.messages"
-import type { RenewalCashRow } from "./persistence/renewal-cash.rows"
+import type { RenewalCashFacts } from "./renewal-cash.contracts"
 
 const DAY_MS = 86_400_000
 /** How many items each part of the renewal story lists before it says how many more there are. */
@@ -112,7 +112,11 @@ export const dayText = (isoDay: string): string => isoDay.split("-").reverse().j
 const NONE = { count: 0, totalVnd: 0, items: [] } as const
 
 /** The renewal-to-cash story of the reader row; no row is an empty story. */
-export const renewalStoryOf = (row: RenewalCashRow | undefined, day: string, horizonDay: string): RenewalCashStory => {
+export const renewalStoryOf = (
+    row: RenewalCashFacts | undefined,
+    day: string,
+    horizonDay: string,
+): RenewalCashStory => {
     if (row === undefined) {
         return { day, horizonDay, issued: NONE, paid: NONE, unpaid: NONE, expiring: NONE, unmatched: NONE }
     }

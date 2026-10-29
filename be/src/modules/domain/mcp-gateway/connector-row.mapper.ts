@@ -1,7 +1,7 @@
-import type { McpCallLogRow } from "@modules/domain/mcp-call-log"
+import type { CallLogRecord } from "@modules/domain/mcp-call-log"
 import { credentialStateOf } from "@modules/domain/mcp-connectors"
 import type { McpConnectorRow } from "@modules/domain/mcp-connectors"
-import type { ArgConstraint, GrantMode, McpToolGrantRow, McpWorkspaceGrantRow } from "@modules/domain/mcp-tool-grants"
+import type { ArgConstraint, GrantMode, McpToolGrantView, McpWorkspaceGrantView } from "@modules/domain/mcp-tool-grants"
 import type { McpRemoteTool } from "@modules/integrations/mcp"
 import { parseJsonText } from "@modules/platform/primitives"
 import { argsHashOf } from "./audit-mask.policy"
@@ -194,7 +194,7 @@ export const constraintsOfJson = (text: string | null | undefined): ReadonlyArra
 }
 
 /** A grant row as a grant. */
-export const grantOf = (row: McpToolGrantRow): ToolGrant => ({
+export const grantOf = (row: McpToolGrantView): ToolGrant => ({
     tool: row.tool,
     mode: modeOf(row.mode),
     limitVnd: numberOrNull(row.limit_vnd),
@@ -202,7 +202,7 @@ export const grantOf = (row: McpToolGrantRow): ToolGrant => ({
 })
 
 /** A workspace grant row as the console reads it. */
-export const grantViewOf = (row: McpWorkspaceGrantRow): GrantView => {
+export const grantViewOf = (row: McpWorkspaceGrantView): GrantView => {
     const grant = grantOf(row)
     return {
         ...grant,
@@ -213,7 +213,7 @@ export const grantViewOf = (row: McpWorkspaceGrantRow): GrantView => {
 }
 
 /** An audit row as the console reads it. */
-export const callLogViewOf = (row: McpCallLogRow): CallLogView => ({
+export const callLogViewOf = (row: CallLogRecord): CallLogView => ({
     id: row.id,
     tool: row.tool,
     agentName: row.agent_name,

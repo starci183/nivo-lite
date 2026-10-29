@@ -1,4 +1,6 @@
 import { Test } from "@nestjs/testing"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import type { EntityManager } from "typeorm"
@@ -7,18 +9,20 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ApiKeysService } from "./api-keys.service"
 import { hashKey } from "./api-keys.policy"
-import { ApiKeysErrorCode } from "./errors/api-keys.error"
 import {
-    API_AGENT_KEY,
-    API_KEY_AUTH,
-    API_KEY_CREDENTIAL,
-    COUNT_ACTIVE_KEYS,
-    INSERT_AGENT_KEY,
-    INSERT_KEY,
-    LIST_KEYS,
-    REVOKE_KEY,
-    SELECT_MEMBER,
-} from "./persistence/api-keys.sql"
+    agentBoundKey,
+    defaultKeyOfWorkspaceWs1,
+    keyOf,
+    keyView,
+    keyWithoutId,
+    keyWithoutWorkspace,
+    loyaltyTillKey,
+    revokedKey,
+} from "@tests/fixtures/builders/api-keys.builder"
+import { ApiKeysErrorCode } from "./errors/api-keys.error"
+import { ApiKeyEntity } from "./persistence/entities"
+
+const API_KEY_AUTH = "SELECT * FROM public.api_key_auth($1)"
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 
@@ -52,7 +56,7 @@ describe("ApiKeysService", () => {
                     API_KEY_AUTH,
                     [
                         {
-                            auth: {
+                            api_key_auth: {
                                 id: "key-1",
                                 workspace_id: "workspace-1",
                                 name: "n8n",
@@ -87,7 +91,7 @@ describe("ApiKeysService", () => {
         })
 
         it("refuses a key no workspace issued and an answer with no row at all", async () => {
-            const unknown = await build(mockEntityManager({ query: [API_KEY_AUTH, [{ auth: null }]] }))
+            const unknown = await build(mockEntityManager({ query: [API_KEY_AUTH, [{ api_key_auth: null }]] }))
             await expect(unknown.authenticate("leads:read", "Bearer nvk_unknown")).rejects.toMatchObject({
                 code: ApiKeysErrorCode.Unauthorized,
             })
@@ -99,7 +103,9 @@ describe("ApiKeysService", () => {
         })
 
         it("refuses a revoked key and a key over its budget with the parameters of the refusal", async () => {
-            const revoked = await build(mockEntityManager({ query: [API_KEY_AUTH, [{ auth: { revoked: true } }]] }))
+            const revoked = await build(
+                mockEntityManager({ query: [API_KEY_AUTH, [{ api_key_auth: { revoked: true } }]] }),
+            )
             await expect(revoked.authenticate("leads:read", "Bearer nvk_old")).rejects.toMatchObject({
                 code: ApiKeysErrorCode.Revoked,
             })
@@ -108,7 +114,16 @@ describe("ApiKeysService", () => {
                 mockEntityManager({
                     query: [
                         API_KEY_AUTH,
-                        [{ auth: { id: "key-1", workspace_id: "workspace-1", scopes: ["leads:read"], hits: 61 } }],
+                        [
+                            {
+                                api_key_auth: {
+                                    id: "key-1",
+                                    workspace_id: "workspace-1",
+                                    scopes: ["leads:read"],
+                                    hits: 61,
+                                },
+                            },
+                        ],
                     ],
                 }),
             )
@@ -120,28 +135,20 @@ describe("ApiKeysService", () => {
     })
 })
 
-const keyRow = {
-    id: "key-2",
-    name: "Daily sync",
-    key_prefix: "nvk_stored12",
-    created_at: "2026-10-12T10:00:00.000Z",
-    last_used_at: null,
-    revoked_at: null,
-    agent_id: null,
-}
+/** Whatever FindOperator the active-key filter builds. */
+const ANYTHING: unknown = expect.anything()
 
-const keyView = {
-    id: "key-2",
-    name: "Daily sync",
-    prefix: "nvk_stored12",
-    createdAt: "2026-10-12T10:00:00.000Z",
-    lastUsedAt: null,
-    revokedAt: null,
-    agentId: null,
-}
+/** The answer of the active-member read: a member of this role, or none. */
+const memberOf = (role: string | undefined, displayName = "Owner"): QueryBuilderAnswers => ({
+    getRawOne: role === undefined ? undefined : { role, displayName },
+})
 
-const buildManagement = async (entityManager: MockEntityManager) => {
+/** The answer of a write that returns `rows`. */
+const wrote = (...rows: Array<ApiKeyEntity>): QueryBuilderAnswers => ({ execute: { raw: rows } })
+
+const buildManagement = async (entityManager: MockEntityManager, answers: ReadonlyArray<QueryBuilderAnswers>) => {
     const transaction = fakeTransaction(entityManager)
+    const fakes = queueQueryBuilders(entityManager, answers)
     const execute = entityManager.transaction.getMockImplementation()
     const managers: Array<EntityManager> = []
     entityManager.transaction.mockImplementation(
@@ -166,78 +173,89 @@ const buildManagement = async (entityManager: MockEntityManager) => {
             { provide: EventsService, useValue: events },
         ],
     }).compile()
-    return { service: moduleRef.get(ApiKeysService), events, transaction, managers }
+    return { service: moduleRef.get(ApiKeysService), events, transaction, managers, fakes }
 }
+
+const MEMBER_WHERE = [
+    "m.workspace_id = :workspaceId AND m.user_id = :principalId AND m.status = 'active'",
+    { workspaceId: "workspace-1", principalId: "principal-1" },
+]
+
+const REVOKE_WHERE = "id = :keyId AND workspace_id = :workspaceId AND revoked_at IS NULL"
 
 describe("ApiKeysService management", () => {
     it("lists the workspace keys as public views for an owner", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_MEMBER, [{ role: "owner", display_name: "Owner" }]],
-                [LIST_KEYS, [keyRow]],
-            ],
-        })
-        const { service } = await buildManagement(em)
+        const em = mockEntityManager({ find: [ApiKeyEntity, [keyOf()]] })
+        const { service, fakes } = await buildManagement(em, [memberOf("owner")])
 
         await expect(service.listKeys("principal-1", "workspace-1")).resolves.toEqual([keyView])
-        expect(em.query).toHaveBeenNthCalledWith(1, SELECT_MEMBER, ["workspace-1", "principal-1"])
-        expect(em.query).toHaveBeenNthCalledWith(2, LIST_KEYS, ["workspace-1"])
+        expect(fakes[0]?.callsOf("where")).toEqual([MEMBER_WHERE])
+        expect(em.find).toHaveBeenCalledWith(ApiKeyEntity, {
+            where: { workspaceId: "workspace-1" },
+            order: { createdAt: "DESC" },
+            take: 100,
+        })
     })
 
     it.each([
-        { members: [], reason: "a non-member" },
-        { members: [{ role: "member", display_name: "Staff" }], reason: "a staff member" },
-    ])("refuses $reason before reading the keys", async ({ members }) => {
-        const em = mockEntityManager({ query: [SELECT_MEMBER, members] })
-        const { service, events } = await buildManagement(em)
+        { member: undefined, reason: "a non-member" },
+        { member: "member", reason: "a staff member" },
+    ])("refuses $reason before reading the keys", async ({ member }) => {
+        const em = mockEntityManager()
+        const { service, events, fakes } = await buildManagement(em, [memberOf(member, "Staff")])
 
         await expect(service.listKeys("principal-1", "workspace-1")).rejects.toMatchObject({
             code: ApiKeysErrorCode.NotManager,
         })
-        expect(em.query).toHaveBeenCalledTimes(1)
-        expect(em.query).toHaveBeenCalledWith(SELECT_MEMBER, ["workspace-1", "principal-1"])
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
+        expect(fakes[0]?.callsOf("where")).toEqual([MEMBER_WHERE])
+        expect(em.find).not.toHaveBeenCalled()
         expect(events.record).not.toHaveBeenCalled()
     })
 
     it("rejects a short name before starting a transaction", async () => {
         const em = mockEntityManager()
-        const { service, events } = await buildManagement(em)
+        const { service, events } = await buildManagement(em, [])
 
         expect(thrownBy(() => service.createKey("principal-1", "workspace-1", " x "))).toEqual(
             objectLike({ code: ApiKeysErrorCode.NameTooShort }),
         )
         expect(em.transaction).not.toHaveBeenCalled()
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
         expect(events.record).not.toHaveBeenCalled()
     })
 })
 
 describe("ApiKeysService management", () => {
     it.each([
-        { active: [], scenario: "the count query answers no row" },
-        { active: [{ active: 19 }], scenario: "one active slot remains" },
+        { active: 0, scenario: "the count query answers no key" },
+        { active: 19, scenario: "one active slot remains" },
     ])("creates a key when $scenario", async ({ active }) => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_MEMBER, [{ role: "manager", display_name: "Manager" }]],
-                [COUNT_ACTIVE_KEYS, active],
-                [INSERT_KEY, [keyRow]],
-            ],
-        })
-        const { service, events, transaction, managers } = await buildManagement(em)
+        const em = mockEntityManager({ count: [ApiKeyEntity, active] })
+        const { service, events, transaction, managers, fakes } = await buildManagement(em, [
+            memberOf("manager", "Manager"),
+            wrote(keyOf()),
+        ])
 
         const created = await service.createKey("principal-1", "workspace-1", "  Daily\n sync  ")
 
         expect(created.item).toEqual(keyView)
         expect(created.key).toMatch(/^nvk_[A-Za-z0-9_-]{43}$/u)
-        expect(em.query).toHaveBeenNthCalledWith(1, SELECT_MEMBER, ["workspace-1", "principal-1"])
-        expect(em.query).toHaveBeenNthCalledWith(2, COUNT_ACTIVE_KEYS, ["workspace-1"])
-        expect(em.query).toHaveBeenNthCalledWith(3, INSERT_KEY, [
-            "workspace-1",
-            "Daily sync",
-            created.key.slice(0, 12),
-            hashKey(created.key),
-            "principal-1",
+        expect(fakes[0]?.callsOf("where")).toEqual([MEMBER_WHERE])
+        expect(em.count).toHaveBeenCalledWith(ApiKeyEntity, {
+            where: { workspaceId: "workspace-1", revokedAt: ANYTHING },
+        })
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(ApiKeyEntity, "ak")
+        expect(fakes[1]?.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "workspace-1",
+                    name: "Daily sync",
+                    keyPrefix: created.key.slice(0, 12),
+                    keyHash: hashKey(created.key),
+                    createdBy: "principal-1",
+                },
+            ],
         ])
         expect(events.record).toHaveBeenCalledWith(
             {
@@ -255,19 +273,14 @@ describe("ApiKeysService management", () => {
     })
 
     it("refuses creation at the active limit without inserting or recording an event", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_MEMBER, [{ role: "owner", display_name: "Owner" }]],
-                [COUNT_ACTIVE_KEYS, [{ active: 20 }]],
-            ],
-        })
-        const { service, events, transaction } = await buildManagement(em)
+        const em = mockEntityManager({ count: [ApiKeyEntity, 20] })
+        const { service, events, transaction } = await buildManagement(em, [memberOf("owner")])
 
         await expect(service.createKey("principal-1", "workspace-1", "Daily sync")).rejects.toMatchObject({
             code: ApiKeysErrorCode.LimitReached,
             params: { limit: 20 },
         })
-        expect(em.query).toHaveBeenCalledTimes(2)
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
         expect(events.record).not.toHaveBeenCalled()
         expect(transaction.outcomes).toEqual(["rollback"])
     })
@@ -275,41 +288,34 @@ describe("ApiKeysService management", () => {
 
 describe("ApiKeysService management", () => {
     it("refuses an insert that returns no key and leaves no creation event", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_MEMBER, [{ role: "owner", display_name: "Owner" }]],
-                [COUNT_ACTIVE_KEYS, [{ active: 0 }]],
-                [INSERT_KEY, []],
-            ],
-        })
-        const { service, events, transaction } = await buildManagement(em)
+        const em = mockEntityManager({ count: [ApiKeyEntity, 0] })
+        const { service, events, transaction } = await buildManagement(em, [memberOf("owner"), wrote()])
 
         await expect(service.createKey("principal-1", "workspace-1", "Daily sync")).rejects.toMatchObject({
             code: ApiKeysErrorCode.NotCreated,
         })
-        expect(em.query).toHaveBeenCalledTimes(3)
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(2)
         expect(events.record).not.toHaveBeenCalled()
         expect(transaction.outcomes).toEqual(["rollback"])
     })
 
     it("revokes the requested workspace key and records the actor in the same transaction", async () => {
-        const revokedAt = "2026-10-12T10:00:20.000Z"
-        const lastUsedAt = "2026-10-12T09:00:00.000Z"
-        const em = mockEntityManager({
-            query: [
-                [SELECT_MEMBER, [{ role: "manager", display_name: "Manager" }]],
-                [REVOKE_KEY, [{ ...keyRow, revoked_at: revokedAt, last_used_at: lastUsedAt }]],
-            ],
-        })
-        const { service, events, transaction, managers } = await buildManagement(em)
+        const revokedAt = new Date("2026-10-12T10:00:20.000Z")
+        const lastUsedAt = new Date("2026-10-12T09:00:00.000Z")
+        const em = mockEntityManager()
+        const { service, events, transaction, managers, fakes } = await buildManagement(em, [
+            memberOf("manager", "Manager"),
+            wrote(keyOf({ revokedAt, lastUsedAt })),
+        ])
 
         await expect(service.revokeKey("principal-1", "workspace-1", "key-2")).resolves.toEqual({
             ...keyView,
-            revokedAt,
-            lastUsedAt,
+            revokedAt: revokedAt.toISOString(),
+            lastUsedAt: lastUsedAt.toISOString(),
         })
-        expect(em.query).toHaveBeenNthCalledWith(1, SELECT_MEMBER, ["workspace-1", "principal-1"])
-        expect(em.query).toHaveBeenNthCalledWith(2, REVOKE_KEY, ["workspace-1", "key-2"])
+        expect(fakes[0]?.callsOf("where")).toEqual([MEMBER_WHERE])
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(ApiKeyEntity, "ak")
+        expect(fakes[1]?.callsOf("where")).toEqual([[REVOKE_WHERE, { keyId: "key-2", workspaceId: "workspace-1" }]])
         expect(events.record).toHaveBeenCalledWith(
             {
                 workspaceId: "workspace-1",
@@ -326,18 +332,13 @@ describe("ApiKeysService management", () => {
     })
 
     it("refuses revocation of a missing active key without recording an event", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_MEMBER, [{ role: "owner", display_name: "Owner" }]],
-                [REVOKE_KEY, []],
-            ],
-        })
-        const { service, events, transaction } = await buildManagement(em)
+        const em = mockEntityManager()
+        const { service, events, transaction, fakes } = await buildManagement(em, [memberOf("owner"), wrote()])
 
         await expect(service.revokeKey("principal-1", "workspace-1", "missing")).rejects.toMatchObject({
             code: ApiKeysErrorCode.NotFound,
         })
-        expect(em.query).toHaveBeenCalledWith(REVOKE_KEY, ["workspace-1", "missing"])
+        expect(fakes[1]?.callsOf("where")).toEqual([[REVOKE_WHERE, { keyId: "missing", workspaceId: "workspace-1" }]])
         expect(events.record).not.toHaveBeenCalled()
         expect(transaction.outcomes).toEqual(["rollback"])
     })
@@ -346,10 +347,7 @@ describe("ApiKeysService management", () => {
 describe("ApiKeysService credential admission", () => {
     it("proves the stored credential without calling the rate-accounting function", async () => {
         const em = mockEntityManager({
-            query: [
-                API_KEY_CREDENTIAL,
-                [{ id: "key-1", workspace_id: "ws-1", name: "Till", scopes: ["loyalty:read"] }],
-            ],
+            findOne: [ApiKeyEntity, loyaltyTillKey()],
         })
         const keys = await build(em)
 
@@ -359,16 +357,16 @@ describe("ApiKeysService credential admission", () => {
             name: "Till",
             scopes: ["loyalty:read"],
         })
-        expect(em.query).toHaveBeenCalledTimes(1)
-        expect(em.query).toHaveBeenCalledWith(API_KEY_CREDENTIAL, [hashKey("nvk_secret")])
+        expect(em.query).not.toHaveBeenCalled()
+        expect(em.findOne).toHaveBeenCalledWith(ApiKeyEntity, {
+            select: { id: true, workspaceId: true, name: true, scopes: true, revokedAt: true },
+            where: { keyHash: hashKey("nvk_secret") },
+        })
     })
 
     it("defaults optional descriptive fields without inventing scopes", async () => {
-        const keys = await build(
-            mockEntityManager({
-                query: [API_KEY_CREDENTIAL, [{ id: "key-1", workspace_id: "ws-1" }]],
-            }),
-        )
+        const incomplete = Object.assign(defaultKeyOfWorkspaceWs1(), { name: undefined, scopes: undefined })
+        const keys = await build(mockEntityManager({ findOne: [ApiKeyEntity, incomplete] }))
 
         await expect(keys.verifyCredential("Bearer nvk_secret")).resolves.toEqual({
             keyId: "key-1",
@@ -385,13 +383,13 @@ describe("ApiKeysService credential admission", () => {
         await expect(keys.verifyCredential("Basic nvk_secret")).rejects.toMatchObject({
             code: ApiKeysErrorCode.Unauthorized,
         })
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.findOne).not.toHaveBeenCalled()
     })
 
-    it.each([{ rows: [] }, { rows: [{}] }, { rows: [{ id: "key-1" }] }])(
+    it.each([{ found: null }, { found: keyWithoutId() }, { found: keyWithoutWorkspace() }])(
         "rejects an unknown or incomplete key (%p)",
-        async ({ rows }) => {
-            const keys = await build(mockEntityManager({ query: [API_KEY_CREDENTIAL, rows] }))
+        async ({ found }) => {
+            const keys = await build(mockEntityManager({ findOne: [ApiKeyEntity, found] }))
 
             await expect(keys.verifyCredential("Bearer nvk_secret")).rejects.toMatchObject({
                 code: ApiKeysErrorCode.Unauthorized,
@@ -400,7 +398,8 @@ describe("ApiKeysService credential admission", () => {
     )
 
     it("preserves the revoked-key refusal", async () => {
-        const keys = await build(mockEntityManager({ query: [API_KEY_CREDENTIAL, [{ revoked: true }]] }))
+        const revoked = revokedKey()
+        const keys = await build(mockEntityManager({ findOne: [ApiKeyEntity, revoked] }))
 
         await expect(keys.verifyCredential("Bearer nvk_secret")).rejects.toMatchObject({
             code: ApiKeysErrorCode.Revoked,
@@ -410,44 +409,48 @@ describe("ApiKeysService credential admission", () => {
 
 describe("ApiKeysService agent keys", () => {
     it("creates a key bound to an agent of the workspace with only the tools:call scope", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_MEMBER, [{ role: "owner", display_name: "Owner" }]],
-                [COUNT_ACTIVE_KEYS, [{ active: 0 }]],
-                [INSERT_AGENT_KEY, [{ ...keyRow, agent_id: "agent-1" }]],
-            ],
-        })
-        const { service, events, transaction } = await buildManagement(em)
+        const em = mockEntityManager({ count: [ApiKeyEntity, 0] })
+        const { service, events, transaction, fakes } = await buildManagement(em, [
+            memberOf("owner"),
+            { getRawOne: { id: "agent-1" } },
+            wrote(agentBoundKey()),
+        ])
 
         const created = await service.createKey("principal-1", "workspace-1", "Desk agent", "agent-1")
 
         expect(created.item).toEqual({ ...keyView, agentId: "agent-1" })
-        expect(em.query).toHaveBeenNthCalledWith(3, INSERT_AGENT_KEY, [
-            "workspace-1",
-            "Desk agent",
-            created.key.slice(0, 12),
-            hashKey(created.key),
-            "principal-1",
-            "agent-1",
-            ["tools:call"],
+        expect(fakes[1]?.callsOf("setLock")).toEqual([["pessimistic_read"]])
+        expect(fakes[1]?.callsOf("where")).toEqual([
+            ["a.id = :agentId AND a.workspace_id = :workspaceId", { agentId: "agent-1", workspaceId: "workspace-1" }],
+        ])
+        expect(fakes[2]?.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "workspace-1",
+                    name: "Desk agent",
+                    keyPrefix: created.key.slice(0, 12),
+                    keyHash: hashKey(created.key),
+                    createdBy: "principal-1",
+                    agentId: "agent-1",
+                    scopes: ["tools:call"],
+                },
+            ],
         ])
         expect(events.record).toHaveBeenCalledTimes(1)
         expect(transaction.outcomes).toEqual(["commit"])
     })
 
     it("refuses an agent that is not of the workspace and records nothing", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_MEMBER, [{ role: "owner", display_name: "Owner" }]],
-                [COUNT_ACTIVE_KEYS, [{ active: 0 }]],
-                [INSERT_AGENT_KEY, []],
-            ],
-        })
-        const { service, events, transaction } = await buildManagement(em)
+        const em = mockEntityManager({ count: [ApiKeyEntity, 0] })
+        const { service, events, transaction } = await buildManagement(em, [
+            memberOf("owner"),
+            { getRawOne: undefined },
+        ])
 
         await expect(service.createKey("principal-1", "workspace-1", "Desk agent", "agent-9")).rejects.toMatchObject({
             code: ApiKeysErrorCode.AgentNotFound,
         })
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(2)
         expect(events.record).not.toHaveBeenCalled()
         expect(transaction.outcomes).toEqual(["rollback"])
     })
@@ -455,21 +458,19 @@ describe("ApiKeysService agent keys", () => {
 
 describe("ApiKeysService agent keys", () => {
     it("verifies an agent key by its hash and answers the agent and its workspace", async () => {
-        const em = mockEntityManager({
-            query: [
-                API_AGENT_KEY,
-                [
-                    {
-                        id: "key-1",
-                        workspace_id: "ws-1",
-                        agent_id: "agent-1",
-                        scopes: ["tools:call"],
-                        revoked: false,
-                        agent_status: "active",
-                    },
-                ],
-            ],
-        })
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [
+            {
+                getRawOne: {
+                    id: "key-1",
+                    workspace_id: "ws-1",
+                    agent_id: "agent-1",
+                    scopes: ["tools:call"],
+                    revoked: false,
+                    agent_status: "active",
+                },
+            },
+        ])
         const keys = await build(em)
 
         await expect(keys.verifyAgentKey("Bearer nvk_secret")).resolves.toEqual({
@@ -477,7 +478,7 @@ describe("ApiKeysService agent keys", () => {
             workspaceId: "ws-1",
             agentId: "agent-1",
         })
-        expect(em.query).toHaveBeenCalledWith(API_AGENT_KEY, [hashKey("nvk_secret")])
+        expect(fake?.callsOf("where")).toEqual([["k.keyHash = :keyHash", { keyHash: hashKey("nvk_secret") }]])
     })
 
     it("refuses a malformed header before the database and a revoked or unknown key after it", async () => {
@@ -485,15 +486,24 @@ describe("ApiKeysService agent keys", () => {
         const keys = await build(em)
 
         await expect(keys.verifyAgentKey("Bearer other")).rejects.toMatchObject({ code: ApiKeysErrorCode.Unauthorized })
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
 
-        em.query.mockResolvedValueOnce([])
+        queueQueryBuilders(em, [
+            { getRawOne: undefined },
+            {
+                getRawOne: {
+                    id: "key-1",
+                    workspace_id: "ws-1",
+                    agent_id: "agent-1",
+                    scopes: [],
+                    revoked: true,
+                    agent_status: null,
+                },
+            },
+        ])
         await expect(keys.verifyAgentKey("Bearer nvk_secret")).rejects.toMatchObject({
             code: ApiKeysErrorCode.Unauthorized,
         })
-        em.query.mockResolvedValueOnce([
-            { id: "key-1", workspace_id: "ws-1", agent_id: "agent-1", scopes: [], revoked: true, agent_status: null },
-        ])
         await expect(keys.verifyAgentKey("Bearer nvk_secret")).rejects.toMatchObject({ code: ApiKeysErrorCode.Revoked })
     })
 })

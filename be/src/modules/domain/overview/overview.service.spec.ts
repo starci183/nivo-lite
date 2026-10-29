@@ -1,30 +1,61 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { OverviewService } from "./overview.service"
-import {
-    DASHBOARD_AGENTS,
-    DASHBOARD_EVENTS,
-    DASHBOARD_EXCEPTIONS,
-    DASHBOARD_GOVERNANCE,
-    DASHBOARD_LEADS,
-    DASHBOARD_PENDING,
-    DASHBOARD_PROMO,
-    DASHBOARD_RESPONSIBILITIES,
-} from "./persistence/overview.sql"
+import type {
+    OverviewAgent,
+    OverviewEvent,
+    OverviewException,
+    OverviewLead,
+    OverviewPending,
+    OverviewResponsibility,
+} from "./overview.contracts"
+import { OverviewFiguresService } from "./overview-figures.service"
+import { OverviewReadsService } from "./overview-reads.service"
 
 const SINCE7 = "2026-10-06T03:00:00.000Z"
 const FOUNDING_FROM = "2026-09-28T17:00:00.000Z"
 const FOUNDING_TO = "2026-10-31T16:59:59.000Z"
 
-const RESPONSIBILITY = { id: "r-1" }
-const AGENT = { id: "a-1" }
-const EVENT = { id: "e-1" }
-const LEAD = { id: "l-1" }
-const PENDING = { id: "p-1" }
+const AT = "2026-10-12T00:00:00+00:00"
+const RESPONSIBILITY: OverviewResponsibility = {
+    id: "r-1",
+    leadId: "l-1",
+    title: "Call",
+    ownerKind: "human",
+    ownerAgentId: null,
+    ownerName: "Mai",
+    nextAction: "call",
+    dueAt: null,
+    status: "open",
+    createdAt: AT,
+    lead: { id: "l-1", contactName: "An", company: "Co", stage: "new" },
+}
+const AGENT: OverviewAgent = {
+    id: "a-1",
+    module: "sales",
+    name: "AI Sales",
+    handle: "ai-sales",
+    role: "sales",
+    instructions: "x",
+    knowledge: "",
+    greeting: "",
+    approvalRule: "",
+    status: "active",
+    createdAt: AT,
+}
+const EVENT: OverviewEvent = {
+    id: "e-1",
+    leadId: null,
+    kind: "module.purchased",
+    actor: "sys",
+    summary: "bought",
+    evidence: null,
+    createdAt: AT,
+}
+const LEAD: OverviewLead = { id: "l-1", stage: "new", createdAt: AT, contactName: "An", company: "Co" }
+const PENDING: OverviewPending = { id: "p-1", responsibilityId: "r-1", createdAt: AT, leadId: "l-1" }
 const PROMO = {
     chatbot: { id: "bot-1", knowledge: "hours" },
     isFoundingMember: true,
@@ -47,7 +78,22 @@ const GOVERNANCE = {
     decisions7: [],
     recent: [],
 }
-const EXCEPTION = { id: "x-1" }
+const EXCEPTION: OverviewException = {
+    id: "x-1",
+    leadId: null,
+    department: "sales",
+    action: "quote",
+    status: "failed",
+    reason: null,
+    error: null,
+    executionId: null,
+    assignedStaffName: null,
+    createdAt: AT,
+    summary: null,
+    contact: null,
+    customer: null,
+    lead: null,
+}
 
 const EMPTY_PROMO = {
     chatbot: null,
@@ -72,7 +118,19 @@ const EMPTY_GOVERNANCE = {
     recent: [],
 }
 
-const build = async (entityManager: MockEntityManager) => {
+const build = async () => {
+    const reads = mock<OverviewReadsService>({
+        responsibilities: jest.fn().mockResolvedValue([]),
+        agents: jest.fn().mockResolvedValue([]),
+        events: jest.fn().mockResolvedValue([]),
+        leads: jest.fn().mockResolvedValue([]),
+        pending: jest.fn().mockResolvedValue([]),
+        exceptions: jest.fn().mockResolvedValue([]),
+    })
+    const figures = mock<OverviewFiguresService>({
+        promo: jest.fn().mockResolvedValue(EMPTY_PROMO),
+        governance: jest.fn().mockResolvedValue(EMPTY_GOVERNANCE),
+    })
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue({
         userId: "user-1",
@@ -85,29 +143,26 @@ const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             OverviewService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: OverviewReadsService, useValue: reads },
+            { provide: OverviewFiguresService, useValue: figures },
             { provide: CLOCK, useValue: new FakeClock("2026-10-13T03:00:00.000Z") },
             { provide: WorkspaceMembersService, useValue: members },
         ],
     }).compile()
-    return { service: moduleRef.get(OverviewService), members }
+    return { service: moduleRef.get(OverviewService), members, reads, figures }
 }
 
 describe("OverviewService > dashboard", () => {
     it("reads every figure for an active member, in the founding window", async () => {
-        const em = mockEntityManager({
-            query: [
-                [DASHBOARD_RESPONSIBILITIES, [{ rows: [RESPONSIBILITY] }]],
-                [DASHBOARD_AGENTS, [{ rows: [AGENT] }]],
-                [DASHBOARD_EVENTS, [{ rows: [EVENT] }]],
-                [DASHBOARD_LEADS, [{ rows: [LEAD] }]],
-                [DASHBOARD_PENDING, [{ rows: [PENDING] }]],
-                [DASHBOARD_PROMO, [{ promo: PROMO }]],
-                [DASHBOARD_GOVERNANCE, [{ governance: GOVERNANCE }]],
-                [DASHBOARD_EXCEPTIONS, [{ rows: [EXCEPTION] }]],
-            ],
-        })
-        const { service, members } = await build(em)
+        const { service, members, reads, figures } = await build()
+        reads.responsibilities.mockResolvedValue([RESPONSIBILITY])
+        reads.agents.mockResolvedValue([AGENT])
+        reads.events.mockResolvedValue([EVENT])
+        reads.leads.mockResolvedValue([LEAD])
+        reads.pending.mockResolvedValue([PENDING])
+        reads.exceptions.mockResolvedValue([EXCEPTION])
+        figures.promo.mockResolvedValue(PROMO)
+        figures.governance.mockResolvedValue(GOVERNANCE)
 
         await expect(service.dashboard("user-1", "ws-1")).resolves.toEqual({
             since7: SINCE7,
@@ -121,33 +176,22 @@ describe("OverviewService > dashboard", () => {
             exceptions: [EXCEPTION],
         })
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-        expect(em.query).toHaveBeenCalledWith(DASHBOARD_RESPONSIBILITIES, ["ws-1"])
-        expect(em.query).toHaveBeenCalledWith(DASHBOARD_AGENTS, ["ws-1"])
-        expect(em.query).toHaveBeenCalledWith(DASHBOARD_EVENTS, ["ws-1", 6])
-        expect(em.query).toHaveBeenCalledWith(DASHBOARD_LEADS, ["ws-1"])
-        expect(em.query).toHaveBeenCalledWith(DASHBOARD_PENDING, ["ws-1"])
-        expect(em.query).toHaveBeenCalledWith(DASHBOARD_PROMO, ["ws-1", FOUNDING_FROM, FOUNDING_TO])
-        expect(em.query).toHaveBeenCalledWith(DASHBOARD_GOVERNANCE, ["ws-1", SINCE7])
-        expect(em.query).toHaveBeenCalledWith(DASHBOARD_EXCEPTIONS, ["ws-1"])
+        expect(reads.responsibilities).toHaveBeenCalledWith("ws-1")
+        expect(reads.agents).toHaveBeenCalledWith("ws-1")
+        expect(reads.events).toHaveBeenCalledWith("ws-1", 6)
+        expect(reads.leads).toHaveBeenCalledWith("ws-1")
+        expect(reads.pending).toHaveBeenCalledWith("ws-1")
+        expect(reads.exceptions).toHaveBeenCalledWith("ws-1")
+        expect(figures.promo).toHaveBeenCalledWith("ws-1", {
+            since7: SINCE7,
+            foundingFrom: FOUNDING_FROM,
+            foundingTo: FOUNDING_TO,
+        })
+        expect(figures.governance).toHaveBeenCalledWith("ws-1", SINCE7)
     })
 
-    it.each([
-        { label: "a missing promo field", promo: [{}] },
-        { label: "no promo row", promo: [] },
-    ])("reads empty answers with $label as empty lists and blank promo and governance", async ({ promo }) => {
-        const em = mockEntityManager({
-            query: [
-                [DASHBOARD_RESPONSIBILITIES, []],
-                [DASHBOARD_AGENTS, [{}]],
-                [DASHBOARD_EVENTS, [{ rows: null }]],
-                [DASHBOARD_LEADS, [{ rows: [] }]],
-                [DASHBOARD_PENDING, []],
-                [DASHBOARD_PROMO, promo],
-                [DASHBOARD_GOVERNANCE, []],
-                [DASHBOARD_EXCEPTIONS, []],
-            ],
-        })
-        const { service } = await build(em)
+    it("answers empty lists and blank promo and governance when nothing is recorded", async () => {
+        const { service } = await build()
 
         await expect(service.dashboard("user-1", "ws-1")).resolves.toEqual({
             since7: SINCE7,
@@ -166,11 +210,11 @@ describe("OverviewService > dashboard", () => {
 describe("OverviewService > dashboard", () => {
     it("reads nothing when the caller is not a member", async () => {
         const denied = new Error("not a member")
-        const em = mockEntityManager()
-        const { service, members } = await build(em)
+        const { service, members, reads, figures } = await build()
         members.require.mockRejectedValue(denied)
 
         await expect(service.dashboard("user-1", "ws-9")).rejects.toBe(denied)
-        expect(em.query).not.toHaveBeenCalled()
+        expect(reads.responsibilities).not.toHaveBeenCalled()
+        expect(figures.promo).not.toHaveBeenCalled()
     })
 })

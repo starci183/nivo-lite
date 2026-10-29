@@ -7,7 +7,8 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { WorkItem } from "./decisions.contracts"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { ModuleApprovalGateService } from "./module-approval-gate.service"
-import { FIND_WORK_ITEM_VIEW } from "./persistence/work-item-views.sql"
+import { WorkItemViewsService } from "./work-item-views.service"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { WorkEngineService } from "./work-engine.service"
 
 const MEMBER_ID = "11111111-1111-4111-8111-111111111111"
@@ -66,15 +67,18 @@ const setup = async (
     engine: Partial<WorkEngineService>,
     rows: ReadonlyArray<WorkItem> = [],
 ): Promise<ModuleApprovalGateService> => {
+    const em = mockEntityManager()
+    queueQueryBuilders(em, [{ getRawOne: rows[0] }])
     const moduleRef = await Test.createTestingModule({
         providers: [
             ModuleApprovalGateService,
+            WorkItemViewsService,
             { provide: WorkEngineService, useValue: mock<WorkEngineService>(engine) },
             {
                 provide: WorkspaceMembersService,
                 useValue: mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(memberOf()) }),
             },
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: mockEntityManager({ query: [FIND_WORK_ITEM_VIEW, rows] }) },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
         ],
     }).compile()
     return moduleRef.get(ModuleApprovalGateService)

@@ -1,18 +1,12 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { Not } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { entityRowBuilder, namedCalls } from "@tests/fixtures/builders/entity-row.builder"
 import { ExtractionNote } from "./brain-extractions.contracts"
 import { BrainExtractionsService } from "./brain-extractions.service"
-import type { BrainExtractionRow } from "./persistence/brain-extractions.rows"
-import {
-    FAIL_EXTRACTION,
-    FINISH_EXTRACTION,
-    LIST_EXTRACTIONS,
-    SAVE_PROGRESS,
-    SELECT_EXTRACTION,
-    UPSERT_EXTRACTION,
-} from "./persistence/brain-extractions.sql"
+import { BrainExtractionEntity } from "./persistence/entities"
 
 const WS = "11111111-1111-4111-8111-111111111111"
 
@@ -23,29 +17,32 @@ const build = async (em: MockEntityManager) => {
     return moduleRef.get(BrainExtractionsService)
 }
 
-const row: BrainExtractionRow = {
-    source_id: "s1",
-    workspace_id: WS,
+const rowOf = entityRowBuilder<BrainExtractionEntity>({
+    sourceId: "s1",
+    workspaceId: WS,
     status: "running",
-    facts_proposed: 7,
-    prompt_version: 3,
-    content_hash: "hash-1",
-    windows_total: 5,
-    windows_done: 2,
+    factsProposed: 7,
+    error: null,
+    model: null,
+    promptVersion: 3,
+    contentHash: "hash-1",
+    windowsTotal: 5,
+    windowsDone: 2,
     attempts: 1,
-    orphan_fact_ids: ["f1", "f2"],
-}
+    orphanFactIds: ["f1", "f2"],
+    updatedAt: new Date("2026-10-13T02:00:00.000Z"),
+})
+
+/** Every update the double saw: the entity, the filter and the changes with their function expressions named. */
+const updatesOf = (em: MockEntityManager): unknown => namedCalls(em.update.mock.calls, 2)
 
 describe("BrainExtractionsService", () => {
     describe("states", () => {
         it("lists each document and its reading status in database order", async () => {
             const em = mockEntityManager({
-                query: [
-                    LIST_EXTRACTIONS,
-                    [
-                        { source_id: "s1", status: "running" },
-                        { source_id: "s2", status: "done" },
-                    ],
+                find: [
+                    BrainExtractionEntity,
+                    [rowOf({ status: "running" }), rowOf({ sourceId: "s2", status: "done" })],
                 ],
             })
             const service = await build(em)
@@ -54,21 +51,33 @@ describe("BrainExtractionsService", () => {
                 { sourceId: "s1", status: "running" },
                 { sourceId: "s2", status: "done" },
             ])
-            expect(em.query.mock.calls).toEqual([[LIST_EXTRACTIONS, [WS]]])
+            expect(namedCalls(em.find.mock.calls)).toEqual([
+                [
+                    "BrainExtractionEntity",
+                    { select: { sourceId: true, status: true }, where: { workspaceId: WS }, take: 500 },
+                ],
+            ])
         })
 
         it("answers an empty list for a workspace with no readings", async () => {
-            const em = mockEntityManager({ query: [LIST_EXTRACTIONS, []] })
+            const em = mockEntityManager({ find: [BrainExtractionEntity, []] })
             const service = await build(em)
 
             await expect(service.states(WS)).resolves.toEqual([])
-            expect(em.query.mock.calls).toEqual([[LIST_EXTRACTIONS, [WS]]])
+            expect(namedCalls(em.find.mock.calls)).toEqual([
+                [
+                    "BrainExtractionEntity",
+                    { select: { sourceId: true, status: true }, where: { workspaceId: WS }, take: 500 },
+                ],
+            ])
         })
     })
+})
 
+describe("BrainExtractionsService", () => {
     describe("get", () => {
         it("names every column of the stored reading and preserves its orphan facts", async () => {
-            const em = mockEntityManager({ query: [SELECT_EXTRACTION, [row]] })
+            const em = mockEntityManager({ findOne: [BrainExtractionEntity, rowOf()] })
             const service = await build(em)
 
             await expect(service.get(WS, "s1")).resolves.toEqual({
@@ -83,13 +92,15 @@ describe("BrainExtractionsService", () => {
                 orphanFactIds: ["f1", "f2"],
             })
 
-            expect(em.query).toHaveBeenCalledWith(SELECT_EXTRACTION, [WS, "s1"])
+            expect(em.findOne).toHaveBeenCalledWith(BrainExtractionEntity, {
+                where: { workspaceId: WS, sourceId: "s1" },
+            })
         })
 
         it("answers an empty orphan list for a row without orphan facts", async () => {
             const service = await build(
                 mockEntityManager({
-                    query: [SELECT_EXTRACTION, [{ ...row, content_hash: null, orphan_fact_ids: null }]],
+                    findOne: [BrainExtractionEntity, rowOf({ contentHash: null, orphanFactIds: [] })],
                 }),
             )
 
@@ -107,7 +118,7 @@ describe("BrainExtractionsService", () => {
         })
 
         it("answers null when the document has no reading", async () => {
-            const service = await build(mockEntityManager({ query: [SELECT_EXTRACTION, []] }))
+            const service = await build(mockEntityManager({ findOne: [BrainExtractionEntity, null] }))
 
             await expect(service.get(WS, "s1")).resolves.toBeNull()
         })
@@ -117,7 +128,7 @@ describe("BrainExtractionsService", () => {
 describe("BrainExtractionsService", () => {
     describe("start", () => {
         it("starts the reading with a copy of its orphan facts", async () => {
-            const em = mockEntityManager({ query: [UPSERT_EXTRACTION, []] })
+            const em = mockEntityManager({ upsert: [BrainExtractionEntity, {}] })
             const service = await build(em)
             const orphanFactIds = ["f1", "f2"]
 
@@ -132,15 +143,33 @@ describe("BrainExtractionsService", () => {
                 }),
             ).resolves.toBeUndefined()
 
-            expect(em.query).toHaveBeenCalledWith(UPSERT_EXTRACTION, [WS, "s1", 3, "hash-1", 5, ["f1", "f2"]])
+            const started = {
+                sourceId: "s1",
+                workspaceId: WS,
+                status: "running",
+                factsProposed: 0,
+                error: null,
+                model: null,
+                promptVersion: 3,
+                contentHash: "hash-1",
+                windowsTotal: 5,
+                windowsDone: 0,
+                attempts: 0,
+                orphanFactIds: ["f1", "f2"],
+                updatedAt: "function",
+            }
+            const upserts = () => namedCalls(em.upsert.mock.calls, 1)
+            expect(upserts()).toEqual([["BrainExtractionEntity", started, ["sourceId"]]])
             orphanFactIds.push("f3")
-            expect(em.query).toHaveBeenCalledWith(UPSERT_EXTRACTION, [WS, "s1", 3, "hash-1", 5, ["f1", "f2"]])
+            expect(upserts()).toEqual([["BrainExtractionEntity", started, ["sourceId"]]])
         })
     })
+})
 
+describe("BrainExtractionsService", () => {
     describe("save", () => {
         it("stores every progress value and the failure code", async () => {
-            const em = mockEntityManager({ query: [SAVE_PROGRESS, []] })
+            const em = mockEntityManager({ update: [BrainExtractionEntity, { affected: 1 }] })
             const service = await build(em)
 
             await expect(
@@ -154,20 +183,25 @@ describe("BrainExtractionsService", () => {
                 }),
             ).resolves.toBeUndefined()
 
-            expect(em.query).toHaveBeenCalledWith(SAVE_PROGRESS, [
-                WS,
-                "s1",
-                "failed",
-                2,
-                7,
-                5,
-                "BRAIN_NOTE_MODEL_BUSY",
-                3,
+            expect(updatesOf(em)).toEqual([
+                [
+                    "BrainExtractionEntity",
+                    { workspaceId: WS, sourceId: "s1" },
+                    {
+                        status: "failed",
+                        windowsDone: 2,
+                        factsProposed: 7,
+                        windowsTotal: 5,
+                        error: "BRAIN_NOTE_MODEL_BUSY",
+                        attempts: 3,
+                        updatedAt: "function",
+                    },
+                ],
             ])
         })
 
         it("passes a null error for a reading that is progressing", async () => {
-            const em = mockEntityManager({ query: [SAVE_PROGRESS, []] })
+            const em = mockEntityManager({ update: [BrainExtractionEntity, { affected: 1 }] })
             const service = await build(em)
 
             await service.save(WS, "s1", {
@@ -179,7 +213,21 @@ describe("BrainExtractionsService", () => {
                 attempts: 0,
             })
 
-            expect(em.query).toHaveBeenCalledWith(SAVE_PROGRESS, [WS, "s1", "running", 4, 9, 5, null, 0])
+            expect(updatesOf(em)).toEqual([
+                [
+                    "BrainExtractionEntity",
+                    { workspaceId: WS, sourceId: "s1" },
+                    {
+                        status: "running",
+                        windowsDone: 4,
+                        factsProposed: 9,
+                        windowsTotal: 5,
+                        error: null,
+                        attempts: 0,
+                        updatedAt: "function",
+                    },
+                ],
+            ])
         })
     })
 })
@@ -187,12 +235,18 @@ describe("BrainExtractionsService", () => {
 describe("BrainExtractionsService", () => {
     describe("finish", () => {
         it("closes the reading with the model that read it", async () => {
-            const em = mockEntityManager({ query: [FINISH_EXTRACTION, []] })
+            const em = mockEntityManager({ update: [BrainExtractionEntity, { affected: 1 }] })
             const service = await build(em)
 
             await expect(service.finish(WS, "s1", "model-1")).resolves.toBeUndefined()
 
-            expect(em.query).toHaveBeenCalledWith(FINISH_EXTRACTION, [WS, "s1", "model-1"])
+            expect(updatesOf(em)).toEqual([
+                [
+                    "BrainExtractionEntity",
+                    { workspaceId: WS, sourceId: "s1" },
+                    { status: "done", error: null, model: "model-1", orphanFactIds: [], updatedAt: "function" },
+                ],
+            ])
         })
     })
 })
@@ -200,12 +254,18 @@ describe("BrainExtractionsService", () => {
 describe("BrainExtractionsService settling", () => {
     describe("fail", () => {
         it("settles an unfinished reading as failed with the note", async () => {
-            const em = mockEntityManager({ query: [FAIL_EXTRACTION, []] })
+            const em = mockEntityManager({ update: [BrainExtractionEntity, { affected: 1 }] })
             const service = await build(em)
 
             await service.fail(WS, "s1", ExtractionNote.Aborted)
 
-            expect(em.query.mock.calls).toEqual([[FAIL_EXTRACTION, [WS, "s1", ExtractionNote.Aborted]]])
+            expect(updatesOf(em)).toEqual([
+                [
+                    "BrainExtractionEntity",
+                    { workspaceId: WS, sourceId: "s1", status: Not("done") },
+                    { status: "failed", error: ExtractionNote.Aborted, updatedAt: "function" },
+                ],
+            ])
         })
     })
 })

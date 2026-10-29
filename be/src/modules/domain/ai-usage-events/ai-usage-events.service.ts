@@ -1,22 +1,26 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { noticeBody, noticeLevelOf } from "./notice.policy"
-import type { DailyModuleUsageRow, QuotaRow, RecentCostRow } from "./persistence/ai-usage-events.rows"
-import {
-    INSERT_USAGE_EVENT,
-    POST_USAGE_NOTICE,
-    SELECT_MONTHLY_USAGE,
-    SELECT_QUOTA_STATUS,
-    SELECT_RECENT_COST,
-} from "./persistence/ai-usage-events.sql"
-import { quotaLookupOf, quotaOf, stopsCall } from "./quota.policy"
-import type { QuotaLookup, QuotaStatus, UsageInput, UsageKind, UsageSummary } from "./ai-usage-events.contracts"
+import { AiUsageEventEntity } from "./persistence/entities"
+import { quotaFiguresOf, quotaLookupOf, quotaOf, stopsCall } from "./quota.policy"
+import type {
+    QuotaLookup,
+    QuotaRecord,
+    QuotaStatus,
+    UsageInput,
+    UsageKind,
+    UsageSummary,
+} from "./ai-usage-events.contracts"
 import { AiUsageEventsLogEvent } from "./ai-usage-events.log-events"
 import { figuresOf } from "./usage-cost.policy"
 import { toDailyModuleUsage, toUsageSummary } from "./usage-summary.mapper"
+import type { MonthlyUsageAggregate } from "./usage-summary.mapper"
+
+/** The most day-and-module rollups the billing card reads. */
+const MONTHLY_ROW_LIMIT = 2000
 
 @Injectable()
 /** Meters every model call of a workspace and answers where the month stands against the allowance; the only writer of ai_usage_events. */
@@ -33,16 +37,16 @@ export class AiUsageEventsService {
     async record(input: UsageInput): Promise<void> {
         try {
             const figures = figuresOf(input, input.usage)
-            await this.entityManager.query(INSERT_USAGE_EVENT, [
-                input.workspaceId,
-                input.kind,
-                input.module,
-                input.model.slice(0, 120),
-                figures.promptTokens,
-                figures.completionTokens,
-                figures.costUsd,
-                figures.estimated,
-            ])
+            await this.entityManager.insert(AiUsageEventEntity, {
+                workspaceId: input.workspaceId,
+                kind: input.kind,
+                module: input.module,
+                model: input.model.slice(0, 120),
+                promptTokens: figures.promptTokens,
+                completionTokens: figures.completionTokens,
+                costUsd: String(figures.costUsd),
+                estimated: figures.estimated,
+            })
             const status = await this.quotaStatus(input.workspaceId)
             if (status !== null) await this.notifyOwner(input.workspaceId, status)
         } catch (cause) {
@@ -53,8 +57,8 @@ export class AiUsageEventsService {
     /** This month's use against the allowance, or null when it cannot be read (metering then fails open). */
     async quotaStatus(workspaceId: string): Promise<QuotaLookup> {
         try {
-            const [row] = await this.entityManager.query<Array<QuotaRow>>(SELECT_QUOTA_STATUS, [workspaceId])
-            return row === undefined ? null : quotaOf(row)
+            const [record] = await this.quotaRecords(workspaceId)
+            return record === undefined ? null : quotaOf(quotaFiguresOf(record))
         } catch (cause) {
             this.logger.error(AiUsageEventsLogEvent.StatusFailed, cause, { workspaceId })
             return null
@@ -63,19 +67,42 @@ export class AiUsageEventsService {
 
     /** The browser's quota read: absence is nullable, while a database failure propagates to the caller. */
     async readQuotaStatus(workspaceId: string): Promise<QuotaLookup> {
-        return quotaLookupOf(await this.entityManager.query<Array<QuotaRow>>(SELECT_QUOTA_STATUS, [workspaceId]))
+        return quotaLookupOf((await this.quotaRecords(workspaceId)).map(quotaFiguresOf))
     }
 
     /** Current-month use for the billing card, after the application proves the caller's manager role. */
     async usageSummary(workspaceId: string): Promise<UsageSummary> {
         const status = await this.readQuotaStatus(workspaceId)
-        const rows = await this.entityManager.query<Array<DailyModuleUsageRow>>(SELECT_MONTHLY_USAGE, [workspaceId])
+        const rows = await this.entityManager
+            .createQueryBuilder(AiUsageEventEntity, "e")
+            .select("to_char(e.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD')", "day")
+            .addSelect("COALESCE(e.module, 'other')", "module")
+            .addSelect("COUNT(*)::float8", "calls")
+            .addSelect("SUM(e.prompt_tokens + e.completion_tokens)::float8", "tokens")
+            .addSelect("SUM(e.cost_usd)::float8", "cost_usd")
+            .where("e.workspace_id = :workspaceId", { workspaceId })
+            .andWhere("e.kind <> 'guide'")
+            .andWhere(
+                "e.created_at >= (date_trunc('month', current_timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh')",
+            )
+            .groupBy("1")
+            .addGroupBy("e.module")
+            .orderBy("day", "ASC")
+            .addOrderBy("module", "ASC")
+            .limit(MONTHLY_ROW_LIMIT)
+            .getRawMany<MonthlyUsageAggregate>()
         return toUsageSummary(status, rows.map(toDailyModuleUsage))
     }
 
     /** The model cost from a selected day onward, used by the credits run-out forecast. */
     async recentCostUsd(workspaceId: string, from: string): Promise<number> {
-        const [row] = await this.entityManager.query<Array<RecentCostRow>>(SELECT_RECENT_COST, [workspaceId, from])
+        const row = await this.entityManager
+            .createQueryBuilder(AiUsageEventEntity, "e")
+            .select("COALESCE(SUM(e.cost_usd), 0)::float8", "cost_usd")
+            .where("e.workspace_id = :workspaceId", { workspaceId })
+            .andWhere("e.kind <> 'guide'")
+            .andWhere("e.created_at >= (CAST(:from AS date)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')", { from })
+            .getRawOne<{ cost_usd: number }>()
         return row?.cost_usd ?? 0
     }
 
@@ -95,7 +122,7 @@ export class AiUsageEventsService {
         const level = noticeLevelOf(status)
         if (level === null) return
         try {
-            await this.entityManager.query(POST_USAGE_NOTICE, [
+            await callDbFunction<{ usage_notice_post: boolean }>(this.entityManager, "public.usage_notice_post", [
                 workspaceId,
                 status.periodStart,
                 level,
@@ -104,5 +131,10 @@ export class AiUsageEventsService {
         } catch (cause) {
             this.logger.error(AiUsageEventsLogEvent.NoticeFailed, cause, { workspaceId })
         }
+    }
+
+    /** This month's use of a workspace against its allowance: no row, or one. */
+    private quotaRecords(workspaceId: string): Promise<ReadonlyArray<QuotaRecord>> {
+        return callDbFunction<QuotaRecord>(this.entityManager, "public.ai_quota_status", [workspaceId])
     }
 }

@@ -9,17 +9,12 @@ import type {
     NewLoyaltyCustomer,
 } from "./loyalty-customers.contracts"
 import { customerBirthday } from "./policies/customer-birthday.policy"
-import {
-    INSERT_CUSTOMER,
-    INSERT_CUSTOMERS_FROM_LEADS,
-    SELECT_CUSTOMER_BY_ID,
-    SELECT_CUSTOMER_BY_PHONE,
-    SELECT_LEAD_CONTACTS,
-    UPDATE_CUSTOMER_TIER,
-    UPDATE_CUSTOMER_PROFILE,
-} from "./persistence/loyalty-customers.sql"
-import { toCustomer, toLeadContact } from "./persistence/loyalty-customers.rows"
-import type { CustomerRow, LeadContactRow } from "./persistence/loyalty-customers.rows"
+import { toCustomer, toLeadContact } from "./policies/customer.mapper"
+import type { LeadContactRaw } from "./policies/customer.mapper"
+import { LoyaltyCustomerEntity } from "./persistence/entities"
+
+/** The most leads one read answers. */
+const LEAD_LIMIT = 2000
 
 /** A move of a customer to another tier. */
 export interface TierMove {
@@ -44,55 +39,62 @@ export class LoyaltyCustomersService {
 
     /** The customer with a normalised phone, or null. */
     async byPhone(workspaceId: string, phone: string): Promise<CustomerMatch> {
-        const [row] = await this.entityManager.query<Array<CustomerRow>>(SELECT_CUSTOMER_BY_PHONE, [workspaceId, phone])
-        return row === undefined ? null : toCustomer(row)
+        const row = await this.entityManager.findOne(LoyaltyCustomerEntity, { where: { workspaceId, phone } })
+        return row === null ? null : toCustomer(row)
     }
 
     /** The customer with an id in the workspace, or null. */
     async byId(workspaceId: string, customerId: string): Promise<CustomerMatch> {
-        const [row] = await this.entityManager.query<Array<CustomerRow>>(SELECT_CUSTOMER_BY_ID, [
-            workspaceId,
-            customerId,
-        ])
-        return row === undefined ? null : toCustomer(row)
+        const row = await this.entityManager.findOne(LoyaltyCustomerEntity, { where: { workspaceId, id: customerId } })
+        return row === null ? null : toCustomer(row)
     }
 
     /** The customer of a phone, created when the phone is new; a concurrent request that created it first is found again. */
     async ensureByPhone(manager: EntityManager, person: NewLoyaltyCustomer): Promise<MaybeText> {
-        const [existing] = await manager.query<Array<CustomerRow>>(SELECT_CUSTOMER_BY_PHONE, [
-            person.workspaceId,
-            person.phone,
-        ])
-        if (existing !== undefined) return existing.id
-        const [created] = await manager.query<Array<{ id: string }>>(INSERT_CUSTOMER, [
-            person.workspaceId,
-            person.name,
-            person.phone,
-            person.email,
-        ])
-        if (created !== undefined) return created.id
-        const [raced] = await manager.query<Array<CustomerRow>>(SELECT_CUSTOMER_BY_PHONE, [
-            person.workspaceId,
-            person.phone,
-        ])
-        return raced === undefined ? null : raced.id
+        const existing = await this.idOfPhone(manager, person.workspaceId, person.phone)
+        if (existing !== null) return existing
+        const created = await manager
+            .createQueryBuilder(LoyaltyCustomerEntity, "lc")
+            .insert()
+            .values({ workspaceId: person.workspaceId, name: person.name, phone: person.phone, email: person.email })
+            .orIgnore()
+            .returning("id")
+            .execute()
+        const id = (created.raw as Array<{ id: string }>)[0]?.id
+        if (id !== undefined) return id
+        return this.idOfPhone(manager, person.workspaceId, person.phone)
     }
 
     /** Moves a customer to a tier unless somebody moved it first; true when this call moved it. */
     async moveTier(move: TierMove): Promise<boolean> {
-        const rows = await move.manager.query<Array<{ id: string }>>(UPDATE_CUSTOMER_TIER, [
-            move.workspaceId,
-            move.customerId,
-            move.toKey,
-            move.fromKey,
-            move.nowIso,
-        ])
-        return rows.length > 0
+        const at = new Date(move.nowIso)
+        const moved = await move.manager
+            .createQueryBuilder(LoyaltyCustomerEntity, "lc")
+            .update()
+            .set({ tierKey: move.toKey, tierSince: at, updatedAt: at })
+            .where("workspace_id = :workspaceId AND id = :customerId AND tier_key IS NOT DISTINCT FROM :fromKey", {
+                workspaceId: move.workspaceId,
+                customerId: move.customerId,
+                fromKey: move.fromKey,
+            })
+            .returning("id")
+            .execute()
+        return (moved.raw as Array<unknown>).length > 0
     }
 
     /** The leads of a workspace that carry a usable phone or email. */
     async leadContacts(workspaceId: string): Promise<ReadonlyArray<LeadContact>> {
-        const rows = await this.entityManager.query<Array<LeadContactRow>>(SELECT_LEAD_CONTACTS, [workspaceId])
+        const rows = await this.entityManager
+            .createQueryBuilder()
+            .select("l.id", "id")
+            .addSelect("l.contact_name", "contact_name")
+            .addSelect("l.phone", "phone")
+            .addSelect("l.email", "email")
+            .from("public.leads", "l")
+            .where("l.workspace_id = :workspaceId AND (l.phone IS NOT NULL OR l.email IS NOT NULL)", { workspaceId })
+            .orderBy("l.created_at", "ASC")
+            .limit(LEAD_LIMIT)
+            .getRawMany<LeadContactRaw>()
         return rows.map(toLeadContact).filter((lead) => lead.phone !== null || lead.email !== null)
     }
 
@@ -103,25 +105,42 @@ export class LoyaltyCustomersService {
         leads: ReadonlyArray<LeadContact>,
     ): Promise<number> {
         if (leads.length === 0) return 0
-        const created = await manager.query<Array<{ id: string }>>(INSERT_CUSTOMERS_FROM_LEADS, [
-            workspaceId,
-            leads.map((lead) => lead.name),
-            leads.map((lead) => lead.phone),
-            leads.map((lead) => lead.email),
-        ])
-        return created.length
+        const result = await manager
+            .createQueryBuilder(LoyaltyCustomerEntity, "lc")
+            .insert()
+            .values(leads.map((lead) => ({ workspaceId, name: lead.name, phone: lead.phone, email: lead.email })))
+            .orIgnore()
+            .returning("id")
+            .execute()
+        return (result.raw as Array<unknown>).length
     }
 
     /** Changes the profile fields of a customer within a workspace, without moving their points or tier. */
     async updateProfile(workspaceId: string, customerId: string, patch: CustomerPatch): Promise<boolean> {
-        const rows = await this.entityManager.query<Array<{ id: string }>>(UPDATE_CUSTOMER_PROFILE, [
-            workspaceId,
-            customerId,
-            patch.name?.trim().slice(0, 120) || null,
-            patch.birthday !== undefined,
-            customerBirthday(patch.birthday ?? null),
-            patch.note?.trim().slice(0, 500) ?? null,
-        ])
-        return rows.length > 0
+        const name = patch.name?.trim().slice(0, 120) || null
+        const note = patch.note?.trim().slice(0, 500) ?? null
+        const changed = await this.entityManager
+            .createQueryBuilder(LoyaltyCustomerEntity, "lc")
+            .update()
+            .set({
+                ...(name === null ? {} : { name }),
+                ...(patch.birthday === undefined ? {} : { birthday: customerBirthday(patch.birthday) }),
+                ...(note === null ? {} : { note }),
+                updatedAt: () => "now()",
+            })
+            .where("workspace_id = :workspaceId AND id = :customerId", { workspaceId, customerId })
+            .returning("id")
+            .execute()
+        return (changed.raw as Array<unknown>).length > 0
+    }
+
+    /** The customer id of a phone; a missing phone matches nobody (a null in a TypeORM where is ignored, never `IS NULL`). */
+    private async idOfPhone(manager: EntityManager, workspaceId: string, phone: string | null): Promise<MaybeText> {
+        if (phone === null) return null
+        const found = await manager.findOne(LoyaltyCustomerEntity, {
+            select: { id: true },
+            where: { workspaceId, phone },
+        })
+        return found === null ? null : found.id
     }
 }

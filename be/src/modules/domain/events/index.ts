@@ -1,3 +1,5 @@
 export { EventsModule } from "./events.module"
 export { EventsService } from "./events.service"
-export type { EventRecordRow } from "./persistence/events.rows"
+export type { EventRecord } from "./events.contracts"
+export type { EventRecord as EventRecordRow } from "./events.contracts"
+export { EventEntity, eventsEntities } from "./persistence/entities"

@@ -1,12 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import { In } from "typeorm"
+import type { EntityManager, SelectQueryBuilder } from "typeorm"
+import { AgentEntity } from "@modules/domain/agents"
 import { CommandBusService, ModuleCatalogService } from "@modules/domain/decisions"
+import { OrderEntity } from "@modules/domain/orders"
 import { OfficeLinesService } from "@modules/domain/messages"
 import type { CommandResult, SendCommandInput, WorkContext } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
 import { isManagerRole, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
-import type { CommandProposalInput } from "@modules/integrations/deepseek"
+import type { CommandProposalInput } from "@modules/domain/ai-tasks"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
@@ -43,27 +46,8 @@ import {
     resolveCandidate,
     subjectRowOf,
 } from "./office-command.policy"
-import type {
-    LeadRefRow,
-    MentionedAgentRow,
-    MessageTextRow,
-    OrderRefRow,
-    TouchedRow,
-} from "./persistence/office-command.rows"
-import {
-    ATTACH_WORK_ITEM,
-    CANCEL_CANDIDATE,
-    CLAIM_CANDIDATE,
-    FIND_CANDIDATE,
-    FIND_CANDIDATE_BY_MESSAGE,
-    FIND_MESSAGE,
-    INSERT_CANDIDATE,
-    LIST_AGENTS_BY_HANDLE,
-    LIST_CANDIDATES,
-    LIST_LEAD_REFS,
-    LIST_ORDER_REFS,
-    RELEASE_CANDIDATE,
-} from "./persistence/office-command.sql"
+import type { LeadPoolLine, MessageText } from "./office-reads.contracts"
+import { OfficeCommandCandidateEntity } from "./persistence/entities"
 
 /** Only owners and managers compose commands: the receiver's own gate still decides what happens next. */
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
@@ -74,8 +58,19 @@ const MAX_REFS = 5
 /** How many candidates the thread shows. */
 const CANDIDATE_LIST_LIMIT = 60
 
-const toLeadRef = (row: LeadRefRow): LeadRef => ({ id: row.id, name: row.contact_name, company: row.company })
-const toOrderRef = (row: OrderRefRow): OrderRef => ({ id: row.id, orderNo: row.order_no, leadId: row.lead_id })
+const toLeadRef = (row: LeadPoolLine): LeadRef => ({ id: row.id, name: row.contact_name, company: row.company })
+const toOrderRef = (row: Pick<OrderEntity, "id" | "orderNo" | "leadId">): OrderRef => ({
+    id: row.id,
+    orderNo: row.orderNo,
+    leadId: row.leadId,
+})
+
+/** The columns a candidate card reads, named as the contract names them; the time keeps the text shape the card always had. */
+const CANDIDATE_RETURNING =
+    "id, message_id, module, command, payload, summary, shown, status, work_item_id, refusal_detail, to_json(created_at) #>> '{}' AS created_at"
+
+/** The most agents a handle lookup can answer (a handle is unique in a workspace). */
+const HANDLE_LIMIT = 10
 
 @Injectable()
 /**
@@ -153,7 +148,12 @@ export class OfficeCommandService {
     async list(principalId: string, workspaceId: string): Promise<ReadonlyArray<CandidateView>> {
         const member = await this.members.require(principalId, workspaceId)
         if (!isManagerRole(member.role)) return []
-        return this.entityManager.query<Array<CandidateView>>(LIST_CANDIDATES, [workspaceId, CANDIDATE_LIST_LIMIT])
+        return this.candidatesOf(this.entityManager)
+            .where("c.workspaceId = :workspaceId", { workspaceId })
+            .orderBy("c.createdAt", "DESC")
+            .addOrderBy("c.id", "DESC")
+            .limit(CANDIDATE_LIST_LIMIT)
+            .getRawMany<CandidateView>()
     }
 
     /**
@@ -163,9 +163,17 @@ export class OfficeCommandService {
      */
     async confirm(principalId: string, workspaceId: string, request: ConfirmRequest): Promise<ConfirmResult> {
         const member = await this.members.require(principalId, workspaceId, MANAGERS)
-        const claimed = (
-            await this.entityManager.query<Array<CandidateView>>(CLAIM_CANDIDATE, [workspaceId, request.candidateId])
-        )[0]
+        const claim = await this.entityManager
+            .createQueryBuilder(OfficeCommandCandidateEntity, "o")
+            .update()
+            .set({ status: "sent", decidedAt: () => "now()", refusalDetail: null })
+            .where("workspace_id = :workspaceId AND id = :candidateId AND status = 'pending'", {
+                workspaceId,
+                candidateId: request.candidateId,
+            })
+            .returning(CANDIDATE_RETURNING)
+            .execute()
+        const [claimed] = claim.raw as Array<CandidateView>
         if (claimed === undefined) return this.alreadyHandled(workspaceId, request.candidateId)
         if ((await this.modules.entryOf(claimed.module)) === null) {
             await this.release(workspaceId, claimed.id, `no agent ${claimed.module}`)
@@ -189,31 +197,69 @@ export class OfficeCommandService {
                 params: { detail: result.detail },
             })
         }
-        await this.entityManager.query(ATTACH_WORK_ITEM, [workspaceId, claimed.id, result.item.id])
+        await this.entityManager.update(
+            OfficeCommandCandidateEntity,
+            { workspaceId, id: claimed.id },
+            { workItemId: result.item.id },
+        )
         return { workItemId: result.item.id, module: claimed.module, created: result.created }
     }
 
     /** Cancels a pending candidate; nothing is sent. Cancelling a cancelled candidate again is a no-op. */
     async cancel(principalId: string, workspaceId: string, candidateId: string): Promise<void> {
         await this.members.require(principalId, workspaceId, MANAGERS)
-        const cancelled = await this.entityManager.query<Array<TouchedRow>>(CANCEL_CANDIDATE, [
-            workspaceId,
-            candidateId,
-        ])
-        if (cancelled.length > 0) return
-        const row = (
-            await this.entityManager.query<Array<CandidateView>>(FIND_CANDIDATE, [workspaceId, candidateId])
-        )[0]
+        const cancelled = await this.entityManager
+            .createQueryBuilder(OfficeCommandCandidateEntity, "o")
+            .update()
+            .set({ status: "cancelled", decidedAt: () => "now()" })
+            .where("workspace_id = :workspaceId AND id = :candidateId AND status = 'pending'", {
+                workspaceId,
+                candidateId,
+            })
+            .returning("id")
+            .execute()
+        if ((cancelled.raw as Array<{ id: string }>).length > 0) return
+        const row = await this.candidateOf(workspaceId, candidateId)
         if (row === undefined)
             throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.CandidateNotFound })
         if (row.status === "sent")
             throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.CandidateSent })
     }
 
-    private async messageOf(workspaceId: string, messageId: string): Promise<MessageTextRow> {
-        const message = (
-            await this.entityManager.query<Array<MessageTextRow>>(FIND_MESSAGE, [workspaceId, messageId])
-        )[0]
+    /** The candidates of the manager, read with the columns and the time text the contract names. */
+    private candidatesOf(manager: EntityManager): SelectQueryBuilder<OfficeCommandCandidateEntity> {
+        return manager
+            .createQueryBuilder(OfficeCommandCandidateEntity, "c")
+            .select("c.id", "id")
+            .addSelect("c.messageId", "message_id")
+            .addSelect("c.module", "module")
+            .addSelect("c.command", "command")
+            .addSelect("c.payload", "payload")
+            .addSelect("c.summary", "summary")
+            .addSelect("c.shown", "shown")
+            .addSelect("c.status", "status")
+            .addSelect("c.workItemId", "work_item_id")
+            .addSelect("c.refusalDetail", "refusal_detail")
+            .addSelect("to_json(c.created_at) #>> '{}'", "created_at")
+    }
+
+    private candidateOf(workspaceId: string, candidateId: string): Promise<CandidateView | undefined> {
+        return this.candidatesOf(this.entityManager)
+            .where("c.workspaceId = :workspaceId AND c.id = :candidateId", { workspaceId, candidateId })
+            .limit(1)
+            .getRawOne<CandidateView>()
+    }
+
+    private async messageOf(workspaceId: string, messageId: string): Promise<MessageText> {
+        const message = await this.entityManager
+            .createQueryBuilder()
+            .select("m.id", "id")
+            .addSelect("m.author_kind", "author_kind")
+            .addSelect("m.body", "body")
+            .from("public.messages", "m")
+            .where("m.workspace_id = :workspaceId AND m.id = :messageId", { workspaceId, messageId })
+            .limit(1)
+            .getRawOne<MessageText>()
         if (message === undefined)
             throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.MessageNotFound })
         if (message.author_kind !== "human")
@@ -222,27 +268,48 @@ export class OfficeCommandService {
     }
 
     private async candidateOfMessage(workspaceId: string, messageId: string): Promise<CandidateView | undefined> {
-        return (
-            await this.entityManager.query<Array<CandidateView>>(FIND_CANDIDATE_BY_MESSAGE, [workspaceId, messageId])
-        )[0]
+        return this.candidatesOf(this.entityManager)
+            .where("c.workspaceId = :workspaceId AND c.messageId = :messageId", { workspaceId, messageId })
+            .limit(1)
+            .getRawOne<CandidateView>()
     }
 
     /** The one active agent the message mentions; none when it mentions no agent, several, or a handle nobody has. */
-    private async mentionedAgent(workspaceId: string, body: string): Promise<MentionedAgentRow | undefined> {
+    private async mentionedAgent(
+        workspaceId: string,
+        body: string,
+    ): Promise<Pick<AgentEntity, "id" | "handle" | "module" | "name"> | undefined> {
         const handles = mentionedHandles(body)
         if (handles.length !== 1) return undefined
-        const agents = await this.entityManager.query<Array<MentionedAgentRow>>(LIST_AGENTS_BY_HANDLE, [
-            workspaceId,
-            handles,
-        ])
+        const agents = await this.entityManager.find(AgentEntity, {
+            select: { id: true, handle: true, module: true, name: true },
+            where: { workspaceId, status: "active", handle: In(handles) },
+            order: { handle: "ASC" },
+            take: HANDLE_LIMIT,
+        })
         return agents.length === 1 ? agents[0] : undefined
     }
 
     /** Names and numbers the message could mean: matched deterministically against the workspace's recent customers and orders. */
     private async referencesIn(workspaceId: string, body: string): Promise<ReferencePool> {
         const [leadRows, orderRows] = await Promise.all([
-            this.entityManager.query<Array<LeadRefRow>>(LIST_LEAD_REFS, [workspaceId, REF_POOL]),
-            this.entityManager.query<Array<OrderRefRow>>(LIST_ORDER_REFS, [workspaceId, REF_POOL]),
+            this.entityManager
+                .createQueryBuilder()
+                .select("l.id", "id")
+                .addSelect("l.contact_name", "contact_name")
+                .addSelect("l.company", "company")
+                .from("public.leads", "l")
+                .where("l.workspace_id = :workspaceId", { workspaceId })
+                .orderBy("l.created_at", "DESC")
+                .addOrderBy("l.id", "DESC")
+                .limit(REF_POOL)
+                .getRawMany<LeadPoolLine>(),
+            this.entityManager.find(OrderEntity, {
+                select: { id: true, orderNo: true, leadId: true },
+                where: { workspaceId },
+                order: { createdAt: "DESC", id: "DESC" },
+                take: REF_POOL,
+            }),
         ])
         const leads = leadRows.map(toLeadRef)
         return {
@@ -290,17 +357,24 @@ export class OfficeCommandService {
         const subject = subjectRowOf(rows)
         const summary =
             subject === undefined ? what : this.catalog.get("office.cmdFor", { what, subject: subject.value }, locale)
-        const created = await this.entityManager.query<Array<CandidateView>>(INSERT_CANDIDATE, [
-            member.workspaceId,
-            messageId,
-            module,
-            ready.command,
-            JSON.stringify(ready.payload),
-            summary,
-            JSON.stringify(rows),
-            member.displayName,
-        ])
-        return created[0] ?? this.missingCandidate()
+        const created = await this.entityManager
+            .createQueryBuilder(OfficeCommandCandidateEntity, "o")
+            .insert()
+            .values({
+                workspaceId: member.workspaceId,
+                messageId,
+                module,
+                command: ready.command,
+                payload: { ...ready.payload },
+                summary,
+                shown: [...rows],
+                createdBy: member.displayName,
+            })
+            .orUpdate(["message_id"], ["message_id"])
+            .returning(CANDIDATE_RETURNING)
+            .execute()
+        const [candidate] = created.raw as Array<CandidateView>
+        return candidate ?? this.missingCandidate()
     }
 
     private missingCandidate(): never {
@@ -323,9 +397,7 @@ export class OfficeCommandService {
 
     /** A candidate somebody else already claimed: where it went, or why it did not. */
     private async alreadyHandled(workspaceId: string, candidateId: string): Promise<ConfirmResult> {
-        const row = (
-            await this.entityManager.query<Array<CandidateView>>(FIND_CANDIDATE, [workspaceId, candidateId])
-        )[0]
+        const row = await this.candidateOf(workspaceId, candidateId)
         if (row === undefined)
             throw new OfficeCommandCandidatesError({ code: OfficeCommandCandidatesErrorCode.CandidateNotFound })
         if (row.status === "cancelled")
@@ -346,6 +418,10 @@ export class OfficeCommandService {
     }
 
     private async release(workspaceId: string, candidateId: string, detail: string): Promise<void> {
-        await this.entityManager.query(RELEASE_CANDIDATE, [workspaceId, candidateId, detail])
+        await this.entityManager.update(
+            OfficeCommandCandidateEntity,
+            { workspaceId, id: candidateId },
+            { status: "pending", decidedAt: null, refusalDetail: detail },
+        )
     }
 }

@@ -1,18 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ResponsibilitiesError, ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
-import type { AgentsRow, MemberOwnerRow } from "./persistence/responsibilities.rows"
-import {
-    FIND_MEMBER_BY_NAME,
-    FIND_OWNER_AGENT,
-    FIND_OWNER_MEMBER,
-    FIND_WORKSPACE_OWNER,
-} from "./persistence/responsibility-owners.sql"
 import { isOwnerId, resolveOwner } from "./responsibility-owner.policy"
-import type { OwnerCandidates, ResolvedOwner } from "./responsibility-owner.policy"
+import type { OwnerAgent, OwnerCandidates, OwnerMember, ResolvedOwner } from "./responsibility-owner.policy"
 
-const memberOwner = (row: MemberOwnerRow): ResolvedOwner => ({
+const memberOwner = (row: OwnerMember): ResolvedOwner => ({
     kind: "human",
     agentId: null,
     memberId: row.id,
@@ -39,7 +32,23 @@ export class ResponsibilityOwnersService {
 
     /** The workspace owner seat as an owner: the default of a step nobody else was named for. */
     async workspaceOwner(workspaceId: string): Promise<ResolvedOwner> {
-        const [row] = await this.entityManager.query<Array<MemberOwnerRow>>(FIND_WORKSPACE_OWNER, [workspaceId])
+        const [seat] = await callDbFunction<{ workspace_owner_member: string | null }>(
+            this.entityManager,
+            "public.workspace_owner_member",
+            [workspaceId],
+        )
+        const seatId = seat?.workspace_owner_member ?? null
+        const row =
+            seatId === null
+                ? undefined
+                : await this.entityManager
+                      .createQueryBuilder()
+                      .select("m.id", "id")
+                      .addSelect("m.display_name", "display_name")
+                      .from("public.workspace_members", "m")
+                      .where("m.id = :seatId", { seatId })
+                      .limit(1)
+                      .getRawOne<OwnerMember>()
         if (row === undefined) {
             throw new ResponsibilitiesError({
                 code: ResponsibilitiesErrorCode.OwnerNotFound,
@@ -51,14 +60,40 @@ export class ResponsibilityOwnersService {
 
     /** The active member who carries a display name (ignoring case), or null when none does. */
     async memberNamed(workspaceId: string, name: string): Promise<ResolvedOwner | null> {
-        const [row] = await this.entityManager.query<Array<MemberOwnerRow>>(FIND_MEMBER_BY_NAME, [workspaceId, name])
+        const row = await this.entityManager
+            .createQueryBuilder()
+            .select("m.id", "id")
+            .addSelect("m.display_name", "display_name")
+            .from("public.workspace_members", "m")
+            .where("m.workspace_id = :workspaceId AND m.status = 'active' AND lower(m.display_name) = lower(:name)", {
+                workspaceId,
+                name,
+            })
+            .orderBy("m.created_at", "ASC")
+            .addOrderBy("m.id", "ASC")
+            .limit(1)
+            .getRawOne<OwnerMember>()
         return row === undefined ? null : memberOwner(row)
     }
 
     private async candidatesOf(manager: EntityManager, workspaceId: string, owner: string): Promise<OwnerCandidates> {
-        const [member] = await manager.query<Array<MemberOwnerRow>>(FIND_OWNER_MEMBER, [workspaceId, owner])
+        const member = await manager
+            .createQueryBuilder()
+            .select("m.id", "id")
+            .addSelect("m.display_name", "display_name")
+            .from("public.workspace_members", "m")
+            .where("m.workspace_id = :workspaceId AND m.id = :owner AND m.status = 'active'", { workspaceId, owner })
+            .limit(1)
+            .getRawOne<OwnerMember>()
         if (member !== undefined) return { member }
-        const [agent] = await manager.query<Array<AgentsRow>>(FIND_OWNER_AGENT, [workspaceId, owner])
+        const agent = await manager
+            .createQueryBuilder()
+            .select("a.id", "id")
+            .addSelect("a.name", "name")
+            .from("public.agents", "a")
+            .where("a.workspace_id = :workspaceId AND a.id = :owner", { workspaceId, owner })
+            .limit(1)
+            .getRawOne<OwnerAgent>()
         return agent === undefined ? {} : { agent }
     }
 }

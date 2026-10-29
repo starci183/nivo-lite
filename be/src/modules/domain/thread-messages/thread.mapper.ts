@@ -1,20 +1,17 @@
 import type { WorkThread } from "@modules/domain/work-threads"
-import type { ThreadListing, ThreadMessage } from "./thread-messages.contracts"
-import type { ThreadDigestRow, ThreadMessageRow } from "./persistence/thread-messages.rows"
-
-const instantOf = (value: string): string => new Date(value).toISOString()
+import type { ThreadDigestRecord, ThreadListing, ThreadMessage, ThreadMessageRecord } from "./thread-messages.contracts"
 
 /** A thread with its digest: the newest line, the count and whether an approval waits; a thread with no message has an empty one. */
-export const toListing = (thread: WorkThread, digest: ThreadDigestRow | undefined): ThreadListing => ({
+export const toListing = (thread: WorkThread, digest: ThreadDigestRecord | undefined): ThreadListing => ({
     ...thread,
     lastBody: digest === undefined ? null : digest.last_body,
-    lastAt: digest === undefined ? null : instantOf(digest.last_at),
+    lastAt: digest === undefined ? null : digest.last_at.toISOString(),
     messageCount: digest === undefined ? 0 : digest.message_count,
     waitingApproval: digest?.waiting_approval === true,
 })
 
 /** One message row as the API reads it. */
-export const toMessage = (row: ThreadMessageRow): ThreadMessage => ({
+export const toMessage = (row: ThreadMessageRecord): ThreadMessage => ({
     id: row.id,
     threadId: row.thread_id,
     authorKind: row.author_kind === "agent" ? "agent" : "member",
@@ -25,5 +22,5 @@ export const toMessage = (row: ThreadMessageRow): ThreadMessage => ({
     quoted: row.quoted,
     mentions: row.mentions,
     approval: row.approval,
-    createdAt: instantOf(row.created_at),
+    createdAt: row.created_at.toISOString(),
 })

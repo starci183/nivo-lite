@@ -1,15 +1,16 @@
+import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { sql } from "@modules/platform/database"
+import { callDbFunction } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
+import { AgentEntity } from "@modules/domain/agents"
+import { leadsEntities } from "@modules/domain/leads"
+import { WorkspaceEntity } from "@modules/domain/workspaces"
+import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
 
-/** The member ids of the accounts of a workspace ($1 workspace, $2 users). */
-const MEMBERS_OF_USERS = sql`SELECT id, user_id FROM public.workspace_members WHERE workspace_id = $1 AND user_id = ANY($2::uuid[])`
+const [LeadEntity] = leadsEntities
 
-/** Seats a member in a department room ($1 workspace, $2 room key, $3 user). */
-const SEAT_MEMBER = sql`SELECT public.seat_office_member($1, $2, $3) AS seated`
-
-/** Creates the department rooms of a workspace ($1 workspace). */
-const ENSURE_ROOMS = sql`SELECT public.ensure_office_rooms($1)`
+/** The most member rows one read takes; the story seats five. */
+const PEOPLE_MAX = 10
 
 /** The five people of the v0.3.2 story. */
 export type OfficePerson = "nam" | "minh" | "ha" | "van" | "lan"
@@ -50,24 +51,25 @@ export const persistOfficeRows = (manager: EntityManager, identity: OfficeIdenti
         await eachInOrder(Object.values(users), async (id) => {
             await tx.insert("auth.users", { id })
         })
-        await tx.insert("public.workspaces", { id: workspaceId, owner_id: users.nam, name: "HAKUEN proof" })
+        await tx.insert(WorkspaceEntity, { id: workspaceId, ownerId: users.nam, name: "HAKUEN proof" })
         await eachInOrder(PEOPLE, async (person) => {
-            await tx.insert("public.workspace_members", {
-                workspace_id: workspaceId,
-                user_id: users[person.key],
+            await tx.insert(WorkspaceMemberEntity, {
+                workspaceId: workspaceId,
+                userId: users[person.key],
                 role: person.role,
-                display_name: person.name,
+                displayName: person.name,
             })
         })
-        await tx.query(ENSURE_ROOMS, [workspaceId])
+        await callDbFunction(tx, "public.ensure_office_rooms", [workspaceId])
         await eachInOrder(PEOPLE, async (person) => {
-            await tx.query(SEAT_MEMBER, [workspaceId, person.room, users[person.key]])
+            await callDbFunction(tx, "public.seat_office_member", [workspaceId, person.room, users[person.key]])
         })
-        const rows = await tx.query<Array<{ id: string; user_id: string }>>(MEMBERS_OF_USERS, [
-            workspaceId,
-            Object.values(users),
-        ])
-        const memberOf = (person: OfficePerson): string => rows.find((row) => row.user_id === users[person])?.id ?? ""
+        const rows = await tx.find(WorkspaceMemberEntity, {
+            where: { workspaceId, userId: In(Object.values(users)) },
+            select: { id: true, userId: true },
+            take: PEOPLE_MAX,
+        })
+        const memberOf = (person: OfficePerson): string => rows.find((row) => row.userId === users[person])?.id ?? ""
         const members: OfficeMembers = {
             nam: memberOf("nam"),
             minh: memberOf("minh"),
@@ -77,31 +79,31 @@ export const persistOfficeRows = (manager: EntityManager, identity: OfficeIdenti
         }
         const agent = (key: OfficeAgent, name: string, module: string) => ({
             id: agents[key],
-            workspace_id: workspaceId,
+            workspaceId: workspaceId,
             module,
             name,
             handle: `${key}-proof`,
             role: name,
             instructions: "Proof agent.",
-            fallback_member_id: members.nam,
+            fallbackMemberId: members.nam,
         })
         const agentRows = [
-            { ...agent("care", "AI CSKH", "chatbot"), owner_member_id: members.ha, assignable_rooms: ["care"] },
+            { ...agent("care", "AI CSKH", "chatbot"), ownerMemberId: members.ha, assignableRooms: ["care"] },
             {
                 ...agent("accounting", "Ke toan AI", "accounting"),
-                owner_member_id: members.van,
-                assignable_rooms: ["accounting"],
-                can_tag_agent_ids: [agents.care],
+                ownerMemberId: members.van,
+                assignableRooms: ["accounting"],
+                canTagAgentIds: [agents.care],
             },
             {
                 ...agent("sales", "AI Sales", "sales"),
-                owner_member_id: members.minh,
-                assignable_rooms: ["sales"],
-                can_tag_agent_ids: [agents.accounting, agents.care],
+                ownerMemberId: members.minh,
+                assignableRooms: ["sales"],
+                canTagAgentIds: [agents.accounting, agents.care],
             },
         ]
         await eachInOrder(agentRows, async (row) => {
-            await tx.insert("public.agents", row)
+            await tx.insert(AgentEntity, row)
         })
         return members
     })
@@ -112,10 +114,10 @@ export const persistStoryLead = async (
     workspaceId: string,
     leadId: string,
 ): Promise<string> => {
-    await manager.insert("public.leads", {
+    await manager.insert(LeadEntity, {
         id: leadId,
-        workspace_id: workspaceId,
-        contact_name: "Chi Thao",
+        workspaceId: workspaceId,
+        contactName: "Chi Thao",
         company: "",
         channel: "zalo",
         need: "Deluxe room 24-26/10",

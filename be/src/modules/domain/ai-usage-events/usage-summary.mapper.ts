@@ -1,9 +1,22 @@
 import type { DailyModuleUsage, QuotaLookup, UsageSummary } from "./ai-usage-events.contracts"
-import type { DailyModuleUsageRow } from "./persistence/ai-usage-events.rows"
 import { creditsOf } from "./usage-cost.policy"
 
+/** One non-guide daily rollup, aggregated across kinds, as the monthly aggregate answers it. */
+export interface MonthlyUsageAggregate {
+    /** The day in Vietnam time, YYYY-MM-DD. */
+    readonly day: string
+    /** The module or shared usage bucket. */
+    readonly module: string
+    /** Number of calls. */
+    readonly calls: number
+    /** Prompt and completion tokens. */
+    readonly tokens: number
+    /** Model cost in USD. */
+    readonly cost_usd: number
+}
+
 /** Reads the monthly rollup without exposing its database column names. */
-export const toDailyModuleUsage = (row: DailyModuleUsageRow): DailyModuleUsage => ({
+export const toDailyModuleUsage = (row: MonthlyUsageAggregate): DailyModuleUsage => ({
     day: row.day,
     module: row.module,
     calls: row.calls,

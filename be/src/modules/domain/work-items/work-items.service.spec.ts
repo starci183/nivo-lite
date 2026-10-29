@@ -1,159 +1,82 @@
 import { WorkItemsErrorCode } from "./errors/work-items.error"
-import { FakeClock, builder, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, fakeIds, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import type { WorkItemRow } from "./persistence/work-items.rows"
+import { IDS } from "@modules/platform/ids"
 import {
-    ASSIGN_WORK_ITEM,
-    ATTACH_WORK_ITEM_EXECUTION,
-    HOLD_WORK_ITEM,
-    MARK_WORK_ITEM_DONE,
-    MARK_WORK_ITEM_FAILED,
-    MARK_WORK_ITEM_REJECTED,
-    MARK_WORK_ITEM_STILL_WAITING,
-    MARK_WORK_ITEM_WAITING,
-    REOPEN_WAITING_WORK_ITEM,
-    SAVE_PREPARED_WORK_ITEM,
-    SETTLE_WAITING_CLAIMS,
-    CLAIM_WORK_ITEM,
-    FIND_LATEST_WORK_ITEM_OF_KEY,
-    FIND_WORK_ITEM_BY_DEDUPE,
-    INSERT_WORK_ITEM,
-    LIST_ACCOUNTING_WORK_ITEMS,
-    LIST_LEAD_ITEMS,
-    LIST_WORKBENCH_ITEMS,
-    LIST_WORKSPACES_WITH_QUEUED_WORK,
-    NEXT_QUEUED_WORK_ITEM,
-    NEXT_INBOUND_QUEUED_WORK_ITEM,
-    READ_INBOUND_WORK_STATE,
-    RETRY_WORK_ITEM,
-    STOP_FAILED_WORK_ITEM,
-} from "./persistence/work-items.sql"
-import type { NewWorkItem, Proposal } from "./work-items.contracts"
+    AT,
+    NOW,
+    MINTED,
+    anyFunction,
+    contractOf,
+    entityOf,
+    insertedValues,
+    managerAnswering,
+    newItem,
+    proposal,
+    returned,
+    rowOf,
+    singleCall,
+} from "@tests/fixtures/builders/work-items.builder"
+import { WorkItemEntity } from "./persistence/entities"
 import { WorkItemsService } from "./work-items.service"
 
-const NOW = "2026-10-12T10:00:00.000Z"
+const providersOf = (entityManager: MockEntityManager) => [
+    WorkItemsService,
+    { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+    { provide: CLOCK, useValue: new FakeClock(NOW) },
+    { provide: IDS, useValue: fakeIds() },
+]
 
-const proposal: Proposal = { summary: "Quote", fields: { items: "tea" } }
-
-const rowOf = builder<WorkItemRow>({
-    id: "item-1",
-    workspace_id: "ws-1",
-    department: "sales",
-    action: "send_quote",
-    subject_type: "lead",
-    subject_id: "lead-1",
-    lead_id: "lead-1",
-    inbound_event_id: null,
-    parent_id: null,
-    chain_id: "item-1",
-    depth: 0,
-    status: "queued",
-    decided_path: null,
-    reason: null,
-    reasons: [],
-    missing_fields: [],
-    proposal: { summary: "Quote", fields: { items: "tea" } },
-    result: null,
-    error: null,
-    evidence_state: "pending",
-    assigned_staff_id: null,
-    execution_id: null,
-    created_at: new Date("2026-10-12T09:00:00.000Z"),
-    updated_at: new Date("2026-10-12T09:00:00.000Z"),
-    completed_at: null,
-    installation_id: null,
-})
-
-const newItem: NewWorkItem = {
-    workspaceId: "ws-1",
-    chainId: null,
-    depth: 0,
-    department: "sales",
-    action: "send_quote",
-    subjectType: "lead",
-    subjectId: "lead-1",
-    leadId: "lead-1",
-    inboundEventId: null,
-    parentId: null,
-    dedupeKey: "send_quote:lead-1",
-    proposal,
-    installationId: null,
-}
-
-const build = async (entityManager: MockEntityManager) => {
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            WorkItemsService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: CLOCK, useValue: new FakeClock(NOW) },
-        ],
-    }).compile()
-    return moduleRef.get(WorkItemsService)
-}
+const build = async (entityManager: MockEntityManager) =>
+    (await Test.createTestingModule({ providers: providersOf(entityManager) }).compile()).get(WorkItemsService)
 
 describe("WorkItemsService persistence", () => {
-    it("writes the queued item and answers it", async () => {
-        const em = mockEntityManager({ query: [INSERT_WORK_ITEM, [rowOf()]] })
+    it("writes the queued item in one statement that ignores a used dedupe key, and answers it", async () => {
+        const { em, fake } = managerAnswering(returned([rowOf()]))
 
         const item = await (await build(em)).insert({ ...newItem, chainId: "chain-1", depth: 2 })
 
         expect(item?.created_at).toBe("2026-10-12T09:00:00.000Z")
-        expect(em.query).toHaveBeenCalledWith(INSERT_WORK_ITEM, [
-            "ws-1",
-            "chain-1",
-            2,
-            "sales",
-            "send_quote",
-            "lead",
-            "lead-1",
-            "lead-1",
-            null,
-            null,
-            "send_quote:lead-1",
-            JSON.stringify(proposal),
-            null,
-        ])
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(WorkItemEntity, "w")
+        expect(fake.callsOf("insert")).toEqual([[]])
+        expect(singleCall(fake, "values")).toEqual(insertedValues({ chainId: "chain-1", depth: 2 }))
+        expect(fake.callsOf("orIgnore")).toEqual([[]])
+        expect(fake.callsOf("returning")).toEqual([["*"]])
+    })
+
+    it("makes a root item the root of its own chain", async () => {
+        const { em, fake } = managerAnswering(returned([rowOf()]))
+
+        await (await build(em)).insert(newItem)
+
+        expect(fake.callsOf("values")[0]?.[0]).toMatchObject({ id: MINTED, chainId: MINTED })
     })
 
     it("answers nothing when the dedupe key is used", async () => {
-        const service = await build(mockEntityManager({ query: [INSERT_WORK_ITEM, []] }))
+        const service = await build(managerAnswering(returned([])).em)
 
         expect(await service.insert(newItem)).toBeNull()
     })
 
     it("inserts and reads the durable item through the caller's transaction", async () => {
         const primary = mockEntityManager()
-        const tx = mockEntityManager({
-            query: [
-                [INSERT_WORK_ITEM, [rowOf()]],
-                [FIND_WORK_ITEM_BY_DEDUPE, [rowOf()]],
-            ],
-        })
+        const { em: tx } = managerAnswering(
+            returned([rowOf()]),
+            mockEntityManager({ findOne: [WorkItemEntity, entityOf()] }),
+        )
         const service = await build(primary)
 
         expect((await service.insert(newItem, tx))?.id).toBe("item-1")
         expect((await service.findByDedupe("ws-1", "send_quote:lead-1", tx))?.id).toBe("item-1")
 
-        expect(primary.query).not.toHaveBeenCalled()
-        expect(tx.query).toHaveBeenCalledWith(INSERT_WORK_ITEM, [
-            "ws-1",
-            null,
-            0,
-            "sales",
-            "send_quote",
-            "lead",
-            "lead-1",
-            "lead-1",
-            null,
-            null,
-            "send_quote:lead-1",
-            JSON.stringify(proposal),
-            null,
-        ])
-        expect(tx.query).toHaveBeenCalledWith(FIND_WORK_ITEM_BY_DEDUPE, ["ws-1", "send_quote:lead-1"])
+        expect(primary.createQueryBuilder).not.toHaveBeenCalled()
+        expect(primary.findOne).not.toHaveBeenCalled()
+        expect(tx.findOne).toHaveBeenCalledWith(WorkItemEntity, {
+            where: { workspaceId: "ws-1", dedupeKey: "send_quote:lead-1" },
+        })
     })
 })
 
@@ -164,132 +87,184 @@ describe("WorkItemsService listing", () => {
         { limit: 1200, expected: 1000 },
         { limit: 25, expected: 25 },
     ])("bounds the workbench limit $limit to $expected", async ({ limit, expected }) => {
-        const row = rowOf()
-        const em = mockEntityManager({ query: [LIST_WORKBENCH_ITEMS, [row]] })
+        const em = mockEntityManager({ find: [WorkItemEntity, [entityOf()]] })
 
-        expect(await (await build(em)).listForWorkbench("ws-1", limit)).toEqual([
-            {
-                ...row,
-                created_at: row.created_at.toISOString(),
-                updated_at: row.updated_at.toISOString(),
-            },
-        ])
-        expect(em.query).toHaveBeenCalledWith(LIST_WORKBENCH_ITEMS, ["ws-1", expected])
+        expect(await (await build(em)).listForWorkbench("ws-1", limit)).toEqual([contractOf()])
+        expect(em.find).toHaveBeenCalledWith(WorkItemEntity, {
+            where: { workspaceId: "ws-1" },
+            order: { createdAt: "DESC", id: "DESC" },
+            take: expected,
+        })
     })
 
     it("lists the chronological items of one lead", async () => {
-        const row = rowOf()
-        const em = mockEntityManager({ query: [LIST_LEAD_ITEMS, [row]] })
+        const em = mockEntityManager({ find: [WorkItemEntity, [entityOf()]] })
 
-        expect(await (await build(em)).listForLead("ws-1", "lead-1")).toEqual([
-            {
-                ...row,
-                created_at: row.created_at.toISOString(),
-                updated_at: row.updated_at.toISOString(),
-            },
-        ])
-        expect(em.query).toHaveBeenCalledWith(LIST_LEAD_ITEMS, ["ws-1", "lead-1"])
+        expect(await (await build(em)).listForLead("ws-1", "lead-1")).toEqual([contractOf()])
+        expect(em.find).toHaveBeenCalledWith(WorkItemEntity, {
+            where: { workspaceId: "ws-1", leadId: "lead-1" },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: 500,
+        })
     })
 })
 
 describe("WorkItemsService persistence", () => {
-    it.each([undefined, 12])("lists accounting lineage with limit %s", async (limit) => {
+    it.each([undefined, 12])("lists accounting lineage with limit %s, the instant as database text", async (limit) => {
         const rows = [{ id: "item-1", action: "reconcile_payment", status: "done" }]
-        const em = mockEntityManager({ query: [LIST_ACCOUNTING_WORK_ITEMS, rows] })
+        const { em, fake } = managerAnswering({ getRawMany: rows })
 
         expect(await (await build(em)).listAccounting("ws-1", limit)).toEqual(rows)
-        expect(em.query).toHaveBeenCalledWith(LIST_ACCOUNTING_WORK_ITEMS, ["ws-1", limit ?? 500])
+        expect(fake.callsOf("select")[0]?.[0]).toContain("to_json(w.created_at) #>> '{}' AS created_at")
+        expect(fake.callsOf("where")).toEqual([
+            ["w.workspace_id = :workspaceId AND w.department = 'accounting'", { workspaceId: "ws-1" }],
+        ])
+        expect(fake.callsOf("limit")).toEqual([[limit ?? 500]])
     })
 
     it("retries only allowed states using the default or supplied manager", async () => {
-        const em = mockEntityManager({ query: [RETRY_WORK_ITEM, [rowOf()]] })
-        const tx = mockEntityManager({ query: [RETRY_WORK_ITEM, []] })
+        const { em, fake } = managerAnswering(returned([rowOf()]))
+        const { em: tx } = managerAnswering(returned([]))
         const service = await build(em)
 
         expect((await service.retry("ws-1", "item-1", ["failed"]))?.id).toBe("item-1")
         expect(await service.retry("ws-1", "item-1", ["rejected"], tx)).toBeNull()
-        expect(em.query).toHaveBeenCalledTimes(1)
-        expect(em.query).toHaveBeenCalledWith(RETRY_WORK_ITEM, ["ws-1", "item-1", ["failed"]])
-        expect(tx.query).toHaveBeenCalledWith(RETRY_WORK_ITEM, ["ws-1", "item-1", ["rejected"]])
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
+        expect(singleCall(fake, "set")).toEqual({
+            status: "queued",
+            error: null,
+            reason: null,
+            reasons: [],
+            completedAt: null,
+            updatedAt: anyFunction(),
+        })
+        expect(fake.callsOf("where")).toEqual([
+            [
+                "workspace_id = :workspaceId AND id = :id AND status = ANY(:allowed)",
+                { id: "item-1", workspaceId: "ws-1" },
+            ],
+        ])
+        expect(fake.callsOf("setParameters")).toEqual([[{ allowed: ["failed"] }]])
+        expect(fake.callsOf("returning")).toEqual([["*"]])
     })
 
     it("stops failed work using the default or supplied manager", async () => {
-        const em = mockEntityManager({ query: [STOP_FAILED_WORK_ITEM, [rowOf({ status: "rejected" })]] })
-        const tx = mockEntityManager({ query: [STOP_FAILED_WORK_ITEM, []] })
+        const { em, fake } = managerAnswering(returned([rowOf({ status: "rejected" })]))
+        const { em: tx, fake: txFake } = managerAnswering(returned([]))
         const service = await build(em)
 
         expect((await service.stopFailed("ws-1", "item-1"))?.status).toBe("rejected")
         expect(await service.stopFailed("ws-1", "item-1", tx)).toBeNull()
-        expect(em.query).toHaveBeenCalledTimes(1)
-        expect(em.query).toHaveBeenCalledWith(STOP_FAILED_WORK_ITEM, ["ws-1", "item-1", NOW])
-        expect(tx.query).toHaveBeenCalledWith(STOP_FAILED_WORK_ITEM, ["ws-1", "item-1", NOW])
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
+        expect(singleCall(fake, "set")).toEqual({ status: "rejected", completedAt: AT, updatedAt: AT })
+        expect(fake.callsOf("where")[0]?.[0]).toBe("workspace_id = :workspaceId AND id = :id AND status = 'failed'")
+        expect(txFake.callsOf("set")).toHaveLength(1)
     })
+})
 
+describe("WorkItemsService lookups", () => {
     it("finds the latest action for a base dedupe key", async () => {
-        const em = mockEntityManager({ query: [FIND_LATEST_WORK_ITEM_OF_KEY, [rowOf()]] })
+        const { em, fake } = managerAnswering({ getOne: entityOf() })
 
         expect((await (await build(em)).latestOfKey("ws-1", "send_quote", "quote:lead-1"))?.id).toBe("item-1")
-        expect(em.query).toHaveBeenCalledWith(FIND_LATEST_WORK_ITEM_OF_KEY, ["ws-1", "send_quote", "quote:lead-1"])
+        expect(fake.callsOf("where")).toEqual([
+            ["w.workspace_id = :workspaceId AND w.action = :action", { workspaceId: "ws-1", action: "send_quote" }],
+        ])
+        expect(fake.callsOf("andWhere")[0]?.[1]).toEqual({ baseKey: "quote:lead-1" })
+        expect(fake.callsOf("orderBy")).toEqual([["w.created_at", "DESC"]])
+    })
+
+    it("answers nothing when no item stands for the key", async () => {
+        const { em } = managerAnswering({ getOne: null })
+
+        expect(await (await build(em)).latestOfKey("ws-1", "send_quote", "none")).toBeNull()
     })
 
     it("finds the next queued step of one inbound event", async () => {
-        const em = mockEntityManager({ query: [NEXT_INBOUND_QUEUED_WORK_ITEM, [rowOf()]] })
+        const { em, fake } = managerAnswering({ getOne: entityOf() })
 
         expect((await (await build(em)).nextInboundQueued("ws-1", "event-1"))?.id).toBe("item-1")
-        expect(em.query).toHaveBeenCalledWith(NEXT_INBOUND_QUEUED_WORK_ITEM, ["ws-1", "event-1", NOW, 120])
+        expect(fake.callsOf("andWhere")).toEqual([
+            [expect.stringContaining("w.updated_at = w.created_at"), { now: AT, lease: 120 }],
+            ["w.inbound_event_id = :eventId", { eventId: "event-1" }],
+        ])
+        expect(fake.callsOf("limit")).toEqual([[1]])
     })
 
     it.each([
-        { rows: [], expected: { queued: 0, failed: 0, waiting: 0 } },
-        { rows: [{ queued: 2, failed: 1, waiting: 3 }], expected: { queued: 2, failed: 1, waiting: 3 } },
-    ])("answers inbound counts, defaulting missing rows to zero", async ({ rows, expected }) => {
-        const em = mockEntityManager({ query: [READ_INBOUND_WORK_STATE, rows] })
+        { row: undefined, expected: { queued: 0, failed: 0, waiting: 0 } },
+        { row: { queued: 2, failed: 1, waiting: 3 }, expected: { queued: 2, failed: 1, waiting: 3 } },
+    ])("answers inbound counts, defaulting a missing row to zero", async ({ row, expected }) => {
+        const { em, fake } = managerAnswering({ getRawOne: row })
 
         expect(await (await build(em)).inboundState("ws-1", "event-1")).toEqual(expected)
-        expect(em.query).toHaveBeenCalledWith(READ_INBOUND_WORK_STATE, ["ws-1", "event-1"])
+        expect(fake.callsOf("where")).toEqual([
+            [
+                "w.workspace_id = :workspaceId AND w.inbound_event_id = :eventId",
+                { workspaceId: "ws-1", eventId: "event-1" },
+            ],
+        ])
     })
 
     it("finds the item of a dedupe key", async () => {
-        const em = mockEntityManager({ query: [FIND_WORK_ITEM_BY_DEDUPE, [rowOf()]] })
+        const em = mockEntityManager({ findOne: [WorkItemEntity, entityOf()] })
 
         expect((await (await build(em)).findByDedupe("ws-1", "k"))?.id).toBe("item-1")
-        expect(em.query).toHaveBeenCalledWith(FIND_WORK_ITEM_BY_DEDUPE, ["ws-1", "k"])
+        expect(em.findOne).toHaveBeenCalledWith(WorkItemEntity, { where: { workspaceId: "ws-1", dedupeKey: "k" } })
+    })
+
+    it("answers nothing for a dedupe key nobody used", async () => {
+        const em = mockEntityManager({ findOne: [WorkItemEntity, null] })
+
+        expect(await (await build(em)).findByDedupe("ws-1", "k")).toBeNull()
     })
 
     it("claims an item for two minutes, or answers nothing when it is held", async () => {
-        const taken = mockEntityManager({ query: [CLAIM_WORK_ITEM, [rowOf()]] })
-        const held = mockEntityManager({ query: [CLAIM_WORK_ITEM, []] })
+        const taken = managerAnswering(returned([rowOf()]))
+        const held = managerAnswering(returned([]))
 
-        expect((await (await build(taken)).claim("ws-1", "item-1"))?.id).toBe("item-1")
-        expect(taken.query).toHaveBeenCalledWith(CLAIM_WORK_ITEM, ["item-1", "ws-1", NOW, 120])
-        expect(await (await build(held)).claim("ws-1", "item-1")).toBeNull()
+        expect((await (await build(taken.em)).claim("ws-1", "item-1"))?.id).toBe("item-1")
+        expect(singleCall(taken.fake, "set")).toEqual({ updatedAt: AT })
+        expect(taken.fake.callsOf("where")[0]?.[0]).toContain(
+            "status = 'queued' AND (updated_at = created_at OR updated_at <",
+        )
+        expect(taken.fake.callsOf("setParameters")).toEqual([[{ now: AT, lease: 120 }]])
+        expect(await (await build(held.em)).claim("ws-1", "item-1")).toBeNull()
     })
 })
 
 describe("WorkItemsService persistence", () => {
     it("lists the workspaces with free queued work, longest waiting first", async () => {
-        const em = mockEntityManager({
-            query: [LIST_WORKSPACES_WITH_QUEUED_WORK, [{ workspace_id: "ws-1" }, { workspace_id: "ws-2" }]],
-        })
+        const { em, fake } = managerAnswering({ getRawMany: [{ workspace_id: "ws-1" }, { workspace_id: "ws-2" }] })
 
         expect(await (await build(em)).workspacesWithQueued(50)).toEqual(["ws-1", "ws-2"])
-        expect(em.query).toHaveBeenCalledWith(LIST_WORKSPACES_WITH_QUEUED_WORK, [NOW, 120, 50])
+        expect(fake.callsOf("groupBy")).toEqual([["w.workspace_id"]])
+        expect(fake.callsOf("orderBy")).toEqual([["min(w.created_at)", "ASC"]])
+        expect(fake.callsOf("limit")).toEqual([[50]])
+        expect(fake.callsOf("andWhere")[0]?.[1]).toEqual({ now: AT, lease: 120 })
     })
 
     it("finds the next free queued item", async () => {
-        const em = mockEntityManager({ query: [NEXT_QUEUED_WORK_ITEM, [rowOf()]] })
+        const { em, fake } = managerAnswering({ getOne: entityOf() })
 
         expect((await (await build(em)).nextQueued("ws-1"))?.id).toBe("item-1")
-        expect(em.query).toHaveBeenCalledWith(NEXT_QUEUED_WORK_ITEM, ["ws-1", NOW, 120])
+        expect(fake.callsOf("where")).toEqual([
+            ["w.workspace_id = :workspaceId AND w.status = 'queued' AND w.reason IS NULL", { workspaceId: "ws-1" }],
+        ])
+        expect(fake.callsOf("orderBy")).toEqual([["w.created_at", "ASC"]])
+        expect(fake.callsOf("addOrderBy")).toEqual([["w.id", "ASC"]])
     })
 
     it("reopens an item that waits, and answers nothing for any other", async () => {
-        const waiting = mockEntityManager({ query: [REOPEN_WAITING_WORK_ITEM, [rowOf()]] })
-        const other = mockEntityManager({ query: [REOPEN_WAITING_WORK_ITEM, []] })
+        const waiting = managerAnswering(returned([rowOf()]))
+        const other = managerAnswering(returned([]))
 
-        expect((await (await build(waiting)).reopen("ws-1", "item-1"))?.id).toBe("item-1")
-        expect(waiting.query).toHaveBeenCalledWith(REOPEN_WAITING_WORK_ITEM, ["item-1", "ws-1", NOW])
-        expect(await (await build(other)).reopen("ws-1", "item-1")).toBeNull()
+        expect((await (await build(waiting.em)).reopen("ws-1", "item-1"))?.id).toBe("item-1")
+        expect(singleCall(waiting.fake, "set")).toEqual({ status: "queued", updatedAt: AT })
+        expect(waiting.fake.callsOf("where")[0]?.[0]).toBe(
+            "workspace_id = :workspaceId AND id = :id AND status = 'waiting_decision'",
+        )
+        expect(await (await build(other.em)).reopen("ws-1", "item-1")).toBeNull()
     })
 })
 
@@ -298,20 +273,22 @@ describe("WorkItemsService holds and assignments", () => {
         { rows: [{ id: "item-1" }], expected: true },
         { rows: [], expected: false },
     ])("holds only an item that is still waiting", async ({ rows, expected }) => {
-        const em = mockEntityManager({ query: [HOLD_WORK_ITEM, rows] })
+        const { em, fake } = managerAnswering(returned(rows))
 
         expect(await (await build(em)).hold("ws-1", "item-1", proposal)).toBe(expected)
-        expect(em.query).toHaveBeenCalledWith(HOLD_WORK_ITEM, ["ws-1", "item-1", JSON.stringify(proposal), NOW])
+        expect(singleCall(fake, "set")).toEqual({ proposal, updatedAt: AT })
+        expect(fake.callsOf("where")[0]?.[0]).toContain("status = 'waiting_decision'")
+        expect(fake.callsOf("returning")).toEqual([["id"]])
     })
 
     it("writes a hold through the caller's transaction manager", async () => {
         const primary = mockEntityManager()
-        const manager = mockEntityManager({ query: [HOLD_WORK_ITEM, [{ id: "item-1" }]] })
+        const { em: manager } = managerAnswering(returned([{ id: "item-1" }]))
 
         expect(await (await build(primary)).hold("ws-1", "item-1", proposal, manager)).toBe(true)
 
-        expect(primary.query).not.toHaveBeenCalled()
-        expect(manager.query).toHaveBeenCalledWith(HOLD_WORK_ITEM, ["ws-1", "item-1", JSON.stringify(proposal), NOW])
+        expect(primary.createQueryBuilder).not.toHaveBeenCalled()
+        expect(manager.createQueryBuilder).toHaveBeenCalledTimes(1)
     })
 
     it.each([
@@ -319,66 +296,82 @@ describe("WorkItemsService holds and assignments", () => {
         { staffId: null, rows: [{ id: "item-1" }], expected: true },
         { staffId: "staff-1", rows: [], expected: false },
     ])("assigns or clears a staff member only in the workspace", async ({ staffId, rows, expected }) => {
-        const em = mockEntityManager({ query: [ASSIGN_WORK_ITEM, rows] })
+        const { em, fake } = managerAnswering(returned(rows))
 
         expect(await (await build(em)).assign("ws-1", "item-1", staffId)).toBe(expected)
-        expect(em.query).toHaveBeenCalledWith(ASSIGN_WORK_ITEM, ["ws-1", "item-1", staffId, NOW])
+        expect(singleCall(fake, "set")).toEqual({ assignedStaffId: staffId, updatedAt: AT })
+        expect(fake.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", id: "item-1" })
     })
 
     it("attaches the execution that decided an item", async () => {
-        const em = mockEntityManager({ query: [ATTACH_WORK_ITEM_EXECUTION, []] })
+        const em = mockEntityManager({ update: [WorkItemEntity, { affected: 1, raw: [], generatedMaps: [] }] })
 
         await (await build(em)).attachExecution("ws-1", "item-1", "exec-1")
 
-        expect(em.query).toHaveBeenCalledWith(ATTACH_WORK_ITEM_EXECUTION, ["ws-1", "item-1", "exec-1"])
+        expect(em.update).toHaveBeenCalledWith(
+            WorkItemEntity,
+            { workspaceId: "ws-1", id: "item-1" },
+            { executionId: "exec-1" },
+        )
     })
 
     it("settles waiting claims and returns the closed inbound items", async () => {
         const rows = [{ id: "claim-1", inbound_event_id: "event-1" }]
-        const em = mockEntityManager({ query: [SETTLE_WAITING_CLAIMS, rows] })
+        const { em, fake } = managerAnswering(returned(rows))
 
         expect(
             await (await build(em)).settleClaims("ws-1", "payment-1", "claim:invoice-1", { summary: "Paid" }),
         ).toEqual(rows)
-        expect(em.query).toHaveBeenCalledWith(SETTLE_WAITING_CLAIMS, [
-            "ws-1",
-            "payment-1",
-            "claim:invoice-1",
-            JSON.stringify({ summary: "Paid" }),
-            NOW,
-        ])
+        expect(singleCall(fake, "set")).toEqual({
+            status: "done",
+            decidedPath: "auto",
+            reason: "routine",
+            completedAt: AT,
+            updatedAt: AT,
+            evidenceState: "verified",
+            result: { summary: "Paid" },
+        })
+        expect(fake.callsOf("where")[0]?.[1]).toEqual({
+            workspaceId: "ws-1",
+            settledBy: "payment-1",
+            dedupePrefix: "claim:invoice-1",
+        })
+        expect(fake.callsOf("returning")).toEqual([["id, inbound_event_id"]])
     })
 })
 
 describe("WorkItemsService persistence", () => {
-    it("saves what the performer prepared", async () => {
-        const em = mockEntityManager({ query: [SAVE_PREPARED_WORK_ITEM, [rowOf()]] })
+    it("saves what the performer prepared and keeps the address a null does not correct", async () => {
+        const { em, fake } = managerAnswering(returned([rowOf()]))
 
         await (
             await build(em)
         ).savePrepared("item-1", { proposal, subjectType: "order", subjectId: "o-1", leadId: null })
 
-        expect(em.query).toHaveBeenCalledWith(SAVE_PREPARED_WORK_ITEM, [
-            "item-1",
-            JSON.stringify(proposal),
-            "order",
-            "o-1",
-            null,
-            NOW,
-        ])
+        expect(singleCall(fake, "set")).toEqual({
+            proposal,
+            subjectType: anyFunction(),
+            subjectId: anyFunction(),
+            leadId: anyFunction(),
+            updatedAt: AT,
+        })
+        expect(fake.callsOf("setParameters")).toEqual([[{ subjectType: "order", subjectId: "o-1", leadId: null }]])
+        expect(fake.callsOf("where")[0]).toEqual(["id = :id", { id: "item-1" }])
+        const set = fake.callsOf("set")[0]?.[0] as Record<string, () => string>
+        expect(set.subjectType?.()).toBe("COALESCE(CAST(:subjectType AS text), subject_type)")
     })
 
     it("marks an item failed", async () => {
-        const em = mockEntityManager({ query: [MARK_WORK_ITEM_FAILED, [rowOf({ status: "failed" })]] })
+        const { em, fake } = managerAnswering(returned([rowOf({ status: "failed" })]))
 
         const item = await (await build(em)).markFailed("item-1", "boom")
 
         expect(item.status).toBe("failed")
-        expect(em.query).toHaveBeenCalledWith(MARK_WORK_ITEM_FAILED, ["item-1", "boom", NOW])
+        expect(singleCall(fake, "set")).toEqual({ status: "failed", error: "boom", updatedAt: AT })
     })
 
     it("puts an item in front of a person", async () => {
-        const em = mockEntityManager({ query: [MARK_WORK_ITEM_WAITING, [rowOf({ status: "waiting_decision" })]] })
+        const { em, fake } = managerAnswering(returned([rowOf({ status: "waiting_decision" })]))
 
         await (
             await build(em)
@@ -390,21 +383,23 @@ describe("WorkItemsService persistence", () => {
             executionId: "exec-1",
         })
 
-        expect(em.query).toHaveBeenCalledWith(MARK_WORK_ITEM_WAITING, [
-            "item-1",
-            "missing_data",
-            ["missing_data"],
-            ["need"],
-            JSON.stringify(proposal),
-            "exec-1",
-            NOW,
-        ])
+        expect(singleCall(fake, "set")).toEqual({
+            status: "waiting_decision",
+            reason: "missing_data",
+            reasons: ["missing_data"],
+            missingFields: ["need"],
+            proposal,
+            executionId: "exec-1",
+            decidedPath: null,
+            error: null,
+            updatedAt: AT,
+        })
     })
 })
 
 describe("WorkItemsService persistence", () => {
-    it("closes an item as done", async () => {
-        const em = mockEntityManager({ query: [MARK_WORK_ITEM_DONE, [rowOf({ status: "done" })]] })
+    it("closes an item as done, recording the routine reason only on the automatic path", async () => {
+        const { em, fake } = managerAnswering(returned([rowOf({ status: "done" })]))
 
         await (
             await build(em)
@@ -416,38 +411,49 @@ describe("WorkItemsService persistence", () => {
             leadId: "lead-9",
         })
 
-        expect(em.query).toHaveBeenCalledWith(MARK_WORK_ITEM_DONE, [
-            "item-1",
-            "auto",
-            JSON.stringify(proposal),
-            JSON.stringify({ summary: "Sent", href: "/q/1" }),
-            "captured",
-            NOW,
-            "lead-9",
-        ])
+        expect(singleCall(fake, "set")).toEqual({
+            status: "done",
+            decidedPath: "auto",
+            proposal,
+            result: { summary: "Sent", href: "/q/1" },
+            evidenceState: "captured",
+            completedAt: AT,
+            updatedAt: AT,
+            error: null,
+            leadId: anyFunction(),
+            reason: anyFunction(),
+            reasons: anyFunction(),
+            missingFields: [],
+        })
+        expect(fake.callsOf("setParameters")).toEqual([[{ path: "auto", leadId: "lead-9" }]])
+        const set = fake.callsOf("set")[0]?.[0] as Record<string, () => string>
+        expect(set.reason?.()).toBe("CASE WHEN CAST(:path AS text) = 'auto' THEN 'routine' ELSE reason END")
+        expect(set.reasons?.()).toBe("CASE WHEN CAST(:path AS text) = 'auto' THEN ARRAY['routine'] ELSE reasons END")
     })
 
     it("closes an item as rejected", async () => {
-        const em = mockEntityManager({ query: [MARK_WORK_ITEM_REJECTED, [rowOf({ status: "rejected" })]] })
+        const { em, fake } = managerAnswering(returned([rowOf({ status: "rejected" })]))
 
         await (await build(em)).markRejected("item-1", proposal, { summary: "No" })
 
-        expect(em.query).toHaveBeenCalledWith(MARK_WORK_ITEM_REJECTED, [
-            "item-1",
-            JSON.stringify(proposal),
-            NOW,
-            JSON.stringify({ summary: "No" }),
-        ])
+        expect(singleCall(fake, "set")).toEqual({
+            status: "rejected",
+            decidedPath: "human",
+            proposal,
+            completedAt: AT,
+            updatedAt: AT,
+            result: { summary: "No" },
+        })
     })
 
     it("is a typed not-found when the write answers no row", async () => {
-        const service = await build(mockEntityManager({ query: [MARK_WORK_ITEM_FAILED, []] }))
+        const service = await build(managerAnswering(returned([])).em)
 
         await expect(service.markFailed("item-1", "boom")).rejects.toThrow(WorkItemsErrorCode.NotFound)
     })
 
     it("puts an item back to waiting when data is still missing", async () => {
-        const em = mockEntityManager({ query: [MARK_WORK_ITEM_STILL_WAITING, []] })
+        const { em, fake } = managerAnswering(returned([]))
 
         await (
             await build(em)
@@ -458,13 +464,13 @@ describe("WorkItemsService persistence", () => {
             reasons: ["missing_data"],
         })
 
-        expect(em.query).toHaveBeenCalledWith(MARK_WORK_ITEM_STILL_WAITING, [
-            "item-1",
-            JSON.stringify(proposal),
-            ["need"],
-            "missing_data",
-            ["missing_data"],
-            NOW,
-        ])
+        expect(singleCall(fake, "set")).toEqual({
+            status: "waiting_decision",
+            proposal,
+            missingFields: ["need"],
+            reason: "missing_data",
+            reasons: ["missing_data"],
+            updatedAt: AT,
+        })
     })
 })

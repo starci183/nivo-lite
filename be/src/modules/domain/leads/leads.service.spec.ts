@@ -7,12 +7,12 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { MessagesService } from "@modules/domain/messages"
 import { ResponsibilitiesService } from "@modules/domain/responsibilities"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { MESSAGE_CATALOG, REQUEST_LOCALE } from "@modules/platform/i18n"
 import type { MessageCatalog, RequestLocale } from "@modules/platform/i18n"
 import { LeadsErrorCode } from "./errors/leads.error"
 import type { RecordOutcomeParams } from "./leads.contracts"
 import { LeadsService } from "./leads.service"
-import { UPDATE_LEAD_STAGE } from "./persistence/leads.sql"
 
 const anything = (): unknown => expect.anything()
 
@@ -72,7 +72,8 @@ const build = async (entityManager: MockEntityManager) => {
 describe("LeadsService", () => {
     describe("recordOutcome", () => {
         it("moves the stage and writes the evidence line and the team-chat line in one transaction", async () => {
-            const tx = fakeTransaction(mockEntityManager({ query: [UPDATE_LEAD_STAGE, [LEAD]] }))
+            const tx = fakeTransaction(mockEntityManager())
+            const [stageUpdate] = queueQueryBuilders(tx.em, [{ execute: { raw: [LEAD] } }])
             const { leads, events, teamChat, requestLocale } = await build(tx.em)
 
             await expect(leads.recordOutcome(paramsOf())).resolves.toEqual({
@@ -85,7 +86,12 @@ describe("LeadsService", () => {
                 handedToAccounting: false,
             })
 
-            expect(tx.em.query).toHaveBeenCalledWith(UPDATE_LEAD_STAGE, ["ws-1", "lead-1", "proposal"])
+            expect(stageUpdate?.callsOf("update")).toEqual([[]])
+            expect(stageUpdate?.callsOf("set")).toEqual([[{ stage: "proposal" }]])
+            expect(stageUpdate?.callsOf("where")).toEqual([
+                ["workspace_id = :workspaceId AND id = :leadId", { workspaceId: "ws-1", leadId: "lead-1" }],
+            ])
+            expect(stageUpdate?.callsOf("returning")).toEqual([["id, contact_name, company, channel, need, stage"]])
             expect(requestLocale.of).toHaveBeenCalledWith("en")
             expect(events.record).toHaveBeenCalledWith(
                 {
@@ -110,7 +116,8 @@ describe("LeadsService", () => {
         })
 
         it("records no evidence text as null", async () => {
-            const tx = fakeTransaction(mockEntityManager({ query: [UPDATE_LEAD_STAGE, [LEAD]] }))
+            const tx = fakeTransaction(mockEntityManager())
+            queueQueryBuilders(tx.em, [{ execute: { raw: [LEAD] } }])
             const { leads, events } = await build(tx.em)
 
             await leads.recordOutcome(paramsOf({ evidence: "" }))
@@ -119,7 +126,8 @@ describe("LeadsService", () => {
         })
 
         it("refuses a lead the workspace does not have and writes nothing else", async () => {
-            const tx = fakeTransaction(mockEntityManager({ query: [UPDATE_LEAD_STAGE, []] }))
+            const tx = fakeTransaction(mockEntityManager())
+            queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
             const { leads, events, teamChat } = await build(tx.em)
 
             await expect(leads.recordOutcome(paramsOf())).rejects.toMatchObject({
@@ -137,7 +145,8 @@ describe("LeadsService", () => {
 describe("LeadsService", () => {
     describe("recordOutcome", () => {
         it("hands a won deal to Accounting inside the same transaction", async () => {
-            const tx = fakeTransaction(mockEntityManager({ query: [UPDATE_LEAD_STAGE, [{ ...LEAD, stage: "won" }]] }))
+            const tx = fakeTransaction(mockEntityManager())
+            queueQueryBuilders(tx.em, [{ execute: { raw: [{ ...LEAD, stage: "won" }] } }])
             const { leads, responsibilities } = await build(tx.em)
 
             await expect(leads.recordOutcome(paramsOf({ stage: "won" }))).resolves.toMatchObject({
@@ -156,7 +165,8 @@ describe("LeadsService", () => {
         })
 
         it("reports no hand-over when the workspace has no Accounting agent", async () => {
-            const tx = fakeTransaction(mockEntityManager({ query: [UPDATE_LEAD_STAGE, [{ ...LEAD, stage: "won" }]] }))
+            const tx = fakeTransaction(mockEntityManager())
+            queueQueryBuilders(tx.em, [{ execute: { raw: [{ ...LEAD, stage: "won" }] } }])
             const { leads, responsibilities } = await build(tx.em)
             responsibilities.handToAccounting.mockResolvedValue(false)
 
@@ -166,7 +176,8 @@ describe("LeadsService", () => {
         })
 
         it("does not hand a lost deal to Accounting", async () => {
-            const tx = fakeTransaction(mockEntityManager({ query: [UPDATE_LEAD_STAGE, [{ ...LEAD, stage: "lost" }]] }))
+            const tx = fakeTransaction(mockEntityManager())
+            queueQueryBuilders(tx.em, [{ execute: { raw: [{ ...LEAD, stage: "lost" }] } }])
             const { leads, responsibilities } = await build(tx.em)
 
             await leads.recordOutcome(paramsOf({ stage: "lost" }))

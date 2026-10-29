@@ -1,12 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import { In, LessThan, MoreThan, Not } from "typeorm"
+import type { EntityManager, FindOptionsWhere } from "typeorm"
+import { BookingResourceEntity } from "@modules/domain/booking-resources"
+import { toTakenSpan } from "./booking-model.mapper"
+import { ACTIVE_STATUSES } from "./bookings.contracts"
 import type { BookingStatus } from "./bookings.contracts"
 import { BookingsError, BookingsErrorCode } from "./errors/bookings.error"
-import { INSERT_BOOKING, LOCK_RESOURCE, RELOCATE_BOOKING, SELECT_RESOURCE_SPANS } from "./persistence/booking-write.sql"
-import { toTakenSpan } from "./persistence/booking.rows"
-import type { SpanRow } from "./persistence/booking.rows"
+import { BookingEntity } from "./persistence/entities"
 import { peakLoad } from "./policies/availability.policy"
-import { bookingIsoOf } from "./policies/zoned-time.policy"
+
+const SPANS_LIMIT = 5000
 
 /** A booking to write. */
 export interface NewBooking {
@@ -103,44 +106,42 @@ export class BookingReservationService {
     /** Writes a booking if its resource still has room (or `force`); a booking that does not hold its slot always goes in. */
     async reserve(params: ReserveParams): Promise<ReserveOutcome> {
         const { manager, booking } = params
-        const [lock] = await manager.query<Array<{ capacity: number }>>(LOCK_RESOURCE, [
-            booking.resourceId,
-            booking.workspaceId,
-        ])
-        if (lock === undefined) return { kind: "resource_not_found" }
+        const resource = await this.lockResource(manager, booking.resourceId, booking.workspaceId)
+        if (resource === null) return { kind: "resource_not_found" }
         if (booking.holdsSlot && !params.force) {
-            const spans = await manager.query<Array<SpanRow>>(SELECT_RESOURCE_SPANS, [
-                booking.resourceId,
-                bookingIsoOf(booking.startMs),
-                bookingIsoOf(booking.blockEndMs),
-                null,
-            ])
+            const spans = await this.spansOf(manager, booking.resourceId, booking.startMs, booking.blockEndMs, null)
             const load = peakLoad(spans.map(toTakenSpan), booking.resourceId, booking.startMs, booking.blockEndMs, null)
-            if (load + booking.partySize > lock.capacity) return { kind: "full" }
+            if (load + booking.partySize > resource.capacity) return { kind: "full" }
         }
-        const [row] = await manager.query<Array<{ id: string }>>(INSERT_BOOKING, [
-            booking.workspaceId,
-            booking.customerName,
-            booking.customerPhone,
-            booking.customerEmail,
-            booking.serviceId,
-            booking.resourceId,
-            bookingIsoOf(booking.startMs),
-            bookingIsoOf(booking.endMs),
-            bookingIsoOf(booking.blockEndMs),
-            booking.partySize,
-            booking.status,
-            booking.holdsSlot,
-            booking.sourceChannel,
-            booking.priceVnd,
-            booking.depositVnd,
-            booking.depositStatus,
-            booking.note,
-            booking.conflictNote,
-            booking.idempotencyKey,
-            booking.conversationId ?? null,
-            booking.leadId ?? null,
-        ])
+        const inserted = await manager
+            .createQueryBuilder(BookingEntity, "bo")
+            .insert()
+            .values({
+                workspaceId: booking.workspaceId,
+                customerName: booking.customerName,
+                customerPhone: booking.customerPhone,
+                customerEmail: booking.customerEmail,
+                serviceId: booking.serviceId,
+                resourceId: booking.resourceId,
+                startAt: new Date(booking.startMs),
+                endAt: new Date(booking.endMs),
+                blockEndAt: new Date(booking.blockEndMs),
+                partySize: booking.partySize,
+                status: booking.status,
+                holdsSlot: booking.holdsSlot,
+                sourceChannel: booking.sourceChannel,
+                priceVnd: booking.priceVnd === null ? null : String(booking.priceVnd),
+                depositVnd: String(booking.depositVnd),
+                depositStatus: booking.depositStatus,
+                note: booking.note,
+                conflictNote: booking.conflictNote,
+                idempotencyKey: booking.idempotencyKey,
+                conversationId: booking.conversationId ?? null,
+                leadId: booking.leadId ?? null,
+            })
+            .returning("id")
+            .execute()
+        const [row] = Array.isArray(inserted.raw) ? (inserted.raw as Array<{ id: string }>) : []
         if (row === undefined) throw new BookingsError({ code: BookingsErrorCode.NotCreated })
         return { kind: "reserved", id: row.id }
     }
@@ -148,18 +149,16 @@ export class BookingReservationService {
     /** Moves a booking to another time or resource if there is room (excluding itself), or `force`. */
     async relocate(params: RelocateParams): Promise<RelocateOutcome> {
         const { manager } = params
-        const [lock] = await manager.query<Array<{ capacity: number }>>(LOCK_RESOURCE, [
-            params.resourceId,
-            params.workspaceId,
-        ])
-        if (lock === undefined) return "resource_not_found"
+        const resource = await this.lockResource(manager, params.resourceId, params.workspaceId)
+        if (resource === null) return "resource_not_found"
         if (!params.force) {
-            const spans = await manager.query<Array<SpanRow>>(SELECT_RESOURCE_SPANS, [
+            const spans = await this.spansOf(
+                manager,
                 params.resourceId,
-                bookingIsoOf(params.startMs),
-                bookingIsoOf(params.blockEndMs),
+                params.startMs,
+                params.blockEndMs,
                 params.bookingId,
-            ])
+            )
             const load = peakLoad(
                 spans.map(toTakenSpan),
                 params.resourceId,
@@ -167,17 +166,64 @@ export class BookingReservationService {
                 params.blockEndMs,
                 params.bookingId,
             )
-            if (load + params.partySize > lock.capacity) return "taken"
+            if (load + params.partySize > resource.capacity) return "taken"
         }
-        await manager.query(RELOCATE_BOOKING, [
-            params.workspaceId,
-            params.bookingId,
-            params.resourceId,
-            bookingIsoOf(params.startMs),
-            bookingIsoOf(params.endMs),
-            bookingIsoOf(params.blockEndMs),
-            bookingIsoOf(params.nowMs),
-        ])
+        const moved = "CAST(:startAt AS timestamptz) <> start_at"
+        await manager
+            .createQueryBuilder(BookingEntity, "bo")
+            .update()
+            .set({
+                resourceId: params.resourceId,
+                startAt: new Date(params.startMs),
+                endAt: new Date(params.endMs),
+                blockEndAt: new Date(params.blockEndMs),
+                holdsSlot: true,
+                rescheduledFrom: () => `CASE WHEN ${moved} THEN start_at ELSE rescheduled_from END`,
+                rescheduleCount: () => `reschedule_count + CASE WHEN ${moved} THEN 1 ELSE 0 END`,
+                status: () =>
+                    `CASE WHEN ${moved} AND status IN ('confirmed', 'rescheduled') THEN 'rescheduled' ELSE status END`,
+                conflictNote: "",
+                updatedAt: new Date(params.nowMs),
+            })
+            .where({ workspaceId: params.workspaceId, id: params.bookingId })
+            .setParameter("startAt", new Date(params.startMs))
+            .execute()
         return "moved"
+    }
+
+    /** Locks one resource of a workspace for the rest of the transaction and answers its capacity, or null when it is not there. */
+    private lockResource(
+        manager: EntityManager,
+        resourceId: string,
+        workspaceId: string,
+    ): Promise<Pick<BookingResourceEntity, "capacity"> | null> {
+        return manager.findOne(BookingResourceEntity, {
+            select: { capacity: true },
+            where: { id: resourceId, workspaceId },
+            lock: { mode: "pessimistic_write" },
+        })
+    }
+
+    /** The bookings that hold one resource between two instants, optionally leaving one out. */
+    private spansOf(
+        manager: EntityManager,
+        resourceId: string,
+        fromMs: number,
+        toMs: number,
+        excludedId: string | null,
+    ): Promise<Array<BookingEntity>> {
+        const where: FindOptionsWhere<BookingEntity> = {
+            resourceId,
+            holdsSlot: true,
+            status: In(ACTIVE_STATUSES),
+            startAt: LessThan(new Date(toMs)),
+            blockEndAt: MoreThan(new Date(fromMs)),
+            ...(excludedId === null ? {} : { id: Not(excludedId) }),
+        }
+        return manager.find(BookingEntity, {
+            select: { id: true, resourceId: true, partySize: true, startAt: true, blockEndAt: true },
+            where,
+            take: SPANS_LIMIT,
+        })
     }
 }

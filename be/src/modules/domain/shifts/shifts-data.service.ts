@@ -1,39 +1,23 @@
 import { Injectable } from "@nestjs/common"
+import { Between, In, IsNull, LessThanOrEqual, Like, MoreThanOrEqual, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
+import { WorkItemEntity } from "@modules/domain/work-items"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { Env, Setup, Shift } from "./shifts.contracts"
+import type { ShiftWithSchedule } from "./shifts-records.contracts"
 import {
-    COUNT_WORK_ASKS,
-    SELECT_APPROVED_LEAVES,
-    SELECT_AVAILABILITY,
-    SELECT_COVERAGE,
-    SELECT_LEAVE,
-    SELECT_PAY,
-    SELECT_POSITIONS,
-    SELECT_PROFILE_OF_USER,
-    SELECT_PRIOR_SHIFTS,
-    SELECT_RANGE_SHIFTS,
-    SELECT_SCHEDULE,
-    SELECT_SCHEDULE_SHIFTS,
-    SELECT_SETTINGS,
-    SELECT_SHIFT,
-    SELECT_STAFF,
-    SELECT_STAFF_SHIFTS,
-    SELECT_SWAP,
-} from "./persistence/shifts.sql"
-import type {
-    ShiftsAvailabilityRow,
-    ShiftsCoverageRow,
-    ShiftsIdRow,
-    ShiftsLeaveRow,
-    ShiftsPayRow,
-    ShiftsPositionRow,
-    ShiftsScheduleRow,
-    ShiftsSettingsRow,
-    ShiftsShiftRow,
-    ShiftsStaffRow,
-    ShiftsSwapRow,
-} from "./persistence/shifts.rows"
+    ShiftsAvailabilityEntity,
+    ShiftsCoverageEntity,
+    ShiftsLeaveRequestEntity,
+    ShiftsPositionEntity,
+    ShiftsScheduleEntity,
+    ShiftsSettingsEntity,
+    ShiftsShiftEntity,
+    ShiftsStaffEntity,
+    ShiftsStaffPayEntity,
+    ShiftsSwapRequestEntity,
+} from "./persistence/entities"
+import { selectShiftWithSchedule } from "./persistence/shifts-shift.query"
 import {
     toAvail,
     toBlock,
@@ -46,6 +30,25 @@ import {
 } from "./policies/row-mappers.policy"
 import { addDays } from "./policies/time.policy"
 
+/** The most positions one read answers. */
+const POSITIONS_MAX = 200
+/** The most people, and pay rows, one read answers. */
+const STAFF_MAX = 500
+/** The most coverage blocks one read answers. */
+const COVERAGE_MAX = 1000
+/** The most approved availability statements one read answers. */
+const AVAILABILITY_MAX = 2000
+/** The most approved leaves one read answers. */
+const LEAVES_MAX = 500
+/** The most shifts of one schedule one read answers. */
+const SCHEDULE_SHIFTS_MAX = 1000
+/** The most shifts of the day before a week one read answers. */
+const PRIOR_SHIFTS_MAX = 500
+/** The most shifts of a range of days one read answers. */
+const RANGE_SHIFTS_MAX = 2000
+/** The most shifts of one person in a range of days one read answers. */
+const STAFF_SHIFTS_MAX = 500
+
 @Injectable()
 /** Reads what the shifts rules run against: the setup of the shop, the approved availability and leave, and the shifts of a schedule. */
 export class ShiftsDataService {
@@ -54,33 +57,65 @@ export class ShiftsDataService {
     /** The positions, people (with pay when asked), coverage blocks and rules of a workspace. */
     async loadSetup(workspaceId: string, withPay: boolean): Promise<Setup> {
         const [positions, staff, pay, blocks, settings] = await Promise.all([
-            this.entityManager.query<Array<ShiftsPositionRow>>(SELECT_POSITIONS, [workspaceId]),
-            this.entityManager.query<Array<ShiftsStaffRow>>(SELECT_STAFF, [workspaceId]),
+            this.entityManager.find(ShiftsPositionEntity, {
+                select: { id: true, name: true, color: true },
+                where: { workspaceId, active: true },
+                order: { sortOrder: "ASC", createdAt: "ASC" },
+                take: POSITIONS_MAX,
+            }),
+            this.entityManager.find(ShiftsStaffEntity, {
+                where: { workspaceId },
+                order: { createdAt: "ASC" },
+                take: STAFF_MAX,
+            }),
             withPay
-                ? this.entityManager.query<Array<ShiftsPayRow>>(SELECT_PAY, [workspaceId])
-                : Promise.resolve<Array<ShiftsPayRow>>([]),
-            this.entityManager.query<Array<ShiftsCoverageRow>>(SELECT_COVERAGE, [workspaceId]),
-            this.entityManager.query<Array<ShiftsSettingsRow>>(SELECT_SETTINGS, [workspaceId]),
+                ? this.entityManager.find(ShiftsStaffPayEntity, {
+                      select: { staffId: true, hourlyWageVnd: true },
+                      where: { workspaceId },
+                      take: STAFF_MAX,
+                  })
+                : Promise.resolve<Array<ShiftsStaffPayEntity>>([]),
+            this.entityManager.find(ShiftsCoverageEntity, {
+                where: { workspaceId },
+                order: { weekday: "ASC", startTime: "ASC" },
+                take: COVERAGE_MAX,
+            }),
+            this.entityManager.findOne(ShiftsSettingsEntity, { where: { workspaceId } }),
         ])
-        const wages = new Map(pay.map((row) => [row.staff_id, Number(row.hourly_wage_vnd) || 0]))
+        const wages = new Map(pay.map((row) => [row.staffId, Number(row.hourlyWageVnd) || 0]))
         return {
             positions: positions.map(toPosition),
             staff: staff.map((row) => toStaff(row, wages.get(row.id) ?? 0)),
             blocks: blocks.map(toBlock),
-            settings: toSettings(settings[0]),
+            settings: toSettings(settings ?? undefined),
         }
     }
 
     /** The environment the rules run in: approved availability and leave, and the work of the day before the week. */
     async loadEnv(workspaceId: string, monday: string, setup: Setup): Promise<Env> {
         const [availability, leaves, prior] = await Promise.all([
-            this.entityManager.query<Array<ShiftsAvailabilityRow>>(SELECT_AVAILABILITY, [workspaceId]),
-            this.entityManager.query<Array<ShiftsLeaveRow>>(SELECT_APPROVED_LEAVES, [
-                workspaceId,
-                monday,
-                addDays(monday, 6),
-            ]),
-            this.entityManager.query<Array<ShiftsShiftRow>>(SELECT_PRIOR_SHIFTS, [workspaceId, addDays(monday, -1)]),
+            this.entityManager.find(ShiftsAvailabilityEntity, {
+                where: { workspaceId, status: "approved" },
+                take: AVAILABILITY_MAX,
+            }),
+            this.entityManager.find(ShiftsLeaveRequestEntity, {
+                where: {
+                    workspaceId,
+                    status: "approved",
+                    toDate: MoreThanOrEqual(monday),
+                    fromDate: LessThanOrEqual(addDays(monday, 6)),
+                },
+                take: LEAVES_MAX,
+            }),
+            this.entityManager.find(ShiftsShiftEntity, {
+                where: {
+                    workspaceId,
+                    shiftDate: addDays(monday, -1),
+                    status: In(["published", "swapped"]),
+                    staffId: Not(IsNull()),
+                },
+                take: PRIOR_SHIFTS_MAX,
+            }),
         ])
         return {
             staff: new Map(setup.staff.map((person) => [person.id, person])),
@@ -93,23 +128,26 @@ export class ShiftsDataService {
 
     /** The shifts of a schedule that were not cancelled, earliest first. */
     async scheduleShifts(workspaceId: string, scheduleId: string): Promise<Array<Shift>> {
-        const rows = await this.entityManager.query<Array<ShiftsShiftRow>>(SELECT_SCHEDULE_SHIFTS, [
-            workspaceId,
-            scheduleId,
-        ])
+        const rows = await this.entityManager.find(ShiftsShiftEntity, {
+            where: { workspaceId, scheduleId, status: Not("cancelled") },
+            order: { shiftDate: "ASC", startTime: "ASC" },
+            take: SCHEDULE_SHIFTS_MAX,
+        })
         return rows.map(toShift)
     }
 
     /** One shift with the state of its schedule, or undefined. */
-    shiftRow(workspaceId: string, shiftId: string): Promise<ShiftsShiftRow | undefined> {
-        return this.first(this.entityManager.query<Array<ShiftsShiftRow>>(SELECT_SHIFT, [workspaceId, shiftId]))
+    shiftRow(workspaceId: string, shiftId: string): Promise<ShiftWithSchedule | undefined> {
+        return selectShiftWithSchedule(this.entityManager, workspaceId)
+            .andWhere("s.id = :shiftId", { shiftId })
+            .limit(1)
+            .getRawOne<ShiftWithSchedule>()
     }
 
     /** One schedule, or undefined. */
-    scheduleRow(workspaceId: string, scheduleId: string): Promise<ShiftsScheduleRow | undefined> {
-        return this.first(
-            this.entityManager.query<Array<ShiftsScheduleRow>>(SELECT_SCHEDULE, [workspaceId, scheduleId]),
-        )
+    async scheduleRow(workspaceId: string, scheduleId: string): Promise<ShiftsScheduleEntity | undefined> {
+        const row = await this.entityManager.findOne(ShiftsScheduleEntity, { where: { workspaceId, id: scheduleId } })
+        return row ?? undefined
     }
 
     /** The shifts of everyone in a range of days that are in one of the statuses. */
@@ -119,12 +157,15 @@ export class ShiftsDataService {
         to: string,
         statuses: ReadonlyArray<string>,
     ): Promise<Array<Shift>> {
-        const rows = await this.entityManager.query<Array<ShiftsShiftRow>>(SELECT_RANGE_SHIFTS, [
-            workspaceId,
-            from,
-            to,
-            statuses,
-        ])
+        const rows = await this.entityManager.find(ShiftsShiftEntity, {
+            where: {
+                workspaceId,
+                shiftDate: Between(from, to),
+                status: In([...statuses]),
+                staffId: Not(IsNull()),
+            },
+            take: RANGE_SHIFTS_MAX,
+        })
         return rows.map(toShift)
     }
 
@@ -136,43 +177,39 @@ export class ShiftsDataService {
         to: string,
         statuses: ReadonlyArray<string>,
     ): Promise<Array<Shift>> {
-        const rows = await this.entityManager.query<Array<ShiftsShiftRow>>(SELECT_STAFF_SHIFTS, [
-            workspaceId,
-            staffId,
-            from,
-            to,
-            statuses,
-        ])
+        const rows = await this.entityManager.find(ShiftsShiftEntity, {
+            where: { workspaceId, staffId, shiftDate: Between(from, to), status: In([...statuses]) },
+            take: STAFF_SHIFTS_MAX,
+        })
         return rows.map(toShift)
     }
 
     /** The profile of the member in the shifts of the workspace, or null when the member has none. */
     async profileOf(workspaceId: string, userId: string): Promise<string | null> {
-        const [row] = await this.entityManager.query<Array<ShiftsIdRow>>(SELECT_PROFILE_OF_USER, [workspaceId, userId])
+        const row = await this.entityManager.findOne(ShiftsStaffEntity, {
+            select: { id: true },
+            where: { workspaceId, active: true, userId },
+            order: { createdAt: "ASC" },
+        })
         return row?.id ?? null
     }
 
     /** One leave request, or undefined. */
-    leaveRow(workspaceId: string, leaveId: string): Promise<ShiftsLeaveRow | undefined> {
-        return this.first(this.entityManager.query<Array<ShiftsLeaveRow>>(SELECT_LEAVE, [workspaceId, leaveId]))
+    async leaveRow(workspaceId: string, leaveId: string): Promise<ShiftsLeaveRequestEntity | undefined> {
+        const row = await this.entityManager.findOne(ShiftsLeaveRequestEntity, { where: { workspaceId, id: leaveId } })
+        return row ?? undefined
     }
 
     /** One swap or claim request, or undefined. */
-    swapRow(workspaceId: string, swapId: string): Promise<ShiftsSwapRow | undefined> {
-        return this.first(this.entityManager.query<Array<ShiftsSwapRow>>(SELECT_SWAP, [workspaceId, swapId]))
+    async swapRow(workspaceId: string, swapId: string): Promise<ShiftsSwapRequestEntity | undefined> {
+        const row = await this.entityManager.findOne(ShiftsSwapRequestEntity, { where: { workspaceId, id: swapId } })
+        return row ?? undefined
     }
 
     /** How many times an action was asked for one subject, so a repeated ask gets a fresh dedupe key. */
-    async askAttempts(workspaceId: string, action: string, prefix: string): Promise<number> {
-        const [row] = await this.entityManager.query<Array<{ attempts: number }>>(COUNT_WORK_ASKS, [
-            workspaceId,
-            action,
-            `${prefix}%`,
-        ])
-        return row?.attempts ?? 0
-    }
-    private async first<Row>(rows: Promise<Array<Row>>): Promise<Row | undefined> {
-        const [row] = await rows
-        return row
+    askAttempts(workspaceId: string, action: string, prefix: string): Promise<number> {
+        return this.entityManager.count(WorkItemEntity, {
+            where: { workspaceId, action, dedupeKey: Like(`${prefix}%`) },
+        })
     }
 }

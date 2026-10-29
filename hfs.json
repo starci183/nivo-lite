@@ -3,12 +3,6 @@
   "kind": "app",
   "edition": "lite",
   "project": "nivo-lite",
-  "supabase": {
-    "enableSignup": true,
-    "jwtExpiry": 3600,
-    "siteUrl": "http://localhost:3000",
-    "redirectUrls": ["http://localhost:3000/**", "http://127.0.0.1:3000/**"]
-  },
   "sides": {
     "be": {
       "apps": [
@@ -32,14 +26,565 @@
           "envPrefix": "PRIMARY_DB",
           "owner": "api",
           "isolation": "schema",
-          "provider": "supabase"
+          "provider": "postgres"
         }
       ],
-      "reads": ["supabase/types/"],
+      "reads": [],
       "patterns": ["webhooks", "queue", "fenced-job", "realtime"],
       "backing": ["redis"],
-      "queueOutbox": { "table": "public.job_outbox", "enqueue": "public.job_enqueue", "queueParameter": "p_queue" },
-      "optionalSlots": ["repo.docs", "be.contract.graphql", "repo.i18n-dynamic-keys"]
+      "optionalSlots": [
+        "repo.docs",
+        "be.contract.graphql",
+        "repo.i18n-dynamic-keys",
+        "be.events",
+        "be.platform.event-bus"
+      ],
+      "dbFunctions": [
+        {
+          "name": "public.event_bus_send",
+          "reason": "sends a typed event once to its pgmq topic in the publisher transaction"
+        },
+        {
+          "name": "public.event_bus_read",
+          "reason": "reads a bounded batch of a consumer queue with a visibility timeout"
+        },
+        {
+          "name": "public.event_bus_archive",
+          "reason": "archives a consumer message once its reactor handled it"
+        },
+        {
+          "name": "public.event_bus_bury",
+          "reason": "moves a poison message to its dead-letter queue and archives the original"
+        },
+        {
+          "name": "public.event_bus_dead_letters",
+          "reason": "lists a consumer dead letters for an operator"
+        },
+        {
+          "name": "public.event_bus_requeue",
+          "reason": "sends a dead letter back to its consumer queue"
+        },
+        {
+          "name": "public.workspace_footprint",
+          "reason": "per-workspace row counts across tables for cleanup"
+        },
+        {
+          "name": "public.workspace_user_references",
+          "reason": "user references across tables for cleanup"
+        },
+        {
+          "name": "public.settle_payment_order",
+          "reason": "settles a payment order and its credits atomically"
+        },
+        {
+          "name": "public.sales_action_find",
+          "reason": "sales action lookup by key or outbox id"
+        },
+        {
+          "name": "public.seat_office_member",
+          "reason": "seats a member in the office rooms"
+        },
+        {
+          "name": "public.ensure_office_rooms",
+          "reason": "creates the default office rooms"
+        },
+        {
+          "name": "public.move_office_agent_home",
+          "reason": "moves an agent to its home room"
+        },
+        {
+          "name": "public.job_stats",
+          "reason": "job counts for readiness and ops"
+        },
+        {
+          "name": "public.job_status",
+          "reason": "job state for a reply or answer"
+        },
+        {
+          "name": "public.job_enqueue",
+          "reason": "fenced job enqueue inside the caller transaction"
+        },
+        {
+          "name": "public.job_failed",
+          "reason": "failed jobs for ops"
+        },
+        {
+          "name": "public.job_open",
+          "reason": "open jobs for ops"
+        },
+        {
+          "name": "public.job_reopen",
+          "reason": "reopens a job for ops"
+        },
+        {
+          "name": "public.job_requeue_failed",
+          "reason": "requeues failed jobs for ops"
+        },
+        {
+          "name": "public.system_history_sweep",
+          "reason": "daily retention of job, cron and outbox history"
+        },
+        {
+          "name": "public.ai_quota_status",
+          "reason": "AI quota of a workspace"
+        },
+        {
+          "name": "public.usage_notice_post",
+          "reason": "posts a usage notice"
+        },
+        {
+          "name": "public.api_key_auth",
+          "reason": "verifies an API key, counts the hit and stamps last use"
+        },
+        {
+          "name": "public.workspace_owner_member",
+          "reason": "owner member of a workspace"
+        },
+        {
+          "name": "public.automations_data",
+          "reason": "automation overview read"
+        },
+        {
+          "name": "public.shell_data",
+          "reason": "app shell bootstrap read"
+        },
+        {
+          "name": "public.post_office_notice",
+          "reason": "posts a notice into the office"
+        },
+        {
+          "name": "gen_random_uuid",
+          "reason": "database random token for invites"
+        },
+        {
+          "name": "public.connection_mark_fed",
+          "reason": "marks a payment feed connection as fed with its last delivery"
+        },
+        {
+          "name": "public.workspace_storage_bytes",
+          "reason": "storage bytes a workspace holds, for plan limits"
+        },
+        {
+          "name": "public.resolve_installation",
+          "reason": "resolves the module installation a decision belongs to"
+        },
+        {
+          "name": "be_access.chat_target_member",
+          "reason": "admits a member to a chat target (room or conversation)"
+        },
+        {
+          "name": "be_access.workspace_member_avatars",
+          "reason": "member names and avatars for chat readers"
+        },
+        {
+          "name": "public.mark_office_room_read",
+          "reason": "advances a room, agent or lead read marker for a member"
+        },
+        {
+          "name": "public.admin_workspace_stats",
+          "reason": "platform console workspace statistics"
+        },
+        {
+          "name": "public.admin_signups_per_day",
+          "reason": "platform console signups per day"
+        },
+        {
+          "name": "be_access.user_emails",
+          "reason": "emails of auth users for the platform console"
+        },
+        {
+          "name": "public.inventory_add_po_lines",
+          "reason": "writes purchase-order lines"
+        },
+        {
+          "name": "public.inventory_apply_movement",
+          "reason": "row-locked idempotent stock change, the one writer of quantities"
+        },
+        {
+          "name": "public.inventory_cancel_po",
+          "reason": "cancels an order and answers its work item"
+        },
+        {
+          "name": "public.inventory_close_receipt",
+          "reason": "sets a receipt value"
+        },
+        {
+          "name": "public.inventory_default_location",
+          "reason": "creates or reads the default location"
+        },
+        {
+          "name": "public.inventory_delete_recipe",
+          "reason": "deletes a recipe with its lines"
+        },
+        {
+          "name": "public.inventory_discard_receipt",
+          "reason": "removes an empty receipt"
+        },
+        {
+          "name": "public.inventory_edit_po_draft",
+          "reason": "edits a draft order, its lines and total"
+        },
+        {
+          "name": "public.inventory_import_item",
+          "reason": "import upsert of an item"
+        },
+        {
+          "name": "public.inventory_insert_po",
+          "reason": "draft order with a unique number"
+        },
+        {
+          "name": "public.inventory_mark_po_reminded",
+          "reason": "counts an order reminder"
+        },
+        {
+          "name": "public.inventory_mark_po_sent",
+          "reason": "marks an order sent"
+        },
+        {
+          "name": "public.inventory_mark_po_waiting",
+          "reason": "moves a draft to waiting approval"
+        },
+        {
+          "name": "public.inventory_open_receipt",
+          "reason": "opens a goods receipt"
+        },
+        {
+          "name": "public.inventory_receive_po_line",
+          "reason": "adds received quantity and cost to a line"
+        },
+        {
+          "name": "public.inventory_recompute_po_total",
+          "reason": "sets an order total from its lines"
+        },
+        {
+          "name": "public.inventory_refuse_po",
+          "reason": "returns a refused order to draft"
+        },
+        {
+          "name": "public.inventory_save_item",
+          "reason": "item upsert with the sku rule"
+        },
+        {
+          "name": "public.inventory_save_location",
+          "reason": "renames or adds a location"
+        },
+        {
+          "name": "public.inventory_save_recipe",
+          "reason": "recipe plus lines in one step"
+        },
+        {
+          "name": "public.inventory_save_supplier",
+          "reason": "supplier upsert"
+        },
+        {
+          "name": "public.inventory_set_item_active",
+          "reason": "switches an item on or off"
+        },
+        {
+          "name": "public.inventory_set_po_message",
+          "reason": "stores the supplier message on a draft"
+        },
+        {
+          "name": "public.inventory_set_po_status",
+          "reason": "order status after a receipt"
+        },
+        {
+          "name": "public.job_relay_claim",
+          "reason": "claims outbox rows to relay into BullMQ"
+        },
+        {
+          "name": "public.job_relay_sent",
+          "reason": "marks relayed outbox rows sent"
+        },
+        {
+          "name": "public.job_relay_release",
+          "reason": "releases outbox rows a relay could not send"
+        },
+        {
+          "name": "public.job_reconcile",
+          "reason": "reconciles job rows with the queue"
+        },
+        {
+          "name": "public.job_start",
+          "reason": "starts a fenced job run"
+        },
+        {
+          "name": "public.job_lease",
+          "reason": "extends a job lease"
+        },
+        {
+          "name": "public.job_done",
+          "reason": "completes a job"
+        },
+        {
+          "name": "public.job_retry",
+          "reason": "schedules a job retry"
+        },
+        {
+          "name": "public.job_dead",
+          "reason": "dead-letters a job"
+        },
+        {
+          "name": "public.job_handback",
+          "reason": "hands a job back to the queue"
+        },
+        {
+          "name": "public.job_reset",
+          "reason": "resets a stuck job"
+        },
+        {
+          "name": "public.shifts_save_schedule",
+          "reason": "versions and saves a schedule, superseding the last"
+        },
+        {
+          "name": "public.shifts_add_shifts",
+          "reason": "bulk-inserts shifts with unnest"
+        },
+        {
+          "name": "public.shifts_reassign",
+          "reason": "reassigns a shift"
+        },
+        {
+          "name": "public.shifts_publish",
+          "reason": "publishes a schedule and cancels superseded shifts"
+        },
+        {
+          "name": "public.shifts_create_leave",
+          "reason": "creates a leave request"
+        },
+        {
+          "name": "public.shifts_create_swap",
+          "reason": "creates a swap request"
+        },
+        {
+          "name": "public.shifts_decide_swap",
+          "reason": "settles a swap once and moves the shift"
+        },
+        {
+          "name": "public.shifts_decide_leave",
+          "reason": "settles a leave once and opens the hit shifts"
+        },
+        {
+          "name": "public.shifts_import_apply",
+          "reason": "applies an imported schedule"
+        },
+        {
+          "name": "public.job_tick_claim",
+          "reason": "claims a scheduler tick for its UTC minute so one replica enqueues it"
+        },
+        {
+          "name": "public.app_errors_record",
+          "reason": "records an app error with its scope"
+        },
+        {
+          "name": "public.be_account_providers",
+          "reason": "sign-in providers of an account"
+        },
+        {
+          "name": "public.be_account_sessions",
+          "reason": "open sessions of an account"
+        },
+        {
+          "name": "public.be_revoke_session",
+          "reason": "revokes one session"
+        },
+        {
+          "name": "public.be_auth_user_by_email",
+          "reason": "auth user by email (identity door)"
+        },
+        {
+          "name": "public.be_auth_user_by_id",
+          "reason": "auth user by id (identity door)"
+        },
+        {
+          "name": "public.be_auth_user_by_google",
+          "reason": "auth user by Google subject (identity door)"
+        },
+        {
+          "name": "public.be_auth_create_user",
+          "reason": "creates an auth user (identity door)"
+        },
+        {
+          "name": "public.be_auth_link_google",
+          "reason": "links a Google identity (identity door)"
+        },
+        {
+          "name": "public.be_auth_touch_user",
+          "reason": "stamps sign-in on an auth user (identity door)"
+        },
+        {
+          "name": "public.be_auth_set_password",
+          "reason": "sets an auth password hash (identity door)"
+        },
+        {
+          "name": "public.be_auth_set_avatar",
+          "reason": "sets an auth user avatar (identity door)"
+        },
+        {
+          "name": "public.be_auth_open_session",
+          "reason": "opens an auth session (identity door)"
+        },
+        {
+          "name": "public.be_auth_touch_session",
+          "reason": "refreshes an auth session (identity door)"
+        },
+        {
+          "name": "public.be_auth_close_session",
+          "reason": "closes an auth session (identity door)"
+        },
+        {
+          "name": "public.be_auth_close_user_sessions",
+          "reason": "closes every session of a user (identity door)"
+        },
+        {
+          "name": "public.be_auth_close_other_sessions",
+          "reason": "closes a user's other sessions (identity door)"
+        },
+        {
+          "name": "public.be_auth_confirm_email",
+          "reason": "confirms an auth email (identity door)"
+        },
+        {
+          "name": "public.hiring_application_submit",
+          "reason": "records a candidate application and its first pipeline event in one call"
+        },
+        {
+          "name": "public.hiring_availability_save",
+          "reason": "saves a candidate interview availability for a job"
+        },
+        {
+          "name": "public.hiring_candidate_link_staff",
+          "reason": "links a hired candidate to the staff record it became"
+        },
+        {
+          "name": "public.hiring_candidate_move",
+          "reason": "moves a candidate to another pipeline stage and logs the move"
+        },
+        {
+          "name": "public.hiring_candidate_notes",
+          "reason": "updates a candidate notes under the workspace guard"
+        },
+        {
+          "name": "public.hiring_candidate_screened",
+          "reason": "marks a candidate screened with its screening result"
+        },
+        {
+          "name": "public.hiring_candidates_delete",
+          "reason": "deletes candidates and their hiring rows for a workspace"
+        },
+        {
+          "name": "public.hiring_event_log",
+          "reason": "appends a hiring pipeline event"
+        },
+        {
+          "name": "public.hiring_interview_confirm",
+          "reason": "confirms an interview slot for a candidate"
+        },
+        {
+          "name": "public.hiring_interview_create",
+          "reason": "creates an interview for a candidate"
+        },
+        {
+          "name": "public.hiring_interview_none_fit",
+          "reason": "records that no offered interview slot fits the candidate"
+        },
+        {
+          "name": "public.hiring_interview_remind_claim",
+          "reason": "claims due interview reminders once for the reminder tick"
+        },
+        {
+          "name": "public.hiring_interview_status",
+          "reason": "changes an interview status"
+        },
+        {
+          "name": "public.hiring_job_ads",
+          "reason": "reads the published job ads of a workspace"
+        },
+        {
+          "name": "public.hiring_job_create",
+          "reason": "creates a job opening"
+        },
+        {
+          "name": "public.hiring_job_fill_check",
+          "reason": "closes a job once its openings are filled"
+        },
+        {
+          "name": "public.hiring_job_status",
+          "reason": "changes a job opening status"
+        },
+        {
+          "name": "public.hiring_job_update",
+          "reason": "updates a job opening"
+        },
+        {
+          "name": "public.hiring_jobs_expire",
+          "reason": "expires job openings past their end date for the jobs tick"
+        },
+        {
+          "name": "public.hiring_offer_answer",
+          "reason": "records a candidate answer to an offer"
+        },
+        {
+          "name": "public.hiring_offer_cancel",
+          "reason": "cancels an open offer"
+        },
+        {
+          "name": "public.hiring_offer_create",
+          "reason": "creates an offer for a candidate"
+        },
+        {
+          "name": "public.hiring_offer_link",
+          "reason": "issues the answer link of an offer"
+        },
+        {
+          "name": "public.hiring_offer_sent",
+          "reason": "marks an offer sent"
+        },
+        {
+          "name": "public.hiring_offers_expire",
+          "reason": "expires unanswered offers for the jobs tick"
+        },
+        {
+          "name": "public.hiring_onboarding_toggle",
+          "reason": "toggles an onboarding checklist item of a hire"
+        },
+        {
+          "name": "public.hiring_retention_log_add",
+          "reason": "appends a retention log entry for a hire"
+        },
+        {
+          "name": "public.hiring_settings_init",
+          "reason": "creates the default hiring settings of a workspace"
+        },
+        {
+          "name": "public.hiring_settings_save",
+          "reason": "saves the hiring settings of a workspace"
+        },
+        {
+          "name": "public.record_ai_usage",
+          "reason": "records metered AI usage against the workspace quota"
+        },
+        {
+          "name": "public.post_ai_usage_notice",
+          "reason": "posts the AI usage threshold notice once per period"
+        },
+        {
+          "name": "public.be_auth_list_users",
+          "reason": "lists accounts a bounded page at a time for operator tools"
+        },
+        {
+          "name": "public.be_auth_delete_user",
+          "reason": "deletes an account and its sessions and tokens for workspace cleanup"
+        },
+        {
+          "name": "extensions.gen_salt",
+          "reason": "makes a bcrypt salt for an owner password set by the operator"
+        },
+        {
+          "name": "extensions.crypt",
+          "reason": "hashes an owner password with pgcrypto bcrypt"
+        }
+      ]
     },
     "fe": {
       "grammar": "core",
@@ -53,7 +598,7 @@
           "kind": "next"
         }
       ],
-      "reads": ["be/contracts/", "supabase/types/"],
+      "reads": ["be/contracts/"],
       "optionalSlots": ["fe.package.i18n", "repo.packages", "repo.i18n-dynamic-keys"],
       "extraPackages": [
         {

@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
+import { DEFAULT_SETTINGS } from "../bookings.contracts"
 import type { BookableService, BookingModel, BookingResource } from "../bookings.contracts"
-import { DEFAULT_SETTINGS } from "../persistence/booking.rows"
 import {
     normaliseBookingPhone,
     isPlausibleBookingPhone,

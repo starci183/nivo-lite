@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { BookingSettingEntity } from "@modules/domain/booking-settings"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -26,9 +27,10 @@ import type {
 import type { OptionalCancellableBooking } from "./booking-chat.contracts"
 import { cancellableOf } from "./policies/cancellable.policy"
 import { BookingsError, BookingsErrorCode } from "./errors/bookings.error"
-import { SELECT_BOOKING_BY_KEY, SELECT_NEXT_CANCELLABLE_BOOKING } from "./persistence/booking-write.sql"
-import { SELECT_PAGE_BY_SLUG } from "./persistence/booking-model.sql"
-import type { CancellableBookingRow, KeyedBookingRow, PageRow } from "./persistence/booking.rows"
+import { BookingServiceEntity } from "@modules/domain/booking-services"
+import { WorkspaceEntity } from "@modules/domain/workspaces"
+import type { CancellableFacts, PublishedPageFacts } from "./booking-facts.contracts"
+import { BookingEntity } from "./persistence/entities"
 import { checkSlot, findSlots, nearestSlots } from "./policies/availability.policy"
 import {
     clampParty,
@@ -48,6 +50,9 @@ const SLOTS_MAX = 200
 const ALTERNATIVES = 3
 const ALTERNATIVE_SPAN_DAYS = 7
 const UNIQUE_VIOLATION = "23505"
+
+/** The booking an idempotency key already created. */
+type KeyedBooking = Pick<BookingEntity, "id" | "status" | "holdsSlot">
 
 const isUniqueViolation = (cause: unknown): boolean => {
     if (typeof cause !== "object" || cause === null) return false
@@ -206,23 +211,46 @@ export class BookingPublicService {
     async nextCancellable(workspaceId: string, phone: string, nowMs: number): Promise<OptionalCancellableBooking> {
         const normalised = normalisePhone(phone)
         if (normalised === null) return null
-        const [row] = await this.entityManager.query<Array<CancellableBookingRow>>(SELECT_NEXT_CANCELLABLE_BOOKING, [
-            workspaceId,
-            normalised,
-            bookingIsoOf(nowMs),
-        ])
+        const row = await this.entityManager
+            .createQueryBuilder(BookingEntity, "b")
+            .innerJoin(BookingServiceEntity, "s", "s.id = b.serviceId AND s.workspaceId = b.workspaceId")
+            .select("b.id", "id")
+            .addSelect("b.leadId", "lead_id")
+            .addSelect("b.customerName", "customer_name")
+            .addSelect("s.name", "service_name")
+            .addSelect("CAST(extract(epoch FROM b.startAt) * 1000 AS float8)", "start_ms")
+            .where("b.workspaceId = :workspaceId AND b.customerPhone = :phone", { workspaceId, phone: normalised })
+            .andWhere("b.status IN ('requested', 'confirmed') AND b.checkedInAt IS NULL")
+            .andWhere("b.startAt > :now", { now: new Date(nowMs) })
+            .orderBy("b.startAt", "ASC")
+            .addOrderBy("b.id", "ASC")
+            .limit(1)
+            .getRawOne<CancellableFacts>()
         return cancellableOf(row)
     }
 
-    private async published(slug: string): Promise<PageRow> {
-        const [row] = await this.entityManager.query<Array<PageRow>>(SELECT_PAGE_BY_SLUG, [slug])
+    private async published(slug: string): Promise<PublishedPageFacts> {
+        const row = await this.entityManager
+            .createQueryBuilder(BookingSettingEntity, "s")
+            .innerJoin(WorkspaceEntity, "w", "w.id = s.workspaceId")
+            .select("s.workspaceId", "workspace_id")
+            .addSelect("s.publicNote", "public_note")
+            .addSelect("s.address", "address")
+            .addSelect("s.timezone", "timezone")
+            .addSelect("w.name", "shop")
+            .where("s.publicSlug = :slug AND s.publicEnabled", { slug })
+            .limit(1)
+            .getRawOne<PublishedPageFacts>()
         if (row === undefined) throw new BookingsError({ code: BookingsErrorCode.PageNotFound })
         return row
     }
 
-    private async keyed(workspaceId: string, key: string): Promise<KeyedBookingRow | undefined> {
-        const [row] = await this.entityManager.query<Array<KeyedBookingRow>>(SELECT_BOOKING_BY_KEY, [workspaceId, key])
-        return row
+    private async keyed(workspaceId: string, key: string): Promise<KeyedBooking | undefined> {
+        const found = await this.entityManager.findOne(BookingEntity, {
+            select: { id: true, status: true, holdsSlot: true },
+            where: { workspaceId, idempotencyKey: key },
+        })
+        return found ?? undefined
     }
 
     private offered(model: BookingModel, serviceId: string): BookableService | undefined {
@@ -302,11 +330,11 @@ export class BookingPublicService {
         return autoConfirm ? "confirmed" : "received_free"
     }
 
-    private repeatedAnswer(row: KeyedBookingRow, serviceName: string, startMs: number): PublicBookResult {
+    private repeatedAnswer(row: KeyedBooking, serviceName: string, startMs: number): PublicBookResult {
         if (row.status === "confirmed")
             return this.answer("confirmed", "confirmed", true, serviceName, bookingIsoOf(startMs), [], row.id)
         return this.answer(
-            row.holds_slot ? "received_free" : "received_taken",
+            row.holdsSlot ? "received_free" : "received_taken",
             "waiting",
             true,
             serviceName,

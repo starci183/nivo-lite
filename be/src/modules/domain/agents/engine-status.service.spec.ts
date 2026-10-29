@@ -1,3 +1,4 @@
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -9,7 +10,6 @@ import { AGENTS_INSTALLATIONS, AGENTS_OPTIONS } from "./agents.decorators"
 import type { AgentsOptions } from "./agents.options"
 import type { Installation, InstallationDirectory } from "./agents.port"
 import { EngineStatusService } from "./engine-status.service"
-import { FIND_LAST_SYNC_CHECK } from "./persistence/sync-check.sql"
 
 const OPTIONS: Omit<AgentsOptions, "ports"> = { syncFreshMs: 600_000 }
 
@@ -31,7 +31,9 @@ const build = async (setup: Setup) => {
     const installations = mock<InstallationDirectory>({
         firstOfModule: jest.fn(() => Promise.resolve(setup.installation ?? null)),
     })
-    const em = mockEntityManager({ query: [FIND_LAST_SYNC_CHECK, [{ checked_at: setup.checkedAt ?? null }]] })
+    const em = mockEntityManager()
+    const syncCheck = fakeQueryBuilder({ getRawOne: { checkedAt: setup.checkedAt ?? null } })
+    em.createQueryBuilder.mockReturnValue(syncCheck.builder)
     const moduleRef = await Test.createTestingModule({
         providers: [
             EngineStatusService,
@@ -44,7 +46,7 @@ const build = async (setup: Setup) => {
             { provide: WorkspaceMembersService, useValue: members },
         ],
     }).compile()
-    return { service: moduleRef.get(EngineStatusService), members, installations, em }
+    return { service: moduleRef.get(EngineStatusService), syncCheck, members, installations, em }
 }
 
 describe("EngineStatusService", () => {
@@ -100,7 +102,7 @@ describe("EngineStatusService", () => {
 describe("EngineStatusService", () => {
     describe("status", () => {
         it("reports a configured engine whose sync checked in recently", async () => {
-            const { service, members, em } = await build({
+            const { service, members, syncCheck } = await build({
                 enabled: true,
                 dirs: true,
                 checkedAt: "2026-10-12T09:55:00.000Z",
@@ -113,7 +115,7 @@ describe("EngineStatusService", () => {
                 syncFresh: true,
             })
             expect(members.require).toHaveBeenCalledWith("u1", "w1")
-            expect(em.query).toHaveBeenCalledWith(FIND_LAST_SYNC_CHECK, ["w1"])
+            expect(syncCheck.callsOf("where")).toEqual([["s.workspace_id = :workspaceId", { workspaceId: "w1" }]])
         })
 
         it("reports a stale or missing sync check", async () => {
@@ -133,7 +135,7 @@ describe("EngineStatusService", () => {
 
         it("tolerates a missing aggregate row", async () => {
             const { service, em } = await build({ enabled: true, dirs: true })
-            em.query.mockResolvedValueOnce([])
+            em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ getRawOne: undefined }).builder)
 
             await expect(service.status("u1", "w1")).resolves.toMatchObject({ lastSyncCheckAt: null })
         })

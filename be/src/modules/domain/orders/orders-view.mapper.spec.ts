@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { toSalesOrderView } from "./orders-view.mapper"
-import type { SalesOrderRow } from "./persistence/orders.rows"
+import type { SalesOrderRow } from "./orders.contracts"
 
 const SUBJECT = Symbol("orders-view.mapper")
 

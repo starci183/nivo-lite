@@ -1,4 +1,4 @@
-import type { ProposedResponsibility } from "@modules/integrations/deepseek"
+import type { ProposedResponsibility } from "@modules/domain/ai-tasks"
 import { isRecord, ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import { LeadActionsErrorCode } from "./errors/lead-actions.error"

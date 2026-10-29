@@ -13,7 +13,7 @@ export interface ModuleRow {
     definition: JsonValue
 }
 
-/** public.authority_actions as the catalog reads it, with the follow-up actions of its module definition. */
+/** public.authority_actions as the catalog reads it, with the definition of its module. */
 export interface ActionRow {
     /** The action key. */
     action: string
@@ -23,6 +23,6 @@ export interface ActionRow {
     max_mode: RuleMode | null
     /** The label in both languages. */
     label: JsonValue
-    /** The actions queued after this one, from the module definition. */
-    next: Array<string>
+    /** The whole module.json of the module that performs it, which names the actions queued after this one. */
+    definition: JsonValue
 }

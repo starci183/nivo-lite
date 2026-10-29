@@ -1,10 +1,13 @@
 import { randomBytes } from "node:crypto"
 import { Injectable } from "@nestjs/common"
+import { IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { EventsService } from "@modules/domain/events"
+import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { AgentEntity } from "@modules/domain/agents"
 import type {
     AgentKeyAnswer,
     AgentKeyPrincipal,
@@ -26,33 +29,37 @@ import {
     TOOLS_CALL_SCOPE,
 } from "./api-keys.policy"
 import { ApiKeysError, ApiKeysErrorCode } from "./errors/api-keys.error"
-import type { ApiKeysRow, MemberRow } from "./persistence/api-keys.rows"
-import {
-    API_AGENT_KEY,
-    API_KEY_AUTH,
-    API_KEY_CREDENTIAL,
-    COUNT_ACTIVE_KEYS,
-    INSERT_AGENT_KEY,
-    INSERT_KEY,
-    LIST_KEYS,
-    REVOKE_KEY,
-    SELECT_MEMBER,
-} from "./persistence/api-keys.sql"
+import { ApiKeyEntity } from "./persistence/entities"
 
 /** Bytes of entropy in one key. */
 const KEY_ENTROPY_BYTES = 32
 
-type KeyRow = Pick<ApiKeysRow, "id" | "name" | "key_prefix" | "created_at" | "last_used_at" | "revoked_at" | "agent_id">
-type MemberFacts = Pick<MemberRow, "role" | "display_name">
+/** The columns a write answers, named as the entity properties so the answer reads as an entity. */
+const RETURNED =
+    'id, name, key_prefix AS "keyPrefix", created_at AS "createdAt", last_used_at AS "lastUsedAt", revoked_at AS "revokedAt", agent_id AS "agentId"'
 
-const toView = (row: KeyRow): ApiKeyView => ({
+interface MemberFacts {
+    readonly role: string
+    readonly displayName: string
+}
+
+/** True when a RETURNING row carries the key shape the returned columns give it. */
+const isApiKeyEntity = (value: unknown): value is ApiKeyEntity =>
+    typeof value === "object" && value !== null && "id" in value && typeof value.id === "string"
+
+/** The rows a write answered. */
+const returnedKeys = (raw: unknown): Array<ApiKeyEntity> => (Array.isArray(raw) ? raw.filter(isApiKeyEntity) : [])
+
+const iso = (at: Date | null): string | null => (at === null ? null : at.toISOString())
+
+const toView = (row: ApiKeyEntity): ApiKeyView => ({
     id: row.id,
     name: row.name,
-    prefix: row.key_prefix,
-    createdAt: row.created_at,
-    lastUsedAt: row.last_used_at,
-    revokedAt: row.revoked_at,
-    agentId: row.agent_id,
+    prefix: row.keyPrefix,
+    createdAt: row.createdAt.toISOString(),
+    lastUsedAt: iso(row.lastUsedAt),
+    revokedAt: iso(row.revokedAt),
+    agentId: row.agentId,
 })
 
 @Injectable()
@@ -73,10 +80,12 @@ export class ApiKeysService {
     async authenticate(scope: ApiScope, authorization: string = ""): Promise<ApiPrincipal> {
         const key = bearerKey(authorization)
         if (key === undefined) throw new ApiKeysError({ code: ApiKeysErrorCode.Unauthorized })
-        const [row] = await this.entityManager.query<Array<{ auth: ApiKeyAuthAnswer | null }>>(API_KEY_AUTH, [
-            hashKey(key),
-        ])
-        const admitted = admitKey(row?.auth ?? null, scope, this.clock.now())
+        const [row] = await callDbFunction<{ api_key_auth: ApiKeyAuthAnswer | null }>(
+            this.entityManager,
+            "public.api_key_auth",
+            [hashKey(key)],
+        )
+        const admitted = admitKey(row?.api_key_auth ?? null, scope, this.clock.now())
         if (admitted.kind === "refused") throw new ApiKeysError({ code: admitted.code, params: admitted.params })
         return admitted.value
     }
@@ -85,10 +94,13 @@ export class ApiKeysService {
     async verifyCredential(authorization: string): Promise<ApiPrincipal> {
         const key = bearerKey(authorization)
         if (key === undefined) throw new ApiKeysError({ code: ApiKeysErrorCode.Unauthorized })
-        const [row] = await this.entityManager.query<Array<ApiKeyAuthAnswer>>(API_KEY_CREDENTIAL, [hashKey(key)])
-        if (row?.revoked) throw new ApiKeysError({ code: ApiKeysErrorCode.Revoked })
-        if (!row?.id || !row.workspace_id) throw new ApiKeysError({ code: ApiKeysErrorCode.Unauthorized })
-        return { keyId: row.id, workspaceId: row.workspace_id, name: row.name ?? "", scopes: row.scopes ?? [] }
+        const row = await this.entityManager.findOne(ApiKeyEntity, {
+            select: { id: true, workspaceId: true, name: true, scopes: true, revokedAt: true },
+            where: { keyHash: hashKey(key) },
+        })
+        if (row?.revokedAt) throw new ApiKeysError({ code: ApiKeysErrorCode.Revoked })
+        if (!row?.id || !row.workspaceId) throw new ApiKeysError({ code: ApiKeysErrorCode.Unauthorized })
+        return { keyId: row.id, workspaceId: row.workspaceId, name: row.name ?? "", scopes: row.scopes ?? [] }
     }
 
     /**
@@ -98,7 +110,18 @@ export class ApiKeysService {
     async verifyAgentKey(authorization: string): Promise<AgentKeyPrincipal> {
         const key = bearerKey(authorization)
         if (key === undefined) throw new ApiKeysError({ code: ApiKeysErrorCode.Unauthorized })
-        const [row] = await this.entityManager.query<Array<AgentKeyAnswer>>(API_AGENT_KEY, [hashKey(key)])
+        const row = await this.entityManager
+            .createQueryBuilder(ApiKeyEntity, "k")
+            .select("k.id", "id")
+            .addSelect("k.workspaceId", "workspace_id")
+            .addSelect("k.agentId", "agent_id")
+            .addSelect("k.scopes", "scopes")
+            .addSelect("k.revokedAt IS NOT NULL", "revoked")
+            .addSelect("a.status", "agent_status")
+            .leftJoin(AgentEntity, "a", "a.id = k.agent_id AND a.workspace_id = k.workspace_id")
+            .where("k.keyHash = :keyHash", { keyHash: hashKey(key) })
+            .limit(1)
+            .getRawOne<AgentKeyAnswer>()
         const admitted = admitAgentKey(row)
         if (admitted.kind === "refused") throw new ApiKeysError({ code: admitted.code, params: admitted.params })
         return admitted.value
@@ -107,7 +130,11 @@ export class ApiKeysService {
     /** The keys of a workspace, newest first, for an owner or manager of it. */
     async listKeys(principalId: string, workspaceId: string): Promise<Array<ApiKeyView>> {
         await this.requireManager(this.entityManager, principalId, workspaceId)
-        const rows = await this.entityManager.query<Array<KeyRow>>(LIST_KEYS, [workspaceId])
+        const rows = await this.entityManager.find(ApiKeyEntity, {
+            where: { workspaceId },
+            order: { createdAt: "DESC" },
+            take: 100,
+        })
         return rows.map(toView)
     }
 
@@ -120,25 +147,35 @@ export class ApiKeysService {
         if (named.kind === "refused") throw new ApiKeysError({ code: named.code })
         return this.entityManager.transaction(async (tx) => {
             const member = await this.requireManager(tx, principalId, workspaceId)
-            const [count] = await tx.query<Array<{ active: number }>>(COUNT_ACTIVE_KEYS, [workspaceId])
-            if ((count?.active ?? 0) >= ACTIVE_KEYS_MAX) {
+            const active = await tx.count(ApiKeyEntity, { where: { workspaceId, revokedAt: IsNull() } })
+            if (active >= ACTIVE_KEYS_MAX) {
                 throw new ApiKeysError({ code: ApiKeysErrorCode.LimitReached, params: { limit: ACTIVE_KEYS_MAX } })
             }
             const built = buildKey(randomBytes(KEY_ENTROPY_BYTES))
-            const values = [workspaceId, named.value, built.prefix, built.hash, principalId]
-            const [row] =
-                agentId === undefined
-                    ? await tx.query<Array<KeyRow>>(INSERT_KEY, values)
-                    : await tx.query<Array<KeyRow>>(INSERT_AGENT_KEY, [...values, agentId, [TOOLS_CALL_SCOPE]])
-            if (row === undefined) {
-                const code = agentId === undefined ? ApiKeysErrorCode.NotCreated : ApiKeysErrorCode.AgentNotFound
-                throw new ApiKeysError({ code })
+            const values = {
+                workspaceId,
+                name: named.value,
+                keyPrefix: built.prefix,
+                keyHash: built.hash,
+                createdBy: principalId,
             }
+            // An agent key holds its agent row (FOR SHARE) while it is inserted, so the agent cannot be deleted in between.
+            if (agentId !== undefined && !(await this.holdsAgent(tx, workspaceId, agentId))) {
+                throw new ApiKeysError({ code: ApiKeysErrorCode.AgentNotFound })
+            }
+            const inserted = await tx
+                .createQueryBuilder(ApiKeyEntity, "ak")
+                .insert()
+                .values(agentId === undefined ? values : { ...values, agentId, scopes: [TOOLS_CALL_SCOPE] })
+                .returning(RETURNED)
+                .execute()
+            const [row] = returnedKeys(inserted.raw)
+            if (row === undefined) throw new ApiKeysError({ code: ApiKeysErrorCode.NotCreated })
             await this.events.record(
                 {
                     workspaceId,
                     kind: "api.key_created",
-                    actor: member.display_name,
+                    actor: member.displayName,
                     summary: `API key created: ${named.value}`,
                     evidence: built.prefix,
                 },
@@ -152,15 +189,22 @@ export class ApiKeysService {
     revokeKey(principalId: string, workspaceId: string, keyId: string): Promise<ApiKeyView> {
         return this.entityManager.transaction(async (tx) => {
             const member = await this.requireManager(tx, principalId, workspaceId)
-            const [row] = await tx.query<Array<KeyRow>>(REVOKE_KEY, [workspaceId, keyId])
+            const revoked = await tx
+                .createQueryBuilder(ApiKeyEntity, "ak")
+                .update()
+                .set({ revokedAt: () => "now()" })
+                .where("id = :keyId AND workspace_id = :workspaceId AND revoked_at IS NULL", { keyId, workspaceId })
+                .returning(RETURNED)
+                .execute()
+            const [row] = returnedKeys(revoked.raw)
             if (row === undefined) throw new ApiKeysError({ code: ApiKeysErrorCode.NotFound })
             await this.events.record(
                 {
                     workspaceId,
                     kind: "api.key_revoked",
-                    actor: member.display_name,
+                    actor: member.displayName,
                     summary: `API key revoked: ${row.name}`,
-                    evidence: row.key_prefix,
+                    evidence: row.keyPrefix,
                 },
                 tx,
             )
@@ -168,12 +212,32 @@ export class ApiKeysService {
         })
     }
 
+    private async holdsAgent(manager: EntityManager, workspaceId: string, agentId: string): Promise<boolean> {
+        const held = await manager
+            .createQueryBuilder(AgentEntity, "a")
+            .select("a.id", "id")
+            .where("a.id = :agentId AND a.workspace_id = :workspaceId", { agentId, workspaceId })
+            .limit(1)
+            .setLock("pessimistic_read")
+            .getRawOne<{ id: string }>()
+        return held !== undefined
+    }
+
     private async requireManager(
         manager: EntityManager,
         principalId: string,
         workspaceId: string,
     ): Promise<MemberFacts> {
-        const [member] = await manager.query<Array<MemberFacts>>(SELECT_MEMBER, [workspaceId, principalId])
+        const member = await manager
+            .createQueryBuilder(WorkspaceMemberEntity, "m")
+            .select("m.role", "role")
+            .addSelect("m.display_name", "displayName")
+            .where("m.workspace_id = :workspaceId AND m.user_id = :principalId AND m.status = 'active'", {
+                workspaceId,
+                principalId,
+            })
+            .limit(1)
+            .getRawOne<MemberFacts>()
         if (member === undefined || !mayManageKeys(member.role)) {
             throw new ApiKeysError({ code: ApiKeysErrorCode.NotManager })
         }

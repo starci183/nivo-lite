@@ -1,131 +1,24 @@
-import { Test } from "@nestjs/testing"
-import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
-import { LOGGER } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { REALTIME_TIMER } from "./realtime.decorators"
-import type { Timer } from "@modules/platform/retry"
-import { PostgresReloadingHubService } from "./postgres-reloading-hub.service"
-import type { ListenHandlers, NotificationListener } from "./postgres-listener.port"
+import { RealtimeEventEntity } from "./persistence/entities"
 import { CATCH_UP_ROWS, REPLAY_FRAMES } from "./realtime.contracts"
-import { REALTIME_LISTENER, REALTIME_MANAGERS } from "./realtime.decorators"
 import { RealtimeLogEvent } from "./realtime.log-events"
-import type { RealtimeTopic } from "./realtime.port"
 import {
     SELECT_EVENT,
     SELECT_EVENTS_AFTER,
     SELECT_MISSED_EVENTS,
     SELECT_TOPIC_HIGHEST_SEQ,
-} from "./persistence/realtime.sql"
+} from "@tests/fixtures/builders/realtime-statements.builder"
+import {
+    build,
+    buildReads,
+    dropAndResume,
+    frameOf,
+    gateOf,
+    notification,
+    rowOf,
+    settle,
+    topicOf,
+} from "@tests/fixtures/builders/realtime-reloading-hub.builder"
 
-interface Frame {
-    readonly id: string
-    readonly value: number
-}
-
-const isFrame = (value: unknown): value is Frame =>
-    typeof value === "object" && value !== null && "id" in value && "value" in value
-
-const topicOf = (name: string): RealtimeTopic<Frame> => ({ name, accepts: isFrame })
-
-const frameOf = (value: number): Frame => ({ id: `e-${value}`, value })
-
-const rowOf = (seq: number, topic: string, payload: object) => ({ seq: String(seq), topic, payload })
-
-const notification = (topic: string, seq: number): string => JSON.stringify({ topic, seq })
-
-const settle = () => new Promise<void>((resolve) => setImmediate(resolve))
-
-type Answer = (args: ReadonlyArray<unknown>) => unknown
-
-type Row = ReturnType<typeof rowOf>
-
-const strings = (value: unknown): ReadonlyArray<string> =>
-    Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []
-
-const numbers = (value: unknown): ReadonlyArray<number> =>
-    Array.isArray(value) ? value.filter((item): item is number => typeof item === "number") : []
-
-const gateOf = () => {
-    let open: () => void = () => undefined
-    const opened = new Promise<void>((resolve) => {
-        open = resolve
-    })
-    return { open, opened }
-}
-
-interface CapturedHandlers {
-    current: ListenHandlers
-}
-
-/**
- * The hub on a scripted database. `table` holds the committed rows; the statements the hub runs answer from it: the highest sequence of
- * a topic, the row a notification names, and the rows after each topic's cursor. A statement the spec did not script answers no rows.
- */
-const build = async (watermarks: Readonly<Record<string, number>> = {}) => {
-    const em: MockEntityManager = mockEntityManager()
-    const table: Array<Row> = []
-    const answers = new Map<string, Answer>([
-        [SELECT_TOPIC_HIGHEST_SEQ, ([topic]) => [{ seq: String(watermarks[String(topic)] ?? 0) }]],
-        [SELECT_EVENT, ([seq]) => table.filter((row) => row.seq === String(seq))],
-        [
-            SELECT_MISSED_EVENTS,
-            ([topics, cursors, limit]) => {
-                const names = strings(topics)
-                const after = numbers(cursors)
-                return table
-                    .filter((row) => Number(row.seq) > (after[names.indexOf(row.topic)] ?? Infinity))
-                    .sort((left, right) => Number(left.seq) - Number(right.seq))
-                    .slice(0, Number(limit))
-            },
-        ],
-    ])
-    em.query.mockImplementation((sql: string, args: Array<unknown> = []) =>
-        Promise.resolve(answers.get(sql)?.(args) ?? []),
-    )
-    const transactions = fakeTransaction(em)
-    const handlers: CapturedHandlers = {
-        current: {
-            notify: () => undefined,
-            probe: () => Promise.resolve(),
-            lost: () => undefined,
-            resumed: () => undefined,
-        },
-    }
-    const listener = mock<NotificationListener>()
-    listener.start.mockImplementation((given) => {
-        handlers.current = given
-        return Promise.resolve()
-    })
-    const scheduled: Array<{ readonly callback: () => void; readonly delayMs: number; cancelled: boolean }> = []
-    const timer = mock<Timer>()
-    timer.schedule.mockImplementation((callback, delayMs) => {
-        const entry = { callback, delayMs, cancelled: false }
-        scheduled.push(entry)
-        return () => {
-            entry.cancelled = true
-        }
-    })
-    const logger = mock<Logger>()
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            PostgresReloadingHubService,
-            { provide: REALTIME_MANAGERS, useValue: [em] },
-            { provide: REALTIME_LISTENER, useValue: listener },
-            { provide: LOGGER, useValue: logger },
-            { provide: REALTIME_TIMER, useValue: timer },
-        ],
-    }).compile()
-    const hub = moduleRef.get(PostgresReloadingHubService)
-    await hub.onModuleInit()
-    return { hub, em, table, answers, listener, logger, handlers, transactions, scheduled }
-}
-
-const dropAndResume = async (handlers: CapturedHandlers): Promise<void> => {
-    handlers.current.lost()
-    handlers.current.resumed()
-    await settle()
-}
 describe("PostgresReloadingHubService reload after a lost LISTEN connection", () => {
     it("reloads, for each followed topic, the frames after its own cursor", async () => {
         const { hub, em, table, handlers } = await build({ "t:down": 10 })
@@ -376,7 +269,7 @@ describe("PostgresReloadingHubService held notifications during a reconnect (par
         gate.open()
         await settle()
         await expect(reader.next()).resolves.toEqual({ done: false, value: frameOf(11) })
-        expect(em.query).not.toHaveBeenCalledWith(SELECT_EVENT, [12])
+        expect(em.query).not.toHaveBeenCalledWith(SELECT_EVENT, ["12"])
 
         table.push(rowOf(12, "t:flap", frameOf(12)))
         handlers.current.resumed()
@@ -422,5 +315,55 @@ describe("PostgresReloadingHubService replay", () => {
         await expect(reader.next()).resolves.toEqual({ done: false, value: frameOf(6) })
         await expect(reader.next()).resolves.toEqual({ done: false, value: frameOf(7) })
         await reader.return?.()
+    })
+})
+
+describe("PostgresReloadingHubService reads", () => {
+    it("loads the row a notification names, and nothing when the sweep already deleted it", async () => {
+        const { hub, em } = await buildReads()
+        const delivered: Array<unknown> = []
+        const subscriptions = (
+            hub as unknown as { subscriptions: { follows: () => boolean; fanOut: (entries: Array<unknown>) => void } }
+        ).subscriptions
+        subscriptions.follows = () => true
+        subscriptions.fanOut = (entries) => delivered.push(...entries)
+        em.findOne.mockResolvedValueOnce(
+            Object.assign(new RealtimeEventEntity(), { seq: "3", topic: "t:one", payload: { id: "e-3" } }) as never,
+        )
+        em.findOne.mockResolvedValueOnce(null as never)
+        const deliver = (payload: string) =>
+            (hub as unknown as { deliverNow: (payload: string) => Promise<void> }).deliverNow(payload)
+
+        await deliver(JSON.stringify({ topic: "t:one", seq: 3 }))
+        await deliver(JSON.stringify({ topic: "t:one", seq: 4 }))
+
+        expect(em.findOne).toHaveBeenNthCalledWith(1, RealtimeEventEntity, {
+            select: { seq: true, topic: true, payload: true },
+            where: { seq: "3" },
+        })
+        expect(delivered).toEqual([{ position: "3", topic: "t:one", frame: { id: "e-3" } }])
+    })
+
+    it("reloads what the followed topics missed after each topic's own cursor, oldest first and bounded", async () => {
+        const { hub, fakes } = await buildReads({ getRawMany: [] })
+        const subscriptions = (
+            hub as unknown as {
+                subscriptions: { follows: () => boolean; floorOf: (topic: string) => string; fanOut: () => void }
+            }
+        ).subscriptions
+        subscriptions.follows = () => true
+        subscriptions.floorOf = (topic) => (topic === "t:a" ? "10" : "0")
+        subscriptions.fanOut = () => undefined
+
+        await (
+            hub as unknown as { reloadFrom: (topics: Array<string>, loaded: Map<string, number>) => Promise<void> }
+        ).reloadFrom(["t:a", "t:b"], new Map([["t:b", 4]]))
+
+        const [read] = fakes
+        expect(read?.callsOf("innerJoin")[0]?.[1]).toBe("cursors")
+        expect(read?.callsOf("innerJoin")[0]?.[2]).toBe("e.topic = cursors.topic AND e.seq > cursors.after")
+        expect(read?.callsOf("setParameters")).toEqual([[{ topics: ["t:a", "t:b"], cursors: [10, 4] }]])
+        expect(read?.callsOf("orderBy")).toEqual([["e.seq", "ASC"]])
+        expect(read?.callsOf("limit")).toEqual([[CATCH_UP_ROWS]])
     })
 })

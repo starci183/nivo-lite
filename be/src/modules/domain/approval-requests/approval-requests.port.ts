@@ -1,11 +1,3 @@
-import type { ApprovalResolved } from "./approval-requests.contracts"
-
-/** The one door out of the capability: it tells the work chain a request was settled. The evidence log is written before it. */
-export interface ApprovalEvents {
-    /** Publishes `approval.resolved`. */
-    resolved(event: ApprovalResolved): Promise<void>
-}
-
 /** Who answers for an agent: the member it was assigned to and the member who stands in for them. */
 export interface AgentOwnerRef {
     /** The member the agent is assigned to; null when none was set. */

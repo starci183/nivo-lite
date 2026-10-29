@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { AdminAccessService } from "./admin-access.service"
+import { AdminDirectoryReadsService } from "./admin-directory-reads.service"
 import { AdminDirectoryService } from "./admin-directory.service"
 import { AdminSupportService } from "./admin-support.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./platform-admin.module-definition"
@@ -13,7 +14,13 @@ export class PlatformAdminModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), AdminAccessService, AdminDirectoryService, AdminSupportService],
+            providers: [
+                ...(base.providers ?? []),
+                AdminAccessService,
+                AdminDirectoryReadsService,
+                AdminDirectoryService,
+                AdminSupportService,
+            ],
             exports: [AdminDirectoryService, AdminSupportService],
         }
     }

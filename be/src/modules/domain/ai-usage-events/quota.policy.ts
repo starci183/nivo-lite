@@ -1,5 +1,11 @@
-import type { QuotaRow } from "./persistence/ai-usage-events.rows"
-import type { QuotaLevel, QuotaLookup, QuotaStatus, UsageKind } from "./ai-usage-events.contracts"
+import type {
+    QuotaFigures,
+    QuotaLevel,
+    QuotaLookup,
+    QuotaRecord,
+    QuotaStatus,
+    UsageKind,
+} from "./ai-usage-events.contracts"
 import { creditsOf } from "./usage-cost.policy"
 
 /** The soft warning starts at this share of the monthly allowance. */
@@ -28,8 +34,33 @@ const levelOf = (exceeded: boolean, ratio: number): QuotaLevel => {
     return ratio >= WARN_AT ? "warn" : "ok"
 }
 
+const numberOf = (value: number | string): number => Number(value)
+const optionalNumberOf = (value: number | string | null): number | null => (value === null ? null : Number(value))
+const pad = (value: number): string => String(value).padStart(2, "0")
+
+/** The period as YYYY-MM-DD, whether the driver answered the date as text or as a local date. */
+const periodOf = (value: Date | string): string =>
+    typeof value === "string"
+        ? value.slice(0, 10)
+        : `${String(value.getFullYear())}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`
+
+/** Reads one raw row of ai_quota_status into figures the policy can compare. */
+export const quotaFiguresOf = (record: QuotaRecord): QuotaFigures => ({
+    period_start: periodOf(record.period_start),
+    messages_used: numberOf(record.messages_used),
+    tokens_used: numberOf(record.tokens_used),
+    cost_usd: numberOf(record.cost_usd),
+    messages_limit: optionalNumberOf(record.messages_limit),
+    tokens_limit: optionalNumberOf(record.tokens_limit),
+    fallback_reply: record.fallback_reply,
+    credits_used: optionalNumberOf(record.credits_used),
+    credits_limit: optionalNumberOf(record.credits_limit),
+    credits_carried: optionalNumberOf(record.credits_carried),
+    topup_balance: optionalNumberOf(record.topup_balance),
+})
+
 /** Reads one row of ai_quota_status into the status with its ratios and level. */
-export const quotaOf = (row: QuotaRow): QuotaStatus => {
+export const quotaOf = (row: QuotaFigures): QuotaStatus => {
     const creditsUsed = row.credits_used ?? creditsOf(row.cost_usd)
     const creditsLimit = row.credits_limit
     const topupBalance = Math.max(0, row.topup_balance ?? 0)
@@ -61,7 +92,7 @@ export const quotaOf = (row: QuotaRow): QuotaStatus => {
 }
 
 /** Maps an optional result row to the quota lookup used by browser reads. */
-export const quotaLookupOf = (rows: ReadonlyArray<QuotaRow>): QuotaLookup =>
+export const quotaLookupOf = (rows: ReadonlyArray<QuotaFigures>): QuotaLookup =>
     rows[0] === undefined ? null : quotaOf(rows[0])
 
 /** Whether a model call of this kind must NOT be made: customer-facing kinds stop at any allowance, the rest at the tokens or credits. */

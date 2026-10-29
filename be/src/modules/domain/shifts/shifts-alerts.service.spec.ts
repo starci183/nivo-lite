@@ -9,14 +9,9 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
-import {
-    SELECT_ALERT_SHIFT,
-    SELECT_ALERT_SHIFTS,
-    SELECT_DAY_MATES,
-    SELECT_REMINDER_ON,
-    SELECT_REMINDER_WORKSPACES,
-} from "./persistence/shifts-alerts.sql"
-import type { AlertShiftRow } from "./persistence/shifts-alerts.rows"
+import { routedQueryBuilder } from "@tests/fixtures/builders/routed-query.builder"
+import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { AlertShiftRead, ReminderWorkspaceRead } from "./persistence/shifts-alerts.reads"
 import { DEFAULT_SETTINGS } from "./policies/row-mappers.policy"
 import { ShiftsAlertsService } from "./shifts-alerts.service"
 import type { Setup } from "./shifts.contracts"
@@ -38,7 +33,7 @@ const anything = (): unknown => expect.anything()
 /** 07:00 in Vietnam on 2026-10-14: one hour before the 08:00 shift. */
 const NOW = "2026-10-14T00:00:00.000Z"
 
-const row = (flags: Partial<AlertShiftRow> = {}): AlertShiftRow => ({
+const row = (flags: Partial<AlertShiftRead> = {}): AlertShiftRead => ({
     id: "s-1",
     schedule_id: "sch-1",
     shift_date: "2026-10-14",
@@ -76,15 +71,54 @@ const SETUP: Setup = {
     settings: DEFAULT_SETTINGS,
 }
 
-const answer = (em: MockEntityManager, rows: ReadonlyArray<AlertShiftRow>, enabled = true) => {
-    em.query.mockImplementation((sql: string) => {
-        if (sql === SELECT_REMINDER_WORKSPACES)
-            return Promise.resolve([{ workspace_id: "ws-1", config: null, remind_minutes: 60, noshow_minutes: 10 }])
-        if (sql === SELECT_ALERT_SHIFTS || sql === SELECT_ALERT_SHIFT) return Promise.resolve(rows)
-        if (sql === SELECT_REMINDER_ON) return Promise.resolve([{ enabled }])
-        if (sql === SELECT_DAY_MATES) return Promise.resolve([{ name: "Minh" }])
-        return Promise.resolve([])
+const WORKSPACE: ReminderWorkspaceRead = { workspace_id: "ws-1", config: null, remind_minutes: 60, noshow_minutes: 10 }
+
+/** What the reads of the service answer. */
+interface Answers {
+    /** The workspaces whose reminders are on. */
+    readonly workspaces?: ReadonlyArray<ReminderWorkspaceRead>
+    /** The names of the others on duty; Minh by default. */
+    readonly mates?: ReadonlyArray<{ readonly name: string }>
+    /** The workspace whose shift read fails. */
+    readonly failFor?: string
+}
+
+const fromOf = (fake: FakeQueryBuilder): unknown => fake.callsOf("from")[0]?.[0]
+
+/** Hands out one fake builder per read, answering by the table it reads, and answers back every builder it made. */
+const answer = (
+    em: MockEntityManager,
+    rows: ReadonlyArray<AlertShiftRead>,
+    enabled: boolean | null = true,
+    options: Answers = {},
+): Array<FakeQueryBuilder> => {
+    const built: Array<FakeQueryBuilder> = []
+    em.createQueryBuilder.mockImplementation(() => {
+        const fake: FakeQueryBuilder = routedQueryBuilder({
+            getRawMany: (read) => {
+                if (fromOf(read) === "public.automation_pipelines") {
+                    return Promise.resolve(options.workspaces ?? [WORKSPACE])
+                }
+                if (read.callsOf("distinct").length > 0) return Promise.resolve(options.mates ?? [{ name: "Minh" }])
+                const where = read.callsOf("where")[0]?.[1] as { workspaceId?: string } | undefined
+                if (where?.workspaceId !== undefined && where.workspaceId === options.failFor) {
+                    return Promise.reject(new TypeError("workspace query failed"))
+                }
+                return Promise.resolve(rows)
+            },
+            getRawOne: (read) =>
+                Promise.resolve(
+                    fromOf(read) === "public.automation_pipelines"
+                        ? enabled === null
+                            ? undefined
+                            : { enabled }
+                        : rows[0],
+                ),
+        })
+        built.push(fake)
+        return fake.builder as never
     })
+    return built
 }
 
 const build = async (em: MockEntityManager, now = NOW) => {
@@ -167,11 +201,14 @@ describe("ShiftsAlertsService", () => {
 describe("ShiftsAlertsService scan", () => {
     it("returns zero counts without opening a transaction when no alerts are due", async () => {
         const em = mockEntityManager()
-        answer(em, [row({ reminded: true, checked_in: true })])
+        const built = answer(em, [row({ reminded: true, checked_in: true })])
         const { service, outbox } = await build(em)
 
         await expect(service.scan(new Date(NOW))).resolves.toEqual({ reminders: 0, noShows: 0 })
-        expect(em.query).toHaveBeenCalledWith(SELECT_ALERT_SHIFTS, ["ws-1", "2026-10-13", "2026-10-15"])
+        expect(built.flatMap((fake) => fake.callsOf("andWhere"))).toContainEqual([
+            "s.shift_date BETWEEN :first AND :last",
+            { first: "2026-10-13", last: "2026-10-15" },
+        ])
         expect(em.transaction).not.toHaveBeenCalled()
         expect(outbox.jobs).toEqual([])
     })
@@ -179,18 +216,15 @@ describe("ShiftsAlertsService scan", () => {
     it("logs a failed workspace and queues both alert kinds for the next workspace", async () => {
         const em = fakeTransaction(mockEntityManager()).em
         const failure = new TypeError("workspace query failed")
-        em.query.mockImplementation((sql: string, params?: Array<unknown>) => {
-            if (sql === SELECT_REMINDER_WORKSPACES)
-                return Promise.resolve([
-                    { workspace_id: "failed", config: null, remind_minutes: 60, noshow_minutes: 10 },
-                    { workspace_id: "ws-1", config: null, remind_minutes: 60, noshow_minutes: 10 },
-                ])
-            if (params?.[0] === "failed") return Promise.reject(failure)
-            return Promise.resolve([
-                row({ id: "reminder", staff_id: null, start_time: "09:00:00" }),
-                row({ id: "noshow", reminded: true }),
-            ])
-        })
+        answer(
+            em,
+            [row({ id: "reminder", staff_id: null, start_time: "09:00:00" }), row({ id: "noshow", reminded: true })],
+            true,
+            {
+                workspaces: [{ ...WORKSPACE, workspace_id: "failed" }, WORKSPACE],
+                failFor: "failed",
+            },
+        )
         const { service, outbox, logger } = await build(em)
         const write = jest.spyOn(outbox, "write")
 
@@ -264,7 +298,7 @@ describe("ShiftsAlertsService runJob", () => {
 
         await service.runJob({ commandId: "c-1" })
 
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
         expect(gate.request).not.toHaveBeenCalled()
     })
 
@@ -355,12 +389,17 @@ describe("ShiftsAlertsService noShow", () => {
 
     it("skips when the enabled query has no row", async () => {
         const em = mockEntityManager()
-        em.query.mockResolvedValue([])
+        const built = answer(em, [], null)
         const { service, notify } = await build(em)
 
         await expect(service.noShow("ws-1", "s-1", new Date(NOW))).resolves.toBe("skipped: automation off")
-        expect(em.query).toHaveBeenCalledTimes(1)
-        expect(em.query).toHaveBeenCalledWith(SELECT_REMINDER_ON, ["ws-1"])
+        expect(built).toHaveLength(1)
+        expect(built[0]?.callsOf("where")).toEqual([
+            [
+                "p.workspace_id = :workspaceId AND p.template_key = :template",
+                { workspaceId: "ws-1", template: "shifts_shift_reminder" },
+            ],
+        ])
         expect(notify.toManagers).not.toHaveBeenCalled()
     })
 
@@ -404,9 +443,7 @@ describe("ShiftsAlertsService performRemind", () => {
         { telegram: null, zalo: null, key: "shifts.remindDoneOffice" },
     ])("uses fallback labels and reports delivery %p", async ({ telegram, zalo, key }) => {
         const em = mockEntityManager()
-        em.query.mockImplementation((sql: string) =>
-            Promise.resolve(sql === SELECT_ALERT_SHIFT ? [row({ position_id: "missing" })] : []),
-        )
+        const built = answer(em, [row({ position_id: "missing" })], true, { mates: [] })
         const { service, notify, workspaces } = await build(em)
         workspaces.nameOf.mockResolvedValue("")
         notify.toStaff.mockResolvedValue({ office: true, telegram, zalo })
@@ -428,7 +465,10 @@ describe("ShiftsAlertsService performRemind", () => {
                 mates: "",
             })}`,
         })
-        expect(em.query).toHaveBeenCalledWith(SELECT_DAY_MATES, ["ws-1", "2026-10-14", "p-1"])
+        expect(built.flatMap((fake) => fake.callsOf("where"))).toContainEqual([
+            expect.stringContaining("s.staff_id <> :personId"),
+            { workspaceId: "ws-1", day: "2026-10-14", personId: "p-1" },
+        ])
         expect(workspaces.nameOf).toHaveBeenCalledWith("ws-1")
     })
 

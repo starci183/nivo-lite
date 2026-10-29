@@ -1,29 +1,12 @@
 import { AT, STALE, WS_A } from "./platform-admin.builder"
-import {
-    FIND_QUOTA_OVERRIDE,
-    FIND_QUOTA_STATUS,
-    FIND_WORKSPACE,
-    FIND_WORKSPACE_STATS,
-    LIST_AGENT_SYNC,
-    LIST_BILLING_EVENTS,
-    LIST_CONNECTIONS,
-    LIST_CONTEXT_VERSIONS,
-    LIST_INSTALLS,
-    LIST_KNOWLEDGE_SOURCES,
-    LIST_MEMBERS,
-    LIST_ORDERS,
-    LIST_PENDING_INVITES,
-    LIST_TRANSFERS,
-    LIST_USER_EMAILS,
-    LIST_WORKSPACE_ERRORS,
-} from "../../../modules/domain/platform-admin/persistence/platform-admin.sql"
+import { READ } from "./platform-admin-reads.builder"
 
-/** The query stubs of the entity-manager double, keyed by SQL text. */
+/** The query stubs of the entity-manager double, keyed by the read it answers. */
 export type Stubs = Record<"query", ReadonlyArray<readonly [string, unknown]>>
 
 const workspaceDetailCore = (change: Record<string, unknown>): Stubs["query"] => [
     [
-        FIND_WORKSPACE,
+        READ.workspace,
         change.workspace ?? [
             {
                 id: WS_A,
@@ -37,15 +20,15 @@ const workspaceDetailCore = (change: Record<string, unknown>): Stubs["query"] =>
         ],
     ],
     [
-        LIST_MEMBERS,
+        READ.members,
         [
             { user_id: "o-1", role: "owner", display_name: "Mai", status: "active", created_at: AT },
             { user_id: "o-9", role: "staff", display_name: "Ha", status: "disabled", created_at: AT },
         ],
     ],
-    [LIST_PENDING_INVITES, [{ id: "i-1", email: "x@nivo.vn", role: "staff", created_at: AT, expires_at: AT }]],
+    [READ.pendingInvites, [{ id: "i-1", email: "x@nivo.vn", role: "staff", created_at: AT, expires_at: AT }]],
     [
-        LIST_ORDERS,
+        READ.orders,
         change.orders ?? [
             {
                 id: "ord-1",
@@ -58,12 +41,12 @@ const workspaceDetailCore = (change: Record<string, unknown>): Stubs["query"] =>
             },
         ],
     ],
-    [LIST_BILLING_EVENTS, [{ id: "b-1", kind: "paid", created_at: AT }]],
+    [READ.billingEvents, [{ id: "b-1", kind: "paid", created_at: AT }]],
 ]
 
 const workspaceDetailConnections = (change: Record<string, unknown>): Stubs["query"] => [
     [
-        LIST_INSTALLS,
+        READ.installs,
         change.installs ?? [
             {
                 id: "m-1",
@@ -85,9 +68,9 @@ const workspaceDetailConnections = (change: Record<string, unknown>): Stubs["que
             },
         ],
     ],
-    [LIST_CONTEXT_VERSIONS, [{ id: "v-1", version: 2, applied_at: AT }]],
+    [READ.contextVersions, [{ id: "v-1", version: 2, applied_at: AT }]],
     [
-        LIST_AGENT_SYNC,
+        READ.agentSync,
         [
             {
                 installation_id: "m-1",
@@ -100,7 +83,7 @@ const workspaceDetailConnections = (change: Record<string, unknown>): Stubs["que
         ],
     ],
     [
-        LIST_CONNECTIONS,
+        READ.connections,
         [
             {
                 id: "c-1",
@@ -114,25 +97,25 @@ const workspaceDetailConnections = (change: Record<string, unknown>): Stubs["que
             },
         ],
     ],
-    [LIST_WORKSPACE_ERRORS, [{ id: "e-1", scope: "api.x", message: "boom", created_at: AT }]],
+    [READ.workspaceErrors, [{ id: "e-1", scope: "api.x", message: "boom", created_at: AT }]],
 ]
 
 const workspaceDetailUsage = (change: Record<string, unknown>): Stubs["query"] => [
     [
-        LIST_KNOWLEDGE_SOURCES,
+        READ.knowledgeSources,
         [
             { kind: "text", status: "ready" },
             { kind: "text", status: "failed" },
         ],
     ],
-    [FIND_WORKSPACE_STATS, change.stats ?? [{ messages_7d: 4, last_customer_message_at: AT, open_decisions: 1 }]],
-    [FIND_QUOTA_STATUS, [{ credits_used: "10", credits_limit: "1150", cost_usd: "0.04" }]],
-    [FIND_QUOTA_OVERRIDE, []],
-    [LIST_TRANSFERS, [{ sepay_id: "7", transfer_amount: "590000", content: "NIVO1", status: "paid", received_at: AT }]],
+    [READ.workspaceActivity, change.stats ?? [{ messages_7d: 4, last_customer_message_at: AT, open_decisions: 1 }]],
+    [READ.quotaStatus, [{ credits_used: "10", credits_limit: "1150", cost_usd: "0.04" }]],
+    [READ.quotaOverride, []],
+    [READ.transfers, [{ sepay_id: "7", transfer_amount: "590000", content: "NIVO1", status: "paid", received_at: AT }]],
 ]
 
 const workspaceDetailEmails = (change: Record<string, unknown>): Stubs["query"] => [
-    [LIST_USER_EMAILS, change.emails ?? [{ id: "o-1", email: "mai@nivo.vn" }]],
+    [READ.userEmails, change.emails ?? [{ id: "o-1", email: "mai@nivo.vn" }]],
 ]
 
 /** Every query of the workspace detail overview, with optional row overrides. */

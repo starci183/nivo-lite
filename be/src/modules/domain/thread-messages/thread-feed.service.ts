@@ -8,10 +8,19 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { Connection, PageRequest } from "@modules/platform/pagination"
 import { MentionDirectoryService } from "./mention-directory.service"
-import type { ThreadDigestRow, ThreadMessageRow } from "./persistence/thread-messages.rows"
-import { LIST_MESSAGES, LIST_THREAD_DIGESTS } from "./persistence/thread-messages.sql"
+import { ThreadMessageEntity } from "./persistence/entities"
+import { selectMessagesWithAuthor } from "./persistence/thread-message.query"
 import { toListing, toMessage } from "./thread.mapper"
-import type { NewThread, ThreadListing, ThreadView } from "./thread-messages.contracts"
+import type {
+    NewThread,
+    ThreadDigestRecord,
+    ThreadListing,
+    ThreadMessageRecord,
+    ThreadView,
+} from "./thread-messages.contracts"
+
+/** How many threads one digest read covers. */
+const DIGEST_PAGE = 200
 
 /** How many of the newest messages a thread read answers. */
 const MESSAGE_PAGE = 200
@@ -49,10 +58,22 @@ export class ThreadFeedService {
     ): Promise<Connection<ThreadListing>> {
         await this.members.require(userId, workspaceId)
         const threads = await this.threads.list(workspaceId, leadId, request)
-        const digests = await this.entityManager.query<Array<ThreadDigestRow>>(LIST_THREAD_DIGESTS, [
-            workspaceId,
-            threads.nodes.map((thread) => thread.id),
-        ])
+        const digests = await this.entityManager
+            .createQueryBuilder(ThreadMessageEntity, "m")
+            .select([
+                "m.thread_id AS thread_id",
+                "(array_agg(m.body ORDER BY m.created_at DESC, m.id DESC))[1] AS last_body",
+                "max(m.created_at) AS last_at",
+                "count(*)::int AS message_count",
+                "COALESCE(bool_or(m.approval ->> 'outcome' = 'pending'), false) AS waiting_approval",
+            ])
+            .where("m.workspace_id = :workspaceId AND m.thread_id = ANY(:threadIds)", {
+                workspaceId,
+                threadIds: threads.nodes.map((thread) => thread.id),
+            })
+            .groupBy("m.thread_id")
+            .limit(DIGEST_PAGE)
+            .getRawMany<ThreadDigestRecord>()
         const byThread = new Map(digests.map((digest) => [digest.thread_id, digest]))
         return {
             nodes: threads.nodes.map((thread) => toListing(thread, byThread.get(thread.id))),
@@ -64,11 +85,12 @@ export class ThreadFeedService {
     async read(userId: string, workspaceId: string, threadId: string): Promise<ThreadView> {
         await this.members.require(userId, workspaceId)
         const thread = await this.threads.find(workspaceId, threadId)
-        const newestFirst = await this.entityManager.query<Array<ThreadMessageRow>>(LIST_MESSAGES, [
-            workspaceId,
-            threadId,
-            MESSAGE_PAGE,
-        ])
+        const newestFirst = await selectMessagesWithAuthor(this.entityManager, workspaceId)
+            .andWhere("m.thread_id = :threadId", { threadId })
+            .orderBy("m.created_at", "DESC")
+            .addOrderBy("m.id", "DESC")
+            .limit(MESSAGE_PAGE)
+            .getRawMany<ThreadMessageRecord>()
         return { thread, messages: newestFirst.map(toMessage).reverse() }
     }
 

@@ -1,6 +1,35 @@
 import { contactParts } from "@modules/domain/leads"
 import type { LinkedCustomers, UnmatchedContract, UnmatchedReason } from "./contracts.contracts"
-import type { CustomerRecordRow } from "./persistence/contracts.rows"
+
+/** One customer record of the data hub (entity customer) with the name of the source it came from. */
+export interface CustomerRecordRead {
+    /** The id of the record in its source. */
+    readonly externalId: string
+    /** The display title of the record. */
+    readonly title: string
+    /** The columns of the record, keyed by their header. */
+    readonly data: Readonly<Record<string, unknown>>
+    /** The name of the data-hub connection the record was synced from, or null. */
+    readonly source: string | null
+}
+
+/** One contract as the customer link reads it, with the phone and the email of the lead it links to. */
+export interface ContractLinkRead {
+    /** The contract row id. */
+    readonly id: string
+    /** The lead the contract links to; null when it has none. */
+    readonly leadId: string | null
+    /** The customer the contract is signed with. */
+    readonly customerName: string
+    /** The plan or package the customer bought. */
+    readonly plan: string
+    /** Free-text remarks; the first segment is the contract reference. */
+    readonly note: string
+    /** The phone of the linked lead, or null. */
+    readonly leadPhone: string | null
+    /** The email of the linked lead, or null. */
+    readonly leadEmail: string | null
+}
 
 /** One customer of the data hub as the link reads it; the phone is `84` digits and the email lowercased, each null when absent. */
 export interface CustomerRecord {
@@ -98,9 +127,9 @@ const firstOf = (raw: string): string =>
         .find((part) => part !== "") ?? ""
 
 /** Reads one data-hub record as a customer: the name, the code, the first phone and the first email it holds. */
-export const customerRecordOf = (row: CustomerRecordRow): CustomerRecord => ({
+export const customerRecordOf = (row: CustomerRecordRead): CustomerRecord => ({
     name: fieldOf(row.data, NAME_KEYS) || row.title,
-    code: fieldOf(row.data, CODE_KEYS) || row.external_id,
+    code: fieldOf(row.data, CODE_KEYS) || row.externalId,
     phone: contactParts(firstOf(fieldOf(row.data, PHONE_KEYS))).phone,
     email: contactParts(firstOf(fieldOf(row.data, EMAIL_KEYS))).email,
     company: nameKeyOf(fieldOf(row.data, KIND_KEYS)).startsWith(COMPANY_KIND),

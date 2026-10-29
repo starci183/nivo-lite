@@ -1,25 +1,16 @@
 import { Test } from "@nestjs/testing"
+import { Not } from "typeorm"
 import { mockEntityManager } from "@starci/jest-preset"
+import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { FakeQueryBuilder, QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { LeadsErrorCode } from "./errors/leads.error"
+import type { LeadRecord } from "./lead-records.contracts"
 import { LeadRecordsService } from "./lead-records.service"
-import type { LeadRecordRow } from "./persistence/lead-records.rows"
-import {
-    APPLY_CLASSIFICATION,
-    APPLY_PUBLIC_LEAD_STAGE,
-    FILL_LEAD_CONTACT,
-    FIND_LEAD,
-    FIND_LEAD_NAMES,
-    HAND_OVER_LEAD_NEED,
-    INSERT_LEAD,
-    MATCH_LEAD,
-    MATCH_LEADS_BY_CONTACT,
-    MARK_LEAD_WON,
-    PATCH_PUBLIC_LEAD,
-    REPLACE_LEAD_CONTEXT,
-} from "./persistence/lead-records.sql"
+import { LeadEntity } from "./persistence/entities"
 
-const ROW: LeadRecordRow = {
+const ROW: LeadRecord = {
     id: "lead-1",
     workspace_id: "ws-1",
     contact_name: "An",
@@ -32,36 +23,43 @@ const ROW: LeadRecordRow = {
     email: null,
 }
 
-const build = async (rows: ReadonlyArray<LeadRecordRow> = [ROW]) => {
-    const em = mockEntityManager({
-        query: [
-            [FIND_LEAD, rows],
-            [MATCH_LEAD, rows],
-            [MATCH_LEADS_BY_CONTACT, rows],
-            [INSERT_LEAD, rows],
-            [FIND_LEAD_NAMES, [{ id: "lead-1", contact_name: "An" }]],
-            [HAND_OVER_LEAD_NEED, []],
-            [FILL_LEAD_CONTACT, []],
-            [APPLY_CLASSIFICATION, []],
-            [MARK_LEAD_WON, []],
-            [REPLACE_LEAD_CONTEXT, []],
-        ],
-    })
+const found = (row: LeadRecord | undefined): QueryBuilderAnswers => ({ getRawOne: row })
+const written = (rows: ReadonlyArray<unknown> = []): QueryBuilderAnswers => ({ execute: { raw: rows } })
+
+/** A service over a manager that hands out one query builder per statement, answering `answers` in order. */
+const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = [], em: MockEntityManager = mockEntityManager()) => {
+    const fakes = queueQueryBuilders(em, answers)
     const moduleRef = await Test.createTestingModule({
         providers: [LeadRecordsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
     }).compile()
-    return { records: moduleRef.get(LeadRecordsService), em }
+    return { records: moduleRef.get(LeadRecordsService), em, fakes }
+}
+
+/** The SQL text a `() => "..."` expression function returns, read from its source. */
+const expressionText = (source: string): string => /"([^"]*)"/u.exec(source)?.[1] ?? source
+
+/** What an update query builder was told to set; a function value is read as the SQL text it returns. */
+const setBy = (fake: FakeQueryBuilder | undefined): Record<string, unknown> => {
+    const [values] = fake?.callsOf("set")[0] ?? []
+    const set = typeof values === "object" && values !== null ? values : {}
+    return Object.fromEntries(
+        Object.entries(set).map(([key, value]) => [
+            key,
+            typeof value === "function" ? expressionText(String(value)) : value,
+        ]),
+    )
 }
 
 describe("LeadRecordsService", () => {
     it("reads one lead of the workspace", async () => {
-        const { records } = await build()
+        const { records, fakes } = await build([found(ROW)])
 
         await expect(records.find("ws-1", "lead-1")).resolves.toEqual(ROW)
+        expect(fakes[0]?.callsOf("andWhere")).toEqual([["l.id = :leadId", { leadId: "lead-1" }]])
     })
 
     it("answers null when the lead is absent and refuses require", async () => {
-        const { records } = await build([])
+        const { records } = await build([found(undefined), found(undefined)])
 
         await expect(records.find("ws-1", "missing")).resolves.toBeNull()
         await expect(records.require("ws-1", "missing")).rejects.toMatchObject({
@@ -71,7 +69,7 @@ describe("LeadRecordsService", () => {
     })
 
     it("matches a customer by phone and treats a blank name as no name", async () => {
-        const { records, em } = await build()
+        const { records, fakes } = await build([found(ROW)])
 
         await expect(
             records.match({
@@ -83,11 +81,14 @@ describe("LeadRecordsService", () => {
             }),
         ).resolves.toEqual(ROW)
 
-        expect(em.query).toHaveBeenCalledWith(MATCH_LEAD, ["ws-1", "84912000701", null, null, "Zalo"])
+        expect(fakes[0]?.callsOf("andWhere")).toEqual([["(l.phone = :phone)"]])
+        expect(fakes[0]?.callsOf("setParameters")).toEqual([
+            [{ phone: "84912000701", email: null, name: "", channel: "Zalo" }],
+        ])
     })
 
     it("captures a customer and answers the inserted row", async () => {
-        const { records, em } = await build()
+        const { records, fakes } = await build([written([ROW])])
 
         await expect(
             records.capture({
@@ -101,38 +102,59 @@ describe("LeadRecordsService", () => {
             }),
         ).resolves.toEqual(ROW)
 
-        expect(em.query).toHaveBeenCalledWith(INSERT_LEAD, ["ws-1", "An", "ACME", "Zalo", "price", "84912000701", null])
+        expect(fakes[0]?.callsOf("insert")).toEqual([[]])
+        expect(fakes[0]?.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "ws-1",
+                    contactName: "An",
+                    company: "ACME",
+                    channel: "Zalo",
+                    need: "price",
+                    phone: "84912000701",
+                    email: null,
+                },
+            ],
+        ])
+        expect(fakes[0]?.callsOf("returning")[0]?.[0]).toContain("context_summary")
     })
+})
 
+describe("LeadRecordsService hand over", () => {
     it("hands over the package as the lead's need", async () => {
-        const { records, em } = await build()
+        const { records, fakes } = await build([written()])
         const need = "Annual sales package"
 
         await expect(records.handOver("ws-1", "lead-1", need)).resolves.toBeUndefined()
 
-        expect(em.query).toHaveBeenCalledWith(HAND_OVER_LEAD_NEED, ["ws-1", "lead-1", need])
+        expect(setBy(fakes[0])).toEqual({ need, contextSummary: "COALESCE(context_summary, CAST(:need AS text))" })
+        expect(fakes[0]?.callsOf("setParameter")).toEqual([["need", need]])
+        expect(fakes[0]?.callsOf("where")).toEqual([
+            ["workspace_id = :workspaceId AND id = :leadId", { workspaceId: "ws-1", leadId: "lead-1" }],
+        ])
     })
 })
 
-describe("LeadRecordsService", () => {
+describe("LeadRecordsService matching", () => {
     it("answers no names when no leads were asked for", async () => {
         const { records, em } = await build()
 
         await expect(records.namesOf("ws-1", [])).resolves.toEqual([])
 
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("requires an existing lead from the requested workspace", async () => {
-        const { records, em } = await build()
+        const { records, fakes } = await build([found(ROW)])
 
         await expect(records.require("ws-1", "lead-1")).resolves.toEqual(ROW)
 
-        expect(em.query).toHaveBeenCalledWith(FIND_LEAD, ["ws-1", "lead-1"])
+        expect(fakes[0]?.callsOf("where")).toEqual([["l.workspaceId = :workspaceId", { workspaceId: "ws-1" }]])
+        expect(fakes[0]?.callsOf("andWhere")).toEqual([["l.id = :leadId", { leadId: "lead-1" }]])
     })
 
     it("matches a trimmed customer name", async () => {
-        const { records, em } = await build()
+        const { records, fakes } = await build([found(ROW)])
 
         await expect(
             records.match({
@@ -144,21 +166,40 @@ describe("LeadRecordsService", () => {
             }),
         ).resolves.toEqual(ROW)
 
-        expect(em.query).toHaveBeenCalledWith(MATCH_LEAD, ["ws-1", null, null, "An", "Zalo"])
+        expect(fakes[0]?.callsOf("andWhere")).toEqual([["((l.contact_name = :name AND l.channel = :channel))"]])
+        expect(fakes[0]?.callsOf("setParameters")).toEqual([
+            [{ phone: null, email: null, name: "An", channel: "Zalo" }],
+        ])
     })
 
-    it("answers null for an unmatched input without a customer name", async () => {
-        const { records, em } = await build([])
+    it("matches by email and prefers the phone match when both are given", async () => {
+        const { records, fakes } = await build([found(ROW)])
+
+        await records.match({
+            workspaceId: "ws-1",
+            phone: "84912000701",
+            email: "an@acme.vn",
+            name: null,
+            channel: null,
+        })
+
+        expect(fakes[0]?.callsOf("andWhere")).toEqual([["(l.phone = :phone OR l.email = :email)"]])
+        expect(String(fakes[0]?.callsOf("orderBy")[0]?.[0])).toContain("WHEN l.phone = CAST(:phone AS text) THEN 0")
+        expect(fakes[0]?.callsOf("addOrderBy")).toEqual([["l.created_at", "ASC"]])
+    })
+
+    it("answers null for an unmatched input without a customer name and asks nothing", async () => {
+        const { records, em } = await build()
 
         await expect(
             records.match({ workspaceId: "ws-1", phone: null, email: null, name: null, channel: null }),
         ).resolves.toBeNull()
 
-        expect(em.query).toHaveBeenCalledWith(MATCH_LEAD, ["ws-1", null, null, null, null])
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("refuses a capture that did not insert a row", async () => {
-        const { records, em } = await build([])
+        const { records, fakes } = await build([written()])
 
         await expect(
             records.capture({
@@ -172,21 +213,13 @@ describe("LeadRecordsService", () => {
             }),
         ).rejects.toMatchObject({ code: LeadsErrorCode.NotFound, params: { id: "new" } })
 
-        expect(em.query).toHaveBeenCalledWith(INSERT_LEAD, [
-            "ws-1",
-            "An",
-            "ACME",
-            "Zalo",
-            "price",
-            null,
-            "an@example.test",
-        ])
+        expect(fakes[0]?.callsOf("values")[0]?.[0]).toMatchObject({ phone: null, email: "an@example.test" })
     })
 })
 
-describe("LeadRecordsService", () => {
+describe("LeadRecordsService writes", () => {
     it("writes the supplied missing contact and classification values", async () => {
-        const { records, em } = await build()
+        const { records, fakes } = await build([written(), written()])
 
         await expect(
             records.fillContact({ workspaceId: "ws-1", leadId: "lead-1", phone: null, email: "an@example.test" }),
@@ -200,63 +233,92 @@ describe("LeadRecordsService", () => {
             }),
         ).resolves.toBeUndefined()
 
-        expect(em.query).toHaveBeenCalledWith(FILL_LEAD_CONTACT, ["ws-1", "lead-1", null, "an@example.test"])
-        expect(em.query).toHaveBeenCalledWith(APPLY_CLASSIFICATION, ["ws-1", "lead-1", "qualified", "Needs menu"])
+        expect(setBy(fakes[0])).toEqual({
+            phone: "COALESCE(phone, CAST(:phone AS text))",
+            email: "COALESCE(email, CAST(:email AS text))",
+        })
+        expect(fakes[0]?.callsOf("setParameters")).toEqual([[{ phone: null, email: "an@example.test" }]])
+        expect(String(setBy(fakes[1]).stage)).toContain("CASE WHEN stage IN ('won', 'lost')")
+        expect(fakes[1]?.callsOf("setParameters")).toEqual([[{ stage: "qualified", summary: "Needs menu" }]])
     })
 
     it("replaces context through the default manager", async () => {
-        const { records, em } = await build()
+        const em = mockEntityManager({ update: [LeadEntity, {}] })
+        const { records } = await build([], em)
 
         await expect(records.replaceContext("ws-1", "lead-1", "Refreshed context")).resolves.toBeUndefined()
 
-        expect(em.query).toHaveBeenCalledWith(REPLACE_LEAD_CONTEXT, ["ws-1", "lead-1", "Refreshed context"])
+        expect(em.update).toHaveBeenCalledWith(
+            LeadEntity,
+            { workspaceId: "ws-1", id: "lead-1" },
+            { contextSummary: "Refreshed context" },
+        )
     })
 
     it("replaces context through a supplied transaction manager", async () => {
         const { records, em } = await build()
-        const manager = mockEntityManager({ query: [REPLACE_LEAD_CONTEXT, []] })
+        const manager = mockEntityManager({ update: [LeadEntity, {}] })
 
         await expect(records.replaceContext("ws-1", "lead-1", "Transaction context", manager)).resolves.toBeUndefined()
 
-        expect(manager.query).toHaveBeenCalledWith(REPLACE_LEAD_CONTEXT, ["ws-1", "lead-1", "Transaction context"])
-        expect(em.query).not.toHaveBeenCalled()
+        expect(manager.update).toHaveBeenCalledWith(
+            LeadEntity,
+            { workspaceId: "ws-1", id: "lead-1" },
+            { contextSummary: "Transaction context" },
+        )
+        expect(em.update).not.toHaveBeenCalled()
     })
 
-    it("marks a won lead and reads the requested lead names", async () => {
-        const { records, em } = await build()
+    it("marks a won lead through the manager of the caller's transaction", async () => {
+        const em = mockEntityManager()
+        const callers = mockEntityManager({ update: [LeadEntity, {}] })
+        const { records } = await build([], em)
+
+        await expect(records.markWon("ws-1", "lead-1", callers)).resolves.toBeUndefined()
+
+        expect(callers.update).toHaveBeenCalledTimes(1)
+        expect(em.update).not.toHaveBeenCalled()
+    })
+
+    it("marks a won lead unless it was lost, and reads the requested lead names", async () => {
+        const em = mockEntityManager({ update: [LeadEntity, {}] })
+        const { records, fakes } = await build([{ getRawMany: [{ id: "lead-1", contact_name: "An" }] }], em)
 
         await expect(records.markWon("ws-1", "lead-1")).resolves.toBeUndefined()
         await expect(records.namesOf("ws-1", ["lead-1"])).resolves.toEqual([{ id: "lead-1", contact_name: "An" }])
 
-        expect(em.query).toHaveBeenCalledWith(MARK_LEAD_WON, ["ws-1", "lead-1"])
-        expect(em.query).toHaveBeenCalledWith(FIND_LEAD_NAMES, ["ws-1", ["lead-1"]])
+        expect(em.update).toHaveBeenCalledWith(
+            LeadEntity,
+            { workspaceId: "ws-1", id: "lead-1", stage: Not("lost") },
+            { stage: "won" },
+        )
+        expect(fakes[0]?.callsOf("where")).toEqual([
+            ["l.workspaceId = :workspaceId AND l.id = ANY(:leadIds)", { workspaceId: "ws-1", leadIds: ["lead-1"] }],
+        ])
+        expect(fakes[0]?.callsOf("limit")).toEqual([[200]])
     })
 })
 
 describe("LeadRecordsService public API transaction", () => {
     it("uses the supplied manager when finding and matching a customer", async () => {
-        const { records, em } = await build([])
-        const manager = mockEntityManager({
-            query: [
-                [FIND_LEAD, [ROW]],
-                [MATCH_LEAD, [ROW]],
-            ],
-        })
+        const manager = mockEntityManager()
+        queueQueryBuilders(manager, [found(ROW), found(ROW)])
+        const { records, em } = await build()
         const match = { workspaceId: "ws-1", phone: "84912000701", email: null, name: "An", channel: "Zalo" }
 
         await expect(records.find("ws-1", "lead-1", manager)).resolves.toEqual(ROW)
         await expect(records.match(match, manager)).resolves.toEqual(ROW)
 
-        expect(manager.query).toHaveBeenCalledWith(FIND_LEAD, ["ws-1", "lead-1"])
-        expect(manager.query).toHaveBeenCalledWith(MATCH_LEAD, ["ws-1", "84912000701", null, "An", "Zalo"])
-        expect(em.query).not.toHaveBeenCalled()
+        expect(manager.createQueryBuilder).toHaveBeenCalledTimes(2)
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it.each([null, "Updated need"])(
         "passes a supplied need or preservation marker through the transaction: %s",
         async (need) => {
             const { records, em } = await build()
-            const manager = mockEntityManager({ query: [PATCH_PUBLIC_LEAD, []] })
+            const manager = mockEntityManager()
+            const [patch] = queueQueryBuilders(manager, [written()])
 
             await expect(
                 records.patchPublicFacts(
@@ -265,8 +327,12 @@ describe("LeadRecordsService public API transaction", () => {
                 ),
             ).resolves.toBeUndefined()
 
-            expect(manager.query).toHaveBeenCalledWith(PATCH_PUBLIC_LEAD, ["ws-1", "lead-1", "New company", need])
-            expect(em.query).not.toHaveBeenCalled()
+            expect(patch?.callsOf("setParameters")).toEqual([[{ company: "New company", need }]])
+            expect(setBy(patch)).toEqual({
+                company: "COALESCE(NULLIF(CAST(:company AS text), ''), company)",
+                need: "COALESCE(NULLIF(CAST(:need AS text), ''), need)",
+            })
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         },
     )
 
@@ -275,24 +341,28 @@ describe("LeadRecordsService public API transaction", () => {
         [[], null],
     ] as const)("returns the changed stage row or no change from the transaction: %j", async (rows, expected) => {
         const { records, em } = await build()
-        const manager = mockEntityManager({ query: [APPLY_PUBLIC_LEAD_STAGE, rows] })
+        const manager = mockEntityManager()
+        const [stage] = queueQueryBuilders(manager, [written(rows)])
 
         await expect(records.applyPublicStage("ws-1", "lead-1", "won", manager)).resolves.toEqual(expected)
 
-        expect(manager.query).toHaveBeenCalledWith(APPLY_PUBLIC_LEAD_STAGE, ["ws-1", "lead-1", "won"])
-        expect(em.query).not.toHaveBeenCalled()
+        expect(stage?.callsOf("setParameter")).toEqual([["stage", "won"]])
+        expect(stage?.callsOf("returning")[0]?.[0]).toContain("context_summary")
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 })
 
 describe("LeadRecordsService for the contract link", () => {
     it("answers every lead holding the phone or the email", async () => {
-        const { records, em } = await build()
+        const { records, fakes } = await build([{ getRawMany: [ROW] }])
 
         await expect(records.matchAllByContact("ws-1", { phone: "84912000701", email: "an@acme.vn" })).resolves.toEqual(
             [ROW],
         )
 
-        expect(em.query).toHaveBeenCalledWith(MATCH_LEADS_BY_CONTACT, ["ws-1", "84912000701", "an@acme.vn"])
+        expect(fakes[0]?.callsOf("andWhere")).toEqual([["(l.phone = :phone OR l.email = :email)"]])
+        expect(fakes[0]?.callsOf("setParameters")).toEqual([[{ phone: "84912000701", email: "an@acme.vn" }]])
+        expect(fakes[0]?.callsOf("limit")).toEqual([[20]])
     })
 
     it("answers no lead for a customer without a contact and asks nothing", async () => {
@@ -300,18 +370,13 @@ describe("LeadRecordsService for the contract link", () => {
 
         await expect(records.matchAllByContact("ws-1", { phone: null, email: null })).resolves.toEqual([])
 
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("captures, classifies and fills a customer in the caller's transaction", async () => {
         const { records, em } = await build()
-        const caller = mockEntityManager({
-            query: [
-                [INSERT_LEAD, [ROW]],
-                [APPLY_CLASSIFICATION, []],
-                [FILL_LEAD_CONTACT, []],
-            ],
-        })
+        const caller = mockEntityManager()
+        queueQueryBuilders(caller, [written([ROW]), written(), written()])
         const lead = { workspaceId: "ws-1", contactName: "An", company: "ACME", channel: "Zalo", need: "price" }
 
         await records.capture({ ...lead, phone: "84912000701", email: null }, caller)
@@ -321,7 +386,7 @@ describe("LeadRecordsService for the contract link", () => {
         )
         await records.fillContact({ workspaceId: "ws-1", leadId: "lead-1", phone: null, email: "an@acme.vn" }, caller)
 
-        expect(caller.query).toHaveBeenCalledTimes(3)
-        expect(em.query).not.toHaveBeenCalled()
+        expect(caller.createQueryBuilder).toHaveBeenCalledTimes(3)
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 })

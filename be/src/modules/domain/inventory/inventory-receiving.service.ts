@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { OfficeLog } from "@modules/domain/module-ops"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { eachInOrder } from "@modules/platform/primitives"
@@ -14,15 +14,7 @@ import { InventoryOrdersService } from "./inventory-orders.service"
 import { clip, uuidOrNull } from "./policies/input-text.policy"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { formatMoney, parseNumber } from "./policies/number-format.policy"
-import {
-    CLOSE_RECEIPT,
-    DISCARD_RECEIPT,
-    OPEN_RECEIPT,
-    RECEIVE_PO_LINE,
-    RECOMPUTE_PO_TOTAL,
-    SELECT_ACCOUNTING_INSTALLED,
-    SET_PO_STATUS,
-} from "./persistence/inventory.sql"
+import { ModuleInstallationEntity } from "@modules/domain/module-installations"
 
 /** Limits of the receive form. */
 const INVOICE_MAX = 60
@@ -33,6 +25,10 @@ const PRICE_CHANGE_MIN = 1
 
 interface IdRow {
     readonly id: string
+}
+
+interface OpenedReceiptRow {
+    readonly inventory_open_receipt: string | null
 }
 
 /** Receipt facts used by the Office evidence and supplier price-change notice. */
@@ -77,14 +73,17 @@ export class InventoryReceivingService {
         }
         const invoiceNo = clip(request.invoiceNo, INVOICE_MAX)
         const invoiceEvidence = invoiceNo === "" ? null : this.text("inventory.invoiceEvidence", { invoiceNo })
-        const [receipt] = await this.entityManager.query<Array<IdRow>>(OPEN_RECEIPT, [
+        const [receipt] = await callDbFunction<OpenedReceiptRow>(this.entityManager, "public.inventory_open_receipt", [
             workspaceId,
             po.id,
             invoiceNo || null,
             clip(request.note, NOTE_MAX),
             actor,
         ])
-        if (receipt === undefined) throw new InventoryError({ code: InventoryErrorCode.PoNotReceivable })
+        const receiptId = receipt?.inventory_open_receipt
+        if (receiptId === null || receiptId === undefined) {
+            throw new InventoryError({ code: InventoryErrorCode.PoNotReceivable })
+        }
         const locationId = await this.locations.defaultLocation(workspaceId)
         let value = 0
         const priceChanges: Array<string> = []
@@ -106,13 +105,13 @@ export class InventoryReceivingService {
                 refLabel: po.poNo,
                 by: actor,
                 evidence: invoiceEvidence,
-                dedupe: `po-receive:${receipt.id}:${line.id}`,
+                dedupe: `po-receive:${receiptId}:${line.id}`,
                 unitCost: cost,
             })
             if (!applied.applied) return
             value += qty * cost
             touched.push(line.itemId)
-            await this.entityManager.query(RECEIVE_PO_LINE, [line.id, qty, cost])
+            await callDbFunction(this.entityManager, "public.inventory_receive_po_line", [line.id, qty, cost])
             if (Math.abs(cost - line.unitCost) >= PRICE_CHANGE_MIN) {
                 priceChanges.push(
                     this.text("inventory.priceChange", {
@@ -124,15 +123,15 @@ export class InventoryReceivingService {
             }
         })
         if (touched.length === 0) {
-            await this.entityManager.query(DISCARD_RECEIPT, [receipt.id])
+            await callDbFunction(this.entityManager, "public.inventory_discard_receipt", [receiptId])
             throw new InventoryError({ code: InventoryErrorCode.ReceiptEmpty })
         }
-        await this.entityManager.query(CLOSE_RECEIPT, [receipt.id, Math.round(value)])
+        await callDbFunction(this.entityManager, "public.inventory_close_receipt", [receiptId, Math.round(value)])
         const fresh = await this.orders.loadPo(workspaceId, po.id)
         const complete = fresh.lines.every((line) => line.qtyReceived >= line.qtyOrdered)
         const status = complete ? "received" : "partially_received"
-        await this.entityManager.query(SET_PO_STATUS, [po.id, status])
-        await this.entityManager.query(RECOMPUTE_PO_TOTAL, [po.id])
+        await callDbFunction(this.entityManager, "public.inventory_set_po_status", [po.id, status])
+        await callDbFunction(this.entityManager, "public.inventory_recompute_po_total", [po.id])
         await this.reportReceipt({
             workspaceId,
             actor,
@@ -151,7 +150,15 @@ export class InventoryReceivingService {
     }
 
     private async accountingInstalled(workspaceId: string): Promise<boolean> {
-        const [row] = await this.entityManager.query<Array<IdRow>>(SELECT_ACCOUNTING_INSTALLED, [workspaceId])
+        const row = await this.entityManager
+            .createQueryBuilder(ModuleInstallationEntity, "m")
+            .select("m.id", "id")
+            .where("m.workspace_id = :workspaceId AND m.module_key = :moduleKey", {
+                workspaceId,
+                moduleKey: "accounting",
+            })
+            .limit(1)
+            .getRawOne<IdRow>()
         return row !== undefined
     }
 

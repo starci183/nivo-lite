@@ -7,23 +7,22 @@ import { GatewayReceiptsService } from "@modules/domain/mcp-gateway-receipts"
 import type { GatewayCallResult } from "@modules/domain/mcp-gateway-receipts"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { persistOfficeRows } from "../../fixtures/builders/office-chain.builder"
-import {
-    CLEAN_GATEWAY_CLAIMS,
-    CLEAN_INBOX_CLAIM,
-    FAIL_TRANSACTION,
-    GRANT_HAKUEN,
-    HOLD_EVENTS,
-    INBOX_CLAIM,
-    INSERT_PROOF_CARD,
-    NOTE_CARDS,
-} from "../../fixtures/persistence/inbox-dedupe.sql"
-import { CLEAN_USERS } from "../../fixtures/persistence/office-chain.sql"
-import { CLEAN_WORKSPACE } from "../../fixtures/persistence/proof.sql"
 import { API_APP_MODULES } from "../../world/api-app.options"
 import { createDedupeRemoteServer } from "../../world/dedupe-remote-server.service"
 import { hubNoteProof } from "../../world/inbox-dedupe-proof.service"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import { useTestWorld } from "../../world/use-test-world"
+import {
+    inboxClaims,
+    cleanInboxClaim,
+    cleanGatewayClaims,
+    holdEvidence,
+    noteCards,
+    failTransaction,
+} from "../../world/inbox-database.service"
+import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
+import { grantConnectorTools } from "../../fixtures/builders/mcp-agent.builder"
+import { insertProofCard } from "../../fixtures/builders/proof-card.builder"
 
 const world = useTestWorld({ modules: API_APP_MODULES })
 const identity = {
@@ -38,7 +37,7 @@ const caller = { workspaceId: WS, agentId: identity.agents.sales, conversationId
 
 const cleanupClaim = (source: string, key: string): void => {
     world.cleanup(async () => {
-        await world.db.primary.query(CLEAN_INBOX_CLAIM, [source, key])
+        await cleanInboxClaim(world.db.primary, source, key)
     })
 }
 
@@ -77,13 +76,13 @@ const waitingItem = async () => {
 
 beforeAll(async () => {
     world.cleanup(async () => {
-        await world.db.primary.query(CLEAN_GATEWAY_CLAIMS, [WS])
-        await world.db.primary.query(CLEAN_WORKSPACE, [WS])
-        await world.db.primary.query(CLEAN_USERS, [Object.values(identity.users)])
+        await cleanGatewayClaims(world.db.primary, WS)
+        await removeWorkspace(world.db.primary, WS)
+        await removeAuthUsers(world.db.primary, Object.values(identity.users))
     })
     const credential = await world.db.primary.transaction(async (tx) => {
         await persistOfficeRows(tx, identity)
-        await tx.query(GRANT_HAKUEN, [WS, identity.agents.sales])
+        await grantConnectorTools(tx, WS, identity.agents.sales, "hakuen.*")
         return randomBytes(32).toString("hex")
     })
     await server.listen()
@@ -116,8 +115,8 @@ describe("durable hold dedupe on the migrated local database", () => {
         )
         expect(results).toHaveLength(24)
         expect(results.every((held) => held.status === "waiting_decision")).toBe(true)
-        expect(await world.db.primary.query(HOLD_EVENTS, [WS, item.id])).toEqual([{ evidence: "Need a receipt" }])
-        expect(await world.db.primary.query(INBOX_CLAIM, ["work.hold", key])).toHaveLength(1)
+        expect(await holdEvidence(world.db.primary, WS, item.id)).toEqual([{ evidence: "Need a receipt" }])
+        expect(await inboxClaims(world.db.primary, "work.hold", key)).toHaveLength(1)
     })
 
     it("rolls a hold and claim back when its evidence SQL fails, then accepts the same retry", async () => {
@@ -129,7 +128,7 @@ describe("durable hold dedupe on the migrated local database", () => {
             .spyOn(world.resolve(EvidenceService), "log")
             .mockImplementationOnce(async (_ctx, _entry, tx) => {
                 assert(tx !== undefined)
-                await tx.query(FAIL_TRANSACTION)
+                await failTransaction(tx)
             })
         try {
             await expect(
@@ -143,10 +142,10 @@ describe("durable hold dedupe on the migrated local database", () => {
         }
         const original = await world.resolve(DecisionsService).getWorkItem(identity.users.nam, WS, item.id)
         expect(original.proposal).toEqual(item.proposal)
-        expect(await world.db.primary.query(INBOX_CLAIM, ["work.hold", key])).toHaveLength(0)
-        expect(await world.db.primary.query(HOLD_EVENTS, [WS, item.id])).toHaveLength(0)
+        expect(await inboxClaims(world.db.primary, "work.hold", key)).toHaveLength(0)
+        expect(await holdEvidence(world.db.primary, WS, item.id)).toHaveLength(0)
         await world.resolve(WorkPlacementService).hold(identity.users.nam, WS, request)
-        expect(await world.db.primary.query(HOLD_EVENTS, [WS, item.id])).toEqual([{ evidence: "Retry this hold" }])
+        expect(await holdEvidence(world.db.primary, WS, item.id)).toEqual([{ evidence: "Retry this hold" }])
     })
 })
 
@@ -210,8 +209,8 @@ describe("durable OpenClaw Hub-note dedupe on the migrated local database", () =
         const title = world.key("one-action-card")
         cleanupClaim("hub.note", JSON.stringify([WS, key]))
         await Promise.all(Array.from({ length: 24 }, () => notes.postOnce(title, identity.agents.sales, key)))
-        expect(await world.db.primary.query(NOTE_CARDS, [WS, title])).toHaveLength(1)
-        expect(await world.db.primary.query(INBOX_CLAIM, ["hub.note", JSON.stringify([WS, key])])).toHaveLength(1)
+        expect(await noteCards(world.db.primary, WS, title)).toHaveLength(1)
+        expect(await inboxClaims(world.db.primary, "hub.note", JSON.stringify([WS, key]))).toHaveLength(1)
     })
 
     it("rolls the OpenClaw Hub-note sink's claim back on a database foreign-key failure and accepts the retry", async () => {
@@ -222,10 +221,10 @@ describe("durable OpenClaw Hub-note dedupe on the migrated local database", () =
         await expect(notes.postOnce(title, world.id(), key)).rejects.toMatchObject({
             code: "23503",
         })
-        expect(await world.db.primary.query(NOTE_CARDS, [WS, title])).toHaveLength(0)
-        expect(await world.db.primary.query(INBOX_CLAIM, ["hub.note", JSON.stringify([WS, key])])).toHaveLength(0)
+        expect(await noteCards(world.db.primary, WS, title)).toHaveLength(0)
+        expect(await inboxClaims(world.db.primary, "hub.note", JSON.stringify([WS, key]))).toHaveLength(0)
         await notes.postOnce(title, identity.agents.sales, key)
-        expect(await world.db.primary.query(NOTE_CARDS, [WS, title])).toHaveLength(1)
+        expect(await noteCards(world.db.primary, WS, title)).toHaveLength(1)
     })
 })
 
@@ -243,11 +242,11 @@ describe("Hub card validation on the migrated local database", () => {
         "action_done",
     ])("stores the v1 %s card without changing its payload", async (type) => {
         const card = { v: 1, type, title: world.key("valid-card") }
-        await expect(world.db.primary.query(INSERT_PROOF_CARD, [WS, JSON.stringify(card)])).resolves.toEqual([{ card }])
+        await expect(insertProofCard(world.db.primary, WS, card)).resolves.toEqual([{ card }])
     })
 
     it("retains ordinary message lines without a card", async () => {
-        await expect(world.db.primary.query(INSERT_PROOF_CARD, [WS, null])).resolves.toEqual([{ card: null }])
+        await expect(insertProofCard(world.db.primary, WS, null)).resolves.toEqual([{ card: null }])
     })
 
     it.each([
@@ -259,7 +258,7 @@ describe("Hub card validation on the migrated local database", () => {
             card: { v: 1, type: "action_done", title: "\u00e9".repeat(32768) },
         },
     ])("rejects $name with the card check constraint", async ({ card }) => {
-        await expect(world.db.primary.query(INSERT_PROOF_CARD, [WS, JSON.stringify(card)])).rejects.toMatchObject({
+        await expect(insertProofCard(world.db.primary, WS, card)).rejects.toMatchObject({
             code: "23514",
             constraint: "messages_card_check",
         })

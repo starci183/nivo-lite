@@ -10,8 +10,7 @@ import type { TemplateDefinition } from "./automation-templates.contracts"
 import { TEMPLATE_CATALOG } from "./automation-templates.templates"
 import { AutomationTemplatesLogEvent } from "./automation-templates.log-events"
 import { AutomationTemplatesError, AutomationTemplatesErrorCode } from "./errors/automation-templates.error"
-import type { AutomationTemplatesRow } from "./persistence/automation-templates.rows"
-import { SELECT_TEMPLATES, UPSERT_TEMPLATE } from "./persistence/automation-templates.sql"
+import { AutomationTemplateEntity } from "./persistence/entities"
 import { parseTemplateDefinition } from "./policies/template-definition.policy"
 
 /** How long a read of the catalogue is reused; the templates change with a deploy, not per request. */
@@ -37,7 +36,10 @@ export class AutomationTemplatesService {
     async listTemplates(): Promise<ReadonlyArray<TemplateDefinition>> {
         const now = this.clock.now().getTime()
         if (this.cached !== undefined && now - this.cached.at < CACHE_MS) return this.cached.templates
-        const rows = await this.entityManager.query<Array<AutomationTemplatesRow>>(SELECT_TEMPLATES)
+        const rows = await this.entityManager.find(AutomationTemplateEntity, {
+            order: { position: "ASC", key: "ASC" },
+            take: 500,
+        })
         const templates = rows.map((row) => parseTemplateDefinition(row.definition))
         this.cached = { at: now, templates }
         return templates
@@ -56,15 +58,20 @@ export class AutomationTemplatesService {
         const templates = definitions.map((definition) => parseTemplateDefinition(definition))
         await this.entityManager.transaction(async (tx) => {
             await eachInOrder(templates, async (template) => {
-                await tx.query(UPSERT_TEMPLATE, [
-                    template.key,
-                    template.version,
-                    template.moduleKey,
-                    template.pack,
-                    template.executor,
-                    template.position,
-                    JSON.stringify(template),
-                ])
+                await tx.upsert(
+                    AutomationTemplateEntity,
+                    {
+                        key: template.key,
+                        version: template.version,
+                        moduleKey: template.moduleKey,
+                        pack: template.pack,
+                        executor: template.executor,
+                        position: template.position,
+                        definition: template,
+                        updatedAt: () => "now()",
+                    },
+                    ["key"],
+                )
             })
         })
         this.cached = undefined

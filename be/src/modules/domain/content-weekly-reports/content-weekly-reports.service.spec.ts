@@ -3,7 +3,8 @@ import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ContentWeeklyReportsService } from "./content-weekly-reports.service"
-import { CLAIM_WEEKLY_POST, FIND_WEEKLY_REPORT, UPSERT_WEEKLY_EXTRAS } from "./persistence/content-weekly-reports.sql"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
+import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
 
 const build = async (em: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
@@ -22,67 +23,106 @@ const POST = {
 }
 const SUGGESTION = { title: "t", body: "b", sources: [] }
 
-describe("ContentWeeklyReportsService", () => {
+const registerReading = () => {
     it("reads a stored week, or null when nothing was stored", async () => {
-        const em = mockEntityManager({
-            query: [
-                [
-                    FIND_WEEKLY_REPORT,
-                    [
-                        {
-                            posts: [POST],
-                            post_count: 8,
-                            suggestion: SUGGESTION,
-                            computed_at: "2026-10-19T03:00:00.000Z",
-                            posted_at: null,
-                        },
-                    ],
+        const em = mockEntityManager()
+        const [found] = queueQueryBuilders(em, [
+            {
+                getRawMany: [
+                    {
+                        posts: [POST],
+                        postCount: 8,
+                        suggestion: SUGGESTION,
+                        computedAt: "2026-10-19T03:00:00+00:00",
+                        postedAt: null,
+                    },
                 ],
-                [FIND_WEEKLY_REPORT, []],
-            ],
-        })
+            },
+            { getRawMany: [] },
+        ])
         const service = await build(em)
 
         await expect(service.find("ws-1", "2026-10-12")).resolves.toEqual({
             posts: [POST],
             postCount: 8,
             suggestion: SUGGESTION,
-            computedAt: "2026-10-19T03:00:00.000Z",
+            computedAt: "2026-10-19T03:00:00+00:00",
             postedAt: null,
         })
         await expect(service.find("ws-1", "2026-10-05")).resolves.toBeNull()
-        expect(em.query).toHaveBeenCalledWith(FIND_WEEKLY_REPORT, ["ws-1", "2026-10-12"])
+        expect(found?.callsOf("where")).toEqual([
+            [
+                "r.workspaceId = :workspaceId AND r.weekStart = :weekStart",
+                { workspaceId: "ws-1", weekStart: "2026-10-12" },
+            ],
+        ])
+        expect(found?.callsOf("addSelect")).toEqual([
+            ["r.post_count", "postCount"],
+            ["r.suggestion", "suggestion"],
+            ["to_json(r.computed_at) #>> '{}'", "computedAt"],
+            ["to_json(r.posted_at) #>> '{}'", "postedAt"],
+        ])
     })
+}
 
+const registerStoring = () => {
     it("stores the extras of a week with or without a suggestion", async () => {
-        const em = mockEntityManager({ query: [UPSERT_WEEKLY_EXTRAS, []] })
+        const em = mockEntityManager()
+        const [first, second] = queueQueryBuilders(em, [{ execute: { raw: [] } }, { execute: { raw: [] } }])
         const service = await build(em)
 
         await service.store("ws-1", "2026-10-12", { posts: [POST], postCount: 8, suggestion: SUGGESTION }, "x")
         await service.store("ws-1", "2026-10-12", { posts: [], postCount: 0, suggestion: null }, "y")
 
-        expect(em.query).toHaveBeenNthCalledWith(1, UPSERT_WEEKLY_EXTRAS, [
-            "ws-1",
-            "2026-10-12",
-            JSON.stringify([POST]),
-            8,
-            JSON.stringify(SUGGESTION),
-            "x",
-        ])
-        expect(em.query).toHaveBeenNthCalledWith(2, UPSERT_WEEKLY_EXTRAS, ["ws-1", "2026-10-12", "[]", 0, null, "y"])
-    })
-
-    it("claims the posting of a week once", async () => {
-        const em = mockEntityManager({
-            query: [
-                [CLAIM_WEEKLY_POST, [{ week_start: "2026-10-12" }]],
-                [CLAIM_WEEKLY_POST, []],
-            ],
+        expect(stampedValues(first?.callsOf("values")[0]?.[0])).toEqual({
+            workspaceId: "ws-1",
+            weekStart: "2026-10-12",
+            posts: "function",
+            postCount: 8,
+            suggestion: "function",
+            computedAt: "function",
         })
+        expect(first?.callsOf("setParameter")).toEqual([
+            ["posts", JSON.stringify([POST])],
+            ["suggestion", JSON.stringify(SUGGESTION)],
+            ["computedAt", "x"],
+        ])
+        expect(second?.callsOf("setParameter")).toEqual([
+            ["posts", "[]"],
+            ["suggestion", null],
+            ["computedAt", "y"],
+        ])
+        expect(first?.callsOf("orUpdate")).toEqual([
+            [
+                ["posts", "post_count", "suggestion", "computed_at"],
+                ["workspace_id", "week_start"],
+            ],
+        ])
+    })
+}
+
+const registerClaim = () => {
+    it("claims the posting of a week once", async () => {
+        const em = mockEntityManager()
+        const [claim] = queueQueryBuilders(em, [
+            { execute: { raw: [{ weekStart: "2026-10-12" }] } },
+            { execute: { raw: [] } },
+        ])
         const service = await build(em)
 
         await expect(service.claimPost("ws-1", "2026-10-12", "z")).resolves.toBe(true)
         await expect(service.claimPost("ws-1", "2026-10-12", "z")).resolves.toBe(false)
-        expect(em.query).toHaveBeenCalledWith(CLAIM_WEEKLY_POST, ["ws-1", "2026-10-12", "z"])
+        expect(stampedValues(claim?.callsOf("values")[0]?.[0])).toEqual({
+            workspaceId: "ws-1",
+            weekStart: "2026-10-12",
+            postedAt: "function",
+        })
+        expect(claim?.callsOf("setParameter")).toEqual([["postedAt", "z"]])
     })
+}
+
+describe("ContentWeeklyReportsService", () => {
+    registerReading()
+    registerStoring()
+    registerClaim()
 })

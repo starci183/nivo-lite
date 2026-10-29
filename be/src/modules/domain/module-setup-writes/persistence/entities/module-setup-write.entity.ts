@@ -1,0 +1,58 @@
+import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import type { CardResult, CardStatus, FactCardPayload, RuleCardPayload } from "../../module-setup-writes.contracts"
+
+@Entity({ schema: "public", name: "module_setup_writes" })
+/** One confirm card of the setup chat: one row of `public.module_setup_writes`. */
+export class ModuleSetupWriteEntity {
+    /** The card. */
+    @PrimaryGeneratedColumn("uuid", { name: "id" })
+    id!: string
+
+    /** The workspace. */
+    @Column({ name: "workspace_id", type: "uuid" })
+    workspaceId!: string
+
+    /** The session it belongs to. */
+    @Column({ name: "setup_session_id", type: "uuid" })
+    setupSessionId!: string
+
+    /** The owner message it came from. */
+    @Column({ name: "source_message_id", type: "uuid", nullable: true })
+    sourceMessageId!: string | null
+
+    /** The gate it answers. */
+    @Column({ name: "gate_key", type: "text" })
+    gateKey!: string
+
+    /** Fact or rule. */
+    @Column({ name: "kind", type: "text" })
+    kind!: "fact" | "rule"
+
+    /** The target: one waiting card per target. */
+    @Column({ name: "target_key", type: "text" })
+    targetKey!: string
+
+    /** The fact or the rule proposed. */
+    @Column({ name: "payload", type: "jsonb" })
+    payload!: FactCardPayload | RuleCardPayload
+
+    /** Where the card stands. */
+    @Column({ name: "status", type: "text", default: () => "'proposed'" })
+    status!: CardStatus
+
+    /** What the card did once decided. */
+    @Column({ name: "result", type: "jsonb", nullable: true })
+    result!: CardResult | null
+
+    /** Who decided it. */
+    @Column({ name: "decided_by", type: "text", nullable: true })
+    decidedBy!: string | null
+
+    /** When it was decided. */
+    @Column({ name: "decided_at", type: "timestamptz", nullable: true })
+    decidedAt!: Date | null
+
+    /** When it was proposed. */
+    @Column({ name: "created_at", type: "timestamptz", default: () => "now()" })
+    createdAt!: Date
+}

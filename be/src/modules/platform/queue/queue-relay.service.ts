@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { QueueError, QueueErrorCode } from "./errors/queue.error"
@@ -11,7 +11,6 @@ import type { QueueOptions } from "./queue.options"
 import { secondsOf } from "./queue.policy"
 import type { CancelQueueTimeout, QueueTimeout } from "./queue-timeout.port"
 import type { QueueTransport } from "./queue-transport.port"
-import { JOB_RECONCILE, JOB_RELAY_CLAIM, JOB_RELAY_RELEASE, JOB_RELAY_SENT, JOB_RESET } from "./persistence/queue.sql"
 import type { QueueReconcileRow, QueueRelayRow } from "./persistence/queue.rows"
 
 /** A claim covers the bounded Redis lookup, removal and publication, without holding a database transaction. */
@@ -89,7 +88,7 @@ export class QueueRelayService implements OnApplicationBootstrap, OnApplicationS
 
     /** Claims and commits before calling Redis; each row is marked with its own lease token afterwards. */
     private async relay(): Promise<number> {
-        const rows = await this.entityManager.query<Array<QueueRelayRow>>(JOB_RELAY_CLAIM, [
+        const rows = await callDbFunction<QueueRelayRow>(this.entityManager, "public.job_relay_claim", [
             this.options.relayBatch,
             CLAIM_SECONDS,
         ])
@@ -108,7 +107,7 @@ export class QueueRelayService implements OnApplicationBootstrap, OnApplicationS
         if (!this.running) return
         if (row.retry_requested) await this.transport.republish(row.queue, row.name, row.id, row.payload)
         else await this.transport.add(row.queue, row.name, row.id, row.payload)
-        await this.entityManager.query(JOB_RELAY_SENT, [
+        await callDbFunction(this.entityManager, "public.job_relay_sent", [
             row.id,
             row.lease_token,
             secondsOf(this.options.reconcileAfterMs),
@@ -117,7 +116,7 @@ export class QueueRelayService implements OnApplicationBootstrap, OnApplicationS
 
     /** Claims a fair due batch with SKIP LOCKED and isolates each row, including broker or settlement failures. */
     private async reconcile(): Promise<void> {
-        const rows = await this.entityManager.query<Array<QueueReconcileRow>>(JOB_RECONCILE, [
+        const rows = await callDbFunction<QueueReconcileRow>(this.entityManager, "public.job_reconcile", [
             secondsOf(this.options.reconcileAfterMs),
             secondsOf(2 * this.options.visibilityTimeoutMs),
             this.options.relayBatch,
@@ -138,13 +137,13 @@ export class QueueRelayService implements OnApplicationBootstrap, OnApplicationS
         const state = await this.transport.stateOf(row.queue, row.id)
         if (!this.running) return
         if (state === "missing" || state === "failed" || state === "completed") {
-            const [reset] = await this.entityManager.query<Array<{ reset: boolean }>>(JOB_RESET, [
+            const [reset] = await callDbFunction<{ job_reset: boolean }>(this.entityManager, "public.job_reset", [
                 row.id,
                 row.lease_token,
                 row.run_token,
             ])
-            if (reset?.reset === true) await this.transport.republish(row.queue, row.name, row.id, row.payload)
+            if (reset?.job_reset === true) await this.transport.republish(row.queue, row.name, row.id, row.payload)
         }
-        await this.entityManager.query(JOB_RELAY_RELEASE, [row.id, row.lease_token])
+        await callDbFunction(this.entityManager, "public.job_relay_release", [row.id, row.lease_token])
     }
 }

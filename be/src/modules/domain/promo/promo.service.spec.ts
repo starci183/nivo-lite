@@ -1,11 +1,11 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
+import { subQueryBuilder } from "@tests/fixtures/builders/sub-query-builder.builder"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import type { PromoStateRow } from "./persistence/promo.rows"
-import { FIND_FOUNDING_MEMBER, FIND_LEAD_WAIT, FIND_PROMO_CHATBOT, FIND_PROMO_STATE } from "./persistence/promo.sql"
 import { PromoService } from "./promo.service"
 import { FOUNDING_OFFER, INVOICE_TITLE_PREFIX } from "./promo.templates"
 
@@ -24,7 +24,7 @@ const build = async (entityManager: MockEntityManager, at: string = IN_OFFER) =>
     return { promo: moduleRef.get(PromoService), members }
 }
 
-const stateRow: PromoStateRow = {
+const stateRow = {
     chatbot_id: "agent-1",
     has_knowledge: true,
     is_founding_member: true,
@@ -41,9 +41,9 @@ const stateRow: PromoStateRow = {
 describe("PromoService", () => {
     describe("chatbot", () => {
         it("answers the earliest chatbot of the workspace", async () => {
-            const em = mockEntityManager({
-                query: [FIND_PROMO_CHATBOT, [{ id: "agent-1", handle: "shop", name: "Shop bot" }]],
-            })
+            const em = mockEntityManager()
+            const read = fakeQueryBuilder({ getRawOne: { id: "agent-1", handle: "shop", name: "Shop bot" } })
+            answerQueryBuilders(em, read)
             const { promo, members } = await build(em)
 
             await expect(promo.chatbot("user-1", "ws-1")).resolves.toEqual({
@@ -53,11 +53,19 @@ describe("PromoService", () => {
                 name: "Shop bot",
             })
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-            expect(em.query).toHaveBeenCalledWith(FIND_PROMO_CHATBOT, ["ws-1"])
+            expect(read.argsOf("from")).toEqual([["public.agents", "a"]])
+            expect(read.argsOf("where")).toEqual([
+                ["a.workspace_id = :workspaceId AND a.module = 'chatbot'", { workspaceId: "ws-1" }],
+            ])
+            expect(read.argsOf("orderBy")).toEqual([["a.created_at"]])
+            expect(read.argsOf("addOrderBy")).toEqual([["a.id"]])
+            expect(read.argsOf("limit")).toEqual([[1]])
         })
 
         it("answers no chatbot for a workspace without one", async () => {
-            const { promo } = await build(mockEntityManager({ query: [FIND_PROMO_CHATBOT, []] }))
+            const em = mockEntityManager()
+            answerQueryBuilders(em, fakeQueryBuilder({ getRawOne: undefined }))
+            const { promo } = await build(em)
 
             await expect(promo.chatbot("user-1", "ws-1")).resolves.toEqual({
                 hasChatbot: false,
@@ -67,22 +75,33 @@ describe("PromoService", () => {
             })
         })
     })
+})
 
+describe("PromoService foundingMember", () => {
     describe("foundingMember", () => {
         it("reads the purchase inside the live offer window", async () => {
-            const em = mockEntityManager({ query: [FIND_FOUNDING_MEMBER, [{ is_founding_member: true }]] })
+            const em = mockEntityManager()
+            const read = fakeQueryBuilder({ getExists: true })
+            answerQueryBuilders(em, read)
             const { promo } = await build(em)
 
             await expect(promo.foundingMember("user-1", "ws-1")).resolves.toBe(true)
-            expect(em.query).toHaveBeenCalledWith(FIND_FOUNDING_MEMBER, [
-                "ws-1",
-                FOUNDING_OFFER.startsAt,
-                FOUNDING_OFFER.endsAt,
+            expect(read.argsOf("from")).toEqual([["public.events", "e"]])
+            expect(read.argsOf("where")).toEqual([
+                ["e.workspace_id = :workspaceId AND e.kind = 'module.purchased'", { workspaceId: "ws-1" }],
+            ])
+            expect(read.argsOf("andWhere")).toEqual([
+                [
+                    "e.created_at >= :startsAt::timestamptz AND e.created_at <= :endsAt::timestamptz",
+                    { startsAt: FOUNDING_OFFER.startsAt, endsAt: FOUNDING_OFFER.endsAt },
+                ],
             ])
         })
 
         it("answers false when no purchase row comes back", async () => {
-            const { promo } = await build(mockEntityManager({ query: [FIND_FOUNDING_MEMBER, []] }))
+            const em = mockEntityManager()
+            answerQueryBuilders(em, fakeQueryBuilder({ getExists: false }))
+            const { promo } = await build(em)
 
             await expect(promo.foundingMember("user-1", "ws-1")).resolves.toBe(false)
         })
@@ -95,16 +114,18 @@ describe("PromoService", () => {
 
                 await expect(promo.foundingMember("user-1", "ws-1")).resolves.toBe(false)
                 expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-                expect(em.query).not.toHaveBeenCalled()
+                expect(em.createQueryBuilder).not.toHaveBeenCalled()
             },
         )
     })
 })
 
-describe("PromoService", () => {
+describe("PromoService state", () => {
     describe("state", () => {
         it("turns the recorded facts into stats and onboarding steps that link to the chatbot", async () => {
-            const em = mockEntityManager({ query: [FIND_PROMO_STATE, [stateRow]] })
+            const em = mockEntityManager()
+            const read = subQueryBuilder({ getRawOne: stateRow })
+            answerQueryBuilders(em, read)
             const { promo } = await build(em)
 
             await expect(promo.state("user-1", "ws-1")).resolves.toEqual({
@@ -122,16 +143,38 @@ describe("PromoService", () => {
                     { key: "Invoice", done: false, href: "/responsibilities" },
                 ],
             })
-            expect(em.query).toHaveBeenCalledWith(FIND_PROMO_STATE, [
-                "ws-1",
-                FOUNDING_OFFER.startsAt,
-                FOUNDING_OFFER.endsAt,
-                INVOICE_TITLE_PREFIX,
+            expect(read.argsOf("from")).toContainEqual(["public.workspaces", "ws"])
+            expect(read.argsOf("where")).toContainEqual(["ws.id = :workspaceId", { workspaceId: "ws-1" }])
+            expect(read.argsOf("setParameters")).toEqual([
+                [
+                    {
+                        website: "%website%",
+                        startsAt: FOUNDING_OFFER.startsAt,
+                        endsAt: FOUNDING_OFFER.endsAt,
+                        invoiceTitle: INVOICE_TITLE_PREFIX,
+                    },
+                ],
             ])
+            expect(read.argsOf("addSelect").map((call) => call[1])).toEqual(
+                expect.arrayContaining([
+                    "has_knowledge",
+                    "is_founding_member",
+                    "website_count",
+                    "after_hours_count",
+                    "avg_wait_hours",
+                    "has_customer_conversation",
+                    "has_lead_conversation",
+                    "has_approved",
+                    "has_won",
+                    "invoice_approved",
+                ]),
+            )
         })
 
         it("points every chatbot step at the install page when nothing is recorded", async () => {
-            const { promo } = await build(mockEntityManager({ query: [FIND_PROMO_STATE, []] }))
+            const em = mockEntityManager()
+            answerQueryBuilders(em, subQueryBuilder({ getRawOne: undefined }))
+            const { promo } = await build(em)
 
             await expect(promo.state("user-1", "ws-1")).resolves.toEqual({
                 hasChatbot: false,
@@ -150,19 +193,31 @@ describe("PromoService", () => {
             })
         })
     })
+})
 
+describe("PromoService leadWait", () => {
     describe("leadWait", () => {
         it("answers the wait of the lead at the clock instant", async () => {
             const wait = { show: true, hours: 4, replied: false }
-            const em = mockEntityManager({ query: [FIND_LEAD_WAIT, [wait]] })
+            const em = mockEntityManager()
+            const read = subQueryBuilder({ getRawOne: wait })
+            answerQueryBuilders(em, read)
             const { promo } = await build(em)
 
             await expect(promo.leadWait("user-1", "ws-1", "lead-1")).resolves.toEqual(wait)
-            expect(em.query).toHaveBeenCalledWith(FIND_LEAD_WAIT, ["ws-1", "lead-1", IN_OFFER])
+            expect(read.argsOf("from")).toContainEqual(["public.leads", "l"])
+            expect(read.argsOf("where")).toContainEqual([
+                "l.workspace_id = :workspaceId AND l.id = :leadId",
+                { workspaceId: "ws-1", leadId: "lead-1" },
+            ])
+            expect(read.argsOf("setParameters")).toEqual([[{ website: "%website%", now: new Date(IN_OFFER) }]])
+            expect(read.argsOf("limit")).toContainEqual([1])
         })
 
         it("hides the note for a missing lead", async () => {
-            const { promo } = await build(mockEntityManager({ query: [FIND_LEAD_WAIT, []] }))
+            const em = mockEntityManager()
+            answerQueryBuilders(em, subQueryBuilder({ getRawOne: undefined }))
+            const { promo } = await build(em)
 
             await expect(promo.leadWait("user-1", "ws-1", "missing")).resolves.toEqual({
                 show: false,

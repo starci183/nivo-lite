@@ -13,7 +13,7 @@ import {
     withRenewal,
 } from "./daily-summary.policy"
 import { CARD_COPY, RENEWAL_COPY, SUMMARY_COPY, kindText } from "./messages/accounting-desk.messages"
-import type { RenewalCashRow, RenewalPaidItemRow } from "./persistence/renewal-cash.rows"
+import type { RenewalCashFacts, RenewalPaidItemFacts } from "./renewal-cash.contracts"
 
 const SUBJECT = Symbol("daily-summary.policy")
 
@@ -150,7 +150,7 @@ describe("daily-summary.policy hub card and counts", () => {
     })
 })
 
-const EMPTY_ROW: RenewalCashRow = {
+const EMPTY_ROW: RenewalCashFacts = {
     issued_count: 0,
     issued_total: 0,
     issued: [],
@@ -168,7 +168,7 @@ const EMPTY_ROW: RenewalCashRow = {
     unmatched: [],
 }
 
-const PAID_ITEM: RenewalPaidItemRow = {
+const PAID_ITEM: RenewalPaidItemFacts = {
     invoice_no: "INV-202610-0001",
     amount_vnd: 2_160_000,
     customer_name: "Truong Phat",
@@ -176,7 +176,7 @@ const PAID_ITEM: RenewalPaidItemRow = {
     extended: true,
 }
 
-const RENEWAL_DAY: RenewalCashRow = {
+const RENEWAL_DAY: RenewalCashFacts = {
     issued_count: 2,
     issued_total: 3_780_000,
     issued: [

@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -7,8 +8,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { OfficeCommandCandidatesErrorCode } from "./errors/office-command-candidates.error"
 import type { MessageView } from "./office-command-candidates.contracts"
 import { OfficeThreadService } from "./office-thread.service"
-import type { ApprovalRow } from "./persistence/office-thread.rows"
-import { LIST_DECIDED_APPROVALS, LIST_MESSAGES, LIST_PENDING_APPROVALS } from "./persistence/office-thread.sql"
+import type { ApprovalLine } from "./office-reads.contracts"
 
 const member: WorkspaceMember = {
     userId: "u-1",
@@ -37,7 +37,7 @@ const messageOf = builder<MessageView>({
     created_at: "2026-10-12T10:00:00+00:00",
 })
 
-const approvalOf = builder<ApprovalRow>({
+const approvalOf = builder<ApprovalLine>({
     id: "x-1",
     responsibility_id: "r-1",
     agent_id: null,
@@ -74,19 +74,23 @@ describe("OfficeThreadService", () => {
     describe("messages", () => {
         it("reads the newest page after proving membership and asks for one row more than the page", async () => {
             const rows = [messageOf({ id: "m-3" }), messageOf({ id: "m-2" }), messageOf({ id: "m-1" })]
-            const em = mockEntityManager({ query: [LIST_MESSAGES, rows] })
+            const em = mockEntityManager()
+            const [page_] = queueQueryBuilders(em, [{ getRawMany: rows }])
             const { service, members } = await build(em)
 
             const page = await service.messages("u-1", "ws-1", { before: null, limit: 2, room: null })
 
             expect(members.require).toHaveBeenCalledWith("u-1", "ws-1")
-            expect(em.query).toHaveBeenCalledWith(LIST_MESSAGES, ["ws-1", null, null, 3, null])
+            expect(page_?.callsOf("where")).toEqual([["m.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
+            expect(page_?.callsOf("andWhere")).toEqual([])
+            expect(page_?.callsOf("limit")).toEqual([[3]])
             expect(page.messages.map((line) => line.id)).toEqual(["m-3", "m-2"])
             expect(page.next).toEqual({ createdAt: "2026-10-12T10:00:00+00:00", id: "m-2" })
         })
 
         it("continues after a cursor and clamps the page size", async () => {
-            const em = mockEntityManager({ query: [LIST_MESSAGES, []] })
+            const em = mockEntityManager()
+            const [paged] = queueQueryBuilders(em, [{ getRawMany: [] }])
             const { service } = await build(em)
             const id = "0b6f0c5e-2d41-4f55-9c9a-7a1c2f3e4d5b"
 
@@ -96,7 +100,14 @@ describe("OfficeThreadService", () => {
                 room: "marketing",
             })
 
-            expect(em.query).toHaveBeenCalledWith(LIST_MESSAGES, ["ws-1", "2026-10-12T10:00:00Z", id, 101, "marketing"])
+            expect(paged?.callsOf("andWhere")).toEqual([
+                ["m.room = :room", { room: "marketing" }],
+                [
+                    "(m.created_at, m.id) < (CAST(:beforeAt AS timestamptz), CAST(:beforeId AS uuid))",
+                    { beforeAt: "2026-10-12T10:00:00Z", beforeId: id },
+                ],
+            ])
+            expect(paged?.callsOf("limit")).toEqual([[101]])
             expect(page).toEqual({ messages: [], next: null })
         })
 
@@ -117,30 +128,33 @@ describe("OfficeThreadService", () => {
             ).rejects.toMatchObject({
                 code: OfficeCommandCandidatesErrorCode.PageInvalid,
             })
-            expect(em.query).not.toHaveBeenCalled()
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
     })
 
     describe("approvals", () => {
         it("lists the waiting executions as cards", async () => {
-            const em = mockEntityManager({ query: [LIST_PENDING_APPROVALS, [approvalOf()]] })
+            const em = mockEntityManager()
+            const [pending] = queueQueryBuilders(em, [{ getRawMany: [approvalOf()] }])
             const { service, members } = await build(em)
 
             const cards = await service.pendingApprovals("u-1", "ws-1")
 
             expect(members.require).toHaveBeenCalledWith("u-1", "ws-1")
-            expect(em.query).toHaveBeenCalledWith(LIST_PENDING_APPROVALS, ["ws-1", 100])
+            expect(pending?.callsOf("andWhere")).toEqual([["x.status = 'pending_approval'"]])
+            expect(pending?.callsOf("limit")).toEqual([[100]])
             expect(cards).toHaveLength(1)
             expect(cards[0]).toMatchObject({ id: "x-1", leadName: "Lan", agentName: "An", channel: "zalo" })
         })
 
         it("lists the last eight decided executions", async () => {
-            const em = mockEntityManager({ query: [LIST_DECIDED_APPROVALS, [approvalOf({ status: "approved" })]] })
+            const em = mockEntityManager()
+            const [decided] = queueQueryBuilders(em, [{ getRawMany: [approvalOf({ status: "approved" })] }])
             const { service } = await build(em)
 
             const cards = await service.decidedApprovals("u-1", "ws-1")
 
-            expect(em.query).toHaveBeenCalledWith(LIST_DECIDED_APPROVALS, ["ws-1", 8])
+            expect(decided?.callsOf("limit")).toEqual([[8]])
             expect(cards[0]?.status).toBe("approved")
         })
     })

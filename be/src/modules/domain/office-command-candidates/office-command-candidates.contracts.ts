@@ -1,4 +1,4 @@
-import type { ProposedCommand } from "@modules/integrations/deepseek"
+import type { ProposedCommand } from "@modules/domain/ai-tasks"
 import type { Locale } from "@modules/platform/i18n"
 
 /** One labelled line of a command card ("Customer: Lan"). */

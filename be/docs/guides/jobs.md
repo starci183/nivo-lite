@@ -89,6 +89,7 @@ the same fenced processing path on BullMQ.
 | `QUEUE_VISIBILITY_TIMEOUT`     | `60s`           | Broker lock and workspace lease duration; leases renew every third of it.           |
 | `QUEUE_SHUTDOWN_GRACE`         | `30s`           | Time existing deliveries get before shutdown abort.                                 |
 | `JOBS_LEASE`, `JOBS_WORKER_ID` | `60s`, `worker` | Fenced claim lease and worker name.                                                 |
+| `JOBS_SCHEDULER_ENABLED`       | `true`          | Whether this app fires the recurring ticks (the api does; one-off runs never).      |
 
 Redis must have a finite positive `maxmemory` and explicit `maxmemory-policy noeviction`. The transport validates those settings
 before publication or worker startup. Producer connections disable offline buffering and use 5 s connection and command deadlines.

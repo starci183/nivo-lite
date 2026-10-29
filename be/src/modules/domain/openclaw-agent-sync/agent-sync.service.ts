@@ -1,44 +1,72 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
 import { agentIdFor, InjectOpenclawAgentRegistry, InjectOpenclawWorkspaceWriter } from "@modules/integrations/openclaw"
 import type { AgentRegistryService, WorkspaceWriterService } from "@modules/integrations/openclaw"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectInbox } from "@modules/platform/inbox"
+import type { Inbox } from "@modules/platform/inbox"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectAgentsQueue, isSyncAgentsPayload } from "@modules/queues/agents"
 import type { AgentsQueue } from "@modules/queues/agents"
 import { INTERNAL_AGENT_MODULE, INTERNAL_AGENT_NAME, INTERNAL_FILES, scopeOf, syncErrorOf } from "./agent-sync.policy"
-import type { OptionalSyncOutcome, SyncAsk, SyncOutcome, SyncRequest } from "./openclaw-agent-sync.contracts"
+import type {
+    InboxClaim,
+    OptionalSyncOutcome,
+    SyncAsk,
+    SyncOutcome,
+    SyncRequest,
+} from "./openclaw-agent-sync.contracts"
 import { InjectInstallations, processorFromSettings, AgentBundleService, PauseClient } from "@modules/domain/agents"
 import type { AgentBundle, Installation, InstallationDirectory, InstallationRef } from "@modules/domain/agents"
 import { InjectSyncOptions } from "./openclaw-agent-sync.decorators"
 import { OpenclawAgentSyncLogEvent } from "./openclaw-agent-sync.log-events"
 import type { OpenclawAgentSyncOptions } from "./openclaw-agent-sync.options"
 import { OpenclawAgentSyncError, OpenclawAgentSyncErrorCode } from "./errors/openclaw-agent-sync.error"
-import type { SyncStateRow } from "./persistence/openclaw-agent-sync.rows"
-import {
-    FIND_SYNC_STATE,
-    RECORD_SYNC_CHECKED,
-    RECORD_SYNC_FAILED,
-    RECORD_SYNC_WRITTEN,
-} from "./persistence/openclaw-agent-sync.sql"
+import { OpenclawAgentSyncEntity } from "./persistence/entities"
 
 /** Who may ask for a sync. */
 const GOVERNORS = ["owner", "manager"] as const
 
 /** The most installations one scope syncs in one job. */
 const SCOPE_LIMIT = 500
+/** The columns a check that found the workspace current refreshes. */
+const CHECKED_COLUMNS = [
+    "workspace_id",
+    "agent_id",
+    "checked_at",
+    "status",
+    "error",
+    "context_version",
+    "content_hash",
+    "files",
+] as const
+/** The columns a check that wrote the workspace refreshes, the sync time included. */
+const SYNCED_COLUMNS = [
+    "workspace_id",
+    "agent_id",
+    "checked_at",
+    "synced_at",
+    "status",
+    "error",
+    "context_version",
+    "content_hash",
+    "files",
+] as const
 
 @Injectable()
 /**
  * One-way sync of an agent's OpenClaw workspace from Supabase: the bundle is built from the database, written file by file (changed
  * files only), the agent is registered in openclaw.json after its files are complete, and what was written is recorded on
  * `openclaw_agent_sync`. When the hash, the files on disk and the registration are all current only the check time moves. The job
- * `agents.sync` calls `process`; a change of an agent, its context or the business knowledge calls `request`.
+ * `agents.sync` calls `process`. It is the `agent_sync` reactor of `installation_changed`: a change of an installation, its context
+ * or the business knowledge is published by the modules capability in the transaction of the change and reaches `installationChanged`,
+ * which queues the job in the transaction that claims the delivery.
  */
 export class AgentSyncService {
     constructor(
@@ -46,6 +74,7 @@ export class AgentSyncService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
+        @InjectInbox() private readonly inbox: Inbox,
         @InjectInstallations() private readonly installations: InstallationDirectory,
         @InjectOpenclawAgentRegistry() private readonly registry: AgentRegistryService,
         @InjectOpenclawWorkspaceWriter() private readonly writer: WorkspaceWriterService,
@@ -68,19 +97,27 @@ export class AgentSyncService {
         )
     }
 
-    /** Queues a sync in its own transaction, for a caller that has none open. */
-    requestNow(request: SyncRequest): Promise<void> {
-        return this.entityManager.transaction((tx) => this.request(request, tx))
+    /** The `agent_sync` reactor: claims the delivery and queues the sync job in one transaction, so a redelivery queues nothing twice. */
+    installationChanged(change: SyncRequest, claim: InboxClaim): Promise<void> {
+        return this.entityManager.transaction(async (tx) => {
+            if (!(await this.inbox.claim(claim.consumer, claim.dedupeKey, tx))) return
+            await this.request(change, tx)
+        })
     }
 
     /** Queues a sync on behalf of a signed-in owner or manager of the workspace the request names. */
     async requestFor(userId: string, ask: SyncAsk): Promise<void> {
         await this.members.require(userId, ask.workspaceId, GOVERNORS)
-        await this.requestNow({
-            workspaceId: ask.workspaceId,
-            installationId: ask.installationId ?? null,
-            force: ask.force ?? false,
-        })
+        await this.entityManager.transaction((tx) =>
+            this.request(
+                {
+                    workspaceId: ask.workspaceId,
+                    installationId: ask.installationId ?? null,
+                    force: ask.force ?? false,
+                },
+                tx,
+            ),
+        )
     }
 
     /**
@@ -160,16 +197,21 @@ export class AgentSyncService {
         const dirs = this.registry.workspaceDirs(bundle.agentId)
         if (dirs === null) throw new OpenclawAgentSyncError({ code: OpenclawAgentSyncErrorCode.WorkspaceUnavailable })
         const hash = this.writer.contentHash(bundle.files)
-        const [previous] = await this.entityManager.query<Array<SyncStateRow>>(FIND_SYNC_STATE, [bundle.installationId])
-        const record = [
-            bundle.installationId,
-            bundle.workspaceId,
-            bundle.agentId,
-            this.clock.now().toISOString(),
-            bundle.contextVersion,
-            hash,
-            JSON.stringify(this.writer.metaOf(bundle.files)),
-        ]
+        const previous = await this.entityManager.findOne(OpenclawAgentSyncEntity, {
+            select: { contentHash: true, status: true },
+            where: { installationId: bundle.installationId },
+        })
+        const record = {
+            installationId: bundle.installationId,
+            workspaceId: bundle.workspaceId,
+            agentId: bundle.agentId,
+            checkedAt: this.clock.now(),
+            status: "ok" as const,
+            error: null,
+            contextVersion: bundle.contextVersion,
+            contentHash: hash,
+            files: this.writer.metaOf(bundle.files),
+        }
         const outcome = {
             agentId: bundle.agentId,
             contextVersion: bundle.contextVersion,
@@ -177,18 +219,18 @@ export class AgentSyncService {
             contentHash: hash,
         }
         const current =
-            previous?.content_hash === hash &&
+            previous?.contentHash === hash &&
             this.writer.matches(dirs.local, bundle.files) &&
             this.registry.isCurrent(bundle.agentId, bundle.agentName)
         if (current) {
-            await this.entityManager.query(RECORD_SYNC_CHECKED, record)
+            await this.upsertSync(record, CHECKED_COLUMNS)
             return { ...outcome, changed: false, written: 0, removed: 0, registered: false }
         }
         // Files first, registration after: the gateway only ever sees an agent whose workspace is complete.
         const { written, removed } = this.writer.write(dirs.local, bundle.files)
         const registered = this.registry.register(bundle.agentId, bundle.agentName)
         if (registered) await this.pause.wait(this.options.reloadSettleMs)
-        await this.entityManager.query(RECORD_SYNC_WRITTEN, record)
+        await this.upsertSync({ ...record, syncedAt: record.checkedAt }, SYNCED_COLUMNS)
         this.logger.info(OpenclawAgentSyncLogEvent.AgentSynced, {
             agentId: bundle.agentId,
             written,
@@ -198,15 +240,33 @@ export class AgentSyncService {
         return { ...outcome, changed: true, written, removed, registered }
     }
 
+    /** Writes one installation's sync record, overwriting the given columns when it exists. */
+    private upsertSync(
+        values: QueryDeepPartialEntity<OpenclawAgentSyncEntity>,
+        columns: ReadonlyArray<string>,
+    ): Promise<unknown> {
+        return this.entityManager
+            .createQueryBuilder(OpenclawAgentSyncEntity, "o")
+            .insert()
+            .values(values)
+            .orUpdate([...columns], ["installation_id"])
+            .execute()
+    }
+
     private recordFailure(installation: Installation, cause: unknown): Promise<void> {
         return this.entityManager
-            .query(RECORD_SYNC_FAILED, [
-                installation.id,
-                installation.workspaceId,
-                agentIdFor(installation.workspaceId, installation.module),
-                this.clock.now().toISOString(),
-                syncErrorOf(cause),
-            ])
+            .createQueryBuilder(OpenclawAgentSyncEntity, "o")
+            .insert()
+            .values({
+                installationId: installation.id,
+                workspaceId: installation.workspaceId,
+                agentId: agentIdFor(installation.workspaceId, installation.module),
+                checkedAt: this.clock.now(),
+                status: "error",
+                error: syncErrorOf(cause),
+            })
+            .orUpdate(["checked_at", "status", "error"], ["installation_id"])
+            .execute()
             .then(() => undefined)
             .catch((error_: unknown) => {
                 this.logger.error(OpenclawAgentSyncLogEvent.SyncFailureNotRecorded, error_, {

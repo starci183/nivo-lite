@@ -20,14 +20,10 @@ import {
     remindDedupeKey,
 } from "@modules/queues/shifts"
 import type { ShiftAlertPayload } from "@modules/queues/shifts"
-import type { AlertShiftRow, EnabledRow, NameRow, ReminderWorkspaceRow } from "./persistence/shifts-alerts.rows"
-import {
-    SELECT_ALERT_SHIFT,
-    SELECT_ALERT_SHIFTS,
-    SELECT_DAY_MATES,
-    SELECT_REMINDER_ON,
-    SELECT_REMINDER_WORKSPACES,
-} from "./persistence/shifts-alerts.sql"
+import { ShiftsShiftEntity, ShiftsSettingsEntity, ShiftsStaffEntity } from "./persistence/entities"
+import type { AlertShiftRead, NameRead, ReminderWorkspaceRead } from "./persistence/shifts-alerts.reads"
+import { selectAlertShifts } from "./persistence/shifts-alert-shift.query"
+import { REMINDER_TEMPLATE, isReminderOn, selectEnabledPipelines } from "./persistence/shifts-pipeline.query"
 import { fieldText } from "./policies/gate-fields.policy"
 import { nameOf } from "./policies/labels.policy"
 import { shiftsJobOf } from "./policies/shift-jobs.policy"
@@ -39,6 +35,11 @@ import { ShiftsMonthCloseService } from "./shifts-month-close.service"
 import { ShiftsNotifyService } from "./shifts-notify.service"
 import { ShiftsTextService } from "./shifts-text.service"
 import { ShiftsLogEvent } from "./shifts.log-events"
+
+/** The most people one reminder lists as on duty with the person. */
+const MATES_MAX = 5
+/** The most live shifts of the three days one scan reads for a workspace. */
+const ALERT_SHIFTS_MAX = 2000
 
 /** Who asks the gate for a reminder, as the log shows it. */
 const ACTOR = "NIVO"
@@ -126,7 +127,15 @@ export class ShiftsAlertsService implements OnModuleInit {
 
     /** Queues every reminder and no-show check that is due now; a workspace that fails is logged and the others still run. */
     async scan(now: Date): Promise<AlertScan> {
-        const workspaces = await this.entityManager.query<Array<ReminderWorkspaceRow>>(SELECT_REMINDER_WORKSPACES)
+        const workspaces = await selectEnabledPipelines(this.entityManager, REMINDER_TEMPLATE)
+            .select([
+                "p.workspace_id AS workspace_id",
+                "p.config AS config",
+                "s.remind_minutes AS remind_minutes",
+                "s.noshow_minutes AS noshow_minutes",
+            ])
+            .leftJoin(ShiftsSettingsEntity, "s", "s.workspace_id = p.workspace_id")
+            .getRawMany<ReminderWorkspaceRead>()
         const today = todayVn(now)
         let reminders = 0
         let noShows = 0
@@ -216,7 +225,19 @@ export class ShiftsAlertsService implements OnModuleInit {
         const person = setup.staff.find((member) => member.id === shift.staffId)
         if (person === undefined) return { summary: this.words.text("shifts.remindNoPerson"), evidence: "pending" }
         const [mates, shop] = await Promise.all([
-            this.entityManager.query<Array<NameRow>>(SELECT_DAY_MATES, [workspaceId, shift.date, person.id]),
+            this.entityManager
+                .createQueryBuilder(ShiftsShiftEntity, "s")
+                .innerJoin(ShiftsStaffEntity, "p", "p.id = s.staff_id")
+                .select("p.name", "name")
+                .distinct(true)
+                .where(
+                    "s.workspace_id = :workspaceId AND s.shift_date = :day AND s.status IN ('published', 'swapped') " +
+                        "AND s.staff_id IS NOT NULL AND s.staff_id <> :personId",
+                    { workspaceId, day: shift.date, personId: person.id },
+                )
+                .orderBy("p.name", "ASC")
+                .limit(MATES_MAX)
+                .getRawMany<NameRead>(),
             this.workspaces.nameOf(workspaceId),
         ])
         const body = this.words.text("shifts.remindBody", {
@@ -254,11 +275,12 @@ export class ShiftsAlertsService implements OnModuleInit {
         today: string,
         now: Date,
     ): Promise<AlertScan> {
-        const rows = await this.entityManager.query<Array<AlertShiftRow>>(SELECT_ALERT_SHIFTS, [
-            workspaceId,
-            addDays(today, -1),
-            addDays(today, 1),
-        ])
+        const rows = await selectAlertShifts(this.entityManager, workspaceId, true)
+            .andWhere("s.shift_date BETWEEN :first AND :last", { first: addDays(today, -1), last: addDays(today, 1) })
+            .orderBy("s.shift_date", "ASC")
+            .addOrderBy("s.start_time", "ASC")
+            .limit(ALERT_SHIFTS_MAX)
+            .getRawMany<AlertShiftRead>()
         const due = dueAlerts(rows.map(toAlertShift), minutes, now.getTime())
         if (due.length === 0) return { reminders: 0, noShows: 0 }
         await this.entityManager.transaction((tx) =>
@@ -278,14 +300,16 @@ export class ShiftsAlertsService implements OnModuleInit {
         }
     }
 
-    private async isOn(workspaceId: string): Promise<boolean> {
-        const [row] = await this.entityManager.query<Array<EnabledRow>>(SELECT_REMINDER_ON, [workspaceId])
-        return row?.enabled === true
+    private isOn(workspaceId: string): Promise<boolean> {
+        return isReminderOn(this.entityManager, workspaceId)
     }
 
     private async alertShift(workspaceId: string, shiftId: string): Promise<AlertShift | undefined> {
         if (shiftId === "") return undefined
-        const [row] = await this.entityManager.query<Array<AlertShiftRow>>(SELECT_ALERT_SHIFT, [workspaceId, shiftId])
+        const row = await selectAlertShifts(this.entityManager, workspaceId, true)
+            .andWhere("s.id = :shiftId", { shiftId })
+            .limit(1)
+            .getRawOne<AlertShiftRead>()
         return row === undefined ? undefined : toAlertShift(row)
     }
 }

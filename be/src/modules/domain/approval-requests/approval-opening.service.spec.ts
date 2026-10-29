@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
@@ -16,9 +17,13 @@ import {
     OWNER,
     OWNER_REF,
     openOf,
-    approvalRequestOf,
+    approvalRequestEntityOf,
     setupFor,
     setupOf,
+    sequentialRequest,
+    requestWithoutAmount,
+    requestExcludingLan,
+    requestWithoutApproversExpiringNow,
 } from "@tests/fixtures/builders/approval-requests.builder"
 import type { Arrangement } from "@tests/fixtures/builders/approval-requests.builder"
 import { ApprovalAnnouncerService } from "./approval-announcer.service"
@@ -26,7 +31,14 @@ import { ApprovalEscalationService } from "./approval-escalation.service"
 import { ApprovalOpeningService } from "./approval-opening.service"
 import type { ApprovalResolved } from "./approval-requests.contracts"
 import { ApprovalRequestsErrorCode } from "./errors/approval-requests.error"
-import { FIND_PENDING_REQUEST, INSERT_REQUEST } from "./persistence/approval-requests.sql"
+import { ApprovalRequestEntity } from "./persistence/entities"
+
+/** The manager of a transaction whose insert answers these rows. */
+const inserting = (...rows: Array<ApprovalRequestEntity>) => {
+    const em = mockEntityManager()
+    const fakes = queueQueryBuilders(em, [{ execute: { raw: rows } }])
+    return { em, fakes, values: () => fakes[0]?.callsOf("values")[0]?.[0] }
+}
 
 const EXPIRED_AT_ONCE: ApprovalResolved = {
     requestId: "request-1",
@@ -66,7 +78,7 @@ const build = async (em: MockEntityManager, arrangement: Arrangement = {}) => {
 
 describe("ApprovalOpeningService > open", () => {
     it("tags the group the grants cover, lists who was left out and starts the clock", async () => {
-        const em = mockEntityManager({ query: [INSERT_REQUEST, [approvalRequestOf({ approvers: [MINH_REF] })]] })
+        const { em, values } = inserting(approvalRequestEntityOf({ approvers: [MINH_REF] }))
         const { service, transaction } = await build(em)
 
         const opened = await service.open(openOf())
@@ -79,19 +91,18 @@ describe("ApprovalOpeningService > open", () => {
             expiresAt: IN_30_MINUTES,
         })
         expect(transaction.commits).toBe(1)
-        const params = em.query.mock.calls[0]?.[1]
-        expect(params?.[8]).toBe(JSON.stringify([MINH_REF]))
-        expect(params?.[9]).toBe(
-            JSON.stringify([
+        expect(values()).toMatchObject({
+            approvers: [MINH_REF],
+            excluded: [
                 { memberId: "member-ha", reason: "over_limit" },
                 { memberId: "member-lan", reason: "no_grant" },
-            ]),
-        )
-        expect(params?.[11]).toBe(IN_30_MINUTES)
+            ],
+            expiresAt: new Date(IN_30_MINUTES),
+        })
     })
 
     it("gives the approvers the order the rule lists them and the policy and time the rule names", async () => {
-        const em = mockEntityManager({ query: [INSERT_REQUEST, [approvalRequestOf({ policy: "sequential" })]] })
+        const { em, values } = inserting(sequentialRequest())
         const setup = setupOf({
             policy: "sequential",
             timeout_minutes: 45,
@@ -101,37 +112,29 @@ describe("ApprovalOpeningService > open", () => {
 
         await service.open(openOf())
 
-        const params = em.query.mock.calls[0]?.[1]
-        expect(params?.[7]).toBe("sequential")
-        expect(params?.[8]).toBe(JSON.stringify([MINH_REF, OWNER_REF]))
-        expect(params?.[10]).toBe(45)
-        expect(params?.[11]).toBe("2026-10-22T10:15:00.000Z")
+        expect(values()).toMatchObject({
+            policy: "sequential",
+            approvers: [MINH_REF, OWNER_REF],
+            timeoutMinutes: 45,
+            expiresAt: new Date("2026-10-22T10:15:00.000Z"),
+        })
     })
 
     it("opens a request for an action that carries no amount, covered by any grant", async () => {
-        const em = mockEntityManager({ query: [INSERT_REQUEST, [approvalRequestOf({ amount: null })]] })
+        const { em, values } = inserting(requestWithoutAmount())
         const { service } = await build(em)
 
         await service.open(openOf({ amount: null }))
 
-        const params = em.query.mock.calls[0]?.[1]
-        expect(params?.[4]).toBeNull()
-        expect(params?.[8]).toBe(JSON.stringify([MINH_REF, HA_REF]))
+        expect(values()).toMatchObject({ amount: null, approvers: [MINH_REF, HA_REF] })
     })
 })
 
 describe("ApprovalOpeningService > open, a step that has a request", () => {
     it("answers the pending request of the step again instead of opening a second one", async () => {
-        const pending = approvalRequestOf({
-            approvers: [MINH_REF, HA_REF],
-            excluded: [{ memberId: "member-lan", reason: "no_grant" }],
-        })
-        const em = mockEntityManager({
-            query: [
-                [INSERT_REQUEST, []],
-                [FIND_PENDING_REQUEST, [pending]],
-            ],
-        })
+        const pending = requestExcludingLan()
+        const { em } = inserting()
+        em.findOne.mockResolvedValue(pending)
         const { service, announcer } = await build(em)
 
         await expect(service.open(openOf())).resolves.toEqual({
@@ -142,15 +145,14 @@ describe("ApprovalOpeningService > open, a step that has a request", () => {
             expiresAt: IN_30_MINUTES,
         })
         expect(announcer.resolved).not.toHaveBeenCalled()
+        expect(em.findOne).toHaveBeenCalledWith(ApprovalRequestEntity, {
+            where: { chainStepId: "step-1", status: "pending" },
+        })
     })
 
     it("fails when the pending request vanished between the insert and the read", async () => {
-        const em = mockEntityManager({
-            query: [
-                [INSERT_REQUEST, []],
-                [FIND_PENDING_REQUEST, []],
-            ],
-        })
+        const { em } = inserting()
+        em.findOne.mockResolvedValue(null)
         const { service } = await build(em)
 
         await expect(service.open(openOf())).rejects.toMatchObject({ code: ApprovalRequestsErrorCode.NotFound })
@@ -159,17 +161,15 @@ describe("ApprovalOpeningService > open, a step that has a request", () => {
 
 describe("ApprovalOpeningService > open, nobody can approve", () => {
     it("expires the request at once, hands it over and announces it", async () => {
-        const em = mockEntityManager({
-            query: [INSERT_REQUEST, [approvalRequestOf({ approvers: [], expires_at: NOW })]],
-        })
+        const { em, values } = inserting(requestWithoutApproversExpiringNow())
         const { service, escalation, announcer } = await build(em, { directory: [OWNER, MINH], grants: [] })
 
         const opened = await service.open(openOf())
 
         expect(opened).toMatchObject({ approvers: [], expiresAt: NOW })
         expect(escalation.expire).toHaveBeenCalledTimes(1)
-        expect(announcer.resolved).toHaveBeenCalledWith(EXPIRED_AT_ONCE)
-        expect(em.query.mock.calls[0]?.[1]?.[11]).toBe(NOW)
+        expect(announcer.resolved).toHaveBeenCalledWith(EXPIRED_AT_ONCE, expect.anything())
+        expect(values()).toMatchObject({ approvers: [], expiresAt: new Date(NOW) })
     })
 })
 
@@ -218,7 +218,7 @@ describe("ApprovalOpeningService > open, refusals", () => {
 
         await expect(service.open(openOf(params))).rejects.toMatchObject({ code })
 
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
         expect(transaction.commits).toBe(0)
     })
 })

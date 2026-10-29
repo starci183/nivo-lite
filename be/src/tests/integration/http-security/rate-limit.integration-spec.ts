@@ -2,25 +2,19 @@ import type { ExecutionContext } from "@nestjs/common"
 import { mock } from "@starci/jest-preset"
 import { HttpSecurityErrorCode, RateLimit, RateLimitGuard, RateTier } from "@modules/platform/http-security"
 import type { OperationRequest } from "@modules/platform/http-security"
-import type {
-    RateLimitAccessRow,
-    RateLimitBucketRow,
-    RateLimitProofAllowedRow,
-    RateLimitProofHitsRow,
-} from "../../fixtures/persistence/rate-limit.rows"
-import {
-    CLEAN_RATE_LIMIT_BUCKET,
-    CONSUME_RATE_LIMIT_PROOF_BUCKET,
-    EXPIRE_RATE_LIMIT_BUCKET,
-    INSERT_RATE_LIMIT_PROOF_BUCKET,
-    RATE_LIMIT_ACCESS,
-    RATE_LIMIT_BUCKET,
-    RUN_RATE_LIMIT_CLEANUP,
-    UPDATE_RATE_LIMIT_PROOF_BUCKET,
-} from "../../fixtures/persistence/rate-limit.sql"
 import { RATE_LIMIT_PROOF_MODULES, sharedRateLimitStore } from "../../world/rate-limit-proof.module"
 import { withBackendRole } from "../../world/backend-role-proof.service"
 import { useTestWorld } from "../../world/use-test-world"
+import {
+    rateLimitBucket,
+    expireRateLimitBucket,
+    cleanRateLimitBucket,
+    runRateLimitCleanup,
+    insertRateLimitProofBucket,
+    updateRateLimitProofBucket,
+    consumeRateLimitProofBucket,
+    rateLimitAccess,
+} from "../../world/rate-limit-database.service"
 
 class Door {
     readonly purpose = "a controller class the rate-limit guard reads its tier from"
@@ -49,7 +43,7 @@ describe("HTTP rate limits shared by PostgreSQL replicas", () => {
         const ip = first.key("concurrent")
         const key = `${RateTier.Default}:${ip}`
         first.cleanup(async () => {
-            await first.db.primary.query(CLEAN_RATE_LIMIT_BUCKET, [key])
+            await cleanRateLimitBucket(first.db.primary, key)
         })
         const firstStore = sharedRateLimitStore(first)
         const secondStore = sharedRateLimitStore(second)
@@ -74,7 +68,7 @@ describe("HTTP rate limits shared by PostgreSQL replicas", () => {
         for (const outcome of outcomes.filter((result) => result !== true)) {
             expect(outcome).toMatchObject({ code: HttpSecurityErrorCode.RateLimited })
         }
-        const rows = await first.db.primary.query<Array<RateLimitBucketRow>>(RATE_LIMIT_BUCKET, [key])
+        const rows = await rateLimitBucket(first.db.primary, key)
         expect(rows).toHaveLength(1)
         expect(rows[0]?.hits).toBe("24")
     })
@@ -83,7 +77,7 @@ describe("HTTP rate limits shared by PostgreSQL replicas", () => {
         const ip = first.key("strict")
         const key = `${RateTier.Strict}:${ip}`
         first.cleanup(async () => {
-            await first.db.primary.query(CLEAN_RATE_LIMIT_BUCKET, [key])
+            await cleanRateLimitBucket(first.db.primary, key)
         })
         const context = contextOf(ip, strictHandler)
 
@@ -98,19 +92,19 @@ describe("Shared rate-limit window lifecycle", () => {
     it("starts one new shared window at expiry without losing simultaneous rollover increments", async () => {
         const key = first.key("rollover")
         first.cleanup(async () => {
-            await first.db.primary.query(CLEAN_RATE_LIMIT_BUCKET, [key])
+            await cleanRateLimitBucket(first.db.primary, key)
         })
         const firstStore = sharedRateLimitStore(first)
         const secondStore = sharedRateLimitStore(second)
         await firstStore.consume(key, 60_000, 2)
         await secondStore.consume(key, 60_000, 2)
         await expect(firstStore.consume(key, 60_000, 2)).resolves.toBe(false)
-        await first.db.primary.query(EXPIRE_RATE_LIMIT_BUCKET, [key])
+        await expireRateLimitBucket(first.db.primary, key)
 
         const admitted = await Promise.all([firstStore.consume(key, 60_000, 2), secondStore.consume(key, 60_000, 2)])
 
         expect(admitted).toEqual([true, true])
-        const rows = await second.db.primary.query<Array<RateLimitBucketRow>>(RATE_LIMIT_BUCKET, [key])
+        const rows = await rateLimitBucket(second.db.primary, key)
         expect(rows).toHaveLength(1)
         expect(rows[0]).toMatchObject({ hits: "2", active: true })
         await expect(secondStore.consume(key, 60_000, 2)).resolves.toBe(false)
@@ -121,20 +115,20 @@ describe("Shared rate-limit window lifecycle", () => {
         const live = first.key("cleanup-live")
         const trigger = first.key("cleanup-trigger")
         first.cleanup(async () => {
-            await first.db.primary.query(CLEAN_RATE_LIMIT_BUCKET, [expired])
-            await first.db.primary.query(CLEAN_RATE_LIMIT_BUCKET, [live])
-            await first.db.primary.query(CLEAN_RATE_LIMIT_BUCKET, [trigger])
+            await cleanRateLimitBucket(first.db.primary, expired)
+            await cleanRateLimitBucket(first.db.primary, live)
+            await cleanRateLimitBucket(first.db.primary, trigger)
         })
         const store = sharedRateLimitStore(first)
         await store.consume(expired, 60_000, 3)
         await store.consume(live, 60_000, 3)
-        await first.db.primary.query(EXPIRE_RATE_LIMIT_BUCKET, [expired])
-        const before = await first.db.primary.query<Array<RateLimitBucketRow>>(RATE_LIMIT_BUCKET, [live])
+        await expireRateLimitBucket(first.db.primary, expired)
+        const before = await rateLimitBucket(first.db.primary, live)
 
         await expect(sharedRateLimitStore(second).consume(trigger, 60_000, 3)).resolves.toBe(true)
 
-        await expect(first.db.primary.query(RATE_LIMIT_BUCKET, [expired])).resolves.toEqual([])
-        await expect(first.db.primary.query(RATE_LIMIT_BUCKET, [live])).resolves.toEqual(before)
+        await expect(rateLimitBucket(first.db.primary, expired)).resolves.toEqual([])
+        await expect(rateLimitBucket(first.db.primary, live)).resolves.toEqual(before)
     })
 })
 
@@ -142,29 +136,23 @@ describe("Shared rate-limit database access", () => {
     it("lets the least-privilege backend count and clean windows while denying browser data and function access", async () => {
         const key = first.key("backend-privileges")
         first.cleanup(async () => {
-            await first.db.primary.query(CLEAN_RATE_LIMIT_BUCKET, [key])
+            await cleanRateLimitBucket(first.db.primary, key)
         })
 
         await withBackendRole(first, async (tx) => {
-            await tx.query(INSERT_RATE_LIMIT_PROOF_BUCKET, [key])
-            await expect(
-                tx.query<Array<RateLimitProofHitsRow>>(UPDATE_RATE_LIMIT_PROOF_BUCKET, [key]),
-            ).resolves.toEqual([{ hits: "2" }])
-            const rows = await tx.query<Array<RateLimitBucketRow>>(RATE_LIMIT_BUCKET, [key])
+            await insertRateLimitProofBucket(tx, key)
+            await expect(updateRateLimitProofBucket(tx, key)).resolves.toEqual([{ hits: "2" }])
+            const rows = await rateLimitBucket(tx, key)
             expect(rows).toHaveLength(1)
             expect(rows[0]).toMatchObject({ hits: "2", active: true })
-            await expect(
-                tx.query<Array<RateLimitProofAllowedRow>>(CONSUME_RATE_LIMIT_PROOF_BUCKET, [key, 60_000, 3]),
-            ).resolves.toEqual([{ allowed: true }])
-            await expect(
-                tx.query<Array<RateLimitProofAllowedRow>>(CONSUME_RATE_LIMIT_PROOF_BUCKET, [key, 60_000, 3]),
-            ).resolves.toEqual([{ allowed: false }])
-            await tx.query(EXPIRE_RATE_LIMIT_BUCKET, [key])
+            await expect(consumeRateLimitProofBucket(tx, key, 60_000, 3)).resolves.toEqual([{ allowed: true }])
+            await expect(consumeRateLimitProofBucket(tx, key, 60_000, 3)).resolves.toEqual([{ allowed: false }])
+            await expireRateLimitBucket(tx, key)
 
-            await tx.query(RUN_RATE_LIMIT_CLEANUP)
+            await runRateLimitCleanup(tx)
 
-            await expect(tx.query(RATE_LIMIT_BUCKET, [key])).resolves.toEqual([])
-            await expect(tx.query<Array<RateLimitAccessRow>>(RATE_LIMIT_ACCESS)).resolves.toEqual([
+            await expect(rateLimitBucket(tx, key)).resolves.toEqual([])
+            await expect(rateLimitAccess(tx)).resolves.toEqual([
                 {
                     anonymous_data: false,
                     authenticated_data: false,

@@ -10,7 +10,7 @@ import {
     resolveOwners,
     rolesOf,
 } from "./agent-ownership.policy"
-import type { AssignContextRow, MemberStateRow, TagContextRow } from "./persistence/ownership.rows"
+import type { AssignContext, MemberState, TagContext } from "./agents-reads.contracts"
 
 type Subject = {
     isAssignableRole: typeof isAssignableRole
@@ -35,29 +35,29 @@ const buildSubject = async () => {
     return moduleRef.get<Subject>(SUBJECT)
 }
 
-const assignOf = builder<AssignContextRow>({
+const assignOf = builder<AssignContext>({
     role: "staff",
-    member_status: "active",
-    agent_status: "active",
-    assignable_roles: ["owner", "manager"],
-    assignable_rooms: [],
-    member_rooms: [],
+    memberStatus: "active",
+    agentStatus: "active",
+    assignableRoles: ["owner", "manager"],
+    assignableRooms: [],
+    memberRooms: [],
 })
 
-const tagOf = builder<TagContextRow>({
-    from_status: "active",
-    to_status: "active",
-    same_workspace: true,
+const tagOf = builder<TagContext>({
+    fromStatus: "active",
+    toStatus: "active",
+    sameWorkspace: true,
     listed: true,
-    same_agent: false,
+    sameAgent: false,
 })
 
-const memberOf = builder<MemberStateRow>({
+const memberOf = builder<MemberState>({
     id: "m1",
-    display_name: "Minh",
+    displayName: "Minh",
     role: "manager",
     status: "active",
-    room_key: "sales",
+    roomKey: "sales",
 })
 
 describe("ownership constants and roles", () => {
@@ -82,7 +82,7 @@ describe("ownership constants and roles", () => {
 })
 
 describe("resolveOwners", () => {
-    const agent = { owner_member_id: "own", fallback_member_id: "fb" }
+    const agent = { ownerMemberId: "own", fallbackMemberId: "fb" }
 
     it("answers the owner first and the fallback after while both are active", async () => {
         const subject = await buildSubject()
@@ -110,7 +110,7 @@ describe("resolveOwners", () => {
 
     it("does not list the workspace owner twice when it is the stored owner", async () => {
         const subject = await buildSubject()
-        const stored = { owner_member_id: "ws", fallback_member_id: "ws" }
+        const stored = { ownerMemberId: "ws", fallbackMemberId: "ws" }
 
         expect(subject.resolveOwners(stored, new Set(["ws"]), "ws")).toEqual({
             ownerMemberId: "ws",
@@ -135,7 +135,7 @@ describe("resolveOwners", () => {
 
     it("skips the missing members of a legacy agent", async () => {
         const subject = await buildSubject()
-        const legacy = { owner_member_id: null, fallback_member_id: null }
+        const legacy = { ownerMemberId: null, fallbackMemberId: null }
 
         expect(subject.resolveOwners(legacy, new Set(), "ws")).toEqual({ ownerMemberId: "ws", fallbackMemberId: null })
     })
@@ -157,37 +157,37 @@ describe("mayAssign", () => {
     it("admits a staff member who sits in a room the agent is open to", async () => {
         const subject = await buildSubject()
 
-        expect(subject.mayAssign(assignOf({ assignable_rooms: ["sales"], member_rooms: ["care", "sales"] }))).toBe(true)
+        expect(subject.mayAssign(assignOf({ assignableRooms: ["sales"], memberRooms: ["care", "sales"] }))).toBe(true)
     })
 
     it("refuses a member whose seat is in another room", async () => {
         const subject = await buildSubject()
 
-        expect(subject.mayAssign(assignOf({ assignable_rooms: ["sales"], member_rooms: ["care"] }))).toBe(false)
+        expect(subject.mayAssign(assignOf({ assignableRooms: ["sales"], memberRooms: ["care"] }))).toBe(false)
     })
 
     it("refuses once the room was revoked from the agent", async () => {
         const subject = await buildSubject()
 
-        expect(subject.mayAssign(assignOf({ assignable_rooms: [], member_rooms: ["sales"] }))).toBe(false)
+        expect(subject.mayAssign(assignOf({ assignableRooms: [], memberRooms: ["sales"] }))).toBe(false)
     })
 
     it("refuses once the member lost the seat", async () => {
         const subject = await buildSubject()
 
-        expect(subject.mayAssign(assignOf({ assignable_rooms: ["sales"], member_rooms: [] }))).toBe(false)
+        expect(subject.mayAssign(assignOf({ assignableRooms: ["sales"], memberRooms: [] }))).toBe(false)
     })
 
     it("refuses a disabled member even when the role qualifies", async () => {
         const subject = await buildSubject()
 
-        expect(subject.mayAssign(assignOf({ role: "owner", member_status: "disabled" }))).toBe(false)
+        expect(subject.mayAssign(assignOf({ role: "owner", memberStatus: "disabled" }))).toBe(false)
     })
 
     it("refuses a paused agent", async () => {
         const subject = await buildSubject()
 
-        expect(subject.mayAssign(assignOf({ role: "owner", agent_status: "paused" }))).toBe(false)
+        expect(subject.mayAssign(assignOf({ role: "owner", agentStatus: "paused" }))).toBe(false)
     })
 })
 
@@ -199,11 +199,11 @@ describe("mayTag", () => {
     })
 
     it.each([
-        { name: "itself", change: { same_agent: true } },
-        { name: "an agent of another workspace", change: { same_workspace: false } },
+        { name: "itself", change: { sameAgent: true } },
+        { name: "an agent of another workspace", change: { sameWorkspace: false } },
         { name: "an agent that is not on its list", change: { listed: false } },
-        { name: "from a paused agent", change: { from_status: "paused" } },
-        { name: "a paused agent", change: { to_status: "paused" } },
+        { name: "from a paused agent", change: { fromStatus: "paused" } },
+        { name: "a paused agent", change: { toStatus: "paused" } },
     ])("refuses $name", async ({ change }) => {
         const subject = await buildSubject()
 
@@ -227,7 +227,7 @@ describe("ownerCardOf", () => {
     it("marks a disabled member inactive and a roomless one with no room", async () => {
         const subject = await buildSubject()
 
-        expect(subject.ownerCardOf(memberOf({ status: "disabled", room_key: null }))).toMatchObject({
+        expect(subject.ownerCardOf(memberOf({ status: "disabled", roomKey: null }))).toMatchObject({
             roomId: null,
             active: false,
         })

@@ -6,4 +6,6 @@ export enum JobsLogEvent {
     DeliveryFailed = "jobs.delivery.failed",
     /** A failed delivery could not even be recorded as failed; the lease will expire and the job will be claimed again. */
     FailureNotRecorded = "jobs.delivery.failure-not-recorded",
+    /** A recurring tick failed to put its job on the queue; the next firing tries again and the app keeps running. */
+    TickFailed = "jobs.tick.failed",
 }

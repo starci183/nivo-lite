@@ -1,16 +1,29 @@
 import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
+import { DecisionMadeEvent } from "@modules/events/api"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectEventBus } from "@modules/platform/event-bus"
+import type { EventBus } from "@modules/platform/event-bus"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import type { Decider, InboundStatus, Performed, Proposal, WorkContext, WorkItem } from "./decisions.contracts"
+import type {
+    Decider,
+    DecisionEntry,
+    InboundStatus,
+    Performed,
+    Proposal,
+    WorkContext,
+    WorkItem,
+} from "./decisions.contracts"
 import { EvidenceService } from "./evidence.service"
 import { ModuleCatalogService } from "./module-catalog.service"
 import { OfficeLinesService } from "@modules/domain/messages"
 import type { FinishPlan } from "./work-engine.contracts"
-import { InjectDecisionEvents, InjectInboundEventStatus } from "./work-engine.decorators"
+import { InjectInboundEventStatus } from "./work-engine.decorators"
 import { WorkEngineLogEvent } from "./work-engine.log-events"
-import type { DecisionEvents, InboundEventStatus } from "./work-engine.port"
+import type { InboundEventStatus } from "./work-engine.port"
 
 @Injectable()
 /** What the engine tells people and other systems once an item changed: the decision log, the evidence log, the Office, the inbound event and the outbound event stream. */
@@ -19,7 +32,8 @@ export class WorkRecorderService {
         @InjectLogger() private readonly logger: Logger,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectInboundEventStatus() private readonly inbound: InboundEventStatus,
-        @InjectDecisionEvents() private readonly events: DecisionEvents,
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectEventBus() private readonly eventBus: EventBus,
         private readonly modules: ModuleCatalogService,
         private readonly evidence: EvidenceService,
         private readonly office: OfficeLinesService,
@@ -72,17 +86,22 @@ export class WorkRecorderService {
                 body: this.catalog.get("engine.auto", { dept, summary: res.summary }, ctx.locale),
             })
         } else {
-            await this.evidence.decide(ctx, {
-                ...decision,
-                decided_by: plan.by.name,
-                decider_kind: plan.by.kind,
-                decided_by_member_id: plan.by.memberId ?? null,
-                outcome: plan.outcome,
-                reason: item.reason,
-                note: plan.note ?? res.summary,
-                before: plan.before ?? null,
-                after: proposal,
-            })
+            await this.decide(
+                ctx,
+                done,
+                {
+                    ...decision,
+                    decided_by: plan.by.name,
+                    decider_kind: plan.by.kind,
+                    decided_by_member_id: plan.by.memberId ?? null,
+                    outcome: plan.outcome,
+                    reason: item.reason,
+                    note: plan.note ?? res.summary,
+                    before: plan.before ?? null,
+                    after: proposal,
+                },
+                res.summary,
+            )
             await this.evidence.log(ctx, {
                 lead_id: done.lead_id,
                 work_item_id: done.id,
@@ -95,7 +114,6 @@ export class WorkRecorderService {
                 ...line,
                 body: this.catalog.get("engine.resumed", { user: plan.by.name, summary: res.summary }, ctx.locale),
             })
-            await this.announce(ctx, done, plan.outcome, plan.by.name, res.summary)
         }
         await this.markInbound(ctx, done, "processed", done.lead_id)
     }
@@ -108,20 +126,25 @@ export class WorkRecorderService {
         by: Decider,
         note: string | null,
     ): Promise<void> {
-        await this.evidence.decide(ctx, {
-            work_item_id: item.id,
-            lead_id: item.lead_id,
-            department: item.department,
-            action: item.action,
-            decided_by: by.name,
-            decider_kind: by.kind,
-            decided_by_member_id: by.memberId ?? null,
-            outcome: "rejected",
-            reason: item.reason,
-            note,
-            before: item.proposal,
-            after: merged,
-        })
+        await this.decide(
+            ctx,
+            item,
+            {
+                work_item_id: item.id,
+                lead_id: item.lead_id,
+                department: item.department,
+                action: item.action,
+                decided_by: by.name,
+                decider_kind: by.kind,
+                decided_by_member_id: by.memberId ?? null,
+                outcome: "rejected",
+                reason: item.reason,
+                note,
+                before: item.proposal,
+                after: merged,
+            },
+            item.proposal.summary,
+        )
         const body = this.catalog.get("engine.rejected", { user: by.name, summary: item.proposal.summary }, ctx.locale)
         await this.evidence.log(ctx, {
             lead_id: item.lead_id,
@@ -139,7 +162,6 @@ export class WorkRecorderService {
             installation_id: item.installation_id,
         })
         await this.markInbound(ctx, item, "processed", null)
-        await this.announce(ctx, item, "rejected", by.name, item.proposal.summary)
     }
 
     /**
@@ -186,31 +208,28 @@ export class WorkRecorderService {
         if (item.inbound_event_id !== null) await this.inbound.mark(ctx, item.inbound_event_id, status, leadId)
     }
 
-    /** Publishes `decision.made`; the decision stands even when the stream is down. */
-    private async announce(
-        ctx: WorkContext,
-        item: WorkItem,
-        outcome: string,
-        by: string,
-        summary: string,
-    ): Promise<void> {
-        await this.safely(
-            () =>
-                this.events.decisionMade(
-                    ctx,
-                    {
-                        work_item_id: item.id,
-                        action: item.action,
-                        department: item.department,
-                        outcome,
-                        decided_by: by,
-                        lead_id: item.lead_id,
-                        summary,
-                    },
-                    `decision.made:${item.id}:${outcome}`,
-                ),
-            WorkEngineLogEvent.DecisionEventFailed,
-        )
+    /**
+     * Writes a person's decision and announces `decision_made` in the same transaction, so the decision and its fact stand or fall
+     * together; the event bus hears it only once the decision has committed.
+     */
+    private decide(ctx: WorkContext, item: WorkItem, entry: DecisionEntry, summary: string): Promise<void> {
+        return this.entityManager.transaction(async (manager) => {
+            await this.evidence.decide(ctx, entry, manager)
+            await this.eventBus.publish(
+                DecisionMadeEvent.create({
+                    workspaceId: ctx.workspaceId,
+                    workItemId: item.id,
+                    action: item.action,
+                    department: item.department,
+                    outcome: entry.outcome,
+                    decidedBy: entry.decided_by,
+                    leadId: item.lead_id,
+                    summary,
+                }),
+                manager,
+                `decision-made:${item.id}:${entry.outcome}`,
+            )
+        })
     }
 
     private async safely(run: () => Promise<void>, event: WorkEngineLogEvent): Promise<void> {

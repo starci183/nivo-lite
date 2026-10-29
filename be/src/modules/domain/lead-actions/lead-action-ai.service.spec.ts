@@ -10,8 +10,8 @@ import { MessagesService } from "@modules/domain/messages"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { ResponsibilityListing } from "@modules/domain/responsibilities"
-import { DEEPSEEK_CLIENT } from "@modules/integrations/deepseek"
-import type { DeepseekClient, ProposedResponsibility } from "@modules/integrations/deepseek"
+import { AI_TASKS } from "@modules/domain/ai-tasks"
+import type { AiTasksService, ProposedResponsibility } from "@modules/domain/ai-tasks"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
@@ -90,7 +90,7 @@ const build = async () => {
     const events = mock<EventsService>()
     events.leadHistory.mockResolvedValue([{ summary: "asked about tea", evidence: null }])
     events.record.mockResolvedValue(undefined)
-    const ai = mock<DeepseekClient>()
+    const ai = mock<AiTasksService>()
     ai.summarizeContext.mockResolvedValue("A tea buyer.")
     const responsibilities = mock<ResponsibilityJournalService>()
     responsibilities.list.mockResolvedValue([open])
@@ -117,7 +117,7 @@ const build = async () => {
             { provide: ResponsibilityJournalService, useValue: responsibilities },
             { provide: MessagesService, useValue: messages },
             { provide: WorkspaceMembersService, useValue: members },
-            { provide: DEEPSEEK_CLIENT, useValue: ai },
+            { provide: AI_TASKS, useValue: ai },
         ],
     }).compile()
     return {

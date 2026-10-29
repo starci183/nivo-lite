@@ -5,34 +5,22 @@ import { LOGGER } from "@modules/platform/logging"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import type { Logger } from "@modules/platform/logging"
+import {
+    definitionOf,
+    invalidTemplateRow,
+    storedTemplateAOne,
+} from "@tests/fixtures/builders/automation-templates.builder"
 import { TEMPLATE_CATALOG } from "./automation-templates.templates"
 import { AutomationTemplatesLogEvent } from "./automation-templates.log-events"
 import { AutomationTemplatesService } from "./automation-templates.service"
 import { AutomationTemplatesErrorCode } from "./errors/automation-templates.error"
-import { SELECT_TEMPLATES, UPSERT_TEMPLATE } from "./persistence/automation-templates.sql"
+import { AutomationTemplateEntity } from "./persistence/entities"
 
-const text = { vi: "Hello there", en: "Hello" }
+/** Stands for the `() => "now()"` expression a write hands the database. */
+const SQL_EXPRESSION: unknown = expect.any(Function)
 
-const definitionOf = (key: string, position: number) => ({
-    key,
-    version: 2,
-    position,
-    pack: "core",
-    executor: "implemented",
-    moduleKey: "sales",
-    icon: "payment",
-    name: text,
-    description: text,
-    trigger: { kind: "event", event: "payment.received", line: text },
-    requires: { modules: [], channels: [], connections: [], capabilities: [] },
-    settings: [],
-    contentMode: "none",
-    guardrails: [],
-    variables: [],
-    defaultBody: null,
-    authority: { action: null },
-    defaults: {},
-})
+/** Stands for the stored definition a sync writes: it contains the catalogue entry. */
+const EXPECTED_DEFINITION: unknown = expect.objectContaining(definitionOf("a_two", 2))
 
 const build = async (em: MockEntityManager) => {
     const clock = new FakeClock("2026-10-12T10:00:00.000Z")
@@ -52,7 +40,7 @@ describe("AutomationTemplatesService", () => {
     describe("listTemplates", () => {
         it("reads the catalogue once and reuses it for a minute", async () => {
             const em = mockEntityManager({
-                query: [SELECT_TEMPLATES, [{ key: "a_one", definition: definitionOf("a_one", 1) }]],
+                find: [AutomationTemplateEntity, [storedTemplateAOne()]],
             })
             const { catalog, clock } = await build(em)
 
@@ -62,12 +50,12 @@ describe("AutomationTemplatesService", () => {
 
             expect(first.map((template) => template.key)).toEqual(["a_one"])
             expect(second).toBe(first)
-            expect(em.query).toHaveBeenCalledTimes(1)
+            expect(em.find).toHaveBeenCalledTimes(1)
         })
 
         it("reads the catalogue again once the minute is over", async () => {
             const em = mockEntityManager({
-                query: [SELECT_TEMPLATES, [{ key: "a_one", definition: definitionOf("a_one", 1) }]],
+                find: [AutomationTemplateEntity, [storedTemplateAOne()]],
             })
             const { catalog, clock } = await build(em)
 
@@ -75,11 +63,11 @@ describe("AutomationTemplatesService", () => {
             clock.advance(60_000)
             await catalog.listTemplates()
 
-            expect(em.query).toHaveBeenCalledTimes(2)
+            expect(em.find).toHaveBeenCalledTimes(2)
         })
 
         it("refuses a stored definition that is not a template", async () => {
-            const em = mockEntityManager({ query: [SELECT_TEMPLATES, [{ key: "bad", definition: {} }]] })
+            const em = mockEntityManager({ find: [AutomationTemplateEntity, [invalidTemplateRow()]] })
             const { catalog } = await build(em)
 
             await expect(catalog.listTemplates()).rejects.toMatchObject({
@@ -91,7 +79,7 @@ describe("AutomationTemplatesService", () => {
     describe("templateOf", () => {
         it("answers the template of a key and refuses an unknown one", async () => {
             const em = mockEntityManager({
-                query: [SELECT_TEMPLATES, [{ key: "a_one", definition: definitionOf("a_one", 1) }]],
+                find: [AutomationTemplateEntity, [storedTemplateAOne()]],
             })
             const { catalog } = await build(em)
 
@@ -108,10 +96,8 @@ describe("AutomationTemplatesService", () => {
         it("writes every definition in one transaction and forgets the cached catalogue", async () => {
             const tx = fakeTransaction(
                 mockEntityManager({
-                    query: [
-                        [SELECT_TEMPLATES, []],
-                        [UPSERT_TEMPLATE, [{ key: "k" }]],
-                    ],
+                    find: [AutomationTemplateEntity, []],
+                    upsert: [AutomationTemplateEntity, {}],
                 }),
             )
             const { catalog } = await build(tx.em)
@@ -124,16 +110,22 @@ describe("AutomationTemplatesService", () => {
             await catalog.listTemplates()
 
             expect(tx.commits).toBe(1)
-            expect(tx.em.query).toHaveBeenCalledWith(UPSERT_TEMPLATE, [
-                "a_two",
-                2,
-                "sales",
-                "core",
-                "implemented",
-                2,
-                JSON.stringify(definitionOf("a_two", 2)),
-            ])
-            expect(tx.em.query).toHaveBeenCalledTimes(1 + 2 + 1)
+            expect(tx.em.upsert).toHaveBeenCalledWith(
+                AutomationTemplateEntity,
+                {
+                    key: "a_two",
+                    version: 2,
+                    moduleKey: "sales",
+                    pack: "core",
+                    executor: "implemented",
+                    position: 2,
+                    definition: EXPECTED_DEFINITION,
+                    updatedAt: SQL_EXPRESSION,
+                },
+                ["key"],
+            )
+            expect(tx.em.find).toHaveBeenCalledTimes(2)
+            expect(tx.em.upsert).toHaveBeenCalledTimes(2)
         })
 
         it("writes nothing when one definition is invalid", async () => {
@@ -150,7 +142,7 @@ describe("AutomationTemplatesService", () => {
 
     describe("syncFromCatalog", () => {
         it("writes every template of the TypeScript catalogue and logs the keys", async () => {
-            const tx = fakeTransaction(mockEntityManager({ query: [UPSERT_TEMPLATE, [{ key: "k" }]] }))
+            const tx = fakeTransaction(mockEntityManager({ upsert: [AutomationTemplateEntity, {}] }))
             const { catalog, logger } = await build(tx.em)
 
             const keys = await catalog.syncFromCatalog()

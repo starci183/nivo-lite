@@ -10,7 +10,7 @@ export interface DatabaseConnectionConfig {
     readonly url: Secret
 }
 
-/** Runtime connection options add only the isolated PostgreSQL schema; lite has no entity or migration registry. */
+/** Runtime connection options add only the isolated PostgreSQL schema; entities come from the apps, migrations stay under `db/migrations`. */
 export interface DatabaseConnectionOptions extends DatabaseConnectionConfig {
     /** The schema named by the `hfs.json` isolation contract. */
     readonly schema?: string
@@ -20,6 +20,11 @@ export interface DatabaseConnectionOptions extends DatabaseConnectionConfig {
 export interface DatabaseOptions {
     /** The integration-owned type parsers created separately for each app connection. */
     readonly typeParsers: () => unknown
+    /**
+     * Every entity class the app maps, normally `PRIMARY_ENTITIES` from `platform/database/entities`.
+     * It is an option rather than an import because the capability barrels that list entities import this capability.
+     */
+    readonly entities: ReadonlyArray<new () => object>
     /** The connections this app opens; one per physical database. */
     readonly connections: ReadonlyArray<DatabaseConnectionOptions>
 }

@@ -24,9 +24,8 @@ const urlOf = (env: EnvSource, key: string): string | null => {
 }
 
 const googleOf = (env: EnvSource): DocumentsGoogleClient | null => {
-    const clientId = env.optional("GOOGLE_OAUTH_CLIENT_ID") ?? env.optional("SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID")
-    const clientSecret =
-        env.optional("GOOGLE_OAUTH_CLIENT_SECRET") ?? env.optional("SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET")
+    const clientId = env.optional("GOOGLE_OAUTH_CLIENT_ID")
+    const clientSecret = env.optional("GOOGLE_OAUTH_CLIENT_SECRET")
     return clientId !== undefined && clientSecret !== undefined
         ? { clientId, clientSecret: new Secret(clientSecret) }
         : null

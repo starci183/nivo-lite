@@ -3,7 +3,7 @@ import { DelayedError, UnrecoverableError } from "bullmq"
 import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { InjectErrorReporter } from "@modules/platform/errors"
 import type { ErrorReporter } from "@modules/platform/errors"
 import { InjectLogger } from "@modules/platform/logging"
@@ -24,7 +24,6 @@ import {
     workspaceOf,
 } from "./queue.policy"
 import type { BullmqJob, QueueRedisGuard } from "./queue-transport.port"
-import { JOB_DEAD, JOB_DONE, JOB_HANDBACK, JOB_LEASE, JOB_RETRY, JOB_START } from "./persistence/queue.sql"
 import type { QueueStartRow } from "./persistence/queue.rows"
 
 /** A delivery in flight: the signal that aborts it and the promise that settles when it is done. */
@@ -93,7 +92,7 @@ export class BullmqQueueDeliveryClient {
             return Promise.reject(new UnrecoverableError(QueueErrorCode.Unrecoverable))
         }
         await redis.command(redis.ready(handler.queue))
-        const [started] = await this.entityManager.query<Array<QueueStartRow>>(JOB_START, [
+        const [started] = await callDbFunction<QueueStartRow>(this.entityManager, "public.job_start", [
             handler.queue,
             id,
             this.options.workspaceConcurrency,
@@ -146,7 +145,7 @@ export class BullmqQueueDeliveryClient {
 
     /** Closes the row done under the admission token; a persistence failure is logged and fails the delivery. */
     private complete(queue: string, id: string, runToken: string): Promise<void> {
-        return this.entityManager.query(JOB_DONE, [id, runToken]).then(
+        return callDbFunction(this.entityManager, "public.job_done", [id, runToken]).then(
             () => undefined,
             (cause: unknown) => {
                 this.logger.error(QueueLogEvent.SettleFailed, cause, { queue, jobId: id })
@@ -157,7 +156,11 @@ export class BullmqQueueDeliveryClient {
 
     /** Renews the workspace slot of a running delivery; a failure is logged and the next renewal tries again. */
     private touch(id: string, queue: string, runToken: string): Promise<void> {
-        return this.entityManager.query(JOB_LEASE, [id, secondsOf(this.options.visibilityTimeoutMs), runToken]).then(
+        return callDbFunction(this.entityManager, "public.job_lease", [
+            id,
+            secondsOf(this.options.visibilityTimeoutMs),
+            runToken,
+        ]).then(
             () => undefined,
             (cause: unknown) => {
                 this.logger.error(QueueLogEvent.TouchFailed, cause, { queue, jobId: id })
@@ -182,11 +185,11 @@ export class BullmqQueueDeliveryClient {
         const fields = { queue: handler.queue, jobId: delivery.id, job: delivery.job, attempt: delivery.attempt }
         if (delivery.signal.aborted) {
             this.logger.warn(QueueLogEvent.HandedBack, fields)
-            await this.entityManager.query(JOB_HANDBACK, [delivery.id, runToken])
+            await callDbFunction(this.entityManager, "public.job_handback", [delivery.id, runToken])
             return this.defer(job, token, deferMsOf(delivery.id), redis)
         }
         if (cause instanceof QueueError && cause.code === QueueErrorCode.DeferredUntil) {
-            await this.entityManager.query(JOB_HANDBACK, [delivery.id, runToken])
+            await callDbFunction(this.entityManager, "public.job_handback", [delivery.id, runToken])
             return this.defer(job, token, Number(cause.params.seconds) * 1000, redis)
         }
         if (isUnrecoverable(cause) || isExhausted(delivery.attempt)) {
@@ -197,11 +200,11 @@ export class BullmqQueueDeliveryClient {
                 attempt: delivery.attempt,
             })
             await this.notifyFailed(handler, delivery, cause)
-            await this.entityManager.query(JOB_DEAD, [delivery.id, reasonOf(cause), runToken])
+            await callDbFunction(this.entityManager, "public.job_dead", [delivery.id, reasonOf(cause), runToken])
             return Promise.reject(new UnrecoverableError(reasonOf(cause)))
         }
         this.logger.error(QueueLogEvent.DeliveryFailed, cause, fields)
-        await this.entityManager.query(JOB_RETRY, [delivery.id, reasonOf(cause), runToken])
+        await callDbFunction(this.entityManager, "public.job_retry", [delivery.id, reasonOf(cause), runToken])
         return Promise.reject(cause)
     }
 

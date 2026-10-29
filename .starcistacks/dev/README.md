@@ -10,8 +10,6 @@ The API's required base settings are below. `be/apps/api/src/api.env.ts` compose
 | `HTTP_SECURITY_ALLOWED_ORIGINS` | Comma-separated canonical browser origins permitted by the HTTP security reader. |
 | `PRIMARY_DB_URL` | Private connection to the local database as the least-privilege `app_be` role, with its existing matching password. The administrative `postgres` connection is not the application credential. |
 | `PRIMARY_DB_SCHEMA` | Nonempty application schema name from the selected database configuration. |
-| `SUPABASE_URL` | Absolute local Supabase API URL reachable from the API's network context. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Private server-side key of that same local Supabase project. |
 | `CHANNEL_TOKEN_KEY` | Private base64 value that decodes to exactly 32 bytes; preserve it for existing encrypted connection data. |
 | `OTP_PEPPER` | Independent private pepper of at least 32 characters for loyalty code hashes. |
 | `SITE_URL` | Absolute public origin of the local web app, used for provider return addresses. |
@@ -21,7 +19,7 @@ Supply private values through the existing native custody owner, never chat, com
 
 The tracked `infra/swarm/stack.yaml` recipe declares an externally supplied legacy API environment input. That declaration does not create, supply or validate the input. Existing `starci app secret` commands can manage and materialize sealed values, but they do not assemble this complete API input, initialize the `app_be` password, or adopt a protected Supabase stack. Native status output and a successful secret-shape check do not establish those steps or application readiness.
 
-Use component-specific endpoints: host application processes reach local dependencies through their published loopback ports, while service containers need the declared reachable host gateway. Browser-facing Supabase URLs must remain browser-reachable. The web app receives only its public `NEXT_PUBLIC_*` build settings, including the local anon/publishable key; the database URL and service-role key remain backend-only. Backend Auth flows using an existing user token or password also need the local project's `SUPABASE_ANON_KEY`.
+Use component-specific endpoints: host application processes reach local dependencies through their published loopback ports, while service containers need the declared reachable host gateway. The browser-facing api origin must remain browser-reachable. The web app receives only its public `NEXT_PUBLIC_*` build settings and signs in through the api's `/auth` doors; the database URL and the sign-in signing keys remain backend-only.
 
 After the selected local configuration and database migration state are verified, the existing package scripts can run the application processes (`npm run dev:be:api`, `npm run dev:fe:web`, `npm run dev:fe:landing`), or the declared Swarm recipe can run the services. These scripts consume configuration; they are not a local credential bootstrap. Run repository commands from the application root and retain separate liveness, database readiness and browser verification.
 
@@ -31,8 +29,6 @@ Swarm does not build images. Choose a registry reachable from the local Swarm, b
 docker build -f be/apps/api/Dockerfile -t <registry>/nivo-lite-api:dev .
 docker build -f be/apps/mcp/Dockerfile -t <registry>/nivo-lite-mcp:dev .
 docker build -f fe/apps/web/Dockerfile -t <registry>/nivo-lite-web:dev \
-    --build-arg NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:55321 \
-    --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY \
     --build-arg NEXT_PUBLIC_API_URL=http://api.localhost \
     --build-arg NEXT_PUBLIC_DEVELOPER_API_URL=http://api.localhost \
     --build-arg NEXT_PUBLIC_SITE_URL=http://localhost \

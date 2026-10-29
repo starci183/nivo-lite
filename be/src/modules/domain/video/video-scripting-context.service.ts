@@ -3,8 +3,8 @@ import type { EntityManager } from "typeorm"
 import { AuthorityService } from "@modules/domain/authority"
 import { BrainFactsService, factLine } from "@modules/domain/brain-facts"
 import { KnowledgeSearchService } from "@modules/domain/knowledge"
-import type { VideoScriptBaseRow, VideoScriptSetupRow, VideoScriptingRow } from "./persistence/video-scripting.rows"
-import { READ_SCRIPT_BASE, READ_SCRIPT_SETUP } from "./persistence/video-scripting.sql"
+import type { ScriptProject } from "./video-stored.contracts"
+import { readScriptBase, readScriptSetup } from "./persistence/video-scripting.query"
 import { videoScriptSetupText } from "./video-scripting-context.policy"
 import { VIDEO_SCRIPT_GOALS } from "./video-scripting.templates"
 import { videoInputsOf } from "./video-workbench.policy"
@@ -22,7 +22,7 @@ export class VideoScriptingContextService {
     async forProject(
         tx: EntityManager,
         workspaceId: string,
-        project: VideoScriptingRow,
+        project: ScriptProject,
         selectedSources: string,
     ): Promise<string> {
         const goal = VIDEO_SCRIPT_GOALS[project.goal] ?? VIDEO_SCRIPT_GOALS.custom
@@ -32,8 +32,8 @@ export class VideoScriptingContextService {
             selectedSources.slice(0, 300),
         ].join(" ")
         const [snapshots, base, facts, passages, authority] = await Promise.all([
-            tx.query<Array<VideoScriptSetupRow>>(READ_SCRIPT_SETUP, [workspaceId]),
-            tx.query<Array<VideoScriptBaseRow>>(READ_SCRIPT_BASE),
+            readScriptSetup(tx, workspaceId),
+            readScriptBase(tx),
             this.facts.search(workspaceId, "customer", "video", null, query, 6),
             this.knowledge.passagesText(
                 { workspaceId, module: "video", audience: "customer", installationId: null },

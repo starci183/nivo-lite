@@ -6,23 +6,61 @@ import { MemberGrantsService } from "@modules/domain/member-grants"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { ApprovalResolved, OpenApprovalParams, OpenedApproval, OpenWrite } from "./approval-requests.contracts"
+import type {
+    ApprovalRequestRecord,
+    ApprovalResolved,
+    OpenApprovalParams,
+    OpenedApproval,
+    OpenWrite,
+} from "./approval-requests.contracts"
+import { toRequestRecord } from "./approval-requests.mapper"
 import { ApprovalAnnouncerService } from "./approval-announcer.service"
 import { ApprovalEscalationService } from "./approval-escalation.service"
 import { resolveApprovers } from "./approver-set.policy"
 import { ApprovalRequestsError, ApprovalRequestsErrorCode } from "./errors/approval-requests.error"
-import type { ApprovalRequestRow } from "./persistence/approval-requests.rows"
-import { FIND_PENDING_REQUEST, INSERT_REQUEST } from "./persistence/approval-requests.sql"
+import { ApprovalRequestEntity } from "./persistence/entities"
 
 const MINUTE_MS = 60_000
 
+/** The columns the insert answers, named as the entity properties so the answer reads as an entity. */
+const RETURNED = [
+    "id",
+    'workspace_id AS "workspaceId"',
+    'chain_step_id AS "chainStepId"',
+    "department",
+    "action",
+    "amount::float8 AS amount",
+    "unit",
+    'requested_by_agent_id AS "requestedByAgentId"',
+    "policy",
+    "status",
+    "approvers",
+    "excluded",
+    "verdicts",
+    'timeout_minutes AS "timeoutMinutes"',
+    'expires_at AS "expiresAt"',
+    'reminded_at AS "remindedAt"',
+    'resolved_by AS "resolvedBy"',
+    'resolved_at AS "resolvedAt"',
+    'escalated_to AS "escalatedTo"',
+    'created_at AS "createdAt"',
+].join(", ")
+
+/** True when a RETURNING row names the key of a stored request, the shape the returned columns give it. */
+const isApprovalRequestEntity = (value: unknown): value is ApprovalRequestEntity =>
+    typeof value === "object" && value !== null && "id" in value && typeof value.id === "string"
+
+/** The rows a write answered. */
+const returnedRequests = (raw: unknown): Array<ApprovalRequestEntity> =>
+    Array.isArray(raw) ? raw.filter(isApprovalRequestEntity) : []
+
 /** What the write answers: the row to describe, and the event to publish when the request expired at once. */
 interface Opened {
-    readonly row: ApprovalRequestRow
+    readonly row: ApprovalRequestRecord
     readonly resolved: ApprovalResolved | null
 }
 
-const toOpened = (row: ApprovalRequestRow): OpenedApproval => ({
+const toOpened = (row: ApprovalRequestRecord): OpenedApproval => ({
     requestId: row.id,
     approvers: row.approvers,
     excluded: row.excluded,
@@ -65,7 +103,6 @@ export class ApprovalOpeningService {
         const wait = set.approvers.length === 0 ? 0 : setup.timeout_minutes * MINUTE_MS
         const write: OpenWrite = { params, setup, set, directory, now, expiresAt: new Date(now.getTime() + wait) }
         const opened = await this.entityManager.transaction((tx) => this.write(tx, write))
-        if (opened.resolved !== null) await this.announcer.resolved(opened.resolved)
         return toOpened(opened.row)
     }
 
@@ -101,27 +138,39 @@ export class ApprovalOpeningService {
 
     private async write(tx: EntityManager, input: OpenWrite): Promise<Opened> {
         const { params, setup, set } = input
-        const [inserted] = await tx.query<Array<ApprovalRequestRow>>(INSERT_REQUEST, [
-            params.workspaceId,
-            params.chainStepId,
-            setup.department,
-            params.action,
-            params.amount,
-            setup.unit,
-            params.requestedByAgentId,
-            setup.policy,
-            JSON.stringify(set.approvers),
-            JSON.stringify(set.excluded),
-            setup.timeout_minutes,
-            input.expiresAt.toISOString(),
-        ])
-        if (inserted === undefined) {
-            const [pending] = await tx.query<Array<ApprovalRequestRow>>(FIND_PENDING_REQUEST, [params.chainStepId])
-            if (pending === undefined) throw new ApprovalRequestsError({ code: ApprovalRequestsErrorCode.NotFound })
-            return { row: pending, resolved: null }
+        // A step has at most one pending request: when one is pending already nothing is inserted and nothing is answered.
+        const written = await tx
+            .createQueryBuilder(ApprovalRequestEntity, "ar")
+            .insert()
+            .values({
+                workspaceId: params.workspaceId,
+                chainStepId: params.chainStepId,
+                department: setup.department,
+                action: params.action,
+                amount: params.amount,
+                unit: setup.unit,
+                requestedByAgentId: params.requestedByAgentId,
+                policy: setup.policy,
+                approvers: [...set.approvers],
+                excluded: [...set.excluded],
+                timeoutMinutes: setup.timeout_minutes,
+                expiresAt: input.expiresAt,
+            })
+            .orIgnore()
+            .returning(RETURNED)
+            .execute()
+        const [row] = returnedRequests(written.raw)
+        if (row === undefined) {
+            const pending = await tx.findOne(ApprovalRequestEntity, {
+                where: { chainStepId: params.chainStepId, status: "pending" },
+            })
+            if (pending === null) throw new ApprovalRequestsError({ code: ApprovalRequestsErrorCode.NotFound })
+            return { row: toRequestRecord(pending), resolved: null }
         }
+        const inserted = toRequestRecord(row)
         if (set.approvers.length > 0) return { row: inserted, resolved: null }
         const resolved = await this.escalation.expire(tx, inserted, input.directory, input.now)
+        await this.announcer.resolved(resolved, tx)
         return { row: { ...inserted, status: "expired" }, resolved }
     }
 }

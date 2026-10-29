@@ -1,3 +1,4 @@
+export { workChainsEntities, WorkChainEntity } from "./persistence/entities"
 export { WORK_CHAINS_ERROR_KINDS } from "./errors/work-chains.error"
 export { WORK_CHAINS_MESSAGES } from "./messages/work-chains.messages"
 export type {
@@ -12,3 +13,4 @@ export type {
 } from "./work-chains.contracts"
 export { WorkChainsModule } from "./work-chains.module"
 export { WorkChainsService } from "./work-chains.service"
+export type { ChainStepRecord } from "./work-chains.contracts"

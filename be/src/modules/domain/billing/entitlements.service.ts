@@ -1,17 +1,10 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { BillingService } from "./billing.service"
 import type { Plan, WorkspaceStorage } from "./billing.contracts"
 import { BillingError, BillingErrorCode } from "./errors/billing.error"
-import type { CountRow, StorageBytesRow } from "./persistence/billing.rows"
-import {
-    SELECT_ACTIVE_MEMBER_COUNT,
-    SELECT_PENDING_INVITE_COUNT,
-    SELECT_STORAGE_BYTES,
-} from "./persistence/billing.sql"
 
 const BYTES_PER_GB = 1024 ** 3
 
@@ -20,19 +13,21 @@ const BYTES_PER_GB = 1024 ** 3
 export class EntitlementsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectClock() private readonly clock: Clock,
         private readonly billing: BillingService,
     ) {}
 
-    /** Refuses an invitation the plan cannot take: individual plans take nobody, per-seat plans take as many people as paid seats. */
-    async requireRoomForInvite(workspaceId: string): Promise<void> {
+    /**
+     * Refuses an invitation the plan cannot take: individual plans take nobody, per-seat plans take as many people as paid seats,
+     * counting the members and the invitations still pending (`pendingInvites`, counted by workspace-invites, which owns them).
+     */
+    async requireRoomForInvite(workspaceId: string, pendingInvites: number): Promise<void> {
         const plan = await this.planOf(workspaceId)
         if (plan === null) return
         if (plan.individual) throw new BillingError({ code: BillingErrorCode.PlanIndividualOnly })
         const seats = await this.paidSeats(workspaceId, plan)
         if (seats === null) return
-        const [members, pending] = await Promise.all([this.members(workspaceId), this.pendingInvites(workspaceId)])
-        if (members + pending >= seats) throw new BillingError({ code: BillingErrorCode.SeatLimitReached })
+        const members = await this.members(workspaceId)
+        if (members + pendingInvites >= seats) throw new BillingError({ code: BillingErrorCode.SeatLimitReached })
     }
 
     /** Refuses accepting an invitation into a workspace whose plan cannot take another member. */
@@ -67,9 +62,13 @@ export class EntitlementsService {
 
     private async storage(workspaceId: string): Promise<WorkspaceStorage> {
         const plan = await this.planOf(workspaceId)
-        const [row] = await this.entityManager.query<Array<StorageBytesRow>>(SELECT_STORAGE_BYTES, [workspaceId])
+        const [row] = await callDbFunction<{ readonly workspace_storage_bytes: string | null }>(
+            this.entityManager,
+            "public.workspace_storage_bytes",
+            [workspaceId],
+        )
         return {
-            usedBytes: row?.bytes ?? 0,
+            usedBytes: Number(row?.workspace_storage_bytes ?? 0),
             quotaBytes: plan?.storageGb == null ? null : plan.storageGb * BYTES_PER_GB,
         }
     }
@@ -88,15 +87,11 @@ export class EntitlementsService {
     }
 
     private async members(workspaceId: string): Promise<number> {
-        const [row] = await this.entityManager.query<Array<CountRow>>(SELECT_ACTIVE_MEMBER_COUNT, [workspaceId])
-        return row?.count ?? 0
-    }
-
-    private async pendingInvites(workspaceId: string): Promise<number> {
-        const [row] = await this.entityManager.query<Array<CountRow>>(SELECT_PENDING_INVITE_COUNT, [
-            workspaceId,
-            this.clock.now(),
-        ])
+        const row = await this.entityManager
+            .createQueryBuilder(WorkspaceMemberEntity, "m")
+            .select("count(*)::int", "count")
+            .where("m.workspace_id = :workspaceId AND m.status = 'active'", { workspaceId })
+            .getRawOne<{ count: number }>()
         return row?.count ?? 0
     }
 }

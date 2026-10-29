@@ -7,10 +7,12 @@ import type { WorkThread } from "@modules/domain/work-threads"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { MentionDirectoryService } from "./mention-directory.service"
-import type { ThreadMessageRow } from "./persistence/thread-messages.rows"
-import { LIST_MESSAGES, LIST_THREAD_DIGESTS } from "./persistence/thread-messages.sql"
+import { ThreadMessageEntity } from "./persistence/entities"
 import { ThreadFeedService } from "./thread-feed.service"
+import type { ThreadMessageRecord } from "./thread-messages.contracts"
 
 const MEMBER: WorkspaceMember = {
     userId: "van",
@@ -33,7 +35,7 @@ const THREAD: WorkThread = {
     updatedAt: "2026-10-22T02:41:00.000Z",
 }
 
-const messageRow = (id: string, createdAt: string): ThreadMessageRow => ({
+const messageRow = (id: string, createdAt: string): ThreadMessageRecord => ({
     id,
     thread_id: "thread-1",
     workspace_id: "ws-1",
@@ -45,8 +47,16 @@ const messageRow = (id: string, createdAt: string): ThreadMessageRow => ({
     quoted: [],
     mentions: [],
     approval: null,
-    created_at: createdAt,
+    created_at: new Date(createdAt),
 })
+
+/** A manager double whose next query builder answers the given terminals. */
+const managerAnswering = (answers: QueryBuilderAnswers) => {
+    const em = mockEntityManager()
+    const fake = fakeQueryBuilder(answers)
+    em.createQueryBuilder.mockReturnValueOnce(fake.builder as never)
+    return { em, fake }
+}
 
 const CHAIN: ChainView = { steps: [], summary: { steps: 0, humanDecisions: 0, minutes: 0, state: "empty" } }
 
@@ -106,11 +116,11 @@ const registerList = () => {
             const digest = {
                 thread_id: "thread-1",
                 last_body: "Confirmation sent.",
-                last_at: "2026-10-22T09:45:00+07:00",
+                last_at: new Date("2026-10-22T09:45:00+07:00"),
                 message_count: 7,
                 waiting_approval: false,
             }
-            const em = mockEntityManager({ query: [LIST_THREAD_DIGESTS, [digest]] })
+            const { em, fake } = managerAnswering({ getRawMany: [digest] })
             const { service, threads } = await build(em)
             threads.list.mockResolvedValue({
                 nodes: [THREAD, { ...THREAD, id: "thread-2" }],
@@ -120,14 +130,23 @@ const registerList = () => {
             const listing = await service.list("van", "ws-1", "lead-1")
 
             expect(threads.list).toHaveBeenCalledWith("ws-1", "lead-1", {})
-            expect(em.query).toHaveBeenCalledWith(LIST_THREAD_DIGESTS, ["ws-1", ["thread-1", "thread-2"]])
+            expect(em.createQueryBuilder).toHaveBeenCalledWith(ThreadMessageEntity, "m")
+            expect(fake.callsOf("where")).toEqual([
+                [
+                    "m.workspace_id = :workspaceId AND m.thread_id = ANY(:threadIds)",
+                    { workspaceId: "ws-1", threadIds: ["thread-1", "thread-2"] },
+                ],
+            ])
+            expect(fake.callsOf("groupBy")).toEqual([["m.thread_id"]])
+            expect(fake.callsOf("limit")).toEqual([[200]])
+            expect(listing.nodes[0]).toMatchObject({ lastAt: "2026-10-22T02:45:00.000Z" })
             expect(listing.nodes[0]).toMatchObject({ id: "thread-1", lastBody: "Confirmation sent.", messageCount: 7 })
             expect(listing.nodes[1]).toMatchObject({ id: "thread-2", lastBody: null, messageCount: 0 })
             expect(listing.pageInfo).toEqual({ endCursor: "cursor", hasNextPage: true })
         })
 
         it("passes the page request after proving workspace membership", async () => {
-            const em = mockEntityManager({ query: [LIST_THREAD_DIGESTS, []] })
+            const { em } = managerAnswering({ getRawMany: [] })
             const { service, members, threads } = await build(em)
             const request = { first: 20, after: "cursor" }
 
@@ -145,7 +164,7 @@ const registerList = () => {
             await expect(service.list("van", "ws-1", null)).rejects.toThrow("not a member")
 
             expect(threads.list).not.toHaveBeenCalled()
-            expect(em.query).not.toHaveBeenCalled()
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
     })
 }
@@ -155,7 +174,7 @@ const registerRead = () => {
         it("answers the thread with its messages oldest first", async () => {
             const newer = messageRow("newer", "2026-10-22T09:45:00+07:00")
             const older = messageRow("older", "2026-10-22T09:41:00+07:00")
-            const em = mockEntityManager({ query: [LIST_MESSAGES, [newer, older]] })
+            const { em, fake } = managerAnswering({ getRawMany: [newer, older] })
             const { service, threads } = await build(em)
 
             const view = await service.read("van", "ws-1", "thread-1")
@@ -163,7 +182,12 @@ const registerRead = () => {
             expect(threads.find).toHaveBeenCalledWith("ws-1", "thread-1")
             expect(view.thread.id).toBe("thread-1")
             expect(view.messages.map((message) => message.id)).toEqual(["older", "newer"])
-            expect(em.query).toHaveBeenCalledWith(LIST_MESSAGES, ["ws-1", "thread-1", 200])
+            expect(em.createQueryBuilder).toHaveBeenCalledWith(ThreadMessageEntity, "m")
+            expect(fake.callsOf("where")).toEqual([["m.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
+            expect(fake.callsOf("andWhere")).toEqual([["m.thread_id = :threadId", { threadId: "thread-1" }]])
+            expect(fake.callsOf("orderBy")).toEqual([["m.created_at", "DESC"]])
+            expect(fake.callsOf("addOrderBy")).toEqual([["m.id", "DESC"]])
+            expect(fake.callsOf("limit")).toEqual([[200]])
         })
 
         it("reads the chain of a thread of the workspace", async () => {

@@ -1,7 +1,7 @@
 import type { CronRow, TickRow } from "../fixtures/persistence/proof.rows"
 import assert from "node:assert/strict"
 import type { LiteWorld } from "./lite-world.service"
-import { CRON, LOCK_TICKS, HIDE_TICKS, TICK_IDS, FIRE_TICK } from "../fixtures/persistence/proof.sql"
+import { CRON, LOCK_TICKS, HIDE_TICKS, TICK_IDS, FIRE_TICK } from "./proof.sql"
 
 /** Executes the installed command, isolates existing ticks, and rolls the entire proof back. */
 export const cronProof = async (world: LiteWorld) => {

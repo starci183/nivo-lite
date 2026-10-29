@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { toChainStep } from "./chain-step.mapper"
-import type { ChainStepRow } from "./persistence/work-chains.rows"
+import type { ChainStepRecord } from "./work-chains.contracts"
 
 const SUBJECT = Symbol("chain-step.mapper")
 
@@ -11,7 +11,7 @@ const buildSubject = async () => {
     return moduleRef.get<typeof import("./chain-step.mapper")>(SUBJECT)
 }
 
-const rowOf = (overrides: Partial<ChainStepRow> = {}): ChainStepRow => ({
+const rowOf = (overrides: Partial<ChainStepRecord> = {}): ChainStepRecord => ({
     id: "step-1",
     seq: 2,
     actor_kind: "agent",
@@ -26,7 +26,7 @@ const rowOf = (overrides: Partial<ChainStepRow> = {}): ChainStepRow => ({
     approval_request_id: "req-1",
     status: "waiting",
     decided_by: null,
-    started_at: "2026-10-22T09:41:00+07:00",
+    started_at: new Date("2026-10-22T09:41:00+07:00"),
     finished_at: null,
     ...overrides,
 })
@@ -64,7 +64,7 @@ describe("chain step mapper", () => {
                 status: "done",
                 target: null,
                 decided_by: "member-1",
-                finished_at: "2026-10-22T09:42:00+07:00",
+                finished_at: new Date("2026-10-22T09:42:00+07:00"),
             }),
         )
 

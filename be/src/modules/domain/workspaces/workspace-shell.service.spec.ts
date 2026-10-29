@@ -3,8 +3,9 @@ import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { READ_SHELL } from "./persistence/workspace-shell.sql"
 import { WorkspaceShellService } from "./workspace-shell.service"
+
+const SHELL_DATA = "SELECT * FROM public.shell_data($1, $2, $3)"
 
 const WINDOW = { from: "2026-09-28T17:00:00.000Z", to: "2026-10-31T16:59:59.000Z" }
 
@@ -44,10 +45,10 @@ describe("WorkspaceShellService", () => {
         it("reads the console frame for an active member", async () => {
             const em = mockEntityManager({
                 query: [
-                    READ_SHELL,
+                    SHELL_DATA,
                     [
                         {
-                            data: {
+                            shell_data: {
                                 lead_count: 3,
                                 open_responsibility_count: 1,
                                 agents: [{ id: "a-1", name: "Mai", module: "sales", status: "paused" }],
@@ -82,18 +83,18 @@ describe("WorkspaceShellService", () => {
                 pendingDecisions: 2,
             })
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-            expect(em.query).toHaveBeenCalledWith(READ_SHELL, ["ws-1", WINDOW.from, WINDOW.to])
+            expect(em.query).toHaveBeenCalledWith(SHELL_DATA, ["ws-1", WINDOW.from, WINDOW.to])
         })
 
         it("reads a missing answer as an empty frame", async () => {
-            const em = mockEntityManager({ query: [READ_SHELL, []] })
+            const em = mockEntityManager({ query: [SHELL_DATA, []] })
             const { service } = await build(em)
 
             await expect(service.read("user-1", "ws-1", WINDOW)).resolves.toEqual(EMPTY)
         })
 
         it("reads a row with no data as an empty frame", async () => {
-            const em = mockEntityManager({ query: [READ_SHELL, [{ data: null }]] })
+            const em = mockEntityManager({ query: [SHELL_DATA, [{ shell_data: null }]] })
             const { service } = await build(em)
 
             await expect(service.read("user-1", "ws-1", WINDOW)).resolves.toEqual(EMPTY)

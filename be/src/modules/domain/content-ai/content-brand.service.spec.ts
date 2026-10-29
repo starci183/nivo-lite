@@ -1,13 +1,16 @@
 import { Test } from "@nestjs/testing"
+import { Equal, In, IsNull, Or } from "typeorm"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import { AuthorityService } from "@modules/domain/authority"
 import type { Authority } from "@modules/domain/authority"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import type { FactRecord } from "@modules/domain/brain-facts"
+import { KnowledgeSourceEntity } from "@modules/domain/knowledge-sources"
+import { ModuleInstallationEntity } from "@modules/domain/module-installations"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { ContentBrandService } from "./content-brand.service"
-import { SELECT_CONTENT_PUBLIC_SOURCES, SELECT_CONTENT_SETUP } from "./persistence/content-ai.sql"
 
 const SNAPSHOT = {
     summary: " Cafe ",
@@ -26,11 +29,12 @@ const build = async (
     records: ReadonlyArray<FactRecord> = [],
 ) => {
     const entityManager = mockEntityManager({
-        query: [
-            [SELECT_CONTENT_SETUP, snapshots],
-            [SELECT_CONTENT_PUBLIC_SOURCES, [{ title: "Menu", topic: "food", content: "Pho" }]],
+        find: [
+            KnowledgeSourceEntity,
+            [Object.assign(new KnowledgeSourceEntity(), { title: "Menu", topic: "food", content: "Pho" })],
         ],
     })
+    const [setup] = queueQueryBuilders(entityManager, [{ getRawOne: snapshots[0] }])
     const authority = mock<AuthorityService>()
     authority.load.mockResolvedValue(profile)
     const facts = mock<BrainFactsService>()
@@ -46,12 +50,12 @@ const build = async (
             { provide: WorkspacesService, useValue: workspaces },
         ],
     }).compile()
-    return moduleRef.get(ContentBrandService)
+    return { service: moduleRef.get(ContentBrandService), entityManager, setup }
 }
 
 describe("ContentBrandService", () => {
     it("reads the shop, the public setup and drops facts that are not text", async () => {
-        const service = await build()
+        const { service, entityManager, setup } = await build()
 
         await expect(service.material("ws-1")).resolves.toEqual({
             shop: "Lan",
@@ -67,6 +71,23 @@ describe("ContentBrandService", () => {
             sources: [{ title: "Menu", topic: "food", content: "Pho" }],
             brainFacts: [],
         })
+        expect(entityManager.createQueryBuilder).toHaveBeenCalledWith(ModuleInstallationEntity, "i")
+        expect(setup?.callsOf("where")).toEqual([
+            ["i.workspace_id = :workspaceId AND i.module_key = 'content'", { workspaceId: "ws-1" }],
+        ])
+        expect(setup?.callsOf("limit")).toEqual([[1]])
+        expect(entityManager.find).toHaveBeenCalledWith(KnowledgeSourceEntity, {
+            select: { title: true, topic: true, content: true },
+            where: {
+                workspaceId: "ws-1",
+                visibility: "public",
+                status: In(["ready", "extracting_facts"]),
+                module: Or(IsNull(), Equal("content")),
+                installationId: IsNull(),
+            },
+            order: { createdAt: "ASC" },
+            take: 40,
+        })
     })
 
     it.each([
@@ -74,7 +95,7 @@ describe("ContentBrandService", () => {
         { snapshots: [{ snapshot: null }] },
         { snapshots: [{ snapshot: { gates: null, facts: null } }] },
     ])("defaults missing and malformed setup material %#", async ({ snapshots }) => {
-        const service = await build(snapshots)
+        const { service } = await build(snapshots)
         await expect(service.material("ws-1")).resolves.toMatchObject({
             authority: { brandVoice: "", replyStyle: "", limitsNote: "" },
             setup: { summary: "", facts: [], tone: "", claimsLimits: "", audience: "", channels: "" },
@@ -84,7 +105,7 @@ describe("ContentBrandService", () => {
 
     it("uses the authority, discards malformed facts and maps customer-visible brain facts", async () => {
         const fact = mock<FactRecord>({ subjectLabel: "Cafe", attributeLabel: "Opening", value: "7am" })
-        const service = await build(
+        const { service } = await build(
             [
                 {
                     snapshot: {

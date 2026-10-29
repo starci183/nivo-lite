@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { DEEPSEEK_CLIENT } from "@modules/integrations/deepseek"
+import { AI_TASKS } from "@modules/domain/ai-tasks"
 import { LeadGenQueueModule } from "@modules/queues/lead-gen"
 import { AskQualifyingPerformerService } from "./ask-qualifying-performer.service"
 import { CaptureLeadPerformerService } from "./capture-lead-performer.service"
@@ -39,7 +39,7 @@ export class LeadFlowsModule extends ConfigurableModuleClass {
             imports: [...(base.imports ?? []), LeadGenQueueModule.register({})],
             providers: [
                 ...(base.providers ?? []),
-                { provide: LEAD_TURN_READER, useExisting: DEEPSEEK_CLIENT },
+                { provide: LEAD_TURN_READER, useExisting: AI_TASKS },
                 LeadFlowStoreService,
                 LeadFlowMetaService,
                 LeadFlowConversationService,

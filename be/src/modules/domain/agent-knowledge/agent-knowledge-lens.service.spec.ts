@@ -330,3 +330,41 @@ describe("AgentKnowledgeLensService ask", () => {
         expect(recall.factsMatching).not.toHaveBeenCalled()
     })
 })
+
+describe("AgentKnowledgeLensService notes", () => {
+    const request = {
+        workspaceId: WS,
+        module: "sales",
+        audience: "customer" as const,
+        installationId: null,
+        question: "  renewal terms ",
+        limit: 2,
+    }
+
+    it("reads the lane of the agent: its facts first, then the passages, cut to the limit", async () => {
+        const { lens, recall, search } = await build()
+        recall.factsMatching.mockResolvedValue([factOf("public")])
+        search.forAgent.mockResolvedValue([{ ...PASSAGE }, { ...PASSAGE }])
+
+        const found = await lens.notes(request)
+
+        expect(search.forAgent).toHaveBeenCalledWith({ ...request, question: "renewal terms" })
+        expect(recall.factsMatching).toHaveBeenCalledWith(
+            { workspaceId: WS, module: "sales", audience: "customer", installationId: null },
+            "renewal terms",
+            5,
+        )
+        expect(found).toHaveLength(2)
+        expect(found[0]).toMatchObject({ layer: "fact", id: "public" })
+    })
+
+    it("finds no notes, and reads no facts, on an empty brain or a blank question", async () => {
+        const { lens, recall, search } = await build()
+        search.forAgent.mockResolvedValue([])
+        recall.factsMatching.mockResolvedValue([])
+
+        await expect(lens.notes(request)).resolves.toEqual([])
+        await expect(lens.notes({ ...request, question: "  " })).resolves.toEqual([])
+        expect(recall.factsMatching).toHaveBeenCalledTimes(1)
+    })
+})

@@ -13,7 +13,7 @@ take the native backup (`starci app db dump`) and verify its receipt first.
   - `keep`: the kept workspaces (id, name).
   - `remove`: each workspace to delete, with its row count per table that cascades from `public.workspaces` and their total.
     The counts come from `public.workspace_footprint(uuid)` (migration
-    `supabase/migrations/20261101000907_workspace-footprint.sql`), a read-only `SECURITY INVOKER` function that only `app_be` may
+    `db/migrations/20261101000907_workspace-footprint.sql`), a read-only `SECURITY INVOKER` function that only `app_be` may
     execute.
   - `orphanUsers`: each account no kept workspace holds as a member or owner, by id, with the email masked (`h***@gmail.com`)
     and `keptCascade`, the kept rows its delete would cascade-delete (empty unless `--allow-kept-cascade`).
@@ -44,7 +44,7 @@ take the native backup (`starci app db dump`) and verify its receipt first.
 
 Run it from the release tag through Actions > seed demo workspace (`.github/workflows/cli-deploy.yml`) with task
 `cleanup-workspaces`. The job reads the same sealed custody as the seed job: every key reaches the cli as `<KEY>_FILE` and is never
-echoed. It requires `PRIMARY_DB_URL`, `SUPABASE_URL` and `CHANNEL_TOKEN_KEY`.
+echoed. It requires `PRIMARY_DB_URL`, `AUTH_JWT_PRIVATE_KEY`, `AUTH_JWT_PUBLIC_KEY` and `CHANNEL_TOKEN_KEY`.
 
 1. Run with `keep` set to the HAKUEN workspace id and `mode` set to `dry-run`. Leave `allow_kept_cascade` off unless a refusal
    named kept rows that may go with the account.

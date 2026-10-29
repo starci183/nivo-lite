@@ -16,8 +16,6 @@ import { OFFICE_RECEIPT_PREFIX } from "./messages/workspace-seed.messages"
 import { SEED_OFFICE_AUTHORITY } from "./office-seed.decorators"
 import type { OfficeAuthorityPort } from "./office-seed.port"
 import { OfficeSeedService } from "./office-seed.service"
-import { SEAT_PERSON } from "./persistence/office-seed.sql"
-import { ENSURE_OFFICE_ROOMS, MOVE_AGENT_HOME, ROOMS_FUNCTION_PRESENT } from "./persistence/workspace-profile.sql"
 import { HAKUEN_OFFICE } from "./profiles/hakuen-office.templates"
 import { SEED_AGENTS, WORKSPACE_SEED_OPTIONS } from "./workspace-seed.decorators"
 import type { SeedAgentRecords } from "./workspace-seed.port"
@@ -59,8 +57,12 @@ const MEMBER_OF_USER: Readonly<Record<string, string>> = {
     "user-ha": "m-ha",
     "user-van": "m-van",
 }
+const ROOMS_FUNCTION_PRESENT = "SELECT * FROM to_regproc($1)"
+const ENSURE_OFFICE_ROOMS = "SELECT * FROM public.ensure_office_rooms($1)"
+const MOVE_AGENT_HOME = "SELECT * FROM public.move_office_agent_home($1, $2, $3)"
+const SEAT_PERSON = "SELECT * FROM public.seat_office_member($1, $2, $3)"
 const ROOMS_READY = [
-    [ROOMS_FUNCTION_PRESENT, [{ present: true }]],
+    [ROOMS_FUNCTION_PRESENT, [{ to_regproc: "public.ensure_office_rooms" }]],
     [ENSURE_OFFICE_ROOMS, []],
     [MOVE_AGENT_HOME, [{ moved: true }]],
     [SEAT_PERSON, [{ seated: true }]],
@@ -112,7 +114,9 @@ const build = async (em: MockEntityManager, options: BuildOptions = {}) => {
 
 describe("OfficeSeedService dry run", () => {
     it("validates the private input and prints the plan without writing anything", async () => {
-        const em = mockEntityManager({ query: [ROOMS_FUNCTION_PRESENT, [{ present: true }]] })
+        const em = mockEntityManager({
+            query: [ROOMS_FUNCTION_PRESENT, [{ to_regproc: "public.ensure_office_rooms" }]],
+        })
         const { service, print, seeds, records, agents } = await build(em)
 
         const report = await service.officeOperator({ owner: ` ${NAM.toUpperCase()} ` })
@@ -250,7 +254,7 @@ describe("OfficeSeedService ownership and rooms", () => {
     })
 
     it("still writes the agents and their owners when the Hub rooms function is not installed", async () => {
-        const em = mockEntityManager({ query: [ROOMS_FUNCTION_PRESENT, [{ present: false }]] })
+        const em = mockEntityManager({ query: [ROOMS_FUNCTION_PRESENT, [{ to_regproc: null }]] })
         const { service, agents } = await build(em)
 
         await expect(service.officeOperator({ owner: NAM, execute: true })).resolves.toMatchObject({

@@ -12,7 +12,7 @@ import type {
     RecordInstallation,
     RequirementFacts,
 } from "@modules/domain/module-installations"
-import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
+import { InstallationChangesService } from "./installation-changes.service"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
@@ -57,7 +57,7 @@ export class ModuleInstallService {
         private readonly identity: AgentIdentityService,
         private readonly rules: AuthorityRulesService,
         private readonly events: EventsService,
-        private readonly sync: AgentSyncService,
+        private readonly changes: InstallationChangesService,
         private readonly readiness: ModuleReadinessService,
     ) {}
 
@@ -107,7 +107,7 @@ export class ModuleInstallService {
                 ? await this.create(principalId, member, module, request, wanted)
                 : { installationId: existing.id, agentId: existing.agentId, created: false }
         await this.rules.seedDefaults(request.workspaceId, module.key, defaultRulesOf(module))
-        await this.sync.requestNow({
+        await this.changes.announceNow({
             workspaceId: request.workspaceId,
             installationId: made.installationId,
             force: true,
@@ -188,7 +188,7 @@ export class ModuleInstallService {
         const current = await this.requireActive(workspaceId, installationId)
         if (current.agentId === null) throw new ModulesError({ code: ModulesErrorCode.AgentMissing })
         await this.identity.rename(principalId, workspaceId, current.agentId, clean)
-        await this.sync.requestNow({ workspaceId, installationId, force: false })
+        await this.changes.announceNow({ workspaceId, installationId, force: false })
         return this.viewOf(workspaceId, installationId)
     }
 

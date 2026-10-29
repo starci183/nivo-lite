@@ -8,10 +8,21 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { ContextNote, DismissedNote } from "./context-notes.contracts"
 import { ModuleContextNotesError, ModuleContextNotesErrorCode } from "./errors/module-context-notes.error"
-import { DISMISS_NOTE, LIST_PENDING_NOTES } from "./persistence/context-notes.sql"
+import { ModuleContextNoteEntity } from "./persistence/entities"
+
+/** How many pending notes of one installation are read at once. */
+const PENDING_NOTES_LIMIT = 200
 
 /** Who may read and dismiss a note. */
 const GOVERNORS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
+
+/** The columns the dismissing update answers. */
+interface DismissedRow {
+    /** The installation whose draft holds the fact. */
+    readonly installation_id: string
+    /** The fact key the note added to the draft. */
+    readonly fact_key: string
+}
 
 @Injectable()
 /** Notes that supplement an installation's context later: the only owner of module_context_notes. */
@@ -26,20 +37,37 @@ export class ContextNotesService {
     /** Pending notes of one installation, oldest first; a manager only. */
     async pending(userId: string, workspaceId: string, installationId: string): Promise<ReadonlyArray<ContextNote>> {
         await this.members.require(userId, workspaceId, GOVERNORS)
-        return this.entityManager.query<Array<ContextNote>>(LIST_PENDING_NOTES, [workspaceId, installationId])
+        const notes = await this.entityManager.find(ModuleContextNoteEntity, {
+            where: { workspaceId, installationId, status: "pending" },
+            order: { createdAt: "ASC" },
+            take: PENDING_NOTES_LIMIT,
+        })
+        return notes.map((note) => ({
+            id: note.id,
+            installationId: note.installationId,
+            body: note.body,
+            source: note.source,
+            authorName: note.authorName,
+            authorRole: note.authorRole,
+            status: note.status,
+            createdAt: note.createdAt.toISOString(),
+        }))
     }
 
     /** Dismisses a pending note and takes its fact out of the open draft; a manager only. */
     async dismiss(userId: string, workspaceId: string, noteId: string): Promise<DismissedNote> {
         const member = await this.members.require(userId, workspaceId, GOVERNORS)
-        const [row] = await this.entityManager.query<Array<DismissedNote>>(DISMISS_NOTE, [
-            workspaceId,
-            noteId,
-            member.displayName,
-            this.clock.now().toISOString(),
-        ])
+        const changed = await this.entityManager
+            .createQueryBuilder(ModuleContextNoteEntity, "m")
+            .update()
+            .set({ status: "dismissed", decidedBy: member.displayName, decidedAt: this.clock.now() })
+            .where({ workspaceId, id: noteId, status: "pending" })
+            .returning(["installationId", "factKey"])
+            .execute()
+        const [row] = changed.raw as Array<DismissedRow>
         if (row === undefined) throw new ModuleContextNotesError({ code: ModuleContextNotesErrorCode.NotFound })
-        await this.sessions.dropFact(row.installationId, row.factKey)
-        return row
+        const dismissed: DismissedNote = { installationId: row.installation_id, factKey: row.fact_key }
+        await this.sessions.dropFact(dismissed.installationId, dismissed.factKey)
+        return dismissed
     }
 }

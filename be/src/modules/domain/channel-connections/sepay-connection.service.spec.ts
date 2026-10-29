@@ -5,6 +5,8 @@ import type { ConnectionRecord } from "@modules/domain/connections"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
+import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
 import { SepayConnectionService } from "./sepay-connection.service"
 
 const actor = { principalId: "owner-1", workspaceId: "ws-1" }
@@ -41,7 +43,19 @@ const build = async (connection: ConnectionRecord = feed()) => {
     connections.webhookUrl.mockReturnValue("https://app.example/api/connections/sepay/c1")
     connections.patch.mockResolvedValue(undefined)
     const manager = mockEntityManager()
-    manager.query.mockResolvedValue([])
+    let answer: ReadonlyArray<unknown> = []
+    let failure: Error | null = null
+    const seen = answerByTable(manager, {
+        "": () => (failure === null ? answer : Promise.reject(failure)),
+    })
+    const rows = {
+        set: (next: ReadonlyArray<unknown>) => {
+            answer = next
+        },
+        fail: (error: Error) => {
+            failure = error
+        },
+    }
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -51,20 +65,20 @@ const build = async (connection: ConnectionRecord = feed()) => {
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { service: moduleRef.get(SepayConnectionService), connections, manager, logger }
+    return { service: moduleRef.get(SepayConnectionService), connections, manager, logger, rows, seen }
 }
 
 describe("SepayConnectionService read", () => {
     it("answers the page model with the key and the account masked and the health counters", async () => {
-        const { service, manager } = await build()
-        manager.query.mockResolvedValue([
+        const { service, rows } = await build()
+        rows.set([
             {
-                last_at: "2026-10-28T06:59:00.000Z",
-                ping_at: "2026-10-28T06:58:00.000Z",
-                transaction_at: null,
-                total_24h: "3",
-                valid_24h: "2",
-                duplicate_24h: "1",
+                lastAt: "2026-10-28T06:59:00.000Z",
+                pingAt: "2026-10-28T06:58:00.000Z",
+                transactionAt: null,
+                total24h: "3",
+                valid24h: "2",
+                duplicate24h: "1",
             },
         ])
 
@@ -103,15 +117,15 @@ describe("SepayConnectionService read", () => {
 
 describe("SepayConnectionService events", () => {
     it("lists the newest deliveries as typed events", async () => {
-        const { service, manager } = await build()
-        manager.query.mockResolvedValue([
+        const { service, rows } = await build()
+        rows.set([
             {
                 id: "e1",
                 at: "2026-10-28T06:59:00.000Z",
                 outcome: "duplicate",
                 kind: "credit",
-                amount_vnd: "2000",
-                provider_event_id: "92704",
+                amountVnd: "2000",
+                providerEventId: "92704",
                 environment: "test",
             },
         ])
@@ -143,14 +157,10 @@ describe("SepayConnectionService setEnvironment", () => {
 
 describe("SepayConnectionService deliveries", () => {
     it("remembers a ping before the intake and a credit after it", async () => {
-        const { service, manager } = await build()
+        const { service, seen } = await build()
         const order: Array<string> = []
-        manager.query.mockImplementation(() => {
-            order.push("remember")
-            return Promise.resolve([])
-        })
         const intake = jest.fn(() => {
-            order.push("intake")
+            order.push(`intake after ${seen.queries.length} remembered`)
             return Promise.resolve()
         })
 
@@ -161,28 +171,43 @@ describe("SepayConnectionService deliveries", () => {
             intake,
         )
 
-        expect(order).toEqual(["remember", "intake", "intake", "remember"])
-        expect(manager.query).toHaveBeenLastCalledWith(expect.anything(), ["c1", "accepted", "credit", 2000, "2"])
+        expect(order).toEqual(["intake after 1 remembered", "intake after 1 remembered"])
+        expect(seen.queries).toHaveLength(2)
+        expect(seen.queries[1]?.callsOf("setParameters")).toEqual([
+            [{ connectionId: "c1", outcome: "accepted", kind: "credit", amount: 2000, eventId: "2" }],
+        ])
+        expect(Object.keys(stampedValues(seen.queries[1]?.callsOf("values")[0]?.[0]))).toEqual([
+            "workspaceId",
+            "connectionId",
+            "environment",
+            "outcome",
+            "kind",
+            "amountVnd",
+            "providerEventId",
+        ])
     })
 
     it("does not remember a credit whose intake failed", async () => {
-        const { service, manager } = await build()
+        const { service, seen } = await build()
         const raw = Buffer.from(JSON.stringify({ id: 2, transferType: "in", transferAmount: 5 }))
 
         await expect(service.traceIntake("c1", raw, () => Promise.reject(new Error("intake")))).rejects.toThrow(
             "intake",
         )
 
-        expect(manager.query).not.toHaveBeenCalled()
+        expect(seen.queries).toHaveLength(0)
     })
 
     it("remembers a refused key as unauthorized, and logs instead of failing when the write fails", async () => {
-        const { service, manager, logger } = await build()
-        manager.query.mockRejectedValue(new Error("down"))
+        const { service, rows, logger, seen } = await build()
+        rows.fail(new Error("down"))
 
         await expect(service.traceRefusal("c1")).resolves.toBeUndefined()
 
-        expect(manager.query).toHaveBeenCalledWith(expect.anything(), ["c1", "unauthorized", "ping", null, null])
+        expect(seen.queries).toHaveLength(1)
+        expect(seen.queries[0]?.callsOf("setParameters")).toEqual([
+            [{ connectionId: "c1", outcome: "unauthorized", kind: "ping", amount: null, eventId: null }],
+        ])
         expect(logger.warn).toHaveBeenCalledTimes(1)
     })
 })

@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { EventsService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -9,7 +10,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG, REQUEST_LOCALE } from "@modules/platform/i18n"
 import type { MessageCatalog, RequestLocale } from "@modules/platform/i18n"
 import { ResponsibilitiesError, ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
-import { FIND_ACCOUNTING_AGENT, INSERT_RESPONSIBILITY, UPDATE_RESPONSIBILITY } from "./persistence/responsibilities.sql"
+import { ResponsibilityEntity } from "./persistence/entities"
 import type { AddResponsibilityParams, AssignResponsibilityParams } from "./responsibilities.contracts"
 import { ResponsibilitiesService } from "./responsibilities.service"
 import type { ResolvedOwner } from "./responsibility-owner.policy"
@@ -103,31 +104,45 @@ const build = async (entityManager: MockEntityManager, owner: ResolvedOwner | Er
     return { responsibilities: moduleRef.get(ResponsibilitiesService), events, requestLocale, owners }
 }
 
+const NEW_STEP = {
+    workspaceId: "ws-1",
+    leadId: "lead-1",
+    title: "Send the contract",
+    ownerKind: "human",
+    ownerAgentId: null,
+    ownerName: "Anh Minh",
+    nextAction: "Email the contract",
+    dueAt: new Date("2026-10-20T00:00:00.000Z"),
+    ownerMemberId: MEMBER_ID,
+}
+
+/** Answers the guarding lead read (held `FOR SHARE`) with `lead` and the insert with `inserted`, in that order. */
+const answerInsert = (em: MockEntityManager, lead: unknown, inserted: ReadonlyArray<unknown>) => {
+    const read = fakeQueryBuilder({ getRawOne: lead })
+    const write = fakeQueryBuilder({ execute: { raw: inserted } })
+    answerQueryBuilders(em, read, write)
+    return { read, write }
+}
+
 describe("ResponsibilitiesService > addResponsibility", () => {
     it("writes the step owned by the member and logs who owns it in the same transaction", async () => {
-        const tx = fakeTransaction(mockEntityManager({ query: [INSERT_RESPONSIBILITY, [STEP]] }))
+        const em = mockEntityManager()
+        const { read, write } = answerInsert(em, { id: "lead-1" }, [STEP])
+        const tx = fakeTransaction(em)
         const { responsibilities, events, owners } = await build(tx.em)
 
         await expect(responsibilities.addResponsibility(addOf())).resolves.toEqual(RESULT)
 
         expect(owners.resolve.mock.calls).toEqual([[expect.anything(), "ws-1", MEMBER_ID]])
         expect(isTransactionManager(owners.resolve.mock.calls[0]?.[0])).toBe(true)
-        expect(tx.em.query.mock.calls).toEqual([
-            [
-                INSERT_RESPONSIBILITY,
-                [
-                    "ws-1",
-                    "lead-1",
-                    "Send the contract",
-                    "human",
-                    null,
-                    "Anh Minh",
-                    "Email the contract",
-                    "2026-10-20T00:00:00.000Z",
-                    MEMBER_ID,
-                ],
-            ],
+        expect(read.argsOf("where")).toEqual([
+            ["l.workspace_id = :workspaceId AND l.id = :leadId", { workspaceId: "ws-1", leadId: "lead-1" }],
         ])
+        expect(read.argsOf("setLock")).toEqual([["pessimistic_read"]])
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(ResponsibilityEntity, "r")
+        expect(write.callsOf("insert")).toEqual([[]])
+        expect(write.argsOf("values")).toEqual([[NEW_STEP]])
+        expect(write.argsOf("returning")).toEqual([[expect.stringContaining("to_char(due_at AT TIME ZONE 'UTC'")]])
         expect(events.record.mock.calls[0]?.[0]).toEqual({
             workspaceId: "ws-1",
             leadId: "lead-1",
@@ -141,7 +156,9 @@ describe("ResponsibilitiesService > addResponsibility", () => {
 
     it("writes the step owned by an agent of the workspace, with no member", async () => {
         const agentStep = { ...STEP, owner_kind: "agent", owner_agent_id: AGENT_ID, owner_member_id: null }
-        const tx = fakeTransaction(mockEntityManager({ query: [INSERT_RESPONSIBILITY, [agentStep]] }))
+        const em = mockEntityManager()
+        const { write } = answerInsert(em, { id: "lead-1" }, [agentStep])
+        const tx = fakeTransaction(em)
         const { responsibilities } = await build(tx.em, AGENT_OWNER)
 
         await expect(responsibilities.addResponsibility(addOf({ owner: AGENT_ID }))).resolves.toMatchObject({
@@ -150,16 +167,8 @@ describe("ResponsibilitiesService > addResponsibility", () => {
             ownerMemberId: null,
         })
 
-        expect(tx.em.query.mock.calls[0]?.[1]).toEqual([
-            "ws-1",
-            "lead-1",
-            "Send the contract",
-            "agent",
-            AGENT_ID,
-            "Sales AI",
-            "Email the contract",
-            "2026-10-20T00:00:00.000Z",
-            null,
+        expect(write.argsOf("values")).toEqual([
+            [{ ...NEW_STEP, ownerKind: "agent", ownerAgentId: AGENT_ID, ownerName: "Sales AI", ownerMemberId: null }],
         ])
     })
 })
@@ -172,13 +181,15 @@ describe("ResponsibilitiesService > addResponsibility, refusals", () => {
 
         await expect(responsibilities.addResponsibility(addOf({ owner: "human" }))).rejects.toBe(refusal)
 
-        expect(tx.em.query).not.toHaveBeenCalled()
+        expect(tx.em.createQueryBuilder).not.toHaveBeenCalled()
         expect(events.record).not.toHaveBeenCalled()
         expect(tx.rollbacks).toBe(1)
     })
 
-    it("refuses a lead the workspace does not have", async () => {
-        const tx = fakeTransaction(mockEntityManager({ query: [INSERT_RESPONSIBILITY, []] }))
+    it("refuses a lead the workspace does not have and inserts nothing", async () => {
+        const em = mockEntityManager()
+        const { write } = answerInsert(em, undefined, [])
+        const tx = fakeTransaction(em)
         const { responsibilities, events } = await build(tx.em)
 
         await expect(responsibilities.addResponsibility(addOf())).rejects.toMatchObject({
@@ -186,6 +197,7 @@ describe("ResponsibilitiesService > addResponsibility, refusals", () => {
             params: { id: "lead-1" },
         })
 
+        expect(write.argsOf("values")).toEqual([])
         expect(events.record).not.toHaveBeenCalled()
         expect(tx.rollbacks).toBe(1)
     })
@@ -194,7 +206,10 @@ describe("ResponsibilitiesService > addResponsibility, refusals", () => {
 describe("ResponsibilitiesService > assignResponsibility", () => {
     it("changes the step to a member and logs who owns it", async () => {
         const changed = { ...STEP, next_action: "Call back", due_at: null }
-        const tx = fakeTransaction(mockEntityManager({ query: [UPDATE_RESPONSIBILITY, [changed]] }))
+        const em = mockEntityManager()
+        const update = fakeQueryBuilder({ execute: { raw: [changed] } })
+        answerQueryBuilders(em, update)
+        const tx = fakeTransaction(em)
         const { responsibilities, events } = await build(tx.em)
 
         await expect(responsibilities.assignResponsibility(assignOf())).resolves.toMatchObject({
@@ -204,17 +219,22 @@ describe("ResponsibilitiesService > assignResponsibility", () => {
             ownerMemberId: MEMBER_ID,
         })
 
-        expect(tx.em.query.mock.calls[0]?.[1]).toEqual([
-            "ws-1",
-            "step-1",
-            "human",
-            null,
-            "Anh Minh",
-            "Call back",
-            null,
-            null,
-            MEMBER_ID,
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(ResponsibilityEntity, "r")
+
+        expect(update.callsOf("update")).toEqual([[]])
+        expect(update.argsOf("set")).toEqual([
+            [
+                {
+                    ownerKind: "human",
+                    ownerAgentId: null,
+                    ownerName: "Anh Minh",
+                    nextAction: "Call back",
+                    dueAt: null,
+                    ownerMemberId: MEMBER_ID,
+                },
+            ],
         ])
+        expect(update.argsOf("where")).toEqual([[{ workspaceId: "ws-1", id: "step-1" }]])
         expect(events.record.mock.calls[0]?.[0]).toMatchObject({
             leadId: "lead-1",
             summary: 'responsibilities.owner-next:{"owner":"Anh Minh","next":"Call back"}',
@@ -224,28 +244,35 @@ describe("ResponsibilitiesService > assignResponsibility", () => {
 
     it("changes the step to an agent and renames it when a title is given", async () => {
         const agentStep = { ...STEP, owner_kind: "agent", owner_agent_id: AGENT_ID, owner_member_id: null }
-        const tx = fakeTransaction(mockEntityManager({ query: [UPDATE_RESPONSIBILITY, [agentStep]] }))
+        const em = mockEntityManager()
+        const update = fakeQueryBuilder({ execute: { raw: [agentStep] } })
+        answerQueryBuilders(em, update)
+        const tx = fakeTransaction(em)
         const { responsibilities } = await build(tx.em, AGENT_OWNER)
 
         await responsibilities.assignResponsibility(assignOf({ owner: AGENT_ID, title: "Renewal" }))
 
-        expect(tx.em.query.mock.calls[0]?.[1]).toEqual([
-            "ws-1",
-            "step-1",
-            "agent",
-            AGENT_ID,
-            "Sales AI",
-            "Call back",
-            null,
-            "Renewal",
-            null,
+        expect(update.argsOf("set")).toEqual([
+            [
+                {
+                    ownerKind: "agent",
+                    ownerAgentId: AGENT_ID,
+                    ownerName: "Sales AI",
+                    nextAction: "Call back",
+                    dueAt: null,
+                    ownerMemberId: null,
+                    title: "Renewal",
+                },
+            ],
         ])
     })
 })
 
 describe("ResponsibilitiesService > assignResponsibility, refusals", () => {
     it("refuses a step the workspace does not have", async () => {
-        const tx = fakeTransaction(mockEntityManager({ query: [UPDATE_RESPONSIBILITY, []] }))
+        const em = mockEntityManager()
+        answerQueryBuilders(em, fakeQueryBuilder({ execute: { raw: [] } }))
+        const tx = fakeTransaction(em)
         const { responsibilities, events } = await build(tx.em)
 
         await expect(responsibilities.assignResponsibility(assignOf())).rejects.toMatchObject({
@@ -263,7 +290,7 @@ describe("ResponsibilitiesService > assignResponsibility, refusals", () => {
 
         await expect(responsibilities.assignResponsibility(assignOf({ owner: AGENT_ID }))).rejects.toBe(refusal)
 
-        expect(tx.em.query).not.toHaveBeenCalled()
+        expect(tx.em.createQueryBuilder).not.toHaveBeenCalled()
     })
 })
 
@@ -277,26 +304,33 @@ describe("ResponsibilitiesService > handToAccounting", () => {
     })
 
     it("hands the deal to the active Accounting agent as a step due the next day and logs it", async () => {
-        const manager = mockEntityManager({
-            query: [
-                [FIND_ACCOUNTING_AGENT, [{ id: "agent-9", name: "Accounting AI" }]],
-                [INSERT_RESPONSIBILITY, []],
-            ],
-        })
+        const manager = mockEntityManager()
+        const lookup = fakeQueryBuilder({ getRawOne: { id: "agent-9", name: "Accounting AI" } })
+        const read = fakeQueryBuilder({ getRawOne: { id: "lead-1" } })
+        const write = fakeQueryBuilder({ execute: { raw: [] } })
+        answerQueryBuilders(manager, lookup, read, write)
         const { responsibilities, events } = await build(manager)
 
         await expect(responsibilities.handToAccounting(handOf(manager))).resolves.toBe(true)
 
-        expect(manager.query.mock.calls[1]?.[1]).toEqual([
-            "ws-1",
-            "lead-1",
-            'responsibilities.invoice-title:{"name":"Anh Minh"}',
-            "agent",
-            "agent-9",
-            "Accounting AI",
-            "responsibilities.invoice-next:{}",
-            "2026-10-13T03:00:00.000Z",
-            null,
+        expect(lookup.argsOf("from")).toEqual([["public.agents", "a"]])
+        expect(lookup.argsOf("orderBy")).toEqual([["a.created_at"]])
+        expect(lookup.argsOf("limit")).toEqual([[1]])
+        expect(read.argsOf("setLock")).toEqual([["pessimistic_read"]])
+        expect(write.argsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "ws-1",
+                    leadId: "lead-1",
+                    title: 'responsibilities.invoice-title:{"name":"Anh Minh"}',
+                    ownerKind: "agent",
+                    ownerAgentId: "agent-9",
+                    ownerName: "Accounting AI",
+                    nextAction: "responsibilities.invoice-next:{}",
+                    dueAt: new Date("2026-10-13T03:00:00.000Z"),
+                    ownerMemberId: null,
+                },
+            ],
         ])
         expect(events.record.mock.calls[0]?.[0]).toEqual({
             workspaceId: "ws-1",
@@ -308,12 +342,27 @@ describe("ResponsibilitiesService > handToAccounting", () => {
     })
 
     it("writes nothing when the workspace has no active Accounting agent", async () => {
-        const manager = mockEntityManager({ query: [FIND_ACCOUNTING_AGENT, []] })
+        const manager = mockEntityManager()
+        answerQueryBuilders(manager, fakeQueryBuilder({ getRawOne: undefined }))
         const { responsibilities, events } = await build(manager)
 
         await expect(responsibilities.handToAccounting(handOf(manager))).resolves.toBe(false)
 
-        expect(manager.query).toHaveBeenCalledTimes(1)
+        expect(manager.createQueryBuilder).toHaveBeenCalledTimes(1)
         expect(events.record).not.toHaveBeenCalled()
+    })
+
+    it("writes no step but still records the hand-over when the lead is gone", async () => {
+        const manager = mockEntityManager()
+        const lookup = fakeQueryBuilder({ getRawOne: { id: "agent-9", name: "Accounting AI" } })
+        const read = fakeQueryBuilder({ getRawOne: undefined })
+        const write = fakeQueryBuilder({ execute: { raw: [] } })
+        answerQueryBuilders(manager, lookup, read, write)
+        const { responsibilities, events } = await build(manager)
+
+        await expect(responsibilities.handToAccounting(handOf(manager))).resolves.toBe(true)
+
+        expect(write.argsOf("values")).toEqual([])
+        expect(events.record).toHaveBeenCalledTimes(1)
     })
 })

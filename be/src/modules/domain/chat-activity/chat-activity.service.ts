@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectAfterCommit, InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -13,8 +14,19 @@ import type { RealtimeHub } from "@modules/platform/realtime"
 import { ChatActivityLogEvent } from "./chat-activity.log-events"
 import type { AuthorId, ChatActivityFrame, ChatActivityKind } from "./chat-activity.contracts"
 import { chatActivityTopic } from "./chat-activity.policy"
-import type { ActiveMemberRow } from "./persistence/chat-activity.rows"
-import { LIST_ACTIVE_MEMBER_IDS } from "./persistence/chat-activity.sql"
+
+/** The most active members one push reaches. */
+const MEMBER_LIMIT = 500
+
+/** One active member of a workspace: the account id the member's topic is built from. */
+interface ActiveMember {
+    /** The account id. */
+    readonly userId: string
+}
+
+/** True when a row names the account of an active member. */
+const isActiveMember = (value: unknown): value is ActiveMember =>
+    typeof value === "object" && value !== null && "userId" in value && typeof value.userId === "string"
 
 @Injectable()
 /**
@@ -75,10 +87,13 @@ export class ChatActivityService {
     ): Promise<void> {
         const task = async (): Promise<void> => {
             try {
-                const rows = await this.entityManager.query<Array<ActiveMemberRow>>(LIST_ACTIVE_MEMBER_IDS, [
-                    workspaceId,
-                ])
-                await deliver(rows.map((row) => row.user_id))
+                const rows: ReadonlyArray<unknown> = await this.entityManager
+                    .createQueryBuilder(WorkspaceMemberEntity, "m")
+                    .select("m.user_id", "userId")
+                    .where("m.workspace_id = :workspaceId AND m.status = 'active'", { workspaceId })
+                    .limit(MEMBER_LIMIT)
+                    .getRawMany()
+                await deliver(rows.filter(isActiveMember).map((row) => row.userId))
             } catch (cause) {
                 this.logger.error(ChatActivityLogEvent.PublishFailed, cause, { workspaceId })
             }

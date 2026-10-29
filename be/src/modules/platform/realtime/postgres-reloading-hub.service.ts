@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { notify } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
@@ -9,9 +10,9 @@ import { CATCH_UP_ROWS, NOTIFY_CHANNEL, RECONNECT_DELAY_MS } from "./realtime.co
 import { InjectRealtimeTimer, InjectNotificationListener, InjectRealtimeManagers } from "./realtime.decorators"
 import { RealtimeLogEvent } from "./realtime.log-events"
 import { entryOf, PostgresReplayHubService } from "./postgres-replay-hub.service"
+import type { EventFacts } from "./postgres-replay-hub.service"
 import type { NotificationListener } from "./postgres-listener.port"
-import type { EventRow } from "./persistence/realtime.rows"
-import { NOTIFY_PROBE, SELECT_EVENT, SELECT_MISSED_EVENTS } from "./persistence/realtime.sql"
+import { RealtimeEventEntity } from "./persistence/entities"
 
 @Injectable()
 /**
@@ -44,7 +45,7 @@ export class PostgresReloadingHubService extends PostgresReplayHubService {
         await this.listener.start({
             notify: (payload) => this.chain(() => this.deliver(payload)),
             probe: async (payload) => {
-                await writer.query(NOTIFY_PROBE, [NOTIFY_CHANNEL, payload])
+                await notify(writer, NOTIFY_CHANNEL, payload)
             },
             lost: () => this.lost(),
             resumed: () => {
@@ -81,8 +82,12 @@ export class PostgresReloadingHubService extends PostgresReplayHubService {
             return
         }
         if (!this.subscriptions.follows(notification.topic)) return
-        const rows = await this.writer().query<Array<EventRow>>(SELECT_EVENT, [notification.seq])
-        this.subscriptions.fanOut(rows.map(entryOf))
+        const row = await this.writer().findOne(RealtimeEventEntity, {
+            select: { seq: true, topic: true, payload: true },
+            where: { seq: String(notification.seq) },
+        })
+        // A row the sweep already deleted answers nothing.
+        this.subscriptions.fanOut(row === null ? [] : [entryOf(row)])
     }
 
     /** Holds delivery until the current loss has been recovered; an older scheduled retry no longer owns the pause. */
@@ -126,11 +131,21 @@ export class PostgresReloadingHubService extends PostgresReplayHubService {
     private async reloadFrom(topics: ReadonlyArray<string>, loaded: Map<string, number>): Promise<void> {
         const followed = topics.filter((topic) => this.subscriptions.follows(topic))
         if (followed.length === 0) return
-        const rows = await this.writer().query<Array<EventRow>>(SELECT_MISSED_EVENTS, [
-            followed,
-            followed.map((topic) => Math.max(Number(this.subscriptions.floorOf(topic)), loaded.get(topic) ?? 0)),
-            CATCH_UP_ROWS,
-        ])
+        const cursors = followed.map((topic) =>
+            Math.max(Number(this.subscriptions.floorOf(topic)), loaded.get(topic) ?? 0),
+        )
+        const rows = await this.writer()
+            .createQueryBuilder(RealtimeEventEntity, "e")
+            .select(["e.seq AS seq", "e.topic AS topic", "e.payload AS payload"])
+            .innerJoin(
+                "(SELECT * FROM unnest(CAST(:topics AS text[]), CAST(:cursors AS bigint[])) AS c(topic, after))",
+                "cursors",
+                "e.topic = cursors.topic AND e.seq > cursors.after",
+            )
+            .setParameters({ topics: followed, cursors })
+            .orderBy("e.seq", "ASC")
+            .limit(CATCH_UP_ROWS)
+            .getRawMany<EventFacts>()
         const entries = rows.map(entryOf)
         this.subscriptions.fanOut(entries)
         for (const entry of entries) loaded.set(entry.topic, Number(entry.position))

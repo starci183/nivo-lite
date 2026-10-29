@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import { ConfigurableModuleClass } from "./cli.module-definition"
 import { CleanupWorkspacesModule } from "./cleanup-workspaces/cleanup-workspaces.module"
+import { CreateOwnerModule } from "./create-owner/create-owner.module"
 import { ConnectChannelModule } from "./connect-channel/connect-channel.module"
 import { CliJobsModule } from "./jobs/jobs.module"
 import { MigrateModule } from "./migrate/migrate.module"
@@ -11,12 +12,14 @@ import { SeedAutomationsModule } from "./seed-automations/seed-automations.modul
 import { SeedMediaModule } from "./seed-media/seed-media.module"
 import { SeedModulesModule } from "./seed-modules/seed-modules.module"
 import { SeedWorkspaceModule } from "./seed-workspace/seed-workspace.module"
+import { StorageCliModule } from "./storage/storage.module"
 import { SyncN8nModule } from "./sync-n8n/sync-n8n.module"
 
 @Module({
     imports: [
         CleanupWorkspacesModule.register({}),
         ConnectChannelModule.register({}),
+        CreateOwnerModule.register({}),
         CliJobsModule.register({}),
         MigrateModule.register({}),
         PruneWorkspacesModule.register({}),
@@ -26,6 +29,7 @@ import { SyncN8nModule } from "./sync-n8n/sync-n8n.module"
         SeedModulesModule.register({}),
         SeedWorkspaceModule.register({}),
         SeedAutomationsModule.register({}),
+        StorageCliModule.register({}),
         SyncN8nModule.register({}),
     ],
 })

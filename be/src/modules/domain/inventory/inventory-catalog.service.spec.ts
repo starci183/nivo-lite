@@ -9,7 +9,13 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { InventoryErrorCode } from "./errors/inventory.error"
 import { InventoryCatalogService } from "./inventory-catalog.service"
 import { InventoryMovementsService } from "./inventory-movements.service"
-import { DELETE_RECIPE, SAVE_ITEM, SAVE_RECIPE, SAVE_SUPPLIER, SET_ITEM_ACTIVE } from "./persistence/inventory.sql"
+import {
+    DELETE_RECIPE,
+    SAVE_ITEM,
+    SAVE_RECIPE,
+    SAVE_SUPPLIER,
+    SET_ITEM_ACTIVE,
+} from "@tests/fixtures/builders/inventory-calls.builder"
 
 const UUID = "0b8c1f0e-3a49-4b7e-9d3f-2c1f6a5d7e90"
 const UUID_2 = "1c9d2a1f-4b5a-4c8f-8e4a-3d2a7b6e8fa1"
@@ -60,7 +66,7 @@ const itemParams = {
 
 describe("InventoryCatalogService / saveItem", () => {
     it("creates an item with a derived upper-case code, the default unit and an opening movement", async () => {
-        const em = mockEntityManager({ query: [SAVE_ITEM, [{ id: "item-9" }]] })
+        const em = mockEntityManager({ query: [SAVE_ITEM, [{ inventory_save_item: "item-9" }]] })
         const { service, members, movements, office } = await build(em)
 
         await expect(service.saveItem("user-1", "ws-1", { ...itemParams, openingQty: "12" })).resolves.toEqual({
@@ -98,7 +104,7 @@ describe("InventoryCatalogService / saveItem", () => {
     })
 
     it("keeps a typed code and unit, and records no movement without an opening quantity", async () => {
-        const em = mockEntityManager({ query: [SAVE_ITEM, [{ id: "item-9" }]] })
+        const em = mockEntityManager({ query: [SAVE_ITEM, [{ inventory_save_item: "item-9" }]] })
         const { service, movements } = await build(em)
 
         await service.saveItem("user-1", "ws-1", {
@@ -114,7 +120,7 @@ describe("InventoryCatalogService / saveItem", () => {
     })
 
     it("updates an item and keeps its code when none is typed", async () => {
-        const em = mockEntityManager({ query: [SAVE_ITEM, [{ id: UUID }]] })
+        const em = mockEntityManager({ query: [SAVE_ITEM, [{ inventory_save_item: UUID }]] })
         const { service, office } = await build(em)
 
         await expect(service.saveItem("user-1", "ws-1", { ...itemParams, id: UUID, openingQty: "5" })).resolves.toEqual(
@@ -156,7 +162,7 @@ describe("InventoryCatalogService / saveItem", () => {
     })
 
     it("refuses when the item to update is missing", async () => {
-        const em = mockEntityManager({ query: [SAVE_ITEM, [{ id: null }]] })
+        const em = mockEntityManager({ query: [SAVE_ITEM, [{ inventory_save_item: null }]] })
         const { service } = await build(em)
 
         await expect(service.saveItem("user-1", "ws-1", { ...itemParams, id: UUID })).rejects.toMatchObject({
@@ -199,7 +205,7 @@ describe("InventoryCatalogService / saveSupplier", () => {
         note: "",
     }
     it("creates a supplier with cleaned fields", async () => {
-        const em = mockEntityManager({ query: [SAVE_SUPPLIER, [{ id: "sup-1" }]] })
+        const em = mockEntityManager({ query: [SAVE_SUPPLIER, [{ inventory_save_supplier: "sup-1" }]] })
         const { service } = await build(em)
 
         await expect(service.saveSupplier("user-1", "ws-1", supplier)).resolves.toEqual({ id: "sup-1" })
@@ -220,7 +226,7 @@ describe("InventoryCatalogService / saveSupplier", () => {
     })
 
     it("updates a supplier, defaults the channel to email and clamps the delivery time", async () => {
-        const em = mockEntityManager({ query: [SAVE_SUPPLIER, [{ id: UUID }]] })
+        const em = mockEntityManager({ query: [SAVE_SUPPLIER, [{ inventory_save_supplier: UUID }]] })
         const { service } = await build(em)
 
         await service.saveSupplier("user-1", "ws-1", {
@@ -249,7 +255,7 @@ describe("InventoryCatalogService / saveSupplier", () => {
     })
 
     it("uses the default delivery time when none is typed", async () => {
-        const em = mockEntityManager({ query: [SAVE_SUPPLIER, [{ id: "sup-1" }]] })
+        const em = mockEntityManager({ query: [SAVE_SUPPLIER, [{ inventory_save_supplier: "sup-1" }]] })
         const { service } = await build(em)
 
         await service.saveSupplier("user-1", "ws-1", { ...supplier, leadTime: "" })
@@ -288,7 +294,7 @@ describe("InventoryCatalogService / saveSupplier", () => {
 
 describe("InventoryCatalogService / saveRecipe", () => {
     it("saves a recipe with its usable ingredient lines", async () => {
-        const em = mockEntityManager({ query: [SAVE_RECIPE, [{ id: "rec-1" }]] })
+        const em = mockEntityManager({ query: [SAVE_RECIPE, [{ inventory_save_recipe: "rec-1" }]] })
         const { service } = await build(em)
 
         await expect(
@@ -308,7 +314,7 @@ describe("InventoryCatalogService / saveRecipe", () => {
     })
 
     it("refuses an empty name, no usable line and a missing recipe", async () => {
-        const missing = mockEntityManager({ query: [SAVE_RECIPE, [{ id: null }]] })
+        const missing = mockEntityManager({ query: [SAVE_RECIPE, [{ inventory_save_recipe: null }]] })
         const { service } = await build(missing)
         const line = { itemId: UUID_2, qty: "1" }
 

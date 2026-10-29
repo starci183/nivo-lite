@@ -2,11 +2,13 @@ import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { CallLogLine, CallLogRecord } from "./mcp-call-log.contracts"
 import { McpCallLogService } from "./mcp-call-log.service"
-import type { McpCallLogRow } from "./persistence/mcp-call-log.rows"
-import { INSERT_CALL_LOG, LIST_CALL_LOG } from "./persistence/mcp-call-log.sql"
+import { McpCallLogEntity } from "./persistence/entities"
 
-const ROW: McpCallLogRow = {
+const ROW: CallLogRecord = {
     id: "log-1",
     tool: "hakuen.booking.hold",
     agent_name: "AI Sales",
@@ -26,50 +28,82 @@ const build = async (entityManager: MockEntityManager): Promise<McpCallLogServic
     return moduleRef.get(McpCallLogService)
 }
 
+/** What an insert query builder was told to write; a function value is read as its source text. */
+const writtenBy = (fake: FakeQueryBuilder): Record<string, unknown> => {
+    const [values] = fake.callsOf("values")[0] ?? []
+    const written = typeof values === "object" && values !== null ? values : {}
+    return Object.fromEntries(
+        Object.entries(written).map(([key, value]) => [key, typeof value === "function" ? String(value) : value]),
+    )
+}
+
+const LINE: CallLogLine = {
+    workspaceId: "ws-1",
+    connector: "hakuen",
+    tool: "hakuen.booking.hold",
+    agentId: "agent-1",
+    conversationId: "conv-1",
+    workItemId: null,
+    argsMaskedJson: '{"code":"***"}',
+    argsHash: "hash",
+    outcome: "ok",
+    errorCode: null,
+    resultSummary: "{}",
+    durationMs: 12,
+    approvedBy: "person-1",
+}
+
 describe("McpCallLogService", () => {
-    it("appends one audit line with every column in order", async () => {
-        const em = mockEntityManager({ query: [INSERT_CALL_LOG, []] })
+    it("appends one audit line with every column, the masked arguments cast to jsonb by the database", async () => {
+        const fake = fakeQueryBuilder({ execute: { raw: [] } })
+        const em = mockEntityManager()
+        em.createQueryBuilder.mockReturnValue(fake.builder as never)
         const log = await build(em)
 
-        await expect(
-            log.append({
-                workspaceId: "ws-1",
-                connector: "hakuen",
-                tool: "hakuen.booking.hold",
-                agentId: "agent-1",
-                conversationId: "conv-1",
-                workItemId: null,
-                argsMaskedJson: '{"code":"***"}',
-                argsHash: "hash",
-                outcome: "ok",
-                errorCode: null,
-                resultSummary: "{}",
-                durationMs: 12,
-                approvedBy: "person-1",
-            }),
-        ).resolves.toBeUndefined()
-        expect(em.query).toHaveBeenCalledWith(INSERT_CALL_LOG, [
-            "ws-1",
-            "hakuen",
-            "hakuen.booking.hold",
-            "agent-1",
-            "conv-1",
-            null,
-            '{"code":"***"}',
-            "hash",
-            "ok",
-            null,
-            "{}",
-            12,
-            "person-1",
-        ])
+        await expect(log.append(LINE)).resolves.toBeUndefined()
+
+        const { argsMasked, ...columns } = writtenBy(fake)
+        expect(String(argsMasked)).toContain("CAST(:argsMaskedJson AS jsonb)")
+        expect(columns).toEqual({
+            workspaceId: "ws-1",
+            connector: "hakuen",
+            tool: "hakuen.booking.hold",
+            agentId: "agent-1",
+            conversationId: "conv-1",
+            workItemId: null,
+            argsHash: "hash",
+            outcome: "ok",
+            errorCode: null,
+            resultSummary: "{}",
+            durationMs: 12,
+            approvedBy: "person-1",
+        })
+        expect(fake.callsOf("insert")).toEqual([[]])
+        expect(fake.callsOf("setParameter")).toEqual([["argsMaskedJson", '{"code":"***"}']])
+    })
+
+    it("hands the masked arguments over as text and leaves reading them to the database", async () => {
+        const fake = fakeQueryBuilder({ execute: { raw: [] } })
+        const em = mockEntityManager()
+        em.createQueryBuilder.mockReturnValue(fake.builder as never)
+        const log = await build(em)
+
+        await expect(log.append({ ...LINE, argsMaskedJson: "{not json" })).resolves.toBeUndefined()
+
+        expect(fake.callsOf("setParameter")).toEqual([["argsMaskedJson", "{not json"]])
     })
 
     it("reads the newest lines of the workspace within the page", async () => {
-        const em = mockEntityManager({ query: [LIST_CALL_LOG, [ROW]] })
+        const fake = fakeQueryBuilder({ getRawMany: [ROW] })
+        const em = mockEntityManager()
+        em.createQueryBuilder.mockReturnValue(fake.builder as never)
         const log = await build(em)
 
         await expect(log.latest({ workspaceId: "ws-1", limit: 50 })).resolves.toEqual([ROW])
-        expect(em.query).toHaveBeenCalledWith(LIST_CALL_LOG, ["ws-1", 50])
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(McpCallLogEntity, "l")
+        expect(fake.callsOf("leftJoin")).toEqual([["agents", "a", "a.id = l.agent_id"]])
+        expect(fake.callsOf("where")).toEqual([["l.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
+        expect(fake.callsOf("orderBy")).toEqual([["l.created_at", "DESC"]])
+        expect(fake.callsOf("limit")).toEqual([[50]])
     })
 })

@@ -6,11 +6,11 @@ import { ModulesService } from "@modules/domain/modules"
 import { PUBLIC_API_QUEUE } from "@modules/queues/public-api"
 import { HandoffLeadPerformerService } from "../../modules/domain/work-performers/handoff-lead-performer.service"
 import type { PublicApiIdentity } from "../fixtures/builders/public-api.builder"
-import * as statements from "../fixtures/persistence/public-api.sql"
+import { apiInbox, apiLeadRequest, apiOutbox, apiSource } from "./public-api-database.service"
+import type { PublicApiRequestState } from "./public-api-database.service"
 import type { LiteWorld } from "./lite-world.service"
 import { PublicApiProofAccess } from "./public-api-capabilities.options"
 import { openPublicApiProof } from "./public-api-proof.service"
-import type { PublicApiRequestState } from "./public-api-proof.service"
 import { registerPublicApiProcessors } from "./public-api-registration.service"
 import type { RegisteredPublicApi } from "./public-api-registration.service"
 
@@ -37,33 +37,15 @@ const requestForLead = async (
     workspaceId: string,
     externalId: string,
 ): Promise<PublicApiRequestState> => {
-    const [row] = await world.db.primary.query<Array<PublicApiRequestState>>(statements.API_LEAD_REQUEST, [
-        workspaceId,
-        externalId,
-    ])
+    const [row] = await apiLeadRequest(world.db.primary, workspaceId, externalId)
     assert(row !== undefined)
     return row
 }
 
 const observations = (world: LiteWorld) => ({
-    source: (workspaceId: string, id: string) =>
-        world.db.primary.query<Array<{ readonly id: string; readonly content: string }>>(statements.API_SOURCE, [
-            workspaceId,
-            id,
-        ]),
-    inbox: (workspaceId: string) =>
-        world.db.primary.query<Array<{ readonly source: string; readonly delivery_id: string }>>(statements.API_INBOX, [
-            workspaceId,
-        ]),
-    outbox: (workspaceId: string) =>
-        world.db.primary.query<
-            Array<{
-                readonly queue: string
-                readonly name: string
-                readonly dedupe_key: string
-                readonly payload: Readonly<Record<string, unknown>>
-            }>
-        >(statements.API_OUTBOX, [workspaceId]),
+    source: (workspaceId: string, id: string) => apiSource(world.db.primary, workspaceId, id),
+    inbox: (workspaceId: string) => apiInbox(world.db.primary, workspaceId),
+    outbox: (workspaceId: string) => apiOutbox(world.db.primary, workspaceId),
 })
 
 /** Registers the world's real processors and gives each scenario its own local workspace and router delivery. */

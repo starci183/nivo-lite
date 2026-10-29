@@ -2,11 +2,11 @@ import assert from "node:assert/strict"
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
 import { PublicLeadsService } from "@modules/domain/public-api"
 import { persistPublicApiLead } from "../../fixtures/builders/public-api.builder"
-import * as statements from "../../fixtures/persistence/public-api.sql"
 import { PUBLIC_API_PROOF_MODULES } from "../../world/public-api-capabilities.options"
 import { publicApiRequest, publicApiWork } from "../../world/public-api-proof.service"
 import { preparePublicApiProof } from "../../world/public-api-suite.service"
 import { useTestWorld } from "../../world/use-test-world"
+import { apiLead } from "../../world/public-api-database.service"
 
 describe("Public API won customer (persisted local integration)", () => {
     const world = useTestWorld({ modules: [...PUBLIC_API_PROOF_MODULES, ProcessPublicApiQueueModule.register({})] })
@@ -29,7 +29,7 @@ describe("Public API won customer (persisted local integration)", () => {
         const request = await requestForLead(identity.workspaceId, externalId)
         const payload = { workspaceId: identity.workspaceId, requestId: request.id }
         await deliver(payload)
-        expect(await world.db.primary.query(statements.API_LEAD, [identity.workspaceId, leadId])).toMatchObject([
+        expect(await apiLead(world.db.primary, identity.workspaceId, leadId)).toMatchObject([
             { id: leadId, stage: "won", company: "Won API company", need: "Invoice annual service" },
         ])
         const work = await publicApiWork(world, identity.workspaceId)

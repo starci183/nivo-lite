@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
-import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { ChatActivityService } from "@modules/domain/chat-activity"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -10,18 +11,21 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { OfficeRoomsErrorCode } from "./errors/office-rooms.error"
 import { OfficeRoomsService } from "./office-rooms.service"
-import type { AgentConversationRow, RoomMemberPreviewRow, RoomRow } from "./persistence/office-rooms.rows"
-import { LIST_ROOM_MEMBERS } from "./persistence/office-room-members.sql"
-import {
-    ENSURE_ROOMS,
-    LIST_AGENT_UNREAD,
-    LIST_LEAD_UNREAD,
-    LIST_ROOMS,
-    MARK_AGENT_READ,
-    MARK_LEAD_READ,
-    MARK_ROOM_READ,
-    OFFICE_ROOM_SUMMARY,
-} from "./persistence/office-rooms.sql"
+import { OfficeRoomMembersService } from "./office-room-members.service"
+import { OfficeRoomReadsService } from "./office-room-reads.service"
+import type { RoomMembersView, RoomMemberPreviewView } from "./office-rooms.contracts"
+import type { AgentConversationFacts, RoomFacts } from "./office-rooms.facts"
+
+/** The statements `callDbFunction` runs. */
+const MARK_ROOM_READ = "SELECT * FROM public.mark_office_room_read($1, $2, $3)"
+const ENSURE_ROOMS = "SELECT * FROM public.ensure_office_rooms($1)"
+
+/** Makes the next query builder answer whether the agent or lead belongs to the workspace. */
+const answerBelonging = (em: MockEntityManager, belongs: boolean) => {
+    const read = fakeQueryBuilder({ getExists: belongs })
+    answerQueryBuilders(em, read)
+    return read
+}
 
 const member = builder<WorkspaceMember>({
     userId: "u-1",
@@ -32,7 +36,7 @@ const member = builder<WorkspaceMember>({
     status: "active",
 })
 
-const roomOf = builder<RoomRow>({
+const roomOf = builder<RoomFacts>({
     key: "marketing",
     name: "Marketing",
     position: 3,
@@ -48,7 +52,7 @@ const roomOf = builder<RoomRow>({
     pins: [{ id: "p-1", title: "HAKUEN_Brand_Guideline.pdf", href: null, note: "Shared knowledge" }],
 })
 
-const personPreviewOf = builder<RoomMemberPreviewRow>({
+const personPreviewOf = builder<RoomMemberPreviewView>({
     id: "u-1",
     kind: "human",
     module: null,
@@ -56,7 +60,7 @@ const personPreviewOf = builder<RoomMemberPreviewRow>({
     avatarUrl: "https://example.com/mai.png",
 })
 
-const agentPreviewOf = builder<RoomMemberPreviewRow>({
+const agentPreviewOf = builder<RoomMemberPreviewView>({
     id: "a-1",
     kind: "agent",
     module: "content",
@@ -64,7 +68,7 @@ const agentPreviewOf = builder<RoomMemberPreviewRow>({
     avatarUrl: null,
 })
 
-const agentConversationOf = builder<AgentConversationRow>({
+const agentConversationOf = builder<AgentConversationFacts>({
     id: "a-1",
     unread: 0,
     last_body: null,
@@ -73,7 +77,17 @@ const agentConversationOf = builder<AgentConversationRow>({
     last_author: null,
 })
 
+/** The member views a read answers, keyed by room key (null is the Office room). */
+const viewsOf = (entries: ReadonlyArray<readonly [string | null, RoomMembersView]>) => new Map(entries)
+
 const build = async (entityManager: MockEntityManager) => {
+    const reads = mock<OfficeRoomReadsService>({
+        summary: jest.fn().mockResolvedValue(undefined),
+        rooms: jest.fn().mockResolvedValue([]),
+        agentConversations: jest.fn().mockResolvedValue([]),
+        leadConversations: jest.fn().mockResolvedValue([]),
+    })
+    const seats = mock<OfficeRoomMembersService>({ read: jest.fn().mockResolvedValue(viewsOf([])) })
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(member()) })
     const activity = mock<ChatActivityService>()
     const cards = mock<OfficeCardsService>({ post: jest.fn().mockResolvedValue({ id: "m-1", room: null }) })
@@ -88,9 +102,11 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: OfficeCardsService, useValue: cards },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: ChatActivityService, useValue: activity },
+            { provide: OfficeRoomReadsService, useValue: reads },
+            { provide: OfficeRoomMembersService, useValue: seats },
         ],
     }).compile()
-    return { service: moduleRef.get(OfficeRoomsService), members, cards, activity }
+    return { service: moduleRef.get(OfficeRoomsService), members, cards, activity, reads, seats }
 }
 
 const officeOf = (summary: Record<string, unknown>) => ({
@@ -115,28 +131,24 @@ describe("OfficeRoomsService.rooms", () => {
             last_author_user_id: "u-2",
             last_at: "2026-10-20T02:00:00+00:00",
         }
-        const em = mockEntityManager({
-            query: [
-                [OFFICE_ROOM_SUMMARY, [summary]],
-                [LIST_ROOMS, [roomOf()]],
-                [
-                    LIST_ROOM_MEMBERS,
-                    [
-                        { key: null, count: 6, preview: [personPreviewOf()] },
-                        { key: "marketing", count: 1, preview: [agentPreviewOf()] },
-                    ],
-                ],
-            ],
-        })
-        const { service, members } = await build(em)
+        const em = mockEntityManager()
+        const { service, members, reads, seats } = await build(em)
+        reads.summary.mockResolvedValue(summary)
+        reads.rooms.mockResolvedValue([roomOf()])
+        seats.read.mockResolvedValue(
+            viewsOf([
+                [null, { count: 6, preview: [personPreviewOf()] }],
+                ["marketing", { count: 1, preview: [agentPreviewOf()] }],
+            ]),
+        )
 
         const rooms = await service.rooms("u-1", "ws-1")
 
         expect(members.require).toHaveBeenCalledWith("u-1", "ws-1")
-        expect(em.query).toHaveBeenCalledWith(LIST_ROOMS, ["ws-1", "u-1", "Mai Linh"])
-        expect(em.query).toHaveBeenCalledWith(OFFICE_ROOM_SUMMARY, ["ws-1", "u-1", "Mai Linh"])
-        expect(em.query).toHaveBeenCalledWith(LIST_ROOM_MEMBERS, ["ws-1", ["marketing"]])
-        expect(em.query).toHaveBeenCalledTimes(3)
+        expect(reads.rooms).toHaveBeenCalledWith("ws-1", "u-1", "Mai Linh")
+        expect(reads.summary).toHaveBeenCalledWith("ws-1", "u-1", "Mai Linh")
+        expect(seats.read).toHaveBeenCalledWith("ws-1", ["marketing"])
+        expect(em.query).not.toHaveBeenCalled()
         expect(rooms).toEqual([
             officeOf({
                 ...summary,
@@ -150,13 +162,7 @@ describe("OfficeRoomsService.rooms", () => {
     })
 
     it("answers an empty Office room when the summary reads nothing", async () => {
-        const em = mockEntityManager({
-            query: [
-                [OFFICE_ROOM_SUMMARY, []],
-                [LIST_ROOMS, []],
-                [LIST_ROOM_MEMBERS, []],
-            ],
-        })
+        const em = mockEntityManager()
         const { service } = await build(em)
 
         await expect(service.rooms("u-1", "ws-1")).resolves.toEqual([
@@ -175,31 +181,28 @@ describe("OfficeRoomsService.rooms", () => {
 describe("OfficeRoomsService.rooms member previews", () => {
     it("batches every department key and supplies empty member summaries when no seats are returned", async () => {
         const rows = [roomOf(), roomOf({ key: "sales", name: "Sales" })]
-        const em = mockEntityManager({
-            query: [
-                [OFFICE_ROOM_SUMMARY, []],
-                [LIST_ROOMS, rows],
-                [LIST_ROOM_MEMBERS, []],
-            ],
-        })
-        const { service } = await build(em)
+        const em = mockEntityManager()
+        const { service, reads, seats } = await build(em)
+        reads.rooms.mockResolvedValue(rows)
 
         const rooms = await service.rooms("u-1", "ws-1")
 
-        expect(em.query).toHaveBeenCalledWith(LIST_ROOM_MEMBERS, ["ws-1", ["marketing", "sales"]])
-        expect(em.query).toHaveBeenCalledTimes(3)
+        expect(seats.read).toHaveBeenCalledWith("ws-1", ["marketing", "sales"])
+        expect(seats.read).toHaveBeenCalledTimes(1)
         expect(rooms.slice(1)).toEqual(rows.map((row) => ({ ...row, members: { count: 0, preview: [] } })))
     })
 
     it("does not read rooms or member photos when workspace membership is refused", async () => {
         const em = mockEntityManager()
-        const { service, members } = await build(em)
+        const { service, members, reads, seats } = await build(em)
         const refusal = new Error("Membership refused")
         members.require.mockRejectedValue(refusal)
 
         await expect(service.rooms("outsider", "ws-1")).rejects.toBe(refusal)
 
         expect(em.query).not.toHaveBeenCalled()
+        expect(reads.rooms).not.toHaveBeenCalled()
+        expect(seats.read).not.toHaveBeenCalled()
     })
 })
 
@@ -240,38 +243,29 @@ describe("OfficeRoomsService.markRead", () => {
 
 describe("OfficeRoomsService.unread agent conversations", () => {
     it("answers every agent conversation with its newest line and only the unread customer ones", async () => {
-        const em = mockEntityManager({
-            query: [
-                [
-                    LIST_AGENT_UNREAD,
-                    [
-                        agentConversationOf({
-                            unread: 2,
-                            last_body: "hello",
-                            last_at: "2026-10-20T02:42:00+00:00",
-                            last_author_id: "u-1",
-                            last_author: "Mai Linh",
-                        }),
-                        agentConversationOf({ id: "a-2" }),
-                    ],
-                ],
-                [
-                    LIST_LEAD_UNREAD,
-                    [
-                        { id: "l-1", unread: 1 },
-                        { id: "l-2", unread: 0 },
-                    ],
-                ],
-            ],
-        })
-        const { service, members } = await build(em)
+        const em = mockEntityManager()
+        const { service, members, reads } = await build(em)
+        reads.agentConversations.mockResolvedValue([
+            agentConversationOf({
+                unread: 2,
+                last_body: "hello",
+                last_at: "2026-10-20T02:42:00+00:00",
+                last_author_id: "u-1",
+                last_author: "Mai Linh",
+            }),
+            agentConversationOf({ id: "a-2" }),
+        ])
+        reads.leadConversations.mockResolvedValue([
+            { id: "l-1", unread: 1 },
+            { id: "l-2", unread: 0 },
+        ])
 
         const unread = await service.unread("u-1", "ws-1")
 
         expect(members.require).toHaveBeenCalledWith("u-1", "ws-1")
-        expect(em.query).toHaveBeenCalledWith(LIST_AGENT_UNREAD, ["ws-1", "u-1", "Mai Linh"])
-        expect(em.query).toHaveBeenCalledWith(LIST_LEAD_UNREAD, ["ws-1", "u-1", "Mai Linh"])
-        expect(em.query).toHaveBeenCalledTimes(2)
+        expect(reads.agentConversations).toHaveBeenCalledWith("ws-1", "u-1", "Mai Linh")
+        expect(reads.leadConversations).toHaveBeenCalledWith("ws-1", "u-1", "Mai Linh")
+        expect(em.query).not.toHaveBeenCalled()
         expect(unread).toEqual({
             agents: [
                 {
@@ -291,13 +285,9 @@ describe("OfficeRoomsService.unread agent conversations", () => {
     })
 
     it("answers an empty body for a conversation whose newest line reads no text", async () => {
-        const em = mockEntityManager({
-            query: [
-                [LIST_AGENT_UNREAD, [agentConversationOf({ last_at: "2026-10-20T02:42:00+00:00" })]],
-                [LIST_LEAD_UNREAD, []],
-            ],
-        })
-        const { service } = await build(em)
+        const em = mockEntityManager()
+        const { service, reads } = await build(em)
+        reads.agentConversations.mockResolvedValue([agentConversationOf({ last_at: "2026-10-20T02:42:00+00:00" })])
 
         await expect(service.unread("u-1", "ws-1")).resolves.toEqual({
             agents: [
@@ -314,12 +304,7 @@ describe("OfficeRoomsService.unread agent conversations", () => {
 
 describe("OfficeRoomsService.unread", () => {
     it("answers empty lists when nothing is unread", async () => {
-        const em = mockEntityManager({
-            query: [
-                [LIST_AGENT_UNREAD, []],
-                [LIST_LEAD_UNREAD, []],
-            ],
-        })
+        const em = mockEntityManager()
         const { service } = await build(em)
 
         await expect(service.unread("u-1", "ws-1")).resolves.toEqual({ agents: [], leads: [] })
@@ -339,22 +324,31 @@ describe("OfficeRoomsService.unread", () => {
 
 describe("OfficeRoomsService.markConversationRead", () => {
     it("marks an agent conversation read under the agent scope", async () => {
-        const em = mockEntityManager({ query: [[MARK_AGENT_READ, [{ marked: null }]]] })
+        const em = mockEntityManager({ query: [MARK_ROOM_READ, []] })
+        fakeTransaction(em)
+        const belongs = answerBelonging(em, true)
         const { service, activity } = await build(em)
 
         await service.markConversationRead("u-1", "ws-1", "agent", "a-1")
 
-        expect(em.query).toHaveBeenCalledWith(MARK_AGENT_READ, ["ws-1", "u-1", "a-1"])
+        expect(belongs.argsOf("from")).toEqual([["public.agents", "t"]])
+        expect(belongs.argsOf("where")).toEqual([
+            ["t.workspace_id = :workspaceId AND t.id::text = :id", { workspaceId: "ws-1", id: "a-1" }],
+        ])
+        expect(em.query).toHaveBeenCalledWith(MARK_ROOM_READ, ["ws-1", "u-1", "agent:a-1"])
         expect(activity.unread.mock.calls).toEqual([["ws-1", "agent:a-1", "u-1"]])
     })
 
     it("marks a customer conversation read under the lead scope", async () => {
-        const em = mockEntityManager({ query: [[MARK_LEAD_READ, [{ marked: null }]]] })
+        const em = mockEntityManager({ query: [MARK_ROOM_READ, []] })
+        fakeTransaction(em)
+        const belongs = answerBelonging(em, true)
         const { service } = await build(em)
 
         await service.markConversationRead("u-1", "ws-1", "lead", "l-1")
 
-        expect(em.query).toHaveBeenCalledWith(MARK_LEAD_READ, ["ws-1", "u-1", "l-1"])
+        expect(belongs.argsOf("from")).toEqual([["public.leads", "t"]])
+        expect(em.query).toHaveBeenCalledWith(MARK_ROOM_READ, ["ws-1", "u-1", "lead:l-1"])
     })
 
     it("refuses a kind that is not a direct conversation and writes nothing", async () => {
@@ -369,13 +363,16 @@ describe("OfficeRoomsService.markConversationRead", () => {
     })
 
     it("refuses a conversation id that names no agent or lead of the workspace", async () => {
-        const em = mockEntityManager({ query: [[MARK_AGENT_READ, []]] })
+        const em = mockEntityManager()
+        fakeTransaction(em)
+        answerBelonging(em, false)
         const { service, activity } = await build(em)
 
         await expect(service.markConversationRead("u-1", "ws-1", "agent", "foreign")).rejects.toMatchObject({
             code: OfficeRoomsErrorCode.ConversationInvalid,
             params: { id: "foreign" },
         })
+        expect(em.query).not.toHaveBeenCalled()
         expect(activity.unread).not.toHaveBeenCalled()
     })
 
@@ -393,15 +390,9 @@ describe("OfficeRoomsService.markConversationRead", () => {
 
 describe("OfficeRoomsService.setup", () => {
     it("opens the rooms as a manager, announces them in the Office room and answers them", async () => {
-        const em = mockEntityManager({
-            query: [
-                [ENSURE_ROOMS, [{ opened: 6 }]],
-                [OFFICE_ROOM_SUMMARY, []],
-                [LIST_ROOMS, [roomOf(), roomOf({ key: "sales", name: "Sales" })]],
-                [LIST_ROOM_MEMBERS, []],
-            ],
-        })
-        const { service, members, cards } = await build(em)
+        const em = mockEntityManager({ query: [ENSURE_ROOMS, [{ ensure_office_rooms: 6 }]] })
+        const { service, members, cards, reads } = await build(em)
+        reads.rooms.mockResolvedValue([roomOf(), roomOf({ key: "sales", name: "Sales" })])
 
         const rooms = await service.setup("u-1", "ws-1", "vi")
 
@@ -427,15 +418,8 @@ describe("OfficeRoomsService.setup", () => {
         )
     })
 
-    it.each([[[{ opened: 0 }]], [[]]])("posts nothing when no room was opened (%p)", async (opened) => {
-        const em = mockEntityManager({
-            query: [
-                [ENSURE_ROOMS, opened],
-                [OFFICE_ROOM_SUMMARY, []],
-                [LIST_ROOMS, []],
-                [LIST_ROOM_MEMBERS, []],
-            ],
-        })
+    it.each([[[{ ensure_office_rooms: 0 }]], [[]]])("posts nothing when no room was opened (%p)", async (opened) => {
+        const em = mockEntityManager({ query: [ENSURE_ROOMS, opened] })
         const { service, cards } = await build(em)
 
         await service.setup("u-1", "ws-1", "en")

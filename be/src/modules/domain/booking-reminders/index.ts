@@ -1,4 +1,6 @@
 export { BookingRemindersModule } from "./booking-reminders.module"
 export { BookingRemindersService } from "./booking-reminders.service"
+export { BookingReminderEntity, bookingRemindersEntities } from "./persistence/entities"
 export { hoursOfKind } from "./policies/reminder-plan.policy"
 export type { DueReminder } from "./policies/reminder-plan.policy"
+export type { ReminderTarget } from "./booking-reminders.service"

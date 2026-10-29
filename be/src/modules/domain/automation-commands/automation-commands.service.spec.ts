@@ -4,21 +4,31 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { AutomationsError, AutomationsErrorCode, AutomationsService } from "@modules/domain/automations"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import type { CommandRow } from "./automation-commands.contracts"
 import { AutomationCommandsService } from "./automation-commands.service"
-import { SELECT_QUEUED_COMMAND, SETTLE_COMMAND } from "./persistence/automation-commands.sql"
+import { AutomationCommandEntity } from "./persistence/entities"
 
 const NOW = "2026-10-13T10:00:00.000Z"
 const COMMAND_ID = "a1234567-b123-c123-d123-e123456789ab"
 const PAYLOAD = { commandId: COMMAND_ID }
-const RUN_NOW: CommandRow = {
+const RUN_NOW = Object.assign(new AutomationCommandEntity(), {
     id: COMMAND_ID,
-    workspace_id: "workspace-1",
+    workspaceId: "workspace-1",
     kind: "run_now",
-    template_key: "weekly_summary",
-    created_by: "manager-1",
-}
-const PROPOSE_BODY: CommandRow = { ...RUN_NOW, kind: "propose_body" }
+    templateKey: "weekly_summary",
+    status: "queued",
+    result: null,
+    faultCode: null,
+    createdBy: "manager-1",
+    createdAt: new Date("2026-10-13T09:00:00.000Z"),
+    finishedAt: null,
+})
+const PROPOSE_BODY = Object.assign(new AutomationCommandEntity(), RUN_NOW, { kind: "propose_body" })
+const QUEUED_WHERE = { where: { id: COMMAND_ID, status: "queued" } }
+const settled = (status: string, result: object | null, faultCode: string | null) => [
+    AutomationCommandEntity,
+    { id: COMMAND_ID, status: "queued" },
+    { status, result, faultCode, finishedAt: new Date(NOW) },
+]
 
 const build = async (em: MockEntityManager) => {
     const automations = mock<AutomationsService>()
@@ -41,29 +51,27 @@ describe("AutomationCommandsService", () => {
 
             await expect(commands.execute({})).resolves.toBeUndefined()
 
-            expect(em.query).not.toHaveBeenCalled()
+            expect(em.findOne).not.toHaveBeenCalled()
             expect(automations.runNow).not.toHaveBeenCalled()
             expect(automations.proposeBody).not.toHaveBeenCalled()
         })
 
         it("does nothing after selecting when no queued command exists", async () => {
-            const em = mockEntityManager({ query: [SELECT_QUEUED_COMMAND, []] })
+            const em = mockEntityManager({ findOne: [AutomationCommandEntity, null] })
             const { commands, automations } = await build(em)
 
             await expect(commands.execute(PAYLOAD)).resolves.toBeUndefined()
 
-            expect(em.query).toHaveBeenCalledTimes(1)
-            expect(em.query).toHaveBeenCalledWith(SELECT_QUEUED_COMMAND, [COMMAND_ID])
+            expect(em.findOne).toHaveBeenCalledTimes(1)
+            expect(em.findOne).toHaveBeenCalledWith(AutomationCommandEntity, QUEUED_WHERE)
             expect(automations.runNow).not.toHaveBeenCalled()
             expect(automations.proposeBody).not.toHaveBeenCalled()
         })
 
         it("runs the queued workflow as its creator and settles done at the clock time", async () => {
             const em = mockEntityManager({
-                query: [
-                    [SELECT_QUEUED_COMMAND, [RUN_NOW]],
-                    [SETTLE_COMMAND, []],
-                ],
+                findOne: [AutomationCommandEntity, RUN_NOW],
+                update: [AutomationCommandEntity, {}],
             })
             const { commands, automations } = await build(em)
             automations.runNow.mockResolvedValue()
@@ -73,9 +81,8 @@ describe("AutomationCommandsService", () => {
             expect(automations.runNow).toHaveBeenCalledTimes(1)
             expect(automations.runNow).toHaveBeenCalledWith("manager-1", "workspace-1", "weekly_summary")
             expect(automations.proposeBody).not.toHaveBeenCalled()
-            expect(em.query).toHaveBeenCalledTimes(2)
-            expect(em.query).toHaveBeenNthCalledWith(1, SELECT_QUEUED_COMMAND, [COMMAND_ID])
-            expect(em.query).toHaveBeenNthCalledWith(2, SETTLE_COMMAND, [COMMAND_ID, "done", "{}", null, new Date(NOW)])
+            expect(em.findOne).toHaveBeenCalledWith(AutomationCommandEntity, QUEUED_WHERE)
+            expect(em.update.mock.calls).toEqual([settled("done", {}, null)])
         })
     })
 })
@@ -84,10 +91,8 @@ describe("AutomationCommandsService", () => {
     describe("execute", () => {
         it("proposes the wording as its creator and settles done with the body and generated flag", async () => {
             const em = mockEntityManager({
-                query: [
-                    [SELECT_QUEUED_COMMAND, [PROPOSE_BODY]],
-                    [SETTLE_COMMAND, []],
-                ],
+                findOne: [AutomationCommandEntity, PROPOSE_BODY],
+                update: [AutomationCommandEntity, {}],
             })
             const { commands, automations } = await build(em)
             automations.proposeBody.mockResolvedValue({
@@ -101,23 +106,16 @@ describe("AutomationCommandsService", () => {
             expect(automations.proposeBody).toHaveBeenCalledTimes(1)
             expect(automations.proposeBody).toHaveBeenCalledWith("manager-1", "workspace-1", "weekly_summary")
             expect(automations.runNow).not.toHaveBeenCalled()
-            expect(em.query).toHaveBeenCalledTimes(2)
-            expect(em.query).toHaveBeenNthCalledWith(1, SELECT_QUEUED_COMMAND, [COMMAND_ID])
-            expect(em.query).toHaveBeenNthCalledWith(2, SETTLE_COMMAND, [
-                COMMAND_ID,
-                "done",
-                '{"body":"Thanks for your payment.","generated":true}',
-                null,
-                new Date(NOW),
+            expect(em.findOne).toHaveBeenCalledWith(AutomationCommandEntity, QUEUED_WHERE)
+            expect(em.update.mock.calls).toEqual([
+                settled("done", { body: "Thanks for your payment.", generated: true }, null),
             ])
         })
 
         it("settles an automations error as failed with its code and no result", async () => {
             const em = mockEntityManager({
-                query: [
-                    [SELECT_QUEUED_COMMAND, [RUN_NOW]],
-                    [SETTLE_COMMAND, []],
-                ],
+                findOne: [AutomationCommandEntity, RUN_NOW],
+                update: [AutomationCommandEntity, {}],
             })
             const { commands, automations } = await build(em)
             const failure = new AutomationsError({ code: AutomationsErrorCode.PipelineOff })
@@ -128,19 +126,12 @@ describe("AutomationCommandsService", () => {
             expect(automations.runNow).toHaveBeenCalledTimes(1)
             expect(automations.runNow).toHaveBeenCalledWith("manager-1", "workspace-1", "weekly_summary")
             expect(automations.proposeBody).not.toHaveBeenCalled()
-            expect(em.query).toHaveBeenCalledTimes(2)
-            expect(em.query).toHaveBeenNthCalledWith(1, SELECT_QUEUED_COMMAND, [COMMAND_ID])
-            expect(em.query).toHaveBeenNthCalledWith(2, SETTLE_COMMAND, [
-                COMMAND_ID,
-                "failed",
-                null,
-                "AUTOMATIONS_PIPELINE_OFF",
-                new Date(NOW),
-            ])
+            expect(em.findOne).toHaveBeenCalledWith(AutomationCommandEntity, QUEUED_WHERE)
+            expect(em.update.mock.calls).toEqual([settled("failed", null, "AUTOMATIONS_PIPELINE_OFF")])
         })
 
         it("rethrows any other failure without settling the command", async () => {
-            const em = mockEntityManager({ query: [SELECT_QUEUED_COMMAND, [PROPOSE_BODY]] })
+            const em = mockEntityManager({ findOne: [AutomationCommandEntity, PROPOSE_BODY] })
             const { commands, automations } = await build(em)
             const failure = new Error("proposal unavailable")
             automations.proposeBody.mockRejectedValue(failure)
@@ -150,8 +141,8 @@ describe("AutomationCommandsService", () => {
             expect(automations.proposeBody).toHaveBeenCalledTimes(1)
             expect(automations.proposeBody).toHaveBeenCalledWith("manager-1", "workspace-1", "weekly_summary")
             expect(automations.runNow).not.toHaveBeenCalled()
-            expect(em.query).toHaveBeenCalledTimes(1)
-            expect(em.query).toHaveBeenCalledWith(SELECT_QUEUED_COMMAND, [COMMAND_ID])
+            expect(em.findOne).toHaveBeenCalledTimes(1)
+            expect(em.update).not.toHaveBeenCalled()
         })
     })
 })

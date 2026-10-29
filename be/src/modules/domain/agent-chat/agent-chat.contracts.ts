@@ -113,3 +113,33 @@ export interface AgentChatTurnStatus {
 export type AgentChatConversations = ReadonlyArray<ChatConversation>
 /** The messages displayed by the thread. */
 export type AgentChatMessages = ReadonlyArray<AgentThreadMessage>
+
+/** The agent facts not present in the reusable public profile. */
+export interface ChatAgentFacts {
+    /** The agent. */
+    readonly id: string
+    /** Its module. */
+    readonly module: string
+    /** Active or paused. */
+    readonly status: string
+    /** The opening greeting. */
+    readonly greeting: string
+}
+
+/** The submitted chat message and its stored reply's delivery verdict. */
+export interface ChatTurnFacts {
+    /** The submitted message. */
+    readonly id: string
+    /** The containing conversation. */
+    readonly conversationId: string
+    /** Website threads are delivered by persisting the reply for the page. */
+    readonly channel: string
+    /** User or agent; agent messages enqueue delivery. */
+    readonly role: string
+    /** The submitted human reply's delivery verdict. */
+    readonly deliveryStatus: string | null
+    /** The reply stored for a user message, when any. */
+    readonly replyId: string | null
+    /** The reply's delivery verdict. */
+    readonly replyDeliveryStatus: string | null
+}

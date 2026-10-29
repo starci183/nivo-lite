@@ -99,3 +99,41 @@ export interface BindingTarget {
 
 /** A connection id, or null for a conversation that came in on no connection (website chat). */
 export type OptionalConnectionId = string | null
+
+/** A binding joined to its active agent, as the binding policy reads it. */
+export interface BoundAgentFacts {
+    /** The agent. */
+    readonly id: string
+    /** The module key. */
+    readonly module: string
+    /** The display name. */
+    readonly name: string
+    /** When the agent was created, as ISO text. */
+    readonly created_at: string
+    /** What the agent may do through the connection. */
+    readonly access: string
+    /** What the agent uses the connection for. */
+    readonly purpose: string
+}
+
+/** A binding joined to its connection, as the binding policy reads it. */
+export interface BoundConnectionFacts {
+    /** The connection. */
+    readonly id: string
+    /** The provider. */
+    readonly provider: string
+    /** The display name. */
+    readonly name: string
+    /** The connection status. */
+    readonly status: string
+    /** When the connection was created, as ISO text. */
+    readonly created_at: string
+    /** What the agent may do through the connection. */
+    readonly access: string
+    /** What the agent uses the connection for. */
+    readonly purpose: string
+    /** The bot username, or null. */
+    readonly bot_username: string | null
+    /** The masked bank account, or null. */
+    readonly account_masked: string | null
+}

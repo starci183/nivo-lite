@@ -4,8 +4,7 @@ import { writerOf } from "./realtime-connection.policy"
 import { REPLAY_TTL_MS, SWEEP_BATCH, SWEEP_MAX_BATCHES } from "./realtime.contracts"
 import { InjectRealtimeManagers } from "./realtime.decorators"
 import type { RealtimeRetention, SweepFence } from "./realtime-retention.port"
-import { DELETE_EXPIRED_EVENTS } from "./persistence/realtime.sql"
-import type { DeletedCountRow } from "./persistence/realtime.rows"
+import { RealtimeEventEntity } from "./persistence/entities"
 
 @Injectable()
 /**
@@ -26,11 +25,18 @@ export class RealtimeRetentionService implements RealtimeRetention {
     private async sweepFrom(beforeBatch: SweepFence, batchesLeft: number): Promise<number> {
         if (batchesLeft === 0) return 0
         await beforeBatch()
-        const [row] = await writerOf(this.managers).query<Array<DeletedCountRow>>(DELETE_EXPIRED_EVENTS, [
-            REPLAY_TTL_MS,
-            SWEEP_BATCH,
-        ])
-        const deleted = Number(row?.deleted ?? 0)
+        // One bounded batch, aged on the database clock that stamped the frames.
+        const result = await writerOf(this.managers)
+            .createQueryBuilder(RealtimeEventEntity, "r")
+            .delete()
+            .where(
+                "seq IN (SELECT old.seq FROM public.realtime_events old " +
+                    "WHERE old.created_at < now() - make_interval(secs => CAST(:ttl AS double precision) / 1000) " +
+                    "ORDER BY old.seq LIMIT :batch)",
+                { ttl: REPLAY_TTL_MS, batch: SWEEP_BATCH },
+            )
+            .execute()
+        const deleted = result.affected ?? 0
         return deleted < SWEEP_BATCH ? deleted : deleted + (await this.sweepFrom(beforeBatch, batchesLeft - 1))
     }
 }

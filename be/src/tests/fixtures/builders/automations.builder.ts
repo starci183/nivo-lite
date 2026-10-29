@@ -178,12 +178,3 @@ export const receiptSetup = () =>
         { n8n: { webhook: "nivo/receipt", audience: "customer" } },
         { body: "Dear {ten_khach}" },
     )
-
-/** A template trigger request shared by fireTemplate scenarios. */
-export const fireRequest = {
-    workspaceId: "ws-1",
-    templateKey: "thank_payment",
-    dedupe: "d-1",
-    triggerRef: "t-1",
-    payload: { a: 1 },
-}

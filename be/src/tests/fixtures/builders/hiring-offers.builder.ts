@@ -7,7 +7,11 @@ type CandidateRecord = Awaited<ReturnType<HiringCandidatesService["requireCandid
 
 /** Deterministic 32-hex offer link token derived from a fixture label. */
 export const TOKEN = createHash("sha256").update("fixture-hiring-offer-token").digest("hex").slice(0, 32)
-export const staleResponses = [{ rows: [] }, { rows: [{ value: null }] }, { rows: [{ value: "sent" }] }]
+export const staleResponses = [
+    { rows: [] },
+    { rows: [{ hiring_offer_answer: null }] },
+    { rows: [{ hiring_offer_answer: "sent" }] },
+]
 /** Render catalog keys and parameters deterministically for the service expectations. */
 export const text = (key: string, params: Readonly<Record<string, string | number>> = {}): string =>
     `${key}${JSON.stringify(params)}`

@@ -1,14 +1,9 @@
 import { Injectable } from "@nestjs/common"
+import { IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { CommentNote, CommentReplyState, PageComment } from "./meta-comments.contracts"
-import type { ClaimedCommentRow, MetaCommentRow } from "./persistence/meta-comments.rows"
-import {
-    CLAIM_PRIVATE_REPLY,
-    FIND_META_COMMENT,
-    NOTE_META_COMMENT,
-    RELEASE_PRIVATE_REPLY,
-} from "./persistence/meta-comments.sql"
+import { MetaCommentEntity } from "./persistence/entities"
 
 const msOf = (value: Date | string | null): number | null => {
     if (value === null) return null
@@ -23,32 +18,47 @@ export class MetaCommentsService {
 
     /** Remembers a comment once, inside the caller's transaction when one is handed in. */
     async note(comment: CommentNote, manager: EntityManager = this.entityManager): Promise<void> {
-        await manager.query(NOTE_META_COMMENT, [comment.connectionId, comment.commentId, comment.platform, comment.at])
+        await manager
+            .createQueryBuilder(MetaCommentEntity, "mc")
+            .insert()
+            .values({
+                connectionId: comment.connectionId,
+                commentId: comment.commentId,
+                platform: comment.platform,
+                commentAt: new Date(comment.at),
+            })
+            .orIgnore()
+            .execute()
     }
 
     /** Where the private reply of a comment stands. */
     async replyState(comment: PageComment): Promise<CommentReplyState> {
-        const [row] = await this.entityManager.query<Array<MetaCommentRow>>(FIND_META_COMMENT, [
-            comment.connectionId,
-            comment.commentId,
-        ])
+        const row = await this.entityManager.findOne(MetaCommentEntity, {
+            select: { commentAt: true, privateRepliedAt: true },
+            where: { connectionId: comment.connectionId, commentId: comment.commentId },
+        })
         return {
-            commentAt: msOf(row?.comment_at ?? null),
-            replied: msOf(row?.private_replied_at ?? null) !== null,
+            commentAt: msOf(row?.commentAt ?? null),
+            replied: msOf(row?.privateRepliedAt ?? null) !== null,
         }
     }
 
     /** Claims the one private reply of a comment before it is sent; false when somebody already took it. */
     async claim(comment: PageComment): Promise<boolean> {
-        const rows = await this.entityManager.query<Array<ClaimedCommentRow>>(CLAIM_PRIVATE_REPLY, [
-            comment.connectionId,
-            comment.commentId,
-        ])
-        return rows.length > 0
+        const result = await this.entityManager.update(
+            MetaCommentEntity,
+            { connectionId: comment.connectionId, commentId: comment.commentId, privateRepliedAt: IsNull() },
+            { privateRepliedAt: () => "now()" },
+        )
+        return (result.affected ?? 0) > 0
     }
 
     /** Gives the one private reply back after a send that failed for another reason than "already answered". */
     async release(comment: PageComment): Promise<void> {
-        await this.entityManager.query(RELEASE_PRIVATE_REPLY, [comment.connectionId, comment.commentId])
+        await this.entityManager.update(
+            MetaCommentEntity,
+            { connectionId: comment.connectionId, commentId: comment.commentId },
+            { privateRepliedAt: null },
+        )
     }
 }

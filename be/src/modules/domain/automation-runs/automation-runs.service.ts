@@ -1,5 +1,8 @@
 import { Injectable } from "@nestjs/common"
+import { In, LessThan, LessThanOrEqual, MoreThanOrEqual } from "typeorm"
 import type { EntityManager } from "typeorm"
+import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
+import { AutomationPipelineEntity } from "@modules/domain/automation-pipelines"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -23,18 +26,7 @@ import type {
     WaitingRun,
 } from "./automation-runs.contracts"
 import { AutomationRunsLogEvent } from "./automation-runs.log-events"
-import {
-    CLAIM_RUN,
-    FAIL_RUN,
-    FINISH_RUN,
-    INSERT_RUN,
-    SELECT_DUE_RUNS,
-    SELECT_LATEST_DONE_RUN,
-    SELECT_PRIOR_RUNS,
-    SELECT_RUNS,
-    SELECT_WAITING_RUNS,
-    UPDATE_RUN_PAYLOAD,
-} from "./persistence/automation-runs.sql"
+import { AutomationRunEntity } from "./persistence/entities"
 
 /** A run's attempts are capped here; the third failure is final. */
 const MAX_ATTEMPTS = 3
@@ -44,6 +36,14 @@ const MINUTE_MS = 60_000
 const ERROR_MAX = 500
 const ERROR_DETAIL_MAX = 200
 const LATER_THRESHOLD_MS = 1000
+const PRIOR_LIMIT = 5000
+const WAITING_LIMIT = 50
+
+/** A payload as a query builder write accepts it: the index signature of `unknown` is not a deep-partial entity value. */
+type RunPayloadWrite = NonNullable<QueryDeepPartialEntity<AutomationRunEntity>["payload"]>
+
+/** The raw rows of a query builder `RETURNING` clause. */
+const rowsOf = <Row>(raw: unknown): Array<Row> => (Array.isArray(raw) ? (raw as Array<Row>) : [])
 
 @Injectable()
 /** The run records of public.automation_runs: one row per trigger, unique per pipeline and dedupe key, executed at most once per attempt. */
@@ -62,33 +62,52 @@ export class AutomationRunsService {
     async beginRun(params: BeginRun): Promise<ClaimedRunOrNone> {
         const now = this.clock.now()
         const later = params.runAt !== undefined && params.runAt.getTime() > now.getTime() + LATER_THRESHOLD_MS
-        const [row] = await this.entityManager.query<Array<{ id: string; attempts: number }>>(INSERT_RUN, [
-            params.pipelineId,
-            params.workspaceId,
-            params.triggerRef,
-            params.dedupe,
-            JSON.stringify(params.payload),
-            later ? "queued" : "running",
-            later ? 0 : 1,
-            (params.runAt ?? now).toISOString(),
-        ])
+        const inserted = await this.entityManager
+            .createQueryBuilder(AutomationRunEntity, "ar")
+            .insert()
+            .values({
+                pipelineId: params.pipelineId,
+                workspaceId: params.workspaceId,
+                triggerRef: params.triggerRef,
+                dedupeKey: params.dedupe,
+                payload: params.payload as RunPayloadWrite,
+                status: later ? "queued" : "running",
+                attempts: later ? 0 : 1,
+                runAt: params.runAt ?? now,
+            })
+            .orIgnore()
+            .returning(["id", "attempts"])
+            .execute()
+        const [row] = rowsOf<{ id: string; attempts: number }>(inserted.raw)
         return row === undefined || later ? null : { id: row.id, attempts: row.attempts, payload: params.payload }
     }
 
     /** The ids of the runs of a pipeline that are due: queued, or failed with attempts left. */
     async dueRunIds(pipelineId: string, now: Date, limit: number): Promise<ReadonlyArray<string>> {
-        const rows = await this.entityManager.query<Array<{ id: string }>>(SELECT_DUE_RUNS, [
-            pipelineId,
-            MAX_ATTEMPTS,
-            now.toISOString(),
-            limit,
-        ])
+        const rows = await this.entityManager.find(AutomationRunEntity, {
+            select: { id: true },
+            where: {
+                pipelineId,
+                status: In(["queued", "failed"]),
+                attempts: LessThan(MAX_ATTEMPTS),
+                runAt: LessThanOrEqual(now),
+            },
+            order: { runAt: "ASC" },
+            take: limit,
+        })
         return rows.map((row) => row.id)
     }
 
     /** Takes a queued or failed run that is due; none when another tick took it first. */
     async claimRun(runId: string): Promise<ClaimedRunOrNone> {
-        const [row] = await this.entityManager.query<Array<ClaimedRun>>(CLAIM_RUN, [runId])
+        const claimed = await this.entityManager
+            .createQueryBuilder(AutomationRunEntity, "ar")
+            .update()
+            .set({ status: "running", attempts: () => "attempts + 1", error: null })
+            .where({ id: runId, status: In(["queued", "failed"]) })
+            .returning(["id", "attempts", "payload"])
+            .execute()
+        const [row] = rowsOf<ClaimedRun>(claimed.raw)
         return row ?? null
     }
 
@@ -107,76 +126,124 @@ export class AutomationRunsService {
 
     /** Ends a run with its result. */
     async finishRun(runId: string, result: RunResult): Promise<void> {
-        await this.entityManager.query(FINISH_RUN, [
-            runId,
-            result.status,
-            JSON.stringify(result.steps),
-            result.evidence ?? null,
-            result.status === "waiting_approval" ? null : this.clock.now().toISOString(),
-        ])
+        await this.entityManager.update(
+            AutomationRunEntity,
+            { id: runId },
+            {
+                status: result.status,
+                steps: [...result.steps],
+                evidence: result.evidence ?? null,
+                error: null,
+                finishedAt: result.status === "waiting_approval" ? null : this.clock.now(),
+            },
+        )
     }
 
     /** Ends a run the owner decided: the waiting step is replaced by the answer. */
     async settleRun(settlement: RunSettlement): Promise<void> {
-        await this.entityManager.query(FINISH_RUN, [
-            settlement.runId,
-            settlement.status,
-            JSON.stringify(settlement.steps),
-            settlement.evidence,
-            this.clock.now().toISOString(),
-        ])
+        await this.entityManager.update(
+            AutomationRunEntity,
+            { id: settlement.runId },
+            {
+                status: settlement.status,
+                steps: [...settlement.steps],
+                evidence: settlement.evidence,
+                error: null,
+                finishedAt: this.clock.now(),
+            },
+        )
     }
 
     /** The latest runs of a workspace, optionally of one template, newest first. */
-    runsOf(query: RunsQuery): Promise<ReadonlyArray<RunRow>> {
-        return this.entityManager.query<Array<RunRow>>(SELECT_RUNS, [query.workspaceId, query.templateKey, query.limit])
+    async runsOf(query: RunsQuery): Promise<ReadonlyArray<RunRow>> {
+        const builder = this.entityManager
+            .createQueryBuilder(AutomationRunEntity, "r")
+            .innerJoin(AutomationPipelineEntity, "p", "p.id = r.pipelineId")
+            .where("r.workspaceId = :workspaceId", { workspaceId: query.workspaceId })
+        if (query.templateKey !== null)
+            builder.andWhere("p.templateKey = :templateKey", { templateKey: query.templateKey })
+        const rows = await builder.orderBy("r.createdAt", "DESC").limit(query.limit).getMany()
+        return rows.map((row) => ({
+            id: row.id,
+            pipeline_id: row.pipelineId,
+            trigger_ref: row.triggerRef,
+            status: row.status,
+            steps: row.steps,
+            evidence: row.evidence,
+            error: row.error,
+            created_at: row.createdAt.toISOString(),
+            finished_at: row.finishedAt === null ? null : row.finishedAt.toISOString(),
+        }))
     }
 
     /** The history of a pipeline for some references. */
-    priorRuns(pipelineId: string, references: ReadonlyArray<string>): Promise<ReadonlyArray<PriorRunRow>> {
-        return references.length === 0
-            ? Promise.resolve([])
-            : this.entityManager.query<Array<PriorRunRow>>(SELECT_PRIOR_RUNS, [pipelineId, references])
+    async priorRuns(pipelineId: string, references: ReadonlyArray<string>): Promise<ReadonlyArray<PriorRunRow>> {
+        if (references.length === 0) return []
+        const rows = await this.entityManager.find(AutomationRunEntity, {
+            select: { triggerRef: true, status: true, createdAt: true, dedupeKey: true },
+            where: { pipelineId, triggerRef: In([...references]) },
+            take: PRIOR_LIMIT,
+        })
+        return rows.map((row) => ({
+            trigger_ref: row.triggerRef,
+            status: row.status,
+            created_at: row.createdAt.toISOString(),
+            dedupe_key: row.dedupeKey,
+        }))
     }
 
     /** The runs of a workspace that wait for a decision on one work item. */
-    waitingRunsFor(workspaceId: string, workItemId: string): Promise<ReadonlyArray<WaitingRun>> {
-        return this.entityManager.query<Array<WaitingRun>>(SELECT_WAITING_RUNS, [
-            workspaceId,
-            JSON.stringify([{ workItemId }]),
-        ])
+    async waitingRunsFor(workspaceId: string, workItemId: string): Promise<ReadonlyArray<WaitingRun>> {
+        const rows = await this.entityManager
+            .createQueryBuilder(AutomationRunEntity, "r")
+            .where("r.workspaceId = :workspaceId", { workspaceId })
+            .andWhere("r.status = :status", { status: "waiting_approval" })
+            .andWhere("r.steps @> CAST(:fragment AS jsonb)", { fragment: JSON.stringify([{ workItemId }]) })
+            .limit(WAITING_LIMIT)
+            .getMany()
+        return rows.map((row) => ({ id: row.id, pipeline_id: row.pipelineId, steps: row.steps }))
     }
 
     /** The latest finished run of a pipeline for one reference since an instant, or none. */
     async latestDoneRun(query: LatestRunQuery): Promise<ClaimedRunOrNone> {
-        const [row] = await this.entityManager.query<Array<{ id: string; payload: RunPayload }>>(
-            SELECT_LATEST_DONE_RUN,
-            [query.pipelineId, query.reference, query.since],
-        )
-        return row === undefined ? null : { id: row.id, attempts: 0, payload: row.payload }
+        const row = await this.entityManager.findOne(AutomationRunEntity, {
+            select: { id: true, payload: true },
+            where: {
+                pipelineId: query.pipelineId,
+                triggerRef: query.reference,
+                status: "done",
+                createdAt: MoreThanOrEqual(new Date(query.since)),
+            },
+            order: { createdAt: "DESC" },
+        })
+        return row === null ? null : { id: row.id, attempts: 0, payload: row.payload }
     }
 
     /** Replaces the payload of a run. */
     async markPayload(runId: string, payload: RunPayload): Promise<void> {
-        await this.entityManager.query(UPDATE_RUN_PAYLOAD, [runId, JSON.stringify(payload)])
+        await this.entityManager.update(AutomationRunEntity, { id: runId }, { payload: payload as RunPayloadWrite })
     }
 
     private async failRun(run: ClaimedRun, message: string): Promise<void> {
         const retry = run.attempts < MAX_ATTEMPTS
         const now = this.clock.now()
         const backoff = BACKOFF_MINUTES[run.attempts - 1] ?? LAST_BACKOFF_MINUTES
-        await this.entityManager.query(FAIL_RUN, [
-            run.id,
-            message.slice(0, ERROR_MAX),
-            new Date(now.getTime() + backoff * MINUTE_MS).toISOString(),
-            retry ? null : now.toISOString(),
-            JSON.stringify([
-                {
-                    label: this.catalog.get("automation-runs.step.failed", {}, "vi"),
-                    status: "failed",
-                    detail: message.slice(0, ERROR_DETAIL_MAX),
-                },
-            ]),
-        ])
+        await this.entityManager.update(
+            AutomationRunEntity,
+            { id: run.id },
+            {
+                status: "failed",
+                error: message.slice(0, ERROR_MAX),
+                runAt: new Date(now.getTime() + backoff * MINUTE_MS),
+                finishedAt: retry ? null : now,
+                steps: [
+                    {
+                        label: this.catalog.get("automation-runs.step.failed", {}, "vi"),
+                        status: "failed",
+                        detail: message.slice(0, ERROR_DETAIL_MAX),
+                    },
+                ],
+            },
+        )
     }
 }

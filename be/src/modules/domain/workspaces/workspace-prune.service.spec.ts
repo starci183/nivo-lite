@@ -3,13 +3,26 @@ import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { WorkspacesErrorCode } from "./errors/workspaces.error"
-import { COUNT_ALL_WORKSPACES, DELETE_ONE_WORKSPACE, LIST_ALL_WORKSPACES } from "./persistence/workspace-prune.sql"
+import { WorkspaceEntity } from "./persistence/entities"
 import { WorkspacePruneService } from "./workspace-prune.service"
 import { NIVO_WORKSPACE_ID } from "./workspaces.contracts"
 
 const NIVO = { id: NIVO_WORKSPACE_ID, name: "NIVO", plan_code: "pro", status: "active" }
 const SPA = { id: "ws-spa", name: "Spa", plan_code: null, status: "pending_payment" }
 const BUN = { id: "ws-bun", name: "Bun", plan_code: "starter", status: "past_due" }
+
+/** The stored workspaces a brief list stands for. */
+const storedOf = (...briefs: ReadonlyArray<typeof NIVO | typeof SPA | typeof BUN>): Array<WorkspaceEntity> =>
+    briefs.map((brief) =>
+        Object.assign(new WorkspaceEntity(), {
+            id: brief.id,
+            name: brief.name,
+            planCode: brief.plan_code,
+            status: brief.status,
+        }),
+    )
+
+const DELETED = { affected: 1, raw: [] }
 
 const build = async (em: MockEntityManager, answer = "DELETE") => {
     const terminal = { print: jest.fn(), ask: jest.fn().mockResolvedValue(answer) }
@@ -29,20 +42,23 @@ const printed = (terminal: TerminalDouble): Array<string> => terminal.print.mock
 describe("WorkspacePruneService", () => {
     it("keeps the built-in workspace, lists both sides, asks, deletes the rest and counts what is left", async () => {
         const em = mockEntityManager({
-            query: [
-                [LIST_ALL_WORKSPACES, [NIVO, SPA, BUN]],
-                [DELETE_ONE_WORKSPACE, []],
-                [COUNT_ALL_WORKSPACES, [{ total: 1 }]],
-            ],
+            find: [WorkspaceEntity, storedOf(NIVO, SPA, BUN)],
+            delete: [WorkspaceEntity, DELETED],
+            count: [WorkspaceEntity, 1],
         })
         const { prune, terminal } = await build(em)
 
         const report = await prune.prune({}, terminal)
 
         expect(report).toEqual({ status: "deleted", kept: [NIVO], doomed: [SPA, BUN], left: 1 })
+        expect(em.find).toHaveBeenCalledWith(WorkspaceEntity, {
+            select: { id: true, name: true, planCode: true, status: true },
+            order: { createdAt: "ASC" },
+            take: 1000,
+        })
         expect(terminal.ask).toHaveBeenCalledWith("Type DELETE to permanently delete these 2 workspaces: ")
-        expect(em.query).toHaveBeenCalledWith(DELETE_ONE_WORKSPACE, ["ws-spa"])
-        expect(em.query).toHaveBeenCalledWith(DELETE_ONE_WORKSPACE, ["ws-bun"])
+        expect(em.delete).toHaveBeenCalledWith(WorkspaceEntity, { id: "ws-spa" })
+        expect(em.delete).toHaveBeenCalledWith(WorkspaceEntity, { id: "ws-bun" })
         expect(printed(terminal)).toEqual([
             "KEEP:",
             `  NIVO  (pro)  ${NIVO_WORKSPACE_ID}`,
@@ -57,11 +73,9 @@ describe("WorkspacePruneService", () => {
 
     it("skips the question with the yes flag and keeps the extra workspaces named", async () => {
         const em = mockEntityManager({
-            query: [
-                [LIST_ALL_WORKSPACES, [NIVO, SPA, BUN]],
-                [DELETE_ONE_WORKSPACE, []],
-                [COUNT_ALL_WORKSPACES, []],
-            ],
+            find: [WorkspaceEntity, storedOf(NIVO, SPA, BUN)],
+            delete: [WorkspaceEntity, DELETED],
+            count: [WorkspaceEntity, 0],
         })
         const { prune, terminal } = await build(em)
 
@@ -74,17 +88,17 @@ describe("WorkspacePruneService", () => {
     })
 
     it("drops the built-in workspace with no-default, which then needs a workspace to keep", async () => {
-        const em = mockEntityManager({ query: [LIST_ALL_WORKSPACES, [SPA]] })
+        const em = mockEntityManager({ find: [WorkspaceEntity, storedOf(SPA)] })
         const { prune, terminal } = await build(em)
 
         await expect(prune.prune({ default: false }, terminal)).rejects.toMatchObject({
             code: WorkspacesErrorCode.NothingToKeep,
         })
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.find).not.toHaveBeenCalled()
     })
 
     it("deletes nothing when a workspace to keep does not exist", async () => {
-        const em = mockEntityManager({ query: [LIST_ALL_WORKSPACES, [SPA]] })
+        const em = mockEntityManager({ find: [WorkspaceEntity, storedOf(SPA)] })
         const { prune, terminal } = await build(em)
 
         await expect(prune.prune({ default: false, keep: ["ws-gone"] }, terminal)).rejects.toMatchObject({
@@ -96,7 +110,7 @@ describe("WorkspacePruneService", () => {
 
 describe("WorkspacePruneService", () => {
     it("says so when there is nothing to delete", async () => {
-        const em = mockEntityManager({ query: [LIST_ALL_WORKSPACES, [NIVO]] })
+        const em = mockEntityManager({ find: [WorkspaceEntity, storedOf(NIVO)] })
         const { prune, terminal } = await build(em)
 
         await expect(prune.prune({}, terminal)).resolves.toEqual({
@@ -110,12 +124,12 @@ describe("WorkspacePruneService", () => {
     })
 
     it("deletes nothing when the operator does not type the confirmation word", async () => {
-        const em = mockEntityManager({ query: [LIST_ALL_WORKSPACES, [NIVO, SPA]] })
+        const em = mockEntityManager({ find: [WorkspaceEntity, storedOf(NIVO, SPA)] })
         const { prune, terminal } = await build(em, "no")
 
         await expect(prune.prune({}, terminal)).resolves.toMatchObject({ status: "cancelled", left: 2 })
         expect(printed(terminal).at(-1)).toBe("Cancelled. Nothing deleted.")
-        expect(em.query).not.toHaveBeenCalledWith(DELETE_ONE_WORKSPACE, expect.anything())
+        expect(em.delete).not.toHaveBeenCalled()
     })
 
     it.each([
@@ -123,17 +137,11 @@ describe("WorkspacePruneService", () => {
         ["a plain value", "locked", "locked"],
     ])("goes on after a delete fails with %s and fails the run at the end", async (_name, cause, message) => {
         const em = mockEntityManager({
-            query: [
-                [LIST_ALL_WORKSPACES, [NIVO, SPA, BUN]],
-                [DELETE_ONE_WORKSPACE, []],
-                [COUNT_ALL_WORKSPACES, [{ total: 2 }]],
-            ],
+            find: [WorkspaceEntity, storedOf(NIVO, SPA, BUN)],
+            count: [WorkspaceEntity, 2],
         })
-        em.query.mockImplementation((text: string, params?: Array<unknown>) => {
-            if (text === DELETE_ONE_WORKSPACE && params?.[0] === "ws-spa") return Promise.reject(cause)
-            if (text === LIST_ALL_WORKSPACES) return Promise.resolve([NIVO, SPA, BUN])
-            return Promise.resolve(text === COUNT_ALL_WORKSPACES ? [{ total: 2 }] : [])
-        })
+        em.delete.mockImplementation(((_target: unknown, criteria: Partial<WorkspaceEntity>) =>
+            criteria.id === "ws-spa" ? Promise.reject(cause) : Promise.resolve(DELETED)) as never)
         const { prune, terminal } = await build(em)
 
         await expect(prune.prune({ yes: true }, terminal)).rejects.toMatchObject({

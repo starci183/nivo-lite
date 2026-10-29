@@ -5,32 +5,25 @@ import {
     type SepayDeliveryRecorded,
 } from "@modules/queues/sepay-delivery"
 import { InjectInbox } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
+import type { EntityInbox } from "@modules/platform/inbox"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 import { Injectable } from "@nestjs/common"
+import { IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { PaymentProofService, parseJsonObject, sepayPayloadOf } from "@modules/domain/billing"
 import type { SepayDelivery, SepayPayload } from "@modules/domain/billing"
 import { orderCodesIn } from "@modules/domain/payment-orders"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import type { ReviewTransaction, SepayAuthorization, SettleOutcome } from "./sepay-transactions.contracts"
 import { transactionStatus } from "./sepay-transactions.policy"
-import {
-    COMPLETE_SEPAY_TRANSACTION,
-    INSERT_SEPAY_TRANSACTION,
-    FIND_PENDING_SEPAY_INBOX,
-    SELECT_REVIEW_TRANSACTIONS,
-    SETTLE_PAYMENT_ORDER,
-    UPDATE_SEPAY_RESULT,
-} from "./persistence/sepay-transactions.sql"
-import type { ReviewTransactionRow, SettleRow } from "./persistence/sepay-transactions.rows"
+import { SepayTransactionEntity } from "./persistence/entities"
 
-/** The locked receipt consumed in the settlement transaction. */
-type PendingSepayReceipt = {
-    readonly id: string
-    readonly payload: Readonly<Record<string, unknown>>
-}
+/** The most transfers one review lists. */
+const REVIEW_ROWS_MAX = 50
+
+/** The statuses a transfer needs a person to look at. */
+const REVIEW_STATUSES: ReadonlyArray<string> = ["underpaid", "expired", "unmatched"]
 
 /** The provider name of NIVO's own billing feed in the delivery inbox. */
 const SEPAY_PROVIDER = "sepay"
@@ -45,22 +38,31 @@ export class SepayTransactionsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly proof: PaymentProofService,
-        @InjectInbox() private readonly inbox: Inbox,
+        @InjectInbox() private readonly inbox: EntityInbox,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
     ) {}
 
     /** Transfers needing review on the requested orders; the workspace predicate prevents cross-workspace disclosure. */
     async review(workspaceId: string, orderIds: ReadonlyArray<string>): Promise<Array<ReviewTransaction>> {
         if (orderIds.length === 0) return []
-        const rows = await this.entityManager.query<Array<ReviewTransactionRow>>(SELECT_REVIEW_TRANSACTIONS, [
-            workspaceId,
-            orderIds,
-        ])
+        const rows = await this.entityManager
+            .createQueryBuilder(SepayTransactionEntity, "t")
+            .innerJoin(
+                (orders) => orders.select(["po.id", "po.workspace_id"]).from("public.payment_orders", "po"),
+                "o",
+                "o.id = t.matchedOrderId",
+            )
+            .where("o.workspace_id = :workspaceId", { workspaceId })
+            .andWhere("o.id IN (:...orderIds)", { orderIds })
+            .andWhere("t.status IN (:...statuses)", { statuses: REVIEW_STATUSES })
+            .orderBy("t.receivedAt", "DESC")
+            .limit(REVIEW_ROWS_MAX)
+            .getMany()
         return rows.map((row) => ({
-            id: row.id,
+            id: row.sepayId,
             status: row.status,
-            transferAmount: row.transfer_amount,
-            receivedAt: new Date(row.received_at).toISOString(),
+            transferAmount: row.transferAmount ?? 0,
+            receivedAt: row.receivedAt.toISOString(),
             content: row.content,
         }))
     }
@@ -82,9 +84,9 @@ export class SepayTransactionsService {
         const deliveryId = String(payload.id)
         await this.entityManager.transaction(async (manager) => {
             if (
-                !(await this.inbox.claim(SEPAY_PROVIDER, deliveryId, manager, {
-                    insert: INSERT_SEPAY_TRANSACTION,
-                    payload: body,
+                !(await this.inbox.claimRow(SEPAY_PROVIDER, deliveryId, manager, {
+                    entity: SepayTransactionEntity,
+                    row: { sepayId: payload.id, payload: body },
                 }))
             )
                 return
@@ -109,12 +111,13 @@ export class SepayTransactionsService {
     /** Settles one committed receipt and completes it in the same retryable transaction. */
     processRecordedDelivery(message: SepayDeliveryRecorded): Promise<void> {
         return this.entityManager.transaction(async (manager) => {
-            const [pending] = await manager.query<Array<PendingSepayReceipt>>(FIND_PENDING_SEPAY_INBOX, [
-                message.deliveryId,
-            ])
-            if (pending === undefined) return
+            const pending = await manager.findOne(SepayTransactionEntity, {
+                where: { sepayId: Number(message.deliveryId), processedAt: IsNull() },
+                lock: { mode: "pessimistic_write" },
+            })
+            if (pending === null) return
             await this.settle(manager, sepayPayloadOf(pending.payload))
-            await manager.query(COMPLETE_SEPAY_TRANSACTION, [pending.id])
+            await manager.update(SepayTransactionEntity, { id: pending.id }, { processedAt: () => "now()" })
         })
     }
 
@@ -123,12 +126,15 @@ export class SepayTransactionsService {
         const isCredit = payload.transferType === "in"
         const codes = isCredit ? orderCodesIn(payload.code, payload.content, payload.description) : []
         const outcome = amount === undefined ? "unmatched" : await this.settleFirst(manager, codes, amount, payload.id)
-        await manager.query(UPDATE_SEPAY_RESULT, [
-            payload.id,
-            transactionStatus(isCredit, outcome),
-            amount ?? null,
-            payload.content ?? payload.code ?? null,
-        ])
+        await manager.update(
+            SepayTransactionEntity,
+            { sepayId: payload.id },
+            {
+                status: transactionStatus(isCredit, outcome),
+                transferAmount: amount ?? null,
+                content: payload.content ?? payload.code ?? null,
+            },
+        )
     }
 
     /** Settles with the first code that names an order; a code that names none is skipped, and no code is unmatched. */
@@ -140,8 +146,12 @@ export class SepayTransactionsService {
     ): Promise<SettleOutcome> {
         const [code, ...rest] = codes
         if (code === undefined) return "unmatched"
-        const [settled] = await manager.query<Array<SettleRow>>(SETTLE_PAYMENT_ORDER, [code, amount, sepayId])
-        const outcome = settled?.outcome ?? "unmatched"
+        const [settled] = await callDbFunction<{ settle_payment_order: SettleOutcome }>(
+            manager,
+            "public.settle_payment_order",
+            [code, amount, sepayId],
+        )
+        const outcome = settled?.settle_payment_order ?? "unmatched"
         return outcome === "unmatched" ? this.settleFirst(manager, rest, amount, sepayId) : outcome
     }
 }

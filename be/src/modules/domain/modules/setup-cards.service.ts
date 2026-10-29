@@ -17,7 +17,7 @@ import type {
     ProposedCardRecord,
     RuleCardPayload,
 } from "@modules/domain/module-setup-writes"
-import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
+import { InstallationChangesService } from "./installation-changes.service"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
@@ -85,7 +85,7 @@ export class SetupCardsService {
         private readonly actions: AuthorityActionsService,
         private readonly gaps: KnowledgeGapsService,
         private readonly events: EventsService,
-        private readonly sync: AgentSyncService,
+        private readonly changes: InstallationChangesService,
     ) {}
 
     /** The cards of the given sessions, each waiting one with the value it would replace. */
@@ -293,7 +293,7 @@ export class SetupCardsService {
         })
         if (fact.status !== "active") throw new ModulesError({ code: ModulesErrorCode.CardFactNotApplied })
         if (base.gapId !== undefined) await this.gaps.answer(workspaceId, base.gapId, `fact:${fact.id}`)
-        await this.sync.requestNow({ workspaceId, installationId: null, force: false })
+        await this.changes.announceNow({ workspaceId, installationId: null, force: false })
         return close(
             "applied",
             { ...edited, attributeLabel },

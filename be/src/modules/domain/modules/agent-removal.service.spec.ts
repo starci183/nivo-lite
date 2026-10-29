@@ -4,7 +4,7 @@ import { AgentsService } from "@modules/domain/agents"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { EventsService } from "@modules/domain/events"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
+import { InstallationChangesService } from "./installation-changes.service"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import {
@@ -23,7 +23,7 @@ const build = async () => {
     const agents = mock<AgentsService>()
     const rules = mock<AuthorityRulesService>()
     const events = mock<EventsService>()
-    const sync = mock<AgentSyncService>()
+    const sync = mock<InstallationChangesService>()
     const readiness = mock<ModuleReadinessService>()
     readiness.withNeeds.mockImplementation((record) =>
         Promise.resolve({ ...record, connectionNeeds: [], lifecycle: "removed" }),
@@ -37,7 +37,7 @@ const build = async () => {
             { provide: AgentsService, useValue: agents },
             { provide: AuthorityRulesService, useValue: rules },
             { provide: EventsService, useValue: events },
-            { provide: AgentSyncService, useValue: sync },
+            { provide: InstallationChangesService, useValue: sync },
             { provide: ModuleReadinessService, useValue: readiness },
         ],
     }).compile()
@@ -63,7 +63,10 @@ describe("AgentRemovalService > remove", () => {
         expect(rules.disableForAgent).toHaveBeenCalledWith("ws-1", "agent-1", expect.anything())
         expect(tx.commits).toBe(1)
         expect(events.record).toHaveBeenCalledWith(expect.objectContaining({ kind: "module.removed" }))
-        expect(sync.requestNow).toHaveBeenCalledWith({ workspaceId: "ws-1", installationId: "inst-1", force: false })
+        expect(sync.announce).toHaveBeenCalledWith(
+            { workspaceId: "ws-1", installationId: "inst-1", force: false },
+            expect.anything(),
+        )
     })
 
     it("removes an installation that has no agent without touching agents or rules", async () => {
@@ -87,7 +90,7 @@ describe("AgentRemovalService > remove", () => {
 
         expect(installations.markRemoved).not.toHaveBeenCalled()
         expect(events.record).not.toHaveBeenCalled()
-        expect(sync.requestNow).not.toHaveBeenCalled()
+        expect(sync.announce).not.toHaveBeenCalled()
     })
 
     it("refuses an installation that is not of the workspace, before or after the removal", async () => {

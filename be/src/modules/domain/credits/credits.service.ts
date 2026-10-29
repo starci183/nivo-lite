@@ -18,8 +18,7 @@ import type {
 } from "./credits.contracts"
 import { toCreditPack, toCreditPackPurchase, toCreditTopupLot } from "./credits.mapper"
 import { CreditsError, CreditsErrorCode } from "./errors/credits.error"
-import type { PackPurchaseRow, PackRow, TopupLotRow } from "./persistence/credits.rows"
-import { SELECT_ACTIVE_PACKS, SELECT_MONTH_PACK_PURCHASES, SELECT_TOPUP_LOTS } from "./persistence/credits.sql"
+import { CreditPackEntity, CreditPackPurchaseEntity, CreditTopupEntity } from "./persistence/entities"
 import { prorateUpgrade } from "./proration.policy"
 
 @Injectable()
@@ -34,21 +33,35 @@ export class CreditsService {
 
     /** The packs on sale in display order. */
     async listPacks(): Promise<Array<CreditPack>> {
-        const rows = await this.entityManager.query<Array<PackRow>>(SELECT_ACTIVE_PACKS)
+        const rows = await this.entityManager.find(CreditPackEntity, {
+            where: { active: true },
+            order: { sort: "ASC" },
+            take: 50,
+        })
         return rows.map(toCreditPack)
     }
 
     /** The latest purchased lots of a workspace, proving the caller's owner or manager role. */
     async topupLots(userId: string, workspaceId: string): Promise<ReadonlyArray<CreditTopupLot>> {
         await this.billing.requireManager(userId, workspaceId)
-        const rows = await this.entityManager.query<Array<TopupLotRow>>(SELECT_TOPUP_LOTS, [workspaceId])
+        const rows = await this.entityManager.find(CreditTopupEntity, {
+            where: { workspaceId },
+            order: { purchasedAt: "DESC" },
+            take: 200,
+        })
         return rows.map(toCreditTopupLot)
     }
 
     /** The add-on packs a workspace paid for this month, for any member. */
     async packsBought(userId: string, workspaceId: string): Promise<ReadonlyArray<CreditPackPurchase>> {
         await this.billing.requireMember(userId, workspaceId)
-        const rows = await this.entityManager.query<Array<PackPurchaseRow>>(SELECT_MONTH_PACK_PURCHASES, [workspaceId])
+        const rows = await this.entityManager
+            .createQueryBuilder(CreditPackPurchaseEntity, "p")
+            .where("p.workspaceId = :workspaceId", { workspaceId })
+            .andWhere("p.period = date_trunc('month', now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date")
+            .orderBy("p.purchasedAt", "DESC")
+            .limit(200)
+            .getMany()
         return rows.map(toCreditPackPurchase)
     }
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import type { EntityManager } from "typeorm"
-import { BACKEND_ROLE, ENTER_BACKEND_ROLE, USE_BACKEND_ROLE } from "../fixtures/persistence/backend-role.sql"
+import { BACKEND_ROLE, ENTER_BACKEND_ROLE, USE_BACKEND_ROLE } from "./backend-role.sql"
 import type { LiteWorld } from "./lite-world.service"
 
 /** Exercises the backend's real privileges and rolls back both the local role membership and the proof's writes. */

@@ -1,7 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { headOf, recentOf, ruleLineOf } from "./agent-profile.mapper"
-import type { AgentHeadRow, AppliedRuleRow, RecentWorkRow } from "./persistence/agent-profile.rows"
+import type { AgentHeadRead, RecentWorkRead } from "./agent-profile-reads.contracts"
+import type { AuthorityRuleEntity } from "@modules/domain/authority-rules"
 
 type Subject = {
     headOf: typeof headOf
@@ -18,33 +19,33 @@ const buildSubject = async () => {
     return moduleRef.get<Subject>(SUBJECT)
 }
 
-const headRowOf = builder<AgentHeadRow>({
+const headRowOf = builder<AgentHeadRead>({
     id: "a1",
     name: "AI Sales",
     handle: "ai-sales",
     role: "Sales assistant",
     module: "sales",
     status: "active",
-    avatar_url: "https://cdn.example/a1.png",
-    room_name: "Sales",
-    operating_mode: "assist",
+    avatarUrl: "https://cdn.example/a1.png",
+    roomName: "Sales",
+    operatingMode: "assist",
 })
 
-const recentRowOf = builder<RecentWorkRow>({
+const recentRowOf = builder<RecentWorkRead>({
     id: "w1",
     action: "send_quote",
     status: "waiting_decision",
     at: "2026-10-22T09:00:00.000Z",
     summary: "Close the group booking",
     customer: "Minh An",
-    lead_id: "l1",
+    leadId: "l1",
 })
 
-const ruleRowOf = builder<AppliedRuleRow>({
+const ruleRowOf = builder<Pick<AuthorityRuleEntity, "action" | "department" | "mode" | "limitVnd" | "note">>({
     action: "send_quote",
     department: "sales",
     mode: "ask",
-    limit_vnd: 5_000_000,
+    limitVnd: 5_000_000,
     note: "The owner confirms",
 })
 
@@ -68,7 +69,7 @@ describe("headOf", () => {
     it("keeps a missing picture, room and instance as null", async () => {
         const subject = await buildSubject()
 
-        expect(subject.headOf(headRowOf({ avatar_url: null, room_name: null, operating_mode: null }))).toMatchObject({
+        expect(subject.headOf(headRowOf({ avatarUrl: null, roomName: null, operatingMode: null }))).toMatchObject({
             avatarUrl: null,
             roomName: null,
             operatingMode: null,
@@ -108,7 +109,7 @@ describe("recentOf", () => {
     it("turns a missing summary and customer into empty texts", async () => {
         const subject = await buildSubject()
 
-        expect(subject.recentOf(recentRowOf({ summary: null, customer: null, lead_id: null }))).toMatchObject({
+        expect(subject.recentOf(recentRowOf({ summary: null, customer: null, leadId: null }))).toMatchObject({
             title: "",
             customer: "",
             leadId: null,

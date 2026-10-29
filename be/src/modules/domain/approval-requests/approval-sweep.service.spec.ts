@@ -1,5 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { IsNull } from "typeorm"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { MemberGrantsService } from "@modules/domain/member-grants"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -9,22 +11,18 @@ import {
     IN_30_MINUTES,
     MINH_REF,
     NOW,
-    approvalRequestOf,
-    verdictOf,
+    approvalRequestEntityOf,
+    requestOfSecondStep,
+    allApproveRequestMinhApproved,
 } from "@tests/fixtures/builders/approval-requests.builder"
 import { ApprovalAnnouncerService } from "./approval-announcer.service"
 import { ApprovalEscalationService } from "./approval-escalation.service"
-import type { ApprovalResolved } from "./approval-requests.contracts"
+import type { ApprovalRequestRecord, ApprovalResolved } from "./approval-requests.contracts"
+import { toRequestRecord } from "./approval-requests.mapper"
 import { ApprovalSweepService } from "./approval-sweep.service"
-import type { ApprovalRequestRow } from "./persistence/approval-requests.rows"
-import {
-    LIST_VERDICTS,
-    LOCK_DUE_REQUESTS,
-    LOCK_REMINDABLE_REQUESTS,
-    MARK_REMINDED,
-} from "./persistence/approval-requests.sql"
+import { ApprovalRequestEntity } from "./persistence/entities"
 
-const expiredOf = (row: ApprovalRequestRow): ApprovalResolved => ({
+const expiredOf = (row: ApprovalRequestRecord): ApprovalResolved => ({
     requestId: row.id,
     outcome: "expired",
     decidedBy: null,
@@ -35,21 +33,13 @@ const expiredOf = (row: ApprovalRequestRow): ApprovalResolved => ({
     escalatedTo: MINH_REF,
 })
 
-/** What the double answers to one statement. */
-type Answer = readonly [string, unknown]
-
-/** Builds the sweep over the statements it will make, in order: what is due, then what is remindable. */
-const build = async (due: ReadonlyArray<ApprovalRequestRow>, remindable: ReadonlyArray<ApprovalRequestRow> = []) => {
-    const reminders: ReadonlyArray<Answer> = remindable.flatMap((): ReadonlyArray<Answer> => [
-        [LIST_VERDICTS, [verdictOf()]],
-        [MARK_REMINDED, []],
-    ])
-    const answers: ReadonlyArray<Answer> = [
-        [LOCK_DUE_REQUESTS, due],
-        [LOCK_REMINDABLE_REQUESTS, remindable],
-        ...reminders,
-    ]
-    const tx = fakeTransaction(mockEntityManager({ query: answers }))
+/** Builds the sweep over the reads it will make, in order: what is due, then what is remindable. */
+const build = async (
+    due: ReadonlyArray<ApprovalRequestEntity>,
+    remindable: ReadonlyArray<ApprovalRequestEntity> = [],
+) => {
+    const tx = fakeTransaction(mockEntityManager({ update: [ApprovalRequestEntity, { affected: 1 }] }))
+    const fakes = queueQueryBuilders(tx.em, [{ getMany: due }, { getMany: remindable }])
     const grants = mock<MemberGrantsService>()
     grants.directory.mockResolvedValue(DIRECTORY)
     const escalation = mock<ApprovalEscalationService>()
@@ -67,23 +57,28 @@ const build = async (due: ReadonlyArray<ApprovalRequestRow>, remindable: Readonl
             { provide: ApprovalAnnouncerService, useValue: announcer },
         ],
     }).compile()
-    return { service: moduleRef.get(ApprovalSweepService), tx, grants, escalation, announcer }
+    return { service: moduleRef.get(ApprovalSweepService), tx, fakes, grants, escalation, announcer }
 }
 
 describe("ApprovalSweepService > requests that ran out of time", () => {
     it("settles each one as expired through the escalation and announces it after the commit", async () => {
-        const first = approvalRequestOf({ expires_at: "2026-10-22T09:29:00.000Z" })
-        const { service, tx, announcer } = await build([first])
+        const first = approvalRequestEntityOf({ expiresAt: new Date("2026-10-22T09:29:00.000Z") })
+        const { service, tx, fakes, announcer } = await build([first])
 
         await expect(service.sweep()).resolves.toEqual({ expired: 1, reminded: 0 })
 
-        expect(tx.em.query).toHaveBeenNthCalledWith(1, LOCK_DUE_REQUESTS, [NOW, 50])
-        expect(announcer.resolved.mock.calls.map((call) => call[0])).toEqual([expiredOf(first)])
+        expect(fakes[0]?.callsOf("where")).toEqual([
+            ["r.status = 'pending' AND r.expiresAt <= :now", { now: new Date(NOW) }],
+        ])
+        expect(fakes[0]?.callsOf("limit")).toEqual([[50]])
+        expect(fakes[0]?.callsOf("setLock")).toEqual([["pessimistic_write"]])
+        expect(fakes[0]?.callsOf("setOnLocked")).toEqual([["skip_locked"]])
+        expect(announcer.resolved.mock.calls.map((call) => call[0])).toEqual([expiredOf(toRequestRecord(first))])
         expect(tx.commits).toBe(2)
     })
 
     it("reads each workspace directory once for the requests of that workspace", async () => {
-        const rows = [approvalRequestOf(), approvalRequestOf({ id: "request-2", chain_step_id: "step-2" })]
+        const rows = [approvalRequestEntityOf(), requestOfSecondStep()]
         const { service, grants, escalation } = await build(rows)
 
         await expect(service.sweep()).resolves.toEqual({ expired: 2, reminded: 0 })
@@ -102,12 +97,17 @@ describe("ApprovalSweepService > requests that ran out of time", () => {
 
 describe("ApprovalSweepService > requests half-way through their time", () => {
     it("reminds once the approvers who have not answered and marks the request reminded", async () => {
-        const row = approvalRequestOf({ policy: "all", approvers: [MINH_REF, HA_REF] })
-        const { service, tx, announcer } = await build([], [row])
+        const row = allApproveRequestMinhApproved()
+        const { service, tx, fakes, announcer } = await build([], [row])
 
         await expect(service.sweep()).resolves.toEqual({ expired: 0, reminded: 1 })
 
-        expect(tx.em.query).toHaveBeenCalledWith(MARK_REMINDED, ["request-1", NOW])
+        expect(fakes[1]?.callsOf("setOnLocked")).toEqual([["skip_locked"]])
+        expect(tx.em.update).toHaveBeenCalledWith(
+            ApprovalRequestEntity,
+            { id: "request-1", remindedAt: IsNull() },
+            { remindedAt: new Date(NOW) },
+        )
         expect(announcer.reminder.mock.calls.map((call) => call[0])).toEqual([
             {
                 requestId: "request-1",

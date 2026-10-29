@@ -10,10 +10,17 @@ import type { MentionRef } from "@modules/domain/work-chains"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
-import type { ThreadWorkRow, WorkAgentRow } from "./persistence/thread-work.rows"
-import { INSERT_THREAD_WORK, LIST_WORK_AGENTS, UPDATE_THREAD_WORK } from "./persistence/thread-work.sql"
+import { ThreadWorkEntity } from "./persistence/entities"
 import { amountText, groupMentionOf, nextStepOf, workAgentOf } from "./thread-work.policy"
-import type { AgentStep, NextStep, ThreadWorkState, WorkAgent, WorkPlace } from "./thread-work.contracts"
+import type {
+    AgentStep,
+    NextStep,
+    ThreadWorkRecord,
+    ThreadWorkState,
+    WorkAgent,
+    WorkAgentRecord,
+    WorkPlace,
+} from "./thread-work.contracts"
 
 /** One line an agent writes in its thread: the text, who it tags, the title of the chain step it makes. */
 interface AgentLine {
@@ -29,6 +36,9 @@ interface WorkMove {
     readonly memberId: string | null
     readonly missing: ReadonlyArray<string>
 }
+
+/** The most agents one agent may pass work to that a read returns. */
+const TARGETS_MAX = 50
 
 /** Nothing is waited for. */
 const SETTLED: Omit<WorkMove, "state"> = { requestId: null, memberId: null, missing: [] }
@@ -67,15 +77,30 @@ export class ThreadWorkTurnsService {
             dedupeKey: `thread:${step.threadId}:${step.agent.id}:${step.action}`,
             seed: step.seed,
         })
-        const [row] = await this.entityManager.query<Array<ThreadWorkRow>>(INSERT_THREAD_WORK, [
-            step.workspaceId,
-            step.threadId,
-            item.id,
-            step.agent.id,
-        ])
+        const row = await this.record(step, item.id)
         if (row?.state !== "running") return null
         const place = { workspaceId: step.workspaceId, threadId: step.threadId, workId: row.id, agent: step.agent }
         return this.react({ ...place, locale: "vi" }, item)
+    }
+
+    /** Records a piece of thread work; a work item is recorded once, and recording it again only touches its clock. */
+    private async record(step: AgentStep, workItemId: string): Promise<ThreadWorkRecord | undefined> {
+        const result = await this.entityManager
+            .createQueryBuilder(ThreadWorkEntity, "t")
+            .insert()
+            .values({
+                workspaceId: step.workspaceId,
+                threadId: step.threadId,
+                workItemId,
+                agentId: step.agent.id,
+            })
+            .orUpdate(["updated_at"], ["work_item_id"])
+            .returning(
+                "id, workspace_id, thread_id, work_item_id, agent_id, state, approval_request_id, waiting_member_id, missing_fields",
+            )
+            .execute()
+        const [row] = result.raw as Array<ThreadWorkRecord>
+        return row
     }
 
     /**
@@ -93,14 +118,18 @@ export class ThreadWorkTurnsService {
 
     /** Records where a piece of thread work stands, and answers it. */
     async move(place: Pick<WorkPlace, "workspaceId" | "workId">, move: WorkMove): Promise<ThreadWorkState> {
-        await this.entityManager.query(UPDATE_THREAD_WORK, [
-            place.workspaceId,
-            place.workId,
-            move.state,
-            move.requestId,
-            move.memberId,
-            move.missing,
-        ])
+        await this.entityManager.update(
+            ThreadWorkEntity,
+            { workspaceId: place.workspaceId, id: place.workId },
+            {
+                state: move.state,
+                // The request it once asked stays named: the decision history reads the work behind a request through it.
+                ...(move.requestId === null ? {} : { approvalRequestId: move.requestId }),
+                waitingMemberId: move.memberId,
+                missingFields: [...move.missing],
+                updatedAt: () => "now()",
+            },
+        )
         return move.state
     }
 
@@ -239,10 +268,20 @@ export class ThreadWorkTurnsService {
 
     /** The active agents the agent may tag, in its order. */
     private async targetsOf(place: WorkPlace): Promise<ReadonlyArray<WorkAgent>> {
-        const rows = await this.entityManager.query<Array<WorkAgentRow>>(LIST_WORK_AGENTS, [
-            place.workspaceId,
-            place.agent.canTag,
-        ])
+        const rows = await this.entityManager
+            .createQueryBuilder()
+            .select(["a.id AS id", "a.name AS name", "a.module AS module", "a.can_tag_agent_ids AS can_tag_agent_ids"])
+            .from("public.agents", "a")
+            .innerJoin(
+                "(SELECT * FROM unnest(CAST(:agentIds AS uuid[])) WITH ORDINALITY AS u(id, position))",
+                "t",
+                "t.id = a.id",
+            )
+            .where("a.workspace_id = :workspaceId AND a.status = 'active'", { workspaceId: place.workspaceId })
+            .setParameter("agentIds", [...place.agent.canTag])
+            .orderBy("t.position", "ASC")
+            .limit(TARGETS_MAX)
+            .getRawMany<WorkAgentRecord>()
         return rows.map(workAgentOf)
     }
 

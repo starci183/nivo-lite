@@ -4,13 +4,13 @@ import { builder } from "@starci/jest-preset"
 
 import { toApprovalView } from "./office-thread.mapper"
 
-import type { ApprovalRow } from "./persistence/office-thread.rows"
+import type { ApprovalLine } from "./office-reads.contracts"
 
 const POLICY = Symbol("./office-thread.mapper")
 
 type PolicySubject = { toApprovalView: typeof toApprovalView }
 
-const rowOf = builder<ApprovalRow>({
+const rowOf = builder<ApprovalLine>({
     id: "x-1",
     responsibility_id: "r-1",
     agent_id: "a-1",

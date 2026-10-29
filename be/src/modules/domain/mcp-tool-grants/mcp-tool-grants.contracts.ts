@@ -30,3 +30,23 @@ export interface McpToolGrantChange extends McpToolGrantRecord {
     /** The person who set it. */
     readonly updatedBy: string
 }
+
+/** One grant row of an agent as the gateway reads it. */
+export interface McpToolGrantView {
+    /** The full tool name or `connector.*`. */
+    readonly tool: string
+    /** `auto`, `ask` or `never`. */
+    readonly mode: string
+    /** The amount limit (bigint text from the driver), or null. */
+    readonly limit_vnd: string | number | null
+    /** The argument constraints (a JSON array). */
+    readonly constraints: unknown
+}
+
+/** One grant row of a workspace with its agent. */
+export interface McpWorkspaceGrantView extends McpToolGrantView {
+    /** The agent. */
+    readonly agent_id: string
+    /** The agent name. */
+    readonly agent_name: string
+}

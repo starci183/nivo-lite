@@ -11,7 +11,8 @@ import type { SaveSettingsParams } from "./hiring-operations.contracts"
 import { HiringDataService } from "./hiring-data.service"
 import { HiringSettingsService } from "./hiring-settings.service"
 import { HiringTextService } from "./hiring-text.service"
-import { INIT_SETTINGS, SAVE_SETTINGS } from "./persistence/hiring.sql"
+const INIT_SETTINGS = "SELECT * FROM public.hiring_settings_init($1, $2)"
+const SAVE_SETTINGS = "SELECT * FROM public.hiring_settings_save($1, $2)"
 
 const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
 
@@ -100,7 +101,7 @@ describe("HiringSettingsService", () => {
             ["Admin", "admin-hr"],
             ["S".repeat(45), "s".repeat(40)],
         ])("creates settings from workspace name %s using slug %s", async (name, slug) => {
-            const em = mockEntityManager({ query: [INIT_SETTINGS, [{ value: "created" }]] })
+            const em = mockEntityManager({ query: [INIT_SETTINGS, [{ hiring_settings_init: "created" }]] })
             const { service, data, office } = await build(em)
             office.workspaceName.mockResolvedValue(name)
             data.settings.mockResolvedValueOnce(undefined).mockResolvedValue(settingsOf({ publicSlug: slug }))
@@ -113,7 +114,7 @@ describe("HiringSettingsService", () => {
         })
 
         it("reads settings when initialization reports that another caller created them", async () => {
-            const em = mockEntityManager({ query: [INIT_SETTINGS, [{ value: "exists" }]] })
+            const em = mockEntityManager({ query: [INIT_SETTINGS, [{ hiring_settings_init: "exists" }]] })
             const { service, data } = await build(em)
             data.settings.mockResolvedValueOnce(undefined)
 
@@ -127,9 +128,9 @@ describe("HiringSettingsService", () => {
             const em = mockEntityManager({
                 query: [
                     [INIT_SETTINGS, []],
-                    [INIT_SETTINGS, [{ value: "taken" }]],
-                    [INIT_SETTINGS, [{ value: "created" }]],
-                    [INIT_SETTINGS, [{ value: "exists" }]],
+                    [INIT_SETTINGS, [{ hiring_settings_init: "taken" }]],
+                    [INIT_SETTINGS, [{ hiring_settings_init: "created" }]],
+                    [INIT_SETTINGS, [{ hiring_settings_init: "exists" }]],
                 ],
             })
             const { service, data } = await build(em)
@@ -198,7 +199,7 @@ describe("HiringSettingsService", () => {
 describe("HiringSettingsService", () => {
     describe("save", () => {
         it("cleans every supplied field and returns the reloaded settings", async () => {
-            const em = mockEntityManager({ query: [SAVE_SETTINGS, [{ value: "saved" }]] })
+            const em = mockEntityManager({ query: [SAVE_SETTINGS, [{ hiring_settings_save: "saved" }]] })
             const { service, members, data } = await build(em)
             const patch = {
                 publicSlug: "new-shop",
@@ -235,7 +236,7 @@ describe("HiringSettingsService", () => {
         })
 
         it("uses the catalog tone when the supplied tone is blank", async () => {
-            const em = mockEntityManager({ query: [SAVE_SETTINGS, [{ value: "saved" }]] })
+            const em = mockEntityManager({ query: [SAVE_SETTINGS, [{ hiring_settings_save: "saved" }]] })
             const { service, catalog } = await build(em)
 
             await expect(service.save("user-1", "ws-1", { adTone: "   " })).resolves.toEqual(outputOf())
@@ -245,7 +246,7 @@ describe("HiringSettingsService", () => {
         })
 
         it("bounds the public slug and ad tone lengths", async () => {
-            const em = mockEntityManager({ query: [SAVE_SETTINGS, [{ value: "saved" }]] })
+            const em = mockEntityManager({ query: [SAVE_SETTINGS, [{ hiring_settings_save: "saved" }]] })
             const { service } = await build(em)
 
             await expect(
@@ -265,7 +266,7 @@ describe("HiringSettingsService", () => {
             [7, 20],
             [730, 800],
         ])("accepts retention %s and consent length %s at the limits", async (retentionDays, length) => {
-            const em = mockEntityManager({ query: [SAVE_SETTINGS, [{ value: "saved" }]] })
+            const em = mockEntityManager({ query: [SAVE_SETTINGS, [{ hiring_settings_save: "saved" }]] })
             const { service } = await build(em)
             const patch = { retentionDays, applyConsentText: "C".repeat(length) }
 
@@ -285,7 +286,7 @@ describe("HiringSettingsService", () => {
         })
 
         it("refuses a public slug already taken by another workspace", async () => {
-            const em = mockEntityManager({ query: [SAVE_SETTINGS, [{ value: "taken" }]] })
+            const em = mockEntityManager({ query: [SAVE_SETTINGS, [{ hiring_settings_save: "taken" }]] })
             const { service, data } = await build(em)
 
             await expect(service.save("user-1", "ws-1", { publicSlug: "other-shop" })).rejects.toMatchObject({

@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { Proposal } from "@modules/domain/decisions"
 import { buildLeadGenWorkbench, conversionSinceIso } from "./leadgen-workbench.mapper"
-import type { LeadGenLeadRow, LeadGenWorkbenchRow, LeadGenWorkItemRow } from "./persistence/leadgen-workbench.rows"
+import type { LeadGenLeadRecord, LeadGenWorkbenchInput, LeadGenWorkItemRecord } from "./leadgen-workbench.contracts"
 
 const SUBJECT = Symbol("leadgen-workbench.mapper")
 
@@ -15,7 +15,7 @@ const buildSubject = async () => {
 
 const NOW = Date.parse("2026-10-12T03:00:00.000Z")
 const CREATED = "2026-10-12T02:00:00.000Z"
-const lead = (id: string, patch: Partial<LeadGenLeadRow> = {}): LeadGenLeadRow => ({
+const lead = (id: string, patch: Partial<LeadGenLeadRecord> = {}): LeadGenLeadRecord => ({
     id,
     contact_name: id,
     company: "Acme",
@@ -30,8 +30,8 @@ const item = (
     id: string,
     action: string,
     leadId: string | null,
-    patch: Partial<LeadGenWorkItemRow> = {},
-): LeadGenWorkItemRow => ({
+    patch: Partial<LeadGenWorkItemRecord> = {},
+): LeadGenWorkItemRecord => ({
     id,
     department: "lead_gen",
     action,
@@ -43,7 +43,7 @@ const item = (
     completed_at: null,
     ...patch,
 })
-const rows = (patch: Partial<LeadGenWorkbenchRow> = {}): LeadGenWorkbenchRow => ({
+const rows = (patch: Partial<LeadGenWorkbenchInput> = {}): LeadGenWorkbenchInput => ({
     nowMs: NOW,
     installationId: null,
     leads: [],
@@ -303,7 +303,7 @@ describe("leadgen-workbench.mapper", () => {
 /** A proposal stored by an older writer: its members are present and empty. */
 const legacyProposal = Object.assign(mock<Proposal>(), { fields: undefined, summary: undefined, draft: undefined })
 const missingProposal = Object.assign(
-    mock<LeadGenWorkItemRow>(item("missing", "reply_comment_public", null, { status: "waiting_decision" })),
+    mock<LeadGenWorkItemRecord>(item("missing", "reply_comment_public", null, { status: "waiting_decision" })),
     { proposal: undefined },
 )
 

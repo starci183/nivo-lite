@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
+import { WorkThreadEntity } from "@modules/domain/work-threads"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -14,6 +15,7 @@ import type {
     ApprovalStepOutcome,
     ChainActor,
     ChainStep,
+    ChainStepRecord,
     ChainStepStatus,
     ChainView,
     MentionRef,
@@ -23,28 +25,14 @@ import type {
 import { MAX_AUTOMATIC_STEPS } from "./work-chains.contracts"
 import { InjectChainOwnerDirectory } from "./work-chains.decorators"
 import type { ChainOwnerDirectory } from "./work-chains.port"
-import type {
-    ActorNameRow,
-    ChainStepRow,
-    ChainThreadRow,
-    InsertedIdRow,
-    MemberIdRow,
-    SettledApprovalRow,
-    WorkspaceOwnerRow,
-} from "./persistence/work-chains.rows"
-import {
-    ABANDON_CHAIN_STEP,
-    FIND_ACTIVE_MEMBER_IDS,
-    FIND_ACTOR_NAME,
-    FIND_CHAIN_STEP,
-    FIND_WORKSPACE_OWNER,
-    INSERT_CHAIN_STEP,
-    LINK_APPROVAL_STEP,
-    LIST_CHAIN_STEPS,
-    LOCK_CHAIN_THREAD,
-    SETTLE_APPROVAL_STEP,
-    SETTLE_TARGETED_STEPS,
-} from "./persistence/work-chains.sql"
+import { WorkChainEntity } from "./persistence/entities"
+import { readStepById, selectStepsWithActor } from "./persistence/work-chain.query"
+
+/** The most steps one chain read answers. */
+const CHAIN_STEPS_MAX = 500
+
+/** The most members one owner lookup checks. */
+const OWNER_CANDIDATES_MAX = 10
 
 /** A step that tags a group is information, not a request one person answers: it ends as it begins. */
 const initialStatusOf = (step: NewChainStep): ChainStepStatus => {
@@ -75,7 +63,7 @@ export class WorkChainsService {
 
     /** The steps of the thread's chain in order, with their summary. */
     async view(workspaceId: string, threadId: string): Promise<ChainView> {
-        const rows = await this.entityManager.query<Array<ChainStepRow>>(LIST_CHAIN_STEPS, [workspaceId, threadId])
+        const rows = await this.stepsOf(this.entityManager, workspaceId, threadId)
         const steps = rows.map(toChainStep)
         return { steps, summary: summarize(steps, this.clock.now()) }
     }
@@ -87,19 +75,46 @@ export class WorkChainsService {
         actor: ChainActor,
         manager: EntityManager = this.entityManager,
     ): Promise<void> {
-        await manager.query(SETTLE_TARGETED_STEPS, [workspaceId, threadId, actor.kind, actor.id])
+        await manager
+            .createQueryBuilder(WorkChainEntity, "w")
+            .update()
+            .set({
+                status: "done",
+                finishedAt: () => "now()",
+                ...(actor.kind === "member" ? { decidedBy: actor.id } : {}),
+            })
+            .where(
+                "workspace_id = :workspaceId AND thread_id = :threadId AND status = 'waiting' AND kind IN ('hand_off', 'assign') " +
+                    "AND target ->> 'kind' = :actorKind AND target ->> 'id' = :actorId",
+                { workspaceId, threadId, actorKind: actor.kind, actorId: actor.id },
+            )
+            .execute()
     }
 
     /** Settles the approval step of a request: approved is done, the others end as they are, and the evidence log says who. */
-    async settleApproval(outcome: ApprovalStepOutcome, manager: EntityManager = this.entityManager): Promise<void> {
+    settleApproval(outcome: ApprovalStepOutcome, manager?: EntityManager): Promise<void> {
+        const run = (tx: EntityManager): Promise<void> => this.settleApprovalIn(tx, outcome)
+        return manager === undefined ? this.entityManager.transaction(run) : run(manager)
+    }
+
+    private async settleApprovalIn(manager: EntityManager, outcome: ApprovalStepOutcome): Promise<void> {
         const status: ChainStepStatus = outcome.outcome === "approved" ? "done" : outcome.outcome
-        const [settled] = await manager.query<Array<SettledApprovalRow>>(SETTLE_APPROVAL_STEP, [
-            outcome.workspaceId,
-            outcome.approvalRequestId,
-            status,
-            outcome.decidedBy,
-        ])
+        const changed = await manager
+            .createQueryBuilder(WorkChainEntity, "w")
+            .update()
+            .set({ status, decidedBy: outcome.decidedBy, finishedAt: () => "now()" })
+            .where(
+                "workspace_id = :workspaceId AND approval_request_id = :requestId AND kind = 'ask_approval' AND status = 'waiting'",
+                { workspaceId: outcome.workspaceId, requestId: outcome.approvalRequestId },
+            )
+            .returning("thread_id, action")
+            .execute()
+        const [settled] = changed.raw as Array<{ thread_id: string; action: string }>
         if (settled === undefined) return
+        const thread = await manager.findOne(WorkThreadEntity, {
+            select: { id: true, leadId: true },
+            where: { id: settled.thread_id },
+        })
         const decider =
             outcome.decidedBy === null
                 ? ""
@@ -114,7 +129,7 @@ export class WorkChainsService {
                     { name: decider, action: settled.action },
                     outcome.locale,
                 ),
-                leadId: settled.lead_id,
+                leadId: thread?.leadId ?? null,
             },
             manager,
         )
@@ -127,12 +142,20 @@ export class WorkChainsService {
         requestId: string,
         manager: EntityManager = this.entityManager,
     ): Promise<void> {
-        await manager.query(LINK_APPROVAL_STEP, [workspaceId, stepId, requestId])
+        await manager.update(
+            WorkChainEntity,
+            { workspaceId, id: stepId, kind: "ask_approval", status: "waiting" },
+            { approvalRequestId: requestId },
+        )
     }
 
     /** Ends a waiting step as stopped when the request it waited for could not be opened. */
     async abandon(workspaceId: string, stepId: string): Promise<void> {
-        await this.entityManager.query(ABANDON_CHAIN_STEP, [workspaceId, stepId])
+        await this.entityManager.update(
+            WorkChainEntity,
+            { workspaceId, id: stepId, status: "waiting" },
+            { status: "stopped", finishedAt: () => "now()" },
+        )
     }
 
     /** The member to tag when an agent's work comes back to its owner: the owner, else the fallback, else the workspace owner. */
@@ -142,26 +165,41 @@ export class WorkChainsService {
         manager: EntityManager = this.entityManager,
     ): Promise<MentionRef> {
         const owner = await this.owners.ownerOf(agentId)
-        const active = await manager.query<Array<MemberIdRow>>(FIND_ACTIVE_MEMBER_IDS, [
-            workspaceId,
-            [owner.ownerMemberId, owner.fallbackMemberId],
-        ])
+        const active = await manager
+            .createQueryBuilder()
+            .select("m.id", "id")
+            .from("public.workspace_members", "m")
+            .where("m.workspace_id = :workspaceId AND m.status = 'active' AND m.id = ANY(:memberIds)", {
+                workspaceId,
+                memberIds: [owner.ownerMemberId, owner.fallbackMemberId],
+            })
+            .limit(OWNER_CANDIDATES_MAX)
+            .getRawMany<{ id: string }>()
         const present = new Set(active.map((row) => row.id))
         const chosen = [owner.ownerMemberId, owner.fallbackMemberId].find((id) => present.has(id))
         if (chosen !== undefined) return { kind: "member", id: chosen }
-        const [workspace] = await manager.query<Array<WorkspaceOwnerRow>>(FIND_WORKSPACE_OWNER, [workspaceId])
+        const workspace = await manager
+            .createQueryBuilder()
+            .select("m.id", "id")
+            .from("public.workspace_members", "m")
+            .innerJoin("workspaces", "w", "w.id = m.workspace_id AND w.owner_id = m.user_id")
+            .where("m.workspace_id = :workspaceId", { workspaceId })
+            .limit(1)
+            .getRawOne<{ id: string }>()
         return { kind: "member", id: workspace?.id ?? owner.fallbackMemberId }
     }
 
     private async recordIn(tx: EntityManager, step: NewChainStep): Promise<RecordedStep> {
-        const [thread] = await tx.query<Array<ChainThreadRow>>(LOCK_CHAIN_THREAD, [step.workspaceId, step.threadId])
-        if (thread === undefined) throw new WorkChainsError({ code: WorkChainsErrorCode.ThreadNotFound })
-        const history = (await tx.query<Array<ChainStepRow>>(LIST_CHAIN_STEPS, [step.workspaceId, step.threadId])).map(
-            toChainStep,
-        )
+        const thread = await tx.findOne(WorkThreadEntity, {
+            select: { id: true, leadId: true },
+            where: { workspaceId: step.workspaceId, id: step.threadId },
+            lock: { mode: "pessimistic_write" },
+        })
+        if (thread === null) throw new WorkChainsError({ code: WorkChainsErrorCode.ThreadNotFound })
+        const history = (await this.stepsOf(tx, step.workspaceId, step.threadId)).map(toChainStep)
         const verdict = judgeStep(history, step)
         if (verdict.kind === "continue") {
-            const stored = await this.store(tx, step, initialStatusOf(step), thread.lead_id)
+            const stored = await this.store(tx, step, initialStatusOf(step), thread.leadId)
             return { step: stored, verdict: "continue", stopReason: null, ownerTag: null }
         }
         const ownerTag = await this.ownerTagOf(step.workspaceId, step.actor.id, tx)
@@ -170,7 +208,7 @@ export class WorkChainsService {
             tx,
             { ...step, kind: "hand_off", target: ownerTag, detail, approvalRequestId: null },
             "stopped",
-            thread.lead_id,
+            thread.leadId,
         )
         return { step: stored, verdict: "stopped", stopReason: verdict.reason, ownerTag }
     }
@@ -181,21 +219,31 @@ export class WorkChainsService {
         status: ChainStepStatus,
         leadId: string | null,
     ): Promise<ChainStep> {
-        const [inserted] = await tx.query<Array<InsertedIdRow>>(INSERT_CHAIN_STEP, [
-            step.workspaceId,
-            step.threadId,
-            step.actor.kind,
-            step.actor.id,
-            step.kind,
-            step.action,
-            step.detail,
-            step.rule,
-            step.target === null ? null : JSON.stringify(step.target),
-            step.approvalRequestId,
-            status,
-        ])
+        const result = await tx
+            .createQueryBuilder(WorkChainEntity, "w")
+            .insert()
+            .values({
+                workspaceId: step.workspaceId,
+                threadId: step.threadId,
+                seq: () => "(SELECT coalesce(max(seq), 0) + 1 FROM public.work_chains WHERE thread_id = :seqThreadId)",
+                actorKind: step.actor.kind,
+                actorId: step.actor.id,
+                kind: step.kind,
+                action: step.action,
+                detail: step.detail,
+                rule: step.rule,
+                target: step.target,
+                approvalRequestId: step.approvalRequestId,
+                status,
+                // A step that waits has no end yet, any other ends now.
+                finishedAt: status === "waiting" ? null : () => "now()",
+            })
+            .setParameter("seqThreadId", step.threadId)
+            .returning("id")
+            .execute()
+        const [inserted] = result.raw as Array<{ id: string }>
         if (inserted === undefined) throw new WorkChainsError({ code: WorkChainsErrorCode.NotStored })
-        const [row] = await tx.query<Array<ChainStepRow>>(FIND_CHAIN_STEP, [step.workspaceId, inserted.id])
+        const row = await readStepById(tx, step.workspaceId, inserted.id)
         if (row === undefined) throw new WorkChainsError({ code: WorkChainsErrorCode.NotStored })
         const stored = toChainStep(row)
         await this.events.record(
@@ -213,7 +261,23 @@ export class WorkChainsService {
     }
 
     private async nameOf(manager: EntityManager, workspaceId: string, kind: string, id: string): Promise<string> {
-        const [row] = await manager.query<Array<ActorNameRow>>(FIND_ACTOR_NAME, [workspaceId, kind, id])
+        if (kind !== "agent" && kind !== "member") return ""
+        const column = kind === "agent" ? "name" : "display_name"
+        const row = await manager
+            .createQueryBuilder()
+            .select(`x.${column}`, "name")
+            .from(kind === "agent" ? "public.agents" : "public.workspace_members", "x")
+            .where("x.workspace_id = :workspaceId AND x.id = :id", { workspaceId, id })
+            .limit(1)
+            .getRawOne<{ name: string }>()
         return row?.name ?? ""
+    }
+
+    private stepsOf(manager: EntityManager, workspaceId: string, threadId: string): Promise<Array<ChainStepRecord>> {
+        return selectStepsWithActor(manager, workspaceId)
+            .andWhere("s.thread_id = :threadId", { threadId })
+            .orderBy("s.seq", "ASC")
+            .limit(CHAIN_STEPS_MAX)
+            .getRawMany<ChainStepRecord>()
     }
 }

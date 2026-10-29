@@ -1,14 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import type { ApproverRef, DirectoryMember } from "@modules/domain/member-grants"
+import { callDbFunction } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ApprovalLogEvent } from "./approval-requests.log-events"
-import type { ApprovalResolved } from "./approval-requests.contracts"
+import type { ApprovalRequestRecord, ApprovalResolved } from "./approval-requests.contracts"
 import { InjectApprovalAgentOwners } from "./approval-requests.decorators"
 import type { AgentOwnerRef, ApprovalAgentOwners } from "./approval-requests.port"
-import type { OwnerSeatRow, ApprovalRequestRow } from "./persistence/approval-requests.rows"
-import { FIND_OWNER_SEAT, RESOLVE_REQUEST } from "./persistence/approval-requests.sql"
+import { ApprovalRequestEntity } from "./persistence/entities"
 
 const NOBODY: AgentOwnerRef = { ownerMemberId: null, fallbackMemberId: null }
 
@@ -34,12 +34,16 @@ export class ApprovalEscalationService {
      */
     async expire(
         tx: EntityManager,
-        row: ApprovalRequestRow,
+        row: ApprovalRequestRecord,
         directory: ReadonlyArray<DirectoryMember>,
         now: Date,
     ): Promise<ApprovalResolved> {
         const target = await this.targetOf(tx, row, directory)
-        await tx.query(RESOLVE_REQUEST, [row.id, "expired", null, now.toISOString(), target?.memberId ?? null])
+        await tx.update(
+            ApprovalRequestEntity,
+            { id: row.id, status: "pending" },
+            { status: "expired", resolvedBy: null, resolvedAt: now, escalatedTo: target?.memberId ?? null },
+        )
         return {
             requestId: row.id,
             outcome: "expired",
@@ -54,12 +58,16 @@ export class ApprovalEscalationService {
 
     private async targetOf(
         tx: EntityManager,
-        row: ApprovalRequestRow,
+        row: ApprovalRequestRecord,
         directory: ReadonlyArray<DirectoryMember>,
     ): Promise<ApproverRef | null> {
         const owners = await this.ownersOf(row)
-        const [seat] = await tx.query<Array<OwnerSeatRow>>(FIND_OWNER_SEAT, [row.workspace_id])
-        const candidates = [owners.ownerMemberId, owners.fallbackMemberId, seat?.id ?? null]
+        const [seat] = await callDbFunction<{ workspace_owner_member: string | null }>(
+            tx,
+            "public.workspace_owner_member",
+            [row.workspace_id],
+        )
+        const candidates = [owners.ownerMemberId, owners.fallbackMemberId, seat?.workspace_owner_member ?? null]
         const active = candidates.flatMap((id) =>
             directory.filter((member) => member.memberId === id && member.status === "active"),
         )
@@ -67,7 +75,7 @@ export class ApprovalEscalationService {
         return first === undefined ? null : refOf(first)
     }
 
-    private async ownersOf(row: ApprovalRequestRow): Promise<AgentOwnerRef> {
+    private async ownersOf(row: ApprovalRequestRecord): Promise<AgentOwnerRef> {
         if (row.requested_by_agent_id === null) return NOBODY
         try {
             return await this.agentOwners.ownerOf(row.requested_by_agent_id)

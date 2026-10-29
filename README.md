@@ -9,23 +9,23 @@
 
 <!-- <<< starci app sync <<< -->
 
-NIVO OS lite: the responsibility operating system for founder-led service businesses, one app with a Nest API, a Next web app and Supabase as the backing service.
+NIVO OS lite: the responsibility operating system for founder-led service businesses, one app with a Nest API, a Next web app and PostgreSQL as the backing service.
 
 ## Overview
 
 NIVO gives every piece of work one accountable owner (a person or an AI agent), one explicit next action and the evidence of its outcome; a person approves anything that leaves the company. Owners run it through the Office team chat, the authority rules, the inbox, leads, decisions, the second brain and the agent modules, over Telegram, Zalo, Meta, Google and bank-transfer channels.
 
-The conversion to the StarCi lite shape is the full architecture on one managed Supabase project: PostgreSQL through the `primary` connection, Auth and Storage through the Supabase integration, and background jobs on Supabase Queues (pgmq) in the same database. There is no test world and no end-to-end run for the front end; the back end has unit specs. The browser talks to the API over GraphQL with the user's access token (Apollo, SWR and axios for uploads); the only Supabase code in the web app is Auth (sign-in, session, token refresh), with no data reads. Privileged Auth and Storage operations and every provider webhook stay behind the API.
+The conversion to the StarCi lite shape is the full architecture on one PostgreSQL database: data through the `primary` connection, our own sign-in (`domain/identity` over `integrations/passport`), files in the S3 object store, and background jobs queued in the same database. There is no test world and no end-to-end run for the front end; the back end has unit specs. The browser talks to the API over GraphQL with the user's access token (Apollo, SWR and axios for uploads); the web app's sign-in goes through the API's `/auth` doors (`modules/auth/auth-door.ts`: the access token in memory, refreshed through the httpOnly cookie), with no data reads. Privileged account and storage operations and every provider webhook stay behind the API.
 
 ## Stack
 
-TypeScript everywhere, NestJS in `be/`, Next.js with next-intl in `fe/`, Supabase for Auth, PostgreSQL and Queues, npm workspaces, and Turbo for front-end tasks. OpenClaw (the agent gateway) and n8n run next to the API on one VPS behind a Traefik edge; images are built from the repository root.
+TypeScript everywhere, NestJS in `be/`, Next.js with next-intl in `fe/`, PostgreSQL for data and queues, our own Passport sign-in, npm workspaces, and Turbo for front-end tasks. OpenClaw (the agent gateway) and n8n run next to the API on one VPS behind a Traefik edge; images are built from the repository root.
 
 ## Repository layout
 
-- `be/`: the API and the command line, the shared platform capabilities, verified identity admission, the privileged Supabase integrations, the queues and the back-end documentation (`be/docs`).
-- `fe/`: the web app; it reads and writes only through the API (`modules/api`: GraphQL queries and mutations behind `hooks/swr` wrappers, REST for uploads); Supabase is used for Auth alone.
-- `db/`: forward-only SQL migrations (`db/migrations`, archive in `db/migrations/archive`), the pre-baseline `db/bootstrap.sql`; `supabase/types/` keeps the generated database types until the harness slot moves.
+- `be/`: the API and the command line, the shared platform capabilities, verified identity admission, the privileged provider integrations, the queues and the back-end documentation (`be/docs`).
+- `fe/`: the web app; it reads and writes only through the API (`modules/api`: GraphQL queries and mutations behind `hooks/swr` wrappers, REST for uploads); sign-in goes through the API's `/auth` doors.
+- `db/`: forward-only SQL migrations (`db/migrations`, archive in `db/migrations/archive`), the pre-baseline `db/bootstrap.sql`.
 - `.starcistacks/`: value-free environment metadata and encrypted-secret custody only.
 - `.starciwork/`: the lite workspace record (`.starciwork/workspace.yaml`) and the brand references.
 - `scripts/`: the contract and type codegen (`scripts/codegen.mjs`).
@@ -43,7 +43,7 @@ npm run build:be
 npm run build:fe
 ```
 
-Local development uses Supabase CLI-managed Docker containers for PostgreSQL, Auth and Storage. The API, web console and landing run separately and need their own runtime or build configuration. The [development runbook](.starcistacks/dev/README.md) owns the required local API settings, custody boundaries and startup procedure; the API's typed readers and the front-end configuration modules validate their respective inputs.
+Local development uses a Supabase CLI-managed Docker container for PostgreSQL. The API, web console and landing run separately and need their own runtime or build configuration. The [development runbook](.starcistacks/dev/README.md) owns the required local API settings, custody boundaries and startup procedure; the API's typed readers and the front-end configuration modules validate their respective inputs.
 
 Application secret custody uses sealed files `.starcistacks/<env>/secrets/<slug>.enc` (SOPS dotenv, age recipient in `.sops.yaml`; the matching identity stays with the StarCi runtime owner). The API accepts `<NAME>_FILE=<path>` through `EnvSource`; Swarm deployments mount versioned Docker secrets at `/run/secrets/<NAME>`. Manage sealed custody through `starci app secret`. The development runbook explains the current recipe's legacy configuration input; it does not use production custody as a local fallback.
 

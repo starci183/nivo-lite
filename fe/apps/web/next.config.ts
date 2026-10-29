@@ -18,10 +18,6 @@ const nextConfig: NextConfig = {
             { source: "/m/:path*", destination: "/agents/:path*", permanent: true },
         ]
     },
-    // E-mail links mailed before the auth return routes merged still point at /auth/confirm: one route now serves both.
-    async rewrites() {
-        return [{ source: "/auth/confirm", destination: "/auth/callback" }]
-    },
     // The runtime stage of the Dockerfile ships the standalone output.
     output: "standalone",
     outputFileTracingRoot: resolve(__dirname, "../../.."),

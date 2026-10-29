@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { OfficeLog } from "@modules/domain/module-ops"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { isHiringTickPayload } from "@modules/queues/hiring-tick"
@@ -12,8 +12,6 @@ import { HiringCandidatesService } from "./hiring-candidates.service"
 import { HiringDataService } from "./hiring-data.service"
 import { HiringInterviewsService } from "./hiring-interviews.service"
 import { HiringTextService } from "./hiring-text.service"
-import { EXPIRE_JOBS, EXPIRE_OFFERS, LOG_RETENTION } from "./persistence/hiring.sql"
-import type { IdsRow, TitlesRow } from "./persistence/hiring.rows"
 import { addDays, addHours } from "./policies/vn-time.policy"
 
 /** Hours ahead an interview is reminded. */
@@ -70,11 +68,11 @@ export class HiringTickService {
         const none: Removed = { candidates: 0, files: 0 }
         const [reminders, offersExpired, jobsClosed, retention] = await Promise.all([
             this.guarded(workspaceId, "reminders", 0, () =>
-                settings.remind_interview ? this.remind(workspaceId) : Promise.resolve(0),
+                settings.remindInterview ? this.remind(workspaceId) : Promise.resolve(0),
             ),
             this.guarded(workspaceId, "offers", 0, () => this.expireOffers(workspaceId)),
             this.guarded(workspaceId, "jobs", 0, () => this.sweepJobs(workspaceId)),
-            this.guarded(workspaceId, "retention", none, () => this.retention(workspaceId, settings.retention_days)),
+            this.guarded(workspaceId, "retention", none, () => this.retention(workspaceId, settings.retentionDays)),
         ])
         return {
             reminders,
@@ -108,16 +106,21 @@ export class HiringTickService {
     }
 
     private async expireOffers(workspaceId: string): Promise<number> {
-        const [row] = await this.entityManager.query<Array<IdsRow>>(EXPIRE_OFFERS, [
-            workspaceId,
-            this.words.text("hiring.event.offerExpired"),
-        ])
-        return row?.ids.length ?? 0
+        const [row] = await callDbFunction<{ hiring_offers_expire: Array<string> }>(
+            this.entityManager,
+            "public.hiring_offers_expire",
+            [workspaceId, this.words.text("hiring.event.offerExpired")],
+        )
+        return row?.hiring_offers_expire.length ?? 0
     }
 
     private async sweepJobs(workspaceId: string): Promise<number> {
-        const [expired] = await this.entityManager.query<Array<TitlesRow>>(EXPIRE_JOBS, [workspaceId])
-        const titles = expired?.titles ?? []
+        const [expired] = await callDbFunction<{ hiring_jobs_expire: Array<string> }>(
+            this.entityManager,
+            "public.hiring_jobs_expire",
+            [workspaceId],
+        )
+        const titles = expired?.hiring_jobs_expire ?? []
         await Promise.all(
             titles.map((title) =>
                 this.office.postOffice(workspaceId, this.words.text("hiring.office.jobExpired", { title })),
@@ -132,7 +135,12 @@ export class HiringTickService {
         const due = await this.data.retentionDue(workspaceId, addDays(this.clock.now(), -days))
         if (due.length === 0) return { candidates: 0, files: 0 }
         const removed = await this.candidates.deleteAll(workspaceId, due)
-        await this.entityManager.query(LOG_RETENTION, [workspaceId, removed.candidates, removed.files, days])
+        await callDbFunction<unknown>(this.entityManager, "public.hiring_retention_log_add", [
+            workspaceId,
+            removed.candidates,
+            removed.files,
+            days,
+        ])
         return removed
     }
 }

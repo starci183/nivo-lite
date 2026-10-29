@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import type { MentionRef } from "@modules/domain/work-chains"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -7,28 +7,91 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { ThreadMessagesError, ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import type {
-    AgentOptionRow,
-    MemberIdRow,
-    MemberNameRow,
-    MemberRefRow,
-    RoomGroupRow,
-} from "./persistence/thread-messages.rows"
-import {
-    FIND_AGENT_REFS,
-    FIND_MEMBER_ID,
-    FIND_MEMBER_NAME,
-    FIND_MEMBER_REFS,
-    FIND_ROOM_GROUPS,
-    LIST_DIRECTORY_AGENTS,
-    LIST_DIRECTORY_MEMBERS,
-    LIST_DIRECTORY_ROOMS,
-} from "./persistence/thread-messages.sql"
-import type { MemberNames, MentionDirectory, MentionOption, MentionView } from "./thread-messages.contracts"
+    MemberNames,
+    MentionDirectory,
+    MentionOption,
+    MentionView,
+    OptionalThreadAgent,
+    ThreadAgentRef,
+} from "./thread-messages.contracts"
 
 const ROLE_GROUPS: ReadonlyArray<string> = ["owner", "manager", "staff"]
 
+/** The most members one directory read answers. */
+const MEMBERS_MAX = 200
+
+/** The most agents one directory read answers. */
+const AGENTS_MAX = 100
+
+/** The most tags one resolve proves per kind, and the most rooms a directory lists. */
+const TAGS_MAX = 20
+
+/** A member of the workspace with the room they sit in. */
+interface MemberRef {
+    /** The member id (workspace_members.id). */
+    readonly id: string
+    /** The display name. */
+    readonly display_name: string
+    /** owner, manager or staff. */
+    readonly role: string
+    /** The key of the room the member sits in, or null. */
+    readonly room_key: string | null
+}
+
+/** An agent as the directory lists it. */
+interface AgentOption {
+    /** The agent id. */
+    readonly id: string
+    /** The display name. */
+    readonly name: string
+    /** The agent module. */
+    readonly module: string
+}
+
+/** A room that has people in it. */
+interface RoomGroup {
+    /** The room key. */
+    readonly key: string
+    /** The room name. */
+    readonly name: string
+}
+
 const idsOf = (mentions: ReadonlyArray<MentionRef>, kind: MentionRef["kind"]): Array<string> =>
     mentions.filter((mention) => mention.kind === kind).map((mention) => mention.id)
+
+/** The active members of a workspace, each with the first room (by position) they sit in; the caller adds filter, order and bound. */
+const activeMembers = (manager: EntityManager, workspaceId: string): SelectQueryBuilder<object> => {
+    const members = manager
+        .createQueryBuilder()
+        .select(["m.id AS id", "m.display_name AS display_name", "m.role AS role"])
+        .from("public.workspace_members", "m")
+        .where("m.workspace_id = :workspaceId AND m.status = 'active'", { workspaceId })
+    const roomKey = members
+        .subQuery()
+        .select("r.key")
+        .from("public.office_rooms_members", "rm")
+        .innerJoin("office_rooms", "r", "r.id = rm.room_id")
+        .where("rm.user_id = m.user_id AND r.workspace_id = m.workspace_id")
+        .orderBy("r.position", "ASC")
+        .limit(1)
+        .getQuery()
+    return members.addSelect(roomKey, "room_key")
+}
+
+/** The rooms of a workspace that have at least one person in them; the caller adds filter, order and bound. */
+const staffedRooms = (manager: EntityManager, workspaceId: string): SelectQueryBuilder<object> => {
+    const rooms = manager
+        .createQueryBuilder()
+        .select(["r.key AS key", "r.name AS name"])
+        .from("public.office_rooms", "r")
+        .where("r.workspace_id = :workspaceId", { workspaceId })
+    const staffed = rooms
+        .subQuery()
+        .select("1")
+        .from("public.office_rooms_members", "rm")
+        .where("rm.room_id = r.id AND rm.user_id IS NOT NULL")
+    return rooms.andWhereExists(staffed)
+}
 
 @Injectable()
 /** Who a composer can tag, and the proof that a tag names someone of the workspace. */
@@ -42,9 +105,23 @@ export class MentionDirectoryService {
     /** The three sections of the `@` list for a member of the workspace: people, active agents, and groups (roles and rooms). */
     async directory(userId: string, workspaceId: string, locale: Locale): Promise<MentionDirectory> {
         await this.members.require(userId, workspaceId)
-        const people = await this.entityManager.query<Array<MemberRefRow>>(LIST_DIRECTORY_MEMBERS, [workspaceId])
-        const agents = await this.entityManager.query<Array<AgentOptionRow>>(LIST_DIRECTORY_AGENTS, [workspaceId])
-        const rooms = await this.entityManager.query<Array<RoomGroupRow>>(LIST_DIRECTORY_ROOMS, [workspaceId])
+        const people = await activeMembers(this.entityManager, workspaceId)
+            .orderBy("CASE m.role WHEN 'owner' THEN 0 WHEN 'manager' THEN 1 ELSE 2 END", "ASC")
+            .addOrderBy("m.display_name", "ASC")
+            .limit(MEMBERS_MAX)
+            .getRawMany<MemberRef>()
+        const agents = await this.entityManager
+            .createQueryBuilder()
+            .select(["a.id AS id", "a.name AS name", "a.module AS module"])
+            .from("public.agents", "a")
+            .where("a.workspace_id = :workspaceId AND a.status = 'active'", { workspaceId })
+            .orderBy("a.name", "ASC")
+            .limit(AGENTS_MAX)
+            .getRawMany<AgentOption>()
+        const rooms = await staffedRooms(this.entityManager, workspaceId)
+            .orderBy("r.position", "ASC")
+            .limit(TAGS_MAX)
+            .getRawMany<RoomGroup>()
         const roles: ReadonlyArray<MentionOption> = ROLE_GROUPS.map((role) => ({
             kind: "group",
             id: `role:${role}`,
@@ -73,18 +150,24 @@ export class MentionDirectoryService {
         mentions: ReadonlyArray<MentionRef>,
         locale: Locale,
     ): Promise<ReadonlyArray<MentionView>> {
-        const people = await manager.query<Array<MemberRefRow>>(FIND_MEMBER_REFS, [
-            workspaceId,
-            idsOf(mentions, "member"),
-        ])
-        const agents = await manager.query<Array<{ id: string; name: string }>>(FIND_AGENT_REFS, [
-            workspaceId,
-            idsOf(mentions, "agent"),
-        ])
+        const people = await this.memberRefs(manager, workspaceId, idsOf(mentions, "member"))
+        const agents = await manager
+            .createQueryBuilder()
+            .select(["a.id AS id", "a.name AS name"])
+            .from("public.agents", "a")
+            .where("a.workspace_id = :workspaceId AND a.status = 'active' AND a.id = ANY(:agentIds)", {
+                workspaceId,
+                agentIds: idsOf(mentions, "agent"),
+            })
+            .limit(TAGS_MAX)
+            .getRawMany<ThreadAgentRef>()
         const keys = idsOf(mentions, "group")
             .filter((id) => id.startsWith("room:"))
             .map((id) => id.slice("room:".length))
-        const rooms = await manager.query<Array<RoomGroupRow>>(FIND_ROOM_GROUPS, [workspaceId, keys])
+        const rooms = await staffedRooms(manager, workspaceId)
+            .andWhere("r.key = ANY(:keys)", { keys })
+            .limit(TAGS_MAX)
+            .getRawMany<RoomGroup>()
         const names = new Map<string, string>([
             ...people.map((row): [string, string] => [`member:${row.id}`, row.display_name]),
             ...agents.map((row): [string, string] => [`agent:${row.id}`, row.name]),
@@ -111,26 +194,61 @@ export class MentionDirectoryService {
 
     /** The member id of a signed-in account in the workspace; the account must be a member, which the caller proved. */
     async memberIdOf(manager: EntityManager, workspaceId: string, userId: string): Promise<string> {
-        const [row] = await manager.query<Array<MemberIdRow>>(FIND_MEMBER_ID, [workspaceId, userId])
+        const row = await manager
+            .createQueryBuilder()
+            .select("m.id", "id")
+            .from("public.workspace_members", "m")
+            .where("m.workspace_id = :workspaceId AND m.user_id = :userId", { workspaceId, userId })
+            .limit(1)
+            .getRawOne<{ id: string }>()
         if (row === undefined) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.MemberNotFound })
         return row.id
     }
 
     /** Proves a member id names an active member of the workspace. */
     async ensureMember(manager: EntityManager, workspaceId: string, memberId: string): Promise<void> {
-        const rows = await manager.query<Array<MemberRefRow>>(FIND_MEMBER_REFS, [workspaceId, [memberId]])
+        const rows = await this.memberRefs(manager, workspaceId, [memberId])
         if (rows.length === 0) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.MemberNotFound })
     }
 
     /** The display name of a member of the workspace; empty when they are not one. */
     async nameOfMember(manager: EntityManager, workspaceId: string, memberId: string): Promise<string> {
-        const [row] = await manager.query<Array<MemberNameRow>>(FIND_MEMBER_NAME, [workspaceId, memberId])
+        const row = await manager
+            .createQueryBuilder()
+            .select("m.display_name", "display_name")
+            .from("public.workspace_members", "m")
+            .where("m.workspace_id = :workspaceId AND m.id = :memberId", { workspaceId, memberId })
+            .limit(1)
+            .getRawOne<{ display_name: string }>()
         return row?.display_name ?? ""
     }
 
     /** The names of the members among the given ids, by id; members that are not active are missing from it. */
     async namesOf(manager: EntityManager, workspaceId: string, memberIds: ReadonlyArray<string>): Promise<MemberNames> {
-        const rows = await manager.query<Array<MemberRefRow>>(FIND_MEMBER_REFS, [workspaceId, memberIds])
+        const rows = await this.memberRefs(manager, workspaceId, memberIds)
         return Object.fromEntries(rows.map((row) => [row.id, row.display_name]))
+    }
+
+    /** The agent of the workspace, or null when there is none with that id. */
+    async findAgent(manager: EntityManager, workspaceId: string, agentId: string): Promise<OptionalThreadAgent> {
+        const row = await manager
+            .createQueryBuilder()
+            .select(["a.id AS id", "a.name AS name"])
+            .from("public.agents", "a")
+            .where("a.workspace_id = :workspaceId AND a.id = :agentId", { workspaceId, agentId })
+            .limit(1)
+            .getRawOne<ThreadAgentRef>()
+        return row ?? null
+    }
+
+    private memberRefs(
+        manager: EntityManager,
+        workspaceId: string,
+        memberIds: ReadonlyArray<string>,
+    ): Promise<Array<MemberRef>> {
+        return activeMembers(manager, workspaceId)
+            .andWhere("m.id = ANY(:memberIds)", { memberIds: [...memberIds] })
+            .limit(TAGS_MAX)
+            .getRawMany<MemberRef>()
     }
 }

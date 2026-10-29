@@ -30,34 +30,23 @@ export type AuthErrorKey =
     | "errEmailNotConfirmed"
     | "errTooMany"
     | "errWeakPassword"
-    | "errSamePassword"
     | "errLinkInvalid"
-    | "errSignupDisabled"
     | "errGeneric"
 
-/** Maps the code of a failed database outcome (a Supabase Auth error code or HTTP status) to its catalog key. */
+/** Maps the code of a failed outcome (a back end `IDENTITY_*` code, or an HTTP status when the body named none) to its catalog key. */
 export const authErrorKey = (code: string): AuthErrorKey => {
     switch (code) {
-        case "invalid_credentials":
+        case "IDENTITY_INVALID_CREDENTIALS":
             return "errInvalidCredentials"
-        case "email_not_confirmed":
+        case "IDENTITY_EMAIL_NOT_CONFIRMED":
             return "errEmailNotConfirmed"
-        case "over_request_rate_limit":
-        case "over_email_send_rate_limit":
-        case "over_sms_send_rate_limit":
+        case "IDENTITY_TOO_MANY_ATTEMPTS":
         case "429":
             return "errTooMany"
-        case "weak_password":
+        case "IDENTITY_PASSWORD_INVALID":
             return "errWeakPassword"
-        case "same_password":
-            return "errSamePassword"
-        case "otp_expired":
-        case "bad_jwt":
-        case "session_not_found":
+        case "IDENTITY_RESET_TOKEN_INVALID":
             return "errLinkInvalid"
-        case "signup_disabled":
-        case "email_provider_disabled":
-            return "errSignupDisabled"
         default:
             return "errGeneric"
     }

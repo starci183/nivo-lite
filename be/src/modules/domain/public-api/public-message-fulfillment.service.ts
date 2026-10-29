@@ -10,8 +10,7 @@ import { PublicApiError, PublicApiErrorCode } from "./errors/public-api.error"
 import type { MessageRequestBody } from "./public-api.contracts"
 import { PublicApiLogEvent } from "./public-api.log-events"
 import { isStaleMessageAdmission } from "./public-api.policy"
-import type { ConversationsRow } from "./persistence/public-api.rows"
-import { SELECT_CONVERSATION } from "./persistence/public-api.sql"
+import { PublicConversationsService } from "./public-conversations.service"
 
 @Injectable()
 /** Turns an admitted API message into durable chatbot work, using the caller's domain transaction. */
@@ -19,6 +18,7 @@ export class PublicMessageFulfillmentService {
     constructor(
         private readonly work: DurableWorkService,
         private readonly evidence: EvidenceService,
+        private readonly conversations: PublicConversationsService,
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
     ) {}
@@ -36,10 +36,7 @@ export class PublicMessageFulfillmentService {
         dedupeKey: string = `api.message:${requestId}`,
         recordEvidence: boolean = true,
     ): Promise<string | null> {
-        const [conversation] = await manager.query<Array<Pick<ConversationsRow, "id" | "lead_id">>>(
-            SELECT_CONVERSATION,
-            [workspaceId, body.conversationId],
-        )
+        const conversation = await this.conversations.find(workspaceId, body.conversationId, manager)
         if (conversation === undefined) throw new PublicApiError({ code: PublicApiErrorCode.ConversationNotFound })
         const ctx: WorkContext = { workspaceId, actor: body.source, locale: "en" }
         const isStale = isStaleMessageAdmission(admittedAt, this.clock.now())

@@ -8,8 +8,8 @@ import type {
     LensCounts,
     OpenGaps,
 } from "./agents.contracts"
+import type { DashboardLine } from "./agents-reads.contracts"
 import type { OptionalInstallation } from "./agents.port"
-import type { DashboardItemRow } from "./persistence/dashboard.rows"
 
 /** Work items whose lead, summary or customer carries this text are test runs and never counted. */
 export const TEST_RUN_PATTERN = "UAT|DBG"
@@ -36,19 +36,19 @@ export const decisionHrefOf = (module: string, installationId: string | null, wo
 }
 
 /** One work item row as a dashboard line. */
-export const itemOf = (row: DashboardItemRow, decisionHref: string): DashboardItem => ({
+export const itemOf = (row: DashboardLine, decisionHref: string): DashboardItem => ({
     id: row.id,
     title: clip(row.summary ?? "", SUMMARY_MAX),
     action: row.action,
     customer: row.customer ?? "",
     at: row.at,
-    leadId: row.lead_id,
-    resultHref: row.result_href === "" ? null : row.result_href,
+    leadId: row.leadId,
+    resultHref: row.resultHref === "" ? null : row.resultHref,
     decisionHref,
 })
 
 /** The count of rows before the limit; every row of a page carries it. */
-export const totalOf = (rows: ReadonlyArray<DashboardItemRow>): number => Number(rows[0]?.total ?? 0)
+export const totalOf = (rows: ReadonlyArray<DashboardLine>): number => Number(rows[0]?.total ?? 0)
 
 const statusOf = (status: string): ConnectionItem["status"] => {
     if (status === "connected") return "connected"

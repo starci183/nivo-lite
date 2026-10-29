@@ -12,18 +12,18 @@ import type {
     AdminTransfer,
 } from "./platform-admin.contracts"
 import type {
-    BillingEventRow,
-    ConnectionRow,
-    InviteRow,
-    MemberRow,
-    OrderRow,
-    RecentBillingEventRow,
-    RecentErrorRow,
-    RecentTransferRow,
-    SignupRow,
-    TransferRow,
-    WorkspaceErrorRow,
-} from "./persistence/platform-admin.rows"
+    BillingEventFacts,
+    ConnectionFacts,
+    InviteFacts,
+    MemberFacts,
+    OrderFacts,
+    RecentBillingEventFacts,
+    RecentErrorFacts,
+    RecentTransferFacts,
+    SignupFacts,
+    TransferFacts,
+    WorkspaceErrorFacts,
+} from "./platform-admin.facts"
 import { connectionHealth, numberOrNull } from "./platform-admin.policy"
 
 /** An instant as ISO 8601 text, whether the driver answered a Date or text. */
@@ -33,7 +33,7 @@ export const iso = (value: string): string => new Date(value).toISOString()
 export const isoOrNull = (value: string | null): string | null => (value === null ? null : iso(value))
 
 /** Maps a member row; the email comes from Auth and may be unknown. */
-export const toMember = (row: MemberRow, email: string | null): AdminMember => ({
+export const toMember = (row: MemberFacts, email: string | null): AdminMember => ({
     userId: row.user_id,
     role: row.role,
     displayName: row.display_name,
@@ -42,7 +42,7 @@ export const toMember = (row: MemberRow, email: string | null): AdminMember => (
 })
 
 /** Maps a pending invitation row. */
-export const toInvite = (row: InviteRow): AdminInvite => ({
+export const toInvite = (row: InviteFacts): AdminInvite => ({
     id: row.id,
     email: row.email,
     role: row.role,
@@ -51,7 +51,7 @@ export const toInvite = (row: InviteRow): AdminInvite => ({
 })
 
 /** Maps a payment order row. */
-export const toOrder = (row: OrderRow): AdminOrder => ({
+export const toOrder = (row: OrderFacts): AdminOrder => ({
     id: row.id,
     orderCode: row.order_code,
     planCode: row.plan_code,
@@ -62,7 +62,7 @@ export const toOrder = (row: OrderRow): AdminOrder => ({
 })
 
 /** Maps a SePay transfer row of a workspace's orders. */
-export const toTransfer = (row: TransferRow): AdminTransfer => ({
+export const toTransfer = (row: TransferFacts): AdminTransfer => ({
     sepayId: Number(row.sepay_id),
     transferAmount: numberOrNull(row.transfer_amount),
     content: row.content,
@@ -71,14 +71,14 @@ export const toTransfer = (row: TransferRow): AdminTransfer => ({
 })
 
 /** Maps a billing event row of a workspace. */
-export const toBillingEvent = (row: BillingEventRow): AdminBillingEvent => ({
+export const toBillingEvent = (row: BillingEventFacts): AdminBillingEvent => ({
     id: row.id,
     kind: row.kind,
     createdAt: iso(row.created_at),
 })
 
 /** Maps a connection row, judging its health at `nowMs`. */
-export const toConnection = (row: ConnectionRow, nowMs: number): AdminConnection => ({
+export const toConnection = (row: ConnectionFacts, nowMs: number): AdminConnection => ({
     id: row.id,
     provider: row.provider,
     name: row.name,
@@ -93,7 +93,7 @@ export const toConnection = (row: ConnectionRow, nowMs: number): AdminConnection
 })
 
 /** Maps a captured error row of a workspace. */
-export const toError = (row: WorkspaceErrorRow): AdminError => ({
+export const toError = (row: WorkspaceErrorFacts): AdminError => ({
     id: row.id,
     scope: row.scope,
     message: row.message,
@@ -101,10 +101,10 @@ export const toError = (row: WorkspaceErrorRow): AdminError => ({
 })
 
 /** Maps a sign-up day row. */
-export const toSignupDay = (row: SignupRow): AdminSignupDay => ({ day: row.day, signups: row.signups })
+export const toSignupDay = (row: SignupFacts): AdminSignupDay => ({ day: row.day, signups: row.signups })
 
 /** Maps a platform SePay transfer row. */
-export const toPlatformTransfer = (row: RecentTransferRow): AdminPlatformTransfer => ({
+export const toPlatformTransfer = (row: RecentTransferFacts): AdminPlatformTransfer => ({
     status: row.status,
     transferAmount: numberOrNull(row.transfer_amount),
     content: row.content,
@@ -112,7 +112,7 @@ export const toPlatformTransfer = (row: RecentTransferRow): AdminPlatformTransfe
 })
 
 /** Maps a platform billing event row. */
-export const toPlatformBillingEvent = (row: RecentBillingEventRow): AdminPlatformBillingEvent => ({
+export const toPlatformBillingEvent = (row: RecentBillingEventFacts): AdminPlatformBillingEvent => ({
     id: row.id,
     workspaceId: row.workspace_id,
     kind: row.kind,
@@ -120,7 +120,7 @@ export const toPlatformBillingEvent = (row: RecentBillingEventRow): AdminPlatfor
 })
 
 /** Maps a platform error row. */
-export const toPlatformError = (row: RecentErrorRow): AdminPlatformError => ({
+export const toPlatformError = (row: RecentErrorFacts): AdminPlatformError => ({
     id: row.id,
     scope: row.scope,
     message: row.message,

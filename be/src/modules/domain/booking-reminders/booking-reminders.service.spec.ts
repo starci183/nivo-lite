@@ -1,26 +1,28 @@
 import { Test } from "@nestjs/testing"
-import { builder, mockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { In, LessThanOrEqual } from "typeorm"
+import { AutomationPipelineEntity } from "@modules/domain/automation-pipelines"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { BookingRemindersService } from "./booking-reminders.service"
-import type { ReminderTarget } from "./booking-reminders.service"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import {
-    CANCEL_OPEN_REMINDERS,
-    CANCEL_STALE_REMINDERS,
-    CLAIM_DUE_REMINDERS,
-    SELECT_REMINDER_CARD,
-    SETTLE_REMINDER,
-    UPSERT_REMINDERS,
-} from "./persistence/booking-reminders.sql"
+    CANCELLED_BOOKING_DONE,
+    CARD_CONFIG_READ,
+    CARD_WHERE,
+    HOUR,
+    NOW,
+    OPEN_REMINDERS_OF_B1,
+    REMINDER_R1_WHERE,
+    SENT_SETTLEMENT,
+    overdueDayReminder,
+    secondBookingReminder,
+    skippedSettlement,
+    targetOf,
+} from "@tests/fixtures/builders/booking-reminders.builder"
+import { BookingRemindersService } from "./booking-reminders.service"
+import { BookingReminderEntity } from "./persistence/entities"
 
-const HOUR = 3_600_000
-const NOW = Date.UTC(2026, 9, 12)
-const targetOf = builder<Omit<ReminderTarget, "manager">>({
-    workspaceId: "ws-1",
-    bookingId: "b1",
-    startMs: NOW + 30 * HOUR,
-    nowMs: NOW,
-    defaultHours: [24, 2],
-})
+const cardOf = (config: Record<string, unknown> | null, body: string | null = null) =>
+    Object.assign(new AutomationPipelineEntity(), { config, body })
 
 const build = async (manager = mockEntityManager()) => {
     const moduleRef = await Test.createTestingModule({
@@ -30,43 +32,46 @@ const build = async (manager = mockEntityManager()) => {
 }
 
 describe("BookingRemindersService claimDue", () => {
-    it("claims the due reminders and maps them in due order", async () => {
-        const manager = mockEntityManager({
-            query: [
-                CLAIM_DUE_REMINDERS,
-                [
-                    { id: "r2", workspace_id: "ws-2", booking_id: "b2", kind: "h2", due_ms: NOW },
-                    { id: "r1", workspace_id: "ws-1", booking_id: "b1", kind: "h24", due_ms: NOW - HOUR },
-                ],
-            ],
-        })
-        const reminders = await build(manager)
+    it("claims the due reminders, turns them waiting and maps them in due order", async () => {
+        const tx = fakeTransaction(mockEntityManager({ update: [BookingReminderEntity, {}] }))
+        const [fake] = queueQueryBuilders(tx.em, [
+            {
+                getMany: [secondBookingReminder(), overdueDayReminder()],
+            },
+        ])
+        const reminders = await build(tx.em)
 
-        await expect(reminders.claimDue(NOW, 40, "\u0110ang g\u1eedi")).resolves.toEqual([
+        await expect(reminders.claimDue(NOW, 40, "Sending")).resolves.toEqual([
             { id: "r1", workspaceId: "ws-1", bookingId: "b1", kind: "h24", dueMs: NOW - HOUR },
             { id: "r2", workspaceId: "ws-2", bookingId: "b2", kind: "h2", dueMs: NOW },
         ])
 
-        expect(manager.query.mock.calls).toEqual([
-            [CLAIM_DUE_REMINDERS, [new Date(NOW).toISOString(), 40, "\u0110ang g\u1eedi"]],
-        ])
+        expect(fake?.callsOf("andWhere")).toEqual([["r.dueAt <= :now", { now: new Date(NOW) }]])
+        expect(fake?.callsOf("limit")).toEqual([[40]])
+        expect(fake?.callsOf("setLock")).toEqual([["pessimistic_write"]])
+        expect(fake?.callsOf("setOnLocked")).toEqual([["skip_locked"]])
+        expect(tx.em.update).toHaveBeenCalledWith(
+            BookingReminderEntity,
+            { id: In(["r2", "r1"]) },
+            { status: "waiting", note: "Sending" },
+        )
+        expect(tx.commits).toBe(1)
     })
 
     it("returns an empty plan when no reminder is due", async () => {
-        const manager = mockEntityManager({ query: [CLAIM_DUE_REMINDERS, []] })
-        const reminders = await build(manager)
+        const tx = fakeTransaction(mockEntityManager())
+        queueQueryBuilders(tx.em, [{ getMany: [] }])
+        const reminders = await build(tx.em)
 
-        await expect(reminders.claimDue(NOW, 3, "\u0110ang g\u1eedi")).resolves.toEqual([])
+        await expect(reminders.claimDue(NOW, 3, "Sending")).resolves.toEqual([])
 
-        expect(manager.query.mock.calls).toEqual([
-            [CLAIM_DUE_REMINDERS, [new Date(NOW).toISOString(), 3, "\u0110ang g\u1eedi"]],
-        ])
+        expect(tx.em.update).not.toHaveBeenCalled()
     })
 })
 
 describe("BookingRemindersService settle", () => {
     it("records a sent reminder with its work item and sent instant", async () => {
-        const manager = mockEntityManager({ query: [SETTLE_REMINDER, []] })
+        const manager = mockEntityManager({ update: [BookingReminderEntity, {}] })
         const reminders = await build(manager)
 
         await expect(
@@ -74,88 +79,83 @@ describe("BookingRemindersService settle", () => {
                 status: "sent",
                 workItemId: "item-1",
                 sentMs: NOW,
-                note: "\u0110\u00e3 nh\u1eafn kh\u00e1ch",
+                note: "Customer messaged",
             }),
         ).resolves.toBeUndefined()
 
-        expect(manager.query.mock.calls).toEqual([
-            [
-                SETTLE_REMINDER,
-                ["r1", "sent", "item-1", new Date(NOW).toISOString(), "\u0110\u00e3 nh\u1eafn kh\u00e1ch"],
-            ],
-        ])
+        expect(manager.update.mock.calls).toEqual([[BookingReminderEntity, REMINDER_R1_WHERE, SENT_SETTLEMENT]])
     })
 
     it("records a skipped reminder without a work item or sent instant", async () => {
-        const manager = mockEntityManager({ query: [SETTLE_REMINDER, []] })
+        const manager = mockEntityManager({ update: [BookingReminderEntity, {}] })
         const reminders = await build(manager)
+        const note = "Booking closed or already past"
 
         await expect(
-            reminders.settle("r1", {
-                status: "skipped",
-                workItemId: null,
-                sentMs: null,
-                note: "L\u1ecbch \u0111\u00e3 \u0111\u00f3ng ho\u1eb7c \u0111\u00e3 qua gi\u1edd",
-            }),
+            reminders.settle("r1", { status: "skipped", workItemId: null, sentMs: null, note }),
         ).resolves.toBeUndefined()
 
-        expect(manager.query.mock.calls).toEqual([
-            [
-                SETTLE_REMINDER,
-                [
-                    "r1",
-                    "skipped",
-                    null,
-                    null,
-                    "L\u1ecbch \u0111\u00e3 \u0111\u00f3ng ho\u1eb7c \u0111\u00e3 qua gi\u1edd",
-                ],
-            ],
-        ])
+        expect(manager.update.mock.calls).toEqual([[BookingReminderEntity, REMINDER_R1_WHERE, skippedSettlement(note)]])
     })
 })
 
 describe("BookingRemindersService cardOf", () => {
     it("reads the custom hours and trims the wording of the reminder card", async () => {
         const manager = mockEntityManager({
-            query: [
-                SELECT_REMINDER_CARD,
-                [{ config: { firstHours: 24, secondHours: "2" }, body: "  Ch\u00e0o {{ten_khach}}  " }],
-            ],
+            findOne: [AutomationPipelineEntity, cardOf({ firstHours: 24, secondHours: "2" }, "  Hello {{customer}}  ")],
         })
         const reminders = await build(manager)
 
-        await expect(reminders.cardOf("ws-1")).resolves.toEqual({ hours: [24, 2], body: "Ch\u00e0o {{ten_khach}}" })
+        await expect(reminders.cardOf("ws-1")).resolves.toEqual({ hours: [24, 2], body: "Hello {{customer}}" })
 
-        expect(manager.query.mock.calls).toEqual([[SELECT_REMINDER_CARD, ["ws-1"]]])
+        expect(manager.findOne.mock.calls).toEqual([
+            [AutomationPipelineEntity, { select: { config: true, body: true }, where: CARD_WHERE }],
+        ])
     })
 
     it("returns no hours or body when there is no enabled card", async () => {
-        const manager = mockEntityManager({ query: [SELECT_REMINDER_CARD, []] })
+        const manager = mockEntityManager({ findOne: [AutomationPipelineEntity, null] })
         const reminders = await build(manager)
 
         await expect(reminders.cardOf("ws-1")).resolves.toEqual({ hours: [], body: null })
 
-        expect(manager.query.mock.calls).toEqual([[SELECT_REMINDER_CARD, ["ws-1"]]])
+        expect(manager.findOne).toHaveBeenCalledTimes(1)
     })
 
     it.each([null, "", " \n\t "])("returns no wording for a blank body %j", async (body) => {
-        const manager = mockEntityManager({ query: [SELECT_REMINDER_CARD, [{ config: null, body }]] })
+        const manager = mockEntityManager({ findOne: [AutomationPipelineEntity, cardOf(null, body)] })
         const reminders = await build(manager)
 
         await expect(reminders.cardOf("ws-1")).resolves.toEqual({ hours: [], body: null })
-
-        expect(manager.query.mock.calls).toEqual([[SELECT_REMINDER_CARD, ["ws-1"]]])
     })
 })
 
 describe("BookingRemindersService schedule", () => {
+    const planned = (kinds: ReadonlyArray<string>, dues: ReadonlyArray<number>) => [
+        BookingReminderEntity,
+        kinds.map((kind, index) => ({
+            workspaceId: "ws-1",
+            bookingId: "b1",
+            kind,
+            dueAt: new Date(dues[index] ?? 0),
+            status: "scheduled",
+            workItemId: null,
+            sentAt: null,
+            note: "",
+        })),
+        ["bookingId", "kind"],
+    ]
+    const STALE = [
+        BookingReminderEntity,
+        { bookingId: "b1", status: "scheduled", dueAt: LessThanOrEqual(new Date(NOW)) },
+        { status: "cancelled", note: "past_due_after_move" },
+    ]
+
     it("writes one reminder per default offset still ahead and cancels the stale ones", async () => {
         const manager = mockEntityManager({
-            query: [
-                [SELECT_REMINDER_CARD, []],
-                [UPSERT_REMINDERS, []],
-                [CANCEL_STALE_REMINDERS, []],
-            ],
+            findOne: [AutomationPipelineEntity, null],
+            upsert: [BookingReminderEntity, {}],
+            update: [BookingReminderEntity, {}],
         })
         const reminders = await build()
 
@@ -165,28 +165,16 @@ describe("BookingRemindersService schedule", () => {
             { kind: "h24", dueMs: NOW + 6 * HOUR },
             { kind: "h2", dueMs: NOW + 28 * HOUR },
         ])
-        expect(manager.query.mock.calls).toEqual([
-            [SELECT_REMINDER_CARD, ["ws-1"]],
-            [
-                UPSERT_REMINDERS,
-                [
-                    "ws-1",
-                    "b1",
-                    ["h24", "h2"],
-                    [new Date(NOW + 6 * HOUR).toISOString(), new Date(NOW + 28 * HOUR).toISOString()],
-                ],
-            ],
-            [CANCEL_STALE_REMINDERS, ["b1", new Date(NOW).toISOString(), "past_due_after_move"]],
-        ])
+        expect(manager.findOne.mock.calls).toEqual([[AutomationPipelineEntity, CARD_CONFIG_READ]])
+        expect(manager.upsert.mock.calls).toEqual([planned(["h24", "h2"], [NOW + 6 * HOUR, NOW + 28 * HOUR])])
+        expect(manager.update.mock.calls).toEqual([STALE])
     })
 
     it("uses the offsets of the reminder card the owner customised", async () => {
         const manager = mockEntityManager({
-            query: [
-                [SELECT_REMINDER_CARD, [{ config: { firstHours: 12, secondHours: 1 } }]],
-                [UPSERT_REMINDERS, []],
-                [CANCEL_STALE_REMINDERS, []],
-            ],
+            findOne: [AutomationPipelineEntity, cardOf({ firstHours: 12, secondHours: 1 })],
+            upsert: [BookingReminderEntity, {}],
+            update: [BookingReminderEntity, {}],
         })
         const reminders = await build()
 
@@ -196,51 +184,34 @@ describe("BookingRemindersService schedule", () => {
             { kind: "h12", dueMs: NOW + 18 * HOUR },
             { kind: "h1", dueMs: NOW + 29 * HOUR },
         ])
-        expect(manager.query.mock.calls).toEqual([
-            [SELECT_REMINDER_CARD, ["ws-1"]],
-            [
-                UPSERT_REMINDERS,
-                [
-                    "ws-1",
-                    "b1",
-                    ["h12", "h1"],
-                    [new Date(NOW + 18 * HOUR).toISOString(), new Date(NOW + 29 * HOUR).toISOString()],
-                ],
-            ],
-            [CANCEL_STALE_REMINDERS, ["b1", new Date(NOW).toISOString(), "past_due_after_move"]],
-        ])
+        expect(manager.upsert.mock.calls).toEqual([planned(["h12", "h1"], [NOW + 18 * HOUR, NOW + 29 * HOUR])])
+        expect(manager.update.mock.calls).toEqual([STALE])
+    })
+
+    it("writes nothing when every offset is already past", async () => {
+        const manager = mockEntityManager({
+            findOne: [AutomationPipelineEntity, cardOf(null)],
+            update: [BookingReminderEntity, {}],
+        })
+        const reminders = await build()
+
+        const plan = await reminders.schedule({ ...targetOf({ startMs: NOW + HOUR }), manager })
+
+        expect(plan).toEqual([])
+        expect(manager.upsert).not.toHaveBeenCalled()
+        expect(manager.update.mock.calls).toEqual([STALE])
     })
 })
 
-describe("BookingRemindersService", () => {
-    describe("schedule", () => {
-        it("writes nothing when every offset is already past", async () => {
-            const manager = mockEntityManager({
-                query: [
-                    [SELECT_REMINDER_CARD, [{ config: null }]],
-                    [CANCEL_STALE_REMINDERS, []],
-                ],
-            })
-            const reminders = await build()
+describe("BookingRemindersService cancel", () => {
+    it("cancels every open reminder of the booking", async () => {
+        const manager = mockEntityManager({ update: [BookingReminderEntity, {}] })
+        const reminders = await build()
 
-            const plan = await reminders.schedule({ ...targetOf({ startMs: NOW + HOUR }), manager })
+        await expect(reminders.cancel(manager, "b1", "booking_done")).resolves.toBeUndefined()
 
-            expect(plan).toEqual([])
-            expect(manager.query.mock.calls).toEqual([
-                [SELECT_REMINDER_CARD, ["ws-1"]],
-                [CANCEL_STALE_REMINDERS, ["b1", new Date(NOW).toISOString(), "past_due_after_move"]],
-            ])
-        })
-    })
-
-    describe("cancel", () => {
-        it("cancels every open reminder of the booking", async () => {
-            const manager = mockEntityManager({ query: [CANCEL_OPEN_REMINDERS, []] })
-            const reminders = await build()
-
-            await expect(reminders.cancel(manager, "b1", "booking_done")).resolves.toBeUndefined()
-
-            expect(manager.query.mock.calls).toEqual([[CANCEL_OPEN_REMINDERS, ["b1", "booking_done"]]])
-        })
+        expect(manager.update.mock.calls).toEqual([
+            [BookingReminderEntity, OPEN_REMINDERS_OF_B1, CANCELLED_BOOKING_DONE],
+        ])
     })
 })

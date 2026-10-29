@@ -2,26 +2,62 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { TransactionsError, TransactionsErrorCode } from "./errors/transactions.error"
-import type { BankCreditRow, TransactionAccountingRow, TransactionRow } from "./persistence/transactions.rows"
-import type { TransactionViewRow } from "./persistence/transaction-views.rows"
-import { LIST_INVOICE_TRANSACTIONS } from "./persistence/transaction-views.sql"
-import {
-    FIND_TRANSACTION,
-    FIND_TRANSACTION_MOMENT,
-    INSERT_TRANSACTION,
-    LIST_ACCOUNTING_TRANSACTIONS,
-    LIST_BANK_MOVES,
-    MATCH_TRANSACTION,
-    REVIEW_TRANSACTION,
-} from "./persistence/transactions.sql"
+import { TransactionEntity } from "./persistence/entities"
+import { toTransactionRow } from "./transaction.mapper"
 import type {
     BankCreditQuery,
+    BankCreditRow,
     BankDirection,
     NewTransaction,
     OptionalTransaction,
     OptionalTransactionMoment,
+    TransactionAccountingRow,
     TransactionMoment,
+    TransactionRow,
+    TransactionViewRow,
 } from "./transactions.contracts"
+
+/** Renders a timestamptz column as the `to_json` text (`+00:00`, microseconds) the contracts always carried. */
+const TEXT_TIMESTAMP = (column: string): string => `to_json(${column}) #>> '{}'`
+
+/** The most payments one invoice read returns. */
+const INVOICE_TRANSACTIONS_MAX = 1000
+
+/** One accounting row as the join selects it, the input columns flat. */
+interface AccountingRawRow {
+    /** The transaction id. */
+    readonly id: string
+    /** The workspace. */
+    readonly workspace_id: string
+    /** The input the payment arrived as. */
+    readonly inbound_event_id: string | null
+    /** The payment channel. */
+    readonly channel: string
+    /** The money, VND (cast to float8 in the select). */
+    readonly amount_vnd: number
+    /** The transfer content. */
+    readonly reference: string | null
+    /** The payer's name. */
+    readonly payer: string | null
+    /** The invoice it settled. */
+    readonly invoice_id: string | null
+    /** The lifecycle state. */
+    readonly status: string
+    /** When the payment occurred, ISO text as `to_json` renders it. */
+    readonly occurred_at: string
+    /** When it was written, ISO text as `to_json` renders it. */
+    readonly created_at: string
+    /** The joined input id, null when the input is gone. */
+    readonly inbound_id: string | null
+    /** The input's source channel. */
+    readonly inbound_channel: string | null
+    /** The channel's own event id. */
+    readonly inbound_event: string | null
+    /** The source text. */
+    readonly inbound_body: string | null
+    /** The sender's name. */
+    readonly inbound_sender_name: string | null
+}
 
 @Injectable()
 /** The payments of a workspace as the ledger sees them: the only writer of public.transactions. */
@@ -30,34 +66,106 @@ export class TransactionsService {
 
     /** The transaction of the workspace, or null when there is none with that id. */
     async find(workspaceId: string, transactionId: string): Promise<OptionalTransaction> {
-        const rows = await this.entityManager.query<Array<TransactionRow>>(FIND_TRANSACTION, [
-            workspaceId,
-            transactionId,
-        ])
-        return rows[0] ?? null
+        const row = await this.entityManager.findOne(TransactionEntity, {
+            where: { workspaceId, id: transactionId },
+        })
+        return row === null ? null : toTransactionRow(row)
     }
 
     /** The money and the moment of a payment, or null when the workspace has no such payment. */
     async momentOf(workspaceId: string, transactionId: string): Promise<OptionalTransactionMoment> {
-        const rows = await this.entityManager.query<Array<TransactionMoment>>(FIND_TRANSACTION_MOMENT, [
-            workspaceId,
-            transactionId,
-        ])
-        return rows[0] ?? null
+        const row = await this.entityManager
+            .createQueryBuilder(TransactionEntity, "t")
+            .select([
+                "t.amount_vnd::float8 AS amount_vnd",
+                "t.payer AS payer",
+                "t.reference AS reference",
+                `${TEXT_TIMESTAMP("t.occurred_at")} AS occurred_at`,
+            ])
+            .where("t.workspace_id = :workspaceId AND t.id = :transactionId", { workspaceId, transactionId })
+            .limit(1)
+            .getRawOne<TransactionMoment>()
+        return row ?? null
     }
 
     /** The payments linked to a customer's invoices, after the composer proved workspace membership. */
     listForInvoices(workspaceId: string, invoiceIds: ReadonlyArray<string>): Promise<Array<TransactionViewRow>> {
         if (invoiceIds.length === 0) return Promise.resolve([])
-        return this.entityManager.query<Array<TransactionViewRow>>(LIST_INVOICE_TRANSACTIONS, [workspaceId, invoiceIds])
+        return this.entityManager
+            .createQueryBuilder(TransactionEntity, "t")
+            .select([
+                "t.id AS id",
+                "t.workspace_id AS workspace_id",
+                "t.inbound_event_id AS inbound_event_id",
+                "t.amount_vnd::float8 AS amount_vnd",
+                "t.reference AS reference",
+                "t.payer AS payer",
+                "t.invoice_id AS invoice_id",
+                "t.status AS status",
+                "t.channel AS channel",
+                `${TEXT_TIMESTAMP("t.occurred_at")} AS occurred_at`,
+                `${TEXT_TIMESTAMP("t.created_at")} AS created_at`,
+            ])
+            .where("t.workspace_id = :workspaceId AND t.invoice_id IN (:...invoiceIds)", {
+                workspaceId,
+                invoiceIds: [...invoiceIds],
+            })
+            .orderBy("t.created_at", "ASC")
+            .addOrderBy("t.id", "ASC")
+            .limit(INVOICE_TRANSACTIONS_MAX)
+            .getRawMany<TransactionViewRow>()
     }
 
     /** The newest payments and their input records for the accounting book. */
-    listAccounting(workspaceId: string, limit: number = 1000): Promise<Array<TransactionAccountingRow>> {
-        return this.entityManager.query<Array<TransactionAccountingRow>>(LIST_ACCOUNTING_TRANSACTIONS, [
-            workspaceId,
-            limit,
-        ])
+    async listAccounting(workspaceId: string, limit: number = 1000): Promise<Array<TransactionAccountingRow>> {
+        const rows = await this.entityManager
+            .createQueryBuilder(TransactionEntity, "t")
+            .leftJoin("inbound_events", "i", "i.id = t.inbound_event_id AND i.workspace_id = t.workspace_id")
+            .select([
+                "t.id AS id",
+                "t.workspace_id AS workspace_id",
+                "t.inbound_event_id AS inbound_event_id",
+                "t.channel AS channel",
+                "t.amount_vnd::float8 AS amount_vnd",
+                "t.reference AS reference",
+                "t.payer AS payer",
+                "t.invoice_id AS invoice_id",
+                "t.status AS status",
+                `${TEXT_TIMESTAMP("t.occurred_at")} AS occurred_at`,
+                `${TEXT_TIMESTAMP("t.created_at")} AS created_at`,
+                "i.id AS inbound_id",
+                "i.channel AS inbound_channel",
+                "i.event_id AS inbound_event",
+                "i.body AS inbound_body",
+                "i.sender_name AS inbound_sender_name",
+            ])
+            .where("t.workspace_id = :workspaceId", { workspaceId })
+            .orderBy("t.occurred_at", "DESC")
+            .addOrderBy("t.id", "DESC")
+            .limit(limit)
+            .getRawMany<AccountingRawRow>()
+        return rows.map((row) => ({
+            id: row.id,
+            workspace_id: row.workspace_id,
+            inbound_event_id: row.inbound_event_id,
+            channel: row.channel,
+            amount_vnd: row.amount_vnd,
+            reference: row.reference,
+            payer: row.payer,
+            invoice_id: row.invoice_id,
+            status: row.status,
+            occurred_at: row.occurred_at,
+            created_at: row.created_at,
+            inbound:
+                row.inbound_id === null
+                    ? null
+                    : {
+                          channel: row.inbound_channel ?? "",
+                          event_id: row.inbound_event,
+                          body: row.inbound_body ?? "",
+                          sender_name: row.inbound_sender_name,
+                      },
+        }))
     }
 
     /** The newest live bank credits of a workspace, optionally of one status and from an instant. */
@@ -75,36 +183,68 @@ export class TransactionsService {
      * (the bank feed books a move atomically with its receipt).
      */
     async open(input: NewTransaction, manager: EntityManager = this.entityManager): Promise<TransactionRow> {
-        const rows = await manager.query<Array<TransactionRow>>(INSERT_TRANSACTION, [
-            input.workspaceId,
-            input.inboundEventId,
-            input.amountVnd,
-            input.reference,
-            input.payer,
-            input.direction ?? "credit",
-        ])
-        const [created] = rows
+        const result = await manager
+            .createQueryBuilder(TransactionEntity, "t")
+            .insert()
+            .values({
+                workspaceId: input.workspaceId,
+                inboundEventId: input.inboundEventId,
+                channel: "bank",
+                amountVnd: input.amountVnd,
+                reference: input.reference,
+                payer: input.payer,
+                status: "unmatched",
+                direction: input.direction ?? "credit",
+            })
+            .returning(
+                "id, workspace_id, inbound_event_id, amount_vnd::float8 AS amount_vnd, reference, payer, invoice_id, status",
+            )
+            .execute()
+        const [created] = result.raw as Array<TransactionRow>
         if (created === undefined) throw new TransactionsError({ code: TransactionsErrorCode.NotCreated })
         return created
     }
 
     private listBankMoves(query: BankCreditQuery, direction: BankDirection): Promise<Array<BankCreditRow>> {
-        return this.entityManager.query<Array<BankCreditRow>>(LIST_BANK_MOVES, [
-            query.workspaceId,
-            query.status,
-            query.since,
-            query.limit,
-            direction,
-        ])
+        const read = this.entityManager
+            .createQueryBuilder(TransactionEntity, "t")
+            .select([
+                "t.id AS id",
+                "t.amount_vnd::float8 AS amount_vnd",
+                "t.reference AS reference",
+                "t.payer AS payer",
+                "t.status AS status",
+                `${TEXT_TIMESTAMP("t.occurred_at")} AS occurred_at`,
+            ])
+            .where("t.workspace_id = :workspaceId AND t.channel = 'bank' AND t.direction = :direction", {
+                workspaceId: query.workspaceId,
+                direction,
+            })
+        if (query.status !== null) read.andWhere("t.status = :status", { status: query.status })
+        if (query.since !== null) read.andWhere("t.occurred_at >= :since", { since: new Date(query.since) })
+        return read
+            .orderBy("t.occurred_at", "DESC")
+            .addOrderBy("t.id", "DESC")
+            .limit(query.limit)
+            .getRawMany<BankCreditRow>()
     }
 
     /** The payment settled an invoice. */
-    async match(workspaceId: string, transactionId: string, invoiceId: string): Promise<void> {
-        await this.entityManager.query(MATCH_TRANSACTION, [workspaceId, transactionId, invoiceId])
+    async match(
+        workspaceId: string,
+        transactionId: string,
+        invoiceId: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<void> {
+        await manager.update(TransactionEntity, { workspaceId, id: transactionId }, { status: "matched", invoiceId })
     }
 
     /** The payment goes back to the owner's review. */
     async sendToReview(workspaceId: string, transactionId: string): Promise<void> {
-        await this.entityManager.query(REVIEW_TRANSACTION, [workspaceId, transactionId])
+        await this.entityManager.update(
+            TransactionEntity,
+            { workspaceId, id: transactionId },
+            { status: "needs_review" },
+        )
     }
 }

@@ -1,5 +1,11 @@
-import type { ThreadMessageRow } from "./persistence/thread-messages.rows"
-import type { ApprovalAsk, ApprovalCard, CardEnding, MentionView, OpenedApproval } from "./thread-messages.contracts"
+import type {
+    ApprovalAsk,
+    ApprovalCard,
+    CardEnding,
+    MentionView,
+    OpenedApproval,
+    ThreadMessageRecord,
+} from "./thread-messages.contracts"
 
 /** What a card is built from: the ask, what the gate answered, the names of the people it left out and the owner a bad end goes to. */
 export interface CardSource {
@@ -52,6 +58,6 @@ export const settleCard = (card: ApprovalCard, ending: CardEnding, at: Date): Ap
 
 /** The message and its card when the card still waits for a decision; null when the message has no card or it was already decided. */
 export const pendingOf = (
-    row: ThreadMessageRow,
-): { readonly row: ThreadMessageRow; readonly card: ApprovalCard } | null =>
+    row: ThreadMessageRecord,
+): { readonly row: ThreadMessageRecord; readonly card: ApprovalCard } | null =>
     row.approval !== null && row.approval.outcome === "pending" ? { row, card: row.approval } : null

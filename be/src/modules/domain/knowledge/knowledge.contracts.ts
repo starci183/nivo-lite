@@ -1,7 +1,7 @@
 import type { PassageView } from "@modules/domain/knowledge-chunks"
 import type { SourceDetail } from "@modules/domain/knowledge-sources"
 import type { DriveFolderListing, MaybeDriveAccess } from "@modules/integrations/documents"
-import type { AiPoolUsage } from "@modules/integrations/ai-pool"
+import type { AiUsage } from "@modules/integrations/ai"
 import type { Outcome } from "@modules/platform/primitives"
 
 /** Who the answer is for; `customer` only ever sees public passages. */
@@ -32,6 +32,22 @@ export interface AskInput {
     readonly audience: string
     /** The agent instance the question is asked as: its own documents join the shared ones. Absent = the shared knowledge only. */
     readonly installationId?: string | null | undefined
+}
+
+/** What an agent lane searches for, without a member asking. */
+export interface AgentSearch {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The module (agent type) whose lane is read. */
+    readonly module: string
+    /** customer sees public passages only. */
+    readonly audience: Audience
+    /** The agent instance whose own documents join the shared ones; null = the shared knowledge only. */
+    readonly installationId: string | null
+    /** The question. */
+    readonly question: string
+    /** The most passages wanted. */
+    readonly limit: number
 }
 
 /** One retrieved passage, labelled by layer: nivo = base knowledge of NIVO, business = the owner's documents. */
@@ -75,7 +91,7 @@ export interface UsageRecord {
     /** The model. */
     readonly model: string
     /** What the provider reported, or null when it reported nothing. */
-    readonly usage: AiPoolUsage | null
+    readonly usage: AiUsage | null
     /** The characters sent, to estimate tokens when the provider reported none. */
     readonly promptChars?: number
     /** The characters received, to estimate tokens when the provider reported none. */

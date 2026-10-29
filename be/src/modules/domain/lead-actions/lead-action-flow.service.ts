@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { AutomationsService, BusinessEventsService } from "@modules/domain/automations"
+import type { EntityManager } from "typeorm"
 import { WorkEngineService } from "@modules/domain/decisions"
 import type { WorkContext, WorkItem } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
@@ -7,6 +7,10 @@ import { InboundEventsService } from "@modules/domain/inbound-events"
 import { LeadRecordsService, contactParts } from "@modules/domain/leads"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { WorkItemsService } from "@modules/domain/work-items"
+import { DealWonEvent, LeadCapturedEvent } from "@modules/events/api"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectEventBus } from "@modules/platform/event-bus"
+import type { EventBus } from "@modules/platform/event-bus"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LeadActionsError, LeadActionsErrorCode } from "./errors/lead-actions.error"
@@ -20,12 +24,12 @@ export class LeadActionFlowService {
         private readonly leads: LeadRecordsService,
         private readonly inbound: InboundEventsService,
         private readonly events: EventsService,
-        private readonly businessEvents: BusinessEventsService,
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectEventBus() private readonly eventBus: EventBus,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly engine: WorkEngineService,
         private readonly items: WorkItemsService,
         private readonly responsibilities: ResponsibilityJournalService,
-        private readonly automations: AutomationsService,
     ) {}
 
     /** Creates a customer from the core surface and assigns a follow-up, independently of installed agent modules. */
@@ -55,14 +59,34 @@ export class LeadActionFlowService {
               })
         const lead =
             known ??
-            (await this.leads.capture({
-                workspaceId: ctx.workspaceId,
-                contactName: input.contactName ?? "",
-                company: input.company ?? "",
-                channel: input.channel ?? "",
-                need: input.need ?? "",
-                phone,
-                email,
+            (await this.entityManager.transaction(async (manager) => {
+                const created = await this.leads.capture(
+                    {
+                        workspaceId: ctx.workspaceId,
+                        contactName: input.contactName ?? "",
+                        company: input.company ?? "",
+                        channel: input.channel ?? "",
+                        need: input.need ?? "",
+                        phone,
+                        email,
+                    },
+                    manager,
+                )
+                await this.eventBus.publish(
+                    LeadCapturedEvent.create({
+                        workspaceId: ctx.workspaceId,
+                        leadId: created.id,
+                        contactName: created.contact_name,
+                        company: created.company,
+                        channel: created.channel,
+                        need: created.need,
+                        phone: created.phone,
+                        email: created.email,
+                    }),
+                    manager,
+                    `lead-captured:${created.id}`,
+                )
+                return created
             }))
         if (known === null) {
             await this.events.record({
@@ -72,7 +96,6 @@ export class LeadActionFlowService {
                 actor: ctx.actor,
                 summary: this.catalog.get("lead-actions.captured", { channel: lead.channel }, ctx.locale),
             })
-            await this.businessEvents.leadCreated(ctx.workspaceId, lead)
         } else {
             await this.leads.fillContact({ workspaceId: ctx.workspaceId, leadId: lead.id, phone, email })
         }
@@ -120,18 +143,21 @@ export class LeadActionFlowService {
             seed: { amount_vnd: null, fields: {} },
         })
         const invoice = await this.requireWork(ctx, item, key)
-        await this.automations.emit(run.requested_by, ctx.workspaceId, {
-            event: "deal.won",
-            dedupe: `deal.won:${lead.id}`,
-            data: {
-                lead_id: lead.id,
-                name: lead.contact_name,
-                company: lead.company,
-                channel: lead.channel,
-                need: lead.need,
-                evidence: run.input.evidence || null,
-            },
-        })
+        await this.entityManager.transaction((manager) =>
+            this.eventBus.publish(
+                DealWonEvent.create({
+                    workspaceId: ctx.workspaceId,
+                    leadId: lead.id,
+                    name: lead.contact_name,
+                    company: lead.company,
+                    channel: lead.channel,
+                    need: lead.need,
+                    evidence: run.input.evidence || null,
+                }),
+                manager,
+                `deal-won:${lead.id}`,
+            ),
+        )
         return { leadId: lead.id, workItemId: invoice.id }
     }
 

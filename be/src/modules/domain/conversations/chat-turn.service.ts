@@ -18,8 +18,18 @@ import type { ChatTurnPayload } from "@modules/queues/chat-turn"
 import { InjectChatTurnExtensions } from "./conversations.decorators"
 import type { CustomerTurn, ChatTurnExtensions, ChatTurnProposal, TurnVerdict } from "./conversations.contracts"
 import { ConversationsLogEvent } from "./conversations.log-events"
-import type { HoldingSettingRow } from "./persistence/conversations.rows"
-import { FIND_HOLDING_SETTING } from "./persistence/conversations.sql"
+
+/** The owner's holding line as a module installation stores it. */
+interface HoldingSettingRow {
+    /** The configured text, null when none is set. */
+    readonly holdingMessage: string | null
+}
+
+const isHoldingSettingRow = (value: unknown): value is HoldingSettingRow =>
+    typeof value === "object" &&
+    value !== null &&
+    "holdingMessage" in value &&
+    (value.holdingMessage === null || typeof value.holdingMessage === "string")
 
 const LOCALE = "vi"
 /** A holding line goes out at most once per conversation per hour. */
@@ -155,11 +165,17 @@ export class ChatTurnService {
 
     /** The owner own words (module settings), else the default holding line. */
     private async holdingText(conversation: TurnConversation): Promise<string> {
-        const rows = await this.entityManager.query<Array<HoldingSettingRow>>(FIND_HOLDING_SETTING, [
-            conversation.workspaceId,
-            conversation.agent.id,
-        ])
-        const custom = rows[0]?.holding_message?.trim() ?? ""
+        const rows: ReadonlyArray<unknown> = await this.entityManager
+            .createQueryBuilder()
+            .select("m.settings ->> 'holdingMessage'", "holdingMessage")
+            .from("public.module_installations", "m")
+            .where("m.workspace_id = :workspaceId AND m.agent_id = :agentId", {
+                workspaceId: conversation.workspaceId,
+                agentId: conversation.agent.id,
+            })
+            .limit(1)
+            .getRawMany()
+        const custom = rows.find(isHoldingSettingRow)?.holdingMessage?.trim() ?? ""
         return custom === "" ? this.catalog.get("conversations.holdingReply", {}, LOCALE) : custom.slice(0, HOLDING_MAX)
     }
 

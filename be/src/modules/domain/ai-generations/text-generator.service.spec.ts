@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import type { TextRequest } from "@modules/integrations/deepseek"
+import type { TextRequest } from "@modules/domain/ai-tasks"
 import { GenerationsService } from "./generations.service"
 import { TextGeneratorService } from "./text-generator.service"
 

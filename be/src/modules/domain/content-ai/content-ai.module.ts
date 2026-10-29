@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { ContentBrandProposalsModule } from "@modules/domain/content-brand-proposals"
 import { ContentEngagementDailyModule } from "@modules/domain/content-engagement-daily"
 import { ContentWeeklyReportsModule } from "@modules/domain/content-weekly-reports"
+import { INBOX, InboxService } from "@modules/platform/inbox"
 import { BrandImagesService } from "./brand-images.service"
 import { BrandKitService } from "./brand-kit.service"
 import { MARKETING_ASSETS } from "./content-agent.decorators"
@@ -42,6 +43,7 @@ export class ContentAiModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 { provide: MARKETING_ASSETS, useExisting: options.assets },
+                { provide: INBOX, useClass: InboxService },
                 ContentAiService,
                 ContentBrandService,
                 ContentAiCompletionService,
@@ -59,13 +61,7 @@ export class ContentAiModule extends ConfigurableModuleClass {
                 MarketingTickService,
                 ContentAgentPerformersService,
             ],
-            exports: [
-                ContentAiService,
-                ContentGenerationCompletionService,
-                BrandKitService,
-                MarketingInsightsService,
-                MarketingTickService,
-            ],
+            exports: [ContentAiService, BrandKitService, MarketingInsightsService, MarketingTickService],
         }
     }
 }

@@ -1,8 +1,7 @@
-import { builder, mock } from "@starci/jest-preset"
+import { builder, fakeTransaction, mock, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import { AgentsService } from "@modules/domain/agents"
-import { BusinessEventsService } from "@modules/domain/automations"
 import { EvidenceService } from "@modules/domain/decisions"
 import type { Proposal, WorkContext, WorkItem } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
@@ -11,6 +10,10 @@ import { LeadRecordsService } from "@modules/domain/leads"
 import type { LeadRecordRow } from "@modules/domain/leads"
 import { PublicLeadCompletionService } from "@modules/domain/public-api"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
+import { LeadCapturedEvent } from "@modules/events/api"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { EVENT_BUS } from "@modules/platform/event-bus"
+import type { BaseEvent } from "@modules/platform/event-bus"
 import { HandoffLeadPerformerService } from "./handoff-lead-performer.service"
 import { PerformerKitService } from "./performer-kit.service"
 
@@ -81,7 +84,8 @@ const build = async () => {
     const inbound = mock<InboundEventsService>()
     const responsibilities = mock<ResponsibilityJournalService>()
     const evidence = mock<EvidenceService>()
-    const events = mock<BusinessEventsService>()
+    const bus = recordingEventBus<BaseEvent>()
+    const tx = fakeTransaction(mockEntityManager())
     const apiCompletion = mock<PublicLeadCompletionService>()
     const contracts = mock<ContractsService>()
     const moduleRef = await Test.createTestingModule({
@@ -94,7 +98,8 @@ const build = async () => {
             { provide: InboundEventsService, useValue: inbound },
             { provide: ResponsibilityJournalService, useValue: responsibilities },
             { provide: EvidenceService, useValue: evidence },
-            { provide: BusinessEventsService, useValue: events },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: EVENT_BUS, useValue: bus },
             { provide: PublicLeadCompletionService, useValue: apiCompletion },
             { provide: ContractsService, useValue: contracts },
         ],
@@ -107,7 +112,8 @@ const build = async () => {
         inbound,
         responsibilities,
         evidence,
-        events,
+        bus,
+        tx,
         apiCompletion,
         contracts,
     }
@@ -125,7 +131,7 @@ describe("HandoffLeadPerformerService", () => {
 
 describe("HandoffLeadPerformerService perform", () => {
     it("captures a new customer, logs the capture and ties the input and the conversation to them", async () => {
-        const { service, leads, conversations, inbound, responsibilities, evidence, events, apiCompletion, contracts } =
+        const { service, leads, conversations, inbound, responsibilities, evidence, bus, apiCompletion, contracts } =
             await build()
 
         await expect(service.perform(ctx, itemOf(), { summary: "s", fields })).resolves.toEqual({
@@ -141,29 +147,69 @@ describe("HandoffLeadPerformerService perform", () => {
             name: "Lan",
             channel: "Telegram",
         })
-        expect(leads.capture).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            contactName: "Lan",
-            company: "Hue Tea",
-            channel: "Telegram",
-            need: "50 tea boxes",
-            phone: "84901234567",
-            email: null,
-        })
-        expect(evidence.log).toHaveBeenCalledWith(ctx, {
-            lead_id: "lead-1",
-            work_item_id: "item-1",
-            kind: "lead.captured",
-            actor: "Mai",
-            summary: "capturedFrom|Telegram",
-            evidence: "Lan: I want 50 boxes",
-        })
+        expect(leads.capture).toHaveBeenCalledWith(
+            {
+                workspaceId: "ws-1",
+                contactName: "Lan",
+                company: "Hue Tea",
+                channel: "Telegram",
+                need: "50 tea boxes",
+                phone: "84901234567",
+                email: null,
+            },
+            expect.anything(),
+        )
+        expect(evidence.log).toHaveBeenCalledWith(
+            ctx,
+            {
+                lead_id: "lead-1",
+                work_item_id: "item-1",
+                kind: "lead.captured",
+                actor: "Mai",
+                summary: "capturedFrom|Telegram",
+                evidence: "Lan: I want 50 boxes",
+            },
+            expect.anything(),
+        )
         expect(inbound.mark).toHaveBeenCalledWith("ws-1", "ev-1", null, "lead-1")
         expect(conversations.attachLead).toHaveBeenCalledWith("ws-1", "conv-1", "lead-1")
         expect(contracts.linkCustomers).toHaveBeenCalledWith("ws-1")
         expect(responsibilities.ensureFor).toHaveBeenCalledWith(ctx, "lead-1")
-        expect(events.leadCreated).toHaveBeenCalledWith("ws-1", leadOf())
+        expect(bus.writes.map((event) => event.constructor)).toEqual([LeadCapturedEvent])
         expect(apiCompletion.complete).toHaveBeenCalledWith(ctx, itemOf(), "lead-1", { summary: "s", fields }, false)
+    })
+
+    it("publishes lead_captured with the captured customer in the capturing transaction", async () => {
+        const { service, bus, tx } = await build()
+
+        await service.perform(ctx, itemOf(), { summary: "s", fields })
+
+        expect(bus.eventsOf(LeadCapturedEvent).map((event) => event.payload)).toEqual([
+            {
+                dedupeKey: "lead.created:lead-1",
+                workspaceId: "ws-1",
+                leadId: "lead-1",
+                contactName: "Lan",
+                company: "Hue Tea",
+                channel: "Telegram",
+                need: "50 tea boxes",
+                phone: "84901234567",
+                email: null,
+            },
+        ])
+        expect(bus.allInTransaction).toBe(true)
+        expect(tx.commits).toBe(1)
+    })
+
+    it("rolls the capture back when lead_captured cannot be sent", async () => {
+        const failure = new Error("bus down")
+        const { service, bus, tx, inbound } = await build()
+        bus.failNext("publish", failure)
+
+        await expect(service.perform(ctx, itemOf(), { summary: "s", fields })).rejects.toBe(failure)
+
+        expect(tx.rollbacks).toBe(1)
+        expect(inbound.mark).not.toHaveBeenCalled()
     })
 
     it("fills in the blanks of a new customer who shared little", async () => {
@@ -187,7 +233,7 @@ describe("HandoffLeadPerformerService perform", () => {
 
 describe("HandoffLeadPerformerService perform", () => {
     it("keeps the customer already linked to the work even when their name no longer matches the original input", async () => {
-        const { service, leads, apiCompletion, inbound, events } = await build()
+        const { service, leads, apiCompletion, inbound, bus } = await build()
         leads.require.mockResolvedValue(leadOf({ contact_name: "Renamed customer", phone: null, email: null }))
         const input = itemOf({ lead_id: "lead-1" })
         const proposal = { summary: "Previously linked", fields: { contact_name: "Original name", need: "tea" } }
@@ -200,14 +246,13 @@ describe("HandoffLeadPerformerService perform", () => {
         expect(leads.require).toHaveBeenCalledWith(ctx.workspaceId, "lead-1")
         expect(leads.match).not.toHaveBeenCalled()
         expect(leads.capture).not.toHaveBeenCalled()
-        expect(events.leadCreated).not.toHaveBeenCalled()
+        expect(bus.writes).toEqual([])
         expect(inbound.mark).toHaveBeenCalledWith(ctx.workspaceId, "ev-1", null, "lead-1")
         expect(apiCompletion.complete).toHaveBeenCalledWith(ctx, input, "lead-1", proposal, true)
     })
 
     it("propagates a missing workspace-scoped linked customer without rematching, capture or downstream effects", async () => {
-        const { service, leads, inbound, conversations, responsibilities, evidence, events, apiCompletion } =
-            await build()
+        const { service, leads, inbound, conversations, responsibilities, evidence, bus, apiCompletion } = await build()
         const refusal = new Error("The linked customer does not belong to this workspace")
         leads.require.mockRejectedValue(refusal)
 
@@ -223,7 +268,7 @@ describe("HandoffLeadPerformerService perform", () => {
         expect(conversations.attachLead).not.toHaveBeenCalled()
         expect(responsibilities.ensureFor).not.toHaveBeenCalled()
         expect(evidence.log).not.toHaveBeenCalled()
-        expect(events.leadCreated).not.toHaveBeenCalled()
+        expect(bus.writes).toEqual([])
         expect(apiCompletion.complete).not.toHaveBeenCalled()
     })
 })

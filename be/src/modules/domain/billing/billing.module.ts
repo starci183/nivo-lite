@@ -1,7 +1,6 @@
 import { BankFeedDeliveryService } from "./bank-feed-delivery.service"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { BankCreditModule } from "@modules/queues/bank-credit"
 import { BankFeedService } from "./bank-feed.service"
 import { BillingReadService } from "./billing-read.service"
 import { BillingService } from "./billing.service"
@@ -19,7 +18,6 @@ export class BillingModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), BankCreditModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 BillingService,

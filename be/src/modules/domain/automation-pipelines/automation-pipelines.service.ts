@@ -10,14 +10,61 @@ import type {
     PipelineWrite,
 } from "./automation-pipelines.contracts"
 import { AutomationPipelinesError, AutomationPipelinesErrorCode } from "./errors/automation-pipelines.error"
-import {
-    SELECT_ENABLED_PIPELINES,
-    SELECT_PIPELINE,
-    SELECT_PIPELINE_BY_ID,
-    SELECT_PIPELINE_KEYS,
-    UPDATE_PIPELINE_LADDER,
-    UPSERT_PIPELINE,
-} from "./persistence/automation-pipelines.sql"
+import { AutomationPipelineEntity } from "./persistence/entities"
+
+/** The most pipelines one list holds. */
+const ENABLED_LIMIT = 5000
+
+/** The most pipelines one workspace is read for. */
+const KEYS_LIMIT = 500
+
+const toRow = (entity: AutomationPipelineEntity): PipelineRow => ({
+    id: entity.id,
+    workspace_id: entity.workspaceId,
+    template_key: entity.templateKey,
+    name: entity.name,
+    module_key: entity.moduleKey,
+    enabled: entity.enabled,
+    dismissed: entity.dismissed,
+    config: entity.config,
+    body: entity.body,
+    body_version: entity.bodyVersion,
+    template_version: entity.templateVersion,
+    based_on_context: entity.basedOnContext,
+    approval_streak: entity.approvalStreak,
+    trust_offered_at: entity.trustOfferedAt === null ? null : entity.trustOfferedAt.toISOString(),
+    auto_send: entity.autoSend,
+    created_at: entity.createdAt.toISOString(),
+    updated_at: entity.updatedAt.toISOString(),
+})
+
+/** The columns a repeated save overwrites on an existing pipeline. */
+const UPSERT_COLUMNS = [
+    "name",
+    "module_key",
+    "template_version",
+    "enabled",
+    "dismissed",
+    "config",
+    "body",
+    "body_version",
+    "based_on_context",
+    "approval_streak",
+    "trust_offered_at",
+    "auto_send",
+    "updated_at",
+]
+
+/** The columns a save reads back from the statement itself. */
+const RETURNED_COLUMNS =
+    "id, workspace_id, template_key, name, module_key, enabled, dismissed, config, body, body_version, template_version, based_on_context, approval_streak, trust_offered_at, auto_send, created_at, updated_at"
+
+/** The pipeline the saving statement hands back: timestamptz columns arrive as Dates. */
+interface SavedRow extends Omit<PipelineRow, "trust_offered_at" | "created_at" | "updated_at"> {
+    readonly trust_offered_at: Date | null
+    readonly created_at: Date
+    readonly updated_at: Date
+}
 
 @Injectable()
 /** The pipelines of public.automation_pipelines: one row per template per workspace. */
@@ -26,29 +73,44 @@ export class AutomationPipelinesService {
 
     /** The pipeline of a template in a workspace, or none before the first switch. */
     async findPipeline(workspaceId: string, templateKey: string): Promise<PipelineOrNone> {
-        const [row] = await this.entityManager.query<Array<PipelineRow>>(SELECT_PIPELINE, [workspaceId, templateKey])
-        return row ?? null
+        const row = await this.entityManager.findOne(AutomationPipelineEntity, { where: { workspaceId, templateKey } })
+        return row === null ? null : toRow(row)
     }
 
     /** One pipeline by id, or none. */
     async findPipelineById(pipelineId: string): Promise<PipelineOrNone> {
-        const [row] = await this.entityManager.query<Array<PipelineRow>>(SELECT_PIPELINE_BY_ID, [pipelineId])
-        return row ?? null
+        const row = await this.entityManager.findOne(AutomationPipelineEntity, { where: { id: pipelineId } })
+        return row === null ? null : toRow(row)
     }
 
     /** The pipelines of every workspace that are on. */
-    enabledPipelines(): Promise<ReadonlyArray<PipelineRow>> {
-        return this.entityManager.query<Array<PipelineRow>>(SELECT_ENABLED_PIPELINES, [null])
+    async enabledPipelines(): Promise<ReadonlyArray<PipelineRow>> {
+        const rows = await this.entityManager.find(AutomationPipelineEntity, {
+            where: { enabled: true },
+            order: { createdAt: "ASC" },
+            take: ENABLED_LIMIT,
+        })
+        return rows.map(toRow)
     }
 
     /** The pipelines of one workspace that are on. */
-    enabledPipelinesOf(workspaceId: string): Promise<ReadonlyArray<PipelineRow>> {
-        return this.entityManager.query<Array<PipelineRow>>(SELECT_ENABLED_PIPELINES, [workspaceId])
+    async enabledPipelinesOf(workspaceId: string): Promise<ReadonlyArray<PipelineRow>> {
+        const rows = await this.entityManager.find(AutomationPipelineEntity, {
+            where: { enabled: true, workspaceId },
+            order: { createdAt: "ASC" },
+            take: ENABLED_LIMIT,
+        })
+        return rows.map(toRow)
     }
 
     /** The id and template key of every pipeline of a workspace. */
-    pipelineKeys(workspaceId: string): Promise<ReadonlyArray<PipelineKey>> {
-        return this.entityManager.query<Array<PipelineKey>>(SELECT_PIPELINE_KEYS, [workspaceId])
+    async pipelineKeys(workspaceId: string): Promise<ReadonlyArray<PipelineKey>> {
+        const rows = await this.entityManager.find(AutomationPipelineEntity, {
+            select: { id: true, templateKey: true },
+            where: { workspaceId },
+            take: KEYS_LIMIT,
+        })
+        return rows.map((row) => ({ id: row.id, template_key: row.templateKey }))
     }
 
     /** Creates or replaces the pipeline of a template; the row answered is the stored one. */
@@ -58,29 +120,63 @@ export class AutomationPipelinesService {
         def: TemplateDefinition,
         write: PipelineWrite,
     ): Promise<PipelineRow> {
-        const [row] = await this.entityManager.query<Array<PipelineRow>>(UPSERT_PIPELINE, [
-            workspaceId,
-            def.key,
-            def.name.vi,
-            def.moduleKey,
-            def.version,
-            userId,
-            write.enabled,
-            write.dismissed,
-            JSON.stringify(write.config),
-            write.body,
-            write.bodyVersion,
-            write.basedOnContext,
-            write.approvalStreak,
-            write.trustOfferedAt,
-            write.autoSend,
-        ])
+        const saved = await this.entityManager
+            .createQueryBuilder(AutomationPipelineEntity, "ap")
+            .insert()
+            .values({
+                workspaceId,
+                templateKey: def.key,
+                name: def.name.vi,
+                moduleKey: def.moduleKey,
+                templateVersion: def.version,
+                createdBy: userId,
+                enabled: write.enabled,
+                dismissed: write.dismissed,
+                config: write.config,
+                body: write.body,
+                bodyVersion: write.bodyVersion,
+                basedOnContext: write.basedOnContext,
+                approvalStreak: write.approvalStreak,
+                trustOfferedAt: write.trustOfferedAt === null ? null : new Date(write.trustOfferedAt),
+                autoSend: write.autoSend,
+                updatedAt: () => "now()",
+            })
+            .orUpdate(UPSERT_COLUMNS, ["workspace_id", "template_key"])
+            .returning(RETURNED_COLUMNS)
+            .execute()
+        const [row] = Array.isArray(saved.raw) ? (saved.raw as Array<SavedRow>) : []
         if (row === undefined) throw new AutomationPipelinesError({ code: AutomationPipelinesErrorCode.NotSaved })
-        return row
+        return {
+            id: row.id,
+            workspace_id: row.workspace_id,
+            template_key: row.template_key,
+            name: row.name,
+            module_key: row.module_key,
+            enabled: row.enabled,
+            dismissed: row.dismissed,
+            config: row.config,
+            body: row.body,
+            body_version: row.body_version,
+            template_version: row.template_version,
+            based_on_context: row.based_on_context,
+            approval_streak: row.approval_streak,
+            trust_offered_at: row.trust_offered_at === null ? null : row.trust_offered_at.toISOString(),
+            auto_send: row.auto_send,
+            created_at: row.created_at.toISOString(),
+            updated_at: row.updated_at.toISOString(),
+        }
     }
 
     /** Records the trust ladder after a decision. */
     async saveLadder(pipelineId: string, streak: number, offeredAt: OptionalInstant): Promise<void> {
-        await this.entityManager.query(UPDATE_PIPELINE_LADDER, [pipelineId, streak, offeredAt])
+        await this.entityManager.update(
+            AutomationPipelineEntity,
+            { id: pipelineId },
+            {
+                approvalStreak: streak,
+                trustOfferedAt: offeredAt === null ? null : new Date(offeredAt),
+                updatedAt: () => "now()",
+            },
+        )
     }
 }

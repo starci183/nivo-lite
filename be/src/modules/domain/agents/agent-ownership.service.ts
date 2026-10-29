@@ -1,7 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { In } from "typeorm"
+import type { EntityManager, UpdateResult } from "typeorm"
+import { WorkspaceMemberEntity, WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { OfficeRoomEntity, OfficeRoomMemberEntity } from "@modules/domain/office-rooms"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import {
     ROOM_KEYS,
     isAssignableRole,
@@ -13,32 +15,31 @@ import {
 } from "./agent-ownership.policy"
 import type { AgentOwners, AgentOwnership, OwnershipChange } from "./agents.contracts"
 import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
-import type { IdRow } from "./persistence/agents.rows"
-import {
-    COUNT_ACTIVE_MEMBERS,
-    COUNT_WORKSPACE_AGENTS,
-    FIND_ASSIGN_CONTEXT,
-    FIND_MEMBER_ID,
-    FIND_OWNERSHIP,
-    FIND_TAG_CONTEXT,
-    FIND_WORKSPACE_OWNER,
-    LIST_ACTIVE_MEMBER_IDS,
-    LIST_MEMBER_STATES,
-    LIST_ROOM_LABELS,
-    LIST_TAG_TARGETS,
-    SET_OWNERSHIP,
-} from "./persistence/agents.sql"
-import type {
-    ActiveMemberRow,
-    AssignContextRow,
-    CountRow,
-    MemberIdRow,
-    MemberStateRow,
-    OwnershipRow,
-    RoomLabelRow,
-    TagContextRow,
-    TagTargetRow,
-} from "./persistence/ownership.rows"
+import type { AssignContext, MemberState, TagContext } from "./agents-reads.contracts"
+import { AgentEntity } from "./persistence/entities"
+
+/** The room keys and cards ownership reads are bounded by what one agent can name. */
+const MEMBER_LIMIT = 10
+const ROOM_LIMIT = 10
+const MEMBER_ROOMS_LIMIT = 50
+const TAG_LIMIT = 50
+
+/** The one row `public.workspace_owner_member` answers: its result is named after the function. */
+interface WorkspaceOwnerRow {
+    readonly workspace_owner_member: string | null
+}
+
+/** One department room as the page names it. */
+interface RoomLabel {
+    readonly key: string
+    readonly name: string
+}
+
+/** A seat's department room: the room keys a member sits in, in the order the first one is chosen. */
+interface SeatRoomRow {
+    readonly userId: string
+    readonly key: string
+}
 
 const GOVERNORS = ["owner", "manager"] as const
 
@@ -60,36 +61,64 @@ export class AgentOwnershipService {
      */
     async ownerOf(agentId: string): Promise<AgentOwners> {
         const agent = await this.ownershipRow(agentId)
-        const stored = [agent.owner_member_id, agent.fallback_member_id].filter((id): id is string => id !== null)
+        const stored = [agent.ownerMemberId, agent.fallbackMemberId].filter((id): id is string => id !== null)
         const [active, workspaceOwner] = await Promise.all([
-            this.entityManager.query<Array<ActiveMemberRow>>(LIST_ACTIVE_MEMBER_IDS, [agent.workspace_id, stored]),
-            this.workspaceOwnerOf(agent.workspace_id),
+            this.entityManager.find(WorkspaceMemberEntity, {
+                select: { id: true },
+                where: { workspaceId: agent.workspaceId, id: In(stored), status: "active" },
+                take: MEMBER_LIMIT,
+            }),
+            this.workspaceOwnerOf(agent.workspaceId),
         ])
         return this.responderOf(agent, new Set(active.map((row) => row.id)), workspaceOwner)
     }
 
     /** Whether an agent may pass work to another agent: both active, one workspace, the second on the first's list. */
     async canTag(agentId: string, targetAgentId: string): Promise<boolean> {
-        const [context] = await this.entityManager.query<Array<TagContextRow>>(FIND_TAG_CONTEXT, [
-            agentId,
-            targetAgentId,
-        ])
-        return context !== undefined && mayTag(context)
+        const agents = await this.entityManager.find(AgentEntity, {
+            where: { id: In([agentId, targetAgentId]) },
+            take: 2,
+        })
+        const from = agents.find((agent) => agent.id === agentId)
+        const to = agents.find((agent) => agent.id === targetAgentId)
+        if (from === undefined || to === undefined) return false
+        const context: TagContext = {
+            fromStatus: from.status,
+            toStatus: to.status,
+            sameWorkspace: from.workspaceId === to.workspaceId,
+            listed: from.canTagAgentIds.includes(to.id),
+            sameAgent: from.id === to.id,
+        }
+        return mayTag(context)
     }
 
     /** Whether a member may hand an agent work: by role or by a seat in a room the agent is open to; nobody may for a paused agent. */
     async canAssign(memberId: string, agentId: string): Promise<boolean> {
-        const [context] = await this.entityManager.query<Array<AssignContextRow>>(FIND_ASSIGN_CONTEXT, [
-            agentId,
-            memberId,
-        ])
-        return context !== undefined && mayAssign(context)
+        const agent = await this.entityManager.findOne(AgentEntity, { where: { id: agentId } })
+        if (agent === null) return false
+        const member = await this.entityManager.findOne(WorkspaceMemberEntity, {
+            where: { id: memberId, workspaceId: agent.workspaceId },
+        })
+        if (member === null) return false
+        const rooms = await this.seatRooms(agent.workspaceId, [member.userId])
+        const context: AssignContext = {
+            role: member.role,
+            memberStatus: member.status,
+            agentStatus: agent.status,
+            assignableRoles: agent.assignableRoles,
+            assignableRooms: agent.assignableRooms,
+            memberRooms: rooms.map((room) => room.key),
+        }
+        return mayAssign(context)
     }
 
     /** The member id (workspace_members.id) of a signed-in account; the account must belong to the workspace. */
     async memberIdOf(userId: string, workspaceId: string): Promise<string> {
         await this.members.require(userId, workspaceId)
-        const [row] = await this.entityManager.query<Array<MemberIdRow>>(FIND_MEMBER_ID, [workspaceId, userId])
+        const row = await this.entityManager.findOne(WorkspaceMemberEntity, {
+            select: { id: true },
+            where: { workspaceId, userId },
+        })
         const id = row?.id ?? null
         if (id === null) throw this.invalidOwnership("member")
         return id
@@ -99,12 +128,17 @@ export class AgentOwnershipService {
     async ownershipOf(userId: string, workspaceId: string, agentId: string): Promise<AgentOwnership> {
         await this.members.require(userId, workspaceId)
         const agent = await this.ownershipRow(agentId, workspaceId)
-        const stored = [agent.owner_member_id, agent.fallback_member_id].filter((id): id is string => id !== null)
+        const stored = [agent.ownerMemberId, agent.fallbackMemberId].filter((id): id is string => id !== null)
         const [states, workspaceOwner, rooms, targets] = await Promise.all([
-            this.entityManager.query<Array<MemberStateRow>>(LIST_MEMBER_STATES, [workspaceId, stored]),
+            this.memberStates(workspaceId, stored),
             this.workspaceOwnerOf(workspaceId),
-            this.entityManager.query<Array<RoomLabelRow>>(LIST_ROOM_LABELS, [workspaceId, agent.assignable_rooms]),
-            this.entityManager.query<Array<TagTargetRow>>(LIST_TAG_TARGETS, [workspaceId, agent.can_tag_agent_ids]),
+            this.roomLabels(workspaceId, agent.assignableRooms),
+            this.entityManager.find(AgentEntity, {
+                select: { id: true, name: true, module: true, status: true },
+                where: { workspaceId, id: In(agent.canTagAgentIds) },
+                order: { createdAt: "ASC", id: "ASC" },
+                take: TAG_LIMIT,
+            }),
         ])
         const active = new Set(states.filter((state) => state.status === "active").map((state) => state.id))
         const cardOf = (id: string | null) => {
@@ -113,12 +147,17 @@ export class AgentOwnershipService {
         }
         return {
             agentId: agent.id,
-            owner: cardOf(agent.owner_member_id),
-            fallback: cardOf(agent.fallback_member_id),
+            owner: cardOf(agent.ownerMemberId),
+            fallback: cardOf(agent.fallbackMemberId),
             responder: this.responderOf(agent, active, workspaceOwner),
-            assignableRoles: rolesOf(agent.assignable_roles),
+            assignableRoles: rolesOf(agent.assignableRoles),
             assignableRooms: rooms,
-            canTag: targets,
+            canTag: targets.map((target) => ({
+                id: target.id,
+                name: target.name,
+                module: target.module,
+                status: target.status,
+            })),
         }
     }
 
@@ -135,15 +174,17 @@ export class AgentOwnershipService {
         if (targets.includes(agentId) || !(await this.agentsCounted(workspaceId, targets)))
             throw this.invalidOwnership("canTagAgentIds")
         this.expectChanged(
-            await this.entityManager.query<Array<IdRow>>(SET_OWNERSHIP, [
-                agentId,
-                workspaceId,
-                change.ownerMemberId,
-                change.fallbackMemberId,
-                roles,
-                rooms,
-                targets,
-            ]),
+            await this.entityManager.update(
+                AgentEntity,
+                { id: agentId, workspaceId },
+                {
+                    ownerMemberId: change.ownerMemberId,
+                    fallbackMemberId: change.fallbackMemberId,
+                    assignableRoles: roles,
+                    assignableRooms: rooms,
+                    canTagAgentIds: targets,
+                },
+            ),
             agentId,
         )
     }
@@ -154,36 +195,90 @@ export class AgentOwnershipService {
 
     /** True when every given member (there is always at least the owner) is an active member of the workspace. */
     private async membersCounted(workspaceId: string, ids: ReadonlyArray<string>): Promise<boolean> {
-        const [row] = await this.entityManager.query<Array<CountRow>>(COUNT_ACTIVE_MEMBERS, [workspaceId, ids])
-        return row?.n === ids.length
+        const counted = await this.entityManager.count(WorkspaceMemberEntity, {
+            where: { workspaceId, id: In([...ids]), status: "active" },
+        })
+        return counted === ids.length
     }
 
     /** True when every given agent belongs to the workspace; an empty list is trivially so. */
     private async agentsCounted(workspaceId: string, ids: ReadonlyArray<string>): Promise<boolean> {
         if (ids.length === 0) return true
-        const [row] = await this.entityManager.query<Array<CountRow>>(COUNT_WORKSPACE_AGENTS, [workspaceId, ids])
-        return row?.n === ids.length
+        const counted = await this.entityManager.count(AgentEntity, { where: { workspaceId, id: In([...ids]) } })
+        return counted === ids.length
     }
 
-    private async ownershipRow(agentId: string, workspaceId: string | null = null): Promise<OwnershipRow> {
-        const [row] = await this.entityManager.query<Array<OwnershipRow>>(FIND_OWNERSHIP, [agentId])
-        if (row === undefined || (workspaceId !== null && row.workspace_id !== workspaceId))
+    private async ownershipRow(agentId: string, workspaceId: string | null = null): Promise<AgentEntity> {
+        const row = await this.entityManager.findOne(AgentEntity, { where: { id: agentId } })
+        if (row === null || (workspaceId !== null && row.workspaceId !== workspaceId))
             throw new AgentsError({ code: AgentsErrorCode.AgentNotFound, params: { id: agentId } })
         return row
     }
 
     private async workspaceOwnerOf(workspaceId: string): Promise<string | null> {
-        const [row] = await this.entityManager.query<Array<MemberIdRow>>(FIND_WORKSPACE_OWNER, [workspaceId])
-        return row?.id ?? null
+        const [row] = await callDbFunction<WorkspaceOwnerRow>(this.entityManager, "public.workspace_owner_member", [
+            workspaceId,
+        ])
+        return row?.workspace_owner_member ?? null
     }
 
-    private responderOf(agent: OwnershipRow, active: ReadonlySet<string>, workspaceOwner: string | null): AgentOwners {
+    private responderOf(agent: AgentEntity, active: ReadonlySet<string>, workspaceOwner: string | null): AgentOwners {
         const owners = resolveOwners(agent, active, workspaceOwner)
         if (owners === null) throw new AgentsError({ code: AgentsErrorCode.OwnerUnavailable })
         return owners
     }
 
-    private expectChanged(rows: ReadonlyArray<IdRow>, agentId: string): void {
-        if (rows.length === 0) throw new AgentsError({ code: AgentsErrorCode.AgentNotFound, params: { id: agentId } })
+    /** The given members with the first department room each sits in. */
+    private async memberStates(workspaceId: string, ids: ReadonlyArray<string>): Promise<ReadonlyArray<MemberState>> {
+        const members = await this.entityManager.find(WorkspaceMemberEntity, {
+            where: { workspaceId, id: In([...ids]) },
+            take: MEMBER_LIMIT,
+        })
+        const rooms = await this.seatRooms(
+            workspaceId,
+            members.map((member) => member.userId),
+        )
+        return members.map((member) => ({
+            id: member.id,
+            displayName: member.displayName,
+            role: member.role,
+            status: member.status,
+            roomKey: rooms.find((room) => room.userId === member.userId)?.key ?? null,
+        }))
+    }
+
+    /** The names of the department rooms of a workspace by key. */
+    private roomLabels(workspaceId: string, keys: ReadonlyArray<string>): Promise<ReadonlyArray<RoomLabel>> {
+        if (keys.length === 0) return Promise.resolve([])
+        return this.entityManager
+            .createQueryBuilder(OfficeRoomEntity, "r")
+            .select("r.key", "key")
+            .addSelect("r.name", "name")
+            .where("r.workspace_id = :workspaceId AND r.key IN (:...keys)", { workspaceId, keys })
+            .orderBy("r.position", "ASC")
+            .addOrderBy("r.key", "ASC")
+            .limit(ROOM_LIMIT)
+            .getRawMany<RoomLabel>()
+    }
+
+    /** The department rooms the given accounts sit in, the first room of each account first. */
+    private seatRooms(workspaceId: string, userIds: ReadonlyArray<string>): Promise<ReadonlyArray<SeatRoomRow>> {
+        if (userIds.length === 0) return Promise.resolve([])
+        return this.entityManager
+            .createQueryBuilder(WorkspaceMemberEntity, "m")
+            .select("m.userId", "userId")
+            .addSelect("r.key", "key")
+            .innerJoin(OfficeRoomMemberEntity, "rm", "rm.user_id = m.user_id")
+            .innerJoin(OfficeRoomEntity, "r", "r.id = rm.room_id AND r.workspace_id = m.workspace_id")
+            .where("m.workspaceId = :workspaceId AND m.userId IN (:...userIds)", { workspaceId, userIds })
+            .orderBy("r.position", "ASC")
+            .addOrderBy("r.key", "ASC")
+            .limit(MEMBER_ROOMS_LIMIT)
+            .getRawMany<SeatRoomRow>()
+    }
+
+    private expectChanged(result: UpdateResult, agentId: string): void {
+        if ((result.affected ?? 0) === 0)
+            throw new AgentsError({ code: AgentsErrorCode.AgentNotFound, params: { id: agentId } })
     }
 }

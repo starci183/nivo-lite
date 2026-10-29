@@ -8,3 +8,4 @@ export type {
 } from "./module-context-versions.contracts"
 export { ContextVersionsService } from "./context-versions.service"
 export { ModuleContextVersionsModule } from "./module-context-versions.module"
+export { ModuleContextVersionEntity, moduleContextVersionsEntities } from "./persistence/entities"

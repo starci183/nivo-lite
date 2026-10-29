@@ -8,8 +8,14 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { DECISIONS_QUEUE, DecisionsJob, decisionsDedupeKey } from "@modules/queues/decisions"
 import { LeadGenCommentService } from "./leadgen-comment.service"
-import type { LeadGenCommentJobRow } from "./persistence/leadgen-comment.rows"
-import { FIND_LEADGEN_COMMENT_JOB } from "./persistence/leadgen-comment.sql"
+
+/** The statement `callDbFunction` sends for the decisions job lookup. */
+const FIND_LEADGEN_COMMENT_JOB = "SELECT * FROM public.job_status($1, $2, $3, $4)"
+
+/** The row `job_status` answers for the decisions queue entry. */
+interface LeadGenCommentJobRow {
+    readonly state: "queued" | "running" | "done" | "failed"
+}
 
 const itemOf = builder<WorkItem>({
     id: "item-1",

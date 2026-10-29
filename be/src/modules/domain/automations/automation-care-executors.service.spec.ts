@@ -1,22 +1,41 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { AutomationRunsService } from "@modules/domain/automation-runs"
 import type { RunResult } from "@modules/domain/automation-runs"
 import { AutomationCareExecutorsService } from "./automation-care-executors.service"
 import { AutomationMessagesService } from "./automation-messages.service"
 import { AUTOMATION_OFFICE } from "./automations.decorators"
 import type { AutomationOffice, ExecutorContext, ExecutorMap, ExecutorPayload } from "./automation-ports.contracts"
 import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/builders/automations.builder"
-import { SELECT_BUILT_IN_CARE, SELECT_CONVERSATION } from "./persistence/automation-readers.sql"
-import type { LeadReadRow } from "./persistence/automations.rows"
+import type { LeadRead } from "./automation-reads.contracts"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { FakeQueryBuilder, QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+
+const READS = new WeakMap<object, ReadonlyArray<FakeQueryBuilder>>()
+
+/** The manager of {@link readingOf}. */
+interface ReadingManager {
+    /** The manager whose reads answer the given results. */
+    readonly em: MockEntityManager
+}
+
+/** A manager whose reads (and the snapshot transaction around some of them) answer `answers`, one fake statement each, in order. */
+const readingOf = (...answers: Array<QueryBuilderAnswers>): ReadingManager => {
+    const em = mockEntityManager()
+    fakeTransaction(em)
+    READS.set(em, queueQueryBuilders(em, answers))
+    return { em }
+}
+
+/** The fake statements of a manager made by {@link readingOf}, in the order the subject built them. */
+const readsOf = (em: object): ReadonlyArray<FakeQueryBuilder> => READS.get(em) ?? []
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 
 const NOW = "2026-10-12T10:00:00.000Z"
-const LEAD: LeadReadRow = {
+const LEAD: LeadRead = {
     id: "l-1",
     contact_name: "An",
     company: "",
@@ -45,7 +64,6 @@ const runner =
 
 const build = async (em: MockEntityManager = mockEntityManager()) => {
     const office = mock<AutomationOffice>()
-    const runs = mock<AutomationRunsService>()
     const messages = mock<AutomationMessagesService>()
     messages.say.mockImplementation((key, params) => `${key}${JSON.stringify(params ?? {})}`)
     messages.skipped.mockImplementation((detail) => ({
@@ -67,69 +85,17 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: AUTOMATION_OFFICE, useValue: office },
-            { provide: AutomationRunsService, useValue: runs },
             { provide: AutomationMessagesService, useValue: messages },
         ],
     }).compile()
     const service = moduleRef.get(AutomationCareExecutorsService)
-    return { service, office, runs, messages, run: runner(service.executors()) }
+    return { service, office, messages, run: runner(service.executors()) }
 }
 
-describe("AutomationCareExecutorsService checkFeedback", () => {
-    const check = {
-        context: context(),
-        runId: "r-1",
-        runPayload: { lead_id: "l-1" },
-        feedback: "x".repeat(400),
-        leadId: "l-1",
-    }
-    it("does nothing for feedback that is not negative", async () => {
-        const { service, messages, runs } = await build()
-        messages.isNegative.mockResolvedValue(false)
-
-        await expect(service.checkFeedback(check)).resolves.toBe(false)
-
-        expect(runs.markPayload).not.toHaveBeenCalled()
-    })
-
-    it("marks the run and tags the owner in Office when the feedback is negative", async () => {
-        const { service, messages, runs, office } = await build()
-        messages.isNegative.mockResolvedValue(true)
-
-        await expect(service.checkFeedback(check)).resolves.toBe(true)
-
-        expect(runs.markPayload).toHaveBeenCalledWith("r-1", {
-            lead_id: "l-1",
-            alerted: { text: "x".repeat(300), at: NOW },
-        })
-        expect(office.postLine).toHaveBeenCalledWith(
-            "ws-1",
-            `feedback.line${JSON.stringify({ name: "An", text: "x".repeat(200) })}`,
-            "l-1",
-        )
-        expect(office.logEvidence).toHaveBeenCalledWith("ws-1", {
-            leadId: "l-1",
-            kind: "automation.negative_review",
-            actor: "feedback.actor{}",
-            summary: 'feedback.summary{"name":"An"}',
-            evidence: "x".repeat(300),
-        })
-    })
-
-    it("calls the customer by a standard word when the lead is gone", async () => {
-        const { service, messages } = await build()
-        messages.isNegative.mockResolvedValue(true)
-        messages.lead.mockResolvedValue(null)
-
-        await service.checkFeedback(check)
-
-        expect(messages.say).toHaveBeenCalledWith("feedback.summary", { name: "customer{}" })
-    })
-})
 describe("AutomationCareExecutorsService thank_payment", () => {
     const payload = { lead_id: "l-1", amount_vnd: 350000, invoice_id: "i-1", invoice_no: "HD1", at: NOW }
     it("thanks a payment through the gate", async () => {
-        const em = mockEntityManager({ query: [SELECT_BUILT_IN_CARE, []] })
+        const em = readingOf({ getRawOne: undefined }).em
         const { run, messages } = await build(em)
 
         await expect(run("thank_payment", context(), payload)).resolves.toBe(SENT)
@@ -144,11 +110,14 @@ describe("AutomationCareExecutorsService thank_payment", () => {
                 vars: objectLike({ ten_khach: "An", ma_phieu: "HD1" }),
             }),
         )
-        expect(em.query).toHaveBeenCalledWith(SELECT_BUILT_IN_CARE, ["ws-1", "l-1", "2026-10-12T09:50:00.000Z"])
+        expect(readsOf(em)[0]?.callsOf("andWhere")).toContainEqual([
+            expect.stringContaining("w.created_at >= :since"),
+            { since: "2026-10-12T09:50:00.000Z" },
+        ])
     })
 
     it("falls back on the lead for the dedupe key and on the clock when the payment has no date", async () => {
-        const em = mockEntityManager({ query: [SELECT_BUILT_IN_CARE, []] })
+        const em = readingOf({ getRawOne: undefined }).em
         const { run, messages } = await build(em)
 
         await run("thank_payment", context(), { lead_id: "l-1" })
@@ -157,7 +126,10 @@ describe("AutomationCareExecutorsService thank_payment", () => {
             expect.anything(),
             expect.objectContaining({ dedupe: "thank:l-1" }),
         )
-        expect(em.query).toHaveBeenCalledWith(SELECT_BUILT_IN_CARE, ["ws-1", "l-1", "2026-10-12T09:40:00.000Z"])
+        expect(readsOf(em)[0]?.callsOf("andWhere")).toContainEqual([
+            expect.stringContaining("w.created_at >= :since"),
+            { since: "2026-10-12T09:40:00.000Z" },
+        ])
     })
 
     it("skips a payment below the minimum amount", async () => {
@@ -169,7 +141,7 @@ describe("AutomationCareExecutorsService thank_payment", () => {
     })
 
     it("skips a missing lead, missing conversation and an existing built-in thank-you", async () => {
-        const em = mockEntityManager({ query: [SELECT_BUILT_IN_CARE, [{ id: "w-9" }]] })
+        const em = readingOf({ getRawOne: { id: "w-9" } }).em
         const { run, messages } = await build(em)
 
         messages.leadOf.mockResolvedValueOnce(null)
@@ -354,9 +326,7 @@ describe("AutomationCareExecutorsService debt_reminder", () => {
 describe("AutomationCareExecutorsService after_hours", () => {
     const payload = { conversation_id: "cv-1", dedupe: "after:cv-1", text: "t".repeat(300) }
     it("answers a lead outside the opening hours, opens a call-back task and tells the owner", async () => {
-        const { run, messages, office } = await build(
-            mockEntityManager({ query: [SELECT_CONVERSATION, [{ ...CONVERSATION, lead_id: "l-1" }]] }),
-        )
+        const { run, messages, office } = await build(readingOf({ getRawOne: { ...CONVERSATION, lead_id: "l-1" } }).em)
 
         const result = await run("after_hours", context(), payload)
 
@@ -388,9 +358,7 @@ describe("AutomationCareExecutorsService after_hours", () => {
     })
 
     it("takes the lead from the payload, a standard staff name and the action without a phone", async () => {
-        const { run, messages, office } = await build(
-            mockEntityManager({ query: [SELECT_CONVERSATION, [CONVERSATION]] }),
-        )
+        const { run, messages, office } = await build(readingOf({ getRawOne: CONVERSATION }).em)
         messages.leadOf.mockResolvedValue({ ...LEAD, phone: null })
         messages.firstStaffName.mockResolvedValue(null)
 
@@ -409,9 +377,7 @@ describe("AutomationCareExecutorsService after_hours", () => {
 describe("AutomationCareExecutorsService after_hours", () => {
     const payload = { conversation_id: "cv-1", dedupe: "after:cv-1", text: "t".repeat(300) }
     it("replies without a lead to a visitor, and skips the call-back task", async () => {
-        const { run, messages, office } = await build(
-            mockEntityManager({ query: [SELECT_CONVERSATION, [CONVERSATION]] }),
-        )
+        const { run, messages, office } = await build(readingOf({ getRawOne: CONVERSATION }).em)
         messages.leadOf.mockResolvedValue(null)
         messages.replyWithoutLead.mockResolvedValue({ status: "waiting_approval", steps: [], evidence: undefined })
 
@@ -436,9 +402,7 @@ describe("AutomationCareExecutorsService after_hours", () => {
     })
 
     it("calls an unnamed visitor by a standard word", async () => {
-        const { run, messages } = await build(
-            mockEntityManager({ query: [SELECT_CONVERSATION, [{ ...CONVERSATION, visitor_name: null }]] }),
-        )
+        const { run, messages } = await build(readingOf({ getRawOne: { ...CONVERSATION, visitor_name: null } }).em)
         messages.leadOf.mockResolvedValue(null)
         messages.replyWithoutLead.mockResolvedValue(SENT)
 
@@ -451,10 +415,8 @@ describe("AutomationCareExecutorsService after_hours", () => {
     })
 
     it("skips a conversation that is gone or that a person took over", async () => {
-        const gone = await build(mockEntityManager({ query: [SELECT_CONVERSATION, []] }))
-        const taken = await build(
-            mockEntityManager({ query: [SELECT_CONVERSATION, [{ ...CONVERSATION, handled_by: "u-1" }]] }),
-        )
+        const gone = await build(readingOf({ getRawOne: undefined }).em)
+        const taken = await build(readingOf({ getRawOne: { ...CONVERSATION, handled_by: "u-1" } }).em)
 
         await expect(gone.run("after_hours", context(), payload)).resolves.toMatchObject({ status: "skipped" })
         await expect(taken.run("after_hours", context(), payload)).resolves.toMatchObject({ status: "skipped" })

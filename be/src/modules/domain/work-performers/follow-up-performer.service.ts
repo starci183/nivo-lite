@@ -32,7 +32,7 @@ export class FollowUpPerformerService implements WorkPerformer {
         private readonly leads: LeadRecordsService,
         private readonly responsibilities: ResponsibilityJournalService,
         private readonly agents: AgentsService,
-        @InjectPromptWriter() private readonly deepseek: PromptWriter,
+        @InjectPromptWriter() private readonly prompts: PromptWriter,
         private readonly delivery: CustomerDeliveryService,
         private readonly executions: ExecutionsService,
         private readonly workItems: WorkItemsService,
@@ -51,8 +51,8 @@ export class FollowUpPerformerService implements WorkPerformer {
             responsibility.owner_agent_id === null
                 ? await this.agents.profileOfDepartment(ctx.workspaceId, "sales")
                 : await this.agents.profileOf(ctx.workspaceId, responsibility.owner_agent_id)
-        const draft = await this.deepseek.draftFollowUp(
-            this.kit.scope(ctx),
+        const draft = await this.prompts.draftFollowUp(
+            this.kit.draftScope(ctx),
             this.kit.leadInput(lead),
             lead.context_summary ?? "",
             responsibility.next_action,

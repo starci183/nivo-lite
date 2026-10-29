@@ -83,14 +83,19 @@ describe("ContentAiService", () => {
         const { service, members, rules, store, completion } = await build()
         await expect(service.draftingBlockedFor("user-1", "ws-1")).resolves.toBe(false)
         await expect(service.recentTitlesFor("user-1", "ws-1", "item-1")).resolves.toEqual(["Yesterday's coffee"])
-        await expect(service.complete("ws-1", "g-1")).resolves.toBeUndefined()
+        await expect(
+            service.complete("ws-1", "g-1", { consumer: "ai_generation_completed__content", dedupeKey: "g-1" }),
+        ).resolves.toBeUndefined()
         expect(members.require.mock.calls).toEqual([
             ["user-1", "ws-1"],
             ["user-1", "ws-1"],
         ])
         expect(rules.ruleFor).toHaveBeenCalledWith({ workspaceId: "ws-1" }, "draft_post", null)
         expect(store.recentTitles).toHaveBeenCalledWith("ws-1", "item-1")
-        expect(completion.complete).toHaveBeenCalledWith("ws-1", "g-1")
+        expect(completion.complete).toHaveBeenCalledWith("ws-1", "g-1", {
+            consumer: "ai_generation_completed__content",
+            dedupeKey: "g-1",
+        })
     })
     it("rejects drafting when the owner disables it", async () => {
         const { service, rules, editor, generations } = await build()

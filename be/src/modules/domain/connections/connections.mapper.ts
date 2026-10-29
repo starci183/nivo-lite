@@ -1,6 +1,6 @@
 import type { ConnectionRecord, ConnectionStatus, Environment, FirstEvent, Provider } from "./connections.contracts"
 import { ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
-import type { ConnectionSelectRow } from "./persistence/connections.rows"
+import type { ConnectionProjection } from "./persistence/connection-projection"
 
 const PROVIDERS: Readonly<Record<Provider, true>> = {
     telegram: true,
@@ -61,24 +61,24 @@ const asFirstEvent = (value: unknown): FirstEvent | null => {
 const asEnvironment = (value: string | null): Environment => (value === "test" ? "test" : "live")
 
 /** Maps a stored connection row to the record the capability answers; the secret is never part of it. */
-export const toConnectionRecord = (row: ConnectionSelectRow): ConnectionRecord => {
+export const toConnectionRecord = (row: ConnectionProjection): ConnectionRecord => {
     const { provider, status } = row
     if (!isProvider(provider) || !isStatus(status)) {
         throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id: row.id } })
     }
     return {
         id: row.id,
-        workspaceId: row.workspace_id,
+        workspaceId: row.workspaceId,
         provider,
         name: row.name,
-        meta: asMeta(row.public_meta),
+        meta: asMeta(row.publicMeta),
         status,
-        lastError: row.last_error,
+        lastError: row.lastError,
         environment: asEnvironment(row.environment),
-        isDefault: Boolean(row.is_default),
-        lastEventAt: row.last_event_at,
-        firstEvent: asFirstEvent(row.first_event),
-        createdBy: row.created_by,
-        createdAt: row.created_at,
+        isDefault: Boolean(row.isDefault),
+        lastEventAt: row.lastEventAt,
+        firstEvent: asFirstEvent(row.firstEvent),
+        createdBy: row.createdBy,
+        createdAt: row.createdAt,
     }
 }

@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { WorkItemsErrorCode } from "./errors/work-items.error"
-import type { WorkItemRow } from "./persistence/work-items.rows"
+import type { WorkItemRecord } from "./work-items.contracts"
 import { toProposal, toWorkItem, requireWorkItem } from "./work-items.mapper"
 
 const SUBJECT = Symbol("work-items.mapper")
@@ -13,7 +13,7 @@ const build = async () => {
     return moduleRef.get<typeof import("./work-items.mapper")>(SUBJECT)
 }
 
-const rowOf = builder<WorkItemRow>({
+const rowOf = builder<WorkItemRecord>({
     id: "item-1",
     workspace_id: "ws-1",
     department: "sales",

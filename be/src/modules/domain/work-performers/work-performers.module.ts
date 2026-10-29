@@ -24,6 +24,7 @@ import { PaymentInstructionsService } from "./payment-instructions.service"
 import { PerformerKitService } from "./performer-kit.service"
 import { QuotePerformerService } from "./quote-performer.service"
 import { RedeemRewardPerformerService } from "./redeem-reward-performer.service"
+import { BankCreditBookedAccountingConsumer } from "./bank-credit-booked-accounting.consumer"
 import { BankCreditSettlementService } from "./bank-credit-settlement.service"
 import { ReconcilePaymentPerformerService } from "./reconcile-payment-performer.service"
 import { ReplyCustomerPerformerService } from "./reply-customer-performer.service"
@@ -61,6 +62,7 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 IssueInvoicePerformerService,
                 ReconcilePaymentPerformerService,
                 BankCreditSettlementService,
+                BankCreditBookedAccountingConsumer,
                 ReplyCustomerPerformerService,
                 SendEmailPerformerService,
                 BookingPerformerService,
@@ -87,7 +89,6 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 InboundStatusService,
                 LeadWriterService,
                 OutboundAccessService,
-                BankCreditSettlementService,
                 WorkspaceMailerService,
                 N8N_MAILER,
             ],

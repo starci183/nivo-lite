@@ -21,8 +21,8 @@ import {
  *   1. RetryLink               retries transient network failures (backoff + jitter)
  *   2. ErrorLink               logs GraphQL / protocol / network errors
  *   3. TimeoutLink             fails an operation that does not answer within the window
- *   4. RefreshOnUnauth.Link    on an `unauthenticated` answer: supabase.auth.refreshSession, then retry once
- *   5. AttachAccessTokenLink   Authorization: Bearer <Supabase session access token>
+ *   4. RefreshOnUnauth.Link    on an `unauthenticated` answer: POST /auth/refresh, then retry once
+ *   5. AttachAccessTokenLink   Authorization: Bearer <in-memory access token>
  *   6. AttachWorkspaceIdLink   X-Workspace-Id (active workspace)
  *   6b. AttachLocaleLink       Accept-Language (locale cookie)
  *   7. HttpLink                POST to the back end /graphql

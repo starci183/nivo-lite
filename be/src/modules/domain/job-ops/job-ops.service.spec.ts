@@ -7,13 +7,12 @@ import type { Logger } from "@modules/platform/logging"
 import { JobOpsErrorCode } from "./errors/job-ops.error"
 import { JobOpsLogEvent } from "./job-ops.log-events"
 import { JobOpsService } from "./job-ops.service"
-import {
-    READ_FAILED_JOBS,
-    READ_JOB_STATS,
-    READ_OPEN_JOBS,
-    REQUEUE_FAILED_JOBS,
-    REQUEUE_JOB,
-} from "./persistence/job-ops.sql"
+/** The statements `callDbFunction` sends for the jobs functions. */
+const READ_JOB_STATS = "SELECT * FROM public.job_stats()"
+const READ_FAILED_JOBS = "SELECT * FROM public.job_failed($1)"
+const READ_OPEN_JOBS = "SELECT * FROM public.job_open($1)"
+const REQUEUE_JOB = "SELECT * FROM public.job_reopen($1)"
+const REQUEUE_FAILED_JOBS = "SELECT * FROM public.job_requeue_failed($1)"
 
 const OUTBOX_ID = "12345678-1234-1234-1234-123456789abc"
 const STATS = {
@@ -41,16 +40,16 @@ const build = async (em: MockEntityManager, loggerOverrides?: Partial<Logger>) =
 
 describe("JobOpsService / stats", () => {
     it("reads and returns the database jsonb statistics on the primary connection", async () => {
-        const em = mockEntityManager({ query: [READ_JOB_STATS, [{ stats: STATS }]] })
+        const em = mockEntityManager({ query: [READ_JOB_STATS, [{ job_stats: STATS }]] })
         const service = await build(em)
 
         await expect(service.stats()).resolves.toBe(STATS)
-        expect(em.query).toHaveBeenCalledWith(READ_JOB_STATS)
+        expect(em.query).toHaveBeenCalledWith(READ_JOB_STATS, [])
         expect(em.query).toHaveBeenCalledTimes(1)
     })
 
     it("preserves a null statistics result", async () => {
-        const em = mockEntityManager({ query: [READ_JOB_STATS, [{ stats: null }]] })
+        const em = mockEntityManager({ query: [READ_JOB_STATS, [{ job_stats: null }]] })
         const service = await build(em)
 
         await expect(service.stats()).resolves.toBeNull()
@@ -244,7 +243,7 @@ describe("JobOpsService / requeue", () => {
     it.each([OUTBOX_ID, OUTBOX_ID.toUpperCase(), "00000000-0000-0000-0000-000000000000"])(
         "requeues canonical UUID %s without losing bigint precision",
         async (outboxId) => {
-            const em = mockEntityManager({ query: [REQUEUE_JOB, [{ message_id: "9223372036854775807" }]] })
+            const em = mockEntityManager({ query: [REQUEUE_JOB, [{ job_reopen: "9223372036854775807" }]] })
             const service = await build(em)
 
             await expect(service.requeue(outboxId)).resolves.toBe("9223372036854775807")
@@ -254,7 +253,7 @@ describe("JobOpsService / requeue", () => {
     )
 
     it("returns null when the outbox id is not a failed job", async () => {
-        const em = mockEntityManager({ query: [REQUEUE_JOB, [{ message_id: null }]] })
+        const em = mockEntityManager({ query: [REQUEUE_JOB, [{ job_reopen: null }]] })
         const service = await build(em)
 
         await expect(service.requeue(OUTBOX_ID)).resolves.toBeNull()
@@ -280,7 +279,9 @@ describe("JobOpsService / requeueFailed", () => {
     })
 
     it.each([1, 720])("binds valid hours %s to the bulk retry function", async (hours) => {
-        const em = mockEntityManager({ query: [REQUEUE_FAILED_JOBS, [{ result: { requeued: 2, failed: 3 } }]] })
+        const em = mockEntityManager({
+            query: [REQUEUE_FAILED_JOBS, [{ job_requeue_failed: { requeued: 2, failed: 3 } }]],
+        })
         const service = await build(em)
 
         await expect(service.requeueFailed(hours)).resolves.toEqual({ requeued: 2, failed: 3 })
@@ -295,7 +296,7 @@ describe("JobOpsService / requeueFailed", () => {
         { requeued: 3, failed: 3 },
     ])("returns only the bulk retry counters %j", async (result) => {
         const em = mockEntityManager({
-            query: [REQUEUE_FAILED_JOBS, [{ result: { ...result, internal: true } }]],
+            query: [REQUEUE_FAILED_JOBS, [{ job_requeue_failed: { ...result, internal: true } }]],
         })
         const service = await build(em)
 
@@ -317,19 +318,19 @@ describe("JobOpsService / requeueFailed", () => {
 
 describe("JobOpsService / watchdog", () => {
     it("returns both watchdog values from checked statistics", async () => {
-        const em = mockEntityManager({ query: [READ_JOB_STATS, [{ stats: STATS }]] })
+        const em = mockEntityManager({ query: [READ_JOB_STATS, [{ job_stats: STATS }]] })
         const logger = mock<Logger>()
         const service = await build(em, { error: logger.error })
 
         await expect(service.watchdog()).resolves.toEqual({ failed24h: 3, oldestQueuedAgeSeconds: 600 })
-        expect(em.query).toHaveBeenCalledWith(READ_JOB_STATS)
+        expect(em.query).toHaveBeenCalledWith(READ_JOB_STATS, [])
         expect(em.query).toHaveBeenCalledTimes(1)
         expect(logger.error).not.toHaveBeenCalled()
     })
 
     it("preserves zero values from checked statistics", async () => {
         const em = mockEntityManager({
-            query: [READ_JOB_STATS, [{ stats: { ...STATS, failed24h: 0, oldestQueuedAgeSeconds: 0 } }]],
+            query: [READ_JOB_STATS, [{ job_stats: { ...STATS, failed24h: 0, oldestQueuedAgeSeconds: 0 } }]],
         })
         const logger = mock<Logger>()
         const service = await build(em, { error: logger.error })
@@ -344,7 +345,7 @@ describe("JobOpsService / watchdog", () => {
         ["a null check timestamp", { ...STATS, checkedAt: null }],
         ["an empty check timestamp", { ...STATS, checkedAt: "" }],
     ])("reports unknown watchdog values for %s", async (_name, stats) => {
-        const em = mockEntityManager({ query: [READ_JOB_STATS, [{ stats }]] })
+        const em = mockEntityManager({ query: [READ_JOB_STATS, [{ job_stats: stats }]] })
         const logger = mock<Logger>()
         const service = await build(em, { error: logger.error })
 

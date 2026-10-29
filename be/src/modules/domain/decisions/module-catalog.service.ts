@@ -5,7 +5,6 @@ import type { Locale } from "@modules/platform/i18n"
 import type { ModuleCommand, OptionalActionEntry, OptionalModuleEntry } from "./decisions.contracts"
 import { toActionEntry, toModuleEntry } from "./module-catalog.mapper"
 import type { ActionRow, ModuleRow } from "./persistence/module-catalog.rows"
-import { FIND_ACTION, FIND_MODULE } from "./persistence/module-catalog.sql"
 
 @Injectable()
 /** The module registry as the database holds it: what each module accepts and which actions it owns. */
@@ -14,7 +13,16 @@ export class ModuleCatalogService {
 
     /** The module with that key, or null when the registry has none. */
     async entryOf(moduleKey: string, manager: EntityManager = this.entityManager): Promise<OptionalModuleEntry> {
-        const row = (await manager.query<Array<ModuleRow>>(FIND_MODULE, [moduleKey]))[0]
+        const row = await manager
+            .createQueryBuilder()
+            .select("m.key", "key")
+            .addSelect("m.audience", "audience")
+            .addSelect("m.multi_instance", "multi_instance")
+            .addSelect("m.definition", "definition")
+            .from("public.modules", "m")
+            .where("m.key = :moduleKey", { moduleKey })
+            .limit(1)
+            .getRawOne<ModuleRow>()
         return row === undefined ? null : toModuleEntry(row)
     }
 
@@ -31,7 +39,18 @@ export class ModuleCatalogService {
 
     /** The authority action with that key, or null when the registry has none. */
     async actionOf(action: string, manager: EntityManager = this.entityManager): Promise<OptionalActionEntry> {
-        const row = (await manager.query<Array<ActionRow>>(FIND_ACTION, [action]))[0]
+        const row = await manager
+            .createQueryBuilder()
+            .select("a.action", "action")
+            .addSelect("a.module_key", "module_key")
+            .addSelect("a.max_mode", "max_mode")
+            .addSelect("a.label", "label")
+            .addSelect("m.definition", "definition")
+            .from("public.authority_actions", "a")
+            .innerJoin("modules", "m", "m.key = a.module_key")
+            .where("a.action = :action", { action })
+            .limit(1)
+            .getRawOne<ActionRow>()
         return row === undefined ? null : toActionEntry(row)
     }
 }

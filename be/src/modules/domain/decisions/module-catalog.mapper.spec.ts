@@ -24,7 +24,7 @@ const actionRowOf = builder<ActionRow>({
     module_key: "sales",
     max_mode: null,
     label: { vi: "Phan loai", en: "Classify lead" },
-    next: ["send_follow_up"],
+    definition: { authorityActions: [{ action: "classify_lead", next: ["send_follow_up"] }] },
 })
 
 describe("toModuleEntry", () => {
@@ -126,5 +126,25 @@ describe("toActionEntry", () => {
             vi: "",
             en: "Classify",
         })
+    })
+
+    it("reads the follow-ups from the snake_case key, only for the action asked, in listed order", async () => {
+        const subject = await buildSubject()
+        const definition = {
+            authority_actions: [
+                { action: "other", next: ["x"] },
+                { action: "classify_lead", next: ["send_follow_up", "close_lead"] },
+                { action: "classify_lead" },
+            ],
+        }
+
+        expect(subject.toActionEntry(actionRowOf({ definition })).next).toEqual(["send_follow_up", "close_lead"])
+    })
+
+    it("has no follow-ups when the definition lists none", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.toActionEntry(actionRowOf({ definition: {} })).next).toEqual([])
+        expect(subject.toActionEntry(actionRowOf({ definition: { authorityActions: "none" } })).next).toEqual([])
     })
 })

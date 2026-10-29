@@ -1,22 +1,38 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { ConnectionEntity } from "@modules/domain/connections"
+import { DataRecordEntity } from "@modules/domain/data-records"
 import { LeadRecordsService } from "@modules/domain/leads"
 import type { LeadRecordRow } from "@modules/domain/leads"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { advisoryXactLock, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { eachInOrder } from "@modules/platform/primitives"
 import { customerRecordOf, indexCustomers, linkedCustomersOf, matchCustomer, planLink } from "./contract-link.policy"
-import type { CustomerIndex, CustomerRecord, LinkLead, LinkPlan, LinkStep } from "./contract-link.policy"
+import type {
+    ContractLinkRead,
+    CustomerIndex,
+    CustomerRecord,
+    CustomerRecordRead,
+    LinkLead,
+    LinkPlan,
+    LinkStep,
+} from "./contract-link.policy"
 import type { LinkedCustomers } from "./contracts.contracts"
-import type { ContractLinkRow, CustomerRecordRow } from "./persistence/contracts.rows"
-import {
-    LIST_CONTRACTS_TO_LINK,
-    LIST_CUSTOMER_RECORDS,
-    LOCK_CONTRACT_LINKING,
-    RELINK_CONTRACT_LEAD,
-} from "./persistence/contracts.sql"
+import { ContractEntity } from "./persistence/entities"
+
+/** True when a raw row holds the text fields of a contract read. */
+const isContractLinkRead = (value: unknown): value is ContractLinkRead =>
+    typeof value === "object" &&
+    value !== null &&
+    ["id", "customerName", "plan", "note"].every((field) => typeof Reflect.get(value, field) === "string")
+
+/** True when a raw row holds the text fields of a customer record read. */
+const isCustomerRecordRead = (value: unknown): value is CustomerRecordRead =>
+    typeof value === "object" &&
+    value !== null &&
+    ["externalId", "title"].every((field) => typeof Reflect.get(value, field) === "string")
 
 /** The locale of the lead a link creates: the workspace owners read it in Vietnamese. */
 const RECORD_LOCALE = "vi"
@@ -56,9 +72,9 @@ export class ContractLinkService {
      */
     linkCustomers(workspaceId: string): Promise<LinkedCustomers> {
         return this.entityManager.transaction(async (tx) => {
-            await tx.query(LOCK_CONTRACT_LINKING, [workspaceId])
-            const contracts = await tx.query<Array<ContractLinkRow>>(LIST_CONTRACTS_TO_LINK, [workspaceId])
-            const records = await tx.query<Array<CustomerRecordRow>>(LIST_CUSTOMER_RECORDS, [workspaceId])
+            await advisoryXactLock(tx, `contracts.link:${workspaceId}`)
+            const contracts = await this.contractsToLink(tx, workspaceId)
+            const records = await this.customerRecords(tx, workspaceId)
             const index = indexCustomers(records.map(customerRecordOf))
             const steps: Array<LinkStep> = []
             await eachInOrder(contracts, async (contract) => {
@@ -68,35 +84,70 @@ export class ContractLinkService {
         })
     }
 
+    private async contractsToLink(tx: EntityManager, workspaceId: string): Promise<Array<ContractLinkRead>> {
+        const rows: ReadonlyArray<unknown> = await tx
+            .createQueryBuilder(ContractEntity, "c")
+            .select("c.id", "id")
+            .addSelect("c.leadId", "leadId")
+            .addSelect("c.customerName", "customerName")
+            .addSelect("c.plan", "plan")
+            .addSelect("c.note", "note")
+            .addSelect("l.phone", "leadPhone")
+            .addSelect("l.email", "leadEmail")
+            .leftJoin("leads", "l", "l.workspace_id = c.workspace_id AND l.id = c.lead_id")
+            .where("c.workspaceId = :workspaceId", { workspaceId })
+            .orderBy("c.createdAt", "ASC")
+            .addOrderBy("c.id", "ASC")
+            .limit(2000)
+            .getRawMany()
+        return rows.filter(isContractLinkRead)
+    }
+
+    private async customerRecords(tx: EntityManager, workspaceId: string): Promise<Array<CustomerRecordRead>> {
+        const rows: ReadonlyArray<unknown> = await tx
+            .createQueryBuilder(DataRecordEntity, "r")
+            .select("r.external_id", "externalId")
+            .addSelect("r.title", "title")
+            .addSelect("r.data", "data")
+            .addSelect("s.name", "source")
+            .leftJoin(ConnectionEntity, "s", "s.workspace_id = r.workspace_id AND s.id = r.connection_id")
+            .where("r.workspace_id = :workspaceId AND r.entity = 'customer'", { workspaceId })
+            .orderBy("r.synced_at", "DESC")
+            .addOrderBy("r.id", "ASC")
+            .limit(5000)
+            .getRawMany()
+        return rows.filter(isCustomerRecordRead)
+    }
+
     private async linkContract(
         tx: EntityManager,
         workspaceId: string,
-        contract: ContractLinkRow,
+        contract: ContractLinkRead,
         index: CustomerIndex,
     ): Promise<LinkStep> {
-        const match = matchCustomer({ customerName: contract.customer_name, note: contract.note }, index)
+        const match = matchCustomer({ customerName: contract.customerName, note: contract.note }, index)
         if (match.kind === "unmatched") {
-            if (contract.lead_phone !== null || contract.lead_email !== null) return KEPT
-            const unmatched = { contractId: contract.id, customerName: contract.customer_name, reason: match.reason }
+            if (contract.leadPhone !== null || contract.leadEmail !== null) return KEPT
+            const unmatched = { contractId: contract.id, customerName: contract.customerName, reason: match.reason }
             return { kind: "unmatched", contract: unmatched }
         }
         const { customer } = match
         const found = await this.leads.matchAllByContact(workspaceId, customer, tx)
-        const own = { id: contract.lead_id ?? "", phone: contract.lead_phone, email: contract.lead_email }
-        const leads = contract.lead_id === null || found.some((lead) => lead.id === own.id) ? found : [own, ...found]
+        const own = { id: contract.leadId ?? "", phone: contract.leadPhone, email: contract.leadEmail }
+        const leads = contract.leadId === null || found.some((lead) => lead.id === own.id) ? found : [own, ...found]
         const linkLeads = await Promise.all(
             leads.map(async (lead) =>
                 linkLeadOf(lead, (await this.conversations.latestOfLead(workspaceId, lead.id, null)) !== null),
             ),
         )
-        const current = linkLeads.find((lead) => lead.id === contract.lead_id) ?? null
+        const current = linkLeads.find((lead) => lead.id === contract.leadId) ?? null
         return this.applyLink(tx, workspaceId, contract, customer, planLink(current, linkLeads, customer))
     }
 
     private async applyLink(
         tx: EntityManager,
         workspaceId: string,
-        contract: ContractLinkRow,
+        contract: ContractLinkRead,
         customer: CustomerRecord,
         plan: LinkPlan,
     ): Promise<LinkStep> {
@@ -107,13 +158,17 @@ export class ContractLinkService {
             return LINKED
         }
         const leadId = plan.kind === "move" ? plan.leadId : await this.captureCustomer(tx, workspaceId, contract, customer)
-        const moved = await tx.query<Array<{ id: string }>>(RELINK_CONTRACT_LEAD, [
-            workspaceId,
-            contract.id,
-            contract.lead_id,
-            leadId,
-        ])
-        if (moved.length === 0) return KEPT
+        const moved = await tx
+            .createQueryBuilder(ContractEntity, "c")
+            .update()
+            .set({ leadId, updatedAt: () => "now()" })
+            .where(
+                "workspace_id = :workspaceId AND id = :contractId AND lead_id IS NOT DISTINCT FROM :readLeadId::uuid AND EXISTS (SELECT 1 FROM public.leads WHERE workspace_id = :workspaceId AND id = :leadId::uuid)",
+                { workspaceId, contractId: contract.id, readLeadId: contract.leadId, leadId },
+            )
+            .returning("id")
+            .execute()
+        if (!Array.isArray(moved.raw) || moved.raw.length === 0) return KEPT
         if (plan.kind === "create") return { kind: "created" }
         await this.leads.fillContact({ ...contact, leadId }, tx)
         return LINKED
@@ -122,7 +177,7 @@ export class ContractLinkService {
     private async captureCustomer(
         tx: EntityManager,
         workspaceId: string,
-        contract: ContractLinkRow,
+        contract: ContractLinkRead,
         customer: CustomerRecord,
     ): Promise<string> {
         const lead = await this.leads.capture(

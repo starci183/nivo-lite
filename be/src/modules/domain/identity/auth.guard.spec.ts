@@ -3,9 +3,9 @@ import { Test } from "@nestjs/testing"
 import { Reflector } from "@nestjs/core"
 import { mock } from "@starci/jest-preset"
 import type { Request } from "express"
-import type { VerifySupabaseAccessToken } from "@modules/integrations/supabase"
 import { ok } from "@modules/platform/primitives"
 import { AuthGuard } from "./auth.guard"
+import type { VerifyAccessToken } from "./identity.contracts"
 import { IdentityErrorCode } from "./errors/identity.error"
 import { PublicReason } from "./identity.contracts"
 import { ACCESS_TOKEN_VERIFIER, CREDENTIAL_KEY, PUBLIC_KEY } from "./identity.decorators"
@@ -18,7 +18,7 @@ const principal = { id: "person-1", role: "authenticated" } as const
 
 const build = async (authorization?: string) => {
     const reflector = mock<Reflector>()
-    const verifier = mock<{ verify: VerifySupabaseAccessToken }>()
+    const verifier = mock<{ verify: VerifyAccessToken }>()
     const verify = verifier.verify
     const request = mock<Request>({
         headers: authorization === undefined ? {} : { authorization },
@@ -71,7 +71,7 @@ describe("AuthGuard", () => {
     it("refuses a bearer token the verifier rejects", async () => {
         const { guard, context, reflector, verify, request } = await build("Bearer access-token")
         reflector.getAllAndOverride.mockReturnValue(undefined)
-        verify.mockResolvedValue(mock<Awaited<ReturnType<VerifySupabaseAccessToken>>>({ kind: "refused" }))
+        verify.mockResolvedValue(mock<Awaited<ReturnType<VerifyAccessToken>>>({ kind: "refused" }))
 
         await expect(guard.canActivate(context)).rejects.toMatchObject({
             code: IdentityErrorCode.Unauthenticated,

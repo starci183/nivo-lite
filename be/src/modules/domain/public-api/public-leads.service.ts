@@ -11,7 +11,6 @@ import type {
     LeadListItem,
     LeadRequestBody,
     ListLeadsParams,
-    RecordedRequest,
 } from "./public-api.contracts"
 import {
     clampLimit,
@@ -21,24 +20,37 @@ import {
     leadFacts,
     normaliseContact,
 } from "./public-api.policy"
-import type { LeadsRow } from "./persistence/public-api.rows"
-import {
-    INSERT_REQUEST,
-    LIST_LEADS,
-    MATCH_LEAD_BY_EMAIL,
-    MATCH_LEAD_BY_NAME,
-    MATCH_LEAD_BY_PHONE,
-} from "./persistence/public-api.sql"
+import { PublicApiLedgerService } from "./public-api-ledger.service"
 
 /** Customers listed by default and at most. */
 const LEADS_LIMIT_DEFAULT = 50
 const LEADS_LIMIT_MAX = 200
 
-type LeadId = Pick<LeadsRow, "id">
-type LeadRow = Pick<
-    LeadsRow,
-    "id" | "contact_name" | "company" | "channel" | "need" | "stage" | "phone" | "email" | "created_at"
->
+/** The id of a customer the hand-over matched. */
+interface LeadId {
+    /** The customer id. */
+    readonly id: string
+}
+
+/** One public.leads row as the public API lists it. */
+interface LeadRow extends LeadId {
+    /** The customer's name. */
+    readonly contact_name: string
+    /** The company, empty when unknown. */
+    readonly company: string
+    /** The channel the customer came through. */
+    readonly channel: string
+    /** What the customer needs. */
+    readonly need: string
+    /** The stage of the deal. */
+    readonly stage: string
+    /** The normalised phone, or null. */
+    readonly phone: string | null
+    /** The normalised email, or null. */
+    readonly email: string | null
+    /** When the customer was created, ISO 8601 as the select formats it. */
+    readonly created_at: string
+}
 
 const toLeadItem = (row: LeadRow): LeadListItem => ({
     id: row.id,
@@ -59,17 +71,32 @@ export class PublicLeadsService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly queue: PublicApiQueue,
         private readonly keys: ApiKeysService,
+        private readonly ledger: PublicApiLedgerService,
     ) {}
 
     /** The customers of the key's workspace, newest first, optionally of one stage. */
     async listLeads(params: ListLeadsParams): Promise<Array<LeadListItem>> {
         const who = await this.keys.authenticate("leads:read", params.authorization)
         const limit = clampLimit(params.limit, LEADS_LIMIT_DEFAULT, LEADS_LIMIT_MAX)
-        const rows = await this.entityManager.query<Array<LeadRow>>(LIST_LEADS, [
-            who.workspaceId,
-            params.stage ?? null,
-            limit,
-        ])
+        const rows = await this.entityManager
+            .createQueryBuilder()
+            .select("l.id", "id")
+            .addSelect("l.contact_name", "contact_name")
+            .addSelect("l.company", "company")
+            .addSelect("l.channel", "channel")
+            .addSelect("l.need", "need")
+            .addSelect("l.stage", "stage")
+            .addSelect("l.phone", "phone")
+            .addSelect("l.email", "email")
+            .addSelect("to_char(l.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"')", "created_at")
+            .from("public.leads", "l")
+            .where("l.workspace_id = :workspaceId AND (:stage::text IS NULL OR l.stage = :stage)", {
+                workspaceId: who.workspaceId,
+                stage: params.stage ?? null,
+            })
+            .orderBy("l.created_at", "DESC")
+            .limit(limit)
+            .getRawMany<LeadRow>()
         return rows.map(toLeadItem)
     }
 
@@ -95,14 +122,18 @@ export class PublicLeadsService {
         }
         return this.entityManager.transaction(async (tx) => {
             const known = await this.matchLead(tx, who.workspaceId, contactParts(contact), lead.name, lead.channel)
-            const [request] = await tx.query<Array<RecordedRequest>>(INSERT_REQUEST, [
-                who.workspaceId,
-                who.keyId,
-                "lead",
-                dedupePrefix("lead", who.keyId),
-                lead.externalId,
-                JSON.stringify(body),
-            ])
+            const request = await this.ledger.record(
+                {
+                    workspaceId: who.workspaceId,
+                    keyId: who.keyId,
+                    kind: "lead",
+                    prefix: dedupePrefix("lead", who.keyId),
+                    suffix: lead.externalId,
+                    body,
+                    needSupplied: body.needSupplied ?? null,
+                },
+                tx,
+            )
             if (request === undefined) throw new PublicApiError({ code: PublicApiErrorCode.NotWritten })
             if (!request.inserted) return { leadId: request.lead_id ?? known ?? null, status: "unchanged" }
             await this.queue.enqueueRequest({ requestId: request.id, workspaceId: who.workspaceId }, tx)
@@ -119,15 +150,35 @@ export class PublicLeadsService {
         channel: string,
     ): Promise<string | undefined> {
         if (parts.phone !== null) {
-            const [byPhone] = await tx.query<Array<LeadId>>(MATCH_LEAD_BY_PHONE, [workspaceId, parts.phone])
+            const byPhone = await this.oldestLead(tx, workspaceId, "l.phone = :phone", { phone: parts.phone })
             if (byPhone !== undefined) return byPhone.id
         }
         if (parts.email !== null) {
-            const [byEmail] = await tx.query<Array<LeadId>>(MATCH_LEAD_BY_EMAIL, [workspaceId, parts.email])
+            const byEmail = await this.oldestLead(tx, workspaceId, "l.email = :email", { email: parts.email })
             if (byEmail !== undefined) return byEmail.id
         }
         if (parts.phone !== null || parts.email !== null) return undefined
-        const [byName] = await tx.query<Array<LeadId>>(MATCH_LEAD_BY_NAME, [workspaceId, name, channel])
+        const byName = await this.oldestLead(tx, workspaceId, "l.contact_name = :name AND l.channel = :channel", {
+            name,
+            channel,
+        })
         return byName?.id
+    }
+
+    /** The oldest customer of a workspace that satisfies one condition. */
+    private oldestLead(
+        tx: EntityManager,
+        workspaceId: string,
+        condition: string,
+        parameters: Record<string, string>,
+    ): Promise<LeadId | undefined> {
+        return tx
+            .createQueryBuilder()
+            .select("l.id", "id")
+            .from("public.leads", "l")
+            .where(`l.workspace_id = :workspaceId AND ${condition}`, { workspaceId, ...parameters })
+            .orderBy("l.created_at")
+            .limit(1)
+            .getRawOne<LeadId>()
     }
 }

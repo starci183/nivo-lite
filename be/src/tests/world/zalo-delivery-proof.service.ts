@@ -12,19 +12,26 @@ import { ZaloDeliveryQueueModule } from "../../features/jobs/zalo-delivery/trans
 import type { LiteWorld } from "./lite-world.service"
 import { QUEUE_MODULES } from "./test-capabilities.options"
 import { RECEIPT_DOMAIN_MODULES } from "./receipt-domain-proof.module"
-import type { ReceiptRow, WebhookJobRow, WebhookMessageRow } from "../fixtures/persistence/proof.rows"
-import * as statements from "../fixtures/builders/zalo-delivery.sql"
+import type { WebhookJobRow, WebhookMessageRow } from "../fixtures/persistence/proof.rows"
+import * as statements from "./zalo-delivery.sql"
+import { receiptsOf, removeReceipts } from "./receipts-database.service"
 
 /** Real database, queue, claims and receipt owners shared by the delivery proofs. */
 export const RECEIPT_DELIVERY_MODULES = [
     ...QUEUE_MODULES,
-    JobsModule.register({ isGlobal: true, connection: PRIMARY_ENTITY_MANAGER, workerId: "proof", leaseMs: 1000 }),
+    JobsModule.register({
+        isGlobal: true,
+        connection: PRIMARY_ENTITY_MANAGER,
+        workerId: "proof",
+        leaseMs: 1000,
+        scheduler: { enabled: false },
+    }),
     ...RECEIPT_DOMAIN_MODULES,
 ]
 
 /** Observes the committed receipt and its durable outbox handoff. */
 export const zaloDeliveryState = async (world: LiteWorld, deliveryId: string) => ({
-    receipts: await world.db.primary.query<Array<ReceiptRow>>(statements.RECEIPTS, [deliveryId]),
+    receipts: await receiptsOf(world.db.primary, "zalo", deliveryId),
     jobs: await world.db.primary.query<Array<WebhookJobRow>>(statements.JOBS, [deliveryId]),
     messages: await world.db.primary.query<Array<WebhookMessageRow>>(statements.MESSAGES, [deliveryId]),
 })
@@ -35,7 +42,7 @@ export const zaloPublicationBuilder = (world: LiteWorld) => {
     world.cleanup(async () => {
         await world.db.primary.query(statements.CLEAN_MESSAGES, [message.deliveryId])
         await world.db.primary.query(statements.CLEAN_JOBS, [message.deliveryId])
-        await world.db.primary.query(statements.CLEAN_RECEIPTS, [message.deliveryId])
+        await removeReceipts(world.db.primary, "zalo", message.deliveryId)
     })
     const actual = world.resolve<QueueOutbox>(QUEUE_OUTBOX)
     return {

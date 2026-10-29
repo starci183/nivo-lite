@@ -5,12 +5,16 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { MessagesScope, OfficeLineInput, OptionalAgentIdentity } from "./office-lines.contracts"
 import { InjectAgentDirectory } from "./office-lines.decorators"
 import type { AgentDirectory } from "./office-lines.port"
-import { INSERT_MESSAGE } from "./persistence/office-lines.sql"
+import { MessageEntity } from "./persistence/entities"
+import type { MessageAuthorKind } from "./persistence/entities"
 
 /** The author name of a plain NIVO Core line. */
 export const CORE_LINE_AUTHOR = "NIVO"
 /** The author name of a command mirror line; the Office keeps it a system line, never re-attributed to an agent. */
 export const COMMAND_LINE_AUTHOR = "NIVO Bus"
+
+/** The name a line speaks under when no agent speaks it: the command mirror or the core system line. */
+const systemAuthor = (line: OfficeLineInput): string => (line.command === true ? COMMAND_LINE_AUTHOR : CORE_LINE_AUTHOR)
 
 @Injectable()
 /** The Office thread: short lines linked to a work item, spoken by the department's own agent when it is installed. */
@@ -27,19 +31,17 @@ export class OfficeLinesService {
      */
     async post(ctx: MessagesScope, line: OfficeLineInput, manager: EntityManager = this.entityManager): Promise<void> {
         const agent = await this.speaker(ctx, line)
-        const [kind, name, agentId] =
-            agent === null
-                ? ["system", line.command === true ? COMMAND_LINE_AUTHOR : CORE_LINE_AUTHOR, null]
-                : ["agent", agent.name, agent.id]
-        await manager.query(INSERT_MESSAGE, [
-            ctx.workspaceId,
-            kind,
-            name,
-            agentId,
-            line.body,
-            line.lead_id,
-            line.work_item_id,
-        ])
+        const kind: MessageAuthorKind = agent === null ? "system" : "agent"
+        const name = agent === null ? systemAuthor(line) : agent.name
+        await manager.insert(MessageEntity, {
+            workspaceId: ctx.workspaceId,
+            authorKind: kind,
+            authorName: name,
+            agentId: agent === null ? null : agent.id,
+            body: line.body,
+            leadId: line.lead_id,
+            workItemId: line.work_item_id,
+        })
         await this.activity.message(
             ctx.workspaceId,
             chatActivityTarget({ room: null, conversationId: null }),

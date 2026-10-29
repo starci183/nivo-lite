@@ -4,7 +4,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./job-ops.module-definiti
 import { JobOpsConsoleService } from "./job-ops-console.service"
 import { JobOpsAlertMonitorService } from "./job-ops-alert-monitor.service"
 import { JobHistoryRetentionService } from "./job-history-retention.service"
-import { JobTickService } from "./job-tick.service"
+import { JobOpsTickService } from "./job-ops-tick.service"
 import { JobOpsService } from "./job-ops.service"
 
 @Module({})
@@ -18,12 +18,12 @@ export class JobOpsModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 JobOpsService,
-                JobTickService,
+                JobOpsTickService,
                 JobHistoryRetentionService,
                 JobOpsConsoleService,
                 ...(options.alerts === undefined ? [] : [JobOpsAlertMonitorService]),
             ],
-            exports: [JobOpsService, JobOpsConsoleService, JobTickService, JobHistoryRetentionService],
+            exports: [JobOpsService, JobOpsConsoleService, JobOpsTickService, JobHistoryRetentionService],
         }
     }
 }

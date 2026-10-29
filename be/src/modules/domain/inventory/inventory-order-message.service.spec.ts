@@ -3,11 +3,12 @@ import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { OfficeLog, ModuleTextGenerator } from "@modules/domain/module-ops"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { AuthorityEntity } from "@modules/domain/authority"
 import type { LoadedPo } from "./inventory.contracts"
 import { InventoryOrderMessageService } from "./inventory-order-message.service"
-import { SELECT_BRAND_VOICE } from "./persistence/inventory.sql"
 
 const textLike = (text: string): unknown => expect.stringContaining(text)
 
@@ -67,13 +68,16 @@ const build = async (entityManager: MockEntityManager) => {
 
 describe("InventoryOrderMessageService.compose", () => {
     it("uses the text the generator wrote, trimmed and cut, and hands it the facts of the order", async () => {
-        const em = mockEntityManager({ query: [SELECT_BRAND_VOICE, [{ brand_voice: "warm", reply_style: "short" }]] })
+        const em = mockEntityManager()
+        const [voice] = queueQueryBuilders(em, [{ getRawOne: { brand_voice: "warm", reply_style: "short" } }])
         const { service, generator } = await build(em)
         generator.generate.mockResolvedValue({ ok: true, output: `  ${"x".repeat(2000)}  ` })
 
         const message = await service.compose("ws-1", poOf(), "order")
 
         expect(message).toEqual({ text: "x".repeat(1800), generated: true })
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(AuthorityEntity, "a")
+        expect(voice?.callsOf("where")).toEqual([["a.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
         expect(generator.generate).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             purpose: "inventory_po_message",
@@ -91,12 +95,8 @@ describe("InventoryOrderMessageService.compose", () => {
     })
 
     it("falls back to the order template when the generator wrote nothing or too little", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_BRAND_VOICE, []],
-                [SELECT_BRAND_VOICE, []],
-            ],
-        })
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ getRawOne: undefined }, { getRawOne: undefined }])
         const { service, generator } = await build(em)
         generator.generate.mockResolvedValueOnce({ ok: true, output: "short" })
 
@@ -114,7 +114,8 @@ describe("InventoryOrderMessageService.compose", () => {
     })
 
     it("writes a reminder for what is still missing, without the total or a due day when there is none", async () => {
-        const em = mockEntityManager({ query: [SELECT_BRAND_VOICE, []] })
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ getRawOne: undefined }])
         const { service, generator } = await build(em)
 
         const message = await service.compose("ws-1", poOf({ expectedAt: null }), "reminder")
@@ -139,7 +140,8 @@ describe("InventoryOrderMessageService.compose", () => {
 
 describe("InventoryOrderMessageService.compose", () => {
     it("writes a reminder with the due day", async () => {
-        const em = mockEntityManager({ query: [SELECT_BRAND_VOICE, []] })
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ getRawOne: undefined }])
         const { service } = await build(em)
 
         const message = await service.compose("ws-1", poOf(), "reminder")
@@ -148,12 +150,8 @@ describe("InventoryOrderMessageService.compose", () => {
     })
 
     it("uses the supplier name or a polite fallback and defaults to email", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_BRAND_VOICE, []],
-                [SELECT_BRAND_VOICE, []],
-            ],
-        })
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ getRawOne: undefined }, { getRawOne: undefined }])
         const { service, generator } = await build(em)
 
         const byName = await service.compose(

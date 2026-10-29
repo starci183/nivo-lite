@@ -1,14 +1,19 @@
 import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import { BusinessEventsService } from "@modules/domain/automations"
 import { ContractsService } from "@modules/domain/contracts"
 import { EvidenceService } from "@modules/domain/decisions"
 import type { Performed, Prepared, Proposal, WorkContext, WorkItem, WorkPerformer } from "@modules/domain/decisions"
 import { AgentsService } from "@modules/domain/agents"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { LeadRecordsService, contactParts } from "@modules/domain/leads"
+import type { LeadRecordRow } from "@modules/domain/leads"
 import { PublicLeadCompletionService } from "@modules/domain/public-api"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
+import { LeadCapturedEvent } from "@modules/events/api"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectEventBus } from "@modules/platform/event-bus"
+import type { EventBus } from "@modules/platform/event-bus"
 import { PerformerKitService } from "./performer-kit.service"
 import { leadHref, textOf } from "./performer.policy"
 
@@ -23,9 +28,10 @@ export class HandoffLeadPerformerService implements WorkPerformer {
         private readonly inbound: InboundEventsService,
         private readonly responsibilities: ResponsibilityJournalService,
         private readonly evidence: EvidenceService,
-        private readonly events: BusinessEventsService,
         private readonly apiCompletion: PublicLeadCompletionService,
         private readonly contracts: ContractsService,
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectEventBus() private readonly bus: EventBus,
     ) {}
 
     /** The summary the owner reads for the handoff. */
@@ -57,7 +63,7 @@ export class HandoffLeadPerformerService implements WorkPerformer {
                 : await this.leads.require(ctx.workspaceId, item.lead_id)
         const lead =
             known ??
-            (await this.leads.capture({
+            (await this.captureLead(ctx, item, channel, textOf(fields.transcript), {
                 workspaceId: ctx.workspaceId,
                 contactName: textOf(fields.contact_name),
                 company: textOf(fields.company) === "" ? this.kit.text(ctx, "notShared") : textOf(fields.company),
@@ -66,10 +72,7 @@ export class HandoffLeadPerformerService implements WorkPerformer {
                 phone,
                 email,
             }))
-        if (known === null) {
-            await this.logCapture(ctx, item, lead.id, channel, textOf(fields.transcript))
-            await this.events.leadCreated(ctx.workspaceId, lead)
-        } else if ((phone !== null && known.phone === null) || (email !== null && known.email === null)) {
+        if (known !== null && ((phone !== null && known.phone === null) || (email !== null && known.email === null))) {
             await this.leads.fillContact({ workspaceId: ctx.workspaceId, leadId: lead.id, phone, email })
         }
         if (item.inbound_event_id !== null)
@@ -90,21 +93,45 @@ export class HandoffLeadPerformerService implements WorkPerformer {
         }
     }
 
-    private async logCapture(
+    /** Captures the customer, leaves the capture evidence and publishes `lead_captured`, all in one transaction. */
+    private async captureLead(
         ctx: WorkContext,
         item: WorkItem,
-        leadId: string,
         channel: string,
         transcript: string,
-    ): Promise<void> {
+        input: Parameters<LeadRecordsService["capture"]>[0],
+    ): Promise<LeadRecordRow> {
         const bot = await this.agents.agentOfDepartment(ctx.workspaceId, "chatbot", null)
-        await this.evidence.log(ctx, {
-            lead_id: leadId,
-            work_item_id: item.id,
-            kind: "lead.captured",
-            actor: bot?.name ?? (await this.kit.department(ctx, "chatbot")),
-            summary: this.kit.text(ctx, "capturedFrom", { channel }),
-            evidence: transcript === "" ? null : transcript,
+        const actor = bot?.name ?? (await this.kit.department(ctx, "chatbot"))
+        return this.entityManager.transaction(async (tx) => {
+            const lead = await this.leads.capture(input, tx)
+            await this.evidence.log(
+                ctx,
+                {
+                    lead_id: lead.id,
+                    work_item_id: item.id,
+                    kind: "lead.captured",
+                    actor,
+                    summary: this.kit.text(ctx, "capturedFrom", { channel }),
+                    evidence: transcript === "" ? null : transcript,
+                },
+                tx,
+            )
+            await this.bus.publish(
+                LeadCapturedEvent.create({
+                    workspaceId: ctx.workspaceId,
+                    leadId: lead.id,
+                    contactName: lead.contact_name,
+                    company: lead.company,
+                    channel: lead.channel,
+                    need: lead.need,
+                    phone: lead.phone,
+                    email: lead.email,
+                }),
+                tx,
+                `lead_captured:${lead.id}`,
+            )
+            return lead
         })
     }
 }

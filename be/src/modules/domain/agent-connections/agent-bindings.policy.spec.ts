@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
-import type { BoundAgent } from "./agent-connections.contracts"
+import type { BoundAgent, BoundAgentFacts, BoundConnectionFacts } from "./agent-connections.contracts"
 import {
     boundAgentsOf as boundAgentsOfImplementation,
     boundConnectionsOf as boundConnectionsOfImplementation,
@@ -10,7 +10,6 @@ import {
     purposesOf as purposesOfImplementation,
     splitRoute as splitRouteImplementation,
 } from "./agent-bindings.policy"
-import type { BoundAgentRow, BoundConnectionRow } from "./persistence/agent-connections.rows"
 
 const SUBJECT = Symbol("subject")
 type Subject = {
@@ -43,7 +42,7 @@ const buildSubject = async () => {
     return moduleRef.get<Subject>(SUBJECT)
 }
 
-const agentRow = builder<BoundAgentRow>({
+const agentRow = builder<BoundAgentFacts>({
     id: "a1",
     module: "chatbot",
     name: "Bot",
@@ -52,7 +51,7 @@ const agentRow = builder<BoundAgentRow>({
     purpose: "inbound_chat",
 })
 
-const connectionRow = builder<BoundConnectionRow>({
+const connectionRow = builder<BoundConnectionFacts>({
     id: "c1",
     provider: "telegram",
     name: "Shop bot",

@@ -26,10 +26,10 @@ import type {
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
 import { clampPageSize, splitPage } from "./paging.policy"
-import { LIST_DECISION_HISTORY } from "./persistence/decision-history.sql"
-import type { AccountingWaitingWorkRow, WorkItemViewRow } from "./persistence/work-item-views.rows"
+import { DecisionHistoryService } from "./decision-history.service"
+import type { AccountingWaitingWorkRow, WorkItemViewRow } from "./work-item-views.rows"
 import { ruleSummary } from "./rule-save.policy"
-import { FIND_WORK_ITEM_VIEW, LIST_ACCOUNTING_WAITING_WORK, LIST_WORK_ITEMS } from "./persistence/work-item-views.sql"
+import { WorkItemViewsService } from "./work-item-views.service"
 
 /** A proposal field when it is text. */
 const textField = (item: WorkItem, key: string): string | null => {
@@ -67,6 +67,8 @@ export class DecisionsService {
         private readonly evidence: EvidenceService,
         private readonly invoices: InvoicesService,
         private readonly transactions: TransactionsService,
+        private readonly views: WorkItemViewsService,
+        private readonly history: DecisionHistoryService,
     ) {}
 
     /** Waiting accounting work and the related names; any workspace member may read. */
@@ -76,10 +78,7 @@ export class DecisionsService {
         limit: number = 500,
     ): Promise<Array<AccountingWaitingWorkRow>> {
         await this.members.require(principalId, workspaceId)
-        const rows = await this.entityManager.query<Array<AccountingWaitingWorkRow>>(LIST_ACCOUNTING_WAITING_WORK, [
-            workspaceId,
-            limit,
-        ])
+        const rows = await this.views.accountingWaiting(workspaceId, limit)
         return rows.map((row) => ({ ...row, proposal: toProposal(row.proposal) }))
     }
 
@@ -87,14 +86,12 @@ export class DecisionsService {
     async listWorkItems(principalId: string, workspaceId: string, query: ListWorkItemsQuery): Promise<WorkItemPage> {
         await this.members.require(principalId, workspaceId)
         const size = clampPageSize(query.limit)
-        const fetched = await this.entityManager.query<Array<WorkItemViewRow>>(LIST_WORK_ITEMS, [
-            workspaceId,
-            query.statuses,
-            query.after?.createdAt ?? null,
-            query.after?.id ?? null,
-            size + 1,
-            query.action ?? null,
-        ])
+        const fetched = await this.views.list(workspaceId, {
+            statuses: query.statuses,
+            after: query.after ?? null,
+            action: query.action ?? null,
+            limit: size + 1,
+        })
         const page = splitPage(fetched, size)
         return { items: page.rows.map(withoutCursor), next: page.next }
     }
@@ -102,9 +99,7 @@ export class DecisionsService {
     /** One work item of the workspace; any member may read. */
     async getWorkItem(principalId: string, workspaceId: string, workItemId: string): Promise<WorkItem> {
         await this.members.require(principalId, workspaceId)
-        const row = (
-            await this.entityManager.query<Array<WorkItemViewRow>>(FIND_WORK_ITEM_VIEW, [workspaceId, workItemId])
-        )[0]
+        const row = await this.views.find(workspaceId, workItemId)
         if (row === undefined) throw new DecisionsError({ code: DecisionsErrorCode.NotFound })
         return withoutCursor(row)
     }
@@ -116,13 +111,12 @@ export class DecisionsService {
         query: DecisionHistoryQuery,
     ): Promise<ReadonlyArray<DecisionRecord>> {
         await this.members.require(principalId, workspaceId)
-        return this.entityManager.query<Array<DecisionRecord>>(LIST_DECISION_HISTORY, [
-            workspaceId,
-            decidersOf(query.kind),
-            query.kind === "rejected" ? "rejected" : null,
-            query.department,
-            clampPageSize(query.limit),
-        ])
+        return this.history.list(workspaceId, {
+            deciders: decidersOf(query.kind),
+            outcome: query.kind === "rejected" ? "rejected" : null,
+            department: query.department,
+            limit: clampPageSize(query.limit),
+        })
     }
 
     /** The goals, house rules and every rule of the workspace; owner and manager only. */

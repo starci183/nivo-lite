@@ -1,3 +1,4 @@
+export { BrainFactEntity, brainFactsEntities } from "./persistence/entities"
 export { BRAIN_FACTS_ERROR_KINDS } from "./errors/brain-facts.error"
 export { BrainFactsModule } from "./brain-facts.module"
 export { BrainFactsService } from "./brain-facts.service"

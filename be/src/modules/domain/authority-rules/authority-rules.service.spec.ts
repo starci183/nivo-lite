@@ -1,71 +1,26 @@
-import { builder, mockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AuthorityRulesService } from "./authority-rules.service"
-import type { RuleChange } from "./authority-rules.contracts"
-import { AuthorityRulesErrorCode } from "./errors/authority-rules.error"
-import type { ApprovalSetupRow, OperatingModeRow, RuleRecordRow, RuleRow } from "./persistence/authority-rules.rows"
 import {
-    FIND_APPROVAL_SETUP,
-    FIND_OPERATING_MODE,
-    FIND_RULE,
-    LIST_RULES,
-    DISABLE_AGENT_RULES,
-    SEED_DEFAULT_RULES,
-    UPSERT_RULE,
-} from "./persistence/authority-rules.sql"
+    askRuleEntity,
+    askRuleForAgentOne,
+    askRuleForAgentsOneAndTwo,
+    autoRuleForAgentOne,
+    changeOf,
+    discountApprovalRuleEntity,
+    entityOf,
+    recordOf,
+    ruleOf,
+    unlimitedAutoRuleEntity,
+} from "@tests/fixtures/builders/authority-rules.builder"
+import { AuthorityRulesErrorCode } from "./errors/authority-rules.error"
+import { AuthorityRuleEntity } from "./persistence/entities"
 
 const scope = { workspaceId: "ws-1" }
-
-const ruleRowOf = builder<RuleRow>({
-    id: "rule-1",
-    department: "sales",
-    action: "send_follow_up",
-    mode: "auto",
-    limit_vnd: 20_000_000,
-    required_fields: ["contact"],
-    unit: "vnd",
-    auto_max: null,
-    ask_max: null,
-    agents: [],
-})
-
-const recordOf = builder<RuleRecordRow>({
-    ...ruleRowOf(),
-    workspace_id: "ws-1",
-    note: "",
-    updated_at: "2026-10-12T10:00:00.000Z",
-    approver_roles: ["owner", "manager"],
-    approver_rooms: [],
-    approver_members: [],
-    approval_policy: "any",
-    timeout_minutes: 30,
-})
-
-const setupRowOf = builder<ApprovalSetupRow>({
-    department: "sales",
-    action: "give_discount",
-    mode: "auto",
-    unit: "percent",
-    auto_max: 3,
-    ask_max: 15,
-    approver_roles: ["manager"],
-    approver_rooms: ["sales"],
-    approver_members: ["member-9"],
-    approval_policy: "sequential",
-    timeout_minutes: 45,
-    agents: ["agent-1"],
-})
-
-const changeOf = builder<RuleChange>({
-    action: "send_follow_up",
-    department: "sales",
-    mode: "ask",
-    limit_vnd: 1000,
-    required_fields: ["contact"],
-    note: null,
-})
 
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
@@ -74,86 +29,108 @@ const build = async (entityManager: MockEntityManager) => {
     return moduleRef.get(AuthorityRulesService)
 }
 
+/** The SQL expression the upsert stamps the save moment with. */
+const NOW_EXPRESSION: unknown = expect.any(Function)
+
+/** The answer of the registry check: the action exists, or it does not. */
+const registered = (found: boolean): QueryBuilderAnswers => ({
+    getOne: found ? { action: "send_follow_up" } : null,
+})
+
+/** The answer of an upsert that stored these rows. */
+const upserted = (...rows: Array<AuthorityRuleEntity>): QueryBuilderAnswers => ({ execute: { raw: rows } })
+
+/** A manager inside a transaction whose query builders answer `answers` in order. */
+const saving = (...answers: Array<QueryBuilderAnswers>) => {
+    const em = mockEntityManager()
+    fakeTransaction(em)
+    return { em, fakes: queueQueryBuilders(em, answers) }
+}
+
 describe("AuthorityRulesService > ruleFor", () => {
     it("answers null when the owner granted no rule", async () => {
-        const service = await build(mockEntityManager({ query: [FIND_RULE, []] }))
+        const service = await build(mockEntityManager({ findOne: [AuthorityRuleEntity, null] }))
 
         await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toBeNull()
     })
 
     it("answers an ask rule without reading the operating mode", async () => {
-        const em = mockEntityManager({ query: [FIND_RULE, [ruleRowOf({ mode: "ask" })]] })
+        const em = mockEntityManager({ findOne: [AuthorityRuleEntity, askRuleEntity()] })
         const service = await build(em)
 
-        await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toEqual(ruleRowOf({ mode: "ask" }))
-        expect(em.query).toHaveBeenCalledTimes(1)
-        expect(em.query).toHaveBeenCalledWith(FIND_RULE, ["ws-1", "send_follow_up"])
+        await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toEqual(ruleOf({ mode: "ask" }))
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+        expect(em.findOne).toHaveBeenCalledWith(AuthorityRuleEntity, {
+            where: { workspaceId: "ws-1", action: "send_follow_up" },
+        })
     })
 
     it("downgrades an auto rule while the instance assists", async () => {
-        const assist = builder<OperatingModeRow>({ operating_mode: "assist" })
-        const em = mockEntityManager({
-            query: [
-                [FIND_RULE, [ruleRowOf()]],
-                [FIND_OPERATING_MODE, [assist()]],
-            ],
-        })
+        const em = mockEntityManager({ findOne: [AuthorityRuleEntity, entityOf()] })
+        const [fake] = queueQueryBuilders(em, [{ getRawOne: { operatingMode: "assist" } }])
         const service = await build(em)
 
-        await expect(service.ruleFor(scope, "send_follow_up", "inst-1")).resolves.toEqual(ruleRowOf({ mode: "ask" }))
-        expect(em.query).toHaveBeenCalledWith(FIND_OPERATING_MODE, ["ws-1", "sales", "inst-1"])
+        await expect(service.ruleFor(scope, "send_follow_up", "inst-1")).resolves.toEqual(ruleOf({ mode: "ask" }))
+        expect(fake?.callsOf("where")).toEqual([
+            [
+                "i.workspace_id = :workspaceId AND i.module_key = :department",
+                { workspaceId: "ws-1", department: "sales" },
+            ],
+        ])
+        expect(fake?.callsOf("andWhere")).toEqual([["i.id = :installationId", { installationId: "inst-1" }]])
     })
 
-    it("keeps an auto rule on autopilot", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_RULE, [ruleRowOf()]],
-                [FIND_OPERATING_MODE, [{ operating_mode: "autopilot" }]],
-            ],
-        })
+    it("keeps an auto rule on autopilot and reads the oldest installation when no instance is named", async () => {
+        const em = mockEntityManager({ findOne: [AuthorityRuleEntity, entityOf()] })
+        const [fake] = queueQueryBuilders(em, [{ getRawOne: { operatingMode: "autopilot" } }])
         const service = await build(em)
 
-        await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toEqual(ruleRowOf())
+        await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toEqual(ruleOf())
+        expect(fake?.callsOf("andWhere")).toEqual([])
+        expect(fake?.callsOf("orderBy")).toEqual([["i.created_at", "ASC"]])
+        expect(fake?.callsOf("addOrderBy")).toEqual([["i.id", "ASC"]])
     })
 
     it("answers a rule that lists agents to one of them", async () => {
-        const rule = ruleRowOf({ mode: "ask", agents: ["agent-1", "agent-2"] })
-        const service = await build(mockEntityManager({ query: [FIND_RULE, [rule]] }))
+        const rule = askRuleForAgentsOneAndTwo()
+        const service = await build(mockEntityManager({ findOne: [AuthorityRuleEntity, rule] }))
 
-        await expect(service.ruleFor(scope, "send_follow_up", null, "agent-2")).resolves.toEqual(rule)
+        await expect(service.ruleFor(scope, "send_follow_up", null, "agent-2")).resolves.toEqual(
+            ruleOf({ mode: "ask", agents: ["agent-1", "agent-2"] }),
+        )
     })
 
     it("answers null to an agent the rule does not list, as if the owner granted none", async () => {
-        const em = mockEntityManager({ query: [FIND_RULE, [ruleRowOf({ agents: ["agent-1"] })]] })
+        const em = mockEntityManager({ findOne: [AuthorityRuleEntity, autoRuleForAgentOne()] })
         const service = await build(em)
 
         await expect(service.ruleFor(scope, "send_follow_up", null, "agent-9")).resolves.toBeNull()
-        expect(em.query).toHaveBeenCalledTimes(1)
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("answers a rule that lists agents to a caller that names none", async () => {
-        const rule = ruleRowOf({ mode: "ask", agents: ["agent-1"] })
-        const service = await build(mockEntityManager({ query: [FIND_RULE, [rule]] }))
+        const rule = askRuleForAgentOne()
+        const service = await build(mockEntityManager({ findOne: [AuthorityRuleEntity, rule] }))
 
-        await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toEqual(rule)
+        await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toEqual(
+            ruleOf({ mode: "ask", agents: ["agent-1"] }),
+        )
     })
 
     it("keeps an auto rule when the module has no installation", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_RULE, [ruleRowOf()]],
-                [FIND_OPERATING_MODE, []],
-            ],
-        })
+        const em = mockEntityManager({ findOne: [AuthorityRuleEntity, entityOf()] })
+        queueQueryBuilders(em, [{ getRawOne: undefined }])
         const service = await build(em)
 
-        await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toEqual(ruleRowOf())
+        await expect(service.ruleFor(scope, "send_follow_up", null)).resolves.toEqual(ruleOf())
     })
 })
 
 describe("AuthorityRulesService > approvalSetup", () => {
     it("answers the approval side of the rule with the group gathered", async () => {
-        const em = mockEntityManager({ query: [FIND_APPROVAL_SETUP, [setupRowOf()]] })
+        const em = mockEntityManager({
+            findOne: [AuthorityRuleEntity, discountApprovalRuleEntity()],
+        })
         const service = await build(em)
 
         await expect(service.approvalSetup("ws-1", "give_discount")).resolves.toEqual({
@@ -168,11 +145,13 @@ describe("AuthorityRulesService > approvalSetup", () => {
             timeout_minutes: 45,
             agents: ["agent-1"],
         })
-        expect(em.query).toHaveBeenCalledWith(FIND_APPROVAL_SETUP, ["ws-1", "give_discount"])
+        expect(em.findOne).toHaveBeenCalledWith(AuthorityRuleEntity, {
+            where: { workspaceId: "ws-1", action: "give_discount" },
+        })
     })
 
     it("answers null when the owner granted no rule", async () => {
-        const service = await build(mockEntityManager({ query: [FIND_APPROVAL_SETUP, []] }))
+        const service = await build(mockEntityManager({ findOne: [AuthorityRuleEntity, null] }))
 
         await expect(service.approvalSetup("ws-1", "give_discount")).resolves.toBeNull()
     })
@@ -180,40 +159,62 @@ describe("AuthorityRulesService > approvalSetup", () => {
 
 describe("AuthorityRulesService > list", () => {
     it("lists the stored rules", async () => {
-        const em = mockEntityManager({ query: [LIST_RULES, [recordOf()]] })
+        const em = mockEntityManager({ find: [AuthorityRuleEntity, [entityOf()]] })
         const service = await build(em)
 
         await expect(service.list("ws-1")).resolves.toEqual([recordOf()])
-        expect(em.query).toHaveBeenCalledWith(LIST_RULES, ["ws-1"])
+        expect(em.find).toHaveBeenCalledWith(AuthorityRuleEntity, {
+            where: { workspaceId: "ws-1" },
+            order: { department: "ASC", action: "ASC" },
+            take: 500,
+        })
     })
 })
 
 describe("AuthorityRulesService > save", () => {
     it("saves the rule", async () => {
-        const em = mockEntityManager({ query: [UPSERT_RULE, [recordOf({ mode: "ask" })]] })
+        const { em, fakes } = saving(registered(true), upserted(askRuleEntity()))
         const service = await build(em)
 
         await expect(service.save("ws-1", changeOf())).resolves.toEqual(recordOf({ mode: "ask" }))
-        expect(em.query).toHaveBeenCalledWith(UPSERT_RULE, [
-            "ws-1",
-            "send_follow_up",
-            "ask",
-            1000,
-            ["contact"],
-            "sales",
-            null,
-            "{}",
+        expect(fakes[0]?.callsOf("where")).toEqual([
+            ["a.action = :action AND a.moduleKey = :department", { action: "send_follow_up", department: "sales" }],
+        ])
+        expect(fakes[0]?.callsOf("setLock")).toEqual([["pessimistic_read"]])
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(AuthorityRuleEntity, "ar")
+        expect(fakes[1]?.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "ws-1",
+                    department: "sales",
+                    action: "send_follow_up",
+                    mode: "ask",
+                    limitVnd: 1000,
+                    requiredFields: ["contact"],
+                    note: "",
+                    updatedAt: NOW_EXPRESSION,
+                },
+            ],
+        ])
+        expect(fakes[1]?.callsOf("orUpdate")).toEqual([
+            [
+                ["mode", "limit_vnd", "required_fields", "updated_at"],
+                ["workspace_id", "department", "action"],
+            ],
         ])
     })
+})
 
+describe("AuthorityRulesService > save, approval settings", () => {
     it("saves the bands and approval settings as a patch of the keys the change names, and follows the bands", async () => {
-        const em = mockEntityManager({ query: [UPSERT_RULE, [recordOf({ mode: "auto", limit_vnd: null })]] })
+        const { em, fakes } = saving(registered(true), upserted(unlimitedAutoRuleEntity()))
         const service = await build(em)
 
         await service.save(
             "ws-1",
             changeOf({
                 mode: "ask",
+                note: "Be careful",
                 unit: "percent",
                 auto_max: 3,
                 ask_max: 15,
@@ -226,28 +227,54 @@ describe("AuthorityRulesService > save", () => {
             }),
         )
 
-        expect(em.query).toHaveBeenCalledWith(UPSERT_RULE, [
-            "ws-1",
-            "send_follow_up",
-            "auto",
-            null,
-            ["contact"],
-            "sales",
-            null,
-            JSON.stringify({
-                unit: "percent",
-                auto_max: 3,
-                ask_max: 15,
-                approver_roles: ["manager"],
-                approver_rooms: ["sales"],
-                approver_members: ["11111111-1111-4111-8111-111111111111"],
-                approval_policy: "sequential",
-                timeout_minutes: 45,
-                agents: ["22222222-2222-4222-8222-222222222222"],
-            }),
+        expect(fakes[1]?.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "ws-1",
+                    department: "sales",
+                    action: "send_follow_up",
+                    mode: "auto",
+                    limitVnd: null,
+                    requiredFields: ["contact"],
+                    note: "Be careful",
+                    updatedAt: NOW_EXPRESSION,
+                    unit: "percent",
+                    autoMax: 3,
+                    askMax: 15,
+                    approverRoles: ["manager"],
+                    approverRooms: ["sales"],
+                    approverMembers: ["11111111-1111-4111-8111-111111111111"],
+                    approvalPolicy: "sequential",
+                    timeoutMinutes: 45,
+                    agents: ["22222222-2222-4222-8222-222222222222"],
+                },
+            ],
+        ])
+        expect(fakes[1]?.callsOf("orUpdate")).toEqual([
+            [
+                [
+                    "mode",
+                    "limit_vnd",
+                    "required_fields",
+                    "updated_at",
+                    "note",
+                    "unit",
+                    "auto_max",
+                    "ask_max",
+                    "approver_roles",
+                    "approver_rooms",
+                    "approver_members",
+                    "approval_policy",
+                    "timeout_minutes",
+                    "agents",
+                ],
+                ["workspace_id", "department", "action"],
+            ],
         ])
     })
+})
 
+describe("AuthorityRulesService > save, refusals", () => {
     it("refuses settings that cannot hold before touching the table", async () => {
         const em = mockEntityManager()
         const service = await build(em)
@@ -255,11 +282,23 @@ describe("AuthorityRulesService > save", () => {
         await expect(service.save("ws-1", changeOf({ auto_max: 20, ask_max: 10 }))).rejects.toMatchObject({
             code: AuthorityRulesErrorCode.InvalidBands,
         })
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("refuses an action the registry does not know", async () => {
-        const service = await build(mockEntityManager({ query: [UPSERT_RULE, []] }))
+        const { em, fakes } = saving(registered(false))
+        const service = await build(em)
+
+        await expect(service.save("ws-1", changeOf())).rejects.toMatchObject({
+            code: AuthorityRulesErrorCode.UnknownAction,
+            params: { action: "send_follow_up" },
+        })
+        expect(fakes[0]?.callsOf("insert")).toEqual([])
+    })
+
+    it("refuses an action when the upsert stores no row", async () => {
+        const { em } = saving(registered(true), upserted())
+        const service = await build(em)
 
         await expect(service.save("ws-1", changeOf())).rejects.toMatchObject({
             code: AuthorityRulesErrorCode.UnknownAction,
@@ -269,31 +308,65 @@ describe("AuthorityRulesService > save", () => {
 })
 
 describe("AuthorityRulesService > seedDefaults", () => {
-    it("passes the module defaults to the database as JSON without changing their fields", async () => {
+    it("inserts the module defaults without changing their fields and keeps the rules the owner set", async () => {
         const rules = [
             { action: "send_follow_up", mode: "ask" as const, limit_vnd: 1000, required_fields: ["contact"] },
             { action: "reply", mode: "auto" as const, limit_vnd: null, required_fields: [] },
         ]
-        const em = mockEntityManager({ query: [SEED_DEFAULT_RULES, []] })
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [{ execute: { raw: [] } }])
         const service = await build(em)
 
         await expect(service.seedDefaults("ws-1", "sales", rules)).resolves.toBeUndefined()
-        expect(em.query).toHaveBeenCalledTimes(1)
-        expect(em.query).toHaveBeenCalledWith(SEED_DEFAULT_RULES, [
-            "ws-1",
-            "sales",
-            '[{"action":"send_follow_up","mode":"ask","limit_vnd":1000,"required_fields":' +
-                '["contact"]},{"action":"reply","mode":"auto","limit_vnd":null,"required_fields":[]}]',
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(AuthorityRuleEntity, "ar")
+        expect(fake?.callsOf("values")).toEqual([
+            [
+                [
+                    {
+                        workspaceId: "ws-1",
+                        department: "sales",
+                        action: "send_follow_up",
+                        mode: "ask",
+                        limitVnd: 1000,
+                        requiredFields: ["contact"],
+                    },
+                    {
+                        workspaceId: "ws-1",
+                        department: "sales",
+                        action: "reply",
+                        mode: "auto",
+                        limitVnd: null,
+                        requiredFields: [],
+                    },
+                ],
+            ],
         ])
+        expect(fake?.callsOf("orIgnore")).toEqual([[]])
+    })
+
+    it("writes nothing when the module has no defaults", async () => {
+        const em = mockEntityManager()
+        const service = await build(em)
+
+        await expect(service.seedDefaults("ws-1", "sales", [])).resolves.toBeUndefined()
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 })
 
 describe("AuthorityRulesService > disableForAgent", () => {
     it("switches off the grants of a removed agent through the manager it is given", async () => {
-        const em = mockEntityManager({ query: [DISABLE_AGENT_RULES, []] })
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [{ execute: { raw: [] } }])
         const service = await build(mockEntityManager())
 
         await expect(service.disableForAgent("ws-1", "agent-1", em)).resolves.toBeUndefined()
-        expect(em.query).toHaveBeenCalledWith(DISABLE_AGENT_RULES, ["ws-1", "agent-1"])
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(AuthorityRuleEntity, "ar")
+        expect(fake?.callsOf("where")).toEqual([
+            [
+                "workspace_id = :workspaceId AND :agentId::uuid = ANY(agents)",
+                { workspaceId: "ws-1", agentId: "agent-1" },
+            ],
+        ])
     })
 })

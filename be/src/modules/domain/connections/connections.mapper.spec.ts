@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { toConnectionRecord as realToConnectionRecord } from "./connections.mapper"
 import { ConnectionsErrorCode } from "./errors/connections.error"
-import type { ConnectionSelectRow } from "./persistence/connections.rows"
+import type { ConnectionProjection } from "./persistence/connection-projection"
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 
@@ -25,20 +25,20 @@ const buildSubject = async () => {
     return { subject }
 }
 
-const row: ConnectionSelectRow = {
+const row: ConnectionProjection = {
     id: "c1",
-    workspace_id: "w1",
+    workspaceId: "w1",
     provider: "sepay",
     name: "Bank",
-    public_meta: { bank_code: "VCB" },
+    publicMeta: { bank_code: "VCB" },
     status: "connected",
-    last_error: null,
+    lastError: null,
     environment: "test",
-    is_default: true,
-    last_event_at: "2026-10-12T01:00:00Z",
-    first_event: { amount: 5, content: "hi", at: "2026-10-12T01:00:00Z" },
-    created_by: "u1",
-    created_at: "2026-10-01T00:00:00Z",
+    isDefault: true,
+    lastEventAt: "2026-10-12T01:00:00Z",
+    firstEvent: { amount: 5, content: "hi", at: "2026-10-12T01:00:00Z" },
+    createdBy: "u1",
+    createdAt: "2026-10-01T00:00:00Z",
 }
 
 describe("toConnectionRecord", () => {
@@ -65,10 +65,10 @@ describe("toConnectionRecord", () => {
     it("falls back to empty meta, live and not default for odd stored values", async () => {
         const { subject } = await buildSubject()
 
-        const odd: ConnectionSelectRow = { ...row, public_meta: [], environment: null, is_default: null }
+        const odd: ConnectionProjection = { ...row, publicMeta: [], environment: null, isDefault: null }
 
         expect(subject.toConnectionRecord(odd)).toMatchObject({ meta: {}, environment: "live", isDefault: false })
-        expect(subject.toConnectionRecord({ ...odd, public_meta: null })).toMatchObject({ meta: {} })
+        expect(subject.toConnectionRecord({ ...odd, publicMeta: null })).toMatchObject({ meta: {} })
     })
 
     it.each([
@@ -90,8 +90,8 @@ describe("toConnectionRecord public facts", () => {
         const firstEvent = { amount: 0, content: "", at: "2026-10-12T01:00:00Z", text: "Hello" }
         const mapped = subject.toConnectionRecord({
             ...row,
-            public_meta: { bank_code: "VCB", count: 3, enabled: true, absent: null },
-            first_event: firstEvent,
+            publicMeta: { bank_code: "VCB", count: 3, enabled: true, absent: null },
+            firstEvent: firstEvent,
         })
 
         expect(mapped.meta).toEqual({ bank_code: "VCB" })
@@ -103,7 +103,7 @@ describe("toConnectionRecord public facts", () => {
 
         const mapped = subject.toConnectionRecord({
             ...row,
-            public_meta: { owner_chat_id: 123456789, count: 3, bad: Number.NaN },
+            publicMeta: { owner_chat_id: 123456789, count: 3, bad: Number.NaN },
         })
 
         expect(mapped.meta).toEqual({ owner_chat_id: "123456789" })
@@ -114,14 +114,14 @@ describe("toConnectionRecord public facts", () => {
         async (ownerChatId) => {
             const { subject } = await buildSubject()
 
-            expect(subject.toConnectionRecord({ ...row, public_meta: { owner_chat_id: ownerChatId } }).meta).toEqual({})
+            expect(subject.toConnectionRecord({ ...row, publicMeta: { owner_chat_id: ownerChatId } }).meta).toEqual({})
         },
     )
 
     it("keeps an owner chat id that is already text", async () => {
         const { subject } = await buildSubject()
 
-        expect(subject.toConnectionRecord({ ...row, public_meta: { owner_chat_id: "123456789" } }).meta).toEqual({
+        expect(subject.toConnectionRecord({ ...row, publicMeta: { owner_chat_id: "123456789" } }).meta).toEqual({
             owner_chat_id: "123456789",
         })
     })
@@ -139,7 +139,7 @@ describe("toConnectionRecord", () => {
     ])("omits an invalid stored first event: %p", async (firstEvent) => {
         const { subject } = await buildSubject()
 
-        expect(subject.toConnectionRecord({ ...row, first_event: firstEvent }).firstEvent).toBeNull()
+        expect(subject.toConnectionRecord({ ...row, firstEvent: firstEvent }).firstEvent).toBeNull()
     })
 
     it("omits non-string optional event text", async () => {
@@ -148,7 +148,7 @@ describe("toConnectionRecord", () => {
         expect(
             subject.toConnectionRecord({
                 ...row,
-                first_event: { amount: 5, content: "hi", at: "now", text: 9 },
+                firstEvent: { amount: 5, content: "hi", at: "now", text: 9 },
             }).firstEvent,
         ).toEqual({ amount: 5, content: "hi", at: "now" })
     })

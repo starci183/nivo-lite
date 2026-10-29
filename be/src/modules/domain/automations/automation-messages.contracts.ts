@@ -1,12 +1,12 @@
-import type { LeadReadRow, ConversationReadRow } from "./persistence/automations.rows"
+import type { LeadRead, ConversationRead } from "./automation-reads.contracts"
 import type { GateFields } from "./automation-ports.contracts"
 import type { MessageVariables } from "./automations.contracts"
 
 /** What a lookup of a lead answers when the id matches no lead of the workspace. */
-export type LeadOrNone = LeadReadRow | null
+export type LeadOrNone = LeadRead | null
 
 /** What a lookup of a conversation answers when it finds none. */
-export type ConversationOrNone = ConversationReadRow | null
+export type ConversationOrNone = ConversationRead | null
 
 /** The name of a staff member, absent when the workspace has none. */
 export type NameOrNone = string | null
@@ -16,7 +16,7 @@ export interface Composition {
     /** The authority action the message goes through. */
     readonly action: string
     /** The customer. */
-    readonly lead: LeadReadRow
+    readonly lead: LeadRead
     /** The conversation it leaves on. */
     readonly conversationId: string
     /** Unique per occurrence: the same key never sends twice. */

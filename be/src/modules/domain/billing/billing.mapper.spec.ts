@@ -7,30 +7,18 @@ import {
     toWorkspaceBilling as realToWorkspaceBilling,
 } from "./billing.mapper"
 
-import type { PlanRow } from "./persistence/billing.rows"
+import {
+    bareFeaturesPlan,
+    mixedFeaturesPlan,
+    otherPlan,
+    otherPlanPack,
+    otherPlanTier,
+    planOf,
+    starterPack,
+    starterTier,
+} from "@tests/fixtures/builders/plans.builder"
 
 const SUBJECT = Symbol("billing.mapper")
-
-const ROW: PlanRow = {
-    code: "starter",
-    name_vi: "Khoi dau",
-    name_en: "Starter",
-    price_vnd: 990000,
-    period: "month",
-    seats: 3,
-    features: { vi: ["a", 5, "b"], en: ["c"] },
-    sort: 1,
-    ai_credits_per_month: 3000,
-    is_custom: false,
-    price_annual_vnd: null,
-    annual_discount_pct: null,
-    promo_price_vnd: null,
-    promo_months: null,
-    storage_gb: null,
-    individual: false,
-    per_seat: false,
-    listed: true,
-}
 
 const NO_TIER = { tier_credits: null, seat_count: null, billing_cycle: null, billed_monthly_vnd: null } as const
 
@@ -66,7 +54,7 @@ describe("billing mapper > toPlan", () => {
     it("maps the columns, keeping only the text lines of the feature lists", async () => {
         const { toPlan } = await buildSubject()
 
-        expect(toPlan(ROW, [])).toEqual({
+        expect(toPlan(mixedFeaturesPlan(), [])).toEqual({
             code: "starter",
             nameVi: "Khoi dau",
             nameEn: "Starter",
@@ -95,25 +83,20 @@ describe("billing mapper > toPlan", () => {
         async (features) => {
             const { toPlan } = await buildSubject()
 
-            expect(toPlan({ ...ROW, features }, []).features).toEqual({ vi: [], en: [] })
+            expect(toPlan(planOf({ features }), []).features).toEqual({ vi: [], en: [] })
         },
     )
 
     it("counts null stored features as empty lists", async () => {
         const { toPlan } = await buildSubject()
 
-        expect(toPlan({ ...ROW, features: null }, []).features).toEqual({ vi: [], en: [] })
+        expect(toPlan(bareFeaturesPlan(), []).features).toEqual({ vi: [], en: [] })
     })
 
     it("maps matching per-seat tiers and add-on packs, excluding rows of another plan", async () => {
         const { toPlan } = await buildSubject()
 
-        const plan = toPlan(ROW, [
-            { plan_code: "starter", credits_per_month: 1000, price_vnd: 50000, per_seat: true },
-            { plan_code: "other", credits_per_month: 9000, price_vnd: 90000, per_seat: true },
-            { plan_code: "starter", credits_per_month: 3000, price_vnd: 70000, per_seat: false },
-            { plan_code: "other", credits_per_month: 8000, price_vnd: 80000, per_seat: false },
-        ])
+        const plan = toPlan(mixedFeaturesPlan(), [starterTier(), otherPlanTier(), starterPack(), otherPlanPack()])
 
         expect(plan.tiers).toEqual([{ creditsPerMonth: 1000, priceVnd: 50000, perSeat: true }])
         expect(plan.packs).toEqual([{ creditsPerMonth: 3000, priceVnd: 70000, perSeat: false }])
@@ -201,12 +184,7 @@ describe("billing mapper > toPlanLookup", () => {
     it("maps only the first plan and its matching tiers", async () => {
         const { toPlanLookup } = await buildSubject()
 
-        expect(
-            toPlanLookup(
-                [ROW, { ...ROW, code: "other" }],
-                [{ plan_code: "starter", credits_per_month: 1000, price_vnd: 50000, per_seat: true }],
-            ),
-        ).toEqual({
+        expect(toPlanLookup([mixedFeaturesPlan(), otherPlan()], [starterTier()])).toEqual({
             code: "starter",
             nameVi: "Khoi dau",
             nameEn: "Starter",

@@ -4,7 +4,7 @@ import { OfficeLog, ModuleTextGenerator } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { HiringError, HiringErrorCode } from "./errors/hiring.error"
 import type { JobRecord } from "./hiring.contracts"
 import type {
@@ -19,8 +19,6 @@ import { HiringDataService } from "./hiring-data.service"
 import { HiringLinksService } from "./hiring-links.service"
 import { HiringSettingsService } from "./hiring-settings.service"
 import { HiringTextService } from "./hiring-text.service"
-import { CREATE_JOB, SET_JOB_ADS, SET_JOB_STATUS, UPDATE_JOB } from "./persistence/hiring.sql"
-import type { IdRow, FlagRow } from "./persistence/hiring.rows"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { fairnessMessage } from "./policies/fairness-message.policy"
 import { findFairnessViolations, stripUnfairLines, validateJobDraft } from "./policies/fairness.policy"
@@ -101,8 +99,12 @@ export class HiringJobsService {
     }
 
     private async update(workspaceId: string, id: string, fields: string): Promise<SaveJobOutput> {
-        const [row] = await this.entityManager.query<Array<FlagRow>>(UPDATE_JOB, [workspaceId, id, fields])
-        const job = row?.value === true ? await this.data.job(workspaceId, id) : undefined
+        const [row] = await callDbFunction<{ hiring_job_update: boolean }>(
+            this.entityManager,
+            "public.hiring_job_update",
+            [workspaceId, id, fields],
+        )
+        const job = row?.hiring_job_update === true ? await this.data.job(workspaceId, id) : undefined
         if (job === undefined) throw new HiringError({ code: HiringErrorCode.JobNotFound })
         return { id: job.id, slug: job.slug }
     }
@@ -116,10 +118,14 @@ export class HiringJobsService {
     ): Promise<SaveJobOutput> {
         if (attempt >= SLUG_TRIES) throw new HiringError({ code: HiringErrorCode.JobSlugUnavailable })
         const slug = attempt === 0 ? base : `${base}-${attempt + 1}`
-        const [row] = await this.entityManager.query<Array<IdRow>>(CREATE_JOB, [workspaceId, userId, slug, fields])
-        return row?.id === null || row?.id === undefined
+        const [row] = await callDbFunction<{ hiring_job_create: string | null }>(
+            this.entityManager,
+            "public.hiring_job_create",
+            [workspaceId, userId, slug, fields],
+        )
+        return row?.hiring_job_create === null || row?.hiring_job_create === undefined
             ? this.create(workspaceId, userId, base, fields, attempt + 1)
-            : { id: row.id, slug }
+            : { id: row.hiring_job_create, slug }
     }
 
     private refuseUnfair(violations: ReturnType<typeof validateJobDraft>): void {
@@ -160,7 +166,11 @@ export class HiringJobsService {
             if (empty) throw new HiringError({ code: HiringErrorCode.JobNeedsContent })
             await this.settings.ensure(workspaceId)
         }
-        await this.entityManager.query<Array<FlagRow>>(SET_JOB_STATUS, [workspaceId, job.id, request.status])
+        await callDbFunction<{ hiring_job_status: boolean }>(this.entityManager, "public.hiring_job_status", [
+            workspaceId,
+            job.id,
+            request.status,
+        ])
         return { status: request.status }
     }
 
@@ -214,7 +224,11 @@ export class HiringJobsService {
             generated_at: generatedAt,
             ms,
         }
-        await this.entityManager.query<Array<FlagRow>>(SET_JOB_ADS, [workspaceId, job.id, JSON.stringify(ads)])
+        await callDbFunction<{ hiring_job_ads: boolean }>(this.entityManager, "public.hiring_job_ads", [
+            workspaceId,
+            job.id,
+            JSON.stringify(ads),
+        ])
         return {
             facebook: ads.facebook,
             zalo: ads.zalo,

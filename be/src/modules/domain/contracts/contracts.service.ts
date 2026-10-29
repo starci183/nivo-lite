@@ -10,34 +10,60 @@ import { ContractLinkService } from "./contract-link.service"
 import { appendNoteLine, displayDayOf, nextTermOf } from "./contract-term.policy"
 import type { ContractResult, LinkedCustomers, PaidRenewal, SaveContractParams } from "./contracts.contracts"
 import { ContractsError, ContractsErrorCode } from "./errors/contracts.error"
-import type { ContractsRow } from "./persistence/contracts.rows"
-import {
-    ATTACH_CONTRACT_LEAD,
-    EXTEND_CONTRACT_TERM,
-    INSERT_CONTRACT,
-    LIST_CONTRACTS,
-    LOCK_CONTRACT,
-    UPDATE_CONTRACT,
-} from "./persistence/contracts.sql"
+import { ContractEntity } from "./persistence/entities"
 
 type SavedContract = Pick<
-    ContractsRow,
-    "id" | "lead_id" | "customer_name" | "plan" | "starts_on" | "ends_on" | "amount_vnd" | "status" | "note"
+    ContractEntity,
+    "id" | "leadId" | "customerName" | "plan" | "startsOn" | "endsOn" | "amountVnd" | "status" | "note"
 >
 
+/** The columns a write answers, named as the entity properties, days as YYYY-MM-DD text and the amount as a number. */
+const RETURNED = [
+    "id",
+    "lead_id AS \"leadId\"",
+    "customer_name AS \"customerName\"",
+    "plan",
+    "to_char(starts_on, 'YYYY-MM-DD') AS \"startsOn\"",
+    "to_char(ends_on, 'YYYY-MM-DD') AS \"endsOn\"",
+    "amount_vnd::float8 AS \"amountVnd\"",
+    "status",
+    "note",
+].join(", ")
+
+/** The condition that a lead belongs to the workspace, for a write that must link only the workspace own leads. */
+const LEAD_IS_OWN = "EXISTS (SELECT 1 FROM public.leads WHERE workspace_id = :workspaceId AND id = :leadId::uuid)"
+
+/** True when a RETURNING row carries a stored contract, the shape the returned columns give it. */
+const isSavedContract = (value: unknown): value is SavedContract =>
+    typeof value === "object" &&
+    value !== null &&
+    ["id", "customerName", "plan", "startsOn", "endsOn", "status", "note"].every(
+        (field) => typeof Reflect.get(value, field) === "string",
+    )
+
+/** The first contract a write answered. */
+const firstSaved = (raw: unknown): SavedContract | undefined =>
+    Array.isArray(raw) ? raw.find(isSavedContract) : undefined
+
 /** The locale of the lines a renewal writes on its own: the workspace owners read them in Vietnamese. */
+/** The fields a contract write carries. */
+type ContractFields = Pick<
+    ContractEntity,
+    "leadId" | "customerName" | "plan" | "startsOn" | "endsOn" | "amountVnd" | "status" | "note"
+>
+
 const RECORD_LOCALE = "vi"
 /** The actor of the lines the system writes on its own. */
 const SYSTEM_ACTOR = "NIVO"
 
 const resultOf = (row: SavedContract): ContractResult => ({
     id: row.id,
-    leadId: row.lead_id,
-    customerName: row.customer_name,
+    leadId: row.leadId,
+    customerName: row.customerName,
     plan: row.plan,
-    startsOn: row.starts_on,
-    endsOn: row.ends_on,
-    amountVnd: row.amount_vnd,
+    startsOn: row.startsOn,
+    endsOn: row.endsOn,
+    amountVnd: row.amountVnd,
     status: row.status,
     note: row.note,
 })
@@ -57,13 +83,26 @@ export class ContractsService {
     /** Lists recurring contracts after proving the caller belongs to their workspace. */
     async list(workspaceId: string, userId: string): Promise<Array<ContractResult>> {
         await this.members.require(userId, workspaceId)
-        const rows = await this.entityManager.query<Array<ContractsRow>>(LIST_CONTRACTS, [workspaceId])
+        const rows = await this.entityManager.find(ContractEntity, {
+            where: { workspaceId },
+            order: { endsOn: "ASC", id: "ASC" },
+            take: 300,
+        })
         return rows.map(resultOf)
     }
 
     /** Links a customer to a contract that was typed in by name only, on the system's behalf; a contract that has a lead keeps it. */
     async attachLead(workspaceId: string, contractId: string, leadId: string): Promise<void> {
-        await this.entityManager.query(ATTACH_CONTRACT_LEAD, [workspaceId, contractId, leadId])
+        await this.entityManager
+            .createQueryBuilder(ContractEntity, "c")
+            .update()
+            .set({ leadId, updatedAt: () => "now()" })
+            .where(`workspace_id = :workspaceId AND id = :contractId AND lead_id IS NULL AND ${LEAD_IS_OWN}`, {
+                workspaceId,
+                contractId,
+                leadId,
+            })
+            .execute()
     }
 
     /**
@@ -90,19 +129,20 @@ export class ContractsService {
             const verdict = checkContract(params)
             if (verdict.kind === "refused") throw new ContractsError({ code: verdict.code, params: verdict.params })
             const contract = verdict.value
-            const fields = [
-                params.leadId,
-                contract.customerName,
-                contract.plan,
-                contract.startsOn,
-                contract.endsOn,
-                contract.amountVnd,
-                contract.status,
-                contract.note,
-            ]
-            const [row] = await (params.contractId === null
-                ? tx.query<Array<SavedContract>>(INSERT_CONTRACT, [params.workspaceId, ...fields])
-                : tx.query<Array<SavedContract>>(UPDATE_CONTRACT, [params.workspaceId, params.contractId, ...fields]))
+            const fields = {
+                leadId: params.leadId,
+                customerName: contract.customerName,
+                plan: contract.plan,
+                startsOn: contract.startsOn,
+                endsOn: contract.endsOn,
+                amountVnd: contract.amountVnd,
+                status: contract.status,
+                note: contract.note,
+            }
+            const row =
+                params.contractId === null
+                    ? await this.insertContract(tx, params.workspaceId, fields)
+                    : await this.updateContract(tx, params.workspaceId, params.contractId, fields)
             if (row === undefined) {
                 throw new ContractsError(
                     params.contractId === null
@@ -141,45 +181,107 @@ export class ContractsService {
         contractId: string,
         periodEndsOn: string,
         invoiceNo: string,
+        manager?: EntityManager,
     ): Promise<PaidRenewal> {
-        return this.entityManager.transaction(async (tx) => {
-            const [current] = await tx.query<Array<SavedContract>>(LOCK_CONTRACT, [workspaceId, contractId])
-            if (current === undefined) {
+        const extend = async (tx: EntityManager): Promise<PaidRenewal> => {
+            const current = await tx
+                .createQueryBuilder(ContractEntity, "c")
+                .where("c.workspaceId = :workspaceId AND c.id = :contractId", { workspaceId, contractId })
+                .limit(1)
+                .setLock("pessimistic_write")
+                .getOne()
+            if (current === null) {
                 throw new ContractsError({ code: ContractsErrorCode.NotFound, params: { id: contractId } })
             }
-            const unchanged = { extended: false, contract: resultOf(current), previousEndsOn: current.ends_on }
-            if (current.ends_on !== periodEndsOn || current.status === "cancelled") return unchanged
-            const term = nextTermOf(current.starts_on, current.ends_on)
+            const unchanged = { extended: false, contract: resultOf(current), previousEndsOn: current.endsOn }
+            if (current.endsOn !== periodEndsOn || current.status === "cancelled") return unchanged
+            const term = nextTermOf(current.startsOn, current.endsOn)
             const line = this.messages.get(
                 "contracts.renewalNote",
                 { until: displayDayOf(term.endsOn), no: invoiceNo },
                 RECORD_LOCALE,
             )
-            const [row] = await tx.query<Array<SavedContract>>(EXTEND_CONTRACT_TERM, [
-                workspaceId,
-                contractId,
-                periodEndsOn,
-                term.startsOn,
-                term.endsOn,
-                appendNoteLine(current.note, line, NOTE_MAX),
-            ])
+            const extended = await tx
+                .createQueryBuilder(ContractEntity, "c")
+                .update()
+                .set({
+                    startsOn: term.startsOn,
+                    endsOn: term.endsOn,
+                    status: "active",
+                    note: appendNoteLine(current.note, line, NOTE_MAX),
+                    updatedAt: () => "now()",
+                })
+                .where("workspace_id = :workspaceId AND id = :contractId AND ends_on = :periodEndsOn::date AND status <> 'cancelled'", {
+                    workspaceId,
+                    contractId,
+                    periodEndsOn,
+                })
+                .returning(RETURNED)
+                .execute()
+            const row = firstSaved(extended.raw)
             if (row === undefined) return unchanged
             await this.events.record(
                 {
                     workspaceId,
-                    leadId: row.lead_id,
+                    leadId: row.leadId,
                     kind: "contract.updated",
                     actor: SYSTEM_ACTOR,
                     summary: this.messages.get(
                         "contracts.renewed",
-                        { customer: row.customer_name, until: displayDayOf(row.ends_on), no: invoiceNo },
+                        { customer: row.customerName, until: displayDayOf(row.endsOn), no: invoiceNo },
                         RECORD_LOCALE,
                     ),
-                    evidence: `${row.starts_on} → ${row.ends_on}`,
+                    evidence: `${row.startsOn} → ${row.endsOn}`,
                 },
                 tx,
             )
-            return { extended: true, contract: resultOf(row), previousEndsOn: current.ends_on }
-        })
+            return { extended: true, contract: resultOf(row), previousEndsOn: current.endsOn }
+        }
+        return manager === undefined ? this.entityManager.transaction(extend) : extend(manager)
+    }
+
+    /** Writes a new contract and answers it; answers nothing when the lead it names is not the workspace own (the lead row is held while the contract is written). */
+    private async insertContract(
+        tx: EntityManager,
+        workspaceId: string,
+        fields: ContractFields,
+    ): Promise<SavedContract | undefined> {
+        if (fields.leadId !== null) {
+            const lead: unknown = await tx
+                .createQueryBuilder()
+                .select("l.id", "id")
+                .from("public.leads", "l")
+                .where("l.workspace_id = :workspaceId AND l.id = :leadId", { workspaceId, leadId: fields.leadId })
+                .setLock("pessimistic_read")
+                .getRawOne()
+            if (lead === undefined) return undefined
+        }
+        const inserted = await tx
+            .createQueryBuilder(ContractEntity, "c")
+            .insert()
+            .values({ workspaceId, ...fields })
+            .returning(RETURNED)
+            .execute()
+        return firstSaved(inserted.raw)
+    }
+
+    /** Changes one contract of the workspace and answers it; answers nothing when it is missing or the lead it names is not the workspace own. */
+    private async updateContract(
+        tx: EntityManager,
+        workspaceId: string,
+        contractId: string,
+        fields: ContractFields,
+    ): Promise<SavedContract | undefined> {
+        const changed = await tx
+            .createQueryBuilder(ContractEntity, "c")
+            .update()
+            .set({ ...fields, updatedAt: () => "now()" })
+            .where(
+                `workspace_id = :workspaceId AND id = :contractId AND (:leadId::uuid IS NULL OR ${LEAD_IS_OWN})`,
+                { workspaceId, contractId, leadId: fields.leadId },
+            )
+            .returning(RETURNED)
+            .execute()
+        return firstSaved(changed.raw)
     }
 }

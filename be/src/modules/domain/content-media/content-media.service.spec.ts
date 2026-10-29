@@ -6,14 +6,16 @@ import { VideoRendersService } from "@modules/domain/video-renders"
 import type { CompletedRenderMedia } from "@modules/domain/video-renders"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
-import type { SupabaseObjectsPort } from "@modules/integrations/supabase"
+import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import type { ContentMediaRequest, MediaFile } from "./content-media.contracts"
 import { CONTENT_MEDIA_STORAGE } from "./content-media.decorators"
 import { ContentMediaService } from "./content-media.service"
 import { ContentMediaError, ContentMediaErrorCode } from "./errors/content-media.error"
-import { NEW_CONTENT_MEDIA_UPLOAD_ID } from "./persistence/content-media.sql"
+
+/** The statement `callDbFunction` sends to allocate an upload object name. */
+const NEW_CONTENT_MEDIA_UPLOAD_ID = "SELECT * FROM gen_random_uuid()"
 
 const MEMBER: WorkspaceMember = {
     userId: "user-1",
@@ -44,7 +46,7 @@ const PICTURE: MediaFile = { name: "Shop Photo.png", contentType: "image/png", s
 const UPLOAD_PATH = "ws-1/upload-1-Shop-Photo.png"
 
 const build = async (entityManager: MockEntityManager = mockEntityManager()) => {
-    const storage = mock<SupabaseObjectsPort>()
+    const storage = mock<StorageObjectsPort>()
     const members = mock<WorkspaceMembersService>()
     const renders = mock<VideoRendersService>()
     const entitlements = mock<EntitlementsService>()
@@ -89,7 +91,7 @@ describe("ContentMediaService", () => {
 
     it("refuses the library when storage cannot list", async () => {
         const { service, storage } = await build()
-        storage.list.mockResolvedValue(refused("SUPABASE_PROVIDER_UNAVAILABLE"))
+        storage.list.mockResolvedValue(refused("OBJECT_STORAGE_UNAVAILABLE"))
 
         await expect(service.library("user-1", "ws-1", 20)).rejects.toBeInstanceOf(ContentMediaError)
         await expect(service.library("user-1", "ws-1", 20)).rejects.toMatchObject({
@@ -213,7 +215,7 @@ describe("ContentMediaService", () => {
         storage.list.mockResolvedValue(ok([]))
         renders.listCompletedMedia.mockResolvedValue([])
         renders.findCompletedMedia.mockResolvedValue([])
-        storage.signedUrls.mockResolvedValue(refused("SUPABASE_PROVIDER_UNAVAILABLE"))
+        storage.signedUrls.mockResolvedValue(refused("OBJECT_STORAGE_UNAVAILABLE"))
 
         await expect(
             service.read("user-1", "ws-1", { paths: ["ws-1/extra.png"], videoIds: [], limit: 5 }),
@@ -263,7 +265,9 @@ describe("ContentMediaService", () => {
     })
 
     it("issues an upload address for an accepted file", async () => {
-        const entityManager = mockEntityManager({ query: [NEW_CONTENT_MEDIA_UPLOAD_ID, [{ id: "upload-1" }]] })
+        const entityManager = mockEntityManager({
+            query: [NEW_CONTENT_MEDIA_UPLOAD_ID, [{ gen_random_uuid: "upload-1" }]],
+        })
         const { service, storage, members, entitlements } = await build(entityManager)
         storage.signedUpload.mockResolvedValue(
             ok({ path: UPLOAD_PATH, token: "token-1", signedUrl: "https://upload.example/shop" }),
@@ -305,9 +309,11 @@ describe("ContentMediaService", () => {
     })
 
     it("refuses the upload when storage cannot sign it", async () => {
-        const entityManager = mockEntityManager({ query: [NEW_CONTENT_MEDIA_UPLOAD_ID, [{ id: "upload-1" }]] })
+        const entityManager = mockEntityManager({
+            query: [NEW_CONTENT_MEDIA_UPLOAD_ID, [{ gen_random_uuid: "upload-1" }]],
+        })
         const { service, storage } = await build(entityManager)
-        storage.signedUpload.mockResolvedValue(refused("SUPABASE_PROVIDER_UNAVAILABLE"))
+        storage.signedUpload.mockResolvedValue(refused("OBJECT_STORAGE_UNAVAILABLE"))
 
         await expect(service.requestUpload("user-1", "ws-1", PICTURE)).rejects.toMatchObject({
             code: ContentMediaErrorCode.StorageUnavailable,
@@ -367,7 +373,7 @@ describe("ContentMediaService", () => {
         storage.list.mockResolvedValue(ok([]))
         renders.listCompletedMedia.mockResolvedValue([])
         renders.findCompletedMedia.mockResolvedValue([])
-        storage.signedUrls.mockResolvedValueOnce(ok([])).mockResolvedValueOnce(refused("SUPABASE_PROVIDER_UNAVAILABLE"))
+        storage.signedUrls.mockResolvedValueOnce(ok([])).mockResolvedValueOnce(refused("OBJECT_STORAGE_UNAVAILABLE"))
 
         await expect(service.read("user-1", "ws-1", { paths: [], videoIds: [], limit: 1 })).rejects.toMatchObject({
             code: ContentMediaErrorCode.StorageUnavailable,

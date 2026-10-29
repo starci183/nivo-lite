@@ -8,8 +8,8 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { AutomationMessagesService } from "./automation-messages.service"
 import type { RenewalPayment } from "./automations.contracts"
-import { SELECT_LAST_CUSTOMER_MESSAGE } from "./persistence/automation-readers.sql"
-import type { ContractReadRow, ConversationReadRow, LastCustomerMessageRow } from "./persistence/automations.rows"
+import { readLastCustomerMessage } from "./automation-reads.query"
+import type { ContractRead, ConversationRead } from "./automation-reads.contracts"
 import { placeholdersOf } from "./policies/config.policy"
 import { instantOf } from "./policies/format.policy"
 import { dongDigits, isBillableAmount, transferContentOf } from "./policies/renewal-payment.policy"
@@ -41,7 +41,7 @@ export class AutomationRenewalPaymentService {
      */
     async paymentOf(
         workspaceId: string,
-        contract: ContractReadRow,
+        contract: ContractRead,
         leadId: string,
         body: string,
     ): Promise<RenewalPayment | null> {
@@ -95,11 +95,9 @@ export class AutomationRenewalPaymentService {
      * A warning step when the customer writes on Zalo and last wrote more than 48 hours ago: Zalo refuses a message the shop writes
      * first, so the owner learns it before approving. None otherwise, a customer who never wrote included (delivery lets it try).
      */
-    async zaloWindowSteps(conversation: ConversationReadRow): Promise<ReadonlyArray<RunStep>> {
+    async zaloWindowSteps(conversation: ConversationRead): Promise<ReadonlyArray<RunStep>> {
         if (conversation.channel !== "zalo") return []
-        const [last] = await this.entityManager.query<Array<LastCustomerMessageRow>>(SELECT_LAST_CUSTOMER_MESSAGE, [
-            conversation.id,
-        ])
+        const last = await readLastCustomerMessage(this.entityManager, conversation.id)
         if (last === undefined || this.clock.now().getTime() - instantOf(last.created_at) <= ZALO_WINDOW_MS) return []
         const say = this.messages.say.bind(this.messages)
         return [{ label: say("renewal.zaloWindow"), status: "skipped", detail: say("renewal.zaloWindowDetail") }]

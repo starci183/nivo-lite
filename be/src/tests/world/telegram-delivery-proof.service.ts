@@ -1,11 +1,12 @@
 import { buildTelegramDelivery } from "../fixtures/builders/telegram-delivery.builder"
 import type { LiteWorld } from "./lite-world.service"
-import type { ReceiptRow, WebhookJobRow, WebhookMessageRow } from "../fixtures/persistence/proof.rows"
-import * as statements from "../fixtures/builders/telegram-delivery.sql"
+import type { WebhookJobRow, WebhookMessageRow } from "../fixtures/persistence/proof.rows"
+import * as statements from "./telegram-delivery.sql"
+import { receiptsOf, removeReceipts } from "./receipts-database.service"
 
 /** Observes committed inbox and outbox state using a separate transaction from intake. */
 export const telegramDeliveryState = async (world: LiteWorld, deliveryId: string) => ({
-    receipts: await world.db.primary.query<Array<ReceiptRow>>(statements.RECEIPTS, [deliveryId]),
+    receipts: await receiptsOf(world.db.primary, "telegram", deliveryId),
     jobs: await world.db.primary.query<Array<WebhookJobRow>>(statements.JOBS, [deliveryId]),
     messages: await world.db.primary.query<Array<WebhookMessageRow>>(statements.MESSAGES, [deliveryId]),
 })
@@ -14,7 +15,7 @@ export const cleanupTelegramDelivery = (world: LiteWorld, deliveryId: string): v
     world.cleanup(async () => {
         await world.db.primary.query(statements.CLEAN_MESSAGES, [deliveryId])
         await world.db.primary.query(statements.CLEAN_JOBS, [deliveryId])
-        await world.db.primary.query(statements.CLEAN_RECEIPTS, [deliveryId])
+        await removeReceipts(world.db.primary, "telegram", deliveryId)
     })
 }
 

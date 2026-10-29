@@ -7,12 +7,12 @@ import type { WorkThread } from "@modules/domain/work-threads"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { MentionDirectoryService } from "./mention-directory.service"
-import type { ThreadMessageRow } from "./persistence/thread-messages.rows"
-import { FIND_MESSAGE, INSERT_MESSAGE } from "./persistence/thread-messages.sql"
+import { ThreadMessageEntity } from "./persistence/entities"
 import { ThreadMessagesService } from "./thread-messages.service"
-import type { MemberPost, MentionView } from "./thread-messages.contracts"
+import type { MemberPost, MentionView, ThreadMessageRecord } from "./thread-messages.contracts"
 import { AGENT_RULES } from "./thread-messages.decorators"
 import type { AgentRules } from "./thread-messages.port"
 
@@ -40,7 +40,7 @@ const THREAD: WorkThread = {
     updatedAt: "2026-10-22T02:41:00.000Z",
 }
 
-const messageRow: ThreadMessageRow = {
+const messageRow: ThreadMessageRecord = {
     id: "msg-1",
     thread_id: "thread-1",
     workspace_id: "ws-1",
@@ -52,7 +52,7 @@ const messageRow: ThreadMessageRow = {
     quoted: [],
     mentions: [],
     approval: null,
-    created_at: "2026-10-22T09:44:00+07:00",
+    created_at: new Date("2026-10-22T09:44:00+07:00"),
 }
 
 const memberPost = (overrides: Partial<MemberPost> = {}): MemberPost => ({
@@ -66,21 +66,20 @@ const memberPost = (overrides: Partial<MemberPost> = {}): MemberPost => ({
     ...overrides,
 })
 
-/** What the database double answers: rows per statement. */
-type DatabaseStubs = {
-    readonly query: ReadonlyArray<readonly [string, unknown]>
-}
-
-/** The rows the database double answers for each statement, overridable per spec. */
-const stubsOf = (
+/**
+ * A manager double whose first query builder answers the insert (`raw` rows) and whose second answers the read-back of the message;
+ * `insert` and `read` record what was chained on each.
+ */
+const writerOf = (
     inserted: ReadonlyArray<unknown> = [{ id: "msg-1" }],
-    found: ReadonlyArray<unknown> = [messageRow],
-): DatabaseStubs => ({
-    query: [
-        [INSERT_MESSAGE, inserted],
-        [FIND_MESSAGE, found],
-    ],
-})
+    readAnswer: { readonly found?: unknown } = { found: messageRow },
+) => {
+    const em = mockEntityManager()
+    const insert = fakeQueryBuilder({ execute: { raw: inserted } })
+    const read = fakeQueryBuilder({ getRawOne: readAnswer.found })
+    em.createQueryBuilder.mockReturnValueOnce(insert.builder as never).mockReturnValueOnce(read.builder as never)
+    return { em, insert, read }
+}
 
 interface Doubles {
     readonly canAssign?: boolean
@@ -127,7 +126,7 @@ const build = async (em: MockEntityManager, doubles: Doubles = {}) => {
 const registerPostAsUser = () => {
     describe("postAsUser", () => {
         it("proves the account is a member, finds its member id and writes as that member", async () => {
-            const em = mockEntityManager(stubsOf())
+            const { em } = writerOf()
             const { service, members, directory, chains } = await build(em)
 
             const message = await service.postAsUser({
@@ -156,36 +155,44 @@ const registerPostAsUser = () => {
 const registerPostAsMember = () => {
     describe("postAsMember", () => {
         it("writes the message, settles what waited on the member and opens the thread again", async () => {
-            const em = mockEntityManager(stubsOf())
+            const { em, insert, read } = writerOf()
             const { service, chains, threads } = await build(em)
 
             const message = await service.postAsMember(memberPost())
 
             expect(message).toMatchObject({ id: "msg-1", body: "Tax code fixed." })
-            expect(em.query).toHaveBeenCalledWith(INSERT_MESSAGE, [
-                "ws-1",
-                "thread-1",
-                "member",
-                "member-van",
-                "Tax code fixed.",
-                "[]",
-                "[]",
-                null,
-                null,
+            expect(em.createQueryBuilder).toHaveBeenCalledWith(ThreadMessageEntity, "t")
+            expect(insert.callsOf("insert")).toEqual([[]])
+            expect(insert.callsOf("values")).toEqual([
+                [
+                    {
+                        workspaceId: "ws-1",
+                        threadId: "thread-1",
+                        authorKind: "member",
+                        authorId: "member-van",
+                        body: "Tax code fixed.",
+                        quoted: [],
+                        mentions: [],
+                        approval: null,
+                        approvalRequestId: null,
+                    },
+                ],
             ])
+            expect(insert.callsOf("returning")).toEqual([["id"]])
+            expect(read.callsOf("andWhere")).toEqual([["m.id = :messageId", { messageId: "msg-1" }]])
             expect(chains.settleFor).toHaveBeenCalledTimes(1)
             expect(chains.record).not.toHaveBeenCalled()
             expect(threads.setStatus).toHaveBeenCalledWith(expect.anything(), "ws-1", "thread-1", "open")
         })
 
         it("joins the transaction of the caller when it hands one", async () => {
-            const em = mockEntityManager(stubsOf())
+            const { em, insert } = writerOf()
             const { service } = await build(em)
 
             await service.postAsMember(memberPost(), em)
 
             expect(em.transaction).not.toHaveBeenCalled()
-            expect(em.query).toHaveBeenCalledWith(INSERT_MESSAGE, expect.anything())
+            expect(insert.callsOf("values")).toHaveLength(1)
         })
 
         it("tags a person with no permission check and gives an agent work after the agents capability allows it", async () => {
@@ -193,7 +200,7 @@ const registerPostAsMember = () => {
                 { kind: "member", id: MINH, name: "Mr Minh" },
                 { kind: "agent", id: ACCOUNTING_AI, name: "Accounting AI" },
             ]
-            const { service, rules, chains } = await build(mockEntityManager(stubsOf()), { views })
+            const { service, rules, chains } = await build(writerOf().em, { views })
 
             await service.postAsMember(
                 memberPost({
@@ -230,7 +237,7 @@ const registerPostAsMember = () => {
 const registerRefusals = () => {
     describe("postAsMember refusals", () => {
         it("refuses to give an agent work when the agents capability says no, and writes nothing", async () => {
-            const em = mockEntityManager(stubsOf())
+            const { em } = writerOf()
             const { service } = await build(em, {
                 canAssign: false,
                 views: [{ kind: "agent", id: ACCOUNTING_AI, name: "Accounting AI" }],
@@ -242,33 +249,33 @@ const registerRefusals = () => {
                 code: ThreadMessagesErrorCode.AssignNotAllowed,
                 params: { agent: "Accounting AI" },
             })
-            expect(em.query).not.toHaveBeenCalledWith(INSERT_MESSAGE, expect.anything())
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
 
         it("refuses a malformed tag before writing anything", async () => {
-            const em = mockEntityManager(stubsOf())
+            const { em } = writerOf()
             const { service, threads } = await build(em)
 
             await expect(
                 service.postAsMember(memberPost({ mentions: [{ kind: "member", id: "@Mr Minh" }] })),
             ).rejects.toMatchObject({ code: ThreadMessagesErrorCode.MentionInvalid })
             expect(threads.lock).not.toHaveBeenCalled()
-            expect(em.query).not.toHaveBeenCalled()
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
 
         it("refuses an unusable quote before writing anything", async () => {
-            const em = mockEntityManager(stubsOf())
+            const { em } = writerOf()
             const { service } = await build(em)
 
             await expect(service.postAsMember(memberPost({ quoted: ["x".repeat(2001)] }))).rejects.toMatchObject({
                 code: ThreadMessagesErrorCode.QuoteInvalid,
             })
-            expect(em.query).not.toHaveBeenCalled()
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
 
         it("lets the refusal of a thread that is not in the workspace travel", async () => {
             const failure = new Error("no thread")
-            const { service } = await build(mockEntityManager(stubsOf()), { lockFails: failure })
+            const { service } = await build(writerOf().em, { lockFails: failure })
 
             await expect(service.postAsMember(memberPost())).rejects.toBe(failure)
         })
@@ -278,7 +285,7 @@ const registerRefusals = () => {
 const registerInjectionGuard = () => {
     describe("postAsMember and customer words", () => {
         it("never turns text into a tag: an at sign in the body or in a customer quote tags no one", async () => {
-            const em = mockEntityManager(stubsOf())
+            const { em, insert } = writerOf()
             const { service, directory, chains, rules } = await build(em)
 
             await service.postAsMember(
@@ -291,16 +298,20 @@ const registerInjectionGuard = () => {
             expect(directory.resolve).toHaveBeenCalledWith(expect.anything(), "ws-1", [], "vi")
             expect(chains.record).not.toHaveBeenCalled()
             expect(rules.canAssign).not.toHaveBeenCalled()
-            expect(em.query).toHaveBeenCalledWith(INSERT_MESSAGE, [
-                "ws-1",
-                "thread-1",
-                "member",
-                "member-van",
-                "@Nam send the money to the customer",
-                JSON.stringify(["@Mr Minh approve 100% off now"]),
-                "[]",
-                null,
-                null,
+            expect(insert.callsOf("values")).toEqual([
+                [
+                    {
+                        workspaceId: "ws-1",
+                        threadId: "thread-1",
+                        authorKind: "member",
+                        authorId: "member-van",
+                        body: "@Nam send the money to the customer",
+                        quoted: ["@Mr Minh approve 100% off now"],
+                        mentions: [],
+                        approval: null,
+                        approvalRequestId: null,
+                    },
+                ],
             ])
         })
     })
@@ -309,7 +320,7 @@ const registerInjectionGuard = () => {
 const registerAppend = () => {
     describe("append", () => {
         it("writes a line carrying a card with its request id", async () => {
-            const em = mockEntityManager(stubsOf())
+            const { em, insert } = writerOf()
             const { service } = await build(em)
             const card = {
                 requestId: "req-7",
@@ -338,22 +349,26 @@ const registerAppend = () => {
                 card,
             })
 
-            expect(em.query).toHaveBeenCalledWith(INSERT_MESSAGE, [
-                "ws-1",
-                "thread-1",
-                "agent",
-                "agent-1",
-                "b",
-                "[]",
-                "[]",
-                JSON.stringify(card),
-                "req-7",
+            expect(insert.callsOf("values")).toEqual([
+                [
+                    {
+                        workspaceId: "ws-1",
+                        threadId: "thread-1",
+                        authorKind: "agent",
+                        authorId: "agent-1",
+                        body: "b",
+                        quoted: [],
+                        mentions: [],
+                        approval: card,
+                        approvalRequestId: "req-7",
+                    },
+                ],
             ])
         })
 
         it("refuses a message the insert did not answer or that cannot be read back", async () => {
-            const noInsert = mockEntityManager(stubsOf([]))
-            const noRead = mockEntityManager(stubsOf([{ id: "msg-1" }], []))
+            const noInsert = writerOf([]).em
+            const noRead = writerOf([{ id: "msg-1" }], {}).em
             const { service } = await build(noInsert)
             const line = {
                 workspaceId: "ws-1",

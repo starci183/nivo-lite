@@ -4,6 +4,7 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { OfficeLog } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { inventoryItemOf, inventoryRecipeOf, inventorySupplierOf } from "@tests/fixtures/builders/inventory.builder"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InventoryErrorCode } from "./errors/inventory.error"
@@ -12,17 +13,9 @@ import { InventoryImportService } from "./inventory-import.service"
 import { InventoryLocationsService } from "./inventory-locations.service"
 import { InventoryMovementsService } from "./inventory-movements.service"
 import { INVENTORY_TEMPLATES, inventoryStarterOf } from "./inventory.templates"
-import { savedId } from "./policies/saved-id.policy"
-import type { IdRow } from "./policies/saved-id.policy"
-import {
-    IMPORT_ITEM,
-    SAVE_ITEM,
-    SAVE_RECIPE,
-    SAVE_SUPPLIER,
-    SELECT_ITEM_REFS,
-    SELECT_RECIPE_NAMES,
-    SELECT_SUPPLIER_NAMES,
-} from "./persistence/inventory.sql"
+import { idColumn, savedId } from "./policies/saved-id.policy"
+import { InventoryItemEntity, InventoryRecipeEntity, InventorySupplierEntity } from "./persistence/entities"
+import { IMPORT_ITEM, SAVE_ITEM, SAVE_RECIPE, SAVE_SUPPLIER } from "@tests/fixtures/builders/inventory-calls.builder"
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 
@@ -37,6 +30,17 @@ const thrownBy = (run: () => unknown): unknown => {
 }
 
 const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
+
+const itemRow = (overrides: { [K in keyof InventoryItemEntity]?: InventoryItemEntity[K] } = {}): InventoryItemEntity =>
+    inventoryItemOf(overrides)
+
+const supplierRow = (
+    overrides: { [K in keyof InventorySupplierEntity]?: InventorySupplierEntity[K] } = {},
+): InventorySupplierEntity => inventorySupplierOf(overrides)
+
+const recipeRow = (
+    overrides: { [K in keyof InventoryRecipeEntity]?: InventoryRecipeEntity[K] } = {},
+): InventoryRecipeEntity => inventoryRecipeOf(overrides)
 
 const build = async (entityManager: MockEntityManager) => {
     const catalog = mock<MessageCatalog>()
@@ -56,7 +60,13 @@ const build = async (entityManager: MockEntityManager) => {
     const locations = mock<InventoryLocationsService>()
     const catalogue = mock<InventoryCatalogService>()
     catalogue.writeSupplier.mockImplementation((_workspaceId, fields) =>
-        savedId(entityManager.query<Array<IdRow>>(SAVE_SUPPLIER, [fields.name]), InventoryErrorCode.SupplierNotFound),
+        savedId(
+            idColumn(
+                entityManager.query<Array<Record<string, string | null>>>(SAVE_SUPPLIER, [fields.name]),
+                "inventory_save_supplier",
+            ),
+            InventoryErrorCode.SupplierNotFound,
+        ),
     )
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -151,21 +161,23 @@ describe("InventoryImportService / importPasted", () => {
 
     it("creates and updates items, creates a missing supplier, sets opening stock and queues the low-stock check", async () => {
         const em = mockEntityManager({
-            query: [
+            find: [
                 [
-                    SELECT_ITEM_REFS,
+                    InventoryItemEntity,
                     [
-                        { id: "item-1", sku: "TEA", name: "Tea" },
-                        { id: "item-2", sku: "SUGAR", name: "Sugar" },
+                        itemRow({ id: "item-1", sku: "TEA", name: "Tea" }),
+                        itemRow({ id: "item-2", sku: "SUGAR", name: "Sugar" }),
                     ],
                 ],
-                [SELECT_SUPPLIER_NAMES, [{ id: "sup-1", name: "Mill Co" }]],
-                [IMPORT_ITEM, [{ id: "item-1" }]],
-                [IMPORT_ITEM, [{ id: "item-2" }]],
-                [SAVE_SUPPLIER, [{ id: "sup-2" }]],
-                [IMPORT_ITEM, [{ id: "item-3" }]],
-                [IMPORT_ITEM, [{ id: "item-4" }]],
-                [IMPORT_ITEM, [{ id: "item-5" }]],
+                [InventorySupplierEntity, [supplierRow({ id: "sup-1", name: "Mill Co" })]],
+            ],
+            query: [
+                [IMPORT_ITEM, [{ inventory_import_item: "item-1" }]],
+                [IMPORT_ITEM, [{ inventory_import_item: "item-2" }]],
+                [SAVE_SUPPLIER, [{ inventory_save_supplier: "sup-2" }]],
+                [IMPORT_ITEM, [{ inventory_import_item: "item-3" }]],
+                [IMPORT_ITEM, [{ inventory_import_item: "item-4" }]],
+                [IMPORT_ITEM, [{ inventory_import_item: "item-5" }]],
             ],
         })
         const { service, movements, office } = await build(em)
@@ -201,10 +213,8 @@ describe("InventoryImportService / importPasted", () => {
 describe("InventoryImportService / importPasted", () => {
     it("refuses when the database answers no id for an imported item or a new supplier", async () => {
         const noItem = mockEntityManager({
-            query: [
-                [SELECT_ITEM_REFS, []],
-                [IMPORT_ITEM, [{ id: null }]],
-            ],
+            find: [InventoryItemEntity, []],
+            query: [[IMPORT_ITEM, [{ inventory_import_item: null }]]],
         })
         const first = await build(noItem)
 
@@ -213,11 +223,11 @@ describe("InventoryImportService / importPasted", () => {
         })
 
         const noSupplier = mockEntityManager({
-            query: [
-                [SELECT_ITEM_REFS, []],
-                [SELECT_SUPPLIER_NAMES, []],
-                [SAVE_SUPPLIER, []],
+            find: [
+                [InventoryItemEntity, []],
+                [InventorySupplierEntity, []],
             ],
+            query: [[SAVE_SUPPLIER, []]],
         })
         const second = await build(noSupplier)
 
@@ -237,13 +247,16 @@ describe("InventoryImportService", () => {
     it("applies a named starter while preserving every existing supplier, item and recipe", async () => {
         const starter = inventoryStarterOf("cafe")
         const em = mockEntityManager({
-            query: [
+            find: [
                 [
-                    SELECT_SUPPLIER_NAMES,
-                    starter.suppliers.map((supplier) => ({ id: supplier.name, name: supplier.name })),
+                    InventorySupplierEntity,
+                    starter.suppliers.map((supplier) => supplierRow({ id: supplier.name, name: supplier.name })),
                 ],
-                [SELECT_ITEM_REFS, starter.items.map((item) => ({ id: item.sku, sku: item.sku, name: item.name }))],
-                [SELECT_RECIPE_NAMES, starter.recipes.map((recipe) => ({ name: recipe.name }))],
+                [
+                    InventoryItemEntity,
+                    starter.items.map((item) => itemRow({ id: item.sku, sku: item.sku, name: item.name })),
+                ],
+                [InventoryRecipeEntity, starter.recipes.map((recipe) => recipeRow({ name: recipe.name }))],
             ],
         })
         const { service, catalogue, movements, office } = await build(em)
@@ -269,12 +282,12 @@ describe("InventoryImportService", () => {
 describe("InventoryImportService", () => {
     it("stores a starter item without a supplier and records the exact import summary", async () => {
         const em = mockEntityManager({
-            query: [
-                [SELECT_SUPPLIER_NAMES, []],
-                [SELECT_ITEM_REFS, []],
-                [SAVE_ITEM, [{ id: "item-1" }]],
-                [SELECT_RECIPE_NAMES, []],
+            find: [
+                [InventorySupplierEntity, []],
+                [InventoryItemEntity, []],
+                [InventoryRecipeEntity, []],
             ],
+            query: [[SAVE_ITEM, [{ inventory_save_item: "item-1" }]]],
         })
         const { service, movements, office } = await build(em)
 
@@ -324,14 +337,16 @@ describe("InventoryImportService", () => {
 describe("InventoryImportService / applyStarter", () => {
     it("adds the missing suppliers, items with opening stock and recipes, and leaves what exists", async () => {
         const em = mockEntityManager({
+            find: [
+                [InventorySupplierEntity, [supplierRow({ id: "sup-1", name: "Mill Co" })]],
+                [InventoryItemEntity, [itemRow({ id: "item-1", sku: "TEA", name: "Tea" })]],
+                [InventoryRecipeEntity, [recipeRow({ name: "Old" })]],
+            ],
             query: [
-                [SELECT_SUPPLIER_NAMES, [{ id: "sup-1", name: "Mill Co" }]],
-                [SAVE_SUPPLIER, [{ id: "sup-2" }]],
-                [SAVE_SUPPLIER, [{ id: "sup-3" }]],
-                [SELECT_ITEM_REFS, [{ id: "item-1", sku: "TEA", name: "Tea" }]],
-                [SAVE_ITEM, [{ id: "item-5" }]],
-                [SAVE_ITEM, [{ id: "item-6" }]],
-                [SELECT_RECIPE_NAMES, [{ name: "Old" }]],
+                [SAVE_SUPPLIER, [{ inventory_save_supplier: "sup-2" }]],
+                [SAVE_SUPPLIER, [{ inventory_save_supplier: "sup-3" }]],
+                [SAVE_ITEM, [{ inventory_save_item: "item-5" }]],
+                [SAVE_ITEM, [{ inventory_save_item: "item-6" }]],
                 [SAVE_RECIPE, []],
                 [SAVE_RECIPE, []],
             ],
@@ -390,10 +405,8 @@ describe("InventoryImportService / applyStarter", () => {
 describe("InventoryImportService / applyStarter", () => {
     it("refuses when the database answers no id for a supplier or an item", async () => {
         const noSupplier = mockEntityManager({
-            query: [
-                [SELECT_SUPPLIER_NAMES, []],
-                [SAVE_SUPPLIER, [{ id: null }]],
-            ],
+            find: [InventorySupplierEntity, []],
+            query: [[SAVE_SUPPLIER, [{ inventory_save_supplier: null }]]],
         })
         const first = await build(noSupplier)
 
@@ -407,11 +420,11 @@ describe("InventoryImportService / applyStarter", () => {
         ).rejects.toMatchObject({ code: InventoryErrorCode.SupplierNotFound })
 
         const noItem = mockEntityManager({
-            query: [
-                [SELECT_SUPPLIER_NAMES, []],
-                [SELECT_ITEM_REFS, []],
-                [SAVE_ITEM, []],
+            find: [
+                [InventorySupplierEntity, []],
+                [InventoryItemEntity, []],
             ],
+            query: [[SAVE_ITEM, []]],
         })
         const second = await build(noItem)
         const item = {

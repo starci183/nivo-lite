@@ -3,7 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { mock } from "@starci/jest-preset"
 import { EventsService } from "@modules/domain/events"
 import { OfficeCardsService } from "@modules/domain/messages"
-import { OfficeRoomsService } from "@modules/domain/office-rooms"
+import { OfficeRoomMembersService, OfficeRoomReadsService, OfficeRoomsService } from "@modules/domain/office-rooms"
 import { StaffService } from "@modules/domain/staff"
 import { ACCOUNT_DIRECTORY, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { AccountDirectory } from "@modules/domain/workspace-members"
@@ -13,6 +13,8 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 @Module({
     providers: [
         OfficeRoomsService,
+        OfficeRoomReadsService,
+        OfficeRoomMembersService,
         WorkspaceMembersService,
         EventsService,
         StaffService,

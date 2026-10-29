@@ -11,8 +11,7 @@ import { VideoWorkbenchService } from "./video-workbench.service"
 import { VideoMediaService } from "./video-media.service"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
 import type { VideoShareResult } from "./video-sharing.contracts"
-import { LIST_WORKBENCH_PROJECTS } from "./persistence/video-workbench.sql"
-import type { WorkbenchProjectRow } from "./persistence/video-workbench.rows"
+import { listWorkbenchProjects } from "./persistence/video-workbench.query"
 
 @Injectable()
 /** Sends an approved video's download link to the owner's Office and connected Telegram chat. */
@@ -33,11 +32,7 @@ export class VideoSharingService {
         const { member, project } = await this.workbench.managed(principalId, workspaceId, projectId)
         if (!["approved", "published"].includes(project.status))
             throw new VideoError({ code: VideoErrorCode.NotApproved })
-        const [row] = await this.entityManager.query<Array<WorkbenchProjectRow>>(LIST_WORKBENCH_PROJECTS, [
-            workspaceId,
-            projectId,
-            true,
-        ])
+        const [row] = await listWorkbenchProjects(this.entityManager, workspaceId, projectId, true)
         const path = row?.render?.status === "done" ? row.render.output_path : null
         if (path === null) throw new VideoError({ code: VideoErrorCode.NotApproved })
         const url = await this.media.shareLink(workspaceId, path)

@@ -17,8 +17,7 @@ import type {
 import type { MessageVariables, TextParams } from "./automations.contracts"
 import { InjectAutomationGate, InjectAutomationOffice, InjectAutomationText } from "./automations.decorators"
 import { AutomationsError, AutomationsErrorCode } from "./errors/automations.error"
-import { SELECT_FIRST_STAFF, SELECT_LATEST_CONVERSATION, SELECT_LEAD } from "./persistence/automation-readers.sql"
-import type { ConversationReadRow, LeadReadRow } from "./persistence/automations.rows"
+import { readFirstStaff, readLatestConversation, readLead } from "./automation-reads.query"
 import { acceptableMessage, fillBody, stripQuotes, withTail } from "./policies/config.policy"
 import { CLASSIFY_SYSTEM, FEEDBACK_MAX, caseSystem, shopBlock } from "./policies/prompt.policy"
 import { NEUTRAL_VARIABLES } from "./words.contracts"
@@ -68,8 +67,7 @@ export class AutomationMessagesService {
 
     /** One lead of a workspace, or none. */
     async lead(workspaceId: string, leadId: string): Promise<LeadOrNone> {
-        const [row] = await this.entityManager.query<Array<LeadReadRow>>(SELECT_LEAD, [workspaceId, leadId])
-        return row ?? null
+        return (await readLead(this.entityManager, workspaceId, leadId)) ?? null
     }
 
     /** The lead of an id the trigger carried; none when it carried none. */
@@ -79,17 +77,12 @@ export class AutomationMessagesService {
 
     /** The latest real conversation of a lead: where a message to the customer leaves. */
     async conversationOf(workspaceId: string, leadId: string): Promise<ConversationOrNone> {
-        const [row] = await this.entityManager.query<Array<ConversationReadRow>>(SELECT_LATEST_CONVERSATION, [
-            workspaceId,
-            leadId,
-        ])
-        return row ?? null
+        return (await readLatestConversation(this.entityManager, workspaceId, leadId)) ?? null
     }
 
     /** The name of the first active staff member, or none. */
     async firstStaffName(workspaceId: string): Promise<NameOrNone> {
-        const [row] = await this.entityManager.query<Array<{ name: string }>>(SELECT_FIRST_STAFF, [workspaceId])
-        return row?.name ?? null
+        return (await readFirstStaff(this.entityManager, workspaceId))?.name ?? null
     }
 
     /**

@@ -174,3 +174,57 @@ export interface Refusal {
     /** The values of its text. */
     readonly params?: ErrorParams
 }
+
+/** One verdict a member gave a request, as the request stores it. */
+export interface ApprovalVerdictRecord {
+    /** The member who answered. */
+    readonly member_id: string
+    /** What they answered. */
+    readonly verdict: ApprovalVerdict
+    /** When they answered, as ISO text. */
+    readonly decided_at: string
+}
+
+/** A stored request for approval as the services read it: the moments are ISO text, the amount a number. */
+export interface ApprovalRequestRecord {
+    /** The request. */
+    readonly id: string
+    /** The workspace. */
+    readonly workspace_id: string
+    /** The chain step it asks about. */
+    readonly chain_step_id: string
+    /** The module of the action. */
+    readonly department: string
+    /** The action. */
+    readonly action: string
+    /** The amount, or null. */
+    readonly amount: number | null
+    /** What the amount is counted in. */
+    readonly unit: RuleUnit
+    /** The agent that asked, or null. */
+    readonly requested_by_agent_id: string | null
+    /** How the approvers decide. */
+    readonly policy: ApprovalPolicy
+    /** Where the request stands. */
+    readonly status: ApprovalStatus
+    /** Who was asked when it opened. */
+    readonly approvers: ReadonlyArray<ApproverRef>
+    /** Who was left out, and why. */
+    readonly excluded: ReadonlyArray<ApprovalExclusion>
+    /** The verdicts given so far, in the order they were given. */
+    readonly verdicts: ReadonlyArray<ApprovalVerdictRecord>
+    /** Minutes before it runs out. */
+    readonly timeout_minutes: number
+    /** When it runs out, as ISO text. */
+    readonly expires_at: string
+    /** When the approvers were reminded, or null. */
+    readonly reminded_at: string | null
+    /** The member who settled it, or null. */
+    readonly resolved_by: string | null
+    /** When it was settled, or null. */
+    readonly resolved_at: string | null
+    /** The member it went to when it expired, or null. */
+    readonly escalated_to: string | null
+    /** When it opened, as ISO text. */
+    readonly created_at: string
+}

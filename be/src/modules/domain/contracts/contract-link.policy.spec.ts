@@ -7,8 +7,7 @@ import {
     nameKeyOf,
     planLink,
 } from "./contract-link.policy"
-import type { CustomerRecord, LinkLead } from "./contract-link.policy"
-import type { CustomerRecordRow } from "./persistence/contracts.rows"
+import type { CustomerRecord, CustomerRecordRead, LinkLead } from "./contract-link.policy"
 
 const SUBJECT = Symbol("contract-link.policy")
 
@@ -24,8 +23,8 @@ const subjectOf = async () => {
     return moduleRef.get<typeof import("./contract-link.policy")>(SUBJECT)
 }
 
-const rowOf = (data: Record<string, unknown>, extra: Partial<CustomerRecordRow> = {}): CustomerRecordRow => ({
-    external_id: "EXT-1",
+const rowOf = (data: Record<string, unknown>, extra: Partial<CustomerRecordRead> = {}): CustomerRecordRead => ({
+    externalId: "EXT-1",
     title: "",
     data,
     source: "Kh\u00e1ch h\u00e0ng NIVO 2026",

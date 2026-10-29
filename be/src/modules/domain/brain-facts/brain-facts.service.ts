@@ -1,14 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import type { EntityManager, FindOptionsWhere } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
+import { BrainFactsMaintenanceService } from "./brain-facts-maintenance.service"
+import { BrainFactsReadService } from "./brain-facts-read.service"
 import { BrainFactsError, BrainFactsErrorCode } from "./errors/brain-facts.error"
 import { toFactRecord } from "./fact-record.mapper"
 import { normalFact, mergeEvidence } from "./fact-input.policy"
 import { AUTO_APPLY_TRUST, TRUST, sameValue } from "./fact-key.policy"
-import { inForce, searchFacts, visibleTo } from "./fact-view.policy"
 import type {
     Evidence,
     FactAudience,
@@ -21,31 +22,10 @@ import type {
     MaybeFact,
     ProposeResult,
 } from "./brain-facts.contracts"
-import type { BrainFactRow, FactIdRow } from "./persistence/brain-facts.rows"
-import {
-    ACTIVATE_FACT,
-    CLOSE_RETIRE_PROPOSAL,
-    END_ACTIVE_AT,
-    EXPIRE_DUE_FACTS,
-    INSERT_FACT,
-    PROMOTE_FACT,
-    REJECT_FACT,
-    REJECT_RETIRE_PROPOSALS,
-    REJECT_SCHEDULED,
-    RETIRE_FACT,
-    SCHEDULE_FACT,
-    SELECT_DUE_FACTS,
-    SELECT_FACT,
-    SELECT_FACTS,
-    SELECT_FACTS_BY_KEY,
-    SELECT_FACTS_OF_DOCUMENT,
-    SUPERSEDE_FACT,
-    UPDATE_EVIDENCE,
-    UPDATE_EVIDENCE_ONLY,
-} from "./persistence/brain-facts.sql"
-
-/** The most facts a list returns. */
-const LIST_MAX = 2000
+import { RETURNED, keyOf, returnedFacts } from "./fact-columns.policy"
+import type { FactChanges, NewFact } from "./fact-columns.policy"
+import { SUPERSEDE, activateChanges, decisionOf, scheduleChanges } from "./fact-write.policy"
+import { BrainFactEntity } from "./persistence/entities"
 
 /** Who acts for the brain itself when no person decides. */
 const BRAIN = "NIVO"
@@ -60,22 +40,18 @@ export class BrainFactsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
+        private readonly reads: BrainFactsReadService,
+        private readonly maintenance: BrainFactsMaintenanceService,
     ) {}
 
     /** One fact of the workspace. */
     get(workspaceId: string, id: string): Promise<MaybeFact> {
-        return this.fetch(this.entityManager, workspaceId, id)
+        return this.reads.get(workspaceId, id)
     }
 
     /** The facts of the workspace, newest change first. */
-    async list(workspaceId: string, filter: FactFilter): Promise<ReadonlyArray<FactRecord>> {
-        const rows = await this.entityManager.query<Array<BrainFactRow>>(SELECT_FACTS, [
-            workspaceId,
-            filter.statuses ?? null,
-            filter.subjectKey ?? null,
-            Math.min(filter.limit ?? 500, LIST_MAX),
-        ])
-        return rows.map(toFactRecord)
+    list(workspaceId: string, filter: FactFilter): Promise<ReadonlyArray<FactRecord>> {
+        return this.reads.list(workspaceId, filter)
     }
 
     /** The facts of a key in one status and scope. */
@@ -86,24 +62,22 @@ export class BrainFactsService {
         status: FactStatus,
         installationId: InstallationScope,
     ): Promise<ReadonlyArray<FactRecord>> {
-        return this.keyed(this.entityManager, workspaceId, subjectKey, attribute, status, installationId)
+        return this.reads.byKey(workspaceId, subjectKey, attribute, status, installationId)
     }
 
     /** The active facts one agent may use right now: in force and inside its view. */
-    async forView(
+    forView(
         workspaceId: string,
         audience: FactAudience,
         module: string,
         installationId: InstallationScope,
         limit: number,
     ): Promise<ReadonlyArray<FactRecord>> {
-        const at = this.clock.now().getTime()
-        const active = await this.list(workspaceId, { statuses: ["active"], limit })
-        return active.filter((fact) => inForce(fact, at) && visibleTo(fact, audience, module, installationId))
+        return this.reads.forView(workspaceId, audience, module, installationId, limit)
     }
 
     /** The facts of a view that match a question, best first. */
-    async search(
+    search(
         workspaceId: string,
         audience: FactAudience,
         module: string,
@@ -111,7 +85,7 @@ export class BrainFactsService {
         query: string,
         limit: number,
     ): Promise<ReadonlyArray<FactRecord>> {
-        return searchFacts(await this.forView(workspaceId, audience, module, installationId, 500), query, limit)
+        return this.reads.search(workspaceId, audience, module, installationId, query, limit)
     }
 
     /**
@@ -126,23 +100,25 @@ export class BrainFactsService {
         const evidence = input.evidence ?? []
         const scopeId = input.installationId ?? null
         const em = this.entityManager
-        const [active] = await this.keyed(em, workspaceId, normal.subjectKey, normal.attribute, "active", scopeId)
+        const [active] = await this.reads.keyed(em, workspaceId, normal.subjectKey, normal.attribute, "active", scopeId)
         if (active !== undefined && sameValue(active.value, normal.value)) {
             const fact = await this.grow(em, workspaceId, active, evidence, trust)
             // A source confirms the value again: a waiting proposal to stop using it no longer holds.
             if (evidence.length > 0) {
-                await em.query(REJECT_RETIRE_PROPOSALS, [
-                    workspaceId,
-                    normal.subjectKey,
-                    normal.attribute,
-                    scopeId,
-                    "A source confirmed this value again",
-                ])
+                await em.update(
+                    BrainFactEntity,
+                    {
+                        ...keyOf(workspaceId, normal.subjectKey, normal.attribute, scopeId),
+                        status: "proposed",
+                        proposalKind: "retire",
+                    },
+                    decisionOf("rejected", "A source confirmed this value again"),
+                )
             }
             return { fact, outcome: "reinforced" }
         }
         const waiting = (
-            await this.keyed(em, workspaceId, normal.subjectKey, normal.attribute, "proposed", scopeId)
+            await this.reads.keyed(em, workspaceId, normal.subjectKey, normal.attribute, "proposed", scopeId)
         ).find((proposal) => proposal.proposalKind === "set" && sameValue(proposal.value, normal.value))
         const direct = input.autoApply ?? trust >= AUTO_APPLY_TRUST
         if (waiting !== undefined) {
@@ -152,29 +128,28 @@ export class BrainFactsService {
         }
         // A new value for a known fact keeps that fact's type, audience and unit unless the caller says otherwise.
         const scope = input.scope ?? active?.scope ?? "internal"
-        const [row] = await em.query<Array<BrainFactRow>>(INSERT_FACT, [
+        const fact = await this.insert(em, {
             workspaceId,
-            input.subjectType ?? active?.subjectType ?? "business",
-            normal.subjectKey,
-            normal.subjectLabel,
-            normal.attribute,
-            normal.attributeLabel,
-            normal.value,
-            normal.valueNumber,
-            input.unit?.trim() || active?.unit || null,
+            subjectType: input.subjectType ?? active?.subjectType ?? "business",
+            subjectKey: normal.subjectKey,
+            subjectLabel: normal.subjectLabel,
+            attribute: normal.attribute,
+            attributeLabel: normal.attributeLabel,
+            value: normal.value,
+            valueNumber: normal.valueNumber === null ? null : String(normal.valueNumber),
+            unit: input.unit?.trim() || active?.unit || null,
             scope,
-            scope === "restricted" ? [...(input.modules ?? active?.modules ?? [])] : [],
-            input.sourceKind,
+            modules: scope === "restricted" ? [...(input.modules ?? active?.modules ?? [])] : [],
+            sourceKind: input.sourceKind,
             trust,
-            input.validFrom ?? null,
-            input.validTo ?? null,
-            active?.id ?? null,
-            JSON.stringify(evidence),
-            input.proposedBy,
-            scopeId,
-            "set",
-        ])
-        const fact = this.first(row)
+            validFrom: input.validFrom ?? null,
+            validTo: input.validTo ?? null,
+            conflictWith: active?.id ?? null,
+            evidence,
+            proposedBy: input.proposedBy,
+            installationId: scopeId,
+            proposalKind: "set",
+        })
         if (direct) return { fact: await this.apply(workspaceId, fact.id, input.proposedBy), outcome: "applied" }
         return { fact, outcome: active === undefined ? "proposed" : "conflict" }
     }
@@ -185,10 +160,10 @@ export class BrainFactsService {
      */
     apply(workspaceId: string, id: string, decidedBy: string, note?: string): Promise<FactRecord> {
         return this.entityManager.transaction(async (tx) => {
-            const fact = await this.fetch(tx, workspaceId, id)
+            const fact = await this.reads.fetch(tx, workspaceId, id)
             if (fact === null) throw new BrainFactsError({ code: BrainFactsErrorCode.FactNotFound })
             if (fact.status !== "proposed") throw new BrainFactsError({ code: BrainFactsErrorCode.NotProposed })
-            const [current] = await this.keyed(
+            const [current] = await this.reads.keyed(
                 tx,
                 workspaceId,
                 fact.subjectKey,
@@ -206,29 +181,36 @@ export class BrainFactsService {
                         decidedBy,
                         reason ?? "No source supports this value any more",
                     )
-                return this.one(tx, CLOSE_RETIRE_PROPOSAL, [workspaceId, id, decidedBy, reason ?? "Stopped using"])
+                return this.changed(
+                    tx,
+                    { workspaceId, id, status: "proposed" },
+                    decisionOf("expired", reason ?? "Stopped using", decidedBy),
+                    BrainFactsErrorCode.NotProposed,
+                )
             }
             if (fact.validFrom !== null && Date.parse(fact.validFrom) > this.clock.now().getTime()) {
-                // Only one scheduled change per key: a newer approval replaces an older plan.
-                await tx.query(REJECT_SCHEDULED, [workspaceId, fact.subjectKey, fact.attribute, fact.installationId])
-                if (current !== undefined) await tx.query(END_ACTIVE_AT, [workspaceId, current.id, fact.validFrom])
-                return this.one(tx, SCHEDULE_FACT, [workspaceId, id, current?.id ?? null, decidedBy, reason])
+                return this.schedule(tx, workspaceId, fact, current?.id ?? null, decidedBy, reason)
             }
-            if (current !== undefined) await tx.query(SUPERSEDE_FACT, [workspaceId, current.id])
-            return this.one(tx, ACTIVATE_FACT, [workspaceId, id, current?.id ?? null, decidedBy, reason])
+            if (current !== undefined) {
+                await tx.update(BrainFactEntity, { workspaceId, id: current.id, status: "active" }, SUPERSEDE)
+            }
+            return this.changed(
+                tx,
+                { workspaceId, id, status: "proposed" },
+                activateChanges(current?.id ?? null, decidedBy, reason),
+                BrainFactsErrorCode.NotProposed,
+            )
         })
     }
 
     /** Turns a proposal down; it stays in the history with the reason. */
-    async reject(workspaceId: string, id: string, decidedBy: string, note?: string): Promise<FactRecord> {
-        const [row] = await this.entityManager.query<Array<BrainFactRow>>(REJECT_FACT, [
-            workspaceId,
-            id,
-            decidedBy,
-            note?.trim() || null,
-        ])
-        if (row === undefined) throw new BrainFactsError({ code: BrainFactsErrorCode.NotProposed })
-        return toFactRecord(row)
+    reject(workspaceId: string, id: string, decidedBy: string, note?: string): Promise<FactRecord> {
+        return this.changed(
+            this.entityManager,
+            { workspaceId, id, status: "proposed" },
+            decisionOf("rejected", note?.trim() || null, decidedBy),
+            BrainFactsErrorCode.NotProposed,
+        )
     }
 
     /** Stops an active fact without a replacement (no longer true): it expires now. */
@@ -316,51 +298,34 @@ export class BrainFactsService {
             active.installationId,
         )
         if (waiting.some((proposal) => proposal.proposalKind === "retire")) return false
-        await this.entityManager.query(INSERT_FACT, [
+        await this.insert(this.entityManager, {
             workspaceId,
-            active.subjectType,
-            active.subjectKey,
-            active.subjectLabel,
-            active.attribute,
-            active.attributeLabel,
-            active.value,
-            active.valueNumber,
-            active.unit,
-            active.scope,
-            [...active.modules],
-            "document",
-            TRUST.document,
-            null,
-            null,
-            active.id,
-            JSON.stringify([why]),
+            subjectType: active.subjectType,
+            subjectKey: active.subjectKey,
+            subjectLabel: active.subjectLabel,
+            attribute: active.attribute,
+            attributeLabel: active.attributeLabel,
+            value: active.value,
+            valueNumber: active.valueNumber === null ? null : String(active.valueNumber),
+            unit: active.unit,
+            scope: active.scope,
+            modules: [...active.modules],
+            sourceKind: "document",
+            trust: TRUST.document,
+            validFrom: null,
+            validTo: null,
+            conflictWith: active.id,
+            evidence: [why],
             proposedBy,
-            active.installationId,
-            "retire",
-        ])
+            installationId: active.installationId,
+            proposalKind: "retire",
+        })
         return true
     }
 
-    /**
-     * Takes one document's contribution back: proposals that rest on it alone are rejected with `note`; a proposal or fact that other
-     * sources also support only loses this document from its evidence. Answers the ids of active document facts left with no evidence.
-     */
-    async withdrawSource(workspaceId: string, sourceId: string, note: string): Promise<ReadonlyArray<string>> {
-        const rows = await this.entityManager.query<Array<BrainFactRow>>(SELECT_FACTS_OF_DOCUMENT, [
-            workspaceId,
-            JSON.stringify([{ kind: "document", ref: sourceId }]),
-        ])
-        const orphans: Array<string> = []
-        await eachInOrder(rows.map(toFactRecord), async (fact) => {
-            const rest = fact.evidence.filter((item) => !(item.kind === "document" && item.ref === sourceId))
-            if (fact.status === "proposed" && rest.length === 0) {
-                await this.reject(workspaceId, fact.id, BRAIN, note)
-                return
-            }
-            await this.entityManager.query(UPDATE_EVIDENCE_ONLY, [workspaceId, fact.id, JSON.stringify(rest)])
-            if (fact.status === "active" && rest.length === 0 && fact.sourceKind === "document") orphans.push(fact.id)
-        })
-        return orphans
+    /** Takes one document's contribution back; answers the ids of active document facts left with no evidence. */
+    withdrawSource(workspaceId: string, sourceId: string, note: string): Promise<ReadonlyArray<string>> {
+        return this.maintenance.withdrawSource(workspaceId, sourceId, note)
     }
 
     /**
@@ -386,51 +351,8 @@ export class BrainFactsService {
     }
 
     /** Scheduled facts whose time has come take over and ended facts expire. */
-    async maintain(workspaceId: string): Promise<MaintenanceResult> {
-        const due = (await this.entityManager.query<Array<BrainFactRow>>(SELECT_DUE_FACTS, [workspaceId])).map(
-            toFactRecord,
-        )
-        const activated: Array<FactRecord> = []
-        await eachInOrder(due, async (fact) => {
-            const current = await this.keyed(
-                this.entityManager,
-                workspaceId,
-                fact.subjectKey,
-                fact.attribute,
-                "active",
-                fact.installationId,
-            )
-            await eachInOrder(current, (old) => this.entityManager.query(SUPERSEDE_FACT, [workspaceId, old.id]))
-            const [row] = await this.entityManager.query<Array<BrainFactRow>>(PROMOTE_FACT, [workspaceId, fact.id])
-            if (row !== undefined) activated.push(toFactRecord(row))
-        })
-        const expired = await this.entityManager.query<Array<FactIdRow>>(EXPIRE_DUE_FACTS, [workspaceId])
-        return { activated, expired: expired.length }
-    }
-
-    /** One fact through a manager. */
-    private async fetch(em: EntityManager, workspaceId: string, id: string): Promise<MaybeFact> {
-        const [row] = await em.query<Array<BrainFactRow>>(SELECT_FACT, [workspaceId, id])
-        return row === undefined ? null : toFactRecord(row)
-    }
-
-    /** The facts of a key in one status and scope through a manager. */
-    private async keyed(
-        em: EntityManager,
-        workspaceId: string,
-        subjectKey: string,
-        attribute: string,
-        status: FactStatus,
-        installationId: InstallationScope,
-    ): Promise<ReadonlyArray<FactRecord>> {
-        const rows = await em.query<Array<BrainFactRow>>(SELECT_FACTS_BY_KEY, [
-            workspaceId,
-            subjectKey,
-            attribute,
-            status,
-            installationId,
-        ])
-        return rows.map(toFactRecord)
+    maintain(workspaceId: string): Promise<MaintenanceResult> {
+        return this.maintenance.maintain(workspaceId)
     }
 
     /** Adds evidence to a fact and lifts its trust to the new source's when that is higher. */
@@ -441,12 +363,13 @@ export class BrainFactsService {
         evidence: ReadonlyArray<Evidence>,
         trust: number,
     ): Promise<FactRecord> {
-        return this.one(em, UPDATE_EVIDENCE, [
-            workspaceId,
-            fact.id,
-            JSON.stringify(mergeEvidence(fact.evidence, evidence)),
-            Math.max(fact.trust, trust),
-        ])
+        return this.changed(
+            em,
+            { workspaceId, id: fact.id },
+            { evidence: () => ":evidence::jsonb", trust: Math.max(fact.trust, trust), updatedAt: () => "now()" },
+            BrainFactsErrorCode.NotProposed,
+            { evidence: JSON.stringify(mergeEvidence(fact.evidence, evidence)) },
+        )
     }
 
     /** Expires an active fact. */
@@ -457,23 +380,86 @@ export class BrainFactsService {
         decidedBy: string,
         note: string | null,
     ): Promise<FactRecord> {
-        return this.one(em, RETIRE_FACT, [workspaceId, id, decidedBy, note], BrainFactsErrorCode.NotActive)
+        return this.changed(
+            em,
+            { workspaceId, id, status: "active" },
+            { ...decisionOf("expired", note, decidedBy), validTo: () => "now()" },
+            BrainFactsErrorCode.NotActive,
+        )
     }
 
     /** The fact of the one row a write answers. */
-    private first(row: BrainFactRow | undefined): FactRecord {
+
+    /** Approves a proposal that starts later: older plans of the key are dropped and the value in force ends at the start. */
+    private async schedule(
+        tx: EntityManager,
+        workspaceId: string,
+        fact: FactRecord,
+        currentId: string | null,
+        decidedBy: string,
+        reason: string | null,
+    ): Promise<FactRecord> {
+        // Only one scheduled change per key: a newer approval replaces an older plan.
+        await tx.update(
+            BrainFactEntity,
+            { ...keyOf(workspaceId, fact.subjectKey, fact.attribute, fact.installationId), status: "scheduled" },
+            { status: "rejected", decisionNote: "Replaced by a newer schedule", updatedAt: () => "now()" },
+        )
+        if (currentId !== null) {
+            await tx
+                .createQueryBuilder(BrainFactEntity, "bf")
+                .update()
+                .set({ validTo: () => ":validTo::timestamptz", updatedAt: () => "now()" })
+                .where({ workspaceId, id: currentId, status: "active" })
+                .setParameter("validTo", fact.validFrom)
+                .execute()
+        }
+        return this.changed(
+            tx,
+            { workspaceId, id: fact.id, status: "proposed" },
+            scheduleChanges(currentId, decidedBy, reason),
+            BrainFactsErrorCode.NotProposed,
+        )
+    }
+
+    /** Stores a new proposal and answers it. */
+    private async insert(em: EntityManager, fact: NewFact): Promise<FactRecord> {
+        const { validFrom, validTo, evidence, ...rest } = fact
+        const inserted = await em
+            .createQueryBuilder(BrainFactEntity, "bf")
+            .insert()
+            .values({
+                ...rest,
+                status: "proposed",
+                validFrom: () => ":validFrom::timestamptz",
+                validTo: () => ":validTo::timestamptz",
+                evidence: () => ":evidence::jsonb",
+            })
+            .setParameters({ validFrom, validTo, evidence: JSON.stringify(evidence) })
+            .returning(RETURNED)
+            .execute()
+        const [row] = returnedFacts(inserted.raw)
         if (row === undefined) throw new BrainFactsError({ code: BrainFactsErrorCode.FactNotFound })
         return toFactRecord(row)
     }
 
-    /** The one row a write answers; the code when it changed nothing. */
-    private async one(
+    /** Changes the one fact a condition names in one atomic statement and answers it; refuses with the code when no row matched. */
+    private async changed(
         em: EntityManager,
-        text: typeof RETIRE_FACT,
-        params: ReadonlyArray<unknown>,
-        code: BrainFactsErrorCode = BrainFactsErrorCode.NotProposed,
+        where: FindOptionsWhere<BrainFactEntity>,
+        changes: FactChanges,
+        code: BrainFactsErrorCode,
+        parameters: Record<string, string> = {},
     ): Promise<FactRecord> {
-        const [row] = await em.query<Array<BrainFactRow>>(text, [...params])
+        const updated = await em
+            .createQueryBuilder(BrainFactEntity, "bf")
+            .update()
+            .set(changes)
+            .where(where)
+            .setParameters(parameters)
+            .returning(RETURNED)
+            .execute()
+        const [row] = returnedFacts(updated.raw)
         if (row === undefined) throw new BrainFactsError({ code })
         return toFactRecord(row)
     }

@@ -28,7 +28,9 @@ import {
     ignoredMessages,
 } from "@tests/fixtures/builders/meta-inbox.builder"
 import { fakeInbox, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
+import type { FakeTransaction } from "@starci/jest-preset"
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
+import { IsNull } from "typeorm"
 import { Test } from "@nestjs/testing"
 import type { EntityManager } from "typeorm"
 import { ConnectionsService } from "@modules/domain/connections"
@@ -47,7 +49,35 @@ import { META_EVENT_TAKER } from "./meta-inbox.decorators"
 import type { MetaEventTaker } from "./meta-inbox.port"
 import type { MetaInboundJob } from "./meta-inbox.contracts"
 import { MetaInboxService } from "./meta-inbox.service"
-import { COMPLETE_META_INBOX, FIND_PENDING_META_INBOX, INSERT_META_INBOX } from "./persistence/meta-inbox.sql"
+import { MetaInboxEntity } from "./persistence/entities"
+import { INSERT_META_INBOX } from "./persistence/meta-inbox.sql"
+
+/** Matches the `() => "now()"` function a write hands the database for a time column. */
+const ANY_FUNCTION: unknown = expect.any(Function)
+
+const FIND_CALL = [
+    MetaInboxEntity,
+    {
+        select: { id: true, payload: true },
+        where: { provider: "meta", deliveryId: DELIVERY_ID, processedAt: IsNull() },
+        lock: { mode: "pessimistic_write" },
+    },
+]
+const COMPLETE_CALL = [MetaInboxEntity, { id: "inbox-1" }, { processedAt: ANY_FUNCTION }]
+
+const pendingReceipt = (payload: object) => Object.assign(new MetaInboxEntity(), { id: "inbox-1", payload })
+
+/** The consumer locked the pending receipt and then completed it. */
+const expectConsumed = (tx: FakeTransaction): void => {
+    expect(tx.em.findOne.mock.calls).toEqual([FIND_CALL])
+    expect(tx.em.update.mock.calls).toEqual([COMPLETE_CALL])
+}
+
+/** The consumer locked the pending receipt and wrote no completion. */
+const expectLockedOnly = (tx: FakeTransaction): void => {
+    expect(tx.em.findOne.mock.calls).toEqual([FIND_CALL])
+    expect(tx.em.update).not.toHaveBeenCalled()
+}
 
 /** A partial-object matcher, typed `unknown` so it flows into any slot. */
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
@@ -74,16 +104,14 @@ const attachReceiptClaim = (inbox: ReturnType<typeof fakeInbox>): void => {
 const build = async (
     events: ReadonlyArray<MetaEvent> = [],
     claimed = [{ id: "inbox-1" }],
-    pending = [{ id: "inbox-1", payload: BODY }],
+    pending: MetaInboxEntity | null = pendingReceipt(BODY),
     realParsing = false,
 ) => {
     const tx = fakeTransaction(
         mockEntityManager({
-            query: [
-                [INSERT_META_INBOX, claimed],
-                [COMPLETE_META_INBOX, []],
-                [FIND_PENDING_META_INBOX, pending],
-            ],
+            query: [INSERT_META_INBOX, claimed],
+            findOne: [MetaInboxEntity, pending],
+            update: [MetaInboxEntity, {}],
         }),
     )
     const connections = mock<ConnectionsService>()
@@ -195,11 +223,8 @@ describe("MetaInboxService empty receipts", () => {
 
         await expect(service.processRecordedDelivery({ deliveryId: DELIVERY_ID })).resolves.toBeUndefined()
         expect(meta.parse).toHaveBeenCalledWith(BODY)
-        expect(tx.em.query.mock.calls).toEqual([
-            [INSERT_META_INBOX, ["meta", DELIVERY_ID, JSON.stringify(BODY)]],
-            [FIND_PENDING_META_INBOX, [DELIVERY_ID]],
-            [COMPLETE_META_INBOX, ["inbox-1"]],
-        ])
+        expect(tx.em.query.mock.calls).toEqual([[INSERT_META_INBOX, ["meta", DELIVERY_ID, JSON.stringify(BODY)]]])
+        expectConsumed(tx)
         expect(connections.findLiveByMeta).not.toHaveBeenCalled()
         expect(connections.recordEvent).not.toHaveBeenCalled()
         expect(outbox.jobsOf(META_INBOUND_QUEUE)).toEqual([])
@@ -218,10 +243,7 @@ describe("MetaInboxService", () => {
         expect(manager).not.toBe(tx.em)
         expect(tx.commits).toBe(1)
         expect(connections.findLiveByMeta.mock.calls).toEqual(expectedSurfaceLookups(manager))
-        expect(tx.em.query.mock.calls).toEqual([
-            [FIND_PENDING_META_INBOX, [DELIVERY_ID]],
-            [COMPLETE_META_INBOX, ["inbox-1"]],
-        ])
+        expectConsumed(tx)
         expect(threads.touch.mock.calls).toEqual(expectedThreadWindows(manager))
         expect(connections.recordEvent.mock.calls).toEqual(expectedMessageRecords(manager))
         expect(write.mock.calls).toEqual(expectedMessageJobs(manager, META_INBOUND_QUEUE))
@@ -237,10 +259,7 @@ describe("MetaInboxService", () => {
         const manager = connections.findLiveByMeta.mock.calls[0]?.[3]
         expect(manager).toBeDefined()
         expect(manager).not.toBe(tx.em)
-        expect(tx.em.query.mock.calls).toEqual([
-            [FIND_PENDING_META_INBOX, [DELIVERY_ID]],
-            [COMPLETE_META_INBOX, ["inbox-1"]],
-        ])
+        expectConsumed(tx)
         expect(comments.note.mock.calls).toEqual(expectedCommentWindows(manager))
         expect(connections.recordEvent.mock.calls).toEqual(expectedCommentRecords(manager))
         expect(write.mock.calls).toEqual(expectedCommentJobs(manager, META_INBOUND_QUEUE))
@@ -257,10 +276,7 @@ describe("MetaInboxService", () => {
         const manager = connections.findLiveByMeta.mock.calls[0]?.[3]
         expect(manager).toBeDefined()
         expect(manager).not.toBe(tx.em)
-        expect(tx.em.query.mock.calls).toEqual([
-            [FIND_PENDING_META_INBOX, [DELIVERY_ID]],
-            [COMPLETE_META_INBOX, ["inbox-1"]],
-        ])
+        expectConsumed(tx)
         expect(connections.recordEvent.mock.calls).toEqual(
             events.map(() => ["connection-1", { amount: 0, content: "Lan", at: AT, text: "Hello" }, manager]),
         )
@@ -278,10 +294,7 @@ describe("MetaInboxService", () => {
         expect(manager).toBeDefined()
         expect(manager).not.toBe(tx.em)
         expect(connections.findLiveByMeta.mock.calls).toEqual(expectedUnownedLookups(manager))
-        expect(tx.em.query.mock.calls).toEqual([
-            [FIND_PENDING_META_INBOX, [DELIVERY_ID]],
-            [COMPLETE_META_INBOX, ["inbox-1"]],
-        ])
+        expectConsumed(tx)
         expect(connections.recordEvent).not.toHaveBeenCalled()
         expect(outbox.jobs).toEqual([])
         expect(tx.commits).toBe(1)
@@ -296,7 +309,7 @@ describe("MetaInboxService", () => {
 
         expect(tx.rollbacks).toBe(1)
         expect(tx.commits).toBe(0)
-        expect(tx.em.query.mock.calls).toEqual([[FIND_PENDING_META_INBOX, [DELIVERY_ID]]])
+        expectLockedOnly(tx)
     })
 })
 
@@ -335,12 +348,12 @@ describe("MetaInboxService deliver", () => {
 describe("MetaInboxService consumer transaction", () => {
     it("retries a real parsed receipt after rollback and ignores a completed replay", async () => {
         const payload = replayReceiptBody
-        const { service, tx, connections, outbox } = await build([], [], [{ id: "inbox-1", payload }], true)
+        const { service, tx, connections, outbox } = await build([], [], pendingReceipt(payload), true)
         const failure = new Error("connection failed")
         connections.recordEvent.mockRejectedValueOnce(failure)
         await expect(service.processRecordedDelivery({ deliveryId: DELIVERY_ID })).rejects.toBe(failure)
         expect(tx.rollbacks).toBe(1)
-        expect(tx.em.query).not.toHaveBeenCalledWith(COMPLETE_META_INBOX, ["inbox-1"])
+        expect(tx.em.update).not.toHaveBeenCalled()
         await service.processRecordedDelivery({ deliveryId: DELIVERY_ID })
         expect(outbox.jobsOf(META_INBOUND_QUEUE)).toEqual([
             objectLike({
@@ -349,9 +362,9 @@ describe("MetaInboxService consumer transaction", () => {
                 }),
             }),
         ])
-        expect(tx.em.query).toHaveBeenCalledWith(COMPLETE_META_INBOX, ["inbox-1"])
+        expect(tx.em.update).toHaveBeenCalledWith(...COMPLETE_CALL)
         const committed = outbox.jobs.length
-        tx.em.query.mockResolvedValueOnce([])
+        tx.em.findOne.mockResolvedValueOnce(null)
         await service.processRecordedDelivery({ deliveryId: DELIVERY_ID })
         expect(outbox.jobs).toHaveLength(committed)
         expect(connections.recordEvent).toHaveBeenCalledTimes(2)
@@ -361,17 +374,14 @@ describe("MetaInboxService consumer transaction", () => {
         const { service, tx, connections } = await build([event()])
         connections.recordEvent.mockImplementation((_id, _event, manager) => {
             expect(isTransactionManager(manager)).toBe(true)
-            expect(tx.em.query.mock.calls).toEqual([[FIND_PENDING_META_INBOX, [DELIVERY_ID]]])
+            expectLockedOnly(tx)
             return Promise.resolve(null)
         })
 
         await service.processRecordedDelivery({ deliveryId: DELIVERY_ID })
 
         expect(connections.recordEvent.mock.calls[0]?.[2]).toBe(connections.findLiveByMeta.mock.calls[0]?.[3])
-        expect(tx.em.query.mock.calls).toEqual([
-            [FIND_PENDING_META_INBOX, [DELIVERY_ID]],
-            [COMPLETE_META_INBOX, ["inbox-1"]],
-        ])
+        expectConsumed(tx)
     })
 
     it("rolls back the consumer and leaves completion unwritten when connection status fails", async () => {
@@ -383,7 +393,7 @@ describe("MetaInboxService consumer transaction", () => {
 
         expect(tx.rollbacks).toBe(1)
         expect(tx.commits).toBe(0)
-        expect(tx.em.query.mock.calls).toEqual([[FIND_PENDING_META_INBOX, [DELIVERY_ID]]])
+        expectLockedOnly(tx)
         expect(outbox.jobs).toEqual([])
     })
 })
@@ -461,9 +471,9 @@ describe("MetaInboxService deliver", () => {
 
 describe("MetaInboxService deferred delivery", () => {
     it("leaves an already processed receipt alone", async () => {
-        const { service, tx, meta, outbox } = await build([], [], [])
+        const { service, tx, meta, outbox } = await build([], [], null)
         await expect(service.processRecordedDelivery({ deliveryId: DELIVERY_ID })).resolves.toBeUndefined()
-        expect(tx.em.query.mock.calls).toEqual([[FIND_PENDING_META_INBOX, [DELIVERY_ID]]])
+        expectLockedOnly(tx)
         expect(meta.parse).not.toHaveBeenCalled()
         expect(outbox.jobs).toEqual([])
         expect(tx.commits).toBe(1)
@@ -473,10 +483,7 @@ describe("MetaInboxService deferred delivery", () => {
         const { service, tx, meta, outbox } = await build()
         await expect(service.processRecordedDelivery({ deliveryId: DELIVERY_ID })).resolves.toBeUndefined()
         expect(meta.parse.mock.calls).toEqual([[BODY]])
-        expect(tx.em.query.mock.calls).toEqual([
-            [FIND_PENDING_META_INBOX, [DELIVERY_ID]],
-            [COMPLETE_META_INBOX, ["inbox-1"]],
-        ])
+        expectConsumed(tx)
         expect(outbox.jobs).toEqual([])
         expect(tx.commits).toBe(1)
     })

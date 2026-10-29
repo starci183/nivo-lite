@@ -241,54 +241,6 @@ describe("AutomationEngineService onBusinessEvent (group 3)", () => {
     })
 })
 
-describe("AutomationEngineService onBusinessEvent a customer's reply after a review request", () => {
-    const thank = inputs.setupOf("thank_payment")
-    const reviewSetup = () => inputs.setupOf("ask_review")
-    const reply = {
-        workspaceId: "ws-1",
-        event: "message.inbound",
-        data: { lead_id: "l-1", text: "bad" },
-        dedupe: "d-2",
-    }
-    it("checks the feedback of the last finished review request of the week", async () => {
-        const { engine, runs, care } = await build(reviewSetup())
-        runs.latestDoneRun.mockResolvedValue({ id: "r-1", attempts: 0, payload: { lead_id: "l-1" } })
-        await engine.onBusinessEvent(reply)
-        expect(runs.latestDoneRun).toHaveBeenCalledWith({
-            pipelineId: "p-ask_review",
-            reference: "l-1",
-            since: "2026-10-05T10:00:00.000Z",
-        })
-        expectPartialCall(care.checkFeedback, {
-            runId: "r-1",
-            runPayload: { lead_id: "l-1" },
-            feedback: "bad",
-            leadId: "l-1",
-        })
-    })
-
-    it("leaves a request that was already alerted, none that was sent, and a reply with no lead", async () => {
-        const { engine, runs, care } = await build(reviewSetup())
-        runs.latestDoneRun.mockResolvedValueOnce({
-            id: "r-1",
-            attempts: 0,
-            payload: { alerted: { text: "x" } },
-        })
-        runs.latestDoneRun.mockResolvedValueOnce(null)
-        await engine.onBusinessEvent(reply)
-        await engine.onBusinessEvent(reply)
-        await engine.onBusinessEvent({ ...reply, data: { text: "bad" } })
-        expect(care.checkFeedback).not.toHaveBeenCalled()
-        expect(runs.latestDoneRun).toHaveBeenCalledTimes(2)
-    })
-
-    it("does nothing when the review automation is off", async () => {
-        const { engine, runs } = await build(thank)
-        await engine.onBusinessEvent(reply)
-        expect(runs.latestDoneRun).not.toHaveBeenCalled()
-    })
-})
-
 describe("AutomationEngineService a decision of the owner", () => {
     const decision = (data: Record<string, unknown>) => ({ ...event, event: "decision.made", data })
     const waiting = {
@@ -349,29 +301,6 @@ describe("AutomationEngineService a decision of the owner", () => {
         expect(runs.settleRun).toHaveBeenCalledTimes(1)
         expect(pipelineService.saveLadder).not.toHaveBeenCalled()
         expect(runs.waitingRunsFor).toHaveBeenCalledTimes(1)
-    })
-})
-
-describe("AutomationEngineService fireTemplate", () => {
-    const request = inputs.fireRequest
-
-    it("writes a run for later when the pipeline is on", async () => {
-        const { engine, care, runs, pipelineService } = await build(inputs.setupOf("thank_payment"))
-        care.executors.mockReturnValue({ thank_payment: jest.fn() })
-        runs.beginRun.mockResolvedValue(null)
-        await expect(engine.fireTemplate(request)).resolves.toBe(true)
-        expect(pipelineService.enabledPipelinesOf).toHaveBeenCalledWith("ws-1")
-        expectPartialCall(runs.beginRun, {
-            dedupe: "d-1",
-            triggerRef: "t-1",
-            runAt: new Date("2026-10-12T10:00:05.000Z"),
-        })
-    })
-
-    it("does nothing when the pipeline is off", async () => {
-        const { engine, runs } = await build({ pipelines: [], templates: [inputs.template("thank_payment")] })
-        await expect(engine.fireTemplate(request)).resolves.toBe(false)
-        expect(runs.beginRun).not.toHaveBeenCalled()
     })
 })
 

@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { buildInventoryWorkbench } from "./inventory-workbench.policy"
 import type { InventoryWorkbenchRows } from "./inventory-workbench.policy"
-import type { WorkbenchItemRow, WorkbenchPoRow, WorkbenchSupplierRow } from "../persistence/inventory-workbench.rows"
+import type { WorkbenchItemInput, WorkbenchPoInput, WorkbenchSupplierInput } from "./inventory-workbench.inputs"
 
 const SUBJECT = Symbol("inventory-workbench.policy")
 
@@ -28,7 +28,7 @@ const rowsOf = (overrides: Partial<InventoryWorkbenchRows> = {}): InventoryWorkb
     stockOutItemIds: [],
     ...overrides,
 })
-const itemOf = (id: string, overrides: Partial<WorkbenchItemRow> = {}): WorkbenchItemRow => ({
+const itemOf = (id: string, overrides: Partial<WorkbenchItemInput> = {}): WorkbenchItemInput => ({
     id,
     sku: id.toUpperCase(),
     name: id,
@@ -44,7 +44,7 @@ const itemOf = (id: string, overrides: Partial<WorkbenchItemRow> = {}): Workbenc
     active: true,
     ...overrides,
 })
-const supplierOf = (overrides: Partial<WorkbenchSupplierRow> = {}): WorkbenchSupplierRow => ({
+const supplierOf = (overrides: Partial<WorkbenchSupplierInput> = {}): WorkbenchSupplierInput => ({
     id: "sup-1",
     name: "Mill",
     contact_name: "Lan",
@@ -57,7 +57,7 @@ const supplierOf = (overrides: Partial<WorkbenchSupplierRow> = {}): WorkbenchSup
     note: "Call first",
     ...overrides,
 })
-const poOf = (id: string, overrides: Partial<WorkbenchPoRow> = {}): WorkbenchPoRow => ({
+const poOf = (id: string, overrides: Partial<WorkbenchPoInput> = {}): WorkbenchPoInput => ({
     id,
     po_no: id.toUpperCase(),
     supplier_id: null,

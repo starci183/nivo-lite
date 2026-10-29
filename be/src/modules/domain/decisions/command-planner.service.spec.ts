@@ -12,15 +12,6 @@ import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
 import { ModuleCatalogService } from "./module-catalog.service"
 import { OfficeLinesService } from "@modules/domain/messages"
-import {
-    CHAIN_REPEATS_COMMAND,
-    FIND_CHAIN_TOP,
-    FIND_GIVEN_INSTALLATION,
-    FIND_PARENT_POSITION,
-    FIND_SENDER_AGENT,
-    FIND_SUBJECT_LABEL,
-    RESOLVE_INSTALLATION,
-} from "./persistence/command-bus.sql"
 import type { CommandPlan, PlannedCommand } from "./work-engine.contracts"
 import { WorkEngineLogEvent } from "./work-engine.log-events"
 import {
@@ -33,8 +24,69 @@ import {
     replyOf,
     rowOf,
 } from "@tests/fixtures/builders/command-planner.builder"
+import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
+import type { TableAnswers, TableQuery } from "@tests/fixtures/builders/table-query-builder.builder"
 
 type Queries = ReadonlyArray<readonly [string, unknown]>
+
+/** The reads of the planner, named. Each one is a query builder on a table, except the resolver, which is a database function. */
+const FIND_SENDER_AGENT = "sender agent"
+const FIND_PARENT_POSITION = "parent position"
+const FIND_CHAIN_TOP = "chain top"
+const CHAIN_REPEATS_COMMAND = "chain repeats"
+const FIND_GIVEN_INSTALLATION = "given installation"
+const FIND_SUBJECT_LABEL = "subject label"
+/** The statement `callDbFunction` sends for the resolver. */
+const RESOLVE_INSTALLATION = "SELECT * FROM public.resolve_installation($1, $2, $3, $4, $5)"
+/** Stands for a lookup that fails: every read of the manager rejects. */
+const UNREADABLE = "SELECT 1"
+
+/** What every manager built by `serve` saw. */
+const SEEN = new WeakMap<MockEntityManager, TableAnswers>()
+
+const rowsAt = (queries: Queries, key: string): ReadonlyArray<Record<string, unknown>> => {
+    const rows = queries.find(([name]) => name === key)?.[1]
+    return Array.isArray(rows) ? rows : []
+}
+
+/** A manager that answers the named reads with their rows; with no reads it is strict and answers nothing. */
+const serve = (queries: Queries = []): MockEntityManager => {
+    if (queries.length === 0) return mockEntityManager()
+    const resolved = rowsAt(queries, RESOLVE_INSTALLATION)
+    const em =
+        resolved.length === 0
+            ? mockEntityManager()
+            : mockEntityManager({
+                  query: [RESOLVE_INSTALLATION, resolved.map(({ installation_id, via }) => ({ installation_id, via }))],
+              })
+    const failing = queries.some(([key]) => key === UNREADABLE)
+    const answer = (rows: ReadonlyArray<unknown>) => (failing ? Promise.reject(new RangeError("lookup failed")) : rows)
+    const label = () => answer(rowsAt(queries, FIND_SUBJECT_LABEL))
+    SEEN.set(
+        em,
+        answerByTable(em, {
+            "public.agents": () => answer(rowsAt(queries, FIND_SENDER_AGENT)),
+            "public.work_items": (query: TableQuery) => {
+                const alias = query.callsOf("select")[0]?.[1]
+                if (alias === "id") return answer(rowsAt(queries, FIND_PARENT_POSITION))
+                if (alias === "depth") return answer(rowsAt(queries, FIND_CHAIN_TOP))
+                return answer(rowsAt(queries, CHAIN_REPEATS_COMMAND).filter((row) => row.repeats === true))
+            },
+            "public.module_installations": (query: TableQuery) =>
+                query.callsOf("addSelect").length > 0
+                    ? answer(rowsAt(queries, FIND_GIVEN_INSTALLATION))
+                    : answer(resolved.map(({ name }) => ({ name }))),
+            "public.orders": label,
+            "public.leads": label,
+            "public.invoices": label,
+        }),
+    )
+    return em
+}
+
+/** The queries of one table that a manager built by `serve` saw. */
+const readsOf = (em: MockEntityManager, table: string): ReadonlyArray<TableQuery> =>
+    SEEN.get(em)?.queriesOf(table) ?? []
 
 const build = async (em: MockEntityManager) => {
     const log = jest.fn().mockResolvedValue(undefined)
@@ -125,15 +177,13 @@ describe("CommandPlannerService", () => {
     describe("a producer's domain transaction", () => {
         it("keeps command lookups, mirror and evidence in the supplied transaction", async () => {
             const em = mockEntityManager()
-            const manager = mockEntityManager({
-                query: [
-                    [FIND_SENDER_AGENT, [{ name: "Bot", module: "chatbot", installation_name: "Main" }]],
-                    [FIND_PARENT_POSITION, [{ id: "parent-1", chain_id: "chain-1", depth: 0 }]],
-                    [CHAIN_REPEATS_COMMAND, [{ repeats: false }]],
-                    [FIND_GIVEN_INSTALLATION, [{ id: "inst-1", name: "Main" }]],
-                    [FIND_SUBJECT_LABEL, [{ label: "Lan" }]],
-                ],
-            })
+            const manager = serve([
+                [FIND_SENDER_AGENT, [{ name: "Bot", module: "chatbot", installation_name: "Main" }]],
+                [FIND_PARENT_POSITION, [{ id: "parent-1", chain_id: "chain-1", depth: 0 }]],
+                [CHAIN_REPEATS_COMMAND, [{ repeats: false }]],
+                [FIND_GIVEN_INSTALLATION, [{ id: "inst-1", name: "Main" }]],
+                [FIND_SUBJECT_LABEL, [{ label: "Lan" }]],
+            ])
             const built = await build(em)
             const plan = planned(
                 await built.service.plan(
@@ -149,8 +199,9 @@ describe("CommandPlannerService", () => {
 
             await plan.spec.onInserted?.(rowOf())
 
-            expect(em.query).not.toHaveBeenCalled()
-            expect(manager.query).toHaveBeenCalledTimes(5)
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
+            // A conversation subject has no label table, so the label is not read at all.
+            expect(manager.createQueryBuilder).toHaveBeenCalledTimes(4)
             expect(built.modules.entryOf).toHaveBeenCalledWith("chatbot", manager)
             expect(built.modules.nameOf).toHaveBeenCalledWith("chatbot", "en", manager)
             expect(built.post).toHaveBeenCalledWith(ctx, expect.objectContaining({ command: true }), manager)
@@ -171,7 +222,7 @@ describe("CommandPlannerService", () => {
 describe("CommandPlannerService", () => {
     describe("refusals", () => {
         it.each(refusalCases)("refuses %s", async (_name, input, expected, queries) => {
-            const built = await build(mockEntityManager({ query: queries }))
+            const built = await build(serve(queries))
             expect(await built.service.plan(ctx, input)).toEqual(expected)
             expect(built.log).toHaveBeenCalledTimes(1)
             const evidence = { kind: "command.refused", actor: "NIVO", evidence: expected.detail }
@@ -185,14 +236,16 @@ describe("CommandPlannerService", () => {
                     built.em,
                 )
             if (expected.refused === "cycle")
-                expect(built.em.query).toHaveBeenCalledWith(CHAIN_REPEATS_COMMAND, [
-                    "ws-1",
-                    "chain-1",
-                    "classify_lead",
-                    "lead",
-                    "cmd:classify_lead:lead:lead-1",
-                    "lead-1",
-                ])
+                expect(
+                    readsOf(built.em, "public.work_items").map((query) => query.callsOf("where")[0]?.[1]),
+                ).toContainEqual({
+                    workspaceId: "ws-1",
+                    chainId: "chain-1",
+                    action: "classify_lead",
+                    subjectType: "lead",
+                    dedupeKey: "cmd:classify_lead:lead:lead-1",
+                    subjectId: "lead-1",
+                })
         })
     })
 })
@@ -289,7 +342,7 @@ describe("CommandPlannerService", () => {
                 [sql, rows],
                 [CHAIN_REPEATS_COMMAND, repeats === null ? [] : [{ repeats }]],
             ]
-            const built = await build(mockEntityManager({ query }))
+            const built = await build(serve(query))
             const plan = planned(await built.service.plan(ctx, input))
             expect(plan.depth).toBe(depth)
             expect(plan.spec.chainId).toBe(chainId)
@@ -346,14 +399,20 @@ describe("CommandPlannerService", () => {
                 ["ws-1", "chatbot", null, "lead-9", null],
             ),
         ])("chooses %s", async (_name, input, id, query, sql, params) => {
-            const built = await build(mockEntityManager({ query }))
+            const built = await build(serve(query))
             const plan = planned(await built.service.plan(ctx, input))
             expect(plan.spec.installationId).toBe(id)
-            expect(built.em.query).toHaveBeenCalledWith(sql, params)
+            if (sql === RESOLVE_INSTALLATION) expect(built.em.query).toHaveBeenCalledWith(sql, params)
+            else
+                expect(readsOf(built.em, "public.module_installations")[0]?.callsOf("where")[0]?.[1]).toEqual({
+                    workspaceId: params[0],
+                    moduleKey: params[1],
+                    installationId: params[2],
+                })
         })
 
         it("leaves the database trigger to attribute the item when the lookup fails", async () => {
-            const built = await build(mockEntityManager({ query: [["SELECT 1", []]] }))
+            const built = await build(serve([[UNREADABLE, []]]))
 
             const plan = planned(await built.service.plan(ctx, replyOf()))
 
@@ -381,10 +440,7 @@ describe("CommandPlannerService", () => {
         ) => [name, body, inputOf(input), query, failed] as const
         const subject = (kind: string) => ({ lead_id: "lead-1", subject_type: kind, subject_id: `${kind}-1` })
         it("announces a command that became an item, once inserted", async () => {
-            const built = await inserted(
-                mockEntityManager({ query: [[FIND_SUBJECT_LABEL, [{ label: "Lan" }]]] }),
-                inputOf(),
-            )
+            const built = await inserted(serve([[FIND_SUBJECT_LABEL, [{ label: "Lan" }]]]), inputOf())
 
             expect(built.plan.inserted()).toBe(true)
             expect(built.post).toHaveBeenCalledWith(
@@ -409,7 +465,9 @@ describe("CommandPlannerService", () => {
                 },
                 built.em,
             )
-            expect(built.em.query).toHaveBeenCalledWith(FIND_SUBJECT_LABEL, ["ws-1", "lead", "lead-1"])
+            expect(readsOf(built.em, "public.leads").map((query) => query.callsOf("where")[0]?.[1])).toEqual([
+                { workspaceId: "ws-1", subjectId: "lead-1" },
+            ])
         })
 
         it.each([
@@ -429,13 +487,13 @@ describe("CommandPlannerService", () => {
                 agent("Free Agent", "custom", null),
             ),
             mirror("an order number", "Owner: classify for order #DH-1", { payload: subject("order") }, label("DH-1")),
-            mirror("an untranslated kind", "Owner: classify for Rice", { payload: subject("stock") }, label("Rice")),
+            mirror("an untranslated kind", "Owner: classify for Rice", { payload: subject("invoice") }, label("Rice")),
             mirror("no subject id", "Owner: classify", { payload: { lead_id: "lead-1" } }, []),
             mirror("a blank label", "Owner: classify", {}, label(null)),
             mirror("no label row", "Owner: classify"),
-            mirror("an unreadable label", "Owner: classify", {}, [["SELECT 1", []]], true),
+            mirror("an unreadable label", "Owner: classify", {}, [[UNREADABLE, []]], true),
         ])("mirrors %s", async (_name, body, input, query, failed) => {
-            const built = await inserted(mockEntityManager({ query }), input)
+            const built = await inserted(serve(query), input)
             expect(built.post.mock.calls[0]?.[1]?.body).toBe(`@Sales <- ${body}`)
             if (failed)
                 expect(built.error).toHaveBeenCalledWith(WorkEngineLogEvent.SubjectLabelUnreadable, expect.any(Error), {
@@ -449,13 +507,11 @@ describe("CommandPlannerService", () => {
     describe("the Office mirror and the sent evidence", () => {
         it("records the instance that was chosen and how", async () => {
             const named = await inserted(
-                mockEntityManager({ query: [[FIND_GIVEN_INSTALLATION, [{ id: "inst-1", name: "Branch 1" }]]] }),
+                serve([[FIND_GIVEN_INSTALLATION, [{ id: "inst-1", name: "Branch 1" }]]]),
                 replyOf({ installationId: "inst-1" }),
             )
             const unnamed = await inserted(
-                mockEntityManager({
-                    query: [[RESOLVE_INSTALLATION, [{ installation_id: "inst-2", via: "first", name: null }]]],
-                }),
+                serve([[RESOLVE_INSTALLATION, [{ installation_id: "inst-2", via: "first", name: null }]]]),
                 replyOf(),
             )
 
@@ -479,7 +535,7 @@ describe("CommandPlannerService", () => {
         })
 
         it("lets neither the Office nor the evidence log block the command", async () => {
-            const built = await build(mockEntityManager({ query: [[FIND_SUBJECT_LABEL, []]] }))
+            const built = await build(serve([[FIND_SUBJECT_LABEL, []]]))
             built.post.mockRejectedValue(new RangeError("office"))
             built.log.mockRejectedValue(new RangeError("log"))
             const plan = planned(await built.service.plan(ctx, inputOf()))

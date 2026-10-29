@@ -1,5 +1,6 @@
 import { Injectable, Optional } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import type { EntityManager, SelectQueryBuilder, UpdateResult } from "typeorm"
+import { WorkItemEntity } from "@modules/domain/work-items"
 import type { BoundConnection } from "@modules/domain/agent-connections"
 import { WorkspaceMembersService, isManagerRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
@@ -8,6 +9,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
+import { LeadEntity } from "@modules/domain/leads"
 import type {
     AgentDashboardData,
     AgentOwners,
@@ -27,6 +29,7 @@ import { AgentOwnershipService } from "./agent-ownership.service"
 import { InjectInstallations, InjectKnowledge } from "./agents.decorators"
 import { AgentsLogEvent } from "./agents.log-events"
 import { firstProfileOf, refOf, summaryOf } from "./agents.mapper"
+import type { AgentRecord } from "./agents.mapper"
 import type { InstallationDirectory, KnowledgeLens, OptionalInstallation } from "./agents.port"
 import {
     GAP_LIMIT,
@@ -41,24 +44,25 @@ import {
     totalOf,
 } from "./dashboard.mapper"
 import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
-import type { AgentRow, IdRow } from "./persistence/agents.rows"
-import {
-    FIND_ACTIVE_AGENT,
-    FIND_AGENT,
-    FIND_FIRST_ACTIVE_AGENT,
-    INSERT_AGENT,
-    LIST_AGENTS,
-    SET_AGENT_STATUS,
-    SET_AGENT_TEXTS,
-} from "./persistence/agents.sql"
-import type { DashboardItemRow } from "./persistence/dashboard.rows"
-import { LIST_DONE_ITEMS, LIST_WAITING_ITEMS } from "./persistence/dashboard.sql"
+import { AgentEntity } from "./persistence/entities"
+import type { DashboardLine } from "./agents-reads.contracts"
 
 const DAY_MS = 86_400_000
 const DONE_WINDOW_DAYS = 7
 const DASHBOARD_PURPOSES = ["inbound_chat", "outbound_chat", "bank_feed", "data_source", "tool"] as const
 const UNIQUE_VIOLATION = "23505"
 const GOVERNORS = ["owner", "manager"] as const
+
+/** The most agents a workspace lists. */
+const AGENT_LIMIT = 200
+
+/** The dashboard's lead name, test runs and customer label, as the lists fold them in. */
+const CUSTOMER_EXPRESSION = "COALESCE(l.contact_name, w.proposal->'fields'->>'customer')"
+const TEST_RUN_TEXT =
+    "concat_ws(' ', l.contact_name, l.company, w.proposal->>'summary', w.proposal->'fields'->>'contact_name', w.proposal->'fields'->>'customer')"
+
+/** The agents newest columns the lists and finders order by: oldest first, the id as tie-break. */
+const OLDEST_FIRST = { createdAt: "ASC", id: "ASC" } as const
 
 const isUniqueViolation = (cause: unknown): boolean =>
     typeof cause === "object" && cause !== null && "code" in cause && cause.code === UNIQUE_VIOLATION
@@ -80,7 +84,11 @@ export class AgentsService {
     /** The agents of the workspace, oldest first, optionally of one module. */
     async list(userId: string, workspaceId: string, module: OptionalId = null): Promise<ReadonlyArray<AgentSummary>> {
         await this.members.require(userId, workspaceId)
-        const rows = await this.entityManager.query<Array<AgentRow>>(LIST_AGENTS, [workspaceId, module])
+        const rows = await this.entityManager.find(AgentEntity, {
+            where: module === null ? { workspaceId } : { workspaceId, module },
+            order: OLDEST_FIRST,
+            take: AGENT_LIMIT,
+        })
         return rows.map(summaryOf)
     }
 
@@ -95,22 +103,30 @@ export class AgentsService {
     ): Promise<OptionalAgentRef> {
         const installation = installationId === null ? null : await this.installations.byId(workspaceId, installationId)
         const instanceAgent = agentIdOf(installation)
-        const [row] =
+        const row =
             instanceAgent === null
-                ? await this.entityManager.query<Array<AgentRow>>(FIND_FIRST_ACTIVE_AGENT, [workspaceId, department])
-                : await this.entityManager.query<Array<AgentRow>>(FIND_ACTIVE_AGENT, [instanceAgent, workspaceId])
-        return row === undefined ? null : refOf(row)
+                ? await this.entityManager.findOne(AgentEntity, {
+                      where: { workspaceId, module: department, status: "active" },
+                      order: OLDEST_FIRST,
+                  })
+                : await this.entityManager.findOne(AgentEntity, {
+                      where: { id: instanceAgent, workspaceId, status: "active" },
+                  })
+        return row === null ? null : refOf(row)
     }
 
     /** The profile of one agent of the workspace, whatever its status; null when there is none. */
     async profileOf(workspaceId: string, agentId: string): Promise<OptionalAgentProfile> {
-        return firstProfileOf(await this.entityManager.query<Array<AgentRow>>(FIND_AGENT, [agentId, workspaceId]))
+        return firstProfileOf(await this.entityManager.findOne(AgentEntity, { where: { id: agentId, workspaceId } }))
     }
 
     /** The profile of the active agent that speaks for a department; null when it has none. */
     async profileOfDepartment(workspaceId: string, department: string): Promise<OptionalAgentProfile> {
         return firstProfileOf(
-            await this.entityManager.query<Array<AgentRow>>(FIND_FIRST_ACTIVE_AGENT, [workspaceId, department]),
+            await this.entityManager.findOne(AgentEntity, {
+                where: { workspaceId, module: department, status: "active" },
+                order: OLDEST_FIRST,
+            }),
         )
     }
 
@@ -141,19 +157,26 @@ export class AgentsService {
     /** Adds an agent to the workspace; a manager only. The handle must be free. */
     async create(userId: string, agent: NewAgent): Promise<AgentSummary> {
         await this.members.require(userId, agent.workspaceId, GOVERNORS)
-        const [row] = await this.entityManager
-            .query<Array<AgentRow>>(INSERT_AGENT, [
-                agent.workspaceId,
-                agent.module,
-                agent.name,
-                agent.handle,
-                agent.role,
-                agent.instructions,
-            ])
+        const inserted = await this.entityManager
+            .createQueryBuilder(AgentEntity, "ag")
+            .insert()
+            .values({
+                workspaceId: agent.workspaceId,
+                module: agent.module,
+                name: agent.name,
+                handle: agent.handle,
+                role: agent.role,
+                instructions: agent.instructions,
+            })
+            .returning(
+                'id, module, name, handle, role, instructions, knowledge, approval_rule AS "approvalRule", status, avatar_url AS "avatarUrl", created_at AS "createdAt"',
+            )
+            .execute()
             .catch((cause: unknown) => {
                 if (!isUniqueViolation(cause)) throw cause
                 throw new AgentsError({ code: AgentsErrorCode.HandleTaken, params: { handle: agent.handle }, cause })
             })
+        const [row] = inserted.raw as Array<AgentRecord>
         if (row === undefined) throw new AgentsError({ code: AgentsErrorCode.NotCreated })
         return summaryOf(row)
     }
@@ -168,7 +191,7 @@ export class AgentsService {
     ): Promise<void> {
         await this.members.require(userId, workspaceId, GOVERNORS)
         this.expectChanged(
-            await manager.query<Array<IdRow>>(SET_AGENT_STATUS, [agentId, workspaceId, active ? "active" : "paused"]),
+            await manager.update(AgentEntity, { id: agentId, workspaceId }, { status: active ? "active" : "paused" }),
             agentId,
         )
     }
@@ -177,12 +200,11 @@ export class AgentsService {
     async setTexts(userId: string, workspaceId: string, agentId: string, texts: AgentTexts): Promise<void> {
         await this.members.require(userId, workspaceId, GOVERNORS)
         this.expectChanged(
-            await this.entityManager.query<Array<IdRow>>(SET_AGENT_TEXTS, [
-                agentId,
-                workspaceId,
-                texts.instructions,
-                texts.knowledge,
-            ]),
+            await this.entityManager.update(
+                AgentEntity,
+                { id: agentId, workspaceId },
+                { instructions: texts.instructions, knowledge: texts.knowledge },
+            ),
             agentId,
         )
     }
@@ -202,8 +224,9 @@ export class AgentsService {
         return this.ownership.canAssign(memberId, agentId)
     }
 
-    private expectChanged(rows: ReadonlyArray<IdRow>, agentId: string): void {
-        if (rows.length === 0) throw new AgentsError({ code: AgentsErrorCode.AgentNotFound, params: { id: agentId } })
+    private expectChanged(result: UpdateResult, agentId: string): void {
+        if ((result.affected ?? 0) === 0)
+            throw new AgentsError({ code: AgentsErrorCode.AgentNotFound, params: { id: agentId } })
     }
 
     private installationOf(query: DashboardQuery): Promise<OptionalInstallation> {
@@ -226,13 +249,12 @@ export class AgentsService {
         scopeId: string | null,
         installationId: string | null,
     ): Promise<WaitingData> {
-        const rows = await this.entityManager.query<Array<DashboardItemRow>>(LIST_WAITING_ITEMS, [
-            query.workspaceId,
-            query.module,
-            scopeId,
-            TEST_RUN_PATTERN,
-            LIST_LIMIT,
-        ])
+        const rows = await this.itemsOf(query, scopeId, "w.created_at", "w.proposal->>'summary'", "NULL::text")
+            .andWhere("w.status = 'waiting_decision'")
+            .orderBy("w.createdAt", "ASC")
+            .addOrderBy("w.id", "ASC")
+            .limit(LIST_LIMIT)
+            .getRawMany<DashboardLine>()
         return {
             total: totalOf(rows),
             items: rows.map((row) => itemOf(row, decisionHrefOf(query.module, installationId, row.id))),
@@ -244,19 +266,53 @@ export class AgentsService {
         scopeId: string | null,
         installationId: string | null,
     ): Promise<DoneData> {
-        const since = new Date(this.clock.now().getTime() - DONE_WINDOW_DAYS * DAY_MS).toISOString()
-        const rows = await this.entityManager.query<Array<DashboardItemRow>>(LIST_DONE_ITEMS, [
-            query.workspaceId,
-            query.module,
+        const since = new Date(this.clock.now().getTime() - DONE_WINDOW_DAYS * DAY_MS)
+        const rows = await this.itemsOf(
+            query,
             scopeId,
-            TEST_RUN_PATTERN,
-            since,
-            LIST_LIMIT,
-        ])
+            "COALESCE(w.completed_at, w.updated_at)",
+            "COALESCE(NULLIF(w.result->>'summary', ''), w.proposal->>'summary')",
+            "w.result->>'href'",
+        )
+            .andWhere("w.status = 'done' AND w.decidedPath = 'auto' AND w.completedAt >= :since", { since })
+            .orderBy("w.completedAt", "DESC")
+            .addOrderBy("w.id", "ASC")
+            .limit(LIST_LIMIT)
+            .getRawMany<DashboardLine>()
         return {
             count: totalOf(rows),
             items: rows.map((row) => itemOf(row, decisionHrefOf(query.module, installationId, row.id))),
         }
+    }
+
+    /**
+     * The work items of a department for the dashboard lists, test runs left out, the lead's name folded in and the total before
+     * the limit on every row; a multi-instance type narrows to its own instance.
+     */
+    private itemsOf(
+        query: DashboardQuery,
+        scopeId: string | null,
+        atExpression: string,
+        summaryExpression: string,
+        hrefExpression: string,
+    ): SelectQueryBuilder<WorkItemEntity> {
+        const items = this.entityManager
+            .createQueryBuilder(WorkItemEntity, "w")
+            .select("w.id", "id")
+            .addSelect("w.action", "action")
+            .addSelect("w.leadId", "leadId")
+            .addSelect(`to_json(${atExpression}) #>> '{}'`, "at")
+            .addSelect(summaryExpression, "summary")
+            .addSelect(CUSTOMER_EXPRESSION, "customer")
+            .addSelect(hrefExpression, "resultHref")
+            .addSelect("count(*) OVER ()", "total")
+            .leftJoin(LeadEntity, "l", "l.id = w.lead_id")
+            .where("w.workspaceId = :workspaceId AND w.department = :department", {
+                workspaceId: query.workspaceId,
+                department: query.module,
+            })
+            .andWhere(`NOT (${TEST_RUN_TEXT} ~ :pattern)`, { pattern: TEST_RUN_PATTERN })
+        return scopeId === null ? items : items.andWhere("w.installationId = :scopeId", { scopeId })
     }
 
     private connectionsOf(agentId: OptionalId): Promise<ReadonlyArray<BoundConnection>> {

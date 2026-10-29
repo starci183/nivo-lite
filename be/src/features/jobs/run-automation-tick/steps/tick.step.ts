@@ -14,7 +14,7 @@ export class RunAutomationTickStep extends AdvancingJobStepPolicy implements Job
     }
 
     /** Dispatches the queued tick after the worker's claim has been checked. */
-    protected perform(payload: object): Promise<unknown> {
-        return this.tick.run(payload)
+    protected perform(): Promise<unknown> {
+        return this.tick.run()
     }
 }

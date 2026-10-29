@@ -2,31 +2,36 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
-import { changePassword } from "@/modules/auth"
-import type { PasswordChange } from "@/modules/auth"
+import { useMutateChangePasswordSwr } from "@/hooks/swr"
+import { graphQLErrorCode } from "@/modules/failure"
 import { toast } from "@/modules/toast"
 import { accountErrorKey } from "./account.shared"
 
-/** Checks the current password and sets the new one through Auth, then toasts the outcome. */
+/** The current password and the one it becomes. */
+export interface PasswordChange {
+    readonly current: string
+    readonly next: string
+}
+
+/** Checks the current password and sets the new one through the `changePassword` mutation, then toasts the outcome. */
 export const useChangePassword = () => {
     const t = useTranslations("account")
     const tToast = useTranslations("toast")
-    const [isPending, setPending] = useState(false)
+    const { trigger, isMutating } = useMutateChangePasswordSwr()
     const [error, setError] = useState<string>()
     const change = useCallback(
         async (input: PasswordChange): Promise<boolean> => {
-            setPending(true)
             setError(undefined)
-            const outcome = await changePassword(input)
-            setPending(false)
-            if (!outcome.success) {
-                setError(t(accountErrorKey(outcome.error ?? "")))
+            try {
+                await trigger({ currentPassword: input.current, newPassword: input.next })
+            } catch (failure) {
+                setError(t(accountErrorKey(graphQLErrorCode(failure) ?? "")))
                 return false
             }
             toast.success(tToast("successTitle"), { description: t("passwordSaved") })
             return true
         },
-        [t, tToast],
+        [t, tToast, trigger],
     )
-    return { change, isPending, error }
+    return { change, isPending: isMutating, error }
 }

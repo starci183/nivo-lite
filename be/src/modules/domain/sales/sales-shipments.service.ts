@@ -6,24 +6,21 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
-import { AUTOMATION_QUEUE, AUTOMATION_TICK_JOB } from "@modules/queues/automation"
-import type { ShipmentEventPayload } from "@modules/queues/automation"
+import { OrderShippedEvent } from "@modules/events/api"
+import { InjectEventBus } from "@modules/platform/event-bus"
+import type { EventBus } from "@modules/platform/event-bus"
 import type { SalesShipment, SalesShipmentRequest } from "./sales.contracts"
-import { SalesStatusService } from "./sales-status.service"
 
 @Injectable()
-/** Records a shipment with its evidence and durable delivery automation notification in one transaction. */
+/** Records a shipment with its evidence and the `order_shipped` fact in one transaction. */
 export class SalesShipmentsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
-        @InjectQueueOutbox() private readonly outbox: QueueOutbox,
+        @InjectEventBus() private readonly bus: EventBus,
         private readonly members: WorkspaceMembersService,
         private readonly orders: OrdersService,
         private readonly evidence: EvidenceService,
-        private readonly status: SalesStatusService,
     ) {}
 
     /** Any active member may hand an eligible order to its carrier once. */
@@ -53,21 +50,21 @@ export class SalesShipmentsService {
                 },
                 tx,
             )
-            const payload: ShipmentEventPayload = {
-                kind: "shipment",
-                workspaceId: request.workspaceId,
-                userId: principalId,
-                orderId: order.id,
-                orderNo: order.order_no,
-                leadId: order.lead_id,
-                carrier,
-                trackingCode,
-                shippedAt: order.shipped_at,
-            }
-            const dedupeKey = `order.shipped:${order.id}`
-            await this.outbox.write(tx, AUTOMATION_QUEUE, payload, { job: AUTOMATION_TICK_JOB, dedupeKey })
-            const action = await this.status.queued(tx, request.workspaceId, dedupeKey)
-            return { id: order.id, orderNo: order.order_no, notificationId: action.id }
+            await this.bus.publish(
+                OrderShippedEvent.create({
+                    workspaceId: request.workspaceId,
+                    userId: principalId,
+                    orderId: order.id,
+                    orderNo: order.order_no,
+                    leadId: order.lead_id,
+                    carrier,
+                    trackingCode,
+                    shippedAt: order.shipped_at,
+                }),
+                tx,
+                `order_shipped:${order.id}`,
+            )
+            return { id: order.id, orderNo: order.order_no, notificationId: order.id }
         })
     }
 }

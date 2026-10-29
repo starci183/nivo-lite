@@ -1,12 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { ShiftsError, ShiftsErrorCode } from "./errors/shifts.error"
 import { ShiftsDataService } from "./shifts-data.service"
 import { ShiftsTextService } from "./shifts-text.service"
 import type { ApplyImportOutput, ApplyImportParams, PreviewImportOutput } from "./shifts-operations.contracts"
-import { APPLY_IMPORT } from "./persistence/shifts.sql"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { parseImport, POSITION_COLORS } from "./policies/import-text.policy"
 
@@ -64,17 +63,21 @@ export class ShiftsImportService {
             throw new ShiftsError({ code: ShiftsErrorCode.ImportEmpty })
         }
         const taken = setup.positions.length
-        const [counts] = await this.entityManager.query<Array<{ counts: ApplyImportOutput }>>(APPLY_IMPORT, [
-            workspaceId,
-            JSON.stringify(
-                parsed.positions.map((name, index) => ({
-                    name,
-                    color: POSITION_COLORS[(taken + index) % POSITION_COLORS.length],
-                })),
-            ),
-            JSON.stringify(parsed.staff),
-            JSON.stringify(parsed.blocks),
-        ])
-        return counts?.counts ?? { positions: 0, staff: 0, blocks: 0 }
+        const [counts] = await callDbFunction<{ shifts_import_apply: ApplyImportOutput }>(
+            this.entityManager,
+            "public.shifts_import_apply",
+            [
+                workspaceId,
+                JSON.stringify(
+                    parsed.positions.map((name, index) => ({
+                        name,
+                        color: POSITION_COLORS[(taken + index) % POSITION_COLORS.length],
+                    })),
+                ),
+                JSON.stringify(parsed.staff),
+                JSON.stringify(parsed.blocks),
+            ],
+        )
+        return counts?.shifts_import_apply ?? { positions: 0, staff: 0, blocks: 0 }
     }
 }

@@ -19,7 +19,6 @@ import {
     THREAD_MESSAGES_ERROR_KINDS,
     THREAD_MESSAGES_MESSAGES,
     ThreadAgentPostsService,
-    ThreadApprovalOutcomesService,
     ThreadMessagesModule,
 } from "@modules/domain/thread-messages"
 import { WORK_CHAINS_ERROR_KINDS, WORK_CHAINS_MESSAGES, WorkChainsModule } from "@modules/domain/work-chains"
@@ -99,7 +98,7 @@ export const OFFICE_CHAIN_MODULES = [
     }),
     ApprovalRequestsModule.register({
         isGlobal: true,
-        ports: { agentOwners: AgentOwnershipService, events: ThreadApprovalOutcomesService },
+        ports: { agentOwners: AgentOwnershipService },
     }),
 ]
 

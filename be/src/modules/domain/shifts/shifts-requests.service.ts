@@ -4,13 +4,13 @@ import { ApprovalGate } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { ShiftsError, ShiftsErrorCode } from "./errors/shifts.error"
 import { ShiftsDataService } from "./shifts-data.service"
 import { ShiftsTextService } from "./shifts-text.service"
 import type { Setup, Shift, SwapFinding } from "./shifts.contracts"
 import type { RequestLeaveParams, RequestOutput, RequestSwapParams } from "./shifts-operations.contracts"
-import { CREATE_LEAVE, CREATE_SWAP, LINK_LEAVE, LINK_SWAP } from "./persistence/shifts.sql"
+import { ShiftsLeaveRequestEntity, ShiftsSwapRequestEntity } from "./persistence/entities"
 import { ANY_MEMBER } from "./policies/access-roles.policy"
 import { isDay } from "./policies/input-text.policy"
 import { toShift } from "./policies/row-mappers.policy"
@@ -58,15 +58,12 @@ export class ShiftsRequestsService {
         )
         if (shift === undefined) throw new ShiftsError({ code: ShiftsErrorCode.ShiftNotFound })
         const sentences = this.words.findings(findings)
-        const [created] = await this.entityManager.query<Array<{ id: string }>>(CREATE_SWAP, [
-            workspaceId,
-            request.kind,
-            shift.id,
-            fromStaffId,
-            toStaffId,
-            request.reason,
-        ])
-        const swapId = created?.id ?? ""
+        const [created] = await callDbFunction<{ shifts_create_swap: string }>(
+            this.entityManager,
+            "public.shifts_create_swap",
+            [workspaceId, request.kind, shift.id, fromStaffId, toStaffId, request.reason],
+        )
+        const swapId = created?.shifts_create_swap ?? ""
         const verdict = await this.gate.request({
             workspaceId,
             actor: displayName,
@@ -84,7 +81,11 @@ export class ShiftsRequestsService {
             }),
             fields: { swap_id: swapId, clean: sentences.length === 0 },
         })
-        await this.entityManager.query(LINK_SWAP, [workspaceId, swapId, JSON.stringify(sentences), verdict.workItemId])
+        await this.entityManager.update(
+            ShiftsSwapRequestEntity,
+            { id: swapId, workspaceId },
+            { checks: sentences, workItemId: verdict.workItemId },
+        )
         return { status: verdict.status }
     }
 
@@ -108,14 +109,12 @@ export class ShiftsRequestsService {
             throw new ShiftsError({ code: ShiftsErrorCode.LeaveRangeInvalid })
         }
         const hit = await this.data.staffShifts(workspaceId, own, request.from, request.to, WORKING)
-        const [created] = await this.entityManager.query<Array<{ id: string }>>(CREATE_LEAVE, [
-            workspaceId,
-            own,
-            request.from,
-            request.to,
-            request.reason,
-        ])
-        const leaveId = created?.id ?? ""
+        const [created] = await callDbFunction<{ shifts_create_leave: string }>(
+            this.entityManager,
+            "public.shifts_create_leave",
+            [workspaceId, own, request.from, request.to, request.reason],
+        )
+        const leaveId = created?.shifts_create_leave ?? ""
         const reason = request.reason.trim()
         const verdict = await this.gate.request({
             workspaceId,
@@ -132,7 +131,11 @@ export class ShiftsRequestsService {
             }),
             fields: { leave_id: leaveId },
         })
-        await this.entityManager.query(LINK_LEAVE, [workspaceId, leaveId, verdict.workItemId])
+        await this.entityManager.update(
+            ShiftsLeaveRequestEntity,
+            { id: leaveId, workspaceId },
+            { workItemId: verdict.workItemId },
+        )
         return { status: verdict.status }
     }
 

@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
@@ -42,21 +43,10 @@ import {
     purposeOf,
     verdictOf,
 } from "./generation.policy"
-import type {
-    GenerationProgressRow,
-    GenerationStateRow,
-    InsertedGenerationRow,
-} from "./persistence/ai-generations.rows"
-import {
-    CANCEL_GENERATION,
-    FIND_GENERATION_PROGRESS,
-    FIND_GENERATION_STATE,
-    INSERT_GENERATION,
-    LOCK_GENERATION_STATE,
-    RECORD_GENERATION_FAILURE,
-    RECORD_GENERATION_RESULT,
-    SET_GENERATION_CONTEXT,
-} from "./persistence/ai-generations.sql"
+import { AiGenerationEntity } from "./persistence/entities"
+
+/** The generations that still wait for a text, so a cancel or a finish may change them. */
+const OPEN_STATUSES = ["queued", "running"] as const
 
 const failure = (reason: GenerationFailureReason, message: string): GenerationFailure => ({
     ok: false,
@@ -137,21 +127,13 @@ export class GenerationsService {
             })
         }
         const enqueue = async (manager: EntityManager): Promise<GenerationEnqueued> => {
-            const [row] = await manager.query<Array<InsertedGenerationRow>>(INSERT_GENERATION, [
-                params.workspaceId,
-                purposeOf(params.purpose),
-                params.module,
-                params.kind,
-                JSON.stringify({
-                    messages: params.messages,
-                    response_format: params.responseFormat,
-                    timeout_ms: clampTimeout(params.timeoutMs),
-                    context,
-                }),
-            ])
-            if (row === undefined) throw new AiGenerationsError({ code: AiGenerationsErrorCode.NotCreated })
-            await this.queue.enqueueGenerate({ generationId: row.id, workspaceId: params.workspaceId }, manager)
-            return { id: row.id, status: "queued" }
+            const id = await this.store(
+                params,
+                { ...inputJsonOf(params, clampTimeout(params.timeoutMs)), context },
+                manager,
+            )
+            await this.queue.enqueueGenerate({ generationId: id, workspaceId: params.workspaceId }, manager)
+            return { id, status: "queued" }
         }
         return tx === undefined ? this.entityManager.transaction(enqueue) : enqueue(tx)
     }
@@ -163,15 +145,15 @@ export class GenerationsService {
         tx?: EntityManager,
         lock: boolean = false,
     ): Promise<OptionalGenerationState> {
-        const [row] = await (tx ?? this.entityManager).query<Array<GenerationStateRow>>(
-            lock ? LOCK_GENERATION_STATE : FIND_GENERATION_STATE,
-            [id, workspaceId],
-        )
-        if (row === undefined) return null
+        const row = await (tx ?? this.entityManager).findOne(AiGenerationEntity, {
+            where: { id, workspaceId },
+            ...(lock ? { lock: { mode: "pessimistic_write" } } : {}),
+        })
+        if (row === null) return null
         const progress = progressOf(row)
         return {
             id: row.id,
-            workspaceId: row.workspace_id,
+            workspaceId: row.workspaceId,
             purpose: row.purpose,
             status: row.status,
             text: progress.text,
@@ -179,25 +161,44 @@ export class GenerationsService {
             input: record(row.input),
             output: record(row.output),
             timings: progress.timings,
-            createdAt: new Date(row.created_at).toISOString(),
-            finishedAt: row.finished_at === null ? null : new Date(row.finished_at).toISOString(),
+            createdAt: row.createdAt.toISOString(),
+            finishedAt: row.finishedAt === null ? null : row.finishedAt.toISOString(),
             messages: inputOf(row.input).messages,
         }
     }
 
     /** Finalizes trusted context inside the same transaction that enqueues all related generations. */
     async setContext(workspaceId: string, id: string, context: GenerationContext, tx: EntityManager): Promise<void> {
-        await tx.query(SET_GENERATION_CONTEXT, [id, workspaceId, JSON.stringify(context)])
+        await tx
+            .createQueryBuilder(AiGenerationEntity, "g")
+            .update()
+            .set({ input: () => "jsonb_set(input, '{context}', CAST(:context AS jsonb), true)" })
+            .where({ id, workspaceId })
+            .setParameter("context", JSON.stringify(context))
+            .execute()
     }
 
     /** Records the domain result in the transaction that writes its effects. */
     async recordResult(workspaceId: string, id: string, result: GenerationResult, tx: EntityManager): Promise<void> {
-        await tx.query(RECORD_GENERATION_RESULT, [id, workspaceId, JSON.stringify(result)])
+        await tx
+            .createQueryBuilder(AiGenerationEntity, "g")
+            .update()
+            .set({
+                output: () => "coalesce(output, '{}'::jsonb) || jsonb_build_object('result', CAST(:result AS jsonb))",
+            })
+            .where({ id, workspaceId, status: "done" })
+            .setParameter("result", JSON.stringify(result))
+            .execute()
     }
 
     /** Records a stable application error code after the engine or result validation fails. */
     async recordFailure(workspaceId: string, id: string, code: string, tx: EntityManager): Promise<void> {
-        await tx.query(RECORD_GENERATION_FAILURE, [id, workspaceId, code])
+        await tx
+            .createQueryBuilder(AiGenerationEntity, "g")
+            .update()
+            .set({ status: "error", error: code, finishedAt: () => "coalesce(finished_at, now())" })
+            .where({ id, workspaceId })
+            .execute()
     }
 
     /** Queues a text a signed-in member asks for and answers its id at once (or why it was not queued); the text is read with `statusFor`. */
@@ -247,7 +248,7 @@ export class GenerationsService {
     async prepare(params: GenerateParams, tx: EntityManager): Promise<PreparedGenerationId> {
         const blocked = await this.usage.blockedBy(params.workspaceId, params.kind, params.locale ?? "vi")
         if (blocked !== null || this.engine.availability() !== "ready") return null
-        return this.insert(params, clampTimeout(params.timeoutMs), tx)
+        return this.store(params, inputJsonOf(params, clampTimeout(params.timeoutMs)), tx)
     }
 
     /** Reads the progress of a generation in the workspace that requested it. */
@@ -274,28 +275,38 @@ export class GenerationsService {
             return failure("error", busy)
         }
         // Too slow: free the row so the job cannot answer later, and drop whatever it would have produced.
-        await this.entityManager.query(CANCEL_GENERATION, [id, params.workspaceId, this.clock.now().toISOString()])
+        await this.entityManager.update(
+            AiGenerationEntity,
+            { id, workspaceId: params.workspaceId, status: In(OPEN_STATUSES) },
+            { status: "cancelled", error: "timeout", finishedAt: this.clock.now() },
+        )
         return failure("timeout", busy)
     }
 
     private enqueue(params: GenerateParams, timeoutMs: number): Promise<string> {
         return this.entityManager.transaction(async (tx) => {
-            const id = await this.insert(params, timeoutMs, tx)
+            const id = await this.store(params, inputJsonOf(params, timeoutMs), tx)
             await this.queue.enqueueGenerate({ generationId: id, workspaceId: params.workspaceId }, tx)
             return id
         })
     }
 
-    private async insert(params: GenerateParams, timeoutMs: number, tx: EntityManager): Promise<string> {
-        const [row] = await tx.query<Array<InsertedGenerationRow>>(INSERT_GENERATION, [
-            params.workspaceId,
-            purposeOf(params.purpose),
-            params.module,
-            params.kind,
-            inputJsonOf(params, timeoutMs),
-        ])
-        if (row === undefined) throw new AiGenerationsError({ code: AiGenerationsErrorCode.NotCreated })
-        return row.id
+    /** Writes a queued generation and answers its id. */
+    private async store(
+        params: GenerateParams,
+        input: Record<string, unknown>,
+        manager: EntityManager,
+    ): Promise<string> {
+        const inserted = await manager.insert(AiGenerationEntity, {
+            workspaceId: params.workspaceId,
+            purpose: purposeOf(params.purpose),
+            module: params.module,
+            usageKind: params.kind,
+            input,
+        })
+        const id: unknown = inserted.identifiers[0]?.id
+        if (typeof id !== "string") throw new AiGenerationsError({ code: AiGenerationsErrorCode.NotCreated })
+        return id
     }
 
     /** Looks at the row every poll interval until it has text, failed, or the deadline passed (a vanished row counts as too slow). */
@@ -308,10 +319,10 @@ export class GenerationsService {
     }
 
     private async poll(id: string, workspaceId: string): Promise<OptionalGenerationProgress> {
-        const [row] = await this.entityManager.query<Array<GenerationProgressRow>>(FIND_GENERATION_PROGRESS, [
-            id,
-            workspaceId,
-        ])
-        return row === undefined ? null : progressOf(row)
+        const row = await this.entityManager.findOne(AiGenerationEntity, {
+            where: { id, workspaceId },
+            select: { status: true, output: true, usage: true, timings: true },
+        })
+        return row === null ? null : progressOf(row)
     }
 }

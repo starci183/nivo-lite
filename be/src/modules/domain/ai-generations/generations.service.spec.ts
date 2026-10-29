@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { In } from "typeorm"
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { FakeTransaction } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
@@ -7,6 +8,8 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { generationRow, lookupOptions, pollOptions } from "@tests/fixtures/builders/ai-generations.builder"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { AGENTS_QUEUE_PRODUCER } from "@modules/queues/agents"
 import type { AgentsQueue } from "@modules/queues/agents"
 import type { GenerateParams } from "./ai-generations.contracts"
@@ -18,16 +21,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { EngineStatusService } from "@modules/domain/agents"
 import { AiGenerationsErrorCode } from "./errors/ai-generations.error"
 import { GenerationsService } from "./generations.service"
-import {
-    CANCEL_GENERATION,
-    FIND_GENERATION_PROGRESS,
-    FIND_GENERATION_STATE,
-    INSERT_GENERATION,
-    LOCK_GENERATION_STATE,
-    RECORD_GENERATION_FAILURE,
-    RECORD_GENERATION_RESULT,
-    SET_GENERATION_CONTEXT,
-} from "./persistence/ai-generations.sql"
+import { AiGenerationEntity } from "./persistence/entities"
 import { PauseClient } from "@modules/domain/agents"
 
 const OPTIONS: Omit<AiGenerationsOptions, "usage"> = { pollMs: 400 }
@@ -41,24 +35,43 @@ const paramsOf = builder<GenerateParams>({
     module: "office",
 })
 
-const QUEUED = { status: "queued", output: null, usage: null, timings: {} }
-const DONE = { status: "done", output: { text: "hello" }, usage: null, timings: { total_ms: 12 } }
+const QUEUED = generationRow()
+const DONE = generationRow({ status: "done", output: { text: "hello" }, timings: { total_ms: 12 } })
+
+/** The prompt a queued generation stores; `context` is there only when the request carried one. */
+const promptOf = (timeoutMs: number, format = "text", context?: object) => ({
+    messages: [{ role: "user", content: "hi" }],
+    response_format: format,
+    timeout_ms: timeoutMs,
+    ...(context === undefined ? {} : { context }),
+})
+
+/** The row a request inserts for the shared params. */
+const insertedAs = (purpose: string, input: object) => ({
+    workspaceId: "w1",
+    purpose,
+    module: "office",
+    usageKind: "relay",
+    input,
+})
 
 interface Setup {
     availability?: "ready" | "offline" | "not_configured"
     blocked?: string
-    progress?: ReadonlyArray<unknown>
+    progress?: ReadonlyArray<AiGenerationEntity>
 }
 
 const build = async (setup: Setup = {}) => {
+    const progress = setup.progress ?? [DONE]
     const clock = new FakeClock("2026-10-12T10:00:00.000Z")
     const tx: FakeTransaction = fakeTransaction(
         mockEntityManager({
-            query: [
-                [INSERT_GENERATION, [{ id: "g1" }]],
-                ...(setup.progress ?? [DONE]).map((row) => [FIND_GENERATION_PROGRESS, [row]] as const),
-                [CANCEL_GENERATION, []],
-            ],
+            insert: [AiGenerationEntity, { identifiers: [{ id: "g1" }] }],
+            findOne:
+                progress.length === 0
+                    ? [AiGenerationEntity, null]
+                    : progress.map((row) => [AiGenerationEntity, row] as const),
+            update: [AiGenerationEntity, { affected: 1 }],
         }),
     )
     const queue = mock<AgentsQueue>({ enqueueGenerate: jest.fn(() => Promise.resolve()) })
@@ -109,7 +122,7 @@ describe("GenerationsService generateFor", () => {
         members.require.mockRejectedValue(refusal)
 
         await expect(service.generateFor("u1", paramsOf())).rejects.toBe(refusal)
-        expect(tx.em.query).not.toHaveBeenCalled()
+        expect(tx.em.insert).not.toHaveBeenCalled()
     })
 
     it("refuses a NIVO-paid kind such as guide and writes nothing", async () => {
@@ -118,7 +131,7 @@ describe("GenerationsService generateFor", () => {
         await expect(service.generateFor("u1", paramsOf({ kind: "guide", module: "other" }))).rejects.toMatchObject({
             code: AiGenerationsErrorCode.KindNotAllowed,
         })
-        expect(tx.em.query).not.toHaveBeenCalled()
+        expect(tx.em.insert).not.toHaveBeenCalled()
     })
 })
 
@@ -152,7 +165,7 @@ describe("GenerationsService requestFor", () => {
         })
         expect(members.require).toHaveBeenCalledWith("u1", "w1")
         expect(catalog.get).toHaveBeenCalledWith("generation.busy", {}, "en")
-        expect(tx.em.query).not.toHaveBeenCalled()
+        expect(tx.em.insert).not.toHaveBeenCalled()
         expect(queue.enqueueGenerate).not.toHaveBeenCalled()
     })
 })
@@ -167,14 +180,10 @@ describe("GenerationsService request", () => {
             status: "queued",
         })
         expect(usage.blockedBy).toHaveBeenCalledWith("w1", "relay", "en")
-        expect(tx.em.query).toHaveBeenCalledWith(INSERT_GENERATION, [
-            "w1",
-            "x".repeat(60),
-            "office",
-            "relay",
-            '{"messages":[{"role":"user","content":"hi"}],"response_format":"text' +
-                '","timeout_ms":5000,"context":{"leadId":"lead1"}}',
-        ])
+        expect(tx.em.insert).toHaveBeenCalledWith(
+            AiGenerationEntity,
+            insertedAs("x".repeat(60), promptOf(5000, "text", { leadId: "lead1" })),
+        )
         expect(queue.enqueueGenerate).toHaveBeenCalledWith(
             { generationId: "g1", workspaceId: "w1" },
             supplied ? tx.em : expect.anything(),
@@ -189,23 +198,16 @@ describe("GenerationsService request", () => {
         const { service, tx, queue, usage } = await build(setup)
         await expect(service.request(paramsOf())).rejects.toMatchObject({ code })
         expect(usage.blockedBy).toHaveBeenCalledWith("w1", "relay", "vi")
-        expect(tx.em.query).not.toHaveBeenCalled()
+        expect(tx.em.insert).not.toHaveBeenCalled()
         expect(queue.enqueueGenerate).not.toHaveBeenCalled()
         expect(tx.commits).toBe(0)
     })
 
     it("fails when no row was created and rolls back without a job", async () => {
         const { service, tx, queue } = await build()
-        tx.em.query.mockResolvedValueOnce([])
+        tx.em.insert.mockResolvedValueOnce({ identifiers: [], generatedMaps: [], raw: [] })
         await expect(service.request(paramsOf())).rejects.toMatchObject({ code: AiGenerationsErrorCode.NotCreated })
-        expect(tx.em.query).toHaveBeenCalledWith(INSERT_GENERATION, [
-            "w1",
-            "relay",
-            "office",
-            "relay",
-            '{"messages":[{"role":"user","content":"hi"}],"response_format":"text' +
-                '","timeout_ms":45000,"context":{}}',
-        ])
+        expect(tx.em.insert).toHaveBeenCalledWith(AiGenerationEntity, insertedAs("relay", promptOf(45000, "text", {})))
         expect(queue.enqueueGenerate).not.toHaveBeenCalled()
         expect(tx.commits).toBe(0)
     })
@@ -216,10 +218,10 @@ describe("GenerationsService state and completion", () => {
         const { service, tx } = await build()
         const input = { messages: [{ role: "user", content: "hi" }], context: { leadId: "lead1" } }
         const output = { text: "hello", result: { leadId: "lead1" } }
-        tx.em.query.mockResolvedValueOnce([
-            {
+        tx.em.findOne.mockResolvedValueOnce(
+            generationRow({
                 id: "g1",
-                workspace_id: "w1",
+                workspaceId: "w1",
                 purpose: "relay",
                 status: "done",
                 input,
@@ -227,10 +229,10 @@ describe("GenerationsService state and completion", () => {
                 error: null,
                 usage: null,
                 timings: { total_ms: 12, ignored: "bad" },
-                created_at: new Date("2026-10-12T10:00:00.000Z"),
-                finished_at: "2026-10-12T10:00:01.000Z",
-            },
-        ])
+                createdAt: new Date("2026-10-12T10:00:00.000Z"),
+                finishedAt: new Date("2026-10-12T10:00:01.000Z"),
+            }),
+        )
         await expect(service.state("w1", "g1", tx.em, true)).resolves.toEqual({
             id: "g1",
             workspaceId: "w1",
@@ -245,15 +247,18 @@ describe("GenerationsService state and completion", () => {
             finishedAt: "2026-10-12T10:00:01.000Z",
             messages: [{ role: "user", content: "hi" }],
         })
-        expect(tx.em.query).toHaveBeenCalledWith(LOCK_GENERATION_STATE, ["g1", "w1"])
+        expect(tx.em.findOne).toHaveBeenCalledWith(AiGenerationEntity, {
+            ...lookupOptions("g1", "w1"),
+            lock: { mode: "pessimistic_write" },
+        })
     })
 
     it("reads without a lock and normalizes malformed persisted records", async () => {
         const { service, tx } = await build()
-        tx.em.query.mockResolvedValueOnce([
-            {
+        tx.em.findOne.mockResolvedValueOnce(
+            generationRow({
                 id: "g2",
-                workspace_id: "w1",
+                workspaceId: "w1",
                 purpose: "relay",
                 status: "error",
                 input: [],
@@ -261,10 +266,10 @@ describe("GenerationsService state and completion", () => {
                 error: "VALIDATION_FAILED",
                 usage: null,
                 timings: {},
-                created_at: "2026-10-12T10:00:00.000Z",
-                finished_at: null,
-            },
-        ])
+                createdAt: new Date("2026-10-12T10:00:00.000Z"),
+                finishedAt: null,
+            }),
+        )
         await expect(service.state("w1", "g2")).resolves.toEqual({
             id: "g2",
             workspaceId: "w1",
@@ -279,27 +284,34 @@ describe("GenerationsService state and completion", () => {
             finishedAt: null,
             messages: [],
         })
-        expect(tx.em.query).toHaveBeenCalledWith(FIND_GENERATION_STATE, ["g2", "w1"])
+        expect(tx.em.findOne).toHaveBeenCalledWith(AiGenerationEntity, lookupOptions("g2", "w1"))
     })
 })
 
 describe("GenerationsService state and completion", () => {
     it("returns no state when the workspace has no matching generation", async () => {
         const { service, tx } = await build()
-        tx.em.query.mockResolvedValueOnce([])
+        tx.em.findOne.mockResolvedValueOnce(null)
         await expect(service.state("w2", "g1")).resolves.toBeNull()
-        expect(tx.em.query).toHaveBeenCalledWith(FIND_GENERATION_STATE, ["g1", "w2"])
+        expect(tx.em.findOne).toHaveBeenCalledWith(AiGenerationEntity, lookupOptions("g1", "w2"))
     })
 
     it("records context, result and a stable failure in their owning transaction", async () => {
         const { service, tx } = await build()
-        tx.em.query.mockResolvedValue([])
+        const [context, result, failed] = queueQueryBuilders(tx.em, [{ execute: {} }, { execute: {} }, { execute: {} }])
         await service.setContext("w1", "g1", { leadId: "lead1" }, tx.em)
         await service.recordResult("w1", "g1", { applied: true }, tx.em)
         await service.recordFailure("w1", "g1", "VALIDATION_FAILED", tx.em)
-        expect(tx.em.query).toHaveBeenNthCalledWith(1, SET_GENERATION_CONTEXT, ["g1", "w1", '{"leadId":"lead1"}'])
-        expect(tx.em.query).toHaveBeenNthCalledWith(2, RECORD_GENERATION_RESULT, ["g1", "w1", '{"applied":true}'])
-        expect(tx.em.query).toHaveBeenNthCalledWith(3, RECORD_GENERATION_FAILURE, ["g1", "w1", "VALIDATION_FAILED"])
+        expect(tx.em.createQueryBuilder).toHaveBeenCalledTimes(3)
+        expect(tx.em.createQueryBuilder).toHaveBeenCalledWith(AiGenerationEntity, "g")
+        expect(context?.callsOf("where")).toEqual([[{ id: "g1", workspaceId: "w1" }]])
+        expect(context?.callsOf("setParameter")).toEqual([["context", '{"leadId":"lead1"}']])
+        expect(result?.callsOf("where")).toEqual([[{ id: "g1", workspaceId: "w1", status: "done" }]])
+        expect(result?.callsOf("setParameter")).toEqual([["result", '{"applied":true}']])
+        expect(failed?.callsOf("where")).toEqual([[{ id: "g1", workspaceId: "w1" }]])
+        expect(failed?.callsOf("set")).toEqual([
+            [{ status: "error", error: "VALIDATION_FAILED", finishedAt: expect.any(Function) }],
+        ])
     })
 })
 
@@ -313,9 +325,9 @@ describe("GenerationsService statusFor and progress", () => {
     ] as const)("maps stored status %s to %s after membership authorization", async (stored, expected) => {
         const { service, tx, members } = await build()
         const usage = { prompt_tokens: 2, completion_tokens: 3, cached_tokens: 1, cost: 0.1, model: "test" }
-        tx.em.query.mockResolvedValueOnce([
-            { status: stored, output: { text: "hello" }, usage, timings: { total_ms: 12 } },
-        ])
+        tx.em.findOne.mockResolvedValueOnce(
+            generationRow({ status: stored, output: { text: "hello" }, usage, timings: { total_ms: 12 } }),
+        )
         await expect(service.statusFor("u1", "w1", "g1")).resolves.toEqual({
             generationId: "g1",
             status: expected,
@@ -324,18 +336,18 @@ describe("GenerationsService statusFor and progress", () => {
             timings: { total_ms: 12 },
         })
         expect(members.require).toHaveBeenCalledWith("u1", "w1")
-        expect(tx.em.query).toHaveBeenCalledWith(FIND_GENERATION_PROGRESS, ["g1", "w1"])
+        expect(tx.em.findOne).toHaveBeenCalledWith(AiGenerationEntity, pollOptions("g1", "w1"))
     })
 
     it("scopes missing progress to the workspace and reports not-found to members", async () => {
         const { service, tx, members } = await build()
-        tx.em.query.mockResolvedValue([])
+        tx.em.findOne.mockResolvedValue(null)
         await expect(service.progress("w2", "g1")).resolves.toBeNull()
         expect(members.require).not.toHaveBeenCalled()
         await expect(service.statusFor("u1", "w2", "g1")).rejects.toMatchObject({
             code: AiGenerationsErrorCode.GenerationNotFound,
         })
-        expect(tx.em.query).toHaveBeenCalledWith(FIND_GENERATION_PROGRESS, ["g1", "w2"])
+        expect(tx.em.findOne).toHaveBeenCalledWith(AiGenerationEntity, pollOptions("g1", "w2"))
         expect(members.require).toHaveBeenCalledWith("u1", "w2")
     })
 })
@@ -349,7 +361,7 @@ describe("GenerationsService prepare", () => {
         await expect(service.prepare(paramsOf(), tx.em)).resolves.toBeNull()
         expect(usage.blockedBy).toHaveBeenCalledWith("w1", "relay", "vi")
         expect(engine.availability).toHaveBeenCalledTimes(checkedEngine ? 1 : 0)
-        expect(tx.em.query).not.toHaveBeenCalled()
+        expect(tx.em.insert).not.toHaveBeenCalled()
         expect(queue.enqueueGenerate).not.toHaveBeenCalled()
     })
 
@@ -357,13 +369,7 @@ describe("GenerationsService prepare", () => {
         const { service, tx, queue, usage } = await build()
         await expect(service.prepare(paramsOf({ locale: "en", timeoutMs: 200_000 }), tx.em)).resolves.toBe("g1")
         expect(usage.blockedBy).toHaveBeenCalledWith("w1", "relay", "en")
-        expect(tx.em.query).toHaveBeenCalledWith(INSERT_GENERATION, [
-            "w1",
-            "relay",
-            "office",
-            "relay",
-            '{"messages":[{"role":"user","content":"hi"}],"response_format":"text' + '","timeout_ms":120000}',
-        ])
+        expect(tx.em.insert).toHaveBeenCalledWith(AiGenerationEntity, insertedAs("relay", promptOf(120000)))
         expect(tx.commits).toBe(0)
         expect(queue.enqueueGenerate).not.toHaveBeenCalled()
     })
@@ -382,18 +388,12 @@ describe("GenerationsService generate", () => {
             timings: { total_ms: 12 },
             usage: null,
         })
-        expect(tx.em.query).toHaveBeenNthCalledWith(1, INSERT_GENERATION, [
-            "w1",
-            "relay",
-            "office",
-            "relay",
-            '{"messages":[{"role":"user","content":"hi"}],"response_format":"json' + '","timeout_ms":60000}',
-        ])
+        expect(tx.em.insert).toHaveBeenCalledWith(AiGenerationEntity, insertedAs("relay", promptOf(60000, "json")))
         expect(queue.enqueueGenerate).toHaveBeenCalledWith({ generationId: "g1", workspaceId: "w1" }, expect.anything())
         expect(tx.commits).toBe(1)
         expect(pause.wait).toHaveBeenCalledTimes(2)
         expect(pause.wait).toHaveBeenCalledWith(400)
-        expect(tx.em.query).toHaveBeenNthCalledWith(2, FIND_GENERATION_PROGRESS, ["g1", "w1"])
+        expect(tx.em.findOne).toHaveBeenNthCalledWith(2, AiGenerationEntity, pollOptions("g1", "w1"))
     })
 
     it("refuses a workspace over its allowance with the allowance's own sentence", async () => {
@@ -405,7 +405,7 @@ describe("GenerationsService generate", () => {
             message: "Over the plan",
         })
         expect(usage.blockedBy).toHaveBeenCalledWith("w1", "relay", "en")
-        expect(tx.em.query).not.toHaveBeenCalled()
+        expect(tx.em.insert).not.toHaveBeenCalled()
     })
 
     it("says the engine is not configured or offline with the busy sentence", async () => {
@@ -419,12 +419,12 @@ describe("GenerationsService generate", () => {
         })
         await expect(offline.service.generate(paramsOf())).resolves.toMatchObject({ reason: "engine_offline" })
         expect(missing.catalog.get).toHaveBeenCalledWith("generation.busy", {}, "vi")
-        expect(missing.tx.em.query).not.toHaveBeenCalled()
+        expect(missing.tx.em.insert).not.toHaveBeenCalled()
     })
 
     it("fails with error when the row ends in error or is cancelled", async () => {
         const { service, logger } = await build({
-            progress: [{ status: "error", output: null, usage: null, timings: {} }],
+            progress: [generationRow({ status: "error" })],
         })
 
         await expect(service.generate(paramsOf())).resolves.toMatchObject({ ok: false, reason: "error" })
@@ -442,16 +442,15 @@ describe("GenerationsService generate", () => {
         const outcome = await service.generate(paramsOf({ timeoutMs: 5000 }))
 
         expect(outcome).toMatchObject({ ok: false, reason: "timeout" })
-        expect(tx.em.query).toHaveBeenLastCalledWith(CANCEL_GENERATION, ["g1", "w1", "2026-10-12T10:00:05.200Z"])
+        expect(tx.em.update).toHaveBeenLastCalledWith(
+            AiGenerationEntity,
+            { id: "g1", workspaceId: "w1", status: In(["queued", "running"]) },
+            { status: "cancelled", error: "timeout", finishedAt: new Date("2026-10-12T10:00:05.200Z") },
+        )
     })
 
     it("treats a vanished row as too slow", async () => {
-        const { service, tx } = await build({ progress: [] })
-        tx.em.query.mockReset()
-        tx.em.query
-            .mockResolvedValueOnce([{ id: "g1" }])
-            .mockResolvedValueOnce([])
-            .mockResolvedValue([])
+        const { service } = await build({ progress: [] })
 
         await expect(service.generate(paramsOf())).resolves.toMatchObject({ ok: false, reason: "timeout" })
     })
@@ -459,8 +458,7 @@ describe("GenerationsService generate", () => {
     it("fails with error and logs when the row cannot be written", async () => {
         const { service, tx, logger } = await build()
         const failure = new Error("database down")
-        tx.em.query.mockReset()
-        tx.em.query.mockRejectedValue(failure)
+        tx.em.insert.mockRejectedValue(failure)
 
         await expect(service.generate(paramsOf())).resolves.toMatchObject({ ok: false, reason: "error" })
         expect(logger.error).toHaveBeenCalledWith(AiGenerationsLogEvent.GenerationFailed, failure, {
@@ -470,8 +468,7 @@ describe("GenerationsService generate", () => {
 
     it("fails with error when the insert answers no row", async () => {
         const { service, tx, queue } = await build()
-        tx.em.query.mockReset()
-        tx.em.query.mockResolvedValueOnce([])
+        tx.em.insert.mockResolvedValueOnce({ identifiers: [], generatedMaps: [], raw: [] })
 
         await expect(service.generate(paramsOf())).resolves.toMatchObject({ ok: false, reason: "error" })
         expect(queue.enqueueGenerate).not.toHaveBeenCalled()

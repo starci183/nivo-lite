@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { WorkspacePaymentAccountService } from "@modules/domain/channel-connections"
 import { InvoicesService } from "@modules/domain/invoices"
@@ -10,11 +10,31 @@ import type { TextParams } from "./automations.contracts"
 import { AutomationMessagesService } from "./automation-messages.service"
 import { AutomationRenewalPaymentService } from "./automation-renewal-payment.service"
 import { AUTOMATIONS_MESSAGES } from "./messages/automations.messages"
-import { SELECT_LAST_CUSTOMER_MESSAGE } from "./persistence/automation-readers.sql"
-import type { ContractReadRow } from "./persistence/automations.rows"
+import type { ContractRead } from "./automation-reads.contracts"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { FakeQueryBuilder, QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+
+const READS = new WeakMap<object, ReadonlyArray<FakeQueryBuilder>>()
+
+/** The manager of {@link readingOf}. */
+interface ReadingManager {
+    /** The manager whose reads answer the given results. */
+    readonly em: MockEntityManager
+}
+
+/** A manager whose reads (and the snapshot transaction around some of them) answer `answers`, one fake statement each, in order. */
+const readingOf = (...answers: Array<QueryBuilderAnswers>): ReadingManager => {
+    const em = mockEntityManager()
+    fakeTransaction(em)
+    READS.set(em, queueQueryBuilders(em, answers))
+    return { em }
+}
+
+/** The fake statements of a manager made by {@link readingOf}, in the order the subject built them. */
+const readsOf = (em: object): ReadonlyArray<FakeQueryBuilder> => READS.get(em) ?? []
 
 const NOW = "2026-10-12T10:00:00.000Z"
-const CONTRACT: ContractReadRow = {
+const CONTRACT: ContractRead = {
     id: "c-1",
     customer_name: "Binh",
     lead_id: "l-1",
@@ -159,7 +179,7 @@ describe("AutomationRenewalPaymentService paymentOf", () => {
 
 describe("AutomationRenewalPaymentService zaloWindowSteps", () => {
     const stepsAfter = async (lastAt: ReadonlyArray<{ created_at: string }>) => {
-        const em = mockEntityManager({ query: [SELECT_LAST_CUSTOMER_MESSAGE, lastAt] })
+        const em = readingOf({ getRawOne: lastAt[0] }).em
         const { service } = await build(em)
         return { em, steps: await service.zaloWindowSteps(ZALO) }
     }
@@ -167,7 +187,9 @@ describe("AutomationRenewalPaymentService zaloWindowSteps", () => {
     it("warns that Zalo will not let the message out when the customer wrote more than 48 hours ago", async () => {
         const { em, steps } = await stepsAfter([{ created_at: "2026-10-10T09:59:00.000Z" }])
 
-        expect(em.query).toHaveBeenCalledWith(SELECT_LAST_CUSTOMER_MESSAGE, ["cv-1"])
+        expect(readsOf(em)[0]?.callsOf("where")).toEqual([
+            [expect.stringContaining("m.conversation_id = :conversationId"), { conversationId: "cv-1" }],
+        ])
         expect(steps).toEqual([
             { label: vi("renewal.zaloWindow"), status: "skipped", detail: vi("renewal.zaloWindowDetail") },
         ])
@@ -185,6 +207,6 @@ describe("AutomationRenewalPaymentService zaloWindowSteps", () => {
         const { service } = await build(em)
 
         await expect(service.zaloWindowSteps({ ...ZALO, channel: "telegram" })).resolves.toEqual([])
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 })

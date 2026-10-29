@@ -44,3 +44,9 @@ export interface SaveBookingSettingsPublicPageParams {
     /** The instant recorded for this settings change. */
     readonly updatedAt: string
 }
+
+/** The workspace whose booking settings were found or changed. */
+export interface BookingSettingsSaved {
+    /** The settings row's workspace id. */
+    readonly id: string
+}

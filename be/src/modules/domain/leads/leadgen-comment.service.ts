@@ -3,13 +3,17 @@ import type { EntityManager } from "typeorm"
 import { DecisionsError, DecisionsErrorCode, DecisionsService } from "@modules/domain/decisions"
 import type { WorkItem } from "@modules/domain/decisions"
 import { WorkspaceMembersService, canDecide } from "@modules/domain/workspace-members"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { DECISIONS_QUEUE, DecisionsJob, decisionsDedupeKey } from "@modules/queues/decisions"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 import type { ApproveLeadGenCommentRequest, LeadGenCommentStatus } from "./leadgen-comment.contracts"
-import type { LeadGenCommentJobRow } from "./persistence/leadgen-comment.rows"
-import { FIND_LEADGEN_COMMENT_JOB } from "./persistence/leadgen-comment.sql"
+
+/** The row `job_status` answers for the existing decisions queue entry. */
+interface LeadGenCommentJobRow {
+    /** State of the existing decisions queue entry. */
+    readonly state: "queued" | "running" | "done" | "failed"
+}
 
 @Injectable()
 /** Authorizes a public-comment decision and enqueues the existing worker without performing provider work on the API request. */
@@ -54,7 +58,7 @@ export class LeadGenCommentService {
     /** Reads workspace-scoped progress, including terminal worker failures even when the work item remains waiting. */
     async status(userId: string, workspaceId: string, workItemId: string): Promise<LeadGenCommentStatus> {
         const item = await this.commentOf(userId, workspaceId, workItemId)
-        const [job] = await this.entityManager.query<Array<LeadGenCommentJobRow>>(FIND_LEADGEN_COMMENT_JOB, [
+        const [job] = await callDbFunction<LeadGenCommentJobRow>(this.entityManager, "public.job_status", [
             workspaceId,
             DECISIONS_QUEUE,
             DecisionsJob.DecideWork,

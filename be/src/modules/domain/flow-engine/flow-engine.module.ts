@@ -9,7 +9,7 @@ import { OwnerChatService } from "./owner-chat.service"
 /**
  * The operating-flow engine: runs the commands of the flows doors through the capabilities that own them, and the owner's
  * plain-words authority and typed decisions in Office. It reads the decisions, staff, chat reply, leads,
- * authority actions and deepseek capabilities the app root registers globally; the app root binds the flows port to its service.
+ * authority actions and ai-tasks capabilities the app root registers globally; the app root binds the flows port to its service.
  */
 export class FlowEngineModule extends ConfigurableModuleClass {
     /** Registers the capability once per app. */

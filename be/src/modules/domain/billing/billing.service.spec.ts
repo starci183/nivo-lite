@@ -4,46 +4,27 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { PaymentOrdersService } from "@modules/domain/payment-orders"
 import type { PaymentOrder } from "@modules/domain/payment-orders"
 import { Secret } from "@modules/platform/config"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import {
+    annualPlan,
+    customPlan,
+    promoPlan,
+    starterPlan,
+    teamPlan,
+    teamTier,
+    unlistedPlan,
+} from "@tests/fixtures/builders/plans.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { BILLING_OPTIONS } from "./billing.decorators"
 import type { BillingOptions } from "./billing.options"
 import { BillingService } from "./billing.service"
 import { BillingErrorCode } from "./errors/billing.error"
-import {
-    SELECT_ACTIVE_PLANS,
-    SELECT_BILLING_WORKSPACE,
-    SELECT_BILLING_WORKSPACES,
-    SELECT_MEMBER_ROLE,
-    SELECT_PLAN,
-    SELECT_PLAN_TIERS,
-    SELECT_PROMO_HISTORY,
-    SELECT_WORKSPACE_BILLING,
-} from "./persistence/billing.sql"
+import { PlanEntity, PlanUsageTierEntity } from "./persistence/entities"
 
 const OPTIONS: BillingOptions = {
     sepayApiKey: new Secret("key"),
     bankAccount: { account: "0123", bank: "MB", holder: "NIVO" },
     channelTokenKey: undefined,
-}
-const PLAN_ROW = {
-    code: "starter",
-    name_vi: "Khoi dau",
-    name_en: "Starter",
-    price_vnd: 990000,
-    period: "month",
-    seats: 3,
-    features: { vi: ["a"], en: ["b"] },
-    sort: 1,
-    ai_credits_per_month: 3000,
-    is_custom: false,
-    price_annual_vnd: null,
-    annual_discount_pct: null,
-    promo_price_vnd: null,
-    promo_months: null,
-    storage_gb: null,
-    individual: false,
-    per_seat: false,
-    listed: true,
 }
 const ORDER: PaymentOrder = {
     id: "order-1",
@@ -89,16 +70,53 @@ const build = async (entityManager: MockEntityManager) => {
     return { billing: moduleRef.get(BillingService), orders }
 }
 
-const WORKSPACE = [WORKSPACE_ROW]
+/** What the database holds for one scenario: a key present is read (the query builders answer in the order role, workspace, promo). */
+interface World {
+    /** The role of the caller's membership, or null when there is none. */
+    readonly role?: string | null
+    /** The billing columns of the workspace, or null when it is gone. */
+    readonly workspace?: object | null
+    /** The plan the code names, or null when none is active. */
+    readonly plan?: PlanEntity | null
+    /** The usage tiers of every plan. */
+    readonly tiers?: ReadonlyArray<PlanUsageTierEntity>
+    /** What the workspace already paid for plan months. */
+    readonly promo?: { readonly full_price: number; readonly promo: number }
+}
 
-const priced = (plan: typeof PLAN_ROW = PLAN_ROW) =>
-    [
-        [SELECT_MEMBER_ROLE, [{ role: "owner" }]],
-        [SELECT_WORKSPACE_BILLING, WORKSPACE],
-        [SELECT_PLAN, [plan]],
-        [SELECT_PLAN_TIERS, []],
-        [SELECT_PROMO_HISTORY, []],
-    ] as const
+const NO_PROMO = { full_price: 0, promo: 0 }
+
+const worldOf = (world: World) => {
+    const em = mockEntityManager({
+        findOne: [PlanEntity, world.plan ?? null],
+        find: [PlanUsageTierEntity, world.tiers ?? []],
+    })
+    const answers = [
+        ...("role" in world ? [{ getRawOne: world.role === null ? undefined : { role: world.role } }] : []),
+        ...("workspace" in world ? [{ getRawOne: world.workspace ?? undefined }] : []),
+        ...("promo" in world ? [{ getRawOne: world.promo }] : []),
+    ]
+    queueQueryBuilders(em, answers)
+    return em
+}
+
+/** The same membership read `times` times: one lookup per guard the subject runs. */
+const membershipOf = (role: string | null, times: number) => {
+    const em = mockEntityManager()
+    queueQueryBuilders(
+        em,
+        Array.from({ length: times }, () => ({ getRawOne: role === null ? undefined : { role } })),
+    )
+    return em
+}
+
+/** A member who may pay and a workspace on the starter plan. */
+const pricedWorld = (plan: PlanEntity = starterPlan()): World => ({
+    role: "owner",
+    workspace: WORKSPACE_ROW,
+    plan,
+    promo: NO_PROMO,
+})
 
 describe("BillingService", () => {
     it("answers the configured bank account", async () => {
@@ -108,28 +126,30 @@ describe("BillingService", () => {
     })
 
     it("lists the active plans", async () => {
-        const { billing } = await build(
-            mockEntityManager({
-                query: [
-                    [SELECT_ACTIVE_PLANS, [PLAN_ROW]],
-                    [SELECT_PLAN_TIERS, []],
-                ],
-            }),
-        )
+        const em = mockEntityManager({
+            find: [
+                [PlanEntity, [starterPlan()]],
+                [PlanUsageTierEntity, []],
+            ],
+        })
+        const { billing } = await build(em)
 
         await expect(billing.listPlans()).resolves.toMatchObject([{ code: "starter", priceVnd: 990000, listed: true }])
+        expect(em.find).toHaveBeenCalledWith(PlanEntity, {
+            where: { active: true, listed: true },
+            order: { sort: "ASC" },
+            take: 100,
+        })
+        expect(em.find).toHaveBeenCalledWith(PlanUsageTierEntity, {
+            order: { planCode: "ASC", sort: "ASC" },
+            take: 500,
+        })
     })
 
     it("finds a plan, answers null for an unknown code and refuses to require it", async () => {
-        const { billing } = await build(
-            mockEntityManager({
-                query: [
-                    [SELECT_PLAN, [PLAN_ROW]],
-                    [SELECT_PLAN_TIERS, []],
-                ],
-            }),
-        )
-        const { billing: none } = await build(mockEntityManager({ query: [SELECT_PLAN, []] }))
+        const em = worldOf({ plan: starterPlan() })
+        const { billing } = await build(em)
+        const { billing: none } = await build(worldOf({ plan: null }))
 
         await expect(billing.findPlan("starter")).resolves.toMatchObject({ code: "starter" })
         await expect(billing.requirePlan("starter")).resolves.toMatchObject({ code: "starter" })
@@ -138,6 +158,7 @@ describe("BillingService", () => {
             code: BillingErrorCode.PlanNotFound,
             params: { plan: "nope" },
         })
+        expect(em.findOne).toHaveBeenCalledWith(PlanEntity, { where: { code: "starter", active: true } })
     })
 
     it("reads the billing columns of a workspace or null", async () => {
@@ -148,8 +169,8 @@ describe("BillingService", () => {
             billing_cycle: "monthly",
             billed_monthly_vnd: 990000,
         }
-        const { billing } = await build(mockEntityManager({ query: [SELECT_WORKSPACE_BILLING, [row]] }))
-        const { billing: none } = await build(mockEntityManager({ query: [SELECT_WORKSPACE_BILLING, []] }))
+        const { billing } = await build(worldOf({ workspace: row }))
+        const { billing: none } = await build(worldOf({ workspace: null }))
 
         await expect(billing.findWorkspaceBilling("ws-1")).resolves.toEqual({
             status: "active",
@@ -166,16 +187,16 @@ describe("BillingService", () => {
 
 describe("BillingService > membership", () => {
     it.each(["owner", "manager"])("lets an active %s manage and be a member", async (role) => {
-        const em = mockEntityManager({ query: [SELECT_MEMBER_ROLE, [{ role }]] })
+        const em = membershipOf(role, 2)
         const { billing } = await build(em)
 
         await expect(billing.requireManager("person-1", "ws-1")).resolves.toBeUndefined()
         await expect(billing.requireMember("person-1", "ws-1")).resolves.toBeUndefined()
-        expect(em.query).toHaveBeenCalledWith(SELECT_MEMBER_ROLE, ["ws-1", "person-1"])
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(2)
     })
 
     it("lets staff read but not manage", async () => {
-        const { billing } = await build(mockEntityManager({ query: [SELECT_MEMBER_ROLE, [{ role: "staff" }]] }))
+        const { billing } = await build(membershipOf("staff", 2))
 
         await expect(billing.requireMember("person-1", "ws-1")).resolves.toBeUndefined()
         await expect(billing.requireManager("person-1", "ws-1")).rejects.toMatchObject({
@@ -184,7 +205,7 @@ describe("BillingService > membership", () => {
     })
 
     it("refuses a person who is not a member", async () => {
-        const { billing } = await build(mockEntityManager({ query: [SELECT_MEMBER_ROLE, []] }))
+        const { billing } = await build(membershipOf(null, 2))
 
         await expect(billing.requireMember("person-1", "ws-1")).rejects.toMatchObject({
             code: BillingErrorCode.NotMember,
@@ -197,7 +218,7 @@ describe("BillingService > membership", () => {
 
 describe("BillingService > renew", () => {
     it("orders the current plan of the workspace at its price", async () => {
-        const { billing, orders } = await build(mockEntityManager({ query: priced() }))
+        const { billing, orders } = await build(worldOf(pricedWorld()))
 
         await expect(billing.renew("person-1", { workspaceId: "ws-1" })).resolves.toEqual(PAYABLE)
         expect(orders.create).toHaveBeenCalledWith({
@@ -213,14 +234,9 @@ describe("BillingService > renew", () => {
 
     it("keeps the cycle and the seats the workspace already pays", async () => {
         const { billing, orders } = await build(
-            mockEntityManager({
-                query: [
-                    [SELECT_MEMBER_ROLE, [{ role: "owner" }]],
-                    [SELECT_WORKSPACE_BILLING, [{ ...WORKSPACE_ROW, seat_count: 4, billing_cycle: "annual" }]],
-                    [SELECT_PLAN, [{ ...PLAN_ROW, price_annual_vnd: 9900000, annual_discount_pct: 17 }]],
-                    [SELECT_PLAN_TIERS, []],
-                    [SELECT_PROMO_HISTORY, []],
-                ],
+            worldOf({
+                ...pricedWorld(annualPlan()),
+                workspace: { ...WORKSPACE_ROW, seat_count: 4, billing_cycle: "annual" },
             }),
         )
 
@@ -236,22 +252,12 @@ describe("BillingService > renew", () => {
 
 describe("BillingService > renew", () => {
     it("refuses a workspace that does not exist or has no plan yet", async () => {
-        const missing = await build(
-            mockEntityManager({
-                query: [
-                    [SELECT_MEMBER_ROLE, [{ role: "owner" }]],
-                    [SELECT_WORKSPACE_BILLING, []],
-                    [SELECT_PLAN, []],
-                ],
-            }),
-        )
+        const missing = await build(worldOf({ role: "owner", workspace: null, plan: null }))
         const unpaid = await build(
-            mockEntityManager({
-                query: [
-                    [SELECT_MEMBER_ROLE, [{ role: "owner" }]],
-                    [SELECT_WORKSPACE_BILLING, [{ status: "pending_payment", plan_code: null, paid_until: null }]],
-                    [SELECT_PLAN, []],
-                ],
+            worldOf({
+                role: "owner",
+                workspace: { status: "pending_payment", plan_code: null, paid_until: null },
+                plan: null,
             }),
         )
 
@@ -264,7 +270,7 @@ describe("BillingService > renew", () => {
     })
 
     it("refuses a contract plan and writes no order", async () => {
-        const { billing, orders } = await build(mockEntityManager({ query: priced({ ...PLAN_ROW, is_custom: true }) }))
+        const { billing, orders } = await build(worldOf(pricedWorld(customPlan())))
 
         await expect(billing.renew("person-1", { workspaceId: "ws-1" })).rejects.toMatchObject({
             code: BillingErrorCode.PlanCustom,
@@ -273,26 +279,20 @@ describe("BillingService > renew", () => {
     })
 
     it("refuses a caller who is not a manager before reading anything else", async () => {
-        const em = mockEntityManager({ query: [SELECT_MEMBER_ROLE, []] })
+        const em = worldOf({ role: null })
         const { billing } = await build(em)
 
         await expect(billing.renew("person-1", { workspaceId: "ws-1" })).rejects.toMatchObject({
             code: BillingErrorCode.Forbidden,
         })
-        expect(em.query).toHaveBeenCalledTimes(1)
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
+        expect(em.findOne).not.toHaveBeenCalled()
     })
 })
 
 describe("BillingService > orderPlan", () => {
     it("orders the plan the workspace chose", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_MEMBER_ROLE, [{ role: "manager" }]],
-                [SELECT_PLAN, [PLAN_ROW]],
-                [SELECT_PLAN_TIERS, []],
-                [SELECT_PROMO_HISTORY, []],
-            ],
-        })
+        const em = worldOf({ role: "manager", plan: starterPlan(), promo: NO_PROMO })
         const { billing, orders } = await build(em)
 
         await expect(billing.orderPlan("person-1", { workspaceId: "ws-1", planCode: "starter" })).resolves.toEqual(
@@ -304,19 +304,8 @@ describe("BillingService > orderPlan", () => {
     })
 
     it("prices a per-seat plan from the level and the seats the caller picked", async () => {
-        const tier = { plan_code: "team", credits_per_month: 5000, price_vnd: 200000, per_seat: true }
         const { billing, orders } = await build(
-            mockEntityManager({
-                query: [
-                    [SELECT_MEMBER_ROLE, [{ role: "manager" }]],
-                    [
-                        SELECT_PLAN,
-                        [{ ...PLAN_ROW, code: "team", per_seat: true, seats: 10, ai_credits_per_month: null }],
-                    ],
-                    [SELECT_PLAN_TIERS, [tier]],
-                    [SELECT_PROMO_HISTORY, []],
-                ],
-            }),
+            worldOf({ role: "manager", plan: teamPlan(), tiers: [teamTier()], promo: NO_PROMO }),
         )
 
         await billing.orderPlan("person-1", {
@@ -344,19 +333,10 @@ describe("BillingService > orderPlan", () => {
 
 describe("BillingService > orderPlan", () => {
     it.each([
-        ["another plan", [{ ...WORKSPACE_ROW, plan_code: "growth" }]],
-        ["no workspace", []],
+        ["another plan", { ...WORKSPACE_ROW, plan_code: "growth" }],
+        ["no workspace", null],
     ])("refuses an unlisted plan of %s", async (_label, workspace) => {
-        const { billing, orders } = await build(
-            mockEntityManager({
-                query: [
-                    [SELECT_MEMBER_ROLE, [{ role: "manager" }]],
-                    [SELECT_PLAN, [{ ...PLAN_ROW, listed: false }]],
-                    [SELECT_PLAN_TIERS, []],
-                    [SELECT_WORKSPACE_BILLING, workspace],
-                ],
-            }),
-        )
+        const { billing, orders } = await build(worldOf({ role: "manager", plan: unlistedPlan(), workspace }))
 
         await expect(billing.orderPlan("person-1", { workspaceId: "ws-1", planCode: "starter" })).rejects.toMatchObject(
             { code: BillingErrorCode.PlanNotListed, params: { plan: "starter" } },
@@ -366,15 +346,7 @@ describe("BillingService > orderPlan", () => {
 
     it("lets a workspace pay again for the unlisted plan it already has", async () => {
         const { billing, orders } = await build(
-            mockEntityManager({
-                query: [
-                    [SELECT_MEMBER_ROLE, [{ role: "manager" }]],
-                    [SELECT_PLAN, [{ ...PLAN_ROW, listed: false }]],
-                    [SELECT_PLAN_TIERS, []],
-                    [SELECT_WORKSPACE_BILLING, [WORKSPACE_ROW]],
-                    [SELECT_PROMO_HISTORY, []],
-                ],
-            }),
+            worldOf({ role: "manager", plan: unlistedPlan(), workspace: WORKSPACE_ROW, promo: NO_PROMO }),
         )
 
         await expect(billing.orderPlan("person-1", { workspaceId: "ws-1", planCode: "starter" })).resolves.toEqual(
@@ -384,13 +356,7 @@ describe("BillingService > orderPlan", () => {
     })
 
     it("refuses an unknown plan", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_MEMBER_ROLE, [{ role: "manager" }]],
-                [SELECT_PLAN, []],
-            ],
-        })
-        const { billing } = await build(em)
+        const { billing } = await build(worldOf({ role: "manager", plan: null }))
 
         await expect(billing.orderPlan("person-1", { workspaceId: "ws-1", planCode: "nope" })).rejects.toMatchObject({
             code: BillingErrorCode.PlanNotFound,
@@ -407,7 +373,9 @@ describe("BillingService > workspaces", () => {
         paid_until: "2026-11-01T00:00:00.000Z",
     }
     it("lists the caller's active workspaces", async () => {
-        const { billing } = await build(mockEntityManager({ query: [SELECT_BILLING_WORKSPACES, [row]] }))
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [{ getRawMany: [row] }])
+        const { billing } = await build(em)
 
         await expect(billing.workspaces("person-1")).resolves.toEqual([
             {
@@ -423,11 +391,19 @@ describe("BillingService > workspaces", () => {
                 billedMonthlyVnd: null,
             },
         ])
+        expect(fake?.callsOf("limit")).toEqual([[200]])
+        expect(fake?.callsOf("where")).toEqual([
+            ["m.user_id = :userId AND m.status = 'active'", { userId: "person-1" }],
+        ])
     })
 
     it("reads one workspace for a member and refuses anyone else", async () => {
-        const { billing } = await build(mockEntityManager({ query: [SELECT_BILLING_WORKSPACE, [row]] }))
-        const { billing: outsider } = await build(mockEntityManager({ query: [SELECT_BILLING_WORKSPACE, []] }))
+        const member = mockEntityManager()
+        const outside = mockEntityManager()
+        queueQueryBuilders(member, [{ getRawOne: row }])
+        queueQueryBuilders(outside, [{ getRawOne: undefined }])
+        const { billing } = await build(member)
+        const { billing: outsider } = await build(outside)
 
         await expect(billing.workspace("person-1", "ws-1")).resolves.toMatchObject({ id: "ws-1", role: "owner" })
         await expect(outsider.workspace("person-1", "ws-1")).rejects.toMatchObject({
@@ -438,16 +414,7 @@ describe("BillingService > workspaces", () => {
 
 describe("BillingService > quote", () => {
     it("prices the intro offer while the workspace has not paid full price", async () => {
-        const { billing } = await build(
-            mockEntityManager({
-                query: [
-                    [SELECT_MEMBER_ROLE, [{ role: "staff" }]],
-                    [SELECT_PLAN, [{ ...PLAN_ROW, promo_price_vnd: 490000, promo_months: 2 }]],
-                    [SELECT_PLAN_TIERS, []],
-                    [SELECT_PROMO_HISTORY, [{ full_price: 0, promo: 0 }]],
-                ],
-            }),
-        )
+        const { billing } = await build(worldOf({ role: "staff", plan: promoPlan(), promo: NO_PROMO }))
 
         await expect(billing.quote("person-1", { workspaceId: "ws-1", planCode: "starter" })).resolves.toEqual({
             planCode: "starter",
@@ -463,12 +430,13 @@ describe("BillingService > quote", () => {
     })
 
     it("stops at membership and reads nothing else", async () => {
-        const em = mockEntityManager({ query: [SELECT_MEMBER_ROLE, []] })
+        const em = worldOf({ role: null })
         const { billing } = await build(em)
 
         await expect(billing.quote("person-1", { workspaceId: "ws-1", planCode: "starter" })).rejects.toMatchObject({
             code: BillingErrorCode.NotMember,
         })
-        expect(em.query).toHaveBeenCalledTimes(1)
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
+        expect(em.findOne).not.toHaveBeenCalled()
     })
 })

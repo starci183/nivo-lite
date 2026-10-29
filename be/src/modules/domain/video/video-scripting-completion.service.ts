@@ -9,11 +9,14 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectInbox } from "@modules/platform/inbox"
+import type { Inbox } from "@modules/platform/inbox"
+import type { InboxClaim } from "./video.contracts"
 import { parseVideoScript } from "./video-scripting.policy"
 import { VIDEO_SCRIPT_RETRY } from "./video-scripting.templates"
 import { videoInputsOf, videoRecord } from "./video-workbench.policy"
-import type { VideoScriptingRow } from "./persistence/video-scripting.rows"
-import { LOCK_SCRIPT_PROJECT } from "./persistence/video-scripting.sql"
+import type { ScriptProject } from "./video-stored.contracts"
+import { readScriptProject } from "./persistence/video-scripting.query"
 
 /** Whether a stored entry is a chat message the model can be sent again. */
 const isMessage = (entry: unknown): entry is GenMessage => {
@@ -28,13 +31,17 @@ export class VideoScriptingCompletionService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
+        @InjectInbox() private readonly inbox: Inbox,
         private readonly generations: GenerationsService,
         private readonly events: EventsService,
         private readonly projectWriter: VideoProjectScriptingService,
     ) {}
 
-    /** Completes only video-script generations that still own the project; queue redelivery is safe. */
-    async complete(workspaceId: string, generationId: string): Promise<void> {
+    /**
+     * The `video` reactor of `ai_generation_completed`: completes only video-script generations that still own the project. The
+     * delivery is claimed in the inbox in the transaction of the effect, so a redelivery changes nothing twice.
+     */
+    async complete(workspaceId: string, generationId: string, claim: InboxClaim): Promise<void> {
         const state = await this.generations.state(workspaceId, generationId)
         const projectId = state === null ? undefined : videoRecord(state.input.context).projectId
         if (
@@ -45,7 +52,8 @@ export class VideoScriptingCompletionService {
         )
             return
         await this.entityManager.transaction(async (tx) => {
-            const [project] = await tx.query<Array<VideoScriptingRow>>(LOCK_SCRIPT_PROJECT, [workspaceId, projectId])
+            if (!(await this.inbox.claim(claim.consumer, claim.dedupeKey, tx))) return
+            const project = await readScriptProject(tx, workspaceId, projectId, true)
             if (project?.status !== "scripting") return
             const meta = videoRecord(project.script_meta)
             if (meta.generation_id !== generationId || typeof meta.script_request_id !== "string") return
@@ -97,7 +105,7 @@ export class VideoScriptingCompletionService {
     private async retry(
         tx: EntityManager,
         workspaceId: string,
-        project: VideoScriptingRow,
+        project: ScriptProject,
         state: GenerationState,
         meta: Record<string, unknown>,
     ): Promise<boolean> {
@@ -132,7 +140,7 @@ export class VideoScriptingCompletionService {
     private async fail(
         tx: EntityManager,
         workspaceId: string,
-        project: VideoScriptingRow,
+        project: ScriptProject,
         state: GenerationState,
         meta: Record<string, unknown>,
         code: string,

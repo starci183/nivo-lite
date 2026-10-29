@@ -1,5 +1,5 @@
 import type { DataSyncRun, DataSyncRunState, DataSyncTrigger } from "./data-sync-runs.contracts"
-import type { DataSyncRunRow } from "./persistence/data-sync-runs.rows"
+import type { DataSyncRunEntity } from "./persistence/entities"
 
 const TRIGGERS: ReadonlyArray<DataSyncTrigger> = ["schedule", "manual", "upload", "push"]
 
@@ -10,13 +10,13 @@ const triggerOf = (value: string): DataSyncTrigger => TRIGGERS.find((trigger) =>
 const stateOf = (value: string): DataSyncRunState => (value === "ok" || value === "failed" ? value : "running")
 
 /** A stored sync run as the capability answers it. */
-export const toDataSyncRun = (row: DataSyncRunRow): DataSyncRun => ({
+export const toDataSyncRun = (row: DataSyncRunEntity): DataSyncRun => ({
     id: row.id,
-    connectionId: row.connection_id,
+    connectionId: row.connectionId,
     trigger: triggerOf(row.trigger),
     state: stateOf(row.status),
-    rows: row.rows_upserted,
+    rows: row.rowsUpserted,
     error: row.error,
-    startedAt: row.started_at,
-    finishedAt: row.finished_at,
+    startedAt: row.startedAt.toISOString(),
+    finishedAt: row.finishedAt?.toISOString() ?? null,
 })

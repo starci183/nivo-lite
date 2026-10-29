@@ -2,14 +2,12 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { OfficeLog } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { HiringError, HiringErrorCode } from "./errors/hiring.error"
 import type { HiringSettings } from "./hiring.contracts"
 import type { EnsureSettingsOutput, SaveSettingsParams } from "./hiring-operations.contracts"
 import { HiringDataService } from "./hiring-data.service"
 import { HiringTextService } from "./hiring-text.service"
-import { INIT_SETTINGS, SAVE_SETTINGS } from "./persistence/hiring.sql"
-import type { TextRow } from "./persistence/hiring.rows"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { RESERVED_SLUGS, clip, slugify } from "./policies/text.policy"
 
@@ -58,12 +56,15 @@ export class HiringSettingsService {
 
     private async create(workspaceId: string, base: string, attempt: number): Promise<HiringSettings> {
         if (attempt >= SLUG_TRIES) throw new HiringError({ code: HiringErrorCode.SettingsSlugUnavailable })
-        const [row] = await this.entityManager.query<Array<TextRow>>(INIT_SETTINGS, [
-            workspaceId,
-            attempt === 0 ? base : `${base}-${attempt + 1}`,
-        ])
+        const [row] = await callDbFunction<{ hiring_settings_init: string | null }>(
+            this.entityManager,
+            "public.hiring_settings_init",
+            [workspaceId, attempt === 0 ? base : `${base}-${attempt + 1}`],
+        )
         const made =
-            row?.value === "created" || row?.value === "exists" ? await this.data.settings(workspaceId) : undefined
+            row?.hiring_settings_init === "created" || row?.hiring_settings_init === "exists"
+                ? await this.data.settings(workspaceId)
+                : undefined
         return made ?? this.create(workspaceId, base, attempt + 1)
     }
 
@@ -78,11 +79,12 @@ export class HiringSettingsService {
         await this.members.require(userId, workspaceId, MANAGER_ROLES)
         await this.ensure(workspaceId)
         const patch = this.patchOf(request)
-        const [row] = await this.entityManager.query<Array<TextRow>>(SAVE_SETTINGS, [
-            workspaceId,
-            JSON.stringify(patch),
-        ])
-        if (row?.value === "taken") throw new HiringError({ code: HiringErrorCode.SlugTaken })
+        const [row] = await callDbFunction<{ hiring_settings_save: string | null }>(
+            this.entityManager,
+            "public.hiring_settings_save",
+            [workspaceId, JSON.stringify(patch)],
+        )
+        if (row?.hiring_settings_save === "taken") throw new HiringError({ code: HiringErrorCode.SlugTaken })
         return outputOf(await this.ensure(workspaceId))
     }
 

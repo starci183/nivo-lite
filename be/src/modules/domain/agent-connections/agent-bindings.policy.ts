@@ -2,13 +2,14 @@ import type {
     Access,
     AgentsForOptions,
     BoundAgent,
+    BoundAgentFacts,
     BoundConnection,
+    BoundConnectionFacts,
     ConnectionsForOptions,
     InboundRoute,
     Purpose,
     PurposeSelector,
 } from "./agent-connections.contracts"
-import type { BoundAgentRow, BoundConnectionRow } from "./persistence/agent-connections.rows"
 
 /**
  * The modules that may be bound inbound_chat to a chat connection, in front-door order. The chatbot is the front door whenever it
@@ -45,7 +46,7 @@ const accessOf = (value: string): Access => (isAccess(value) ? value : "read")
 const byCreatedAt = <T extends { readonly created_at: string }>(a: T, b: T): number =>
     a.created_at.localeCompare(b.created_at)
 
-const agentOf = (row: BoundAgentRow, purpose: Purpose): BoundAgent => ({
+const agentOf = (row: BoundAgentFacts, purpose: Purpose): BoundAgent => ({
     id: row.id,
     module: row.module,
     name: row.name,
@@ -53,7 +54,7 @@ const agentOf = (row: BoundAgentRow, purpose: Purpose): BoundAgent => ({
     purpose,
 })
 
-const connectionOf = (row: BoundConnectionRow, purpose: Purpose): BoundConnection => ({
+const connectionOf = (row: BoundConnectionFacts, purpose: Purpose): BoundConnection => ({
     id: row.id,
     provider: row.provider,
     name: row.name,
@@ -66,7 +67,7 @@ const connectionOf = (row: BoundConnectionRow, purpose: Purpose): BoundConnectio
 
 /** The bound agents that count, oldest first. */
 export const boundAgentsOf = (
-    rows: ReadonlyArray<BoundAgentRow>,
+    rows: ReadonlyArray<BoundAgentFacts>,
     options: AgentsForOptions,
 ): ReadonlyArray<BoundAgent> =>
     [...rows]
@@ -77,7 +78,7 @@ export const boundAgentsOf = (
 
 /** The bound connections that count, oldest first; a disconnected connection never counts. */
 export const boundConnectionsOf = (
-    rows: ReadonlyArray<BoundConnectionRow>,
+    rows: ReadonlyArray<BoundConnectionFacts>,
     options: ConnectionsForOptions,
 ): ReadonlyArray<BoundConnection> =>
     [...rows]

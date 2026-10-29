@@ -64,7 +64,6 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.candidateLabel": "{{no}} · {{name}} · {{amount}}",
         "performers.bankCredit": "{{bank}} báo có +{{amount}} · nội dung {{ref}} · từ {{payer}}",
         "performers.matchedByCodeAmount": "Khớp mã hồ sơ + số tiền",
-        "performers.contractRenewed": "Đã gia hạn hợp đồng đến {{until}} theo hóa đơn {{no}}",
         "performers.claimSettled": "Đã xong: giao dịch ngân hàng đã khớp {{no}}, lời báo của khách không cần duyệt nữa",
         "performers.replyPosted": "Đã gửi câu trả lời đã duyệt cho khách trong website chat",
         "performers.replyPostedTelegram": "Đã gửi câu trả lời đã duyệt cho khách qua Telegram",
@@ -206,7 +205,6 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.candidateLabel": "{{no}} · {{name}} · {{amount}}",
         "performers.bankCredit": "{{bank}} credit +{{amount}} · content {{ref}} · from {{payer}}",
         "performers.matchedByCodeAmount": "Matched record code + amount",
-        "performers.contractRenewed": "Renewed the contract until {{until}} by invoice {{no}}",
         "performers.claimSettled":
             "Settled: the bank credit was matched to {{no}}, so the customer's claim needs no decision",
         "performers.replyPosted": "Sent the approved answer to the customer in the website chat",

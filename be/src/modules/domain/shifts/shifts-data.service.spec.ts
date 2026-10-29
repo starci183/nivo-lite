@@ -1,45 +1,41 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { Between, In, IsNull, LessThanOrEqual, Like, MoreThanOrEqual, Not } from "typeorm"
+import { WorkItemEntity } from "@modules/domain/work-items"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import type { ShiftsShiftRow, ShiftsStaffRow } from "./persistence/shifts.rows"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import {
-    COUNT_WORK_ASKS,
-    SELECT_APPROVED_LEAVES,
-    SELECT_AVAILABILITY,
-    SELECT_COVERAGE,
-    SELECT_LEAVE,
-    SELECT_PAY,
-    SELECT_POSITIONS,
-    SELECT_PRIOR_SHIFTS,
-    SELECT_RANGE_SHIFTS,
-    SELECT_SCHEDULE,
-    SELECT_SCHEDULE_SHIFTS,
-    SELECT_SETTINGS,
-    SELECT_SHIFT,
-    SELECT_STAFF,
-    SELECT_STAFF_SHIFTS,
-    SELECT_SWAP,
-    SELECT_PROFILE_OF_USER,
-} from "./persistence/shifts.sql"
+    ShiftsAvailabilityEntity,
+    ShiftsCoverageEntity,
+    ShiftsLeaveRequestEntity,
+    ShiftsPositionEntity,
+    ShiftsScheduleEntity,
+    ShiftsSettingsEntity,
+    ShiftsShiftEntity,
+    ShiftsStaffEntity,
+    ShiftsStaffPayEntity,
+    ShiftsSwapRequestEntity,
+} from "./persistence/entities"
 import type { Setup, Shift, ShiftStaff } from "./shifts.contracts"
 import { ShiftsDataService } from "./shifts-data.service"
 
-const staffRow = (overrides: Partial<ShiftsStaffRow> = {}): ShiftsStaffRow => ({
-    id: "staff-1",
-    name: "Alex",
-    staff_id: "member-1",
-    phone: "123456789",
-    telegram_chat_id: "telegram-1",
-    zalo_user_id: "zalo-1",
-    position_ids: ["position-1"],
-    skills: ["coffee"],
-    max_hours_week: "40",
-    max_hours_day: "8",
-    min_rest_hours: "12",
-    active: true,
-    ...overrides,
-})
+const staffRow = (overrides: Partial<ShiftsStaffEntity> = {}): ShiftsStaffEntity =>
+    Object.assign(new ShiftsStaffEntity(), {
+        id: "staff-1",
+        name: "Alex",
+        staffId: "member-1",
+        phone: "123456789",
+        telegramChatId: "telegram-1",
+        zaloUserId: "zalo-1",
+        positionIds: ["position-1"],
+        skills: ["coffee"],
+        maxHoursWeek: "40",
+        maxHoursDay: "8",
+        minRestHours: "12",
+        active: true,
+        ...overrides,
+    })
 
 const person: ShiftStaff = {
     id: "staff-1",
@@ -66,19 +62,18 @@ const settings = {
     overtimeHoursWeek: 40,
 }
 
-const shiftRow = (overrides: Partial<ShiftsShiftRow> = {}): ShiftsShiftRow => ({
-    id: "shift-1",
-    schedule_id: "schedule-1",
-    shift_date: "2026-10-12",
-    start_time: "08:00:00",
-    end_time: "16:00:00",
-    position_id: "position-1",
-    staff_id: "staff-1",
-    status: "published",
-    schedule_status: "published",
-    week_start: "2026-10-12",
-    ...overrides,
-})
+const shiftRow = (overrides: Partial<ShiftsShiftEntity> = {}): ShiftsShiftEntity =>
+    Object.assign(new ShiftsShiftEntity(), {
+        id: "shift-1",
+        scheduleId: "schedule-1",
+        shiftDate: "2026-10-12",
+        startTime: "08:00:00",
+        endTime: "16:00:00",
+        positionId: "position-1",
+        staffId: "staff-1",
+        status: "published",
+        ...overrides,
+    })
 
 const shift: Shift = {
     id: "shift-1",
@@ -97,52 +92,51 @@ const build = async (entityManager: MockEntityManager) => {
     return moduleRef.get(ShiftsDataService)
 }
 
-const setupRows: ReadonlyArray<readonly [string, ReadonlyArray<object>]> = [
-    [SELECT_POSITIONS, [{ id: "position-1", name: "Barista", color: "#123456" }]],
-    [
-        SELECT_STAFF,
-        [staffRow(), staffRow({ id: "staff-2", name: "Blair" }), staffRow({ id: "staff-3", name: "Casey" })],
-    ],
-    [
-        SELECT_PAY,
-        [
-            { staff_id: "staff-1", hourly_wage_vnd: "30000.00" },
-            { staff_id: "staff-2", hourly_wage_vnd: "unreadable" },
-        ],
-    ],
-    [
-        SELECT_COVERAGE,
-        [
-            {
-                id: "block-1",
-                weekday: 0,
-                start_time: "08:00:00",
-                end_time: "16:00:00",
-                position_id: "position-1",
-                min_staff: 1,
-                ideal_staff: 2,
-                is_peak: true,
-            },
-        ],
-    ],
-    [
-        SELECT_SETTINGS,
-        [
-            {
-                opening_hours: { "0": { open: "08:00", close: "22:00" } },
-                swap_notice_hours: 12,
-                leave_notice_days: 3,
-                remind_minutes: 45,
-                noshow_minutes: 15,
-                overtime_hours_week: "40",
-            },
-        ],
-    ],
+const position = Object.assign(new ShiftsPositionEntity(), { id: "position-1", name: "Barista", color: "#123456" })
+
+const coverage = Object.assign(new ShiftsCoverageEntity(), {
+    id: "block-1",
+    weekday: 0,
+    startTime: "08:00:00",
+    endTime: "16:00:00",
+    positionId: "position-1",
+    minStaff: 1,
+    idealStaff: 2,
+    isPeak: true,
+})
+
+const settingsRow = Object.assign(new ShiftsSettingsEntity(), {
+    openingHours: { "0": { open: "08:00", close: "22:00" } },
+    swapNoticeHours: 12,
+    leaveNoticeDays: 3,
+    remindMinutes: 45,
+    noshowMinutes: 15,
+    overtimeHoursWeek: "40",
+})
+
+const pay = [
+    Object.assign(new ShiftsStaffPayEntity(), { staffId: "staff-1", hourlyWageVnd: 30000 }),
+    Object.assign(new ShiftsStaffPayEntity(), { staffId: "staff-2", hourlyWageVnd: 0 }),
 ]
 
 describe("ShiftsDataService loadSetup", () => {
     it("maps positions, people, wages, coverage and settings exactly", async () => {
-        const em = mockEntityManager({ query: setupRows })
+        const em = mockEntityManager({
+            find: [
+                [ShiftsPositionEntity, [position]],
+                [
+                    ShiftsStaffEntity,
+                    [
+                        staffRow(),
+                        staffRow({ id: "staff-2", name: "Blair" }),
+                        staffRow({ id: "staff-3", name: "Casey" }),
+                    ],
+                ],
+                [ShiftsStaffPayEntity, pay],
+                [ShiftsCoverageEntity, [coverage]],
+            ],
+            findOne: [ShiftsSettingsEntity, settingsRow],
+        })
         const service = await build(em)
 
         await expect(service.loadSetup("ws-1", true)).resolves.toEqual({
@@ -166,25 +160,40 @@ describe("ShiftsDataService loadSetup", () => {
             ],
             settings,
         })
-        expect(em.query.mock.calls).toEqual([
-            [SELECT_POSITIONS, ["ws-1"]],
-            [SELECT_STAFF, ["ws-1"]],
-            [SELECT_PAY, ["ws-1"]],
-            [SELECT_COVERAGE, ["ws-1"]],
-            [SELECT_SETTINGS, ["ws-1"]],
-        ])
+        expect(em.find).toHaveBeenCalledWith(ShiftsPositionEntity, {
+            select: { id: true, name: true, color: true },
+            where: { workspaceId: "ws-1", active: true },
+            order: { sortOrder: "ASC", createdAt: "ASC" },
+            take: 200,
+        })
+        expect(em.find).toHaveBeenCalledWith(ShiftsStaffEntity, {
+            where: { workspaceId: "ws-1" },
+            order: { createdAt: "ASC" },
+            take: 500,
+        })
+        expect(em.find).toHaveBeenCalledWith(ShiftsStaffPayEntity, {
+            select: { staffId: true, hourlyWageVnd: true },
+            where: { workspaceId: "ws-1" },
+            take: 500,
+        })
+        expect(em.find).toHaveBeenCalledWith(ShiftsCoverageEntity, {
+            where: { workspaceId: "ws-1" },
+            order: { weekday: "ASC", startTime: "ASC" },
+            take: 1000,
+        })
+        expect(em.findOne).toHaveBeenCalledWith(ShiftsSettingsEntity, { where: { workspaceId: "ws-1" } })
     })
 })
 
-describe("ShiftsDataService loadSetup", () => {
-    it("omits the pay query and uses zero wages and default rules when settings are absent", async () => {
+describe("ShiftsDataService loadSetup without pay or settings", () => {
+    it("omits the pay read and uses zero wages and default rules when settings are absent", async () => {
         const em = mockEntityManager({
-            query: [
-                [SELECT_POSITIONS, []],
-                [SELECT_STAFF, [staffRow()]],
-                [SELECT_COVERAGE, []],
-                [SELECT_SETTINGS, []],
+            find: [
+                [ShiftsPositionEntity, []],
+                [ShiftsStaffEntity, [staffRow()]],
+                [ShiftsCoverageEntity, []],
             ],
+            findOne: [ShiftsSettingsEntity, null],
         })
         const service = await build(em)
 
@@ -201,48 +210,41 @@ describe("ShiftsDataService loadSetup", () => {
                 overtimeHoursWeek: 48,
             },
         })
-        expect(em.query.mock.calls).toEqual([
-            [SELECT_POSITIONS, ["ws-1"]],
-            [SELECT_STAFF, ["ws-1"]],
-            [SELECT_COVERAGE, ["ws-1"]],
-            [SELECT_SETTINGS, ["ws-1"]],
-        ])
+        expect(em.find).not.toHaveBeenCalledWith(ShiftsStaffPayEntity, expect.anything())
+        expect(em.find).toHaveBeenCalledTimes(3)
     })
 })
 
-describe("ShiftsDataService", () => {
+describe("ShiftsDataService loadEnv", () => {
     it("loads approved availability and leave for the week and prior work for the preceding day", async () => {
         const em = mockEntityManager({
-            query: [
+            find: [
                 [
-                    SELECT_AVAILABILITY,
+                    ShiftsAvailabilityEntity,
                     [
-                        {
-                            staff_id: "staff-1",
+                        Object.assign(new ShiftsAvailabilityEntity(), {
+                            staffId: "staff-1",
                             weekday: 0,
-                            shift_date: null,
-                            start_time: "08:00:00",
-                            end_time: "16:00:00",
+                            shiftDate: null,
+                            startTime: "08:00:00",
+                            endTime: "16:00:00",
                             available: true,
-                        },
+                        }),
                     ],
                 ],
                 [
-                    SELECT_APPROVED_LEAVES,
+                    ShiftsLeaveRequestEntity,
                     [
-                        {
-                            id: "leave-1",
-                            staff_id: "staff-1",
-                            from_date: "2026-10-15",
-                            to_date: "2026-10-16",
-                            reason: "holiday",
-                            status: "approved",
-                        },
+                        Object.assign(new ShiftsLeaveRequestEntity(), {
+                            staffId: "staff-1",
+                            fromDate: "2026-10-15",
+                            toDate: "2026-10-16",
+                        }),
                     ],
                 ],
                 [
-                    SELECT_PRIOR_SHIFTS,
-                    [shiftRow({ shift_date: "2026-10-11", start_time: "20:00:00", end_time: "23:00:00" })],
+                    ShiftsShiftEntity,
+                    [shiftRow({ shiftDate: "2026-10-11", startTime: "20:00:00", endTime: "23:00:00" })],
                 ],
             ],
         })
@@ -256,23 +258,34 @@ describe("ShiftsDataService", () => {
             prior: new Map([["staff-1", [{ date: "2026-10-11", s: 1200, e: 1380, pos: "position-1" }]]]),
             overtimeHoursWeek: 40,
         })
-        expect(em.query.mock.calls).toEqual([
-            [SELECT_AVAILABILITY, ["ws-1"]],
-            [SELECT_APPROVED_LEAVES, ["ws-1", "2026-10-12", "2026-10-18"]],
-            [SELECT_PRIOR_SHIFTS, ["ws-1", "2026-10-11"]],
-        ])
+        expect(em.find).toHaveBeenCalledWith(ShiftsAvailabilityEntity, {
+            where: { workspaceId: "ws-1", status: "approved" },
+            take: 2000,
+        })
+        expect(em.find).toHaveBeenCalledWith(ShiftsLeaveRequestEntity, {
+            where: {
+                workspaceId: "ws-1",
+                status: "approved",
+                toDate: MoreThanOrEqual("2026-10-12"),
+                fromDate: LessThanOrEqual("2026-10-18"),
+            },
+            take: 500,
+        })
+        expect(em.find).toHaveBeenCalledWith(ShiftsShiftEntity, {
+            where: {
+                workspaceId: "ws-1",
+                shiftDate: "2026-10-11",
+                status: In(["published", "swapped"]),
+                staffId: Not(IsNull()),
+            },
+            take: 500,
+        })
     })
 })
 
-describe("ShiftsDataService", () => {
-    it("maps schedule, workspace-range and staff-range shifts and forwards each query parameter", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_SCHEDULE_SHIFTS, [shiftRow()]],
-                [SELECT_RANGE_SHIFTS, [shiftRow()]],
-                [SELECT_STAFF_SHIFTS, [shiftRow()]],
-            ],
-        })
+describe("ShiftsDataService shifts", () => {
+    it("maps schedule, workspace-range and staff-range shifts and forwards each read parameter", async () => {
+        const em = mockEntityManager({ find: [ShiftsShiftEntity, [shiftRow()]] })
         const service = await build(em)
         const statuses = ["published", "swapped"]
 
@@ -281,120 +294,113 @@ describe("ShiftsDataService", () => {
         await expect(service.staffShifts("ws-1", "staff-1", "2026-10-12", "2026-10-18", statuses)).resolves.toEqual([
             shift,
         ])
-        expect(em.query.mock.calls).toEqual([
-            [SELECT_SCHEDULE_SHIFTS, ["ws-1", "schedule-1"]],
-            [SELECT_RANGE_SHIFTS, ["ws-1", "2026-10-12", "2026-10-18", statuses]],
-            [SELECT_STAFF_SHIFTS, ["ws-1", "staff-1", "2026-10-12", "2026-10-18", statuses]],
-        ])
+        expect(em.find).toHaveBeenNthCalledWith(1, ShiftsShiftEntity, {
+            where: { workspaceId: "ws-1", scheduleId: "schedule-1", status: Not("cancelled") },
+            order: { shiftDate: "ASC", startTime: "ASC" },
+            take: 1000,
+        })
+        expect(em.find).toHaveBeenNthCalledWith(2, ShiftsShiftEntity, {
+            where: {
+                workspaceId: "ws-1",
+                shiftDate: Between("2026-10-12", "2026-10-18"),
+                status: In(statuses),
+                staffId: Not(IsNull()),
+            },
+            take: 2000,
+        })
+        expect(em.find).toHaveBeenNthCalledWith(3, ShiftsShiftEntity, {
+            where: {
+                workspaceId: "ws-1",
+                staffId: "staff-1",
+                shiftDate: Between("2026-10-12", "2026-10-18"),
+                status: In(statuses),
+            },
+            take: 500,
+        })
     })
 
-    it("returns the first raw shift, schedule, leave and swap rows", async () => {
-        const schedule = {
+    it("returns the shift with its schedule, and the schedule, leave and swap rows", async () => {
+        const schedule = Object.assign(new ShiftsScheduleEntity(), {
             id: "schedule-1",
-            week_start: "2026-10-12",
-            version: 2,
-            status: "draft",
-            cost_vnd: "240000",
-            summary: { shifts: 1 },
-            evidence: { iterations: 1 },
-        }
-        const leave = {
-            id: "leave-1",
-            staff_id: "staff-1",
-            from_date: "2026-10-15",
-            to_date: "2026-10-16",
-            reason: "holiday",
-            status: "approved",
-        }
-        const swap = {
-            id: "swap-1",
-            kind: "swap",
-            shift_id: "shift-1",
-            from_staff_id: "staff-1",
-            to_staff_id: "staff-2",
-            status: "pending",
+            weekStart: "2026-10-12",
+            costVnd: "240000",
+        })
+        const leave = Object.assign(new ShiftsLeaveRequestEntity(), { id: "leave-1", staffId: "staff-1" })
+        const swap = Object.assign(new ShiftsSwapRequestEntity(), { id: "swap-1", toStaffId: "staff-2" })
+        const withSchedule = {
+            ...shift,
+            scheduleId: "schedule-1",
+            scheduleStatus: "published",
+            weekStart: "2026-10-12",
         }
         const em = mockEntityManager({
-            query: [
-                [SELECT_SHIFT, [shiftRow(), shiftRow({ id: "shift-2" })]],
-                [SELECT_SCHEDULE, [schedule, { ...schedule, id: "schedule-2" }]],
-                [SELECT_LEAVE, [leave, { ...leave, id: "leave-2" }]],
-                [SELECT_SWAP, [swap, { ...swap, id: "swap-2" }]],
+            findOne: [
+                [ShiftsScheduleEntity, schedule],
+                [ShiftsLeaveRequestEntity, leave],
+                [ShiftsSwapRequestEntity, swap],
             ],
         })
+        const read = fakeQueryBuilder({ getRawOne: withSchedule })
+        em.createQueryBuilder.mockReturnValue(read.builder as never)
         const service = await build(em)
 
-        await expect(service.shiftRow("ws-1", "shift-1")).resolves.toEqual(shiftRow())
-        await expect(service.scheduleRow("ws-1", "schedule-1")).resolves.toEqual(schedule)
-        await expect(service.leaveRow("ws-1", "leave-1")).resolves.toEqual(leave)
-        await expect(service.swapRow("ws-1", "swap-1")).resolves.toEqual(swap)
-        expect(em.query.mock.calls).toEqual([
-            [SELECT_SHIFT, ["ws-1", "shift-1"]],
-            [SELECT_SCHEDULE, ["ws-1", "schedule-1"]],
-            [SELECT_LEAVE, ["ws-1", "leave-1"]],
-            [SELECT_SWAP, ["ws-1", "swap-1"]],
-        ])
+        await expect(service.shiftRow("ws-1", "shift-1")).resolves.toEqual(withSchedule)
+        await expect(service.scheduleRow("ws-1", "schedule-1")).resolves.toBe(schedule)
+        await expect(service.leaveRow("ws-1", "leave-1")).resolves.toBe(leave)
+        await expect(service.swapRow("ws-1", "swap-1")).resolves.toBe(swap)
+        expect(read.callsOf("andWhere")).toEqual([["s.id = :shiftId", { shiftId: "shift-1" }]])
+        expect(em.findOne).toHaveBeenCalledWith(ShiftsScheduleEntity, {
+            where: { workspaceId: "ws-1", id: "schedule-1" },
+        })
+        expect(em.findOne).toHaveBeenCalledWith(ShiftsLeaveRequestEntity, {
+            where: { workspaceId: "ws-1", id: "leave-1" },
+        })
+        expect(em.findOne).toHaveBeenCalledWith(ShiftsSwapRequestEntity, {
+            where: { workspaceId: "ws-1", id: "swap-1" },
+        })
     })
 })
 
-describe("ShiftsDataService", () => {
+describe("ShiftsDataService lookups", () => {
     it("returns undefined when a shift, schedule, leave or swap does not exist", async () => {
         const em = mockEntityManager({
-            query: [
-                [SELECT_SHIFT, []],
-                [SELECT_SCHEDULE, []],
-                [SELECT_LEAVE, []],
-                [SELECT_SWAP, []],
+            findOne: [
+                [ShiftsScheduleEntity, null],
+                [ShiftsLeaveRequestEntity, null],
+                [ShiftsSwapRequestEntity, null],
             ],
         })
+        em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ getRawOne: undefined }).builder as never)
         const service = await build(em)
 
         await expect(service.shiftRow("ws-1", "shift-1")).resolves.toBeUndefined()
         await expect(service.scheduleRow("ws-1", "schedule-1")).resolves.toBeUndefined()
         await expect(service.leaveRow("ws-1", "leave-1")).resolves.toBeUndefined()
         await expect(service.swapRow("ws-1", "swap-1")).resolves.toBeUndefined()
-        expect(em.query.mock.calls).toEqual([
-            [SELECT_SHIFT, ["ws-1", "shift-1"]],
-            [SELECT_SCHEDULE, ["ws-1", "schedule-1"]],
-            [SELECT_LEAVE, ["ws-1", "leave-1"]],
-            [SELECT_SWAP, ["ws-1", "swap-1"]],
-        ])
     })
 
-    it("returns a member profile id or null for a null or missing profile", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_PROFILE_OF_USER, [{ id: "staff-1" }]],
-                [SELECT_PROFILE_OF_USER, [{ id: null }]],
-                [SELECT_PROFILE_OF_USER, []],
-            ],
-        })
+    it("returns a member profile id or null when the member has none", async () => {
+        const em = mockEntityManager({ findOne: [ShiftsStaffEntity, null] })
         const service = await build(em)
+        em.findOne.mockResolvedValueOnce(Object.assign(new ShiftsStaffEntity(), { id: "staff-1" }) as never)
+        em.findOne.mockResolvedValueOnce(null as never)
 
         await expect(service.profileOf("ws-1", "user-1")).resolves.toBe("staff-1")
-        await expect(service.profileOf("ws-1", "user-2")).resolves.toBeNull()
         await expect(service.profileOf("ws-1", "user-3")).resolves.toBeNull()
-        expect(em.query.mock.calls).toEqual([
-            [SELECT_PROFILE_OF_USER, ["ws-1", "user-1"]],
-            [SELECT_PROFILE_OF_USER, ["ws-1", "user-2"]],
-            [SELECT_PROFILE_OF_USER, ["ws-1", "user-3"]],
-        ])
+        expect(em.findOne).toHaveBeenNthCalledWith(1, ShiftsStaffEntity, {
+            select: { id: true },
+            where: { workspaceId: "ws-1", active: true, userId: "user-1" },
+            order: { createdAt: "ASC" },
+        })
     })
 
-    it("counts attempts using a prefix pattern and returns zero when no count row exists", async () => {
-        const em = mockEntityManager({
-            query: [
-                [COUNT_WORK_ASKS, [{ attempts: 3 }]],
-                [COUNT_WORK_ASKS, []],
-            ],
-        })
+    it("counts attempts using a prefix pattern", async () => {
+        const em = mockEntityManager({ count: [WorkItemEntity, 3] })
         const service = await build(em)
 
         await expect(service.askAttempts("ws-1", "publish_schedule", "publish:schedule-1:")).resolves.toBe(3)
-        await expect(service.askAttempts("ws-1", "approve_swap", "swap:swap-1:")).resolves.toBe(0)
-        expect(em.query.mock.calls).toEqual([
-            [COUNT_WORK_ASKS, ["ws-1", "publish_schedule", "publish:schedule-1:%"]],
-            [COUNT_WORK_ASKS, ["ws-1", "approve_swap", "swap:swap-1:%"]],
-        ])
+        expect(em.count).toHaveBeenCalledWith(WorkItemEntity, {
+            where: { workspaceId: "ws-1", action: "publish_schedule", dedupeKey: Like("publish:schedule-1:%") },
+        })
     })
 })

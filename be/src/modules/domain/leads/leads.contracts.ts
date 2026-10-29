@@ -34,3 +34,19 @@ export interface RecordedOutcome {
     /** True when a won deal was handed to an active Accounting agent as the next responsibility. */
     readonly handedToAccounting: boolean
 }
+
+/** A lead as a stage change answers it. */
+export interface StagedLead {
+    /** The lead id. */
+    readonly id: string
+    /** The name of the contact. */
+    readonly contact_name: string
+    /** The company of the contact. */
+    readonly company: string
+    /** The channel the lead came through. */
+    readonly channel: string
+    /** What the customer needs. */
+    readonly need: string
+    /** The stage the lead now stands at. */
+    readonly stage: string
+}

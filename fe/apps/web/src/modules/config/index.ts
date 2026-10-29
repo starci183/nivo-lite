@@ -5,19 +5,11 @@ const required = (name: string, value: string | undefined): string => {
     return value
 }
 
-/** The public Supabase project origin. */
-export const supabaseUrl = (): string => required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL)
-/** The public anonymous key; RLS remains the authority for every request. */
-export const supabaseAnonKey = (): string =>
-    required("NEXT_PUBLIC_SUPABASE_ANON_KEY", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 /** The origin of the public API the Developers page documents; the web app itself never calls it. */
 export const developerApiUrl = (): string =>
     required("NEXT_PUBLIC_DEVELOPER_API_URL", process.env.NEXT_PUBLIC_DEVELOPER_API_URL)
 
-/**
- * Security attributes applied whenever the app writes a Supabase session cookie. `httpOnly` is false on purpose: the browser
- * client (realtime, auth lifecycle, the realtime token) reads the session from this cookie.
- */
+/** Security attributes applied to the cookies the web app itself writes (the locale cookie). The session cookie belongs to the back end. */
 export const sessionCookieOptions = {
     httpOnly: false,
     secure: process.env.NODE_ENV === "production",
@@ -25,9 +17,9 @@ export const sessionCookieOptions = {
 } as const
 
 /** The origin of the back end api the browser calls directly (GraphQL at `/graphql`, REST beside it). */
-const apiUrl = (): string => required("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL)
+export const apiOrigin = (): string => required("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL)
 /** The GraphQL endpoint of the back end api. */
-export const graphqlUrl = (): string => `${apiUrl()}/graphql`
+export const graphqlUrl = (): string => `${apiOrigin()}/graphql`
 /** The back end's event-stream endpoint at `path`, on the origin of its GraphQL endpoint (the streams of modules/api/sse). */
 export const eventStreamUrl = (path: string): string => new URL(path, graphqlUrl()).href
 

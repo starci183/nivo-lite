@@ -4,6 +4,7 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { ApprovalGate, OfficeLog, OutboundMail } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InventoryErrorCode } from "./errors/inventory.error"
@@ -12,13 +13,12 @@ import { InventoryDispatchService } from "./inventory-dispatch.service"
 import { InventoryOrderMessageService } from "./inventory-order-message.service"
 import { InventoryOrdersService } from "./inventory-orders.service"
 import {
-    COUNT_SEND_ATTEMPTS,
     MARK_PO_REMINDED,
     MARK_PO_SENT,
     MARK_PO_WAITING,
     REFUSE_PO,
     SET_PO_MESSAGE,
-} from "./persistence/inventory.sql"
+} from "@tests/fixtures/builders/inventory-calls.builder"
 
 const textLike = (text: string): unknown => expect.stringContaining(text)
 
@@ -88,11 +88,11 @@ describe("InventoryDispatchService / requestSend", () => {
     it("puts a draft order before the owner and parks it as waiting", async () => {
         const em = mockEntityManager({
             query: [
-                [COUNT_SEND_ATTEMPTS, [{ attempts: 1 }]],
                 [SET_PO_MESSAGE, []],
                 [MARK_PO_WAITING, []],
             ],
         })
+        const [counted] = queueQueryBuilders(em, [{ getRawOne: { attempts: 1 } }])
         const { service, gate, members } = await build(em)
         gate.request.mockResolvedValue({ status: "waiting_decision", workItemId: "work-1" })
 
@@ -101,7 +101,12 @@ describe("InventoryDispatchService / requestSend", () => {
         })
 
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1", ["owner", "manager"])
-        expect(em.query).toHaveBeenCalledWith(COUNT_SEND_ATTEMPTS, ["ws-1", "send_po:order:po-1:%"])
+        expect(counted?.callsOf("where")).toEqual([
+            [
+                "w.workspace_id = :workspaceId AND w.dedupe_key LIKE :pattern",
+                { workspaceId: "ws-1", pattern: "send_po:order:po-1:%" },
+            ],
+        ])
         expect(em.query).toHaveBeenCalledWith(SET_PO_MESSAGE, ["po-1", "Dear Huong"])
         expect(gate.request).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -132,11 +137,9 @@ describe("InventoryDispatchService / requestSend", () => {
 
     it("leaves the order a draft when the gate let it through at once", async () => {
         const em = mockEntityManager({
-            query: [
-                [COUNT_SEND_ATTEMPTS, []],
-                [SET_PO_MESSAGE, []],
-            ],
+            query: [[SET_PO_MESSAGE, []]],
         })
+        queueQueryBuilders(em, [{ getRawOne: undefined }])
         const { service, gate } = await build(em)
         gate.request.mockResolvedValue({ status: "done", workItemId: "work-1" })
 
@@ -150,7 +153,8 @@ describe("InventoryDispatchService / requestSend", () => {
 
 describe("InventoryDispatchService / requestSend", () => {
     it("asks for a reminder of a sent order without rewriting its message", async () => {
-        const em = mockEntityManager({ query: [COUNT_SEND_ATTEMPTS, [{ attempts: 0 }]] })
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ getRawOne: { attempts: 0 } }])
         const { service, gate, orders } = await build(em)
         orders.loadPo.mockResolvedValue(poOf({ status: "partially_received" }))
         gate.request.mockResolvedValue({ status: "waiting_decision", workItemId: "work-2" })
@@ -163,11 +167,14 @@ describe("InventoryDispatchService / requestSend", () => {
                 summary: textLike("inventory.remindAskSummary"),
             }),
         )
-        expect(em.query).toHaveBeenCalledTimes(1)
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
+        expect(em.query).not.toHaveBeenCalled()
     })
 
     it("asks for a reminder only for an order that was sent", async () => {
-        const { service, gate, orders } = await build(mockEntityManager({ query: [COUNT_SEND_ATTEMPTS, []] }))
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ getRawOne: undefined }])
+        const { service, gate, orders } = await build(em)
         orders.loadPo.mockResolvedValue(poOf({ status: "sent" }))
         gate.request.mockResolvedValue({ status: "waiting_decision", workItemId: "work-2" })
 

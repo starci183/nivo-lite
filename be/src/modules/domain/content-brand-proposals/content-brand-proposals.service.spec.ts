@@ -2,26 +2,23 @@ import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import type { BrandProposalClosing } from "./content-brand-proposals.contracts"
 import { ContentBrandProposalsService } from "./content-brand-proposals.service"
-import {
-    CLOSE_BRAND_PROPOSAL,
-    FIND_BRAND_PROPOSAL,
-    INSERT_BRAND_PROPOSAL,
-    LIST_BRAND_PROPOSALS,
-} from "./persistence/content-brand-proposals.sql"
+import { ContentBrandProposalEntity } from "./persistence/entities"
 
 const ROW = {
     id: "p-1",
-    workspace_id: "ws-1",
-    installation_id: "inst-1",
-    setup_session_id: null,
-    file_name: "guide.pdf",
-    file_size: 4,
+    workspaceId: "ws-1",
+    installationId: "inst-1",
+    setupSessionId: null,
+    fileName: "guide.pdf",
+    fileSize: 4,
     payload: { tone: "Warm" },
     status: "proposed",
-    decided_by: null,
-    created_at: "2026-10-20T00:00:00.000Z",
+    decidedBy: null,
+    createdAt: "2026-10-20T00:00:00+00:00",
 }
 const RECORD = {
     id: "p-1",
@@ -33,7 +30,7 @@ const RECORD = {
     payload: { tone: "Warm" },
     status: "proposed",
     decidedBy: null,
-    createdAt: "2026-10-20T00:00:00.000Z",
+    createdAt: "2026-10-20T00:00:00+00:00",
 }
 
 const build = async (em: MockEntityManager) => {
@@ -45,12 +42,8 @@ const build = async (em: MockEntityManager) => {
 
 describe("ContentBrandProposalsService", () => {
     it("stores a proposal with a bounded file name, or answers null", async () => {
-        const em = mockEntityManager({
-            query: [
-                [INSERT_BRAND_PROPOSAL, [ROW]],
-                [INSERT_BRAND_PROPOSAL, []],
-            ],
-        })
+        const em = mockEntityManager()
+        const [stored] = queueQueryBuilders(em, [{ execute: { raw: [ROW] } }, { execute: { raw: [] } }])
         const service = await build(em)
         const input = {
             workspaceId: "ws-1",
@@ -63,31 +56,42 @@ describe("ContentBrandProposalsService", () => {
 
         await expect(service.insert(input)).resolves.toEqual(RECORD)
         await expect(service.insert(input)).resolves.toBeNull()
-        expect(em.query.mock.calls[0]?.[1]?.[3]).toHaveLength(255)
+        expect(stampedValues(stored?.callsOf("values")[0]?.[0])).toEqual({
+            workspaceId: "ws-1",
+            installationId: "inst-1",
+            setupSessionId: null,
+            fileName: "a".repeat(255),
+            fileSize: 4,
+            payload: "function",
+        })
+        expect(stored?.callsOf("setParameter")).toEqual([["payload", "{}"]])
     })
 
     it("finds one proposal or null and lists an installation's proposals", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_BRAND_PROPOSAL, [ROW]],
-                [FIND_BRAND_PROPOSAL, []],
-                [LIST_BRAND_PROPOSALS, [ROW]],
-            ],
-        })
+        const em = mockEntityManager()
+        const [one, none, many] = queueQueryBuilders(em, [
+            { getRawMany: [ROW] },
+            { getRawMany: [] },
+            { getRawMany: [ROW] },
+        ])
         const service = await build(em)
 
         await expect(service.find("ws-1", "p-1")).resolves.toEqual(RECORD)
         await expect(service.find("ws-1", "p-1")).resolves.toBeNull()
         await expect(service.list("ws-1", "inst-1")).resolves.toEqual([RECORD])
+        expect(one?.callsOf("where")).toEqual([[{ workspaceId: "ws-1", id: "p-1" }]])
+        expect(none?.callsOf("limit")).toEqual([[1]])
+        expect(many?.callsOf("where")).toEqual([[{ workspaceId: "ws-1", installationId: "inst-1" }]])
+        expect(many?.callsOf("orderBy")).toEqual([["p.createdAt", "DESC"]])
+        expect(many?.callsOf("limit")).toEqual([[10]])
     })
 
     it("closes a waiting proposal, null when decided already", async () => {
-        const em = mockEntityManager({
-            query: [
-                [CLOSE_BRAND_PROPOSAL, [{ ...ROW, status: "applied", decided_by: "Mai" }]],
-                [CLOSE_BRAND_PROPOSAL, []],
-            ],
-        })
+        const em = mockEntityManager()
+        const [closed] = queueQueryBuilders(em, [
+            { execute: { raw: [{ ...ROW, status: "applied", decidedBy: "Mai" }] } },
+            { execute: { raw: [] } },
+        ])
         const service = await build(em)
         const closing: BrandProposalClosing = { status: "applied", payload: "{}", decidedBy: "Mai" }
 
@@ -96,6 +100,14 @@ describe("ContentBrandProposalsService", () => {
             decidedBy: "Mai",
         })
         await expect(service.close("ws-1", "p-1", closing)).resolves.toBeNull()
-        expect(em.query).toHaveBeenCalledWith(CLOSE_BRAND_PROPOSAL, ["ws-1", "p-1", "applied", "{}", "Mai"])
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(ContentBrandProposalEntity, "cbp")
+        expect(closed?.callsOf("where")).toEqual([[{ workspaceId: "ws-1", id: "p-1", status: "proposed" }]])
+        expect(closed?.callsOf("setParameter")).toEqual([["payload", "{}"]])
+        expect(stampedValues(closed?.callsOf("set")[0]?.[0])).toEqual({
+            status: "applied",
+            payload: "function",
+            decidedBy: "Mai",
+            decidedAt: "function",
+        })
     })
 })

@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import { In, MoreThanOrEqual, Not } from "typeorm"
+import type { EntityManager, FindOptionsWhere } from "typeorm"
 import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-activity"
+import { AgentConversationEntity } from "@modules/domain/agent-conversations"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
@@ -13,32 +15,23 @@ import type {
     StoredReply,
     TranscriptLine,
 } from "./agent-messages.contracts"
+import type { ConversationMessage, ConversationMessagesQuery } from "./conversation-messages.contracts"
 import { AgentMessagesError, AgentMessagesErrorCode } from "./errors/agent-messages.error"
-import type { ConversationMessageRow } from "./persistence/conversation-messages.rows"
-import { LIST_CONVERSATION_MESSAGES } from "./persistence/conversation-messages.sql"
-import type { ConversationMessagesQuery } from "./conversation-messages.contracts"
-import type {
-    ChatMessageRow,
-    CustomerMessagesDayRow,
-    LastMessageRow,
-    MessageIdRow,
-    StoredMessageRow,
-    TranscriptRow,
-} from "./persistence/agent-messages.rows"
-import {
-    COUNT_CUSTOMER_MESSAGES_PER_DAY,
-    FIND_AGENT_REPLY,
-    FIND_LAST_CUSTOMER_MESSAGE,
-    FIND_MESSAGE,
-    INSERT_AGENT_REPLY,
-    INSERT_CUSTOMER_MESSAGE,
-    INSERT_GREETING_MESSAGE,
-    INSERT_HUMAN_MESSAGE,
-    INSERT_SYSTEM_LINE,
-    LIST_TRANSCRIPT,
-    MARK_MESSAGE_DELIVERY,
-    LIST_CHAT_MESSAGES,
-} from "./persistence/agent-messages.sql"
+import { AgentMessageEntity } from "./persistence/entities"
+
+/** The most messages of a thread one read answers. */
+const CHAT_MESSAGES_MAX = 300
+
+/** The most lines of a transcript. */
+const TRANSCRIPT_MAX = 40
+
+/** True when a RETURNING row names the key of a stored message. */
+const isStoredMessage = (value: unknown): value is { readonly id: string } =>
+    typeof value === "object" && value !== null && "id" in value && typeof value.id === "string"
+
+/** The ids a write answered. */
+const returnedIds = (raw: unknown): ReadonlyArray<string> =>
+    Array.isArray(raw) ? raw.filter(isStoredMessage).map((row) => row.id) : []
 
 @Injectable()
 /** The messages of a conversation between a customer and an agent; the only writer of agent_messages. */
@@ -54,45 +47,69 @@ export class AgentMessagesService {
         from: string,
         to: string,
     ): Promise<ReadonlyArray<CustomerMessagesDay>> {
-        const rows = await this.entityManager.query<Array<CustomerMessagesDayRow>>(COUNT_CUSTOMER_MESSAGES_PER_DAY, [
-            workspaceId,
-            from,
-            to,
-        ])
+        // Only the customer side of real customer conversations is counted.
+        const rows = await this.entityManager
+            .createQueryBuilder(AgentMessageEntity, "m")
+            .select("c.channel", "channel")
+            .addSelect("to_char((m.createdAt AT TIME ZONE 'Asia/Ho_Chi_Minh')::date, 'YYYY-MM-DD')", "day")
+            .addSelect("count(*)::integer", "messages")
+            .innerJoin(AgentConversationEntity, "c", "c.id = m.conversation_id AND c.workspace_id = m.workspace_id")
+            .where("m.workspaceId = :workspaceId AND m.role = 'user' AND c.kind = 'customer'", { workspaceId })
+            .andWhere("c.channel IN ('facebook', 'zalo')")
+            .andWhere("m.createdAt >= (:from::date::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')", { from })
+            .andWhere("m.createdAt < (:to::date::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')", { to })
+            .groupBy("c.channel")
+            .addGroupBy("day")
+            .orderBy("day", "ASC")
+            .addOrderBy("c.channel", "ASC")
+            .limit(400)
+            .getRawMany<CustomerMessagesDay>()
         return rows.map((row) => ({ channel: row.channel, day: row.day, messages: row.messages }))
     }
 
-    /** Reads messages of the workspace's selected conversations after its caller's membership was proved. */
-    listForConversations(
+    /** Reads messages of the selected conversations of the workspace after its caller membership was proved. */
+    async listForConversations(
         workspaceId: string,
         conversationIds: ReadonlyArray<string>,
         query: ConversationMessagesQuery,
-    ): Promise<Array<ConversationMessageRow>> {
-        if (conversationIds.length === 0) return Promise.resolve([])
-        return this.entityManager.query<Array<ConversationMessageRow>>(LIST_CONVERSATION_MESSAGES, [
+    ): Promise<Array<ConversationMessage>> {
+        if (conversationIds.length === 0) return []
+        const where: FindOptionsWhere<AgentMessageEntity> = {
             workspaceId,
-            conversationIds,
-            query.since ?? null,
-            query.oldestFirst ?? false,
-            query.limit,
-        ])
+            conversationId: In([...conversationIds]),
+            ...(query.since === undefined ? {} : { createdAt: MoreThanOrEqual(new Date(query.since)) }),
+        }
+        const rows = await this.entityManager.find(AgentMessageEntity, {
+            select: { conversationId: true, role: true, body: true, createdAt: true },
+            where,
+            order: { createdAt: query.oldestFirst === true ? "ASC" : "DESC", id: "ASC" },
+            take: query.limit,
+        })
+        return rows.map((row) => ({
+            conversation_id: row.conversationId,
+            role: row.role,
+            body: row.body,
+            created_at: row.createdAt.toISOString(),
+        }))
     }
 
     /** The bounded thread in a workspace the caller has proven. */
     async listChat(workspaceId: string, conversationId: string): Promise<ReadonlyArray<AgentThreadMessage>> {
-        const rows = await this.entityManager.query<Array<ChatMessageRow>>(LIST_CHAT_MESSAGES, [
-            workspaceId,
-            conversationId,
-        ])
+        const rows = await this.entityManager.find(AgentMessageEntity, {
+            select: { id: true, role: true, body: true, createdAt: true },
+            where: { workspaceId, conversationId },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: CHAT_MESSAGES_MAX,
+        })
         return rows.map((row) => ({
             id: row.id,
             role: row.role === "user" || row.role === "system" ? row.role : "agent",
             body: row.body,
-            createdAt: new Date(row.created_at).toISOString(),
+            createdAt: row.createdAt.toISOString(),
         }))
     }
 
-    /** Stores a person's customer reply in the transaction that queues its delivery. */
+    /** Stores a person customer reply in the transaction that queues its delivery. */
     storeHuman(
         workspaceId: string,
         conversationId: string,
@@ -113,12 +130,7 @@ export class AgentMessagesService {
         authorUserId: AuthorUserId = null,
     ): Promise<string> {
         const id = this.required(
-            await manager.query<Array<MessageIdRow>>(INSERT_CUSTOMER_MESSAGE, [
-                workspaceId,
-                conversationId,
-                body,
-                authorUserId,
-            ]),
+            await this.insert(manager, { workspaceId, conversationId, role: "user", body, authorUserId }),
         )
         await this.announce(workspaceId, conversationId, authorUserId, manager)
         return id
@@ -131,62 +143,53 @@ export class AgentMessagesService {
         body: string,
         manager: EntityManager,
     ): Promise<string> {
-        const id = this.required(
-            await manager.query<Array<MessageIdRow>>(INSERT_GREETING_MESSAGE, [workspaceId, conversationId, body]),
-        )
+        const id = this.required(await this.insert(manager, { workspaceId, conversationId, role: "agent", body }))
         await this.announce(workspaceId, conversationId, null, manager)
         return id
     }
 
-    /** Stores the agent's reply to a customer message exactly once; a second attempt answers the reply the first one stored. */
+    /** Stores the reply of the agent to a customer message exactly once; a second attempt answers the reply the first one stored. */
     async storeReply(
         workspaceId: string,
         conversationId: string,
         body: string,
         inReplyTo: string,
     ): Promise<StoredReply> {
-        const inserted = (
-            await this.entityManager.query<Array<MessageIdRow>>(INSERT_AGENT_REPLY, [
-                workspaceId,
-                conversationId,
-                body,
-                inReplyTo,
-            ])
-        )[0]
-        if (inserted !== undefined) {
+        const inserted = await this.entityManager
+            .createQueryBuilder(AgentMessageEntity, "am")
+            .insert()
+            .values({ workspaceId, conversationId, role: "agent", body, inReplyTo })
+            .orIgnore()
+            .returning("id")
+            .execute()
+        const [id] = returnedIds(inserted.raw)
+        if (id !== undefined) {
             await this.announce(workspaceId, conversationId, null, this.entityManager)
-            return { id: inserted.id, body, sent: false }
+            return { id, body, sent: false }
         }
-        const existing = (
-            await this.entityManager.query<Array<StoredMessageRow>>(FIND_AGENT_REPLY, [conversationId, inReplyTo])
-        )[0]
-        if (existing === undefined) throw new AgentMessagesError({ code: AgentMessagesErrorCode.NotStored })
-        return { id: existing.id, body: existing.body, sent: existing.delivery_status === "sent" }
+        const existing = await this.entityManager.findOne(AgentMessageEntity, {
+            select: { id: true, body: true, deliveryStatus: true },
+            where: { conversationId, inReplyTo, role: "agent" },
+        })
+        if (existing === null) throw new AgentMessagesError({ code: AgentMessagesErrorCode.NotStored })
+        return { id: existing.id, body: existing.body, sent: existing.deliveryStatus === "sent" }
     }
 
     /** True when the agent already stored a reply to the customer message, which makes a new attempt a retry. */
-    async replyExists(conversationId: string, inReplyTo: string): Promise<boolean> {
-        const rows = await this.entityManager.query<Array<StoredMessageRow>>(FIND_AGENT_REPLY, [
-            conversationId,
-            inReplyTo,
-        ])
-        return rows.length > 0
+    replyExists(conversationId: string, inReplyTo: string): Promise<boolean> {
+        return this.entityManager.exists(AgentMessageEntity, { where: { conversationId, inReplyTo, role: "agent" } })
     }
 
     /** Stores a message the company sends on its own (not a reply to a customer message) and answers its id. */
     async storeAgentMessage(workspaceId: string, conversationId: string, body: string): Promise<string> {
         const id = this.required(
-            await this.entityManager.query<Array<MessageIdRow>>(INSERT_GREETING_MESSAGE, [
-                workspaceId,
-                conversationId,
-                body,
-            ]),
+            await this.insert(this.entityManager, { workspaceId, conversationId, role: "agent", body }),
         )
         await this.announce(workspaceId, conversationId, null, this.entityManager)
         return id
     }
 
-    /** Stores a member's reply in the caller's transaction; an approval's stable id reuses the same message on retry. */
+    /** Stores a member reply in the transaction of the caller; the stable id of an approval reuses the same message on retry. */
     async storeHumanMessage(
         workspaceId: string,
         conversationId: string,
@@ -196,16 +199,22 @@ export class AgentMessagesService {
         approvedItemId: ApprovedMessageId = null,
         authorUserId: AuthorUserId = null,
     ): Promise<string> {
-        const rows = await manager.query<Array<MessageIdRow>>(INSERT_HUMAN_MESSAGE, [
-            approvedItemId,
-            workspaceId,
-            conversationId,
-            body,
-            authorName,
-            authorUserId,
-        ])
-        if (rows[0] === undefined && approvedItemId !== null) return approvedItemId
-        const id = this.required(rows)
+        const ids = await this.insert(
+            manager,
+            {
+                ...(approvedItemId === null ? {} : { id: approvedItemId }),
+                workspaceId,
+                conversationId,
+                role: "agent",
+                body,
+                authorKind: "human",
+                authorName,
+                authorUserId,
+            },
+            true,
+        )
+        if (ids[0] === undefined && approvedItemId !== null) return approvedItemId
+        const id = this.required(ids)
         await this.announce(workspaceId, conversationId, authorUserId, manager)
         return id
     }
@@ -217,40 +226,67 @@ export class AgentMessagesService {
         body: string,
         manager: EntityManager = this.entityManager,
     ): Promise<void> {
-        await manager.query(INSERT_SYSTEM_LINE, [workspaceId, conversationId, body])
+        await manager.insert(AgentMessageEntity, { workspaceId, conversationId, role: "system", body })
         await this.announce(workspaceId, conversationId, null, manager)
     }
 
     /** One stored message of a conversation, or a refusal when it is not there. */
     async find(messageId: string, conversationId: string): Promise<Outcome<StoredMessage, AgentMessagesErrorCode>> {
-        const row = (
-            await this.entityManager.query<Array<StoredMessageRow>>(FIND_MESSAGE, [messageId, conversationId])
-        )[0]
-        if (row === undefined) return refused(AgentMessagesErrorCode.NotFound)
-        return ok({ id: row.id, role: row.role ?? "", body: row.body, deliveryStatus: row.delivery_status })
+        const row = await this.entityManager.findOne(AgentMessageEntity, {
+            select: { id: true, role: true, body: true, deliveryStatus: true },
+            where: { id: messageId, conversationId },
+        })
+        if (row === null) return refused(AgentMessagesErrorCode.NotFound)
+        return ok({ id: row.id, role: row.role ?? "", body: row.body, deliveryStatus: row.deliveryStatus })
     }
 
     /** The recent transcript of the conversation without system lines, oldest first. */
     async transcript(conversationId: string): Promise<ReadonlyArray<TranscriptLine>> {
-        const rows = await this.entityManager.query<Array<TranscriptRow>>(LIST_TRANSCRIPT, [conversationId])
-        return rows.map((row): TranscriptLine => ({ role: row.role === "user" ? "user" : "agent", body: row.body }))
+        const recent = await this.entityManager.find(AgentMessageEntity, {
+            select: { role: true, body: true, createdAt: true },
+            where: { conversationId, role: Not("system") },
+            order: { createdAt: "DESC", id: "DESC" },
+            take: TRANSCRIPT_MAX,
+        })
+        const lines = recent.map((row): TranscriptLine => ({
+            role: row.role === "user" ? "user" : "agent",
+            body: row.body,
+        }))
+        lines.reverse()
+        return lines
     }
 
     /** When the customer last wrote, or a refusal when they never did. */
     async lastCustomerAt(conversationId: string): Promise<Outcome<Date, AgentMessagesErrorCode>> {
-        const row = (
-            await this.entityManager.query<Array<LastMessageRow>>(FIND_LAST_CUSTOMER_MESSAGE, [conversationId])
-        )[0]
-        return row === undefined ? refused(AgentMessagesErrorCode.NotFound) : ok(new Date(row.created_at))
+        const row = await this.entityManager.findOne(AgentMessageEntity, {
+            select: { createdAt: true },
+            where: { conversationId, role: "user" },
+            order: { createdAt: "DESC" },
+        })
+        return row === null ? refused(AgentMessagesErrorCode.NotFound) : ok(row.createdAt)
     }
 
     /** Writes the verdict of a delivery on the stored message so the workbench can show why a reply did not leave. */
     async markDelivery(messageId: string, delivered: boolean, error?: string): Promise<void> {
-        await this.entityManager.query(MARK_MESSAGE_DELIVERY, [
-            messageId,
-            delivered ? "sent" : "failed",
-            delivered ? null : (error ?? "delivery_failed"),
-        ])
+        await this.entityManager.update(
+            AgentMessageEntity,
+            { id: messageId },
+            {
+                deliveryStatus: delivered ? "sent" : "failed",
+                deliveryError: delivered ? null : (error ?? "delivery_failed"),
+            },
+        )
+    }
+
+    /** Inserts one message and answers the ids it stored; with `orIgnore` a row that exists already stores nothing. */
+    private async insert(
+        manager: EntityManager,
+        values: Partial<AgentMessageEntity>,
+        orIgnore = false,
+    ): Promise<ReadonlyArray<string>> {
+        const insert = manager.createQueryBuilder(AgentMessageEntity, "am").insert().values(values)
+        const written = await (orIgnore ? insert.orIgnore() : insert).returning("id").execute()
+        return returnedIds(written.raw)
     }
 
     private announce(
@@ -267,9 +303,9 @@ export class AgentMessagesService {
         )
     }
 
-    private required(rows: ReadonlyArray<MessageIdRow>): string {
-        const row = rows[0]
-        if (row === undefined) throw new AgentMessagesError({ code: AgentMessagesErrorCode.NotStored })
-        return row.id
+    private required(ids: ReadonlyArray<string>): string {
+        const [id] = ids
+        if (id === undefined) throw new AgentMessagesError({ code: AgentMessagesErrorCode.NotStored })
+        return id
     }
 }

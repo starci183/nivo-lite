@@ -31,11 +31,3 @@ export interface KitIdentity {
     /** The shop name; empty when unknown. */
     readonly shopName: string
 }
-
-/** The logo and name columns of a kit row. */
-export interface KitIdentityRow {
-    /** The logo path. */
-    readonly logo_path: string | null
-    /** The shop name. */
-    readonly shop_name: string
-}

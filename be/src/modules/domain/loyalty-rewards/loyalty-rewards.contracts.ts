@@ -87,9 +87,6 @@ export interface RewardEdit {
 /** Whether removal deleted an unused entry, found none, or paused an entry with immutable history. */
 export type RewardRemoval = "deleted" | "missing" | "retired"
 
-/** The ordered scalar parameters shared by reward insert and update statements. */
-export type RewardFields = ReadonlyArray<string | number | boolean | null>
-
 /** One starter catalogue entry with its display wording looked up from the catalog. */
 export interface RewardPreset extends Omit<RewardEdit, "name" | "note"> {
     /** The catalog key of the default name. */

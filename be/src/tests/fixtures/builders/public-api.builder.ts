@@ -1,9 +1,16 @@
 import { createHash } from "node:crypto"
 import type { EntityManager } from "typeorm"
-import { sql } from "@modules/platform/database"
+import { PublicApiEntity } from "@modules/domain/public-api"
+import { AgentConversationEntity } from "@modules/domain/agent-conversations"
+import { AgentEntity } from "@modules/domain/agents"
+import { ApiKeyEntity } from "@modules/domain/api-keys"
+import { AuthorityRuleEntity } from "@modules/domain/authority-rules"
+import { inboundEventsEntities } from "@modules/domain/inbound-events"
+import { leadsEntities } from "@modules/domain/leads"
+import { WorkspaceEntity } from "@modules/domain/workspaces"
 
-const MARK_BACKLOG = sql`UPDATE public.public_api SET need_supplied = NULL,
-payload = payload - 'needSupplied' WHERE workspace_id = $1::uuid AND id = $2::uuid`
+const [InboundEventEntity] = inboundEventsEntities
+const [LeadEntity] = leadsEntities
 
 /** All identities are supplied by the suite's isolated local world. */
 export interface PublicApiIdentity {
@@ -18,49 +25,49 @@ export interface PublicApiIdentity {
 export const persistPublicApiWorkspace = async (manager: EntityManager, identity: PublicApiIdentity): Promise<void> => {
     await manager.transaction(async (tx) => {
         await tx.insert("auth.users", { id: identity.userId })
-        await tx.insert("public.workspaces", {
+        await tx.insert(WorkspaceEntity, {
             id: identity.workspaceId,
-            owner_id: identity.userId,
+            ownerId: identity.userId,
             name: "Public API proof",
         })
-        await tx.insert("public.api_keys", {
+        await tx.insert(ApiKeyEntity, {
             id: identity.keyId,
-            workspace_id: identity.workspaceId,
+            workspaceId: identity.workspaceId,
             name: "Public API proof",
-            key_prefix: "nvk_proof",
-            key_hash: createHash("sha256").update(identity.key).digest("hex"),
+            keyPrefix: "nvk_proof",
+            keyHash: createHash("sha256").update(identity.key).digest("hex"),
         })
-        await tx.insert("public.agents", {
+        await tx.insert(AgentEntity, {
             id: identity.agentId,
-            workspace_id: identity.workspaceId,
+            workspaceId: identity.workspaceId,
             module: "chatbot",
             name: "Public API chatbot",
             handle: "public-api-proof",
             role: "chatbot",
             instructions: "Local integration proof",
         })
-        await tx.insert("public.authority_rules", {
-            workspace_id: identity.workspaceId,
+        await tx.insert(AuthorityRuleEntity, {
+            workspaceId: identity.workspaceId,
             department: "chatbot",
             action: "reply_customer",
             mode: "auto",
         })
-        await tx.insert("public.authority_rules", {
-            workspace_id: identity.workspaceId,
+        await tx.insert(AuthorityRuleEntity, {
+            workspaceId: identity.workspaceId,
             department: "chatbot",
             action: "handoff_lead",
             mode: "auto",
-            required_fields: ["contact_name", "need"],
+            requiredFields: ["contact_name", "need"],
         })
     })
 }
 
 /** An existing customer's need is intentionally more meaningful than the admission default. */
 export const persistPublicApiLead = async (manager: EntityManager, workspaceId: string, id: string): Promise<void> => {
-    await manager.insert("public.leads", {
+    await manager.insert(LeadEntity, {
         id,
-        workspace_id: workspaceId,
-        contact_name: "Existing API customer",
+        workspaceId: workspaceId,
+        contactName: "Existing API customer",
         company: "Existing API company",
         channel: "API",
         need: "Retain the annual service contract",
@@ -76,12 +83,12 @@ export const persistPublicApiConversation = async (
     leadId: string,
 ): Promise<void> => {
     await persistPublicApiLead(manager, identity.workspaceId, leadId)
-    await manager.insert("public.agent_conversations", {
+    await manager.insert(AgentConversationEntity, {
         id: conversationId,
-        workspace_id: identity.workspaceId,
-        agent_id: identity.agentId,
+        workspaceId: identity.workspaceId,
+        agentId: identity.agentId,
         kind: "customer",
-        lead_id: leadId,
+        leadId: leadId,
     })
 }
 
@@ -97,15 +104,15 @@ export interface PublicApiSourceFixture {
 /** Retains the inbound identity and optional linked customer of an historical admission. */
 export interface PublicApiInboundFixture {
     readonly id: string
-    readonly workspace_id: string
+    readonly workspaceId: string
     readonly channel: "manual"
     readonly kind: "lead"
-    readonly sender_name: string
+    readonly senderName: string
     readonly body: string
-    readonly external_ref: string
-    readonly event_id: string
-    readonly dedupe_key: string
-    readonly lead_id?: string
+    readonly externalRef: string
+    readonly eventId: string
+    readonly dedupeKey: string
+    readonly leadId?: string
 }
 
 /** Creates a historical text source under the scenario's existing workspace. */
@@ -118,7 +125,7 @@ export const persistPublicApiInbound = async (
     manager: EntityManager,
     inbound: PublicApiInboundFixture,
 ): Promise<void> => {
-    await manager.insert("public.inbound_events", inbound)
+    await manager.insert(InboundEventEntity, inbound)
 }
 
 /** Reproduces an old admitted lead whose producer had no need-presence column. */
@@ -127,5 +134,10 @@ export const markPublicApiBacklog = async (
     workspaceId: string,
     requestId: string,
 ): Promise<void> => {
-    await manager.query(MARK_BACKLOG, [workspaceId, requestId])
+    await manager
+        .createQueryBuilder(PublicApiEntity, "t")
+        .update()
+        .set({ needSupplied: null, payload: () => "payload - 'needSupplied'" })
+        .where("workspace_id = :workspaceId AND id = :requestId", { workspaceId, requestId })
+        .execute()
 }

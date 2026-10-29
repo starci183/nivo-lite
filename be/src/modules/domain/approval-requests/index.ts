@@ -3,4 +3,5 @@ export { APPROVAL_REQUESTS_MESSAGES } from "./messages/approval-requests.message
 export { ApprovalRequestsModule } from "./approval-requests.module"
 export { ApprovalRequestsService } from "./approval-requests.service"
 export type { OpenApprovalParams } from "./approval-requests.contracts"
-export type { ApprovalRequestRow, ApprovalVerdictRow } from "./persistence/approval-requests.rows"
+export type { ApprovalRequestRecord, ApprovalVerdictRecord } from "./approval-requests.contracts"
+export { ApprovalRequestEntity, approvalRequestsEntities } from "./persistence/entities"

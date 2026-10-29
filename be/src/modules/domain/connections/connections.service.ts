@@ -1,8 +1,11 @@
 import { Injectable } from "@nestjs/common"
+import { Not, Raw } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
 import { ConnectorInterestService } from "@modules/domain/connector-interest"
 import type { OptionalStoredSecret } from "@modules/domain/connection-secrets"
+import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { AgentConnectionEntity } from "@modules/domain/agent-connections"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -37,48 +40,21 @@ import type {
     SyncSchedule,
     WizardSettlement,
 } from "./connections.contracts"
+import { ConnectionsUpkeepService } from "./connections-upkeep.service"
 import { toConnectionRecord } from "./connections.mapper"
 import { InjectConnectionsOptions } from "./connections.decorators"
 import { ConnectionsLogEvent } from "./connections.log-events"
 import type { ConnectionsOptions } from "./connections.options"
 import { ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
-import type {
-    ConnectionSelectRow,
-    HealthCandidateRow,
-    IntakeConnectionRow,
-    MemberRow,
-    SyncScheduleRow,
-} from "./persistence/connections.rows"
-import {
-    APPLY_ZALO_AUTHORIZATION,
-    DELETE_CONNECTION,
-    FIND_ACTIVE_MEMBER,
-    FIND_CONNECTION,
-    FIND_CONNECTION_AGENT_IDS,
-    FIND_DEFAULT_SMTP,
-    FIND_SYNC_SCHEDULE,
-    FIND_CONNECTIONS_BY_IDS,
-    FIND_INTAKE_CONNECTION,
-    FIND_LIVE_BY_META,
-    INSERT_CONNECTION,
-    LIST_CONNECTIONS,
-    LIST_CONNECTIONS_BY_PROVIDER,
-    CLAIM_DUE_SYNCS,
-    LIST_HEALTH_BATCH,
-    MARK_CONNECTION_ERROR,
-    MARK_CONNECTION_HEALTH,
-    MARK_CONNECTION_RECEIVED,
-    MARK_SYNC_FAILED,
-    MARK_SYNCED,
-    PATCH_CONNECTION,
-    RECORD_EVENT,
-    SET_DEFAULT_SMTP,
-    SET_SYNC_SCHEDULE,
-    SETTLE_WIZARD,
-} from "./persistence/connections.sql"
+import { ConnectionEntity } from "./persistence/entities"
+import { returnedIds, returnedRows, selectConnections } from "./persistence/connection-projection"
+import type { ConnectionProjection } from "./persistence/connection-projection"
 
-/** The id every real id sorts after. */
-const NIL_UUID = "00000000-0000-0000-0000-000000000000"
+/** The most rows any list of connections returns. */
+const LIST_MAX = 500
+
+/** A pending or failing connection that received something works now. */
+const RECOVERED_STATUS = "CASE WHEN status IN ('pending', 'error') THEN 'connected' ELSE status END"
 
 @Injectable()
 /** The connections of a workspace and their sealed secrets, reached only through the primary EntityManager. */
@@ -92,6 +68,7 @@ export class ConnectionsService {
         @InjectLogger() private readonly logger: Logger,
         private readonly secrets: ConnectionSecretsService,
         private readonly interest: ConnectorInterestService,
+        private readonly upkeep: ConnectionsUpkeepService,
     ) {
         this.siteUrl = options.publicSiteUrl ?? options.siteUrl
         this.providerUrl = options.publicApiUrl ?? options.publicSiteUrl
@@ -119,15 +96,21 @@ export class ConnectionsService {
 
     /** Requires an active member of the workspace holding one of the roles; answers who they are. */
     async authorize(actor: ConnectionActor, roles: ReadonlyArray<ConnectionRole>): Promise<ConnectionMember> {
-        const [row] = await this.entityManager.query<Array<MemberRow>>(FIND_ACTIVE_MEMBER, [
-            actor.workspaceId,
-            actor.principalId,
-        ])
+        const row = await this.entityManager
+            .createQueryBuilder(WorkspaceMemberEntity, "m")
+            .select("m.role", "role")
+            .addSelect("m.display_name", "displayName")
+            .where("m.workspace_id = :workspaceId AND m.user_id = :userId AND m.status = 'active'", {
+                workspaceId: actor.workspaceId,
+                userId: actor.principalId,
+            })
+            .limit(1)
+            .getRawOne<ConnectionMember>()
         const acceptedRoles: ReadonlyArray<string> = roles
         if (row === undefined || !acceptedRoles.includes(row.role)) {
             throw new ConnectionsError({ code: ConnectionsErrorCode.Forbidden })
         }
-        return { role: row.role, displayName: row.display_name }
+        return { role: row.role, displayName: row.displayName }
     }
 
     /** One connection of the workspace, or null. */
@@ -136,7 +119,10 @@ export class ConnectionsService {
         id: string,
         manager: EntityManager = this.entityManager,
     ): Promise<OptionalConnectionRecord> {
-        const [row] = await manager.query<Array<ConnectionSelectRow>>(FIND_CONNECTION, [workspaceId, id])
+        const row = await selectConnections(manager)
+            .where("c.workspaceId = :workspaceId AND c.id = :id", { workspaceId, id })
+            .limit(1)
+            .getRawOne<ConnectionProjection>()
         return row === undefined ? null : toConnectionRecord(row)
     }
 
@@ -153,7 +139,11 @@ export class ConnectionsService {
         ids: ReadonlyArray<string>,
         manager: EntityManager = this.entityManager,
     ): Promise<ReadonlyArray<ConnectionRecord>> {
-        const rows = await manager.query<Array<ConnectionSelectRow>>(FIND_CONNECTIONS_BY_IDS, [workspaceId, ids])
+        const rows = await selectConnections(manager)
+            .where("c.workspaceId = :workspaceId AND c.id = ANY(:ids)", { workspaceId, ids: [...ids] })
+            .orderBy("c.createdAt")
+            .limit(LIST_MAX)
+            .getRawMany<ConnectionProjection>()
         return rows.map(toConnectionRecord)
     }
 
@@ -167,26 +157,37 @@ export class ConnectionsService {
         value: string,
         manager: EntityManager = this.entityManager,
     ): Promise<OptionalConnectionOwner> {
-        const [row] = await manager.query<Array<{ id: string; workspace_id: string }>>(FIND_LIVE_BY_META, [
-            provider,
-            key,
-            value,
-        ])
-        return row === undefined ? null : { id: row.id, workspaceId: row.workspace_id }
+        const row = await manager.findOne(ConnectionEntity, {
+            where: {
+                provider,
+                status: Not("disconnected"),
+                publicMeta: Raw((column) => `${column} ->> :key = :value`, { key, value }),
+            },
+            select: { id: true, workspaceId: true },
+            order: { createdAt: "ASC" },
+        })
+        return row === null ? null : { id: row.id, workspaceId: row.workspaceId }
     }
 
     /** The ids of the agents that use a connection, in the order they were attached. */
     async agentIds(workspaceId: string, connectionId: string): Promise<ReadonlyArray<string>> {
-        const rows = await this.entityManager.query<Array<{ agent_id: string }>>(FIND_CONNECTION_AGENT_IDS, [
-            workspaceId,
-            connectionId,
-        ])
-        return rows.map((row) => row.agent_id)
+        const rows = await this.entityManager
+            .createQueryBuilder(AgentConnectionEntity, "a")
+            .select("a.agent_id", "agentId")
+            .where("a.workspace_id = :workspaceId AND a.connection_id = :connectionId", { workspaceId, connectionId })
+            .orderBy("a.created_at")
+            .limit(LIST_MAX)
+            .getRawMany<{ agentId: string }>()
+        return rows.map((row) => row.agentId)
     }
 
     /** Every connection of the workspace, oldest first. */
     async list(workspaceId: string): Promise<ReadonlyArray<ConnectionRecord>> {
-        const rows = await this.entityManager.query<Array<ConnectionSelectRow>>(LIST_CONNECTIONS, [workspaceId])
+        const rows = await selectConnections(this.entityManager)
+            .where("c.workspaceId = :workspaceId AND c.provider <> 'google_drive'", { workspaceId })
+            .orderBy("c.createdAt")
+            .limit(LIST_MAX)
+            .getRawMany<ConnectionProjection>()
         return rows.map(toConnectionRecord)
     }
 
@@ -196,11 +197,12 @@ export class ConnectionsService {
         provider: Provider,
         options: ListByProviderOptions,
     ): Promise<ReadonlyArray<ConnectionRecord>> {
-        const rows = await this.entityManager.query<Array<ConnectionSelectRow>>(LIST_CONNECTIONS_BY_PROVIDER, [
-            workspaceId,
-            provider,
-            options.includeDisconnected,
-        ])
+        const rows = await selectConnections(this.entityManager)
+            .where("c.workspaceId = :workspaceId AND c.provider = :provider", { workspaceId, provider })
+            .andWhere(options.includeDisconnected ? "true" : "c.status <> 'disconnected'")
+            .orderBy("c.createdAt")
+            .limit(LIST_MAX)
+            .getRawMany<ConnectionProjection>()
         return rows.map(toConnectionRecord)
     }
 
@@ -213,17 +215,23 @@ export class ConnectionsService {
         const name = cleanConnectionName(input.name)
         if (name === null) throw new ConnectionsError({ code: ConnectionsErrorCode.NameInvalid })
         const write = async (tx: EntityManager): Promise<string> => {
-            const [row] = await tx.query<Array<{ id: string }>>(INSERT_CONNECTION, [
-                input.workspaceId,
-                input.provider,
-                name,
-                input.status,
-                input.environment,
-                input.createdBy,
-                JSON.stringify(input.meta),
-            ])
-            if (row === undefined) throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound })
-            const id = row.id
+            const inserted = await tx
+                .createQueryBuilder(ConnectionEntity, "co")
+                .insert()
+                .values({
+                    workspaceId: input.workspaceId,
+                    provider: input.provider,
+                    name,
+                    status: input.status,
+                    environment: input.environment,
+                    createdBy: input.createdBy,
+                    publicMeta: () => ":meta::jsonb",
+                })
+                .setParameter("meta", JSON.stringify(input.meta))
+                .returning("id")
+                .execute()
+            const [id] = returnedIds(inserted.raw)
+            if (id === undefined) throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound })
             await this.secrets.create(id, input.secret.plain, input.secret.webhookSecret, tx)
             return id
         }
@@ -236,17 +244,24 @@ export class ConnectionsService {
         if (patch.name !== undefined && name === null) {
             throw new ConnectionsError({ code: ConnectionsErrorCode.NameInvalid })
         }
-        const rows = await this.entityManager.query<Array<{ id: string }>>(PATCH_CONNECTION, [
-            workspaceId,
-            id,
-            name,
-            patch.status ?? null,
-            patch.environment ?? null,
-            patch.meta === undefined ? null : JSON.stringify(patch.meta),
-            patch.lastError !== undefined,
-            patch.lastError ?? null,
-        ])
-        if (rows[0] === undefined) throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id } })
+        const updated = await this.entityManager
+            .createQueryBuilder(ConnectionEntity, "co")
+            .update()
+            .set({
+                ...(name === null ? {} : { name }),
+                ...(patch.status === undefined ? {} : { status: patch.status }),
+                ...(patch.environment === undefined ? {} : { environment: patch.environment }),
+                ...(patch.meta === undefined ? {} : { publicMeta: () => ":meta::jsonb" }),
+                ...(patch.lastError === undefined ? {} : { lastError: patch.lastError }),
+                updatedAt: () => "now()",
+            })
+            .where({ workspaceId, id })
+            .setParameter("meta", patch.meta === undefined ? null : JSON.stringify(patch.meta))
+            .returning("id")
+            .execute()
+        if (returnedIds(updated.raw).length === 0) {
+            throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id } })
+        }
     }
 
     /** Opens the stored secret of a connection; null when there is none or it cannot be opened with the current key. */
@@ -276,8 +291,15 @@ export class ConnectionsService {
      * Deletes a connection of the workspace (its secret and bindings go with it); a missing one is a typed not-found.
      */
     async remove(workspaceId: string, id: string): Promise<void> {
-        const rows = await this.entityManager.query<Array<{ id: string }>>(DELETE_CONNECTION, [workspaceId, id])
-        if (rows[0] === undefined) throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id } })
+        const deleted = await this.entityManager
+            .createQueryBuilder(ConnectionEntity, "co")
+            .delete()
+            .where({ workspaceId, id })
+            .returning("id")
+            .execute()
+        if (returnedIds(deleted.raw).length === 0) {
+            throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id } })
+        }
     }
 
     /**
@@ -297,12 +319,27 @@ export class ConnectionsService {
             at: event.at,
             ...(event.text === undefined ? {} : { text: event.text }),
         }
-        const [row] = await manager.query<Array<{ name: string; environment: string }>>(RECORD_EVENT, [
-            connectionId,
-            event.at,
-            JSON.stringify(first),
-        ])
-        return row === undefined ? null : { name: row.name, environment: row.environment === "test" ? "test" : "live" }
+        const recorded = await manager
+            .createQueryBuilder(ConnectionEntity, "co")
+            .update()
+            .set({
+                lastEventAt: () => ":at::timestamptz",
+                lastError: null,
+                updatedAt: () => ":at::timestamptz",
+                status: () => RECOVERED_STATUS,
+                firstEvent: () => "COALESCE(first_event, :first::jsonb)",
+            })
+            .where({ id: connectionId })
+            .setParameters({ at: event.at, first: JSON.stringify(first) })
+            .returning("name, environment")
+            .execute()
+        const [row] = returnedRows(recorded.raw)
+        if (row === undefined) return null
+        const name: unknown = Reflect.get(row, "name")
+        return {
+            name: typeof name === "string" ? name : "",
+            environment: Reflect.get(row, "environment") === "test" ? "test" : "live",
+        }
     }
 
     /** The wizard polling: has the first event arrived for this connection (manager). */
@@ -327,60 +364,59 @@ export class ConnectionsService {
         provider: string,
         manager: EntityManager = this.entityManager,
     ): Promise<Outcome<IntakeConnection, ConnectionsErrorCode>> {
-        const row = (
-            await manager.query<Array<IntakeConnectionRow>>(FIND_INTAKE_CONNECTION, [connectionId, provider])
-        )[0]
-        if (row === undefined) return refused(ConnectionsErrorCode.NotFound)
-        return ok({ id: row.id, workspaceId: row.workspace_id, status: row.status })
+        const row = await manager.findOne(ConnectionEntity, {
+            where: { id: connectionId, provider, status: Not("disconnected") },
+            select: { id: true, workspaceId: true, status: true },
+        })
+        if (row === null) return refused(ConnectionsErrorCode.NotFound)
+        return ok({ id: row.id, workspaceId: row.workspaceId, status: row.status })
     }
 
     /** Marks the connection as failing with the reason the owner reads on Connections. */
     async markFailing(connectionId: string, reason: string): Promise<void> {
-        await this.entityManager.query(MARK_CONNECTION_ERROR, [connectionId, reason])
+        await this.entityManager.update(
+            ConnectionEntity,
+            { id: connectionId },
+            { status: "error", lastError: reason, updatedAt: () => "now()" },
+        )
     }
 
     /**
      * The connection received its first (or any) event: it turns connected and keeps the first event for the wizard.
      */
     async markReceived(connectionId: string, firstEvent: FirstEvent, manager: EntityManager): Promise<void> {
-        await manager.query(MARK_CONNECTION_RECEIVED, [connectionId, JSON.stringify(firstEvent)])
+        await manager
+            .createQueryBuilder(ConnectionEntity, "co")
+            .update()
+            .set({
+                lastEventAt: () => "now()",
+                updatedAt: () => "now()",
+                status: () => RECOVERED_STATUS,
+                lastError: () => "CASE WHEN status IN ('pending', 'error') THEN NULL ELSE last_error END",
+                firstEvent: () => "COALESCE(first_event, :first::jsonb)",
+            })
+            .where({ id: connectionId })
+            .setParameter("first", JSON.stringify(firstEvent))
+            .execute()
     }
 
     /** The owner authorized the Zalo OA: its id joins the public facts and an error status clears. */
     async applyZaloAuthorization(connectionId: string, oaId?: string): Promise<void> {
-        await this.entityManager.query(APPLY_ZALO_AUTHORIZATION, [
-            connectionId,
-            JSON.stringify(oaId === undefined ? { authorized: true } : { authorized: true, oa_id: oaId }),
-        ])
-    }
-
-    /**
-     * A page of the connections the health check judges, in id order, after the given id (empty for the first page).
-     */
-    async healthBatch(afterId: string, size: number): Promise<ReadonlyArray<HealthCandidate>> {
-        const rows = await this.entityManager.query<Array<HealthCandidateRow>>(LIST_HEALTH_BATCH, [
-            afterId === "" ? NIL_UUID : afterId,
-            size,
-        ])
-        return rows.map((row) => ({
-            id: row.id,
-            workspaceId: row.workspace_id,
-            provider: row.provider,
-            name: row.name,
-            status: row.status,
-            lastError: row.last_error,
-            lastEventAt: row.last_event_at,
-            createdAt: row.created_at,
-            health: row.health,
-        }))
-    }
-
-    /** Records the health verdict in the public facts of the connection. */
-    async markHealth(connectionId: string, mark: HealthMark): Promise<void> {
-        await this.entityManager.query(MARK_CONNECTION_HEALTH, [
-            connectionId,
-            JSON.stringify({ state: mark.state, reason: mark.reason, checked_at: mark.checkedAt }),
-        ])
+        await this.entityManager
+            .createQueryBuilder(ConnectionEntity, "co")
+            .update()
+            .set({
+                publicMeta: () => "jsonb_concat(public_meta, CAST(:meta AS jsonb))",
+                status: () => "CASE WHEN status = 'error' THEN 'connected' ELSE status END",
+                lastError: null,
+                updatedAt: () => "now()",
+            })
+            .where({ id: connectionId })
+            .setParameter(
+                "meta",
+                JSON.stringify(oaId === undefined ? { authorized: true } : { authorized: true, oa_id: oaId }),
+            )
+            .execute()
     }
 
     /**
@@ -396,61 +432,58 @@ export class ConnectionsService {
             code: settlement.code,
         }
         const facts = settlement.oaSecretSaved ? { oa_secret_saved: true, wizard } : { wizard }
-        await this.entityManager.query(SETTLE_WIZARD, [connectionId, ticket, JSON.stringify(facts)])
+        await this.entityManager
+            .createQueryBuilder(ConnectionEntity, "co")
+            .update()
+            .set({ publicMeta: () => "jsonb_concat(public_meta, CAST(:facts AS jsonb))", updatedAt: () => "now()" })
+            .where({ id: connectionId })
+            .andWhere("public_meta -> 'wizard' ->> 'ticket' = :ticket", { ticket })
+            .setParameter("facts", JSON.stringify(facts))
+            .execute()
     }
 
-    /**
-     * How often a connection of the workspace syncs by itself and when it last did; a missing one is a typed not-
-     * found.
-     */
-    async scheduleOf(workspaceId: string, id: string): Promise<SyncSchedule> {
-        const [row] = await this.entityManager.query<Array<SyncScheduleRow>>(FIND_SYNC_SCHEDULE, [workspaceId, id])
-        if (row === undefined) throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id } })
-        return { everyMinutes: row.sync_every_minutes, lastSyncAt: row.last_sync_at }
+    /** A page of the connections the health check judges, in id order, after the given id. */
+    healthBatch(afterId: string, size: number): Promise<ReadonlyArray<HealthCandidate>> {
+        return this.upkeep.healthBatch(afterId, size)
     }
 
-    /** Sets how often a connection syncs by itself (null is manual only); the first scheduled sync is due at once. */
-    async setSchedule(workspaceId: string, id: string, everyMinutes: SyncInterval): Promise<void> {
-        const rows = await this.entityManager.query<Array<{ id: string }>>(SET_SYNC_SCHEDULE, [
-            workspaceId,
-            id,
-            everyMinutes,
-        ])
-        if (rows[0] === undefined) throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id } })
+    /** Records the health verdict in the public facts of the connection. */
+    markHealth(connectionId: string, mark: HealthMark): Promise<void> {
+        return this.upkeep.markHealth(connectionId, mark)
     }
 
-    /**
-     * A sync finished: the connection works, the next sync is scheduled and the given public facts join the old ones.
-     */
-    async markSynced(connectionId: string, facts: SyncFacts): Promise<void> {
-        await this.entityManager.query(MARK_SYNCED, [connectionId, JSON.stringify(facts)])
+    /** How often a connection of the workspace syncs by itself and when it last did. */
+    scheduleOf(workspaceId: string, id: string): Promise<SyncSchedule> {
+        return this.upkeep.scheduleOf(workspaceId, id)
     }
 
-    /** A sync failed: the owner reads the reason and the retry waits at least a quarter of an hour. */
-    async markSyncFailed(connectionId: string, reason: string): Promise<void> {
-        await this.entityManager.query(MARK_SYNC_FAILED, [connectionId, reason])
+    /** Sets how often a connection syncs by itself (null is manual only). */
+    setSchedule(workspaceId: string, id: string, everyMinutes: SyncInterval): Promise<void> {
+        return this.upkeep.setSchedule(workspaceId, id, everyMinutes)
     }
 
-    /**
-     * Claims the connections of these providers whose scheduled sync is due, soonest first; their next sync moves half
-     * an hour on until the sync sets the real time.
-     */
-    async claimDueSyncs(providers: ReadonlyArray<Provider>, size: number): Promise<ReadonlyArray<ConnectionOwner>> {
-        const rows = await this.entityManager.query<Array<{ id: string; workspace_id: string }>>(CLAIM_DUE_SYNCS, [
-            providers,
-            size,
-        ])
-        return rows.map((row) => ({ id: row.id, workspaceId: row.workspace_id }))
+    /** A sync finished: the connection works and the given public facts join the old ones. */
+    markSynced(connectionId: string, facts: SyncFacts): Promise<void> {
+        return this.upkeep.markSynced(connectionId, facts)
+    }
+
+    /** A sync failed: the owner reads the reason. */
+    markSyncFailed(connectionId: string, reason: string): Promise<void> {
+        return this.upkeep.markSyncFailed(connectionId, reason)
+    }
+
+    /** Claims the connections of these providers whose scheduled sync is due, soonest first. */
+    claimDueSyncs(providers: ReadonlyArray<Provider>, size: number): Promise<ReadonlyArray<ConnectionOwner>> {
+        return this.upkeep.claimDueSyncs(providers, size)
     }
 
     /** Makes one SMTP connection the workspace default; every other one becomes a spare. */
-    async setDefaultSmtp(workspaceId: string, id: string): Promise<void> {
-        await this.entityManager.query(SET_DEFAULT_SMTP, [workspaceId, id])
+    setDefaultSmtp(workspaceId: string, id: string): Promise<void> {
+        return this.upkeep.setDefaultSmtp(workspaceId, id)
     }
 
     /** The id of the workspace default SMTP connection, or null when it has none. */
-    async defaultSmtpId(workspaceId: string): Promise<OptionalConnectionId> {
-        const [row] = await this.entityManager.query<Array<{ id: string }>>(FIND_DEFAULT_SMTP, [workspaceId])
-        return row === undefined ? null : row.id
+    defaultSmtpId(workspaceId: string): Promise<OptionalConnectionId> {
+        return this.upkeep.defaultSmtpId(workspaceId)
     }
 }

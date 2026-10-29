@@ -8,14 +8,14 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog, InjectRequestLocale } from "@modules/platform/i18n"
 import type { MessageCatalog, RequestLocale } from "@modules/platform/i18n"
 import { LeadsError, LeadsErrorCode } from "./errors/leads.error"
-import type { RecordOutcomeParams, RecordedOutcome } from "./leads.contracts"
-import type { LeadsRow } from "./persistence/leads.rows"
-import { UPDATE_LEAD_STAGE } from "./persistence/leads.sql"
+import type { RecordOutcomeParams, RecordedOutcome, StagedLead } from "./leads.contracts"
+import { LeadEntity } from "./persistence/entities"
 
 /** The evidence-log kind of a recorded outcome. */
 const OUTCOME_KIND = "outcome.recorded"
 
-type StagedLead = Pick<LeadsRow, "id" | "contact_name" | "company" | "channel" | "need" | "stage">
+/** The columns a stage change answers about the lead it moved. */
+const STAGED_LEAD_RETURNING = "id, contact_name, company, channel, need, stage"
 
 @Injectable()
 /** The journey of a lead reached only through the shared primary EntityManager. */
@@ -38,11 +38,17 @@ export class LeadsService {
         const member = await this.members.require(params.userId, params.workspaceId)
         const locale = this.requestLocale.of(params.acceptLanguage)
         return this.entityManager.transaction(async (tx) => {
-            const [lead] = await tx.query<Array<StagedLead>>(UPDATE_LEAD_STAGE, [
-                params.workspaceId,
-                params.leadId,
-                params.stage,
-            ])
+            const moved = await tx
+                .createQueryBuilder(LeadEntity, "l")
+                .update()
+                .set({ stage: params.stage })
+                .where("workspace_id = :workspaceId AND id = :leadId", {
+                    workspaceId: params.workspaceId,
+                    leadId: params.leadId,
+                })
+                .returning(STAGED_LEAD_RETURNING)
+                .execute()
+            const [lead] = moved.raw as Array<StagedLead>
             if (lead === undefined) {
                 throw new LeadsError({ code: LeadsErrorCode.NotFound, params: { id: params.leadId } })
             }

@@ -2,12 +2,11 @@ import assert from "node:assert/strict"
 import type { ChatTarget } from "@modules/domain/chat-markers"
 import { eachInOrder } from "@modules/platform/primitives"
 import { chatMarkersIdentity, persistChatMarkers } from "../../fixtures/builders/chat-markers.builder"
-import { CLEAN_USERS } from "../../fixtures/persistence/office-chain.sql"
-import { CLEAN_WORKSPACE } from "../../fixtures/persistence/proof.sql"
 import { waitForProof } from "../../world/redis-proof.service"
 import { useTestWorld } from "../../world/use-test-world"
 import { withTypingReplicas } from "../../world/chat-typing-sse-proof.service"
 import type { TypingStreamClient, TypingStreamFrame } from "../../world/realtime-stream-proof.service"
+import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 
 const world = useTestWorld({ modules: [] })
 const identity = chatMarkersIdentity(() => world.id())
@@ -68,10 +67,13 @@ const received = async (stream: TypingStreamClient, count: number): Promise<void
 beforeAll(async () => {
     world.cleanup(async () => {
         await eachInOrder([identity.workspaceId, identity.foreignWorkspaceId], async (workspaceId) => {
-            await world.db.primary.query(CLEAN_WORKSPACE, [workspaceId])
+            await removeWorkspace(world.db.primary, workspaceId)
         })
-        await world.db.primary.query(CLEAN_USERS, [
-            [identity.ownerId, ...identity.readerIds, identity.outsiderId, identity.foreignOwnerId],
+        await removeAuthUsers(world.db.primary, [
+            identity.ownerId,
+            ...identity.readerIds,
+            identity.outsiderId,
+            identity.foreignOwnerId,
         ])
     })
     await persistChatMarkers(world.db.primary, identity)

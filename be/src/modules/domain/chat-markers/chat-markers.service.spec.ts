@@ -2,21 +2,18 @@ import { Test } from "@nestjs/testing"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { ChatActivityService } from "@modules/domain/chat-activity"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { WorkspaceMembersService, WorkspaceMemberEntity } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { OfficeReadMarkersService } from "@modules/domain/office-rooms"
 import type { ChatTarget } from "./chat-markers.contracts"
 import { ChatMarkersService } from "./chat-markers.service"
-import {
-    CHAT_MARKER_STATE,
-    CHAT_MESSAGE_CURSOR,
-    CHAT_TARGET_MEMBER,
-    CHAT_TARGET_MEMBER_IDS,
-    MARK_CHAT_DELIVERED,
-    MARK_CHAT_READ,
-    SET_CHAT_MUTED,
-} from "./persistence/chat-markers.sql"
+import { ChatMarkerEntity } from "./persistence/entities"
+import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder.builder"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
+import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
+import { MessageEntity } from "@modules/domain/messages"
+import { AgentMessageEntity } from "@modules/domain/agent-messages"
 
 const member = builder<WorkspaceMember>({
     userId: "member",
@@ -30,6 +27,9 @@ const OFFICE: ChatTarget = { room: null, conversationId: null }
 const SALES: ChatTarget = { room: "sales", conversationId: null }
 const CONVERSATION: ChatTarget = { room: null, conversationId: "conversation" }
 const PERSISTED_AT = "2026-10-25T01:00:00+00:00"
+/** The statements `callDbFunction` sends for the admission predicate and the avatar function. */
+const CHAT_TARGET_MEMBER = "SELECT * FROM be_access.chat_target_member($1, $2, $3, $4)"
+const CHAT_READER_AVATARS = "SELECT * FROM be_access.workspace_member_avatars($1, $2)"
 
 const build = async (em: MockEntityManager) => {
     const tx = fakeTransaction(em)
@@ -50,7 +50,7 @@ const build = async (em: MockEntityManager) => {
 
 describe("ChatMarkersService admission", () => {
     it.each([OFFICE, SALES, CONVERSATION])("proves active membership and target scope for %p", async (target) => {
-        const em = mockEntityManager({ query: [CHAT_TARGET_MEMBER, [{ allowed: true }]] })
+        const em = mockEntityManager({ query: [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]] })
         const { service, members } = await build(em)
 
         await expect(service.requireTarget("principal", "workspace", target)).resolves.toEqual(member())
@@ -78,7 +78,7 @@ describe("ChatMarkersService admission", () => {
         expect(em.query).not.toHaveBeenCalled()
     })
 
-    it.each([{ rows: [] }, { rows: [{ allowed: false }] }])(
+    it.each([{ rows: [] }, { rows: [{ chat_target_member: false }] }])(
         "refuses absent, foreign or inaccessible targets (%p)",
         async ({ rows }) => {
             const em = mockEntityManager({ query: [CHAT_TARGET_MEMBER, rows] })
@@ -104,44 +104,115 @@ describe("ChatMarkersService admission", () => {
     })
 })
 
+const OWN_ROW = { id: "message", createdAt: PERSISTED_AT }
+
 describe("ChatMarkersService state", () => {
     it("returns the scoped bounded database projection without inferring ownership from names", async () => {
-        const lastOwnMessage = {
-            id: "message",
-            status: "seen",
-            seenBy: [
-                {
-                    id: "reader",
-                    name: "Reader",
-                    avatarSeed: "reader",
-                    avatarUrl: "https://cdn.example.test/reader.png",
-                },
-            ],
-            seenByCount: 4,
-        }
         const em = mockEntityManager({
             query: [
-                [CHAT_TARGET_MEMBER, [{ allowed: true }]],
-                [CHAT_MARKER_STATE, [{ muted: true, last_own_message: lastOwnMessage }]],
+                [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]],
+                [CHAT_READER_AVATARS, [{ id: "reader", avatar_url: "https://cdn.example.test/reader.png" }]],
             ],
+            findOne: [ChatMarkerEntity, { muted: true } as ChatMarkerEntity],
         })
+        const [own, readers] = queueQueryBuilders(em, [
+            { getRawMany: [OWN_ROW] },
+            { getRawMany: [{ id: "reader", name: "Reader", total: 4 }] },
+        ])
         const { service } = await build(em)
 
         await expect(service.state("principal", "workspace", SALES)).resolves.toEqual({
             muted: true,
-            lastOwnMessage,
+            lastOwnMessage: {
+                id: "message",
+                status: "seen",
+                seenBy: [
+                    {
+                        id: "reader",
+                        name: "Reader",
+                        avatarSeed: "reader",
+                        avatarUrl: "https://cdn.example.test/reader.png",
+                    },
+                ],
+                seenByCount: 4,
+            },
         })
 
-        expect(em.query).toHaveBeenCalledWith(CHAT_MARKER_STATE, ["workspace", "member", "sales", null])
+        expect(em.query).toHaveBeenCalledWith(CHAT_READER_AVATARS, ["workspace", ["reader"]])
+        expect(em.findOne).toHaveBeenCalledWith(ChatMarkerEntity, {
+            where: { workspaceId: "workspace", userId: "member", targetKey: "sales" },
+            select: { muted: true },
+        })
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(MessageEntity, "m")
+        expect(own?.callsOf("andWhere")).toEqual([["m.room = :room", { room: "sales" }]])
+        expect(readers?.callsOf("limit")).toEqual([[3]])
+        expect(readers?.callsOf("andWhere")[0]?.[1]).toEqual({
+            room: "sales",
+            conversationId: null,
+            createdAt: PERSISTED_AT,
+            ownId: "message",
+        })
+    })
+
+    it("reads a conversation receipt from the agent messages and the conversation cursors", async () => {
+        const em = mockEntityManager({
+            query: [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]],
+            findOne: [ChatMarkerEntity, null],
+        })
+        const [, readers, delivered] = queueQueryBuilders(em, [
+            { getRawMany: [OWN_ROW] },
+            { getRawMany: [] },
+            { getRawMany: [{ one: 1 }] },
+        ])
+        const { service } = await build(em)
+
+        await expect(service.state("principal", "workspace", CONVERSATION)).resolves.toEqual({
+            muted: false,
+            lastOwnMessage: { id: "message", status: "delivered", seenBy: [], seenByCount: 0 },
+        })
+
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(AgentMessageEntity, "m")
+        expect(readers?.callsOf("andWhere")[0]?.[0]).toContain("s.conversation_id = :conversationId::uuid")
+        expect(delivered?.callsOf("andWhere")[0]?.[1]).toEqual({ createdAt: PERSISTED_AT, ownId: "message" })
+        expect(em.query).toHaveBeenCalledTimes(1)
+    })
+
+    it("answers sent when no other member has read or received the message", async () => {
+        const em = mockEntityManager({
+            query: [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]],
+            findOne: [ChatMarkerEntity, { muted: false } as ChatMarkerEntity],
+        })
+        queueQueryBuilders(em, [{ getRawMany: [OWN_ROW] }, { getRawMany: [] }, { getRawMany: [] }])
+        const { service } = await build(em)
+
+        await expect(service.state("principal", "workspace", OFFICE)).resolves.toEqual({
+            muted: false,
+            lastOwnMessage: { id: "message", status: "sent", seenBy: [], seenByCount: 0 },
+        })
     })
 
     it("keeps an absent owned message null", async () => {
         const em = mockEntityManager({
-            query: [
-                [CHAT_TARGET_MEMBER, [{ allowed: true }]],
-                [CHAT_MARKER_STATE, [{ muted: false, last_own_message: null }]],
-            ],
+            query: [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]],
+            findOne: [ChatMarkerEntity, { muted: false } as ChatMarkerEntity],
         })
+        const [own] = queueQueryBuilders(em, [{ getRawMany: [] }])
+        const { service } = await build(em)
+
+        await expect(service.state("principal", "workspace", OFFICE)).resolves.toEqual({
+            muted: false,
+            lastOwnMessage: null,
+        })
+        expect(own?.callsOf("andWhere")).toEqual([["true", { room: null }]])
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
+    })
+
+    it("keeps an owned message without a readable instant null", async () => {
+        const em = mockEntityManager({
+            query: [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]],
+            findOne: [ChatMarkerEntity, null],
+        })
+        queueQueryBuilders(em, [{ getRawMany: ["broken"] }])
         const { service } = await build(em)
 
         await expect(service.state("principal", "workspace", OFFICE)).resolves.toEqual({
@@ -154,39 +225,49 @@ describe("ChatMarkersService state", () => {
 const activityNameOf = (target: ChatTarget): string =>
     target.conversationId === null ? `room:${target.room ?? "office"}` : `conversation:${target.conversationId}`
 
-const receiptQuery = (statement: string): Array<[string, Array<object>]> => [
-    [CHAT_TARGET_MEMBER, [{ allowed: true }]],
-    [CHAT_MESSAGE_CURSOR, [{ created_at: PERSISTED_AT }]],
-    [statement, []],
-]
+/** A manager that admits the caller, finds the message and accepts the write; the builders are the cursor read, then the write. */
+const receiptEm = () => {
+    const em = mockEntityManager({ query: [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]] })
+    const [cursor, write] = queueQueryBuilders(em, [{ getRawMany: [{ createdAt: PERSISTED_AT }] }, { execute: {} }])
+    return { em, cursor, write }
+}
 
-const expectResolvedCursorWrite = (em: MockEntityManager, target: ChatTarget, statement: string): void => {
-    expect(em.query).toHaveBeenCalledWith(CHAT_MESSAGE_CURSOR, [
-        "workspace",
-        target.room,
-        target.conversationId,
-        "fetched",
-    ])
-    expect(em.query).toHaveBeenCalledWith(statement, [
-        "workspace",
-        "member",
-        target.room ?? "",
-        target.conversationId,
-        PERSISTED_AT,
-        "fetched",
-    ])
+const expectResolvedCursorWrite = (
+    em: MockEntityManager,
+    cursor: FakeQueryBuilder | undefined,
+    write: FakeQueryBuilder | undefined,
+    target: ChatTarget,
+    cursors: object,
+): void => {
+    expect(em.createQueryBuilder).toHaveBeenNthCalledWith(
+        1,
+        target.conversationId === null ? MessageEntity : AgentMessageEntity,
+        "m",
+    )
+    expect(cursor?.callsOf("where")[0]?.[1]).toMatchObject({ workspaceId: "workspace", messageId: "fetched" })
+    expect(stampedValues(write?.callsOf("values")[0]?.[0])).toEqual({
+        workspaceId: "workspace",
+        userId: "member",
+        room: target.room ?? "",
+        conversationId: target.conversationId,
+        ...cursors,
+    })
+    expect(write?.callsOf("setParameter")).toEqual([["at", PERSISTED_AT]])
 }
 
 describe("ChatMarkersService delivered receipts", () => {
     it.each([{ target: SALES }, { target: CONVERSATION }])(
         "writes the resolved fetched cursor for delivered in $target without a transaction",
         async ({ target }) => {
-            const em = mockEntityManager({ query: receiptQuery(MARK_CHAT_DELIVERED) })
+            const { em, cursor, write } = receiptEm()
             const { service, roomReads, tx, activity } = await build(em)
 
             await service.markDelivered("principal", "workspace", target, "fetched")
 
-            expectResolvedCursorWrite(em, target, MARK_CHAT_DELIVERED)
+            expectResolvedCursorWrite(em, cursor, write, target, {
+                deliveredAt: "function",
+                deliveredMessageId: "fetched",
+            })
             expect(activity.receipt.mock.calls).toEqual([["workspace", activityNameOf(target)]])
             expect(activity.unread).not.toHaveBeenCalled()
             expect(tx.outcomes).toEqual([])
@@ -195,12 +276,8 @@ describe("ChatMarkersService delivered receipts", () => {
     )
 
     it("refuses a message outside the proven target without writing a cursor", async () => {
-        const em = mockEntityManager({
-            query: [
-                [CHAT_TARGET_MEMBER, [{ allowed: true }]],
-                [CHAT_MESSAGE_CURSOR, []],
-            ],
-        })
+        const em = mockEntityManager({ query: [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]] })
+        queueQueryBuilders(em, [{ getRawMany: [] }])
         const { service, activity } = await build(em)
 
         await expect(service.markDelivered("principal", "workspace", SALES, "foreign")).rejects.toMatchObject({
@@ -208,7 +285,8 @@ describe("ChatMarkersService delivered receipts", () => {
         })
         expect(activity.receipt).not.toHaveBeenCalled()
 
-        expect(em.query).toHaveBeenCalledTimes(2)
+        expect(em.query).toHaveBeenCalledTimes(1)
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
     })
 })
 
@@ -216,12 +294,17 @@ describe("ChatMarkersService read receipts", () => {
     it.each([{ target: OFFICE }, { target: SALES }, { target: CONVERSATION }])(
         "commits the resolved fetched cursor for read in $target",
         async ({ target }) => {
-            const em = mockEntityManager({ query: receiptQuery(MARK_CHAT_READ) })
+            const { em, cursor, write } = receiptEm()
             const { service, roomReads, tx, activity } = await build(em)
 
             await service.markRead("principal", "workspace", target, "fetched")
 
-            expectResolvedCursorWrite(em, target, MARK_CHAT_READ)
+            expectResolvedCursorWrite(em, cursor, write, target, {
+                deliveredAt: "function",
+                deliveredMessageId: "fetched",
+                readAt: "function",
+                readMessageId: "fetched",
+            })
             expect(activity.receipt.mock.calls).toEqual([["workspace", activityNameOf(target)]])
             expect(activity.unread.mock.calls).toEqual([["workspace", activityNameOf(target), "member"]])
             expect(tx.outcomes).toEqual(["commit"])
@@ -239,7 +322,7 @@ describe("ChatMarkersService read receipts", () => {
     )
 
     it("rolls back the precise receipt when the room owner cannot advance its compatible read marker", async () => {
-        const em = mockEntityManager({ query: receiptQuery(MARK_CHAT_READ) })
+        const { em, write } = receiptEm()
         const { service, roomReads, tx, activity } = await build(em)
         const failure = new Error("Room cursor write failed")
         roomReads.advance.mockRejectedValue(failure)
@@ -248,7 +331,7 @@ describe("ChatMarkersService read receipts", () => {
 
         expect(tx.outcomes).toEqual(["rollback"])
         expect(tx.committedWrites).toEqual([])
-        expect(tx.rolledBackWrites).toHaveLength(1)
+        expect(write?.callsOf("execute")).toHaveLength(1)
         expect(activity.receipt).not.toHaveBeenCalled()
         expect(activity.unread).not.toHaveBeenCalled()
     })
@@ -260,50 +343,55 @@ describe("ChatMarkersService mute", () => {
         { target: SALES, muted: false },
         { target: CONVERSATION, muted: true },
     ])("writes only the proven account preference for $target", async ({ target, muted }) => {
-        const em = mockEntityManager({
-            query: [
-                [CHAT_TARGET_MEMBER, [{ allowed: true }]],
-                [SET_CHAT_MUTED, []],
-            ],
-        })
+        const em = mockEntityManager({ query: [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]] })
+        const [write] = queueQueryBuilders(em, [{ execute: {} }])
         const { service, activity } = await build(em)
 
         await service.mute("principal", "workspace", target, muted)
 
         expect(activity.unread.mock.calls).toEqual([["workspace", activityNameOf(target), "member"]])
 
-        expect(em.query).toHaveBeenCalledWith(SET_CHAT_MUTED, [
-            "workspace",
-            "member",
-            target.room ?? "",
-            target.conversationId,
-            muted,
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(ChatMarkerEntity, "chat_markers")
+        expect(write?.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "workspace",
+                    userId: "member",
+                    room: target.room ?? "",
+                    conversationId: target.conversationId,
+                    muted,
+                },
+            ],
         ])
+        expect(write?.callsOf("orUpdate")).toEqual([[["muted"], ["workspace_id", "user_id", "target_key"]]])
     })
 })
 
 describe("ChatMarkersService memberIds", () => {
     it("lists the admitted accounts only after the caller itself is admitted", async () => {
-        const em = mockEntityManager({
-            query: [
-                [CHAT_TARGET_MEMBER, [{ allowed: true }]],
-                [CHAT_TARGET_MEMBER_IDS, [{ user_id: "a" }, { user_id: "b" }]],
-            ],
-        })
+        const em = mockEntityManager({ query: [CHAT_TARGET_MEMBER, [{ chat_target_member: true }]] })
+        const [listing] = queueQueryBuilders(em, [{ getRawMany: [{ user_id: "a" }, { user_id: "b" }] }])
         const { service } = await build(em)
 
         await expect(service.memberIds("principal", "workspace", SALES)).resolves.toEqual(["a", "b"])
 
-        expect(em.query).toHaveBeenCalledWith(CHAT_TARGET_MEMBER_IDS, ["workspace", "sales", null])
+        expect(em.query).toHaveBeenCalledTimes(1)
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(WorkspaceMemberEntity, "m")
+        expect(listing?.callsOf("where")).toEqual([
+            ["m.workspace_id = :workspaceId AND m.status = 'active'", { workspaceId: "workspace" }],
+        ])
+        expect(listing?.callsOf("orderBy")).toEqual([["m.user_id"]])
+        expect(listing?.callsOf("limit")).toEqual([[500]])
     })
 
     it("refuses a caller the target does not admit, without listing anyone", async () => {
-        const em = mockEntityManager({ query: [CHAT_TARGET_MEMBER, [{ allowed: false }]] })
+        const em = mockEntityManager({ query: [CHAT_TARGET_MEMBER, [{ chat_target_member: false }]] })
         const { service } = await build(em)
 
         await expect(service.memberIds("principal", "workspace", OFFICE)).rejects.toMatchObject({
             code: "CHAT_MARKERS_TARGET_NOT_FOUND",
         })
-        expect(em.query).not.toHaveBeenCalledWith(CHAT_TARGET_MEMBER_IDS, expect.anything())
+        expect(em.query).toHaveBeenCalledTimes(1)
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 })

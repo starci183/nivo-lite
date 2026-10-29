@@ -42,3 +42,15 @@ export type {
     ReceivePoParams,
     ReceivePoOutput,
 } from "./inventory-operations.contracts"
+export {
+    InventoryItemEntity,
+    InventoryLocationEntity,
+    InventoryMovementEntity,
+    InventoryPoLineEntity,
+    InventoryPurchaseOrderEntity,
+    InventoryRecipeEntity,
+    InventoryRecipeLineEntity,
+    InventoryStockLevelEntity,
+    InventorySupplierEntity,
+    inventoryEntities,
+} from "./persistence/entities"

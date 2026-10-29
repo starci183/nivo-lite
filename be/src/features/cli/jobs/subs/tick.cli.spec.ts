@@ -1,12 +1,12 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { JobTickService } from "@modules/domain/job-ops"
+import { JobOpsTickService } from "@modules/domain/job-ops"
 import { TickJobsCli } from "./tick.cli"
 
 const build = async () => {
-    const ticks = mock<JobTickService>()
+    const ticks = mock<JobOpsTickService>()
     const moduleRef = await Test.createTestingModule({
-        providers: [TickJobsCli, { provide: JobTickService, useValue: ticks }],
+        providers: [TickJobsCli, { provide: JobOpsTickService, useValue: ticks }],
     }).compile()
     return { cli: moduleRef.get(TickJobsCli), ticks }
 }

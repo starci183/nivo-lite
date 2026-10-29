@@ -1,23 +1,13 @@
 import { randomBytes } from "node:crypto"
 import { McpGatewayAdminService, McpGatewayService } from "@modules/domain/mcp-gateway"
 import { Secret } from "@modules/platform/config"
-import { persistMcpAgentRows } from "../../fixtures/builders/mcp-agent.builder"
-import {
-    GRANT_CONNECTOR_TOOLS,
-    MCP_CALLS_OF_AGENT,
-    STORED_CREDENTIAL_OF,
-} from "../../fixtures/persistence/mcp-agent.sql"
+import { persistMcpAgentRows, grantConnectorTools } from "../../fixtures/builders/mcp-agent.builder"
 import { MCP_SEALED_CREDENTIAL_MODULES } from "../../world/mcp-sealed-credential-capabilities.options"
 import { createRemoteServer } from "../../world/mcp-remote-server.service"
 import { cleanupWorkspace } from "../../world/proof-database.service"
 import { useTestWorld } from "../../world/use-test-world"
-
-/** One stored credential row, as the database holds it. */
-interface StoredRow {
-    readonly credential_state: string
-    readonly credential_sealed: string | null
-    readonly credential_set_by: string | null
-}
+import { mcpCallsOfAgent, storedCredentialOf } from "../../world/inbox-database.service"
+import type { StoredCredentialRow } from "../../world/inbox-database.service"
 
 const world = useTestWorld({ modules: MCP_SEALED_CREDENTIAL_MODULES })
 
@@ -33,13 +23,13 @@ const caller = {
 const bearer = { accepted: randomBytes(24).toString("hex") }
 const server = createRemoteServer(() => bearer.accepted)
 
-const stored = async (): Promise<StoredRow | undefined> =>
-    (await world.db.primary.query<Array<StoredRow>>(STORED_CREDENTIAL_OF, [identity.workspaceId, "proof"]))[0]
+const stored = async (): Promise<StoredCredentialRow | undefined> =>
+    (await storedCredentialOf(world.db.primary, identity.workspaceId, "proof"))[0]
 
 beforeAll(async () => {
     cleanupWorkspace(world, identity.userId, identity.workspaceId)
     await persistMcpAgentRows(world.db.primary, identity)
-    await world.db.primary.query(GRANT_CONNECTOR_TOOLS, [identity.workspaceId, identity.agentId, "proof.*"])
+    await grantConnectorTools(world.db.primary, identity.workspaceId, identity.agentId, "proof.*")
     await server.listen()
 })
 
@@ -88,7 +78,7 @@ describe("MCP gateway with a credential sealed in the database: register and cal
         })
         expect(server.seen.authorized).toBeGreaterThan(before)
         expect(server.seen.calls).toEqual([{ nights: 2 }])
-        await expect(world.db.primary.query(MCP_CALLS_OF_AGENT, [identity.agentId])).resolves.toEqual(
+        await expect(mcpCallsOfAgent(world.db.primary, identity.agentId)).resolves.toEqual(
             expect.arrayContaining([{ tool: "proof.rates.quote", outcome: "ok" }]),
         )
     })

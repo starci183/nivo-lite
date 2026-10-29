@@ -1,8 +1,13 @@
 import { QueueError, QueueErrorCode } from "@modules/platform/queue"
-import { REQUEUE_REDIS_JOB } from "../../fixtures/persistence/redis-proof.sql"
 import { worldIds } from "../../world/lite-world.service"
 import { redisQueueModules } from "../../world/redis-capabilities.options"
-import { redisJobProof, startQueueRelay, transportOf, waitForProof } from "../../world/redis-proof.service"
+import {
+    redisJobProof,
+    startQueueRelay,
+    transportOf,
+    waitForProof,
+    requeueRedisJob,
+} from "../../world/redis-proof.service"
 import { useTestWorld } from "../../world/use-test-world"
 
 describe("Queue operator retry over private Redis and Supabase", () => {
@@ -37,7 +42,7 @@ describe("Queue operator retry over private Redis and Supabase", () => {
             () => transportOf(world).stateOf(queue, row.id),
             (state) => state === "failed",
         )
-        await world.db.primary.query(REQUEUE_REDIS_JOB, [row.id])
+        await requeueRedisJob(world.db.primary, row.id)
         await waitForProof(
             () => rowOf(key),
             (value) => value.state === "done",

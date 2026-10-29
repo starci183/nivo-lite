@@ -8,6 +8,7 @@ import { ThreadAgentPostsService } from "@modules/domain/thread-messages"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { itemOf } from "@tests/fixtures/builders/work-decision.builder"
 import {
     ACCOUNTING_ROW,
@@ -17,24 +18,52 @@ import {
     PLACE,
     SETUP,
     STEP,
-    moved,
     rowOf,
-    stubsOf,
     unrelated,
 } from "@tests/fixtures/builders/thread-work-turns.builder"
 import type { Doubles } from "@tests/fixtures/builders/thread-work-turns.builder"
-import { INSERT_THREAD_WORK, UPDATE_THREAD_WORK } from "./persistence/thread-work.sql"
+import { ThreadWorkEntity } from "./persistence/entities"
 import { ThreadWorkTurnsService } from "./thread-work-turns.service"
+
+/** The arguments of the entity update that persists a transition, as the thread scenarios expect them. */
+export const moved = (
+    state: string,
+    requestId: string | null = null,
+    memberId: string | null = null,
+    missing: Array<string> = [],
+) =>
+    [
+        ThreadWorkEntity,
+        { workspaceId: "ws-1", id: "work-1" },
+        {
+            state,
+            ...(requestId === null ? {} : { approvalRequestId: requestId }),
+            waitingMemberId: memberId,
+            missingFields: missing,
+            updatedAt: anyFunction(),
+        },
+    ] as const
 
 /** A partial-object matcher, typed `unknown` so it flows into any slot. */
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** The any-function matcher, typed `unknown` so it flows into any slot. */
+const anyFunction = (): unknown => expect.any(Function)
 
 /** The match-anything matcher, typed `unknown` so it flows into any slot. */
 const anything = (): unknown => expect.anything()
 
 /** Builds thread turns with explicit kit doubles for every constructor dependency. */
 const build = async (doubles: Doubles = {}) => {
-    const em: MockEntityManager = mockEntityManager(stubsOf(doubles.inserted ?? [rowOf("running")]))
+    const em: MockEntityManager = mockEntityManager({
+        update: [ThreadWorkEntity, { affected: 1, raw: [], generatedMaps: [] }],
+    })
+    // One builder serves the insert of the work and the read of the agents it may tag.
+    const write = fakeQueryBuilder({
+        execute: { raw: doubles.inserted ?? [rowOf("running")] },
+        getRawMany: [ACCOUNTING_ROW],
+    })
+    em.createQueryBuilder.mockReturnValue(write.builder as never)
     const catalog = mock<MessageCatalog>({
         get: jest.fn((key: string, params: Readonly<Record<string, string | number>>) => {
             if (key === "engine.field.tax_code") return "MST"
@@ -71,13 +100,13 @@ const build = async (doubles: Doubles = {}) => {
             { provide: AgentOwnershipService, useValue: ownership },
         ],
     }).compile()
-    return { service: moduleRef.get(ThreadWorkTurnsService), em, engine, posts, catalog, modules }
+    return { service: moduleRef.get(ThreadWorkTurnsService), em, write, engine, posts, catalog, modules }
 }
 
 const registerRun = () => {
     describe("run", () => {
         it("runs the step through the work engine about the customer and records the work of the thread", async () => {
-            const { service, engine, em, posts } = await build()
+            const { service, em, engine, write, posts } = await build()
 
             await expect(service.run(STEP)).resolves.toBeNull()
 
@@ -93,7 +122,17 @@ const registerRun = () => {
                     seed: STEP.seed,
                 },
             )
-            expect(em.query).toHaveBeenCalledWith(INSERT_THREAD_WORK, ["ws-1", "thread-1", "item-1", "agent-sales"])
+            expect(em.createQueryBuilder).toHaveBeenCalledWith(ThreadWorkEntity, "t")
+            expect(write.callsOf("insert")).toEqual([[]])
+            expect(write.callsOf("values")).toEqual([
+                [{ workspaceId: "ws-1", threadId: "thread-1", workItemId: "item-1", agentId: "agent-sales" }],
+            ])
+            expect(write.callsOf("orUpdate")).toEqual([[["updated_at"], ["work_item_id"]]])
+            expect(write.callsOf("returning")).toEqual([
+                [
+                    "id, workspace_id, thread_id, work_item_id, agent_id, state, approval_request_id, waiting_member_id, missing_fields",
+                ],
+            ])
             expect(posts.postAsAgent).not.toHaveBeenCalled()
         })
 
@@ -132,7 +171,7 @@ const registerAsk = () => {
                 },
                 locale: "vi",
             })
-            expect(em.query).toHaveBeenCalledWith(UPDATE_THREAD_WORK, moved("asked", "req-1"))
+            expect(em.update).toHaveBeenCalledWith(...moved("asked", "req-1"))
         })
 
         it("titles a card with no amount by the action alone", async () => {
@@ -152,7 +191,7 @@ const registerAsk = () => {
 
             await expect(service.react(PLACE, DISCOUNT)).resolves.toBe("stopped")
 
-            expect(em.query).toHaveBeenCalledWith(UPDATE_THREAD_WORK, moved("stopped"))
+            expect(em.update).toHaveBeenCalledWith(...moved("stopped"))
         })
 
         it("stops when the chain limits stopped the ask or no request was opened", async () => {
@@ -160,7 +199,7 @@ const registerAsk = () => {
 
             await expect(service.react(PLACE, DISCOUNT)).resolves.toBe("stopped")
 
-            expect(em.query).toHaveBeenCalledWith(UPDATE_THREAD_WORK, moved("stopped", "req-1"))
+            expect(em.update).toHaveBeenCalledWith(...moved("stopped", "req-1"))
         })
 
         it.each([
@@ -174,7 +213,7 @@ const registerAsk = () => {
             expect(posts.postAsAgent).toHaveBeenCalledWith(
                 objectLike({ mentions: [{ kind: "member", id: "m-minh" }], approval: null }),
             )
-            expect(em.query).toHaveBeenCalledWith(UPDATE_THREAD_WORK, moved("stopped"))
+            expect(em.update).toHaveBeenCalledWith(...moved("stopped"))
         })
     })
 }
@@ -199,10 +238,7 @@ const registerMemberAsk = () => {
                     stepTitle: 'threadWork.missingStep|{"fields":"MST, po"}',
                 }),
             )
-            expect(em.query).toHaveBeenCalledWith(
-                UPDATE_THREAD_WORK,
-                moved("waiting_member", null, "m-van", ["tax_code", "po"]),
-            )
+            expect(em.update).toHaveBeenCalledWith(...moved("waiting_member", null, "m-van", ["tax_code", "po"]))
         })
 
         it("missing data with nobody named: asks the owner of the agent; a stopped chain waits for nobody", async () => {
@@ -216,7 +252,7 @@ const registerMemberAsk = () => {
             ).resolves.toBe("stopped")
 
             expect(posts.postAsAgent).toHaveBeenCalledWith(objectLike({ mentions: [{ kind: "member", id: "m-minh" }] }))
-            expect(em.query).toHaveBeenCalledWith(UPDATE_THREAD_WORK, moved("stopped"))
+            expect(em.update).toHaveBeenCalledWith(...moved("stopped"))
         })
     })
 }
@@ -242,7 +278,7 @@ const registerDone = () => {
                     stepTitle: 'threadWork.handoffStep|{"next":"Xuat hoa don"}',
                 }),
             )
-            expect(em.query).toHaveBeenCalledWith(UPDATE_THREAD_WORK, moved("done"))
+            expect(em.update).toHaveBeenCalledWith(...moved("done"))
             expect(engine.runWork).toHaveBeenCalledWith(
                 { workspaceId: "ws-1", actor: "AI Sales", locale: "vi" },
                 objectLike({
@@ -351,7 +387,7 @@ const registerHandOffEnds = () => {
                 service.react(PLACE, itemOf({ action: "give_discount", status: "done", lead_id: leadId })),
             ).resolves.toBe(state)
 
-            expect(em.query).toHaveBeenCalledWith(UPDATE_THREAD_WORK, moved(state))
+            expect(em.update).toHaveBeenCalledWith(...moved(state))
             expect(engine.runWork).not.toHaveBeenCalled()
         })
 
@@ -395,7 +431,7 @@ const registerHandOffEnds = () => {
                     stepTitle: 'threadWork.doneStep|{"action":"unknown_action"}',
                 }),
             )
-            expect(em.query).toHaveBeenCalledWith(UPDATE_THREAD_WORK, moved("done"))
+            expect(em.update).toHaveBeenCalledWith(...moved("done"))
         })
     })
 }
@@ -433,7 +469,7 @@ const registerStop = () => {
                 3,
                 objectLike({ body: 'threadWork.stopped|{"action":"Giam gia","reason":""}' }),
             )
-            expect(em.query).toHaveBeenCalledWith(UPDATE_THREAD_WORK, moved("stopped"))
+            expect(em.update).toHaveBeenCalledWith(...moved("stopped"))
         })
 
         it("says nothing about a step still queued", async () => {

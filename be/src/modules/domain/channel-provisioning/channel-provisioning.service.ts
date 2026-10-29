@@ -5,12 +5,40 @@ import { ConnectionGrantsService, purposeFor } from "@modules/domain/connection-
 import { randomSecret } from "@modules/domain/connection-secrets"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, Provider } from "@modules/domain/connections"
+import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { AgentEntity } from "@modules/domain/agents"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectChannelProvisioningOptions } from "./channel-provisioning.decorators"
 import type { ProvisionFlags } from "./channel-provisioning.contracts"
 import type { ChannelProvisioningOptions } from "./channel-provisioning.options"
-import type { AgentRow, OwnerRow } from "./persistence/channel-provisioning.rows"
-import { FIND_WORKSPACE_OWNER, LIST_WORKSPACE_AGENTS } from "./persistence/channel-provisioning.sql"
+
+/** The most agents one bind reaches. */
+const AGENT_LIMIT = 500
+
+/** The owner of a workspace: the account provisioning acts in the name of. */
+interface OwnerRow {
+    /** The account that owns the workspace. */
+    readonly userId: string
+}
+
+/** One agent of a workspace and the module it works for. */
+interface AgentRow {
+    /** The agent row id a channel binding points at. */
+    readonly id: string
+    /** The product module the agent serves, used to pick the agent a new channel is bound to. */
+    readonly module: string
+}
+
+const isOwnerRow = (value: unknown): value is OwnerRow =>
+    typeof value === "object" && value !== null && "userId" in value && typeof value.userId === "string"
+
+const isAgentRow = (value: unknown): value is AgentRow =>
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    typeof value.id === "string" &&
+    "module" in value &&
+    typeof value.module === "string"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
 
@@ -40,12 +68,18 @@ export class ChannelProvisioningService {
     async run(kind: string, flags: ProvisionFlags): Promise<void> {
         const workspaceId =
             flags.workspace !== undefined && UUID.test(flags.workspace) ? flags.workspace : invalid("workspace")
-        const rows: ReadonlyArray<OwnerRow> = await this.entityManager.query(FIND_WORKSPACE_OWNER, [workspaceId])
-        const owner = rows[0]
+        const rows: ReadonlyArray<unknown> = await this.entityManager
+            .createQueryBuilder(WorkspaceMemberEntity, "m")
+            .select("m.user_id", "userId")
+            .where("m.workspace_id = :workspaceId AND m.role = 'owner' AND m.status = 'active'", { workspaceId })
+            .orderBy("m.created_at")
+            .limit(1)
+            .getRawMany()
+        const owner = rows.find(isOwnerRow)
         if (owner === undefined) {
             throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id: workspaceId } })
         }
-        const actor: ConnectionActor = { principalId: owner.user_id, workspaceId }
+        const actor: ConnectionActor = { principalId: owner.userId, workspaceId }
         if (kind === "telegram") return this.telegram(actor, flags)
         if (kind === "sepay") return this.sepay(actor, flags)
         if (kind === "zalo") return this.zalo(actor, flags)
@@ -113,10 +147,15 @@ export class ChannelProvisioningService {
         flags: ProvisionFlags,
     ): Promise<void> {
         if (flags.bind !== true) return
-        const agents: ReadonlyArray<AgentRow> = await this.entityManager.query(LIST_WORKSPACE_AGENTS, [
-            actor.workspaceId,
-        ])
-        const eligible = agents.filter((agent) => purposeFor(agent.module, provider) !== null)
+        const rows: ReadonlyArray<unknown> = await this.entityManager
+            .createQueryBuilder(AgentEntity, "a")
+            .select("a.id", "id")
+            .addSelect("a.module", "module")
+            .where("a.workspace_id = :workspaceId", { workspaceId: actor.workspaceId })
+            .orderBy("a.created_at")
+            .limit(AGENT_LIMIT)
+            .getRawMany()
+        const eligible = rows.filter(isAgentRow).filter((agent) => purposeFor(agent.module, provider) !== null)
         await this.grants.setConnectionAgents(
             actor,
             connectionId,

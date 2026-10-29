@@ -1,4 +1,5 @@
 import type { InjectionToken } from "@nestjs/common"
+import type { JobsSchedulerOptions } from "./types/jobs-scheduler.options"
 
 /** What the jobs of one app need: the connection that holds the job table, who this worker is, and how long a claim lasts. */
 export interface JobsOptions {
@@ -8,4 +9,6 @@ export interface JobsOptions {
     readonly workerId: string
     /** How long a claim lasts: after it a stalled job may be claimed again, and the old worker is fenced out. */
     readonly leaseMs: number
+    /** The recurring ticks of the app. */
+    readonly scheduler: JobsSchedulerOptions
 }

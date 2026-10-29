@@ -1,33 +1,38 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { MoreThan } from "typeorm"
+import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
+import {
+    AT_DEADLINE_ROW,
+    LAPSED_ROW,
+    PAID_LAPSED_ROW,
+    PAYMENT_ORDER_NOW,
+    SECOND_ROW,
+    paymentOrderRowOf,
+} from "@tests/fixtures/builders/payment-orders.builder"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { PaymentOrdersErrorCode } from "./errors/payment-orders.error"
 import type { PaymentOrder } from "./payment-orders.contracts"
 import { PaymentOrdersService } from "./payment-orders.service"
-import type { OrderRow } from "./persistence/payment-orders.rows"
-import {
-    INSERT_PAYMENT_ORDER,
-    SELECT_OPEN_CREDIT_PACK_ORDER,
-    SELECT_OPEN_PLAN_ORDER,
-    SELECT_OPEN_TOPUP_ORDER,
-    SELECT_OPEN_UPGRADE_ORDER,
-    SELECT_PAYMENT_ORDER,
-    SELECT_PAYMENT_ORDERS,
-} from "./persistence/payment-orders.sql"
+import { PaymentOrderEntity } from "./persistence/entities"
 
-const NOW = "2026-10-12T10:00:00.000Z"
-const ROW = {
+const NOW = PAYMENT_ORDER_NOW
+const ROW = paymentOrderRowOf()
+/** Any freshly drawn order code. */
+const DRAWN_CODE: unknown = expect.stringMatching(/^NIVO[2-9A-HJKMNP-Z]{5}$/)
+/** What the insert answers with `RETURNING *`. */
+const WRITTEN = {
     id: "order-1",
     workspace_id: "ws-1",
     plan_code: "starter",
-    amount_vnd: 990000,
+    amount_vnd: "990000",
     order_code: "NIVO8F3K2",
     status: "pending",
-    expires_at: "2026-10-12T10:30:00.000Z",
+    expires_at: new Date("2026-10-12T10:30:00.000Z"),
     paid_at: null,
-    created_at: NOW,
+    created_at: new Date(NOW),
     kind: "plan",
     pack_code: null,
     detail: {},
@@ -69,92 +74,108 @@ const build = async (entityManager: MockEntityManager) => {
 
 describe("PaymentOrdersService", () => {
     it("maps every listed order for the requested workspace", async () => {
-        const em = mockEntityManager({ query: [SELECT_PAYMENT_ORDERS, [ROW, { ...ROW, id: "order-2" }]] })
+        const em = mockEntityManager({ find: [PaymentOrderEntity, [ROW, SECOND_ROW]] })
         const orders = await build(em)
 
         await expect(orders.list("ws-1")).resolves.toEqual([ORDER, { ...ORDER, id: "order-2" }])
 
-        expect(em.query.mock.calls).toEqual([[SELECT_PAYMENT_ORDERS, ["ws-1"]]])
+        expect(em.find).toHaveBeenCalledWith(PaymentOrderEntity, {
+            where: { workspaceId: "ws-1" },
+            order: { createdAt: "DESC" },
+            take: 50,
+        })
     })
 
-    it.each<{ rows: Array<OrderRow>; expected: PaymentOrder | null }>([
-        { rows: [], expected: null },
-        { rows: [{ ...ROW, status: "pending", kind: "plan" }], expected: ORDER },
+    it.each<{ row: PaymentOrderEntity | null; expected: PaymentOrder | null }>([
+        { row: null, expected: null },
+        { row: paymentOrderRowOf(), expected: ORDER },
         {
-            rows: [{ ...ROW, status: "pending", kind: "plan", expires_at: "2026-10-12T09:59:59.999Z" }],
+            row: LAPSED_ROW,
             expected: { ...ORDER, status: "expired", expiresAt: "2026-10-12T09:59:59.999Z" },
         },
         {
-            rows: [{ ...ROW, status: "pending", kind: "plan", expires_at: NOW }],
+            row: AT_DEADLINE_ROW,
             expected: { ...ORDER, expiresAt: NOW },
         },
         {
-            rows: [{ ...ROW, status: "paid", kind: "plan", expires_at: "2026-10-12T09:59:59.999Z", paid_at: NOW }],
+            row: PAID_LAPSED_ROW,
             expected: { ...ORDER, status: "paid", expiresAt: "2026-10-12T09:59:59.999Z", paidAt: NOW },
         },
-    ])("looks up the scoped order and expires only a lapsed pending order: $expected", async ({ rows, expected }) => {
-        const em = mockEntityManager({ query: [SELECT_PAYMENT_ORDER, rows] })
+    ])("looks up the scoped order and expires only a lapsed pending order: $expected", async ({ row, expected }) => {
+        const em = mockEntityManager({ findOne: [PaymentOrderEntity, row] })
         const orders = await build(em)
 
         await expect(orders.find("ws-1", "order-1")).resolves.toEqual(expected)
 
-        expect(em.query.mock.calls).toEqual([[SELECT_PAYMENT_ORDER, ["ws-1", "order-1"]]])
+        expect(em.findOne).toHaveBeenCalledWith(PaymentOrderEntity, { where: { workspaceId: "ws-1", id: "order-1" } })
     })
 
     it.each([
-        { rows: [ROW], expected: ORDER },
-        { rows: [], expected: null },
-    ])("finds a payable plan order at the clock's current instant: $expected", async ({ rows, expected }) => {
-        const em = mockEntityManager({ query: [SELECT_OPEN_PLAN_ORDER, rows] })
+        { row: ROW, expected: ORDER },
+        { row: null, expected: null },
+    ])("finds a payable plan order at the clock's current instant: $expected", async ({ row, expected }) => {
+        const em = mockEntityManager({ findOne: [PaymentOrderEntity, row] })
         const orders = await build(em)
 
         await expect(orders.findOpenPlan("ws-1")).resolves.toEqual(expected)
 
-        expect(em.query.mock.calls).toEqual([[SELECT_OPEN_PLAN_ORDER, ["ws-1", new Date(NOW)]]])
+        expect(em.findOne).toHaveBeenCalledWith(PaymentOrderEntity, {
+            where: { workspaceId: "ws-1", kind: "plan", status: "pending", expiresAt: MoreThan(new Date(NOW)) },
+            order: { createdAt: "DESC" },
+        })
     })
 })
 
 describe("PaymentOrdersService", () => {
     describe("create", () => {
         it("writes the pending order with a fresh code and answers it", async () => {
-            const em = mockEntityManager({ query: [INSERT_PAYMENT_ORDER, [ROW]] })
+            const em = mockEntityManager()
+            const insert = fakeQueryBuilder({ execute: { raw: [WRITTEN] } })
+            answerQueryBuilders(em, insert)
             const orders = await build(em)
 
             await expect(orders.create(NEW_ORDER)).resolves.toMatchObject({ id: "order-1", orderCode: "NIVO8F3K2" })
 
-            expect(em.query).toHaveBeenCalledWith(INSERT_PAYMENT_ORDER, [
-                "ws-1",
-                "person-1",
-                "starter",
-                990000,
-                expect.stringMatching(/^NIVO[2-9A-HJKMNP-Z]{5}$/),
-                "plan",
-                null,
-                JSON.stringify({ credits: 5 }),
+            expect(insert.argsOf("values")).toEqual([
+                [
+                    {
+                        workspaceId: "ws-1",
+                        createdBy: "person-1",
+                        planCode: "starter",
+                        amountVnd: 990000,
+                        orderCode: DRAWN_CODE,
+                        kind: "plan",
+                        packCode: null,
+                        detail: { credits: 5 },
+                    },
+                ],
             ])
+            expect(insert.argsOf("orUpdate")).toEqual([
+                [["order_code"], ["order_code"], { skipUpdateIfNoValuesChanged: true }],
+            ])
+            expect(insert.argsOf("orIgnore")).toHaveLength(0)
         })
 
         it("draws a new code when the first one collides", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [INSERT_PAYMENT_ORDER, []],
-                    [INSERT_PAYMENT_ORDER, [ROW]],
-                ],
-            })
+            const em = mockEntityManager()
+            answerQueryBuilders(
+                em,
+                fakeQueryBuilder({ execute: { raw: [] } }),
+                fakeQueryBuilder({ execute: { raw: [WRITTEN] } }),
+            )
             const orders = await build(em)
 
             await expect(orders.create(NEW_ORDER)).resolves.toMatchObject({ id: "order-1" })
-            expect(em.query).toHaveBeenCalledTimes(2)
+            expect(em.createQueryBuilder).toHaveBeenCalledTimes(2)
         })
 
         it("gives up after five collisions", async () => {
-            const em = mockEntityManager({
-                query: Array.from({ length: 5 }, () => [INSERT_PAYMENT_ORDER, []] as const),
-            })
+            const em = mockEntityManager()
+            answerQueryBuilders(em, fakeQueryBuilder({ execute: { raw: [] } }))
             const orders = await build(em)
 
             await expect(orders.create(NEW_ORDER)).rejects.toMatchObject({ code: PaymentOrdersErrorCode.CodeExhausted })
-            expect(em.query).toHaveBeenCalledTimes(5)
+            expect(em.createQueryBuilder).toHaveBeenCalledTimes(5)
         })
     })
 })
@@ -162,52 +183,56 @@ describe("PaymentOrdersService", () => {
 describe("PaymentOrdersService", () => {
     describe("open orders", () => {
         const query = { workspaceId: "ws-1", target: "credits_1000", amountVnd: 299000 }
+        const NOW_DATE = new Date(NOW)
 
         it.each([
-            { rows: [ROW], expected: ORDER },
-            { rows: [], expected: null },
+            { row: ROW, expected: ORDER },
+            { row: null, expected: null },
         ])(
             "finds an open add-on order for the exact credit target and amount: $expected",
-            async ({ rows, expected }) => {
-                const em = mockEntityManager({ query: [SELECT_OPEN_CREDIT_PACK_ORDER, rows] })
+            async ({ row, expected }) => {
+                const em = mockEntityManager()
+                const open = fakeQueryBuilder({ getOne: row })
+                answerQueryBuilders(em, open)
                 const orders = await build(em)
 
                 await expect(orders.findOpenCreditPack(query)).resolves.toEqual(expected)
 
-                expect(em.query.mock.calls).toEqual([
-                    [SELECT_OPEN_CREDIT_PACK_ORDER, ["ws-1", "credits_1000", 299000, new Date(NOW)]],
+                expect(open.argsOf("where")).toEqual([
+                    [
+                        "o.workspaceId = :workspaceId AND o.kind = :kind AND o.status = 'pending'",
+                        { workspaceId: "ws-1", kind: "credit_pack" },
+                    ],
+                ])
+                expect(open.argsOf("andWhere")).toEqual([
+                    ["o.amountVnd = :amountVnd AND o.expiresAt > :now", { amountVnd: 299000, now: NOW_DATE }],
+                    ["o.detail ->> 'credits' = :target", { target: "credits_1000" }],
                 ])
             },
         )
 
         it("finds the pending top-up order for the pack and amount, or none", async () => {
-            const hit = mockEntityManager({ query: [SELECT_OPEN_TOPUP_ORDER, [ROW]] })
-            const found = await build(hit)
-            const miss = await build(mockEntityManager({ query: [SELECT_OPEN_TOPUP_ORDER, []] }))
+            const em = mockEntityManager()
+            const hit = fakeQueryBuilder({ getOne: ROW })
+            answerQueryBuilders(em, hit, fakeQueryBuilder({ getOne: null }))
+            const orders = await build(em)
 
-            await expect(found.findOpenTopup(query)).resolves.toMatchObject({ id: "order-1" })
-            expect(hit.query).toHaveBeenCalledWith(SELECT_OPEN_TOPUP_ORDER, [
-                "ws-1",
-                "credits_1000",
-                299000,
-                new Date(NOW),
-            ])
-            await expect(miss.findOpenTopup(query)).resolves.toBeNull()
+            await expect(orders.findOpenTopup(query)).resolves.toMatchObject({ id: "order-1" })
+            expect(hit.argsOf("andWhere")[1]).toEqual(["o.packCode = :target", { target: "credits_1000" }])
+            expect(hit.argsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", kind: "topup" })
+            await expect(orders.findOpenTopup(query)).resolves.toBeNull()
         })
 
         it("finds the pending upgrade order for the plan and amount, or none", async () => {
-            const hit = mockEntityManager({ query: [SELECT_OPEN_UPGRADE_ORDER, [ROW]] })
-            const found = await build(hit)
-            const miss = await build(mockEntityManager({ query: [SELECT_OPEN_UPGRADE_ORDER, []] }))
+            const em = mockEntityManager()
+            const hit = fakeQueryBuilder({ getOne: ROW })
+            answerQueryBuilders(em, hit, fakeQueryBuilder({ getOne: null }))
+            const orders = await build(em)
 
-            await expect(found.findOpenUpgrade(query)).resolves.toMatchObject({ id: "order-1" })
-            expect(hit.query).toHaveBeenCalledWith(SELECT_OPEN_UPGRADE_ORDER, [
-                "ws-1",
-                "credits_1000",
-                299000,
-                new Date(NOW),
-            ])
-            await expect(miss.findOpenUpgrade(query)).resolves.toBeNull()
+            await expect(orders.findOpenUpgrade(query)).resolves.toMatchObject({ id: "order-1" })
+            expect(hit.argsOf("andWhere")[1]).toEqual(["o.planCode = :target", { target: "credits_1000" }])
+            expect(hit.argsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", kind: "upgrade" })
+            await expect(orders.findOpenUpgrade(query)).resolves.toBeNull()
         })
     })
 })

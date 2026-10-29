@@ -1,10 +1,12 @@
 import type { CredentialPrincipal } from "./credential.contracts"
 import type { Principal } from "@modules/platform/cqrs"
+import type { Outcome } from "@modules/platform/primitives"
+import type { IdentityErrorCode } from "./errors/identity.error"
 
 declare module "express-serve-static-core" {
     /** The request carries the principal established by the default-deny auth guard. */
     interface Request {
-        /** The authenticated Supabase caller, when the door is not public. */
+        /** The authenticated caller, when the door is not public. */
         principal?: Principal | undefined
         /** The alternate credential, never a session principal. */
         credentialPrincipal?: CredentialPrincipal | undefined
@@ -31,3 +33,6 @@ export interface PublicMetadata {
 
 /** What identity admission returns to the guard. */
 export type IdentityAdmission = Principal | PublicReason
+
+/** Verifies one bearer token and returns the principal only when every cryptographic and semantic check passed. */
+export type VerifyAccessToken = (token: string) => Promise<Outcome<Principal, IdentityErrorCode>>

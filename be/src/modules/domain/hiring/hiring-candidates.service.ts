@@ -4,7 +4,7 @@ import { OfficeLog } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { CvStorage } from "./cv-storage.port"
 import { HiringError, HiringErrorCode } from "./errors/hiring.error"
 import type { ApplicationSource, CandidateRecord, DeletedCandidates, JobRecord } from "./hiring.contracts"
@@ -24,16 +24,6 @@ import { HiringDataService } from "./hiring-data.service"
 import { HiringScreeningService } from "./hiring-screening.service"
 import { HiringSettingsService } from "./hiring-settings.service"
 import { HiringTextService } from "./hiring-text.service"
-import {
-    DELETE_CANDIDATES,
-    FILL_CHECK,
-    LINK_STAFF,
-    MOVE_CANDIDATE,
-    SAVE_NOTES,
-    SUBMIT_APPLICATION,
-    TOGGLE_ONBOARDING,
-} from "./persistence/hiring.sql"
-import type { FilledRow, FlagRow, PathsRow, StaffLinkRow, SubmitRow } from "./persistence/hiring.rows"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { checkApplication, openingRefusal } from "./policies/application.policy"
 import type { ApplicationInput } from "./policies/application.policy"
@@ -126,30 +116,34 @@ export class HiringCandidatesService {
         if (!checked.ok) throw new HiringError(checked.refusal)
         const settings = await this.settings.ensure(workspaceId)
         const clean = checked.value
-        const [row] = await this.entityManager.query<Array<SubmitRow>>(SUBMIT_APPLICATION, [
-            workspaceId,
-            job.id,
-            JSON.stringify({
-                name: clean.name,
-                phone: clean.phone,
-                email: clean.email,
-                source,
-                conversationId: extras.conversationId ?? null,
-                cvPath: extras.cv?.path ?? null,
-                cvName: extras.cv?.name ?? null,
-                cvMime: extras.cv?.mime ?? null,
-                cvSize: extras.cv?.size ?? null,
-                answers: clean.answers.map((answer) => ({
-                    question_id: answer.questionId,
-                    question: answer.question,
-                    answer: answer.answer,
-                })),
-                availability: clean.availability,
-            }),
-            settings.applyConsentText,
-            extras.ipHash ?? null,
-            [this.words.text(`hiring.applied.${source}`), this.words.text("hiring.applied.consent")],
-        ])
+        const [row] = await callDbFunction<{ id: string; duplicate: boolean }>(
+            this.entityManager,
+            "public.hiring_application_submit",
+            [
+                workspaceId,
+                job.id,
+                JSON.stringify({
+                    name: clean.name,
+                    phone: clean.phone,
+                    email: clean.email,
+                    source,
+                    conversationId: extras.conversationId ?? null,
+                    cvPath: extras.cv?.path ?? null,
+                    cvName: extras.cv?.name ?? null,
+                    cvMime: extras.cv?.mime ?? null,
+                    cvSize: extras.cv?.size ?? null,
+                    answers: clean.answers.map((answer) => ({
+                        question_id: answer.questionId,
+                        question: answer.question,
+                        answer: answer.answer,
+                    })),
+                    availability: clean.availability,
+                }),
+                settings.applyConsentText,
+                extras.ipHash ?? null,
+                [this.words.text(`hiring.applied.${source}`), this.words.text("hiring.applied.consent")],
+            ],
+        )
         if (row === undefined) throw new HiringError({ code: HiringErrorCode.JobNotOpen })
         if (!row.duplicate) {
             if (settings.notifyNewCandidate) {
@@ -183,7 +177,7 @@ export class HiringCandidatesService {
             stage: this.words.text(`hiring.stage.${request.stage}`),
             reason: reason.slice(0, REASON_MAX),
         })
-        await this.entityManager.query<Array<FlagRow>>(MOVE_CANDIDATE, [
+        await callDbFunction<{ hiring_candidate_move: boolean }>(this.entityManager, "public.hiring_candidate_move", [
             workspaceId,
             current.id,
             request.stage,
@@ -224,24 +218,29 @@ export class HiringCandidatesService {
                 },
             })
         }
-        const [row] = await this.entityManager.query<Array<FlagRow>>(SAVE_NOTES, [
-            workspaceId,
-            request.id,
-            request.notes.slice(0, NOTES_MAX),
-            displayName,
-            this.words.text("hiring.event.notes"),
-        ])
-        if (row?.value !== true) throw new HiringError({ code: HiringErrorCode.CandidateNotFound })
+        const [row] = await callDbFunction<{ hiring_candidate_notes: boolean }>(
+            this.entityManager,
+            "public.hiring_candidate_notes",
+            [
+                workspaceId,
+                request.id,
+                request.notes.slice(0, NOTES_MAX),
+                displayName,
+                this.words.text("hiring.event.notes"),
+            ],
+        )
+        if (row?.hiring_candidate_notes !== true) throw new HiringError({ code: HiringErrorCode.CandidateNotFound })
     }
 
     /** Deletes candidates with every trace: the answers, the consent, the interviews, the offers and the CV files. */
     async deleteAll(workspaceId: string, candidateIds: ReadonlyArray<string>): Promise<DeletedCandidates> {
         if (candidateIds.length === 0) return { candidates: 0, files: 0 }
-        const [row] = await this.entityManager.query<Array<PathsRow>>(DELETE_CANDIDATES, [
-            workspaceId,
-            [...candidateIds],
-        ])
-        const paths = row?.paths ?? []
+        const [row] = await callDbFunction<{ hiring_candidates_delete: Array<string> }>(
+            this.entityManager,
+            "public.hiring_candidates_delete",
+            [workspaceId, [...candidateIds]],
+        )
+        const paths = row?.hiring_candidates_delete ?? []
         const files = paths.length === 0 ? 0 : await this.storage.remove(paths)
         return { candidates: candidateIds.length, files }
     }
@@ -270,7 +269,11 @@ export class HiringCandidatesService {
         const candidate = await this.requireCandidate(workspaceId, request.candidateId)
         if (candidate.stage !== "hired") throw new HiringError({ code: HiringErrorCode.StaffNotHired })
         if (candidate.staffId !== null) throw new HiringError({ code: HiringErrorCode.StaffLinked })
-        const [row] = await this.entityManager.query<Array<StaffLinkRow>>(LINK_STAFF, [workspaceId, candidate.id])
+        const [row] = await callDbFunction<{ staff_id: string | null; missing: boolean }>(
+            this.entityManager,
+            "public.hiring_candidate_link_staff",
+            [workspaceId, candidate.id],
+        )
         if (row?.staff_id === null || row?.staff_id === undefined)
             throw new HiringError({ code: HiringErrorCode.StaffLinked })
         await this.office.logEvidence(workspaceId, {
@@ -284,17 +287,22 @@ export class HiringCandidatesService {
     /** Ticks or unticks a step of the onboarding checklist. */
     async toggleOnboarding(userId: string, workspaceId: string, request: ToggleOnboardingParams): Promise<void> {
         await this.members.require(userId, workspaceId, MANAGER_ROLES)
-        const [row] = await this.entityManager.query<Array<FlagRow>>(TOGGLE_ONBOARDING, [
-            workspaceId,
-            request.id,
-            request.done,
-        ])
-        if (row?.value !== true) throw new HiringError({ code: HiringErrorCode.OnboardingNotFound })
+        const [row] = await callDbFunction<{ hiring_onboarding_toggle: boolean }>(
+            this.entityManager,
+            "public.hiring_onboarding_toggle",
+            [workspaceId, request.id, request.done],
+        )
+        if (row?.hiring_onboarding_toggle !== true) throw new HiringError({ code: HiringErrorCode.OnboardingNotFound })
     }
 
     /** Closes a job once enough people accepted, when the workspace asked for it; answers whether it closed. */
     async closeJobIfFilled(workspaceId: string, jobId: string): Promise<boolean> {
-        const [row] = await this.entityManager.query<Array<FilledRow>>(FILL_CHECK, [workspaceId, jobId])
+        const [row] = await callDbFunction<{
+            closed: boolean
+            title: string
+            hired: number | string
+            headcount: number
+        }>(this.entityManager, "public.hiring_job_fill_check", [workspaceId, jobId])
         if (!row?.closed) return false
         await this.office.postOffice(
             workspaceId,

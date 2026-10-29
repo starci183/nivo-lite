@@ -26,15 +26,15 @@ describe("Public API linked-legacy-lead (persisted local integration)", () => {
         const inboundEventId = world.id()
         await persistPublicApiInbound(world.db.primary, {
             id: inboundEventId,
-            workspace_id: identity.workspaceId,
+            workspaceId: identity.workspaceId,
             channel: "manual",
             kind: "lead",
-            sender_name: "Original customer name",
+            senderName: "Original customer name",
             body: DEFAULT_NEED,
-            external_ref: "api:Public API proof",
-            event_id: world.id(),
-            dedupe_key: `api:historical:${world.id()}`,
-            lead_id: known.id,
+            externalRef: "api:Public API proof",
+            eventId: world.id(),
+            dedupeKey: `api:historical:${world.id()}`,
+            leadId: known.id,
         })
         const payload = {
             kind: "lead",

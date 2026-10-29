@@ -6,10 +6,9 @@ import { TransactionsService } from "@modules/domain/transactions"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { normalizeAdjustment } from "./adjustment.policy"
-import type { NewAccountingAdjustment } from "./accounting-adjustments.contracts"
+import type { AccountingAdjustmentRow, NewAccountingAdjustment } from "./accounting-adjustments.contracts"
 import { AccountingAdjustmentsError, AccountingAdjustmentsErrorCode } from "./errors/accounting-adjustments.error"
-import type { AccountingAdjustmentRow } from "./persistence/accounting-adjustments.rows"
-import { INSERT_ADJUSTMENT, LIST_ADJUSTMENTS } from "./persistence/accounting-adjustments.sql"
+import { AccountingAdjustmentEntity } from "./persistence/entities"
 
 /** The correction history and whether its optional migration is present. */
 export interface AccountingAdjustmentHistory {
@@ -25,6 +24,30 @@ const missingTable = (error: unknown): boolean => {
     return "driverError" in error && missingTable(error.driverError)
 }
 
+const toRow = (entity: AccountingAdjustmentEntity): AccountingAdjustmentRow => ({
+    id: entity.id,
+    target_type: entity.targetType,
+    target_id: entity.targetId,
+    note: entity.note,
+    corrected_amount_vnd: entity.correctedAmountVnd === null ? null : Number(entity.correctedAmountVnd),
+    created_by: entity.createdBy,
+    created_at: entity.createdAt.toISOString(),
+})
+
+/** The columns the appending statement hands back. */
+const RETURNED_COLUMNS = "id, target_type, target_id, note, corrected_amount_vnd, created_by, created_at"
+
+/** The correction the appending statement hands back: the driver delivers bigint as text and timestamptz as a Date. */
+interface CreatedRow {
+    readonly id: string
+    readonly target_type: "invoice" | "transaction"
+    readonly target_id: string
+    readonly note: string
+    readonly corrected_amount_vnd: string | null
+    readonly created_by: string
+    readonly created_at: Date
+}
+
 @Injectable()
 /** The only owner of public.accounting_adjustments; every correction and its evidence line commit together. */
 export class AccountingAdjustmentsService {
@@ -36,8 +59,13 @@ export class AccountingAdjustmentsService {
         private readonly events: EventsService,
     ) {}
     /** Lists the latest append-only corrections; the caller proves membership before reading. */
-    list(workspaceId: string): Promise<Array<AccountingAdjustmentRow>> {
-        return this.entityManager.query<Array<AccountingAdjustmentRow>>(LIST_ADJUSTMENTS, [workspaceId])
+    async list(workspaceId: string): Promise<Array<AccountingAdjustmentRow>> {
+        const entities = await this.entityManager.find(AccountingAdjustmentEntity, {
+            where: { workspaceId },
+            order: { createdAt: "DESC", id: "DESC" },
+            take: 500,
+        })
+        return entities.map(toRow)
     }
 
     /** Distinguishes an unapplied optional migration from other database failures. */
@@ -64,14 +92,20 @@ export class AccountingAdjustmentsService {
         if (target === null) throw new AccountingAdjustmentsError({ code: AccountingAdjustmentsErrorCode.NotFound })
         const leadId = "lead_id" in target ? target.lead_id : null
         return this.entityManager.transaction(async (manager) => {
-            const [created] = await manager.query<Array<AccountingAdjustmentRow>>(INSERT_ADJUSTMENT, [
-                workspaceId,
-                input.targetType,
-                input.targetId,
-                input.note,
-                input.correctedAmount,
-                member.displayName,
-            ])
+            const inserted = await manager
+                .createQueryBuilder(AccountingAdjustmentEntity, "aa")
+                .insert()
+                .values({
+                    workspaceId,
+                    targetType: input.targetType,
+                    targetId: input.targetId,
+                    note: input.note,
+                    correctedAmountVnd: input.correctedAmount === null ? null : String(input.correctedAmount),
+                    createdBy: member.displayName,
+                })
+                .returning(RETURNED_COLUMNS)
+                .execute()
+            const [created] = Array.isArray(inserted.raw) ? (inserted.raw as Array<CreatedRow>) : []
             if (created === undefined)
                 throw new AccountingAdjustmentsError({ code: AccountingAdjustmentsErrorCode.NotCreated })
             await this.events.record(
@@ -86,7 +120,16 @@ export class AccountingAdjustmentsService {
                 },
                 manager,
             )
-            return created
+            return {
+                id: created.id,
+                target_type: created.target_type,
+                target_id: created.target_id,
+                note: created.note,
+                corrected_amount_vnd:
+                    created.corrected_amount_vnd === null ? null : Number(created.corrected_amount_vnd),
+                created_by: created.created_by,
+                created_at: created.created_at.toISOString(),
+            }
         })
     }
 }

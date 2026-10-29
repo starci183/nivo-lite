@@ -4,14 +4,18 @@ import { Test } from "@nestjs/testing"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { MentionDirectoryService } from "./mention-directory.service"
-import type { ThreadMessageRow } from "./persistence/thread-messages.rows"
-import { FIND_MESSAGE } from "./persistence/thread-messages.sql"
 import { toMessage } from "./thread.mapper"
 import { ThreadApprovalOutcomesService } from "./thread-approval-outcomes.service"
 import { ThreadApprovalsService } from "./thread-approvals.service"
-import type { ApprovalCard, ThreadApprovalDecisionResult, CardApprover } from "./thread-messages.contracts"
+import type {
+    ApprovalCard,
+    CardApprover,
+    ThreadApprovalDecisionResult,
+    ThreadMessageRecord,
+} from "./thread-messages.contracts"
 import { APPROVAL_GATE } from "./thread-messages.decorators"
 import type { ThreadApprovalGate } from "./thread-messages.port"
 
@@ -58,7 +62,7 @@ const DECIDED: ApprovalCard = {
     decidedAt: "2026-10-22T09:42:00.000Z",
 }
 
-const rowOf = (approval: ApprovalCard | null): ThreadMessageRow => ({
+const rowOf = (approval: ApprovalCard | null): ThreadMessageRecord => ({
     id: "msg-1",
     thread_id: "thread-1",
     workspace_id: "ws-1",
@@ -70,14 +74,14 @@ const rowOf = (approval: ApprovalCard | null): ThreadMessageRow => ({
     quoted: [],
     mentions: [],
     approval,
-    created_at: "2026-10-22T09:41:00+07:00",
+    created_at: new Date("2026-10-22T09:41:00+07:00"),
 })
 
 interface Answers {
     /** The message as the first read finds it. */
-    readonly found?: ReadonlyArray<ThreadMessageRow>
+    readonly found?: ReadonlyArray<ThreadMessageRecord>
     /** The message as the lock finds it, after the gate answered. */
-    readonly locked?: ThreadMessageRow
+    readonly locked?: ThreadMessageRecord
     /** What the gate answers. */
     readonly decision?: ThreadApprovalDecisionResult
 }
@@ -110,7 +114,13 @@ const build = async (em: MockEntityManager, answers: Answers = {}) => {
     return { service: moduleRef.get(ThreadApprovalsService), members, gate, outcomes }
 }
 
-const found = (rows: ReadonlyArray<ThreadMessageRow> = [rowOf(PENDING)]) => ({ query: [[FIND_MESSAGE, rows]] as const })
+/** A manager double whose message read answers the first of the given rows, or nothing. */
+const found = (rows: ReadonlyArray<ThreadMessageRecord> = [rowOf(PENDING)]) => {
+    const em = mockEntityManager()
+    const read = fakeQueryBuilder({ getRawOne: rows[0] })
+    em.createQueryBuilder.mockReturnValueOnce(read.builder as never)
+    return em
+}
 
 const decision = (verdict: "approve" | "reject" = "approve", userId = "minh") => ({
     workspaceId: "ws-1",
@@ -123,7 +133,7 @@ const decision = (verdict: "approve" | "reject" = "approve", userId = "minh") =>
 const registerRefusals = () => {
     describe("decide refusals", () => {
         it("refuses a message that is not in the workspace", async () => {
-            const { service } = await build(mockEntityManager(found([])))
+            const { service } = await build(found([]))
 
             await expect(service.decide(decision())).rejects.toMatchObject({
                 code: ThreadMessagesErrorCode.MessageNotFound,
@@ -131,13 +141,13 @@ const registerRefusals = () => {
         })
 
         it("refuses a message with no card", async () => {
-            const { service } = await build(mockEntityManager(found([rowOf(null)])))
+            const { service } = await build(found([rowOf(null)]))
 
             await expect(service.decide(decision())).rejects.toMatchObject({ code: ThreadMessagesErrorCode.NoApproval })
         })
 
         it("refuses a member who is not among the people tagged, without asking the gate", async () => {
-            const { service, gate } = await build(mockEntityManager(found()))
+            const { service, gate } = await build(found())
 
             await expect(service.decide(decision("approve", "van"))).rejects.toMatchObject({
                 code: ThreadMessagesErrorCode.NotApprover,
@@ -146,7 +156,7 @@ const registerRefusals = () => {
         })
 
         it("tells the late clicker who already decided and when", async () => {
-            const { service, gate } = await build(mockEntityManager(found([rowOf(DECIDED)])))
+            const { service, gate } = await build(found([rowOf(DECIDED)]))
 
             await expect(service.decide(decision())).rejects.toMatchObject({
                 code: ThreadMessagesErrorCode.AlreadyDecided,
@@ -156,7 +166,7 @@ const registerRefusals = () => {
         })
 
         it("names nobody when a decided card has no name or instant", async () => {
-            const { service } = await build(mockEntityManager(found([rowOf({ ...PENDING, outcome: "rejected" })])))
+            const { service } = await build(found([rowOf({ ...PENDING, outcome: "rejected" })]))
 
             await expect(service.decide(decision())).rejects.toMatchObject({
                 code: ThreadMessagesErrorCode.AlreadyDecided,
@@ -165,7 +175,7 @@ const registerRefusals = () => {
         })
 
         it("refuses a card that expired", async () => {
-            const { service } = await build(mockEntityManager(found([rowOf({ ...PENDING, outcome: "expired" })])))
+            const { service } = await build(found([rowOf({ ...PENDING, outcome: "expired" })]))
 
             await expect(service.decide(decision())).rejects.toMatchObject({
                 code: ThreadMessagesErrorCode.ApprovalClosed,
@@ -177,7 +187,7 @@ const registerRefusals = () => {
 const registerDecisions = () => {
     describe("decide", () => {
         it("asks the gate as the member and settles the card with the member's vote and the gate's answer", async () => {
-            const { service, gate, members, outcomes } = await build(mockEntityManager(found()))
+            const { service, gate, members, outcomes } = await build(found())
 
             const message = await service.decide(decision())
 
@@ -195,7 +205,7 @@ const registerDecisions = () => {
         })
 
         it("settles a rejection the gate answered as rejected", async () => {
-            const { service, outcomes } = await build(mockEntityManager(found()), { decision: { status: "rejected" } })
+            const { service, outcomes } = await build(found(), { decision: { status: "rejected" } })
 
             await service.decide(decision("reject"))
 
@@ -209,7 +219,7 @@ const registerDecisions = () => {
         })
 
         it("only records the vote while the policy still waits for more people", async () => {
-            const { service, outcomes } = await build(mockEntityManager(found()), { decision: { status: "pending" } })
+            const { service, outcomes } = await build(found(), { decision: { status: "pending" } })
 
             const message = await service.decide(decision("approve", "nam"))
 
@@ -220,7 +230,7 @@ const registerDecisions = () => {
         })
 
         it("returns the card as settled when approval.resolved settled it while the gate was answering", async () => {
-            const { service, outcomes } = await build(mockEntityManager(found()), { locked: rowOf(DECIDED) })
+            const { service, outcomes } = await build(found(), { locked: rowOf(DECIDED) })
 
             const message = await service.decide(decision())
 

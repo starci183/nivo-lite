@@ -18,7 +18,7 @@ export class RateLimitProofModule {
 
 /** Each world opens its own primary connection and registers the real shared rate-limit store. */
 export const RATE_LIMIT_PROOF_MODULES: ReadonlyArray<DynamicModule> = [
-    DatabaseModule.register({ isGlobal: true, connections: [], typeParsers: appPgTypes }),
+    DatabaseModule.register({ isGlobal: true, connections: [], entities: [], typeParsers: appPgTypes }),
     HttpSecurityModule.register({
         isGlobal: true,
         trustedProxyHops: 1,

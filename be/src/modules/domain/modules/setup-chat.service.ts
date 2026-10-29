@@ -11,7 +11,7 @@ import { SetupMessagesService } from "@modules/domain/module-setup-messages"
 import type { SetupMessageRecord } from "@modules/domain/module-setup-messages"
 import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
 import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
-import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
+import { InstallationChangesService } from "./installation-changes.service"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
@@ -61,7 +61,7 @@ export class SetupChatService {
         private readonly modules: ModulesService,
         private readonly agents: AgentsService,
         private readonly events: EventsService,
-        private readonly sync: AgentSyncService,
+        private readonly changes: InstallationChangesService,
         private readonly cards: SetupCardsService,
         private readonly readiness: ModuleReadinessService,
     ) {}
@@ -204,7 +204,7 @@ export class SetupChatService {
             actor: member.displayName,
             summary: `${module.name[locale]} v${version}`,
         })
-        await this.sync.requestNow({ workspaceId, installationId: installation.id, force: false })
+        await this.changes.announceNow({ workspaceId, installationId: installation.id, force: false })
         return version
     }
 

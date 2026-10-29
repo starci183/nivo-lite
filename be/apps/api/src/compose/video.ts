@@ -1,5 +1,5 @@
 import type { DynamicModule } from "@nestjs/common"
-import { SUPABASE_STORAGE } from "@modules/integrations/supabase"
+import { STORAGE_ASSETS } from "@modules/integrations/object-storage"
 import { VideoModule } from "@modules/domain/video"
 import { VideoProjectVersionsModule } from "@modules/domain/video-project-versions"
 import { VideoProjectsModule } from "@modules/domain/video-projects"
@@ -14,5 +14,5 @@ export const videoModules = (options: ApiOptions): Array<DynamicModule> => [
     VideoRendersModule.register({ isGlobal: true }),
     VideoProjectsModule.register({ isGlobal: true }),
     VideoProjectVersionsModule.register({ isGlobal: true }),
-    VideoModule.register({ isGlobal: true, ...options.video, assets: SUPABASE_STORAGE }),
+    VideoModule.register({ isGlobal: true, ...options.video, assets: STORAGE_ASSETS }),
 ]

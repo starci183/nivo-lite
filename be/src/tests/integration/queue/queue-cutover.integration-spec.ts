@@ -1,20 +1,28 @@
 import assert from "node:assert/strict"
 import { JobRunnerService } from "@modules/platform/jobs"
 import type { FencedProcessor } from "@modules/platform/jobs"
-import type {
-    CutoverClaim,
-    CutoverFunctions,
-    CutoverQueueList,
-    CutoverQueues,
-    CutoverRow,
-} from "../../fixtures/persistence/queue-cutover.rows"
-import * as statements from "../../fixtures/persistence/queue-cutover.sql"
+import type { CutoverClaim, CutoverQueues, CutoverRow } from "../../fixtures/persistence/queue-cutover.rows"
 import { worldIds } from "../../world/lite-world.service"
 import type { LiteWorld } from "../../world/lite-world.service"
 import { CONTRACT_MIGRATION, EXPAND_MIGRATION, cutoverSandbox } from "../../world/queue-cutover-sandbox.service"
 import { redisJobsModules } from "../../world/redis-capabilities.options"
 import { startQueueRelay, transportOf, waitForProof } from "../../world/redis-proof.service"
 import { useTestWorld } from "../../world/use-test-world"
+import {
+    seedCutoverOutbox,
+    seedCutoverRaw,
+    cutoverRows,
+    originalCutoverRows,
+    cutoverClaims,
+    cutoverQueues,
+    lateCutoverSend,
+    contractCutoverSend,
+    contractEnqueue,
+    pgmqAfterContract,
+    legacyCutoverMarker,
+    legacyAckFence,
+    cutoverFunctions,
+} from "../../world/queue-cutover-database.service"
 
 /** The seeded scenarios, by name, in a stable order. */
 const proofs = (rows: ReadonlyArray<CutoverRow>, state?: string): Array<string> =>
@@ -22,14 +30,11 @@ const proofs = (rows: ReadonlyArray<CutoverRow>, state?: string): Array<string> 
 
 const ordered = (values: ReadonlyArray<string>): Array<string> => values.toSorted((a, b) => a.localeCompare(b))
 
-const rowsOf = (world: LiteWorld): Promise<Array<CutoverRow>> =>
-    world.db.primary.query<Array<CutoverRow>>(statements.CUTOVER_ROWS)
+const rowsOf = (world: LiteWorld): Promise<Array<CutoverRow>> => cutoverRows(world.db.primary)
 
-const claimsOf = (world: LiteWorld): Promise<Array<CutoverClaim>> =>
-    world.db.primary.query<Array<CutoverClaim>>(statements.CUTOVER_CLAIMS)
+const claimsOf = (world: LiteWorld): Promise<Array<CutoverClaim>> => cutoverClaims(world.db.primary)
 
-const queuesOf = (world: LiteWorld): Promise<Array<CutoverQueues>> =>
-    world.db.primary.query<Array<CutoverQueues>>(statements.CUTOVER_PGMQ)
+const queuesOf = (world: LiteWorld): Promise<Array<CutoverQueues>> => cutoverQueues(world.db.primary)
 
 /** After the expand migration every message is an outbox row to publish, nothing is left in a job queue and the old consumers are fenced. */
 const expectExpanded = async (world: LiteWorld, original: ReadonlyArray<CutoverRow>): Promise<void> => {
@@ -43,7 +48,7 @@ const expectExpanded = async (world: LiteWorld, original: ReadonlyArray<CutoverR
     expect(expanded.filter((row) => row.state === "running").every((row) => row.run_lease_until instanceof Date)).toBe(
         true,
     )
-    expect(await world.db.primary.query(statements.LEGACY_ACK_FENCE)).toEqual([{ body: "select false" }])
+    expect(await legacyAckFence(world.db.primary)).toEqual([{ body: "select false" }])
     expect(await queuesOf(world)).toEqual([{ pending: 0, archived: 2, event_bus: 1 }])
     expect(expanded.filter((row) => original.some((before) => before.id === row.id)).map((row) => row.id)).toEqual(
         original.map((row) => row.id),
@@ -52,8 +57,8 @@ const expectExpanded = async (world: LiteWorld, original: ReadonlyArray<CutoverR
 
 /** Work sent by a not yet drained producer lands in the outbox, and the raw ticks keep their fenced claims under the new delivery id. */
 const expectLateWork = async (world: LiteWorld, original: ReadonlyArray<CutoverClaim>): Promise<void> => {
-    await world.db.primary.query(statements.LATE_CUTOVER_SEND)
-    await world.db.primary.query(statements.LEGACY_CUTOVER_MARKER)
+    await lateCutoverSend(world.db.primary)
+    await legacyCutoverMarker(world.db.primary)
     const rows = await rowsOf(world)
     expect(rows).toHaveLength(10)
     expect(rows.find((row) => row.proof === "late")).toMatchObject({ state: "queued", sent_at: null })
@@ -68,14 +73,10 @@ const expectLateWork = async (world: LiteWorld, original: ReadonlyArray<CutoverC
 /** The contract migration drops the legacy functions and every pgmq job queue: a late legacy send is refused, a producer on the outbox still lands its work and the event bus stays. */
 const expectContracted = async (world: LiteWorld): Promise<void> => {
     const before = await rowsOf(world)
-    expect(await world.db.primary.query<Array<CutoverFunctions>>(statements.CUTOVER_FUNCTIONS)).toEqual([
-        { legacy_read: null, legacy_ack: null },
-    ])
-    await expect(world.db.primary.query(statements.CONTRACT_CUTOVER_SEND)).rejects.toThrow()
-    expect(await world.db.primary.query<Array<CutoverQueueList>>(statements.PGMQ_AFTER_CONTRACT)).toEqual([
-        { queues: ["cutover_bus_events"] },
-    ])
-    await world.db.primary.query(statements.CONTRACT_ENQUEUE)
+    expect(await cutoverFunctions(world.db.primary)).toEqual([{ legacy_read: null, legacy_ack: null }])
+    await expect(contractCutoverSend(world.db.primary)).rejects.toThrow()
+    expect(await pgmqAfterContract(world.db.primary)).toEqual([{ queues: ["cutover_bus_events"] }])
+    await contractEnqueue(world.db.primary)
     const after = await rowsOf(world)
     expect(after).toHaveLength(11)
     expect(after.find((row) => row.proof === "late-contract")).toMatchObject({ state: "queued", sent_at: null })
@@ -110,13 +111,13 @@ describe("Queue pgmq to BullMQ cutover (private local Supabase and Redis)", () =
     const sandbox = cutoverSandbox()
     const world = useTestWorld({ modules: redisJobsModules(`cutover-${worldIds.next()}`, 5000), sandbox })
     beforeAll(async () => {
-        await world.db.primary.query(statements.SEED_CUTOVER_OUTBOX)
-        await world.db.primary.query(statements.SEED_CUTOVER_RAW)
+        await seedCutoverOutbox(world.db.primary)
+        await seedCutoverRaw(world.db.primary)
     })
 
     it("migrates queued, in-flight and archived work before dropping legacy functions, preserving identities and fenced progress", async () => {
         const originalClaims = await claimsOf(world)
-        const originalRows = await world.db.primary.query<Array<CutoverRow>>(statements.ORIGINAL_CUTOVER_ROWS)
+        const originalRows = await originalCutoverRows(world.db.primary)
         const processed: Array<string> = []
         const failed: Array<string> = []
 
@@ -151,8 +152,6 @@ describe("Queue pgmq to BullMQ cutover (private local Supabase and Redis)", () =
                 current_step: "preserved-checkpoint",
             }),
         ])
-        expect(await world.db.primary.query<Array<CutoverQueueList>>(statements.PGMQ_AFTER_CONTRACT)).toEqual([
-            { queues: ["cutover_bus_events"] },
-        ])
+        expect(await pgmqAfterContract(world.db.primary)).toEqual([{ queues: ["cutover_bus_events"] }])
     }, 90000)
 })

@@ -4,7 +4,7 @@ import { ResetPasswordPageBase } from "./component"
 
 /** What the route passes through: the query of the reset URL. */
 interface ResetPasswordPageProps {
-    readonly searchParams: Promise<{ readonly error?: string }>
+    readonly searchParams: Promise<{ readonly error?: string; readonly token?: string }>
 }
 
 /** The document title of the page. */
@@ -13,8 +13,13 @@ export const resetPasswordMetadata = async (): Promise<Metadata> => {
     return { title: t("resetTitle") }
 }
 
-/** Set a new password. The recovery link leaves a session; with an error code the link is expired (the form also checks the session). */
+/** Set a new password. The recovery link carries its one-time token; with an error code, or without a token, the link is expired. */
 export const ResetPasswordPage = async (props: ResetPasswordPageProps) => {
-    const { error } = await props.searchParams
-    return <ResetPasswordPageBase props={{ expired: error !== undefined && error !== "" }} />
+    const { error, token } = await props.searchParams
+    const hasToken = token !== undefined && token !== ""
+    return (
+        <ResetPasswordPageBase
+            props={{ expired: (error !== undefined && error !== "") || !hasToken, token: token ?? "" }}
+        />
+    )
 }

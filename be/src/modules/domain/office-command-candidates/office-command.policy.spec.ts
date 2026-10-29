@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 
 import type { ModuleCommand } from "@modules/domain/decisions"
 
-import type { ProposedCommand } from "@modules/integrations/deepseek"
+import type { ProposedCommand } from "@modules/domain/ai-tasks"
 
 import { DomainError } from "@modules/platform/errors"
 

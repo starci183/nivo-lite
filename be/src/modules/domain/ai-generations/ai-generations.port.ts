@@ -1,12 +1,6 @@
 import type { RunUsage } from "@modules/integrations/openclaw"
 import type { Locale } from "@modules/platform/i18n"
 
-/** Applies the result of an already-run generation without making another provider call. */
-export interface GenerationCompletion {
-    /** Dispatches the trusted generation to its owning application. */
-    completeGeneration(workspaceId: string, generationId: string): Promise<void>
-}
-
 /** What the plan allowance says about a workspace that is over it. */
 export interface QuotaBlock {
     /** The sentence to show the person, in the asked language. */

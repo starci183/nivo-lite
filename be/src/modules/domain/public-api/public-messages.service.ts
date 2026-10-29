@@ -4,12 +4,10 @@ import { ApiKeysService } from "@modules/domain/api-keys"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { PublicApiQueue } from "@modules/queues/public-api"
 import { PublicApiError, PublicApiErrorCode } from "./errors/public-api.error"
-import type { AcceptMessageParams, AcceptedMessage, MessageRequestBody, RecordedRequest } from "./public-api.contracts"
+import type { AcceptMessageParams, AcceptedMessage, MessageRequestBody } from "./public-api.contracts"
 import { dedupePrefix, messageDedupeSuffix } from "./public-api.policy"
-import type { ConversationsRow } from "./persistence/public-api.rows"
-import { INSERT_REQUEST, SELECT_CONVERSATION, SELECT_CONVERSATION_OF_LEAD } from "./persistence/public-api.sql"
-
-type ConversationRow = Pick<ConversationsRow, "id" | "lead_id">
+import { PublicApiLedgerService } from "./public-api-ledger.service"
+import { PublicConversationsService } from "./public-conversations.service"
 
 @Injectable()
 /** The messages the public API asks the chatbot to send, reached only through the shared primary EntityManager; the sending itself is a job decided by the owner's authority rule. */
@@ -18,6 +16,8 @@ export class PublicMessagesService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly queue: PublicApiQueue,
         private readonly keys: ApiKeysService,
+        private readonly ledger: PublicApiLedgerService,
+        private readonly conversations: PublicConversationsService,
     ) {}
 
     /**
@@ -32,10 +32,10 @@ export class PublicMessagesService {
             throw new PublicApiError({ code: PublicApiErrorCode.TargetMissing })
         }
         return this.entityManager.transaction(async (tx) => {
-            const [conversation] =
+            const conversation =
                 conversationId === ""
-                    ? await tx.query<Array<ConversationRow>>(SELECT_CONVERSATION_OF_LEAD, [who.workspaceId, leadId])
-                    : await tx.query<Array<ConversationRow>>(SELECT_CONVERSATION, [who.workspaceId, conversationId])
+                    ? await this.conversations.ofLead(who.workspaceId, leadId, tx)
+                    : await this.conversations.find(who.workspaceId, conversationId, tx)
             if (conversation === undefined) throw new PublicApiError({ code: PublicApiErrorCode.ConversationNotFound })
             const body: MessageRequestBody = {
                 conversationId: conversation.id,
@@ -44,14 +44,17 @@ export class PublicMessagesService {
                 requireApproval: params.requireApproval === true,
                 source: `api:${who.name}`,
             }
-            const [request] = await tx.query<Array<RecordedRequest>>(INSERT_REQUEST, [
-                who.workspaceId,
-                who.keyId,
-                "message",
-                dedupePrefix("message", who.keyId),
-                messageDedupeSuffix(params.idempotencyKey, conversation.id),
-                JSON.stringify(body),
-            ])
+            const request = await this.ledger.record(
+                {
+                    workspaceId: who.workspaceId,
+                    keyId: who.keyId,
+                    kind: "message",
+                    prefix: dedupePrefix("message", who.keyId),
+                    suffix: messageDedupeSuffix(params.idempotencyKey, conversation.id),
+                    body,
+                },
+                tx,
+            )
             if (request === undefined) throw new PublicApiError({ code: PublicApiErrorCode.NotWritten })
             if (request.inserted) {
                 await this.queue.enqueueRequest({ requestId: request.id, workspaceId: who.workspaceId }, tx)

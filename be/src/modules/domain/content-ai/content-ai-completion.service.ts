@@ -11,6 +11,8 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { isDomainError } from "@modules/platform/errors"
+import { InjectInbox } from "@modules/platform/inbox"
+import type { Inbox } from "@modules/platform/inbox"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { idsOf, isBrandContext, isContentMediaRef, isPlannedSlot, numeric, objectOf } from "./content-ai-context.policy"
@@ -23,6 +25,7 @@ import {
     trimmedText,
 } from "./content-ai-prompt.policy"
 import { isPlanChannel } from "./content-ai-planning.policy"
+import type { InboxClaim } from "./content-ai.contracts"
 import { ContentAiError, ContentAiErrorCode } from "./errors/content-ai.error"
 import { ContentAiLogEvent } from "./content-ai.log-events"
 
@@ -33,6 +36,7 @@ export class ContentAiCompletionService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
+        @InjectInbox() private readonly inbox: Inbox,
         private readonly generations: GenerationsService,
         private readonly rules: AuthorityRulesService,
         private readonly editor: ContentEditorService,
@@ -42,14 +46,18 @@ export class ContentAiCompletionService {
         private readonly events: EventsService,
     ) {}
 
-    /** Called by the fenced generation step; unrelated generations are ignored. */
-    async complete(workspaceId: string, generationId: string): Promise<void> {
+    /**
+     * The `content` reactor of `ai_generation_completed`; unrelated generations are ignored. The delivery is claimed in the inbox
+     * in the transaction that applies the result, so a redelivery applies nothing twice.
+     */
+    async complete(workspaceId: string, generationId: string, claim: InboxClaim): Promise<void> {
         const state = await this.generations.state(workspaceId, generationId)
         if (state === null || !["content_plan", "content_draft"].includes(state.purpose)) return
         const childContext = objectOf(state.input.context)
         const rootId = trimmedText(childContext.rootId) || generationId
         try {
             await this.entityManager.transaction(async (tx) => {
+                if (!(await this.inbox.claim(claim.consumer, claim.dedupeKey, tx))) return
                 const root = await this.generations.state(workspaceId, rootId, tx, true)
                 if (
                     root === null ||

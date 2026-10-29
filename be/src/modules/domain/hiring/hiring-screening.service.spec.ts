@@ -15,7 +15,7 @@ import { HiringDataService } from "./hiring-data.service"
 import { HiringScreeningService } from "./hiring-screening.service"
 import { HiringTextService } from "./hiring-text.service"
 import { HiringLogEvent } from "./hiring.log-events"
-import { SET_SCREENED } from "./persistence/hiring.sql"
+const SET_SCREENED = "SELECT * FROM public.hiring_candidate_screened($1, $2, $3, $4, $5, $6, $7, $8)"
 const candidateOf = builder<CandidateRecord>(CANDIDATE)
 const jobOf = builder<JobRecord>(JOB)
 
@@ -374,7 +374,7 @@ describe("HiringScreeningService", () => {
         })
 
         it("stores only complete reasons and string questions and joins the summary with questions", async () => {
-            const em = mockEntityManager({ query: [SET_SCREENED, [{ value: true }]] })
+            const em = mockEntityManager({ query: [SET_SCREENED, [{ hiring_candidate_screened: true }]] })
             const { service } = await build(em)
             const reasons = [
                 { criterion: "Skills", status: "met", note: "Confirmed" },

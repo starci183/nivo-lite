@@ -1,10 +1,11 @@
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
-import { WorkspacePruneService } from "@modules/domain/workspaces"
+import { WorkspaceEntity, WorkspacePruneService } from "@modules/domain/workspaces"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { WorkspaceCleanupErrorCode } from "./errors/workspace-cleanup.error"
 import { CLEANUP_RECEIPT_PREFIX } from "./messages/workspace-cleanup.messages"
-import { LIST_KEPT_USERS, LIST_USER_REFERENCES, LIST_WORKSPACE_FOOTPRINTS } from "./persistence/workspace-cleanup.sql"
 import type { UserReferenceRow, WorkspaceFootprintRow } from "./persistence/workspace-cleanup.rows"
 import type { CleanupCommand, CleanupReport } from "./workspace-cleanup.contracts"
 import { CLEANUP_ACCOUNTS, WORKSPACE_CLEANUP_OPTIONS } from "./workspace-cleanup.decorators"
@@ -19,6 +20,9 @@ const stringLike = (text: string): unknown => expect.stringContaining(text)
 
 /** The match-anything matcher, typed `unknown` so it flows into any slot. */
 const anything = (): unknown => expect.anything()
+
+const WORKSPACE_FOOTPRINT = "SELECT * FROM public.workspace_footprint($1)"
+const WORKSPACE_USER_REFERENCES = "SELECT * FROM public.workspace_user_references($1, $2)"
 
 const HAKUEN = "cd312306-c950-4328-8b88-022553070ae6"
 const SPA = "11111111-1111-4111-8111-111111111111"
@@ -44,13 +48,31 @@ const referenceRows = (fixture: Fixture): ReadonlyArray<UserReferenceRow> =>
         .map((user) => ({ user_id: user.id, refs: fixture.refs?.[user.id] ?? CLEAN }))
 
 const build = async (fixture: Fixture = {}) => {
+    const workspaces = fixture.workspaces ?? [KEPT_ROW, SPA_ROW]
+    const footprints = workspaces
+        .filter((row) => row.footprint !== null)
+        .map((row) => [WORKSPACE_FOOTPRINT, [{ workspace_footprint: row.footprint }]] as const)
+    const references = referenceRows(fixture).map(
+        (row) => [WORKSPACE_USER_REFERENCES, [{ workspace_user_references: row.refs }]] as const,
+    )
+    const calls: ReadonlyArray<readonly [string, unknown]> = [...footprints, ...references]
     const em = mockEntityManager({
-        query: [
-            [LIST_WORKSPACE_FOOTPRINTS, fixture.workspaces ?? [KEPT_ROW, SPA_ROW]],
-            [LIST_KEPT_USERS, fixture.kept ?? KEPT],
-            [LIST_USER_REFERENCES, referenceRows(fixture)],
+        find: [
+            WorkspaceEntity,
+            workspaces.map((row) => Object.assign(new WorkspaceEntity(), { id: row.id, name: row.name })),
         ],
+        query: calls.length === 0 ? [["no statement expected", []]] : calls,
     })
+    const keptRows = fixture.kept ?? KEPT
+    const builders: Array<FakeQueryBuilder> = []
+    em.createQueryBuilder.mockImplementation((() => {
+        // the members read first, the owners read second, per survey
+        const fake = fakeQueryBuilder({
+            getRawMany: builders.length % 2 === 0 ? keptRows.slice(1) : keptRows.slice(0, 1),
+        })
+        builders.push(fake)
+        return fake.builder
+    }) as never)
     const prune = mock<WorkspacePruneService>()
     const accounts = mock<CleanupAccounts>()
     accounts.listUsers.mockResolvedValue({ data: { users: fixture.users ?? [OWNER, STAFF, ORPHAN] }, error: null })
@@ -65,7 +87,7 @@ const build = async (fixture: Fixture = {}) => {
             { provide: WORKSPACE_CLEANUP_OPTIONS, useValue: { accounts: CLEANUP_ACCOUNTS, print } },
         ],
     }).compile()
-    return { cleanup: moduleRef.get(WorkspaceCleanupService), em, prune, accounts, print }
+    return { cleanup: moduleRef.get(WorkspaceCleanupService), em, prune, accounts, print, builders }
 }
 
 const refusedWith = (code: WorkspaceCleanupErrorCode, params?: Record<string, string | number>) =>
@@ -103,7 +125,7 @@ describe("WorkspaceCleanupService dry run", () => {
     })
 
     it("prints the dry-run receipt with its digest and deletes nothing", async () => {
-        const { cleanup, em, prune, accounts, print } = await build()
+        const { cleanup, em, prune, accounts, print, builders } = await build()
 
         const report = await cleanup.run({ keep: HAKUEN, dryRun: true })
 
@@ -118,9 +140,20 @@ describe("WorkspaceCleanupService dry run", () => {
             allowKeptCascade: false,
         })
         expect(print).toHaveBeenCalledWith(receiptLineOf(report))
-        expect(em.query).toHaveBeenCalledWith(LIST_WORKSPACE_FOOTPRINTS, [[HAKUEN]])
-        expect(em.query).toHaveBeenCalledWith(LIST_KEPT_USERS, [[HAKUEN]])
-        expect(em.query).toHaveBeenCalledWith(LIST_USER_REFERENCES, [[ORPHAN.id], [HAKUEN]])
+        expect(em.find).toHaveBeenCalledWith(WorkspaceEntity, {
+            select: { id: true, name: true },
+            order: { id: "ASC" },
+            take: 1000,
+        })
+        expect(em.query).toHaveBeenCalledWith(WORKSPACE_FOOTPRINT, [SPA])
+        expect(em.query).not.toHaveBeenCalledWith(WORKSPACE_FOOTPRINT, [HAKUEN])
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(2)
+        expect(builders.map((fake) => fake.callsOf("where"))).toEqual([
+            [["m.workspace_id = ANY(CAST(:keep AS uuid[]))", { keep: [HAKUEN] }]],
+            [["w.id = ANY(CAST(:keep AS uuid[]))", { keep: [HAKUEN] }]],
+        ])
+        expect(builders.map((fake) => fake.callsOf("limit"))).toEqual([[[5000]], [[5000]]])
+        expect(em.query).toHaveBeenCalledWith(WORKSPACE_USER_REFERENCES, [ORPHAN.id, [HAKUEN]])
         expect(prune.prune).not.toHaveBeenCalled()
         expect(accounts.deleteUser).not.toHaveBeenCalled()
     })
@@ -131,7 +164,7 @@ describe("WorkspaceCleanupService dry run", () => {
         const report = await cleanup.run({ keep: HAKUEN, dryRun: true })
 
         expect(report.receipt.orphanUsers).toEqual([])
-        expect(em.query).not.toHaveBeenCalledWith(LIST_USER_REFERENCES, anything())
+        expect(em.query).not.toHaveBeenCalledWith(WORKSPACE_USER_REFERENCES, anything())
     })
 })
 

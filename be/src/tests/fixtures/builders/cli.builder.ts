@@ -4,7 +4,7 @@ import { Secret } from "@modules/platform/config"
 import { HTTP_CLIENT, HttpError, HttpErrorCode } from "@modules/platform/http"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QueueModule } from "@modules/platform/queue"
-import { SupabaseModule } from "@modules/integrations/supabase"
+import { ObjectStorageModule } from "@modules/integrations/object-storage"
 
 const PRIMARY_DATA_SOURCE = "primaryDataSource"
 const wiringIds = fakeIds()
@@ -22,19 +22,37 @@ const wiringSettings = {
         url: new Secret(`postgresql://wiring:${wiringIds.next()}@database.invalid:5432/wiring`),
         schema: "public",
     },
-    supabase: { url: "https://supabase.invalid", serviceRoleKey: new Secret("wiring-fixture") },
-    aiPool: {
-        chat: [
-            { id: "deepseek", baseUrl: "https://llm.invalid", keys: [], model: "wiring-chat", smartModel: null },
-            { id: "openrouter", baseUrl: "https://llm.invalid", keys: [], model: "wiring-chat", smartModel: null },
-        ],
-        embedding: {
-            id: "embeddings",
-            baseUrl: "https://llm.invalid",
-            keys: [],
-            model: "wiring-embedding",
-            smartModel: null,
-        },
+    passport: {
+        privateKey: new Secret("wiring-fixture"),
+        publicKey: "wiring-fixture",
+        keyId: undefined,
+        issuer: "wiring",
+        returnOrigin: "https://site.invalid",
+        audience: "authenticated",
+        accessTtlSeconds: 900,
+        bcryptCost: 4,
+        google: null,
+    },
+    identityAuth: {
+        webOrigin: "https://site.invalid",
+        cookieDomain: undefined,
+        refreshTtlSeconds: 60,
+        resetTtlSeconds: 60,
+        inviteTtlSeconds: 60,
+        loginAttempts: 5,
+        resetAttempts: 5,
+        attemptWindowMs: 60000,
+    },
+    mail: { allowPrivateHosts: true, platform: null, helloName: "wiring.invalid" },
+    ai: { gatewayUrl: null, virtualKey: null, chatModel: "work", embeddingModel: "embed" },
+    storage: {
+        endpoint: "https://storage.invalid:9000",
+        region: "us-east-1",
+        accessKey: new Secret("wiring-fixture"),
+        secretKey: new Secret("wiring-fixture"),
+        bucketPrefix: "wiring",
+        publicUrl: "https://storage.invalid:9000",
+        timeoutMs: 1000,
     },
     channelConnections: {
         channelTokenKey: new Secret("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="),
@@ -46,8 +64,11 @@ const wiringSettings = {
 
 const options = {
     connections: [wiringSettings.database],
-    supabase: wiringSettings.supabase,
-    aiPool: wiringSettings.aiPool,
+    passport: wiringSettings.passport,
+    identityAuth: wiringSettings.identityAuth,
+    mail: wiringSettings.mail,
+    storage: wiringSettings.storage,
+    ai: wiringSettings.ai,
     channelConnections: wiringSettings.channelConnections,
     channelSetup: wiringSettings.channelSetup,
     n8nHost: { host: undefined, user: "wiring", sshKey: undefined, knownHosts: undefined, container: "wiring" },
@@ -90,20 +111,19 @@ const resourceDoubles = (): ReadonlyMap<string, unknown> => {
         ["platform.database.primary-entity-manager", manager],
         ["platform.http.client", { request: refuseWiringOperation }],
         [
-            "integrations.supabase.admin-client",
+            "integrations.object-storage.client",
             {
-                auth: {
-                    getUserById: refuseWiringOperation,
-                    inviteUserByEmail: refuseWiringOperation,
-                    listUsers: refuseWiringOperation,
-                    createUser: refuseWiringOperation,
-                    updateUserById: refuseWiringOperation,
-                    deleteUser: refuseWiringOperation,
-                },
-                storage: { from: refuseWiringOperation },
+                put: refuseWiringOperation,
+                get: refuseWiringOperation,
+                head: refuseWiringOperation,
+                remove: refuseWiringOperation,
+                list: refuseWiringOperation,
+                walk: refuseWiringOperation,
+                presignGet: refuseWiringOperation,
+                presignPut: refuseWiringOperation,
+                ensureBucket: refuseWiringOperation,
             },
         ],
-        ["integrations.supabase.public-client", { sendSignInLink: refuseWiringOperation }],
         ["platform.queue.transport", transport],
         ["BullmqQueueTransportClient", transport],
     ])
@@ -116,12 +136,12 @@ const resourceName = (token: InjectionToken): string | undefined => {
     return undefined
 }
 
-/** Reads private Supabase and producer-only queue tokens through their public registrations. */
+/** Reads private object-storage and producer-only queue tokens through their public registrations. */
 const resourceOverrides = (): Array<{ token: InjectionToken; value: unknown }> => {
     const resources = resourceDoubles()
     const overrides: Array<{ token: InjectionToken; value: unknown }> = []
     const definitions = [
-        SupabaseModule.register(wiringSettings.supabase),
+        ObjectStorageModule.register(wiringSettings.storage),
         QueueModule.register({
             enabled: false,
             redisHost: "redis.invalid",

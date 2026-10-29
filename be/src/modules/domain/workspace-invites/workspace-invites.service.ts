@@ -1,50 +1,53 @@
 import type { CredentialPrincipal } from "@modules/domain/identity"
 import { Injectable } from "@nestjs/common"
+import { IsNull, MoreThan } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { EntitlementsService } from "@modules/domain/billing"
 import { EventsService } from "@modules/domain/events"
+import { StaffEntity } from "@modules/domain/staff"
+import { WorkspaceEntity } from "@modules/domain/workspaces"
 import { InjectAccountDirectory, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { AccountDirectory, MemberListing } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { unwrapOutcome } from "@modules/platform/primitives"
 import { WorkspaceInvitesError, WorkspaceInvitesErrorCode } from "./errors/workspace-invites.error"
 import { isEmailAddress, judgeInvite, normaliseEmail } from "./invite.policy"
-import type {
-    ChangedInviteRow,
-    HeldRow,
-    InvitePreviewRow,
-    InviteRow,
-    MintedTokenRow,
-    PendingInviteRow,
-} from "./persistence/workspace-invites.rows"
-import {
-    FIND_INVITE_BY_TOKEN,
-    FIND_STAFF_INVITE,
-    INSERT_INVITE,
-    LIST_PENDING_INVITES,
-    MARK_INVITE_ACCEPTED,
-    MINT_TOKEN,
-    PREVIEW_INVITE,
-    REVOKE_INVITE,
-    REVOKE_PENDING_FOR_EMAIL,
-    ROTATE_INVITE,
-} from "./persistence/workspace-invites.sql"
+import { hashInviteToken } from "./invite-token.policy"
+import { WorkspaceInviteEntity } from "./persistence/entities"
 import type {
     AcceptedInvite,
+    ChangedInvite,
     InviteAcceptor,
     InviteDeliveryPort,
     InvitePreview,
     InviteRequest,
     InviteResult,
     InviteState,
+    MintedToken,
     PendingInvite,
 } from "./workspace-invites.contracts"
 import type { WorkspaceInvitesOptions } from "./workspace-invites.options"
 import { InjectInviteDelivery, InjectWorkspaceInvitesOptions } from "./workspace-invites.port"
 
 const DAY_MS = 86_400_000
+const PENDING_INVITES_MAX = 200
+
+/** The preview as the join selects it. */
+interface InvitePreviewRaw {
+    /** The name of the workspace the invitation is for. */
+    readonly workspace_name: string
+    /** The invited address. */
+    readonly email: string
+    /** The role it grants. */
+    readonly role: string
+    /** The name of the staff row it links, when any. */
+    readonly staff_name: string | null
+    /** `pending`, `revoked`, `accepted` or `expired`. */
+    readonly state: string
+}
+
 const MANAGERS = ["owner", "manager"] as const
 
 @Injectable()
@@ -64,24 +67,34 @@ export class WorkspaceInvitesService {
     /** The invitations of the caller's workspace that can still be accepted; owner and manager only. */
     async listPending(userId: string, workspaceId: string): Promise<ReadonlyArray<PendingInvite>> {
         await this.members.require(userId, workspaceId, MANAGERS)
-        const rows = await this.entityManager.query<Array<PendingInviteRow>>(LIST_PENDING_INVITES, [
-            workspaceId,
-            this.clock.now(),
-        ])
+        const rows = await this.entityManager.find(WorkspaceInviteEntity, {
+            select: { id: true, email: true, role: true, staffId: true, createdAt: true, expiresAt: true },
+            where: {
+                workspaceId,
+                acceptedAt: IsNull(),
+                revokedAt: IsNull(),
+                expiresAt: MoreThan(this.clock.now()),
+            },
+            order: { createdAt: "DESC" },
+            take: PENDING_INVITES_MAX,
+        })
         return rows.map((row) => ({
             id: row.id,
             email: row.email,
             role: row.role,
-            staffId: row.staff_id,
-            createdAt: new Date(row.created_at).toISOString(),
-            expiresAt: new Date(row.expires_at).toISOString(),
+            staffId: row.staffId,
+            createdAt: row.createdAt.toISOString(),
+            expiresAt: row.expiresAt.toISOString(),
         }))
     }
 
     /** Issues an invitation and emails it; the token is returned once, inside the link. Owner and manager only. */
     async create(userId: string, workspaceId: string, request: InviteRequest): Promise<InviteResult> {
         const actor = await this.members.require(userId, workspaceId, MANAGERS)
-        await this.entitlements.requireRoomForInvite(workspaceId)
+        const pending = await this.entityManager.count(WorkspaceInviteEntity, {
+            where: { workspaceId, acceptedAt: IsNull(), revokedAt: IsNull(), expiresAt: MoreThan(this.clock.now()) },
+        })
+        await this.entitlements.requireRoomForInvite(workspaceId, pending)
         const email = normaliseEmail(request.email)
         if (!isEmailAddress(email)) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.EmailInvalid })
         const people = await this.members.list(userId, workspaceId)
@@ -90,19 +103,30 @@ export class WorkspaceInvitesService {
         }
         const staffId = request.staffId ?? null
         if (staffId !== null) await this.requireStaffFree(workspaceId, staffId, email, people)
-        const [minted] = await this.entityManager.query<[MintedTokenRow]>(MINT_TOKEN)
+        const minted = await this.mintToken()
         await this.entityManager.transaction(async (scoped) => {
             const now = this.clock.now()
-            await scoped.query(REVOKE_PENDING_FOR_EMAIL, [workspaceId, email, now])
-            await scoped.query(INSERT_INVITE, [
+            await scoped
+                .createQueryBuilder(WorkspaceInviteEntity, "i")
+                .update()
+                .set({ revokedAt: now })
+                .where(
+                    "workspace_id = :workspaceId AND lower(email) = :email AND accepted_at IS NULL AND revoked_at IS NULL",
+                    {
+                        workspaceId,
+                        email,
+                    },
+                )
+                .execute()
+            await scoped.insert(WorkspaceInviteEntity, {
                 workspaceId,
                 email,
-                request.role,
+                role: request.role,
                 staffId,
-                minted.token,
-                userId,
-                this.expiry(now),
-            ])
+                tokenHash: hashInviteToken(minted.token),
+                invitedBy: userId,
+                expiresAt: this.expiry(now),
+            })
         })
         const delivery = await this.delivery.deliverInvite(email, this.redirectOf(minted.token))
         await this.events.record({
@@ -138,11 +162,17 @@ export class WorkspaceInvitesService {
     /** Revokes a pending invitation: its link stops working at once. */
     async revoke(userId: string, workspaceId: string, inviteId: string): Promise<void> {
         const actor = await this.members.require(userId, workspaceId, MANAGERS)
-        const [revoked] = await this.entityManager.query<Array<ChangedInviteRow>>(REVOKE_INVITE, [
-            inviteId,
-            workspaceId,
-            this.clock.now(),
-        ])
+        const result = await this.entityManager
+            .createQueryBuilder(WorkspaceInviteEntity, "i")
+            .update()
+            .set({ revokedAt: this.clock.now() })
+            .where("id = :inviteId AND workspace_id = :workspaceId AND accepted_at IS NULL AND revoked_at IS NULL", {
+                inviteId,
+                workspaceId,
+            })
+            .returning("id, email, role")
+            .execute()
+        const [revoked] = result.raw as Array<ChangedInvite>
         if (revoked === undefined) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.NotFound })
         await this.events.record({
             workspaceId,
@@ -154,9 +184,9 @@ export class WorkspaceInvitesService {
 
     /** Resolves a preview token to its stored invitation, including historical states. */
     async authenticateLink(token: string): Promise<CredentialPrincipal> {
-        const [row] = await this.entityManager.query<Array<InviteRow>>(FIND_INVITE_BY_TOKEN, [token])
-        if (row === undefined) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.Invalid })
-        return { kind: "link-token", subject: row.id, workspaceId: row.workspace_id }
+        const row = await this.findByToken(token)
+        if (row === null) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.Invalid })
+        return { kind: "link-token", subject: row.id, workspaceId: row.workspaceId }
     }
 
     /** What the person sees before accepting; a token that matches nothing is refused. */
@@ -170,7 +200,25 @@ export class WorkspaceInvitesService {
             )
                 throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.Invalid })
         }
-        const [row] = await this.entityManager.query<Array<InvitePreviewRow>>(PREVIEW_INVITE, [token, this.clock.now()])
+        const row = await this.entityManager
+            .createQueryBuilder(WorkspaceInviteEntity, "i")
+            .innerJoin(WorkspaceEntity, "w", "w.id = i.workspace_id")
+            .leftJoin(StaffEntity, "s", "s.id = i.staff_id")
+            .select("w.name", "workspace_name")
+            .addSelect("i.email", "email")
+            .addSelect("i.role", "role")
+            .addSelect("s.name", "staff_name")
+            .addSelect(
+                `CASE WHEN i.revoked_at IS NOT NULL THEN 'revoked'
+                WHEN i.accepted_at IS NOT NULL THEN 'accepted'
+                WHEN i.expires_at < :now THEN 'expired'
+                ELSE 'pending' END`,
+                "state",
+            )
+            .where("i.token_hash = :tokenHash", { tokenHash: hashInviteToken(token) })
+            .setParameter("now", this.clock.now())
+            .limit(1)
+            .getRawOne<InvitePreviewRaw>()
         if (row === undefined) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.Invalid })
         return {
             workspaceName: row.workspace_name,
@@ -183,9 +231,9 @@ export class WorkspaceInvitesService {
 
     /** Accepts the invitation as the signed-in person whose email matches it; answers the workspace they joined. */
     async accept(acceptor: InviteAcceptor, token: string): Promise<AcceptedInvite> {
-        const [row] = await this.entityManager.query<Array<InviteRow>>(FIND_INVITE_BY_TOKEN, [token])
+        const row = await this.findByToken(token)
         const invite = unwrapOutcome(
-            judgeInvite(row === undefined ? undefined : toInviteState(row), acceptor.email ?? "", this.clock.now()),
+            judgeInvite(row === null ? undefined : toInviteState(row), acceptor.email ?? "", this.clock.now()),
             WorkspaceInvitesError,
         )
         await this.entitlements.requireRoomForMember(invite.workspaceId)
@@ -198,7 +246,11 @@ export class WorkspaceInvitesService {
             staffId: invite.staffId,
             displayName,
         })
-        await this.entityManager.query(MARK_INVITE_ACCEPTED, [invite.id, this.clock.now(), acceptor.id])
+        await this.entityManager.update(
+            WorkspaceInviteEntity,
+            { id: invite.id, acceptedAt: IsNull() },
+            { acceptedAt: this.clock.now(), acceptedBy: acceptor.id },
+        )
         await this.events.record({
             workspaceId: invite.workspaceId,
             kind: "member.joined",
@@ -226,37 +278,62 @@ export class WorkspaceInvitesService {
         email: string,
         people: ReadonlyArray<MemberListing>,
     ): Promise<void> {
-        const held = await this.entityManager.query<Array<HeldRow>>(FIND_STAFF_INVITE, [
-            workspaceId,
-            staffId,
-            this.clock.now(),
-            email,
-        ])
-        if (people.some((member) => member.staffId === staffId) || held.length > 0) {
+        const held = await this.entityManager
+            .createQueryBuilder(WorkspaceInviteEntity, "i")
+            .select("i.id")
+            .where("i.workspace_id = :workspaceId AND i.staff_id = :staffId", { workspaceId, staffId })
+            .andWhere("i.accepted_at IS NULL AND i.revoked_at IS NULL AND i.expires_at > :now", {
+                now: this.clock.now(),
+            })
+            .andWhere("lower(i.email) <> :email", { email })
+            .limit(1)
+            .getRawOne<{ readonly i_id: string }>()
+        if (people.some((member) => member.staffId === staffId) || held !== undefined) {
             throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.StaffTaken })
         }
     }
 
-    private async rotate(workspaceId: string, inviteId: string): Promise<{ invite: ChangedInviteRow; token: string }> {
-        const [minted] = await this.entityManager.query<[MintedTokenRow]>(MINT_TOKEN)
-        const [invite] = await this.entityManager.query<Array<ChangedInviteRow>>(ROTATE_INVITE, [
-            inviteId,
-            workspaceId,
-            minted.token,
-            this.expiry(this.clock.now()),
-        ])
+    private findByToken(token: string): Promise<WorkspaceInviteEntity | null> {
+        return this.entityManager.findOne(WorkspaceInviteEntity, { where: { tokenHash: hashInviteToken(token) } })
+    }
+
+    private async rotate(workspaceId: string, inviteId: string): Promise<{ invite: ChangedInvite; token: string }> {
+        const minted = await this.mintToken()
+        const result = await this.entityManager
+            .createQueryBuilder(WorkspaceInviteEntity, "i")
+            .update()
+            .set({ tokenHash: hashInviteToken(minted.token), expiresAt: this.expiry(this.clock.now()) })
+            .where("id = :inviteId AND workspace_id = :workspaceId AND accepted_at IS NULL AND revoked_at IS NULL", {
+                inviteId,
+                workspaceId,
+            })
+            .returning("id, email, role")
+            .execute()
+        const [invite] = result.raw as Array<ChangedInvite>
         if (invite === undefined) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.NotFound })
         return { invite, token: minted.token }
     }
+
+    /** Mints an invitation token from two random uuids of the database (its strong random source), dashes removed; only its hash is ever stored. */
+    private async mintToken(): Promise<MintedToken> {
+        const [first, second] = await Promise.all([this.uuid(), this.uuid()])
+        return { token: `${first}${second}`.replaceAll("-", "") }
+    }
+
+    private async uuid(): Promise<string> {
+        const [row] = await callDbFunction<{ gen_random_uuid: string }>(this.entityManager, "gen_random_uuid", [])
+        if (row === undefined) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.TokenUnavailable })
+        return row.gen_random_uuid
+    }
 }
 
-const toInviteState = (row: InviteRow): InviteState => ({
+const toInviteState = (row: WorkspaceInviteEntity): InviteState => ({
     id: row.id,
-    workspaceId: row.workspace_id,
+    workspaceId: row.workspaceId,
     email: row.email,
     role: row.role,
-    staffId: row.staff_id,
-    acceptedAt: row.accepted_at === null ? null : new Date(row.accepted_at).toISOString(),
-    revokedAt: row.revoked_at === null ? null : new Date(row.revoked_at).toISOString(),
-    expiresAt: new Date(row.expires_at).toISOString(),
+    staffId: row.staffId,
+    acceptedAt: row.acceptedAt === null ? null : row.acceptedAt.toISOString(),
+    revokedAt: row.revokedAt === null ? null : row.revokedAt.toISOString(),
+    expiresAt: row.expiresAt.toISOString(),
 })

@@ -1,10 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { MAX_SWEEP_BATCHES, retentionWindowOf } from "./job-history-retention.policy"
 import type { HistoryRetentionWindow, SweepFence } from "./job-history-retention.policy"
 import type { HistorySweepRow } from "./persistence/job-ops.rows"
-import { SWEEP_SYSTEM_HISTORY } from "./persistence/job-ops.sql"
 
 @Injectable()
 /**
@@ -27,12 +26,12 @@ export class JobHistoryRetentionService {
     ): Promise<number> {
         if (batchesLeft === 0) return 0
         await beforeBatch()
-        const [row] = await this.entityManager.query<[HistorySweepRow?]>(SWEEP_SYSTEM_HISTORY, [
+        const [row] = await callDbFunction<HistorySweepRow>(this.entityManager, "public.system_history_sweep", [
             window.doneDays,
             window.failedDays,
             window.batch,
         ])
-        const counts = row?.result
+        const counts = row?.system_history_sweep
         if (counts === undefined) return 0
         const deleted = counts.outbox + counts.jobs + counts.cron + counts.http
         const full = Math.max(counts.outbox, counts.jobs, counts.cron, counts.http) >= window.batch

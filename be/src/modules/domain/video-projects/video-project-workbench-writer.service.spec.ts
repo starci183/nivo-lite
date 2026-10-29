@@ -3,16 +3,13 @@ import { FakeClock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import {
-    APPROVE_VIDEO_PROJECT,
-    ARCHIVE_WORKBENCH_PROJECT,
-    CREATE_DELEGATED_PROJECT,
-    CREATE_WORKBENCH_PROJECT,
-    DUPLICATE_WORKBENCH_PROJECT,
-    PUBLISH_WORKBENCH_PROJECT,
-    UPDATE_WORKBENCH_PROJECT,
-} from "./persistence/video-workbench.sql"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { VideoProjectEntity } from "./persistence/entities"
 import { VideoProjectWorkbenchWriterService } from "./video-project-workbench-writer.service"
+
+/** The any-function matcher, typed `unknown` so it flows into any slot. */
+const anyFunction = (): unknown => expect.any(Function)
 
 const build = async (em: MockEntityManager = mockEntityManager()) => {
     const moduleRef = await Test.createTestingModule({
@@ -25,9 +22,23 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
     return moduleRef.get(VideoProjectWorkbenchWriterService)
 }
 
+/** A manager double whose every query builder is one fake that answers the given terminals and records the chain. */
+const managerAnswering = (answers: QueryBuilderAnswers, em: MockEntityManager = mockEntityManager()) => {
+    const fake = fakeQueryBuilder(answers)
+    em.createQueryBuilder.mockReturnValue(fake.builder as never)
+    return { em, fake }
+}
+
+/** The answer of an `UPDATE ... RETURNING id` or an `INSERT ... RETURNING id`. */
+const returned = (rows: ReadonlyArray<{ readonly id: string }>): QueryBuilderAnswers => ({ execute: { raw: rows } })
+
+const ONE = [{ id: "project-1" }]
+
+const IDLE = "status NOT IN ('scripting', 'rendering')"
+
 describe("VideoProjectWorkbenchWriterService > create", () => {
     it("saves a typed title and answers the new project id", async () => {
-        const tx = mockEntityManager({ query: [CREATE_WORKBENCH_PROJECT, [{ id: "project-1" }]] })
+        const { em: tx, fake } = managerAnswering(returned(ONE))
         const writer = await build()
 
         await expect(
@@ -40,31 +51,40 @@ describe("VideoProjectWorkbenchWriterService > create", () => {
             }),
         ).resolves.toBe("project-1")
 
-        expect(tx.query).toHaveBeenCalledWith(CREATE_WORKBENCH_PROJECT, [
-            "workspace-1",
-            "Spring offer",
-            "offer",
-            "9:16",
-            30,
-            '{"notes":"fresh bread"}',
-            "{}",
-            "person-1",
+        expect(tx.createQueryBuilder).toHaveBeenCalledWith(VideoProjectEntity, "v")
+
+        expect(fake.callsOf("insert")).toEqual([[]])
+        expect(fake.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "workspace-1",
+                    title: "Spring offer",
+                    goal: "offer",
+                    aspect: "9:16",
+                    targetSeconds: 30,
+                    inputs: { notes: "fresh bread" },
+                    scriptMeta: {},
+                    createdBy: "person-1",
+                },
+            ],
         ])
+        expect(fake.callsOf("returning")).toEqual([["id"]])
     })
 
     it("names an untitled project after its goal and today, and marks the title automatic", async () => {
-        const tx = mockEntityManager({ query: [CREATE_WORKBENCH_PROJECT, [{ id: "project-2" }]] })
+        const { em: tx, fake } = managerAnswering(returned([{ id: "project-2" }]))
         const writer = await build()
 
         await writer.create(tx, "workspace-1", "person-1", { goal: "hiring", aspect: "1:1", targetSeconds: 15 })
 
-        const params = tx.query.mock.calls[0]?.[1]
-        expect(params?.[1]).toBe("hiring - 2026-10-13")
-        expect(params?.[6]).toBe('{"auto_title":true}')
+        expect(fake.callsOf("values")[0]?.[0]).toMatchObject({
+            title: "hiring - 2026-10-13",
+            scriptMeta: { auto_title: true },
+        })
     })
 
     it("answers null when nothing was saved", async () => {
-        const tx = mockEntityManager({ query: [CREATE_WORKBENCH_PROJECT, []] })
+        const { em: tx } = managerAnswering(returned([]))
         const writer = await build()
 
         await expect(
@@ -74,80 +94,192 @@ describe("VideoProjectWorkbenchWriterService > create", () => {
 })
 
 describe("VideoProjectWorkbenchWriterService > update", () => {
-    it("serializes the changed inputs and scenes and reports the change", async () => {
-        const em = mockEntityManager({ query: [UPDATE_WORKBENCH_PROJECT, [{ id: "project-1" }]] })
+    it("serializes the changed inputs and scenes, guards an idle project in one statement and reports the change", async () => {
+        const { em, fake } = managerAnswering(returned(ONE))
         const writer = await build(em)
 
         await expect(
             writer.update("workspace-1", "project-1", { title: "New", inputs: { notes: "x" }, script: [] }),
         ).resolves.toBe(true)
 
-        expect(em.query).toHaveBeenCalledWith(UPDATE_WORKBENCH_PROJECT, [
-            "workspace-1",
-            "project-1",
-            "New",
-            null,
-            null,
-            null,
-            '{"notes":"x"}',
-            "[]",
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(VideoProjectEntity, "v")
+
+        expect(fake.callsOf("update")).toEqual([[]])
+        expect(fake.callsOf("set")).toEqual([
+            [
+                {
+                    title: anyFunction(),
+                    goal: anyFunction(),
+                    aspect: anyFunction(),
+                    targetSeconds: anyFunction(),
+                    inputs: anyFunction(),
+                    script: anyFunction(),
+                    status: anyFunction(),
+                    approvedAt: anyFunction(),
+                    approvedByName: anyFunction(),
+                    publishedAt: anyFunction(),
+                },
+            ],
         ])
+        expect(fake.callsOf("where")).toEqual([
+            [
+                `workspace_id = :workspaceId AND id = :projectId AND ${IDLE}`,
+                { workspaceId: "workspace-1", projectId: "project-1" },
+            ],
+        ])
+        expect(fake.callsOf("setParameters")).toEqual([
+            [{ title: "New", goal: null, aspect: null, targetSeconds: null, inputs: '{"notes":"x"}', script: "[]" }],
+        ])
+        expect(fake.callsOf("returning")).toEqual([["id"]])
+    })
+
+    it("writes the guarded expressions that keep, replace and invalidate", async () => {
+        const { em, fake } = managerAnswering(returned(ONE))
+        const writer = await build(em)
+
+        await writer.update("workspace-1", "project-1", { script: [] })
+
+        const set = fake.callsOf("set")[0]?.[0] as Record<string, () => string>
+        expect(set.title?.()).toBe("COALESCE(NULLIF(CAST(:title AS text), ''), title)")
+        expect(set.script?.()).toBe("COALESCE(CAST(:script AS jsonb), script)")
+        expect(set.status?.()).toBe(
+            "CASE WHEN CAST(:script AS jsonb) IS NOT NULL AND status IN ('ready', 'approved', 'published') THEN 'draft' ELSE status END",
+        )
+        expect(set.approvedAt?.()).toBe("CASE WHEN CAST(:script AS jsonb) IS NOT NULL THEN NULL ELSE approved_at END")
+        expect(set.publishedAt?.()).toBe("CASE WHEN CAST(:script AS jsonb) IS NOT NULL THEN NULL ELSE published_at END")
     })
 
     it("reports a busy project that did not change", async () => {
-        const em = mockEntityManager({ query: [UPDATE_WORKBENCH_PROJECT, []] })
+        const { em, fake } = managerAnswering(returned([]))
         const writer = await build(em)
 
         await expect(writer.update("workspace-1", "project-1", {})).resolves.toBe(false)
-        expect(em.query.mock.calls[0]?.[1]).toEqual(["workspace-1", "project-1", null, null, null, null, null, null])
+        expect(fake.callsOf("setParameters")).toEqual([
+            [{ title: null, goal: null, aspect: null, targetSeconds: null, inputs: null, script: null }],
+        ])
     })
 })
 
 describe("VideoProjectWorkbenchWriterService > duplicate", () => {
     it("answers the copy's id, or null when the source is missing", async () => {
-        const copied = mockEntityManager({ query: [DUPLICATE_WORKBENCH_PROJECT, [{ id: "project-2" }]] })
-        const missing = mockEntityManager({ query: [DUPLICATE_WORKBENCH_PROJECT, []] })
+        const source = Object.assign(new VideoProjectEntity(), {
+            id: "project-1",
+            workspaceId: "workspace-1",
+            title: "Spring offer",
+            goal: "offer",
+            aspect: "9:16",
+            targetSeconds: 30,
+            inputs: { notes: "x" },
+            script: [{ caption: "A" }],
+        })
+        const copied = managerAnswering(
+            returned([{ id: "project-2" }]),
+            mockEntityManager({ findOne: [VideoProjectEntity, source] }),
+        )
+        const missing = managerAnswering(returned([]), mockEntityManager({ findOne: [VideoProjectEntity, null] }))
         const writer = await build()
 
-        await expect(writer.duplicate(copied, "workspace-1", "project-1", "person-1")).resolves.toBe("project-2")
-        await expect(writer.duplicate(missing, "workspace-1", "project-1", "person-1")).resolves.toBeNull()
-        expect(copied.query).toHaveBeenCalledWith(DUPLICATE_WORKBENCH_PROJECT, ["workspace-1", "project-1", "person-1"])
+        await expect(writer.duplicate(copied.em, "workspace-1", "project-1", "person-1")).resolves.toBe("project-2")
+        await expect(writer.duplicate(missing.em, "workspace-1", "project-1", "person-1")).resolves.toBeNull()
+        expect(copied.em.findOne).toHaveBeenCalledWith(VideoProjectEntity, {
+            where: { workspaceId: "workspace-1", id: "project-1" },
+            lock: { mode: "pessimistic_read" },
+        })
+        expect(copied.fake.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "workspace-1",
+                    title: "Spring offer (copy)",
+                    goal: "offer",
+                    aspect: "9:16",
+                    targetSeconds: 30,
+                    inputs: { notes: "x" },
+                    script: [{ caption: "A" }],
+                    sourceProjectId: "project-1",
+                    createdBy: "person-1",
+                },
+            ],
+        ])
+        expect(missing.fake.callsOf("values")).toEqual([])
+    })
+
+    it("cuts the title of the copy at 120 characters", async () => {
+        const source = Object.assign(new VideoProjectEntity(), {
+            id: "project-1",
+            workspaceId: "workspace-1",
+            title: "x".repeat(120),
+        })
+        const { em, fake } = managerAnswering(
+            returned([{ id: "project-2" }]),
+            mockEntityManager({ findOne: [VideoProjectEntity, source] }),
+        )
+        const writer = await build()
+
+        await writer.duplicate(em, "workspace-1", "project-1", "person-1")
+
+        expect(fake.callsOf("values")[0]?.[0]).toMatchObject({ title: "x".repeat(120) })
     })
 })
 
 describe("VideoProjectWorkbenchWriterService > archive", () => {
     it("reports whether the idle project changed", async () => {
-        const changed = mockEntityManager({ query: [ARCHIVE_WORKBENCH_PROJECT, [{ id: "project-1" }]] })
-        const busy = mockEntityManager({ query: [ARCHIVE_WORKBENCH_PROJECT, []] })
+        const changed = managerAnswering(returned(ONE))
+        const busy = managerAnswering(returned([]))
 
-        await expect((await build(changed)).archive("workspace-1", "project-1", true)).resolves.toBe(true)
-        await expect((await build(busy)).archive("workspace-1", "project-1", false)).resolves.toBe(false)
-        expect(changed.query).toHaveBeenCalledWith(ARCHIVE_WORKBENCH_PROJECT, ["workspace-1", "project-1", true])
+        await expect((await build(changed.em)).archive("workspace-1", "project-1", true)).resolves.toBe(true)
+        await expect((await build(busy.em)).archive("workspace-1", "project-1", false)).resolves.toBe(false)
+        expect(changed.fake.callsOf("where")).toEqual([
+            [
+                `workspace_id = :workspaceId AND id = :projectId AND ${IDLE}`,
+                { workspaceId: "workspace-1", projectId: "project-1" },
+            ],
+        ])
+        expect(changed.fake.callsOf("setParameter")).toEqual([["archived", true]])
+        const set = changed.fake.callsOf("set")[0]?.[0] as { status: () => string }
+        expect(set.status()).toBe(
+            "CASE WHEN CAST(:archived AS boolean) THEN 'archived' WHEN render_id IS NULL THEN 'draft' ELSE 'ready' END",
+        )
     })
 })
 
 describe("VideoProjectWorkbenchWriterService > publish", () => {
     it("reports whether an approved project was published", async () => {
-        const approved = mockEntityManager({ query: [PUBLISH_WORKBENCH_PROJECT, [{ id: "project-1" }]] })
-        const draft = mockEntityManager({ query: [PUBLISH_WORKBENCH_PROJECT, []] })
+        const approved = managerAnswering(returned(ONE))
+        const draft = managerAnswering(returned([]))
         const writer = await build()
 
-        await expect(writer.publish(approved, "workspace-1", "project-1")).resolves.toBe(true)
-        await expect(writer.publish(draft, "workspace-1", "project-1")).resolves.toBe(false)
+        await expect(writer.publish(approved.em, "workspace-1", "project-1")).resolves.toBe(true)
+        await expect(writer.publish(draft.em, "workspace-1", "project-1")).resolves.toBe(false)
+        expect(approved.fake.callsOf("set")).toEqual([[{ status: "published", publishedAt: anyFunction() }]])
+        expect(approved.fake.callsOf("where")).toEqual([
+            [
+                "workspace_id = :workspaceId AND id = :projectId AND status = 'approved'",
+                { workspaceId: "workspace-1", projectId: "project-1" },
+            ],
+        ])
     })
 })
 
 describe("VideoProjectWorkbenchWriterService > approve", () => {
-    it("records the approver of the selected render", async () => {
-        const em = mockEntityManager({ query: [APPROVE_VIDEO_PROJECT, [{ id: "project-1" }]] })
+    it("records the approver of the selected render once a done render backs it", async () => {
+        const { em, fake } = managerAnswering(returned(ONE))
         const writer = await build(em)
 
         await expect(writer.approve("workspace-1", "project-1", "render-1", "Lan")).resolves.toBe(true)
-        expect(em.query).toHaveBeenCalledWith(APPROVE_VIDEO_PROJECT, ["workspace-1", "project-1", "render-1", "Lan"])
+        expect(fake.callsOf("set")).toEqual([
+            [{ status: "approved", approvedAt: anyFunction(), approvedByName: "Lan" }],
+        ])
+        expect(fake.callsOf("where")).toEqual([
+            [
+                "workspace_id = :workspaceId AND id = :projectId AND render_id = :renderId AND status = 'ready'",
+                { workspaceId: "workspace-1", projectId: "project-1", renderId: "render-1" },
+            ],
+        ])
+        expect(fake.callsOf("andWhere")[0]?.[0]).toContain("r.status = 'done'")
     })
 
     it("reports a render that is not the finished one", async () => {
-        const em = mockEntityManager({ query: [APPROVE_VIDEO_PROJECT, []] })
+        const { em } = managerAnswering(returned([]))
         const writer = await build(em)
 
         await expect(writer.approve("workspace-1", "project-1", "render-0", "Lan")).resolves.toBe(false)
@@ -156,24 +288,31 @@ describe("VideoProjectWorkbenchWriterService > approve", () => {
 
 describe("VideoProjectWorkbenchWriterService > createDelegated", () => {
     it("saves the delegated script with no creator and answers the new project id", async () => {
-        const tx = mockEntityManager({ query: [CREATE_DELEGATED_PROJECT, [{ id: "project-1" }]] })
+        const { em: tx, fake } = managerAnswering(returned(ONE))
         const writer = await build()
         const draft = { title: "Weekend", goal: "offer", aspect: "9:16", targetSeconds: 15, script: [{ caption: "A" }] }
 
         await expect(writer.createDelegated(tx, "workspace-1", draft)).resolves.toBe("project-1")
 
-        expect(tx.query).toHaveBeenCalledWith(CREATE_DELEGATED_PROJECT, [
-            "workspace-1",
-            "Weekend",
-            "offer",
-            "9:16",
-            15,
-            '[{"caption":"A"}]',
+        expect(fake.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "workspace-1",
+                    title: "Weekend",
+                    goal: "offer",
+                    aspect: "9:16",
+                    targetSeconds: 15,
+                    script: [{ caption: "A" }],
+                    inputs: {},
+                    scriptMeta: { delegated: true },
+                    createdBy: null,
+                },
+            ],
         ])
     })
 
     it("answers null when nothing was written", async () => {
-        const tx = mockEntityManager({ query: [CREATE_DELEGATED_PROJECT, []] })
+        const { em: tx } = managerAnswering(returned([]))
         const writer = await build()
 
         await expect(

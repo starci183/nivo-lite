@@ -1,6 +1,7 @@
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import type { AgentOwners, OwnerCard } from "./agents.contracts"
-import type { AssignContextRow, MemberStateRow, OwnershipRow, TagContextRow } from "./persistence/ownership.rows"
+import type { AssignContext, MemberState, TagContext } from "./agents-reads.contracts"
+import type { AgentEntity } from "./persistence/entities"
 
 /** The workspace roles an agent can be assigned to, in the order the page shows them. */
 export const ASSIGNABLE_ROLES: ReadonlyArray<WorkspaceRole> = ["owner", "manager", "staff"]
@@ -24,11 +25,11 @@ export const rolesOf = (stored: ReadonlyArray<string>): ReadonlyArray<WorkspaceR
  * active (a workspace without an active owner).
  */
 export const resolveOwners = (
-    agent: Pick<OwnershipRow, "owner_member_id" | "fallback_member_id">,
+    agent: Pick<AgentEntity, "ownerMemberId" | "fallbackMemberId">,
     activeIds: ReadonlySet<string>,
     workspaceOwnerId: string | null,
 ): AgentOwners | null => {
-    const stored = [agent.owner_member_id, agent.fallback_member_id].filter(
+    const stored = [agent.ownerMemberId, agent.fallbackMemberId].filter(
         (id): id is string => id !== null && activeIds.has(id),
     )
     const chain = [...new Set([...stored, ...(workspaceOwnerId === null ? [] : [workspaceOwnerId])])]
@@ -41,27 +42,27 @@ export const resolveOwners = (
  * role or by a seat in one of the rooms the agent is open to. A room the agent no longer lists, or a seat the member lost,
  * gives nothing.
  */
-export const mayAssign = (context: AssignContextRow): boolean => {
-    if (context.member_status !== "active" || context.agent_status !== "active") return false
+export const mayAssign = (context: AssignContext): boolean => {
+    if (context.memberStatus !== "active" || context.agentStatus !== "active") return false
     return (
-        context.assignable_roles.includes(context.role) ||
-        context.member_rooms.some((room) => context.assignable_rooms.includes(room))
+        context.assignableRoles.includes(context.role) ||
+        context.memberRooms.some((room) => context.assignableRooms.includes(room))
     )
 }
 
 /** Whether an agent may pass work to another: two different active agents of one workspace, the second on the first's list. */
-export const mayTag = (context: TagContextRow): boolean =>
-    !context.same_agent &&
-    context.same_workspace &&
+export const mayTag = (context: TagContext): boolean =>
+    !context.sameAgent &&
+    context.sameWorkspace &&
     context.listed &&
-    context.from_status === "active" &&
-    context.to_status === "active"
+    context.fromStatus === "active" &&
+    context.toStatus === "active"
 
 /** A member row as the card the page shows. */
-export const ownerCardOf = (row: MemberStateRow): OwnerCard => ({
+export const ownerCardOf = (row: MemberState): OwnerCard => ({
     memberId: row.id,
-    name: row.display_name,
+    name: row.displayName,
     role: row.role,
-    roomId: row.room_key,
+    roomId: row.roomKey,
     active: row.status === "active",
 })

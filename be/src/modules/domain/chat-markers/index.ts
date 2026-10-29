@@ -1,3 +1,4 @@
+export { chatMarkersEntities } from "./persistence/entities"
 export { CHAT_MARKERS_ERROR_KINDS } from "./errors/chat-markers.error"
 export { CHAT_MARKERS_MESSAGES } from "./messages/chat-markers.messages"
 export { ChatMarkersModule } from "./chat-markers.module"

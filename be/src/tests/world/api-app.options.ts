@@ -26,7 +26,11 @@ const providerOptions = () => ({
         manageAgents: false,
         toolSecret: null,
     },
-    deepseek: { jsonRetries: 1, poolTimeoutMs: 1000 },
+    aiTasks: {
+        jsonRetries: 1,
+        timeoutMs: 1000,
+        endpoint: { gatewayUrl: null, virtualKey: null, chatModel: "work", embeddingModel: "embed" },
+    },
     connectionSecrets: { tokenKey: TOKEN_KEY },
     loyaltyOtps: { pepper: new Secret("world-proof") },
     channels: { siteUrl: SITE },
@@ -43,19 +47,46 @@ const providerOptions = () => ({
     platformAdmin: { admins: [] },
 })
 
-/** An AI pool with no keys: every provider sits out, so the api boots and its AI callers fall back without a provider call. */
-const keylessAiPool: ApiOptions["aiPool"] = {
-    chat: [
-        { id: "deepseek", baseUrl: "https://llm.invalid", keys: [], model: "world-chat", smartModel: null },
-        { id: "openrouter", baseUrl: "https://llm.invalid", keys: [], model: "world-chat", smartModel: null },
-    ],
-    embedding: {
-        id: "embeddings",
-        baseUrl: "https://llm.invalid",
-        keys: [],
-        model: "world-embedding",
-        smartModel: null,
-    },
+/** Sign-in settings for a proof: keys that are never loaded and no Google client. */
+const localPassport: ApiOptions["passport"] = {
+    privateKey: new Secret("world-proof"),
+    publicKey: "world-proof",
+    keyId: undefined,
+    issuer: "world-proof",
+    returnOrigin: SITE,
+    audience: "authenticated",
+    accessTtlSeconds: 900,
+    bcryptCost: 4,
+    google: null,
+}
+
+const localIdentityAuth: ApiOptions["identityAuth"] = {
+    webOrigin: SITE,
+    cookieDomain: undefined,
+    refreshTtlSeconds: 60,
+    resetTtlSeconds: 60,
+    inviteTtlSeconds: 60,
+    loginAttempts: 5,
+    resetAttempts: 5,
+    attemptWindowMs: 60000,
+}
+
+/** An AI pool with no keys: no router and no gateway are registered, so the api boots and its AI callers fall back without a provider call. */
+const keylessAiGateway: ApiOptions["aiGateway"] = {
+    providers: [],
+    models: { work: "world-chat", embed: "world-embedding" },
+    gateway: null,
+}
+
+/** The object store of the proof: an address nothing answers. */
+const storageProof = {
+    endpoint: "https://storage.invalid:9000",
+    region: "us-east-1",
+    accessKey: new Secret("world-proof"),
+    secretKey: new Secret("world-proof"),
+    bucketPrefix: "world",
+    publicUrl: "https://storage.invalid:9000",
+    timeoutMs: 1000,
 }
 
 /**
@@ -71,8 +102,10 @@ const localApiOptions = (): ApiOptions => ({
         webhooks: {},
     },
     database: parsePrimaryDatabaseConfig(EnvSource.fromProcess()),
-    supabase: { url: "https://supabase.invalid", serviceRoleKey: new Secret("world-proof") },
-    aiPool: keylessAiPool,
+    storage: storageProof,
+    aiGateway: keylessAiGateway,
+    passport: localPassport,
+    identityAuth: localIdentityAuth,
     documents: {
         driveBase: "https://drive.invalid",
         oauthBase: null,
@@ -102,7 +135,7 @@ const localApiOptions = (): ApiOptions => ({
         visibilityTimeoutMs: 60000,
         shutdownGraceMs: 1000,
     },
-    jobs: { workerId: "world-proof", leaseMs: 60000 },
+    jobs: { workerId: "world-proof", leaseMs: 60000, scheduler: { enabled: false } },
     jobsAlert: { enabled: false, intervalMs: 60000, failedMax: 1, staleSeconds: 60 },
     connections: {
         channelTokenKey: TOKEN_KEY,

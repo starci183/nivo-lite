@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { Any, IsNull, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { OfficeLog } from "@modules/domain/module-ops"
@@ -18,33 +19,25 @@ import { InventoryLogEvent } from "./inventory.log-events"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { toInventoryItem } from "./policies/item-row.policy"
 
-import type { ItemRowColumns } from "./policies/item-row.policy"
+import { ITEM_LIMIT, OPEN_PO_STATUSES, itemRowOf } from "./policies/inventory-row.mapper"
 import { columnNumber, formatMoney } from "./policies/number-format.policy"
 import { stockStatus, suggestOrderQty } from "./policies/stock.policy"
-import {
-    SELECT_ACTIVE_ITEMS,
-    SELECT_ACTIVE_ITEMS_BY_ID,
-    SELECT_DRAFT_PO,
-    SELECT_ON_ORDER,
-    SELECT_PO_ITEM_IDS,
-    SELECT_PO_SUMMARY,
-    SELECT_POS_WITH_SUPPLIER,
-    SELECT_RULE_MODE,
-} from "./persistence/inventory.sql"
-
-interface IdRow {
-    readonly id: string
-}
+import { InventoryItemEntity, InventoryPoLineEntity, InventoryPurchaseOrderEntity } from "./persistence/entities"
+import { AuthorityRuleEntity } from "@modules/domain/authority-rules"
 
 interface TotalRow {
     readonly item_id: string
     readonly qty: number | string
 }
 
-interface PoSummaryRow {
-    readonly po_no: string
-    readonly total_vnd: number | string
-}
+/** The most items one on-order read answers. */
+const ON_ORDER_LIMIT = 5000
+
+/** The most lines of one order the draft extension compares with. */
+const PO_LINE_LIMIT = 1000
+
+/** The most orders one approval request checks. */
+const APPROVAL_LIMIT = 200
 
 @Injectable()
 /** Replenishment: finding the items at their reorder point and drafting one purchase order per supplier for them. */
@@ -66,14 +59,15 @@ export class InventoryReplenishService {
 
     /** The items at or below their reorder point; an item with no reorder point is never low. */
     async lowItems(workspaceId: string, itemIds?: ReadonlyArray<string>): Promise<Array<LowItem>> {
-        const rows =
-            itemIds === undefined
-                ? await this.entityManager.query<Array<ItemRowColumns>>(SELECT_ACTIVE_ITEMS, [workspaceId])
-                : await this.entityManager.query<Array<ItemRowColumns>>(SELECT_ACTIVE_ITEMS_BY_ID, [
-                      workspaceId,
-                      [...itemIds],
-                  ])
-        const items = rows.map(toInventoryItem)
+        const rows = await this.entityManager.find(InventoryItemEntity, {
+            where:
+                itemIds === undefined
+                    ? { workspaceId, active: true }
+                    : { workspaceId, active: true, id: Any([...itemIds]) },
+            order: { name: "ASC" },
+            take: ITEM_LIMIT,
+        })
+        const items = rows.map((row) => toInventoryItem(itemRowOf(row)))
         const totals = await this.movements.totals(workspaceId, itemIds ?? items.map((item) => item.id))
         const low: Array<LowItem> = []
         for (const item of items) {
@@ -104,18 +98,30 @@ export class InventoryReplenishService {
         const by = options.by ?? SYSTEM_ACTOR
         const low = await this.lowItems(workspaceId, options.itemIds)
         if (low.length === 0) return { poIds: [], lowCount: 0, skipped: [] }
-        const [rule] = await this.entityManager.query<Array<{ mode: string }>>(SELECT_RULE_MODE, [
-            workspaceId,
-            "draft_purchase_order",
-        ])
+        const rule = await this.entityManager
+            .createQueryBuilder(AuthorityRuleEntity, "r")
+            .select("r.mode", "mode")
+            .where("r.workspace_id = :workspaceId AND r.action = :action", {
+                workspaceId,
+                action: "draft_purchase_order",
+            })
+            .limit(1)
+            .getRawOne<{ mode: string }>()
         if (rule?.mode === "never")
             return { poIds: [], lowCount: low.length, skipped: low.map((entry) => entry.item.name) }
-        const onOrder = new Map(
-            (await this.entityManager.query<Array<TotalRow>>(SELECT_ON_ORDER, [workspaceId])).map((row) => [
-                row.item_id,
-                columnNumber(row.qty),
-            ]),
-        )
+        const onOrderRows = await this.entityManager
+            .createQueryBuilder(InventoryPoLineEntity, "line")
+            .select("line.item_id", "item_id")
+            .addSelect("SUM(GREATEST(line.qty_ordered - line.qty_received, 0))", "qty")
+            .innerJoin(InventoryPurchaseOrderEntity, "po", "po.id = line.po_id")
+            .where("po.workspace_id = :workspaceId AND po.status IN (:...open)", {
+                workspaceId,
+                open: [...OPEN_PO_STATUSES],
+            })
+            .groupBy("line.item_id")
+            .limit(ON_ORDER_LIMIT)
+            .getRawMany<TotalRow>()
+        const onOrder = new Map(onOrderRows.map((row) => [row.item_id, columnNumber(row.qty)]))
         // The inventory position is what is on the shelf plus what is already ordered; order only when it is still at or below the reorder point.
         const need = low.filter((entry) => entry.total + (onOrder.get(entry.item.id) ?? 0) <= entry.item.reorderPoint)
         const skipped = low.filter((entry) => !need.includes(entry)).map((entry) => entry.item.name)
@@ -141,9 +147,14 @@ export class InventoryReplenishService {
             qty: suggestOrderQty(entry.item, entry.total),
             unitCost: entry.item.costVnd,
         }))
-        const [existing] = await this.entityManager.query<Array<IdRow>>(SELECT_DRAFT_PO, [workspaceId, supplierId])
+        // A null supplier means "the draft of no supplier": a null in a where object would match every draft.
+        const existing = await this.entityManager.findOne(InventoryPurchaseOrderEntity, {
+            select: { id: true },
+            where: { workspaceId, status: "draft", supplierId: supplierId === null ? IsNull() : supplierId },
+            order: { createdAt: "ASC" },
+        })
         let poId: string
-        if (existing === undefined) {
+        if (existing === null) {
             poId = await this.orders.createPoRecord(workspaceId, {
                 supplierId,
                 lines: wanted,
@@ -157,21 +168,28 @@ export class InventoryReplenishService {
         } else {
             poId = existing.id
             const have = new Set(
-                (await this.entityManager.query<Array<{ item_id: string }>>(SELECT_PO_ITEM_IDS, [poId])).map(
-                    (row) => row.item_id,
-                ),
+                (
+                    await this.entityManager.find(InventoryPoLineEntity, {
+                        select: { itemId: true },
+                        where: { poId },
+                        take: PO_LINE_LIMIT,
+                    })
+                ).map((row) => row.itemId),
             )
             const add = wanted.filter((line) => !have.has(line.itemId))
             if (add.length > 0) await this.orders.addLines(workspaceId, poId, add)
         }
-        const [summary] = await this.entityManager.query<Array<PoSummaryRow>>(SELECT_PO_SUMMARY, [poId])
-        const poNo = summary?.po_no ?? ""
+        const summary = await this.entityManager.findOne(InventoryPurchaseOrderEntity, {
+            select: { poNo: true, totalVnd: true },
+            where: { id: poId },
+        })
+        const poNo = summary?.poNo ?? ""
         const names = entries.map((entry) => entry.item.name).join(", ")
         await this.office.logEvidence(workspaceId, {
             kind: "inventory.po_drafted",
             actor: this.text("inventory.draftActor", {}),
             summary: this.text("inventory.poDraftedSummary", { poNo, names }),
-            evidence: formatMoney(columnNumber(summary?.total_vnd)),
+            evidence: formatMoney(columnNumber(summary?.totalVnd)),
         })
         await this.office.logDecision(workspaceId, {
             department: "inventory",
@@ -189,7 +207,13 @@ export class InventoryReplenishService {
     async requestApprovals(workspaceId: string, by: string, poIds: ReadonlyArray<string>): Promise<void> {
         if (poIds.length === 0) return
         const withSupplier = new Set(
-            (await this.entityManager.query<Array<IdRow>>(SELECT_POS_WITH_SUPPLIER, [[...poIds]])).map((row) => row.id),
+            (
+                await this.entityManager.find(InventoryPurchaseOrderEntity, {
+                    select: { id: true },
+                    where: { id: Any([...poIds]), supplierId: Not(IsNull()) },
+                    take: APPROVAL_LIMIT,
+                })
+            ).map((row) => row.id),
         )
         await eachInOrder(
             poIds.filter((id) => withSupplier.has(id)),

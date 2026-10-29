@@ -8,7 +8,16 @@ import type {
     QueuedGeneration,
     ResponseFormat,
 } from "./ai-generations.contracts"
-import type { GenerationProgressRow, GenerationRow } from "./persistence/ai-generations.rows"
+import type { AiGenerationEntity } from "./persistence/entities"
+
+/** The part of a generation row a caller polls. */
+export type GenerationProgressFields = Pick<AiGenerationEntity, "status" | "output" | "usage" | "timings">
+
+/** The part of a generation row the runner works on. */
+export type GenerationRunFields = Pick<
+    AiGenerationEntity,
+    "id" | "workspaceId" | "purpose" | "module" | "usageKind" | "status" | "input"
+>
 
 /** The deadline of a caller that names none, ms. */
 export const DEFAULT_TIMEOUT_MS = 45_000
@@ -39,8 +48,11 @@ export const failureTextOf = (cause: unknown): string =>
     (cause instanceof Error ? cause.message : String(cause)).slice(0, FAILURE_MAX)
 
 /** The input JSON a queued generation stores. */
-export const inputJsonOf = (params: GenerateParams, timeoutMs: number): string =>
-    JSON.stringify({ messages: params.messages, response_format: params.responseFormat, timeout_ms: timeoutMs })
+export const inputJsonOf = (params: GenerateParams, timeoutMs: number): Record<string, unknown> => ({
+    messages: params.messages,
+    response_format: params.responseFormat,
+    timeout_ms: timeoutMs,
+})
 
 const isMessage = (value: unknown): value is GenMessage =>
     isPlainObject(value) &&
@@ -82,7 +94,7 @@ export const timingsOf = (value: unknown): Readonly<Record<string, number>> =>
         : {}
 
 /** The row a caller polls, as the progress it shows. */
-export const progressOf = (row: GenerationProgressRow): GenerationProgress => ({
+export const progressOf = (row: GenerationProgressFields): GenerationProgress => ({
     status: row.status,
     text: isPlainObject(row.output) && typeof row.output.text === "string" ? row.output.text : null,
     usage: usageOf(row.usage),
@@ -90,12 +102,12 @@ export const progressOf = (row: GenerationProgressRow): GenerationProgress => ({
 })
 
 /** A generation row as the runner works on it. */
-export const queuedOf = (row: GenerationRow): QueuedGeneration => ({
+export const queuedOf = (row: GenerationRunFields): QueuedGeneration => ({
     id: row.id,
-    workspaceId: row.workspace_id,
+    workspaceId: row.workspaceId,
     purpose: row.purpose,
     module: row.module,
-    usageKind: row.usage_kind,
+    usageKind: row.usageKind,
     status: row.status,
     input: inputOf(row.input),
 })

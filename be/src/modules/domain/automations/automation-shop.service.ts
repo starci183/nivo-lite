@@ -1,11 +1,10 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import type { LocalizedText } from "@modules/domain/automation-templates"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { OverviewRows, PreviewSample, ShopWithHours, TextParams } from "./automations.contracts"
-import { SELECT_OVERVIEW } from "./persistence/automations.sql"
 import type { RequirementLabeller } from "./policies/cards.policy"
 import { contextVersionFor, contextsFrom, shopContextFrom } from "./policies/context.policy"
 import type { ActiveContexts, ShopPatterns } from "./policies/context.policy"
@@ -31,8 +30,12 @@ export class AutomationShopService {
 
     /** Every row the automations screen reads, in one call. */
     async overviewRows(workspaceId: string): Promise<OverviewRows> {
-        const [row] = await this.entityManager.query<Array<{ data: OverviewRows }>>(SELECT_OVERVIEW, [workspaceId])
-        return row?.data ?? EMPTY_ROWS
+        const [row] = await callDbFunction<{ automations_data: OverviewRows | null }>(
+            this.entityManager,
+            "public.automations_data",
+            [workspaceId],
+        )
+        return row?.automations_data ?? EMPTY_ROWS
     }
 
     /** The language data that reads a shop, compiled once from the message catalog. */

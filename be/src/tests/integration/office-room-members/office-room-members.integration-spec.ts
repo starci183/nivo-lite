@@ -6,28 +6,19 @@ import {
     officeRoomMembersIdentity,
     persistOfficeRoomMembers,
 } from "../../fixtures/builders/office-room-members.builder"
-import { CLEAN_USERS } from "../../fixtures/persistence/office-chain.sql"
-import {
-    AGENT_AVATAR_PRIVILEGES,
-    READ_ROOM_MEMBER_AVATARS,
-    ROOM_MEMBER_AVATAR_PRIVILEGES,
-    WRITE_AGENT_AVATAR,
-} from "../../fixtures/persistence/office-room-members.sql"
-import { CLEAN_WORKSPACE } from "../../fixtures/persistence/proof.sql"
 import { withBackendRole } from "../../world/backend-role-proof.service"
 import { OfficeRoomMembersProofModule } from "../../world/office-room-members-proof.module"
 import { useTestWorld } from "../../world/use-test-world"
+import {
+    roomMemberAvatars,
+    writeAgentAvatar,
+    agentAvatarPrivileges,
+    roomMemberAvatarPrivileges,
+} from "../../world/avatars-database.service"
+import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 
 const world = useTestWorld({ modules: [OfficeRoomMembersProofModule.register()] })
 const identity = officeRoomMembersIdentity(() => world.id())
-
-/** The restricted helper's only Auth output: account id and provider photo. */
-interface MemberAvatarRow {
-    /** The requested active workspace account. */
-    readonly id: string
-    /** Its public provider photo, when the metadata holds an HTTPS URL. */
-    readonly avatar_url: string | null
-}
 
 const human = (id: string, name: string, avatarUrl: string | null = null) => ({
     id,
@@ -48,10 +39,13 @@ const agent = (id: string, name: string, avatarUrl: string | null = null) => ({
 beforeAll(async () => {
     world.cleanup(async () => {
         await eachInOrder([identity.workspaceId, identity.foreignWorkspaceId], async (workspaceId) => {
-            await world.db.primary.query(CLEAN_WORKSPACE, [workspaceId])
+            await removeWorkspace(world.db.primary, workspaceId)
         })
-        await world.db.primary.query(CLEAN_USERS, [
-            [identity.ownerId, identity.managerId, ...identity.userIds, identity.foreignUserId],
+        await removeAuthUsers(world.db.primary, [
+            identity.ownerId,
+            identity.managerId,
+            ...identity.userIds,
+            identity.foreignUserId,
         ])
     })
     await persistOfficeRoomMembers(world.db.primary, identity)
@@ -121,9 +115,9 @@ describe("office group membership boundaries over PostgreSQL", () => {
 
     it("returns null for HTTP, JavaScript and non-string photos and exposes only requested active workspace accounts", async () => {
         await withBackendRole(world, async (tx) => {
-            const rows = await tx.query<Array<MemberAvatarRow>>(READ_ROOM_MEMBER_AVATARS, [
-                identity.workspaceId,
-                [...identity.userIds, identity.foreignUserId],
+            const rows = await roomMemberAvatars(tx, identity.workspaceId, [
+                ...identity.userIds,
+                identity.foreignUserId,
             ])
 
             expect(rows).toEqual([
@@ -133,7 +127,7 @@ describe("office group membership boundaries over PostgreSQL", () => {
                 { id: identity.userIds[3], avatar_url: null },
             ])
         })
-        await expect(world.db.primary.query(ROOM_MEMBER_AVATAR_PRIVILEGES)).resolves.toEqual([
+        await expect(roomMemberAvatarPrivileges(world.db.primary)).resolves.toEqual([
             { backend: true, anonymous: false, browser: false, auth_table: false },
         ])
     })
@@ -143,15 +137,15 @@ describe("agent pictures over PostgreSQL", () => {
     it("keeps only HTTPS agent pictures and lets only the backend write them", async () => {
         await withBackendRole(world, async (tx) => {
             await expect(
-                tx.query(WRITE_AGENT_AVATAR, [identity.agentIds[1], "http://images.example.test/agent.png"]),
+                writeAgentAvatar(tx, identity.agentIds[1], "http://images.example.test/agent.png"),
             ).rejects.toMatchObject({ code: "23514" })
         })
         await withBackendRole(world, async (tx) => {
-            await expect(
-                tx.query(WRITE_AGENT_AVATAR, [identity.agentIds[1], "javascript:alert(1)"]),
-            ).rejects.toMatchObject({ code: "23514" })
+            await expect(writeAgentAvatar(tx, identity.agentIds[1], "javascript:alert(1)")).rejects.toMatchObject({
+                code: "23514",
+            })
         })
-        await expect(world.db.primary.query(AGENT_AVATAR_PRIVILEGES)).resolves.toEqual([
+        await expect(agentAvatarPrivileges(world.db.primary)).resolves.toEqual([
             { backend: true, anonymous_read: false, browser_read: false, browser_write: false },
         ])
     })

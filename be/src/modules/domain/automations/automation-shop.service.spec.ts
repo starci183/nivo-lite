@@ -6,7 +6,6 @@ import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { AutomationShopService } from "./automation-shop.service"
 import { buildInstallation, buildOverviewRows } from "@tests/fixtures/builders/automations.builder"
-import { SELECT_OVERVIEW } from "./persistence/automations.sql"
 import type { MockEntityManager } from "@starci/jest-preset"
 
 const build = async (em: MockEntityManager) => {
@@ -26,10 +25,12 @@ const build = async (em: MockEntityManager) => {
     return { shop: moduleRef.get(AutomationShopService), em }
 }
 
+const SELECT_OVERVIEW = "SELECT * FROM public.automations_data($1)"
+
 describe("AutomationShopService overviewRows", () => {
     it("reads every row of the screen in one call", async () => {
         const rows = buildOverviewRows({ workspace_name: "Tiem Hoa" })
-        const { shop, em } = await build(mockEntityManager({ query: [SELECT_OVERVIEW, [{ data: rows }]] }))
+        const { shop, em } = await build(mockEntityManager({ query: [SELECT_OVERVIEW, [{ automations_data: rows }]] }))
 
         await expect(shop.overviewRows("ws-1")).resolves.toBe(rows)
 
@@ -76,13 +77,13 @@ describe("AutomationShopService shop and context", () => {
     })
 
     it("tells the shop of a workspace", async () => {
-        const { shop } = await build(mockEntityManager({ query: [SELECT_OVERVIEW, [{ data: rows }]] }))
+        const { shop } = await build(mockEntityManager({ query: [SELECT_OVERVIEW, [{ automations_data: rows }]] }))
 
         await expect(shop.shopOf("ws-1")).resolves.toMatchObject({ shop: "Tiem Hoa" })
     })
 
     it("gives the context text and the version a template is written from", async () => {
-        const { shop } = await build(mockEntityManager({ query: [SELECT_OVERVIEW, [{ data: rows }]] }))
+        const { shop } = await build(mockEntityManager({ query: [SELECT_OVERVIEW, [{ automations_data: rows }]] }))
 
         await expect(shop.contextFor("ws-1", "sales")).resolves.toEqual({ text: "We sell flowers.", version: 4 })
         await expect(shop.contextFor("ws-1", null)).resolves.toEqual({ text: "We sell flowers.", version: 4 })

@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { InjectSupabaseObjects } from "@modules/integrations/supabase"
-import type { SupabaseObjectsPort } from "@modules/integrations/supabase"
+import { InjectStorageObjects } from "@modules/integrations/object-storage"
+import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { CvStorage } from "./cv-storage.port"
 
 /** The private Storage bucket of candidate CVs (managers read it through their own policy, the back end through the service role). */
@@ -12,7 +12,7 @@ const VIEW_SECONDS = 600
 @Injectable()
 /** Candidate CV files in Supabase Storage: short-lived view links, one-time upload tokens for the public apply page, and removal. */
 export class SupabaseCvStorageService extends CvStorage {
-    constructor(@InjectSupabaseObjects() private readonly objects: SupabaseObjectsPort) {
+    constructor(@InjectStorageObjects() private readonly objects: StorageObjectsPort) {
         super()
     }
 

@@ -1,9 +1,21 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
+import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { DataRecordInput } from "./data-records.contracts"
 import { DataRecordsService } from "./data-records.service"
-import { COUNT_DATA_RECORDS, COUNT_EXISTING_DATA_RECORDS, UPSERT_DATA_RECORDS } from "./persistence/data-records.sql"
+import { DataRecordEntity } from "./persistence/entities"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
+
+const KEYS = ["connectionId", "entity", "externalId"]
+
+/** The rows of one upsert with the type of their sync stamp, which is a function expression and cannot be compared. */
+const stamped = (rows: unknown): ReadonlyArray<unknown> =>
+    Array.isArray(rows) ? rows.map((row: Record<string, unknown>) => ({ ...row, syncedAt: typeof row.syncedAt })) : []
+
+/** What each upsert wrote: the entity, the stamped rows, and the conflict keys. */
+const upsertsOf = (em: MockEntityManager) =>
+    em.upsert.mock.calls.map(([target, rows, keys]) => [target, stamped(rows), keys])
 
 const build = async () => {
     const entityManager = mockEntityManager()
@@ -21,7 +33,7 @@ describe("DataRecordsService upsert", () => {
 
     it("skips unusable ids and writes the mapped fields with bounded titles and normalized dates", async () => {
         const { service, entityManager } = await build()
-        entityManager.query.mockResolvedValue([])
+        entityManager.upsert.mockResolvedValue({ identifiers: [], generatedMaps: [], raw: [] })
         const boundaryId = "i".repeat(300)
         const rows: ReadonlyArray<DataRecordInput> = [
             { externalId: "", data: { skipped: true } },
@@ -41,25 +53,46 @@ describe("DataRecordsService upsert", () => {
                 data: {},
             },
         ]
+        const stamp = { workspaceId: "ws-1", connectionId: "c-1", entity: "order", syncedAt: "function" }
 
         await expect(service.upsert("ws-1", "c-1", "order", rows)).resolves.toBe(4)
 
-        expect(entityManager.query).toHaveBeenCalledTimes(1)
-        expect(entityManager.query).toHaveBeenCalledWith(UPSERT_DATA_RECORDS, [
-            "ws-1",
-            "c-1",
-            "order",
-            JSON.stringify([
-                { external_id: boundaryId, title: "t".repeat(300), occurred_at: null, data: { amount: 12 } },
-                { external_id: "null-time", title: "", occurred_at: null, data: { nested: { active: true } } },
-                {
-                    external_id: "string-time",
-                    title: "Order 1",
-                    occurred_at: "2026-01-02T03:30:00.000Z",
-                    data: { tags: ["paid"] },
-                },
-                { external_id: "date-time", title: "", occurred_at: "2026-02-03T04:05:06.789Z", data: {} },
-            ]),
+        expect(entityManager.upsert).toHaveBeenCalledTimes(1)
+        expect(upsertsOf(entityManager)).toEqual([
+            [
+                DataRecordEntity,
+                [
+                    {
+                        ...stamp,
+                        externalId: boundaryId,
+                        title: "t".repeat(300),
+                        occurredAt: null,
+                        data: { amount: 12 },
+                    },
+                    {
+                        ...stamp,
+                        externalId: "null-time",
+                        title: "",
+                        occurredAt: null,
+                        data: { nested: { active: true } },
+                    },
+                    {
+                        ...stamp,
+                        externalId: "string-time",
+                        title: "Order 1",
+                        occurredAt: new Date("2026-01-02T03:30:00.000Z"),
+                        data: { tags: ["paid"] },
+                    },
+                    {
+                        ...stamp,
+                        externalId: "date-time",
+                        title: "",
+                        occurredAt: new Date("2026-02-03T04:05:06.789Z"),
+                        data: {},
+                    },
+                ],
+                KEYS,
+            ],
         ])
     })
 
@@ -77,48 +110,43 @@ describe("DataRecordsService upsert", () => {
 
         await expect(service.upsert("ws-1", "c-1", "other", rows)).resolves.toBe(0)
 
-        expect(entityManager.query).not.toHaveBeenCalled()
+        expect(entityManager.upsert).not.toHaveBeenCalled()
     })
 })
 
 describe("DataRecordsService upsert", () => {
     it("writes at most 500 usable rows in each query, preserving the input order", async () => {
         const { service, entityManager } = await build()
-        entityManager.query.mockResolvedValue([])
+        entityManager.upsert.mockResolvedValue({ identifiers: [], generatedMaps: [], raw: [] })
         const rows = Array.from({ length: 501 }, (_unused, index) => ({ externalId: `id-${index}`, data: {} }))
-        const firstChunk = Array.from({ length: 500 }, (_unused, index) => ({
-            external_id: `id-${index}`,
+        const written = (index: number) => ({
+            workspaceId: "ws-2",
+            connectionId: "c-2",
+            entity: "product",
+            externalId: `id-${index}`,
             title: "",
-            occurred_at: null,
+            occurredAt: null,
             data: {},
-        }))
+            syncedAt: "function",
+        })
 
         await expect(service.upsert("ws-2", "c-2", "product", rows)).resolves.toBe(501)
 
-        expect(entityManager.query).toHaveBeenCalledTimes(2)
-        expect(entityManager.query).toHaveBeenNthCalledWith(1, UPSERT_DATA_RECORDS, [
-            "ws-2",
-            "c-2",
-            "product",
-            JSON.stringify(firstChunk),
-        ])
-        expect(entityManager.query).toHaveBeenNthCalledWith(2, UPSERT_DATA_RECORDS, [
-            "ws-2",
-            "c-2",
-            "product",
-            JSON.stringify([{ external_id: "id-500", title: "", occurred_at: null, data: {} }]),
+        expect(upsertsOf(entityManager)).toEqual([
+            [DataRecordEntity, Array.from({ length: 500 }, (_unused, index) => written(index)), KEYS],
+            [DataRecordEntity, [written(500)], KEYS],
         ])
     })
 
     it("propagates a rejected write and does not start a later batch", async () => {
         const { service, entityManager } = await build()
         const failure = new TypeError("write refused")
-        entityManager.query.mockRejectedValue(failure)
+        entityManager.upsert.mockRejectedValue(failure)
         const rows = Array.from({ length: 501 }, (_unused, index) => ({ externalId: `id-${index}`, data: {} }))
 
         await expect(service.upsert("ws-1", "c-1", "message", rows)).rejects.toBe(failure)
 
-        expect(entityManager.query).toHaveBeenCalledTimes(1)
+        expect(entityManager.upsert).toHaveBeenCalledTimes(1)
     })
 
     it("rejects an invalid occurrence date before querying", async () => {
@@ -128,7 +156,7 @@ describe("DataRecordsService upsert", () => {
             service.upsert("ws-1", "c-1", "document", [{ externalId: "id-1", occurredAt: "invalid", data: {} }]),
         ).rejects.toBeInstanceOf(RangeError)
 
-        expect(entityManager.query).not.toHaveBeenCalled()
+        expect(entityManager.upsert).not.toHaveBeenCalled()
     })
 })
 
@@ -138,32 +166,19 @@ describe("DataRecordsService countExisting", () => {
         expect(service.countExisting).toBeInstanceOf(Function)
     })
 
-    it("adds counts across 500-id batches and treats a missing result row as zero", async () => {
+    it("counts the held ids in one statement with the ids as one array parameter", async () => {
         const { service, entityManager } = await build()
-        entityManager.query
-            .mockResolvedValueOnce([{ n: 7 }])
-            .mockResolvedValueOnce([])
-            .mockResolvedValueOnce([{ n: 2 }])
+        const [counter] = queueQueryBuilders(entityManager, [{ getCount: 9 }])
         const ids = Array.from({ length: 1001 }, (_unused, index) => `id-${index}`)
 
         await expect(service.countExisting("c-1", "customer", ids)).resolves.toBe(9)
 
-        expect(entityManager.query).toHaveBeenCalledTimes(3)
-        expect(entityManager.query).toHaveBeenNthCalledWith(1, COUNT_EXISTING_DATA_RECORDS, [
-            "c-1",
-            "customer",
-            ids.slice(0, 500),
+        expect(entityManager.createQueryBuilder).toHaveBeenCalledTimes(1)
+        expect(entityManager.createQueryBuilder).toHaveBeenCalledWith(DataRecordEntity, "d")
+        expect(counter?.callsOf("where")).toEqual([
+            ["d.connection_id = :connectionId AND d.entity = :entity", { connectionId: "c-1", entity: "customer" }],
         ])
-        expect(entityManager.query).toHaveBeenNthCalledWith(2, COUNT_EXISTING_DATA_RECORDS, [
-            "c-1",
-            "customer",
-            ids.slice(500, 1000),
-        ])
-        expect(entityManager.query).toHaveBeenNthCalledWith(3, COUNT_EXISTING_DATA_RECORDS, [
-            "c-1",
-            "customer",
-            ["id-1000"],
-        ])
+        expect(counter?.callsOf("andWhere")).toEqual([["d.external_id = ANY(:ids)", { ids }]])
     })
 
     it("answers zero without querying an empty id list", async () => {
@@ -171,17 +186,17 @@ describe("DataRecordsService countExisting", () => {
 
         await expect(service.countExisting("c-1", "transaction", [])).resolves.toBe(0)
 
-        expect(entityManager.query).not.toHaveBeenCalled()
+        expect(entityManager.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("propagates a rejected count query", async () => {
         const { service, entityManager } = await build()
         const failure = new TypeError("count refused")
-        entityManager.query.mockRejectedValue(failure)
+        entityManager.createQueryBuilder.mockImplementation(() => {
+            throw failure
+        })
 
         await expect(service.countExisting("c-1", "other", ["id-1"])).rejects.toBe(failure)
-
-        expect(entityManager.query).toHaveBeenCalledWith(COUNT_EXISTING_DATA_RECORDS, ["c-1", "other", ["id-1"]])
     })
 })
 
@@ -191,17 +206,13 @@ describe("DataRecordsService count", () => {
         expect(service.count).toBeInstanceOf(Function)
     })
 
-    it.each([
-        [[{ n: 12 }], 12],
-        [[{ n: 0 }], 0],
-        [[], 0],
-    ] as const)("answers the returned count or zero when the result row is absent (%j)", async (rows, expected) => {
+    it.each([12, 0])("answers the number of rows the connection holds (%j)", async (expected) => {
         const { service, entityManager } = await build()
-        entityManager.query.mockResolvedValue(rows)
+        entityManager.count.mockResolvedValue(expected)
 
         await expect(service.count("c-2")).resolves.toBe(expected)
 
-        expect(entityManager.query).toHaveBeenCalledTimes(1)
-        expect(entityManager.query).toHaveBeenCalledWith(COUNT_DATA_RECORDS, ["c-2"])
+        expect(entityManager.count).toHaveBeenCalledTimes(1)
+        expect(entityManager.count).toHaveBeenCalledWith(DataRecordEntity, { where: { connectionId: "c-2" } })
     })
 })

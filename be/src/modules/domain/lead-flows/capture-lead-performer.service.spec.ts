@@ -1,15 +1,16 @@
 import { Test } from "@nestjs/testing"
-import { builder, mock } from "@starci/jest-preset"
+import { builder, fakeTransaction, mock, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
 import type { AgentProfile } from "@modules/domain/agents"
 import type { FlowFields } from "./lead-flow-fields.policy"
 
-import { BusinessEventsService } from "@modules/domain/automations"
 import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
 import type { WorkContext, WorkItem, WorkPerformerRegistry } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { LeadRecordsService } from "@modules/domain/leads"
 import type { LeadRecordRow } from "@modules/domain/leads"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { EVENT_BUS } from "@modules/platform/event-bus"
 import { CaptureLeadPerformerService } from "./capture-lead-performer.service"
 import { LeadFlowsError, LeadFlowsErrorCode } from "./errors/lead-flows.error"
 import { LeadFlowConversationService } from "./lead-flow-conversation.service"
@@ -148,7 +149,8 @@ const build = async (flow: LeadFlow = flowOf({ phone: "84912345678", psid: null 
     leads.capture.mockResolvedValue(leadOf())
     const inbound = mock<InboundEventsService>()
     const responsibilities = mock<ResponsibilityJournalService>()
-    const events = mock<BusinessEventsService>()
+    const events = recordingEventBus()
+    const transaction = fakeTransaction(mockEntityManager())
     store.candidates.mockResolvedValue([])
     store.byLead.mockResolvedValue(null)
     store.open.mockResolvedValue(flow)
@@ -161,11 +163,12 @@ const build = async (flow: LeadFlow = flowOf({ phone: "84912345678", psid: null 
             { provide: LeadRecordsService, useValue: leads },
             { provide: InboundEventsService, useValue: inbound },
             { provide: ResponsibilityJournalService, useValue: responsibilities },
-            { provide: BusinessEventsService, useValue: events },
+            { provide: EVENT_BUS, useValue: events },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: transaction.em },
         ],
     }).compile()
     const performer = moduleRef.get(CaptureLeadPerformerService)
-    return { performer, registry, kit, store, transcript, leads, inbound, responsibilities, events }
+    return { performer, registry, kit, store, transcript, leads, inbound, responsibilities, events, transaction }
 }
 
 const captured = { summary: "capture.done", evidence: "captured", lead_id: "lead-1", detail: null }
@@ -193,17 +196,23 @@ describe("CaptureLeadPerformerService", () => {
             performer.perform(ctx, itemOf({ inbound_event_id: "event-1" }), { summary: "", fields }),
         ).resolves.toMatchObject({ summary: "capture.done", lead_id: "lead-1" })
 
-        expect(leads.capture).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            contactName: "Lan",
-            company: "not-shared",
-            channel: "channel.lead-ads",
-            need: "want tea",
-            phone: "84912345678",
-            email: null,
-        })
+        expect(leads.capture).toHaveBeenCalledWith(
+            {
+                workspaceId: "ws-1",
+                contactName: "Lan",
+                company: "not-shared",
+                channel: "channel.lead-ads",
+                need: "want tea",
+                phone: "84912345678",
+                email: null,
+            },
+            expect.anything(),
+        )
         expect(responsibilities.ensureFor).toHaveBeenCalledWith(ctx, "lead-1")
-        expect(events.leadCreated).toHaveBeenCalledWith("ws-1", leadOf())
+        expect(events.writes[0]).toMatchObject({
+            eventName: "lead_captured",
+            payload: { dedupeKey: "lead.created:lead-1", contactName: "Lan", phone: "84912345678" },
+        })
         expect(store.open).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             leadId: "lead-1",
@@ -237,7 +246,7 @@ describe("CaptureLeadPerformerService", () => {
             email: null,
         })
         expect(leads.capture).not.toHaveBeenCalled()
-        expect(events.leadCreated).not.toHaveBeenCalled()
+        expect(events.writes).toEqual([])
         expect(store.open).not.toHaveBeenCalled()
         expect(store.patch).toHaveBeenCalledWith(flow, { touches: [SOURCE] })
         expect(kit.log).toHaveBeenCalledWith(
@@ -276,15 +285,18 @@ describe("CaptureLeadPerformerService", () => {
         })
         await expect(performer.perform(ctx, itemOf(), { summary: "", fields: {} })).resolves.toEqual(captured)
         expect(leads.match).not.toHaveBeenCalled()
-        expect(leads.capture).toHaveBeenLastCalledWith({
-            workspaceId: "ws-1",
-            contactName: "guest.facebook",
-            company: "not-shared",
-            channel: "channel.lead-ads",
-            need: "Facebook form",
-            phone: null,
-            email: null,
-        })
+        expect(leads.capture).toHaveBeenLastCalledWith(
+            {
+                workspaceId: "ws-1",
+                contactName: "guest.facebook",
+                company: "not-shared",
+                channel: "channel.lead-ads",
+                need: "Facebook form",
+                phone: null,
+                email: null,
+            },
+            expect.anything(),
+        )
         expect(kit.log).toHaveBeenCalledWith(
             ctx,
             { lead_id: "lead-1" },
@@ -301,15 +313,18 @@ describe("CaptureLeadPerformerService", () => {
             email: "minh@example.com",
         }
         await expect(performer.perform(ctx, itemOf(), { summary: "", fields: incoming })).resolves.toEqual(captured)
-        expect(leads.capture).toHaveBeenLastCalledWith({
-            workspaceId: "ws-1",
-            contactName: "Minh",
-            company: "Tea Shop",
-            channel: "Owner channel",
-            need: "Owner need",
-            phone: null,
-            email: "minh@example.com",
-        })
+        expect(leads.capture).toHaveBeenLastCalledWith(
+            {
+                workspaceId: "ws-1",
+                contactName: "Minh",
+                company: "Tea Shop",
+                channel: "Owner channel",
+                need: "Owner need",
+                phone: null,
+                email: "minh@example.com",
+            },
+            expect.anything(),
+        )
         expect(leads.match).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             phone: null,

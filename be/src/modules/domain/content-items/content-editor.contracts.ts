@@ -222,3 +222,21 @@ export interface ContentPillarCoverage {
     /** The total number of active themes. */
     readonly total: number
 }
+
+/** The summary of the last completed editorial plan, as the content-plans owner reads it. */
+export interface PlanSummary {
+    /** The planned month. */
+    readonly month: string
+    /** How many ideas it made. */
+    readonly ideas: number
+    /** How long the AI took. */
+    readonly ms: number | null
+    /** When it was made. */
+    readonly createdAt: Date | string
+}
+
+/** The last completed plan, or nothing before the first. */
+export type OptionalPlanSummary = PlanSummary | undefined
+
+/** Reads the last completed plan of a workspace; the owner of the plans table hands it in, so this capability never imports it. */
+export type PlanReader = (workspaceId: string) => Promise<OptionalPlanSummary>

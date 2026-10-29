@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { JobOpsConsoleService, JobTickService } from "@modules/domain/job-ops"
+import { JobOpsConsoleService, JobOpsTickService } from "@modules/domain/job-ops"
 import { JobsCli } from "./jobs.cli"
 import { FailedJobsCli } from "./subs/failed.cli"
 import { OpenJobsCli } from "./subs/open.cli"
@@ -24,7 +24,7 @@ describe("JobsCli", () => {
 
     it("constructs the group and all seven commands with their explicit capabilities", async () => {
         const jobs = mock<JobOpsConsoleService>()
-        const ticks = mock<JobTickService>()
+        const ticks = mock<JobOpsTickService>()
         const moduleRef = await Test.createTestingModule({
             providers: [
                 JobsCli,
@@ -36,7 +36,7 @@ describe("JobsCli", () => {
                 WatchdogJobsCli,
                 TickJobsCli,
                 { provide: JobOpsConsoleService, useValue: jobs },
-                { provide: JobTickService, useValue: ticks },
+                { provide: JobOpsTickService, useValue: ticks },
             ],
         }).compile()
 

@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
@@ -10,20 +11,28 @@ import type {
     NivoWriteResult,
 } from "./nivo-knowledge.contracts"
 import { CORE_FOLDER } from "./nivo-item.policy"
-import type {
-    NivoEntryRow,
-    RemovedNivoRow,
-    UnembeddedNivoRow,
-    UpsertedNivoRow,
-} from "./persistence/nivo-knowledge.rows"
-import {
-    COUNT_NIVO_FOR_MODULES,
-    DELETE_STALE_NIVO_ITEMS,
-    LIST_NIVO_ITEMS,
-    SELECT_NIVO_UNEMBEDDED,
-    UPDATE_NIVO_VECTORS,
-    UPSERT_NIVO_ITEM,
-} from "./persistence/nivo-knowledge.sql"
+import { NivoKnowledgeItemEntity } from "./persistence/entities"
+
+/** The most items the Knowledge page lists. */
+const LIST_LIMIT = 500
+
+/** The condition under which an item keeps its vector: its title and body did not change. */
+const UNCHANGED = '"nivo_knowledge"."body" = EXCLUDED."body" AND "nivo_knowledge"."title" = EXCLUDED."title"'
+
+/**
+ * The conflict clause that publishes an item by its slug: an unchanged text keeps its version and vector, a changed one takes
+ * the next version and loses its vector.
+ */
+const UPSERT_CONFLICT = `("slug") DO UPDATE SET
+    "module" = EXCLUDED."module", "title" = EXCLUDED."title", "body" = EXCLUDED."body", "kind" = EXCLUDED."kind",
+    "version" = CASE WHEN ${UNCHANGED} THEN "nivo_knowledge"."version" ELSE "nivo_knowledge"."version" + 1 END,
+    "embedding" = CASE WHEN ${UNCHANGED} THEN "nivo_knowledge"."embedding" ELSE NULL END,
+    "embedding_model" = CASE WHEN ${UNCHANGED} THEN "nivo_knowledge"."embedding_model" ELSE NULL END,
+    "updated_at" = now()`
+
+/** The vector of each id, picked from the two arrays the write carries. */
+const VECTOR_OF_ID =
+    '(SELECT t.embedding::extensions.vector FROM unnest(CAST(:ids AS uuid[]), CAST(:vectors AS text[])) AS t(id, embedding) WHERE t.id = "nivo_knowledge"."id")'
 
 /** The longest text of an item that is embedded. */
 const EMBED_CHARS = 8000
@@ -41,13 +50,20 @@ export class NivoKnowledgeService {
         return this.entityManager.transaction(async (tx) => {
             const counts = { inserted: 0, updated: 0 }
             await eachInOrder(items, async (item) => {
-                const [row] = await tx.query<Array<UpsertedNivoRow>>(UPSERT_NIVO_ITEM, [
-                    item.module,
-                    item.slug,
-                    item.title,
-                    item.body,
-                    item.kind,
-                ])
+                const result = await tx
+                    .createQueryBuilder(NivoKnowledgeItemEntity, "nivo_knowledge")
+                    .insert()
+                    .values({
+                        module: item.module,
+                        slug: item.slug,
+                        title: item.title,
+                        body: item.body,
+                        kind: item.kind,
+                    })
+                    .onConflict(UPSERT_CONFLICT)
+                    .returning("(xmax = 0) AS inserted")
+                    .execute()
+                const [row] = result.raw as Array<{ inserted: boolean }>
                 if (row?.inserted === true) counts.inserted += 1
                 else counts.updated += 1
             })
@@ -65,13 +81,15 @@ export class NivoKnowledgeService {
 
     /** How many base-knowledge items belong to the named modules. */
     async countFor(modules: ReadonlyArray<string>): Promise<number> {
-        const [row] = await this.entityManager.query<Array<{ count: number }>>(COUNT_NIVO_FOR_MODULES, [[...modules]])
-        return row?.count ?? 0
+        return this.entityManager.count(NivoKnowledgeItemEntity, { where: { module: In([...modules]) } })
     }
 
     /** Every item of the base knowledge, for the Knowledge page; any signed-in person may read it. */
     async list(): Promise<ReadonlyArray<NivoEntry>> {
-        const rows = await this.entityManager.query<Array<NivoEntryRow>>(LIST_NIVO_ITEMS)
+        const rows = await this.entityManager.find(NivoKnowledgeItemEntity, {
+            order: { module: "ASC", kind: "ASC", slug: "ASC" },
+            take: LIST_LIMIT,
+        })
         return rows.map((row) => ({
             id: row.id,
             module: row.module,
@@ -80,24 +98,42 @@ export class NivoKnowledgeService {
             body: row.body,
             kind: row.kind,
             version: row.version,
-            updatedAt: new Date(row.updated_at).toISOString(),
+            updatedAt: row.updatedAt.toISOString(),
         }))
     }
 
     /** Removes the items whose slug is not given, so the table mirrors the folder; answers how many went. */
     async removeExcept(slugs: ReadonlyArray<string>): Promise<number> {
-        const removed = await this.entityManager.query<Array<RemovedNivoRow>>(DELETE_STALE_NIVO_ITEMS, [slugs])
-        return removed.length
+        const removed = await this.entityManager
+            .createQueryBuilder(NivoKnowledgeItemEntity, "n")
+            .delete()
+            .where("slug <> ALL(CAST(:slugs AS text[]))", { slugs: [...slugs] })
+            .returning("id")
+            .execute()
+        return (removed.raw as Array<{ id: string }>).length
     }
 
     /** Up to `limit` items without a vector of `model`, with the text to embed. */
     async unembedded(model: string, limit: number): Promise<ReadonlyArray<NivoUnembedded>> {
-        const rows = await this.entityManager.query<Array<UnembeddedNivoRow>>(SELECT_NIVO_UNEMBEDDED, [model, limit])
+        const rows = await this.entityManager
+            .createQueryBuilder(NivoKnowledgeItemEntity, "k")
+            .select(["k.id", "k.title", "k.body"])
+            .where("k.embedding IS NULL OR k.embeddingModel IS NULL OR k.embeddingModel <> :model", { model })
+            .orderBy("k.module", "ASC")
+            .addOrderBy("k.slug", "ASC")
+            .limit(limit)
+            .getMany()
         return rows.map((row) => ({ id: row.id, text: `${row.title}\n\n${row.body}`.slice(0, EMBED_CHARS) }))
     }
 
     /** Gives items their vectors. */
     async setVectors(write: NivoVectorWrite): Promise<void> {
-        await this.entityManager.query(UPDATE_NIVO_VECTORS, [write.ids, write.vectors, write.model])
+        await this.entityManager
+            .createQueryBuilder(NivoKnowledgeItemEntity, "n")
+            .update()
+            .set({ embedding: () => VECTOR_OF_ID, embeddingModel: write.model })
+            .where("id = ANY(CAST(:ids AS uuid[]))")
+            .setParameters({ ids: [...write.ids], vectors: [...write.vectors] })
+            .execute()
     }
 }

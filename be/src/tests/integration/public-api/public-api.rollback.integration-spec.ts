@@ -1,12 +1,11 @@
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
 import { PublicApiProcessingService, PublicKnowledgeService } from "@modules/domain/public-api"
-import * as statements from "../../fixtures/persistence/public-api.sql"
 import { PUBLIC_API_PROOF_MODULES } from "../../world/public-api-capabilities.options"
 import { claimPublicApi, publicApiRequest } from "../../world/public-api-proof.service"
-import type { PublicApiRequestState } from "../../world/public-api-proof.service"
 import { preparePublicApiProof } from "../../world/public-api-suite.service"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import { useTestWorld } from "../../world/use-test-world"
+import { apiRequest } from "../../world/public-api-database.service"
 
 describe("Public API rollback (persisted local integration)", () => {
     const world = useTestWorld({ modules: [...PUBLIC_API_PROOF_MODULES, ProcessPublicApiQueueModule.register({})] })
@@ -26,10 +25,7 @@ describe("Public API rollback (persisted local integration)", () => {
         jest.spyOn(processing, "process").mockImplementationOnce(async (input, tx) => {
             expect(tx.queryRunner?.isTransactionActive).toBe(true)
             await fulfill(input, tx)
-            const [uncommitted] = await tx.query<Array<PublicApiRequestState>>(statements.API_REQUEST, [
-                identity.workspaceId,
-                accepted.id,
-            ])
+            const [uncommitted] = await apiRequest(tx, identity.workspaceId, accepted.id)
             expect(uncommitted?.processed_at).toBeInstanceOf(Date)
             expect((await publicApiRequest(world, identity.workspaceId, accepted.id)).processed_at).toBeNull()
             expect(await source(identity.workspaceId, accepted.id)).toEqual([])

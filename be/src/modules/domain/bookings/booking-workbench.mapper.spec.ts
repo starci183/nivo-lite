@@ -12,7 +12,7 @@ import {
     toSaveBookingServiceRequest,
 } from "./booking-workbench.mapper"
 import { BookingsErrorCode } from "./errors/bookings.error"
-import { DEFAULT_SETTINGS } from "./persistence/booking.rows"
+import { DEFAULT_SETTINGS } from "./bookings.contracts"
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 

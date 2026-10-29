@@ -1,37 +1,45 @@
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { AutomationTemplatesService } from "@modules/domain/automation-templates"
-import { AutomationTickService } from "@modules/domain/automations"
+import { AutomationEngineService } from "@modules/domain/automations"
 import { BankFeedService } from "@modules/domain/billing"
 import { ModulesService } from "@modules/domain/modules"
+import { PaymentReconciledContractsConsumer } from "@modules/domain/contracts"
+import { BankCreditBookedAccountingConsumer } from "@modules/domain/work-performers"
 import { CLOCK } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
+import {
+    BANK_CREDIT_BOOKED_ACCOUNTING_TOPIC_QUEUE,
+    PAYMENT_RECONCILED_CONTRACTS_TOPIC_QUEUE,
+    EventConsumerService,
+} from "@modules/platform/event-bus"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { JobRunnerService } from "@modules/platform/jobs"
 import type { FencedProcessor } from "@modules/platform/jobs"
 import { eachInOrder } from "@modules/platform/primitives"
 import { BankFeedDeliveryProcessor } from "../../../features/jobs/bank-feed-delivery/transport/queue/bank-feed-delivery.processor"
-import { ReconcileBankCreditProcessor } from "../../../features/jobs/reconcile-bank-credit/transport/queue/reconcile-bank-credit.processor"
 import { WorkPerformersRegistrarService } from "../../../modules/domain/work-performers/work-performers-registrar.service"
 import { persistCustomerContract, persistRenewalWorld } from "../../fixtures/builders/renewal-to-cash.builder"
 import type { RenewalContract, RenewalIdentity } from "../../fixtures/builders/renewal-to-cash.builder"
-import { CLEAN_USER, CLEAN_WORKSPACE } from "../../fixtures/persistence/proof.sql"
-import {
-    BANK_CREDIT_JOBS,
-    BANK_EVENTS,
-    BANK_TRANSACTIONS,
-    CLEAN_FEED_RECEIPTS,
-    CLEAN_JOB_KEYS,
-    CONTRACT_STATE,
-    EVIDENCE_OF_KIND,
-    FEED_DELIVERIES,
-    PIPELINE_RUNS,
-    RENEWAL_INVOICES,
-    WORK_ITEMS_OF_ACTION,
-} from "../../fixtures/persistence/renewal-to-cash.sql"
 import { API_APP_MODULES } from "../../world/api-app.options"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import { useTestWorld } from "../../world/use-test-world"
+import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
+import {
+    renewalInvoices,
+    workItemsOfAction,
+    pipelineRuns,
+    contractState,
+    bankEvents,
+    bankTransactions,
+    evidenceOfKind,
+    feedDeliveries,
+    bankCreditClaims,
+    cleanEventClaims,
+    cleanFeedReceipts,
+    cleanJobKeys,
+} from "../../world/renewal-to-cash-database.service"
+import type { ContractState, OutboxJob } from "../../world/renewal-to-cash-database.service"
 
 const world = useTestWorld({ modules: API_APP_MODULES })
 
@@ -63,90 +71,6 @@ const plusDays = (iso: string, days: number): string =>
 const plusYears = (iso: string, years: number): string => `${Number(iso.slice(0, 4)) + years}${iso.slice(4)}`
 const display = (iso: string): string => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
 
-/** One invoice as the database holds it. */
-interface InvoiceState {
-    readonly id: string
-    readonly invoice_no: string
-    readonly amount_vnd: number
-    readonly status: string
-    readonly lead_id: string | null
-    readonly contract_id: string | null
-    readonly period_ends_on: string | null
-    readonly paid_at: string | null
-}
-
-/** One invoice a proposal offers. */
-interface ProposalCandidateState {
-    readonly id: string
-}
-
-/** The part of a work item's proposal the proof reads. */
-interface ProposalState {
-    readonly draft?: string
-    readonly candidates?: ReadonlyArray<ProposalCandidateState>
-}
-
-/** One work item as the database holds it. */
-interface WorkItemState {
-    readonly id: string
-    readonly status: string
-    readonly decided_path: string | null
-    readonly reason: string | null
-    readonly inbound_event_id: string | null
-    readonly lead_id: string | null
-    readonly proposal: ProposalState
-}
-
-/** One bank credit as an inbound event. */
-interface BankEventState {
-    readonly id: string
-    readonly status: string
-    readonly amount_vnd: number
-    readonly external_ref: string | null
-    readonly event_id: string | null
-}
-
-/** One bank transaction. */
-interface TransactionState {
-    readonly id: string
-    readonly status: string
-    readonly invoice_id: string | null
-    readonly amount_vnd: number
-}
-
-/** One contract as it stands. */
-interface ContractState {
-    readonly starts_on: string
-    readonly ends_on: string
-    readonly note: string
-    readonly status: string
-}
-
-/** One step of an automation run. */
-interface RunStepState {
-    readonly label: string
-}
-
-/** One automation run. */
-interface RunState {
-    readonly status: string
-    readonly steps: ReadonlyArray<RunStepState>
-}
-
-/** One evidence line. */
-interface EvidenceState {
-    readonly summary: string
-    readonly evidence: string | null
-}
-
-/** One queued job as the outbox holds it. */
-interface OutboxJob {
-    readonly id: string
-    readonly queue: string
-    readonly name: string
-    readonly payload: object
-}
-
 /** The two contracts of the story, dated from the world's clock once it is open. */
 interface StoryContracts {
     first: RenewalContract
@@ -171,14 +95,14 @@ const db = () => world.db.primary
 const say = (key: string, params: Record<string, string | number> = {}): string =>
     world.resolve<MessageCatalog>(MESSAGE_CATALOG).get(key, params, "vi")
 
-const invoicesOf = (contractId: string) => db().query<Array<InvoiceState>>(RENEWAL_INVOICES, [WS, contractId])
-const workOf = (action: string) => db().query<Array<WorkItemState>>(WORK_ITEMS_OF_ACTION, [WS, action])
-const creditsOf = () => db().query<Array<BankEventState>>(BANK_EVENTS, [WS])
-const renewalsLogged = () => db().query<Array<EvidenceState>>(EVIDENCE_OF_KIND, [WS, "contract.renewed"])
-const feedReceipts = () => db().query<Array<OutboxJob>>(FEED_DELIVERIES, [identity.connectionId])
-const creditJobs = () => db().query<Array<OutboxJob>>(BANK_CREDIT_JOBS, [WS])
+const invoicesOf = (contractId: string) => renewalInvoices(db(), WS, contractId)
+const workOf = (action: string) => workItemsOfAction(db(), WS, action)
+const creditsOf = () => bankEvents(db(), WS)
+const renewalsLogged = () => evidenceOfKind(db(), WS, "contract.renewed")
+const feedReceipts = () => feedDeliveries(db(), identity.connectionId)
+const creditClaims = () => bankCreditClaims(db(), WS)
 const contractOf = async (contractId: string): Promise<ContractState> => {
-    const [row] = await db().query<Array<ContractState>>(CONTRACT_STATE, [WS, contractId])
+    const [row] = await contractState(db(), WS, contractId)
     if (row === undefined) throw new TestWorldError({ code: TestWorldErrorCode.RowMissing, params: { contractId } })
     return row
 }
@@ -190,10 +114,9 @@ const yearlyEnding = (days: number, contract: RenewalContract): RenewalContract 
     return { ...contract, startsOn: plusYears(endsOn, -1), endsOn }
 }
 
-/** The automation queue's business event, as the contract scan announces a contract entering its renewal window. */
+/** The engine's business event, as the contract scan announces a contract entering its renewal window. */
 const announceExpiring = (contractId: string, contract: RenewalContract): Promise<void> =>
-    world.resolve(AutomationTickService).run({
-        kind: "business_event",
+    world.resolve(AutomationEngineService).onBusinessEvent({
         event: "contract.expiring",
         workspaceId: WS,
         dedupe: `contract.expiring:${contractId}:${contract.endsOn}`,
@@ -242,22 +165,39 @@ const runQueued = async (queued: ReadonlyArray<OutboxJob>, processor: FencedProc
     })
 }
 
+/** Reads the committed facts every reactor of the money story is waiting for, once each: the settlement and the renewal. */
+const drainEvents = async (): Promise<void> => {
+    const bus = world.resolve(EventConsumerService)
+    await bus.drain({
+        queue: BANK_CREDIT_BOOKED_ACCOUNTING_TOPIC_QUEUE,
+        consumer: world.resolve(BankCreditBookedAccountingConsumer),
+        maxDeliveries: 5,
+    })
+    await bus.drain({
+        queue: PAYMENT_RECONCILED_CONTRACTS_TOPIC_QUEUE,
+        consumer: world.resolve(PaymentReconciledContractsConsumer),
+        maxDeliveries: 5,
+    })
+}
+
 /**
  * The SePay webhook path after its credential proof: the receipt is recorded with its queue message, the bank-feed-delivery job
- * books it (one inbound payment event and its reconcile job), and the reconcile-bank-credit job settles it.
+ * books it (one inbound payment event and its `bank_credit_booked` fact), the accounting reactor settles it, and the contracts
+ * reactor renews the contract the settled invoice paid for.
  */
 const deliverSepay = async (id: number, amount: number, content: string): Promise<void> => {
     await world.resolve(BankFeedService).acceptSepayFeedDelivery(sepayBody(id, amount, content), identity.connectionId)
     await runQueued(await feedReceipts(), world.resolve(BankFeedDeliveryProcessor))
-    await runQueued(await creditJobs(), world.resolve(ReconcileBankCreditProcessor))
+    await drainEvents()
 }
 
 beforeAll(async () => {
     world.cleanup(async () => {
-        await db().query(CLEAN_JOB_KEYS, [[...delivered]])
-        await db().query(CLEAN_FEED_RECEIPTS, [identity.connectionId])
-        await db().query(CLEAN_WORKSPACE, [WS])
-        await db().query(CLEAN_USER, [identity.ownerId])
+        await cleanJobKeys(db(), [...delivered])
+        await cleanEventClaims(db(), WS)
+        await cleanFeedReceipts(db(), identity.connectionId)
+        await removeWorkspace(db(), WS)
+        await removeAuthUsers(db(), [identity.ownerId])
     })
     loop.today = new Date(world.resolve<Clock>(CLOCK).now().getTime() + VN_OFFSET_MS).toISOString().slice(0, 10)
     story.first = yearlyEnding(7, story.first)
@@ -323,7 +263,7 @@ describe("renewal-to-cash: the contract_renewal automation bills the period and 
         expect(drafts[0]).toMatchObject({ status: "waiting_decision", lead_id: identity.leadId })
         expect(drafts[0]?.proposal.draft?.endsWith(`\n\n${tail}`)).toBe(true)
 
-        const runs = await db().query<Array<RunState>>(PIPELINE_RUNS, [identity.pipelineId])
+        const runs = await pipelineRuns(db(), identity.pipelineId)
         expect(runs).toHaveLength(1)
         expect(runs[0]?.status).toBe("waiting_approval")
         expect(runs[0]?.steps.map((step) => step.label)).toContain(
@@ -349,7 +289,7 @@ describe("renewal-to-cash: the SePay credit settles the invoice and renews the c
         expect(credits).toHaveLength(1)
         expect(credits[0]).toMatchObject({ amount_vnd: FIRST_AMOUNT.vnd, event_id: "sepay:910001" })
         expect(reconciled[0]?.inbound_event_id).toBe(credits[0]?.id)
-        await expect(db().query<Array<TransactionState>>(BANK_TRANSACTIONS, [WS])).resolves.toEqual([
+        await expect(bankTransactions(db(), WS)).resolves.toEqual([
             expect.objectContaining({ status: "matched", invoice_id: loop.invoiceId, amount_vnd: FIRST_AMOUNT.vnd }),
         ])
 
@@ -371,7 +311,7 @@ describe("renewal-to-cash: the SePay credit settles the invoice and renews the c
             credits: await creditsOf(),
             reconciled: await workOf("reconcile_payment"),
             receipts: await feedReceipts(),
-            jobs: await creditJobs(),
+            claims: await creditClaims(),
             renewals: await renewalsLogged(),
         }
 
@@ -382,7 +322,7 @@ describe("renewal-to-cash: the SePay credit settles the invoice and renews the c
         await expect(creditsOf()).resolves.toEqual(before.credits)
         await expect(workOf("reconcile_payment")).resolves.toEqual(before.reconciled)
         await expect(feedReceipts()).resolves.toEqual(before.receipts)
-        await expect(creditJobs()).resolves.toEqual(before.jobs)
+        await expect(creditClaims()).resolves.toEqual(before.claims)
         await expect(renewalsLogged()).resolves.toEqual(before.renewals)
     })
 })

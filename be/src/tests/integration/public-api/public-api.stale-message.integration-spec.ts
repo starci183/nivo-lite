@@ -4,14 +4,13 @@ import { WorkEngineService, WORK_PERFORMER_REGISTRY } from "@modules/domain/deci
 import type { WorkPerformer, WorkPerformerRegistry } from "@modules/domain/decisions"
 import { PublicMessagesService } from "@modules/domain/public-api"
 import { persistPublicApiConversation } from "../../fixtures/builders/public-api.builder"
-import * as statements from "../../fixtures/persistence/public-api.sql"
 import { PUBLIC_API_PROOF_MODULES, PublicApiProofAccess } from "../../world/public-api-capabilities.options"
 import type { LiteWorld } from "../../world/lite-world.service"
 import { publicApiWork } from "../../world/public-api-proof.service"
-import type { PublicApiRequestState } from "../../world/public-api-proof.service"
 import { preparePublicApiProof } from "../../world/public-api-suite.service"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import { useTestWorld } from "../../world/use-test-world"
+import { apiMessageRequest, backdateApiRequest } from "../../world/public-api-database.service"
 
 /** Lets the workspace's own authority send automatically and records whether a send happened. */
 const automaticSender = (world: LiteWorld) => {
@@ -56,12 +55,9 @@ describe("Public API stale message (persisted local integration)", () => {
             requireApproval: false,
             idempotencyKey: "stale-message",
         })
-        const [request] = await world.db.primary.query<Array<PublicApiRequestState>>(statements.API_MESSAGE_REQUEST, [
-            identity.workspaceId,
-            conversationId,
-        ])
+        const [request] = await apiMessageRequest(world.db.primary, identity.workspaceId, conversationId)
         assert(request !== undefined)
-        await world.db.primary.query(statements.BACKDATE_API_REQUEST, [identity.workspaceId, request.id, 25])
+        await backdateApiRequest(world.db.primary, identity.workspaceId, request.id, 25)
         const perform = automaticSender(world)
 
         await deliver({ workspaceId: identity.workspaceId, requestId: request.id })

@@ -5,7 +5,7 @@ import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { EventsService } from "@modules/domain/events"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { AgentSyncStatus } from "@modules/domain/module-installations"
-import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
+import { InstallationChangesService } from "./installation-changes.service"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ACCOUNTING_MODULE } from "./accounting.contracts"
@@ -42,7 +42,7 @@ const build = async () => {
     const identity = mock<AgentIdentityService>()
     const rules = mock<AuthorityRulesService>()
     const events = mock<EventsService>()
-    const sync = mock<AgentSyncService>()
+    const sync = mock<InstallationChangesService>()
     const readiness = mock<ModuleReadinessService>()
     readiness.needsOf.mockResolvedValue([])
     readiness.withNeeds.mockImplementation((record) => Promise.resolve({ ...record, ...VIEWED }))
@@ -57,7 +57,7 @@ const build = async () => {
             { provide: AgentIdentityService, useValue: identity },
             { provide: AuthorityRulesService, useValue: rules },
             { provide: EventsService, useValue: events },
-            { provide: AgentSyncService, useValue: sync },
+            { provide: InstallationChangesService, useValue: sync },
             { provide: ModuleReadinessService, useValue: readiness },
         ],
     }).compile()
@@ -94,7 +94,7 @@ describe("ModuleInstallService > install", () => {
         })
         expect(installations.insert).not.toHaveBeenCalled()
         expect(rules.seedDefaults).toHaveBeenCalledWith("ws-1", "chatbot", expect.any(Array))
-        expect(sync.requestNow).toHaveBeenCalledWith({ workspaceId: "ws-1", installationId: "inst-1", force: true })
+        expect(sync.announceNow).toHaveBeenCalledWith({ workspaceId: "ws-1", installationId: "inst-1", force: true })
     })
 
     it("installs the first instance on an agent no installation drives yet", async () => {
@@ -285,7 +285,7 @@ describe("ModuleInstallService > renameAgent", () => {
             ...VIEWED,
         })
         expect(identity.rename).toHaveBeenCalledWith("u1", "ws-1", "agent-1", "Mai")
-        expect(sync.requestNow).toHaveBeenCalledWith({
+        expect(sync.announceNow).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             installationId: "inst-1",
             force: false,
@@ -416,7 +416,7 @@ describe("ModuleInstallService lifecycle and reads", () => {
         expect(installations.firstOfModule).toHaveBeenLastCalledWith("ws-1", "chatbot")
         expect(events.record).not.toHaveBeenCalled()
         expect(rules.seedDefaults).not.toHaveBeenCalled()
-        expect(sync.requestNow).not.toHaveBeenCalled()
+        expect(sync.announceNow).not.toHaveBeenCalled()
     })
 
     it("rejects a blank instance rename before reading or writing the installation", async () => {

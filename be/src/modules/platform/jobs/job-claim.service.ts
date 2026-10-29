@@ -1,9 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { JobsError, JobsErrorCode } from "./errors/jobs.error"
-import type { sql } from "@modules/platform/database"
 import { isRunKey } from "./jobs.contracts"
 import type {
     AdvanceWrite,
@@ -19,16 +19,17 @@ import type {
 } from "./jobs.contracts"
 import { InjectJobsManagers } from "./jobs.decorators"
 import type { JobClaims } from "./jobs.port"
-import {
-    ADVANCE_JOB,
-    CLAIM_JOB,
-    COMPLETE_JOB,
-    FAIL_JOB,
-    LOCK_JOB_FENCE,
-    LOCK_FAILED_JOB_FENCE,
-    JOB_CLAIM_STATE,
-} from "./persistence/jobs.sql"
-import type { ClaimedRow, JobClaimStateRow } from "./persistence/jobs.rows"
+import { JobEntity } from "./persistence/entities"
+import type { JobState } from "./persistence/entities"
+
+/**
+ * The upsert half of a claim: an existing key is claimed again only when the job failed or its lease expired, and then the
+ * token is bumped by the store. A done job and a live claim match nothing, so no row comes back.
+ */
+const CLAIM_CONFLICT = `("job_key") DO UPDATE
+    SET fencing_token = jobs.fencing_token + 1, claimed_by = :claimedBy, lease_expires_at = :leaseExpiresAt,
+        status = 'running', error = NULL, updated_at = :now
+    WHERE jobs.status = 'failed' OR (jobs.status = 'running' AND jobs.lease_expires_at < :now)`
 
 @Injectable()
 /**
@@ -45,15 +46,33 @@ export class JobClaimService implements JobClaims {
     /** Claims the delivery; null when the job is done or another worker holds a claim that has not expired. */
     async claim(params: ClaimParams): Promise<ClaimResult> {
         const now = this.clock.now()
-        const rows: Array<ClaimedRow> = await this.writer().query(CLAIM_JOB, [
-            params.kind,
-            params.jobKey,
-            params.workerId,
-            new Date(now.getTime() + params.leaseMs),
-            JSON.stringify(params.payload),
-            now,
-        ])
-        const row = rows[0]
+        const result = await this.writer()
+            .createQueryBuilder(JobEntity, "jobs")
+            .insert()
+            .values({
+                kind: params.kind,
+                jobKey: params.jobKey,
+                status: "running",
+                fencingToken: 1,
+                claimedBy: params.workerId,
+                leaseExpiresAt: new Date(now.getTime() + params.leaseMs),
+                payload: params.payload,
+                createdAt: now,
+                updatedAt: now,
+            })
+            .onConflict(CLAIM_CONFLICT)
+            .setParameter("claimedBy", params.workerId)
+            .setParameter("leaseExpiresAt", new Date(now.getTime() + params.leaseMs))
+            .setParameter("now", now)
+            .returning("id, kind, fencing_token, current_step, payload")
+            .execute()
+        const [row] = result.raw as Array<{
+            readonly id: string
+            readonly kind: string
+            readonly fencing_token: string
+            readonly current_step: string | null
+            readonly payload: object
+        }>
         if (row === undefined) return null
         return {
             jobId: row.id,
@@ -66,32 +85,48 @@ export class JobClaimService implements JobClaims {
 
     /** A refused claim completes only after confirmed success; races and live leases defer without spending an attempt. */
     async retryAfterSeconds(jobKey: string): Promise<ClaimRetryDelay> {
-        const [row] = await this.writer().query<Array<JobClaimStateRow>>(JOB_CLAIM_STATE, [jobKey])
+        const row = await this.writer().findOne(JobEntity, {
+            select: { status: true, leaseExpiresAt: true },
+            where: { jobKey },
+        })
         if (row?.status === "done") return null
-        const lease = row?.lease_expires_at?.getTime() ?? this.clock.now().getTime()
+        const lease = row?.leaseExpiresAt?.getTime() ?? this.clock.now().getTime()
         return Math.min(3600, Math.max(1, Math.ceil((lease - this.clock.now().getTime()) / 1000)))
     }
 
     /** Records a finished step under the token the caller holds. */
     advance(write: AdvanceWrite): Promise<void> {
-        return this.guarded(ADVANCE_JOB, [write.jobId, write.expectedFencingToken, write.step, this.clock.now()], write)
+        return this.guarded({ currentStep: write.step, updatedAt: this.clock.now() }, write)
     }
 
     /** Completes the job under the token the caller holds. */
     complete(write: GuardedWrite): Promise<void> {
-        return this.guarded(COMPLETE_JOB, [write.jobId, write.expectedFencingToken, this.clock.now()], write)
+        return this.guarded({ status: "done", leaseExpiresAt: null, updatedAt: this.clock.now() }, write)
     }
 
     /** Marks the job failed under the token the caller holds, so the queue can retry it. */
     fail(write: FailWrite): Promise<void> {
-        return this.guarded(FAIL_JOB, [write.jobId, write.expectedFencingToken, write.reason, this.clock.now()], write)
+        return this.guarded(
+            { status: "failed", error: write.reason, leaseExpiresAt: null, updatedAt: this.clock.now() },
+            write,
+        )
     }
 
     /** Holds the live fence across domain effects; no job-row writes may be attempted inside the callback. */
     withFence<T>(job: ClaimedJob, work: JobEffect<T>): Promise<T> {
         return this.writer().transaction(async (manager) => {
-            const rows = await manager.query<Array<{ id: string }>>(LOCK_JOB_FENCE, [job.jobId, job.fencingToken])
-            if (rows.length === 0) {
+            const fence = await manager
+                .createQueryBuilder(JobEntity, "job")
+                .select("job.id")
+                .where("job.id = :jobId AND job.fencingToken = :token AND job.status = :running", {
+                    jobId: job.jobId,
+                    token: job.fencingToken,
+                    running: "running" satisfies JobState,
+                })
+                .limit(1)
+                .setLock("pessimistic_write")
+                .getOne()
+            if (fence === null) {
                 throw new JobsError({
                     code: JobsErrorCode.FencedOut,
                     params: { jobId: job.jobId, token: job.fencingToken },
@@ -104,11 +139,15 @@ export class JobClaimService implements JobClaims {
     /** Runs a terminal delivery effect under its latest failed claim, so it cannot overwrite a live successor. */
     withFailedFence(jobKey: string, work: FailedJobEffect): Promise<void> {
         return this.writer().transaction(async (manager) => {
-            const [row] = await manager.query<Array<{ id: string; fencing_token: string }>>(LOCK_FAILED_JOB_FENCE, [
-                jobKey,
-            ])
-            if (row === undefined) return
-            await work({ jobId: row.id, expectedFencingToken: Number(row.fencing_token) })
+            const row = await manager
+                .createQueryBuilder(JobEntity, "job")
+                .select(["job.id", "job.fencingToken"])
+                .where("job.jobKey = :jobKey AND job.status = :failed", { jobKey, failed: "failed" satisfies JobState })
+                .limit(1)
+                .setLock("pessimistic_write")
+                .getOne()
+            if (row === null) return
+            await work({ jobId: row.id, expectedFencingToken: row.fencingToken })
         })
     }
 
@@ -128,13 +167,13 @@ export class JobClaimService implements JobClaims {
     }
 
     /** Runs a statement that updates only when the token still matches; no row updated means a newer worker owns the job. */
-    private async guarded(
-        statement: ReturnType<typeof sql>,
-        parameters: Array<unknown>,
-        write: GuardedWrite,
-    ): Promise<void> {
-        const rows: Array<object> = await this.writer().query(statement, parameters)
-        if (rows.length === 0) {
+    private async guarded(changes: QueryDeepPartialEntity<JobEntity>, write: GuardedWrite): Promise<void> {
+        const result = await this.writer().update(
+            JobEntity,
+            { id: write.jobId, fencingToken: write.expectedFencingToken, status: "running" },
+            changes,
+        )
+        if (result.affected === 0) {
             throw new JobsError({
                 code: JobsErrorCode.FencedOut,
                 params: { jobId: write.jobId, token: write.expectedFencingToken },

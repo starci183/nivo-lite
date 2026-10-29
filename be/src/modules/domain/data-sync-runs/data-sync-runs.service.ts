@@ -3,8 +3,28 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { toDataSyncRun } from "./data-sync-runs.mapper"
 import type { DataSyncTrigger, FoundRun, RunFailure, SettledRunState } from "./data-sync-runs.contracts"
-import type { DataSyncRunRow } from "./persistence/data-sync-runs.rows"
-import { FIND_SYNC_RUN, FINISH_SYNC_RUN, INSERT_SYNC_RUN } from "./persistence/data-sync-runs.sql"
+import { DataSyncRunEntity } from "./persistence/entities"
+
+/** The columns an opened run answers, named as the entity properties so the answer reads as an entity. */
+const RETURNED = [
+    "id",
+    'workspace_id AS "workspaceId"',
+    'connection_id AS "connectionId"',
+    "trigger",
+    "status",
+    'rows_upserted AS "rowsUpserted"',
+    "error",
+    'started_at AS "startedAt"',
+    'finished_at AS "finishedAt"',
+].join(", ")
+
+/** True when a RETURNING row names the key of a stored run, the shape the returned columns give it. */
+const isDataSyncRunEntity = (value: unknown): value is DataSyncRunEntity =>
+    typeof value === "object" && value !== null && "id" in value && typeof value.id === "string"
+
+/** The rows a write answered. */
+const returnedRuns = (raw: unknown): Array<DataSyncRunEntity> =>
+    Array.isArray(raw) ? raw.filter(isDataSyncRunEntity) : []
 
 @Injectable()
 /** The record of every sync: a run opens as running and ends once as ok or failed; the only writer of public.data_sync_runs. */
@@ -18,18 +38,28 @@ export class DataSyncRunsService {
         connectionId: string,
         trigger: DataSyncTrigger,
     ): Promise<FoundRun> {
-        const [row] = await tx.query<Array<DataSyncRunRow>>(INSERT_SYNC_RUN, [workspaceId, connectionId, trigger])
+        const opened = await tx
+            .createQueryBuilder(DataSyncRunEntity, "dsr")
+            .insert()
+            .values({ workspaceId, connectionId, trigger })
+            .returning(RETURNED)
+            .execute()
+        const [row] = returnedRuns(opened.raw)
         return row === undefined ? null : toDataSyncRun(row)
     }
 
     /** Settles a run that is still running; a run already settled is left as it is. */
     async finish(runId: string, state: SettledRunState, rows: number, error: RunFailure): Promise<void> {
-        await this.entityManager.query(FINISH_SYNC_RUN, [runId, state, rows, error])
+        await this.entityManager.update(
+            DataSyncRunEntity,
+            { id: runId, status: "running" },
+            { status: state, rowsUpserted: rows, error, finishedAt: () => "now()" },
+        )
     }
 
     /** One run of the workspace, or null when there is none. */
     async find(workspaceId: string, runId: string): Promise<FoundRun> {
-        const [row] = await this.entityManager.query<Array<DataSyncRunRow>>(FIND_SYNC_RUN, [workspaceId, runId])
-        return row === undefined ? null : toDataSyncRun(row)
+        const row = await this.entityManager.findOne(DataSyncRunEntity, { where: { workspaceId, id: runId } })
+        return row === null ? null : toDataSyncRun(row)
     }
 }

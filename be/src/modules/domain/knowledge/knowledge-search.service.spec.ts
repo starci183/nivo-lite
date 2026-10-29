@@ -220,3 +220,62 @@ describe("KnowledgeSearchService", () => {
         })
     })
 })
+
+describe("KnowledgeSearchService", () => {
+    describe("forAgent", () => {
+        const stubs = (audience: string): ReadonlyArray<readonly [string, unknown]> => [
+            [SELECT_MODULE_AUDIENCE, [{ audience }]],
+            [MATCH_KNOWLEDGE, [row("business")]],
+        ]
+        const request = {
+            workspaceId: WS,
+            module: "sales",
+            audience: "internal" as const,
+            installationId: null,
+            question: " renewal terms ",
+            limit: 4,
+        }
+
+        it("searches the lane of the agent without asking who the member is", async () => {
+            const em = mockEntityManager({ query: stubs("internal") })
+            const { service, members } = await build(em)
+
+            const passages = await service.forAgent(request)
+
+            expect(members.require).not.toHaveBeenCalled()
+            expect(passages).toEqual([expect.objectContaining({ id: "business-1" })])
+            expect(em.query).toHaveBeenCalledWith(MATCH_KNOWLEDGE, [
+                WS,
+                "sales",
+                "[1,2]",
+                "renewal terms",
+                4,
+                "internal",
+                "m1",
+                null,
+            ])
+        })
+
+        it("narrows the lane to public passages for a customer audience or a customer-facing module, and joins the instance", async () => {
+            const asked = mockEntityManager({ query: stubs("internal") })
+            const facing = mockEntityManager({ query: stubs("customer") })
+
+            await (await build(asked)).service.forAgent({ ...request, audience: "customer", installationId: "i1" })
+            await (await build(facing)).service.forAgent(request)
+
+            expect(asked.query).toHaveBeenCalledWith(MATCH_KNOWLEDGE, expect.arrayContaining(["customer", "i1"]))
+            expect(facing.query).toHaveBeenCalledWith(MATCH_KNOWLEDGE, expect.arrayContaining(["customer"]))
+        })
+
+        it("finds nothing on a blank question and refuses an unknown module", async () => {
+            const { service, embeddings } = await build(mockEntityManager({ query: stubs("internal") }))
+            const unknown = await build(mockEntityManager({ query: [SELECT_MODULE_AUDIENCE, []] }))
+
+            await expect(service.forAgent({ ...request, question: "   " })).resolves.toEqual([])
+            expect(embeddings.embed).not.toHaveBeenCalled()
+            await expect(unknown.service.forAgent(request)).rejects.toMatchObject({
+                code: KnowledgeErrorCode.ModuleUnknown,
+            })
+        })
+    })
+})

@@ -20,13 +20,19 @@ import { EvidenceService } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { INBOX } from "@modules/platform/inbox"
+import type { Inbox } from "@modules/platform/inbox"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ContentAiCompletionService } from "./content-ai-completion.service"
 import { ContentAiLogEvent } from "./content-ai.log-events"
 import { ContentAiErrorCode } from "./errors/content-ai.error"
 
-const build = async (states: ReadonlyArray<GenerationState>) => {
+/** The delivery key the bus hands the `content` reactor. */
+const CLAIM = { consumer: "ai_generation_completed__content", dedupeKey: "g-2" }
+
+const build = async (states: ReadonlyArray<GenerationState>, claimWon = true) => {
+    const inbox = mock<Inbox>({ claim: jest.fn().mockResolvedValue(claimWon) })
     const em = mockEntityManager()
     const tx = fakeTransaction(em)
     const clock = new FakeClock(NOW)
@@ -51,6 +57,7 @@ const build = async (states: ReadonlyArray<GenerationState>) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: clock },
             { provide: LOGGER, useValue: logger },
+            { provide: INBOX, useValue: inbox },
             { provide: GenerationsService, useValue: generations },
             { provide: AuthorityRulesService, useValue: rules },
             { provide: ContentEditorService, useValue: editor },
@@ -61,7 +68,7 @@ const build = async (states: ReadonlyArray<GenerationState>) => {
         ],
     }).compile()
     const service = moduleRef.get(ContentAiCompletionService)
-    return { service, tx, logger, generations, rules, editor, store, plans, evidence, events }
+    return { service, inbox, tx, logger, generations, rules, editor, store, plans, evidence, events }
 }
 
 /** The arguments of a call without its trailing transaction manager. */
@@ -83,7 +90,7 @@ describe("ContentAiCompletionService", () => {
             text: JSON.stringify({ variants: { facebook: { text: "Roses" } }, media }),
         })
         const { service, store, generations } = await build([stateOf({ ...draftRoot, input: { context } }), child])
-        await service.complete("ws-1", "g-2")
+        await service.complete("ws-1", "g-2", CLAIM)
         expect(store.applyDraft.mock.calls[0]?.[2].media).toEqual([
             { ...second, suggested: true },
             { ...first, suggested: true },
@@ -94,8 +101,24 @@ describe("ContentAiCompletionService", () => {
     })
     it("ignores a generation that is not a content generation", async () => {
         const { service, tx, generations } = await build([stateOf({ purpose: "chat_reply" })])
-        await service.complete("ws-1", "g-2")
+        await service.complete("ws-1", "g-2", CLAIM)
         expect(tx.outcomes).toEqual([])
+        expect(generations.recordResult).not.toHaveBeenCalled()
+    })
+})
+
+describe("ContentAiCompletionService", () => {
+    it("claims the delivery in the transaction that applies the result and applies nothing for a redelivery", async () => {
+        const child = stateOf({
+            input: { context: { rootId: "g-1", allowedSlots: [1, 2] } },
+            text: JSON.stringify({ ideas: [{ slot: 1, title: "Flowers", brief: "" }] }),
+        })
+        const { service, inbox, generations, plans } = await build([planRoot, child], false)
+
+        await service.complete("ws-1", "g-2", CLAIM)
+
+        expect(inbox.claim).toHaveBeenCalledWith("ai_generation_completed__content", "g-2", expect.anything())
+        expect(plans.apply).not.toHaveBeenCalled()
         expect(generations.recordResult).not.toHaveBeenCalled()
     })
 })
@@ -113,7 +136,7 @@ describe("ContentAiCompletionService", () => {
             }),
         })
         const { service, tx, generations, plans, events } = await build([planRoot, child])
-        await service.complete("ws-1", "g-2")
+        await service.complete("ws-1", "g-2", CLAIM)
         expect(withoutManager(plans.apply.mock.calls)).toEqual([
             [
                 "ws-1",
@@ -150,7 +173,7 @@ describe("ContentAiCompletionService", () => {
 describe("ContentAiCompletionService", () => {
     it("writes the draft variants, suggested media, evidence and event for a finished draft", async () => {
         const { service, generations, store, evidence, events } = await build([draftRoot, draftChild])
-        await service.complete("ws-1", "g-2")
+        await service.complete("ws-1", "g-2", CLAIM)
         expect(withoutManager(store.applyDraft.mock.calls)).toEqual([
             [
                 "ws-1",
@@ -193,7 +216,7 @@ describe("ContentAiCompletionService", () => {
             limit_vnd: null,
             required_fields: [],
         })
-        await service.complete("ws-1", "g-2")
+        await service.complete("ws-1", "g-2", CLAIM)
         expect(store.applyDraft).not.toHaveBeenCalled()
         expect(withoutManager(generations.recordFailure.mock.calls)).toEqual([
             ["ws-1", "g-1", ContentAiErrorCode.DraftingBlocked],
@@ -208,7 +231,7 @@ describe("ContentAiCompletionService", () => {
     it("asks once more for an unreadable answer and swaps the child in the root context", async () => {
         const unreadable = stateOf({ text: "not json", input: { context: { rootId: "g-1" }, timeout_ms: 60000 } })
         const { service, generations, plans } = await build([planRoot, unreadable])
-        await service.complete("ws-1", "g-2")
+        await service.complete("ws-1", "g-2", CLAIM)
         const [request, context] = generations.request.mock.calls[0] ?? []
         expect(request).toEqual({
             workspaceId: "ws-1",
@@ -226,7 +249,7 @@ describe("ContentAiCompletionService", () => {
     it("leaves a root that already has its result", async () => {
         const settled = stateOf({ ...planRoot, output: { result: { planId: "p-0" } } })
         const { service, tx, generations } = await build([settled, stateOf({ text: "{}" })])
-        await service.complete("ws-1", "g-2")
+        await service.complete("ws-1", "g-2", CLAIM)
         expect(generations.recordResult).not.toHaveBeenCalled()
         expect(generations.recordFailure).not.toHaveBeenCalled()
         expect(tx.commits).toBe(1)
@@ -238,7 +261,7 @@ describe("ContentAiCompletionService", () => {
         })
         const done = stateOf({ text: JSON.stringify({ ideas: [] }) })
         const { service, generations } = await build([root, done, stateOf({ id: "g-4", status: "running" })])
-        await service.complete("ws-1", "g-2")
+        await service.complete("ws-1", "g-2", CLAIM)
         expect(generations.recordResult).not.toHaveBeenCalled()
         expect(generations.recordFailure).not.toHaveBeenCalled()
     })
@@ -257,7 +280,7 @@ describe("ContentAiCompletionService", () => {
         ],
     ])("records the child failure or invalid answer as %s / %s", async (child, code) => {
         const { service, generations } = await build([planRoot, child])
-        await service.complete("ws-1", "g-2")
+        await service.complete("ws-1", "g-2", CLAIM)
         expect(generations.request).not.toHaveBeenCalled()
         expect(withoutManager(generations.recordFailure.mock.calls)).toEqual([["ws-1", "g-1", code]])
         expect(generations.recordResult).not.toHaveBeenCalled()
@@ -275,7 +298,7 @@ describe("ContentAiCompletionService", () => {
         [planRoot, stateOf()],
     ])("ignores missing, terminal, unrelated and unfinished operations: %s", async (...states) => {
         const { service, generations } = await build(states)
-        await service.complete("ws-1", "g-2")
+        await service.complete("ws-1", "g-2", CLAIM)
         expect(generations.recordResult).not.toHaveBeenCalled()
         expect(generations.recordFailure).not.toHaveBeenCalled()
     })
@@ -283,7 +306,7 @@ describe("ContentAiCompletionService", () => {
         const { service, generations } = await build([
             stateOf({ status: "queued", input: { context: { generationIds: ["g-2"] } } }),
         ])
-        await service.complete("ws-1", "g-2")
+        await service.complete("ws-1", "g-2", CLAIM)
         expect(generations.state.mock.calls.map((call) => call.slice(0, 2))).toEqual([
             ["ws-1", "g-2"],
             ["ws-1", "g-2"],
@@ -294,20 +317,20 @@ describe("ContentAiCompletionService", () => {
         const states = [root, stateOf({ text: "{}" })]
         if (status !== null) states.push(stateOf({ id: "g-4", status }))
         const { service, generations } = await build(states)
-        await service.complete("ws-1", "g-2")
+        await service.complete("ws-1", "g-2", CLAIM)
         expect(generations.recordFailure.mock.calls[0]?.[2]).toBe(ContentAiErrorCode.Failed)
         const cancelled = await build([planRoot, stateOf({ status: "cancelled" })])
-        await cancelled.service.complete("ws-1", "g-2")
+        await cancelled.service.complete("ws-1", "g-2", CLAIM)
         expect(cancelled.generations.recordFailure.mock.calls[0]?.[2]).toBe(ContentAiErrorCode.Failed)
     })
     it("normalizes collaborator failures and retries unreadable output with default timeout", async () => {
         const failed = await build([draftRoot, draftChild])
         failed.store.applyDraft.mockRejectedValue({ reason: "storage failed" })
-        await failed.service.complete("ws-1", "g-2")
+        await failed.service.complete("ws-1", "g-2", CLAIM)
         expect(failed.generations.recordFailure.mock.calls[0]?.[2]).toBe(ContentAiErrorCode.Failed)
         const root = stateOf({ ...planRoot, input: { context: { ...PLAN_CONTEXT, generationIds: ["g-2", "g-4"] } } })
         const retry = await build([root, stateOf({ text: "bad" })])
-        await retry.service.complete("ws-1", "g-2")
+        await retry.service.complete("ws-1", "g-2", CLAIM)
         expect(retry.generations.request.mock.calls[0]?.[0].timeoutMs).toBe(120000)
         expect(retry.generations.setContext.mock.calls[0]?.[2]).toMatchObject({ generationIds: ["g-3", "g-4"] })
     })
@@ -318,12 +341,12 @@ describe("ContentAiCompletionService", () => {
             .mockResolvedValueOnce(draftRoot)
             .mockResolvedValueOnce(draftChild)
             .mockResolvedValueOnce(null)
-        await vanished.service.complete("ws-1", "g-2")
+        await vanished.service.complete("ws-1", "g-2", CLAIM)
         expect(vanished.generations.recordFailure.mock.calls[0]?.[2]).toBe(ContentAiErrorCode.InvalidAnswer)
         for (const change of [{ brand: null }, { channels: undefined }, { channels: [] }]) {
             const context = { ...DRAFT_CONTEXT, ...change }
             const { service, generations } = await build([stateOf({ ...draftRoot, input: { context } }), draftChild])
-            await service.complete("ws-1", "g-2")
+            await service.complete("ws-1", "g-2", CLAIM)
             expect(generations.recordFailure.mock.calls[0]?.[2]).toBe(
                 "brand" in change ? ContentAiErrorCode.InvalidAnswer : ContentAiErrorCode.EmptyAnswer,
             )
@@ -353,7 +376,7 @@ describe("ContentAiCompletionService", () => {
         editor.get.mockResolvedValue(
             itemOf({ pillarId: null, source: "quick", media: [{ kind: "image", name: "manual.jpg" }] }),
         )
-        await service.complete("ws-1", "g-2")
+        await service.complete("ws-1", "g-2", CLAIM)
         expect(store.applyDraft.mock.calls[0]?.[2]).toMatchObject({
             pillarId: "pl-1",
             title: "R".repeat(200),
@@ -378,7 +401,7 @@ describe("ContentAiCompletionService", () => {
             })
             const { service, editor, store } = await build([stateOf({ ...draftRoot, input: { context } }), child])
             editor.get.mockResolvedValue(itemOf({ pillarId: null, source: "quick", hashtags: ["saved"] }))
-            await service.complete("ws-1", "g-2")
+            await service.complete("ws-1", "g-2", CLAIM)
             expect(store.applyDraft.mock.calls[0]?.[2]).toMatchObject({ hashtags: ["#saved"], media: [] })
             expect(store.applyDraft.mock.calls[0]?.[2]).not.toHaveProperty("title")
         },
@@ -394,7 +417,7 @@ describe("ContentAiCompletionService", () => {
                 context.generationIds = []
                 return Promise.resolve(draftChild)
             })
-        await service.complete("ws-1", "g-2")
+        await service.complete("ws-1", "g-2", CLAIM)
         expect(generations.state.mock.calls.map((call) => call[1])).toEqual(["g-2", "g-1", "g-2", "g-1"])
         expect(store.applyDraft.mock.calls[0]?.[2].media).toEqual([
             { kind: "image", name: "hoa-hong.jpg", path: "ws-1/hoa-hong.jpg", suggested: true },
@@ -413,12 +436,12 @@ describe("ContentAiCompletionService", () => {
                 root,
                 stateOf({ text: '{"ideas":[{"slot":1,"title":"Roses"}]}' }),
             ])
-            await service.complete("ws-1", "g-2")
+            await service.complete("ws-1", "g-2", CLAIM)
             expect(generations.recordFailure.mock.calls[0]?.[2]).toBe(ContentAiErrorCode.EmptyAnswer)
         }
         const root = stateOf({ ...planRoot, input: { context: { ...PLAN_CONTEXT, generationIds: ["g-2", "g-4"] } } })
         const { service, generations } = await build([root, stateOf({ text: "{}" }), stateOf({ id: "g-4" })])
-        await service.complete("ws-1", "g-2")
+        await service.complete("ws-1", "g-2", CLAIM)
         expect(generations.recordFailure.mock.calls[0]?.[2]).toBe(ContentAiErrorCode.InvalidAnswer)
     })
     it("applies a pinned holiday and defaults the skipped-past count", async () => {
@@ -430,7 +453,7 @@ describe("ContentAiCompletionService", () => {
             input: { context: { rootId: "g-1", allowedSlots: [1] } },
         })
         const { service, generations, plans } = await build([root, child])
-        await service.complete("ws-1", "g-2")
+        await service.complete("ws-1", "g-2", CLAIM)
         expect(plans.apply.mock.calls[0]?.[1].items[0]?.holidayKey).toBe("new_year")
         expect(generations.recordResult.mock.calls[0]?.[2]).toEqual({
             planId: "p-1",

@@ -16,17 +16,29 @@ import { HiringDataService } from "./hiring-data.service"
 import { HiringScreeningService } from "./hiring-screening.service"
 import { HiringSettingsService } from "./hiring-settings.service"
 import { HiringTextService } from "./hiring-text.service"
-import {
-    DELETE_CANDIDATES,
-    FILL_CHECK,
-    LINK_STAFF,
-    MOVE_CANDIDATE,
-    SAVE_NOTES,
-    SUBMIT_APPLICATION,
-    TOGGLE_ONBOARDING,
-} from "./persistence/hiring.sql"
-import type { FilledRow, FlagRow, StaffLinkRow } from "./persistence/hiring.rows"
 import type { ApplicationInput } from "./policies/application.policy"
+
+const SUBMIT_APPLICATION = "SELECT * FROM public.hiring_application_submit($1, $2, $3, $4, $5, $6)"
+const MOVE_CANDIDATE = "SELECT * FROM public.hiring_candidate_move($1, $2, $3, $4, $5, $6)"
+const SAVE_NOTES = "SELECT * FROM public.hiring_candidate_notes($1, $2, $3, $4, $5)"
+const DELETE_CANDIDATES = "SELECT * FROM public.hiring_candidates_delete($1, $2)"
+const LINK_STAFF = "SELECT * FROM public.hiring_candidate_link_staff($1, $2)"
+const TOGGLE_ONBOARDING = "SELECT * FROM public.hiring_onboarding_toggle($1, $2, $3)"
+const FILL_CHECK = "SELECT * FROM public.hiring_job_fill_check($1, $2)"
+
+interface NotesRow {
+    readonly hiring_candidate_notes: boolean
+}
+interface StaffLinkRow {
+    readonly staff_id: string | null
+    readonly missing: boolean
+}
+interface FilledRow {
+    readonly closed: boolean
+    readonly title: string
+    readonly hired: number | string
+    readonly headcount: number
+}
 
 const W = "ws-1"
 const U = "user-1"
@@ -298,7 +310,7 @@ describe("HiringCandidatesService", () => {
             moveOf({ stage: "shortlisted" }),
             moveOf({ stage: "rejected", reason: ` ${"a".repeat(301)} ` }),
         ])("moves to $stage with the exact event and trimmed reason", async (request) => {
-            const em = mockEntityManager({ query: [MOVE_CANDIDATE, [{ value: true }]] })
+            const em = mockEntityManager({ query: [MOVE_CANDIDATE, [{ hiring_candidate_move: true }]] })
             const { service } = await build(em)
             const reason = request.stage === "rejected" ? "a".repeat(301) : ""
             const summary = text(request.stage === "rejected" ? "hiring.event.rejected" : "hiring.event.stage", {
@@ -314,10 +326,10 @@ describe("HiringCandidatesService", () => {
 describe("HiringCandidatesService", () => {
     describe("saveNotes", () => {
         const detail = text("hiring.fairness.notes", { trait: text("hiring.fairness.gender") })
-        it.each<[string, Array<FlagRow>, Code, Record<string, string | number>]>([
+        it.each<[string, Array<NotesRow>, Code, Record<string, string | number>]>([
             ["nu", [], Code.Unfair, { detail }],
             ["Good skills", [], Code.CandidateNotFound, {}],
-            ["Good skills", [{ value: false }], Code.CandidateNotFound, {}],
+            ["Good skills", [{ hiring_candidate_notes: false }], Code.CandidateNotFound, {}],
         ])("refuses notes %s", async (notes, rows, code, params) => {
             const em = mockEntityManager({ query: [SAVE_NOTES, rows] })
             const { service } = await build(em)
@@ -325,7 +337,7 @@ describe("HiringCandidatesService", () => {
             if (code === Code.Unfair) expect(em.query).not.toHaveBeenCalled()
         })
         it("stores four thousand characters with the manager and event", async () => {
-            const em = mockEntityManager({ query: [SAVE_NOTES, [{ value: true }]] })
+            const em = mockEntityManager({ query: [SAVE_NOTES, [{ hiring_candidate_notes: true }]] })
             const { service, members } = await build(em)
             await expect(service.saveNotes(U, W, { id: C, notes: "a".repeat(4001) })).resolves.toBeUndefined()
             expect(members.require.mock.calls).toEqual(managerCalls)
@@ -337,10 +349,10 @@ describe("HiringCandidatesService", () => {
         it.each([
             { ids: [], rows: [], candidates: 0, files: 0, paths: [] },
             { ids: [C, "candidate-2"], rows: [], candidates: 2, files: 0, paths: [] },
-            { ids: [C, "candidate-2"], rows: [{ paths: [] }], candidates: 2, files: 0, paths: [] },
+            { ids: [C, "candidate-2"], rows: [{ hiring_candidates_delete: [] }], candidates: 2, files: 0, paths: [] },
             {
                 ids: [C, "candidate-2"],
-                rows: [{ paths: ["cv-1", "cv-2"] }],
+                rows: [{ hiring_candidates_delete: ["cv-1", "cv-2"] }],
                 candidates: 2,
                 files: 1,
                 paths: ["cv-1", "cv-2"],
@@ -356,7 +368,7 @@ describe("HiringCandidatesService", () => {
             },
         )
         it("requires a manager and removes one known candidate", async () => {
-            const em = mockEntityManager({ query: [DELETE_CANDIDATES, [{ paths: ["cv-1"] }]] })
+            const em = mockEntityManager({ query: [DELETE_CANDIDATES, [{ hiring_candidates_delete: ["cv-1"] }]] })
             const { service, storage, members, data } = await build(em)
             await expect(service.delete(U, W, { id: C })).resolves.toEqual({ files: 1 })
             expect(members.require.mock.calls).toEqual(managerCalls)
@@ -430,17 +442,20 @@ describe("HiringCandidatesService", () => {
 describe("HiringCandidatesService", () => {
     describe("toggleOnboarding", () => {
         it.each([true, false])("stores the onboarding done value %s", async (done) => {
-            const em = mockEntityManager({ query: [TOGGLE_ONBOARDING, [{ value: true }]] })
+            const em = mockEntityManager({ query: [TOGGLE_ONBOARDING, [{ hiring_onboarding_toggle: true }]] })
             const { service, members } = await build(em)
             await expect(service.toggleOnboarding(U, W, { id: "step-1", done })).resolves.toBeUndefined()
             expect(members.require.mock.calls).toEqual(managerCalls)
             query(em, TOGGLE_ONBOARDING, [W, "step-1", done])
         })
-        it.each([{ rows: [] }, { rows: [{ value: false }] }])("refuses missing onboarding for %j", async ({ rows }) => {
-            const em = mockEntityManager({ query: [TOGGLE_ONBOARDING, rows] })
-            const { service } = await build(em)
-            await refuse(service.toggleOnboarding(U, W, { id: "missing", done: true }), Code.OnboardingNotFound)
-        })
+        it.each([{ rows: [] }, { rows: [{ hiring_onboarding_toggle: false }] }])(
+            "refuses missing onboarding for %j",
+            async ({ rows }) => {
+                const em = mockEntityManager({ query: [TOGGLE_ONBOARDING, rows] })
+                const { service } = await build(em)
+                await refuse(service.toggleOnboarding(U, W, { id: "missing", done: true }), Code.OnboardingNotFound)
+            },
+        )
     })
 
     describe("closeJobIfFilled", () => {

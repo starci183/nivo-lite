@@ -11,7 +11,8 @@ import type { ProvisionFlags } from "./channel-provisioning.contracts"
 import { CHANNEL_PROVISIONING_OPTIONS } from "./channel-provisioning.decorators"
 import type { ChannelProvisioningOptions } from "./channel-provisioning.options"
 import { ChannelProvisioningService } from "./channel-provisioning.service"
-import { FIND_WORKSPACE_OWNER, LIST_WORKSPACE_AGENTS } from "./persistence/channel-provisioning.sql"
+import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
+import type { TableAnswers } from "@tests/fixtures/builders/table-query-builder.builder"
 
 const WORKSPACE = "12345678-1234-5678-9abc-123456789abc"
 const ACTOR = { principalId: "owner-1", workspaceId: WORKSPACE }
@@ -33,9 +34,25 @@ const TELEGRAM: ConnectionRecord = {
     createdAt: "2026-10-13T00:00:00.000Z",
 }
 
+const SEEN = new WeakMap<MockEntityManager, TableAnswers>()
+
+/** A manager whose workspace_members and agents tables answer the given rows. */
+const managerOf = (
+    owners: ReadonlyArray<unknown> = [{ userId: "owner-1" }],
+    agents: ReadonlyArray<unknown> = [],
+): MockEntityManager => {
+    const em = mockEntityManager()
+    SEEN.set(em, answerByTable(em, { "public.workspace_members": owners, "public.agents": agents }))
+    return em
+}
+
+/** The tables the subject read through the manager, in order. */
+const tablesRead = (em: MockEntityManager): ReadonlyArray<string> =>
+    (SEEN.get(em)?.queries ?? []).map((query) => query.table)
+
 const build = async (
     overrides: Partial<ChannelProvisioningOptions> = {},
-    entityManager: MockEntityManager = mockEntityManager({ query: [FIND_WORKSPACE_OWNER, [{ user_id: "owner-1" }]] }),
+    entityManager: MockEntityManager = managerOf(),
 ) => {
     const channels = mock<ChannelConnectionsService>()
     channels.connectTelegram.mockResolvedValue({
@@ -105,12 +122,7 @@ const ZALO = {
 
 describe("ChannelProvisioningService zalo", () => {
     it("connects a Zalo OA with every key sealed at once and binds the agents that chat", async () => {
-        const entityManager = mockEntityManager({
-            query: [
-                [FIND_WORKSPACE_OWNER, [{ user_id: "owner-1" }]],
-                [LIST_WORKSPACE_AGENTS, AGENT_ROWS],
-            ],
-        })
+        const entityManager = managerOf(undefined, AGENT_ROWS)
         const { service, connections, grants, print } = await build(ZALO, entityManager)
 
         await service.run("zalo", { workspace: WORKSPACE, bind: true })
@@ -156,7 +168,7 @@ describe("ChannelProvisioningService refusals and telegram", () => {
 
             await expect(result).rejects.toBeInstanceOf(ConnectionsError)
             await expect(result).rejects.toEqual(invalid("workspace"))
-            expect(entityManager.query).not.toHaveBeenCalled()
+            expect(entityManager.createQueryBuilder).not.toHaveBeenCalled()
             expect(channels.connectTelegram).not.toHaveBeenCalled()
             expect(channels.startMoneyConnection).not.toHaveBeenCalled()
             expect(grants.setConnectionAgents).not.toHaveBeenCalled()
@@ -165,15 +177,12 @@ describe("ChannelProvisioningService refusals and telegram", () => {
     )
 
     it("refuses a workspace without an owner", async () => {
-        const { service, entityManager, channels, print } = await build(
-            {},
-            mockEntityManager({ query: [FIND_WORKSPACE_OWNER, []] }),
-        )
+        const { service, entityManager, channels, print } = await build({}, managerOf([]))
 
         await expect(service.run("telegram", { workspace: WORKSPACE })).rejects.toEqual(
             new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id: WORKSPACE } }),
         )
-        expect(entityManager.query.mock.calls).toEqual([[FIND_WORKSPACE_OWNER, [WORKSPACE]]])
+        expect(tablesRead(entityManager)).toEqual(["public.workspace_members"])
         expect(channels.connectTelegram).not.toHaveBeenCalled()
         expect(print).not.toHaveBeenCalled()
     })
@@ -183,7 +192,7 @@ describe("ChannelProvisioningService refusals and telegram", () => {
 
         await expect(service.run(kind, { workspace: WORKSPACE })).rejects.toEqual(invalid("kind"))
 
-        expect(entityManager.query.mock.calls).toEqual([[FIND_WORKSPACE_OWNER, [WORKSPACE]]])
+        expect(tablesRead(entityManager)).toEqual(["public.workspace_members"])
         expect(channels.connectTelegram).not.toHaveBeenCalled()
         expect(channels.startMoneyConnection).not.toHaveBeenCalled()
         expect(print).not.toHaveBeenCalled()
@@ -204,7 +213,7 @@ describe("ChannelProvisioningService refusals and telegram", () => {
         await expect(service.run("telegram", { workspace: WORKSPACE })).resolves.toBeUndefined()
 
         expect(channels.connectTelegram.mock.calls).toEqual([[ACTOR, { name: "Bot Telegram", token: TOKEN }]])
-        expect(entityManager.query.mock.calls).toEqual([[FIND_WORKSPACE_OWNER, [WORKSPACE]]])
+        expect(tablesRead(entityManager)).toEqual(["public.workspace_members"])
         expect(print.mock.calls).toEqual([["telegram connection telegram-1 (Bot Telegram); webhook registered"]])
         expect(grants.setConnectionAgents).not.toHaveBeenCalled()
     })
@@ -223,7 +232,7 @@ describe("ChannelProvisioningService", () => {
         await service.run("telegram", { workspace: WORKSPACE, name: "Shop bot", bind: false })
 
         expect(channels.connectTelegram.mock.calls).toEqual([[ACTOR, { name: "Shop bot", token: TOKEN }]])
-        expect(entityManager.query.mock.calls).toEqual([[FIND_WORKSPACE_OWNER, [WORKSPACE]]])
+        expect(tablesRead(entityManager)).toEqual(["public.workspace_members"])
         expect(print.mock.calls).toEqual([
             ["telegram connection telegram-1 (Shop bot); webhook not registered (the site is not public https)"],
         ])
@@ -264,7 +273,7 @@ describe("ChannelProvisioningService", () => {
                 },
             ],
         ])
-        expect(entityManager.query.mock.calls).toEqual([[FIND_WORKSPACE_OWNER, [WORKSPACE]]])
+        expect(tablesRead(entityManager)).toEqual(["public.workspace_members"])
         expect(print.mock.calls).toEqual([
             [
                 "sepay connection sepay-1; paste into SePay: url " +
@@ -277,21 +286,16 @@ describe("ChannelProvisioningService", () => {
 
 describe("ChannelProvisioningService", () => {
     it("binds only the agents whose modules can use Telegram, preserving their order", async () => {
-        const { service, entityManager, grants, print } = await build(
-            {},
-            mockEntityManager({
-                query: [
-                    [FIND_WORKSPACE_OWNER, [{ user_id: "owner-1" }]],
-                    [LIST_WORKSPACE_AGENTS, AGENT_ROWS],
-                ],
-            }),
-        )
+        const { service, entityManager, grants, print } = await build({}, managerOf(undefined, AGENT_ROWS))
 
         await service.run("telegram", { workspace: WORKSPACE, bind: true })
 
-        expect(entityManager.query.mock.calls).toEqual([
-            [FIND_WORKSPACE_OWNER, [WORKSPACE]],
-            [LIST_WORKSPACE_AGENTS, [WORKSPACE]],
+        expect(tablesRead(entityManager)).toEqual(["public.workspace_members", "public.agents"])
+        expect(SEEN.get(entityManager)?.queries[0]?.callsOf("where")).toEqual([
+            ["m.workspace_id = :workspaceId AND m.role = 'owner' AND m.status = 'active'", { workspaceId: WORKSPACE }],
+        ])
+        expect(SEEN.get(entityManager)?.queries[1]?.callsOf("where")).toEqual([
+            ["a.workspace_id = :workspaceId", { workspaceId: WORKSPACE }],
         ])
         expect(grants.setConnectionAgents.mock.calls).toEqual([
             [ACTOR, "telegram-1", [{ agentId: "chat-1" }, { agentId: "booking-1" }, { agentId: "chat-2" }]],
@@ -303,15 +307,7 @@ describe("ChannelProvisioningService", () => {
     })
 
     it("uses the supplied SePay name and environment and binds only accounting agents", async () => {
-        const { service, entityManager, channels, grants, print } = await build(
-            {},
-            mockEntityManager({
-                query: [
-                    [FIND_WORKSPACE_OWNER, [{ user_id: "owner-1" }]],
-                    [LIST_WORKSPACE_AGENTS, AGENT_ROWS],
-                ],
-            }),
-        )
+        const { service, entityManager, channels, grants, print } = await build({}, managerOf(undefined, AGENT_ROWS))
 
         await service.run("sepay", {
             workspace: WORKSPACE,
@@ -334,9 +330,12 @@ describe("ChannelProvisioningService", () => {
                 },
             ],
         ])
-        expect(entityManager.query.mock.calls).toEqual([
-            [FIND_WORKSPACE_OWNER, [WORKSPACE]],
-            [LIST_WORKSPACE_AGENTS, [WORKSPACE]],
+        expect(tablesRead(entityManager)).toEqual(["public.workspace_members", "public.agents"])
+        expect(SEEN.get(entityManager)?.queries[0]?.callsOf("where")).toEqual([
+            ["m.workspace_id = :workspaceId AND m.role = 'owner' AND m.status = 'active'", { workspaceId: WORKSPACE }],
+        ])
+        expect(SEEN.get(entityManager)?.queries[1]?.callsOf("where")).toEqual([
+            ["a.workspace_id = :workspaceId", { workspaceId: WORKSPACE }],
         ])
         expect(grants.setConnectionAgents.mock.calls).toEqual([[ACTOR, "sepay-1", [{ agentId: "bank-1" }]]])
         expect(print.mock.calls).toEqual([
@@ -353,12 +352,7 @@ describe("ChannelProvisioningService", () => {
     it("sets an empty agent wish list and prints zero when no module can use the provider", async () => {
         const { service, grants, print } = await build(
             {},
-            mockEntityManager({
-                query: [
-                    [FIND_WORKSPACE_OWNER, [{ user_id: "owner-1" }]],
-                    [LIST_WORKSPACE_AGENTS, [{ id: "bank-1", module: "accounting" }]],
-                ],
-            }),
+            managerOf(undefined, [{ id: "bank-1", module: "accounting" }]),
         )
 
         await service.run("telegram", { workspace: WORKSPACE, bind: true })

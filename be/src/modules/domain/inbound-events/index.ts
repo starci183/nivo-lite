@@ -3,5 +3,10 @@ export { INBOUND_EVENTS_MESSAGES } from "./messages/inbound-events.messages"
 export { InboundEventsModule } from "./inbound-events.module"
 export { InboundEventsService } from "./inbound-events.service"
 export { InboxFeedService } from "./inbox-feed.service"
-export type { InboundEventFeedRow } from "./persistence/inbound-events.rows"
+export type { InboundEventFeedRecord, InboundEventDetail } from "./inbound-events.contracts"
+export type {
+    InboundEventFeedRecord as InboundEventFeedRow,
+    InboundEventDetail as InboundEventRow,
+} from "./inbound-events.contracts"
 export type { OptionalLeadRef, OptionalInboundEvent } from "./inbound-events.contracts"
+export { InboundEventEntity, inboundEventsEntities } from "./persistence/entities"

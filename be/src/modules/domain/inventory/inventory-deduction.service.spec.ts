@@ -1,104 +1,108 @@
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { fakeInbox, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { OfficeLog } from "@modules/domain/module-ops"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { inventoryItemOf, inventoryRecipeLineOf, inventoryRecipeOf } from "@tests/fixtures/builders/inventory.builder"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { InventoryOrderQueue } from "@modules/queues/inventory-order"
+import { INBOX } from "@modules/platform/inbox"
 import { InventoryDeductionService } from "./inventory-deduction.service"
 import { InventoryLocationsService } from "./inventory-locations.service"
 import { InventoryMovementsService } from "./inventory-movements.service"
-import { SELECT_ACTIVE_ITEMS, SELECT_ACTIVE_RECIPES, SELECT_RECIPE_LINES } from "./persistence/inventory.sql"
+import { InventoryItemEntity, InventoryRecipeEntity, InventoryRecipeLineEntity } from "./persistence/entities"
 
 const LINE_BREAK = "\n"
 
 const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
 
-const itemRow = (overrides: Record<string, unknown> = {}) => ({
-    id: "item-1",
-    sku: "TEA",
-    name: "Tea",
-    unit: "kg",
-    units: [{ unit: "box", factor: 10 }],
-    category: "",
-    cost_vnd: "20000.00",
-    sell_price_vnd: null,
-    reorder_point: "0",
-    reorder_qty: "0",
-    supplier_id: null,
-    aliases: [],
-    active: true,
-    ...overrides,
-})
+const itemRow = (overrides: { [K in keyof InventoryItemEntity]?: InventoryItemEntity[K] } = {}): InventoryItemEntity =>
+    inventoryItemOf({
+        id: "item-1",
+        sku: "TEA",
+        name: "Tea",
+        unit: "kg",
+        units: [{ unit: "box", factor: 10 }],
+        category: "",
+        costVnd: "20000.00",
+        sellPriceVnd: null,
+        reorderPoint: "0",
+        reorderQty: "0",
+        supplierId: null,
+        aliases: [],
+        active: true,
+        ...overrides,
+    })
+
+const recipeRow = (
+    overrides: { [K in keyof InventoryRecipeEntity]?: InventoryRecipeEntity[K] } = {},
+): InventoryRecipeEntity => inventoryRecipeOf(overrides)
+
+const recipeLineRow = (
+    overrides: { [K in keyof InventoryRecipeLineEntity]?: InventoryRecipeLineEntity[K] } = {},
+): InventoryRecipeLineEntity => inventoryRecipeLineOf(overrides)
 
 const build = async (entityManager: MockEntityManager) => {
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, params) => text(key, params))
     const office = mock<OfficeLog>()
-    const members = mock<WorkspaceMembersService>()
-    members.require.mockResolvedValue({
-        userId: "user-1",
-        workspaceId: "ws-1",
-        role: "staff",
-        staffId: null,
-        displayName: "Lan",
-        status: "active",
-    })
+    const inbox = fakeInbox()
     const movements = mock<InventoryMovementsService>()
     movements.apply.mockResolvedValue({ applied: true, before: 10, after: 12, cost: 20000 })
     const locations = mock<InventoryLocationsService>()
     locations.defaultLocation.mockResolvedValue("loc-1")
-    const queue = mock<InventoryOrderQueue>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             InventoryDeductionService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: OfficeLog, useValue: office },
-            { provide: WorkspaceMembersService, useValue: members },
             { provide: InventoryMovementsService, useValue: movements },
             { provide: InventoryLocationsService, useValue: locations },
-            { provide: InventoryOrderQueue, useValue: queue },
+            { provide: INBOX, useValue: inbox },
         ],
     }).compile()
-    return { service: moduleRef.get(InventoryDeductionService), office, members, movements, locations, queue }
+    return { service: moduleRef.get(InventoryDeductionService), office, inbox, movements, locations }
 }
 
-describe("InventoryDeductionService / enqueueDeduct", () => {
-    it("queues the deduction in one transaction after proving membership", async () => {
-        const tx = fakeTransaction(mockEntityManager())
-        const { service, queue, members } = await build(tx.em)
+describe("InventoryDeductionService / deductConfirmedOrder", () => {
+    const QUEUE = "order_confirmed__inventory"
+    const confirmed = { workspaceId: "ws-1", orderId: "order-1", orderNo: "DH-1", items: "2 tea" }
 
-        await service.enqueueDeduct("user-1", "ws-1", { orderId: "order-1", orderNo: "DH-1", items: "2 tea" })
+    it("claims the delivery key and deducts the confirmed order in one transaction", async () => {
+        const tx = fakeTransaction(mockEntityManager({ find: [InventoryItemEntity, []] }))
+        const { service, inbox } = await build(tx.em)
 
-        expect(members.require).toHaveBeenCalledWith("user-1", "ws-1", [])
-        expect(queue.enqueueDeductOrder).toHaveBeenCalledWith(
-            { workspaceId: "ws-1", orderId: "order-1", orderNo: "DH-1", items: "2 tea" },
-            expect.anything(),
-        )
+        await service.deductConfirmedOrder(QUEUE, "order-1", confirmed)
+
+        expect(inbox.claims).toEqual([{ source: QUEUE, eventId: "order-1" }])
+        expect(tx.em.find).toHaveBeenCalledWith(InventoryItemEntity, {
+            where: { workspaceId: "ws-1", active: true },
+            order: { name: "ASC" },
+            take: 2000,
+        })
         expect(tx.commits).toBe(1)
     })
-})
 
-describe("InventoryDeductionService / deductOrderJob", () => {
-    it("deducts a job payload that names an order", async () => {
-        const em = mockEntityManager({ query: [SELECT_ACTIVE_ITEMS, []] })
-        const { service } = await build(em)
+    it("deducts nothing for a delivery key it already handled", async () => {
+        const tx = fakeTransaction(mockEntityManager())
+        const { service, inbox } = await build(tx.em)
+        inbox.seen(QUEUE, "order-1")
 
-        await service.deductOrderJob({ workspaceId: "ws-1", orderId: "order-1", orderNo: "DH-1", items: "2 tea" })
+        await service.deductConfirmedOrder(QUEUE, "order-1", confirmed)
 
-        expect(em.query).toHaveBeenCalledWith(SELECT_ACTIVE_ITEMS, ["ws-1"])
+        expect(tx.em.find).not.toHaveBeenCalled()
     })
 
-    it("changes nothing for the payload of another job", async () => {
-        const em = mockEntityManager()
-        const { service } = await build(em)
+    it("rolls the claim back when the deduction fails so the redelivery runs again", async () => {
+        const failure = new Error("stock down")
+        const tx = fakeTransaction(mockEntityManager())
+        tx.em.find.mockRejectedValue(failure)
+        const { service } = await build(tx.em)
 
-        await service.deductOrderJob({ itemIds: [] })
+        await expect(service.deductConfirmedOrder(QUEUE, "order-1", confirmed)).rejects.toBe(failure)
 
-        expect(em.query).not.toHaveBeenCalled()
+        expect(tx.rollbacks).toBe(1)
     })
 })
 
@@ -110,7 +114,7 @@ describe("InventoryDeductionService / deductForOrder", () => {
         items: ["2 tea", "1 milk coffee", "3 ghost", "1 water", "1 air"].join(LINE_BREAK),
     }
     it("does nothing for an order without an id or without text, and for a workspace without items", async () => {
-        const em = mockEntityManager({ query: [SELECT_ACTIVE_ITEMS, []] })
+        const em = mockEntityManager({ find: [InventoryItemEntity, []] })
         const { service, movements } = await build(em)
 
         await expect(service.deductForOrder({ ...order, orderId: "" })).resolves.toEqual({
@@ -136,25 +140,25 @@ describe("InventoryDeductionService / deductForOrder", () => {
     }
     it("takes items and recipe ingredients out of stock, reports unmatched lines and queues the check", async () => {
         const em = mockEntityManager({
-            query: [
+            find: [
                 [
-                    SELECT_ACTIVE_ITEMS,
+                    InventoryItemEntity,
                     [itemRow(), itemRow({ id: "item-2", sku: "MILK", name: "Milk", unit: "l", units: [] })],
                 ],
                 [
-                    SELECT_ACTIVE_RECIPES,
+                    InventoryRecipeEntity,
                     [
-                        { id: "rec-1", name: "Milk coffee", aliases: [] },
-                        { id: "rec-2", name: "Water", aliases: [] },
-                        { id: "rec-3", name: "Air", aliases: [] },
+                        recipeRow({ id: "rec-1", name: "Milk coffee" }),
+                        recipeRow({ id: "rec-2", name: "Water" }),
+                        recipeRow({ id: "rec-3", name: "Air" }),
                     ],
                 ],
                 [
-                    SELECT_RECIPE_LINES,
+                    InventoryRecipeLineEntity,
                     [
-                        { recipe_id: "rec-1", item_id: "item-2", qty: "0.250" },
-                        { recipe_id: "rec-1", item_id: "item-1", qty: "0.020" },
-                        { recipe_id: "rec-2", item_id: "item-gone", qty: "1" },
+                        recipeLineRow({ recipeId: "rec-1", itemId: "item-2", qty: "0.250" }),
+                        recipeLineRow({ recipeId: "rec-1", itemId: "item-1", qty: "0.020" }),
+                        recipeLineRow({ recipeId: "rec-2", itemId: "item-gone", qty: "1" }),
                     ],
                 ],
             ],
@@ -199,10 +203,10 @@ describe("InventoryDeductionService / deductForOrder", () => {
     }
     it("retries the whole line after a stripped-name miss and skips inactive items", async () => {
         const em = mockEntityManager({
-            query: [
-                [SELECT_ACTIVE_ITEMS, [itemRow({ name: "Soda", sku: "SD", aliases: ["2 up"] })]],
-                [SELECT_ACTIVE_RECIPES, []],
-                [SELECT_RECIPE_LINES, [{ recipe_id: "rec-9", item_id: "item-gone", qty: "1" }]],
+            find: [
+                [InventoryItemEntity, [itemRow({ name: "Soda", sku: "SD", aliases: ["2 up"] })]],
+                [InventoryRecipeEntity, []],
+                [InventoryRecipeLineEntity, [recipeLineRow({ recipeId: "rec-9", itemId: "item-gone", qty: "1" })]],
             ],
         })
         const { service, movements } = await build(em)
@@ -215,10 +219,10 @@ describe("InventoryDeductionService / deductForOrder", () => {
 
     it("does not log anything when no line matched anything", async () => {
         const em = mockEntityManager({
-            query: [
-                [SELECT_ACTIVE_ITEMS, [itemRow()]],
-                [SELECT_ACTIVE_RECIPES, []],
-                [SELECT_RECIPE_LINES, []],
+            find: [
+                [InventoryItemEntity, [itemRow()]],
+                [InventoryRecipeEntity, []],
+                [InventoryRecipeLineEntity, []],
             ],
         })
         const { service, office, movements } = await build(em)

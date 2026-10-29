@@ -8,3 +8,4 @@ export type {
     GatewayJson,
     GatewayReceiptOperation,
 } from "./mcp-gateway-receipts.contracts"
+export { mcpGatewayReceiptsEntities } from "./persistence/entities"

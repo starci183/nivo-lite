@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
-import type { AiPoolUsage } from "@modules/integrations/ai-pool"
+import type { AiUsage } from "@modules/integrations/ai"
 import type { QuotaStatus } from "./knowledge.contracts"
 import type { QuotaStatusRow } from "./persistence/usage.rows"
 import { estimateTokens, figuresOf, isBlocked, priceOf, quotaStatusOf } from "./usage.policy"
@@ -21,7 +21,12 @@ const build = async () => {
     return moduleRef.get<Subject>(SUBJECT)
 }
 
-const usageOf = builder<AiPoolUsage>({ promptTokens: null, completionTokens: null, totalTokens: null, costUsd: null })
+const usageOf = builder<AiUsage>({
+    promptTokens: null,
+    completionTokens: null,
+    totalTokens: null,
+    costUsd: null,
+})
 
 const rowOf = builder<QuotaStatusRow>({
     period_start: "2026-10-01",

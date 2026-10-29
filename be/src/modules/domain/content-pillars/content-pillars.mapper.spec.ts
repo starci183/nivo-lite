@@ -1,11 +1,12 @@
 import { Test } from "@nestjs/testing"
 import type { ContentPillarDraft } from "./content-pillars.contracts"
 import { ContentPillarDraftSelectionMapper, toContentPillar } from "./content-pillars.mapper"
-import type { ContentPillarRow } from "./persistence/content-pillars.rows"
+import type { ContentPillarEntity } from "./persistence/entities"
 
-const row: ContentPillarRow = {
+const row: ContentPillarEntity = {
+    createdAt: new Date("2026-10-01T00:00:00.000Z"),
     id: "pillar-1",
-    workspace_id: "ws-1",
+    workspaceId: "ws-1",
     name: "Tea",
     description: "Daily cups",
     weight: 3,

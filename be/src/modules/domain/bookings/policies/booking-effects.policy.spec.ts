@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
+import { DEFAULT_SETTINGS } from "../bookings.contracts"
 import type { BookingEventKind } from "../bookings.contracts"
-import { DEFAULT_SETTINGS } from "../persistence/booking.rows"
 import { cancelFeeOf, feeOf, isLateCancel, noticeMark, noticeOf, remindersOf } from "./booking-effects.policy"
 const SUBJECT = Symbol("booking-effects.policy")
 

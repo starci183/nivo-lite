@@ -9,5 +9,4 @@ export enum AutomationsLogEvent {
     /** An audit line could not be written; the change it describes was made. */
     AuditFailed = "automations.audit_failed",
     /** A business event another capability announced could not start its pipelines; the write it follows stands. */
-    AnnounceFailed = "automations.announce_failed",
 }

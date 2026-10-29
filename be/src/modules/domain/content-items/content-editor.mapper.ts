@@ -14,7 +14,7 @@ const readChannels = (values: ReadonlyArray<string>): Array<string> => {
     return channels.length === 0 ? ["facebook"] : channels
 }
 import type { ContentItem } from "./content-editor.contracts"
-import type { ContentEditorRow } from "./persistence/content-editor.rows"
+import type { ContentItemEntity } from "./persistence/entities"
 
 /** Serializes a PostgreSQL timestamp independently of the driver parser. */
 export const contentInstant = (value: Date | string): string => (value instanceof Date ? value.toISOString() : value)
@@ -22,30 +22,30 @@ export const contentInstant = (value: Date | string): string => (value instanceo
 const optionalInstant = (value: Date | string | null): string | null => (value === null ? null : contentInstant(value))
 
 /** Maps a stored item without losing any editor, audit or approval field. */
-export const toContentItem = (row: ContentEditorRow): ContentItem => ({
+export const toContentItem = (row: ContentItemEntity): ContentItem => ({
     id: row.id,
-    workspaceId: row.workspace_id,
-    planId: row.plan_id,
+    workspaceId: row.workspaceId,
+    planId: row.planId,
     title: row.title,
     brief: row.brief,
-    pillarId: row.pillar_id,
+    pillarId: row.pillarId,
     channels: readChannels(row.channels),
-    scheduledAt: optionalInstant(row.scheduled_at),
+    scheduledAt: optionalInstant(row.scheduledAt),
     status: CONTENT_STATUSES.has(row.status) ? row.status : "idea",
     variants: readContentVariants(row.variants),
     hashtags: row.hashtags,
     media: readContentMedia(row.media),
     links: readContentLinks(row.links),
-    holidayKey: row.holiday_key,
+    holidayKey: row.holidayKey,
     evidence: readContentEvidence(row.evidence),
     published: readContentPublished(row.published),
-    workItemId: row.work_item_id,
-    draftedAt: optionalInstant(row.drafted_at),
-    approvedBy: row.approved_by,
-    approvedAt: optionalInstant(row.approved_at),
-    publishedAt: optionalInstant(row.published_at),
+    workItemId: row.workItemId,
+    draftedAt: optionalInstant(row.draftedAt),
+    approvedBy: row.approvedBy,
+    approvedAt: optionalInstant(row.approvedAt),
+    publishedAt: optionalInstant(row.publishedAt),
     source: CONTENT_SOURCES.has(row.source) ? row.source : "manual",
-    createdBy: row.created_by,
-    createdAt: contentInstant(row.created_at),
-    updatedAt: contentInstant(row.updated_at),
+    createdBy: row.createdBy,
+    createdAt: contentInstant(row.createdAt),
+    updatedAt: contentInstant(row.updatedAt),
 })

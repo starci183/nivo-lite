@@ -23,20 +23,15 @@ import type {
 } from "./shifts-setup.contracts"
 import { ShiftsDataService } from "./shifts-data.service"
 import {
-    CHECK_IN,
-    DECIDE_AVAILABILITY,
-    INSERT_AVAILABILITY,
-    REMOVE_AVAILABILITY,
-    REMOVE_COVERAGE,
-    REMOVE_POSITION,
-    SAVE_COVERAGE,
-    SAVE_POSITION,
-    SAVE_STAFF_PROFILE,
-    SELECT_PROFILE_OF_MEMBER,
-    UPSERT_PAY,
-    UPSERT_SETTINGS,
-} from "./persistence/shifts-workbench.sql"
-import type { ShiftsIdRow } from "./persistence/shifts.rows"
+    ShiftsAttendanceEntity,
+    ShiftsAvailabilityEntity,
+    ShiftsCoverageEntity,
+    ShiftsPositionEntity,
+    ShiftsSettingsEntity,
+    ShiftsStaffEntity,
+    ShiftsStaffPayEntity,
+} from "./persistence/entities"
+import { profileIdOfMember } from "./persistence/shifts-profile.query"
 import { ANY_MEMBER, MANAGER_ROLES } from "./policies/access-roles.policy"
 import { isDay, isTime } from "./policies/input-text.policy"
 import { instantOf, toMin } from "./policies/time.policy"
@@ -50,6 +45,12 @@ const nameOf = (name: string, max: number): string => {
     const trimmed = name.trim()
     if (trimmed === "" || trimmed.length > max) throw new ShiftsError({ code: ShiftsErrorCode.SetupFieldInvalid })
     return trimmed
+}
+
+/** The id a `RETURNING id` answered, or undefined when no row matched. */
+const idOf = (raw: unknown): string | undefined => {
+    const id = (raw as Array<{ id: string | null }> | undefined)?.[0]?.id
+    return id ?? undefined
 }
 
 const windowOf = (start: string, end: string): void => {
@@ -73,49 +74,79 @@ export class ShiftsSetupService {
         await this.members.require(userId, workspaceId, MANAGER_ROLES)
         const name = nameOf(request.name, 60)
         const color = request.color?.trim() || DEFAULT_COLOR
-        const [row] = await this.entityManager.query<Array<ShiftsIdRow>>(SAVE_POSITION, [
-            workspaceId,
-            request.id ?? null,
-            name,
-            color,
-        ])
-        if (row?.id === null || row?.id === undefined) throw new ShiftsError({ code: ShiftsErrorCode.StaffNotFound })
-        return { id: row.id }
+        const saved =
+            request.id === undefined
+                ? await this.entityManager
+                      .createQueryBuilder(ShiftsPositionEntity, "s")
+                      .insert()
+                      .values({ workspaceId, name, color })
+                      .orUpdate(["color"], ["workspace_id", "name"])
+                      .returning("id")
+                      .execute()
+                : await this.entityManager
+                      .createQueryBuilder(ShiftsPositionEntity, "s")
+                      .update()
+                      .set({ name, color })
+                      .where("workspace_id = :workspaceId AND id = :id", { workspaceId, id: request.id })
+                      .returning("id")
+                      .execute()
+        const id = idOf(saved.raw)
+        if (id === undefined) throw new ShiftsError({ code: ShiftsErrorCode.StaffNotFound })
+        return { id }
     }
 
     /** Retires a position; its coverage rows stay but stop matching. */
     async removePosition(userId: string, workspaceId: string, request: RemovePositionParams): Promise<void> {
         await this.members.require(userId, workspaceId, MANAGER_ROLES)
-        await this.entityManager.query(REMOVE_POSITION, [workspaceId, request.id])
+        await this.entityManager.update(ShiftsPositionEntity, { workspaceId, id: request.id }, { active: false })
     }
 
     /** Creates or updates one person's shifts profile, with the wage when given. */
     async saveStaff(userId: string, workspaceId: string, request: SaveStaffParams): Promise<SaveStaffOutput> {
         await this.members.require(userId, workspaceId, MANAGER_ROLES)
         const name = nameOf(request.name, 80)
-        const row = JSON.stringify({
+        const fields = {
             name,
-            staffRowId: request.staffRowId ?? "",
-            phone: request.phone?.trim() ?? "",
-            telegramChatId: request.telegramChatId?.trim() ?? "",
-            zaloUserId: request.zaloUserId?.trim() ?? "",
-            positionIds: request.positionIds,
-            maxWeek: request.maxWeek ?? "",
-            maxDay: request.maxDay ?? "",
-            minRest: request.minRest ?? "",
+            staffId: request.staffRowId || null,
+            phone: request.phone?.trim() || null,
+            telegramChatId: request.telegramChatId?.trim() || null,
+            zaloUserId: request.zaloUserId?.trim() || null,
+            positionIds: [...request.positionIds],
+            ...(request.maxWeek === undefined ? {} : { maxHoursWeek: String(request.maxWeek) }),
+            ...(request.maxDay === undefined ? {} : { maxHoursDay: String(request.maxDay) }),
+            ...(request.minRest === undefined ? {} : { minRestHours: String(request.minRest) }),
             active: request.active ?? true,
-        })
-        const [saved] = await this.entityManager.query<Array<ShiftsIdRow>>(SAVE_STAFF_PROFILE, [
-            workspaceId,
-            request.id ?? null,
-            row,
-        ])
-        if (saved?.id === null || saved?.id === undefined)
-            throw new ShiftsError({ code: ShiftsErrorCode.StaffNotFound })
-        if (request.wage !== undefined) {
-            await this.entityManager.query(UPSERT_PAY, [workspaceId, saved.id, Math.max(0, Math.round(request.wage))])
         }
-        return { id: saved.id }
+        const result =
+            request.id === undefined
+                ? await this.entityManager
+                      .createQueryBuilder(ShiftsStaffEntity, "s")
+                      .insert()
+                      .values({ workspaceId, ...fields })
+                      .returning("id")
+                      .execute()
+                : await this.entityManager
+                      .createQueryBuilder(ShiftsStaffEntity, "s")
+                      .update()
+                      .set(fields)
+                      .where("workspace_id = :workspaceId AND id = :id", { workspaceId, id: request.id })
+                      .returning("id")
+                      .execute()
+        const saved = idOf(result.raw)
+        if (saved === undefined) throw new ShiftsError({ code: ShiftsErrorCode.StaffNotFound })
+        if (request.wage !== undefined) {
+            await this.entityManager.upsert(
+                ShiftsStaffPayEntity,
+                {
+                    staffId: saved,
+                    workspaceId,
+                    hourlyWageVnd: Math.max(0, Math.round(request.wage)),
+                    updatedAt: () => "now()",
+                },
+                ["staffId"],
+            )
+        }
+        return { id: saved }
     }
 
     /** Updates one coverage block, or inserts one per weekday given. */
@@ -123,26 +154,36 @@ export class ShiftsSetupService {
         await this.members.require(userId, workspaceId, MANAGER_ROLES)
         windowOf(request.start, request.end)
         const weekdays = request.weekdays.filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
-        if (weekdays.length === 0 || request.ideal < request.min) {
+        const [first] = weekdays
+        if (first === undefined || request.ideal < request.min) {
             throw new ShiftsError({ code: ShiftsErrorCode.SetupFieldInvalid })
         }
-        await this.entityManager.query(SAVE_COVERAGE, [
-            workspaceId,
-            request.id ?? null,
-            weekdays,
-            request.start,
-            request.end,
-            request.positionId,
-            request.min,
-            request.ideal,
-            request.peak,
-        ])
+        const block = {
+            startTime: request.start,
+            endTime: request.end,
+            positionId: request.positionId,
+            minStaff: request.min,
+            idealStaff: request.ideal,
+            isPeak: request.peak,
+        }
+        if (request.id === undefined) {
+            await this.entityManager.insert(
+                ShiftsCoverageEntity,
+                weekdays.map((weekday) => ({ workspaceId, weekday, ...block })),
+            )
+            return
+        }
+        await this.entityManager.update(
+            ShiftsCoverageEntity,
+            { workspaceId, id: request.id },
+            { weekday: first, ...block },
+        )
     }
 
     /** Removes a coverage block. */
     async removeCoverage(userId: string, workspaceId: string, request: RemoveCoverageParams): Promise<void> {
         await this.members.require(userId, workspaceId, MANAGER_ROLES)
-        await this.entityManager.query(REMOVE_COVERAGE, [workspaceId, request.id])
+        await this.entityManager.delete(ShiftsCoverageEntity, { workspaceId, id: request.id })
     }
 
     /** Saves the rules and the opening hours of the shop. */
@@ -162,15 +203,20 @@ export class ShiftsSetupService {
             }
             opening[String(day.weekday)] = { open: day.open, close: day.close }
         }
-        await this.entityManager.query(UPSERT_SETTINGS, [
-            workspaceId,
-            JSON.stringify(opening),
-            request.swapNoticeHours,
-            request.leaveNoticeDays,
-            request.remindMinutes,
-            request.noshowMinutes,
-            request.overtimeHoursWeek,
-        ])
+        await this.entityManager.upsert(
+            ShiftsSettingsEntity,
+            {
+                workspaceId,
+                openingHours: opening,
+                swapNoticeHours: request.swapNoticeHours,
+                leaveNoticeDays: request.leaveNoticeDays,
+                remindMinutes: request.remindMinutes,
+                noshowMinutes: request.noshowMinutes,
+                overtimeHoursWeek: String(request.overtimeHoursWeek),
+                updatedAt: () => "now()",
+            },
+            ["workspaceId"],
+        )
     }
 
     /** A manager enters an availability statement for a person; it is approved at once. */
@@ -198,18 +244,17 @@ export class ShiftsSetupService {
     /** Removes an availability statement. */
     async removeAvailability(userId: string, workspaceId: string, request: RemoveAvailabilityParams): Promise<void> {
         await this.members.require(userId, workspaceId, MANAGER_ROLES)
-        await this.entityManager.query(REMOVE_AVAILABILITY, [workspaceId, request.id])
+        await this.entityManager.delete(ShiftsAvailabilityEntity, { workspaceId, id: request.id })
     }
 
     /** Approves or declines a pending availability statement. */
     async decideAvailability(userId: string, workspaceId: string, request: DecideAvailabilityParams): Promise<void> {
         const { displayName } = await this.members.require(userId, workspaceId, MANAGER_ROLES)
-        await this.entityManager.query(DECIDE_AVAILABILITY, [
-            workspaceId,
-            request.id,
-            request.approve ? "approved" : "declined",
-            displayName,
-        ])
+        await this.entityManager.update(
+            ShiftsAvailabilityEntity,
+            { workspaceId, id: request.id, status: "pending" },
+            { status: request.approve ? "approved" : "declined", decidedBy: displayName },
+        )
     }
 
     /** A person checks in to their own shift, from thirty minutes before the start until it ends. */
@@ -218,21 +263,30 @@ export class ShiftsSetupService {
         const own = await this.profileOfMember(workspaceId, userId)
         const shift = await this.data.shiftRow(workspaceId, request.shiftId)
         if (shift === undefined) throw new ShiftsError({ code: ShiftsErrorCode.ShiftNotFound })
-        if (shift.staff_id !== own) throw new ShiftsError({ code: ShiftsErrorCode.CheckinNotYours })
+        if (shift.staffId !== own) throw new ShiftsError({ code: ShiftsErrorCode.CheckinNotYours })
         const now = this.clock.now()
-        const start = instantOf(shift.shift_date, toMin(shift.start_time)).getTime()
-        const end = instantOf(shift.shift_date, toMin(shift.end_time)).getTime()
+        const start = instantOf(shift.shiftDate, toMin(shift.startTime)).getTime()
+        const end = instantOf(shift.shiftDate, toMin(shift.endTime)).getTime()
         if (now.getTime() < start - CHECKIN_EARLY_MIN * 60_000) {
             throw new ShiftsError({ code: ShiftsErrorCode.CheckinEarly })
         }
         if (now.getTime() > end) throw new ShiftsError({ code: ShiftsErrorCode.CheckinClosed })
-        const [row] = await this.entityManager.query<Array<{ checked_in_at: Date | string | null }>>(CHECK_IN, [
-            workspaceId,
-            request.shiftId,
-            own,
-        ])
-        const at = row?.checked_in_at
-        return { at: typeof at === "string" ? at : (at ?? now).toISOString() }
+        const inserted = await this.entityManager
+            .createQueryBuilder(ShiftsAttendanceEntity, "s")
+            .insert()
+            .values({ workspaceId, shiftId: request.shiftId, staffId: own })
+            .orIgnore()
+            .returning("checked_in_at")
+            .execute()
+        const first = (inserted.raw as Array<{ checked_in_at: Date | string | null }> | undefined)?.[0]
+        const stored =
+            first?.checked_in_at ??
+            (
+                await this.entityManager.findOne(ShiftsAttendanceEntity, {
+                    where: { shiftId: request.shiftId, staffId: own },
+                })
+            )?.checkedInAt
+        return { at: typeof stored === "string" ? stored : (stored ?? now).toISOString() }
     }
 
     private async insertAvailability(
@@ -252,29 +306,25 @@ export class ShiftsSetupService {
             throw new ShiftsError({ code: ShiftsErrorCode.AvailabilityInvalid })
         }
         windowOf(request.start, request.end)
-        const [row] = await this.entityManager.query<Array<ShiftsIdRow>>(INSERT_AVAILABILITY, [
+        const result = await this.entityManager.insert(ShiftsAvailabilityEntity, {
             workspaceId,
             staffId,
-            weekday ?? null,
-            day,
-            request.start,
-            request.end,
-            request.available,
-            (request.note ?? "").trim().slice(0, 200),
+            weekday: weekday ?? null,
+            shiftDate: day,
+            startTime: request.start,
+            endTime: request.end,
+            available: request.available,
+            note: (request.note ?? "").trim().slice(0, 200),
             status,
-            decider,
-        ])
-        return { id: row?.id ?? "" }
+            decidedBy: decider,
+        })
+        return { id: (result.identifiers[0] as { id?: string } | undefined)?.id ?? "" }
     }
 
     private async profileOfMember(workspaceId: string, userId: string): Promise<string> {
         const member = await this.members.require(userId, workspaceId)
-        const [row] = await this.entityManager.query<Array<ShiftsIdRow>>(SELECT_PROFILE_OF_MEMBER, [
-            workspaceId,
-            userId,
-            member.staffId,
-        ])
-        if (row?.id === null || row?.id === undefined) throw new ShiftsError({ code: ShiftsErrorCode.ProfileMissing })
-        return row.id
+        const id = await profileIdOfMember(this.entityManager, workspaceId, userId, member.staffId)
+        if (id === null) throw new ShiftsError({ code: ShiftsErrorCode.ProfileMissing })
+        return id
     }
 }

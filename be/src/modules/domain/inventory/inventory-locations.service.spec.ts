@@ -7,7 +7,7 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InventoryErrorCode } from "./errors/inventory.error"
 import { InventoryLocationsService } from "./inventory-locations.service"
-import { DEFAULT_LOCATION, SAVE_LOCATION } from "./persistence/inventory.sql"
+import { DEFAULT_LOCATION, SAVE_LOCATION } from "@tests/fixtures/builders/inventory-calls.builder"
 
 const UUID = "0b8c1f0e-3a49-4b7e-9d3f-2c1f6a5d7e90"
 
@@ -29,7 +29,7 @@ const build = async (entityManager: MockEntityManager) => {
 describe("InventoryLocationsService", () => {
     describe("defaultLocation", () => {
         it("answers the default location of the workspace, created with the catalogue name on first use", async () => {
-            const em = mockEntityManager({ query: [DEFAULT_LOCATION, [{ id: "loc-1" }]] })
+            const em = mockEntityManager({ query: [DEFAULT_LOCATION, [{ inventory_default_location: "loc-1" }]] })
             const { locations } = await build(em)
 
             await expect(locations.defaultLocation("ws-1")).resolves.toBe("loc-1")
@@ -38,7 +38,7 @@ describe("InventoryLocationsService", () => {
         })
 
         it("refuses when the database answers no location", async () => {
-            const em = mockEntityManager({ query: [DEFAULT_LOCATION, [{ id: null }]] })
+            const em = mockEntityManager({ query: [DEFAULT_LOCATION, [{ inventory_default_location: null }]] })
             const { locations } = await build(em)
 
             await expect(locations.defaultLocation("ws-1")).rejects.toMatchObject({
@@ -58,7 +58,7 @@ describe("InventoryLocationsService", () => {
 
     describe("saveLocation", () => {
         it("renames the named location after proving the caller is a manager", async () => {
-            const em = mockEntityManager({ query: [SAVE_LOCATION, [{ id: UUID }]] })
+            const em = mockEntityManager({ query: [SAVE_LOCATION, [{ inventory_save_location: UUID }]] })
             const { locations, members } = await build(em)
 
             await locations.saveLocation("user-1", "ws-1", { id: UUID, name: "  Back store  " })
@@ -70,8 +70,8 @@ describe("InventoryLocationsService", () => {
         it("makes sure the default location exists before adding another one", async () => {
             const em = mockEntityManager({
                 query: [
-                    [DEFAULT_LOCATION, [{ id: "loc-1" }]],
-                    [SAVE_LOCATION, [{ id: "loc-2" }]],
+                    [DEFAULT_LOCATION, [{ inventory_default_location: "loc-1" }]],
+                    [SAVE_LOCATION, [{ inventory_save_location: "loc-2" }]],
                 ],
             })
             const { locations } = await build(em)

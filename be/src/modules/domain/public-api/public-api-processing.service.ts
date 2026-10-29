@@ -11,10 +11,9 @@ import { PublicApiQueueJob, PUBLIC_API_QUEUE } from "@modules/queues/public-api"
 import { PublicApiError, PublicApiErrorCode } from "./errors/public-api.error"
 import { parsePublicApiBody, parsePublicApiJob } from "./public-api-job.policy"
 import type { PublicApiJob } from "./public-api-job.contracts"
+import { PublicApiLedgerService } from "./public-api-ledger.service"
 import { PublicLeadFulfillmentService } from "./public-lead-fulfillment.service"
 import { PublicMessageFulfillmentService } from "./public-message-fulfillment.service"
-import type { PublicApiProcessingRow } from "./persistence/public-api-processing.rows"
-import { COMPLETE_PUBLIC_API_REQUEST, LOCK_PUBLIC_API_REQUEST } from "./persistence/public-api-processing.sql"
 
 @Injectable()
 /** Fulfills API admissions with inbox dedupe, domain writes and downstream jobs in one fence-held transaction. */
@@ -26,6 +25,7 @@ export class PublicApiProcessingService {
         private readonly leads: PublicLeadFulfillmentService,
         private readonly messages: PublicMessageFulfillmentService,
         private readonly events: EventsService,
+        private readonly ledger: PublicApiLedgerService,
     ) {}
 
     /** Both historical implicit names and current named requests route through this queue's processor. */
@@ -68,11 +68,8 @@ export class PublicApiProcessingService {
         }
         await this.entityManager.transaction(async (tx) => {
             if (job.format === "ledger") {
-                const [row] = await tx.query<Array<PublicApiProcessingRow>>(LOCK_PUBLIC_API_REQUEST, [
-                    job.workspaceId,
-                    job.requestId,
-                ])
-                if (row?.processed_at !== null) return
+                const row = await this.ledger.lock(job.workspaceId, job.requestId, tx)
+                if (row?.processedAt !== null) return
             }
             if (!(await this.inbox.claim("public_api.failed", delivery.id, tx))) return
             await this.events.record(
@@ -89,14 +86,14 @@ export class PublicApiProcessingService {
     }
 
     private async processRequest(workspaceId: string, requestId: string, tx: EntityManager): Promise<void> {
-        const [row] = await tx.query<Array<PublicApiProcessingRow>>(LOCK_PUBLIC_API_REQUEST, [workspaceId, requestId])
-        if (row === undefined) throw new PublicApiError({ code: PublicApiErrorCode.RequestNotFound })
-        if (row.processed_at !== null) return
-        const request = parsePublicApiBody(row.kind, row.payload, row.need_supplied)
+        const row = await this.ledger.lock(workspaceId, requestId, tx)
+        if (row === null) throw new PublicApiError({ code: PublicApiErrorCode.RequestNotFound })
+        if (row.processedAt !== null) return
+        const request = parsePublicApiBody(row.kind, row.payload, row.needSupplied)
         if (!(await this.inbox.claim(PUBLIC_API_QUEUE, `${workspaceId}:${requestId}`, tx))) {
             throw new PublicApiError({ code: PublicApiErrorCode.InboxInconsistent })
         }
-        let leadId = row.lead_id
+        let leadId = row.leadId
         switch (request.kind) {
             case "knowledge":
                 await this.knowledge.addText(
@@ -123,10 +120,10 @@ export class PublicApiProcessingService {
                 leadId = await this.leads.fulfill(workspaceId, requestId, request.body, tx)
                 break
             case "message":
-                leadId = await this.messages.fulfill(workspaceId, requestId, request.body, row.created_at, tx)
+                leadId = await this.messages.fulfill(workspaceId, requestId, request.body, row.createdAt, tx)
                 break
         }
-        await tx.query(COMPLETE_PUBLIC_API_REQUEST, [workspaceId, requestId, leadId])
+        await this.ledger.complete(workspaceId, requestId, leadId, tx)
     }
 
     private async processLegacy(job: Exclude<PublicApiJob, { format: "ledger" }>, tx: EntityManager): Promise<void> {

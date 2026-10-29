@@ -5,7 +5,8 @@ import { JobsError, JobsErrorCode } from "./errors/jobs.error"
 import type { ClaimedJob } from "./jobs.contracts"
 import { JOBS_MANAGERS } from "./jobs.decorators"
 import { JobFenceService } from "./job-fence.service"
-import { LOCK_JOB_FENCE } from "./persistence/jobs.sql"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { JobEntity } from "./persistence/entities"
 
 const job: ClaimedJob = {
     jobId: "j-1",
@@ -13,6 +14,14 @@ const job: ClaimedJob = {
     fencingToken: 3,
     currentStep: "send",
     payload: { id: "m-1" },
+}
+
+/** A transaction whose lock builder finds the fence (`found`) or nothing. */
+const lockTransaction = (found: boolean) => {
+    const lock = fakeQueryBuilder({ getOne: found ? Object.assign(new JobEntity(), { id: "j-1" }) : null })
+    const tx = fakeTransaction(mockEntityManager())
+    tx.em.createQueryBuilder.mockReturnValue(lock.builder as never)
+    return { tx, lock }
 }
 
 const build = async (manager: MockEntityManager) => {
@@ -32,19 +41,26 @@ const buildWithoutConnection = async () => {
 describe("JobFenceService", () => {
     describe("write", () => {
         it("runs the domain write in the transaction that holds the live fence", async () => {
-            const tx = fakeTransaction(mockEntityManager({ query: [LOCK_JOB_FENCE, [{ id: "j-1" }]] }))
+            const { tx, lock } = lockTransaction(true)
             const { fence } = await build(tx.em)
             const action = jest.fn().mockResolvedValue(undefined)
 
             await fence.write(job, action)
 
             expect(action).toHaveBeenCalledTimes(1)
-            expect(tx.em.query).toHaveBeenCalledWith(LOCK_JOB_FENCE, ["j-1", 3])
+            expect(tx.em.createQueryBuilder).toHaveBeenCalledWith(JobEntity, "job")
+            expect(lock.callsOf("where")).toEqual([
+                [
+                    "job.id = :jobId AND job.fencingToken = :token AND job.status = :running",
+                    { jobId: "j-1", token: 3, running: "running" },
+                ],
+            ])
+            expect(lock.callsOf("setLock")).toEqual([["pessimistic_write"]])
             expect(tx.commits).toBe(1)
         })
 
         it("refuses a stale token before the domain write and rolls the transaction back", async () => {
-            const tx = fakeTransaction(mockEntityManager({ query: [LOCK_JOB_FENCE, []] }))
+            const { tx } = lockTransaction(false)
             const { fence } = await build(tx.em)
             const action = jest.fn().mockResolvedValue(undefined)
 
@@ -59,7 +75,7 @@ describe("JobFenceService", () => {
         })
 
         it("rolls the fence back when the domain write fails", async () => {
-            const tx = fakeTransaction(mockEntityManager({ query: [LOCK_JOB_FENCE, [{ id: "j-1" }]] }))
+            const { tx } = lockTransaction(true)
             const { fence } = await build(tx.em)
             const failure = new Error("the change failed")
 

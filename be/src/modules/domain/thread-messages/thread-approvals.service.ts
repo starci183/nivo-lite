@@ -5,11 +5,10 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { pendingOf, withVote } from "./approval-card.policy"
 import { ThreadMessagesError, ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { MentionDirectoryService } from "./mention-directory.service"
-import type { ThreadMessageRow } from "./persistence/thread-messages.rows"
-import { FIND_MESSAGE } from "./persistence/thread-messages.sql"
+import { selectMessagesWithAuthor } from "./persistence/thread-message.query"
 import { toMessage } from "./thread.mapper"
 import { ThreadApprovalOutcomesService } from "./thread-approval-outcomes.service"
-import type { ThreadCardDecision, ThreadMessage } from "./thread-messages.contracts"
+import type { ThreadCardDecision, ThreadMessage, ThreadMessageRecord } from "./thread-messages.contracts"
 import { InjectApprovalGate } from "./thread-messages.decorators"
 import type { ThreadApprovalGate } from "./thread-messages.port"
 
@@ -34,10 +33,10 @@ export class ThreadApprovalsService {
     async decide(input: ThreadCardDecision): Promise<ThreadMessage> {
         await this.members.require(input.userId, input.workspaceId)
         const memberId = await this.directory.memberIdOf(this.entityManager, input.workspaceId, input.userId)
-        const [row] = await this.entityManager.query<Array<ThreadMessageRow>>(FIND_MESSAGE, [
-            input.workspaceId,
-            input.messageId,
-        ])
+        const row = await selectMessagesWithAuthor(this.entityManager, input.workspaceId)
+            .andWhere("m.id = :messageId", { messageId: input.messageId })
+            .limit(1)
+            .getRawOne<ThreadMessageRecord>()
         if (row === undefined) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.MessageNotFound })
         const card = row.approval
         if (card === null) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.NoApproval })

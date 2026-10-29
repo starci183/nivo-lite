@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { generationRow, pollOptions } from "@tests/fixtures/builders/ai-generations.builder"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { GenerateParams } from "./ai-generations.contracts"
@@ -9,7 +10,7 @@ import { AiGenerationsLogEvent } from "./ai-generations.log-events"
 import { DirectGenerationService } from "./direct-generation.service"
 import { GenerationRunnerService } from "./generation-runner.service"
 import { GenerationsService } from "./generations.service"
-import { FIND_GENERATION_PROGRESS, INSERT_GENERATION } from "./persistence/ai-generations.sql"
+import { AiGenerationEntity } from "./persistence/entities"
 
 const paramsOf = builder<GenerateParams>({
     workspaceId: "w1",
@@ -44,12 +45,10 @@ const build = async (entityManager: MockEntityManager) => {
 describe("DirectGenerationService", () => {
     it("writes the row, runs it right here and answers its text", async () => {
         const em = mockEntityManager({
-            query: [
-                [INSERT_GENERATION, [{ id: "g1" }]],
-                [
-                    FIND_GENERATION_PROGRESS,
-                    [{ status: "done", output: { text: "hello" }, usage: null, timings: { total_ms: 12 } }],
-                ],
+            insert: [AiGenerationEntity, { identifiers: [{ id: "g1" }] }],
+            findOne: [
+                AiGenerationEntity,
+                generationRow({ status: "done", output: { text: "hello" }, timings: { total_ms: 12 } }),
             ],
         })
         const { service, runner } = await build(em)
@@ -63,13 +62,13 @@ describe("DirectGenerationService", () => {
             timings: { total_ms: 12 },
             usage: null,
         })
-        expect(em.query).toHaveBeenNthCalledWith(1, INSERT_GENERATION, [
-            "w1",
-            "setup-chat",
-            "office",
-            "relay",
-            '{"messages":[{"role":"user","content":"hi"}],"response_format":"text","timeout_ms":5000}',
-        ])
+        expect(em.insert).toHaveBeenCalledWith(AiGenerationEntity, {
+            workspaceId: "w1",
+            purpose: "setup-chat",
+            module: "office",
+            usageKind: "relay",
+            input: { messages: [{ role: "user", content: "hi" }], response_format: "text", timeout_ms: 5000 },
+        })
         expect(runner.run).toHaveBeenCalledWith({ generationId: "g1", workspaceId: "w1" })
     })
 
@@ -82,10 +81,8 @@ describe("DirectGenerationService", () => {
 
     it("answers the busy sentence when the run left no text", async () => {
         const em = mockEntityManager({
-            query: [
-                [INSERT_GENERATION, [{ id: "g1" }]],
-                [FIND_GENERATION_PROGRESS, [{ status: "error", output: null, usage: null, timings: {} }]],
-            ],
+            insert: [AiGenerationEntity, { identifiers: [{ id: "g1" }] }],
+            findOne: [AiGenerationEntity, generationRow({ status: "error" })],
         })
         const { service } = await build(em)
 
@@ -94,10 +91,8 @@ describe("DirectGenerationService", () => {
 
     it("answers the busy sentence when the generation disappeared after running", async () => {
         const em = mockEntityManager({
-            query: [
-                [INSERT_GENERATION, [{ id: "g1" }]],
-                [FIND_GENERATION_PROGRESS, []],
-            ],
+            insert: [AiGenerationEntity, { identifiers: [{ id: "g1" }] }],
+            findOne: [AiGenerationEntity, null],
         })
         const { service, generations, logger, runner } = await build(em)
         const params = paramsOf()
@@ -105,7 +100,7 @@ describe("DirectGenerationService", () => {
         await expect(service.run(params)).resolves.toEqual({ ok: false, reason: "error", message: BUSY })
 
         expect(runner.run).toHaveBeenCalledWith({ generationId: "g1", workspaceId: "w1" })
-        expect(em.query).toHaveBeenLastCalledWith(FIND_GENERATION_PROGRESS, ["g1", "w1"])
+        expect(em.findOne).toHaveBeenLastCalledWith(AiGenerationEntity, pollOptions("g1", "w1"))
         expect(generations.busyText).toHaveBeenCalledWith(params)
         expect(logger.error).not.toHaveBeenCalled()
     })
@@ -114,23 +109,21 @@ describe("DirectGenerationService", () => {
 describe("DirectGenerationService", () => {
     it("answers the busy sentence when the stored generation is still running", async () => {
         const em = mockEntityManager({
-            query: [
-                [INSERT_GENERATION, [{ id: "g1" }]],
-                [FIND_GENERATION_PROGRESS, [{ status: "running", output: null, usage: null, timings: {} }]],
-            ],
+            insert: [AiGenerationEntity, { identifiers: [{ id: "g1" }] }],
+            findOne: [AiGenerationEntity, generationRow({ status: "running" })],
         })
         const { service, generations, logger } = await build(em)
         const params = paramsOf()
 
         await expect(service.run(params)).resolves.toEqual({ ok: false, reason: "error", message: BUSY })
 
-        expect(em.query).toHaveBeenLastCalledWith(FIND_GENERATION_PROGRESS, ["g1", "w1"])
+        expect(em.findOne).toHaveBeenLastCalledWith(AiGenerationEntity, pollOptions("g1", "w1"))
         expect(generations.busyText).toHaveBeenCalledWith(params)
         expect(logger.error).not.toHaveBeenCalled()
     })
 
     it("logs a failed insert and answers the busy sentence", async () => {
-        const em = mockEntityManager({ query: [INSERT_GENERATION, []] })
+        const em = mockEntityManager({ insert: [AiGenerationEntity, { identifiers: [] }] })
         const { service, logger, runner } = await build(em)
 
         await expect(service.run(paramsOf())).resolves.toEqual({ ok: false, reason: "error", message: BUSY })

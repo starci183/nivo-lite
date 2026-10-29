@@ -16,6 +16,7 @@ import { KnowledgeSearchService } from "@modules/domain/knowledge"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { NivoKnowledgeService } from "@modules/domain/nivo-knowledge"
+import type { AgentNotesRequest } from "./agent-knowledge.contracts"
 import { KnowledgeRecallService } from "./knowledge-recall.service"
 import { CUSTOMER_MODULE, lanesOfView } from "./knowledge-lanes.policy"
 import { audienceOfModule, viewOf } from "./knowledge-view.policy"
@@ -144,6 +145,19 @@ export class AgentKnowledgeLensService implements KnowledgeLens {
         })
         const facts = await this.recall.factsMatching(view, question, FACT_LIMIT)
         return [...facts.map((fact) => factRow(fact, input.module)), ...passages]
+    }
+
+    /**
+     * The business notes a task the system runs for an agent retrieves (a drafted follow-up, a thank-you): the same lane as `ask`
+     * (the facts of the view, then the passages the view allows), without a member asking. A customer-facing text passes the
+     * customer audience and so never reads an internal document or fact; a blank question finds nothing.
+     */
+    async notes(request: AgentNotesRequest): Promise<ReadonlyArray<AskedPassage>> {
+        const question = request.question.trim().slice(0, QUESTION_MAX_CHARS)
+        const passages = await this.search.forAgent({ ...request, question })
+        if (question === "") return passages
+        const facts = await this.recall.factsMatching(viewOf(request), question, FACT_LIMIT)
+        return [...facts.map((fact) => factRow(fact, request.module)), ...passages].slice(0, request.limit)
     }
 
     /** Which kinds of knowledge the view of the module reads, by the same policy that builds the view. */

@@ -1,7 +1,35 @@
-import type { ExecutionRecordRow, ExecutionRow } from "./persistence/executions.rows"
+/** An approval card as the decision flow reads it. */
+export interface ExecutionCard {
+    /** The execution id. */
+    id: string
+    /** `pending_approval`, `approved` or `rejected`. */
+    status: string
+    /** The work item the card belongs to, when there is one. */
+    work_item_id: string | null
+    /** The draft the person approves. */
+    draft: string
+}
+
+/** An approval card selected for a workspace's lead and sales views. */
+export interface ExecutionRecord extends ExecutionCard {
+    /** The workspace that owns the card. */
+    readonly workspace_id: string
+    /** The responsibility the draft belongs to. */
+    readonly responsibility_id: string
+    /** The agent that wrote the draft, when there is one. */
+    readonly agent_id: string | null
+    /** The draft's action kind. */
+    readonly kind: string
+    /** The person that decided the card, when decided. */
+    readonly decided_by: string | null
+    /** The decision time as ISO 8601 text, when decided. */
+    readonly decided_at: string | null
+    /** The creation time as ISO 8601 text. */
+    readonly created_at: string
+}
 
 /** A complete approval card, or null when the workspace has no such card. */
-export type OptionalExecutionRecord = ExecutionRecordRow | null
+export type OptionalExecutionRecord = ExecutionRecord | null
 
 /** What an approval card is made of. */
 export interface NewExecution {
@@ -21,7 +49,7 @@ export interface NewExecution {
 export type ExecutionDecision = "approved" | "rejected"
 
 /** An approval card, or null when the workspace has no such card. */
-export type OptionalExecution = ExecutionRow | null
+export type OptionalExecution = ExecutionCard | null
 
 /** What settling a card takes. */
 export interface ExecutionSettlement {

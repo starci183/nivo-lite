@@ -3,10 +3,13 @@ import { AuthorityService } from "@modules/domain/authority"
 import { ModuleCatalogService, formatVnd } from "@modules/domain/decisions"
 import type { WorkContext } from "@modules/domain/decisions"
 import type { LeadRecordRow } from "@modules/domain/leads"
-import { authorityBrief } from "@modules/integrations/deepseek"
-import type { DeepseekScope, LeadInput } from "@modules/integrations/deepseek"
+import { authorityBrief } from "@modules/domain/ai-tasks"
+import type { AiTaskScope, LeadInput } from "@modules/domain/ai-tasks"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+
+/** The module whose knowledge lane the follow-up and care drafts read. */
+const SALES_LANE = "sales"
 
 @Injectable()
 /** What every performer reaches for: its texts, the owner's authority brief for prompts, the prompt scope, and the labels of departments and money. */
@@ -33,8 +36,13 @@ export class PerformerKitService {
     }
 
     /** Who and what language a prompt writes for. */
-    scope(ctx: WorkContext): DeepseekScope {
+    scope(ctx: WorkContext): AiTaskScope {
         return { workspaceId: ctx.workspaceId, locale: ctx.locale }
+    }
+
+    /** The scope of a drafting prompt: the language and workspace, plus the customer lane of the sales agent its business notes come from. */
+    draftScope(ctx: WorkContext): AiTaskScope {
+        return { ...this.scope(ctx), lane: { module: SALES_LANE, installationId: null, audience: "customer" } }
     }
 
     /** The lead as a prompt reads it. */

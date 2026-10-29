@@ -4,3 +4,4 @@ export { AGENT_MESSAGES_ERROR_KINDS, AgentMessagesErrorCode } from "./errors/age
 export { AGENT_MESSAGES_MESSAGES } from "./messages/agent-messages.messages"
 export type { TranscriptLine } from "./agent-messages.contracts"
 export type { AgentThreadMessage } from "./agent-messages.contracts"
+export { AgentMessageEntity, agentMessagesEntities } from "./persistence/entities"

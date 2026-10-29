@@ -3,19 +3,10 @@ import {
     officeDirectUnreadIdentity,
     persistOfficeDirectUnread,
 } from "../../fixtures/builders/office-direct-unread.builder"
-import { CLEAN_USERS } from "../../fixtures/persistence/office-chain.sql"
-import {
-    CLEAN_AGENT_CHAT,
-    CLEAN_AGENTS,
-    CLEAN_LEADS,
-    CLEAN_MEMBERS,
-    CLEAN_MESSAGES,
-    CLEAN_READS,
-    CLEAN_WORKSPACES,
-    MARKERS_OF,
-} from "../../fixtures/persistence/office-direct-unread.sql"
 import { OfficeRoomMembersProofModule } from "../../world/office-room-members-proof.module"
 import { useTestWorld } from "../../world/use-test-world"
+import { removeDirectUnreadStory, markersOf } from "../../world/office-direct-unread-database.service"
+import { removeAuthUsers } from "../../world/proof-accounts.service"
 
 const world = useTestWorld({ modules: [OfficeRoomMembersProofModule.register()] })
 /** The newest line a row previews, as the caller draws it. */
@@ -27,15 +18,8 @@ const identity = officeDirectUnreadIdentity(() => world.id())
 beforeAll(async () => {
     world.cleanup(async () => {
         const workspaces = [identity.workspaceId, identity.foreignWorkspaceId]
-        await world.db.primary.query(CLEAN_MESSAGES, [workspaces])
-        await world.db.primary.query(CLEAN_AGENT_CHAT, [workspaces])
-        await world.db.primary.query(CLEAN_READS, [workspaces])
-        await world.db.primary.query(CLEAN_AGENTS, [[...identity.agentIds]])
-        await world.db.primary.query(CLEAN_LEADS, [[...identity.leadIds]])
-        // Cascade clears the seated owners; the last-owner guard only bars lone deletes.
-        await world.db.primary.query(CLEAN_WORKSPACES, [workspaces])
-        await world.db.primary.query(CLEAN_MEMBERS, [workspaces])
-        await world.db.primary.query(CLEAN_USERS, [[identity.ownerId, identity.foreignUserId]])
+        await removeDirectUnreadStory(world.db.primary, workspaces, identity.agentIds, identity.leadIds)
+        await removeAuthUsers(world.db.primary, [identity.ownerId, identity.foreignUserId])
     })
     await persistOfficeDirectUnread(world.db.primary, identity)
 })
@@ -91,9 +75,9 @@ describe("direct conversation read markers over PostgreSQL", () => {
             ],
             leads: [{ id: identity.leadIds[0], unread: 2 }],
         })
-        expect(
-            await world.db.primary.query(MARKERS_OF, [identity.workspaceId, `agent:${identity.agentIds[0]}`]),
-        ).toEqual([{ n: 1 }])
+        expect(await markersOf(world.db.primary, identity.workspaceId, `agent:${identity.agentIds[0]}`)).toEqual([
+            { n: 1 },
+        ])
     })
 
     it("marks a customer conversation read", async () => {
@@ -115,9 +99,9 @@ describe("direct conversation read markers over PostgreSQL", () => {
             ],
             leads: [],
         })
-        expect(await world.db.primary.query(MARKERS_OF, [identity.workspaceId, `lead:${identity.leadIds[0]}`])).toEqual(
-            [{ n: 1 }],
-        )
+        expect(await markersOf(world.db.primary, identity.workspaceId, `lead:${identity.leadIds[0]}`)).toEqual([
+            { n: 1 },
+        ])
     })
 
     it("refuses a kind that is not a direct conversation and writes no marker", async () => {
@@ -125,7 +109,7 @@ describe("direct conversation read markers over PostgreSQL", () => {
         await expect(
             rooms.markConversationRead(identity.ownerId, identity.workspaceId, "room", "sales"),
         ).rejects.toMatchObject({ code: "OFFICE_ROOMS_CONVERSATION_INVALID", params: { id: "sales" } })
-        expect(await world.db.primary.query(MARKERS_OF, [identity.workspaceId, "room:sales"])).toEqual([{ n: 0 }])
+        expect(await markersOf(world.db.primary, identity.workspaceId, "room:sales")).toEqual([{ n: 0 }])
     })
 
     it("refuses a conversation of a foreign workspace and writes no marker for it", async () => {
@@ -136,9 +120,9 @@ describe("direct conversation read markers over PostgreSQL", () => {
             code: "OFFICE_ROOMS_CONVERSATION_INVALID",
             params: { id: identity.agentIds[2] },
         })
-        expect(
-            await world.db.primary.query(MARKERS_OF, [identity.workspaceId, `agent:${identity.agentIds[2]}`]),
-        ).toEqual([{ n: 0 }])
+        expect(await markersOf(world.db.primary, identity.workspaceId, `agent:${identity.agentIds[2]}`)).toEqual([
+            { n: 0 },
+        ])
     })
 
     it("rejects a caller outside the workspace without reading or writing", async () => {

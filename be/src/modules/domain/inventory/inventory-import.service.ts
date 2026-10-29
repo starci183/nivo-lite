@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { OfficeLog } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { eachInOrder } from "@modules/platform/primitives"
@@ -22,28 +22,20 @@ import { INVENTORY_TEMPLATES, inventoryStarterOf } from "./inventory.templates"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { parseItemTable, skuFromName } from "./policies/item-table.policy"
 import { channelOf } from "./policies/supplier-channel.policy"
-import { savedId } from "./policies/saved-id.policy"
-import type { IdRow } from "./policies/saved-id.policy"
-import {
-    IMPORT_ITEM,
-    SAVE_ITEM,
-    SAVE_RECIPE,
-    SELECT_ITEM_REFS,
-    SELECT_RECIPE_NAMES,
-    SELECT_SUPPLIER_NAMES,
-} from "./persistence/inventory.sql"
+import { idColumn, savedId } from "./policies/saved-id.policy"
+import { InventoryItemEntity, InventoryRecipeEntity, InventorySupplierEntity } from "./persistence/entities"
 
 /** The delivery time assumed when none is typed, in days. */
 const LEAD_TIME_DEFAULT_DAYS = 2
 
-interface NameRow {
-    readonly id: string
-    readonly name: string
-}
+/** The most items one import matches against. */
+const ITEM_REF_LIMIT = 5000
 
-interface RefRow extends NameRow {
-    readonly sku: string
-}
+/** The most suppliers one import matches against. */
+const SUPPLIER_LIMIT = 1000
+
+/** The most recipes one starter compares with. */
+const RECIPE_LIMIT = 1000
 
 @Injectable()
 /** The bulk loads of the catalogue: a pasted item table and a starter set of suppliers, items and recipes. */
@@ -87,19 +79,22 @@ export class InventoryImportService {
             const supplierId =
                 row.supplier === "" ? null : await this.supplierByName(workspaceId, row.supplier, suppliers)
             const itemId = await savedId(
-                this.entityManager.query<Array<IdRow>>(IMPORT_ITEM, [
-                    workspaceId,
-                    knownId,
-                    finalSku,
-                    row.name,
-                    row.unit,
-                    row.category,
-                    row.costVnd,
-                    row.sellPriceVnd,
-                    row.reorderPoint,
-                    row.reorderQty,
-                    supplierId,
-                ]),
+                idColumn(
+                    callDbFunction(this.entityManager, "public.inventory_import_item", [
+                        workspaceId,
+                        knownId,
+                        finalSku,
+                        row.name,
+                        row.unit,
+                        row.category,
+                        row.costVnd,
+                        row.sellPriceVnd,
+                        row.reorderPoint,
+                        row.reorderQty,
+                        supplierId,
+                    ]),
+                    "inventory_import_item",
+                ),
                 InventoryErrorCode.ItemNotFound,
             )
             if (knownId === null) created += 1
@@ -115,10 +110,26 @@ export class InventoryImportService {
         return { created, updated, stocked: touched.length, skipped }
     }
 
+    private itemRefs(workspaceId: string): Promise<Array<Pick<InventoryItemEntity, "id" | "sku" | "name">>> {
+        return this.entityManager.find(InventoryItemEntity, {
+            select: { id: true, sku: true, name: true },
+            where: { workspaceId },
+            take: ITEM_REF_LIMIT,
+        })
+    }
+
+    private supplierNames(workspaceId: string): Promise<Array<Pick<InventorySupplierEntity, "id" | "name">>> {
+        return this.entityManager.find(InventorySupplierEntity, {
+            select: { id: true, name: true },
+            where: { workspaceId },
+            take: SUPPLIER_LIMIT,
+        })
+    }
+
     private async knownItems(
         workspaceId: string,
     ): Promise<{ bySku: Map<string, string>; byName: Map<string, string> }> {
-        const existing = await this.entityManager.query<Array<RefRow>>(SELECT_ITEM_REFS, [workspaceId])
+        const existing = await this.itemRefs(workspaceId)
         return {
             bySku: new Map(existing.map((row) => [row.sku.toLowerCase(), row.id])),
             byName: new Map(existing.map((row) => [row.name.trim().toLowerCase(), row.id])),
@@ -142,7 +153,7 @@ export class InventoryImportService {
 
     private async supplierByName(workspaceId: string, name: string, cache: Map<string, string>): Promise<string> {
         if (cache.size === 0) {
-            const known = await this.entityManager.query<Array<NameRow>>(SELECT_SUPPLIER_NAMES, [workspaceId])
+            const known = await this.supplierNames(workspaceId)
             for (const supplier of known) cache.set(supplier.name.trim().toLowerCase(), supplier.id)
         }
         const key = name.trim().toLowerCase()
@@ -182,12 +193,7 @@ export class InventoryImportService {
         const { displayName: actor } = await this.members.require(userId, workspaceId, MANAGER_ROLES)
         await this.locations.defaultLocation(workspaceId)
         const { supplierIds, suppliers } = await this.loadStarterSuppliers(workspaceId, request)
-        const itemIds = new Map(
-            (await this.entityManager.query<Array<RefRow>>(SELECT_ITEM_REFS, [workspaceId])).map((row) => [
-                row.sku,
-                row.id,
-            ]),
-        )
+        const itemIds = new Map((await this.itemRefs(workspaceId)).map((row) => [row.sku, row.id]))
         let items = 0
         await eachInOrder(
             request.items.filter((item) => !itemIds.has(item.sku)),
@@ -195,21 +201,24 @@ export class InventoryImportService {
                 const supplierId =
                     item.supplier === undefined ? null : (supplierIds.get(item.supplier.toLowerCase()) ?? null)
                 const id = await savedId(
-                    this.entityManager.query<Array<IdRow>>(SAVE_ITEM, [
-                        workspaceId,
-                        null,
-                        item.sku,
-                        item.name,
-                        item.unit,
-                        JSON.stringify(item.units ?? []),
-                        item.category,
-                        item.costVnd,
-                        item.sellPriceVnd ?? null,
-                        item.reorderPoint,
-                        item.reorderQty,
-                        supplierId,
-                        item.aliases ?? [],
-                    ]),
+                    idColumn(
+                        callDbFunction(this.entityManager, "public.inventory_save_item", [
+                            workspaceId,
+                            null,
+                            item.sku,
+                            item.name,
+                            item.unit,
+                            JSON.stringify(item.units ?? []),
+                            item.category,
+                            item.costVnd,
+                            item.sellPriceVnd ?? null,
+                            item.reorderPoint,
+                            item.reorderQty,
+                            supplierId,
+                            item.aliases ?? [],
+                        ]),
+                        "inventory_save_item",
+                    ),
                     InventoryErrorCode.ItemNotFound,
                 )
                 itemIds.set(item.sku, id)
@@ -228,9 +237,13 @@ export class InventoryImportService {
             },
         )
         const recipeNames = new Set(
-            (await this.entityManager.query<Array<{ name: string }>>(SELECT_RECIPE_NAMES, [workspaceId])).map((row) =>
-                row.name.toLowerCase(),
-            ),
+            (
+                await this.entityManager.find(InventoryRecipeEntity, {
+                    select: { name: true },
+                    where: { workspaceId },
+                    take: RECIPE_LIMIT,
+                })
+            ).map((row) => row.name.toLowerCase()),
         )
         let recipes = 0
         await eachInOrder(
@@ -240,7 +253,7 @@ export class InventoryImportService {
                     const itemId = itemIds.get(line.sku)
                     return itemId === undefined ? [] : [{ itemId, qty: line.qty }]
                 })
-                await this.entityManager.query(SAVE_RECIPE, [
+                await callDbFunction(this.entityManager, "public.inventory_save_recipe", [
                     workspaceId,
                     null,
                     recipe.name,
@@ -264,7 +277,7 @@ export class InventoryImportService {
         request: ApplyStarterParams,
     ): Promise<{ supplierIds: Map<string, string>; suppliers: number }> {
         const supplierIds = new Map<string, string>()
-        for (const known of await this.entityManager.query<Array<NameRow>>(SELECT_SUPPLIER_NAMES, [workspaceId])) {
+        for (const known of await this.supplierNames(workspaceId)) {
             supplierIds.set(known.name.toLowerCase(), known.id)
         }
         let suppliers = 0

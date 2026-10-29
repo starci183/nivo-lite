@@ -12,11 +12,24 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { ChatTurnQueue } from "@modules/queues/chat-turn"
 import type { MetaInbound } from "./conversations.contracts"
 import { ConversationsService } from "./conversations.service"
-import { FIND_FRONT_AGENT } from "./persistence/conversations.sql"
+import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
+import type { TableAnswers } from "@tests/fixtures/builders/table-query-builder.builder"
+
+const SEEN = new WeakMap<object, TableAnswers>()
+
+/** A manager whose agent_connections table answers the given front-door rows. */
+const frontAgents = (rows: ReadonlyArray<unknown>) => {
+    const em = mockEntityManager()
+    SEEN.set(em, answerByTable(em, { "public.agent_connections": rows }))
+    return em
+}
+
+/** The where conditions of the front-door lookup the subject ran on a manager. */
+const frontLookup = (em: object) => SEEN.get(em)?.queries[0]?.callsOf("where")
 
 const registerTelegramRouting = () => {
     it("opens the conversation of a new customer, stores the message and enqueues the turn", async () => {
-        const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, [FRONT_AGENT]] })
+        const manager = frontAgents([FRONT_AGENT])
         const { service, queue, conversations, messages } = await build()
 
         await expect(service.acceptTelegram(CONNECTION, telegram(), manager)).resolves.toBeUndefined()
@@ -26,7 +39,7 @@ const registerTelegramRouting = () => {
     })
 
     it("continues the conversation of a known customer without opening or rebinding it", async () => {
-        const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, [FRONT_AGENT]] })
+        const manager = frontAgents([FRONT_AGENT])
         const { service, queue, conversations } = await build({ existing: known() })
 
         await expect(service.acceptTelegram(CONNECTION, telegram(), manager)).resolves.toBeUndefined()
@@ -36,7 +49,7 @@ const registerTelegramRouting = () => {
     })
 
     it("moves a conversation to the connection current front-door agent", async () => {
-        const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, [FRONT_AGENT]] })
+        const manager = frontAgents([FRONT_AGENT])
         const { service, conversations } = await build({ existing: known({ agentId: "agent-old" }) })
 
         await expect(service.acceptTelegram(CONNECTION, telegram(), manager)).resolves.toBeUndefined()
@@ -44,7 +57,7 @@ const registerTelegramRouting = () => {
     })
 
     it("stores the message and enqueues nothing while a person holds the conversation", async () => {
-        const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, [FRONT_AGENT]] })
+        const manager = frontAgents([FRONT_AGENT])
         const { service, queue, messages } = await build({ existing: known({ handledBy: "Lan" }) })
 
         await expect(service.acceptTelegram(CONNECTION, telegram(), manager)).resolves.toBeUndefined()
@@ -53,7 +66,7 @@ const registerTelegramRouting = () => {
     })
 
     it("only keeps the message in the inbox when no agent is bound to the connection", async () => {
-        const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, []] })
+        const manager = frontAgents([])
         const { service, queue, inboundEvents, conversations } = await build()
 
         await expect(service.acceptTelegram(CONNECTION, telegram(), manager)).resolves.toBeUndefined()
@@ -72,11 +85,11 @@ const registerTelegramRouting = () => {
 
 const registerTelegramGuards = () => {
     it("ignores a delivery for a connection that is gone", async () => {
-        const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, [FRONT_AGENT]] })
+        const manager = frontAgents([FRONT_AGENT])
         const { service, queue } = await build({ connection: false })
 
         await expect(service.acceptTelegram(CONNECTION, telegram(), manager)).resolves.toBeUndefined()
-        expect(manager.query).not.toHaveBeenCalled()
+        expect(manager.createQueryBuilder).not.toHaveBeenCalled()
         expect(queue.enqueueChatTurn).not.toHaveBeenCalled()
     })
 
@@ -84,7 +97,7 @@ const registerTelegramGuards = () => {
         "opens a new visit on /start: archives the old conversation and delivers the greeting of the agent " +
             "without an AI call",
         async () => {
-            const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, [FRONT_AGENT]] })
+            const manager = frontAgents([FRONT_AGENT])
             const { service, queue, conversations, messages } = await build()
 
             await expect(
@@ -108,7 +121,7 @@ const registerTelegramGuards = () => {
     )
 
     it("greets with the default line when the agent has no greeting of its own", async () => {
-        const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, [{ id: "agent-1", greeting: "  " }]] })
+        const manager = frontAgents([{ id: "agent-1", greeting: "  " }])
         const { service, messages } = await build()
 
         await expect(
@@ -125,7 +138,7 @@ const registerTelegramGuards = () => {
 
 const registerZaloRouting = () => {
     it("marks the connection received, opens the conversation and asks the job to look the customer name up", async () => {
-        const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, [FRONT_AGENT]] })
+        const manager = frontAgents([FRONT_AGENT])
         const { service, queue, connections, conversations, zalo } = await build()
         zalo.load.mockResolvedValue({
             kind: "ok",
@@ -157,7 +170,7 @@ const registerZaloRouting = () => {
     })
 
     it("keeps the name of a known customer, does not ask for it again and cuts the first event text at 160 characters", async () => {
-        const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, [FRONT_AGENT]] })
+        const manager = frontAgents([FRONT_AGENT])
         const { service, queue, connections } = await build({ existing: known() })
 
         await expect(
@@ -172,7 +185,7 @@ const registerZaloRouting = () => {
     })
 
     it("falls back to the guest name for a known customer without one", async () => {
-        const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, [FRONT_AGENT]] })
+        const manager = frontAgents([FRONT_AGENT])
         const { service, connections } = await build({ existing: known({ visitorName: null }) })
 
         await expect(service.acceptZalo(CONNECTION, zaloMessage(), manager)).resolves.toBeUndefined()
@@ -187,7 +200,7 @@ const registerZaloRouting = () => {
 
 const registerZaloInbox = () => {
     it("only keeps the message in the inbox when no agent is bound", async () => {
-        const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, []] })
+        const manager = frontAgents([])
         const { service, queue, inboundEvents } = await build()
 
         await expect(service.acceptZalo(CONNECTION, zaloMessage(), manager)).resolves.toBeUndefined()
@@ -202,7 +215,7 @@ const registerZaloInbox = () => {
     })
 
     it("ignores an event for another Zalo app and one for a connection that is gone", async () => {
-        const otherManager = mockEntityManager({ query: [FIND_FRONT_AGENT, [FRONT_AGENT]] })
+        const otherManager = frontAgents([FRONT_AGENT])
         const other = await build()
         other.zalo.load.mockResolvedValue({
             kind: "ok",
@@ -224,7 +237,7 @@ const registerZaloInbox = () => {
     })
 
     it("accepts an event whose app cannot be checked because the credential is unreadable", async () => {
-        const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, [FRONT_AGENT]] })
+        const manager = frontAgents([FRONT_AGENT])
         const { service, connections, zalo } = await build()
         zalo.load.mockResolvedValue({ kind: "refused", code: ChannelsErrorCode.SecretUnreadable })
 
@@ -235,14 +248,14 @@ const registerZaloInbox = () => {
 
 const registerMetaGuards = () => {
     it("ignores a delivery for a refused connection", async () => {
-        const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, [FRONT_AGENT]] })
+        const manager = frontAgents([FRONT_AGENT])
         const { service, connections, conversations, messages, inboundEvents, queue, catalog } = await build({
             connection: false,
         })
 
         await expect(service.acceptMeta(CONNECTION, metaMessage(), manager)).resolves.toBeUndefined()
         expect(connections.intakeOf).toHaveBeenCalledWith(CONNECTION, "meta", manager)
-        expect(manager.query).not.toHaveBeenCalled()
+        expect(manager.createQueryBuilder).not.toHaveBeenCalled()
         expect(catalog.get).not.toHaveBeenCalled()
         expect(conversations.find).not.toHaveBeenCalled()
         expect(conversations.open).not.toHaveBeenCalled()
@@ -255,12 +268,12 @@ const registerMetaGuards = () => {
     it.each(["facebook", "instagram"] as const)(
         "keeps an unrouted %s delivery in the inbox with its connection-scoped event id",
         async (platform) => {
-            const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, []] })
+            const manager = frontAgents([])
             const { service, connections, conversations, messages, inboundEvents, queue, catalog } = await build()
 
             await expect(service.acceptMeta(CONNECTION, metaMessage({ platform }), manager)).resolves.toBeUndefined()
             expect(connections.intakeOf).toHaveBeenCalledWith(CONNECTION, "meta", manager)
-            expect(manager.query).toHaveBeenCalledWith(FIND_FRONT_AGENT, [CONNECTION])
+            expect(frontLookup(manager)).toEqual([["l.connection_id = :connectionId", { connectionId: CONNECTION }]])
             expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, {
                 workspaceId: "ws-1",
                 channel: platform,
@@ -283,12 +296,12 @@ const registerMetaRouting = () => {
     it.each(["facebook", "instagram"] as const)(
         "opens a %s conversation for the person and stores and enqueues their message",
         async (platform) => {
-            const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, [FRONT_AGENT]] })
+            const manager = frontAgents([FRONT_AGENT])
             const { service, connections, conversations, messages, inboundEvents, queue, catalog } = await build()
 
             await expect(service.acceptMeta(CONNECTION, metaMessage({ platform }), manager)).resolves.toBeUndefined()
             expect(connections.intakeOf).toHaveBeenCalledWith(CONNECTION, "meta", manager)
-            expect(manager.query).toHaveBeenCalledWith(FIND_FRONT_AGENT, [CONNECTION])
+            expect(frontLookup(manager)).toEqual([["l.connection_id = :connectionId", { connectionId: CONNECTION }]])
             expect(conversations.find).toHaveBeenCalledWith("ws-1", platform, CONNECTION, "person-1", manager)
             expect(conversations.open).toHaveBeenCalledWith(
                 openingOf({ channel: platform, customerId: "person-1" }),
@@ -307,7 +320,7 @@ const registerMetaRouting = () => {
     it.each(["facebook", "instagram"] as const)(
         "uses the %s guest catalog line for an unnamed person with a front agent",
         async (platform) => {
-            const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, [FRONT_AGENT]] })
+            const manager = frontAgents([FRONT_AGENT])
             const { service, conversations, catalog } = await build()
 
             await expect(
@@ -330,7 +343,7 @@ const registerMetaGuestNames = () => {
     it.each(["facebook", "instagram"] as const)(
         "uses the %s guest catalog line for an unnamed unrouted person",
         async (platform) => {
-            const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, []] })
+            const manager = frontAgents([])
             const { service, inboundEvents, catalog } = await build()
 
             await expect(
@@ -348,7 +361,7 @@ const registerMetaGuestNames = () => {
     )
 
     it("preserves an empty visitor name supplied by Meta", async () => {
-        const manager = mockEntityManager({ query: [FIND_FRONT_AGENT, [FRONT_AGENT]] })
+        const manager = frontAgents([FRONT_AGENT])
         const { service, conversations, catalog } = await build()
 
         await expect(service.acceptMeta(CONNECTION, metaMessage({ visitor: "" }), manager)).resolves.toBeUndefined()

@@ -1,42 +1,12 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import type { Principal } from "@modules/platform/cqrs"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { PlatformAuditService } from "@modules/domain/platform-audit"
 import { AdminAccessService } from "./admin-access.service"
 import { PlatformAdminError, PlatformAdminErrorCode } from "./errors/platform-admin.error"
-import {
-    FIND_QUOTA_OVERRIDE,
-    FIND_QUOTA_STATUS,
-    FIND_WORKSPACE,
-    FIND_WORKSPACE_STATS,
-    LIST_AGENT_SYNC,
-    LIST_BILLING_EVENTS,
-    LIST_CONNECTIONS,
-    LIST_CONTEXT_VERSIONS,
-    LIST_ERROR_SCOPES,
-    LIST_ERROR_WORKSPACES,
-    LIST_INSTALLS,
-    LIST_KNOWLEDGE_SOURCES,
-    LIST_LIVE_CONNECTIONS,
-    LIST_MEMBERS,
-    LIST_MODULE_INSTALLS,
-    LIST_ORDERS,
-    LIST_PENDING_INVITES,
-    LIST_RECENT_BILLING_EVENTS,
-    LIST_RECENT_ERRORS,
-    LIST_RECENT_TRANSFERS,
-    LIST_SIGNUPS,
-    LIST_TRANSFERS,
-    LIST_USER_EMAILS,
-    LIST_WORKSPACES,
-    LIST_WORKSPACE_ERRORS,
-    LIST_WORKSPACE_NAMES,
-    LIST_WORKSPACE_STATS,
-} from "./persistence/platform-admin.sql"
-import type * as R from "./persistence/platform-admin.rows"
+import { AdminDirectoryReadsService } from "./admin-directory-reads.service"
+import type * as R from "./platform-admin.facts"
 import type {
     AdminHealth,
     AdminIdentity,
@@ -80,10 +50,10 @@ const DAY_MS = 86_400_000
  */
 export class AdminDirectoryService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         private readonly access: AdminAccessService,
         private readonly audits: PlatformAuditService,
+        private readonly reads: AdminDirectoryReadsService,
     ) {}
 
     /** The platform admin behind the request, for the console's chrome. */
@@ -97,13 +67,12 @@ export class AdminDirectoryService {
         await this.access.audit(admin, "view.workspaces", null, { filter: query.filter, q: query.query })
         const nowMs = this.clock.now().getTime()
         const since = new Date(nowMs - DAY_MS)
-        const em = this.entityManager
         const [workspaces, stats, installs, connections, errors] = await Promise.all([
-            em.query<Array<R.WorkspaceRow>>(LIST_WORKSPACES),
-            em.query<Array<R.StatsRow>>(LIST_WORKSPACE_STATS),
-            em.query<Array<R.ModuleBadgeRow>>(LIST_MODULE_INSTALLS),
-            em.query<Array<R.ConnectionBadgeRow>>(LIST_LIVE_CONNECTIONS),
-            em.query<Array<R.WorkspaceRefRow>>(LIST_ERROR_WORKSPACES, [since]),
+            this.reads.workspaces(),
+            this.reads.workspaceStats(),
+            this.reads.moduleInstalls(),
+            this.reads.liveConnections(),
+            this.reads.errorWorkspaces(since),
         ])
         const owners = await this.emailsOf(workspaces.map((workspace) => workspace.owner_id))
         const statsBy = new Map(stats.map((row) => [row.workspace_id, row]))
@@ -164,32 +133,27 @@ export class AdminDirectoryService {
     /** The read-only overview of one workspace. */
     async workspaceDetail(principal: Principal, workspaceId: string): Promise<AdminWorkspaceDetail> {
         const admin = this.access.requireAdmin(principal)
-        const em = this.entityManager
         const nowMs = this.clock.now().getTime()
-        const [workspace] = await em.query<Array<R.WorkspaceRow>>(FIND_WORKSPACE, [workspaceId])
+        const workspace = await this.reads.workspace(workspaceId)
         if (workspace === undefined) throw new PlatformAdminError({ code: PlatformAdminErrorCode.WorkspaceNotFound })
         const [members, invites, orders, billingEvents, installs, versions, syncs] = await Promise.all([
-            em.query<Array<R.MemberRow>>(LIST_MEMBERS, [workspaceId]),
-            em.query<Array<R.InviteRow>>(LIST_PENDING_INVITES, [workspaceId]),
-            em.query<Array<R.OrderRow>>(LIST_ORDERS, [workspaceId]),
-            em.query<Array<R.BillingEventRow>>(LIST_BILLING_EVENTS, [workspaceId]),
-            em.query<Array<R.InstallRow>>(LIST_INSTALLS, [workspaceId]),
-            em.query<Array<R.ContextVersionRow>>(LIST_CONTEXT_VERSIONS, [workspaceId]),
-            em.query<Array<R.AgentSyncRow>>(LIST_AGENT_SYNC, [workspaceId]),
+            this.reads.members(workspaceId),
+            this.reads.pendingInvites(workspaceId),
+            this.reads.orders(workspaceId),
+            this.reads.billingEvents(workspaceId),
+            this.reads.installs(workspaceId),
+            this.reads.contextVersions(workspaceId),
+            this.reads.agentSync(workspaceId),
         ])
-        const [connections, errors, sources, statsRows, quotaRows, overrideRows] = await Promise.all([
-            em.query<Array<R.ConnectionRow>>(LIST_CONNECTIONS, [workspaceId]),
-            em.query<Array<R.WorkspaceErrorRow>>(LIST_WORKSPACE_ERRORS, [workspaceId]),
-            em.query<Array<R.KnowledgeRow>>(LIST_KNOWLEDGE_SOURCES, [workspaceId]),
-            em.query<Array<R.ActivityRow>>(FIND_WORKSPACE_STATS, [workspaceId]),
-            em.query<Array<R.QuotaRow>>(FIND_QUOTA_STATUS, [workspaceId]),
-            em.query<Array<R.QuotaOverrideRow>>(FIND_QUOTA_OVERRIDE, [workspaceId]),
+        const [connections, errors, sources, stats, quota, override] = await Promise.all([
+            this.reads.connections(workspaceId),
+            this.reads.workspaceErrors(workspaceId),
+            this.reads.knowledgeSources(workspaceId),
+            this.reads.workspaceActivity(workspaceId),
+            this.reads.quotaStatus(workspaceId),
+            this.reads.quotaOverride(workspaceId),
         ])
-        const [stats] = statsRows
-        const transfers =
-            orders.length === 0
-                ? []
-                : await em.query<Array<R.TransferRow>>(LIST_TRANSFERS, [orders.map((order) => order.id)])
+        const transfers = orders.length === 0 ? [] : await this.reads.transfers(orders.map((order) => order.id))
         const emails = await this.emailsOf([workspace.owner_id, ...members.map((member) => member.user_id)])
         await this.access.audit(admin, "view.workspace", workspaceId)
         return {
@@ -202,7 +166,7 @@ export class AdminDirectoryService {
                 paidUntil: isoOrNull(workspace.paid_until),
                 createdAt: iso(workspace.created_at),
             },
-            credits: creditsFrom(quotaRows[0], overrideRows[0]),
+            credits: creditsFrom(quota, override),
             members: members.map((member) => toMember(member, emails.get(member.user_id) ?? null)),
             invites: invites.map(toInvite),
             orders: orders.map(toOrder),
@@ -225,14 +189,13 @@ export class AdminDirectoryService {
     async health(principal: Principal): Promise<AdminHealth> {
         const admin = this.access.requireAdmin(principal)
         await this.access.audit(admin, "view.health", null)
-        const em = this.entityManager
         const since = new Date(this.clock.now().getTime() - DAY_MS)
         const [signups, transfers, billingEvents, errors, scopes, audits] = await Promise.all([
-            em.query<Array<R.SignupRow>>(LIST_SIGNUPS),
-            em.query<Array<R.RecentTransferRow>>(LIST_RECENT_TRANSFERS),
-            em.query<Array<R.RecentBillingEventRow>>(LIST_RECENT_BILLING_EVENTS),
-            em.query<Array<R.RecentErrorRow>>(LIST_RECENT_ERRORS),
-            em.query<Array<R.CountRow>>(LIST_ERROR_SCOPES, [since]),
+            this.reads.signups(),
+            this.reads.recentTransfers(),
+            this.reads.recentBillingEvents(),
+            this.reads.recentErrors(),
+            this.reads.errorScopes(since),
             this.audits.recent(),
         ])
         const referenced = [
@@ -243,8 +206,7 @@ export class AdminDirectoryService {
                 ].filter((id): id is string => id !== null),
             ),
         ]
-        const names =
-            referenced.length === 0 ? [] : await em.query<Array<R.WorkspaceNameRow>>(LIST_WORKSPACE_NAMES, [referenced])
+        const names = referenced.length === 0 ? [] : await this.reads.workspaceNames(referenced)
         return {
             signups: signups.map(toSignupDay),
             transfers: transfers.map(toPlatformTransfer),
@@ -260,14 +222,14 @@ export class AdminDirectoryService {
     private async emailsOf(ids: ReadonlyArray<string>): Promise<Map<string, string>> {
         const unique = [...new Set(ids)]
         if (unique.length === 0) return new Map()
-        const rows = await this.entityManager.query<Array<R.UserEmailRow>>(LIST_USER_EMAILS, [unique])
+        const rows = await this.reads.userEmails(unique)
         return new Map(rows.map((row) => [row.id, row.email]))
     }
 
     private workspaceModules(
-        installs: ReadonlyArray<R.InstallRow>,
-        versions: ReadonlyArray<R.ContextVersionRow>,
-        syncs: ReadonlyArray<R.AgentSyncRow>,
+        installs: ReadonlyArray<R.InstallFacts>,
+        versions: ReadonlyArray<R.ContextVersionFacts>,
+        syncs: ReadonlyArray<R.AgentSyncFacts>,
     ): Array<AdminModule> {
         return installs.map((install): AdminModule => {
             const version = versions.find((candidate) => candidate.id === install.active_context_version_id)

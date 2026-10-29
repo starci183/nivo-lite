@@ -3,33 +3,23 @@ import { FakeClock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { FakeQueryBuilder, QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { InvoicesErrorCode } from "./errors/invoices.error"
-import type { NewInvoice, NewRenewalInvoice } from "./invoices.contracts"
-import { InvoicesService } from "./invoices.service"
+import { INVOICE_RETURNING } from "./invoice-columns.policy"
 import type {
-    InvoiceAccountingRow,
-    InvoiceListingRow,
-    InvoiceRow,
-    ReconcileInvoiceRow,
-} from "./persistence/invoices.rows"
-import type { InvoiceViewRow } from "./persistence/invoice-views.rows"
-import { LIST_LEAD_INVOICES, LIST_WORKBENCH_INVOICES } from "./persistence/invoice-views.sql"
-import {
-    FIND_CONTRACT_PERIOD_INVOICE,
-    FIND_INVOICE,
-    FIND_INVOICE_OF_ORDER,
-    FIND_LATEST_LEAD_INVOICE,
-    INSERT_INVOICE,
-    INSERT_RENEWAL_INVOICE,
-    LAST_INVOICE_NUMBER,
-    LIST_ACCOUNTING_INVOICES,
-    LIST_ISSUED_INVOICES,
-    LIST_RECONCILE_INVOICES,
-    MARK_INVOICE_PAID,
-} from "./persistence/invoices.sql"
+    InvoiceAccountingRecord,
+    InvoiceListingRecord,
+    InvoiceRecord,
+    InvoiceViewRecord,
+    NewInvoice,
+    NewRenewalInvoice,
+    ReconcileInvoiceRecord,
+} from "./invoices.contracts"
+import { InvoicesService } from "./invoices.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
-const INVOICE: InvoiceRow = {
+const INVOICE: InvoiceRecord = {
     id: "inv-1",
     workspace_id: WS,
     order_id: "o1",
@@ -44,16 +34,10 @@ const INVOICE: InvoiceRow = {
 }
 const NOW = "2026-10-13T10:00:00.000Z"
 const DUE_AT = "2026-10-28T10:00:00.000Z"
-const INPUT: NewInvoice = {
-    workspaceId: WS,
-    orderId: "o1",
-    leadId: "l1",
-    amountVnd: 50_000,
-    issuedBy: "Lan",
-}
+const INPUT: NewInvoice = { workspaceId: WS, orderId: "o1", leadId: "l1", amountVnd: 50_000, issuedBy: "Lan" }
 const CONTRACT = "c1"
 const PERIOD = "2026-11-30"
-const RENEWAL: InvoiceRow = {
+const RENEWAL: InvoiceRecord = {
     ...INVOICE,
     id: "inv-r1",
     order_id: null,
@@ -71,7 +55,7 @@ const RENEWAL_INPUT: NewRenewalInvoice = {
     periodEndsOn: PERIOD,
     issuedBy: null,
 }
-const VIEW: InvoiceViewRow = { ...INVOICE, due_at: DUE_AT, issued_at: NOW, created_at: NOW }
+const VIEW: InvoiceViewRecord = { ...INVOICE, due_at: DUE_AT, issued_at: NOW, created_at: NOW }
 
 const build = async (em: MockEntityManager): Promise<InvoicesService> => {
     const moduleRef = await Test.createTestingModule({
@@ -84,83 +68,186 @@ const build = async (em: MockEntityManager): Promise<InvoicesService> => {
     return moduleRef.get(InvoicesService)
 }
 
-describe("InvoicesService", () => {
+/** A manager that hands out one query builder per call, answering `answers` in order. */
+const queued = (answers: ReadonlyArray<QueryBuilderAnswers>) => {
+    const em = mockEntityManager()
+    return { em, fakes: queueQueryBuilders(em, answers) }
+}
+
+/** The answers of an insert that wrote `rows`, of a read that found `row`, and of a list of `rows`. */
+const inserted = (rows: ReadonlyArray<unknown>): QueryBuilderAnswers => ({ execute: { raw: rows } })
+const found = (row: unknown): QueryBuilderAnswers => ({ getRawOne: row })
+const listed = (rows: ReadonlyArray<unknown>): QueryBuilderAnswers => ({ getRawMany: rows })
+
+/** What an insert query builder was told to write. */
+const writtenBy = (fake: FakeQueryBuilder | undefined): unknown => fake?.callsOf("values")[0]?.[0]
+
+/** What the clock-dated insert of an order invoice writes under a number. */
+const orderValues = (invoiceNo: string, orderId: string | null = "o1") => ({
+    workspaceId: WS,
+    orderId,
+    leadId: "l1",
+    invoiceNo,
+    amountVnd: 50_000,
+    dueAt: new Date(DUE_AT),
+    issuedBy: "Lan",
+    issuedAt: new Date(NOW),
+    status: "issued",
+})
+
+/** What the clock-dated insert of a renewal invoice writes under a number. */
+const renewalValues = (invoiceNo: string, periodEndsOn: string = PERIOD) => ({
+    workspaceId: WS,
+    contractId: CONTRACT,
+    periodEndsOn,
+    leadId: "l1",
+    invoiceNo,
+    amountVnd: 900_000,
+    dueAt: new Date(DUE_AT),
+    issuedBy: null,
+    issuedAt: new Date(NOW),
+    status: "issued",
+})
+
+describe("InvoicesService finds", () => {
     it("finds the customer's newest open invoice", async () => {
-        const service = await build(mockEntityManager({ query: [FIND_LATEST_LEAD_INVOICE, [INVOICE]] }))
+        const { em, fakes } = queued([found(INVOICE)])
+        const service = await build(em)
+
         await expect(service.latestOfLead(WS, "l1", "issued")).resolves.toEqual(INVOICE)
+        expect(fakes[0]?.callsOf("andWhere")).toEqual([
+            ["i.leadId = :leadId AND i.status = :status", { leadId: "l1", status: "issued" }],
+        ])
+        expect(fakes[0]?.callsOf("orderBy")).toEqual([["i.created_at", "DESC"]])
+    })
+
+    it("orders the newest paid invoice by payment time first", async () => {
+        const { em, fakes } = queued([found({ ...INVOICE, status: "paid" })])
+        const service = await build(em)
+
+        await service.latestOfLead(WS, "l1", "paid")
+
+        expect(fakes[0]?.callsOf("orderBy")).toEqual([["i.paid_at", "DESC", "NULLS LAST"]])
+        expect(fakes[0]?.callsOf("addOrderBy")).toEqual([["i.created_at", "DESC"]])
     })
 
     it("answers null when the customer has no invoice in that state", async () => {
-        const service = await build(mockEntityManager({ query: [FIND_LATEST_LEAD_INVOICE, []] }))
+        const { em } = queued([found(undefined)])
+        const service = await build(em)
+
         await expect(service.latestOfLead(WS, "l1", "paid")).resolves.toBeNull()
     })
 
     it("finds one invoice of the workspace", async () => {
-        const service = await build(mockEntityManager({ query: [FIND_INVOICE, [INVOICE]] }))
+        const { em, fakes } = queued([found(INVOICE)])
+        const service = await build(em)
+
         await expect(service.find(WS, "inv-1")).resolves.toEqual(INVOICE)
+        expect(fakes[0]?.callsOf("where")).toEqual([["i.workspaceId = :workspaceId", { workspaceId: WS }]])
+        expect(fakes[0]?.callsOf("andWhere")).toEqual([["i.id = :invoiceId", { invoiceId: "inv-1" }]])
     })
 
     it("answers null for an invoice the workspace does not have", async () => {
-        const em = mockEntityManager({ query: [FIND_INVOICE, []] })
+        const { em } = queued([found(undefined)])
         const service = await build(em)
 
         await expect(service.find(WS, "missing")).resolves.toBeNull()
-        expect(em.query).toHaveBeenCalledWith(FIND_INVOICE, [WS, "missing"])
     })
 
     it("reads the invoice of an order, or null when it has none", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_INVOICE_OF_ORDER, [INVOICE]],
-                [FIND_INVOICE_OF_ORDER, []],
-            ],
-        })
+        const { em, fakes } = queued([found(INVOICE), found(undefined)])
         const service = await build(em)
 
         await expect(service.ofOrder(WS, "o1")).resolves.toEqual(INVOICE)
         await expect(service.ofOrder(WS, "o2")).resolves.toBeNull()
-        expect(em.query.mock.calls).toEqual([
-            [FIND_INVOICE_OF_ORDER, [WS, "o1"]],
-            [FIND_INVOICE_OF_ORDER, [WS, "o2"]],
-        ])
-    })
-
-    it("lists the newest issued invoices up to the requested limit", async () => {
-        const row: InvoiceListingRow = { ...INVOICE, order_no: "ORDER-1", contact_name: "Minh" }
-        const em = mockEntityManager({
-            query: [
-                [LIST_ISSUED_INVOICES, [row]],
-                [LIST_ISSUED_INVOICES, []],
-            ],
-        })
-        const service = await build(em)
-
-        await expect(service.listIssued(WS, 20)).resolves.toEqual([row])
-        await expect(service.listIssued(WS, 10)).resolves.toEqual([])
-        expect(em.query.mock.calls).toEqual([
-            [LIST_ISSUED_INVOICES, [WS, 20]],
-            [LIST_ISSUED_INVOICES, [WS, 10]],
+        expect(fakes.map((fake) => fake.callsOf("andWhere"))).toEqual([
+            [["i.orderId = :orderId", { orderId: "o1" }]],
+            [["i.orderId = :orderId", { orderId: "o2" }]],
         ])
     })
 })
 
-describe("InvoicesService", () => {
-    it("lists accounting invoices with the default or requested limit", async () => {
-        const row: InvoiceAccountingRow = { ...VIEW, order: null, lead: null }
-        const em = mockEntityManager({
-            query: [
-                [LIST_ACCOUNTING_INVOICES, [row]],
-                [LIST_ACCOUNTING_INVOICES, []],
+describe("InvoicesService finds contract periods", () => {
+    it("reads the renewal invoice of a contract period, or null when it has none", async () => {
+        const { em, fakes } = queued([found(RENEWAL), found(undefined)])
+        const service = await build(em)
+
+        await expect(service.forContractPeriod(WS, CONTRACT, PERIOD)).resolves.toEqual(RENEWAL)
+        await expect(service.forContractPeriod(WS, CONTRACT, "2026-12-31")).resolves.toBeNull()
+        expect(fakes[1]?.callsOf("andWhere")).toEqual([
+            [
+                "i.contractId = :contractId AND i.period_ends_on = :periodEndsOn",
+                { contractId: CONTRACT, periodEndsOn: "2026-12-31" },
             ],
-        })
+        ])
+    })
+
+    it.each([
+        ["find", [found(RENEWAL)], (service: InvoicesService) => service.find(WS, "inv-r1"), "select"],
+        ["ofOrder", [found(RENEWAL)], (service: InvoicesService) => service.ofOrder(WS, "o1"), "select"],
+        [
+            "latestOfLead",
+            [found(RENEWAL)],
+            (service: InvoicesService) => service.latestOfLead(WS, "l1", "issued"),
+            "select",
+        ],
+        [
+            "forContractPeriod",
+            [found(RENEWAL)],
+            (service: InvoicesService) => service.forContractPeriod(WS, CONTRACT, PERIOD),
+            "select",
+        ],
+        [
+            "issue",
+            [found(undefined), inserted([RENEWAL])],
+            (service: InvoicesService) => service.issue(INPUT),
+            "returning",
+        ],
+        [
+            "issueRenewal",
+            [found(undefined), found(undefined), inserted([RENEWAL])],
+            (service: InvoicesService) => service.issueRenewal(RENEWAL_INPUT),
+            "returning",
+        ],
+        ["markPaid", [inserted([RENEWAL])], (service: InvoicesService) => service.markPaid(WS, "inv-r1"), "returning"],
+    ] as const)("selects the contract and its period in invoice statement %s", async (_name, answers, run, how) => {
+        const { em, fakes } = queued(answers)
+
+        await run(await build(em))
+
+        const statement = fakes[fakes.length - 1]
+        const selected = [...(statement?.callsOf("select") ?? []), ...(statement?.callsOf("addSelect") ?? [])]
+            .map(([expression]) => String(expression))
+            .join(" ")
+        const text = how === "select" ? selected : String(statement?.callsOf("returning")[0]?.[0])
+        expect(text).toContain(how === "select" ? "i.contractId" : "contract_id")
+        expect(text).toContain(how === "select" ? "i.period_ends_on::text" : "period_ends_on::text AS period_ends_on")
+    })
+})
+
+describe("InvoicesService lists", () => {
+    it("lists the newest issued invoices up to the requested limit", async () => {
+        const row: InvoiceListingRecord = { ...INVOICE, order_no: "ORDER-1", contact_name: "Minh" }
+        const { em, fakes } = queued([listed([row]), listed([])])
+        const service = await build(em)
+
+        await expect(service.listIssued(WS, 20)).resolves.toEqual([row])
+        await expect(service.listIssued(WS, 10)).resolves.toEqual([])
+        expect(fakes.map((fake) => fake.callsOf("limit"))).toEqual([[[20]], [[10]]])
+        expect(fakes[0]?.callsOf("andWhere")).toEqual([["i.status = 'issued'"]])
+        expect(fakes[0]?.callsOf("orderBy")).toEqual([["i.created_at", "DESC"]])
+    })
+
+    it("lists accounting invoices with the default or requested limit", async () => {
+        const row: InvoiceAccountingRecord = { ...VIEW, order: null, lead: null }
+        const { em, fakes } = queued([listed([row]), listed([])])
         const service = await build(em)
 
         await expect(service.listAccounting(WS)).resolves.toEqual([row])
         await expect(service.listAccounting(WS, 25)).resolves.toEqual([])
-        expect(em.query.mock.calls).toEqual([
-            [LIST_ACCOUNTING_INVOICES, [WS, 1000]],
-            [LIST_ACCOUNTING_INVOICES, [WS, 25]],
-        ])
+        expect(fakes.map((fake) => fake.callsOf("limit"))).toEqual([[[1000]], [[25]]])
+        expect(fakes[0]?.callsOf("orderBy")).toEqual([["i.created_at", "DESC"]])
+        expect(fakes[0]?.callsOf("addOrderBy")).toEqual([["i.id", "DESC"]])
     })
 
     it("does not read reconciliation invoices for an empty selection", async () => {
@@ -168,11 +255,11 @@ describe("InvoicesService", () => {
         const service = await build(em)
 
         await expect(service.listForReconcile(WS, [])).resolves.toEqual([])
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("reads at most fifty reconciliation invoices without changing the selection", async () => {
-        const row: ReconcileInvoiceRow = {
+        const row: ReconcileInvoiceRecord = {
             id: INVOICE.id,
             invoice_no: INVOICE.invoice_no,
             amount_vnd: INVOICE.amount_vnd,
@@ -186,287 +273,237 @@ describe("InvoicesService", () => {
             due_at: DUE_AT,
         }
         const ids = Array.from({ length: 52 }, (_, index) => `inv-${index + 1}`)
-        const em = mockEntityManager({ query: [LIST_RECONCILE_INVOICES, [row]] })
+        const { em, fakes } = queued([listed([row])])
         const service = await build(em)
 
         await expect(service.listForReconcile(WS, ids)).resolves.toEqual([row])
-        expect(em.query).toHaveBeenCalledWith(LIST_RECONCILE_INVOICES, [WS, ids.slice(0, 50)])
+        expect(fakes[0]?.callsOf("where")).toEqual([
+            ["i.workspaceId = :workspaceId AND i.id = ANY(:ids)", { workspaceId: WS, ids: ids.slice(0, 50) }],
+        ])
+        expect(fakes[0]?.callsOf("limit")).toEqual([[50]])
         expect(ids).toHaveLength(52)
         expect(ids[51]).toBe("inv-52")
     })
+})
 
+describe("InvoicesService view lists", () => {
     it("reads the workbench invoices with a limit of five hundred", async () => {
-        const em = mockEntityManager({ query: [LIST_WORKBENCH_INVOICES, [VIEW]] })
+        const { em, fakes } = queued([listed([VIEW])])
         const service = await build(em)
 
         await expect(service.listForWorkbench(WS)).resolves.toEqual([VIEW])
-        expect(em.query).toHaveBeenCalledWith(LIST_WORKBENCH_INVOICES, [WS, 500])
+        expect(fakes[0]?.callsOf("limit")).toEqual([[500]])
+        expect(fakes[0]?.callsOf("orderBy")).toEqual([["i.created_at", "ASC"]])
     })
 
     it("reads the invoices of one customer", async () => {
-        const em = mockEntityManager({ query: [LIST_LEAD_INVOICES, [VIEW]] })
+        const { em, fakes } = queued([listed([VIEW])])
         const service = await build(em)
 
         await expect(service.listForLead(WS, "l1")).resolves.toEqual([VIEW])
-        expect(em.query).toHaveBeenCalledWith(LIST_LEAD_INVOICES, [WS, "l1"])
+        expect(fakes[0]?.callsOf("andWhere")).toEqual([["i.leadId = :leadId", { leadId: "l1" }]])
+        expect(fakes[0]?.callsOf("limit")).toEqual([[1000]])
     })
 })
 
-describe("InvoicesService", () => {
+describe("InvoicesService issue", () => {
     it("issues the next monthly number with the clock's dates and issuer", async () => {
         const created = { ...INVOICE, invoice_no: "INV-202610-0043", issued_by: "Lan" }
-        const em = mockEntityManager({
-            query: [
-                [LAST_INVOICE_NUMBER, [{ invoice_no: "INV-202610-0042" }]],
-                [INSERT_INVOICE, [created]],
-            ],
-        })
+        const { em, fakes } = queued([found({ invoice_no: "INV-202610-0042" }), inserted([created])])
         const service = await build(em)
 
         await expect(service.issue(INPUT)).resolves.toEqual({ invoice: created, created: true })
-        expect(em.query.mock.calls).toEqual([
-            [LAST_INVOICE_NUMBER, [WS, "INV-202610-"]],
-            [INSERT_INVOICE, [WS, "o1", "l1", "INV-202610-0043", 50_000, DUE_AT, "Lan", NOW]],
+        expect(fakes[0]?.callsOf("where")).toEqual([
+            [
+                "i.workspaceId = :workspaceId AND i.invoiceNo LIKE :pattern",
+                { workspaceId: WS, pattern: "INV-202610-%" },
+            ],
         ])
+        expect(writtenBy(fakes[1])).toEqual(orderValues("INV-202610-0043"))
+        expect(fakes[1]?.callsOf("orIgnore")).toHaveLength(1)
+        expect(fakes[1]?.callsOf("returning")).toEqual([[INVOICE_RETURNING]])
     })
 
-    it.each([{ last: [] }, { last: [{ invoice_no: null }] }])(
+    it.each([found(undefined), found({ invoice_no: null })])(
         "starts a month at one when no last number is present: %p",
-        async ({ last }) => {
+        async (last) => {
             const created = { ...INVOICE, invoice_no: "INV-202610-0001", order_id: null, lead_id: null }
-            const em = mockEntityManager({
-                query: [
-                    [LAST_INVOICE_NUMBER, last],
-                    [INSERT_INVOICE, [created]],
-                ],
-            })
+            const { em, fakes } = queued([last, inserted([created])])
             const service = await build(em)
 
             await expect(service.issue({ ...INPUT, orderId: null, leadId: null })).resolves.toEqual({
                 invoice: created,
                 created: true,
             })
-            expect(em.query.mock.calls).toEqual([
-                [LAST_INVOICE_NUMBER, [WS, "INV-202610-"]],
-                [INSERT_INVOICE, [WS, null, null, "INV-202610-0001", 50_000, DUE_AT, "Lan", NOW]],
-            ])
+            expect(writtenBy(fakes[1])).toEqual({ ...orderValues("INV-202610-0001", null), leadId: null })
         },
     )
 
     it("returns the order's existing invoice after an insert conflict", async () => {
-        const em = mockEntityManager({
-            query: [
-                [LAST_INVOICE_NUMBER, []],
-                [INSERT_INVOICE, []],
-                [FIND_INVOICE_OF_ORDER, [INVOICE]],
-            ],
-        })
+        const { em, fakes } = queued([found(undefined), inserted([]), found(INVOICE)])
         const service = await build(em)
 
         await expect(service.issue(INPUT)).resolves.toEqual({ invoice: INVOICE, created: false })
-        expect(em.query.mock.calls).toEqual([
-            [LAST_INVOICE_NUMBER, [WS, "INV-202610-"]],
-            [INSERT_INVOICE, [WS, "o1", "l1", "INV-202610-0001", 50_000, DUE_AT, "Lan", NOW]],
-            [FIND_INVOICE_OF_ORDER, [WS, "o1"]],
-        ])
+        expect(writtenBy(fakes[1])).toEqual(orderValues("INV-202610-0001"))
+        expect(fakes[2]?.callsOf("andWhere")).toEqual([["i.orderId = :orderId", { orderId: "o1" }]])
     })
-})
 
-describe("InvoicesService", () => {
     it("tries the following number when the conflicted order has no existing invoice", async () => {
         const created = { ...INVOICE, invoice_no: "INV-202610-0002" }
-        const em = mockEntityManager({
-            query: [
-                [LAST_INVOICE_NUMBER, []],
-                [INSERT_INVOICE, []],
-                [FIND_INVOICE_OF_ORDER, []],
-                [INSERT_INVOICE, [created]],
-            ],
-        })
+        const { em, fakes } = queued([found(undefined), inserted([]), found(undefined), inserted([created])])
         const service = await build(em)
 
         await expect(service.issue(INPUT)).resolves.toEqual({ invoice: created, created: true })
-        expect(em.query.mock.calls).toEqual([
-            [LAST_INVOICE_NUMBER, [WS, "INV-202610-"]],
-            [INSERT_INVOICE, [WS, "o1", "l1", "INV-202610-0001", 50_000, DUE_AT, "Lan", NOW]],
-            [FIND_INVOICE_OF_ORDER, [WS, "o1"]],
-            [INSERT_INVOICE, [WS, "o1", "l1", "INV-202610-0002", 50_000, DUE_AT, "Lan", NOW]],
-        ])
+        expect(writtenBy(fakes[1])).toEqual(orderValues("INV-202610-0001"))
+        expect(writtenBy(fakes[3])).toEqual(orderValues("INV-202610-0002"))
     })
 
     it("gives up after four taken numbers for an invoice without an order", async () => {
-        const em = mockEntityManager({
-            query: [
-                [LAST_INVOICE_NUMBER, [{ invoice_no: "INV-202610-0008" }]],
-                [INSERT_INVOICE, []],
-            ],
-        })
+        const { em, fakes } = queued([
+            found({ invoice_no: "INV-202610-0008" }),
+            inserted([]),
+            inserted([]),
+            inserted([]),
+            inserted([]),
+        ])
         const service = await build(em)
 
         await expect(service.issue({ ...INPUT, orderId: null })).rejects.toMatchObject({
             code: InvoicesErrorCode.NotNumbered,
         })
-        expect(em.query.mock.calls).toEqual([
-            [LAST_INVOICE_NUMBER, [WS, "INV-202610-"]],
-            [INSERT_INVOICE, [WS, null, "l1", "INV-202610-0009", 50_000, DUE_AT, "Lan", NOW]],
-            [INSERT_INVOICE, [WS, null, "l1", "INV-202610-0010", 50_000, DUE_AT, "Lan", NOW]],
-            [INSERT_INVOICE, [WS, null, "l1", "INV-202610-0011", 50_000, DUE_AT, "Lan", NOW]],
-            [INSERT_INVOICE, [WS, null, "l1", "INV-202610-0012", 50_000, DUE_AT, "Lan", NOW]],
-        ])
+        expect(fakes.slice(1).map((fake) => writtenBy(fake))).toEqual(
+            ["0009", "0010", "0011", "0012"].map((no) => orderValues(`INV-202610-${no}`, null)),
+        )
     })
+})
 
+describe("InvoicesService payment", () => {
     it("marks an invoice paid at the clock instant", async () => {
         const paid = { ...INVOICE, status: "paid", paid_at: NOW }
-        const em = mockEntityManager({ query: [MARK_INVOICE_PAID, [paid]] })
+        const { em, fakes } = queued([inserted([paid])])
         const service = await build(em)
 
         await expect(service.markPaid(WS, "inv-1")).resolves.toEqual(paid)
-        expect(em.query.mock.calls).toEqual([[MARK_INVOICE_PAID, [WS, "inv-1", NOW]]])
+        expect(fakes[0]?.callsOf("update")).toEqual([[]])
+        expect(fakes[0]?.callsOf("set")).toEqual([[{ status: "paid", paidAt: new Date(NOW) }]])
+        expect(fakes[0]?.callsOf("where")).toEqual([
+            [
+                "workspace_id = :workspaceId AND id = :invoiceId AND status <> 'paid'",
+                { workspaceId: WS, invoiceId: "inv-1" },
+            ],
+        ])
+        expect(fakes[0]?.callsOf("returning")).toEqual([[INVOICE_RETURNING]])
+    })
+
+    it("keeps a paid invoice paid: it answers the invoice as it stands and never re-stamps paid_at", async () => {
+        const standing = { ...INVOICE, status: "paid", paid_at: "2026-10-01 08:00:00+00" }
+        const { em, fakes } = queued([inserted([]), found(standing)])
+        const service = await build(em)
+
+        await expect(service.markPaid(WS, "inv-1")).resolves.toEqual(standing)
+        expect(fakes[0]?.callsOf("where")[0]?.[0]).toContain("status <> 'paid'")
+        expect(fakes[1]?.callsOf("update")).toEqual([])
+        expect(fakes[1]?.callsOf("where")).toEqual([
+            ["i.workspaceId = :workspaceId AND i.id = :invoiceId", { workspaceId: WS, invoiceId: "inv-1" }],
+        ])
+    })
+
+    it("writes through the supplied manager", async () => {
+        const paid = { ...INVOICE, status: "paid", paid_at: NOW }
+        const { em } = queued([])
+        const { em: other, fakes } = queued([inserted([paid])])
+        const service = await build(em)
+
+        await expect(service.markPaid(WS, "inv-1", other)).resolves.toEqual(paid)
+        expect(fakes[0]?.callsOf("update")).toEqual([[]])
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("rejects payment when the invoice is absent from the workspace", async () => {
-        const em = mockEntityManager({ query: [MARK_INVOICE_PAID, []] })
+        const { em } = queued([inserted([]), found(undefined)])
         const service = await build(em)
 
         await expect(service.markPaid(WS, "missing")).rejects.toMatchObject({
             code: InvoicesErrorCode.NotFound,
         })
-        expect(em.query).toHaveBeenCalledWith(MARK_INVOICE_PAID, [WS, "missing", NOW])
     })
 })
 
 describe("InvoicesService renewals", () => {
     it("issues a renewal invoice for a contract period with the next number, no order and the term due date", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_CONTRACT_PERIOD_INVOICE, []],
-                [LAST_INVOICE_NUMBER, [{ invoice_no: "INV-202610-0042" }]],
-                [INSERT_RENEWAL_INVOICE, [RENEWAL]],
-            ],
-        })
+        const { em, fakes } = queued([found(undefined), found({ invoice_no: "INV-202610-0042" }), inserted([RENEWAL])])
         const service = await build(em)
 
         await expect(service.issueRenewal(RENEWAL_INPUT)).resolves.toEqual({ invoice: RENEWAL, created: true })
-        expect(em.query.mock.calls).toEqual([
-            [FIND_CONTRACT_PERIOD_INVOICE, [WS, CONTRACT, PERIOD]],
-            [LAST_INVOICE_NUMBER, [WS, "INV-202610-"]],
-            [INSERT_RENEWAL_INVOICE, [WS, CONTRACT, PERIOD, "l1", "INV-202610-0043", 900_000, DUE_AT, null, NOW]],
+        expect(fakes[0]?.callsOf("andWhere")).toEqual([
+            [
+                "i.contractId = :contractId AND i.period_ends_on = :periodEndsOn",
+                { contractId: CONTRACT, periodEndsOn: PERIOD },
+            ],
         ])
+        expect(writtenBy(fakes[2])).toEqual(renewalValues("INV-202610-0043"))
     })
 
     it("answers the existing renewal invoice of the period without issuing another", async () => {
-        const em = mockEntityManager({ query: [FIND_CONTRACT_PERIOD_INVOICE, [RENEWAL]] })
+        const { em } = queued([found(RENEWAL)])
         const service = await build(em)
 
         await expect(service.issueRenewal(RENEWAL_INPUT)).resolves.toEqual({ invoice: RENEWAL, created: false })
-        expect(em.query.mock.calls).toEqual([[FIND_CONTRACT_PERIOD_INVOICE, [WS, CONTRACT, PERIOD]]])
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
     })
 
     it("issues a new invoice for the next period of the same contract", async () => {
         const next = { ...RENEWAL, id: "inv-r2", invoice_no: "INV-202610-0044", period_ends_on: "2026-12-31" }
-        const em = mockEntityManager({
-            query: [
-                [FIND_CONTRACT_PERIOD_INVOICE, []],
-                [LAST_INVOICE_NUMBER, [{ invoice_no: "INV-202610-0043" }]],
-                [INSERT_RENEWAL_INVOICE, [next]],
-            ],
-        })
+        const { em, fakes } = queued([found(undefined), found({ invoice_no: "INV-202610-0043" }), inserted([next])])
         const service = await build(em)
 
         await expect(service.issueRenewal({ ...RENEWAL_INPUT, periodEndsOn: "2026-12-31" })).resolves.toEqual({
             invoice: next,
             created: true,
         })
-        expect(em.query.mock.calls).toEqual([
-            [FIND_CONTRACT_PERIOD_INVOICE, [WS, CONTRACT, "2026-12-31"]],
-            [LAST_INVOICE_NUMBER, [WS, "INV-202610-"]],
-            [INSERT_RENEWAL_INVOICE, [WS, CONTRACT, "2026-12-31", "l1", "INV-202610-0044", 900_000, DUE_AT, null, NOW]],
-        ])
+        expect(writtenBy(fakes[2])).toEqual(renewalValues("INV-202610-0044", "2026-12-31"))
     })
 })
 
-describe("InvoicesService renewals", () => {
+describe("InvoicesService renewal clashes", () => {
     it("tries the following number when only the number clashed", async () => {
         const created = { ...RENEWAL, invoice_no: "INV-202610-0002" }
-        const em = mockEntityManager({
-            query: [
-                [FIND_CONTRACT_PERIOD_INVOICE, []],
-                [LAST_INVOICE_NUMBER, []],
-                [INSERT_RENEWAL_INVOICE, []],
-                [FIND_CONTRACT_PERIOD_INVOICE, []],
-                [INSERT_RENEWAL_INVOICE, [created]],
-            ],
-        })
+        const { em, fakes } = queued([
+            found(undefined),
+            found(undefined),
+            inserted([]),
+            found(undefined),
+            inserted([created]),
+        ])
         const service = await build(em)
 
         await expect(service.issueRenewal(RENEWAL_INPUT)).resolves.toEqual({ invoice: created, created: true })
-        expect(em.query.mock.calls).toEqual([
-            [FIND_CONTRACT_PERIOD_INVOICE, [WS, CONTRACT, PERIOD]],
-            [LAST_INVOICE_NUMBER, [WS, "INV-202610-"]],
-            [INSERT_RENEWAL_INVOICE, [WS, CONTRACT, PERIOD, "l1", "INV-202610-0001", 900_000, DUE_AT, null, NOW]],
-            [FIND_CONTRACT_PERIOD_INVOICE, [WS, CONTRACT, PERIOD]],
-            [INSERT_RENEWAL_INVOICE, [WS, CONTRACT, PERIOD, "l1", "INV-202610-0002", 900_000, DUE_AT, null, NOW]],
-        ])
+        expect(writtenBy(fakes[2])).toEqual(renewalValues("INV-202610-0001"))
+        expect(writtenBy(fakes[4])).toEqual(renewalValues("INV-202610-0002"))
     })
 
     it("answers the renewal a concurrent issuer wrote after the insert conflicted", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_CONTRACT_PERIOD_INVOICE, []],
-                [LAST_INVOICE_NUMBER, []],
-                [INSERT_RENEWAL_INVOICE, []],
-                [FIND_CONTRACT_PERIOD_INVOICE, [RENEWAL]],
-            ],
-        })
+        const { em } = queued([found(undefined), found(undefined), inserted([]), found(RENEWAL)])
         const service = await build(em)
 
         await expect(service.issueRenewal(RENEWAL_INPUT)).resolves.toEqual({ invoice: RENEWAL, created: false })
-        expect(em.query).toHaveBeenCalledTimes(4)
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(4)
     })
 
     it("gives up a renewal after four taken numbers", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_CONTRACT_PERIOD_INVOICE, []],
-                [LAST_INVOICE_NUMBER, []],
-                [INSERT_RENEWAL_INVOICE, []],
-            ],
-        })
+        const clashes = Array.from({ length: 4 }, () => [inserted([]), found(undefined)]).flat()
+        const { em, fakes } = queued([found(undefined), found(undefined), ...clashes])
         const service = await build(em)
 
         await expect(service.issueRenewal(RENEWAL_INPUT)).rejects.toMatchObject({
             code: InvoicesErrorCode.NotNumbered,
         })
-        expect(em.query.mock.calls.filter(([statement]) => statement === INSERT_RENEWAL_INVOICE)).toHaveLength(4)
-    })
-})
-
-describe("InvoicesService renewals", () => {
-    it("reads the renewal invoice of a contract period, or null when it has none", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_CONTRACT_PERIOD_INVOICE, [RENEWAL]],
-                [FIND_CONTRACT_PERIOD_INVOICE, []],
-            ],
-        })
-        const service = await build(em)
-
-        await expect(service.forContractPeriod(WS, CONTRACT, PERIOD)).resolves.toEqual(RENEWAL)
-        await expect(service.forContractPeriod(WS, CONTRACT, "2026-12-31")).resolves.toBeNull()
-        expect(em.query.mock.calls).toEqual([
-            [FIND_CONTRACT_PERIOD_INVOICE, [WS, CONTRACT, PERIOD]],
-            [FIND_CONTRACT_PERIOD_INVOICE, [WS, CONTRACT, "2026-12-31"]],
-        ])
+        expect(fakes.filter((fake) => fake.callsOf("insert").length > 0)).toHaveLength(4)
     })
 
     it("carries the contract and period through find and markPaid", async () => {
         const paid = { ...RENEWAL, status: "paid", paid_at: NOW }
-        const em = mockEntityManager({
-            query: [
-                [FIND_INVOICE, [RENEWAL]],
-                [MARK_INVOICE_PAID, [paid]],
-            ],
-        })
+        const { em } = queued([found(RENEWAL), inserted([paid])])
         const service = await build(em)
 
         await expect(service.find(WS, "inv-r1")).resolves.toMatchObject({
@@ -478,18 +515,5 @@ describe("InvoicesService renewals", () => {
             period_ends_on: PERIOD,
             status: "paid",
         })
-    })
-
-    it.each([
-        FIND_INVOICE,
-        FIND_INVOICE_OF_ORDER,
-        FIND_LATEST_LEAD_INVOICE,
-        FIND_CONTRACT_PERIOD_INVOICE,
-        INSERT_INVOICE,
-        INSERT_RENEWAL_INVOICE,
-        MARK_INVOICE_PAID,
-    ])("selects the contract and its period in invoice statement %#", (statement) => {
-        expect(String(statement)).toContain("contract_id")
-        expect(String(statement)).toContain("period_ends_on::text AS period_ends_on")
     })
 })

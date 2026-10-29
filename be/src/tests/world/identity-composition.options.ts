@@ -1,6 +1,5 @@
-import type { VerifySupabaseAccessToken } from "@modules/integrations/supabase"
 import { IdentityModule } from "@modules/domain/identity"
-import type { CredentialAuthenticator, CredentialPrincipal } from "@modules/domain/identity"
+import type { CredentialAuthenticator, CredentialPrincipal, VerifyAccessToken } from "@modules/domain/identity"
 
 /** A credential verifier selected through the module's public configuration. */
 class Verifier implements CredentialAuthenticator {
@@ -11,7 +10,7 @@ class Verifier implements CredentialAuthenticator {
 
 /** Each composition owns its external session-verification callback. */
 export const identityComposition = (configured: boolean) => {
-    const verify = jest.fn<ReturnType<VerifySupabaseAccessToken>, Parameters<VerifySupabaseAccessToken>>()
+    const verify = jest.fn<ReturnType<VerifyAccessToken>, Parameters<VerifyAccessToken>>()
     const modules = [
         IdentityModule.register({
             verifyAccessToken: verify,

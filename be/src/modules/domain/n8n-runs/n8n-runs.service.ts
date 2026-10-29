@@ -1,10 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
 import { InjectN8nClient, N8nError, N8nErrorCode } from "@modules/integrations/n8n"
 import type { N8nClient } from "@modules/integrations/n8n"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectIds } from "@modules/platform/ids"
+import type { Ids } from "@modules/platform/ids"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
@@ -20,18 +23,12 @@ import type {
     StartN8nRun,
 } from "./n8n-runs.contracts"
 import { N8nRunsLogEvent } from "./n8n-runs.log-events"
-import {
-    COMPLETE_N8N_RUN,
-    INSERT_N8N_RUN,
-    SELECT_API_BASE,
-    SELECT_N8N_RUN,
-    SELECT_RUN_PIPELINE,
-} from "./persistence/n8n-runs.sql"
-import type { CreatedRunRow, N8nRunRow, RunPipelineRow } from "./persistence/n8n-runs.rows"
+import { N8nPlatformConfigEntity, N8nRunEntity } from "./persistence/entities"
 import {
     RUN_TOKEN_TTL_MS,
     boundedResult,
     finalStatusOf,
+    hashToken,
     isWorkflowKey,
     parseBearer,
     runIsOpen,
@@ -39,12 +36,24 @@ import {
     tokenMatches,
 } from "./policies/n8n-run.policy"
 
+/** The settings key of the public address n8n calls back. */
+const API_BASE_KEY = "api_base"
+
+/** The settings and the approved wording of the pipeline a run belongs to, as the pipeline query selects them. */
+interface RunPipeline {
+    /** The settings. */
+    readonly config: Record<string, unknown>
+    /** The approved message template. */
+    readonly body: string | null
+}
+
 @Injectable()
 /** The runs of the shared n8n workflows: starting one, delivering it to n8n, proving the token n8n calls back with and closing it. */
 export class N8nRunsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
+        @InjectIds() private readonly ids: Ids,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectLogger() private readonly logger: Logger,
         @InjectN8nClient() private readonly n8n: N8nClient,
@@ -59,17 +68,28 @@ export class N8nRunsService {
         if (!isWorkflowKey(input.templateKey)) {
             throw new N8nRunsError({ code: N8nRunsErrorCode.TemplateKeyInvalid, params: { key: input.templateKey } })
         }
-        const [base] = await this.entityManager.query<Array<{ value: string }>>(SELECT_API_BASE)
-        if (base === undefined) throw new N8nRunsError({ code: N8nRunsErrorCode.ApiBaseMissing })
+        const base = await this.entityManager.findOne(N8nPlatformConfigEntity, { where: { key: API_BASE_KEY } })
+        if (base === null) throw new N8nRunsError({ code: N8nRunsErrorCode.ApiBaseMissing })
         const expiresAt = new Date(this.clock.now().getTime() + RUN_TOKEN_TTL_MS)
         return this.entityManager.transaction(async (tx) => {
-            const [run] = await tx.query<Array<CreatedRunRow>>(INSERT_N8N_RUN, [
-                input.workspaceId,
-                input.templateKey,
-                input.dedupe,
-                expiresAt,
-            ])
-            if (run === undefined) return null
+            const runId = this.ids.next()
+            const token = `${runId}.${this.ids.next().replaceAll("-", "")}${this.ids.next().replaceAll("-", "")}`
+            const created = await tx
+                .createQueryBuilder(N8nRunEntity, "n")
+                .insert()
+                .values({
+                    id: runId,
+                    workspaceId: input.workspaceId,
+                    templateKey: input.templateKey,
+                    dedupeKey: input.dedupe,
+                    tokenHash: hashToken(token),
+                    expiresAt,
+                })
+                .orIgnore()
+                .returning(["id"])
+                .execute()
+            if ((created.raw as Array<unknown>).length === 0) return null
+            const run = { id: runId, token }
             await this.queue.enqueueEmit(
                 {
                     workspaceId: input.workspaceId,
@@ -127,23 +147,30 @@ export class N8nRunsService {
         const bearer = parseBearer(request.authorization)
         if (bearer === null || (request.expectedRunId !== undefined && bearer.runId !== request.expectedRunId))
             return null
-        const [run] = await this.entityManager.query<Array<N8nRunRow>>(SELECT_N8N_RUN, [bearer.runId])
+        const run = await this.entityManager.findOne(N8nRunEntity, { where: { id: bearer.runId } })
         if (
-            run === undefined ||
-            !tokenMatches(run.token_hash, bearer.token) ||
-            new Date(run.expires_at).getTime() < this.clock.now().getTime() ||
+            run === null ||
+            !tokenMatches(run.tokenHash, bearer.token) ||
+            run.expiresAt.getTime() < this.clock.now().getTime() ||
             !runIsOpen(run.status)
         ) {
             return null
         }
-        const [pipeline] = await this.entityManager.query<Array<RunPipelineRow>>(SELECT_RUN_PIPELINE, [
-            run.workspace_id,
-            run.template_key,
-        ])
+        const pipeline = await this.entityManager
+            .createQueryBuilder()
+            .select("p.config", "config")
+            .addSelect("p.body", "body")
+            .from("public.automation_pipelines", "p")
+            .where("p.workspace_id = :workspaceId AND p.template_key = :templateKey", {
+                workspaceId: run.workspaceId,
+                templateKey: run.templateKey,
+            })
+            .limit(1)
+            .getRawOne<RunPipeline>()
         return {
             runId: run.id,
-            workspaceId: run.workspace_id,
-            templateKey: run.template_key,
+            workspaceId: run.workspaceId,
+            templateKey: run.templateKey,
             config: { ...pipeline?.config, ...(pipeline?.body ? { body: pipeline.body } : {}) },
         }
     }
@@ -180,14 +207,17 @@ export class N8nRunsService {
         summary: string | null,
         result: Readonly<Record<string, unknown>> | null,
     ): Promise<void> {
-        const [closed] = await this.entityManager.query<Array<{ id: string }>>(COMPLETE_N8N_RUN, [
-            runId,
-            workspaceId,
-            status,
-            summary,
-            result === null ? null : JSON.stringify(result),
-        ])
-        if (closed === undefined) throw new N8nRunsError({ code: N8nRunsErrorCode.NotClosed })
+        const closed = await this.entityManager.update(
+            N8nRunEntity,
+            { id: runId, workspaceId },
+            {
+                status,
+                summary,
+                result: result as QueryDeepPartialEntity<N8nRunEntity["result"]>,
+                finishedAt: () => "now()",
+            },
+        )
+        if ((closed.affected ?? 0) === 0) throw new N8nRunsError({ code: N8nRunsErrorCode.NotClosed })
     }
 
     /** The words for the counters the shared workflows report (the workflows carry no wording); an unknown counter goes by its name. */

@@ -25,8 +25,8 @@ export const LISTEN_STATEMENT = `LISTEN ${NOTIFY_CHANNEL}`
 /** The start of the payload of the probe the hub sends from another session after LISTEN: a connection that never hears its own probe cannot carry the hub. */
 export const PROBE_PREFIX = "probe:"
 
-/** The class id of the advisory locks of the realtime capability (the first key of the two-key form), apart from the locks of any other capability. */
-export const REALTIME_LOCK_CLASS = 4401
+/** The prefix of the advisory-lock key of a topic, apart from the locks of any other capability. */
+export const REALTIME_LOCK_NAMESPACE = "realtime.topic:"
 
 /** How long a new LISTEN connection waits to hear its own probe before the hub refuses it (a transaction pooler accepts LISTEN and delivers nothing). */
 export const PROBE_TIMEOUT_MS = 5000

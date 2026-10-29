@@ -14,7 +14,64 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ContentService } from "./content.service"
 import { ContentLogEvent } from "./content.log-events"
-import { INSERT_NOTICE, SELECT_CADENCE_CHANNELS, SELECT_FRESH_SOURCES, SELECT_PILLARS } from "./persistence/content.sql"
+import { ContentCadenceEntity } from "@modules/domain/content-cadence"
+import { ContentPillarEntity } from "@modules/domain/content-pillars"
+import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
+import type { TableAnswers } from "@tests/fixtures/builders/table-query-builder.builder"
+import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
+
+/** The statement `callDbFunction` sends for the office notice. */
+const INSERT_NOTICE = "SELECT * FROM public.post_office_notice($1, $2)"
+
+const pillarOf = entityRowBuilder<ContentPillarEntity>({
+    id: "pillar-1",
+    workspaceId: "workspace-1",
+    name: "Products",
+    description: "",
+    weight: 1,
+    sort: 0,
+    active: true,
+    createdAt: new Date("2026-10-01T00:00:00.000Z"),
+})
+
+const cadenceOf = entityRowBuilder<ContentCadenceEntity>({
+    id: "cadence-1",
+    workspaceId: "workspace-1",
+    channel: "zalo",
+    postsPerWeek: 3,
+    days: [],
+    postTime: "19:30",
+    createdAt: new Date("2026-10-01T00:00:00.000Z"),
+})
+
+const SEEN = new WeakMap<object, TableAnswers>()
+
+/** The rows a content spec hands its manager. */
+interface ContentRows {
+    /** The fresh sources. */
+    readonly sources?: ReadonlyArray<unknown>
+    /** The themes. */
+    readonly pillars?: ReadonlyArray<ContentPillarEntity>
+    /** The cadence channels. */
+    readonly cadence?: ReadonlyArray<ContentCadenceEntity>
+}
+
+/** A manager whose themes, cadence channels, fresh sources and Office notice answer the given rows. */
+const emFor = (given: ContentRows): MockEntityManager => {
+    const em = mockEntityManager({
+        find: [
+            [ContentPillarEntity, given.pillars ?? []],
+            [ContentCadenceEntity, given.cadence ?? []],
+        ],
+        query: [INSERT_NOTICE, []],
+    })
+    SEEN.set(em, answerByTable(em, { "public.knowledge_sources": given.sources ?? [] }))
+    return em
+}
+
+/** The parameters of the fresh-source lookup the subject ran on a manager. */
+const sourceParameters = (em: object): unknown =>
+    SEEN.get(em)?.queriesOf("public.knowledge_sources")[0]?.callsOf("where")[0]?.[1]
 
 /** Monday 12 October 2026, 09:30 in Vietnam. */
 const registerRunTick = () => {
@@ -203,17 +260,8 @@ const registerEmptyReminder = () => {
 
 const registerSummaryContents = () => {
     it("summarises last week by status and by theme", async () => {
-        const em = mockEntityManager({
-            query: [
-                [
-                    SELECT_PILLARS,
-                    [
-                        { id: "pillar-1", name: "Products", active: true },
-                        { id: "pillar-2", name: "Unused", active: true },
-                    ],
-                ],
-                [INSERT_NOTICE, []],
-            ],
+        const em = emFor({
+            pillars: [pillarOf(), pillarOf({ id: "pillar-2", name: "Unused" })],
         })
         const { content, settings, items } = await build(em)
         settings.tickWorkspaces.mockResolvedValue([summaryOf()])
@@ -242,12 +290,7 @@ const registerSummaryContents = () => {
     })
 
     it("leaves out the theme and missed lines when there is nothing to say", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_PILLARS, []],
-                [INSERT_NOTICE, []],
-            ],
-        })
+        const em = emFor({})
         const { content, settings, items } = await build(em)
         settings.tickWorkspaces.mockResolvedValue([summaryOf()])
         items.listBetween.mockResolvedValue([itemOf({ status: "published" })])
@@ -263,12 +306,7 @@ const registerSummaryContents = () => {
 
 const registerEmptySummary = () => {
     it("says so when no post was scheduled", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_PILLARS, []],
-                [INSERT_NOTICE, []],
-            ],
-        })
+        const em = emFor({})
         const { content, settings } = await build(em)
         settings.tickWorkspaces.mockResolvedValue([summaryOf()])
 
@@ -300,22 +338,10 @@ const registerOfferDiscovery = () => {
     })
 
     it("makes an idea for each new offer, notifies the owner and moves the mark", async () => {
-        const em = mockEntityManager({
-            query: [
-                [
-                    SELECT_FRESH_SOURCES,
-                    [SOURCE, { ...SOURCE, id: "source-2", title: "Weather report", excerpt: "Sunny" }],
-                ],
-                [
-                    SELECT_PILLARS,
-                    [
-                        { id: "pillar-1", name: "Products", active: true },
-                        { id: "pillar-2", name: "Special offer", active: true },
-                    ],
-                ],
-                [SELECT_CADENCE_CHANNELS, [{ channel: "zalo" }]],
-                [INSERT_NOTICE, []],
-            ],
+        const em = emFor({
+            sources: [SOURCE, { ...SOURCE, id: "source-2", title: "Weather report", excerpt: "Sunny" }],
+            pillars: [pillarOf(), pillarOf({ id: "pillar-2", name: "Special offer" })],
+            cadence: [cadenceOf()],
         })
         const { content, settings, items } = await build(em)
         settings.tickWorkspaces.mockResolvedValue([offerOf({ offer_seen_at: "2026-10-12T00:00:00.000Z" })])
@@ -324,7 +350,11 @@ const registerOfferDiscovery = () => {
             { workspaceId: "workspace-1", job: "offer_draft", count: 1 },
         ])
 
-        expect(em.query).toHaveBeenCalledWith(SELECT_FRESH_SOURCES, ["workspace-1", "2026-10-12T00:00:00.000Z"])
+        expect(sourceParameters(em)).toEqual({ workspaceId: "workspace-1" })
+        expect(SEEN.get(em)?.queries[0]?.callsOf("andWhere")[1]).toEqual([
+            "s.updated_at > :since::timestamptz",
+            { since: "2026-10-12T00:00:00.000Z" },
+        ])
         expect(items.hasOffer).toHaveBeenCalledWith("workspace-1", 'content.offer.title:{"title":"Big offer"}')
         expect(items.createOfferIdea).toHaveBeenCalledWith({
             workspaceId: "workspace-1",
@@ -343,14 +373,7 @@ const registerOfferDiscovery = () => {
 
 const registerOfferProgress = () => {
     it("leaves the mark at the newest source when it is later than now, and posts to Facebook by default", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_FRESH_SOURCES, [{ ...SOURCE, changed_at: "2026-10-12T05:00:00.000000Z" }]],
-                [SELECT_PILLARS, []],
-                [SELECT_CADENCE_CHANNELS, []],
-                [INSERT_NOTICE, []],
-            ],
-        })
+        const em = emFor({ sources: [{ ...SOURCE, changedAt: "2026-10-12T05:00:00.000000Z" }] })
         const { content, settings, items } = await build(em)
         settings.tickWorkspaces.mockResolvedValue([offerOf({ offer_seen_at: "2026-10-12T00:00:00.000Z" })])
 
@@ -365,13 +388,7 @@ const registerOfferProgress = () => {
     })
 
     it("does not make an idea twice and does not notify when nothing new was made", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_FRESH_SOURCES, [SOURCE]],
-                [SELECT_PILLARS, []],
-                [SELECT_CADENCE_CHANNELS, []],
-            ],
-        })
+        const em = emFor({ sources: [SOURCE] })
         const { content, settings, items } = await build(em)
         settings.tickWorkspaces.mockResolvedValue([offerOf({ offer_seen_at: "2026-10-12T00:00:00.000Z" })])
         items.hasOffer.mockResolvedValue(true)
@@ -385,9 +402,7 @@ const registerOfferProgress = () => {
     })
 
     it("does nothing when no new source talks about an offer", async () => {
-        const em = mockEntityManager({
-            query: [SELECT_FRESH_SOURCES, [{ ...SOURCE, title: "Weather", excerpt: "Sunny" }]],
-        })
+        const em = emFor({ sources: [{ ...SOURCE, title: "Weather", excerpt: "Sunny" }] })
         const { content, settings, items } = await build(em)
         settings.tickWorkspaces.mockResolvedValue([offerOf({ offer_seen_at: "2026-10-12T00:00:00.000Z" })])
 
@@ -398,26 +413,22 @@ const registerOfferProgress = () => {
     })
 
     it("looks at every source when an operator forces a first run", async () => {
-        const em = mockEntityManager({ query: [SELECT_FRESH_SOURCES, []] })
+        const em = emFor({})
         const { content, settings } = await build(em)
         settings.tickWorkspaces.mockResolvedValue([offerOf()])
 
         await content.runTick({ workspaceId: "workspace-1", force: true })
 
-        expect(em.query).toHaveBeenCalledWith(SELECT_FRESH_SOURCES, ["workspace-1", "1970-01-01T00:00:00.000Z"])
+        expect(SEEN.get(em)?.queries[0]?.callsOf("andWhere")[1]).toEqual([
+            "s.updated_at > :since::timestamptz",
+            { since: "1970-01-01T00:00:00.000Z" },
+        ])
     })
 }
 
 const registerOfferTopics = () => {
     it("matches an offer by its topic too", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_FRESH_SOURCES, [{ ...SOURCE, title: "News", topic: "Summer sale", excerpt: "x" }]],
-                [SELECT_PILLARS, []],
-                [SELECT_CADENCE_CHANNELS, []],
-                [INSERT_NOTICE, []],
-            ],
-        })
+        const em = emFor({ sources: [{ ...SOURCE, title: "News", topic: "Summer sale", excerpt: "x" }] })
         const { content, settings, items } = await build(em)
         settings.tickWorkspaces.mockResolvedValue([offerOf({ offer_seen_at: "2026-10-12T00:00:00.000Z" })])
 
@@ -453,7 +464,7 @@ const SOURCE = {
     title: "Big offer",
     topic: null,
     excerpt: "A real offer for you",
-    changed_at: "2026-10-12T01:00:00.123456Z",
+    changedAt: "2026-10-12T01:00:00.123456Z",
 }
 
 const build = async (entityManager: MockEntityManager) => {

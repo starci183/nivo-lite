@@ -166,7 +166,7 @@ export interface UploadedFile {
 export type MaybeUploadedFile = UploadedFile | null
 
 /** The code storage answers for an object that is not there. */
-export const STORAGE_OBJECT_MISSING = "SUPABASE_OBJECT_NOT_FOUND"
+export const STORAGE_OBJECT_MISSING = "OBJECT_STORAGE_NOT_FOUND"
 
 /** A source as the Knowledge page lists it: everything but the text. */
 export interface SourceSummary {

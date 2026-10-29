@@ -1,10 +1,13 @@
 import { Test } from "@nestjs/testing"
+import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { FakeTransaction } from "@starci/jest-preset"
 import { OPENCLAW_AGENT_REGISTRY, OPENCLAW_WORKSPACE_WRITER } from "@modules/integrations/openclaw"
 import type { AgentRegistryService, WorkspaceWriterService } from "@modules/integrations/openclaw"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { INBOX } from "@modules/platform/inbox"
+import type { Inbox } from "@modules/platform/inbox"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AGENTS_QUEUE_PRODUCER } from "@modules/queues/agents"
@@ -20,12 +23,7 @@ import { OpenclawAgentSyncLogEvent } from "./openclaw-agent-sync.log-events"
 import type { OpenclawAgentSyncOptions } from "./openclaw-agent-sync.options"
 import type { Installation, InstallationDirectory } from "@modules/domain/agents"
 import { OpenclawAgentSyncErrorCode } from "./errors/openclaw-agent-sync.error"
-import {
-    FIND_SYNC_STATE,
-    RECORD_SYNC_CHECKED,
-    RECORD_SYNC_FAILED,
-    RECORD_SYNC_WRITTEN,
-} from "./persistence/openclaw-agent-sync.sql"
+import { OpenclawAgentSyncEntity } from "./persistence/entities"
 
 const OPTIONS: OpenclawAgentSyncOptions = { reloadSettleMs: 2000 }
 
@@ -57,14 +55,27 @@ const BUNDLE: AgentBundle = {
     files: [{ path: "AGENTS.md", content: "rules" }],
 }
 
-const RECORD = [
-    "i1",
-    WORKSPACE,
-    "ws-12345678-chatbot",
-    AT,
-    3,
-    "hash-1",
-    '[{"path":"AGENTS.md","bytes":1,"sha256":"s"}]',
+const RECORD = {
+    installationId: "i1",
+    workspaceId: WORKSPACE,
+    agentId: "ws-12345678-chatbot",
+    checkedAt: new Date(AT),
+    status: "ok",
+    error: null,
+    contextVersion: 3,
+    contentHash: "hash-1",
+    files: [{ path: "AGENTS.md", bytes: 1, sha256: "s" }],
+}
+
+const CHECKED_COLUMNS = [
+    "workspace_id",
+    "agent_id",
+    "checked_at",
+    "status",
+    "error",
+    "context_version",
+    "content_hash",
+    "files",
 ]
 
 interface Setup {
@@ -76,21 +87,23 @@ interface Setup {
     internalCurrent?: boolean
     internalRegistered?: boolean
     sibling?: boolean
+    recordFails?: boolean
 }
 
 const build = async (setup: Setup = {}) => {
+    const inbox = mock<Inbox>({ claim: jest.fn().mockResolvedValue(true) })
     const tx: FakeTransaction = fakeTransaction(
         mockEntityManager({
-            query: [
-                FIND_SYNC_STATE,
-                setup.previousHash === undefined ? [] : [{ content_hash: setup.previousHash, status: "ok" }],
+            findOne: [
+                OpenclawAgentSyncEntity,
+                setup.previousHash === undefined
+                    ? null
+                    : Object.assign(new OpenclawAgentSyncEntity(), { contentHash: setup.previousHash, status: "ok" }),
             ],
         }),
     )
-    tx.em.query.mockResolvedValue([])
-    tx.em.query.mockResolvedValueOnce(
-        setup.previousHash === undefined ? [] : [{ content_hash: setup.previousHash, status: "ok" }],
-    )
+    const recorder = fakeQueryBuilder({ execute: setup.recordFails === true ? new Error("table locked") : {} })
+    answerQueryBuilders(tx.em, recorder)
     const installations = mock<InstallationDirectory>({
         byId: jest.fn(() => Promise.resolve(setup.installation === undefined ? installationOf() : setup.installation)),
         firstOfModule: jest.fn(() => Promise.resolve(setup.sibling === true ? installationOf({ id: "i2" }) : null)),
@@ -127,6 +140,7 @@ const build = async (setup: Setup = {}) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: CLOCK, useValue: new FakeClock(AT) },
             { provide: LOGGER, useValue: logger },
+            { provide: INBOX, useValue: inbox },
             { provide: AGENTS_INSTALLATIONS, useValue: installations },
             { provide: OPENCLAW_AGENT_REGISTRY, useValue: registry },
             { provide: OPENCLAW_WORKSPACE_WRITER, useValue: writer },
@@ -139,6 +153,7 @@ const build = async (setup: Setup = {}) => {
     return {
         service: moduleRef.get(AgentSyncService),
         tx,
+        recorder,
         installations,
         registry,
         writer,
@@ -147,6 +162,7 @@ const build = async (setup: Setup = {}) => {
         pause,
         logger,
         members,
+        inbox,
     }
 }
 
@@ -174,13 +190,29 @@ describe("AgentSyncService", () => {
             )
         })
 
-        it("opens its own transaction when asked to", async () => {
-            const { service, tx, queue } = await build()
+        it("claims the delivery of installation_changed and queues the sync in one transaction", async () => {
+            const { service, tx, queue, inbox } = await build()
 
-            await service.requestNow({ workspaceId: "w1", installationId: null, force: false })
+            await service.installationChanged(
+                { workspaceId: "w1", installationId: null, force: false },
+                { consumer: "installation_changed__agent_sync", dedupeKey: "change-1" },
+            )
 
+            expect(inbox.claim).toHaveBeenCalledWith("installation_changed__agent_sync", "change-1", expect.anything())
             expect(tx.commits).toBe(1)
             expect(queue.enqueueSyncAgents).toHaveBeenCalledTimes(1)
+        })
+
+        it("queues nothing for a redelivery of a change it already took", async () => {
+            const { service, queue, inbox } = await build()
+            inbox.claim.mockResolvedValue(false)
+
+            await service.installationChanged(
+                { workspaceId: "w1", installationId: "i1", force: true },
+                { consumer: "installation_changed__agent_sync", dedupeKey: "change-1" },
+            )
+
+            expect(queue.enqueueSyncAgents).not.toHaveBeenCalled()
         })
     })
 
@@ -289,7 +321,7 @@ describe("AgentSyncService", () => {
         })
 
         it("writes the files, registers the agent, waits for the reload and records the sync", async () => {
-            const { service, tx, writer, registry, pause, logger } = await build({
+            const { service, tx, recorder, writer, registry, pause, logger } = await build({
                 previousHash: "old",
                 registered: true,
             })
@@ -309,8 +341,14 @@ describe("AgentSyncService", () => {
             expect(writer.write).toHaveBeenCalledWith("/cfg/workspace-x", BUNDLE.files)
             expect(registry.register).toHaveBeenCalledWith("ws-12345678-chatbot", "Bot")
             expect(pause.wait).toHaveBeenCalledWith(2000)
-            expect(tx.em.query).toHaveBeenCalledWith(FIND_SYNC_STATE, ["i1"])
-            expect(tx.em.query).toHaveBeenCalledWith(RECORD_SYNC_WRITTEN, RECORD)
+            expect(tx.em.findOne).toHaveBeenCalledWith(OpenclawAgentSyncEntity, {
+                select: { contentHash: true, status: true },
+                where: { installationId: "i1" },
+            })
+            expect(recorder.argsOf("values")).toEqual([[{ ...RECORD, syncedAt: new Date(AT) }]])
+            expect(recorder.argsOf("orUpdate")).toEqual([
+                [[...CHECKED_COLUMNS.slice(0, 3), "synced_at", ...CHECKED_COLUMNS.slice(3)], ["installation_id"]],
+            ])
             expect(logger.info).toHaveBeenCalledWith(OpenclawAgentSyncLogEvent.AgentSynced, {
                 agentId: "ws-12345678-chatbot",
                 written: 1,
@@ -327,7 +365,7 @@ describe("AgentSyncService", () => {
         })
 
         it("only moves the check time when the copy is already current", async () => {
-            const { service, tx, writer } = await build({ previousHash: "hash-1", current: true })
+            const { service, recorder, writer } = await build({ previousHash: "hash-1", current: true })
 
             await expect(service.syncInstallation(WORKSPACE, "i1", false)).resolves.toMatchObject({
                 changed: false,
@@ -336,7 +374,8 @@ describe("AgentSyncService", () => {
             })
 
             expect(writer.write).not.toHaveBeenCalled()
-            expect(tx.em.query).toHaveBeenCalledWith(RECORD_SYNC_CHECKED, RECORD)
+            expect(recorder.argsOf("values")).toEqual([[RECORD]])
+            expect(recorder.argsOf("orUpdate")).toEqual([[CHECKED_COLUMNS, ["installation_id"]]])
         })
 
         it("rewrites when the hash is the same but a file on disk differs", async () => {
@@ -351,29 +390,33 @@ describe("AgentSyncService", () => {
 describe("AgentSyncService", () => {
     describe("syncInstallation", () => {
         it("records the failure on the sync row and rethrows it", async () => {
-            const { service, tx, logger } = await build({ dirs: false })
+            const { service, recorder, logger } = await build({ dirs: false })
 
             await expect(service.syncInstallation(WORKSPACE, "i1", false)).rejects.toMatchObject({
                 code: OpenclawAgentSyncErrorCode.WorkspaceUnavailable,
             })
 
-            expect(tx.em.query).toHaveBeenCalledWith(RECORD_SYNC_FAILED, [
-                "i1",
-                WORKSPACE,
-                "ws-12345678-chatbot",
-                AT,
-                "OPENCLAW_AGENT_SYNC_WORKSPACE_UNAVAILABLE",
+            expect(recorder.argsOf("values")).toEqual([
+                [
+                    {
+                        installationId: "i1",
+                        workspaceId: WORKSPACE,
+                        agentId: "ws-12345678-chatbot",
+                        checkedAt: new Date(AT),
+                        status: "error",
+                        error: "OPENCLAW_AGENT_SYNC_WORKSPACE_UNAVAILABLE",
+                    },
+                ],
             ])
+            expect(recorder.argsOf("orUpdate")).toEqual([[["checked_at", "status", "error"], ["installation_id"]]])
             expect(logger.error).toHaveBeenCalledTimes(1)
         })
 
         it("still rethrows the original failure when it cannot be recorded", async () => {
-            const { service, tx, bundles, logger } = await build()
+            const { service, bundles, logger } = await build({ recordFails: true })
             const failure = new Error("bundle failed")
             const recordFailure = new Error("table locked")
             bundles.build.mockRejectedValue(failure)
-            tx.em.query.mockReset()
-            tx.em.query.mockRejectedValue(recordFailure)
 
             await expect(service.syncInstallation(WORKSPACE, "i1", false)).rejects.toBe(failure)
 

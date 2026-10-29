@@ -12,7 +12,7 @@ import { OfficeCardsService } from "./office-cards.service"
 import { AGENT_DIRECTORY } from "./office-lines.decorators"
 import type { OptionalAgentIdentity } from "./office-lines.contracts"
 import type { AgentDirectory } from "./office-lines.port"
-import { INSERT_CARD_MESSAGE } from "./persistence/office-lines.sql"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 
 const card = { v: 1, type: "action_done", title: "Order placed: done" }
 
@@ -55,7 +55,8 @@ const build = async (entityManager: MockEntityManager, departmentAgent: Optional
 describe("OfficeCardsService", () => {
     it("stores a card through its caller's transaction without using the primary manager", async () => {
         const primary = mockEntityManager()
-        const manager = mockEntityManager({ query: [INSERT_CARD_MESSAGE, [{ id: "m-1", room: "sales" }]] })
+        const manager = mockEntityManager()
+        const [insert] = queueQueryBuilders(manager, [{ execute: { raw: [{ id: "m-1", room: "sales" }] } }])
         const { service, activity } = await build(primary)
 
         await expect(service.post({ workspaceId: "ws-1" }, line(), manager)).resolves.toEqual({
@@ -65,33 +66,40 @@ describe("OfficeCardsService", () => {
 
         expect(activity.message.mock.calls).toEqual([["ws-1", "room:sales", null, manager]])
 
-        expect(manager.query).toHaveBeenCalledWith(INSERT_CARD_MESSAGE, expect.any(Array))
-        expect(primary.query).not.toHaveBeenCalled()
+        expect(insert?.callsOf("insert")).toEqual([[]])
+        expect(insert?.callsOf("returning")).toEqual([["id, room"]])
+        expect(primary.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("stores a valid card as the agent's line and answers where it landed", async () => {
-        const em = mockEntityManager({ query: [INSERT_CARD_MESSAGE, [{ id: "m-1", room: "sales" }]] })
+        const em = mockEntityManager()
+        const [insert] = queueQueryBuilders(em, [{ execute: { raw: [{ id: "m-1", room: "sales" }] } }])
         const { service, activity } = await build(em)
 
         await expect(service.post({ workspaceId: "ws-1" }, line())).resolves.toEqual({ id: "m-1", room: "sales" })
 
         expect(activity.message.mock.calls).toEqual([["ws-1", "room:sales", null, em]])
 
-        expect(em.query).toHaveBeenCalledWith(INSERT_CARD_MESSAGE, [
-            "ws-1",
-            "agent",
-            "AI Sales",
-            "agent-1",
-            "Held",
-            "lead-1",
-            "wi-1",
-            null,
-            JSON.stringify(card),
+        expect(insert?.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "ws-1",
+                    authorKind: "agent",
+                    authorName: "AI Sales",
+                    agentId: "agent-1",
+                    body: "Held",
+                    leadId: "lead-1",
+                    workItemId: "wi-1",
+                    room: null,
+                    card,
+                },
+            ],
         ])
     })
 
     it("posts a NIVO line in the named room and falls back to the title for an empty preview", async () => {
-        const em = mockEntityManager({ query: [INSERT_CARD_MESSAGE, []] })
+        const em = mockEntityManager()
+        const [insert] = queueQueryBuilders(em, [{ execute: { raw: [] } }])
         const { service, activity } = await build(em)
 
         const posted = await service.post(
@@ -101,19 +109,25 @@ describe("OfficeCardsService", () => {
 
         expect(posted).toEqual({ id: "", room: "accounting" })
         expect(activity.message.mock.calls).toEqual([["ws-1", "room:accounting", null, em]])
-        expect(em.query).toHaveBeenCalledWith(INSERT_CARD_MESSAGE, [
-            "ws-1",
-            "system",
-            "NIVO",
-            null,
-            card.title,
-            "lead-1",
-            "wi-1",
-            "accounting",
-            JSON.stringify(card),
+        expect(insert?.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "ws-1",
+                    authorKind: "system",
+                    authorName: "NIVO",
+                    agentId: null,
+                    body: card.title,
+                    leadId: "lead-1",
+                    workItemId: "wi-1",
+                    room: "accounting",
+                    card,
+                },
+            ],
         ])
     })
+})
 
+describe("OfficeCardsService refusals", () => {
     it("refuses a card that breaks the contract and writes nothing", async () => {
         const em = mockEntityManager()
         const { service, activity } = await build(em)
@@ -122,14 +136,15 @@ describe("OfficeCardsService", () => {
             code: MessagesErrorCode.CardInvalid,
             params: { reason: "type is not a card type" },
         })
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
         expect(activity.message).not.toHaveBeenCalled()
     })
 })
 
 describe("OfficeCardsService.postAsDepartment", () => {
     it("posts a valid card as the department's agent", async () => {
-        const em = mockEntityManager({ query: [INSERT_CARD_MESSAGE, [{ id: "m-2", room: "sales" }]] })
+        const em = mockEntityManager()
+        const [insert] = queueQueryBuilders(em, [{ execute: { raw: [{ id: "m-2", room: "sales" }] } }])
         const { service, logger, agents, activity } = await build(em, { id: "agent-9", name: "AI Sales" })
 
         await expect(service.postAsDepartment({ workspaceId: "ws-1" }, "sales", departmentLine())).resolves.toEqual({
@@ -140,22 +155,27 @@ describe("OfficeCardsService.postAsDepartment", () => {
         expect(activity.message.mock.calls).toEqual([["ws-1", "room:sales", null, em]])
 
         expect(agents.agentOfDepartment).toHaveBeenCalledWith("ws-1", "sales", null)
-        expect(em.query).toHaveBeenCalledWith(INSERT_CARD_MESSAGE, [
-            "ws-1",
-            "agent",
-            "AI Sales",
-            "agent-9",
-            "Held",
-            null,
-            "wi-1",
-            "sales",
-            JSON.stringify(card),
+        expect(insert?.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "ws-1",
+                    authorKind: "agent",
+                    authorName: "AI Sales",
+                    agentId: "agent-9",
+                    body: "Held",
+                    leadId: null,
+                    workItemId: "wi-1",
+                    room: "sales",
+                    card,
+                },
+            ],
         ])
         expect(logger.warn).not.toHaveBeenCalled()
     })
 
     it("logs a refused card and still posts its preview line spoken by the department's agent", async () => {
-        const em = mockEntityManager({ query: [INSERT_CARD_MESSAGE, [{ id: "m-3", room: "sales" }]] })
+        const em = mockEntityManager()
+        const [insert] = queueQueryBuilders(em, [{ execute: { raw: [{ id: "m-3", room: "sales" }] } }])
         const { service, logger, activity } = await build(em, { id: "agent-9", name: "AI Sales" })
 
         const posted = await service.postAsDepartment(
@@ -171,23 +191,28 @@ describe("OfficeCardsService.postAsDepartment", () => {
             department: "sales",
             reason: "type is not a card type",
         })
-        expect(em.query).toHaveBeenCalledWith(INSERT_CARD_MESSAGE, [
-            "ws-1",
-            "agent",
-            "AI Sales",
-            "agent-9",
-            "Held",
-            null,
-            "wi-1",
-            "sales",
-            null,
+        expect(insert?.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "ws-1",
+                    authorKind: "agent",
+                    authorName: "AI Sales",
+                    agentId: "agent-9",
+                    body: "Held",
+                    leadId: null,
+                    workItemId: "wi-1",
+                    room: "sales",
+                    card: null,
+                },
+            ],
         ])
     })
 })
 
 describe("OfficeCardsService.postAsDepartment without an agent", () => {
     it("speaks a refused card as NIVO, previews the department name and answers the room when nothing comes back", async () => {
-        const em = mockEntityManager({ query: [INSERT_CARD_MESSAGE, []] })
+        const em = mockEntityManager()
+        const [insert] = queueQueryBuilders(em, [{ execute: { raw: [] } }])
         const { service, logger, activity } = await build(em)
 
         const posted = await service.postAsDepartment(
@@ -199,16 +224,20 @@ describe("OfficeCardsService.postAsDepartment without an agent", () => {
         expect(posted).toEqual({ id: "", room: null })
         expect(activity.message.mock.calls).toEqual([["ws-1", "room:office", null, em]])
         expect(logger.warn).toHaveBeenCalledTimes(1)
-        expect(em.query).toHaveBeenCalledWith(INSERT_CARD_MESSAGE, [
-            "ws-1",
-            "system",
-            "NIVO",
-            null,
-            "accounting",
-            null,
-            "wi-1",
-            null,
-            null,
+        expect(insert?.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "ws-1",
+                    authorKind: "system",
+                    authorName: "NIVO",
+                    agentId: null,
+                    body: "accounting",
+                    leadId: null,
+                    workItemId: "wi-1",
+                    room: null,
+                    card: null,
+                },
+            ],
         ])
     })
 })

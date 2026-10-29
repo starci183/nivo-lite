@@ -4,7 +4,7 @@ import { Test } from "@nestjs/testing"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { DecisionCorrectionsService } from "./decision-corrections.service"
 import type { CorrectionRow } from "./persistence/corrections.rows"
-import { LIST_RECENT_CORRECTIONS } from "./persistence/corrections.sql"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 
 const correctionRowOf = builder<CorrectionRow>({
     id: "decision-1",
@@ -35,7 +35,8 @@ describe("DecisionCorrectionsService", () => {
                 note: null,
                 after: null,
             })
-            const em = mockEntityManager({ query: [LIST_RECENT_CORRECTIONS, [newest, older]] })
+            const em = mockEntityManager()
+            const [read] = queueQueryBuilders(em, [{ getRawMany: [newest, older] }])
             const service = await build(em)
 
             await expect(
@@ -60,16 +61,26 @@ describe("DecisionCorrectionsService", () => {
                     after: null,
                 },
             ])
-            expect(em.query).toHaveBeenCalledWith(LIST_RECENT_CORRECTIONS, [
-                "workspace-1",
-                "sales",
-                "2026-07-17T09:15:00.000Z",
-                60,
+            expect(read?.callsOf("where")).toEqual([
+                [
+                    "d.workspaceId = :workspaceId AND d.department = :module",
+                    { workspaceId: "workspace-1", module: "sales" },
+                ],
             ])
+            expect(read?.callsOf("andWhere")).toEqual([
+                [
+                    "d.outcome IN ('edited', 'rejected') AND d.createdAt >= :since",
+                    { since: new Date("2026-07-17T09:15:00.000Z") },
+                ],
+            ])
+            expect(read?.callsOf("orderBy")).toEqual([["d.createdAt", "DESC"]])
+            expect(read?.callsOf("limit")).toEqual([[60]])
         })
 
         it("returns no corrections when the query finds none", async () => {
-            const service = await build(mockEntityManager({ query: [LIST_RECENT_CORRECTIONS, []] }))
+            const em = mockEntityManager()
+            queueQueryBuilders(em, [{ getRawMany: [] }])
+            const service = await build(em)
 
             await expect(
                 service.recent("workspace-1", "accounting", new Date("2026-10-15T00:00:00.000Z"), 5),
@@ -79,7 +90,9 @@ describe("DecisionCorrectionsService", () => {
         it("propagates a database failure", async () => {
             const error = new Error("Decision query failed")
             const em = mockEntityManager()
-            em.query.mockRejectedValueOnce(error)
+            em.createQueryBuilder.mockImplementationOnce(() => {
+                throw error
+            })
             const service = await build(em)
 
             await expect(service.recent("workspace-1", "sales", new Date("2026-07-17T09:15:00.000Z"), 60)).rejects.toBe(

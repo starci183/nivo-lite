@@ -1,16 +1,10 @@
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { NewSetupSession, SetupRevisionRecord, SetupSessionRecord } from "./module-setup-sessions.contracts"
-import {
-    CLOSE_SESSION,
-    FIND_LATEST_SESSION,
-    FIND_SESSION,
-    INSERT_SESSION,
-    LIST_REVISIONS,
-    SAVE_TURN,
-} from "./persistence/module-setup-sessions.sql"
+import { ModuleSetupSessionEntity } from "./persistence/entities"
 import { SetupSessionsService } from "./setup-sessions.service"
 
 const session: SetupSessionRecord = {
@@ -23,6 +17,28 @@ const session: SetupSessionRecord = {
     gateEvidence: { tone: { status: "proposed", evidence: "warm" } },
     createdAt: "2026-10-12T10:00:00.000Z",
 }
+
+const row = Object.assign(new ModuleSetupSessionEntity(), {
+    id: "ses-1",
+    workspaceId: "ws-1",
+    installationId: "inst-1",
+    revision: 1,
+    status: "draft" as const,
+    draftSnapshot: session.draft,
+    gateEvidence: session.gateEvidence,
+    createdAt: new Date("2026-10-12T10:00:00.000Z"),
+})
+
+const savedRaw = () => ({
+    id: "ses-1",
+    workspace_id: "ws-1",
+    installation_id: "inst-1",
+    revision: 1,
+    status: "draft",
+    draft_snapshot: session.draft,
+    gate_evidence: session.gateEvidence,
+    created_at: new Date("2026-10-12T10:00:00.000Z"),
+})
 
 const opening: NewSetupSession = {
     workspaceId: "ws-1",
@@ -41,72 +57,79 @@ const build = async (entityManager: MockEntityManager) => {
 
 describe("SetupSessionsService", () => {
     it("finds the newest revision", async () => {
-        const em = mockEntityManager({ query: [FIND_LATEST_SESSION, [session]] })
+        const em = mockEntityManager({ findOne: [ModuleSetupSessionEntity, row] })
 
         await expect((await build(em)).latest("inst-1")).resolves.toEqual(session)
 
-        expect(em.query).toHaveBeenCalledWith(FIND_LATEST_SESSION, ["inst-1"])
+        expect(em.findOne).toHaveBeenCalledWith(ModuleSetupSessionEntity, {
+            where: { installationId: "inst-1" },
+            order: { revision: "DESC" },
+        })
     })
 
     it("answers nothing before the chat was opened", async () => {
-        const em = mockEntityManager({ query: [FIND_LATEST_SESSION, []] })
+        const em = mockEntityManager({ findOne: [ModuleSetupSessionEntity, null] })
 
         await expect((await build(em)).latest("inst-1")).resolves.toBeNull()
     })
 
     it("finds one session of the workspace", async () => {
-        const em = mockEntityManager({ query: [FIND_SESSION, [session]] })
+        const em = mockEntityManager({ findOne: [ModuleSetupSessionEntity, row] })
 
         await expect((await build(em)).find("ws-1", "ses-1")).resolves.toEqual(session)
 
-        expect(em.query).toHaveBeenCalledWith(FIND_SESSION, ["ses-1", "ws-1"])
+        expect(em.findOne).toHaveBeenCalledWith(ModuleSetupSessionEntity, {
+            where: { id: "ses-1", workspaceId: "ws-1" },
+        })
     })
 
     it("answers nothing when the session is not in the workspace", async () => {
-        const em = mockEntityManager({ query: [FIND_SESSION, []] })
+        const em = mockEntityManager({ findOne: [ModuleSetupSessionEntity, null] })
 
         await expect((await build(em)).find("ws-1", "missing")).resolves.toBeNull()
     })
 
     it("lists every revision, oldest first", async () => {
         const revisions: ReadonlyArray<SetupRevisionRecord> = [{ id: "ses-1", revision: 1, status: "draft" }]
-        const em = mockEntityManager({ query: [LIST_REVISIONS, revisions] })
+        const em = mockEntityManager({ find: [ModuleSetupSessionEntity, [row]] })
 
         await expect((await build(em)).revisions("inst-1")).resolves.toEqual(revisions)
 
-        expect(em.query).toHaveBeenCalledWith(LIST_REVISIONS, ["inst-1"])
+        expect(em.find).toHaveBeenCalledWith(ModuleSetupSessionEntity, {
+            select: { id: true, revision: true, status: true },
+            where: { installationId: "inst-1" },
+            order: { revision: "ASC" },
+            take: 100,
+        })
     })
 
     it("opens the next draft", async () => {
-        const em = mockEntityManager({ query: [INSERT_SESSION, [session]] })
+        const em = mockEntityManager({ save: [ModuleSetupSessionEntity, row] })
 
         await expect((await build(em)).open(opening)).resolves.toEqual(session)
 
-        expect(em.query).toHaveBeenCalledWith(INSERT_SESSION, [
-            "ws-1",
-            "inst-1",
-            1,
-            JSON.stringify(session.draft),
-            JSON.stringify(session.gateEvidence),
-        ])
-    })
-
-    it("answers nothing when the insert writes no row", async () => {
-        const em = mockEntityManager({ query: [INSERT_SESSION, []] })
-
-        await expect((await build(em)).open(opening)).resolves.toBeNull()
+        expect(em.save).toHaveBeenCalledWith(
+            ModuleSetupSessionEntity,
+            expect.objectContaining({
+                workspaceId: "ws-1",
+                installationId: "inst-1",
+                revision: 1,
+                draftSnapshot: session.draft,
+                gateEvidence: session.gateEvidence,
+            }),
+        )
     })
 
     it("answers nothing when the same revision was opened first", async () => {
         const em = mockEntityManager()
-        em.query.mockRejectedValueOnce(Object.assign(new Error("duplicate"), { code: "23505" }))
+        em.save.mockRejectedValueOnce(Object.assign(new Error("duplicate"), { code: "23505" }))
 
         await expect((await build(em)).open(opening)).resolves.toBeNull()
     })
 
     it("answers nothing when a plain object reports the unique violation", async () => {
         const em = mockEntityManager()
-        em.query.mockRejectedValueOnce({ code: "23505" })
+        em.save.mockRejectedValueOnce({ code: "23505" })
 
         await expect((await build(em)).open(opening)).resolves.toBeNull()
     })
@@ -115,121 +138,119 @@ describe("SetupSessionsService", () => {
 describe("SetupSessionsService", () => {
     it("rethrows a database error that is not a unique violation", async () => {
         const em = mockEntityManager()
-        em.query.mockRejectedValueOnce(Object.assign(new Error("foreign key"), { code: "23503" }))
+        em.save.mockRejectedValueOnce(Object.assign(new Error("foreign key"), { code: "23503" }))
 
         await expect((await build(em)).open(opening)).rejects.toThrow("foreign key")
     })
 
     it("rethrows an error that carries no code", async () => {
         const em = mockEntityManager()
-        em.query.mockRejectedValueOnce(new Error("down"))
+        em.save.mockRejectedValueOnce(new Error("down"))
 
         await expect((await build(em)).open(opening)).rejects.toThrow("down")
     })
 
     it("rethrows a null failure", async () => {
         const em = mockEntityManager()
-        em.query.mockRejectedValueOnce(null)
+        em.save.mockRejectedValueOnce(null)
 
         await expect((await build(em)).open(opening)).rejects.toBeNull()
     })
 
     it("rethrows a text failure", async () => {
         const em = mockEntityManager()
-        em.query.mockRejectedValueOnce("down")
+        em.save.mockRejectedValueOnce("down")
 
         await expect((await build(em)).open(opening)).rejects.toBe("down")
     })
 
     it("stores the draft of an open session", async () => {
-        const em = mockEntityManager({ query: [SAVE_TURN, [session]] })
+        const em = mockEntityManager()
+        const update = fakeQueryBuilder({ execute: { raw: [savedRaw()] } })
+        answerQueryBuilders(em, update)
         const change = { draft: session.draft, gateEvidence: session.gateEvidence }
 
         await expect((await build(em)).save("ses-1", change)).resolves.toEqual(session)
 
-        expect(em.query).toHaveBeenCalledWith(SAVE_TURN, [
-            "ses-1",
-            JSON.stringify(session.draft),
-            JSON.stringify(session.gateEvidence),
-        ])
+        expect(update.argsOf("set")).toEqual([[{ draftSnapshot: session.draft, gateEvidence: session.gateEvidence }]])
+        expect(update.argsOf("where")).toEqual([[{ id: "ses-1", status: "draft" }]])
     })
 
     it("answers nothing when the session is no longer a draft", async () => {
-        const em = mockEntityManager({ query: [SAVE_TURN, []] })
+        const em = mockEntityManager()
+        answerQueryBuilders(em, fakeQueryBuilder({ execute: { raw: [] } }))
 
         await expect((await build(em)).save("ses-1", { draft: session.draft, gateEvidence: {} })).resolves.toBeNull()
     })
 
     it("closes the draft as applied", async () => {
-        const em = mockEntityManager({ query: [CLOSE_SESSION, [{ id: "ses-1" }]] })
+        const em = mockEntityManager({ update: [ModuleSetupSessionEntity, { affected: 1 }] })
 
         await expect((await build(em)).close("ses-1")).resolves.toBeUndefined()
 
-        expect(em.query).toHaveBeenCalledWith(CLOSE_SESSION, ["ses-1"])
+        expect(em.update).toHaveBeenCalledWith(ModuleSetupSessionEntity, { id: "ses-1" }, { status: "applied" })
     })
 
     it("does not drop a fact when the installation has no session", async () => {
-        const em = mockEntityManager({ query: [FIND_LATEST_SESSION, []] })
+        const em = mockEntityManager({ findOne: [ModuleSetupSessionEntity, null] })
         const service = await build(em)
 
         await expect(service.dropFact("inst-1", "city")).resolves.toBeUndefined()
 
-        expect(em.query).toHaveBeenCalledTimes(1)
-        expect(em.query).toHaveBeenCalledWith(FIND_LATEST_SESSION, ["inst-1"])
+        expect(em.findOne).toHaveBeenCalledTimes(1)
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 })
 
 describe("SetupSessionsService", () => {
     it.each(["applied", "discarded"] as const)("leaves facts on a %s session unchanged", async (status) => {
-        const em = mockEntityManager({ query: [FIND_LATEST_SESSION, [{ ...session, status }]] })
+        const closed = Object.assign(new ModuleSetupSessionEntity(), row, { status })
+        const em = mockEntityManager({ findOne: [ModuleSetupSessionEntity, closed] })
         const service = await build(em)
 
         await expect(service.dropFact("inst-1", "city")).resolves.toBeUndefined()
 
-        expect(em.query).toHaveBeenCalledTimes(1)
-        expect(em.query).toHaveBeenCalledWith(FIND_LATEST_SESSION, ["inst-1"])
+        expect(em.findOne).toHaveBeenCalledTimes(1)
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("leaves the draft unchanged when the requested fact is absent", async () => {
-        const em = mockEntityManager({ query: [FIND_LATEST_SESSION, [session]] })
+        const em = mockEntityManager({ findOne: [ModuleSetupSessionEntity, row] })
         const service = await build(em)
 
         await expect(service.dropFact("inst-1", "missing")).resolves.toBeUndefined()
 
-        expect(em.query).toHaveBeenCalledTimes(1)
-        expect(em.query).toHaveBeenCalledWith(FIND_LATEST_SESSION, ["inst-1"])
+        expect(em.findOne).toHaveBeenCalledTimes(1)
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("removes matching facts while retaining the other facts, draft summary and evidence", async () => {
-        const current = {
-            ...session,
-            draft: {
-                summary: "Tea shop in Hue",
-                facts: [
-                    { key: "city", text: "Hue" },
-                    { key: "hours", text: "9 to 5" },
-                    { key: "city", text: "Old city" },
-                ],
-            },
-        }
-        const em = mockEntityManager({
-            query: [
-                [FIND_LATEST_SESSION, [current]],
-                [SAVE_TURN, [session]],
+        const draft = {
+            summary: "Tea shop in Hue",
+            facts: [
+                { key: "city", text: "Hue" },
+                { key: "hours", text: "9 to 5" },
+                { key: "city", text: "Old city" },
             ],
-        })
+        }
+        const current = Object.assign(new ModuleSetupSessionEntity(), row, { draftSnapshot: draft })
+        const em = mockEntityManager({ findOne: [ModuleSetupSessionEntity, current] })
+        const update = fakeQueryBuilder({ execute: { raw: [savedRaw()] } })
+        answerQueryBuilders(em, update)
         const service = await build(em)
 
         await expect(service.dropFact("inst-1", "city")).resolves.toBeUndefined()
 
-        expect(em.query).toHaveBeenCalledTimes(2)
-        expect(em.query).toHaveBeenNthCalledWith(1, FIND_LATEST_SESSION, ["inst-1"])
-        expect(em.query).toHaveBeenNthCalledWith(2, SAVE_TURN, [
-            "ses-1",
-            '{"summary":"Tea shop in Hue","facts":[{"key":"hours","text":"9 to 5"}]}',
-            '{"tone":{"status":"proposed","evidence":"warm"}}',
+        expect(update.argsOf("set")).toEqual([
+            [
+                {
+                    draftSnapshot: { summary: "Tea shop in Hue", facts: [{ key: "hours", text: "9 to 5" }] },
+                    gateEvidence: { tone: { status: "proposed", evidence: "warm" } },
+                },
+            ],
         ])
-        expect(current.draft.facts).toEqual([
+        expect(update.argsOf("where")).toEqual([[{ id: "ses-1", status: "draft" }]])
+        expect(draft.facts).toEqual([
             { key: "city", text: "Hue" },
             { key: "hours", text: "9 to 5" },
             { key: "city", text: "Old city" },

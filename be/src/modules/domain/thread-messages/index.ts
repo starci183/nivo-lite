@@ -1,4 +1,5 @@
 export { THREAD_MESSAGES_ERROR_KINDS } from "./errors/thread-messages.error"
+export { threadMessagesEntities } from "./persistence/entities"
 export { THREAD_MESSAGES_MESSAGES } from "./messages/thread-messages.messages"
 export type {
     MentionDirectory,
@@ -9,7 +10,6 @@ export type {
     UserPost,
 } from "./thread-messages.contracts"
 export { MentionDirectoryService } from "./mention-directory.service"
-export { ThreadApprovalOutcomesService } from "./thread-approval-outcomes.service"
 export { ThreadApprovalsService } from "./thread-approvals.service"
 export { ThreadAgentPostsService } from "./thread-agent-posts.service"
 export { ThreadAssignmentsService } from "./thread-assignments.service"

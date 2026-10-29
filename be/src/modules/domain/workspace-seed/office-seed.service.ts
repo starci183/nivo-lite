@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentOwnershipService } from "@modules/domain/agents"
 import { Secret } from "@modules/platform/config"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { OFFICE_RECEIPT_PREFIX } from "./messages/workspace-seed.messages"
@@ -19,8 +19,6 @@ import type {
 import { InjectSeedOfficeAuthority } from "./office-seed.decorators"
 import type { OfficeAuthorityPort } from "./office-seed.port"
 import { readOfficeInput } from "./office-seed.policy"
-import { SEAT_PERSON } from "./persistence/office-seed.sql"
-import { ENSURE_OFFICE_ROOMS, MOVE_AGENT_HOME, ROOMS_FUNCTION_PRESENT } from "./persistence/workspace-profile.sql"
 import { HAKUEN_OFFICE_AUTHORITY } from "./profiles/hakuen-office.authority.templates"
 import { HAKUEN_OFFICE } from "./profiles/hakuen-office.templates"
 import type { SeedAccount, SeedRequest } from "./workspace-seed.contracts"
@@ -29,12 +27,6 @@ import type { WorkspaceSeedOptions } from "./workspace-seed.options"
 import { readEnsureFor } from "./workspace-seed.policy"
 import type { SeedAgentRecords } from "./workspace-seed.port"
 import { WorkspaceSeedService } from "./workspace-seed.service"
-
-/** Whether the rooms function exists. */
-interface PresentRow {
-    /** True when installed. */
-    readonly present: boolean
-}
 
 /** The workspace an office run writes into and the owner who writes it. */
 interface OfficeTarget {
@@ -171,18 +163,24 @@ export class OfficeSeedService {
         users: PerPerson<string>,
         agentIds: PerAgent<string>,
     ): Promise<OfficeReport["rooms"]> {
-        const [check] = await this.entityManager.query<Array<PresentRow>>(ROOMS_FUNCTION_PRESENT)
-        if (check?.present !== true) return "absent"
-        await this.entityManager.query(ENSURE_OFFICE_ROOMS, [workspaceId])
+        const [check] = await callDbFunction<{ to_regproc: string | null }>(this.entityManager, "to_regproc", [
+            "public.ensure_office_rooms",
+        ])
+        if (check?.to_regproc == null) return "absent"
+        await callDbFunction(this.entityManager, "public.ensure_office_rooms", [workspaceId])
         await eachInOrder(OFFICE_AGENT_KEYS, async (key) => {
-            await this.entityManager.query(MOVE_AGENT_HOME, [
+            await callDbFunction(this.entityManager, "public.move_office_agent_home", [
                 workspaceId,
                 HAKUEN_OFFICE.agents[key].room,
                 agentIds[key],
             ])
         })
         await eachInOrder(OFFICE_PERSON_KEYS, async (key) => {
-            await this.entityManager.query(SEAT_PERSON, [workspaceId, HAKUEN_OFFICE.people[key].room, users[key]])
+            await callDbFunction(this.entityManager, "public.seat_office_member", [
+                workspaceId,
+                HAKUEN_OFFICE.people[key].room,
+                users[key],
+            ])
         })
         return "ready"
     }

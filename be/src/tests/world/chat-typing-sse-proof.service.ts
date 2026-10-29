@@ -8,10 +8,15 @@ import * as typingContract from "@modules/domain/chat-typing"
 import { ChatTypingModule, ChatTypingService } from "@modules/domain/chat-typing"
 import { CHAT_MARKERS_ERROR_KINDS, CHAT_MARKERS_MESSAGES } from "@modules/domain/chat-markers"
 import type { ChatTarget } from "@modules/domain/chat-markers"
-import { AuthGuard, IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
+import {
+    AuthGuard,
+    IDENTITY_ERROR_KINDS,
+    IDENTITY_MESSAGES,
+    IdentityModule,
+    refuseSessions,
+} from "@modules/domain/identity"
+import type { VerifyAccessToken } from "@modules/domain/identity"
 import { WORKSPACE_MEMBERS_ERROR_KINDS, WORKSPACE_MEMBERS_MESSAGES } from "@modules/domain/workspace-members"
-import { refuseSupabaseSessions } from "@modules/integrations/supabase"
-import type { VerifySupabaseAccessToken } from "@modules/integrations/supabase"
 import { ChatTypingSseModule } from "@features/realtime/chat-typing"
 import { ClockModule } from "@modules/platform/clock"
 import { Secret } from "@modules/platform/config"
@@ -93,14 +98,12 @@ class TypingProofDatabaseModule {
 }
 
 /** Only the verifier boundary is deterministic; the actual default-deny and production membership guards run. */
-const verifierFor = (identity: ChatMarkersIdentity): VerifySupabaseAccessToken => {
+const verifierFor = (identity: ChatMarkersIdentity): VerifyAccessToken => {
     const ids = [identity.ownerId, ...identity.readerIds, identity.outsiderId, identity.foreignOwnerId]
     const principals = new Map(ids.map((id) => [`proof-${id}`, id]))
     return (token) => {
         const id = principals.get(token)
-        return id === undefined
-            ? refuseSupabaseSessions(token)
-            : Promise.resolve(ok({ id, role: "authenticated" as const }))
+        return id === undefined ? refuseSessions(token) : Promise.resolve(ok({ id, role: "authenticated" as const }))
     }
 }
 

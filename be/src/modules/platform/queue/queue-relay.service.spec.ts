@@ -76,7 +76,7 @@ const build = async (
             checked = true
             return Promise.resolve(rows)
         }
-        if (text.includes("job_reset")) return Promise.resolve([{ reset: true }])
+        if (text.includes("job_reset")) return Promise.resolve([{ job_reset: true }])
         return Promise.resolve([])
     }
     em.query.mockImplementation(query)
@@ -184,7 +184,7 @@ describe("due reconciliation", () => {
             expect(calls(world, "job_relay_release")).toHaveLength(1)
         },
     )
-    it.each([{ answer: [] }, { answer: [{ reset: false }] }])(
+    it.each([{ answer: [] }, { answer: [{ job_reset: false }] }])(
         "does not replay after losing a relay claim or worker admission",
         async ({ answer }) => {
             const world = await build([[]], [REPAIR], { "row-1": "missing" })

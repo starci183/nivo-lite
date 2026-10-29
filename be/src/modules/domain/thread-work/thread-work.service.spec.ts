@@ -9,40 +9,34 @@ import type { ThreadMessage } from "@modules/domain/thread-messages"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { itemOf } from "@tests/fixtures/builders/work-decision.builder"
 import { ThreadWorkErrorCode } from "./errors/thread-work.error"
-import type {
-    DeciderRow,
-    SettledAskRow,
-    ThreadWorkRow,
-    WorkAgentRow,
-    WorkLeadRow,
-} from "./persistence/thread-work.rows"
-import {
-    FIND_DECIDER,
-    FIND_SETTLED_ASK,
-    FIND_WAITING_FOR_MEMBER,
-    FIND_WORK_AGENT,
-    FIND_WORK_LEAD,
-    LIST_SETTLED_ASKS,
-} from "./persistence/thread-work.sql"
+import { ThreadWorkEntity } from "./persistence/entities"
 import { ThreadWorkLogEvent } from "./thread-work.log-events"
 import { ThreadWorkService } from "./thread-work.service"
 import { ThreadWorkTurnsService } from "./thread-work-turns.service"
-import type { ThreadWorkStart } from "./thread-work.contracts"
+import type {
+    DeciderRecord,
+    SettledAskRecord,
+    ThreadWorkRecord,
+    ThreadWorkStart,
+    WorkAgentRecord,
+    WorkLeadRecord,
+} from "./thread-work.contracts"
 
 /** A partial-object matcher, typed `unknown` so it flows into any slot. */
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 
-const SALES_ROW: WorkAgentRow = {
+const SALES_ROW: WorkAgentRecord = {
     id: "agent-sales",
     name: "AI Sales",
     module: "sales",
     can_tag_agent_ids: ["agent-accounting"],
 }
 const SALES_AI = { id: "agent-sales", name: "AI Sales", module: "sales", canTag: ["agent-accounting"] }
-const LEAD: WorkLeadRow = { id: "lead-thao", contact_name: "Chi Thao" }
-const MINH: DeciderRow = { id: "m-minh", display_name: "Anh Minh", role: "manager" }
+const LEAD: WorkLeadRecord = { id: "lead-thao", contact_name: "Chi Thao" }
+const MINH: DeciderRecord = { id: "m-minh", display_name: "Anh Minh", role: "manager" }
 
 const DISCOUNT: ActionEntry = {
     action: "give_discount",
@@ -52,7 +46,7 @@ const DISCOUNT: ActionEntry = {
     label: { vi: "Giam gia", en: "Give discount" },
 }
 
-const workRow = (overrides: Partial<ThreadWorkRow> = {}): ThreadWorkRow => ({
+const workRow = (overrides: Partial<ThreadWorkRecord> = {}): ThreadWorkRecord => ({
     id: "work-1",
     workspace_id: "ws-1",
     thread_id: "thread-1",
@@ -65,7 +59,7 @@ const workRow = (overrides: Partial<ThreadWorkRow> = {}): ThreadWorkRow => ({
     ...overrides,
 })
 
-const settledRow = (overrides: Partial<SettledAskRow> = {}): SettledAskRow => ({
+const settledRow = (overrides: Partial<SettledAskRecord> = {}): SettledAskRecord => ({
     ...workRow({ state: "asked", approval_request_id: "req-1", waiting_member_id: null, missing_fields: [] }),
     request_status: "approved",
     resolved_by: "m-minh",
@@ -73,24 +67,53 @@ const settledRow = (overrides: Partial<SettledAskRow> = {}): SettledAskRow => ({
 })
 
 interface Rows {
-    readonly agents?: ReadonlyArray<WorkAgentRow>
-    readonly leads?: ReadonlyArray<WorkLeadRow>
-    readonly deciders?: ReadonlyArray<DeciderRow>
-    readonly waiting?: ReadonlyArray<ThreadWorkRow>
-    readonly settled?: ReadonlyArray<SettledAskRow>
+    readonly agents?: ReadonlyArray<WorkAgentRecord>
+    readonly leads?: ReadonlyArray<WorkLeadRecord>
+    readonly deciders?: ReadonlyArray<DeciderRecord>
+    readonly waiting?: ReadonlyArray<ThreadWorkRecord>
+    readonly settled?: ReadonlyArray<SettledAskRecord>
 }
 
-/** The rows the database double answers for each statement, overridable per spec. */
-const stubsOf = (rows: Rows = {}) => ({
-    query: [
-        [FIND_WORK_AGENT, rows.agents ?? [SALES_ROW]],
-        [FIND_WORK_LEAD, rows.leads ?? [LEAD]],
-        [FIND_DECIDER, rows.deciders ?? [MINH]],
-        [FIND_WAITING_FOR_MEMBER, rows.waiting ?? [workRow()]],
-        [FIND_SETTLED_ASK, rows.settled ?? [settledRow()]],
-        [LIST_SETTLED_ASKS, rows.settled ?? [settledRow()]],
-    ] as const,
-})
+/** The stored piece of work a record stands for. */
+const entityOf = (record: ThreadWorkRecord): ThreadWorkEntity =>
+    Object.assign(new ThreadWorkEntity(), {
+        id: record.id,
+        workspaceId: record.workspace_id,
+        threadId: record.thread_id,
+        workItemId: record.work_item_id,
+        agentId: record.agent_id,
+        state: record.state,
+        approvalRequestId: record.approval_request_id,
+        waitingMemberId: record.waiting_member_id,
+        missingFields: record.missing_fields,
+    })
+
+/**
+ * The manager double, overridable per spec: the waiting work is found by entity, the settled asks come from the join on the work
+ * entity, and the agent, the customer and the decider are plain table reads answered by the table each one reads from.
+ */
+const managerOf = (rows: Rows = {}) => {
+    const waiting = rows.waiting ?? [workRow()]
+    const em = mockEntityManager({
+        findOne: [ThreadWorkEntity, waiting[0] === undefined ? null : entityOf(waiting[0])],
+    })
+    const settled = fakeQueryBuilder({ getRawMany: rows.settled ?? [settledRow()] })
+    const answers: Record<string, ReadonlyArray<unknown>> = {
+        "public.agents": rows.agents ?? [SALES_ROW],
+        "public.leads": rows.leads ?? [LEAD],
+        "public.workspace_members": rows.deciders ?? [MINH],
+    }
+    const reads: Array<ReturnType<typeof fakeQueryBuilder>> = []
+    em.createQueryBuilder.mockImplementation(((entity?: unknown) => {
+        if (entity === ThreadWorkEntity) return settled.builder
+        const read: ReturnType<typeof fakeQueryBuilder> = fakeQueryBuilder({
+            getRawOne: () => Promise.resolve(answers[String(read.callsOf("from")[0]?.[0])]?.[0]),
+        })
+        reads.push(read)
+        return read.builder
+    }) as never)
+    return { em, settled, reads }
+}
 
 const MESSAGE: ThreadMessage = {
     id: "msg-1",
@@ -174,9 +197,15 @@ const BY_MINH = { name: "Anh Minh", kind: "staff", memberId: "m-minh" }
 const registerStart = () => {
     describe("start", () => {
         it("runs the agent's first step about the customer, with the amount in the unit of the action's rule", async () => {
-            const { service, turns } = await build(mockEntityManager(stubsOf()))
+            const harness = managerOf()
+            const { service, turns } = await build(harness.em)
 
             await service.start(START)
+
+            expect(harness.reads.map((read) => read.callsOf("from")[0]?.[0])).toEqual(["public.agents", "public.leads"])
+            expect(harness.reads[1]?.callsOf("where")).toEqual([
+                ["l.workspace_id = :workspaceId AND l.id = :leadId", { workspaceId: "ws-1", leadId: "lead-thao" }],
+            ])
 
             expect(turns.run).toHaveBeenCalledWith({
                 workspaceId: "ws-1",
@@ -198,9 +227,13 @@ const registerStart = () => {
                 actorName: "Lan",
             })
         })
+    })
+}
 
+const registerStartCases = () => {
+    describe("start cases", () => {
         it("counts in VND an action that has no rule yet", async () => {
-            const { service, turns, rules } = await build(mockEntityManager(stubsOf()))
+            const { service, turns, rules } = await build(managerOf().em)
             rules.approvalSetup.mockResolvedValue(null)
 
             await service.start(START)
@@ -241,7 +274,7 @@ const registerStart = () => {
                 code: ThreadWorkErrorCode.LeadNotFound,
             },
         ])("refuses $name and runs nothing", async ({ rows, entry, code }) => {
-            const { service, turns } = await build(mockEntityManager(stubsOf(rows)), entry)
+            const { service, turns } = await build(managerOf(rows).em, entry)
 
             await expect(service.start(START)).rejects.toMatchObject({ code })
             expect(turns.run).not.toHaveBeenCalled()
@@ -252,7 +285,7 @@ const registerStart = () => {
 const registerDoors = () => {
     describe("post and decide", () => {
         it("writes the member's message, then lets the work that waited for their answer go on with it", async () => {
-            const em = mockEntityManager(stubsOf({ deciders: [{ id: "m-van", display_name: "Van", role: "staff" }] }))
+            const em = managerOf({ deciders: [{ id: "m-van", display_name: "Van", role: "staff" }] }).em
             const { service, messages, engine, turns } = await build(em)
             const post = {
                 workspaceId: "ws-1",
@@ -278,7 +311,7 @@ const registerDoors = () => {
         })
 
         it("decides the card, then moves the work of a settled request on; a message without a card moves nothing", async () => {
-            const { service, approvals, engine } = await build(mockEntityManager(stubsOf()))
+            const { service, approvals, engine } = await build(managerOf().em)
             const decision = {
                 workspaceId: "ws-1",
                 messageId: "msg-1",
@@ -304,7 +337,7 @@ const registerReplies = () => {
             { name: "no work waits for the member", rows: { waiting: [] } },
             { name: "the member is gone", rows: { deciders: [] } },
         ])("answers false when $name", async ({ rows }) => {
-            const { service, engine } = await build(mockEntityManager(stubsOf(rows)))
+            const { service, engine } = await build(managerOf(rows).em)
 
             await expect(
                 service.memberReplied({ workspaceId: "ws-1", threadId: "thread-1", memberId: "m-van", body: "x" }),
@@ -312,8 +345,20 @@ const registerReplies = () => {
             expect(engine.resumeWork).not.toHaveBeenCalled()
         })
 
+        it("finds a waiting member's work oldest first, only in the state that waits for them", async () => {
+            const harness = managerOf()
+            const { service } = await build(harness.em)
+
+            await service.memberReplied({ workspaceId: "ws-1", threadId: "thread-1", memberId: "m-van", body: "x" })
+
+            expect(harness.em.findOne).toHaveBeenCalledWith(ThreadWorkEntity, {
+                where: { workspaceId: "ws-1", threadId: "thread-1", waitingMemberId: "m-van", state: "waiting_member" },
+                order: { updatedAt: "ASC" },
+            })
+        })
+
         it("keeps the work waiting and logs when the answer cannot move it on", async () => {
-            const { service, engine, logger, turns } = await build(mockEntityManager(stubsOf()))
+            const { service, engine, logger, turns } = await build(managerOf().em)
             const cause = new Error("still missing")
             engine.resumeWork.mockRejectedValue(cause)
 
@@ -325,7 +370,7 @@ const registerReplies = () => {
         })
 
         it("resumes but says nothing when the agent was paused meanwhile", async () => {
-            const { service, engine, turns } = await build(mockEntityManager(stubsOf({ agents: [] })))
+            const { service, engine, turns } = await build(managerOf({ agents: [] }).em)
 
             await service.memberReplied({ workspaceId: "ws-1", threadId: "thread-1", memberId: "m-van", body: "x" })
 
@@ -340,7 +385,7 @@ const stoppedMove = { state: "stopped", requestId: "req-1", memberId: null, miss
 const registerSettled = () => {
     describe("tick", () => {
         it("drains the queued steps, then moves on the settled approvals, and answers how many of each", async () => {
-            const { service, engine } = await build(mockEntityManager(stubsOf()))
+            const { service, engine } = await build(managerOf().em)
 
             await expect(service.tick()).resolves.toEqual({ steps: 3, settled: 1 })
             expect(engine.resumeWork).toHaveBeenCalledTimes(1)
@@ -349,9 +394,15 @@ const registerSettled = () => {
 
     describe("resumeSettled", () => {
         it("resumes an approved request as the member who approved it, and the agent goes on", async () => {
-            const { service, engine, turns } = await build(mockEntityManager(stubsOf()))
+            const harness = managerOf()
+            const { service, engine, turns } = await build(harness.em)
 
             await expect(service.resumeSettled()).resolves.toBe(1)
+
+            expect(harness.em.createQueryBuilder).toHaveBeenCalledWith(ThreadWorkEntity, "w")
+            expect(harness.settled.callsOf("where")).toEqual([["w.state = 'asked' AND r.status <> 'pending'"]])
+            expect(harness.settled.callsOf("orderBy")).toEqual([["w.updated_at", "ASC"]])
+            expect(harness.settled.callsOf("limit")).toEqual([[20]])
 
             expect(engine.resumeWork).toHaveBeenCalledWith(CTX, "item-1", "approved", {}, BY_MINH)
             expect(turns.react).toHaveBeenCalled()
@@ -360,7 +411,7 @@ const registerSettled = () => {
 
         it("stops the work of a refused request as the member who refused it", async () => {
             const { service, engine, turns } = await build(
-                mockEntityManager(stubsOf({ settled: [settledRow({ request_status: "rejected" })] })),
+                managerOf({ settled: [settledRow({ request_status: "rejected" })] }).em,
             )
 
             await service.resumeSettled()
@@ -373,7 +424,7 @@ const registerSettled = () => {
             { name: "an expired request", row: settledRow({ request_status: "expired", resolved_by: null }) },
             { name: "a request settled by nobody known", row: settledRow({ resolved_by: null }) },
         ])("leaves the work to the owner after $name", async ({ row }) => {
-            const { service, engine, turns } = await build(mockEntityManager(stubsOf({ settled: [row] })))
+            const { service, engine, turns } = await build(managerOf({ settled: [row] }).em)
 
             await service.resumeSettled()
 
@@ -382,7 +433,7 @@ const registerSettled = () => {
         })
 
         it("logs a request whose work cannot resume and stops it", async () => {
-            const { service, engine, logger, turns } = await build(mockEntityManager(stubsOf()))
+            const { service, engine, logger, turns } = await build(managerOf().em)
             const cause = new Error("not waiting")
             engine.resumeWork.mockRejectedValue(cause)
 
@@ -396,6 +447,7 @@ const registerSettled = () => {
 
 describe("ThreadWorkService", () => {
     registerStart()
+    registerStartCases()
     registerDoors()
     registerReplies()
     registerSettled()

@@ -2,12 +2,9 @@ import type { EnvSource } from "@modules/platform/config"
 import type { GoogleOAuthClient, GoogleOptions } from "./google.options"
 
 const readClient = (env: EnvSource): GoogleOAuthClient | null => {
-    const clientId = env.optional("GOOGLE_OAUTH_CLIENT_ID") ?? env.optional("SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID")
-    const secretKey = env.has("GOOGLE_OAUTH_CLIENT_SECRET")
-        ? "GOOGLE_OAUTH_CLIENT_SECRET"
-        : "SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET"
-    if (clientId === undefined || !env.has(secretKey)) return null
-    return { clientId, clientSecret: env.secret(secretKey) }
+    const clientId = env.optional("GOOGLE_OAUTH_CLIENT_ID")
+    if (clientId === undefined || !env.has("GOOGLE_OAUTH_CLIENT_SECRET")) return null
+    return { clientId, clientSecret: env.secret("GOOGLE_OAUTH_CLIENT_SECRET") }
 }
 
 /** Reads the google options: the OAuth client is optional (absent means unavailable), the channel token key is required. */

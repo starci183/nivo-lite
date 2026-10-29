@@ -22,7 +22,7 @@ export class ClassifyLeadPerformerService implements WorkPerformer {
         private readonly kit: PerformerKitService,
         private readonly leads: LeadRecordsService,
         private readonly events: EventsService,
-        @InjectPromptWriter() private readonly deepseek: PromptWriter,
+        @InjectPromptWriter() private readonly prompts: PromptWriter,
         private readonly responsibilities: ResponsibilityJournalService,
         private readonly evidence: EvidenceService,
     ) {}
@@ -33,7 +33,7 @@ export class ClassifyLeadPerformerService implements WorkPerformer {
         const history = (await this.events.leadHistory(ctx.workspaceId, lead.id, HISTORY_LINES)).map((line) =>
             historyLine(line.summary, line.evidence),
         )
-        const result = await this.deepseek.classifyLead(
+        const result = await this.prompts.classifyLead(
             this.kit.scope(ctx),
             this.kit.leadInput(lead),
             history,

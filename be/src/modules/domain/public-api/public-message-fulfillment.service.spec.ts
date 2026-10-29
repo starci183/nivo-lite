@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
+import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { DurableWorkService, EvidenceService } from "@modules/domain/decisions"
 import type { WorkItem } from "@modules/domain/decisions"
 import { CLOCK } from "@modules/platform/clock"
@@ -9,7 +10,8 @@ import { PublicApiErrorCode } from "./errors/public-api.error"
 import type { MessageRequestBody } from "./public-api.contracts"
 import { PublicApiLogEvent } from "./public-api.log-events"
 import { MESSAGE_AUTO_SEND_WINDOW_MS } from "./public-api.policy"
-import { SELECT_CONVERSATION } from "./persistence/public-api.sql"
+import { PublicConversationsService } from "./public-conversations.service"
+import type { ConversationRef } from "./public-conversations.service"
 import { PublicMessageFulfillmentService } from "./public-message-fulfillment.service"
 
 const body: MessageRequestBody = {
@@ -24,6 +26,14 @@ const NOW = new Date("2026-10-25T12:00:00.000Z")
 const RECENT = new Date("2026-10-25T11:00:00.000Z")
 const CONVERSATION = { id: "conversation-1", lead_id: "lead-1" }
 
+/** A manager whose conversation read answers the given conversation, or none. */
+const managerWith = (conversation: ConversationRef | undefined) => {
+    const tx = mockEntityManager()
+    const read = fakeQueryBuilder({ getRawOne: conversation })
+    answerQueryBuilders(tx, read)
+    return { tx, read }
+}
+
 const build = async () => {
     const work = mock<DurableWorkService>({
         enqueueWork: jest.fn().mockResolvedValue(mock<WorkItem>({ id: "work-1" })),
@@ -35,6 +45,7 @@ const build = async () => {
             PublicMessageFulfillmentService,
             { provide: DurableWorkService, useValue: work },
             { provide: EvidenceService, useValue: evidence },
+            PublicConversationsService,
             { provide: CLOCK, useValue: new FakeClock(NOW.toISOString()) },
             { provide: LOGGER, useValue: logger },
         ],
@@ -44,12 +55,18 @@ const build = async () => {
 
 describe("PublicMessageFulfillmentService", () => {
     it("keeps the exact draft and its durable work and evidence in the supplied transaction", async () => {
-        const tx = mockEntityManager({ query: [SELECT_CONVERSATION, [CONVERSATION]] })
+        const { tx, read } = managerWith(CONVERSATION)
         const { service, work, evidence, logger } = await build()
 
         expect(await service.fulfill("workspace-1", "request-1", body, RECENT, tx)).toBe("lead-1")
 
-        expect(tx.query).toHaveBeenCalledWith(SELECT_CONVERSATION, ["workspace-1", "conversation-1"])
+        expect(read.argsOf("from")).toEqual([["public.agent_conversations", "c"]])
+        expect(read.argsOf("where")).toEqual([
+            [
+                "c.workspace_id = :workspaceId AND c.kind = 'customer' AND c.id = :conversationId",
+                { workspaceId: "workspace-1", conversationId: "conversation-1" },
+            ],
+        ])
         expect(work.enqueueWork).toHaveBeenCalledWith(
             ctx,
             {
@@ -87,7 +104,7 @@ describe("PublicMessageFulfillmentService", () => {
     })
 
     it("retains the legacy identity and approval without duplicating evidence already recorded at admission", async () => {
-        const tx = mockEntityManager({ query: [SELECT_CONVERSATION, [{ ...CONVERSATION, lead_id: null }]] })
+        const { tx } = managerWith({ ...CONVERSATION, lead_id: null })
         const { service, work, evidence } = await build()
 
         expect(
@@ -113,7 +130,7 @@ describe("PublicMessageFulfillmentService", () => {
 
 describe("PublicMessageFulfillmentService auto-send window", () => {
     it("still lets a message admitted exactly one window ago go out under the workspace's authority", async () => {
-        const tx = mockEntityManager({ query: [SELECT_CONVERSATION, [CONVERSATION]] })
+        const { tx } = managerWith(CONVERSATION)
         const { service, work, logger } = await build()
         const admittedAt = new Date(NOW.getTime() - MESSAGE_AUTO_SEND_WINDOW_MS)
 
@@ -124,7 +141,7 @@ describe("PublicMessageFulfillmentService auto-send window", () => {
     })
 
     it("holds an older message for approval with its draft kept and logs it without the content", async () => {
-        const tx = mockEntityManager({ query: [SELECT_CONVERSATION, [CONVERSATION]] })
+        const { tx } = managerWith(CONVERSATION)
         const { service, work, evidence, logger } = await build()
         const admittedAt = new Date(NOW.getTime() - MESSAGE_AUTO_SEND_WINDOW_MS - 1)
 
@@ -145,7 +162,7 @@ describe("PublicMessageFulfillmentService auto-send window", () => {
     })
 
     it("holds a pre-ledger delivery, whose admission time is unknown, even when the caller asked for no approval", async () => {
-        const tx = mockEntityManager({ query: [SELECT_CONVERSATION, [CONVERSATION]] })
+        const { tx } = managerWith(CONVERSATION)
         const { service, work, logger } = await build()
 
         await service.fulfill("workspace-1", "legacy-1", body, null, tx, "legacy-1", false)
@@ -166,7 +183,7 @@ describe("PublicMessageFulfillmentService auto-send window", () => {
 
 describe("PublicMessageFulfillmentService refusals", () => {
     it("refuses a conversation absent from the request workspace before inserting work or evidence", async () => {
-        const tx = mockEntityManager({ query: [SELECT_CONVERSATION, []] })
+        const { tx } = managerWith(undefined)
         const { service, work, evidence } = await build()
 
         await expect(service.fulfill("workspace-1", "request-1", body, RECENT, tx)).rejects.toMatchObject({
@@ -178,7 +195,7 @@ describe("PublicMessageFulfillmentService refusals", () => {
     })
 
     it("propagates a durable intake failure so the caller rolls back the request", async () => {
-        const tx = mockEntityManager({ query: [SELECT_CONVERSATION, [CONVERSATION]] })
+        const { tx } = managerWith(CONVERSATION)
         const { service, work, evidence, logger } = await build()
         const cause = new Error("durable intake unavailable")
         work.enqueueWork.mockRejectedValue(cause)

@@ -2,11 +2,10 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { WorkspacesService } from "@modules/domain/workspaces"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { PROFILE_RECEIPT_PREFIX } from "./messages/workspace-seed.messages"
-import { ENSURE_OFFICE_ROOMS, MOVE_AGENT_HOME, ROOMS_FUNCTION_PRESENT } from "./persistence/workspace-profile.sql"
 import { WORKSPACE_PROFILES } from "./profiles/workspace-profiles.templates"
 import type {
     ProfileAgent,
@@ -37,12 +36,6 @@ import type {
 } from "./workspace-seed.port"
 import { ProfileActivationService } from "./profile-activation.service"
 import { WorkspaceSeedService } from "./workspace-seed.service"
-
-/** Whether the rooms function exists. */
-interface PresentRow {
-    /** True when installed. */
-    readonly present: boolean
-}
 
 /** What the agents step kept: the home room of each agent, the tool grants to write and the installations to activate. */
 interface KeptAgents {
@@ -220,11 +213,13 @@ export class WorkspaceProfileService {
         workspaceId: string,
         homes: ReadonlyArray<readonly [string, string]>,
     ): Promise<ProfileReport["rooms"]> {
-        const [check] = await this.entityManager.query<Array<PresentRow>>(ROOMS_FUNCTION_PRESENT)
-        if (check?.present !== true) return "absent"
-        await this.entityManager.query(ENSURE_OFFICE_ROOMS, [workspaceId])
+        const [check] = await callDbFunction<{ to_regproc: string | null }>(this.entityManager, "to_regproc", [
+            "public.ensure_office_rooms",
+        ])
+        if (check?.to_regproc == null) return "absent"
+        await callDbFunction(this.entityManager, "public.ensure_office_rooms", [workspaceId])
         await eachInOrder(homes, async ([agentId, room]) => {
-            await this.entityManager.query(MOVE_AGENT_HOME, [workspaceId, room, agentId])
+            await callDbFunction(this.entityManager, "public.move_office_agent_home", [workspaceId, room, agentId])
         })
         return "ready"
     }

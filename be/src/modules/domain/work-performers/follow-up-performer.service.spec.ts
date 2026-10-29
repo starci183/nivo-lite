@@ -91,7 +91,7 @@ const proposalOf = (fields: Proposal["fields"], draft?: string): Proposal => ({ 
 const build = async (lead: LeadRecordRow = leadOf()) => {
     const kit = mock<PerformerKitService>()
     kit.text.mockImplementation((_ctx, key, params = {}) => [key, ...Object.values(params).map(String)].join("|"))
-    kit.scope.mockReturnValue({ workspaceId: "ws-1", locale: "en" })
+    kit.draftScope.mockReturnValue({ workspaceId: "ws-1", locale: "en" })
     kit.leadInput.mockReturnValue({ contact_name: "Lan", company: "Hue Tea", channel: "zalo", need: "wholesale" })
     kit.brief.mockResolvedValue("brief")
     const leads = mock<LeadRecordsService>()

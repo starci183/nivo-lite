@@ -8,6 +8,7 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     ApprovalProgress,
+    ApprovalRequestRecord,
     ApprovalResolved,
     ApproverSet,
     DecideApprovalParams,
@@ -16,9 +17,9 @@ import type {
 import { ApprovalAnnouncerService } from "./approval-announcer.service"
 import { ApprovalEscalationService } from "./approval-escalation.service"
 import { resolveApprovers } from "./approver-set.policy"
+import { toRequestRecord } from "./approval-requests.mapper"
 import { ApprovalRequestsError, ApprovalRequestsErrorCode } from "./errors/approval-requests.error"
-import type { ApprovalRequestRow, ApprovalVerdictRow } from "./persistence/approval-requests.rows"
-import { INSERT_VERDICT, LIST_VERDICTS, LOCK_REQUEST, RESOLVE_REQUEST } from "./persistence/approval-requests.sql"
+import { ApprovalRequestEntity } from "./persistence/entities"
 import { answererOf, namedGroup, notAnApprover, settledBefore } from "./refusal.policy"
 import { judgeVerdict } from "./verdict.policy"
 
@@ -50,23 +51,29 @@ export class ApprovalDecidingService {
      */
     async decide(params: DecideApprovalParams): Promise<ApprovalProgress> {
         const settled = await this.entityManager.transaction((tx) => this.settle(tx, params, this.clock.now()))
-        if (settled.resolved !== null) await this.announcer.resolved(settled.resolved)
         if (settled.kind === "expired") throw new ApprovalRequestsError({ code: ApprovalRequestsErrorCode.Expired })
         return settled.progress
     }
 
     private async settle(tx: EntityManager, params: DecideApprovalParams, now: Date): Promise<Settled> {
-        const [row] = await tx.query<Array<ApprovalRequestRow>>(LOCK_REQUEST, [params.requestId])
-        if (row === undefined) throw new ApprovalRequestsError({ code: ApprovalRequestsErrorCode.NotFound })
+        // Every verdict and every expiry starts at this lock, so they take turns on the one row.
+        const locked = await tx.findOne(ApprovalRequestEntity, {
+            where: { id: params.requestId },
+            lock: { mode: "pessimistic_write" },
+        })
+        if (locked === null) throw new ApprovalRequestsError({ code: ApprovalRequestsErrorCode.NotFound })
+        const row = toRequestRecord(locked)
         const directory = await this.grants.directory(row.workspace_id)
         if (row.status !== "pending") throw refused(settledBefore(row, directory))
         if (new Date(row.expires_at).getTime() <= now.getTime()) {
-            return { kind: "expired", resolved: await this.escalation.expire(tx, row, directory, now) }
+            const expired = await this.escalation.expire(tx, row, directory, now)
+            await this.announcer.resolved(expired, tx)
+            return { kind: "expired", resolved: expired }
         }
         const eligible = await this.eligibleFor(row, directory)
         const decider = answererOf(params.memberId, eligible)
         if (decider === null) throw refused(notAnApprover(params.memberId, eligible))
-        const given = await tx.query<Array<ApprovalVerdictRow>>(LIST_VERDICTS, [row.id])
+        const given = row.verdicts
         const judged = judgeVerdict({
             policy: row.policy,
             eligible: eligible.approvers,
@@ -75,7 +82,20 @@ export class ApprovalDecidingService {
             verdict: params.verdict,
         })
         if (judged.kind === "refused") throw new ApprovalRequestsError({ code: judged.code, params: judged.params })
-        await tx.query(INSERT_VERDICT, [row.id, params.memberId, params.verdict, now.toISOString()])
+        await tx
+            .createQueryBuilder(ApprovalRequestEntity, "ar")
+            .update()
+            .set({
+                verdicts: () =>
+                    "verdicts || jsonb_build_array(jsonb_build_object('member_id', :memberId::text, 'verdict', :verdict::text, 'decided_at', :decidedAt::text))",
+            })
+            .where("id = :requestId AND status = 'pending'", {
+                requestId: row.id,
+                memberId: params.memberId,
+                verdict: params.verdict,
+                decidedAt: now.toISOString(),
+            })
+            .execute()
         const approvedBy = [
             ...given.filter((one) => one.verdict === "approve").map((one) => one.member_id),
             ...(params.verdict === "approve" ? [params.memberId] : []),
@@ -85,20 +105,26 @@ export class ApprovalDecidingService {
             return { kind: "progress", progress, resolved: null }
         }
         const outcome = judged.value.outcome
-        await tx.query(RESOLVE_REQUEST, [row.id, outcome, params.memberId, now.toISOString(), null])
+        await tx.update(
+            ApprovalRequestEntity,
+            { id: row.id, status: "pending" },
+            { status: outcome, resolvedBy: params.memberId, resolvedAt: now, escalatedTo: null },
+        )
+        const resolved: ApprovalResolved = {
+            requestId: row.id,
+            outcome,
+            decidedBy: params.memberId,
+            decidedByName: decider.name,
+            action: row.action,
+            workspaceId: row.workspace_id,
+            chainStepId: row.chain_step_id,
+            escalatedTo: null,
+        }
+        await this.announcer.resolved(resolved, tx)
         return {
             kind: "progress",
             progress: { requestId: row.id, status: outcome, approvedBy, remaining: [] },
-            resolved: {
-                requestId: row.id,
-                outcome,
-                decidedBy: params.memberId,
-                decidedByName: decider.name,
-                action: row.action,
-                workspaceId: row.workspace_id,
-                chainStepId: row.chain_step_id,
-                escalatedTo: null,
-            },
+            resolved,
         }
     }
 
@@ -107,7 +133,7 @@ export class ApprovalDecidingService {
      * the rule is gone) with the grants as they are now, so a member who lost their grant, or the room, no longer can.
      */
     private async eligibleFor(
-        row: ApprovalRequestRow,
+        row: ApprovalRequestRecord,
         directory: ReadonlyArray<DirectoryMember>,
     ): Promise<ApproverSet> {
         const [setup, grants] = await Promise.all([

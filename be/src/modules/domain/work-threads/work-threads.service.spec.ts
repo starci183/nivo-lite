@@ -2,20 +2,18 @@ import { mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { normalizePage } from "@modules/platform/pagination"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { WorkThreadsErrorCode } from "./errors/work-threads.error"
-import type { ThreadRow } from "./persistence/work-threads.rows"
-import {
-    FIND_LEAD,
-    FIND_ORDER,
-    FIND_THREAD,
-    INSERT_THREAD,
-    LIST_THREADS,
-    LOCK_THREAD,
-    SET_THREAD_STATUS,
-} from "./persistence/work-threads.sql"
+import { WorkThreadEntity } from "./persistence/entities"
+import { THREAD_COLUMNS, THREAD_RETURNING } from "./persistence/work-thread.query"
 import { WorkThreadsService } from "./work-threads.service"
+import type { WorkThreadRecord } from "./work-threads.contracts"
 
-const threadRow: ThreadRow = {
+/** The any-function matcher, typed `unknown` so it flows into any slot. */
+const anyFunction = (): unknown => expect.any(Function)
+
+const threadRow: WorkThreadRecord = {
     id: "thread-1",
     workspace_id: "ws-1",
     title: "Villa booking for Ms Thao",
@@ -34,6 +32,22 @@ const build = async (em: ReturnType<typeof mockEntityManager>) => {
     return moduleRef.get(WorkThreadsService)
 }
 
+/** A manager double that hands out one fake query builder per `createQueryBuilder` call, in order. */
+const managerOf = (answers: ReadonlyArray<QueryBuilderAnswers>) => {
+    const em = mockEntityManager()
+    const fakes = answers.map((answer) => fakeQueryBuilder(answer))
+    for (const fake of fakes) em.createQueryBuilder.mockReturnValueOnce(fake.builder as never)
+    return { em, fakes }
+}
+
+/** A manager double whose every query builder is the same one. */
+const managerWith = (answers: QueryBuilderAnswers) => {
+    const em = mockEntityManager()
+    const fake = fakeQueryBuilder(answers)
+    em.createQueryBuilder.mockReturnValue(fake.builder as never)
+    return { em, fake }
+}
+
 const input = {
     workspaceId: "ws-1",
     memberId: "member-van",
@@ -44,47 +58,52 @@ const input = {
 
 const registerCreateFor = () => {
     describe("createFor", () => {
-        it("opens a thread for a member id", async () => {
-            const em = mockEntityManager({ query: [INSERT_THREAD, [threadRow]] })
+        it("opens a thread for a member id and answers it from the insert itself", async () => {
+            const { em, fake } = managerWith({ execute: { raw: [threadRow] } })
             const service = await build(em)
 
             const thread = await service.createFor(input)
 
             expect(thread).toMatchObject({ id: "thread-1", status: "open", createdBy: "member-van" })
-            expect(em.query).toHaveBeenCalledWith(INSERT_THREAD, [
-                "ws-1",
-                "Villa booking for Ms Thao",
-                null,
-                null,
-                "member-van",
+            expect(em.createQueryBuilder).toHaveBeenCalledWith(WorkThreadEntity, "w")
+            expect(fake.callsOf("insert")).toEqual([[]])
+            expect(fake.callsOf("values")).toEqual([
+                [
+                    {
+                        workspaceId: "ws-1",
+                        title: "Villa booking for Ms Thao",
+                        leadId: null,
+                        orderId: null,
+                        createdBy: "member-van",
+                    },
+                ],
             ])
+            expect(fake.callsOf("returning")).toEqual([[THREAD_RETURNING]])
         })
 
         it("opens a thread about a lead and an order of the workspace inside the transaction of the caller", async () => {
-            const em = mockEntityManager({ query: [INSERT_THREAD, [threadRow]] })
-            const other = mockEntityManager({
-                query: [
-                    [FIND_LEAD, [{ id: "lead-1" }]],
-                    [FIND_ORDER, [{ id: "order-1" }]],
-                    [INSERT_THREAD, [threadRow]],
-                ],
-            })
+            const em = mockEntityManager()
+            const other = managerOf([
+                { getRawOne: { id: "lead-1" } },
+                { getRawOne: { id: "order-1" } },
+                { execute: { raw: [threadRow] } },
+            ])
             const service = await build(em)
 
-            await service.createFor({ ...input, leadId: "lead-1", orderId: "order-1" }, other)
+            await service.createFor({ ...input, leadId: "lead-1", orderId: "order-1" }, other.em)
 
-            expect(other.query).toHaveBeenCalledWith(INSERT_THREAD, [
-                "ws-1",
-                "Villa booking for Ms Thao",
-                "lead-1",
-                "order-1",
-                "member-van",
+            const [leadRead, orderRead, insert] = other.fakes
+            expect(leadRead?.callsOf("from")).toEqual([["public.leads", "x"]])
+            expect(leadRead?.callsOf("where")).toEqual([
+                ["x.workspace_id = :workspaceId AND x.id = :id", { workspaceId: "ws-1", id: "lead-1" }],
             ])
-            expect(em.query).not.toHaveBeenCalled()
+            expect(orderRead?.callsOf("from")).toEqual([["public.orders", "x"]])
+            expect(insert?.callsOf("values")[0]?.[0]).toMatchObject({ leadId: "lead-1", orderId: "order-1" })
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
 
         it("refuses a lead that is not in the workspace", async () => {
-            const service = await build(mockEntityManager({ query: [FIND_LEAD, []] }))
+            const service = await build(managerWith({ getRawOne: undefined }).em)
 
             await expect(service.createFor({ ...input, leadId: "lead-9" })).rejects.toMatchObject({
                 code: WorkThreadsErrorCode.LeadNotFound,
@@ -92,7 +111,7 @@ const registerCreateFor = () => {
         })
 
         it("refuses an order that is not in the workspace", async () => {
-            const service = await build(mockEntityManager({ query: [FIND_ORDER, []] }))
+            const service = await build(managerWith({ getRawOne: undefined }).em)
 
             await expect(service.createFor({ ...input, orderId: "order-9" })).rejects.toMatchObject({
                 code: WorkThreadsErrorCode.OrderNotFound,
@@ -100,7 +119,7 @@ const registerCreateFor = () => {
         })
 
         it("refuses a thread the insert did not answer", async () => {
-            const service = await build(mockEntityManager({ query: [INSERT_THREAD, []] }))
+            const service = await build(managerWith({ execute: { raw: [] } }).em)
 
             await expect(service.createFor(input)).rejects.toMatchObject({ code: WorkThreadsErrorCode.NotStored })
         })
@@ -109,16 +128,20 @@ const registerCreateFor = () => {
 
 const registerReads = () => {
     describe("find and lock", () => {
-        it("finds a thread of the workspace", async () => {
-            const em = mockEntityManager({ query: [FIND_THREAD, [threadRow]] })
+        it("finds a thread of the workspace with the instants as database text", async () => {
+            const { em, fake } = managerWith({ getRawOne: threadRow })
             const service = await build(em)
 
             await expect(service.find("ws-1", "thread-1")).resolves.toMatchObject({ id: "thread-1" })
-            expect(em.query).toHaveBeenCalledWith(FIND_THREAD, ["ws-1", "thread-1"])
+            expect(em.createQueryBuilder).toHaveBeenCalledWith(WorkThreadEntity, "t")
+            expect(fake.callsOf("select")).toEqual([[[...THREAD_COLUMNS]]])
+            expect(fake.callsOf("where")).toEqual([["t.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
+            expect(fake.callsOf("andWhere")).toEqual([["t.id = :threadId", { threadId: "thread-1" }]])
+            expect(fake.callsOf("setLock")).toEqual([])
         })
 
         it("refuses a thread that is not in the workspace", async () => {
-            const service = await build(mockEntityManager({ query: [FIND_THREAD, []] }))
+            const service = await build(managerWith({ getRawOne: undefined }).em)
 
             await expect(service.find("ws-1", "thread-9")).rejects.toMatchObject({
                 code: WorkThreadsErrorCode.ThreadNotFound,
@@ -126,15 +149,16 @@ const registerReads = () => {
         })
 
         it("locks a thread for the transaction of the caller", async () => {
-            const em = mockEntityManager({ query: [LOCK_THREAD, [threadRow]] })
+            const { em, fake } = managerWith({ getRawOne: threadRow })
             const service = await build(mockEntityManager())
 
             await expect(service.lock(em, "ws-1", "thread-1")).resolves.toMatchObject({ id: "thread-1" })
-            expect(em.query).toHaveBeenCalledWith(LOCK_THREAD, ["ws-1", "thread-1"])
+            expect(fake.callsOf("setLock")).toEqual([["pessimistic_write"]])
+            expect(fake.callsOf("andWhere")).toEqual([["t.id = :threadId", { threadId: "thread-1" }]])
         })
 
         it("refuses to lock a thread that is not in the workspace", async () => {
-            const em = mockEntityManager({ query: [LOCK_THREAD, []] })
+            const { em } = managerWith({ getRawOne: undefined })
             const service = await build(mockEntityManager())
 
             await expect(service.lock(em, "ws-1", "thread-9")).rejects.toMatchObject({
@@ -147,7 +171,7 @@ const registerReads = () => {
 const registerPagination = () => {
     describe("list", () => {
         it("lists the newest threads, optionally only those about one lead", async () => {
-            const em = mockEntityManager({ query: [LIST_THREADS, [threadRow]] })
+            const { em, fake } = managerWith({ getRawMany: [threadRow] })
             const service = await build(em)
 
             const threads = await service.list("ws-1", "lead-1")
@@ -162,7 +186,10 @@ const registerPagination = () => {
                 }),
             ).toString("base64url")
             expect(threads.pageInfo).toEqual({ hasNextPage: false, endCursor })
-            expect(em.query).toHaveBeenCalledWith(LIST_THREADS, ["ws-1", "lead-1", null, null, 51])
+            expect(fake.callsOf("andWhere")).toEqual([["t.lead_id = :leadId", { leadId: "lead-1" }]])
+            expect(fake.callsOf("orderBy")).toEqual([["t.created_at", "DESC"]])
+            expect(fake.callsOf("addOrderBy")).toEqual([["t.id", "DESC"]])
+            expect(fake.callsOf("limit")).toEqual([[51]])
         })
 
         it("continues after the full database instant and id without exposing the lookahead row", async () => {
@@ -172,7 +199,7 @@ const registerPagination = () => {
                 created_at: "2026-10-22T02:41:00.123456+00:00",
             }
             const older = { ...row, id: "00000000-0000-4000-8000-000000000001" }
-            const em = mockEntityManager({ query: [LIST_THREADS, [row, older]] })
+            const { em, fake } = managerWith({ getRawMany: [row, older] })
             const service = await build(em)
 
             const first = await service.list("ws-1", null, { first: 1 })
@@ -186,23 +213,29 @@ const registerPagination = () => {
 
             await service.list("ws-1", null, { first: 1, after: first.pageInfo.endCursor })
 
-            expect(em.query).toHaveBeenLastCalledWith(LIST_THREADS, ["ws-1", null, row.created_at, row.id, 2])
+            expect(fake.callsOf("andWhere")).toEqual([
+                [
+                    "(t.created_at, t.id) < (CAST(:cursorAt AS timestamptz), CAST(:cursorId AS uuid))",
+                    { cursorAt: row.created_at, cursorId: row.id },
+                ],
+            ])
+            expect(fake.callsOf("limit")).toEqual([[2], [2]])
         })
 
         it("refuses a cursor from another lead filter before reading rows", async () => {
             const row = { ...threadRow, id: "00000000-0000-4000-8000-000000000001" }
-            const em = mockEntityManager({ query: [LIST_THREADS, [row]] })
+            const { em } = managerWith({ getRawMany: [row] })
             const service = await build(em)
             const page = await service.list("ws-1", "lead-1", { first: 1 })
-            em.query.mockClear()
+            em.createQueryBuilder.mockClear()
 
             await expect(service.list("ws-1", null, { after: page.pageInfo.endCursor })).rejects.toThrow()
 
-            expect(em.query).not.toHaveBeenCalled()
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
 
         it.each([null, undefined])("normalizes an absent lead filter %p to an unfiltered query", async (leadId) => {
-            const em = mockEntityManager({ query: [LIST_THREADS, []] })
+            const { em, fake } = managerWith({ getRawMany: [] })
             const service = await build(em)
 
             await expect(service.list("ws-1", leadId)).resolves.toEqual({
@@ -210,20 +243,25 @@ const registerPagination = () => {
                 pageInfo: { endCursor: null, hasNextPage: false },
             })
 
-            expect(em.query).toHaveBeenCalledWith(LIST_THREADS, ["ws-1", null, null, null, 51])
+            expect(fake.callsOf("andWhere")).toEqual([])
+            expect(fake.callsOf("limit")).toEqual([[51]])
         })
     })
 }
 
 const registerStatus = () => {
     describe("setStatus", () => {
-        it("sets where a thread stands inside the transaction of the caller", async () => {
-            const em = mockEntityManager({ query: [SET_THREAD_STATUS, []] })
+        it("sets where a thread stands and marks it changed inside the transaction of the caller", async () => {
+            const em = mockEntityManager({ update: [WorkThreadEntity, { affected: 1, raw: [], generatedMaps: [] }] })
             const service = await build(mockEntityManager())
 
             await service.setStatus(em, "ws-1", "thread-1", "waiting")
 
-            expect(em.query).toHaveBeenCalledWith(SET_THREAD_STATUS, ["ws-1", "thread-1", "waiting"])
+            expect(em.update).toHaveBeenCalledWith(
+                WorkThreadEntity,
+                { workspaceId: "ws-1", id: "thread-1" },
+                { status: "waiting", updatedAt: anyFunction() },
+            )
         })
     })
 }

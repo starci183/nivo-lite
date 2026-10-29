@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { toGapRecord } from "./gap-record.mapper"
-import type { KnowledgeGapRow } from "./persistence/knowledge-gaps.rows"
+import type { GapFields } from "./gap-record.mapper"
 
 const SUBJECT = Symbol("gap-record.mapper")
 type Subject = { toGapRecord: typeof toGapRecord }
@@ -16,20 +16,20 @@ describe("toGapRecord", () => {
     it("names every stored gap field and renders driver Dates and timestamp strings", async () => {
         const subject = await build()
 
-        const row: KnowledgeGapRow = {
+        const row: GapFields = {
             id: "g1",
             module: "chatbot",
             question: "Tea price?",
-            question_key: "tea-price",
+            questionKey: "tea-price",
             keywords: ["tea", "price"],
             topic: "Tea",
-            attribute_guess: "Price",
+            attributeGuess: "Price",
             count: 3,
-            first_seen_at: new Date("2026-10-10T10:00:00.000Z"),
-            last_seen_at: "2026-10-12T10:00:00.000Z",
-            example_conversation_id: "c1",
+            firstSeenAt: new Date("2026-10-10T10:00:00.000Z"),
+            lastSeenAt: "2026-10-12T10:00:00.000Z" as unknown as Date,
+            exampleConversationId: "c1",
             status: "answered",
-            reopened_count: 2,
+            reopenedCount: 2,
         }
 
         expect(subject.toGapRecord(row)).toEqual({

@@ -1,8 +1,7 @@
 import type { ApproverGroup } from "@modules/domain/authority-rules"
 import type { ApproverRef, DirectoryMember, ExclusionReason } from "@modules/domain/member-grants"
-import type { ApproverSet, Refusal } from "./approval-requests.contracts"
+import type { ApprovalRequestRecord, ApproverSet, Refusal } from "./approval-requests.contracts"
 import { ApprovalRequestsErrorCode } from "./errors/approval-requests.error"
-import type { ApprovalRequestRow } from "./persistence/approval-requests.rows"
 import { timeOfDay } from "./verdict.policy"
 
 /** The refusal each reason a grant leaves a member out raises. */
@@ -26,7 +25,7 @@ export const notAnApprover = (memberId: string, set: ApproverSet): Refusal => {
  * What a member who answers a settled request is told: who settled it, how and when ("Anh Minh already approved it at 09:42"); or,
  * for a request that ran out of time, that it went to the owner of the agent.
  */
-export const settledBefore = (row: ApprovalRequestRow, directory: ReadonlyArray<DirectoryMember>): Refusal => {
+export const settledBefore = (row: ApprovalRequestRecord, directory: ReadonlyArray<DirectoryMember>): Refusal => {
     if (row.status === "expired") return { code: ApprovalRequestsErrorCode.Expired }
     const by = directory.find((member) => member.memberId === row.resolved_by)
     return {
@@ -39,7 +38,7 @@ export const settledBefore = (row: ApprovalRequestRow, directory: ReadonlyArray<
 }
 
 /** The people a request named when it opened, as the group to fall back on when its rule is gone. */
-export const namedGroup = (row: ApprovalRequestRow): ApproverGroup => ({
+export const namedGroup = (row: ApprovalRequestRecord): ApproverGroup => ({
     roles: [],
     rooms: [],
     members: row.approvers.map((member) => member.memberId),

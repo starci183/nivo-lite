@@ -16,39 +16,39 @@ import type {
     InventoryWorkbenchView,
 } from "../inventory-workbench.contracts"
 import type {
-    WorkbenchItemRow,
-    WorkbenchLevelRow,
-    WorkbenchMovementRow,
-    WorkbenchPoLineRow,
-    WorkbenchPoRow,
-    WorkbenchRecipeLineRow,
-    WorkbenchRecipeRow,
-    WorkbenchSupplierRow,
-    WorkbenchWorkRow,
-} from "../persistence/inventory-workbench.rows"
+    WorkbenchItemInput,
+    WorkbenchLevelInput,
+    WorkbenchMovementInput,
+    WorkbenchPoLineInput,
+    WorkbenchPoInput,
+    WorkbenchRecipeLineInput,
+    WorkbenchRecipeInput,
+    WorkbenchSupplierInput,
+    WorkbenchWorkInput,
+} from "./inventory-workbench.inputs"
 
 /** The rows the workbench read, before they are shaped. */
 export interface InventoryWorkbenchRows {
     /** The stock locations, default first. */
     readonly locations: ReadonlyArray<{ readonly id: string; readonly name: string }>
     /** The suppliers. */
-    readonly suppliers: ReadonlyArray<WorkbenchSupplierRow>
+    readonly suppliers: ReadonlyArray<WorkbenchSupplierInput>
     /** The catalogue items. */
-    readonly items: ReadonlyArray<WorkbenchItemRow>
+    readonly items: ReadonlyArray<WorkbenchItemInput>
     /** The stock levels. */
-    readonly levels: ReadonlyArray<WorkbenchLevelRow>
+    readonly levels: ReadonlyArray<WorkbenchLevelInput>
     /** The active recipes. */
-    readonly recipes: ReadonlyArray<WorkbenchRecipeRow>
+    readonly recipes: ReadonlyArray<WorkbenchRecipeInput>
     /** The recipe lines. */
-    readonly recipeLines: ReadonlyArray<WorkbenchRecipeLineRow>
+    readonly recipeLines: ReadonlyArray<WorkbenchRecipeLineInput>
     /** The purchase orders. */
-    readonly pos: ReadonlyArray<WorkbenchPoRow>
+    readonly pos: ReadonlyArray<WorkbenchPoInput>
     /** The purchase order lines. */
-    readonly poLines: ReadonlyArray<WorkbenchPoLineRow>
+    readonly poLines: ReadonlyArray<WorkbenchPoLineInput>
     /** The recent movements. */
-    readonly movements: ReadonlyArray<WorkbenchMovementRow>
+    readonly movements: ReadonlyArray<WorkbenchMovementInput>
     /** The decisions waiting. */
-    readonly work: ReadonlyArray<WorkbenchWorkRow>
+    readonly work: ReadonlyArray<WorkbenchWorkInput>
     /** The items that stocked out lately; null when the history could not be read. */
     readonly stockOutItemIds: ReadonlyArray<string> | null
 }
@@ -97,7 +97,7 @@ const channelOf = (value: string | null): InventorySupplierChannel =>
 
 const poStatusOf = (value: string): InventoryPoStatus => PO_STATUSES.find((status) => status === value) ?? "draft"
 
-const toSupplier = (row: WorkbenchSupplierRow): InventorySupplierView => ({
+const toSupplier = (row: WorkbenchSupplierInput): InventorySupplierView => ({
     id: row.id,
     name: row.name,
     contactName: row.contact_name,
@@ -111,7 +111,7 @@ const toSupplier = (row: WorkbenchSupplierRow): InventorySupplierView => ({
 })
 
 const levelsByItem = (
-    levels: ReadonlyArray<WorkbenchLevelRow>,
+    levels: ReadonlyArray<WorkbenchLevelInput>,
 ): ReadonlyMap<string, ReadonlyArray<InventoryLevelView>> => {
     const grouped = new Map<string, Array<InventoryLevelView>>()
     for (const level of levels) {
@@ -124,8 +124,8 @@ const levelsByItem = (
 }
 
 const onOrderByItem = (
-    pos: ReadonlyArray<WorkbenchPoRow>,
-    lines: ReadonlyArray<WorkbenchPoLineRow>,
+    pos: ReadonlyArray<WorkbenchPoInput>,
+    lines: ReadonlyArray<WorkbenchPoLineInput>,
 ): ReadonlyMap<string, number> => {
     const open = new Set(pos.filter((po) => OPEN_STATUSES.has(po.status)).map((po) => po.id))
     const totals = new Map<string, number>()
@@ -138,7 +138,7 @@ const onOrderByItem = (
 }
 
 const toItem = (
-    row: WorkbenchItemRow,
+    row: WorkbenchItemInput,
     levels: ReadonlyArray<InventoryLevelView>,
     onOrder: number,
 ): InventoryItemView => {
@@ -153,7 +153,7 @@ const toItem = (
     }
 }
 
-const toPo = (row: WorkbenchPoRow, lines: ReadonlyArray<InventoryPoLineView>): InventoryPoView => ({
+const toPo = (row: WorkbenchPoInput, lines: ReadonlyArray<InventoryPoLineView>): InventoryPoView => ({
     id: row.id,
     poNo: row.po_no,
     supplierId: row.supplier_id,
@@ -172,7 +172,7 @@ const toPo = (row: WorkbenchPoRow, lines: ReadonlyArray<InventoryPoLineView>): I
     lines,
 })
 
-const toPending = (row: WorkbenchWorkRow): InventoryPendingView | null => {
+const toPending = (row: WorkbenchWorkInput): InventoryPendingView | null => {
     if (row.action !== "send_purchase_order" && row.action !== "adjust_stock") return null
     const proposal = record(row.proposal)
     const fields = record(proposal.fields)
@@ -189,8 +189,8 @@ const toPending = (row: WorkbenchWorkRow): InventoryPendingView | null => {
 }
 
 const poLinesOf = (
-    rows: ReadonlyArray<WorkbenchPoLineRow>,
-    items: ReadonlyMap<string, WorkbenchItemRow>,
+    rows: ReadonlyArray<WorkbenchPoLineInput>,
+    items: ReadonlyMap<string, WorkbenchItemInput>,
 ): ReadonlyMap<string, ReadonlyArray<InventoryPoLineView>> => {
     const grouped = new Map<string, Array<InventoryPoLineView>>()
     for (const line of rows) {
@@ -211,7 +211,7 @@ const poLinesOf = (
 
 const recipesOf = (
     rows: InventoryWorkbenchRows,
-    items: ReadonlyMap<string, WorkbenchItemRow>,
+    items: ReadonlyMap<string, WorkbenchItemInput>,
 ): ReadonlyArray<InventoryRecipeView> =>
     rows.recipes.map((recipe) => ({
         id: recipe.id,
@@ -228,8 +228,8 @@ const recipesOf = (
     }))
 
 const movementsOf = (
-    rows: ReadonlyArray<WorkbenchMovementRow>,
-    items: ReadonlyMap<string, WorkbenchItemRow>,
+    rows: ReadonlyArray<WorkbenchMovementInput>,
+    items: ReadonlyMap<string, WorkbenchItemInput>,
 ): ReadonlyArray<InventoryMovementView> =>
     rows.map((row) => ({
         id: row.id,

@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
-import type { WorkbenchProjectRow } from "./persistence/video-workbench.rows"
+import type { StoredProject } from "./video-stored.contracts"
 import type { WorkbenchRender } from "./video-workbench.contracts"
 import {
     editorScenesOf as editorScenesOfImplementation,
@@ -44,7 +44,7 @@ const WS = "workspace-1"
 const SOURCE = "0a1b2c3d-0a1b-4c3d-8a1b-0a1b2c3d4e5f"
 const INSTANT = "2026-10-13T09:00:00.000Z"
 
-const rowOf = builder<WorkbenchProjectRow>({
+const rowOf = builder<StoredProject>({
     id: "project-1",
     title: "Spring offer",
     goal: "offer",

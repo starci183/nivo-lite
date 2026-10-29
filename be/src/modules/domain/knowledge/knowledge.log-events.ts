@@ -14,4 +14,6 @@ export enum KnowledgeLogEvent {
     PayloadRefused = "knowledge.job.payload_refused",
     /** A re-embedding job asked for a model this deployment does not embed with and was dropped. */
     ModelMismatch = "knowledge.reembed.model_mismatch",
+    /** The embeddings endpoint answered another count or size of vectors than asked; the passages are stored without vectors. */
+    EmbeddingUnexpected = "knowledge.embedding.unexpected",
 }

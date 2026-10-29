@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
 import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-activity"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
@@ -11,7 +12,7 @@ import type { MessagesScope } from "./office-lines.contracts"
 import { InjectAgentDirectory } from "./office-lines.decorators"
 import type { AgentDirectory } from "./office-lines.port"
 import { parseOfficeCard } from "./office-card.policy"
-import { INSERT_CARD_MESSAGE } from "./persistence/office-lines.sql"
+import { MessageEntity } from "./persistence/entities"
 import { CORE_LINE_AUTHOR } from "./office-lines.service"
 
 /** The stored card line: its id and the room it landed in. */
@@ -50,17 +51,17 @@ export class OfficeCardsService {
             department,
             reason: parsed.reason,
         })
-        const [row] = await this.entityManager.query<Array<PostedCard>>(INSERT_CARD_MESSAGE, [
-            ctx.workspaceId,
-            agent === null ? "system" : "agent",
-            speaker.authorName,
-            speaker.agentId,
-            line.body.trim() === "" ? department : line.body.trim(),
-            line.leadId,
-            line.workItemId,
-            line.room,
-            null,
-        ])
+        const row = await this.store(this.entityManager, {
+            workspaceId: ctx.workspaceId,
+            authorKind: agent === null ? "system" : "agent",
+            authorName: speaker.authorName,
+            agentId: speaker.agentId,
+            body: line.body.trim() === "" ? department : line.body.trim(),
+            leadId: line.leadId,
+            workItemId: line.workItemId,
+            room: line.room,
+            card: null,
+        })
         return this.announced(ctx.workspaceId, row, line.room, this.entityManager)
     }
 
@@ -74,18 +75,32 @@ export class OfficeCardsService {
         if (!parsed.ok)
             throw new MessagesError({ code: MessagesErrorCode.CardInvalid, params: { reason: parsed.reason } })
         const body = line.body.trim() === "" ? parsed.card.title : line.body.trim()
-        const [row] = await manager.query<Array<PostedCard>>(INSERT_CARD_MESSAGE, [
-            ctx.workspaceId,
-            line.agentId === null ? "system" : "agent",
-            line.authorName,
-            line.agentId,
+        const row = await this.store(manager, {
+            workspaceId: ctx.workspaceId,
+            authorKind: line.agentId === null ? "system" : "agent",
+            authorName: line.authorName,
+            agentId: line.agentId,
             body,
-            line.leadId,
-            line.workItemId,
-            line.room,
-            JSON.stringify(parsed.card),
-        ])
+            leadId: line.leadId,
+            workItemId: line.workItemId,
+            room: line.room,
+            card: parsed.card,
+        })
         return this.announced(ctx.workspaceId, row, line.room, manager)
+    }
+
+    /** Stores one card line and answers its id and the room the database routed it to. */
+    private async store(
+        manager: EntityManager,
+        values: QueryDeepPartialEntity<MessageEntity>,
+    ): Promise<PostedCard | undefined> {
+        const result = await manager
+            .createQueryBuilder(MessageEntity, "m")
+            .insert()
+            .values(values)
+            .returning("id, room")
+            .execute()
+        return (result.raw as Array<PostedCard>)[0]
     }
 
     private async announced(

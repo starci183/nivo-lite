@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
-import { builder, mock, mockEntityManager } from "@starci/jest-preset"
-import { AutomationBusinessEventsService } from "@modules/domain/automations"
+import { builder, mock, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
 import { DurableWorkService, EvidenceService } from "@modules/domain/decisions"
 import type { WorkContext, WorkItem } from "@modules/domain/decisions"
+import { EVENT_BUS } from "@modules/platform/event-bus"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import type { OptionalInboundEvent } from "@modules/domain/inbound-events"
 import { LeadRecordsService } from "@modules/domain/leads"
@@ -98,7 +98,7 @@ const build = async () => {
     const work = mock<DurableWorkService>()
     work.enqueueCommand.mockResolvedValue(itemOf())
     const evidence = mock<EvidenceService>()
-    const events = mock<AutomationBusinessEventsService>()
+    const events = recordingEventBus()
     const tx = mockEntityManager()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -107,7 +107,7 @@ const build = async () => {
             { provide: LeadRecordsService, useValue: leads },
             { provide: DurableWorkService, useValue: work },
             { provide: EvidenceService, useValue: evidence },
-            { provide: AutomationBusinessEventsService, useValue: events },
+            { provide: EVENT_BUS, useValue: events },
         ],
     }).compile()
     return { service: moduleRef.get(PublicLeadFulfillmentService), inbound, leads, work, evidence, events, tx }
@@ -264,7 +264,7 @@ describe("PublicLeadFulfillmentService outcomes", () => {
         expect(leads.applyPublicStage).toHaveBeenCalledWith(ctx.workspaceId, "lead-1", "qualified", tx)
         expect(evidence.log).not.toHaveBeenCalled()
         expect(work.enqueueWork).not.toHaveBeenCalled()
-        expect(events.publish).not.toHaveBeenCalled()
+        expect(events.writes).toEqual([])
     })
 
     it("records a changed open stage without invoice or business event", async () => {
@@ -273,7 +273,7 @@ describe("PublicLeadFulfillmentService outcomes", () => {
         await service.applyDetails(ctx, "lead-1", bodyOf({ need: "", stage: "qualified" }), tx)
         expect(evidence.log).toHaveBeenCalledWith(ctx, expect.objectContaining({ kind: "outcome.recorded" }), tx)
         expect(work.enqueueWork).not.toHaveBeenCalled()
-        expect(events.publish).not.toHaveBeenCalled()
+        expect(events.writes).toEqual([])
     })
 
     it("commits a newly won outcome with gated invoice work and the deduped business event", async () => {
@@ -292,20 +292,19 @@ describe("PublicLeadFulfillmentService outcomes", () => {
             },
             tx,
         )
-        expect(events.publish).toHaveBeenCalledWith(
-            ctx.workspaceId,
-            "deal.won",
-            {
-                lead_id: "lead-1",
+        expect(events.writes[0]).toMatchObject({
+            eventName: "deal_won",
+            payload: {
+                dedupeKey: "deal.won:lead-1",
+                workspaceId: ctx.workspaceId,
+                leadId: "lead-1",
                 name: "Mai",
                 company: "Tea",
                 channel: "API",
                 need: "Keep this need",
                 source: ctx.actor,
             },
-            "deal.won:lead-1",
-            tx,
-        )
+        })
     })
 })
 

@@ -7,7 +7,7 @@ import { cliSetupModules } from "./compose/setup"
 @Module({})
 /**
  * The composition root of the cli: the clock and the logger every command logs through, the database capability over every
- * connection, Supabase Auth administration, the workspace capabilities (demo seed and prune), and the cli feature root.
+ * connection, own-auth account administration, the workspace capabilities (demo seed and prune), and the cli feature root.
  */
 export class AppModule {
     /** Builds the cli from its parsed options. */

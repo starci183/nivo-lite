@@ -3,7 +3,7 @@ import type { JobStats, RetryFailedResult } from "../job-ops.contracts"
 /** The JSON value returned by the existing statistics function. */
 export interface JobStatsRow {
     /** Database statistics, or null when no statistics were returned. */
-    readonly stats: JobStats | null
+    readonly job_stats: JobStats | null
 }
 
 /** Safe columns returned by the failed-jobs function. */
@@ -39,13 +39,13 @@ export interface OpenJobRow {
 /** The result of the existing requeue function. */
 export interface JobRequeueRow {
     /** The new bigint message id as lossless text, or null when the job was not failed. */
-    readonly message_id: string | null
+    readonly job_reopen: string | null
 }
 
 /** The JSON value returned by the bulk retry function. */
 export interface JobRequeueFailedRow {
     /** The requeued and initially eligible job counts. */
-    readonly result: RetryFailedResult
+    readonly job_requeue_failed: RetryFailedResult
 }
 
 /** Rows one sweep batch deleted, per table. */
@@ -63,5 +63,5 @@ export interface HistorySweepCountsRow {
 /** The JSON value returned by the system history sweep. */
 export interface HistorySweepRow {
     /** The per-table counts of this batch. */
-    readonly result: HistorySweepCountsRow
+    readonly system_history_sweep: HistorySweepCountsRow
 }

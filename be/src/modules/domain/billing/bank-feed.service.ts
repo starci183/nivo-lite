@@ -14,12 +14,15 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { createHash } from "node:crypto"
+import { AgentConnectionEntity } from "@modules/domain/agent-connections"
 import { eachInOrder } from "@modules/platform/primitives"
-import { BankCreditQueue } from "@modules/queues/bank-credit"
+import { InjectEventBus } from "@modules/platform/event-bus"
+import type { EventBus } from "@modules/platform/event-bus"
+import { BankCreditBookedEvent } from "@modules/events/api"
 import type {
     RawBody,
     HeaderValue,
@@ -32,15 +35,11 @@ import { cassoCredits, isCassoError } from "./casso.policy"
 import { BillingError, BillingErrorCode } from "./errors/billing.error"
 import { PaymentProofService } from "./payment-proof.service"
 import { payosBodyOf, readPayosDelivery } from "./payos.policy"
-import type { AgentIdRow, ConnectionStateRow, FeedConnectionRow } from "./persistence/bank-feed.rows"
-import {
-    MARK_CONNECTION_FED,
-    SELECT_FEED_CONNECTION,
-    SELECT_BOUND_ACCOUNTING_AGENT,
-    SELECT_CONNECTION_STATE,
-} from "./persistence/bank-feed.sql"
+import type { ConnectionStateRead } from "./billing-reads.contracts"
 import { isSepayPing, sepayPayloadOf } from "./sepay.policy"
 import { parseJsonObject } from "./webhook-body.policy"
+import { ConnectionEntity } from "@modules/domain/connections"
+import { AgentEntity } from "@modules/domain/agents"
 
 /** The locale of the lines billing writes into the shared records: the workspace owners read them in Vietnamese. */
 const RECORD_LOCALE = "vi"
@@ -70,8 +69,8 @@ interface Booking {
 /**
  * Books the credits a payment connection reports. The webhook door proves each delivery before its receipt is recorded; a deferred credit
  * becomes one inbound payment event, once per workspace and provider transaction id, so a repeat is counted without a second event
- * or job. A credit on a connection with no accounting agent bound, or on a connection in the provider's test environment, is
- * remembered on the connection only and never reaches a business table. The event and its reconcile job are written in one
+ * or event. A credit on a connection with no accounting agent bound, or on a connection in the provider's test environment, is
+ * remembered on the connection only and never reaches a business table. The inbound event and its `bank_credit_booked` fact are written in one
  * transaction.
  */
 export class BankFeedService {
@@ -81,7 +80,7 @@ export class BankFeedService {
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly proof: PaymentProofService,
         private readonly inbound: InboundEventsService,
-        private readonly credits: BankCreditQueue,
+        @InjectEventBus() private readonly bus: EventBus,
         private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
         private readonly transactions: TransactionsService,
@@ -92,7 +91,7 @@ export class BankFeedService {
 
     /**
      * An owner or manager enters money they know arrived: real money, booked as live through the same intake as every other credit
-     * (one inbound payment event and its reconcile job, once per day, amount and content). Its source is `manual` (the `manual:`
+     * (one inbound payment event and its `bank_credit_booked` fact, once per day, amount and content). Its source is `manual` (the `manual:`
      * event id and the manual bank name) and the member who entered it is the actor of its evidence line. Answers whether the
      * same evidence had already been entered.
      */
@@ -207,9 +206,12 @@ export class BankFeedService {
         return this.entityManager.transaction(async (manager) => {
             const pending = await this.bankFeedInbox.lock(manager, message.provider, message.deliveryId)
             if (pending === undefined) return []
-            const [owner] = await manager.query<Array<FeedConnectionRow>>(SELECT_FEED_CONNECTION, [
-                pending.payload.connection,
-            ])
+            const owner = await manager
+                .createQueryBuilder(ConnectionEntity, "c")
+                .select("c.workspace_id", "workspace_id")
+                .where("c.id = :connectionId", { connectionId: pending.payload.connection })
+                .limit(1)
+                .getRawOne<{ workspace_id: string }>()
             const answers: Array<FeedCreditAnswer> = []
             if (owner !== undefined) {
                 const connection = { connectionId: pending.payload.connection, workspaceId: owner.workspace_id }
@@ -249,14 +251,29 @@ export class BankFeedService {
         credit: IncomingCredit,
     ): Promise<FeedCreditAnswer> {
         const at = this.clock.now()
-        const [state] = await tx.query<Array<ConnectionStateRow>>(SELECT_CONNECTION_STATE, [connection.connectionId])
-        await tx.query(MARK_CONNECTION_FED, [
+        const state = await tx
+            .createQueryBuilder(ConnectionEntity, "c")
+            .select(["c.name AS name", "c.environment AS environment"])
+            .where("c.id = :connectionId", { connectionId: connection.connectionId })
+            .limit(1)
+            .getRawOne<ConnectionStateRead>()
+        await callDbFunction(tx, "public.connection_mark_fed", [
             connection.connectionId,
             at,
             JSON.stringify({ amount: Math.round(credit.amount), content: credit.content, at: at.toISOString() }),
         ])
         if (state?.environment === "test") return { status: "refused", code: "test_environment" }
-        const [agent] = await tx.query<Array<AgentIdRow>>(SELECT_BOUND_ACCOUNTING_AGENT, [connection.connectionId])
+        const agent = await tx
+            .createQueryBuilder(AgentConnectionEntity, "ac")
+            .select("a.id", "id")
+            .innerJoin(AgentEntity, "a", "a.id = ac.agentId")
+            .where(
+                "ac.connectionId = :connectionId AND ac.purpose = 'bank_feed' AND a.status = 'active' AND a.module = 'accounting'",
+                { connectionId: connection.connectionId },
+            )
+            .orderBy("a.created_at", "ASC")
+            .limit(1)
+            .getRawOne<{ id: string }>()
         if (agent === undefined) return { status: "unbound" }
         if (credit.direction === "debit") return this.debit(tx, connection, credit)
         const duplicate = await this.book(tx, {
@@ -293,7 +310,7 @@ export class BankFeedService {
         return { status: "debited" }
     }
 
-    /** Records the credit and queues its reconcile job; answers whether the same credit had already been recorded. */
+    /** Records the credit and publishes `bank_credit_booked` in the same transaction; answers whether the same credit had already been recorded. */
     private async book(tx: EntityManager, booking: Booking): Promise<boolean> {
         const amountVnd = Math.round(booking.amount)
         const recorded = await this.inbound.recordBankPayment({
@@ -315,9 +332,14 @@ export class BankFeedService {
             providerRef: booking.eventId,
         })
         if (recorded.duplicate) return true
-        await this.credits.enqueueBankCredit(
-            { workspaceId: booking.workspaceId, inboundEventId: recorded.inboundEventId, amountVnd },
+        await this.bus.publish(
+            BankCreditBookedEvent.create({
+                workspaceId: booking.workspaceId,
+                inboundEventId: recorded.inboundEventId,
+                amountVnd,
+            }),
             tx,
+            `bank_credit_booked:${recorded.inboundEventId}`,
         )
         return false
     }

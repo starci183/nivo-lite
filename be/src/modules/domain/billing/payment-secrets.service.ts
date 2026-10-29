@@ -6,9 +6,9 @@ import type { Logger } from "@modules/platform/logging"
 import { BillingLogEvent } from "./billing.log-events"
 import { InjectBillingOptions } from "./billing.decorators"
 import type { BillingOptions } from "./billing.options"
-import { openSecretWithBase64Key } from "@modules/domain/connection-secrets"
-import type { ConnectionSecretRow } from "./persistence/bank-feed.rows"
-import { SELECT_CONNECTION_SECRET } from "./persistence/bank-feed.sql"
+import { ConnectionSecretEntity, openSecretWithBase64Key } from "@modules/domain/connection-secrets"
+import type { ConnectionSecretRead } from "./billing-reads.contracts"
+import { ConnectionEntity } from "@modules/domain/connections"
 
 /** A connection's secrets as the proof of its webhook needs them. */
 export interface PaymentSecret {
@@ -40,9 +40,15 @@ export class PaymentSecretsService {
      */
     async load(connectionId: string, provider: string): Promise<PaymentSecretLookup> {
         if (!UUID.test(connectionId)) return null
-        const [row] = await this.entityManager.query<Array<ConnectionSecretRow>>(SELECT_CONNECTION_SECRET, [
-            connectionId,
-        ])
+        const row = await this.entityManager
+            .createQueryBuilder(ConnectionEntity, "c")
+            .select(["c.workspace_id AS workspace_id", "c.status AS status", "c.provider AS provider"])
+            .addSelect("s.ciphertext", "ciphertext")
+            .addSelect("s.webhook_secret", "webhook_secret")
+            .innerJoin(ConnectionSecretEntity, "s", "s.connection_id = c.id")
+            .where("c.id = :connectionId", { connectionId })
+            .limit(1)
+            .getRawOne<ConnectionSecretRead>()
         if (row?.provider !== provider || row.status === "disconnected") return null
         try {
             const credential = openSecretWithBase64Key(row.ciphertext, this.options.channelTokenKey?.reveal() ?? "")

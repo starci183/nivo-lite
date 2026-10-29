@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
-import type { VideoScriptingRow } from "./persistence/video-scripting.rows"
+import type { ScriptProject } from "./video-stored.contracts"
 import { videoScriptMessages, videoScriptSourcesText } from "./video-scripting-prompt.policy"
 import { VIDEO_SCRIPT_GOALS, VIDEO_SCRIPT_SYSTEM } from "./video-scripting.templates"
 
@@ -18,7 +18,7 @@ const build = async () => {
 }
 
 const WS = "workspace-1"
-const projectOf = builder<VideoScriptingRow>({
+const projectOf = builder<ScriptProject>({
     id: "project-1",
     title: "Spring offer",
     goal: "offer",

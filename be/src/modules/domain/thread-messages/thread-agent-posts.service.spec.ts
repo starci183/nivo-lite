@@ -7,7 +7,6 @@ import { WorkThreadsService } from "@modules/domain/work-threads"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { MentionDirectoryService } from "./mention-directory.service"
-import { FIND_AGENT } from "./persistence/thread-messages.sql"
 import { ThreadAgentPostsService } from "./thread-agent-posts.service"
 import { ThreadMessagesService } from "./thread-messages.service"
 import type { AgentPost, MentionView, OpenedApproval, ThreadMessage } from "./thread-messages.contracts"
@@ -106,12 +105,17 @@ interface Doubles {
     readonly recorded?: ReadonlyArray<RecordedStep>
     readonly open?: () => Promise<OpenedApproval>
     readonly views?: ReadonlyArray<MentionView>
+    /** The agent the directory finds; null when the workspace has none with that id. */
+    readonly agent?: { readonly id: string; readonly name: string } | null
 }
 
 const build = async (em: MockEntityManager, doubles: Doubles = {}) => {
     fakeTransaction(em)
     const directory = mock<MentionDirectoryService>({
         resolve: jest.fn().mockResolvedValue(doubles.views ?? []),
+        findAgent: jest
+            .fn()
+            .mockResolvedValue(doubles.agent === undefined ? { id: "agent-1", name: "AI Sales" } : doubles.agent),
         nameOfMember: jest.fn().mockResolvedValue("Mr Minh"),
         namesOf: jest.fn().mockResolvedValue({ ha: "Ms Ha" }),
     })
@@ -154,27 +158,20 @@ const build = async (em: MockEntityManager, doubles: Doubles = {}) => {
     return { service: moduleRef.get(ThreadAgentPostsService), directory, threads, chains, messages, rules, gate }
 }
 
-/** What the database double answers: rows per statement. */
-type DatabaseStubs = {
-    readonly query: ReadonlyArray<readonly [string, unknown]>
-}
-
-const agentStubs = (found: ReadonlyArray<unknown> = [{ id: "agent-1", name: "AI Sales" }]): DatabaseStubs => ({
-    query: [[FIND_AGENT, found]],
-})
-
 const registerPlainPosts = () => {
     describe("postAsAgent without an approval", () => {
         it("refuses an agent that is not in the workspace", async () => {
-            const { service } = await build(mockEntityManager(agentStubs([])))
+            const em = mockEntityManager()
+            const { service, directory } = await build(em, { agent: null })
 
             await expect(service.postAsAgent(agentPost())).rejects.toMatchObject({
                 code: ThreadMessagesErrorCode.AgentNotFound,
             })
+            expect(directory.findAgent).toHaveBeenCalledWith(em, "ws-1", agentPost().agentId)
         })
 
         it("writes a plain agent line as a step of its own and leaves the thread open", async () => {
-            const { service, chains, threads, messages } = await build(mockEntityManager(agentStubs()))
+            const { service, chains, threads, messages } = await build(mockEntityManager())
 
             const posted = await service.postAsAgent(agentPost())
 
@@ -203,7 +200,7 @@ const registerPlainPosts = () => {
         })
 
         it("sends a plain agent line the chain limits stopped back to the owner", async () => {
-            const { service, messages, threads } = await build(mockEntityManager(agentStubs()), {
+            const { service, messages, threads } = await build(mockEntityManager(), {
                 recorded: [stopped("limit")],
             })
 
@@ -218,7 +215,7 @@ const registerPlainPosts = () => {
         })
 
         it("asks the agents capability before the agent tags another agent", async () => {
-            const { service, messages, rules } = await build(mockEntityManager(agentStubs()))
+            const { service, messages, rules } = await build(mockEntityManager())
             messages.proveAgents.mockImplementation((...args) => args[1](ACCOUNTING_AI).then(() => undefined))
 
             await service.postAsAgent(agentPost())
@@ -241,7 +238,7 @@ const registerTags = () => {
                 { kind: "member", id: MINH, name: "Mr Minh" },
                 { kind: "group", id: "role:manager", name: "Managers" },
             ]
-            const { service, chains } = await build(mockEntityManager(agentStubs()), { views })
+            const { service, chains } = await build(mockEntityManager(), { views })
 
             await service.postAsAgent(
                 agentPost({
@@ -273,7 +270,7 @@ const registerTags = () => {
                 { kind: "agent", id: ACCOUNTING_AI, name: "Accounting AI" },
                 { kind: "group", id: "role:staff", name: "Staff" },
             ]
-            const { service, chains, messages, threads } = await build(mockEntityManager(agentStubs()), {
+            const { service, chains, messages, threads } = await build(mockEntityManager(), {
                 views,
                 recorded: [continued("a"), stopped("loop")],
             })
@@ -301,7 +298,7 @@ const registerApprovalAsks = () => {
                 { kind: "group", id: "role:manager", name: "Managers" },
                 { kind: "member", id: MINH, name: "Mr Minh" },
             ]
-            const em = mockEntityManager(agentStubs())
+            const em = mockEntityManager()
             const { service, gate, chains, directory, messages, threads } = await build(em, {
                 views,
                 recorded: [continued("step-ask")],
@@ -354,7 +351,7 @@ const registerApprovalAsks = () => {
         })
 
         it("asks with no group tagged and no hand-off steps for the ask itself", async () => {
-            const { service, chains } = await build(mockEntityManager(agentStubs()), {
+            const { service, chains } = await build(mockEntityManager(), {
                 recorded: [continued("step-ask")],
             })
 
@@ -370,7 +367,7 @@ const registerApprovalFailures = () => {
     describe("postAsAgent when an approval cannot go ahead", () => {
         it("ends the waiting step and lets the failure travel when the request cannot be opened", async () => {
             const failure = new Error("gate down")
-            const { service, chains } = await build(mockEntityManager(agentStubs()), {
+            const { service, chains } = await build(mockEntityManager(), {
                 recorded: [continued("step-ask")],
                 open: () => Promise.reject(failure),
             })
@@ -380,7 +377,7 @@ const registerApprovalFailures = () => {
         })
 
         it("sends an ask the chain limits stopped back to the owner without opening a request", async () => {
-            const { service, gate, messages, threads } = await build(mockEntityManager(agentStubs()), {
+            const { service, gate, messages, threads } = await build(mockEntityManager(), {
                 views: [{ kind: "group", id: "role:manager", name: "Managers" }],
                 recorded: [stopped("limit")],
             })

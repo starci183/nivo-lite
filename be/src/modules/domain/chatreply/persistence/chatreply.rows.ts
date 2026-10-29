@@ -21,3 +21,11 @@ export interface AnswerProgressRow {
     /** The decision job's state. */
     readonly job_state: string | null
 }
+
+/** The state `public.job_status` answers for one job. */
+export interface JobStateRow {
+    /** The job id. */
+    readonly id: string
+    /** The outbox state. */
+    readonly state: string
+}

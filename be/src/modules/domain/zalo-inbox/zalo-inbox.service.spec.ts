@@ -1,15 +1,15 @@
 import { Test } from "@nestjs/testing"
-import { fakeInbox, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
-import type { EntityManager } from "typeorm"
+import { IsNull } from "typeorm"
+import { fakeRowInbox } from "@tests/fixtures/builders/row-claims.builder"
 import { ConversationsService } from "@modules/domain/conversations"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
-import type { Inbox, InboxReceipt } from "@modules/platform/inbox"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { ZaloInboxService } from "./zalo-inbox.service"
 import { ZALO_DELIVERY_QUEUE } from "./zalo-inbox.contracts"
-import { INSERT_ZALO_INBOX, FIND_PENDING_ZALO_INBOX, COMPLETE_ZALO_INBOX } from "./persistence/zalo-inbox.sql"
+import { ZaloInboxEntity } from "./persistence/entities"
 
 const body = Buffer.from(
     JSON.stringify({
@@ -21,35 +21,19 @@ const body = Buffer.from(
 )
 const payload = { connection: "c-1", rawBody: body.toString("utf8") }
 
-const build = async (pending = [{ id: "receipt-1", payload }], claimed = [{ id: "receipt-1" }]) => {
+const pendingOf = (over: Partial<ZaloInboxEntity> = {}): ZaloInboxEntity =>
+    Object.assign(new ZaloInboxEntity(), { id: "receipt-1", provider: "zalo", payload }, over)
+
+const build = async (pending: ZaloInboxEntity | null = pendingOf(), claimed = true) => {
     const tx = fakeTransaction(
         mockEntityManager({
-            query: [
-                [INSERT_ZALO_INBOX, claimed],
-                [FIND_PENDING_ZALO_INBOX, pending],
-                [COMPLETE_ZALO_INBOX, []],
-            ],
+            findOne: [ZaloInboxEntity, pending],
+            update: [ZaloInboxEntity, { affected: 1 }],
         }),
     )
     const conversations = mock<ConversationsService>()
     conversations.acceptZalo.mockResolvedValue(undefined)
-    const inbox = fakeInbox()
-    const claim = inbox.claim.bind(inbox)
-    const claimReceipt: Inbox["claim"] = async (
-        source: string,
-        eventId: string,
-        manager?: EntityManager,
-        receipt?: InboxReceipt,
-    ) => {
-        if (eventId === "" || manager === undefined || receipt === undefined) return false
-        const rows = await manager.query<Array<{ readonly id: string }>>(receipt.insert, [
-            source,
-            eventId,
-            JSON.stringify(receipt.payload),
-        ])
-        return rows.length > 0 && claim(source, eventId)
-    }
-    inbox.claim = claimReceipt
+    const inbox = fakeRowInbox(claimed)
     const outbox = recordingQueueOutbox()
     const write = jest.spyOn(outbox, "write")
     const moduleRef = await Test.createTestingModule({
@@ -61,16 +45,22 @@ const build = async (pending = [{ id: "receipt-1", payload }], claimed = [{ id: 
             { provide: ConversationsService, useValue: conversations },
         ],
     }).compile()
-    return { service: moduleRef.get(ZaloInboxService), tx, conversations, outbox, write }
+    return { service: moduleRef.get(ZaloInboxService), tx, conversations, outbox, write, rowClaims: inbox.rowClaims }
 }
 
 describe("ZaloInboxService receipt delivery", () => {
     it("claims the connection-prefixed message identity and defers conversation effects", async () => {
-        const { service, tx, conversations, write } = await build()
+        const { service, conversations, write, rowClaims } = await build()
         await service.acceptZaloDelivery(body, "c-1")
         const manager = write.mock.calls[0]?.[0]
         expect(isTransactionManager(manager)).toBe(true)
-        expect(tx.em.query.mock.calls).toEqual([[INSERT_ZALO_INBOX, ["zalo", "c-1:m-1", JSON.stringify(payload)]]])
+        expect(rowClaims).toEqual([
+            {
+                source: "zalo",
+                eventId: "c-1:m-1",
+                receipt: { entity: ZaloInboxEntity, row: { provider: "zalo", deliveryId: "c-1:m-1", payload } },
+            },
+        ])
         expect(write).toHaveBeenCalledWith(
             manager,
             ZALO_DELIVERY_QUEUE,
@@ -81,7 +71,7 @@ describe("ZaloInboxService receipt delivery", () => {
     })
 
     it("does not publish duplicates", async () => {
-        const { service, outbox, tx, conversations } = await build([], [])
+        const { service, outbox, tx, conversations } = await build(null, false)
         await service.acceptZaloDelivery(body, "c-1")
         expect(outbox.jobs).toEqual([])
         expect(tx.commits).toBe(1)
@@ -91,7 +81,7 @@ describe("ZaloInboxService receipt delivery", () => {
     it("ignores unreadable deliveries without a claim", async () => {
         const { service, tx, outbox } = await build()
         await service.acceptZaloDelivery(undefined, "c-1")
-        expect(tx.em.query).not.toHaveBeenCalled()
+        expect(tx.em.findOne).not.toHaveBeenCalled()
         expect(outbox.jobs).toEqual([])
     })
 
@@ -109,7 +99,8 @@ describe("ZaloInboxService deferred effects", () => {
         const { service, tx, conversations } = await build()
         conversations.acceptZalo.mockImplementation((_connection, _message, manager) => {
             expect(isTransactionManager(manager)).toBe(true)
-            expect(tx.em.query.mock.calls).toEqual([[FIND_PENDING_ZALO_INBOX, ["c-1:m-1"]]])
+            expect(tx.em.findOne).toHaveBeenCalledTimes(1)
+            expect(tx.em.update).not.toHaveBeenCalled()
             return Promise.resolve()
         })
         await service.processRecordedDelivery({ deliveryId: "c-1:m-1" })
@@ -119,32 +110,33 @@ describe("ZaloInboxService deferred effects", () => {
             { appId: "app-1", userId: "user-1", messageId: "m-1", text: "Hello" },
             conversations.acceptZalo.mock.calls[0]?.[2],
         )
-        expect(tx.em.query.mock.calls).toEqual([
-            [FIND_PENDING_ZALO_INBOX, ["c-1:m-1"]],
-            [COMPLETE_ZALO_INBOX, ["receipt-1"]],
-        ])
+        expect(tx.em.findOne).toHaveBeenCalledWith(ZaloInboxEntity, {
+            where: { provider: "zalo", deliveryId: "c-1:m-1", processedAt: IsNull() },
+            lock: { mode: "pessimistic_write" },
+        })
+        expect(tx.em.update).toHaveBeenCalledWith(
+            ZaloInboxEntity,
+            { id: "receipt-1" },
+            { processedAt: expect.any(Function) },
+        )
         expect(tx.commits).toBe(1)
     })
 
     it("does not repeat a missing or completed receipt", async () => {
-        const { service, conversations, tx } = await build([])
+        const { service, conversations, tx } = await build(null)
         await service.processRecordedDelivery({ deliveryId: "c-1:m-1" })
         expect(conversations.acceptZalo).not.toHaveBeenCalled()
-        expect(tx.em.query.mock.calls).toEqual([[FIND_PENDING_ZALO_INBOX, ["c-1:m-1"]]])
+        expect(tx.em.findOne).toHaveBeenCalledTimes(1)
+        expect(tx.em.update).not.toHaveBeenCalled()
     })
 })
 
 describe("ZaloInboxService consumer recovery", () => {
     it("completes an ignored decoded message without a conversation effect", async () => {
-        const { service, conversations, tx } = await build([
-            {
-                id: "receipt-1",
-                payload: { connection: "c-1", rawBody: "{}" },
-            },
-        ])
+        const { service, conversations, tx } = await build(pendingOf({ payload: { connection: "c-1", rawBody: "{}" } }))
         await service.processRecordedDelivery({ deliveryId: "c-1:m-1" })
         expect(conversations.acceptZalo).not.toHaveBeenCalled()
-        expect(tx.em.query).toHaveBeenCalledWith(COMPLETE_ZALO_INBOX, ["receipt-1"])
+        expect(tx.em.update).toHaveBeenCalledTimes(1)
     })
 
     it("leaves completion unwritten and rolls back a failed consumer", async () => {
@@ -153,16 +145,17 @@ describe("ZaloInboxService consumer recovery", () => {
         conversations.acceptZalo.mockRejectedValue(failure)
         await expect(service.processRecordedDelivery({ deliveryId: "c-1:m-1" })).rejects.toBe(failure)
         expect(tx.rollbacks).toBe(1)
-        expect(tx.em.query.mock.calls).toEqual([[FIND_PENDING_ZALO_INBOX, ["c-1:m-1"]]])
+        expect(tx.em.findOne).toHaveBeenCalledTimes(1)
+        expect(tx.em.update).not.toHaveBeenCalled()
     })
 })
 
 describe("ZaloInboxService non-text events", () => {
     it("claims a follow event under its own connection-scoped id and completes it without a conversation effect", async () => {
-        const { service, tx, conversations, write } = await build()
+        const { service, conversations, write, rowClaims } = await build()
         const follow = JSON.stringify({ event_name: "follow", timestamp: "1700", follower: { id: "user-9" } })
         await service.acceptZaloDelivery(Buffer.from(follow), "c-1")
-        expect(tx.em.query.mock.calls[0]?.[1]?.[1]).toBe("c-1:follow:1700:user-9")
+        expect(rowClaims[0]?.receipt.row).toMatchObject({ deliveryId: "c-1:follow:1700:user-9" })
         expect(write).toHaveBeenCalledWith(
             expect.anything(),
             ZALO_DELIVERY_QUEUE,

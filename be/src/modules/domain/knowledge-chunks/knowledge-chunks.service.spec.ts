@@ -1,18 +1,26 @@
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { builder, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { KnowledgeChunksService } from "./knowledge-chunks.service"
 import type { ChunkDraft } from "./knowledge-chunks.contracts"
-import {
-    DELETE_CHUNKS,
-    INSERT_CHUNKS,
-    LIST_PASSAGES,
-    SELECT_EMBEDDED_CHUNKS,
-    SELECT_STALE_CHUNKS,
-    UPDATE_CHUNK_VECTORS,
-} from "./persistence/knowledge-chunks.sql"
+import { KnowledgeChunkEntity } from "./persistence/entities"
 
 const WS = "11111111-1111-4111-8111-111111111111"
+
+const chunkOf = builder<KnowledgeChunkEntity>({
+    id: "c1",
+    workspaceId: WS,
+    sourceId: "s1",
+    module: "chatbot",
+    ord: 0,
+    content: "a",
+    embedding: null,
+    fts: null,
+    createdAt: new Date("2026-04-01T00:00:00.000Z"),
+    visibility: "internal",
+    embeddingModel: null,
+})
 
 const build = async (em: ReturnType<typeof mockEntityManager>) => {
     const moduleRef = await Test.createTestingModule({
@@ -23,6 +31,17 @@ const build = async (em: ReturnType<typeof mockEntityManager>) => {
 
 const drafts = (count: number, vector: string | null): Array<ChunkDraft> =>
     Array.from({ length: count }, (_, index) => ({ text: `p${index}`, vector }))
+
+const passage = (ord: number, embedding: string | null, embeddingModel: string | null) => ({
+    workspaceId: WS,
+    sourceId: "s1",
+    module: "chatbot",
+    visibility: "internal",
+    ord,
+    content: "",
+    embedding,
+    embeddingModel,
+})
 
 const write = (list: ReadonlyArray<ChunkDraft>) => ({
     workspaceId: WS,
@@ -38,26 +57,18 @@ describe("KnowledgeChunksService", () => {
         it("removes the old passages and stores the new ones with their vectors in one transaction", async () => {
             const tx = fakeTransaction(
                 mockEntityManager({
-                    query: [
-                        [DELETE_CHUNKS, []],
-                        [INSERT_CHUNKS, []],
-                    ],
+                    delete: [KnowledgeChunkEntity, { affected: 3 }],
+                    insert: [KnowledgeChunkEntity, {}],
                 }),
             )
             const service = await build(tx.em)
 
             await service.replace(write(drafts(2, "[1]")))
 
-            expect(tx.em.query).toHaveBeenCalledWith(DELETE_CHUNKS, ["s1", WS])
-            expect(tx.em.query).toHaveBeenCalledWith(INSERT_CHUNKS, [
-                WS,
-                "s1",
-                "chatbot",
-                "internal",
-                [0, 1],
-                ["p0", "p1"],
-                ["[1]", "[1]"],
-                ["m1", "m1"],
+            expect(tx.em.delete).toHaveBeenCalledWith(KnowledgeChunkEntity, { sourceId: "s1", workspaceId: WS })
+            expect(tx.em.insert).toHaveBeenCalledWith(KnowledgeChunkEntity, [
+                { ...passage(0, "[1]", "m1"), content: "p0" },
+                { ...passage(1, "[1]", "m1"), content: "p1" },
             ])
             expect(tx.commits).toBe(1)
         })
@@ -65,25 +76,16 @@ describe("KnowledgeChunksService", () => {
         it("stores passages without a vector and without a model", async () => {
             const tx = fakeTransaction(
                 mockEntityManager({
-                    query: [
-                        [DELETE_CHUNKS, []],
-                        [INSERT_CHUNKS, []],
-                    ],
+                    delete: [KnowledgeChunkEntity, { affected: 0 }],
+                    insert: [KnowledgeChunkEntity, {}],
                 }),
             )
             const service = await build(tx.em)
 
             await service.replace(write(drafts(1, null)))
 
-            expect(tx.em.query).toHaveBeenCalledWith(INSERT_CHUNKS, [
-                WS,
-                "s1",
-                "chatbot",
-                "internal",
-                [0],
-                ["p0"],
-                [null],
-                [null],
+            expect(tx.em.insert).toHaveBeenCalledWith(KnowledgeChunkEntity, [
+                { ...passage(0, null, null), content: "p0" },
             ])
         })
     })
@@ -94,49 +96,44 @@ describe("KnowledgeChunksService", () => {
         it("inserts a long document in batches that keep the order", async () => {
             const tx = fakeTransaction(
                 mockEntityManager({
-                    query: [
-                        [DELETE_CHUNKS, []],
-                        [INSERT_CHUNKS, []],
-                    ],
+                    delete: [KnowledgeChunkEntity, { affected: 0 }],
+                    insert: [KnowledgeChunkEntity, {}],
                 }),
             )
             const service = await build(tx.em)
 
             await service.replace(write(drafts(120, "[1]")))
 
-            const inserts = tx.em.query.mock.calls.filter(([statement]) => statement === INSERT_CHUNKS)
-            expect(inserts).toHaveLength(3)
-            expect(tx.em.query).toHaveBeenCalledWith(
-                INSERT_CHUNKS,
-                expect.arrayContaining([Array.from({ length: 20 }, (_, index) => 100 + index)]),
+            expect(tx.em.insert).toHaveBeenCalledTimes(3)
+            const orders = tx.em.insert.mock.calls.map(([, rows]) =>
+                Array.isArray(rows) ? rows.map((row) => row.ord) : [],
             )
-            expect(tx.em.query).toHaveBeenCalledWith(
-                INSERT_CHUNKS,
-                expect.arrayContaining([Array.from({ length: 50 }, (_, index) => 50 + index)]),
-            )
+            expect(orders[2]).toEqual(Array.from({ length: 20 }, (_, index) => 100 + index))
+            expect(orders[1]).toEqual(Array.from({ length: 50 }, (_, index) => 50 + index))
         })
 
         it("only clears the old passages of a source with no passage", async () => {
-            const tx = fakeTransaction(mockEntityManager({ query: [DELETE_CHUNKS, []] }))
+            const tx = fakeTransaction(mockEntityManager({ delete: [KnowledgeChunkEntity, { affected: 2 }] }))
             const service = await build(tx.em)
 
             await service.replace(write([]))
 
-            expect(tx.em.query).not.toHaveBeenCalledWith(INSERT_CHUNKS, expect.anything())
+            expect(tx.em.delete).toHaveBeenCalledTimes(1)
+            expect(tx.em.insert).not.toHaveBeenCalled()
         })
     })
 
     describe("passagesOf", () => {
         it("returns the ordered passage content and embedding flags for the requested source", async () => {
-            const em = mockEntityManager({
-                query: [
-                    LIST_PASSAGES,
-                    [
-                        { id: "c1", ord: 0, content: "Tea", has_embedding: true },
-                        { id: "c2", ord: 1, content: "Coffee", has_embedding: false },
+            const em = mockEntityManager()
+            const list = queueQueryBuilders(em, [
+                {
+                    getRawMany: [
+                        { id: "c1", ord: 0, content: "Tea", hasEmbedding: true },
+                        { id: "c2", ord: 1, content: "Coffee", hasEmbedding: false },
                     ],
-                ],
-            })
+                },
+            ])[0]
             const service = await build(em)
 
             await expect(service.passagesOf(WS, "s1")).resolves.toEqual([
@@ -144,17 +141,18 @@ describe("KnowledgeChunksService", () => {
                 { id: "c2", order: 1, content: "Coffee", hasEmbedding: false },
             ])
 
-            expect(em.query).toHaveBeenCalledWith(LIST_PASSAGES, [WS, "s1"])
+            expect(list?.callsOf("where")).toEqual([
+                ["c.workspaceId = :workspaceId AND c.sourceId = :sourceId", { workspaceId: WS, sourceId: "s1" }],
+            ])
+            expect(list?.callsOf("limit")).toEqual([[500]])
         })
     })
 
     describe("embeddedOf", () => {
         it("names the columns of the stored passages", async () => {
-            const service = await build(
-                mockEntityManager({
-                    query: [SELECT_EMBEDDED_CHUNKS, [{ ord: 0, content: "a", embedding_model: "m1" }]],
-                }),
-            )
+            const em = mockEntityManager()
+            queueQueryBuilders(em, [{ getMany: [chunkOf({ embeddingModel: "m1" })] }])
+            const service = await build(em)
 
             await expect(service.embeddedOf(WS, "s1")).resolves.toEqual([{ order: 0, text: "a", model: "m1" }])
         })
@@ -164,23 +162,27 @@ describe("KnowledgeChunksService", () => {
 describe("KnowledgeChunksService", () => {
     describe("stale", () => {
         it("names the passages that need a vector of the model", async () => {
-            const em = mockEntityManager({ query: [SELECT_STALE_CHUNKS, [{ id: "c1", content: "a" }]] })
+            const em = mockEntityManager()
+            const read = queueQueryBuilders(em, [{ getMany: [chunkOf()] }])[0]
             const service = await build(em)
 
             await expect(service.stale(WS, "m1", 32)).resolves.toEqual([{ id: "c1", text: "a" }])
 
-            expect(em.query).toHaveBeenCalledWith(SELECT_STALE_CHUNKS, [WS, "m1", 32])
+            expect(read?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: WS, model: "m1" })
+            expect(read?.callsOf("limit")).toEqual([[32]])
         })
     })
 
     describe("setVectors", () => {
         it("gives the passages their vectors", async () => {
-            const em = mockEntityManager({ query: [UPDATE_CHUNK_VECTORS, []] })
+            const em = mockEntityManager()
+            const write = queueQueryBuilders(em, [{ execute: {} }])[0]
             const service = await build(em)
 
             await service.setVectors({ workspaceId: WS, model: "m1", ids: ["c1"], vectors: ["[1]"] })
 
-            expect(em.query).toHaveBeenCalledWith(UPDATE_CHUNK_VECTORS, [WS, ["c1"], ["[1]"], "m1"])
+            expect(write?.callsOf("update")).toEqual([[]])
+            expect(write?.callsOf("setParameters")).toEqual([[{ workspaceId: WS, ids: ["c1"], vectors: ["[1]"] }]])
         })
     })
 })

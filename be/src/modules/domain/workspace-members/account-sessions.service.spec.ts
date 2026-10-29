@@ -5,9 +5,13 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import { AccountSessionsService } from "./account-sessions.service"
 import { WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
-import { LIST_PROVIDERS, LIST_SESSIONS, REVOKE_SESSION } from "./persistence/account-sessions.sql"
 import type { AccountDirectory } from "./workspace-members.contracts"
 import { ACCOUNT_DIRECTORY } from "./workspace-members.port"
+
+/** The statements `callDbFunction` sends for the three account doors. */
+const LIST_PROVIDERS = "SELECT * FROM public.be_account_providers($1)"
+const LIST_SESSIONS = "SELECT * FROM public.be_account_sessions($1)"
+const REVOKE_SESSION = "SELECT * FROM public.be_revoke_session($1, $2)"
 
 const CREATED = new Date("2026-10-01T00:00:00.000Z")
 const ACTIVE = "2026-10-11T08:30:00.000Z"
@@ -148,7 +152,7 @@ describe("AccountSessionsService / revokeSession", () => {
     })
 
     it("refuses a session the database did not delete", async () => {
-        const em = mockEntityManager({ query: [REVOKE_SESSION, [{ revoked: false }]] })
+        const em = mockEntityManager({ query: [REVOKE_SESSION, [{ be_revoke_session: false }]] })
         const { service } = await build(em)
 
         await expect(service.revokeSession("user-1", "s-old")).rejects.toMatchObject({
@@ -157,7 +161,7 @@ describe("AccountSessionsService / revokeSession", () => {
     })
 
     it("deletes another session of the account", async () => {
-        const em = mockEntityManager({ query: [REVOKE_SESSION, [{ revoked: true }]] })
+        const em = mockEntityManager({ query: [REVOKE_SESSION, [{ be_revoke_session: true }]] })
         const { service } = await build(em)
 
         await expect(service.revokeSession("user-1", "s-old", "s-now")).resolves.toBeUndefined()

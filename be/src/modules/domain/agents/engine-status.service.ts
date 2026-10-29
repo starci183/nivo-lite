@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { OpenclawAgentSyncEntity } from "@modules/domain/openclaw-agent-sync/persistence/entities"
 import { InjectOpenclawAgentRegistry, InjectOpenclawGateway } from "@modules/integrations/openclaw"
 import type { AgentRegistryService, GatewayClient } from "@modules/integrations/openclaw"
 import { InjectClock } from "@modules/platform/clock"
@@ -12,8 +13,6 @@ import type { AgentsOptions } from "./agents.options"
 import type { InstallationDirectory } from "./agents.port"
 import { EngineReadinessService } from "./engine-readiness.service"
 import { isFresh, processorFromSettings } from "./engine-status.policy"
-import type { SyncCheckRow } from "./persistence/sync-check.rows"
-import { FIND_LAST_SYNC_CHECK } from "./persistence/sync-check.sql"
 
 @Injectable()
 /**
@@ -50,8 +49,12 @@ export class EngineStatusService {
     /** The engine status for the Agents page; any member may look. */
     async status(userId: string, workspaceId: string): Promise<EngineStatus> {
         await this.members.require(userId, workspaceId)
-        const [row] = await this.entityManager.query<Array<SyncCheckRow>>(FIND_LAST_SYNC_CHECK, [workspaceId])
-        const lastSyncCheckAt = row?.checked_at ?? null
+        const checked = await this.entityManager
+            .createQueryBuilder(OpenclawAgentSyncEntity, "s")
+            .select("max(s.checked_at)", "checkedAt")
+            .where("s.workspace_id = :workspaceId", { workspaceId })
+            .getRawOne<{ checkedAt: Date | string | null }>()
+        const lastSyncCheckAt = checked?.checkedAt == null ? null : new Date(checked.checkedAt).toISOString()
         return {
             gatewayConfigured: this.readiness.configured(),
             workspaceWritable: this.readiness.writable(),

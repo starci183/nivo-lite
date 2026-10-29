@@ -226,16 +226,6 @@ export interface ApplyStarterOutput {
     readonly recipes: number
 }
 
-/** What the request to take a confirmed order out of stock takes. */
-export interface DeductOrderParams {
-    /** The order id: the idempotency key of the deduction. */
-    readonly orderId: string
-    /** The order number shown to people. */
-    readonly orderNo: string
-    /** The ordered items as the customer wrote them. */
-    readonly items: string
-}
-
 /** What the request to change one item's quantity by hand takes. */
 export interface AdjustStockParams {
     /** The item. */

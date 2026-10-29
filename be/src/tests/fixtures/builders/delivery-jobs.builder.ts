@@ -5,6 +5,8 @@ import type { TelegramInboxService } from "@modules/domain/telegram-inbox"
 import type { SepayTransactionsService } from "@modules/domain/sepay-transactions"
 import type { JobClaims, FencedProcessor } from "@modules/platform/jobs"
 import type { EntityManager } from "typeorm"
+import { ConnectionEntity } from "@modules/domain/connections"
+import { WorkspaceEntity } from "@modules/domain/workspaces"
 
 /** The receipt capabilities covered by the delivery processors. */
 export type DeliveryKind = "meta" | "telegram" | "sepay"
@@ -37,7 +39,7 @@ export const persistDeliveryWorkspaceRows = async (
 ): Promise<void> => {
     await manager.transaction(async (tx) => {
         await tx.insert("auth.users", { id: userId })
-        await tx.insert("public.workspaces", { id: workspaceId, owner_id: userId, name: "Delivery proof" })
+        await tx.insert(WorkspaceEntity, { id: workspaceId, ownerId: userId, name: "Delivery proof" })
     })
 }
 
@@ -50,9 +52,9 @@ export const deliveryIntakeBuilder = async (
 ) => {
     const { id, connection, proofId, workspaceId } = identity
     if (kind === "telegram") {
-        await manager.insert("public.connections", {
+        await manager.insert(ConnectionEntity, {
             id: connection,
-            workspace_id: workspaceId,
+            workspaceId: workspaceId,
             provider: "telegram",
             name: "Delivery proof",
             status: "connected",

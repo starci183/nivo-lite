@@ -21,7 +21,6 @@ import { AutomationShopService } from "./automation-shop.service"
 import type {
     BusinessEvent,
     EventData,
-    FireTemplate,
     LoadedPipeline,
     ShopWithHours,
     TextParams,
@@ -33,12 +32,10 @@ import { resolveConfig } from "./policies/config.policy"
 import { planDecision, writeOf } from "./policies/pipeline.policy"
 import { BATCH, planN8nSchedule } from "./policies/scan.policy"
 import type { ScanPlan, ScanPlans } from "./policies/scan.policy"
-import { DAY_MS, planTrigger, textOf } from "./policies/trigger.policy"
+import { planTrigger, textOf } from "./policies/trigger.policy"
 import type { TriggerPlan } from "./policies/trigger.policy"
 
 const TICK_BUDGET_MS = 25_000
-const FIRE_DELAY_MS = 5000
-const FEEDBACK_WINDOW_DAYS = 7
 
 @Injectable()
 /**
@@ -96,7 +93,6 @@ export class AutomationEngineService {
                 })
             }
         })
-        if (event.event === "message.inbound") await this.onFeedback(loaded, shop, data)
     }
 
     /**
@@ -114,23 +110,6 @@ export class AutomationEngineService {
             data: { transaction_id: transactionId, invoice_id: invoiceId },
             dedupe: `receipt:${transactionId ?? invoiceId ?? ""}`,
         })
-    }
-
-    /** Starts one run of a template for ONE workspace from code (a loyalty tier-up fires this); a no-op when its pipeline is off. */
-    async fireTemplate(request: FireTemplate): Promise<boolean> {
-        const item = (await this.loadPipelines(request.workspaceId)).find(
-            (candidate) => candidate.def.key === request.templateKey,
-        )
-        if (item === undefined) return false
-        const shop = await this.shop.shopOf(request.workspaceId)
-        // Written now and executed on a later tick, not inside the request or tick that fired it.
-        await this.start(item, shop, {
-            dedupe: request.dedupe,
-            triggerRef: request.triggerRef,
-            payload: request.payload,
-            delayMs: FIRE_DELAY_MS,
-        })
-        return true
     }
 
     /** The minute tick at the current instant: what the tick job of the queue runs. */
@@ -169,30 +148,6 @@ export class AutomationEngineService {
     }
 
     /* ------------------------------------------------------------------ events */
-
-    /** A customer replied after a review request: a negative answer tags the owner in Office (once per request). */
-    private async onFeedback(
-        loaded: ReadonlyArray<LoadedPipeline>,
-        shop: ShopWithHours,
-        data: EventData,
-    ): Promise<void> {
-        const item = loaded.find((candidate) => candidate.def.key === "ask_review")
-        const leadId = textOf(data.lead_id)
-        if (item === undefined || !leadId) return
-        const run = await this.runs.latestDoneRun({
-            pipelineId: item.pipeline.id,
-            reference: leadId,
-            since: new Date(this.clock.now().getTime() - FEEDBACK_WINDOW_DAYS * DAY_MS).toISOString(),
-        })
-        if (run === null || run.payload.alerted) return
-        await this.care.checkFeedback({
-            context: this.contextOf(item, shop),
-            runId: run.id,
-            runPayload: run.payload,
-            feedback: textOf(data.text),
-            leadId,
-        })
-    }
 
     /** The owner decided a work item: the automation run that waited for it ends, and the trust ladder moves. */
     private async onDecision(workspaceId: string, data: EventData): Promise<void> {

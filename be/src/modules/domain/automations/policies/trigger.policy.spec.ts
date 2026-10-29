@@ -131,39 +131,6 @@ describe("planTrigger", () => {
 })
 
 describe("planTrigger", () => {
-    describe("after hours", () => {
-        const base = { templateKey: "after_hours", event: "message.inbound", data: { conversation_id: "cv-1" } }
-
-        it("answers a message that arrives outside the opening hours, once a day per conversation", async () => {
-            const subject = await buildSubject()
-
-            expect(subject.planTrigger(input({ ...base }))).toEqual({
-                dedupe: "after:cv-1:2026-10-12",
-                triggerRef: "cv-1",
-                payload: { conversation_id: "cv-1", dedupe: "d-1" },
-                delayMs: 0,
-            })
-        })
-
-        it("stays quiet during the opening hours", async () => {
-            const subject = await buildSubject()
-
-            expect(subject.planTrigger(input({ ...base, at: new Date("2026-10-12T03:00:00.000Z") }))).toBeNull()
-        })
-
-        it("reads the hours from the settings when the shop states none", async () => {
-            const subject = await buildSubject()
-
-            const shop = buildShop({ hoursRange: null })
-            const config = { openFrom: "08:00", openTo: "21:00" }
-
-            expect(
-                subject.planTrigger(input({ ...base, shop, config, at: new Date("2026-10-12T03:00:00.000Z") })),
-            ).toBeNull()
-            expect(subject.planTrigger(input({ ...base, shop, config }))).not.toBeNull()
-        })
-    })
-
     it("does nothing for an event or a template it does not know", async () => {
         const subject = await buildSubject()
 

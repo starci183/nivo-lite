@@ -1,17 +1,10 @@
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
 import { persistPublicApiInbound } from "../../fixtures/builders/public-api.builder"
-import * as statements from "../../fixtures/persistence/public-api.sql"
 import { PUBLIC_API_PROOF_MODULES } from "../../world/public-api-capabilities.options"
 import { publicApiWork } from "../../world/public-api-proof.service"
 import { preparePublicApiProof } from "../../world/public-api-suite.service"
 import { useTestWorld } from "../../world/use-test-world"
-
-interface InboundState {
-    readonly id: string
-    readonly event_id: string
-    readonly body: string
-    readonly lead_id: string | null
-}
+import { apiInbound } from "../../world/public-api-database.service"
 
 describe("Public API unresolved-legacy-lead (persisted local integration)", () => {
     const world = useTestWorld({ modules: [...PUBLIC_API_PROOF_MODULES, ProcessPublicApiQueueModule.register({})] })
@@ -22,14 +15,14 @@ describe("Public API unresolved-legacy-lead (persisted local integration)", () =
         const inboundEventId = world.id()
         await persistPublicApiInbound(world.db.primary, {
             id: inboundEventId,
-            workspace_id: identity.workspaceId,
+            workspaceId: identity.workspaceId,
             channel: "manual",
             kind: "lead",
-            sender_name: "Unresolved historical customer",
+            senderName: "Unresolved historical customer",
             body: "Original historical need",
-            external_ref: "api:Public API proof",
-            event_id: world.id(),
-            dedupe_key: `api:historical:${world.id()}`,
+            externalRef: "api:Public API proof",
+            eventId: world.id(),
+            dedupeKey: `api:historical:${world.id()}`,
         })
         const payload = {
             kind: "lead",
@@ -41,16 +34,12 @@ describe("Public API unresolved-legacy-lead (persisted local integration)", () =
             stage: null,
             note: "",
         }
-        const original = await world.db.primary.query<Array<InboundState>>(statements.API_INBOUND, [
-            identity.workspaceId,
-        ])
+        const original = await apiInbound(world.db.primary, identity.workspaceId)
         await expect(deliver(payload, "public_api")).rejects.toMatchObject({
             code: "PUBLIC_API_REQUEST_INVALID",
             params: { field: "legacyChannel" },
         })
-        expect(
-            await world.db.primary.query<Array<InboundState>>(statements.API_INBOUND, [identity.workspaceId]),
-        ).toEqual(original)
+        expect(await apiInbound(world.db.primary, identity.workspaceId)).toEqual(original)
         expect(await publicApiWork(world, identity.workspaceId)).toEqual([])
         expect(await inbox(identity.workspaceId)).toEqual([])
     })

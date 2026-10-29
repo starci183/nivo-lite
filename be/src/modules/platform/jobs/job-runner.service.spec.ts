@@ -13,7 +13,7 @@ import type { JobsOptions } from "./jobs.options"
 import type { JobClaims } from "./jobs.port"
 import { JobRunnerService } from "./job-runner.service"
 
-const options: JobsOptions = { connection: "primary", workerId: "w-1", leaseMs: 60000 }
+const options: JobsOptions = { connection: "primary", workerId: "w-1", leaseMs: 60000, scheduler: { enabled: false } }
 const delivery: QueueDelivery = {
     id: "k-1",
     queue: "mail",

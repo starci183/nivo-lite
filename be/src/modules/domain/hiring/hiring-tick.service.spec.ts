@@ -14,15 +14,24 @@ import { HiringTextService } from "./hiring-text.service"
 import { HiringTickService } from "./hiring-tick.service"
 import type { InterviewRecord } from "./hiring.contracts"
 import { HiringLogEvent } from "./hiring.log-events"
-import type { TickWorkspaceRow } from "./persistence/hiring.rows"
-import { EXPIRE_JOBS, EXPIRE_OFFERS, LOG_RETENTION } from "./persistence/hiring.sql"
+
+const EXPIRE_OFFERS = "SELECT * FROM public.hiring_offers_expire($1, $2)"
+const EXPIRE_JOBS = "SELECT * FROM public.hiring_jobs_expire($1)"
+const LOG_RETENTION = "SELECT * FROM public.hiring_retention_log_add($1, $2, $3, $4)"
+
+/** What the tick reads of the settings of a workspace. */
+interface TickWorkspace {
+    readonly workspaceId: string
+    readonly retentionDays: number
+    readonly remindInterview: boolean
+}
 
 const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
 
-const settingsOf = builder<TickWorkspaceRow>({
-    workspace_id: "ws-1",
-    retention_days: 30,
-    remind_interview: true,
+const settingsOf = builder<TickWorkspace>({
+    workspaceId: "ws-1",
+    retentionDays: 30,
+    remindInterview: true,
 })
 
 const interviewOf = builder<InterviewRecord>({
@@ -133,7 +142,7 @@ describe("HiringTickService", () => {
             ],
         })
         const { service, data, office, candidates, interviews, catalog, logger } = await build(em)
-        data.tickWorkspace.mockResolvedValue(settingsOf({ retention_days: 10, remind_interview: false }))
+        data.tickWorkspace.mockResolvedValue(settingsOf({ retentionDays: 10, remindInterview: false }))
 
         await expect(service.run("ws-1")).resolves.toEqual(nothing)
 
@@ -158,8 +167,8 @@ describe("HiringTickService", () => {
     it("counts sent reminders, expired offers, closed jobs and deleted candidates and files", async () => {
         const em = mockEntityManager({
             query: [
-                [EXPIRE_OFFERS, [{ ids: ["offer-1", "offer-2"] }]],
-                [EXPIRE_JOBS, [{ titles: ["Barista", "Cashier"] }]],
+                [EXPIRE_OFFERS, [{ hiring_offers_expire: ["offer-1", "offer-2"] }]],
+                [EXPIRE_JOBS, [{ hiring_jobs_expire: ["Barista", "Cashier"] }]],
                 [LOG_RETENTION, []],
             ],
         })
@@ -220,8 +229,8 @@ describe("HiringTickService", () => {
     it("handles enabled reminders with no due interviews and present empty expiration rows", async () => {
         const em = mockEntityManager({
             query: [
-                [EXPIRE_OFFERS, [{ ids: [] }]],
-                [EXPIRE_JOBS, [{ titles: [] }]],
+                [EXPIRE_OFFERS, [{ hiring_offers_expire: [] }]],
+                [EXPIRE_JOBS, [{ hiring_jobs_expire: [] }]],
             ],
         })
         const { service, data, office, interviews, candidates, logger } = await build(em)
@@ -276,8 +285,8 @@ describe("HiringTickService", () => {
     it("preserves successful counts when reminding fails", async () => {
         const em = mockEntityManager({
             query: [
-                [EXPIRE_OFFERS, [{ ids: ["offer-1"] }]],
-                [EXPIRE_JOBS, [{ titles: ["Barista"] }]],
+                [EXPIRE_OFFERS, [{ hiring_offers_expire: ["offer-1"] }]],
+                [EXPIRE_JOBS, [{ hiring_jobs_expire: ["Barista"] }]],
                 [LOG_RETENTION, []],
             ],
         })

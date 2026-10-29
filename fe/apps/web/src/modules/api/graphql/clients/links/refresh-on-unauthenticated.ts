@@ -7,7 +7,7 @@ const isUnauthenticated = (result: ApolloLink.Result): boolean =>
 
 /** Parameters of the refresh link. */
 export interface CreateRefreshOnUnauthenticatedLinkParams {
-    /** Refreshes the session and answers the new token; defaults to `supabase.auth.refreshSession`. */
+    /** Refreshes the session and answers the new token; defaults to `POST /auth/refresh`. */
     refresh?: () => Promise<string | undefined>
 }
 
@@ -53,7 +53,7 @@ const refreshOperation = (
     })
 
 /**
- * On an `unauthenticated` answer, refreshes the Supabase session once and sends the same operation again; the access-token
+ * On an `unauthenticated` answer, refreshes the session once and sends the same operation again; the access-token
  * link below it then attaches the new token. When the refresh yields no session, the original answer goes through so the
  * caller sees the refusal.
  */

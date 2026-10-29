@@ -1,24 +1,21 @@
 import { Test } from "@nestjs/testing"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { BookingExceptionEntity } from "@modules/domain/booking-exceptions"
+import { BookingHourEntity } from "@modules/domain/booking-hours"
+import { BookingResourceEntity } from "@modules/domain/booking-resources"
+import { BookingServiceEntity } from "@modules/domain/booking-services"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { BookingBoardService } from "./booking-board.service"
+import type { BoardBookingFacts } from "./booking-facts.contracts"
 import { BookingModelService } from "./booking-model.service"
 import { BookingOverviewService } from "./booking-overview.service"
+import { DEFAULT_SETTINGS } from "./bookings.contracts"
 import type { BookingOverview } from "./bookings.contracts"
 import { BookingsErrorCode } from "./errors/bookings.error"
-import type { BoardBookingRow } from "./persistence/booking-board.rows"
-import {
-    SELECT_BOARD_BOOKINGS,
-    SELECT_BOARD_EXCEPTIONS,
-    SELECT_BOARD_RESOURCES,
-    SELECT_BOARD_STAFF,
-    SELECT_BOARD_WAITLIST,
-} from "./persistence/booking-board.sql"
-import { SELECT_HOURS, SELECT_SERVICES } from "./persistence/booking-model.sql"
-import { DEFAULT_SETTINGS } from "./persistence/booking.rows"
 
 const WORKSPACE = "ws-1"
 const USER = "user-1"
@@ -37,7 +34,7 @@ const OVERVIEW: BookingOverview = {
     stats: { byResource: [], byStatus: {}, noShowPct: 0, doneRevenueVnd: 0, total: 0 },
 }
 
-const BOOKING: BoardBookingRow = {
+const BOOKING: BoardBookingFacts = {
     id: "b-1",
     customer_name: "Mai",
     customer_phone: "0900",
@@ -61,6 +58,32 @@ const BOOKING: BoardBookingRow = {
     reschedule_count: 0,
 }
 
+/** A manager whose five entity reads are empty and whose three query builders answer the bookings, the waitlist and the staff. */
+const boardManager = () => {
+    const em = mockEntityManager({
+        find: [
+            [BookingServiceEntity, []],
+            [BookingResourceEntity, []],
+            [BookingHourEntity, []],
+            [BookingExceptionEntity, []],
+        ],
+    })
+    const bookings = fakeQueryBuilder({ getRawMany: [BOOKING] })
+    const waitlist = fakeQueryBuilder({ getRawMany: [] })
+    const staff = fakeQueryBuilder({ getRawMany: [{ id: "s-1", name: "Anna" }] })
+    em.createQueryBuilder
+        .mockReturnValueOnce(bookings.builder)
+        .mockReturnValueOnce(waitlist.builder)
+        .mockReturnValueOnce(staff.builder)
+    return { em, bookings, waitlist, staff }
+}
+
+/** The `onDate` bound of the exceptions read. */
+const exceptionsFrom = (em: MockEntityManager): unknown => {
+    const call = em.find.mock.calls.find(([entity]) => entity === BookingExceptionEntity)
+    return JSON.stringify(call?.[1])
+}
+
 const build = async (entityManager: MockEntityManager) => {
     const members = mock<WorkspaceMembersService>()
     const models = mock<BookingModelService>({ settings: jest.fn(() => Promise.resolve(DEFAULT_SETTINGS)) })
@@ -81,17 +104,7 @@ const build = async (entityManager: MockEntityManager) => {
 describe("BookingBoardService", () => {
     describe("board", () => {
         it("reads this week and places bookings on the workspace's local clock", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_SERVICES, []],
-                    [SELECT_BOARD_RESOURCES, []],
-                    [SELECT_HOURS, []],
-                    [SELECT_BOARD_EXCEPTIONS, []],
-                    [SELECT_BOARD_BOOKINGS, [BOOKING]],
-                    [SELECT_BOARD_WAITLIST, []],
-                    [SELECT_BOARD_STAFF, [{ id: "s-1", name: "Anna" }]],
-                ],
-            })
+            const { em, bookings } = boardManager()
             const { service, members, overview } = await build(em)
 
             const board = await service.board(USER, { workspaceId: WORKSPACE })
@@ -117,12 +130,17 @@ describe("BookingBoardService", () => {
                 }),
             ])
             expect(members.require).toHaveBeenCalledWith(USER, WORKSPACE)
-            expect(em.query).toHaveBeenCalledWith(SELECT_BOARD_BOOKINGS, [
-                WORKSPACE,
-                "2026-10-11T17:00:00.000Z",
-                "2026-10-18T17:00:00.000Z",
+            expect(bookings.callsOf("where")).toEqual([
+                [
+                    "b.workspaceId = :workspaceId AND b.startAt < :to AND b.endAt > :from",
+                    {
+                        workspaceId: WORKSPACE,
+                        from: new Date("2026-10-11T17:00:00.000Z"),
+                        to: new Date("2026-10-18T17:00:00.000Z"),
+                    },
+                ],
             ])
-            expect(em.query).toHaveBeenCalledWith(SELECT_BOARD_EXCEPTIONS, [WORKSPACE, "2026-10-12"])
+            expect(exceptionsFrom(em)).toContain("2026-10-12")
             expect(overview.overview).toHaveBeenCalledWith(USER, {
                 workspaceId: WORKSPACE,
                 from: "2026-10-12",
@@ -135,39 +153,17 @@ describe("BookingBoardService", () => {
 describe("BookingBoardService", () => {
     describe("board", () => {
         it("reads exceptions from yesterday when the range starts later", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_SERVICES, []],
-                    [SELECT_BOARD_RESOURCES, []],
-                    [SELECT_HOURS, []],
-                    [SELECT_BOARD_EXCEPTIONS, []],
-                    [SELECT_BOARD_BOOKINGS, [BOOKING]],
-                    [SELECT_BOARD_WAITLIST, []],
-                    [SELECT_BOARD_STAFF, [{ id: "s-1", name: "Anna" }]],
-                ],
-            })
+            const { em } = boardManager()
             const { service } = await build(em)
 
             const board = await service.board(USER, { workspaceId: WORKSPACE, from: "2026-10-20", to: "2026-10-20" })
 
             expect(board).toMatchObject({ from: "2026-10-20", to: "2026-10-20" })
-            expect(em.query).toHaveBeenCalledWith(SELECT_BOARD_EXCEPTIONS, [WORKSPACE, "2026-10-13"])
+            expect(exceptionsFrom(em)).toContain("2026-10-13")
         })
 
         it("refuses invalid dates, reversed ranges and ranges longer than a year", async () => {
-            const { service } = await build(
-                mockEntityManager({
-                    query: [
-                        [SELECT_SERVICES, []],
-                        [SELECT_BOARD_RESOURCES, []],
-                        [SELECT_HOURS, []],
-                        [SELECT_BOARD_EXCEPTIONS, []],
-                        [SELECT_BOARD_BOOKINGS, [BOOKING]],
-                        [SELECT_BOARD_WAITLIST, []],
-                        [SELECT_BOARD_STAFF, [{ id: "s-1", name: "Anna" }]],
-                    ],
-                }),
-            )
+            const { service } = await build(boardManager().em)
 
             for (const range of [
                 { from: "2026-02-30" },
@@ -181,23 +177,14 @@ describe("BookingBoardService", () => {
         })
 
         it("reads nothing for someone who is not a member", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_SERVICES, []],
-                    [SELECT_BOARD_RESOURCES, []],
-                    [SELECT_HOURS, []],
-                    [SELECT_BOARD_EXCEPTIONS, []],
-                    [SELECT_BOARD_BOOKINGS, [BOOKING]],
-                    [SELECT_BOARD_WAITLIST, []],
-                    [SELECT_BOARD_STAFF, [{ id: "s-1", name: "Anna" }]],
-                ],
-            })
+            const { em } = boardManager()
             const { service, members } = await build(em)
             const refusal = new Error("not a member")
             members.require.mockRejectedValue(refusal)
 
             await expect(service.board(USER, { workspaceId: WORKSPACE })).rejects.toBe(refusal)
-            expect(em.query).not.toHaveBeenCalled()
+            expect(em.find).not.toHaveBeenCalled()
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
     })
 })
@@ -216,7 +203,7 @@ describe("BookingBoardService", () => {
             await expect(service.board(USER, { workspaceId: WORKSPACE, ...range })).rejects.toMatchObject({
                 code: BookingsErrorCode.InvalidInput,
             })
-            expect(em.query).not.toHaveBeenCalled()
+            expect(em.find).not.toHaveBeenCalled()
             expect(overview.overview).not.toHaveBeenCalled()
         })
     })

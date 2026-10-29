@@ -1,11 +1,33 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { storedAvatarAddress } from "@modules/integrations/object-storage"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspaceMembersError, WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
-import type { ProviderRow, RevokedRow, SessionRow } from "./persistence/account-sessions.rows"
-import { LIST_PROVIDERS, LIST_SESSIONS, REVOKE_SESSION } from "./persistence/account-sessions.sql"
 import type { AccountDirectory, AccountOverview, DeviceSession } from "./workspace-members.contracts"
 import { InjectAccountDirectory } from "./workspace-members.port"
+
+/** One row of `public.be_account_sessions`. */
+interface SessionRow {
+    readonly id: string
+    readonly created_at: Date | string | null
+    readonly last_active_at: Date | string | null
+    readonly user_agent: string | null
+    readonly ip: string | null
+}
+
+/** One row of `public.be_account_providers`. */
+interface ProviderRow {
+    readonly provider: string
+}
+
+/** The answer of `public.be_revoke_session`: one row named after the function. */
+interface RevokedRow {
+    readonly be_revoke_session: boolean
+}
+
+/** The most sessions and providers the overview lists. */
+const SESSION_LIMIT = 100
+const PROVIDER_LIMIT = 20
 
 const isoOf = (value: Date | string | null): string | null => (value === null ? null : new Date(value).toISOString())
 
@@ -21,11 +43,11 @@ export class AccountSessionsService {
     async overview(userId: string, currentSessionId?: string): Promise<AccountOverview> {
         const [profile, providers, sessions] = await Promise.all([
             this.accounts.accountOf(userId),
-            this.entityManager.query<Array<ProviderRow>>(LIST_PROVIDERS, [userId]),
-            this.entityManager.query<Array<SessionRow>>(LIST_SESSIONS, [userId]),
+            callDbFunction<ProviderRow>(this.entityManager, "public.be_account_providers", [userId]),
+            callDbFunction<SessionRow>(this.entityManager, "public.be_account_sessions", [userId]),
         ])
         const known = profile.kind === "ok" ? profile.value : undefined
-        const devices = sessions.map((row): DeviceSession => ({
+        const devices = sessions.slice(0, SESSION_LIMIT).map((row): DeviceSession => ({
             id: row.id,
             userAgent: row.user_agent,
             ip: row.ip,
@@ -36,9 +58,9 @@ export class AccountSessionsService {
         return {
             name: known?.displayName ?? "",
             email: known?.email ?? "",
-            avatarUrl: known?.avatarUrl ?? null,
-            uploadedAvatarUrl: known?.uploadedAvatarUrl ?? null,
-            providers: providers.map((row) => row.provider),
+            avatarUrl: storedAvatarAddress(known?.avatarUrl ?? null),
+            uploadedAvatarUrl: storedAvatarAddress(known?.uploadedAvatarUrl ?? null),
+            providers: providers.slice(0, PROVIDER_LIMIT).map((row) => row.provider),
             sessions: [...devices].sort((a, b) => Number(b.isCurrent) - Number(a.isCurrent)),
         }
     }
@@ -47,7 +69,11 @@ export class AccountSessionsService {
     async revokeSession(userId: string, sessionId: string, currentSessionId?: string): Promise<void> {
         if (sessionId === currentSessionId)
             throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.CurrentSession })
-        const [row] = await this.entityManager.query<Array<RevokedRow>>(REVOKE_SESSION, [userId, sessionId])
-        if (!row?.revoked) throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.SessionNotFound })
+        const [row] = await callDbFunction<RevokedRow>(this.entityManager, "public.be_revoke_session", [
+            userId,
+            sessionId,
+        ])
+        if (!row?.be_revoke_session)
+            throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.SessionNotFound })
     }
 }

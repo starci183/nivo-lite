@@ -1,15 +1,13 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
-import {
-    FIND_MEMBER_BY_NAME,
-    FIND_OWNER_AGENT,
-    FIND_OWNER_MEMBER,
-    FIND_WORKSPACE_OWNER,
-} from "./persistence/responsibility-owners.sql"
 import { ResponsibilityOwnersService } from "./responsibility-owners.service"
+
+/** The statement `callDbFunction` runs to find the owner seat. */
+const FIND_WORKSPACE_OWNER = "SELECT * FROM public.workspace_owner_member($1)"
 
 const MEMBER_ID = "11111111-1111-4111-8111-111111111111"
 const AGENT_ID = "22222222-2222-4222-8222-222222222222"
@@ -23,7 +21,9 @@ const build = async (em: MockEntityManager) => {
 
 describe("ResponsibilityOwnersService > resolve", () => {
     it("makes a member of the workspace the owner under the member's name", async () => {
-        const em = mockEntityManager({ query: [FIND_OWNER_MEMBER, [{ id: MEMBER_ID, display_name: "Anh Minh" }]] })
+        const em = mockEntityManager()
+        const lookup = fakeQueryBuilder({ getRawOne: { id: MEMBER_ID, display_name: "Anh Minh" } })
+        answerQueryBuilders(em, lookup)
         const service = await build(em)
 
         await expect(service.resolve(em, "ws-1", MEMBER_ID)).resolves.toEqual({
@@ -32,18 +32,21 @@ describe("ResponsibilityOwnersService > resolve", () => {
             memberId: MEMBER_ID,
             name: "Anh Minh",
         })
-        expect(em.query.mock.calls).toEqual([[FIND_OWNER_MEMBER, ["ws-1", MEMBER_ID]]])
+        expect(lookup.argsOf("from")).toEqual([["public.workspace_members", "m"]])
+        expect(lookup.argsOf("where")).toEqual([
+            [
+                "m.workspace_id = :workspaceId AND m.id = :owner AND m.status = 'active'",
+                { workspaceId: "ws-1", owner: MEMBER_ID },
+            ],
+        ])
     })
 
     it("makes an agent of the workspace the owner when no member has the id, inside the caller's transaction", async () => {
-        const tx = fakeTransaction(
-            mockEntityManager({
-                query: [
-                    [FIND_OWNER_MEMBER, []],
-                    [FIND_OWNER_AGENT, [{ id: AGENT_ID, name: "Sales AI" }]],
-                ],
-            }),
-        )
+        const em = mockEntityManager()
+        const asMember = fakeQueryBuilder({ getRawOne: undefined })
+        const asAgent = fakeQueryBuilder({ getRawOne: { id: AGENT_ID, name: "Sales AI" } })
+        answerQueryBuilders(em, asMember, asAgent)
+        const tx = fakeTransaction(em)
         const service = await build(mockEntityManager())
 
         await expect(service.resolve(tx.em, "ws-1", AGENT_ID)).resolves.toEqual({
@@ -52,19 +55,16 @@ describe("ResponsibilityOwnersService > resolve", () => {
             memberId: null,
             name: "Sales AI",
         })
-        expect(tx.em.query.mock.calls.map((call) => call[1])).toEqual([
-            ["ws-1", AGENT_ID],
-            ["ws-1", AGENT_ID],
+        expect(asMember.argsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", owner: AGENT_ID })
+        expect(asAgent.argsOf("from")).toEqual([["public.agents", "a"]])
+        expect(asAgent.argsOf("where")).toEqual([
+            ["a.workspace_id = :workspaceId AND a.id = :owner", { workspaceId: "ws-1", owner: AGENT_ID }],
         ])
     })
 
     it("refuses an id that is neither a member nor an agent of the workspace", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_OWNER_MEMBER, []],
-                [FIND_OWNER_AGENT, []],
-            ],
-        })
+        const em = mockEntityManager()
+        answerQueryBuilders(em, fakeQueryBuilder({ getRawOne: undefined }), fakeQueryBuilder({ getRawOne: undefined }))
         const service = await build(em)
 
         await expect(service.resolve(em, "ws-1", AGENT_ID)).rejects.toMatchObject({
@@ -81,13 +81,14 @@ describe("ResponsibilityOwnersService > resolve", () => {
             code: ResponsibilitiesErrorCode.OwnerNotFound,
             params: { id: "human" },
         })
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 })
 
 describe("ResponsibilityOwnersService > the defaults", () => {
     it("answers the workspace owner seat as an owner", async () => {
-        const em = mockEntityManager({ query: [FIND_WORKSPACE_OWNER, [{ id: MEMBER_ID, display_name: "Chu Van" }]] })
+        const em = mockEntityManager({ query: [FIND_WORKSPACE_OWNER, [{ workspace_owner_member: MEMBER_ID }]] })
+        answerQueryBuilders(em, fakeQueryBuilder({ getRawOne: { id: MEMBER_ID, display_name: "Chu Van" } }))
         const service = await build(em)
 
         await expect(service.workspaceOwner("ws-1")).resolves.toEqual({
@@ -99,7 +100,9 @@ describe("ResponsibilityOwnersService > the defaults", () => {
     })
 
     it("refuses when the workspace has no active owner seat", async () => {
-        const service = await build(mockEntityManager({ query: [FIND_WORKSPACE_OWNER, []] }))
+        const service = await build(
+            mockEntityManager({ query: [FIND_WORKSPACE_OWNER, [{ workspace_owner_member: null }]] }),
+        )
 
         await expect(service.workspaceOwner("ws-1")).rejects.toMatchObject({
             code: ResponsibilitiesErrorCode.OwnerNotFound,
@@ -107,9 +110,22 @@ describe("ResponsibilityOwnersService > the defaults", () => {
         })
     })
 
+    it("refuses when the owner seat function names a seat that has no member row", async () => {
+        const em = mockEntityManager({ query: [FIND_WORKSPACE_OWNER, [{ workspace_owner_member: MEMBER_ID }]] })
+        answerQueryBuilders(em, fakeQueryBuilder({ getRawOne: undefined }))
+        const service = await build(em)
+
+        await expect(service.workspaceOwner("ws-1")).rejects.toMatchObject({
+            code: ResponsibilitiesErrorCode.OwnerNotFound,
+        })
+    })
+
     it("answers the active member who carries a name, or null when none does", async () => {
-        const named = mockEntityManager({ query: [FIND_MEMBER_BY_NAME, [{ id: MEMBER_ID, display_name: "Linh" }]] })
-        const nobody = mockEntityManager({ query: [FIND_MEMBER_BY_NAME, []] })
+        const named = mockEntityManager()
+        const nobody = mockEntityManager()
+        const lookup = fakeQueryBuilder({ getRawOne: { id: MEMBER_ID, display_name: "Linh" } })
+        answerQueryBuilders(named, lookup)
+        answerQueryBuilders(nobody, fakeQueryBuilder({ getRawOne: undefined }))
 
         await expect((await build(named)).memberNamed("ws-1", "linh")).resolves.toEqual({
             kind: "human",
@@ -118,6 +134,7 @@ describe("ResponsibilityOwnersService > the defaults", () => {
             name: "Linh",
         })
         await expect((await build(nobody)).memberNamed("ws-1", "Ghost")).resolves.toBeNull()
-        expect(named.query.mock.calls).toEqual([[FIND_MEMBER_BY_NAME, ["ws-1", "linh"]]])
+        expect(lookup.argsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", name: "linh" })
+        expect(lookup.argsOf("orderBy")).toEqual([["m.created_at", "ASC"]])
     })
 })

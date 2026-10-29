@@ -27,16 +27,13 @@ import { RunZaloWizardQueueModule } from "@features/jobs/run-zalo-wizard"
 import { RunChatTurnQueueModule } from "@features/jobs/run-chat-turn"
 import { RunLeadActionQueueModule } from "@features/jobs/run-lead-action"
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
-import { ReconcileBankCreditQueueModule } from "@features/jobs/reconcile-bank-credit"
 import { CreatePaymentOrderQueueModule } from "@features/jobs/create-payment-order"
-import { ApplyBookingStatusQueueModule } from "@features/jobs/apply-booking-status"
 import { PublishContentQueueModule } from "@features/jobs/publish-content"
 import { AcceptMetaEventQueueModule } from "@features/jobs/accept-meta-event"
 import { IssueInviteQueueModule } from "@features/jobs/issue-invite"
 import { RenderVideoQueueModule } from "@features/jobs/render-video"
 import { ConnectionCommandsQueueModule } from "@features/jobs/connection-commands"
 import { RequestRenderQueueModule } from "@features/jobs/request-render"
-import { DeductOrderQueueModule } from "@features/jobs/deduct-order"
 import { ReplenishStockQueueModule } from "@features/jobs/replenish-stock"
 import { HiringTickQueueModule } from "@features/jobs/hiring-tick"
 import { RunShiftsAlertsQueueModule } from "@features/jobs/run-shifts-alerts"
@@ -76,9 +73,7 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     RunChatTurnQueueModule.register({}),
     RunLeadActionQueueModule.register({}),
     ProcessPublicApiQueueModule.register({}),
-    ReconcileBankCreditQueueModule.register({}),
     CreatePaymentOrderQueueModule.register({}),
-    ApplyBookingStatusQueueModule.register({}),
     PublishContentQueueModule.register({}),
     AcceptMetaEventQueueModule.register({}),
     RunLeadGenQueueModule.register({}),
@@ -88,7 +83,6 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     RenderVideoQueueModule.register({}),
     ConnectionCommandsQueueModule.register({}),
     RequestRenderQueueModule.register({}),
-    DeductOrderQueueModule.register({}),
     ReplenishStockQueueModule.register({}),
     HiringTickQueueModule.register({}),
     RunShiftsAlertsQueueModule.register({}),

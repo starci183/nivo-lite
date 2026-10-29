@@ -1,22 +1,25 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
+import type { MockEntityManager } from "@starci/jest-preset"
+import { In, Not } from "typeorm"
+import { ContentPillarEntity } from "@modules/domain/content-pillars"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
+import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder.builder"
+import { namedCalls, stampedValues } from "@tests/fixtures/builders/entity-row.builder"
 import { ContentAiStoreService } from "./content-ai-store.service"
 import { ContentItemsErrorCode } from "./errors/content-items.error"
-import {
-    APPLY_GENERATED_DRAFT,
-    DELETE_UNTOUCHED_PLAN_IDEAS,
-    INSERT_PLANNED_IDEAS,
-    INSERT_QUICK_IDEA,
-    SELECT_RECENT_CONTENT_TITLES,
-} from "./persistence/content-ai-store.sql"
+import { ContentItemEntity } from "./persistence/entities"
 
-const build = async () => {
+const build = async (
+    answers: ReadonlyArray<QueryBuilderAnswers> = [],
+    entityManager: MockEntityManager = mockEntityManager(),
+) => {
     const clock = new FakeClock("2026-01-01T00:00:00.000Z")
-    const entityManager = mockEntityManager()
     const members = mock<WorkspaceMembersService>()
+    const fakes = queueQueryBuilders(entityManager, answers)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ContentAiStoreService,
@@ -25,7 +28,7 @@ const build = async () => {
             { provide: CLOCK, useValue: clock },
         ],
     }).compile()
-    return { service: moduleRef.get(ContentAiStoreService), clock, entityManager, members }
+    return { service: moduleRef.get(ContentAiStoreService), clock, entityManager, members, fakes }
 }
 
 const member = {
@@ -38,145 +41,75 @@ const member = {
 }
 
 const variants = { facebook: { text: "Draft", hashtags: ["launch"], note: "Friendly" } }
+const quick = (updatedAt: string | Date) => ({ execute: { raw: [{ id: "idea-1", updated_at: updatedAt }] } })
 
-describe("ContentAiStoreService", () => {
-    describe("createQuickIdea", () => {
-        it("createQuickIdea exercises its first behavior through the compiled module", async () => {
-            const { service, entityManager, members } = await build()
-            members.require.mockResolvedValue(member)
-            entityManager.query.mockResolvedValue([])
-            await expect(
-                service.createQuickIdea("user-1", "workspace-1", { topic: "Launch", channels: ["facebook"] }),
-            ).rejects.toMatchObject({ code: ContentItemsErrorCode.NotWritten })
-
-            expect(service.createQuickIdea).toBeInstanceOf(Function)
-        })
-    })
-
-    describe("applyDraft", () => {
-        it("applyDraft exercises its first behavior through the compiled module", async () => {
-            const { service, entityManager } = await build()
-            entityManager.query.mockResolvedValue([])
-            await expect(service.applyDraft("workspace-1", "idea-1", { variants, hashtags: [] })).rejects.toMatchObject(
-                {
-                    code: ContentItemsErrorCode.NotWritten,
-                },
-            )
-
-            expect(service.applyDraft).toBeInstanceOf(Function)
-        })
-    })
-
-    describe("recentTitles", () => {
-        it("recentTitles exercises its first behavior through the compiled module", async () => {
-            const { service, entityManager } = await build()
-            entityManager.query.mockResolvedValue([{ title: "Latest" }, { title: "Earlier" }])
-            await expect(service.recentTitles("workspace-1", "idea-1")).resolves.toEqual(["Latest", "Earlier"])
-            expect(entityManager.query).toHaveBeenCalledWith(SELECT_RECENT_CONTENT_TITLES, ["workspace-1", "idea-1"])
-
-            expect(service.recentTitles).toBeInstanceOf(Function)
-        })
-    })
-
-    describe("insertPlannedIdeas", () => {
-        it("insertPlannedIdeas exercises its first behavior through the compiled module", async () => {
-            const { service } = await build()
-            const tx = mockEntityManager({
-                query: [
-                    [DELETE_UNTOUCHED_PLAN_IDEAS, []],
-                    [INSERT_PLANNED_IDEAS, [{ id: "unexpected" }]],
-                ],
-            })
-            await expect(
-                service.insertPlannedIdeas(
-                    "workspace-1",
-                    "plan-1",
-                    {
-                        month: "2026-01",
-                        actor: "Mai",
-                        meta: {},
-                        generationId: "generation-1",
-                        aiMs: 0,
-                        items: [],
-                    },
-                    tx,
-                ),
-            ).rejects.toMatchObject({ code: ContentItemsErrorCode.NotWritten })
-
-            expect(service.insertPlannedIdeas).toBeInstanceOf(Function)
-        })
-    })
-})
-
-describe("ContentAiStoreService writes", () => {
+describe("ContentAiStoreService createQuickIdea", () => {
     it("creates a bounded first-line title with membership identity and normalizes the revision", async () => {
-        const { service, entityManager, members } = await build()
+        const { service, members, fakes, entityManager } = await build([quick(new Date("2026-01-01T07:00:00+07:00"))])
         members.require.mockResolvedValue(member)
-        entityManager.query.mockResolvedValue([{ id: "idea-1", updated_at: new Date("2026-01-01T07:00:00+07:00") }])
         const topic = `${"a".repeat(90)}\nFull brief`
         await expect(
             service.createQuickIdea("user-1", "workspace-1", { topic, channels: ["facebook", "zalo"] }),
         ).resolves.toEqual({ id: "idea-1", updatedAt: "2026-01-01T00:00:00.000Z" })
         expect(members.require).toHaveBeenCalledWith("user-1", "workspace-1", ["owner", "manager"])
-        expect(entityManager.query).toHaveBeenCalledWith(INSERT_QUICK_IDEA, [
-            "workspace-1",
-            "a".repeat(80),
-            topic,
-            ["facebook", "zalo"],
-            "Mai",
+        expect(entityManager.createQueryBuilder).toHaveBeenCalledWith(ContentItemEntity, "ci")
+        expect(fakes[0]?.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "workspace-1",
+                    title: "a".repeat(80),
+                    brief: topic,
+                    channels: ["facebook", "zalo"],
+                    status: "idea",
+                    source: "quick",
+                    createdBy: "Mai",
+                },
+            ],
         ])
+        expect(fakes[0]?.callsOf("returning")).toEqual([["id, updated_at"]])
     })
-})
 
-describe("ContentAiStoreService writes", () => {
     it("uses the supplied transaction and falls back to the user identity for an unnamed member", async () => {
         const { service, entityManager, members } = await build()
-        const tx = mockEntityManager({
-            query: [INSERT_QUICK_IDEA, [{ id: "idea-2", updated_at: "2026-01-02T00:00:00Z" }]],
-        })
+        const tx = mockEntityManager()
+        const [write] = queueQueryBuilders(tx, [quick("2026-01-02T00:00:00Z")])
         members.require.mockResolvedValue({ ...member, displayName: "" })
         await expect(
             service.createQuickIdea("user-1", "workspace-1", { topic: "", channels: ["facebook"] }, tx),
-        ).resolves.toEqual({ id: "idea-2", updatedAt: "2026-01-02T00:00:00.000Z" })
-        expect(tx.query).toHaveBeenCalledWith(INSERT_QUICK_IDEA, ["workspace-1", "", "", ["facebook"], "user-1"])
-        expect(entityManager.query).not.toHaveBeenCalled()
+        ).resolves.toEqual({ id: "idea-1", updatedAt: "2026-01-02T00:00:00.000Z" })
+        expect(write?.callsOf("values")[0]?.[0]).toMatchObject({ title: "", brief: "", createdBy: "user-1" })
+        expect(entityManager.createQueryBuilder).not.toHaveBeenCalled()
     })
-})
 
-describe("ContentAiStoreService writes", () => {
     it.each([
         { topic: "\nFull brief", title: "" },
         { topic: "Launch\nFull brief", title: "Launch" },
         { topic: "Launch", title: "Launch" },
     ])("preserves the first line of $topic as the title", async ({ topic, title }) => {
-        const { service, entityManager, members } = await build()
+        const { service, members, fakes } = await build([quick("2026-01-01T00:00:00Z")])
         members.require.mockResolvedValue(member)
-        entityManager.query.mockResolvedValue([{ id: "idea-1", updated_at: "2026-01-01T00:00:00Z" }])
 
         await expect(service.createQuickIdea("user-1", "workspace-1", { topic, channels: [] })).resolves.toEqual({
             id: "idea-1",
             updatedAt: "2026-01-01T00:00:00.000Z",
         })
-        expect(entityManager.query).toHaveBeenCalledWith(INSERT_QUICK_IDEA, ["workspace-1", title, topic, [], "Mai"])
+        expect(fakes[0]?.callsOf("values")[0]?.[0]).toMatchObject({ title, brief: topic, channels: [] })
     })
-})
 
-describe("ContentAiStoreService writes", () => {
-    it("refuses a quick idea insert that returns no row", async () => {
-        const { service, entityManager, members } = await build()
-        members.require.mockResolvedValue(member)
-        entityManager.query.mockResolvedValue([])
-        await expect(
-            service.createQuickIdea("user-1", "workspace-1", { topic: "Launch", channels: ["facebook"] }),
-        ).rejects.toMatchObject({ code: ContentItemsErrorCode.NotWritten })
-    })
-})
+    it.each([[[]], [[{ id: "idea-1", updated_at: 5 }]]])(
+        "refuses a quick idea insert that returns no usable row (%j)",
+        async (raw) => {
+            const { service, members } = await build([{ execute: { raw } }])
+            members.require.mockResolvedValue(member)
+            await expect(
+                service.createQuickIdea("user-1", "workspace-1", { topic: "Launch", channels: ["facebook"] }),
+            ).rejects.toMatchObject({ code: ContentItemsErrorCode.NotWritten })
+        },
+    )
 
-describe("ContentAiStoreService writes", () => {
     it("uses the bounded topic when splitting supplies no first line", async () => {
-        const { service, entityManager, members } = await build()
+        const { service, members, fakes } = await build([quick("2026-01-03T00:00:00Z")])
         members.require.mockResolvedValue(member)
-        entityManager.query.mockResolvedValue([{ id: "idea-fallback", updated_at: "2026-01-03T00:00:00Z" }])
         const topic = `Fallback ${"b".repeat(90)}`
         const originalSplit = String.prototype.split
         const split = jest.spyOn(String.prototype, "split").mockImplementation(function (
@@ -190,49 +123,47 @@ describe("ContentAiStoreService writes", () => {
         })
         try {
             await expect(service.createQuickIdea("user-1", "workspace-1", { topic, channels: [] })).resolves.toEqual({
-                id: "idea-fallback",
+                id: "idea-1",
                 updatedAt: "2026-01-03T00:00:00.000Z",
             })
-            expect(entityManager.query).toHaveBeenCalledWith(INSERT_QUICK_IDEA, [
-                "workspace-1",
-                `Fallback ${"b".repeat(71)}`,
-                topic,
-                [],
-                "Mai",
-            ])
+            expect(fakes[0]?.callsOf("values")[0]?.[0]).toMatchObject({
+                title: `Fallback ${"b".repeat(71)}`,
+                brief: topic,
+            })
         } finally {
             split.mockRestore()
         }
     })
 })
 
-describe("ContentAiStoreService writes", () => {
+describe("ContentAiStoreService applyDraft", () => {
     it("applies a minimal draft using null optional values and empty evidence", async () => {
-        const { service, entityManager } = await build()
-        entityManager.query.mockResolvedValue([{ id: "idea-1" }])
+        const { service, fakes } = await build([{ execute: { raw: [{ id: "idea-1" }] } }])
         await expect(service.applyDraft("workspace-1", "idea-1", { variants, hashtags: ["launch"] })).resolves.toEqual({
             id: "idea-1",
         })
-        expect(entityManager.query).toHaveBeenCalledWith(APPLY_GENERATED_DRAFT, [
-            "idea-1",
-            "workspace-1",
-            JSON.stringify(variants),
-            ["launch"],
-            null,
-            null,
-            null,
-            null,
-            null,
-            "[]",
-            null,
+        expect(fakes[0]?.callsOf("setParameters")).toEqual([
+            [
+                {
+                    variants: JSON.stringify(variants),
+                    media: null,
+                    channels: null,
+                    pillarId: null,
+                    title: null,
+                    draftedAt: null,
+                    evidence: "[]",
+                    expected: null,
+                },
+            ],
         ])
+        expect(stampedValues(fakes[0]?.callsOf("set")[0]?.[0])).toMatchObject({ hashtags: ["launch"], status: "draft" })
+        expect(fakes[0]?.callsOf("where")[0]?.[1]).toEqual({ itemId: "idea-1", workspaceId: "workspace-1" })
     })
-})
 
-describe("ContentAiStoreService writes", () => {
     it("serializes a complete draft into the supplied transaction", async () => {
         const { service, entityManager } = await build()
-        const tx = mockEntityManager({ query: [APPLY_GENERATED_DRAFT, [{ id: "idea-1" }]] })
+        const tx = mockEntityManager()
+        const [write] = queueQueryBuilders(tx, [{ execute: { raw: [{ id: "idea-1" }] } }])
         const media = [{ kind: "media", name: "Photo", path: "workspace-1/photo.jpg" }]
         const evidence = [{ at: "2026-01-01T00:00:00Z", kind: "drafted", by: "NIVO", text: "AI draft" }]
         await expect(
@@ -253,119 +184,133 @@ describe("ContentAiStoreService writes", () => {
                 tx,
             ),
         ).resolves.toEqual({ id: "idea-1" })
-        expect(tx.query).toHaveBeenCalledWith(APPLY_GENERATED_DRAFT, [
-            "idea-1",
-            "workspace-1",
-            JSON.stringify(variants),
-            ["launch"],
-            JSON.stringify(media),
-            ["facebook"],
-            "pillar-1",
-            "Launch",
-            "2026-01-01T00:00:00Z",
-            JSON.stringify(evidence),
-            "2025-12-31T00:00:00Z",
+        expect(write?.callsOf("setParameters")).toEqual([
+            [
+                {
+                    variants: JSON.stringify(variants),
+                    media: JSON.stringify(media),
+                    channels: ["facebook"],
+                    pillarId: "pillar-1",
+                    title: "Launch",
+                    draftedAt: "2026-01-01T00:00:00Z",
+                    evidence: JSON.stringify(evidence),
+                    expected: "2025-12-31T00:00:00Z",
+                },
+            ],
         ])
-        expect(entityManager.query).not.toHaveBeenCalled()
+        expect(write?.callsOf("andWhere").map(([condition]) => condition)).toEqual([
+            expect.stringContaining("date_trunc('milliseconds', updated_at)"),
+            expect.stringContaining("public.content_pillars"),
+        ])
+        expect(entityManager.createQueryBuilder).not.toHaveBeenCalled()
     })
-})
 
-describe("ContentAiStoreService writes", () => {
     it("refuses a draft that no longer has an editable row", async () => {
-        const { service, entityManager } = await build()
-        entityManager.query.mockResolvedValue([])
+        const { service } = await build([{ execute: { raw: [] } }])
         await expect(service.applyDraft("workspace-1", "idea-1", { variants, hashtags: [] })).rejects.toMatchObject({
             code: ContentItemsErrorCode.NotWritten,
         })
     })
 })
 
-describe("ContentAiStoreService writes", () => {
+describe("ContentAiStoreService recentTitles", () => {
     it("returns only the recent titles in database order", async () => {
-        const { service, entityManager } = await build()
-        entityManager.query.mockResolvedValue([{ title: "Latest" }, { title: "Earlier" }])
+        const entityManager = mockEntityManager({
+            find: [
+                ContentItemEntity,
+                [
+                    Object.assign(new ContentItemEntity(), { title: "Latest" }),
+                    Object.assign(new ContentItemEntity(), { title: "Earlier" }),
+                ],
+            ],
+        })
+        const { service } = await build([], entityManager)
         await expect(service.recentTitles("workspace-1", "idea-1")).resolves.toEqual(["Latest", "Earlier"])
-        expect(entityManager.query).toHaveBeenCalledWith(SELECT_RECENT_CONTENT_TITLES, ["workspace-1", "idea-1"])
+        expect(namedCalls(entityManager.find.mock.calls)).toEqual([
+            [
+                "ContentItemEntity",
+                {
+                    where: { workspaceId: "workspace-1", id: Not("idea-1") },
+                    select: { title: true },
+                    order: { createdAt: "DESC" },
+                    take: 8,
+                },
+            ],
+        ])
     })
 })
 
-describe("ContentAiStoreService writes", () => {
+describe("ContentAiStoreService insertPlannedIdeas", () => {
+    const item = {
+        title: "Launch",
+        brief: "Explain launch",
+        pillarId: "pillar-1",
+        channels: ["facebook"],
+        scheduledAt: "2026-01-02T00:00:00Z",
+        holidayKey: null,
+    }
+    const plan = (items: ReadonlyArray<typeof item>) => ({
+        month: "2026-01",
+        actor: "Mai",
+        meta: {},
+        generationId: "generation-1",
+        aiMs: 50,
+        items,
+    })
+
     it("replaces untouched ideas and serializes planned ideas and clock evidence", async () => {
         const { service, entityManager } = await build()
         const tx = mockEntityManager({
-            query: [
-                [DELETE_UNTOUCHED_PLAN_IDEAS, []],
-                [INSERT_PLANNED_IDEAS, [{ id: "idea-1" }]],
-            ],
+            find: [ContentPillarEntity, [Object.assign(new ContentPillarEntity(), { id: "pillar-1" })]],
         })
-        await expect(
-            service.insertPlannedIdeas(
-                "workspace-1",
-                "plan-1",
-                {
-                    month: "2026-01",
-                    actor: "Mai",
-                    meta: {},
-                    generationId: "generation-1",
-                    aiMs: 50,
-                    items: [
-                        {
-                            title: "Launch",
-                            brief: "Explain launch",
-                            pillarId: "pillar-1",
-                            channels: ["facebook"],
-                            scheduledAt: "2026-01-02T00:00:00Z",
-                            holidayKey: null,
-                        },
-                    ],
-                },
-                tx,
-            ),
-        ).resolves.toBe(1)
-        expect(tx.query).toHaveBeenNthCalledWith(1, DELETE_UNTOUCHED_PLAN_IDEAS, ["workspace-1", "2026-01-01"])
-        expect(tx.query).toHaveBeenNthCalledWith(2, INSERT_PLANNED_IDEAS, [
-            "workspace-1",
-            "plan-1",
-            JSON.stringify([
-                {
-                    title: "Launch",
-                    brief: "Explain launch",
-                    pillar_id: "pillar-1",
-                    channels: ["facebook"],
-                    scheduled_at: "2026-01-02T00:00:00Z",
-                    holiday_key: null,
-                },
-            ]),
-            "Mai",
-            JSON.stringify([{ at: "2026-01-01T00:00:00.000Z", kind: "planned", by: "NIVO", text: "2026-01" }]),
+        const [remove, insert] = queueQueryBuilders(tx, [{ execute: {} }, { execute: { raw: [{ id: "idea-1" }] } }])
+        await expect(service.insertPlannedIdeas("workspace-1", "plan-1", plan([item]), tx)).resolves.toBe(1)
+        expect(remove?.callsOf("where")).toEqual([[{ workspaceId: "workspace-1", status: "idea", source: "plan" }]])
+        expect(remove?.callsOf("andWhere")[0]?.[1]).toEqual({ month: "2026-01-01" })
+        expect(namedCalls(tx.find.mock.calls)).toEqual([
+            [
+                "ContentPillarEntity",
+                { where: { workspaceId: "workspace-1", id: In(["pillar-1"]) }, select: { id: true }, take: 100 },
+            ],
         ])
-        expect(entityManager.query).not.toHaveBeenCalled()
+        expect(insert?.callsOf("values")).toEqual([
+            [
+                [
+                    {
+                        workspaceId: "workspace-1",
+                        planId: "plan-1",
+                        title: "Launch",
+                        brief: "Explain launch",
+                        pillarId: "pillar-1",
+                        channels: ["facebook"],
+                        scheduledAt: new Date("2026-01-02T00:00:00Z"),
+                        holidayKey: null,
+                        status: "idea",
+                        source: "plan",
+                        createdBy: "Mai",
+                        evidence: [{ at: "2026-01-01T00:00:00.000Z", kind: "planned", by: "NIVO", text: "2026-01" }],
+                    },
+                ],
+            ],
+        ])
+        expect(entityManager.createQueryBuilder).not.toHaveBeenCalled()
     })
-})
 
-describe("ContentAiStoreService writes", () => {
     it("refuses a plan when the inserted count does not match its items", async () => {
         const { service } = await build()
-        const tx = mockEntityManager({
-            query: [
-                [DELETE_UNTOUCHED_PLAN_IDEAS, []],
-                [INSERT_PLANNED_IDEAS, [{ id: "unexpected" }]],
-            ],
+        const tx = mockEntityManager({ find: [ContentPillarEntity, []] })
+        const [, insert] = queueQueryBuilders(tx, [{ execute: {} }, { execute: { raw: [] } }])
+        await expect(service.insertPlannedIdeas("workspace-1", "plan-1", plan([item]), tx)).rejects.toMatchObject({
+            code: ContentItemsErrorCode.NotWritten,
         })
-        await expect(
-            service.insertPlannedIdeas(
-                "workspace-1",
-                "plan-1",
-                {
-                    month: "2026-01",
-                    actor: "Mai",
-                    meta: {},
-                    generationId: "generation-1",
-                    aiMs: 0,
-                    items: [],
-                },
-                tx,
-            ),
-        ).rejects.toMatchObject({ code: ContentItemsErrorCode.NotWritten })
+        expect(insert?.callsOf("execute")).toEqual([])
+    })
+
+    it("writes nothing and answers zero for a plan without items", async () => {
+        const { service } = await build()
+        const tx = mockEntityManager({ find: [ContentPillarEntity, []] })
+        queueQueryBuilders(tx, [{ execute: {} }])
+        await expect(service.insertPlannedIdeas("workspace-1", "plan-1", plan([]), tx)).resolves.toBe(0)
+        expect(tx.createQueryBuilder).toHaveBeenCalledTimes(1)
     })
 })

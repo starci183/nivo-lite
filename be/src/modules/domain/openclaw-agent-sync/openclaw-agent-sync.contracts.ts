@@ -21,6 +21,14 @@ export interface SyncOutcome {
 /** A sync outcome, or null when the installation is gone or not on OpenClaw and the sync was not forced. */
 export type OptionalSyncOutcome = SyncOutcome | null
 
+/** What a delivery of the event bus gives the inbox: the consumer's queue and the business key, claimed once per effect. */
+export interface InboxClaim {
+    /** The reactor's queue, the first half of the inbox key. */
+    readonly consumer: string
+    /** The business key of the fact, the second half. */
+    readonly dedupeKey: string
+}
+
 /** Which copy of the OpenClaw agents to rebuild. */
 export interface SyncRequest {
     /** The workspace. */

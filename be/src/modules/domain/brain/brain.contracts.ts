@@ -1,3 +1,11 @@
+/** What a delivery of the event bus gives the inbox: the consumer's queue and the business key, claimed once per effect. */
+export interface InboxClaim {
+    /** The reactor's queue, the first half of the inbox key. */
+    readonly consumer: string
+    /** The business key of the fact, the second half. */
+    readonly dedupeKey: string
+}
+
 import type { BrainSubjectType, Scope } from "@modules/domain/brain-facts"
 
 /** One correction the owner made of an agent's work, as the decisions record keeps it. */

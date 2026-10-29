@@ -1,19 +1,15 @@
 import { Test } from "@nestjs/testing"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
-import type { StubsOf } from "@starci/jest-preset/entity-manager"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { BookingModelService } from "./booking-model.service"
 import { BookingOverviewService } from "./booking-overview.service"
+import { DEFAULT_SETTINGS } from "./bookings.contracts"
 import type { BookingModel } from "./bookings.contracts"
-import {
-    SELECT_DEPOSITS_DUE,
-    SELECT_FINISHED_COUNTS,
-    SELECT_OVERLAPPING_BOOKINGS,
-    SELECT_WINDOW_BOOKINGS,
-} from "./persistence/booking-overview.sql"
-import { DEFAULT_SETTINGS } from "./persistence/booking.rows"
+import { BookingEntity } from "./persistence/entities"
 
 const WORKSPACE = "ws-1"
 const USER = "user-1"
@@ -28,15 +24,20 @@ const modelOf = builder<BookingModel>({
     exceptions: [],
 })
 
-type Untyped = readonly [unknown, unknown]
-
-const build = async <
-    const S extends { readonly [M in string]?: Untyped | ReadonlyArray<Untyped> } = Record<never, never>,
->(
-    stubs: S & StubsOf<S>,
+const build = async (
+    bookings: { readonly week: Array<BookingEntity>; readonly range: Array<BookingEntity> },
+    counts: { readonly finished: QueryBuilderAnswers; readonly deposits: QueryBuilderAnswers },
     model: BookingModel = modelOf(),
 ) => {
-    const entityManager = mockEntityManager(stubs)
+    const entityManager = mockEntityManager({
+        find: [
+            [BookingEntity, bookings.week],
+            [BookingEntity, bookings.range],
+        ],
+    })
+    const finished = fakeQueryBuilder(counts.finished)
+    const deposits = fakeQueryBuilder(counts.deposits)
+    entityManager.createQueryBuilder.mockReturnValueOnce(finished.builder).mockReturnValueOnce(deposits.builder)
     const access = mock<WorkspaceMembersService>()
     access.require.mockResolvedValue({
         userId: USER,
@@ -57,49 +58,45 @@ const build = async <
             { provide: BookingModelService, useValue: models },
         ],
     }).compile()
-    return { service: moduleRef.get(BookingOverviewService), access, entityManager }
+    return { service: moduleRef.get(BookingOverviewService), access, entityManager, finished, deposits }
 }
 
-const rowOf = (status: string, startIso: string, endIso: string, resource = "r1") => ({
-    status,
-    resource_id: resource,
-    party_size: 1,
-    price_vnd: 100000,
-    start_ms: Date.parse(startIso),
-    end_ms: Date.parse(endIso),
-})
+const rowOf = (status: string, startIso: string, endIso: string, resource = "r1"): BookingEntity =>
+    Object.assign(new BookingEntity(), {
+        status,
+        resourceId: resource,
+        partySize: 1,
+        priceVnd: "100000",
+        startAt: new Date(startIso),
+        endAt: new Date(endIso),
+    })
 
 describe("BookingOverviewService", () => {
     describe("overview", () => {
         it("sums today, the week, the last 30 days, the deposits and the statistics of the range", async () => {
-            const { service, access, entityManager } = await build({
-                query: [
-                    [
-                        SELECT_WINDOW_BOOKINGS,
-                        [
-                            rowOf("confirmed", "2026-10-14T02:00:00Z", "2026-10-14T03:00:00Z"),
-                            rowOf("cancelled", "2026-10-14T04:00:00Z", "2026-10-14T05:00:00Z"),
-                            rowOf("done", "2026-10-13T02:00:00Z", "2026-10-13T03:00:00Z"),
-                        ],
+            const { service, access, entityManager, finished, deposits } = await build(
+                {
+                    week: [
+                        rowOf("confirmed", "2026-10-14T02:00:00Z", "2026-10-14T03:00:00Z"),
+                        rowOf("cancelled", "2026-10-14T04:00:00Z", "2026-10-14T05:00:00Z"),
+                        rowOf("done", "2026-10-13T02:00:00Z", "2026-10-13T03:00:00Z"),
                     ],
-                    [
-                        SELECT_FINISHED_COUNTS,
-                        [
+                    range: [
+                        rowOf("done", "2026-10-13T02:00:00Z", "2026-10-13T03:00:00Z"),
+                        rowOf("no_show", "2026-10-13T04:00:00Z", "2026-10-13T05:00:00Z"),
+                        rowOf("confirmed", "2026-10-14T02:00:00Z", "2026-10-14T03:00:00Z"),
+                    ],
+                },
+                {
+                    finished: {
+                        getRawMany: [
                             { status: "done", total: 3 },
                             { status: "no_show", total: 1 },
                         ],
-                    ],
-                    [SELECT_DEPOSITS_DUE, [{ total: 2, amount_vnd: 150000 }]],
-                    [
-                        SELECT_OVERLAPPING_BOOKINGS,
-                        [
-                            rowOf("done", "2026-10-13T02:00:00Z", "2026-10-13T03:00:00Z"),
-                            rowOf("no_show", "2026-10-13T04:00:00Z", "2026-10-13T05:00:00Z"),
-                            rowOf("confirmed", "2026-10-14T02:00:00Z", "2026-10-14T03:00:00Z"),
-                        ],
-                    ],
-                ],
-            })
+                    },
+                    deposits: { getRawOne: { total: 2, amount_vnd: 150000 } },
+                },
+            )
 
             const result = await service.overview(USER, {
                 workspaceId: WORKSPACE,
@@ -124,11 +121,19 @@ describe("BookingOverviewService", () => {
                 doneRevenueVnd: 100000,
                 total: 3,
             })
-            expect(entityManager.query).toHaveBeenCalledWith(SELECT_WINDOW_BOOKINGS, [
-                WORKSPACE,
-                "2026-10-11T17:00:00.000Z",
-                "2026-10-18T17:00:00.000Z",
-                "inst-1",
+            const [week, range] = entityManager.find.mock.calls
+            expect(week?.[0]).toBe(BookingEntity)
+            expect(JSON.stringify(week?.[1])).toContain("inst-1")
+            expect(JSON.stringify(week?.[1])).toContain("2026-10-11T17:00:00.000Z")
+            expect(JSON.stringify(week?.[1])).toContain("2026-10-18T17:00:00.000Z")
+            expect(JSON.stringify(range?.[1])).not.toContain("installationId")
+            expect(finished.callsOf("andWhere")).toContainEqual([
+                "b.installationId = :instance",
+                { instance: "inst-1" },
+            ])
+            expect(deposits.callsOf("andWhere")).toContainEqual([
+                "b.installationId = :instance",
+                { instance: "inst-1" },
             ])
         })
     })
@@ -137,15 +142,9 @@ describe("BookingOverviewService", () => {
 describe("BookingOverviewService", () => {
     describe("overview", () => {
         it("has no shares to show for a business without resources or finished bookings", async () => {
-            const { service, entityManager } = await build(
-                {
-                    query: [
-                        [SELECT_WINDOW_BOOKINGS, []],
-                        [SELECT_FINISHED_COUNTS, []],
-                        [SELECT_DEPOSITS_DUE, [{ total: 0, amount_vnd: 0 }]],
-                        [SELECT_OVERLAPPING_BOOKINGS, []],
-                    ],
-                },
+            const { service, deposits } = await build(
+                { week: [], range: [] },
+                { finished: { getRawMany: [] }, deposits: { getRawOne: { total: 0, amount_vnd: 0 } } },
                 modelOf({ resources: [] }),
             )
 
@@ -164,7 +163,7 @@ describe("BookingOverviewService", () => {
                 depositsPendingVnd: 0,
             })
             expect(result.stats).toEqual({ byResource: [], byStatus: {}, noShowPct: 0, doneRevenueVnd: 0, total: 0 })
-            expect(entityManager.query).toHaveBeenCalledWith(SELECT_DEPOSITS_DUE, [WORKSPACE, null])
+            expect(deposits.callsOf("andWhere")).toHaveLength(1)
         })
     })
 })

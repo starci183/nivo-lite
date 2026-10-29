@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { ApprovalGate, OfficeLog } from "@modules/domain/module-ops"
@@ -25,10 +26,10 @@ import { fieldNumber, fieldText } from "./policies/gate-fields.policy"
 import { ANY_MEMBER } from "./policies/access-roles.policy"
 import { clip, uuidOrNull } from "./policies/input-text.policy"
 import { toInventoryItem } from "./policies/item-row.policy"
-import type { ItemRowColumns } from "./policies/item-row.policy"
+import { itemRowOf } from "./policies/inventory-row.mapper"
 import { formatMoney, formatQty } from "./policies/number-format.policy"
 import { isSmallAdjustment } from "./policies/stock.policy"
-import { SELECT_ITEM, SELECT_ITEM_LABEL, SELECT_LOCATION_NAMES } from "./persistence/inventory.sql"
+import { InventoryItemEntity, InventoryLocationEntity } from "./persistence/entities"
 
 /** Most counted lines one stock count takes. */
 const COUNT_LINES_MAX = 500
@@ -39,15 +40,8 @@ const REASON_MAX = 160
 /** The longest transfer note. */
 const NOTE_MAX = 100
 
-interface LocationNameRow {
-    readonly id: string
-    readonly name: string
-}
-
-interface ItemLabelRow {
-    readonly name: string
-    readonly unit: string
-}
+/** The most locations one transfer names. */
+const TRANSFER_PLACES = 2
 
 @Injectable()
 /** Stock quantities: manual adjustments (big ones wait for the owner), transfers between locations, stock counts and the */
@@ -88,9 +82,9 @@ export class InventoryStockService {
      * adjust_stock decision the owner approves. A counted level sets the quantity instead of adding to it.
      */
     async adjust(workspaceId: string, actor: string, input: AdjustInput): Promise<AdjustStockOutput> {
-        const [row] = await this.entityManager.query<Array<ItemRowColumns>>(SELECT_ITEM, [workspaceId, input.itemId])
-        if (row === undefined) throw new InventoryError({ code: InventoryErrorCode.ItemNotFound })
-        const item = toInventoryItem(row)
+        const row = await this.entityManager.findOne(InventoryItemEntity, { where: { workspaceId, id: input.itemId } })
+        if (row === null) throw new InventoryError({ code: InventoryErrorCode.ItemNotFound })
+        const item = toInventoryItem(itemRowOf(row))
         const locationId = input.locationId ?? (await this.locations.defaultLocation(workspaceId))
         const current = await this.movements.levelAt(item.id, locationId)
         const counting = input.countedQty !== undefined
@@ -194,15 +188,16 @@ export class InventoryStockService {
         }
         if (request.qty <= 0 || Number.isNaN(request.qty))
             throw new InventoryError({ code: InventoryErrorCode.TransferQtyRequired })
-        const [item] = await this.entityManager.query<Array<ItemLabelRow>>(SELECT_ITEM_LABEL, [
-            workspaceId,
-            request.itemId,
-        ])
-        if (item === undefined) throw new InventoryError({ code: InventoryErrorCode.ItemNotFound })
-        const places = await this.entityManager.query<Array<LocationNameRow>>(SELECT_LOCATION_NAMES, [
-            workspaceId,
-            [request.fromLocationId, request.toLocationId],
-        ])
+        const item = await this.entityManager.findOne(InventoryItemEntity, {
+            select: { name: true, unit: true },
+            where: { workspaceId, id: request.itemId },
+        })
+        if (item === null) throw new InventoryError({ code: InventoryErrorCode.ItemNotFound })
+        const places = await this.entityManager.find(InventoryLocationEntity, {
+            select: { id: true, name: true },
+            where: { workspaceId, id: In([request.fromLocationId, request.toLocationId]) },
+            take: TRANSFER_PLACES,
+        })
         const nameOf = new Map(places.map((place) => [place.id, place.name]))
         const fromName = nameOf.get(request.fromLocationId)
         const toName = nameOf.get(request.toLocationId)
@@ -252,11 +247,11 @@ export class InventoryStockService {
     /** The performer of the adjust_stock action: the approved quantity change becomes a movement. */
     async performAdjustStock(context: PerformContext): Promise<PerformResult> {
         const itemId = fieldText(context.fields, "item_id")
-        const [item] = await this.entityManager.query<Array<ItemLabelRow>>(SELECT_ITEM_LABEL, [
-            context.workspaceId,
-            itemId,
-        ])
-        if (item === undefined) throw new InventoryError({ code: InventoryErrorCode.ItemNotFound })
+        const item = await this.entityManager.findOne(InventoryItemEntity, {
+            select: { name: true, unit: true },
+            where: { workspaceId: context.workspaceId, id: itemId },
+        })
+        if (item === null) throw new InventoryError({ code: InventoryErrorCode.ItemNotFound })
         const reason = fieldText(context.fields, "reason") || this.text("inventory.adjustDefaultReason", {})
         const locationId = fieldText(context.fields, "location_id")
         const applied = await this.movements.apply(context.workspaceId, {

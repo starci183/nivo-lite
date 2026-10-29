@@ -9,8 +9,8 @@ import { eachInOrder, unwrapOutcome } from "@modules/platform/primitives"
 import { ThreadMessagesError, ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { vetMentions, vetQuotes } from "./mention.policy"
 import { MentionDirectoryService } from "./mention-directory.service"
-import type { InsertedRow, ThreadMessageRow } from "./persistence/thread-messages.rows"
-import { FIND_MESSAGE, INSERT_MESSAGE } from "./persistence/thread-messages.sql"
+import { ThreadMessageEntity } from "./persistence/entities"
+import { readMessageById } from "./persistence/thread-message.query"
 import { toMessage } from "./thread.mapper"
 import { tagStepOf } from "./thread-step.policy"
 import { stepTitleOf } from "./thread-text.policy"
@@ -99,19 +99,25 @@ export class ThreadMessagesService {
     /** Writes one line into a thread inside the caller's transaction and reads it back. */
     async append(tx: EntityManager, line: ThreadLine): Promise<ThreadMessage> {
         const card = line.card
-        const [inserted] = await tx.query<Array<InsertedRow>>(INSERT_MESSAGE, [
-            line.workspaceId,
-            line.threadId,
-            line.author.kind,
-            line.author.id,
-            line.body,
-            JSON.stringify(line.quoted),
-            JSON.stringify(line.mentions),
-            card === null ? null : JSON.stringify(card),
-            card === null ? null : card.requestId,
-        ])
+        const result = await tx
+            .createQueryBuilder(ThreadMessageEntity, "t")
+            .insert()
+            .values({
+                workspaceId: line.workspaceId,
+                threadId: line.threadId,
+                authorKind: line.author.kind,
+                authorId: line.author.id,
+                body: line.body,
+                quoted: line.quoted,
+                mentions: line.mentions,
+                approval: card,
+                approvalRequestId: card === null ? null : card.requestId,
+            })
+            .returning("id")
+            .execute()
+        const [inserted] = result.raw as Array<{ id: string }>
         if (inserted === undefined) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.NotStored })
-        const [row] = await tx.query<Array<ThreadMessageRow>>(FIND_MESSAGE, [line.workspaceId, inserted.id])
+        const row = await readMessageById(tx, line.workspaceId, inserted.id)
         if (row === undefined) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.NotStored })
         return toMessage(row)
     }

@@ -7,13 +7,7 @@ import type {
     OptionalStoredGuidelineBrand,
     TickWorkspace,
 } from "./content-settings.contracts"
-import {
-    MERGE_MARKS,
-    SAVE_GUIDELINE_BRAND,
-    SELECT_GUIDELINE_BRAND,
-    SELECT_TICK_WORKSPACES,
-} from "./persistence/content-settings.sql"
-import type { GuidelineBrandRow, TickWorkspaceRow } from "./persistence/content-settings.rows"
+import { ContentSettingsEntity } from "./persistence/entities"
 
 @Injectable()
 /** The `content_settings` rows: which automations a workspace switched on and the marks that keep a repeated tick from doing anything twice. */
@@ -22,42 +16,66 @@ export class ContentSettingsService {
 
     /** The next page of workspaces with an automation on, after the last id seen; `only` limits the scan to one workspace. */
     async tickWorkspaces(after: string, size: number, only?: string): Promise<Array<TickWorkspace>> {
-        const rows = await this.entityManager.query<Array<TickWorkspaceRow>>(SELECT_TICK_WORKSPACES, [
-            only ?? null,
-            after,
-            size,
-        ])
-        return rows.map((row) => ({ workspaceId: row.workspace_id, automations: row.automations, marks: row.marks }))
+        const rows = await this.entityManager
+            .createQueryBuilder(ContentSettingsEntity, "settings")
+            .select(["settings.workspaceId", "settings.automations", "settings.marks"])
+            .where("(:only::uuid IS NULL OR settings.workspaceId = :only) AND settings.workspaceId > :after")
+            .andWhere(
+                "((settings.automations ->> 'today_reminder') = 'true' OR (settings.automations ->> 'offer_draft') = 'true' OR (settings.automations ->> 'weekly_summary') = 'true')",
+            )
+            .setParameters({ only: only ?? null, after })
+            .orderBy("settings.workspaceId", "ASC")
+            .limit(size)
+            .getMany()
+        return rows.map((row) => ({ workspaceId: row.workspaceId, automations: row.automations, marks: row.marks }))
     }
 
     /** Merges marks into the settings of a workspace. */
     async mergeMarks(workspaceId: string, marks: AutomationMarks): Promise<void> {
-        await this.entityManager.query(MERGE_MARKS, [workspaceId, JSON.stringify(marks)])
+        await this.entityManager
+            .createQueryBuilder(ContentSettingsEntity, "cs")
+            .update()
+            .set({ marks: () => "jsonb_concat(marks, CAST(:marks AS jsonb))" })
+            .where({ workspaceId })
+            .setParameter("marks", JSON.stringify(marks))
+            .execute()
     }
 
     /** Writes the guideline brand the owner confirmed (palette, fonts, tone, imagery, voice, avoid). */
     async saveGuidelineBrand(workspaceId: string, brand: GuidelineBrand): Promise<void> {
-        await this.entityManager.query(SAVE_GUIDELINE_BRAND, [
-            workspaceId,
-            JSON.stringify(brand.colors),
-            brand.fonts,
-            brand.tone,
-            brand.imagery,
-            brand.source,
-            brand.voice,
-            brand.avoid,
-        ])
+        await this.entityManager
+            .createQueryBuilder(ContentSettingsEntity, "cs")
+            .insert()
+            .values({
+                workspaceId,
+                brandColors: () => ":colors::jsonb",
+                brandFonts: [...brand.fonts],
+                brandTone: brand.tone,
+                brandImagery: [...brand.imagery],
+                brandSource: brand.source,
+                brandVoice: brand.voice,
+                avoid: brand.avoid,
+            })
+            .setParameter("colors", JSON.stringify(brand.colors))
+            .orUpdate(
+                ["brand_colors", "brand_fonts", "brand_tone", "brand_imagery", "brand_source", "brand_voice", "avoid"],
+                ["workspace_id"],
+            )
+            .execute()
     }
 
     /** The guideline brand of a workspace, or null when it has no settings. */
     async guidelineBrandOf(workspaceId: string): Promise<OptionalStoredGuidelineBrand> {
-        const [row] = await this.entityManager.query<Array<GuidelineBrandRow>>(SELECT_GUIDELINE_BRAND, [workspaceId])
-        if (row === undefined) return null
+        const row = await this.entityManager.findOne(ContentSettingsEntity, {
+            select: { brandColors: true, brandFonts: true, brandTone: true, brandImagery: true, avoid: true },
+            where: { workspaceId },
+        })
+        if (row === null) return null
         return {
-            colors: row.brand_colors,
-            fonts: row.brand_fonts,
-            tone: row.brand_tone,
-            imagery: row.brand_imagery,
+            colors: row.brandColors,
+            fonts: row.brandFonts,
+            tone: row.brandTone,
+            imagery: row.brandImagery,
             avoid: row.avoid,
         }
     }

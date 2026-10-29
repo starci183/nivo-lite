@@ -178,9 +178,11 @@ describe("generation policy row text", () => {
         const subject = await buildSubject()
         const stored = subject.inputJsonOf(paramsOf({ responseFormat: "json" }), 9000)
 
-        expect(stored).toBe(
-            JSON.stringify({ messages: [{ role: "user", content: "hi" }], response_format: "json", timeout_ms: 9000 }),
-        )
+        expect(stored).toEqual({
+            messages: [{ role: "user", content: "hi" }],
+            response_format: "json",
+            timeout_ms: 9000,
+        })
     })
 })
 
@@ -267,10 +269,10 @@ describe("generation policy queuedOf", () => {
         const subject = await buildSubject()
         const queued = subject.queuedOf({
             id: "g1",
-            workspace_id: "w1",
+            workspaceId: "w1",
             purpose: "relay",
             module: "office",
-            usage_kind: "relay",
+            usageKind: "relay",
             status: "queued",
             input: { messages: [], response_format: "text", timeout_ms: 8000 },
         })

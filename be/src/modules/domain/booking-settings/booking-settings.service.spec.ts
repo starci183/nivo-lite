@@ -2,12 +2,10 @@ import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { PUBLIC_PAGE_UPSERT_ROW } from "@tests/fixtures/builders/booking-settings.builder"
 import { BookingSettingsService } from "./booking-settings.service"
-import {
-    SELECT_SETUP_SLUG_OWNER,
-    UPSERT_SETUP_POLICY,
-    UPSERT_SETUP_PUBLIC_PAGE,
-} from "./persistence/booking-settings.sql"
+import { Not } from "typeorm"
+import { BookingSettingEntity } from "./persistence/entities"
 
 const UPDATED_AT = "2026-10-12T10:00:00.000Z"
 
@@ -20,8 +18,8 @@ const build = async (entityManager: MockEntityManager = mockEntityManager()) => 
 
 describe("BookingSettingsService", () => {
     describe("savePolicy", () => {
-        it("writes every policy value in order and answers the settings id", async () => {
-            const em = mockEntityManager({ query: [UPSERT_SETUP_POLICY, [{ id: "set-1" }]] })
+        it("writes every policy value and answers the settings id", async () => {
+            const em = mockEntityManager({ upsert: [BookingSettingEntity, {}] })
             const settings = await build(em)
 
             const saved = await settings.savePolicy({
@@ -40,31 +38,64 @@ describe("BookingSettingsService", () => {
                 updatedAt: UPDATED_AT,
             })
 
-            expect(saved).toEqual([{ id: "set-1" }])
-            expect(em.query.mock.calls).toEqual([
+            expect(saved).toEqual([{ id: "ws-1" }])
+            expect(em.upsert.mock.calls).toEqual([
                 [
-                    UPSERT_SETUP_POLICY,
-                    ["ws-1", 24, 30, 50, 100000, 60, 30, 15, true, false, "1 Le Loi", "Asia/Ho_Chi_Minh", UPDATED_AT],
+                    BookingSettingEntity,
+                    {
+                        workspaceId: "ws-1",
+                        cancelWindowHours: 24,
+                        depositPct: 30,
+                        lateCancelFeePct: 50,
+                        noShowFeeVnd: "100000",
+                        minLeadMin: 60,
+                        maxAdvanceDays: 30,
+                        slotStepMin: 15,
+                        autoConfirm: true,
+                        handoffOrder: false,
+                        address: "1 Le Loi",
+                        timezone: "Asia/Ho_Chi_Minh",
+                        updatedAt: new Date(UPDATED_AT),
+                    },
+                    ["workspaceId"],
                 ],
             ])
         })
     })
+})
 
+describe("BookingSettingsService", () => {
     describe("slugOwner", () => {
         it("answers the other workspace that owns the slug, through the manager of the caller", async () => {
             const own = mockEntityManager()
-            const caller = mockEntityManager({ query: [SELECT_SETUP_SLUG_OWNER, [{ id: "ws-2" }]] })
+            const caller = mockEntityManager({
+                findOne: [BookingSettingEntity, Object.assign(new BookingSettingEntity(), { workspaceId: "ws-2" })],
+            })
             const settings = await build(own)
 
             await expect(settings.slugOwner("ws-1", "tiem-hoa", caller)).resolves.toEqual([{ id: "ws-2" }])
-            expect(caller.query).toHaveBeenCalledWith(SELECT_SETUP_SLUG_OWNER, ["ws-1", "tiem-hoa"])
-            expect(own.query).not.toHaveBeenCalled()
+            expect(caller.findOne).toHaveBeenCalledWith(BookingSettingEntity, {
+                select: { workspaceId: true },
+                where: { workspaceId: Not("ws-1"), publicSlug: "tiem-hoa" },
+            })
+            expect(own.findOne).not.toHaveBeenCalled()
+        })
+
+        it("answers nothing when the workspace has no slug to compare, or no other workspace owns it", async () => {
+            const em = mockEntityManager({ findOne: [BookingSettingEntity, null] })
+            const settings = await build(em)
+
+            await expect(settings.slugOwner("ws-1", null)).resolves.toEqual([])
+            await expect(settings.slugOwner("ws-1", "tiem-hoa")).resolves.toEqual([])
+            expect(em.findOne).toHaveBeenCalledTimes(1)
         })
     })
+})
 
+describe("BookingSettingsService", () => {
     describe("savePublicPage", () => {
         it("writes the publishing values and answers the settings id", async () => {
-            const em = mockEntityManager({ query: [UPSERT_SETUP_PUBLIC_PAGE, [{ id: "set-1" }]] })
+            const em = mockEntityManager({ upsert: [BookingSettingEntity, {}] })
             const settings = await build(em)
 
             await expect(
@@ -75,10 +106,8 @@ describe("BookingSettingsService", () => {
                     note: "Book online",
                     updatedAt: UPDATED_AT,
                 }),
-            ).resolves.toEqual([{ id: "set-1" }])
-            expect(em.query.mock.calls).toEqual([
-                [UPSERT_SETUP_PUBLIC_PAGE, ["ws-1", true, null, "Book online", UPDATED_AT]],
-            ])
+            ).resolves.toEqual([{ id: "ws-1" }])
+            expect(em.upsert.mock.calls).toEqual([[BookingSettingEntity, PUBLIC_PAGE_UPSERT_ROW, ["workspaceId"]]])
         })
     })
 })

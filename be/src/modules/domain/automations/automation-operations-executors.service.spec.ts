@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -19,14 +19,44 @@ import type {
     ExecutorPayload,
 } from "./automation-ports.contracts"
 import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/builders/automations.builder"
-import { SELECT_CONTRACT, SELECT_DAY_FIGURES, SELECT_ORDER } from "./persistence/automation-readers.sql"
-import type { LeadReadRow } from "./persistence/automations.rows"
+import type { DayFigures } from "./automation-reads.contracts"
+import type { LeadRead } from "./automation-reads.contracts"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { FakeQueryBuilder, QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+
+const READS = new WeakMap<object, ReadonlyArray<FakeQueryBuilder>>()
+
+/** The manager of {@link readingOf}. */
+interface ReadingManager {
+    /** The manager whose reads answer the given results. */
+    readonly em: MockEntityManager
+}
+
+/** A manager whose reads (and the snapshot transaction around some of them) answer `answers`, one fake statement each, in order. */
+const readingOf = (...answers: Array<QueryBuilderAnswers>): ReadingManager => {
+    const em = mockEntityManager()
+    fakeTransaction(em)
+    READS.set(em, queueQueryBuilders(em, answers))
+    return { em }
+}
+
+/** The fake statements of a manager made by {@link readingOf}, in the order the subject built them. */
+const readsOf = (em: object): ReadonlyArray<FakeQueryBuilder> => READS.get(em) ?? []
+
+/** What the five statements of the day report answer for these figures, in the order they run. */
+const dayFiguresAnswers = (figures: DayFigures | undefined): Array<QueryBuilderAnswers> => [
+    { getRawOne: figures && { count: figures.new_leads } },
+    { getRawOne: figures && { count: figures.confirmed_orders, total: figures.confirmed_total } },
+    { getRawOne: figures && { total: figures.money_in } },
+    { getRawOne: figures && { count: figures.won_leads } },
+    { getRawMany: (figures?.waiting ?? []).map((summary) => ({ summary })) },
+]
 
 const RENEWAL_REPORT = mock<RenewalCashReport>({ lines: ["   - Renewal line"] })
 const textLike = (text: string): unknown => expect.stringContaining(text)
 
 const NOW = "2026-10-12T10:00:00.000Z"
-const LEAD: LeadReadRow = {
+const LEAD: LeadRead = {
     id: "l-1",
     contact_name: "An",
     company: "",
@@ -113,12 +143,17 @@ describe("AutomationOperationsExecutorsService daily_report", () => {
         waiting: ["a".repeat(120), null, "c", "d"],
     }
     it("posts the day to Office with the deals, the money and what waits", async () => {
-        const em = mockEntityManager({ query: [SELECT_DAY_FIGURES, [figures]] })
+        const em = readingOf(...dayFiguresAnswers(figures)).em
         const { run, office, desk } = await build(em)
 
         const result = await run("daily_report", context(), { day: "2026-10-11" })
 
-        expect(em.query).toHaveBeenCalledWith(SELECT_DAY_FIGURES, ["ws-1", "2026-10-10T17:00:00.000Z"])
+        expect(readsOf(em)[0]?.callsOf("where")).toEqual([
+            [
+                expect.stringContaining(".created_at >= :start"),
+                { workspaceId: "ws-1", start: "2026-10-10T17:00:00.000Z" },
+            ],
+        ])
         const text = (office.postLine.mock.calls[0] ?? [])[1] ?? ""
         expect(text.split("\n")).toEqual([
             'report.title{"day":"11/10/2026","shop":"Tiem Hoa"}',
@@ -140,12 +175,17 @@ describe("AutomationOperationsExecutorsService daily_report", () => {
     })
 
     it("reports an empty day: today, no deals, nothing waiting", async () => {
-        const em = mockEntityManager({ query: [SELECT_DAY_FIGURES, []] })
+        const em = readingOf(...dayFiguresAnswers(undefined)).em
         const { run, office } = await build(em)
 
         const result = await run("daily_report", context(), {})
 
-        expect(em.query).toHaveBeenCalledWith(SELECT_DAY_FIGURES, ["ws-1", "2026-10-11T17:00:00.000Z"])
+        expect(readsOf(em)[0]?.callsOf("where")).toEqual([
+            [
+                expect.stringContaining(".created_at >= :start"),
+                { workspaceId: "ws-1", start: "2026-10-11T17:00:00.000Z" },
+            ],
+        ])
         const text = (office.postLine.mock.calls[0] ?? [])[1] ?? ""
         expect(text).toContain('report.deals{"count":0}')
         expect(text).toContain("report.waitingNone{}")
@@ -153,7 +193,7 @@ describe("AutomationOperationsExecutorsService daily_report", () => {
     })
 
     it("also sends the report to the chat of the owner when asked", async () => {
-        const em = mockEntityManager({ query: [SELECT_DAY_FIGURES, [figures]] })
+        const em = readingOf(...dayFiguresAnswers(figures)).em
         const { run, chat } = await build(em)
 
         const result = await run("daily_report", context({ toOwnerChat: true }), {})
@@ -163,7 +203,7 @@ describe("AutomationOperationsExecutorsService daily_report", () => {
     })
 
     it("says the chat was skipped when it cannot be reached", async () => {
-        const em = mockEntityManager({ query: [SELECT_DAY_FIGURES, [figures]] })
+        const em = readingOf(...dayFiguresAnswers(figures)).em
         const unreachable = await build(em)
         unreachable.chat.sendToOwner.mockResolvedValue(false)
 
@@ -186,7 +226,7 @@ describe("AutomationOperationsExecutorsService daily_report", () => {
         waiting: ["a".repeat(120), null, "c", "d"],
     }
     it("keeps the report in Office when the null chat adapter is registered", async () => {
-        const em = mockEntityManager({ query: [SELECT_DAY_FIGURES, [figures]] })
+        const em = readingOf(...dayFiguresAnswers(figures)).em
         const { run, office } = await build(em, true)
 
         const result = await run("daily_report", context({ toOwnerChat: true }), {})
@@ -209,7 +249,7 @@ describe("AutomationOperationsExecutorsService delivery_notice", () => {
         tracking_code: " ABC ",
     }
     it("tells the customer the order left, with the carrier and the tracking code", async () => {
-        const em = mockEntityManager({ query: [SELECT_ORDER, [order]] })
+        const em = readingOf({ getRawOne: order }).em
         const { run, messages } = await build(em)
 
         await expect(run("delivery_notice", context(), { order_id: "o-1" })).resolves.toBe(SENT)
@@ -225,7 +265,7 @@ describe("AutomationOperationsExecutorsService delivery_notice", () => {
     })
 
     it("falls back on standard words when the order has no carrier or tracking code", async () => {
-        const em = mockEntityManager({ query: [SELECT_ORDER, [{ ...order, carrier: null, tracking_code: null }]] })
+        const em = readingOf({ getRawOne: { ...order, carrier: null, tracking_code: null } }).em
         const { run, messages } = await build(em)
 
         await run("delivery_notice", context(), { order_id: "o-1" })
@@ -240,11 +280,11 @@ describe("AutomationOperationsExecutorsService delivery_notice", () => {
     })
 
     it("skips an order that is not shipped, has no customer or no chat", async () => {
-        const missing = await build(mockEntityManager({ query: [SELECT_ORDER, []] }))
-        const unshipped = await build(mockEntityManager({ query: [SELECT_ORDER, [{ ...order, shipped_at: null }]] }))
-        const noLead = await build(mockEntityManager({ query: [SELECT_ORDER, [{ ...order, lead_id: null }]] }))
+        const missing = await build(readingOf({ getRawOne: undefined }).em)
+        const unshipped = await build(readingOf({ getRawOne: { ...order, shipped_at: null } }).em)
+        const noLead = await build(readingOf({ getRawOne: { ...order, lead_id: null } }).em)
         noLead.messages.leadOf.mockResolvedValue(null)
-        const noChat = await build(mockEntityManager({ query: [SELECT_ORDER, [order]] }))
+        const noChat = await build(readingOf({ getRawOne: order }).em)
         noChat.messages.conversationOf.mockResolvedValue(null)
 
         await missing.run("delivery_notice", context(), {})
@@ -261,7 +301,7 @@ describe("AutomationOperationsExecutorsService delivery_notice", () => {
 })
 describe("AutomationOperationsExecutorsService contract_renewal", () => {
     it("drafts the renewal message, asks the owner and opens a follow-up for sales", async () => {
-        const { run, messages, office } = await build(mockEntityManager({ query: [SELECT_CONTRACT, [CONTRACT]] }))
+        const { run, messages, office } = await build(readingOf({ getRawOne: CONTRACT }).em)
 
         const result = await run("contract_renewal", context(), { contract_id: "c-1", ends_on: "2026-10-20" })
 
@@ -305,7 +345,7 @@ describe("AutomationOperationsExecutorsService contract_renewal", () => {
 
     it("lets the owner switch the question off, and follows up on the end date when it is sooner", async () => {
         const { run, messages, office } = await build(
-            mockEntityManager({ query: [SELECT_CONTRACT, [{ ...CONTRACT, ends_on: "2026-10-13", plan: "  " }]] }),
+            readingOf({ getRawOne: { ...CONTRACT, ends_on: "2026-10-13", plan: "  " } }).em,
         )
 
         await run("contract_renewal", context({ alwaysAsk: false }), { contract_id: "c-1" })
@@ -322,7 +362,7 @@ describe("AutomationOperationsExecutorsService contract_renewal", () => {
 })
 describe("AutomationOperationsExecutorsService contract_renewal", () => {
     it("only notes a follow-up that was already open, and uses the standard staff name and the action without a phone", async () => {
-        const { run, messages, office } = await build(mockEntityManager({ query: [SELECT_CONTRACT, [CONTRACT]] }))
+        const { run, messages, office } = await build(readingOf({ getRawOne: CONTRACT }).em)
         office.openFollowUp.mockResolvedValue(false)
         messages.firstStaffName.mockResolvedValue(null)
         messages.lead.mockResolvedValue({ ...LEAD, phone: null })
@@ -341,7 +381,7 @@ describe("AutomationOperationsExecutorsService contract_renewal", () => {
     })
 
     it("does not message a customer without a chat but still opens the follow-up", async () => {
-        const { run, messages } = await build(mockEntityManager({ query: [SELECT_CONTRACT, [CONTRACT]] }))
+        const { run, messages } = await build(readingOf({ getRawOne: CONTRACT }).em)
         messages.conversationOf.mockResolvedValue(null)
 
         const result = await run("contract_renewal", context(), { contract_id: "c-1" })
@@ -356,7 +396,7 @@ describe("AutomationOperationsExecutorsService contract_renewal", () => {
 
     it("makes a lead for a contract typed in by name and attaches it", async () => {
         const { run, records, messages } = await build(
-            mockEntityManager({ query: [SELECT_CONTRACT, [{ ...CONTRACT, lead_id: null }]] }),
+            readingOf({ getRawOne: { ...CONTRACT, lead_id: null } }, { getRawOne: { ...CONTRACT, lead_id: null } }).em,
         )
 
         await run("contract_renewal", context(), { contract_id: "c-1" })
@@ -372,11 +412,11 @@ describe("AutomationOperationsExecutorsService contract_renewal", () => {
     })
 
     it("skips a contract that is gone, no longer active, moved to another end date or has no lead", async () => {
-        const gone = await build(mockEntityManager({ query: [SELECT_CONTRACT, []] }))
+        const gone = await build(readingOf({ getRawOne: undefined }).em)
         const noId = await build(mockEntityManager())
-        const ended = await build(mockEntityManager({ query: [SELECT_CONTRACT, [{ ...CONTRACT, status: "ended" }]] }))
-        const moved = await build(mockEntityManager({ query: [SELECT_CONTRACT, [CONTRACT]] }))
-        const noLead = await build(mockEntityManager({ query: [SELECT_CONTRACT, [CONTRACT]] }))
+        const ended = await build(readingOf({ getRawOne: { ...CONTRACT, status: "ended" } }).em)
+        const moved = await build(readingOf({ getRawOne: CONTRACT }).em)
+        const noLead = await build(readingOf({ getRawOne: CONTRACT }).em)
         noLead.messages.lead.mockResolvedValue(null)
 
         await gone.run("contract_renewal", context(), { contract_id: "c-1" })
@@ -395,14 +435,7 @@ describe("AutomationOperationsExecutorsService contract_renewal", () => {
 describe("AutomationOperationsExecutorsService contract_renewal links the customer", () => {
     it("links the contracts to their customers before it makes a lead, and uses the lead the link found", async () => {
         const unlinked = { ...CONTRACT, lead_id: null }
-        const { run, records } = await build(
-            mockEntityManager({
-                query: [
-                    [SELECT_CONTRACT, [unlinked]],
-                    [SELECT_CONTRACT, [unlinked]],
-                ],
-            }),
-        )
+        const { run, records } = await build(readingOf({ getRawOne: unlinked }, { getRawOne: unlinked }).em)
         records.linkCustomers.mockResolvedValue(undefined)
         await run("contract_renewal", context(), { contract_id: "c-1" })
         expect(records.linkCustomers).toHaveBeenCalledWith("ws-1")
@@ -410,12 +443,7 @@ describe("AutomationOperationsExecutorsService contract_renewal links the custom
             records.createLead.mock.invocationCallOrder[0] ?? 0,
         )
         const linked = await build(
-            mockEntityManager({
-                query: [
-                    [SELECT_CONTRACT, [unlinked]],
-                    [SELECT_CONTRACT, [{ ...unlinked, lead_id: "l-1" }]],
-                ],
-            }),
+            readingOf({ getRawOne: unlinked }, { getRawOne: { ...unlinked, lead_id: "l-1" } }).em,
         )
         await linked.run("contract_renewal", context(), { contract_id: "c-1" })
         expect(linked.records.linkCustomers).toHaveBeenCalledWith("ws-1")
@@ -424,7 +452,7 @@ describe("AutomationOperationsExecutorsService contract_renewal links the custom
     })
 
     it("does not link when the contract already has its lead", async () => {
-        const { run, records } = await build(mockEntityManager({ query: [SELECT_CONTRACT, [CONTRACT]] }))
+        const { run, records } = await build(readingOf({ getRawOne: CONTRACT }).em)
         await run("contract_renewal", context(), { contract_id: "c-1" })
         expect(records.linkCustomers).not.toHaveBeenCalled()
     })
@@ -441,9 +469,7 @@ describe("AutomationOperationsExecutorsService contract_renewal with a payment",
     }
 
     it("sends the payment lines as a fixed tail, reports the invoice first and names it in the evidence", async () => {
-        const { run, messages, renewal, office } = await build(
-            mockEntityManager({ query: [SELECT_CONTRACT, [CONTRACT]] }),
-        )
+        const { run, messages, renewal, office } = await build(readingOf({ getRawOne: CONTRACT }).em)
         renewal.paymentOf.mockResolvedValue(PAYMENT)
         const zalo = { label: "zalo", status: "skipped" as const }
         renewal.zaloWindowSteps.mockResolvedValue([zalo])
@@ -468,7 +494,7 @@ describe("AutomationOperationsExecutorsService contract_renewal with a payment",
     })
 
     it("keeps the invoice step when the customer has no chat, so sales can quote it", async () => {
-        const { run, messages, renewal } = await build(mockEntityManager({ query: [SELECT_CONTRACT, [CONTRACT]] }))
+        const { run, messages, renewal } = await build(readingOf({ getRawOne: CONTRACT }).em)
         renewal.paymentOf.mockResolvedValue(PAYMENT)
         messages.conversationOf.mockResolvedValue(null)
 

@@ -7,7 +7,7 @@ import type { PerformContext, PerformResult } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { HiringError, HiringErrorCode } from "./errors/hiring.error"
 import type { InterviewRecord } from "./hiring.contracts"
 import type {
@@ -28,16 +28,6 @@ import { HiringDataService } from "./hiring-data.service"
 import { HiringLinksService } from "./hiring-links.service"
 import { HiringNotifyService } from "./hiring-notify.service"
 import { HiringTextService } from "./hiring-text.service"
-import {
-    CLAIM_REMINDER,
-    CONFIRM_INTERVIEW,
-    LOG_EVENT,
-    CREATE_INTERVIEW,
-    NONE_FIT_INTERVIEW,
-    SAVE_AVAILABILITY,
-    SET_INTERVIEW_STATUS,
-} from "./persistence/hiring.sql"
-import type { FlagRow, IdRow } from "./persistence/hiring.rows"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { fieldNumber, fieldText } from "./policies/gate-fields.policy"
 import { DEFAULT_WINDOWS, computeSlots } from "./policies/slots.policy"
@@ -74,7 +64,7 @@ export class HiringInterviewsService {
         if (userId !== undefined) {
             const member = await this.data.memberName(workspaceId, userId)
             if (member === undefined) throw new HiringError({ code: HiringErrorCode.InterviewerNotMember })
-            return { userId, name: member.display_name }
+            return { userId, name: member.displayName }
         }
         const [first] = await this.data.interviewers(workspaceId)
         if (first === undefined) throw new HiringError({ code: HiringErrorCode.InterviewerMissing })
@@ -146,23 +136,27 @@ export class HiringInterviewsService {
             who: interviewerName === "" ? this.words.text("hiring.interview.someone") : interviewerName,
             fallback: usedDefault ? this.words.text("hiring.interview.defaultWindow") : "",
         })
-        await this.entityManager.query<Array<IdRow>>(CREATE_INTERVIEW, [
-            workspaceId,
-            candidate.id,
-            candidate.jobId,
-            JSON.stringify({
-                interviewerUserId: interviewerId === "" ? null : interviewerId,
-                interviewerName,
-                mode,
-                location,
-                durationMin: duration,
-                slots,
-            }),
-            token,
-            context.workItemId,
-            context.actor,
-            line,
-        ])
+        await callDbFunction<{ hiring_interview_create: string | null }>(
+            this.entityManager,
+            "public.hiring_interview_create",
+            [
+                workspaceId,
+                candidate.id,
+                candidate.jobId,
+                JSON.stringify({
+                    interviewerUserId: interviewerId === "" ? null : interviewerId,
+                    interviewerName,
+                    mode,
+                    location,
+                    durationMin: duration,
+                    slots,
+                }),
+                token,
+                context.workItemId,
+                context.actor,
+                line,
+            ],
+        )
         const link = this.links.interview(token)
         const shop = await this.office.workspaceName(workspaceId)
         const text = this.words.text("hiring.interview.invite", {
@@ -236,11 +230,15 @@ export class HiringInterviewsService {
         const name = candidate?.name ?? ""
         const title = job?.title ?? ""
         if (request.start === undefined) {
-            await this.entityManager.query<Array<FlagRow>>(NONE_FIT_INTERVIEW, [
-                request.token,
-                this.words.text("hiring.interview.noneFitNote"),
-                this.words.text("hiring.event.noneFit"),
-            ])
+            await callDbFunction<{ hiring_interview_none_fit: boolean }>(
+                this.entityManager,
+                "public.hiring_interview_none_fit",
+                [
+                    request.token,
+                    this.words.text("hiring.interview.noneFitNote"),
+                    this.words.text("hiring.event.noneFit"),
+                ],
+            )
             await this.office.postOffice(
                 interview.workspaceId,
                 this.words.text("hiring.office.noneFit", { name, title }),
@@ -250,13 +248,12 @@ export class HiringInterviewsService {
         const slot = interview.proposedSlots.find((item) => item.start === request.start)
         if (slot === undefined) return { outcome: "not_offered", slotStart: null }
         const when = this.words.when(slot.start)
-        const [row] = await this.entityManager.query<Array<FlagRow>>(CONFIRM_INTERVIEW, [
-            request.token,
-            slot.start,
-            slot.end,
-            this.words.text("hiring.event.interviewConfirmed", { when }),
-        ])
-        if (row?.value !== true) return { outcome: "stale", slotStart: null }
+        const [row] = await callDbFunction<{ hiring_interview_confirm: boolean }>(
+            this.entityManager,
+            "public.hiring_interview_confirm",
+            [request.token, slot.start, slot.end, this.words.text("hiring.event.interviewConfirmed", { when })],
+        )
+        if (row?.hiring_interview_confirm !== true) return { outcome: "stale", slotStart: null }
         await this.office.postOffice(
             interview.workspaceId,
             this.words.text("hiring.office.interviewConfirmed", {
@@ -275,14 +272,18 @@ export class HiringInterviewsService {
     /** Sets an interview done, cancelled or missed. */
     async setStatus(userId: string, workspaceId: string, request: SetInterviewStatusParams): Promise<void> {
         const { displayName } = await this.members.require(userId, workspaceId, MANAGER_ROLES)
-        const [row] = await this.entityManager.query<Array<IdRow>>(SET_INTERVIEW_STATUS, [
-            workspaceId,
-            request.id,
-            request.status,
-            displayName,
-            this.words.text(`hiring.event.interview_${request.status}`),
-        ])
-        if (row?.id === null || row?.id === undefined)
+        const [row] = await callDbFunction<{ hiring_interview_status: string | null }>(
+            this.entityManager,
+            "public.hiring_interview_status",
+            [
+                workspaceId,
+                request.id,
+                request.status,
+                displayName,
+                this.words.text(`hiring.event.interview_${request.status}`),
+            ],
+        )
+        if (row?.hiring_interview_status === null || row?.hiring_interview_status === undefined)
             throw new HiringError({ code: HiringErrorCode.InterviewNotFound })
     }
 
@@ -307,19 +308,23 @@ export class HiringInterviewsService {
         )
         if (valid.length !== request.windows.length)
             throw new HiringError({ code: HiringErrorCode.AvailabilityInvalid })
-        const [row] = await this.entityManager.query<Array<{ value: number }>>(SAVE_AVAILABILITY, [
-            workspaceId,
-            request.memberUserId,
-            JSON.stringify(valid),
-        ])
-        return { saved: row?.value ?? 0 }
+        const [row] = await callDbFunction<{ hiring_availability_save: number }>(
+            this.entityManager,
+            "public.hiring_availability_save",
+            [workspaceId, request.memberUserId, JSON.stringify(valid)],
+        )
+        return { saved: row?.hiring_availability_save ?? 0 }
     }
 
     /** Sends the reminder of a confirmed interview once; answers whether this call sent it. */
     async remind(interview: InterviewRecord, shop: string): Promise<boolean> {
         if (interview.slotStart === null) return false
-        const [claim] = await this.entityManager.query<Array<FlagRow>>(CLAIM_REMINDER, [interview.id])
-        if (claim?.value !== true) return false
+        const [claim] = await callDbFunction<{ hiring_interview_remind_claim: boolean }>(
+            this.entityManager,
+            "public.hiring_interview_remind_claim",
+            [interview.id],
+        )
+        if (claim?.hiring_interview_remind_claim !== true) return false
         const candidate = await this.data.candidate(interview.workspaceId, interview.candidateId)
         const job = await this.data.jobHead(interview.jobId)
         if (candidate === undefined) return false
@@ -340,7 +345,7 @@ export class HiringInterviewsService {
                       }),
                       workItemId: interview.workItemId,
                   })
-        await this.entityManager.query(LOG_EVENT, [
+        await callDbFunction<unknown>(this.entityManager, "public.hiring_event_log", [
             interview.workspaceId,
             candidate.id,
             "interview_reminder",

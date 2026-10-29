@@ -1,7 +1,13 @@
 import assert from "node:assert/strict"
 import type { EntityManager } from "typeorm"
-import { sql } from "@modules/platform/database"
+import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
 import { eachInOrder } from "@modules/platform/primitives"
+import { leadsEntities } from "@modules/domain/leads"
+import { OrderEntity } from "@modules/domain/orders"
+import { WorkThreadEntity } from "@modules/domain/work-threads"
+import { WorkspaceEntity } from "@modules/domain/workspaces"
+
+const [LeadEntity] = leadsEntities
 
 /** The identities of one isolated pagination proof. */
 export interface PaginationIdentity {
@@ -25,11 +31,8 @@ export interface PaginationFixture extends PaginationIdentity {
     readonly creatorMemberId: string
 }
 
-/** The workspace trigger seats its owner under a distinct member id ($1 workspace, $2 user). */
-const OWNER_MEMBER = sql`SELECT id FROM public.workspace_members WHERE workspace_id = $1 AND user_id = $2 LIMIT 1`
-
 const ownerMemberId = async (manager: EntityManager, workspaceId: string, userId: string): Promise<string> => {
-    const [row] = await manager.query<Array<{ id: string }>>(OWNER_MEMBER, [workspaceId, userId])
+    const row = await manager.findOne(WorkspaceMemberEntity, { where: { workspaceId, userId }, select: { id: true } })
     assert(row, "The pagination workspace must have its owner's member row")
     return row.id
 }
@@ -50,30 +53,30 @@ export const persistPaginationRow = async (
     leadId: string,
     createdBy: string,
 ): Promise<void> => {
-    await manager.insert("public.leads", {
+    await manager.insert(LeadEntity, {
         id: rowId,
-        workspace_id: workspaceId,
-        contact_name: `Pagination ${rowId}`,
+        workspaceId: workspaceId,
+        contactName: `Pagination ${rowId}`,
         company: "",
         channel: "web",
         need: "Cursor proof",
-        created_at: createdAt,
+        createdAt: createdAt,
     })
-    await manager.insert("public.orders", {
+    await manager.insert(OrderEntity, {
         id: rowId,
-        workspace_id: workspaceId,
-        lead_id: leadId,
-        order_no: `pagination-${rowId}`,
-        created_at: createdAt,
+        workspaceId: workspaceId,
+        leadId: leadId,
+        orderNo: `pagination-${rowId}`,
+        createdAt: createdAt,
     })
-    await manager.insert("public.work_threads", {
+    await manager.insert(WorkThreadEntity, {
         id: rowId,
-        workspace_id: workspaceId,
-        lead_id: leadId,
+        workspaceId: workspaceId,
+        leadId: leadId,
         title: `Pagination ${rowId}`,
-        created_by: createdBy,
-        created_at: createdAt,
-        updated_at: createdAt,
+        createdBy: createdBy,
+        createdAt: createdAt,
+        updatedAt: createdAt,
     })
 }
 
@@ -87,9 +90,9 @@ export const persistPaginationRows = (
         await eachInOrder(
             [identity.workspaceId, identity.foreignWorkspaceId, identity.emptyWorkspaceId],
             async (workspaceId) => {
-                await tx.insert("public.workspaces", {
+                await tx.insert(WorkspaceEntity, {
                     id: workspaceId,
-                    owner_id: identity.userId,
+                    ownerId: identity.userId,
                     name: "Pagination proof",
                 })
             },
@@ -133,8 +136,8 @@ export const persistPaginationChange = (
             fixture.creatorMemberId,
         )
         await tx.update(
-            "public.work_threads",
-            { id: fixture.rowIds[0], workspace_id: fixture.workspaceId },
-            { updated_at: "2026-01-02T00:00:00+00:00" },
+            WorkThreadEntity,
+            { id: fixture.rowIds[0], workspaceId: fixture.workspaceId },
+            { updatedAt: "2026-01-02T00:00:00+00:00" },
         )
     })

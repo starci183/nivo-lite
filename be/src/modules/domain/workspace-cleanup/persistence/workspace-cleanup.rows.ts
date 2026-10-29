@@ -8,12 +8,6 @@ export interface WorkspaceFootprintRow {
     readonly footprint: unknown
 }
 
-/** One account that a kept workspace holds, as a member or as its owner. */
-export interface KeptUserRow {
-    /** The Auth user id. */
-    readonly user_id: string
-}
-
 /** What deleting one account would do to the data that survives the cleanup. */
 export interface UserReferenceRow {
     /** The Auth user id. */

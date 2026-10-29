@@ -1,4 +1,3 @@
-import type { InboundEventRow } from "./persistence/inbound-events.rows"
 import type { EntityManager } from "typeorm"
 
 /** A customer message no agent is bound to answer. */
@@ -69,7 +68,7 @@ export type OptionalEventStatus = EventStatus | null
 export type OptionalLeadRef = string | null
 
 /** An inbound event, or null when the workspace has no such event. */
-export type OptionalInboundEvent = InboundEventRow | null
+export type OptionalInboundEvent = InboundEventDetail | null
 
 /** An input a channel delivered, as the engine records it. */
 export interface InboundInput {
@@ -89,4 +88,40 @@ export interface InboundInput {
     readonly externalRef: string | null
     /** The channel's own event id: the idempotency key. */
     readonly eventId: string
+}
+
+/** An inbound event as the engine reads it. */
+export interface InboundEventDetail {
+    /** The event id. */
+    readonly id: string
+    /** The workspace. */
+    readonly workspace_id: string
+    /** The channel key. */
+    readonly channel: string
+    /** The kind of input. */
+    readonly kind: string
+    /** The sender's name. */
+    readonly sender_name: string | null
+    /** The sender's phone or email. */
+    readonly sender_contact: string | null
+    /** The text. */
+    readonly body: string
+    /** The money in it, VND. */
+    readonly amount_vnd: number | null
+    /** The external reference. */
+    readonly external_ref: string | null
+    /** The channel's own event id. */
+    readonly event_id: string | null
+    /** The customer it belongs to. */
+    readonly lead_id: string | null
+    /** Where it stands. */
+    readonly status: string
+}
+
+/** A received input with feed timestamps and repeat-delivery counts. */
+export interface InboundEventFeedRecord extends InboundEventDetail {
+    /** How many duplicate deliveries have been blocked. */
+    readonly duplicate_count: number
+    /** When this event was first received, as ISO 8601 text. */
+    readonly created_at: string
 }

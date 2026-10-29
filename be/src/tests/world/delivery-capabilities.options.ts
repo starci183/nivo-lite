@@ -9,7 +9,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { I18nModule } from "@modules/platform/i18n"
 import { JobsModule } from "@modules/platform/jobs"
 import { HttpSecurityModule } from "@modules/platform/http-security"
-import { SupabaseModule, SUPABASE_AUTH } from "@modules/integrations/supabase"
+import { refused } from "@modules/platform/primitives"
 import { ZaloModule, ZALO } from "@modules/integrations/zalo"
 import type { ZaloClient } from "@modules/integrations/zalo"
 import { MetaModule } from "@modules/integrations/meta"
@@ -44,6 +44,13 @@ class DeferredMetaEvents {
     }
 }
 
+/** The members proof needs an account directory but reads no account. */
+class ProofAccounts {
+    accountOf() {
+        return Promise.resolve(refused("IDENTITY_ACCOUNT_NOT_FOUND"))
+    }
+}
+
 @Module({})
 class DeliveryPeersModule {
     static register(): DynamicModule {
@@ -54,6 +61,7 @@ class DeliveryPeersModule {
             providers: [
                 ConversationsService,
                 DeferredMetaEvents,
+                ProofAccounts,
                 {
                     provide: ZaloCredentialsService,
                     useFactory: (
@@ -74,7 +82,7 @@ class DeliveryPeersModule {
                     inject: [CLOCK, ZALO, LOGGER, ConnectionSecretsService, ConnectionsService],
                 },
             ],
-            exports: [ConversationsService, DeferredMetaEvents],
+            exports: [ConversationsService, DeferredMetaEvents, ProofAccounts],
         }
     }
 }
@@ -86,6 +94,7 @@ const platformModules = (tokenKey: Secret): Array<DynamicModule> => [
         connection: PRIMARY_ENTITY_MANAGER,
         workerId: "delivery-proof",
         leaseMs: 100,
+        scheduler: { enabled: false },
     }),
     I18nModule.register({ isGlobal: true, bundles: [CONVERSATIONS_MESSAGES, BILLING_MESSAGES] }),
     HttpSecurityModule.register({
@@ -94,11 +103,6 @@ const platformModules = (tokenKey: Secret): Array<DynamicModule> => [
         allowedOrigins: [],
         rateLimit: { windowMs: 1000, defaultLimit: 100, strictLimit: 100 },
         webhooks: {},
-    }),
-    SupabaseModule.register({
-        isGlobal: true,
-        url: "http://localhost:54321",
-        serviceRoleKey: new Secret("proof-key"),
     }),
     ZaloModule.register({
         isGlobal: true,
@@ -133,7 +137,7 @@ const domainModules = (tokenKey: Secret): Array<DynamicModule> => [
     InboundEventsModule.register({ isGlobal: true }),
     EventsModule.register({ isGlobal: true }),
     StaffModule.register({ isGlobal: true }),
-    WorkspaceMembersModule.register({ isGlobal: true, accounts: SUPABASE_AUTH }),
+    WorkspaceMembersModule.register({ isGlobal: true, accounts: ProofAccounts }),
     PaymentOrdersModule.register({ isGlobal: true }),
     BankFeedInboxModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),

@@ -1,4 +1,4 @@
-import type { LeadTurnInput } from "@modules/integrations/deepseek"
+import type { LeadTurnInput } from "@modules/domain/ai-tasks"
 
 /** A returning customer asking about the service price in a public comment. */
 export const priceComment = (input: LeadTurnInput): LeadTurnInput => ({

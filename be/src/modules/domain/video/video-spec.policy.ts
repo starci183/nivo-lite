@@ -164,7 +164,8 @@ const DEFAULT_COLOR = "#222222"
 const DEFAULT_PRIMARY = "#16a34a"
 const DEFAULT_SECONDARY = "#0f172a"
 const DEFAULT_VOICE: TtsVoice = "vi-VN-HoaiMyNeural"
-const MEDIA_URL = /\/storage\/v1\/object\/(?:sign\/|authenticated\/|public\/)?media\/(.+)$/u
+const MEDIA_URL =
+    /\/storage\/v1\/object\/(?:sign\/|authenticated\/|public\/)?media\/(.+)$|^\/[a-z0-9][a-z0-9-]*-media\/(.+)$/u
 const WORKSPACE_PATH = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/.+/iu
 const HEX_COLOR = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/iu
 
@@ -205,7 +206,8 @@ const decodePath = (text: string): string =>
 
 const urlPath = (value: string): string | null => {
     if (!URL.canParse(value)) return null
-    const tail = MEDIA_URL.exec(new URL(value).pathname)?.[1]
+    const found = MEDIA_URL.exec(new URL(value).pathname)
+    const tail = found?.[1] ?? found?.[2]
     if (tail === undefined || MALFORMED_PERCENT.test(tail)) return null
     return decodePath(tail)
 }
@@ -217,8 +219,8 @@ const hasUnsafeSegment = (path: string): boolean =>
     UNSAFE_CHARACTER.test(path)
 
 /**
- * An asset reference -> the bare path inside the `media` bucket, or null. Accepts the path itself or a Supabase Storage URL
- * (.../storage/v1/object/{sign|authenticated|public}/media/<path>[?token]). `workspaceId` (when given) must be the first path segment.
+ * An asset reference -> the bare path inside the `media` bucket, or null. Accepts the path itself or a storage URL: the S3 form
+ * (https://host/<prefix>-media/<path>?signature) or the old Supabase form (.../storage/v1/object/{sign|authenticated|public}/media/<path>[?token]). `workspaceId` (when given) must be the first path segment.
  */
 export const mediaPathOf = (value: unknown, workspaceId?: string): string | null => {
     if (typeof value !== "string") return null

@@ -1,5 +1,5 @@
 import type { ModuleCommand } from "@modules/domain/decisions"
-import type { ProposedCommand } from "@modules/integrations/deepseek"
+import type { ProposedCommand } from "@modules/domain/ai-tasks"
 import { isDomainError } from "@modules/platform/errors"
 import type { Locale } from "@modules/platform/i18n"
 import type {

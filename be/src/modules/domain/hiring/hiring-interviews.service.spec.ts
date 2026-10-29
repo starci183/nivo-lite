@@ -29,15 +29,15 @@ import { HiringInterviewsService } from "./hiring-interviews.service"
 import { HiringLinksService } from "./hiring-links.service"
 import { HiringNotifyService } from "./hiring-notify.service"
 import { HiringTextService } from "./hiring-text.service"
-import {
-    CLAIM_REMINDER,
-    CONFIRM_INTERVIEW,
-    CREATE_INTERVIEW,
-    LOG_EVENT,
-    NONE_FIT_INTERVIEW,
-    SAVE_AVAILABILITY,
-    SET_INTERVIEW_STATUS,
-} from "./persistence/hiring.sql"
+const CREATE_INTERVIEW = "SELECT * FROM public.hiring_interview_create($1, $2, $3, $4, $5, $6, $7, $8)"
+const NONE_FIT_INTERVIEW = "SELECT * FROM public.hiring_interview_none_fit($1, $2, $3)"
+const CONFIRM_INTERVIEW = "SELECT * FROM public.hiring_interview_confirm($1, $2, $3, $4)"
+const SET_INTERVIEW_STATUS = "SELECT * FROM public.hiring_interview_status($1, $2, $3, $4, $5)"
+const SAVE_AVAILABILITY = "SELECT * FROM public.hiring_availability_save($1, $2, $3)"
+const CLAIM_REMINDER = "SELECT * FROM public.hiring_interview_remind_claim($1)"
+const LOG_EVENT = "SELECT * FROM public.hiring_event_log($1, $2, $3, $4, $5)"
+const NO_STATUS_ROW = [{ rows: [] }, { rows: [{ hiring_interview_status: null }] }]
+const NO_CLAIM_ROW = [{ rows: [] }, { rows: [{ hiring_interview_remind_claim: false }] }]
 
 interface CredentialResponseCase {
     readonly status: InterviewStatus
@@ -61,7 +61,7 @@ const build = async (entityManager: MockEntityManager = mockEntityManager()) => 
     office.workspaceName.mockResolvedValue("Coffee Shop")
     const data = mock<HiringDataService>()
     data.hasOpenInterview.mockResolvedValue(false)
-    data.memberName.mockResolvedValue({ user_id: "interviewer-1", display_name: "Bob" })
+    data.memberName.mockResolvedValue({ userId: "interviewer-1", displayName: "Bob" })
     data.interviewers.mockResolvedValue([{ userId: "interviewer-1", name: "Bob", isOwner: true }])
     data.askAttempts.mockResolvedValue(2)
     data.jobHead.mockResolvedValue({ title: "Barista", position: "Barista", location: "Main Street" })
@@ -264,7 +264,7 @@ describe("HiringInterviewsService", () => {
     })
 
     it("records no fitting slot with missing heads and rejects unoffered times", async () => {
-        const em = mockEntityManager({ query: [NONE_FIT_INTERVIEW, [{ value: true }]] })
+        const em = mockEntityManager({ query: [NONE_FIT_INTERVIEW, [{ hiring_interview_none_fit: true }]] })
         const { service, data, office } = await build(em)
         data.candidateHead.mockResolvedValue(undefined)
         data.jobHead.mockResolvedValue(undefined)
@@ -281,9 +281,9 @@ describe("HiringInterviewsService", () => {
 describe("HiringInterviewsService", () => {
     it.each([
         { rows: [], name: "Bob", outcome: "stale" },
-        { rows: [{ value: false }], name: "Bob", outcome: "stale" },
-        { rows: [{ value: true }], name: "Bob", outcome: "confirmed" },
-        { rows: [{ value: true }], name: "", outcome: "confirmed" },
+        { rows: [{ hiring_interview_confirm: false }], name: "Bob", outcome: "stale" },
+        { rows: [{ hiring_interview_confirm: true }], name: "Bob", outcome: "confirmed" },
+        { rows: [{ hiring_interview_confirm: true }], name: "", outcome: "confirmed" },
     ])("responds $outcome with interviewer '$name'", async ({ rows, name, outcome }) => {
         const em = mockEntityManager({ query: [CONFIRM_INTERVIEW, rows] })
         const { service, data, office } = await build(em)
@@ -303,7 +303,7 @@ describe("HiringInterviewsService", () => {
     it.each([statusOf(), statusOf({ status: "cancelled" }), statusOf({ status: "no_show" })])(
         "sets $status",
         async (request) => {
-            const em = mockEntityManager({ query: [SET_INTERVIEW_STATUS, [{ id: "interview-1" }]] })
+            const em = mockEntityManager({ query: [SET_INTERVIEW_STATUS, [{ hiring_interview_status: "id-1" }]] })
             const { service, members } = await build(em)
             await service.setStatus("user-1", "ws-1", request)
             expect(members.require.mock.calls).toEqual([roleCall])
@@ -313,7 +313,7 @@ describe("HiringInterviewsService", () => {
         },
     )
 
-    it.each([{ rows: [] }, { rows: [{ id: null }] }])("refuses missing status rows $rows", async ({ rows }) => {
+    it.each(NO_STATUS_ROW)("refuses missing status rows $rows", async ({ rows }) => {
         const em = mockEntityManager({ query: [SET_INTERVIEW_STATUS, rows] })
         const { service } = await build(em)
         await expect(service.setStatus("user-1", "ws-1", statusOf())).rejects.toMatchObject({
@@ -351,9 +351,9 @@ describe("HiringInterviewsService", () => {
     })
 
     it.each([
-        { rows: [{ value: 2 }], saved: 2 },
+        { rows: [{ hiring_availability_save: 2 }], saved: 2 },
         { rows: [], saved: 0 },
-        { rows: [{ value: null }], saved: 0 },
+        { rows: [{ hiring_availability_save: null }], saved: 0 },
     ])("saves windows with count $saved", async ({ rows, saved }) => {
         const em = mockEntityManager({ query: [SAVE_AVAILABILITY, rows] })
         const { service, members, data } = await build(em)
@@ -369,7 +369,7 @@ describe("HiringInterviewsService", () => {
     })
 
     it("ignores reminders without a confirmed start or existing candidate", async () => {
-        const em = mockEntityManager({ query: [CLAIM_REMINDER, [{ value: true }]] })
+        const em = mockEntityManager({ query: [CLAIM_REMINDER, [{ hiring_interview_remind_claim: true }]] })
         const { service, data, notify, office } = await build(em)
         await expect(service.remind(interviewOf({ slotStart: null }), "Coffee Shop")).resolves.toBe(false)
         expect(em.query).not.toHaveBeenCalled()
@@ -379,7 +379,7 @@ describe("HiringInterviewsService", () => {
         expect(office.postOffice).not.toHaveBeenCalled()
     })
 
-    it.each([{ rows: [] }, { rows: [{ value: false }] }])("ignores unclaimed reminders $rows", async ({ rows }) => {
+    it.each(NO_CLAIM_ROW)("ignores unclaimed reminders $rows", async ({ rows }) => {
         const em = mockEntityManager({ query: [CLAIM_REMINDER, rows] })
         const { service, data } = await build(em)
         await expect(service.remind(interviewOf(), "Coffee Shop")).resolves.toBe(false)
@@ -392,7 +392,7 @@ describe("HiringInterviewsService", () => {
     it.each([true, false])("records a reminder with delivery=$hasWork", async (hasWork) => {
         const em = mockEntityManager({
             query: [
-                [CLAIM_REMINDER, [{ value: true }]],
+                [CLAIM_REMINDER, [{ hiring_interview_remind_claim: true }]],
                 [LOG_EVENT, []],
             ],
         })

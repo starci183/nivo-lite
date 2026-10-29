@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
-import type { McpCallLogRow } from "@modules/domain/mcp-call-log"
+import type { CallLogRecord } from "@modules/domain/mcp-call-log"
 import type { McpConnectorRow } from "@modules/domain/mcp-connectors"
 import { SEPAY_MANIFEST } from "./adapters/sepay-native.service"
 import { argsHashOf } from "./audit-mask.policy"
@@ -75,7 +75,7 @@ const rowOf = builder<McpConnectorRow>({
     checked_at: null,
 })
 
-const logOf = builder<McpCallLogRow>({
+const logOf = builder<CallLogRecord>({
     id: "l1",
     tool: "hakuen.rates.quote",
     agent_name: "Sales",

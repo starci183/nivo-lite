@@ -9,8 +9,7 @@ import { AiGenerationsError, AiGenerationsErrorCode } from "./errors/ai-generati
 import { GenerationRunnerService } from "./generation-runner.service"
 import { GenerationsService } from "./generations.service"
 import { clampTimeout, inputJsonOf, progressOf, purposeOf, verdictOf } from "./generation.policy"
-import type { GenerationProgressRow, InsertedGenerationRow } from "./persistence/ai-generations.rows"
-import { FIND_GENERATION_PROGRESS, INSERT_GENERATION } from "./persistence/ai-generations.sql"
+import { AiGenerationEntity } from "./persistence/entities"
 
 @Injectable()
 /**
@@ -37,20 +36,21 @@ export class DirectGenerationService {
     }
 
     private async generate(params: GenerateParams): Promise<GenerationOutcome> {
-        const [row] = await this.entityManager.query<Array<InsertedGenerationRow>>(INSERT_GENERATION, [
-            params.workspaceId,
-            purposeOf(params.purpose),
-            params.module,
-            params.kind,
-            inputJsonOf(params, clampTimeout(params.timeoutMs)),
-        ])
-        if (row === undefined) throw new AiGenerationsError({ code: AiGenerationsErrorCode.NotCreated })
-        await this.runner.run({ generationId: row.id, workspaceId: params.workspaceId })
-        const [stored] = await this.entityManager.query<Array<GenerationProgressRow>>(FIND_GENERATION_PROGRESS, [
-            row.id,
-            params.workspaceId,
-        ])
-        const progress = stored === undefined ? null : progressOf(stored)
+        const inserted = await this.entityManager.insert(AiGenerationEntity, {
+            workspaceId: params.workspaceId,
+            purpose: purposeOf(params.purpose),
+            module: params.module,
+            usageKind: params.kind,
+            input: inputJsonOf(params, clampTimeout(params.timeoutMs)),
+        })
+        const id: unknown = inserted.identifiers[0]?.id
+        if (typeof id !== "string") throw new AiGenerationsError({ code: AiGenerationsErrorCode.NotCreated })
+        await this.runner.run({ generationId: id, workspaceId: params.workspaceId })
+        const stored = await this.entityManager.findOne(AiGenerationEntity, {
+            where: { id, workspaceId: params.workspaceId },
+            select: { status: true, output: true, usage: true, timings: true },
+        })
+        const progress = stored === null ? null : progressOf(stored)
         const verdict = progress === null ? null : verdictOf(progress)
         if (progress === null || verdict?.kind !== "done") {
             return { ok: false, reason: "error", message: this.generations.busyText(params) }
@@ -58,7 +58,7 @@ export class DirectGenerationService {
         return {
             ok: true,
             output: verdict.text,
-            generationId: row.id,
+            generationId: id,
             timings: progress.timings,
             usage: progress.usage,
         }

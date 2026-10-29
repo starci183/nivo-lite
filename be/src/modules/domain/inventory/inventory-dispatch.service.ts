@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { ApprovalGate, OfficeLog, OutboundMail } from "@modules/domain/module-ops"
 import type { PerformContext, PerformResult } from "@modules/domain/module-ops"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InventoryError, InventoryErrorCode } from "./errors/inventory.error"
@@ -15,14 +15,7 @@ import { fieldText } from "./policies/gate-fields.policy"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { isEmailAddress } from "./policies/input-text.policy"
 import { formatMoney } from "./policies/number-format.policy"
-import {
-    COUNT_SEND_ATTEMPTS,
-    MARK_PO_REMINDED,
-    MARK_PO_SENT,
-    MARK_PO_WAITING,
-    REFUSE_PO,
-    SET_PO_MESSAGE,
-} from "./persistence/inventory.sql"
+import { WorkItemEntity } from "@modules/domain/work-items"
 
 @Injectable()
 /**
@@ -66,13 +59,17 @@ export class InventoryDispatchService {
             kind === "order" ? po.status === "draft" : po.status === "sent" || po.status === "partially_received"
         if (!sendable) return { status: po.status, workItemId: null }
         const { text } = await this.messages.compose(workspaceId, po, kind)
-        const [counted] = await this.entityManager.query<Array<{ attempts: number }>>(COUNT_SEND_ATTEMPTS, [
-            workspaceId,
-            `send_po:${kind}:${po.id}:%`,
-        ])
+        const counted = await this.entityManager
+            .createQueryBuilder(WorkItemEntity, "w")
+            .select("CAST(COUNT(*) AS int)", "attempts")
+            .where("w.workspace_id = :workspaceId AND w.dedupe_key LIKE :pattern", {
+                workspaceId,
+                pattern: `send_po:${kind}:${po.id}:%`,
+            })
+            .getRawOne<{ attempts: number }>()
         const attempt = (counted?.attempts ?? 0) + 1
         const total = Math.round(po.totalVnd)
-        if (kind === "order") await this.entityManager.query(SET_PO_MESSAGE, [po.id, text])
+        if (kind === "order") await callDbFunction(this.entityManager, "public.inventory_set_po_message", [po.id, text])
         const verdict = await this.gate.request({
             workspaceId,
             actor,
@@ -98,7 +95,7 @@ export class InventoryDispatchService {
             },
         })
         if (kind === "order" && verdict.status === "waiting_decision") {
-            await this.entityManager.query(MARK_PO_WAITING, [po.id, verdict.workItemId])
+            await callDbFunction(this.entityManager, "public.inventory_mark_po_waiting", [po.id, verdict.workItemId])
         }
         return { status: verdict.status, workItemId: verdict.workItemId }
     }
@@ -123,12 +120,12 @@ export class InventoryDispatchService {
         const who = supplier?.name ?? this.text("inventory.supplierFallback", {})
         const channelWord = this.text(`inventory.channelWord.${supplier?.channel ?? "email"}`, {})
         if (reminder) {
-            await this.entityManager.query(MARK_PO_REMINDED, [
+            await callDbFunction(this.entityManager, "public.inventory_mark_po_reminded", [
                 po.id,
                 via === "copy" ? (note ?? this.text("inventory.reminderCopyNote", { channel: channelWord })) : null,
             ])
         } else {
-            await this.entityManager.query(MARK_PO_SENT, [
+            await callDbFunction(this.entityManager, "public.inventory_mark_po_sent", [
                 po.id,
                 via,
                 message,
@@ -178,7 +175,7 @@ export class InventoryDispatchService {
      */
     async rejectSendPurchaseOrder(context: PerformContext): Promise<void> {
         if (fieldText(context.fields, "kind") === "reminder") return
-        await this.entityManager.query(REFUSE_PO, [
+        await callDbFunction(this.entityManager, "public.inventory_refuse_po", [
             context.workspaceId,
             fieldText(context.fields, "po_id"),
             this.text("inventory.refusedNote", {}),

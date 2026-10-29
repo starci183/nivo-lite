@@ -38,7 +38,7 @@ export class CarePerformerService implements WorkPerformer {
         private readonly transactions: TransactionsService,
         private readonly invoices: InvoicesService,
         private readonly orders: OrdersService,
-        @InjectPromptWriter() private readonly deepseek: PromptWriter,
+        @InjectPromptWriter() private readonly prompts: PromptWriter,
         private readonly delivery: CustomerDeliveryService,
         @InjectLogger() private readonly logger: Logger,
     ) {}
@@ -70,8 +70,8 @@ export class CarePerformerService implements WorkPerformer {
     /** The model's thank-you; when the model fails or times out, the template filled with the name and what was paid. */
     private async writeCare(ctx: WorkContext, item: WorkItem, lead: LeadRecordRow, note: string): Promise<CareText> {
         try {
-            const text = await this.deepseek.draftCare(
-                this.kit.scope(ctx),
+            const text = await this.prompts.draftCare(
+                this.kit.draftScope(ctx),
                 this.kit.leadInput(lead),
                 note,
                 await this.kit.brief(ctx),

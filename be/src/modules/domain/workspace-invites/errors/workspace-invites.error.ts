@@ -21,6 +21,8 @@ export enum WorkspaceInvitesErrorCode {
     Expired = "WORKSPACE_INVITES_EXPIRED",
     /** The signed-in address is not the invited one. */
     EmailMismatch = "WORKSPACE_INVITES_EMAIL_MISMATCH",
+    /** The database gave no random uuid for the invitation token. */
+    TokenUnavailable = "WORKSPACE_INVITES_TOKEN_UNAVAILABLE",
 }
 
 /** How each workspace-invites code travels. */
@@ -34,6 +36,7 @@ export const WORKSPACE_INVITES_ERROR_KINDS: Record<WorkspaceInvitesErrorCode, Er
     [WorkspaceInvitesErrorCode.Used]: "conflict",
     [WorkspaceInvitesErrorCode.Expired]: "conflict",
     [WorkspaceInvitesErrorCode.EmailMismatch]: "forbidden",
+    [WorkspaceInvitesErrorCode.TokenUnavailable]: "internal",
 }
 
 /** The one error class of the workspace-invites capability. */

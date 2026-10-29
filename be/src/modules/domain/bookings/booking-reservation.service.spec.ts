@@ -1,9 +1,12 @@
 import { Test } from "@nestjs/testing"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { builder, mockEntityManager } from "@starci/jest-preset"
+import type { MockEntityManager } from "@starci/jest-preset"
+import { BookingResourceEntity } from "@modules/domain/booking-resources"
 import { BookingReservationService } from "./booking-reservation.service"
 import type { NewBooking, RelocateParams } from "./booking-reservation.service"
 import { BookingsErrorCode } from "./errors/bookings.error"
-import { INSERT_BOOKING, LOCK_RESOURCE, RELOCATE_BOOKING, SELECT_RESOURCE_SPANS } from "./persistence/booking-write.sql"
+import { BookingEntity } from "./persistence/entities"
 
 const START = Date.UTC(2026, 9, 12, 2)
 const HOUR = 3_600_000
@@ -28,7 +31,32 @@ const bookingOf = builder<NewBooking>({
     conflictNote: "",
     idempotencyKey: null,
 })
-const SPAN = { id: "b9", resource_id: "r1", party_size: 1, start_ms: START, block_end_ms: START + HOUR }
+const spanOf = (overrides: Partial<BookingEntity> = {}): BookingEntity =>
+    Object.assign(new BookingEntity(), {
+        id: "b9",
+        resourceId: "r1",
+        partySize: 1,
+        startAt: new Date(START),
+        blockEndAt: new Date(START + HOUR),
+        ...overrides,
+    })
+const resourceOf = (capacity: number | null): BookingResourceEntity | null =>
+    capacity === null ? null : Object.assign(new BookingResourceEntity(), { capacity })
+
+/** A manager that locks a resource of `capacity` (none for null), lists `spans` and writes through a fake builder. */
+const managerOf = (
+    capacity: number | null,
+    spans: Array<BookingEntity> | null,
+    answers: { execute?: unknown } = {},
+) => {
+    const manager: MockEntityManager = mockEntityManager({
+        findOne: [BookingResourceEntity, resourceOf(capacity)],
+        find: [BookingEntity, spans ?? []],
+    })
+    const write = fakeQueryBuilder(answers)
+    manager.createQueryBuilder.mockReturnValue(write.builder)
+    return { manager, write }
+}
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({ providers: [BookingReservationService] }).compile()
@@ -38,13 +66,7 @@ const build = async () => {
 describe("BookingReservationService", () => {
     describe("reserve", () => {
         it("locks the resource, checks the load and writes the booking", async () => {
-            const manager = mockEntityManager({
-                query: [
-                    [LOCK_RESOURCE, [{ capacity: 1 }]],
-                    [SELECT_RESOURCE_SPANS, []],
-                    [INSERT_BOOKING, [{ id: "b1" }]],
-                ],
-            })
+            const { manager, write } = managerOf(1, [], { execute: { raw: [{ id: "b1" }] } })
             const reservation = await build()
 
             await expect(reservation.reserve({ manager, booking: bookingOf(), force: false })).resolves.toEqual({
@@ -52,46 +74,57 @@ describe("BookingReservationService", () => {
                 id: "b1",
             })
 
-            expect(manager.query).toHaveBeenCalledWith(LOCK_RESOURCE, ["r1", "ws-1"])
-            expect(manager.query).toHaveBeenCalledWith(SELECT_RESOURCE_SPANS, [
-                "r1",
-                new Date(START).toISOString(),
-                new Date(START + HOUR).toISOString(),
-                null,
-            ])
-            expect(manager.query).toHaveBeenCalledWith(
-                INSERT_BOOKING,
-                expect.arrayContaining(["ws-1", "Mai", "84912345678", "s1", "r1", 1, "confirmed", true, "public_page"]),
+            expect(manager.findOne).toHaveBeenCalledWith(
+                BookingResourceEntity,
+                expect.objectContaining({
+                    where: { id: "r1", workspaceId: "ws-1" },
+                    lock: { mode: "pessimistic_write" },
+                }),
             )
+            const [, options] = manager.find.mock.calls[0] ?? []
+            expect(JSON.stringify(options)).toContain(new Date(START).toISOString())
+            expect(JSON.stringify(options)).toContain(new Date(START + HOUR).toISOString())
+            expect(manager.createQueryBuilder).toHaveBeenCalledWith(BookingEntity, "bo")
+            expect(write.callsOf("values")).toEqual([
+                [
+                    expect.objectContaining({
+                        workspaceId: "ws-1",
+                        customerName: "Mai",
+                        customerPhone: "84912345678",
+                        serviceId: "s1",
+                        resourceId: "r1",
+                        partySize: 1,
+                        status: "confirmed",
+                        holdsSlot: true,
+                        sourceChannel: "public_page",
+                        startAt: new Date(START),
+                        priceVnd: "200000",
+                        depositVnd: "0",
+                    }),
+                ],
+            ])
+            expect(write.callsOf("returning")).toEqual([["id"]])
         })
 
         it("answers full without writing when the resource has no room", async () => {
-            const manager = mockEntityManager({
-                query: [
-                    [LOCK_RESOURCE, [{ capacity: 1 }]],
-                    [SELECT_RESOURCE_SPANS, [SPAN]],
-                ],
-            })
+            const { manager, write } = managerOf(1, [spanOf()])
             const reservation = await build()
 
             await expect(reservation.reserve({ manager, booking: bookingOf(), force: false })).resolves.toEqual({
                 kind: "full",
             })
+            expect(write.calls).toEqual([])
         })
 
         it("writes over a taken place when forced and skips the load check", async () => {
-            const manager = mockEntityManager({
-                query: [
-                    [LOCK_RESOURCE, [{ capacity: 1 }]],
-                    [INSERT_BOOKING, [{ id: "b2" }]],
-                ],
-            })
+            const { manager } = managerOf(1, null, { execute: { raw: [{ id: "b2" }] } })
             const reservation = await build()
 
             await expect(reservation.reserve({ manager, booking: bookingOf(), force: true })).resolves.toEqual({
                 kind: "reserved",
                 id: "b2",
             })
+            expect(manager.find).not.toHaveBeenCalled()
         })
     })
 })
@@ -99,12 +132,7 @@ describe("BookingReservationService", () => {
 describe("BookingReservationService", () => {
     describe("reserve", () => {
         it("writes a request that does not hold its slot without checking the load", async () => {
-            const manager = mockEntityManager({
-                query: [
-                    [LOCK_RESOURCE, [{ capacity: 1 }]],
-                    [INSERT_BOOKING, [{ id: "b3" }]],
-                ],
-            })
+            const { manager } = managerOf(1, null, { execute: { raw: [{ id: "b3" }] } })
             const reservation = await build()
 
             await expect(
@@ -114,25 +142,21 @@ describe("BookingReservationService", () => {
                     force: false,
                 }),
             ).resolves.toEqual({ kind: "reserved", id: "b3" })
+            expect(manager.find).not.toHaveBeenCalled()
         })
 
         it("answers resource_not_found when the resource is not in the workspace", async () => {
-            const manager = mockEntityManager({ query: [LOCK_RESOURCE, []] })
+            const { manager, write } = managerOf(null, null)
             const reservation = await build()
 
             await expect(reservation.reserve({ manager, booking: bookingOf(), force: false })).resolves.toEqual({
                 kind: "resource_not_found",
             })
+            expect(write.calls).toEqual([])
         })
 
         it("fails when the insert answers no row", async () => {
-            const manager = mockEntityManager({
-                query: [
-                    [LOCK_RESOURCE, [{ capacity: 1 }]],
-                    [SELECT_RESOURCE_SPANS, []],
-                    [INSERT_BOOKING, []],
-                ],
-            })
+            const { manager } = managerOf(1, [], { execute: { raw: [] } })
             const reservation = await build()
 
             await expect(reservation.reserve({ manager, booking: bookingOf(), force: false })).rejects.toMatchObject({
@@ -144,8 +168,8 @@ describe("BookingReservationService", () => {
 
 describe("BookingReservationService", () => {
     describe("relocate", () => {
-        const moveOf = (overrides: Partial<RelocateParams> = {}): RelocateParams => ({
-            manager: mockEntityManager(),
+        const moveOf = (manager: MockEntityManager, overrides: Partial<RelocateParams> = {}): RelocateParams => ({
+            manager,
             workspaceId: "ws-1",
             bookingId: "b1",
             resourceId: "r2",
@@ -159,57 +183,52 @@ describe("BookingReservationService", () => {
         })
 
         it("moves the booking when the new place has room", async () => {
-            const manager = mockEntityManager({
-                query: [
-                    [LOCK_RESOURCE, [{ capacity: 1 }]],
-                    [SELECT_RESOURCE_SPANS, []],
-                    [RELOCATE_BOOKING, []],
-                ],
-            })
+            const { manager, write } = managerOf(1, [], { execute: { raw: [] } })
             const reservation = await build()
 
-            await expect(reservation.relocate(moveOf({ manager }))).resolves.toBe("moved")
+            await expect(reservation.relocate(moveOf(manager))).resolves.toBe("moved")
 
-            expect(manager.query).toHaveBeenCalledWith(RELOCATE_BOOKING, [
-                "ws-1",
-                "b1",
-                "r2",
-                new Date(START).toISOString(),
-                new Date(START + HOUR).toISOString(),
-                new Date(START + HOUR).toISOString(),
-                new Date(START - HOUR).toISOString(),
+            const [, options] = manager.find.mock.calls[0] ?? []
+            expect(JSON.stringify(options)).toContain("r2")
+            expect(manager.createQueryBuilder).toHaveBeenCalledWith(BookingEntity, "bo")
+            expect(write.callsOf("set")).toEqual([
+                [
+                    expect.objectContaining({
+                        resourceId: "r2",
+                        startAt: new Date(START),
+                        endAt: new Date(START + HOUR),
+                        blockEndAt: new Date(START + HOUR),
+                        holdsSlot: true,
+                        conflictNote: "",
+                        updatedAt: new Date(START - HOUR),
+                    }),
+                ],
             ])
+            expect(write.callsOf("where")).toEqual([[{ workspaceId: "ws-1", id: "b1" }]])
+            expect(write.callsOf("setParameter")).toEqual([["startAt", new Date(START)]])
         })
 
         it("answers taken when the new place is full and the move is not forced", async () => {
-            const manager = mockEntityManager({
-                query: [
-                    [LOCK_RESOURCE, [{ capacity: 1 }]],
-                    [SELECT_RESOURCE_SPANS, [{ ...SPAN, resource_id: "r2" }]],
-                ],
-            })
+            const { manager, write } = managerOf(1, [spanOf({ resourceId: "r2" })])
             const reservation = await build()
 
-            await expect(reservation.relocate(moveOf({ manager }))).resolves.toBe("taken")
+            await expect(reservation.relocate(moveOf(manager))).resolves.toBe("taken")
+            expect(write.calls).toEqual([])
         })
 
         it("moves over a taken place when forced", async () => {
-            const manager = mockEntityManager({
-                query: [
-                    [LOCK_RESOURCE, [{ capacity: 1 }]],
-                    [RELOCATE_BOOKING, []],
-                ],
-            })
+            const { manager } = managerOf(1, null, { execute: { raw: [] } })
             const reservation = await build()
 
-            await expect(reservation.relocate(moveOf({ manager, force: true }))).resolves.toBe("moved")
+            await expect(reservation.relocate(moveOf(manager, { force: true }))).resolves.toBe("moved")
+            expect(manager.find).not.toHaveBeenCalled()
         })
 
         it("answers resource_not_found for a resource outside the workspace", async () => {
-            const manager = mockEntityManager({ query: [LOCK_RESOURCE, []] })
+            const { manager } = managerOf(null, null)
             const reservation = await build()
 
-            await expect(reservation.relocate(moveOf({ manager }))).resolves.toBe("resource_not_found")
+            await expect(reservation.relocate(moveOf(manager))).resolves.toBe("resource_not_found")
         })
     })
 })

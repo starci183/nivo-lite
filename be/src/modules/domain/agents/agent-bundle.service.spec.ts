@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { agentEntityOf } from "@tests/fixtures/builders/agents.builder"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -11,8 +12,7 @@ import { AGENTS_INSTALLATIONS, AGENTS_KNOWLEDGE, AGENTS_MODULES } from "./agents
 import { AgentsLogEvent } from "./agents.log-events"
 import type { Installation, InstallationDirectory, KnowledgeLens, ModuleProfiles } from "./agents.port"
 import { AgentsErrorCode } from "./errors/agents.error"
-import type { AgentRow } from "./persistence/agents.rows"
-import { FIND_AGENT } from "./persistence/agents.sql"
+import { AgentEntity } from "./persistence/entities"
 
 const installationOf = builder<Installation>({
     id: "i1",
@@ -28,20 +28,11 @@ const installationOf = builder<Installation>({
     removed: false,
 })
 
-const AGENT: AgentRow = {
-    id: "a1",
-    workspace_id: "12345678-aaaa-bbbb-cccc-000000000000",
-    module: "chatbot",
-    name: "Bot",
-    handle: "bot",
-    role: "Front desk",
-    instructions: "Be kind",
+const AGENT = agentEntityOf({
+    workspaceId: "12345678-aaaa-bbbb-cccc-000000000000",
     knowledge: "",
-    approval_rule: "",
-    status: "active",
-    avatar_url: null,
-    created_at: "2026-10-01T00:00:00.000Z",
-}
+    approvalRule: "",
+})
 
 const echo = (key: string, params: Readonly<Record<string, string | number>>): string => {
     const entries = Object.entries(params).map(([name, value]) => `${name}=${String(value)}`)
@@ -100,7 +91,7 @@ const build = async (entityManager: MockEntityManager) => {
 
 describe("AgentBundleService", () => {
     it("builds AGENTS.md, SOUL.md and one file per knowledge source for the installation", async () => {
-        const em = mockEntityManager({ query: [FIND_AGENT, [AGENT]] })
+        const em = mockEntityManager({ findOne: [AgentEntity, AGENT] })
         const { service, knowledge, installations } = await build(em)
 
         const bundle = await service.build(installationOf())
@@ -123,7 +114,9 @@ describe("AgentBundleService", () => {
         expect(agentsMd).toContain("bundle.toolsTitle")
         expect(bundle.files[1]?.content).toContain("bundle.soulConfirmed(text=chi)")
         expect(bundle.files[1]?.content).toContain("bundle.soulGuidance(text=### Warm\nBe warm)")
-        expect(em.query).toHaveBeenCalledWith(FIND_AGENT, ["a1", "12345678-aaaa-bbbb-cccc-000000000000"])
+        expect(em.findOne).toHaveBeenCalledWith(AgentEntity, {
+            where: { id: "a1", workspaceId: "12345678-aaaa-bbbb-cccc-000000000000" },
+        })
         expect(knowledge.baseRulesOf).toHaveBeenCalledWith(["chatbot", "core"])
         expect(knowledge.sourcesFor).toHaveBeenCalledWith("12345678-aaaa-bbbb-cccc-000000000000", "chatbot", "i1", 200)
         expect(installations.contextVersionOf).toHaveBeenCalledWith("v1")
@@ -143,7 +136,7 @@ describe("AgentBundleService", () => {
     })
 
     it("builds without a persona when the agent row is gone", async () => {
-        const { service } = await build(mockEntityManager({ query: [FIND_AGENT, []] }))
+        const { service } = await build(mockEntityManager({ findOne: [AgentEntity, null] }))
 
         const bundle = await service.build(installationOf())
 
@@ -151,7 +144,7 @@ describe("AgentBundleService", () => {
     })
 
     it("goes without the brain memory when it cannot be read", async () => {
-        const { service, knowledge, logger } = await build(mockEntityManager({ query: [FIND_AGENT, [AGENT]] }))
+        const { service, knowledge, logger } = await build(mockEntityManager({ findOne: [AgentEntity, AGENT] }))
         const failure = new Error("brain missing")
         knowledge.memoryFor.mockRejectedValue(failure)
 

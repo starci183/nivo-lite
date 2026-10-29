@@ -1,16 +1,17 @@
 import { InjectInbox } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
+import type { EntityInbox } from "@modules/platform/inbox"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
-import type { ZaloRawDelivery, PendingZaloReceipt } from "./zalo-inbox.contracts"
+import type { ZaloRawDelivery } from "./zalo-inbox.contracts"
 import { ZALO_DELIVERY_QUEUE } from "@modules/queues/zalo-delivery"
 import type { ZaloDeliveryRecorded } from "@modules/queues/zalo-delivery"
 import { Injectable } from "@nestjs/common"
+import { IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { ConversationsService, readZaloEvent } from "@modules/domain/conversations"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { zaloDeliveryIdOf } from "./zalo-delivery-id.policy"
-import { COMPLETE_ZALO_INBOX, FIND_PENDING_ZALO_INBOX, INSERT_ZALO_INBOX } from "./persistence/zalo-inbox.sql"
+import { ZaloInboxEntity } from "./persistence/entities"
 
 @Injectable()
 /** Claims each Zalo message once, then publishes its durable receipt; a deferred consumer stores it and queues its answer. */
@@ -18,7 +19,7 @@ export class ZaloInboxService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly conversations: ConversationsService,
-        @InjectInbox() private readonly inbox: Inbox,
+        @InjectInbox() private readonly inbox: EntityInbox,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
     ) {}
 
@@ -28,9 +29,9 @@ export class ZaloInboxService {
             const payload = { connection, rawBody: rawBody?.toString("utf8") }
             const deliveryId = rawBody === undefined ? "" : zaloDeliveryIdOf(connection, rawBody)
             if (
-                !(await this.inbox.claim("zalo", deliveryId, manager, {
-                    insert: INSERT_ZALO_INBOX,
-                    payload,
+                !(await this.inbox.claimRow("zalo", deliveryId, manager, {
+                    entity: ZaloInboxEntity,
+                    row: { provider: "zalo", deliveryId, payload },
                 }))
             )
                 return
@@ -44,15 +45,16 @@ export class ZaloInboxService {
     /** Resolves and processes a committed receipt atomically; retries leave a failed receipt pending. */
     processRecordedDelivery(message: ZaloDeliveryRecorded): Promise<void> {
         return this.entityManager.transaction(async (manager) => {
-            const [pending] = await manager.query<Array<PendingZaloReceipt>>(FIND_PENDING_ZALO_INBOX, [
-                message.deliveryId,
-            ])
-            if (pending === undefined) return
+            const pending = await manager.findOne(ZaloInboxEntity, {
+                where: { provider: "zalo", deliveryId: message.deliveryId, processedAt: IsNull() },
+                lock: { mode: "pessimistic_write" },
+            })
+            if (pending === null) return
             const rawBody = Buffer.from(pending.payload.rawBody, "utf8")
             const inbound = readZaloEvent(rawBody)
             if (inbound.kind === "ok")
                 await this.conversations.acceptZalo(pending.payload.connection, inbound.value, manager)
-            await manager.query(COMPLETE_ZALO_INBOX, [pending.id])
+            await manager.update(ZaloInboxEntity, { id: pending.id }, { processedAt: () => "now()" })
         })
     }
 }

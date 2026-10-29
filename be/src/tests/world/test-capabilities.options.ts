@@ -26,7 +26,12 @@ export const QUEUE_MODULES = [QueueModule.register({ ...queueOptions, isGlobal: 
 /** Public modules used by the claim proofs. */
 export const JOBS_MODULES = [
     ...QUEUE_MODULES,
-    JobsModule.register({ connection: PRIMARY_ENTITY_MANAGER, workerId: "proof", leaseMs: 100 }),
+    JobsModule.register({
+        connection: PRIMARY_ENTITY_MANAGER,
+        workerId: "proof",
+        leaseMs: 100,
+        scheduler: { enabled: false },
+    }),
 ]
 /** The local provider signing key; this is synthetic test data. */
 export const signingFixture = "integration-meta-provider-fixture"

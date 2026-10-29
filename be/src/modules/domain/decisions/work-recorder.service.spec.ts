@@ -1,5 +1,7 @@
-import { builder, mock } from "@starci/jest-preset"
+import { builder, fakeTransaction, mock, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { EVENT_BUS } from "@modules/platform/event-bus"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
@@ -9,9 +11,9 @@ import { EvidenceService } from "./evidence.service"
 import { ModuleCatalogService } from "./module-catalog.service"
 import { OfficeLinesService } from "@modules/domain/messages"
 import type { FinishPlan } from "./work-engine.contracts"
-import { DECISION_EVENTS, INBOUND_EVENT_STATUS } from "./work-engine.decorators"
 import { WorkEngineLogEvent } from "./work-engine.log-events"
-import type { DecisionEvents, InboundEventStatus } from "./work-engine.port"
+import { INBOUND_EVENT_STATUS } from "./work-engine.decorators"
+import type { InboundEventStatus } from "./work-engine.port"
 import { WorkRecorderService } from "./work-recorder.service"
 
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "An", locale: "en" }
@@ -61,7 +63,7 @@ interface Built {
     readonly log: jest.Mock
     readonly post: jest.Mock
     readonly mark: jest.Mock
-    readonly decisionMade: jest.Mock
+    readonly bus: ReturnType<typeof recordingEventBus>
     readonly error: jest.Mock<void, Parameters<Logger["error"]>>
 }
 
@@ -70,7 +72,7 @@ const build = async (found: ActionEntry | null = action): Promise<Built> => {
     const log = jest.fn().mockResolvedValue(undefined)
     const post = jest.fn().mockResolvedValue(undefined)
     const mark = jest.fn().mockResolvedValue(undefined)
-    const decisionMade = jest.fn().mockResolvedValue(undefined)
+    const bus = recordingEventBus()
     const error = jest.fn<void, Parameters<Logger["error"]>>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -86,7 +88,8 @@ const build = async (found: ActionEntry | null = action): Promise<Built> => {
                 }),
             },
             { provide: INBOUND_EVENT_STATUS, useValue: mock<InboundEventStatus>({ mark }) },
-            { provide: DECISION_EVENTS, useValue: mock<DecisionEvents>({ decisionMade }) },
+            { provide: EVENT_BUS, useValue: bus },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: fakeTransaction(mockEntityManager()).em },
             {
                 provide: ModuleCatalogService,
                 useValue: mock<ModuleCatalogService>({
@@ -98,7 +101,7 @@ const build = async (found: ActionEntry | null = action): Promise<Built> => {
             { provide: OfficeLinesService, useValue: mock<OfficeLinesService>({ post }) },
         ],
     }).compile()
-    return { service: moduleRef.get(WorkRecorderService), decide, log, post, mark, decisionMade, error }
+    return { service: moduleRef.get(WorkRecorderService), decide, log, post, mark, bus, error }
 }
 
 const auto: FinishPlan = { path: "auto", by: { name: "NIVO", kind: "policy" }, outcome: "auto_done" }
@@ -143,7 +146,7 @@ describe("WorkRecorderService", () => {
                 installation_id: "inst-1",
                 body: "engine.auto(Sales AI,Sent)",
             })
-            expect(built.decisionMade).not.toHaveBeenCalled()
+            expect(built.bus.writes).toEqual([])
             expect(built.mark).toHaveBeenCalledWith(ctx, "in-1", "processed", "lead-1")
         })
     })
@@ -159,20 +162,24 @@ describe("WorkRecorderService", () => {
                 evidence: "captured",
             })
 
-            expect(built.decide).toHaveBeenCalledWith(ctx, {
-                work_item_id: "item-1",
-                lead_id: "lead-1",
-                department: "sales",
-                action: "send_quote",
-                decided_by: "Lan",
-                decider_kind: "owner",
-                decided_by_member_id: "member-1",
-                outcome: "edited",
-                reason: "missing_data",
-                note: "ok",
-                before: { summary: "Before", fields: {} },
-                after: proposal,
-            })
+            expect(built.decide).toHaveBeenCalledWith(
+                ctx,
+                {
+                    work_item_id: "item-1",
+                    lead_id: "lead-1",
+                    department: "sales",
+                    action: "send_quote",
+                    decided_by: "Lan",
+                    decider_kind: "owner",
+                    decided_by_member_id: "member-1",
+                    outcome: "edited",
+                    reason: "missing_data",
+                    note: "ok",
+                    before: { summary: "Before", fields: {} },
+                    after: proposal,
+                },
+                expect.anything(),
+            )
             expect(built.log).toHaveBeenCalledWith(ctx, {
                 lead_id: "lead-1",
                 work_item_id: "item-1",
@@ -182,19 +189,20 @@ describe("WorkRecorderService", () => {
                 evidence: null,
             })
             expect(built.post).toHaveBeenCalledWith(ctx, expect.objectContaining({ body: "engine.resumed(Lan,Sent)" }))
-            expect(built.decisionMade).toHaveBeenCalledWith(
-                ctx,
-                {
-                    work_item_id: "item-1",
+            expect(built.bus.writes[0]).toMatchObject({
+                eventName: "decision_made",
+                payload: {
+                    dedupeKey: "decision.made:item-1:edited",
+                    workspaceId: "ws-1",
+                    workItemId: "item-1",
                     action: "send_quote",
                     department: "sales",
                     outcome: "edited",
-                    decided_by: "Lan",
-                    lead_id: "lead-1",
+                    decidedBy: "Lan",
+                    leadId: "lead-1",
                     summary: "Sent",
                 },
-                "decision.made:item-1:edited",
-            )
+            })
         })
 
         it("falls back to the summary as the note and to no proposal before", async () => {
@@ -212,17 +220,27 @@ describe("WorkRecorderService", () => {
                     decided_by_member_id: null,
                     outcome: "approved",
                 }),
+                expect.anything(),
             )
         })
 
-        it("leaves the inbound event alone when the item came from none, and survives a down event stream", async () => {
+        it("leaves the inbound event alone when the item came from none", async () => {
             const built = await build()
-            built.decisionMade.mockRejectedValue(new RangeError("down"))
 
             await built.service.finished(ctx, itemOf(), itemOf({ inbound_event_id: null }), proposal, human, performed)
 
             expect(built.mark).not.toHaveBeenCalled()
-            expect(built.error).toHaveBeenCalledWith(WorkEngineLogEvent.DecisionEventFailed, expect.any(RangeError))
+        })
+
+        it("fails with the decision when the event cannot be published, so the decision and its fact stand or fall together", async () => {
+            const built = await build()
+            built.bus.failNext("publish", new RangeError("down"))
+
+            await expect(built.service.finished(ctx, itemOf(), itemOf(), proposal, human, performed)).rejects.toThrow(
+                RangeError,
+            )
+
+            expect(built.mark).not.toHaveBeenCalled()
         })
     })
 })
@@ -251,6 +269,7 @@ describe("WorkRecorderService", () => {
             expect(built.decide).toHaveBeenCalledWith(
                 ctx,
                 expect.objectContaining({ decided_by: "NIVO", decided_by_member_id: null, outcome: "rejected" }),
+                expect.anything(),
             )
         })
 
@@ -261,20 +280,24 @@ describe("WorkRecorderService", () => {
 
             await built.service.rejected(ctx, itemOf(), merged, by, "too much")
 
-            expect(built.decide).toHaveBeenCalledWith(ctx, {
-                work_item_id: "item-1",
-                lead_id: "lead-1",
-                department: "sales",
-                action: "send_quote",
-                decided_by: "Lan",
-                decider_kind: "owner",
-                decided_by_member_id: "member-1",
-                outcome: "rejected",
-                reason: "over_authority",
-                note: "too much",
-                before: { summary: "Quote", fields: {} },
-                after: merged,
-            })
+            expect(built.decide).toHaveBeenCalledWith(
+                ctx,
+                {
+                    work_item_id: "item-1",
+                    lead_id: "lead-1",
+                    department: "sales",
+                    action: "send_quote",
+                    decided_by: "Lan",
+                    decider_kind: "owner",
+                    decided_by_member_id: "member-1",
+                    outcome: "rejected",
+                    reason: "over_authority",
+                    note: "too much",
+                    before: { summary: "Quote", fields: {} },
+                    after: merged,
+                },
+                expect.anything(),
+            )
             expect(built.log).toHaveBeenCalledWith(ctx, {
                 lead_id: "lead-1",
                 work_item_id: "item-1",
@@ -291,11 +314,13 @@ describe("WorkRecorderService", () => {
                 installation_id: "inst-1",
             })
             expect(built.mark).toHaveBeenCalledWith(ctx, "in-1", "processed", null)
-            expect(built.decisionMade).toHaveBeenCalledWith(
-                ctx,
-                expect.objectContaining({ outcome: "rejected", summary: "Quote" }),
-                "decision.made:item-1:rejected",
-            )
+            expect(built.bus.writes[0]).toMatchObject({
+                payload: {
+                    dedupeKey: "decision.made:item-1:rejected",
+                    outcome: "rejected",
+                    summary: "Quote",
+                },
+            })
         })
     })
 })

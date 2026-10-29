@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
@@ -38,24 +38,61 @@ import type {
     SplitPayload,
 } from "./work-engine.contracts"
 import { WorkEngineLogEvent } from "./work-engine.log-events"
-import type {
-    ChainTopRow,
-    GivenInstallationRow,
-    ParentPositionRow,
-    RepeatsRow,
-    ResolvedInstallationRow,
-    SenderAgentRow,
-    SubjectLabelRow,
-} from "./persistence/command-bus.rows"
-import {
-    CHAIN_REPEATS_COMMAND,
-    FIND_CHAIN_TOP,
-    FIND_GIVEN_INSTALLATION,
-    FIND_PARENT_POSITION,
-    FIND_SENDER_AGENT,
-    FIND_SUBJECT_LABEL,
-    RESOLVE_INSTALLATION,
-} from "./persistence/command-bus.sql"
+
+/** The agent a command sender id names. */
+interface SenderAgentRow {
+    /** The agent name. */
+    readonly name: string
+    /** The module it belongs to. */
+    readonly module: string
+    /** The installation name of the agent, null for an agent that is not an installed instance. */
+    readonly installation_name: string | null
+}
+
+/** Where a work item sits in its chain. */
+interface ParentPositionRow {
+    /** The item. */
+    readonly id: string
+    /** Its chain. */
+    readonly chain_id: string | null
+    /** Its depth. */
+    readonly depth: number
+}
+
+/** The depth of the deepest item of a chain. */
+interface ChainTopRow {
+    /** The depth. */
+    readonly depth: number
+}
+
+/** An installation of a module. */
+interface GivenInstallationRow {
+    /** The installation. */
+    readonly id: string
+    /** Its name. */
+    readonly name: string
+}
+
+/** How the database resolved the installation of a command (`public.resolve_installation`). */
+interface ResolvedInstallationRow {
+    /** The installation. */
+    readonly installation_id: string
+    /** Which rule chose it. */
+    readonly via: string
+}
+
+/** The readable label of a command subject. */
+interface SubjectLabelRow {
+    /** The order number, customer name or invoice number. */
+    readonly label: string | null
+}
+
+/** The table and column that hold the readable label of each kind of subject. */
+const LABEL_SOURCES: Readonly<Record<string, readonly [table: string, column: string]>> = {
+    order: ["public.orders", "order_no"],
+    lead: ["public.leads", "contact_name"],
+    invoice: ["public.invoices", "invoice_no"],
+}
 
 @Injectable()
 /**
@@ -243,7 +280,16 @@ export class CommandPlannerService {
         if ((await this.modules.entryOf(from, manager)) !== null)
             return { label: await this.modules.nameOf(from, ctx.locale, manager) }
         if (!isUuid(from)) return null
-        const agent = (await manager.query<Array<SenderAgentRow>>(FIND_SENDER_AGENT, [ctx.workspaceId, from]))[0]
+        const agent = await manager
+            .createQueryBuilder()
+            .select("a.name", "name")
+            .addSelect("a.module", "module")
+            .addSelect("i.name", "installation_name")
+            .from("public.agents", "a")
+            .leftJoin("module_installations", "i", "i.agent_id = a.id AND i.workspace_id = a.workspace_id")
+            .where("a.workspace_id = :workspaceId AND a.id = :agentId", { workspaceId: ctx.workspaceId, agentId: from })
+            .limit(1)
+            .getRawOne<SenderAgentRow>()
         if (agent === undefined) return null
         const registered = await this.modules.entryOf(agent.module, manager)
         if (registered === null) return { label: agent.name }
@@ -259,14 +305,33 @@ export class CommandPlannerService {
     ): Promise<ChainPosition> {
         const named = input.chainId ?? null
         if (input.parentId !== undefined && input.parentId !== null) {
-            const parent = (
-                await manager.query<Array<ParentPositionRow>>(FIND_PARENT_POSITION, [ctx.workspaceId, input.parentId])
-            )[0]
+            const parent = await manager
+                .createQueryBuilder()
+                .select("w.id", "id")
+                .addSelect("w.chain_id", "chain_id")
+                .addSelect("w.depth", "depth")
+                .from("public.work_items", "w")
+                .where("w.workspace_id = :workspaceId AND w.id = :parentId", {
+                    workspaceId: ctx.workspaceId,
+                    parentId: input.parentId,
+                })
+                .limit(1)
+                .getRawOne<ParentPositionRow>()
             if (parent === undefined) return { chainId: named, depth: 0 }
             return { chainId: named ?? parent.chain_id ?? parent.id, depth: parent.depth + 1 }
         }
         if (named === null) return { chainId: null, depth: 0 }
-        const top = (await manager.query<Array<ChainTopRow>>(FIND_CHAIN_TOP, [ctx.workspaceId, named]))[0]
+        const top = await manager
+            .createQueryBuilder()
+            .select("w.depth", "depth")
+            .from("public.work_items", "w")
+            .where("w.workspace_id = :workspaceId AND w.chain_id = :chainId", {
+                workspaceId: ctx.workspaceId,
+                chainId: named,
+            })
+            .orderBy("w.depth", "DESC")
+            .limit(1)
+            .getRawOne<ChainTopRow>()
         return { chainId: named, depth: top === undefined ? 1 : top.depth + 1 }
     }
 
@@ -279,17 +344,24 @@ export class CommandPlannerService {
         dedupeKey: string,
         manager: EntityManager,
     ): Promise<boolean> {
-        const row = (
-            await manager.query<Array<RepeatsRow>>(CHAIN_REPEATS_COMMAND, [
-                ctx.workspaceId,
-                chainId,
-                accepted.action,
-                address.subjectType,
-                dedupeKey,
-                address.subjectId,
-            ])
-        )[0]
-        return row?.repeats === true
+        const row = await manager
+            .createQueryBuilder()
+            .select("1", "repeats")
+            .from("public.work_items", "w")
+            .where(
+                "w.workspace_id = :workspaceId AND w.chain_id = :chainId AND w.action = :action AND w.subject_type = :subjectType AND w.dedupe_key <> :dedupeKey AND w.subject_id IS NOT DISTINCT FROM CAST(:subjectId AS uuid)",
+                {
+                    workspaceId: ctx.workspaceId,
+                    chainId,
+                    action: accepted.action,
+                    subjectType: address.subjectType,
+                    dedupeKey,
+                    subjectId: address.subjectId,
+                },
+            )
+            .limit(1)
+            .getRawOne<{ repeats: number }>()
+        return row !== undefined
     }
 
     /** The conversation a command is about: the one in its fields, else the subject when that is a conversation. */
@@ -312,16 +384,22 @@ export class CommandPlannerService {
         try {
             const given = await this.givenInstance(ctx, input, manager)
             if (given !== null) return given
-            const hit = (
-                await manager.query<Array<ResolvedInstallationRow>>(RESOLVE_INSTALLATION, [
-                    ctx.workspaceId,
-                    input.to,
-                    this.conversationOf(address),
-                    address.leadId,
-                    position.chainId,
-                ])
-            )[0]
-            return hit === undefined ? null : { id: hit.installation_id, via: hit.via, name: hit.name }
+            const [hit] = await callDbFunction<ResolvedInstallationRow>(manager, "public.resolve_installation", [
+                ctx.workspaceId,
+                input.to,
+                this.conversationOf(address),
+                address.leadId,
+                position.chainId,
+            ])
+            if (hit === undefined) return null
+            const installation = await manager
+                .createQueryBuilder()
+                .select("i.name", "name")
+                .from("public.module_installations", "i")
+                .where("i.id = :installationId", { installationId: hit.installation_id })
+                .limit(1)
+                .getRawOne<{ name: string | null }>()
+            return { id: hit.installation_id, via: hit.via, name: installation?.name ?? null }
         } catch (cause) {
             this.logger.error(WorkEngineLogEvent.InstanceUnresolved, cause, { to: input.to })
             return null
@@ -334,13 +412,18 @@ export class CommandPlannerService {
         manager: EntityManager,
     ): Promise<OptionalInstanceChoice> {
         if (input.installationId === undefined || input.installationId === null) return null
-        const row = (
-            await manager.query<Array<GivenInstallationRow>>(FIND_GIVEN_INSTALLATION, [
-                ctx.workspaceId,
-                input.to,
-                input.installationId,
-            ])
-        )[0]
+        const row = await manager
+            .createQueryBuilder()
+            .select("i.id", "id")
+            .addSelect("i.name", "name")
+            .from("public.module_installations", "i")
+            .where("i.workspace_id = :workspaceId AND i.module_key = :moduleKey AND i.id = :installationId", {
+                workspaceId: ctx.workspaceId,
+                moduleKey: input.to,
+                installationId: input.installationId,
+            })
+            .limit(1)
+            .getRawOne<GivenInstallationRow>()
         return row === undefined ? null : { id: row.id, via: "given", name: row.name }
     }
 
@@ -357,12 +440,19 @@ export class CommandPlannerService {
 
     private async labelOf(ctx: WorkContext, address: SplitPayload, manager: EntityManager): Promise<string | null> {
         try {
-            const rows = await manager.query<Array<SubjectLabelRow>>(FIND_SUBJECT_LABEL, [
-                ctx.workspaceId,
-                address.subjectType,
-                address.subjectId,
-            ])
-            return rows[0]?.label ?? null
+            const source = LABEL_SOURCES[address.subjectType]
+            if (source === undefined) return null
+            const row = await manager
+                .createQueryBuilder()
+                .select(`s.${source[1]}`, "label")
+                .from(source[0], "s")
+                .where("s.workspace_id = :workspaceId AND s.id = :subjectId", {
+                    workspaceId: ctx.workspaceId,
+                    subjectId: address.subjectId,
+                })
+                .limit(1)
+                .getRawOne<SubjectLabelRow>()
+            return row?.label ?? null
         } catch (cause) {
             this.logger.error(WorkEngineLogEvent.SubjectLabelUnreadable, cause, { subjectType: address.subjectType })
             return null

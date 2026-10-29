@@ -21,17 +21,17 @@ import type {
 } from "../hiring.contracts"
 import { STAGES } from "../hiring.contracts"
 import type {
-    AnswerRow,
-    HiringCandidatesRow,
-    HiringInterviewsRow,
-    HiringJobsRow,
-    HiringOffersRow,
-    HiringSettingsRow,
-    QuestionRow,
-    RequirementsRow,
-    SlotRow,
-    TermsRow,
-} from "../persistence/hiring.rows"
+    HiringCandidateAnswer,
+    HiringCandidateEntity,
+    HiringInterviewEntity,
+    HiringInterviewSlot,
+    HiringJobEntity,
+    HiringJobQuestion,
+    HiringJobRequirements,
+    HiringOfferEntity,
+    HiringOfferTerms,
+    HiringSettingEntity,
+} from "../persistence/entities"
 import { isoOrNull } from "./vn-time.policy"
 
 const QUESTION_TYPES: ReadonlyArray<QuestionType> = ["text", "yesno", "number", "choice"]
@@ -59,21 +59,21 @@ const STAGE_NAMES: ReadonlySet<unknown> = new Set(STAGES)
 /** True for a stage name. */
 export const isStage = (value: unknown): value is Stage => STAGE_NAMES.has(value)
 
-const numberOrNull = (value: number | string | null): number | null => (value === null ? null : Number(value))
+const numberOrNull = (value: string | null): number | null => (value === null ? null : Number(value))
 
 /** The settings of a workspace. */
-export const toSettings = (row: HiringSettingsRow): HiringSettings => ({
-    workspaceId: row.workspace_id,
-    publicSlug: row.public_slug,
-    retentionDays: row.retention_days,
-    notifyNewCandidate: row.notify_new_candidate,
-    remindInterview: row.remind_interview,
-    autoCloseWhenFilled: row.auto_close_when_filled,
-    applyConsentText: row.apply_consent_text,
-    adTone: row.ad_tone,
+export const toSettings = (row: HiringSettingEntity): HiringSettings => ({
+    workspaceId: row.workspaceId,
+    publicSlug: row.publicSlug,
+    retentionDays: row.retentionDays,
+    notifyNewCandidate: row.notifyNewCandidate,
+    remindInterview: row.remindInterview,
+    autoCloseWhenFilled: row.autoCloseWhenFilled,
+    applyConsentText: row.applyConsentText,
+    adTone: row.adTone,
 })
 
-const toRequirements = (json: RequirementsRow | null): JobRequirements => ({
+const toRequirements = (json: HiringJobRequirements | null): JobRequirements => ({
     skills: json?.skills ?? [],
     experienceYears: json?.experience_years ?? null,
     experienceNote: json?.experience_note ?? "",
@@ -83,7 +83,7 @@ const toRequirements = (json: RequirementsRow | null): JobRequirements => ({
 })
 
 /** The requirements as the column stores them. */
-export const requirementsJson = (requirements: JobRequirements): RequirementsRow => ({
+export const requirementsJson = (requirements: JobRequirements): HiringJobRequirements => ({
     skills: [...requirements.skills],
     experience_years: requirements.experienceYears,
     experience_note: requirements.experienceNote,
@@ -95,13 +95,13 @@ export const requirementsJson = (requirements: JobRequirements): RequirementsRow
 /** Whether a stored expectation is a list of accepted choices (`Array.isArray` alone narrows to `any[]`). */
 const isChoices = (value: unknown): value is Array<string> => Array.isArray(value)
 
-const expectOfJson = (value: QuestionRow["expect"]): QuestionExpect | undefined => {
+const expectOfJson = (value: HiringJobQuestion["expect"]): QuestionExpect | undefined => {
     let expect: QuestionExpect | undefined
     if (value === "yes" || value === "no" || typeof value === "number" || isChoices(value)) expect = value
     return expect
 }
 
-const toQuestion = (json: QuestionRow): JobQuestion => {
+const toQuestion = (json: HiringJobQuestion): JobQuestion => {
     const expect = expectOfJson(json.expect)
     return {
         id: json.id,
@@ -117,7 +117,7 @@ const expectToJson = (value: QuestionExpect): string | number | Array<string> =>
     typeof value === "object" ? [...value] : value
 
 /** The questions as the column stores them. */
-export const questionsJson = (questions: ReadonlyArray<JobQuestion>): Array<QuestionRow> =>
+export const questionsJson = (questions: ReadonlyArray<JobQuestion>): Array<HiringJobQuestion> =>
     questions.map((question) => ({
         id: question.id,
         text: question.text,
@@ -128,17 +128,17 @@ export const questionsJson = (questions: ReadonlyArray<JobQuestion>): Array<Ques
     }))
 
 /** A job. */
-export const toJob = (row: HiringJobsRow): JobRecord => ({
+export const toJob = (row: HiringJobEntity): JobRecord => ({
     id: row.id,
-    workspaceId: row.workspace_id,
+    workspaceId: row.workspaceId,
     slug: row.slug,
     title: row.title,
     position: row.position,
-    employmentType: pick(EMPLOYMENTS, row.employment_type, "full_time"),
+    employmentType: pick(EMPLOYMENTS, row.employmentType, "full_time"),
     schedule: row.schedule,
-    payMinVnd: numberOrNull(row.pay_min_vnd),
-    payMaxVnd: numberOrNull(row.pay_max_vnd),
-    payUnit: pick(PAY_UNITS, row.pay_unit, "month"),
+    payMinVnd: numberOrNull(row.payMinVnd),
+    payMaxVnd: numberOrNull(row.payMaxVnd),
+    payUnit: pick(PAY_UNITS, row.payUnit, "month"),
     location: row.location,
     headcount: row.headcount,
     description: row.description,
@@ -146,57 +146,57 @@ export const toJob = (row: HiringJobsRow): JobRecord => ({
     questions: (row.questions ?? []).map(toQuestion),
     status: pick(JOB_STATUSES, row.status, "draft"),
     channels: row.channels,
-    closesAt: isoOrNull(row.closes_at),
+    closesAt: isoOrNull(row.closesAt),
 })
 
-const toAnswer = (json: AnswerRow): Answer => ({
+const toAnswer = (json: HiringCandidateAnswer): Answer => ({
     questionId: json.question_id,
     question: json.question,
     answer: json.answer,
 })
 
 /** A candidate. */
-export const toCandidate = (row: HiringCandidatesRow): CandidateRecord => ({
+export const toCandidate = (row: HiringCandidateEntity): CandidateRecord => ({
     id: row.id,
-    workspaceId: row.workspace_id,
-    jobId: row.job_id,
+    workspaceId: row.workspaceId,
+    jobId: row.jobId,
     name: row.name,
     phone: row.phone,
     email: row.email,
     source: pick(SOURCES, row.source, "page"),
-    conversationId: row.conversation_id,
-    cvPath: row.cv_path,
-    cvName: row.cv_name,
-    cvMime: row.cv_mime,
+    conversationId: row.conversationId,
+    cvPath: row.cvPath,
+    cvName: row.cvName,
+    cvMime: row.cvMime,
     answers: (row.answers ?? []).map(toAnswer),
     availability: row.availability,
     stage: isStage(row.stage) ? row.stage : "applied",
-    staffId: row.staff_id,
+    staffId: row.staffId,
 })
 
-const toSlot = (json: SlotRow): Slot => ({ start: json.start, end: json.end })
+const toSlot = (json: HiringInterviewSlot): Slot => ({ start: json.start, end: json.end })
 
 /** An interview. */
-export const toInterview = (row: HiringInterviewsRow): InterviewRecord => ({
+export const toInterview = (row: HiringInterviewEntity): InterviewRecord => ({
     id: row.id,
-    workspaceId: row.workspace_id,
-    candidateId: row.candidate_id,
-    jobId: row.job_id,
-    interviewerUserId: row.interviewer_user_id,
-    interviewerName: row.interviewer_name,
+    workspaceId: row.workspaceId,
+    candidateId: row.candidateId,
+    jobId: row.jobId,
+    interviewerUserId: row.interviewerUserId,
+    interviewerName: row.interviewerName,
     mode: row.mode === "online" ? "online" : "in_person",
     location: row.location,
-    durationMin: row.duration_min,
-    proposedSlots: (row.proposed_slots ?? []).map(toSlot),
-    slotStart: isoOrNull(row.slot_start),
-    slotEnd: isoOrNull(row.slot_end),
+    durationMin: row.durationMin,
+    proposedSlots: (row.proposedSlots ?? []).map(toSlot),
+    slotStart: isoOrNull(row.slotStart),
+    slotEnd: isoOrNull(row.slotEnd),
     status: pick(INTERVIEW_STATUSES, row.status, "proposed"),
     token: row.token,
-    workItemId: row.work_item_id,
+    workItemId: row.workItemId,
     note: row.note,
 })
 
-const toTerms = (json: TermsRow | null): OfferTerms => ({
+const toTerms = (json: HiringOfferTerms | null): OfferTerms => ({
     title: json?.title ?? "",
     pay: json?.pay ?? "",
     startDate: json?.start_date ?? "",
@@ -205,7 +205,7 @@ const toTerms = (json: TermsRow | null): OfferTerms => ({
 })
 
 /** The terms as the column stores them. */
-export const termsJson = (terms: OfferTerms): TermsRow => ({
+export const termsJson = (terms: OfferTerms): HiringOfferTerms => ({
     title: terms.title,
     pay: terms.pay,
     start_date: terms.startDate,
@@ -214,15 +214,15 @@ export const termsJson = (terms: OfferTerms): TermsRow => ({
 })
 
 /** An offer. */
-export const toOffer = (row: HiringOffersRow): OfferRecord => ({
+export const toOffer = (row: HiringOfferEntity): OfferRecord => ({
     id: row.id,
-    workspaceId: row.workspace_id,
-    candidateId: row.candidate_id,
-    jobId: row.job_id,
+    workspaceId: row.workspaceId,
+    candidateId: row.candidateId,
+    jobId: row.jobId,
     terms: toTerms(row.terms),
     draft: row.draft,
     status: pick(OFFER_STATUSES, row.status, "draft"),
     token: row.token,
-    workItemId: row.work_item_id,
-    expiresAt: isoOrNull(row.expires_at),
+    workItemId: row.workItemId,
+    expiresAt: isoOrNull(row.expiresAt),
 })

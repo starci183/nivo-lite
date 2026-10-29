@@ -1,9 +1,11 @@
 import { Injectable } from "@nestjs/common"
+import { In, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { keyOf } from "@modules/domain/brain-facts"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { toGapRecord } from "./gap-record.mapper"
+import type { GapFields } from "./gap-record.mapper"
 import { answers, keywordsOf, sameQuestion, splitTopic, wordSet } from "./gap-keywords.policy"
 import type {
     Answerer,
@@ -14,19 +16,12 @@ import type {
     MaybeGapRecorded,
     ModuleGaps,
 } from "./knowledge-gaps.contracts"
-import type { KnowledgeGapRow, OpenCountRow } from "./persistence/knowledge-gaps.rows"
-import {
-    ANSWER_GAP,
-    BUMP_GAP,
-    COUNT_OPEN_GAPS,
-    COUNT_OPEN_GAPS_OF_MODULE,
-    DISMISS_GAP,
-    INSERT_GAP,
-    SELECT_GAPS,
-    SELECT_GAP_CANDIDATES,
-    SELECT_OPEN_GAPS,
-    SELECT_OPEN_GAPS_OF_MODULE,
-} from "./persistence/knowledge-gaps.sql"
+import { KnowledgeGapEntity } from "./persistence/entities"
+
+/** The columns a write answers, named as the entity names them. */
+const GAP_RETURNING = `id, module, question, question_key AS "questionKey", keywords, topic, attribute_guess AS "attributeGuess", count,
+    first_seen_at AS "firstSeenAt", last_seen_at AS "lastSeenAt", example_conversation_id AS "exampleConversationId", status,
+    reopened_count AS "reopenedCount"`
 
 /** The longest question kept. */
 const QUESTION_MAX = 300
@@ -51,11 +46,11 @@ export class KnowledgeGapsService {
         statuses: ReadonlyArray<GapStatus>,
         limit: number,
     ): Promise<ReadonlyArray<GapRecord>> {
-        const rows = await this.entityManager.query<Array<KnowledgeGapRow>>(SELECT_GAPS, [
-            workspaceId,
-            statuses,
-            Math.min(limit, LIST_MAX),
-        ])
+        const rows = await this.entityManager.find(KnowledgeGapEntity, {
+            where: { workspaceId, status: In([...statuses]) },
+            order: { count: "DESC", lastSeenAt: "DESC" },
+            take: Math.min(limit, LIST_MAX),
+        })
         return rows.map(toGapRecord)
     }
 
@@ -69,40 +64,41 @@ export class KnowledgeGapsService {
         if (keywords.length === 0) return null
         const key = keyOf(question)
         const { subject, attribute } = splitTopic(input.topic)
-        const bump = async (row: KnowledgeGapRow): Promise<GapRecorded> => {
-            const [changed = row] = await this.entityManager.query<Array<KnowledgeGapRow>>(BUMP_GAP, [
-                workspaceId,
-                row.id,
-                subject,
-                attribute,
-                input.conversationId ?? null,
-            ])
-            return { gap: toGapRecord(changed), isNew: false, reopened: row.status === "answered" }
+        const bump = async (row: GapFields): Promise<GapRecorded> => {
+            const changed = await this.countAgain(workspaceId, row.id, subject, attribute, input.conversationId ?? null)
+            return { gap: toGapRecord(changed ?? row), isNew: false, reopened: row.status === "answered" }
         }
-        const find = async (): Promise<KnowledgeGapRow | undefined> => {
-            const rows = await this.entityManager.query<Array<KnowledgeGapRow>>(SELECT_GAP_CANDIDATES, [
-                workspaceId,
-                input.module,
-                CANDIDATES,
-            ])
+        const find = async (): Promise<GapFields | undefined> => {
+            const rows = await this.entityManager.find(KnowledgeGapEntity, {
+                where: { workspaceId, module: input.module },
+                order: { lastSeenAt: "DESC" },
+                take: CANDIDATES,
+            })
             return (
-                rows.find((row) => row.question_key === key) ??
+                rows.find((row) => row.questionKey === key) ??
                 rows.find((row) => sameQuestion(keywords, row.keywords ?? keywordsOf(row.question)))
             )
         }
         const existing = await find()
         if (existing !== undefined) return bump(existing)
-        const [created] = await this.entityManager.query<Array<KnowledgeGapRow>>(INSERT_GAP, [
-            workspaceId,
-            input.module,
-            question,
-            key,
-            keywords,
-            subject,
-            attribute,
-            input.conversationId ?? null,
-            input.source,
-        ])
+        const inserted = await this.entityManager
+            .createQueryBuilder(KnowledgeGapEntity, "kg")
+            .insert()
+            .values({
+                workspaceId,
+                module: input.module,
+                question,
+                questionKey: key,
+                keywords,
+                topic: subject,
+                attributeGuess: attribute,
+                exampleConversationId: input.conversationId ?? null,
+                source: input.source,
+            })
+            .orIgnore()
+            .returning(GAP_RETURNING)
+            .execute()
+        const [created] = inserted.raw as Array<GapFields>
         if (created !== undefined) return { gap: toGapRecord(created), isNew: true, reopened: false }
         // Two turns of the same question at once: the second insert lost, so it counts on the first one.
         const again = await find()
@@ -111,18 +107,30 @@ export class KnowledgeGapsService {
 
     /** The owner does not need this answered: it leaves the list for good (the row is kept). */
     async dismiss(workspaceId: string, id: string, by: string): Promise<void> {
-        await this.entityManager.query(DISMISS_GAP, [workspaceId, id, by])
+        await this.entityManager.update(
+            KnowledgeGapEntity,
+            { workspaceId, id, status: Not("answered") },
+            { status: "dismissed", dismissedAt: () => "now()", dismissedBy: by, updatedAt: () => "now()" },
+        )
     }
 
     /** The gap is answered (`by` = "fact:<id>", "document:<id>" or "owner"). */
     async answer(workspaceId: string, id: string, by: string): Promise<void> {
-        await this.entityManager.query(ANSWER_GAP, [workspaceId, id, by])
+        await this.entityManager.update(
+            KnowledgeGapEntity,
+            { workspaceId, id, status: "open" },
+            { status: "answered", answeredAt: () => "now()", answeredBy: by, updatedAt: () => "now()" },
+        )
     }
 
     /** Answers every open gap whose question words the text covers. Answers how many. */
     async resolve(workspaceId: string, answerer: Answerer): Promise<number> {
         const words = wordSet(answerer.text)
-        const open = await this.entityManager.query<Array<KnowledgeGapRow>>(SELECT_OPEN_GAPS, [workspaceId, CANDIDATES])
+        const open = await this.entityManager.find(KnowledgeGapEntity, {
+            select: { id: true, module: true, keywords: true, question: true },
+            where: { workspaceId, status: "open" },
+            take: CANDIDATES,
+        })
         const matching = open.filter(
             (gap) =>
                 (answerer.module === null || answerer.module === gap.module) &&
@@ -133,21 +141,50 @@ export class KnowledgeGapsService {
     }
 
     /** How many gaps wait for an answer. */
-    async countOpen(workspaceId: string): Promise<number> {
-        const [row] = await this.entityManager.query<Array<OpenCountRow>>(COUNT_OPEN_GAPS, [workspaceId])
-        return row?.total ?? 0
+    countOpen(workspaceId: string): Promise<number> {
+        return this.entityManager.count(KnowledgeGapEntity, { where: { workspaceId, status: "open" } })
     }
 
     /** The open gaps of one agent, the most asked first, and how many it has in all. */
     async openOfModule(workspaceId: string, module: string, limit: number): Promise<ModuleGaps> {
-        const [rows, counted] = await Promise.all([
-            this.entityManager.query<Array<KnowledgeGapRow>>(SELECT_OPEN_GAPS_OF_MODULE, [
-                workspaceId,
-                module,
-                Math.min(limit, LIST_MAX),
-            ]),
-            this.entityManager.query<Array<OpenCountRow>>(COUNT_OPEN_GAPS_OF_MODULE, [workspaceId, module]),
+        const [rows, openCount] = await Promise.all([
+            this.entityManager.find(KnowledgeGapEntity, {
+                where: { workspaceId, module, status: "open" },
+                order: { count: "DESC", lastSeenAt: "DESC" },
+                take: Math.min(limit, LIST_MAX),
+            }),
+            this.entityManager.count(KnowledgeGapEntity, { where: { workspaceId, module, status: "open" } }),
         ])
-        return { openCount: counted[0]?.total ?? 0, items: rows.map(toGapRecord) }
+        return { openCount, items: rows.map(toGapRecord) }
+    }
+
+    /** Counts a question once more in one statement; an answered gap opens again. Answers the changed gap, or undefined when it is gone. */
+    private async countAgain(
+        workspaceId: string,
+        id: string,
+        subject: string | null,
+        attribute: string | null,
+        conversationId: string | null,
+    ): Promise<GapFields | undefined> {
+        const result = await this.entityManager
+            .createQueryBuilder(KnowledgeGapEntity, "kg")
+            .update()
+            .set({
+                count: () => "count + 1",
+                lastSeenAt: () => "now()",
+                updatedAt: () => "now()",
+                topic: () => "coalesce(topic, :subject)",
+                attributeGuess: () => "coalesce(attribute_guess, :attribute)",
+                exampleConversationId: () => "coalesce(example_conversation_id, CAST(:conversationId AS uuid))",
+                status: () => "CASE WHEN status = 'answered' THEN 'open' ELSE status END",
+                answeredAt: () => "CASE WHEN status = 'answered' THEN NULL ELSE answered_at END",
+                answeredBy: () => "CASE WHEN status = 'answered' THEN NULL ELSE answered_by END",
+                reopenedCount: () => "CASE WHEN status = 'answered' THEN reopened_count + 1 ELSE reopened_count END",
+            })
+            .where("workspace_id = :workspaceId AND id = :id", { workspaceId, id })
+            .setParameters({ subject, attribute, conversationId })
+            .returning(GAP_RETURNING)
+            .execute()
+        return (result.raw as Array<GapFields>)[0]
     }
 }

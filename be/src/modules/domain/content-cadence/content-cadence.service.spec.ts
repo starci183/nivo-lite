@@ -1,32 +1,28 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
+import { In, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
 import type { ContentCadenceDraft } from "./content-cadence.contracts"
 import { ContentCadenceService } from "./content-cadence.service"
-import type { ContentCadenceRow } from "./persistence/content-cadence.rows"
-import {
-    DELETE_CONFIGURATION_CADENCE,
-    SAVE_CONFIGURATION_CADENCE,
-    SELECT_CONFIGURATION_CADENCE,
-} from "./persistence/content-cadence.sql"
+import { ContentCadenceEntity } from "./persistence/entities"
 
-const row: ContentCadenceRow = {
+const row = entityRowBuilder<ContentCadenceEntity>({
     id: "cad-1",
-    workspace_id: "ws-1",
+    workspaceId: "ws-1",
     channel: "facebook",
-    posts_per_week: 3,
+    postsPerWeek: 3,
     days: [1, 3],
-    post_time: "09:00",
-}
+    postTime: "09:00",
+    createdAt: new Date("2026-10-13T02:00:00.000Z"),
+})()
 
-const build = async (rows: ReadonlyArray<ContentCadenceRow>) => {
+const build = async (rows: ReadonlyArray<ContentCadenceEntity>) => {
     const entityManager = mockEntityManager({
-        query: [
-            [SELECT_CONFIGURATION_CADENCE, rows],
-            [DELETE_CONFIGURATION_CADENCE, []],
-            [SAVE_CONFIGURATION_CADENCE, []],
-        ],
+        find: [ContentCadenceEntity, rows],
+        delete: [ContentCadenceEntity, { affected: 0 }],
+        upsert: [ContentCadenceEntity, {}],
     })
     const moduleRef = await Test.createTestingModule({
         providers: [ContentCadenceService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
@@ -48,15 +44,19 @@ describe("ContentCadenceService", () => {
                 time: "09:00",
             },
         ])
-        expect(entityManager.query).toHaveBeenCalledWith(SELECT_CONFIGURATION_CADENCE, ["ws-1"])
+        expect(entityManager.find).toHaveBeenCalledWith(ContentCadenceEntity, {
+            where: { workspaceId: "ws-1" },
+            order: { channel: "ASC" },
+            take: 4,
+        })
     })
 
     it("reads an explicit transaction and answers nothing when the workspace has no rhythm", async () => {
         const { service, entityManager } = await build([])
-        const transaction: EntityManager = mockEntityManager({ query: [SELECT_CONFIGURATION_CADENCE, []] })
+        const transaction: EntityManager = mockEntityManager({ find: [ContentCadenceEntity, []] })
 
         await expect(service.list("ws-1", transaction)).resolves.toEqual([])
-        expect(entityManager.query).not.toHaveBeenCalled()
+        expect(entityManager.find).not.toHaveBeenCalled()
     })
 
     it("replaces the workspace rhythms with sorted unique weekdays", async () => {
@@ -65,10 +65,26 @@ describe("ContentCadenceService", () => {
 
         await service.replace(entityManager, "ws-1", [draft])
 
-        expect(entityManager.query).toHaveBeenCalledWith(DELETE_CONFIGURATION_CADENCE, ["ws-1", ["zalo"]])
-        expect(entityManager.query).toHaveBeenCalledWith(SAVE_CONFIGURATION_CADENCE, [
-            "ws-1",
-            JSON.stringify([{ channel: "zalo", posts_per_week: 4, days: [1, 3], post_time: "18:30" }]),
-        ])
+        expect(entityManager.delete).toHaveBeenCalledWith(ContentCadenceEntity, {
+            workspaceId: "ws-1",
+            channel: Not(In(["zalo"])),
+        })
+        expect(entityManager.upsert).toHaveBeenCalledWith(
+            ContentCadenceEntity,
+            [{ workspaceId: "ws-1", channel: "zalo", postsPerWeek: 4, days: [1, 3], postTime: "18:30" }],
+            ["workspaceId", "channel"],
+        )
+    })
+
+    it("only removes the rhythms left out when the replacement is empty", async () => {
+        const { service, entityManager } = await build([])
+
+        await service.replace(entityManager, "ws-1", [])
+
+        expect(entityManager.delete).toHaveBeenCalledWith(ContentCadenceEntity, {
+            workspaceId: "ws-1",
+            channel: Not(In([])),
+        })
+        expect(entityManager.upsert).not.toHaveBeenCalled()
     })
 })

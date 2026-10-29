@@ -1,13 +1,17 @@
 import { Injectable } from "@nestjs/common"
+import { MoreThan } from "typeorm"
 import type { EntityManager } from "typeorm"
+import { ContentCadenceEntity } from "@modules/domain/content-cadence"
+import { ContentPillarEntity } from "@modules/domain/content-pillars"
 import { EventsService } from "@modules/domain/events"
 import { ContentItemsService } from "@modules/domain/content-items"
+import { KnowledgeSourceEntity } from "@modules/domain/knowledge-sources"
 import type { DueItem } from "@modules/domain/content-items"
 import { ContentSettingsService } from "@modules/domain/content-settings"
 import type { TickWorkspace } from "@modules/domain/content-settings"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
@@ -24,8 +28,35 @@ import {
     vnDateKey,
     weekStartKey,
 } from "./content-time.policy"
-import { INSERT_NOTICE, SELECT_CADENCE_CHANNELS, SELECT_FRESH_SOURCES, SELECT_PILLARS } from "./persistence/content.sql"
-import type { CadenceRow, FreshSourceRow, PillarRow } from "./persistence/content.rows"
+
+/** One content theme. */
+type PillarRow = Pick<ContentPillarEntity, "id" | "name" | "active">
+
+/** One public knowledge source that changed. */
+interface FreshSourceRow {
+    /** The source. */
+    readonly id: string
+    /** Its title. */
+    readonly title: string
+    /** Its topic, when it has one. */
+    readonly topic: string | null
+    /** The first 400 characters of its text. */
+    readonly excerpt: string
+    /** When it changed, as an ISO instant in UTC with microseconds. */
+    readonly changedAt: string
+}
+
+const isFreshSourceRow = (value: unknown): value is FreshSourceRow =>
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    typeof value.id === "string" &&
+    "title" in value &&
+    typeof value.title === "string" &&
+    "excerpt" in value &&
+    typeof value.excerpt === "string" &&
+    "changedAt" in value &&
+    typeof value.changedAt === "string"
 
 /** The id every uuid sorts after: where the keyset scan of the workspaces starts. */
 const NIL_UUID = "00000000-0000-0000-0000-000000000000"
@@ -144,7 +175,7 @@ export class ContentService {
         const workspaceId = workspace.workspaceId
         const window = lastWeekWindow(now)
         const items = await this.items.listBetween(workspaceId, window.from, window.to)
-        const pillars = await this.entityManager.query<Array<PillarRow>>(SELECT_PILLARS, [workspaceId])
+        const pillars = await this.pillarsOf(workspaceId)
         await this.notify(workspaceId, this.summaryBody(items, pillars))
         await this.events.record({
             workspaceId,
@@ -154,6 +185,50 @@ export class ContentService {
         })
         await this.settings.mergeMarks(workspaceId, { summary_week: weekStartKey(now) })
         return items.length
+    }
+
+    /** The content themes of a workspace, in display order. */
+    private pillarsOf(workspaceId: string): Promise<Array<PillarRow>> {
+        return this.entityManager.find(ContentPillarEntity, {
+            select: { id: true, name: true, active: true },
+            where: { workspaceId },
+            order: { sort: "ASC", createdAt: "ASC" },
+            take: 100,
+        })
+    }
+
+    /** The channels a workspace posts to at least once a week. */
+    private async cadenceChannels(workspaceId: string): Promise<Array<string>> {
+        const rows = await this.entityManager.find(ContentCadenceEntity, {
+            select: { channel: true },
+            where: { workspaceId, postsPerWeek: MoreThan(0) },
+            order: { channel: "ASC" },
+            take: 10,
+        })
+        return rows.map((row) => row.channel)
+    }
+
+    /** The public, indexed knowledge sources shared with the content module that changed after an instant, oldest change first. */
+    private async freshSources(workspaceId: string, since: string): Promise<Array<FreshSourceRow>> {
+        const rows: ReadonlyArray<unknown> = await this.entityManager
+            .createQueryBuilder(KnowledgeSourceEntity, "s")
+            .select("s.id", "id")
+            .addSelect("s.title", "title")
+            .addSelect("s.topic", "topic")
+            .addSelect("left(s.content, 400)", "excerpt")
+            .addSelect("to_char(s.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"')", "changedAt")
+            .where(
+                "s.workspace_id = :workspaceId AND s.visibility = 'public' AND s.status IN ('ready', 'extracting_facts')",
+                {
+                    workspaceId,
+                },
+            )
+            .andWhere("(s.module IS NULL OR s.module = 'content') AND s.installation_id IS NULL")
+            .andWhere("s.updated_at > :since::timestamptz", { since })
+            .orderBy("s.updated_at")
+            .limit(5)
+            .getRawMany()
+        return rows.filter(isFreshSourceRow)
     }
 
     private summaryBody(items: ReadonlyArray<DueItem>, pillars: ReadonlyArray<PillarRow>): string {
@@ -192,29 +267,23 @@ export class ContentService {
             await this.settings.mergeMarks(workspaceId, { offer_seen_at: now.toISOString() })
             return null
         }
-        const sources = await this.entityManager.query<Array<FreshSourceRow>>(SELECT_FRESH_SOURCES, [
-            workspaceId,
-            lastSeen ?? new Date(0).toISOString(),
-        ])
+        const sources = await this.freshSources(workspaceId, lastSeen ?? new Date(0).toISOString())
         const pattern = new RegExp(this.text("content.offer.pattern"), "iu")
         const fresh = sources
             .filter((source) => pattern.test(`${source.title} ${source.topic ?? ""} ${source.excerpt}`))
             .slice(0, OFFERS_PER_TICK)
         if (fresh.length === 0) return null
-        const [pillars, cadence] = await Promise.all([
-            this.entityManager.query<Array<PillarRow>>(SELECT_PILLARS, [workspaceId]),
-            this.entityManager.query<Array<CadenceRow>>(SELECT_CADENCE_CHANNELS, [workspaceId]),
-        ])
+        const [pillars, cadence] = await Promise.all([this.pillarsOf(workspaceId), this.cadenceChannels(workspaceId)])
         const pillarPattern = new RegExp(this.text("content.offer.pillar"), "iu")
         const offerPillar = pillars.find((pillar) => pillar.active && pillarPattern.test(pillar.name))
-        const channels = cadence.length > 0 ? cadence.map((entry) => entry.channel) : ["facebook"]
+        const channels = cadence.length > 0 ? cadence : ["facebook"]
         let made = 0
         await eachInOrder(fresh, async (source) => {
             if (await this.ideaFor(workspaceId, source, offerPillar?.id ?? null, channels, now)) made += 1
         })
         // The mark moves forward only when every fresh source was handled; a failure above leaves it so the next tick tries again.
         const newest = fresh.reduce(
-            (newest, source) => (Date.parse(source.changed_at) > Date.parse(newest) ? source.changed_at : newest),
+            (newest, source) => (Date.parse(source.changedAt) > Date.parse(newest) ? source.changedAt : newest),
             now.toISOString(),
         )
         await this.settings.mergeMarks(workspaceId, { offer_seen_at: newest })
@@ -254,6 +323,6 @@ export class ContentService {
     }
 
     private async notify(workspaceId: string, body: string): Promise<void> {
-        await this.entityManager.query(INSERT_NOTICE, [workspaceId, body])
+        await callDbFunction(this.entityManager, "public.post_office_notice", [workspaceId, body])
     }
 }

@@ -2,13 +2,13 @@ import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { CommandPlannerService } from "./command-planner.service"
 import type { ActionEntry, SendCommandInput, WorkContext, WorkItem, WorkSpec } from "./decisions.contracts"
 import { ModuleCatalogService } from "./module-catalog.service"
-import { FIND_LEAD_STAGE, FOLLOW_UP_IS_PENDING } from "./persistence/chain-reads.sql"
 import type { CommandPlan } from "./work-engine.contracts"
-import { LEAD_GEN_FLOW, PAYMENT_RECEIPTS } from "./work-engine.decorators"
-import type { LeadGenFlow, PaymentReceipts } from "./work-engine.port"
+import { LEAD_GEN_FLOW } from "./work-engine.decorators"
+import type { LeadGenFlow } from "./work-engine.port"
 import { WorkChainService } from "./work-chain.service"
 import { WorkIntakeService } from "./work-intake.service"
 
@@ -66,7 +66,6 @@ const ACTIONS: Readonly<Record<string, ActionEntry>> = {
 
 interface Built {
     readonly service: WorkChainService
-    readonly receipts: jest.Mock
     readonly leadGen: jest.Mock
     readonly sent: Array<SendCommandInput>
     readonly inserted: Array<WorkSpec>
@@ -75,7 +74,6 @@ interface Built {
 const build = async (entityManager: MockEntityManager, refuse = false): Promise<Built> => {
     const sent: Array<SendCommandInput> = []
     const inserted: Array<WorkSpec> = []
-    const receipts = jest.fn().mockResolvedValue(undefined)
     const leadGen = jest.fn().mockResolvedValue(undefined)
     const plan = jest.fn((_ctx: WorkContext, input: SendCommandInput): Promise<CommandPlan> => {
         sent.push(input)
@@ -91,7 +89,6 @@ const build = async (entityManager: MockEntityManager, refuse = false): Promise<
         providers: [
             WorkChainService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: PAYMENT_RECEIPTS, useValue: mock<PaymentReceipts>({ receiptFor: receipts }) },
             { provide: LEAD_GEN_FLOW, useValue: mock<LeadGenFlow>({ continueAfter: leadGen }) },
             {
                 provide: ModuleCatalogService,
@@ -111,7 +108,7 @@ const build = async (entityManager: MockEntityManager, refuse = false): Promise<
             },
         ],
     }).compile()
-    return { service: moduleRef.get(WorkChainService), receipts, leadGen, sent, inserted }
+    return { service: moduleRef.get(WorkChainService), leadGen, sent, inserted }
 }
 
 describe("WorkChainService", () => {
@@ -155,31 +152,26 @@ describe("WorkChainService", () => {
     })
 
     it("queues a follow-up for a customer who is neither lost, won nor waiting", async () => {
-        const built = await build(
-            mockEntityManager({
-                query: [
-                    [FIND_LEAD_STAGE, [{ stage: "new" }]],
-                    [FOLLOW_UP_IS_PENDING, [{ pending: false }]],
-                ],
-            }),
-        )
+        const em = mockEntityManager()
+        const [stage, pending] = queueQueryBuilders(em, [{ getRawOne: { stage: "new" } }, { getRawOne: undefined }])
+        const built = await build(em)
 
         await built.service.continueChain(ctx, itemOf())
 
         expect(built.sent.map((input) => [input.command, input.reason, input.dedupeKey])).toEqual([
             ["send_follow_up", "classified", "send_follow_up:after:item-1"],
         ])
+        expect(stage?.callsOf("from")).toEqual([["public.leads", "l"]])
+        expect(stage?.callsOf("where")).toEqual([
+            ["l.workspace_id = :workspaceId AND l.id = :leadId", { workspaceId: "ws-1", leadId: "lead-1" }],
+        ])
+        expect(pending?.callsOf("from")).toEqual([["public.work_items", "w"]])
     })
 
     it("queues a follow-up when the customer cannot be read and nothing is probed", async () => {
-        const built = await build(
-            mockEntityManager({
-                query: [
-                    [FIND_LEAD_STAGE, []],
-                    [FOLLOW_UP_IS_PENDING, []],
-                ],
-            }),
-        )
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ getRawOne: undefined }, { getRawOne: undefined }])
+        const built = await build(em)
 
         await built.service.continueChain(ctx, itemOf())
 
@@ -197,7 +189,9 @@ describe("WorkChainService", () => {
     })
 
     it("queues no follow-up for a customer who already bought", async () => {
-        const built = await build(mockEntityManager({ query: [FIND_LEAD_STAGE, [{ stage: "won" }]] }))
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ getRawOne: { stage: "won" } }])
+        const built = await build(em)
 
         await built.service.continueChain(ctx, itemOf())
 
@@ -205,14 +199,9 @@ describe("WorkChainService", () => {
     })
 
     it("queues no second follow-up while one waits for a decision", async () => {
-        const built = await build(
-            mockEntityManager({
-                query: [
-                    [FIND_LEAD_STAGE, [{ stage: "new" }]],
-                    [FOLLOW_UP_IS_PENDING, [{ pending: true }]],
-                ],
-            }),
-        )
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ getRawOne: { stage: "new" } }, { getRawOne: { pending: 1 } }])
+        const built = await build(em)
 
         await built.service.continueChain(ctx, itemOf())
 
@@ -264,7 +253,6 @@ describe("WorkChainService", () => {
                 paid({ subject_id: "tx-1", proposal: { summary: "S", fields: {}, candidates } }),
             )
 
-            expect(built.receipts).toHaveBeenCalledWith(ctx, { transactionId: "tx-1", invoiceId: "inv-1" })
             expect(built.sent.map((input) => [input.command, input.dedupeKey, input.payload])).toEqual([
                 [
                     "send_care",
@@ -286,7 +274,6 @@ describe("WorkChainService", () => {
                 paid({ subject_id: "tx-1", proposal: { summary: "S", fields: {}, candidates } }),
             )
 
-            expect(built.receipts).toHaveBeenCalledWith(ctx, { transactionId: "tx-1", invoiceId: null })
             expect(built.sent.map((input) => input.dedupeKey)).toEqual(["send_care:transaction:tx-1"])
         })
 
@@ -295,7 +282,6 @@ describe("WorkChainService", () => {
 
             await built.service.continueChain(ctx, paid({ subject_type: "invoice", subject_id: "inv-9" }))
 
-            expect(built.receipts).toHaveBeenCalledWith(ctx, { transactionId: null, invoiceId: "inv-9" })
             expect(built.sent.map((input) => input.payload)).toEqual([
                 { subject_type: "invoice", subject_id: "inv-9", lead_id: "lead-1" },
             ])
@@ -309,7 +295,6 @@ describe("WorkChainService", () => {
             await built.service.continueChain(ctx, paid({ subject_type: "lead", subject_id: "lead-1" }))
 
             expect(built.sent).toEqual([])
-            expect(built.receipts).toHaveBeenCalledTimes(3)
         })
     })
 })

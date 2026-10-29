@@ -1,22 +1,24 @@
 import type { OrderDetail, PaymentOrder } from "./payment-orders.contracts"
-import type { OrderRow } from "./persistence/payment-orders.rows"
+import type { PaymentOrderEntity } from "./persistence/entities"
 
 /** The detail of an order as an object: a stored value that is not a JSON object counts as no detail. */
-const detailOf = (value: OrderRow["detail"]): OrderDetail =>
-    typeof value === "object" && value !== null && !Array.isArray(value) ? value : {}
+const detailOf = (value: unknown): OrderDetail =>
+    typeof value === "object" && value !== null && !Array.isArray(value)
+        ? Object.fromEntries(Object.entries(value))
+        : {}
 
-/** Maps one order row to the order the capability answers, its instants as ISO text. */
-export const toPaymentOrder = (row: OrderRow): PaymentOrder => ({
+/** Maps one stored order to the order the capability answers, its instants as ISO text. */
+export const toPaymentOrder = (row: PaymentOrderEntity): PaymentOrder => ({
     id: row.id,
-    workspaceId: row.workspace_id,
-    planCode: row.plan_code,
-    amountVnd: row.amount_vnd,
-    orderCode: row.order_code,
+    workspaceId: row.workspaceId,
+    planCode: row.planCode,
+    amountVnd: row.amountVnd,
+    orderCode: row.orderCode,
     status: row.status,
-    expiresAt: new Date(row.expires_at).toISOString(),
-    paidAt: row.paid_at === null ? null : new Date(row.paid_at).toISOString(),
-    createdAt: new Date(row.created_at).toISOString(),
+    expiresAt: row.expiresAt.toISOString(),
+    paidAt: row.paidAt === null ? null : row.paidAt.toISOString(),
+    createdAt: row.createdAt.toISOString(),
     kind: row.kind,
-    packCode: row.pack_code,
+    packCode: row.packCode,
     detail: detailOf(row.detail),
 })

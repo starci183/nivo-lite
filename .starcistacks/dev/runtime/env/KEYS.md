@@ -6,8 +6,6 @@ local ones.
 
 | Key | Semantics |
 | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | The local Supabase origin and anonymous key (from `supabase status -o env`). |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | The local Supabase origin and anonymous key (from `supabase status -o env`). |
 | `NEXT_PUBLIC_API_URL` | The api origin, `http://api.localhost`. |
 | `NEXT_PUBLIC_DEVELOPER_API_URL` | The api origin, `http://api.localhost`. |
 | `NEXT_PUBLIC_SITE_URL` | The console `http://localhost` and the landing `http://landing.localhost`. |

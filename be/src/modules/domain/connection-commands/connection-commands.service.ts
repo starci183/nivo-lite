@@ -15,8 +15,7 @@ import { isConnectionCommandPayload } from "@modules/queues/connection-commands"
 import type { CommandFailed, CommandOutcome } from "./connection-commands.contracts"
 import { toConnectionCommand } from "./connection-commands.mapper"
 import { runCommand } from "./connection-commands.policy"
-import type { ConnectionCommandRow } from "./persistence/connection-commands.rows"
-import { FIND_COMMAND, FINISH_COMMAND } from "./persistence/connection-commands.sql"
+import { ConnectionCommandEntity } from "./persistence/entities"
 
 @Injectable()
 /** Runs the console commands members submitted through the database: as that member, in that workspace, writing the outcome back to the row. */
@@ -43,16 +42,19 @@ export class ConnectionCommandsService {
      * changes nothing, so a redelivered job never runs a command twice.
      */
     async run(commandId: string): Promise<void> {
-        const rows: ReadonlyArray<ConnectionCommandRow> = await this.entityManager.query(FIND_COMMAND, [commandId])
-        const row = rows[0]
-        if (row === undefined) return
+        const row = await this.entityManager.findOne(ConnectionCommandEntity, { where: { id: commandId } })
+        if (row === null) return
         const command = toConnectionCommand(row)
         if (command.status === "done") return
         const outcome = await this.outcomeOf(command.kind, command.input, {
             principalId: command.userId,
             workspaceId: command.workspaceId,
         })
-        await this.entityManager.query(FINISH_COMMAND, [command.id, JSON.stringify(outcome)])
+        await this.entityManager.update(
+            ConnectionCommandEntity,
+            { id: command.id, status: "pending" },
+            { status: "done", outcome, finishedAt: () => "now()" },
+        )
     }
 
     private async outcomeOf(

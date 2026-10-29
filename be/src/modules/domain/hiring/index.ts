@@ -60,3 +60,4 @@ export {
 } from "./hiring-requests.mapper"
 
 export type { CandidateRecord, InterviewRecord, JobRecord, OfferRecord } from "./hiring.contracts"
+export { hiringEntities } from "./persistence/entities"

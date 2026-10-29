@@ -1,6 +1,6 @@
 import { isRecord } from "@modules/platform/primitives"
 import type { EditorScene, MaybeWorkbenchRender, VideoInputs, WorkbenchProject } from "./video-workbench.contracts"
-import type { WorkbenchProjectRow } from "./persistence/video-workbench.rows"
+import type { StoredProject } from "./video-stored.contracts"
 
 /** Supported video editor goals. */
 export const VIDEO_GOALS = ["service", "offer", "testimonial", "behind_scenes", "hiring", "custom"] as const
@@ -69,7 +69,7 @@ const lastErrorCodeOf = (error: string | null): string | null => {
 
 /** A project row with storage links supplied by the caller. */
 export const workbenchProjectOf = (
-    row: WorkbenchProjectRow,
+    row: StoredProject,
     workspaceId: string,
     render: MaybeWorkbenchRender,
 ): WorkbenchProject => ({

@@ -4,6 +4,7 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { OfficeLog } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InventoryErrorCode } from "./errors/inventory.error"
@@ -18,9 +19,8 @@ import {
     OPEN_RECEIPT,
     RECEIVE_PO_LINE,
     RECOMPUTE_PO_TOTAL,
-    SELECT_ACCOUNTING_INSTALLED,
     SET_PO_STATUS,
-} from "./persistence/inventory.sql"
+} from "@tests/fixtures/builders/inventory-calls.builder"
 
 const textLike = (text: string): unknown => expect.stringContaining(text)
 
@@ -84,15 +84,15 @@ describe("InventoryReceivingService / receivePo", () => {
     it("receives at actual prices, completes the order, logs changes and hands the payable to Accounting", async () => {
         const em = mockEntityManager({
             query: [
-                [OPEN_RECEIPT, [{ id: "rec-1" }]],
+                [OPEN_RECEIPT, [{ inventory_open_receipt: "rec-1" }]],
                 [RECEIVE_PO_LINE, []],
                 [RECEIVE_PO_LINE, []],
                 [CLOSE_RECEIPT, []],
                 [SET_PO_STATUS, []],
                 [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
-                [SELECT_ACCOUNTING_INSTALLED, [{ id: "mod-1" }]],
             ],
         })
+        queueQueryBuilders(em, [{ getRawOne: { id: "mod-1" } }])
         const { service, movements, orders, office } = await build(em)
         orders.loadPo
             .mockResolvedValueOnce(poOf())
@@ -157,14 +157,14 @@ describe("InventoryReceivingService / receivePo", () => {
     it("marks partial receipts, skips unapplied lines and requires Accounting and an invoice", async () => {
         const em = mockEntityManager({
             query: [
-                [OPEN_RECEIPT, [{ id: "rec-1" }]],
+                [OPEN_RECEIPT, [{ inventory_open_receipt: "rec-1" }]],
                 [RECEIVE_PO_LINE, []],
                 [CLOSE_RECEIPT, []],
                 [SET_PO_STATUS, []],
                 [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
-                [SELECT_ACCOUNTING_INSTALLED, []],
             ],
         })
+        queueQueryBuilders(em, [{ getRawOne: undefined }])
         const { service, movements, orders, office } = await build(em)
         movements.apply
             .mockResolvedValueOnce({ applied: true, before: 0, after: 4, cost: 0 })
@@ -210,14 +210,14 @@ describe("InventoryReceivingService / receivePo", () => {
     it("names the fallback supplier and item and writes the invoice into the payable", async () => {
         const em = mockEntityManager({
             query: [
-                [OPEN_RECEIPT, [{ id: "rec-1" }]],
+                [OPEN_RECEIPT, [{ inventory_open_receipt: "rec-1" }]],
                 [RECEIVE_PO_LINE, []],
                 [CLOSE_RECEIPT, []],
                 [SET_PO_STATUS, []],
                 [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
-                [SELECT_ACCOUNTING_INSTALLED, [{ id: "mod-1" }]],
             ],
         })
+        queueQueryBuilders(em, [{ getRawOne: { id: "mod-1" } }])
         const { service, orders, office } = await build(em)
         orders.loadPo.mockResolvedValue(poOf({ supplier: null }))
 
@@ -238,14 +238,14 @@ describe("InventoryReceivingService / receivePo", () => {
     it("hands a payable to Accounting without an invoice number", async () => {
         const em = mockEntityManager({
             query: [
-                [OPEN_RECEIPT, [{ id: "rec-1" }]],
+                [OPEN_RECEIPT, [{ inventory_open_receipt: "rec-1" }]],
                 [RECEIVE_PO_LINE, []],
                 [CLOSE_RECEIPT, []],
                 [SET_PO_STATUS, []],
                 [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
-                [SELECT_ACCOUNTING_INSTALLED, [{ id: "mod-1" }]],
             ],
         })
+        queueQueryBuilders(em, [{ getRawOne: { id: "mod-1" } }])
         const { service, office } = await build(em)
 
         await service.receivePo("user-1", "ws-1", {
@@ -267,7 +267,7 @@ describe("InventoryReceivingService / receivePo", () => {
     it("throws away the receipt when no line received anything", async () => {
         const em = mockEntityManager({
             query: [
-                [OPEN_RECEIPT, [{ id: "rec-1" }]],
+                [OPEN_RECEIPT, [{ inventory_open_receipt: "rec-1" }]],
                 [DISCARD_RECEIPT, []],
             ],
         })

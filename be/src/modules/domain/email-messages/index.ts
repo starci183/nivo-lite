@@ -8,3 +8,4 @@ export type { SmtpConnectionView, SmtpTestResult } from "./smtp-wizard.contracts
 export type { SendEmailResult } from "./email-messages.contracts"
 export { EmailMessagesService } from "./email-messages.service"
 export { isMailAddress } from "./email-address.policy"
+export { emailMessagesEntities } from "./persistence/entities"

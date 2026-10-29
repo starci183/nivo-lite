@@ -7,7 +7,7 @@ import type {
     AdminWorkspaceItem,
     WorkspaceFilter,
 } from "./platform-admin.contracts"
-import type { QuotaOverrideRow, QuotaRow } from "./persistence/platform-admin.rows"
+import type { QuotaOverrideFacts, QuotaFacts } from "./platform-admin.facts"
 
 const DAY_MS = 86_400_000
 
@@ -151,7 +151,7 @@ export const tally = (values: ReadonlyArray<string>): Array<AdminCount> => {
 export const numberOrNull = (value: string | number | null): number | null => (value === null ? null : Number(value))
 
 /** The month's credits from the quota status and the workspace's own allowance; a workspace with no status shows zero use. */
-export const creditsFrom = (quota: QuotaRow | undefined, override: QuotaOverrideRow | undefined): AdminCredits => {
+export const creditsFrom = (quota: QuotaFacts | undefined, override: QuotaOverrideFacts | undefined): AdminCredits => {
     const costUsd = quota === undefined ? 0 : Number(quota.cost_usd)
     const reported = quota === undefined ? null : numberOrNull(quota.credits_used)
     return {

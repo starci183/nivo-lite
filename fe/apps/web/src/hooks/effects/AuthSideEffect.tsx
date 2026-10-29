@@ -10,7 +10,7 @@ import { setViewerId, useAppDispatch } from "@/redux"
 type SeenUser = string | null | undefined
 
 /**
- * Follows the browser Supabase session. Only a real change of identity (a different person, or sign-in and sign-out) drops every cached
+ * Follows the browser session. Only a real change of identity (a different person, or sign-in and sign-out) drops every cached
  * API answer and re-renders the server tree (the proxy gates routes on the session cookie). A token refresh, the initial session and a
  * repeated sign-in of the same person (the browser re-announces it when a tab regains focus) change nothing, so the console is not
  * remounted by them; the very first answer only records the person. Renders nothing.

@@ -17,18 +17,25 @@ import type {
     OptionalInboundEvent,
     UnroutedMessage,
 } from "./inbound-events.contracts"
-import type { EventIdRow, InboundEventRow } from "./persistence/inbound-events.rows"
-import {
-    BUMP_DUPLICATE_EVENT,
-    FIND_INBOUND_EVENT,
-    FIND_INPUT_ID,
-    INSERT_ORDER_HANDOFF,
-    HOLD_EVENT_FOR_OWNER,
-    INSERT_BANK_EVENT,
-    INSERT_INPUT_EVENT,
-    INSERT_UNROUTED_EVENT,
-    MARK_INBOUND_EVENT,
-} from "./persistence/inbound-events.sql"
+import { InboundEventEntity } from "./persistence/entities"
+
+/** The columns a new inbound event is written with; every other column keeps its default. */
+type NewInboundEvent = Pick<InboundEventEntity, "workspaceId" | "channel" | "kind" | "body" | "dedupeKey"> &
+    Partial<
+        Pick<InboundEventEntity, "senderName" | "senderContact" | "amountVnd" | "externalRef" | "eventId" | "leadId">
+    >
+
+/** Writes one inbound event once per workspace and dedupe key; answers its id, or undefined when the key was taken. */
+const insertOnce = async (manager: EntityManager, event: NewInboundEvent): Promise<string | undefined> => {
+    const result = await manager
+        .createQueryBuilder(InboundEventEntity, "ie")
+        .insert()
+        .values(event)
+        .orIgnore()
+        .returning("id")
+        .execute()
+    return (result.raw as Array<{ id: string }>)[0]?.id
+}
 
 @Injectable()
 /** The inbound events: the only writer of public.inbound_events. A credit is one event per workspace and provider transaction id. */
@@ -45,40 +52,37 @@ export class InboundEventsService {
      */
     async recordBankPayment(event: BankPaymentEvent): Promise<BankPaymentRecorded> {
         const key = bankDedupeKey(event.providerRef)
-        const [created] = await event.manager.query<Array<EventIdRow>>(INSERT_BANK_EVENT, [
-            event.workspaceId,
-            event.sender,
-            event.body,
-            event.amountVnd,
-            event.externalRef,
-            event.providerRef.trim(),
-            key,
-        ])
-        if (created !== undefined) return { duplicate: false, inboundEventId: created.id }
-        const [repeated] = await event.manager.query<Array<EventIdRow>>(BUMP_DUPLICATE_EVENT, [
-            event.workspaceId,
-            key,
-            this.clock.now(),
-        ])
-        if (repeated === undefined) throw new InboundEventsError({ code: InboundEventsErrorCode.Unreadable })
-        return { duplicate: true, inboundEventId: repeated.id }
+        const created = await insertOnce(event.manager, {
+            workspaceId: event.workspaceId,
+            channel: "bank",
+            kind: "payment",
+            senderName: event.sender,
+            body: event.body,
+            amountVnd: event.amountVnd,
+            externalRef: event.externalRef,
+            eventId: event.providerRef.trim(),
+            dedupeKey: key,
+        })
+        if (created !== undefined) return { duplicate: false, inboundEventId: created }
+        return this.countRepeat(event.manager, event.workspaceId, key)
     }
 
     /** Keeps a message nobody is bound to answer visible in the inbox; the same event twice is one row. It writes in the transaction of the caller that already claimed the delivery. */
     async keepUnrouted(manager: EntityManager, message: UnroutedMessage): Promise<void> {
-        await manager.query(INSERT_UNROUTED_EVENT, [
-            message.workspaceId,
-            message.channel,
-            message.sender,
-            message.body,
-            message.eventId,
-            `${message.channel}:message:${message.eventId}`,
-        ])
+        await insertOnce(manager, {
+            workspaceId: message.workspaceId,
+            channel: message.channel,
+            kind: "message",
+            senderName: message.sender,
+            body: message.body,
+            eventId: message.eventId,
+            dedupeKey: `${message.channel}:message:${message.eventId}`,
+        })
     }
 
     /** Holds an inbound event for the owner's check until an agent matches it; an event already past that stage is left as it is. */
-    async holdForOwnerCheck(eventId: string): Promise<void> {
-        await this.entityManager.query(HOLD_EVENT_FOR_OWNER, [eventId])
+    async holdForOwnerCheck(eventId: string, manager: EntityManager = this.entityManager): Promise<void> {
+        await manager.update(InboundEventEntity, { id: eventId, status: "received" }, { status: "needs_decision" })
     }
 
     /** The inbound event of the workspace, or null when there is none with that id. */
@@ -87,8 +91,22 @@ export class InboundEventsService {
         eventId: string,
         manager: EntityManager = this.entityManager,
     ): Promise<OptionalInboundEvent> {
-        const rows = await manager.query<Array<InboundEventRow>>(FIND_INBOUND_EVENT, [workspaceId, eventId])
-        return rows[0] ?? null
+        const event = await manager.findOne(InboundEventEntity, { where: { workspaceId, id: eventId } })
+        if (event === null) return null
+        return {
+            id: event.id,
+            workspace_id: event.workspaceId,
+            channel: event.channel,
+            kind: event.kind,
+            sender_name: event.senderName,
+            sender_contact: event.senderContact,
+            body: event.body,
+            amount_vnd: event.amountVnd,
+            external_ref: event.externalRef,
+            event_id: event.eventId,
+            lead_id: event.leadId,
+            status: event.status,
+        }
     }
 
     /** Sets where an event stands (null keeps it) and links the customer the engine found (null keeps it). */
@@ -97,8 +115,14 @@ export class InboundEventsService {
         eventId: string,
         status: OptionalEventStatus,
         leadId: OptionalLeadRef,
+        manager: EntityManager = this.entityManager,
     ): Promise<void> {
-        await this.entityManager.query(MARK_INBOUND_EVENT, [workspaceId, eventId, status, leadId])
+        if (status === null && leadId === null) return
+        await manager.update(
+            InboundEventEntity,
+            { workspaceId, id: eventId },
+            { ...(status === null ? {} : { status }), ...(leadId === null ? {} : { leadId }) },
+        )
     }
 
     /**
@@ -120,46 +144,60 @@ export class InboundEventsService {
 
     private async findRepeatedInput(input: InboundInput, manager: EntityManager): Promise<BankPaymentRecorded> {
         const key = eventDedupeKey(input.channel, input.kind, input.eventId)
-        const [recorded] = await manager.query<Array<EventIdRow>>(FIND_INPUT_ID, [input.workspaceId, key])
-        if (recorded === undefined) throw new InboundEventsError({ code: InboundEventsErrorCode.Unreadable })
+        const recorded = await manager.findOne(InboundEventEntity, {
+            select: { id: true },
+            where: { workspaceId: input.workspaceId, dedupeKey: key },
+        })
+        if (recorded === null) throw new InboundEventsError({ code: InboundEventsErrorCode.Unreadable })
         return { duplicate: true, inboundEventId: recorded.id }
     }
 
     private async writeInput(input: InboundInput, manager: EntityManager): Promise<BankPaymentRecorded> {
         const key = eventDedupeKey(input.channel, input.kind, input.eventId)
-        const [created] = await manager.query<Array<EventIdRow>>(INSERT_INPUT_EVENT, [
-            input.workspaceId,
-            input.channel,
-            input.kind,
-            input.senderName,
-            input.senderContact,
-            input.body,
-            null,
-            input.externalRef,
-            input.eventId.trim(),
-            key,
-        ])
-        if (created !== undefined) return { duplicate: false, inboundEventId: created.id }
-        const [repeated] = await manager.query<Array<EventIdRow>>(BUMP_DUPLICATE_EVENT, [
-            input.workspaceId,
-            key,
-            this.clock.now(),
-        ])
+        const created = await insertOnce(manager, {
+            workspaceId: input.workspaceId,
+            channel: input.channel,
+            kind: input.kind,
+            senderName: input.senderName,
+            senderContact: input.senderContact,
+            body: input.body,
+            amountVnd: null,
+            externalRef: input.externalRef,
+            eventId: input.eventId.trim(),
+            dedupeKey: key,
+        })
+        if (created !== undefined) return { duplicate: false, inboundEventId: created }
+        return this.countRepeat(manager, input.workspaceId, key)
+    }
+
+    /** Counts a repeated delivery on the event it repeats; the first event must be readable. */
+    private async countRepeat(manager: EntityManager, workspaceId: string, key: string): Promise<BankPaymentRecorded> {
+        const result = await manager
+            .createQueryBuilder(InboundEventEntity, "ie")
+            .update()
+            .set({ duplicateCount: () => "duplicate_count + 1", lastDuplicateAt: this.clock.now() })
+            .where("workspace_id = :workspaceId AND dedupe_key = :key", { workspaceId, key })
+            .returning("id")
+            .execute()
+        const repeated = (result.raw as Array<{ id: string }>)[0]
         if (repeated === undefined) throw new InboundEventsError({ code: InboundEventsErrorCode.Unreadable })
         return { duplicate: true, inboundEventId: repeated.id }
     }
 
     /** Hands a finished sale to the order chain, inside the caller's transaction; the same sale twice is one order. Answers whether it was new. */
     async handOffOrder(order: OrderHandoff, manager: EntityManager): Promise<boolean> {
-        const rows = await manager.query<Array<{ id: string }>>(INSERT_ORDER_HANDOFF, [
-            order.workspaceId,
-            order.sender,
-            order.contact,
-            order.body,
-            order.amountVnd,
-            order.ref,
-            order.leadId,
-        ])
-        return rows.length > 0
+        const created = await insertOnce(manager, {
+            workspaceId: order.workspaceId,
+            channel: "manual",
+            kind: "order",
+            senderName: order.sender,
+            senderContact: order.contact,
+            body: order.body,
+            amountVnd: order.amountVnd,
+            externalRef: order.ref,
+            dedupeKey: `order:${order.ref}`,
+            leadId: order.leadId,
+        })
+        return created !== undefined
     }
 }

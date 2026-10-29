@@ -14,6 +14,7 @@ export const WORKSPACE_INVITES_MESSAGES: MessageBundle = {
         "errors.WORKSPACE_INVITES_USED": "L\u1eddi m\u1eddi \u0111\u00e3 \u0111\u01b0\u1ee3c d\u00f9ng.",
         "errors.WORKSPACE_INVITES_EXPIRED": "L\u1eddi m\u1eddi \u0111\u00e3 h\u1ebft h\u1ea1n.",
         "errors.WORKSPACE_INVITES_EMAIL_MISMATCH": "L\u1eddi m\u1eddi n\u00e0y d\u00e0nh cho m\u1ed9t email kh\u00e1c.",
+        "errors.WORKSPACE_INVITES_TOKEN_UNAVAILABLE": "Không tạo được liên kết mời.",
     },
     en: {
         "errors.WORKSPACE_INVITES_EMAIL_INVALID": "That email address is not valid.",
@@ -26,5 +27,6 @@ export const WORKSPACE_INVITES_MESSAGES: MessageBundle = {
         "errors.WORKSPACE_INVITES_USED": "This invitation was already used.",
         "errors.WORKSPACE_INVITES_EXPIRED": "This invitation has expired.",
         "errors.WORKSPACE_INVITES_EMAIL_MISMATCH": "This invitation is for a different email address.",
+        "errors.WORKSPACE_INVITES_TOKEN_UNAVAILABLE": "The invitation link could not be created.",
     },
 }

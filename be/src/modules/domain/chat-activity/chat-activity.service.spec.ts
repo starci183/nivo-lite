@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, fakeIds, mock, mockEntityManager } from "@starci/jest-preset"
+import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { AFTER_COMMIT, PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { AfterCommit } from "@modules/platform/database"
@@ -11,16 +12,24 @@ import type { RealtimeHub } from "@modules/platform/realtime"
 import { ChatActivityLogEvent } from "./chat-activity.log-events"
 import { ChatActivityService } from "./chat-activity.service"
 import { chatActivityTopic } from "./chat-activity.policy"
-import type { ActiveMemberRow } from "./persistence/chat-activity.rows"
-import { LIST_ACTIVE_MEMBER_IDS } from "./persistence/chat-activity.sql"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
+import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
 
 const NOW = "2026-10-26T01:00:00.000Z"
 const WS = "WS-1"
-const MEMBERS: ReadonlyArray<ActiveMemberRow> = [{ user_id: "author" }, { user_id: "bob" }, { user_id: "cara" }]
+const MEMBERS: ReadonlyArray<{ readonly userId: string }> = [
+    { userId: "author" },
+    { userId: "bob" },
+    { userId: "cara" },
+]
 const inside = mockEntityManager()
 
-const build = async (members: ReadonlyArray<ActiveMemberRow> = MEMBERS) => {
-    const entityManager = mockEntityManager({ query: [LIST_ACTIVE_MEMBER_IDS, members] })
+const build = async (members: ReadonlyArray<{ readonly userId: string }> = MEMBERS) => {
+    const entityManager = mockEntityManager()
+    const lookups = queueQueryBuilders(
+        entityManager,
+        Array.from({ length: 4 }, () => ({ getRawMany: members })),
+    )
     const hub = mock<RealtimeHub>({ publish: jest.fn().mockResolvedValue(undefined) })
     const logger = mock<Logger>({ info: jest.fn(), warn: jest.fn(), error: jest.fn() })
     const commits = mock<AfterCommit>({
@@ -37,7 +46,7 @@ const build = async (members: ReadonlyArray<ActiveMemberRow> = MEMBERS) => {
             { provide: AFTER_COMMIT, useValue: commits },
         ],
     }).compile()
-    return { service: moduleRef.get(ChatActivityService), entityManager, hub, logger, commits }
+    return { service: moduleRef.get(ChatActivityService), entityManager, hub, logger, commits, lookups }
 }
 
 const fieldOf = (frame: object, key: string): string => {
@@ -56,11 +65,15 @@ const published = (hub: Pick<jest.Mocked<RealtimeHub>, "publish">) =>
 
 describe("ChatActivityService.message", () => {
     it("tells every active member of the line and every member but its author of the unread", async () => {
-        const { service, entityManager, hub } = await build()
+        const { service, lookups, hub, entityManager } = await build()
 
         await service.message(WS, "room:sales", "author", inside)
 
-        expect(entityManager.query.mock.calls).toEqual([[LIST_ACTIVE_MEMBER_IDS, [WS]]])
+        expect(entityManager.createQueryBuilder).toHaveBeenCalledWith(WorkspaceMemberEntity, "m")
+        expect(lookups[0]?.callsOf("where")).toEqual([
+            ["m.workspace_id = :workspaceId AND m.status = 'active'", { workspaceId: WS }],
+        ])
+        expect(lookups[0]?.callsOf("limit")).toEqual([[500]])
         expect(published(hub)).toEqual([
             { topic: chatActivityTopic("author", WS).name, kind: "message", target: "room:sales", at: NOW },
             { topic: chatActivityTopic("bob", WS).name, kind: "message", target: "room:sales", at: NOW },
@@ -110,7 +123,8 @@ describe("ChatActivityService.message", () => {
     it("logs a failed member lookup and still settles", async () => {
         const { service, entityManager, hub, logger } = await build()
         const cause = new Error("db down")
-        entityManager.query.mockRejectedValue(cause)
+        entityManager.createQueryBuilder.mockReset()
+        answerByTable(entityManager, { "public.workspace_members": () => Promise.reject(cause) })
 
         await expect(service.message(WS, "room:sales", "author")).resolves.toBeUndefined()
 
@@ -127,7 +141,7 @@ describe("ChatActivityService.receipt", () => {
 
         expect(published(hub)).toEqual(
             MEMBERS.map((member) => ({
-                topic: chatActivityTopic(member.user_id, WS).name,
+                topic: chatActivityTopic(member.userId, WS).name,
                 kind: "receipt",
                 target: "conversation:cv-1",
                 at: NOW,

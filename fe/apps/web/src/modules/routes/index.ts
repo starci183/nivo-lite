@@ -7,10 +7,9 @@ export const APP_ROUTES = {
     chat: "/chat",
     account: "/account",
     workspaceNew: "/workspaces/new",
-    authCallback: "/auth/callback",
 } as const
 
-export { safeNext, safeNextPath } from "./safe-next-path"
+export { safeNext } from "./safe-next-path"
 export { LEADS_ROUTES, leadPath, newLeadPath } from "./leads-routes"
 export {
     AUTH_ROUTES,

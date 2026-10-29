@@ -4,13 +4,13 @@ import { AutomationRunsService } from "@modules/domain/automation-runs"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { LoadedPipeline } from "./automations.contracts"
 import {
-    SELECT_DEBT_INVOICES,
-    SELECT_EXPIRING_CONTRACTS,
-    SELECT_LEAD_ACTIVITY,
-    SELECT_LEADS_WITH_CHAT,
-    SELECT_SCAN_LEADS,
-} from "./persistence/automation-readers.sql"
-import type { DebtInvoiceRow, LeadActivityRow, ScanLeadRow } from "./persistence/automations.rows"
+    readDebtInvoices,
+    readExpiringContracts,
+    readLeadActivity,
+    readLeadsWithChat,
+    readScanLeads,
+} from "./automation-reads.query"
+import type { ScanLead } from "./automation-reads.contracts"
 import { instantOf, automationIsoOf } from "./policies/format.policy"
 import {
     NO_SCAN,
@@ -66,13 +66,13 @@ export class AutomationScansService {
         batch: number,
     ): Promise<ScanPlans> {
         const workspaceId = item.pipeline.workspace_id
-        const leads = await this.entityManager.query<Array<ScanLeadRow>>(SELECT_SCAN_LEADS, [
+        const leads = await readScanLeads(this.entityManager, {
             workspaceId,
-            lookbackIso(now, kind),
-            kind === "nurture" ? NURTURE_STAGES : null,
-            kind === "win_back" ? "lost" : null,
-            LEADS_SCANNED,
-        ])
+            since: lookbackIso(now, kind),
+            stages: kind === "nurture" ? NURTURE_STAGES : null,
+            except: kind === "win_back" ? "lost" : null,
+            limit: LEADS_SCANNED,
+        })
         if (leads.length === 0) return NO_SCAN
         const ids = leads.map((lead) => lead.id)
         const [activity, withChat, prior] = await Promise.all([
@@ -96,10 +96,7 @@ export class AutomationScansService {
 
     private async scanDebts(item: LoadedPipeline, now: Date, batch: number): Promise<ScanPlans> {
         const workspaceId = item.pipeline.workspace_id
-        const invoices = await this.entityManager.query<Array<DebtInvoiceRow>>(SELECT_DEBT_INVOICES, [
-            workspaceId,
-            debtCutoffIso(now, item.config),
-        ])
+        const invoices = await readDebtInvoices(this.entityManager, workspaceId, debtCutoffIso(now, item.config))
         const leadIds = invoices.flatMap((invoice) => (invoice.lead_id === null ? [] : [invoice.lead_id]))
         const [withChat, prior] = await Promise.all([
             this.chatsOf(workspaceId, leadIds),
@@ -130,10 +127,7 @@ export class AutomationScansService {
     /** The contracts ending soon that this pipeline has not announced for their current end date. */
     private async scanContracts(item: LoadedPipeline, now: Date, batch: number): Promise<ScanPlans> {
         const { today, horizon } = contractWindow(now, item.config)
-        const contracts = await this.entityManager.query<Array<{ id: string; ends_on: string }>>(
-            SELECT_EXPIRING_CONTRACTS,
-            [item.pipeline.workspace_id, today, horizon],
-        )
+        const contracts = await readExpiringContracts(this.entityManager, item.pipeline.workspace_id, today, horizon)
         if (contracts.length === 0) return NO_SCAN
         const prior = await this.runs.priorRuns(
             item.pipeline.id,
@@ -153,13 +147,14 @@ export class AutomationScansService {
     /** The instant of the last activity of each lead, starting from its creation. */
     private async activityOf(
         workspaceId: string,
-        leads: ReadonlyArray<ScanLeadRow>,
+        leads: ReadonlyArray<ScanLead>,
     ): Promise<ReadonlyMap<string, number>> {
         const activity = new Map(leads.map((lead) => [lead.id, instantOf(lead.created_at)]))
-        const rows = await this.entityManager.query<Array<LeadActivityRow>>(SELECT_LEAD_ACTIVITY, [
+        const rows = await readLeadActivity(
+            this.entityManager,
             workspaceId,
             leads.map((lead) => lead.id),
-        ])
+        )
         for (const row of rows)
             activity.set(row.lead_id, Math.max(activity.get(row.lead_id) ?? 0, instantOf(row.last_at)))
         return activity
@@ -167,10 +162,7 @@ export class AutomationScansService {
 
     private async chatsOf(workspaceId: string, leadIds: ReadonlyArray<string>): Promise<ReadonlySet<string>> {
         if (leadIds.length === 0) return new Set()
-        const rows = await this.entityManager.query<Array<{ lead_id: string }>>(SELECT_LEADS_WITH_CHAT, [
-            workspaceId,
-            leadIds,
-        ])
+        const rows = await readLeadsWithChat(this.entityManager, workspaceId, leadIds)
         return new Set(rows.map((row) => row.lead_id))
     }
 }

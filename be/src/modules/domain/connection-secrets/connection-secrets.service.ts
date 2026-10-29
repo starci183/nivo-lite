@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { ConnectionEntity } from "@modules/domain/connections/persistence/entities"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
@@ -7,25 +8,41 @@ import { InjectConnectionSecretsOptions } from "./connection-secrets.decorators"
 import type { ConnectionSecret, OptionalSealedText, OptionalStoredSecret } from "./connection-secrets.contracts"
 import type { ConnectionSecretsOptions } from "./connection-secrets.options"
 import { ConnectionSecretsError, ConnectionSecretsErrorCode } from "./errors/connection-secrets.error"
-import type {
-    ConnectionIdRow,
-    ConnectionSecretRow,
-    SealedSampleRow,
-    StoredSecretRow,
-} from "./persistence/connection-secrets.rows"
-import {
-    DELETE_STORED_SECRET,
-    FIND_CONNECTION_SECRET,
-    FIND_STORED_SECRET,
-    INSERT_STORED_SECRET,
-    UPSERT_STORED_SECRET,
-    LIST_ZALO_CONNECTIONS_DUE,
-    RELEASE_REFRESH_LEASE,
-    SAMPLE_SEALED_SECRET,
-    SAVE_SECRET,
-    SAVE_SECRET_WITH_EXPIRY,
-    TRY_REFRESH_LEASE,
-} from "./persistence/connection-secrets.sql"
+import { ConnectionSecretEntity } from "./persistence/entities"
+
+/** A connection with its sealed credential, as the joined read answers it. */
+interface ConnectionSecretRead {
+    /** The workspace the connection belongs to. */
+    readonly workspaceId: string
+    /** The provider key. */
+    readonly provider: string
+    /** The connection status. */
+    readonly status: string
+    /** The sealed credential. */
+    readonly ciphertext: string
+    /** The random secret of the connection's own webhook. */
+    readonly webhookSecret: string
+    /** When the access token ends. */
+    readonly tokenExpiresAt: Date | null
+}
+
+const isConnectionSecretRead = (value: unknown): value is ConnectionSecretRead =>
+    typeof value === "object" &&
+    value !== null &&
+    "workspaceId" in value &&
+    typeof value.workspaceId === "string" &&
+    "provider" in value &&
+    typeof value.provider === "string" &&
+    "status" in value &&
+    typeof value.status === "string" &&
+    "ciphertext" in value &&
+    typeof value.ciphertext === "string" &&
+    "webhookSecret" in value &&
+    typeof value.webhookSecret === "string"
+
+/** True when a row names the connection of a lease or a due credential. */
+const hasConnectionId = (value: unknown): value is { readonly connectionId: string } =>
+    typeof value === "object" && value !== null && "connectionId" in value && typeof value.connectionId === "string"
 import { openSecret, parseTokenKey, randomSecret, sealSecret } from "./secret-cipher.policy"
 
 @Injectable()
@@ -62,7 +79,10 @@ export class ConnectionSecretsService {
 
     /** Proves at boot that the connection key opens the credentials of connection_secrets (see `assertOpens`). */
     async assertKeyOpensStored(): Promise<void> {
-        const [row] = await this.entityManager.query<Array<SealedSampleRow>>(SAMPLE_SEALED_SECRET)
+        const row = await this.entityManager.findOne(ConnectionSecretEntity, {
+            select: { ciphertext: true },
+            where: {},
+        })
         this.assertOpens(row?.ciphertext ?? null)
     }
 
@@ -81,16 +101,28 @@ export class ConnectionSecretsService {
         provider: string,
         manager: EntityManager = this.entityManager,
     ): Promise<Outcome<ConnectionSecret, ConnectionSecretsErrorCode>> {
-        const row = (await manager.query<Array<ConnectionSecretRow>>(FIND_CONNECTION_SECRET, [connectionId]))[0]
+        const rows: ReadonlyArray<unknown> = await manager
+            .createQueryBuilder(ConnectionSecretEntity, "s")
+            .select("c.workspace_id", "workspaceId")
+            .addSelect("c.provider", "provider")
+            .addSelect("c.status", "status")
+            .addSelect("s.ciphertext", "ciphertext")
+            .addSelect("s.webhook_secret", "webhookSecret")
+            .addSelect("s.token_expires_at", "tokenExpiresAt")
+            .innerJoin(ConnectionEntity, "c", "c.id = s.connection_id")
+            .where("s.connectionId = :connectionId", { connectionId })
+            .limit(1)
+            .getRawMany()
+        const row = rows.find(isConnectionSecretRead)
         if (row?.provider !== provider || row.status === "disconnected") {
             return refused(ConnectionSecretsErrorCode.NotFound)
         }
         try {
             return ok({
-                workspaceId: row.workspace_id,
+                workspaceId: row.workspaceId,
                 credential: openSecret(this.key, row.ciphertext),
-                webhookSecret: row.webhook_secret,
-                tokenExpiresAt: row.token_expires_at,
+                webhookSecret: row.webhookSecret,
+                tokenExpiresAt: row.tokenExpiresAt?.toISOString() ?? null,
             })
         } catch (cause) {
             return refused(ConnectionSecretsErrorCode.Unreadable, { reason: String(cause) })
@@ -108,8 +140,15 @@ export class ConnectionSecretsService {
 
     /** Replaces the sealed credential; with an expiry it also records the end of the access token and drops the refresh lease. */
     async save(connectionId: string, sealed: string, expiresAt?: Date): Promise<void> {
-        if (expiresAt === undefined) await this.entityManager.query(SAVE_SECRET, [connectionId, sealed])
-        else await this.entityManager.query(SAVE_SECRET_WITH_EXPIRY, [connectionId, sealed, expiresAt])
+        if (expiresAt === undefined) {
+            await this.entityManager.update(ConnectionSecretEntity, { connectionId }, { ciphertext: sealed })
+        } else {
+            await this.entityManager.update(
+                ConnectionSecretEntity,
+                { connectionId },
+                { ciphertext: sealed, tokenExpiresAt: expiresAt, refreshLockUntil: null },
+            )
+        }
     }
 
     /** Seals and inserts the credential of a new connection, inside the caller's transaction when one is handed in. */
@@ -119,50 +158,74 @@ export class ConnectionSecretsService {
         webhookSecret: string,
         manager: EntityManager = this.entityManager,
     ): Promise<void> {
-        await manager.query(INSERT_STORED_SECRET, [connectionId, sealSecret(this.key, plain), webhookSecret])
+        await manager.insert(ConnectionSecretEntity, {
+            connectionId,
+            ciphertext: sealSecret(this.key, plain),
+            webhookSecret,
+        })
     }
 
     /** The opened credential of a connection, or null when it has none; throws when it cannot be opened with the current key. */
     async read(connectionId: string): Promise<OptionalStoredSecret> {
-        const [row] = await this.entityManager.query<Array<StoredSecretRow>>(FIND_STORED_SECRET, [connectionId])
-        return row === undefined
-            ? null
-            : { plain: openSecret(this.key, row.ciphertext), webhookSecret: row.webhook_secret }
+        const row = await this.entityManager.findOne(ConnectionSecretEntity, {
+            select: { ciphertext: true, webhookSecret: true },
+            where: { connectionId },
+        })
+        return row === null ? null : { plain: openSecret(this.key, row.ciphertext), webhookSecret: row.webhookSecret }
     }
 
     /** Seals and stores the credential; the webhook secret changes only when one is given (a new row gets a random one). */
     async write(connectionId: string, plain: string, webhookSecret?: string): Promise<void> {
-        await this.entityManager.query(UPSERT_STORED_SECRET, [
-            connectionId,
-            sealSecret(this.key, plain),
-            webhookSecret ?? randomSecret(),
-            webhookSecret !== undefined,
-        ])
+        await this.entityManager
+            .createQueryBuilder(ConnectionSecretEntity, "cs")
+            .insert()
+            .values({
+                connectionId,
+                ciphertext: sealSecret(this.key, plain),
+                webhookSecret: webhookSecret ?? randomSecret(),
+            })
+            .orUpdate(webhookSecret === undefined ? ["ciphertext"] : ["ciphertext", "webhook_secret"], [
+                "connection_id",
+            ])
+            .execute()
     }
 
     /** Deletes the stored credential of a connection. */
     async wipe(connectionId: string): Promise<void> {
-        await this.entityManager.query(DELETE_STORED_SECRET, [connectionId])
+        await this.entityManager.delete(ConnectionSecretEntity, { connectionId })
     }
 
     /** Takes the refresh lease when nobody holds a live one; false when another caller has it. */
     async takeLease(connectionId: string, until: Date, now: Date): Promise<boolean> {
-        const rows = await this.entityManager.query<Array<ConnectionIdRow>>(TRY_REFRESH_LEASE, [
-            connectionId,
-            until,
-            now,
-        ])
-        return rows.length > 0
+        const taken = await this.entityManager
+            .createQueryBuilder(ConnectionSecretEntity, "cs")
+            .update()
+            .set({ refreshLockUntil: until })
+            .where("connection_id = :connectionId AND (refresh_lock_until IS NULL OR refresh_lock_until < :now)", {
+                connectionId,
+                now,
+            })
+            .returning('connection_id AS "connectionId"')
+            .execute()
+        return Array.isArray(taken.raw) && taken.raw.some(hasConnectionId)
     }
 
     /** Drops the refresh lease. */
     async releaseLease(connectionId: string): Promise<void> {
-        await this.entityManager.query(RELEASE_REFRESH_LEASE, [connectionId])
+        await this.entityManager.update(ConnectionSecretEntity, { connectionId }, { refreshLockUntil: null })
     }
 
     /** The ids of the Zalo connections whose access token ends before the horizon, soonest first. */
     async dueZalo(horizon: Date): Promise<ReadonlyArray<string>> {
-        const rows = await this.entityManager.query<Array<ConnectionIdRow>>(LIST_ZALO_CONNECTIONS_DUE, [horizon])
-        return rows.map((row) => row.connection_id)
+        const rows: ReadonlyArray<unknown> = await this.entityManager
+            .createQueryBuilder(ConnectionSecretEntity, "s")
+            .select("s.connection_id", "connectionId")
+            .innerJoin(ConnectionEntity, "c", "c.id = s.connection_id")
+            .where("c.provider = 'zalo_oa' AND c.status <> 'disconnected'")
+            .andWhere("s.token_expires_at IS NOT NULL AND s.token_expires_at < :horizon", { horizon })
+            .orderBy("s.token_expires_at")
+            .limit(500)
+            .getRawMany()
+        return rows.filter(hasConnectionId).map((row) => row.connectionId)
     }
 }

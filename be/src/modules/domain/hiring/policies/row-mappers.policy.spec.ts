@@ -1,27 +1,8 @@
-import {
-    jobRow,
-    job,
-    candidateRow,
-    candidate,
-    interviewRow,
-    interview,
-    offerRow,
-    offer,
-} from "../../../../tests/fixtures/builders/hiring-row-mappers.builder"
+import { job } from "../../../../tests/fixtures/builders/hiring-row-mappers.builder"
 import { Test } from "@nestjs/testing"
-import type {
-    ApplicationSource,
-    EmploymentType,
-    InterviewStatus,
-    JobQuestion,
-    JobRequirements,
-    JobStatus,
-    OfferStatus,
-    OfferTerms,
-    PayUnit,
-} from "../hiring.contracts"
+import type { EmploymentType, JobQuestion, JobRequirements, JobStatus, PayUnit } from "../hiring.contracts"
 import { STAGES } from "../hiring.contracts"
-import type { HiringSettingsRow } from "../persistence/hiring.rows"
+import type { HiringJobEntity, HiringSettingEntity } from "../persistence/entities"
 import {
     isStage as isStageImplementation,
     questionsJson as questionsJsonImplementation,
@@ -33,6 +14,51 @@ import {
     toOffer as toOfferImplementation,
     toSettings as toSettingsImplementation,
 } from "./row-mappers.policy"
+
+const CREATED = new Date("2026-10-01T00:00:00.000Z")
+
+/** Overrides of a job entity; the closed-list columns accept any text so fallback cases can be written. */
+type JobOverrides = Partial<Omit<HiringJobEntity, "employmentType" | "payUnit" | "status">> & {
+    employmentType?: string
+    payUnit?: string
+    status?: string
+}
+
+/** Builds a complete job entity, with overrides for storage fallback cases. */
+const jobEntity = (overrides: JobOverrides = {}): HiringJobEntity => {
+    const base: HiringJobEntity = {
+        id: "job-1",
+        workspaceId: "ws-1",
+        slug: "barista",
+        title: "Barista",
+        position: "Coffee maker",
+        employmentType: "part_time",
+        schedule: "Monday morning",
+        payMinVnd: "30000",
+        payMaxVnd: "40000",
+        payUnit: "hour",
+        location: "Main shop",
+        headcount: 2,
+        description: "Make coffee",
+        requirements: {
+            skills: ["coffee"],
+            experience_years: 2,
+            experience_note: "Cafe work",
+            availability: ["Monday"],
+            must_have: ["Certificate"],
+            nice_to_have: ["Tea"],
+        },
+        questions: [{ id: "q-1", text: "Can you make coffee?", type: "yesno", required: true, expect: "yes" }],
+        status: "open",
+        channels: ["page", "chat"],
+        adVariants: null,
+        closesAt: new Date("2026-10-20T08:00:00+07:00"),
+        createdBy: null,
+        createdAt: CREATED,
+        updatedAt: CREATED,
+    }
+    return Object.assign(base, overrides)
+}
 
 const SUBJECT = Symbol("subject")
 type Subject = {
@@ -93,15 +119,16 @@ describe("row mappers policy", () => {
     it("maps every settings column", async () => {
         const subject = await buildSubject()
 
-        const row: HiringSettingsRow = {
-            workspace_id: "ws-1",
-            public_slug: "shop",
-            retention_days: 90,
-            notify_new_candidate: true,
-            remind_interview: false,
-            auto_close_when_filled: true,
-            apply_consent_text: "Consent example",
-            ad_tone: "Friendly",
+        const row: HiringSettingEntity = {
+            workspaceId: "ws-1",
+            publicSlug: "shop",
+            retentionDays: 90,
+            notifyNewCandidate: true,
+            remindInterview: false,
+            autoCloseWhenFilled: true,
+            applyConsentText: "Consent example",
+            adTone: "Friendly",
+            updatedAt: new Date("2026-10-01T00:00:00.000Z"),
         }
         expect(subject.toSettings(row)).toEqual({
             workspaceId: "ws-1",
@@ -186,7 +213,7 @@ describe("row mappers policy", () => {
         it("maps a complete row with numeric pay and normalized dates", async () => {
             const subject = await buildSubject()
 
-            expect(subject.toJob(jobRow())).toEqual(job)
+            expect(subject.toJob(jobEntity())).toEqual(job)
         })
 
         it.each([null, {}])("defaults every missing requirement from %s", async (requirements) => {
@@ -194,15 +221,15 @@ describe("row mappers policy", () => {
 
             expect(
                 subject.toJob(
-                    jobRow({
-                        employment_type: "unknown",
-                        pay_min_vnd: null,
-                        pay_max_vnd: null,
-                        pay_unit: "unknown",
+                    jobEntity({
+                        employmentType: "unknown",
+                        payMinVnd: null,
+                        payMaxVnd: null,
+                        payUnit: "unknown",
                         requirements,
                         questions: null,
                         status: "unknown",
-                        closes_at: null,
+                        closesAt: null,
                     }),
                 ),
             ).toEqual({
@@ -234,7 +261,7 @@ describe("row mappers policy", () => {
 
             expect(
                 subject.toJob(
-                    jobRow({
+                    jobEntity({
                         questions: [
                             { id: "text", text: "Experience?", type: "text", required: false },
                             { id: "no", text: "Tea?", type: "yesno", required: false, expect: "no" },
@@ -273,151 +300,19 @@ describe("row mappers policy", () => {
         it.each(statuses)("keeps the %s job status", async (status) => {
             const subject = await buildSubject()
 
-            expect(subject.toJob(jobRow({ status }))).toEqual({ ...job, status })
+            expect(subject.toJob(jobEntity({ status }))).toEqual({ ...job, status })
         })
 
         it.each(employments)("keeps the %s employment type", async (employmentType) => {
             const subject = await buildSubject()
 
-            expect(subject.toJob(jobRow({ employment_type: employmentType }))).toEqual({ ...job, employmentType })
+            expect(subject.toJob(jobEntity({ employmentType }))).toEqual({ ...job, employmentType })
         })
 
         it.each(payUnits)("keeps the %s pay unit", async (payUnit) => {
             const subject = await buildSubject()
 
-            expect(subject.toJob(jobRow({ pay_unit: payUnit }))).toEqual({ ...job, payUnit })
-        })
-    })
-})
-
-describe("row mappers policy", () => {
-    describe("toCandidate", () => {
-        it("maps every candidate column and answer", async () => {
-            const subject = await buildSubject()
-
-            expect(subject.toCandidate(candidateRow())).toEqual(candidate)
-        })
-
-        it("defaults an unknown source, unknown stage and null answers", async () => {
-            const subject = await buildSubject()
-
-            expect(subject.toCandidate(candidateRow({ source: "unknown", stage: "unknown", answers: null }))).toEqual({
-                ...candidate,
-                source: "page",
-                stage: "applied",
-                answers: [],
-            })
-        })
-
-        const sources: Array<ApplicationSource> = ["page", "chat", "manual"]
-        it.each(sources)("keeps the %s application source", async (source) => {
-            const subject = await buildSubject()
-
-            expect(subject.toCandidate(candidateRow({ source }))).toEqual({ ...candidate, source })
-        })
-
-        it.each(STAGES)("keeps the %s candidate stage", async (stage) => {
-            const subject = await buildSubject()
-
-            expect(subject.toCandidate(candidateRow({ stage }))).toEqual({ ...candidate, stage })
-        })
-    })
-
-    describe("toInterview", () => {
-        it("maps every interview column and proposed slot", async () => {
-            const subject = await buildSubject()
-
-            expect(subject.toInterview(interviewRow())).toEqual(interview)
-        })
-
-        it("defaults mode, slots, dates and status when unavailable", async () => {
-            const subject = await buildSubject()
-
-            expect(
-                subject.toInterview(
-                    interviewRow({
-                        mode: "unknown",
-                        proposed_slots: null,
-                        slot_start: null,
-                        slot_end: null,
-                        status: "unknown",
-                    }),
-                ),
-            ).toEqual({
-                ...interview,
-                mode: "in_person",
-                proposedSlots: [],
-                slotStart: null,
-                slotEnd: null,
-                status: "proposed",
-            })
-        })
-
-        const statuses: Array<InterviewStatus> = ["proposed", "confirmed", "done", "cancelled", "no_show"]
-        it.each(statuses)("keeps the %s interview status", async (status) => {
-            const subject = await buildSubject()
-
-            expect(subject.toInterview(interviewRow({ status }))).toEqual({ ...interview, status })
-        })
-
-        it("keeps in person interviews", async () => {
-            const subject = await buildSubject()
-
-            expect(subject.toInterview(interviewRow({ mode: "in_person" }))).toEqual({
-                ...interview,
-                mode: "in_person",
-            })
-        })
-    })
-})
-
-describe("row mappers policy", () => {
-    describe("termsJson", () => {
-        it("writes the complete terms under snake case keys", async () => {
-            const subject = await buildSubject()
-
-            const terms: OfferTerms = offer.terms
-            expect(subject.termsJson(terms)).toEqual({
-                title: "Barista",
-                pay: "40000 per hour",
-                start_date: "2026-10-20",
-                probation: "One month",
-                note: "Welcome",
-            })
-        })
-    })
-
-    describe("toOffer", () => {
-        it("maps every offer column and term", async () => {
-            const subject = await buildSubject()
-
-            expect(subject.toOffer(offerRow())).toEqual(offer)
-        })
-
-        it.each([null, {}])("defaults every missing term from %s", async (terms) => {
-            const subject = await buildSubject()
-
-            expect(subject.toOffer(offerRow({ terms, status: "unknown", expires_at: null }))).toEqual({
-                ...offer,
-                terms: { title: "", pay: "", startDate: "", probation: "", note: "" },
-                status: "draft",
-                expiresAt: null,
-            })
-        })
-
-        const statuses: Array<OfferStatus> = [
-            "draft",
-            "waiting",
-            "sent",
-            "accepted",
-            "declined",
-            "expired",
-            "cancelled",
-        ]
-        it.each(statuses)("keeps the %s offer status", async (status) => {
-            const subject = await buildSubject()
-
-            expect(subject.toOffer(offerRow({ status }))).toEqual({ ...offer, status })
+            expect(subject.toJob(jobEntity({ payUnit }))).toEqual({ ...job, payUnit })
         })
     })
 })

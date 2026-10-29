@@ -1,13 +1,11 @@
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { NEW_CONTENT_MEDIA_UPLOAD_ID } from "./persistence/content-media.sql"
-import type { ContentMediaUploadIdRow } from "./persistence/content-media.rows"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { Injectable } from "@nestjs/common"
 import { EntitlementsService } from "@modules/domain/billing"
 import { VideoRendersService } from "@modules/domain/video-renders"
 import type { CompletedRenderMedia } from "@modules/domain/video-renders"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { SupabaseObjectsPort } from "@modules/integrations/supabase"
+import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { ContentMediaError, ContentMediaErrorCode } from "./errors/content-media.error"
 import type {
     ContentMediaData,
@@ -28,6 +26,11 @@ import {
 } from "./media.policy"
 
 /** Private preview addresses expire after one hour. */
+/** The one row `gen_random_uuid()` answers: the new upload object name. */
+interface AllocatedId {
+    readonly gen_random_uuid: string
+}
+
 const SIGN_SECONDS = 3600
 /** The maximum number of attachment addresses on one editor screen. */
 const URL_LIMIT = 80
@@ -39,7 +42,7 @@ const VIDEO_BUCKET = "videos"
 export class ContentMediaService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectContentMediaStorage() private readonly storage: SupabaseObjectsPort,
+        @InjectContentMediaStorage() private readonly storage: StorageObjectsPort,
         private readonly members: WorkspaceMembersService,
         private readonly renders: VideoRendersService,
         private readonly entitlements: EntitlementsService,
@@ -111,9 +114,9 @@ export class ContentMediaService {
         await this.members.require(userId, workspaceId, ["owner", "manager"])
         if (!isAcceptedMedia(file)) throw new ContentMediaError({ code: ContentMediaErrorCode.UploadInvalid })
         await this.entitlements.requireStorageFor(workspaceId, file.sizeBytes)
-        const [allocated] = await this.entityManager.query<Array<ContentMediaUploadIdRow>>(NEW_CONTENT_MEDIA_UPLOAD_ID)
+        const [allocated] = await callDbFunction<AllocatedId>(this.entityManager, "gen_random_uuid", [])
         if (allocated === undefined) throw new ContentMediaError({ code: ContentMediaErrorCode.StorageUnavailable })
-        const path = buildContentMediaPath(workspaceId, file.name, allocated.id)
+        const path = buildContentMediaPath(workspaceId, file.name, allocated.gen_random_uuid)
         const signed = await this.storage.signedUpload(CONTENT_MEDIA_BUCKET, path)
         if (signed.kind !== "ok") throw new ContentMediaError({ code: ContentMediaErrorCode.StorageUnavailable })
         return { ...signed.value, name: file.name }

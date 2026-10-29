@@ -5,8 +5,11 @@ export type {
     NewResponsibility,
     ResponsibilityListing,
     ResponsibilityRecord,
+    ResponsibilityScope,
     ResponsibilityStatus,
 } from "./responsibility-journal.contracts"
 export { ResponsibilitiesModule } from "./responsibilities.module"
 export { ResponsibilitiesService } from "./responsibilities.service"
 export { ResponsibilityJournalService } from "./responsibility-journal.service"
+export { ResponsibilityEntity, responsibilitiesEntities } from "./persistence/entities"
+export type { ResolvedOwner } from "./responsibility-owner.policy"

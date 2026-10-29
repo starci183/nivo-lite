@@ -1,26 +1,26 @@
 import type { CreditPack, CreditPackPurchase, CreditTopupLot } from "./credits.contracts"
-import type { PackPurchaseRow, PackRow, TopupLotRow } from "./persistence/credits.rows"
+import type { CreditPackEntity, CreditPackPurchaseEntity, CreditTopupEntity } from "./persistence/entities"
 
 /** Maps one pack row to the pack the capability answers. */
-export const toCreditPack = (row: PackRow): CreditPack => ({
+export const toCreditPack = (row: CreditPackEntity): CreditPack => ({
     code: row.code,
     credits: row.credits,
-    priceVnd: row.price_vnd,
+    priceVnd: row.priceVnd,
     sort: row.sort,
 })
 
 /** Maps an add-on pack purchase to its figures and ISO instant. */
-export const toCreditPackPurchase = (row: PackPurchaseRow): CreditPackPurchase => ({
+export const toCreditPackPurchase = (row: CreditPackPurchaseEntity): CreditPackPurchase => ({
     credits: row.credits,
-    priceVnd: row.price_vnd,
-    purchasedAt: new Date(row.purchased_at).toISOString(),
+    priceVnd: row.priceVnd,
+    purchasedAt: row.purchasedAt.toISOString(),
 })
 
 /** Maps a purchased lot to its figures and ISO instants. */
-export const toCreditTopupLot = (row: TopupLotRow): CreditTopupLot => ({
+export const toCreditTopupLot = (row: CreditTopupEntity): CreditTopupLot => ({
     credits: row.credits,
-    priceVnd: row.price_vnd,
-    purchasedAt: new Date(row.purchased_at).toISOString(),
-    expiresAt: new Date(row.expires_at).toISOString(),
-    creditsRemaining: row.credits_remaining,
+    priceVnd: row.priceVnd,
+    purchasedAt: row.purchasedAt.toISOString(),
+    expiresAt: row.expiresAt.toISOString(),
+    creditsRemaining: row.creditsRemaining,
 })

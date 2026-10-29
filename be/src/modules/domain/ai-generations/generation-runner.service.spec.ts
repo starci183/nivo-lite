@@ -1,35 +1,59 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
+import { In } from "typeorm"
+import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { OPENCLAW_GATEWAY } from "@modules/integrations/openclaw"
 import type { GatewayClient, TurnResult } from "@modules/integrations/openclaw"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { JOB_CLAIMS } from "@modules/platform/jobs"
-import type { JobClaims } from "@modules/platform/jobs"
+import { EVENT_BUS } from "@modules/platform/event-bus"
+import type { EventBus } from "@modules/platform/event-bus"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
-import { AI_GENERATIONS_COMPLETION, AI_GENERATIONS_USAGE } from "./ai-generations.decorators"
+import { generationRow } from "@tests/fixtures/builders/ai-generations.builder"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
+import { AI_GENERATIONS_USAGE } from "./ai-generations.decorators"
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
-import type { GenerationCompletion, UsageGate } from "./ai-generations.port"
+import type { UsageGate } from "./ai-generations.port"
 import { GenerationRunnerService } from "./generation-runner.service"
-import {
-    CANCEL_GENERATION,
-    FAIL_GENERATION,
-    FIND_GENERATION,
-    FINISH_GENERATION,
-    START_GENERATION,
-} from "./persistence/ai-generations.sql"
+import { AiGenerationEntity } from "./persistence/entities"
 
-const ROW = {
-    id: "g1",
-    workspace_id: "w1",
-    purpose: "relay",
-    module: "office",
-    usage_kind: "relay",
-    status: "queued",
-    input: { messages: [{ role: "user", content: "hi" }], response_format: "text", timeout_ms: 20_000 },
+const INPUT = { messages: [{ role: "user", content: "hi" }], response_format: "text", timeout_ms: 20_000 }
+
+/** What the runner asks for when it looks the generation up. */
+const FIND_OPTIONS = {
+    where: { id: "g1", workspaceId: "w1" },
+    select: { id: true, workspaceId: true, purpose: true, module: true, usageKind: true, status: true, input: true },
+}
+
+/** The write that starts a queued generation. */
+const STARTED = [AiGenerationEntity, { id: "g1", workspaceId: "w1", status: "queued" }, { status: "running" }]
+
+/** The write that cancels an open generation for a timeout at `iso`. */
+const cancelledAt = (iso: string) => [
+    AiGenerationEntity,
+    { id: "g1", workspaceId: "w1", status: In(["queued", "running"]) },
+    { status: "cancelled", error: "timeout", finishedAt: new Date(iso) },
+]
+
+/** The statuses a cancel, a failure or a finish may still change. */
+const OPEN = In(["queued", "running"])
+
+/**
+ * A manager that finds `row` (nothing for null), accepts every update and, when `finish` is a list, answers it as the
+ * rows of the finishing write; `finish` null stubs no finishing write at all, so the case proves the runner made none.
+ */
+const managerOf = (
+    row: AiGenerationEntity | null = generationRow(),
+    finish: ReadonlyArray<{ usage_kind: string; module: string }> | null = [{ usage_kind: "relay", module: "office" }],
+) => {
+    const em = mockEntityManager({
+        findOne: [AiGenerationEntity, row],
+        update: [AiGenerationEntity, { affected: 1 }],
+    })
+    const [finisher] = finish === null ? [] : queueQueryBuilders(em, [{ execute: { raw: finish } }])
+    return { em, finisher }
 }
 
 const USAGE = { prompt_tokens: 10, completion_tokens: 5, cached_tokens: 0, cost: 0.1, model: "m" }
@@ -42,6 +66,7 @@ interface Setup {
 }
 
 const build = async (entityManager: MockEntityManager, setup: Setup = {}) => {
+    fakeTransaction(entityManager)
     const clock = new FakeClock("2026-10-12T10:00:00.000Z")
     const gateway = mock<GatewayClient>({
         runTurn: jest.fn(() => {
@@ -58,8 +83,8 @@ const build = async (entityManager: MockEntityManager, setup: Setup = {}) => {
     })
     const usage = mock<UsageGate>({ record: jest.fn(() => Promise.resolve()) })
     const logger = mock<Logger>()
-    const claims = mock<JobClaims>()
-    const completion = mock<GenerationCompletion>()
+    const bus = mock<EventBus>()
+    bus.publish.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             GenerationRunnerService,
@@ -69,56 +94,56 @@ const build = async (entityManager: MockEntityManager, setup: Setup = {}) => {
             { provide: AI_GENERATIONS_USAGE, useValue: usage },
             { provide: OPENCLAW_GATEWAY, useValue: gateway },
             { provide: AgentSyncService, useValue: sync },
-            { provide: JOB_CLAIMS, useValue: claims },
-            { provide: AI_GENERATIONS_COMPLETION, useValue: completion },
+            { provide: EVENT_BUS, useValue: bus },
         ],
     }).compile()
-    return { runner: moduleRef.get(GenerationRunnerService), clock, gateway, sync, usage, logger, claims, completion }
+    return { runner: moduleRef.get(GenerationRunnerService), clock, gateway, sync, usage, logger, bus }
 }
 
+/** The event the runner publishes for generation g1 of workspace w1. */
+const completedAs = (status: "done" | "error" | "cancelled") =>
+    expect.objectContaining({
+        eventName: "ai_generation_completed",
+        eventId: "g1",
+        payload: { dedupeKey: "g1", generationId: "g1", workspaceId: "w1", purpose: "relay", status },
+    })
+
 describe("GenerationRunnerService", () => {
-    it("fences the finished job at the apply step before handing the generation to its application", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_GENERATION, [ROW]],
-                [START_GENERATION, []],
-                [FINISH_GENERATION, [{ usage_kind: "relay", module: "office" }]],
-            ],
-        })
-        const { runner, claims, completion } = await build(em)
+    it("runs the generation of a job and publishes its end in the transaction that wrote it", async () => {
+        const { em } = managerOf()
+        const { runner, bus } = await build(em)
         const job = { jobId: "job-1", kind: "generate", fencingToken: 4, currentStep: null, payload: PAYLOAD }
-        claims.advance.mockImplementation(() => {
-            expect(completion.completeGeneration).not.toHaveBeenCalled()
-            return Promise.resolve()
-        })
 
         await expect(runner.runJob(job)).resolves.toBeUndefined()
 
-        expect(claims.advance.mock.calls).toEqual([[{ jobId: "job-1", expectedFencingToken: 4, step: "apply-result" }]])
-        expect(completion.completeGeneration.mock.calls).toEqual([["w1", "g1"]])
+        expect(bus.publish).toHaveBeenCalledTimes(1)
+        expect(bus.publish).toHaveBeenCalledWith(completedAs("done"), expect.anything(), "g1")
     })
 
-    it("acknowledges a job of another shape without fencing or completing anything", async () => {
-        const { runner, claims, completion } = await build(mockEntityManager())
+    it("publishes nothing for a job of another shape", async () => {
+        const { runner, bus } = await build(mockEntityManager())
         const job = { jobId: "job-2", kind: "generate", fencingToken: 1, currentStep: null, payload: { other: true } }
 
         await expect(runner.runJob(job)).resolves.toBeUndefined()
 
-        expect(claims.advance).not.toHaveBeenCalled()
-        expect(completion.completeGeneration).not.toHaveBeenCalled()
+        expect(bus.publish).not.toHaveBeenCalled()
+    })
+
+    it("lets a failure to publish undo the finishing write, so nothing is metered", async () => {
+        const { em } = managerOf()
+        const { runner, bus, usage } = await build(em)
+        bus.publish.mockRejectedValue(new Error("bus down"))
+
+        await expect(runner.run(PAYLOAD)).rejects.toThrow("bus down")
+
+        expect(usage.record).not.toHaveBeenCalled()
     })
 })
 
 describe("GenerationRunnerService", () => {
     it("runs the prompt on the internal agent, writes the text and meters it", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_GENERATION, [ROW]],
-                [START_GENERATION, []],
-                [FINISH_GENERATION, [{ usage_kind: "relay", module: "office" }]],
-            ],
-        })
-        const { runner, gateway, sync, usage } = await build(em)
+        const { em, finisher } = managerOf()
+        const { runner, gateway, sync, usage, bus } = await build(em)
 
         await expect(runner.run(PAYLOAD)).resolves.toBe("done")
 
@@ -141,15 +166,25 @@ describe("GenerationRunnerService", () => {
             },
             expect.any(AbortSignal),
         )
-        expect(em.query).toHaveBeenCalledWith(START_GENERATION, ["g1", "w1"])
-        expect(em.query).toHaveBeenCalledWith(FINISH_GENERATION, [
-            "g1",
-            "w1",
-            '{"text":"hello"}',
-            JSON.stringify(USAGE),
-            '{"model_ms":900,"ready_ms":100,"total_ms":1600}',
-            "2026-10-12T10:00:01.600Z",
+        expect(em.findOne).toHaveBeenCalledWith(AiGenerationEntity, FIND_OPTIONS)
+        expect(em.update).toHaveBeenCalledWith(
+            AiGenerationEntity,
+            { id: "g1", workspaceId: "w1", status: "queued" },
+            { status: "running" },
+        )
+        expect(finisher?.callsOf("set")).toEqual([
+            [
+                {
+                    status: "done",
+                    output: { text: "hello" },
+                    usage: USAGE,
+                    timings: { model_ms: 900, ready_ms: 100, total_ms: 1600 },
+                    finishedAt: new Date("2026-10-12T10:00:01.600Z"),
+                },
+            ],
         ])
+        expect(finisher?.callsOf("where")).toEqual([[{ id: "g1", workspaceId: "w1", status: OPEN }]])
+        expect(finisher?.callsOf("returning")).toEqual([["usage_kind, module"]])
         expect(usage.record).toHaveBeenCalledWith({
             workspaceId: "w1",
             kind: "relay",
@@ -157,18 +192,13 @@ describe("GenerationRunnerService", () => {
             usage: USAGE,
             completionChars: 5,
         })
+        expect(bus.publish).toHaveBeenCalledWith(completedAs("done"), expect.anything(), "g1")
     })
 })
 
 describe("GenerationRunnerService", () => {
     it("subtracts the time spent setting up the agent from the turn budget", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_GENERATION, [ROW]],
-                [START_GENERATION, []],
-                [FINISH_GENERATION, [{ usage_kind: "relay", module: "office" }]],
-            ],
-        })
+        const { em, finisher } = managerOf()
         const { runner, clock, sync, gateway } = await build(em)
         sync.ensureInternalAgent.mockImplementation(() => {
             clock.advance(4500)
@@ -201,52 +231,47 @@ describe("GenerationRunnerService", () => {
         const signal = gateway.runTurn.mock.calls[0]?.[1]
         expect(signal).toBeInstanceOf(AbortSignal)
         expect(signal?.aborted).toBe(false)
-        expect(em.query).toHaveBeenLastCalledWith(FINISH_GENERATION, [
-            "g1",
-            "w1",
-            '{"text":"hello"}',
-            JSON.stringify(USAGE),
-            '{"model_ms":900,"ready_ms":4500,"total_ms":6000}',
-            "2026-10-12T10:00:06.000Z",
+        expect(finisher?.callsOf("set")).toEqual([
+            [
+                {
+                    status: "done",
+                    output: { text: "hello" },
+                    usage: USAGE,
+                    timings: { model_ms: 900, ready_ms: 4500, total_ms: 6000 },
+                    finishedAt: new Date("2026-10-12T10:00:06.000Z"),
+                },
+            ],
         ])
     })
 
     it("writes the text without usage when the gateway reported none", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_GENERATION, [{ ...ROW, status: "running" }]],
-                [START_GENERATION, []],
-                [FINISH_GENERATION, [{ usage_kind: "relay", module: "office" }]],
-            ],
-        })
+        const { em, finisher } = managerOf(generationRow({ status: "running" }))
         const { runner } = await build(em, { turn: { text: "ok", usage: null, timings: {} } })
 
         await expect(runner.run(PAYLOAD)).resolves.toBe("done")
 
-        expect(em.query).toHaveBeenCalledWith(FINISH_GENERATION, [
-            "g1",
-            "w1",
-            '{"text":"ok"}',
-            null,
-            '{"ready_ms":100,"total_ms":1600}',
-            "2026-10-12T10:00:01.600Z",
+        expect(finisher?.callsOf("set")).toEqual([
+            [
+                {
+                    status: "done",
+                    output: { text: "ok" },
+                    usage: null,
+                    timings: { ready_ms: 100, total_ms: 1600 },
+                    finishedAt: new Date("2026-10-12T10:00:01.600Z"),
+                },
+            ],
         ])
     })
 })
 
 describe("GenerationRunnerService", () => {
     it("leaves a row the caller cancelled alone and meters nothing", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_GENERATION, [ROW]],
-                [START_GENERATION, []],
-                [FINISH_GENERATION, []],
-            ],
-        })
-        const { runner, usage } = await build(em)
+        const { em } = managerOf(generationRow(), [])
+        const { runner, usage, bus } = await build(em)
 
         await expect(runner.run(PAYLOAD)).resolves.toBe("dropped")
         expect(usage.record).not.toHaveBeenCalled()
+        expect(bus.publish).not.toHaveBeenCalled()
     })
 
     it("drops a payload of another shape", async () => {
@@ -254,12 +279,13 @@ describe("GenerationRunnerService", () => {
         const { runner } = await build(em)
 
         await expect(runner.run({ orderId: "o1" })).resolves.toBe("dropped")
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.findOne).not.toHaveBeenCalled()
+        expect(em.update).not.toHaveBeenCalled()
     })
 
     it("drops a generation that is gone or no longer waiting", async () => {
-        const gone = await build(mockEntityManager({ query: [FIND_GENERATION, []] }))
-        const ended = await build(mockEntityManager({ query: [FIND_GENERATION, [{ ...ROW, status: "cancelled" }]] }))
+        const gone = await build(managerOf(null, null).em)
+        const ended = await build(managerOf(generationRow({ status: "cancelled" }), null).em)
 
         await expect(gone.runner.run(PAYLOAD)).resolves.toBe("dropped")
         await expect(ended.runner.run(PAYLOAD)).resolves.toBe("dropped")
@@ -268,85 +294,72 @@ describe("GenerationRunnerService", () => {
     })
 
     it("writes the failure on the row when no gateway is configured", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_GENERATION, [ROW]],
-                [START_GENERATION, []],
-                [FAIL_GENERATION, []],
-            ],
-        })
-        const { runner, sync } = await build(em, { enabled: false })
+        const { em } = managerOf(generationRow(), null)
+        const { runner, sync, bus } = await build(em, { enabled: false })
 
         await expect(runner.run(PAYLOAD)).resolves.toBe("error")
 
         expect(sync.ensureInternalAgent).not.toHaveBeenCalled()
-        expect(em.query).toHaveBeenCalledWith(FAIL_GENERATION, [
-            "g1",
-            "w1",
-            "openclaw_not_configured",
-            '{"total_ms":0}',
-            "2026-10-12T10:00:00.000Z",
-        ])
+        expect(em.update).toHaveBeenCalledWith(
+            AiGenerationEntity,
+            { id: "g1", workspaceId: "w1", status: OPEN },
+            {
+                status: "error",
+                error: "openclaw_not_configured",
+                timings: { total_ms: 0 },
+                finishedAt: new Date("2026-10-12T10:00:00.000Z"),
+            },
+        )
+        expect(bus.publish).toHaveBeenCalledWith(completedAs("error"), expect.anything(), "g1")
     })
 })
 
 describe("GenerationRunnerService", () => {
     it("writes an empty answer as a failure", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_GENERATION, [ROW]],
-                [START_GENERATION, []],
-                [FAIL_GENERATION, []],
-            ],
-        })
+        const { em } = managerOf(generationRow(), null)
         const { runner } = await build(em, { turn: { text: "  ", usage: USAGE, timings: {} } })
 
         await expect(runner.run(PAYLOAD)).resolves.toBe("error")
 
-        expect(em.query).toHaveBeenLastCalledWith(FAIL_GENERATION, [
-            "g1",
-            "w1",
-            "empty answer",
-            '{"ready_ms":100,"total_ms":1600}',
-            "2026-10-12T10:00:01.600Z",
-        ])
+        expect(em.update).toHaveBeenLastCalledWith(
+            AiGenerationEntity,
+            { id: "g1", workspaceId: "w1", status: OPEN },
+            {
+                status: "error",
+                error: "empty answer",
+                timings: { ready_ms: 100, total_ms: 1600 },
+                finishedAt: new Date("2026-10-12T10:00:01.600Z"),
+            },
+        )
     })
 
     it("writes the failure of the gateway on the row and logs it", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_GENERATION, [ROW]],
-                [START_GENERATION, []],
-                [FAIL_GENERATION, []],
-            ],
-        })
-        const { runner, gateway, logger } = await build(em)
+        const { em } = managerOf(generationRow(), null)
+        const { runner, gateway, logger, bus } = await build(em)
         const failure = new Error("gateway closed")
         gateway.runTurn.mockRejectedValue(failure)
 
         await expect(runner.run(PAYLOAD)).resolves.toBe("error")
 
         expect(logger.error).toHaveBeenCalledWith(AiGenerationsLogEvent.GenerationFailed, failure, { purpose: "relay" })
-        expect(em.query).toHaveBeenLastCalledWith(FAIL_GENERATION, [
-            "g1",
-            "w1",
-            "gateway closed",
-            '{"total_ms":100}',
-            "2026-10-12T10:00:00.100Z",
-        ])
+        expect(em.update).toHaveBeenLastCalledWith(
+            AiGenerationEntity,
+            { id: "g1", workspaceId: "w1", status: OPEN },
+            {
+                status: "error",
+                error: "gateway closed",
+                timings: { total_ms: 100 },
+                finishedAt: new Date("2026-10-12T10:00:00.100Z"),
+            },
+        )
+        expect(bus.publish).toHaveBeenCalledWith(completedAs("error"), expect.anything(), "g1")
     })
 })
 
 describe("GenerationRunnerService", () => {
     it("cancels a generation when its deadline passes while the internal agent is still being prepared", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_GENERATION, [{ ...ROW, input: { ...ROW.input, timeout_ms: 20 } }]],
-                [START_GENERATION, []],
-                [CANCEL_GENERATION, []],
-            ],
-        })
-        const { runner, sync, gateway, usage, logger } = await build(em)
+        const { em } = managerOf(generationRow({ input: { ...INPUT, timeout_ms: 20 } }), null)
+        const { runner, sync, gateway, usage, logger, bus } = await build(em)
         sync.ensureInternalAgent.mockReturnValue(new Promise<string>(() => {}))
 
         await expect(runner.run(PAYLOAD)).resolves.toBe("error")
@@ -354,11 +367,9 @@ describe("GenerationRunnerService", () => {
         expect(sync.ensureInternalAgent.mock.calls).toEqual([["w1"]])
         expect(gateway.runTurn).not.toHaveBeenCalled()
         expect(usage.record).not.toHaveBeenCalled()
-        expect(em.query.mock.calls).toEqual([
-            [FIND_GENERATION, ["g1", "w1"]],
-            [START_GENERATION, ["g1", "w1"]],
-            [CANCEL_GENERATION, ["g1", "w1", "2026-10-12T10:00:00.000Z"]],
-        ])
+        expect(em.findOne.mock.calls).toEqual([[AiGenerationEntity, FIND_OPTIONS]])
+        expect(em.update.mock.calls).toEqual([STARTED, cancelledAt("2026-10-12T10:00:00.000Z")])
+        expect(bus.publish).toHaveBeenCalledWith(completedAs("cancelled"), expect.anything(), "g1")
         expect(logger.error).toHaveBeenCalledWith(
             AiGenerationsLogEvent.GenerationFailed,
             expect.objectContaining({ name: "TimeoutError" }),
@@ -367,14 +378,8 @@ describe("GenerationRunnerService", () => {
     })
 
     it.each(["TimeoutError", "AbortError"])("cancels a generation when the turn rejects with %s", async (name) => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_GENERATION, [ROW]],
-                [START_GENERATION, []],
-                [CANCEL_GENERATION, []],
-            ],
-        })
-        const { runner, gateway, usage, logger } = await build(em)
+        const { em } = managerOf(generationRow(), null)
+        const { runner, gateway, usage, logger, bus } = await build(em)
         const failure = new Error("the deadline passed")
         failure.name = name
         gateway.runTurn.mockRejectedValue(failure)
@@ -384,11 +389,9 @@ describe("GenerationRunnerService", () => {
         expect(logger.error.mock.calls).toEqual([
             [AiGenerationsLogEvent.GenerationFailed, failure, { purpose: "relay" }],
         ])
-        expect(em.query.mock.calls).toEqual([
-            [FIND_GENERATION, ["g1", "w1"]],
-            [START_GENERATION, ["g1", "w1"]],
-            [CANCEL_GENERATION, ["g1", "w1", "2026-10-12T10:00:00.100Z"]],
-        ])
+        expect(em.findOne.mock.calls).toEqual([[AiGenerationEntity, FIND_OPTIONS]])
+        expect(em.update.mock.calls).toEqual([STARTED, cancelledAt("2026-10-12T10:00:00.100Z")])
+        expect(bus.publish).toHaveBeenCalledWith(completedAs("cancelled"), expect.anything(), "g1")
         expect(usage.record).not.toHaveBeenCalled()
     })
 })

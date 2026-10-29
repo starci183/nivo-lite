@@ -3,17 +3,12 @@ import type { EntityManager } from "typeorm"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
 import { ChannelDeliveryService } from "@modules/domain/channels"
 import { OfficeLog } from "@modules/domain/module-ops"
+import { StaffEntity } from "@modules/domain/staff"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import type { AgentHandleRow, AgentIdRow, HandleStaffRow, NotifyPersonRow } from "./persistence/shifts-alerts.rows"
-import {
-    INSERT_NOTIFICATION,
-    SELECT_AGENT_HANDLES,
-    SELECT_HANDLE_STAFF,
-    SELECT_NOTIFY_PERSON,
-    SELECT_SHIFTS_AGENT,
-} from "./persistence/shifts-alerts.sql"
+import { ShiftsNotificationEntity, ShiftsStaffEntity } from "./persistence/entities"
+import type { AgentHandleRead, AgentIdRead } from "./persistence/shifts-alerts.reads"
 import { staffHandles } from "./policies/staff-handles.policy"
 import { ShiftsLogEvent } from "./shifts.log-events"
 import { ShiftsTextService } from "./shifts-text.service"
@@ -60,6 +55,16 @@ interface Attempt {
 
 const SENT: Attempt = { status: "sent", error: null }
 
+/** The most characters a stored message keeps. */
+const BODY_MAX = 4000
+/** The most characters a stored failure reason keeps. */
+const ERROR_MAX = 500
+/** The most staff rows and agent handles one Office handle read answers. */
+const HANDLES_MAX = 500
+
+/** The first `max` characters of a text, whole characters like Postgres `left`. */
+const leftOf = (text: string, max: number): string => Array.from(text).slice(0, max).join("")
+
 const reasonOf = (cause: unknown): string => (cause instanceof Error ? cause.message : String(cause)).slice(0, 200)
 
 @Injectable()
@@ -82,12 +87,12 @@ export class ShiftsNotifyService {
 
     /** Tells one person: Office (tagged) and, when linked, Telegram and Zalo. */
     async toStaff(workspaceId: string, notice: StaffNotice): Promise<NoticeOutcome> {
-        const [person] = await this.entityManager.query<Array<NotifyPersonRow>>(SELECT_NOTIFY_PERSON, [
-            workspaceId,
-            notice.staffId,
-        ])
-        if (person === undefined) return { office: false, telegram: null, zalo: null }
-        const handle = person.staff_id === null ? undefined : (await this.handles(workspaceId)).get(person.staff_id)
+        const person = await this.entityManager.findOne(ShiftsStaffEntity, {
+            select: { id: true, name: true, staffId: true, telegramChatId: true, zaloUserId: true },
+            where: { workspaceId, id: notice.staffId },
+        })
+        if (person === null) return { office: false, telegram: null, zalo: null }
+        const handle = person.staffId === null ? undefined : (await this.handles(workspaceId)).get(person.staffId)
         const tagged =
             handle === undefined
                 ? this.words.text("shifts.tagged", { name: person.name, body: notice.body })
@@ -98,13 +103,13 @@ export class ShiftsNotifyService {
         )
         await this.record(workspaceId, notice, "office", tagged, office)
         const telegram =
-            person.telegram_chat_id === null || person.telegram_chat_id === ""
+            person.telegramChatId === null || person.telegramChatId === ""
                 ? null
-                : await this.viaChannel(workspaceId, "telegram", person.telegram_chat_id, notice)
+                : await this.viaChannel(workspaceId, "telegram", person.telegramChatId, notice)
         const zalo =
-            person.zalo_user_id === null || person.zalo_user_id === ""
+            person.zaloUserId === null || person.zaloUserId === ""
                 ? null
-                : await this.viaChannel(workspaceId, "zalo_oa", person.zalo_user_id, notice)
+                : await this.viaChannel(workspaceId, "zalo_oa", person.zaloUserId, notice)
         return {
             office: office.status === "sent",
             telegram: telegram === null || telegram.status === "skipped" ? null : telegram.status === "sent",
@@ -162,7 +167,14 @@ export class ShiftsNotifyService {
 
     /** The connection the shifts agent speaks through for one provider: only a connected one bound for outbound chat; never "any". */
     private async boundConnection(workspaceId: string, provider: "telegram" | "zalo_oa"): Promise<string | null> {
-        const [agent] = await this.entityManager.query<Array<AgentIdRow>>(SELECT_SHIFTS_AGENT, [workspaceId])
+        const agent = await this.entityManager
+            .createQueryBuilder()
+            .select("a.id", "id")
+            .from("public.agents", "a")
+            .where("a.workspace_id = :workspaceId AND a.module = 'shifts' AND a.status = 'active'", { workspaceId })
+            .orderBy("a.created_at", "ASC")
+            .limit(1)
+            .getRawOne<AgentIdRead>()
         if (agent === undefined) return null
         const bound = await this.bindings.connectionsFor(agent.id, "outbound_chat", {
             acting: true,
@@ -175,8 +187,19 @@ export class ShiftsNotifyService {
     /** id → @handle of the active staff rows, clear of every agent handle and @nivo. */
     private async handles(workspaceId: string): Promise<ReadonlyMap<string, string>> {
         const [staff, agents] = await Promise.all([
-            this.entityManager.query<Array<HandleStaffRow>>(SELECT_HANDLE_STAFF, [workspaceId]),
-            this.entityManager.query<Array<AgentHandleRow>>(SELECT_AGENT_HANDLES, [workspaceId]),
+            this.entityManager.find(StaffEntity, {
+                select: { id: true, name: true },
+                where: { workspaceId, active: true },
+                order: { createdAt: "ASC", id: "ASC" },
+                take: HANDLES_MAX,
+            }),
+            this.entityManager
+                .createQueryBuilder()
+                .select("a.handle", "handle")
+                .from("public.agents", "a")
+                .where("a.workspace_id = :workspaceId", { workspaceId })
+                .limit(HANDLES_MAX)
+                .getRawMany<AgentHandleRead>(),
         ])
         return staffHandles(
             staff,
@@ -192,17 +215,17 @@ export class ShiftsNotifyService {
         attempt: Attempt,
     ): Promise<void> {
         await this.entityManager
-            .query(INSERT_NOTIFICATION, [
+            .insert(ShiftsNotificationEntity, {
                 workspaceId,
-                notice.staffId ?? null,
-                notice.scheduleId ?? null,
-                notice.shiftId ?? null,
-                notice.kind,
+                staffId: notice.staffId ?? null,
+                scheduleId: notice.scheduleId ?? null,
+                shiftId: notice.shiftId ?? null,
+                kind: notice.kind,
                 channel,
-                attempt.status,
-                body,
-                attempt.error,
-            ])
+                status: attempt.status,
+                body: leftOf(body, BODY_MAX),
+                error: attempt.error === null ? null : leftOf(attempt.error, ERROR_MAX),
+            })
             .catch((cause: unknown) => {
                 this.logger.error(ShiftsLogEvent.NoticeNotRecorded, cause, { workspaceId, channel })
             })

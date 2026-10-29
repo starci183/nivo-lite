@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { JobOpsError, JobOpsErrorCode } from "./errors/job-ops.error"
@@ -20,13 +20,6 @@ import type {
     JobStatsRow,
     OpenJobRow,
 } from "./persistence/job-ops.rows"
-import {
-    READ_FAILED_JOBS,
-    READ_JOB_STATS,
-    READ_OPEN_JOBS,
-    REQUEUE_FAILED_JOBS,
-    REQUEUE_JOB,
-} from "./persistence/job-ops.sql"
 
 const LIMIT_MAX = 200
 const HOURS_MAX = 720
@@ -46,14 +39,14 @@ export class JobOpsService {
 
     /** Returns the existing database function's JSON statistics without reshaping them. */
     async stats(): Promise<JobStatsResult> {
-        const [row] = await this.entityManager.query<[JobStatsRow]>(READ_JOB_STATS)
-        return row.stats
+        const [row] = await callDbFunction<JobStatsRow>(this.entityManager, "public.job_stats", [])
+        return row?.job_stats ?? null
     }
 
     /** Returns failed jobs through the database function granted to the primary role. */
     async failed(limit: number): Promise<ReadonlyArray<FailedJob>> {
         requireInteger(limit, LIMIT_MAX, JobOpsErrorCode.LimitInvalid)
-        const rows = await this.entityManager.query<Array<FailedJobRow>>(READ_FAILED_JOBS, [limit])
+        const rows = await callDbFunction<FailedJobRow>(this.entityManager, "public.job_failed", [limit])
         return rows.map((row) => ({
             id: row.id,
             name: row.name,
@@ -66,7 +59,7 @@ export class JobOpsService {
     /** Returns queued and running jobs through the database function granted to the primary role. */
     async open(limit: number): Promise<ReadonlyArray<OpenJob>> {
         requireInteger(limit, LIMIT_MAX, JobOpsErrorCode.LimitInvalid)
-        const rows = await this.entityManager.query<Array<OpenJobRow>>(READ_OPEN_JOBS, [limit])
+        const rows = await callDbFunction<OpenJobRow>(this.entityManager, "public.job_open", [limit])
         return rows.map((row) => ({
             id: row.id,
             name: row.name,
@@ -80,15 +73,17 @@ export class JobOpsService {
     /** Sends one failed job again, returning the new lossless message id or null. */
     async requeue(outboxId: string): Promise<JobRequeueResult> {
         if (!UUID_PATTERN.test(outboxId)) throw new JobOpsError({ code: JobOpsErrorCode.IdInvalid })
-        const [row] = await this.entityManager.query<[JobRequeueRow]>(REQUEUE_JOB, [outboxId])
-        return row.message_id
+        const [row] = await callDbFunction<JobRequeueRow>(this.entityManager, "public.job_reopen", [outboxId])
+        return row?.job_reopen ?? null
     }
 
     /** Requeues failed jobs in the requested time window through the granted database function. */
     async requeueFailed(hours: number): Promise<RetryFailedResult> {
         requireInteger(hours, HOURS_MAX, JobOpsErrorCode.HoursInvalid)
-        const [row] = await this.entityManager.query<[JobRequeueFailedRow]>(REQUEUE_FAILED_JOBS, [hours])
-        return { requeued: row.result.requeued, failed: row.result.failed }
+        const [row] = await callDbFunction<JobRequeueFailedRow>(this.entityManager, "public.job_requeue_failed", [
+            hours,
+        ])
+        return { requeued: row?.job_requeue_failed.requeued ?? 0, failed: row?.job_requeue_failed.failed ?? 0 }
     }
 
     /** Returns the watchdog counters, or -1 for both when no checked statistics are available. */

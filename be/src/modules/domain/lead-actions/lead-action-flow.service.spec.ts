@@ -1,6 +1,5 @@
-import { mock } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { AutomationsService, BusinessEventsService } from "@modules/domain/automations"
 import { WorkEngineService } from "@modules/domain/decisions"
 import type { WorkContext, WorkItem } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
@@ -9,6 +8,8 @@ import { LeadRecordsService } from "@modules/domain/leads"
 import type { LeadRecordRow } from "@modules/domain/leads"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { WorkItemsService } from "@modules/domain/work-items"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { EVENT_BUS } from "@modules/platform/event-bus"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LeadActionsErrorCode } from "./errors/lead-actions.error"
@@ -93,7 +94,7 @@ const inbound = mock<InboundEventsService>()
 
 const events = mock<EventsService>()
 
-const businessEvents = mock<BusinessEventsService>()
+const eventBus = recordingEventBus()
 
 const catalog = mock<MessageCatalog>()
 
@@ -103,8 +104,6 @@ const items = mock<WorkItemsService>()
 
 const responsibilities = mock<ResponsibilityJournalService>()
 
-const automations = mock<AutomationsService>()
-
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -112,12 +111,12 @@ const build = async () => {
             { provide: LeadRecordsService, useValue: leads },
             { provide: InboundEventsService, useValue: inbound },
             { provide: EventsService, useValue: events },
-            { provide: BusinessEventsService, useValue: businessEvents },
+            { provide: EVENT_BUS, useValue: eventBus },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: fakeTransaction(mockEntityManager()).em },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: WorkEngineService, useValue: engine },
             { provide: WorkItemsService, useValue: items },
             { provide: ResponsibilityJournalService, useValue: responsibilities },
-            { provide: AutomationsService, useValue: automations },
         ],
     }).compile()
     return moduleRef.get(LeadActionFlowService)
@@ -125,6 +124,7 @@ const build = async () => {
 
 beforeEach(() => {
     jest.resetAllMocks()
+    eventBus.clear()
     leads.require.mockResolvedValue(lead)
     inbound.recordInput.mockResolvedValue({ duplicate: false, inboundEventId: "inbound-1" })
     inbound.find.mockResolvedValue(null)
@@ -179,15 +179,18 @@ describe("LeadActionFlowService", () => {
             name: "Lan",
             channel: "zalo",
         })
-        expect(leads.capture).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            contactName: "Lan",
-            company: "Hue Tea",
-            channel: "zalo",
-            need: "tea",
-            phone: "84912000701",
-            email: "lan@example.com",
-        })
+        expect(leads.capture).toHaveBeenCalledWith(
+            {
+                workspaceId: "ws-1",
+                contactName: "Lan",
+                company: "Hue Tea",
+                channel: "zalo",
+                need: "tea",
+                phone: "84912000701",
+                email: "lan@example.com",
+            },
+            expect.anything(),
+        )
         expect(events.record).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             leadId: "lead-1",
@@ -196,7 +199,10 @@ describe("LeadActionFlowService", () => {
             summary: 'lead-actions.captured:{"channel":"zalo"}',
         })
         expect(catalog.get).toHaveBeenCalledWith("lead-actions.captured", { channel: "zalo" }, "vi")
-        expect(businessEvents.leadCreated).toHaveBeenCalledWith("ws-1", lead)
+        expect(eventBus.writes[0]).toMatchObject({
+            eventName: "lead_captured",
+            payload: { dedupeKey: "lead.created:lead-1", workspaceId: "ws-1", leadId: "lead-1" },
+        })
         expect(inbound.mark).toHaveBeenCalledWith("ws-1", "inbound-1", "processed", "lead-1")
         expect(responsibilities.ensureFor).toHaveBeenCalledWith(ctx, "lead-1")
         expect(leads.fillContact).not.toHaveBeenCalled()
@@ -233,7 +239,7 @@ describe("LeadActionFlowService", () => {
         expect(leads.match).not.toHaveBeenCalled()
         expect(leads.capture).not.toHaveBeenCalled()
         expect(events.record).not.toHaveBeenCalled()
-        expect(businessEvents.leadCreated).not.toHaveBeenCalled()
+        expect(eventBus.writes).toEqual([])
     })
 })
 
@@ -265,6 +271,7 @@ describe("LeadActionFlowService", () => {
                 need: "",
                 phone: null,
             }),
+            expect.anything(),
         )
     })
 
@@ -284,7 +291,7 @@ describe("LeadActionFlowService", () => {
         })
         expect(leads.capture).not.toHaveBeenCalled()
         expect(events.record).not.toHaveBeenCalled()
-        expect(businessEvents.leadCreated).not.toHaveBeenCalled()
+        expect(eventBus.writes).toEqual([])
         expect(inbound.mark).toHaveBeenCalledWith("ws-1", "inbound-1", "processed", "lead-1")
         expect(responsibilities.ensureFor).toHaveBeenCalledWith(ctx, "lead-1")
     })
@@ -412,11 +419,12 @@ describe("LeadActionFlowService", () => {
             dedupeKey: "issue_invoice:lead:lead-1",
             seed: { amount_vnd: null, fields: {} },
         })
-        expect(automations.emit).toHaveBeenCalledWith("user-1", "ws-1", {
-            event: "deal.won",
-            dedupe: "deal.won:lead-1",
-            data: {
-                lead_id: "lead-1",
+        expect(eventBus.writes[0]).toMatchObject({
+            eventName: "deal_won",
+            payload: {
+                dedupeKey: "deal.won:lead-1",
+                workspaceId: "ws-1",
+                leadId: "lead-1",
                 name: "Lan",
                 company: "Hue Tea",
                 channel: "zalo",

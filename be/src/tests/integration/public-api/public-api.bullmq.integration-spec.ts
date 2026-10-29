@@ -5,9 +5,8 @@ import { publicApiRequest } from "../../world/public-api-proof.service"
 import { preparePublicApiProof } from "../../world/public-api-suite.service"
 import { worldIds } from "../../world/lite-world.service"
 import { redisProofOptions } from "../../world/redis-capabilities.options"
-import { startQueueRelay, transportOf, waitForProof } from "../../world/redis-proof.service"
+import { startQueueRelay, transportOf, waitForProof, apiRedisJob } from "../../world/redis-proof.service"
 import { useTestWorld } from "../../world/use-test-world"
-import { API_REDIS_JOB } from "../../fixtures/persistence/redis-proof.sql"
 
 describe("Public API consumer over BullMQ (private local integration)", () => {
     const world = useTestWorld({
@@ -35,10 +34,7 @@ describe("Public API consumer over BullMQ (private local integration)", () => {
             (row) => row.processed_at !== null,
         )
         expect(await source(identity.workspaceId, accepted.id)).toHaveLength(1)
-        const completed = await world.db.primary.query<Array<{ readonly id: string; readonly state: string }>>(
-            API_REDIS_JOB,
-            [accepted.id],
-        )
+        const completed = await apiRedisJob(world.db.primary, accepted.id)
         expect(completed).toEqual([expect.objectContaining({ state: "done" })])
         const id = completed[0]?.id
         expect(id).toBeDefined()

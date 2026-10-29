@@ -1,4 +1,5 @@
 import type { EntityManager } from "typeorm"
+import { WorkspaceEntity } from "@modules/domain/workspaces"
 
 /** A fresh workspace and account owned by one inbound-input proof. */
 export interface InboundInputIdentity {
@@ -12,9 +13,9 @@ export interface InboundInputIdentity {
 export const persistInboundInputWorkspace = (manager: EntityManager, identity: InboundInputIdentity): Promise<void> =>
     manager.transaction(async (tx) => {
         await tx.insert("auth.users", { id: identity.ownerId })
-        await tx.insert("public.workspaces", {
+        await tx.insert(WorkspaceEntity, {
             id: identity.workspaceId,
-            owner_id: identity.ownerId,
+            ownerId: identity.ownerId,
             name: "Inbound input proof",
         })
     })

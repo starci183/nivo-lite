@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { InventoryOrderModule } from "@modules/queues/inventory-order"
 import { InventoryReplenishModule } from "@modules/queues/inventory-replenish"
 import { InventoryAutomationService } from "./inventory-automation.service"
 import { InventoryCatalogService } from "./inventory-catalog.service"
@@ -14,6 +13,7 @@ import { InventoryPerformersService } from "./inventory-performers.service"
 import { InventoryReceivingService } from "./inventory-receiving.service"
 import { InventoryReplenishService } from "./inventory-replenish.service"
 import { InventoryDeductionService } from "./inventory-deduction.service"
+import { OrderConfirmedInventoryConsumer } from "./order-confirmed-inventory.consumer"
 import { InventoryStockService } from "./inventory-stock.service"
 import { InventoryWorkbenchService } from "./inventory-workbench.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./inventory.module-definition"
@@ -26,11 +26,7 @@ export class InventoryModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [
-                ...(base.imports ?? []),
-                InventoryOrderModule.register({}),
-                InventoryReplenishModule.register({}),
-            ],
+            imports: [...(base.imports ?? []), InventoryReplenishModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 InventoryLocationsService,
@@ -43,6 +39,7 @@ export class InventoryModule extends ConfigurableModuleClass {
                 InventoryCatalogService,
                 InventoryImportService,
                 InventoryDeductionService,
+                OrderConfirmedInventoryConsumer,
                 InventoryStockService,
                 InventoryAutomationService,
                 InventoryPerformersService,

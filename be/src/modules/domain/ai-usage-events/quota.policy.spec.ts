@@ -1,6 +1,5 @@
 import { Test } from "@nestjs/testing"
-import type { QuotaStatus, UsageKind } from "./ai-usage-events.contracts"
-import type { QuotaRow } from "./persistence/ai-usage-events.rows"
+import type { QuotaFigures, QuotaStatus, UsageKind } from "./ai-usage-events.contracts"
 import {
     quotaLookupOf as realQuotaLookupOf,
     quotaOf as realQuotaOf,
@@ -26,7 +25,7 @@ const build = async () => {
     }>(SUBJECT)
 }
 
-const row: QuotaRow = {
+const row: QuotaFigures = {
     period_start: "2026-10-01",
     messages_used: 500,
     tokens_used: 2_000,

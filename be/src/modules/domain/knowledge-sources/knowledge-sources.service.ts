@@ -9,7 +9,10 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { unwrapOutcome } from "@modules/platform/primitives"
-import type { SupabaseObjectsPort } from "@modules/integrations/supabase"
+import type { StorageObjectsPort } from "@modules/integrations/object-storage"
+import { KnowledgeSourceIndexedEvent } from "@modules/events/api"
+import { InjectEventBus } from "@modules/platform/event-bus"
+import type { EventBus } from "@modules/platform/event-bus"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import { KNOWLEDGE_UPLOAD_BUCKET, STORAGE_OBJECT_MISSING } from "./knowledge-sources.contracts"
@@ -77,10 +80,11 @@ export class KnowledgeSourcesService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
-        @InjectKnowledgeStorage() private readonly storage: SupabaseObjectsPort,
+        @InjectKnowledgeStorage() private readonly storage: StorageObjectsPort,
         @InjectLogger() private readonly logger: Logger,
         private readonly members: WorkspaceMembersService,
         private readonly queue: KnowledgeQueue,
+        @InjectEventBus() private readonly bus: EventBus,
         private readonly entitlements: EntitlementsService,
     ) {}
 
@@ -242,11 +246,16 @@ export class KnowledgeSourcesService {
         await this.entityManager.query(MARK_FAILED, [sourceId, workspaceId, note])
     }
 
-    /** The passages are stored: the source records them and a note, and the facts job is queued with the move to that stage in one transaction. */
+    /** The passages are stored: the source records them and a note, and `knowledge_source_indexed` is published with the move to that stage in one transaction. */
     async finishIndexing(workspaceId: string, sourceId: string, note: MaybeNote, chunks: number): Promise<void> {
         await this.entityManager.transaction(async (tx) => {
             await tx.query(MARK_INDEXED, [sourceId, workspaceId, note, chunks])
-            await this.queue.enqueueFacts({ sourceId, workspaceId }, tx, this.clock.now().getTime())
+            const indexed = KnowledgeSourceIndexedEvent.create({
+                sourceId,
+                workspaceId,
+                indexedAt: this.clock.now().getTime(),
+            })
+            await this.bus.publish(indexed, tx, indexed.eventId)
             await tx.query(MARK_EXTRACTING, [sourceId, workspaceId])
         })
     }

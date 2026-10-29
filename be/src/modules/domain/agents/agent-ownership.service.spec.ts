@@ -1,26 +1,28 @@
 import { Test } from "@nestjs/testing"
-import { agentMemberOf as memberOf } from "@tests/fixtures/builders/agents.builder"
-import { mock, mockEntityManager } from "@starci/jest-preset"
+import { agentEntityOf, agentMemberOf as memberOf } from "@tests/fixtures/builders/agents.builder"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { WorkspaceMemberEntity, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentOwnershipService } from "./agent-ownership.service"
 import { AgentsErrorCode } from "./errors/agents.error"
-import {
-    COUNT_ACTIVE_MEMBERS,
-    COUNT_WORKSPACE_AGENTS,
-    FIND_ASSIGN_CONTEXT,
-    FIND_MEMBER_ID,
-    FIND_OWNERSHIP,
-    FIND_TAG_CONTEXT,
-    FIND_WORKSPACE_OWNER,
-    LIST_ACTIVE_MEMBER_IDS,
-    LIST_MEMBER_STATES,
-    LIST_ROOM_LABELS,
-    LIST_TAG_TARGETS,
-    SET_OWNERSHIP,
-} from "./persistence/agents.sql"
-import type { OwnershipRow } from "./persistence/ownership.rows"
+import { AgentEntity } from "./persistence/entities"
+
+/** The statement `callDbFunction` sends for the workspace owner. */
+const FIND_WORKSPACE_OWNER = "SELECT * FROM public.workspace_owner_member($1)"
+const ownerRow = (id: string | null) => [{ workspace_owner_member: id }]
+
+const seatOf = builder<WorkspaceMemberEntity>({
+    id: "m-minh",
+    workspaceId: "w1",
+    userId: "u-minh",
+    role: "manager",
+    staffId: null,
+    displayName: "Minh",
+    status: "active",
+    createdAt: new Date("2026-10-01T00:00:00.000Z"),
+})
 
 const build = async (entityManager: MockEntityManager) => {
     const members = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(memberOf())) })
@@ -34,42 +36,45 @@ const build = async (entityManager: MockEntityManager) => {
     return { service: moduleRef.get(AgentOwnershipService), members }
 }
 
-const OWNERSHIP: OwnershipRow = {
+const OWNERSHIP = agentEntityOf({
     id: "a1",
-    workspace_id: "w1",
+    workspaceId: "w1",
     name: "AI Sales",
-    status: "active",
-    owner_member_id: "m-minh",
-    fallback_member_id: "m-nam",
-    assignable_roles: ["owner", "manager"],
-    assignable_rooms: ["sales"],
-    can_tag_agent_ids: ["a2"],
-}
+    ownerMemberId: "m-minh",
+    fallbackMemberId: "m-nam",
+    assignableRoles: ["owner", "manager"],
+    assignableRooms: ["sales"],
+    canTagAgentIds: ["a2"],
+})
 
 describe("AgentOwnershipService ownerOf", () => {
     it("answers the owner and the fallback while both are active", async () => {
         const em = mockEntityManager({
-            query: [
-                [FIND_OWNERSHIP, [OWNERSHIP]],
-                [LIST_ACTIVE_MEMBER_IDS, [{ id: "m-minh" }, { id: "m-nam" }]],
-                [FIND_WORKSPACE_OWNER, [{ id: "m-nam" }]],
-            ],
+            findOne: [AgentEntity, OWNERSHIP],
+            find: [WorkspaceMemberEntity, [seatOf({ id: "m-minh" }), seatOf({ id: "m-nam" })]],
+            query: [FIND_WORKSPACE_OWNER, ownerRow("m-nam")],
         })
         const { service } = await build(em)
 
         await expect(service.ownerOf("a1")).resolves.toEqual({ ownerMemberId: "m-minh", fallbackMemberId: "m-nam" })
-        expect(em.query).toHaveBeenCalledWith(FIND_OWNERSHIP, ["a1"])
-        expect(em.query).toHaveBeenCalledWith(LIST_ACTIVE_MEMBER_IDS, ["w1", ["m-minh", "m-nam"]])
+        expect(em.findOne).toHaveBeenCalledWith(AgentEntity, { where: { id: "a1" } })
+        expect(em.find).toHaveBeenCalledWith(WorkspaceMemberEntity, {
+            select: { id: true },
+            where: {
+                workspaceId: "w1",
+                id: expect.objectContaining({ _value: ["m-minh", "m-nam"] }),
+                status: "active",
+            },
+            take: 10,
+        })
         expect(em.query).toHaveBeenCalledWith(FIND_WORKSPACE_OWNER, ["w1"])
     })
 
     it("falls back when the owner left the workspace", async () => {
         const em = mockEntityManager({
-            query: [
-                [FIND_OWNERSHIP, [OWNERSHIP]],
-                [LIST_ACTIVE_MEMBER_IDS, [{ id: "m-nam" }]],
-                [FIND_WORKSPACE_OWNER, [{ id: "m-nam" }]],
-            ],
+            findOne: [AgentEntity, OWNERSHIP],
+            find: [WorkspaceMemberEntity, [seatOf({ id: "m-nam" })]],
+            query: [FIND_WORKSPACE_OWNER, ownerRow("m-nam")],
         })
         const { service } = await build(em)
 
@@ -78,11 +83,9 @@ describe("AgentOwnershipService ownerOf", () => {
 
     it("falls back to the workspace owner when the owner and the fallback are both gone", async () => {
         const em = mockEntityManager({
-            query: [
-                [FIND_OWNERSHIP, [OWNERSHIP]],
-                [LIST_ACTIVE_MEMBER_IDS, []],
-                [FIND_WORKSPACE_OWNER, [{ id: "m-ceo" }]],
-            ],
+            findOne: [AgentEntity, OWNERSHIP],
+            find: [WorkspaceMemberEntity, []],
+            query: [FIND_WORKSPACE_OWNER, ownerRow("m-ceo")],
         })
         const { service } = await build(em)
 
@@ -90,27 +93,26 @@ describe("AgentOwnershipService ownerOf", () => {
     })
 
     it("asks the active list only about the members the agent names", async () => {
-        const legacy = { ...OWNERSHIP, owner_member_id: null, fallback_member_id: null }
+        const legacy = { ...OWNERSHIP, ownerMemberId: null, fallbackMemberId: null }
         const em = mockEntityManager({
-            query: [
-                [FIND_OWNERSHIP, [legacy]],
-                [LIST_ACTIVE_MEMBER_IDS, []],
-                [FIND_WORKSPACE_OWNER, [{ id: "m-ceo" }]],
-            ],
+            findOne: [AgentEntity, legacy],
+            find: [WorkspaceMemberEntity, []],
+            query: [FIND_WORKSPACE_OWNER, ownerRow("m-ceo")],
         })
         const { service } = await build(em)
 
         await expect(service.ownerOf("a1")).resolves.toEqual({ ownerMemberId: "m-ceo", fallbackMemberId: null })
-        expect(em.query).toHaveBeenCalledWith(LIST_ACTIVE_MEMBER_IDS, ["w1", []])
+        expect(em.find).toHaveBeenCalledWith(
+            WorkspaceMemberEntity,
+            expect.objectContaining({ where: expect.objectContaining({ workspaceId: "w1" }) }),
+        )
     })
 
     it("refuses when nobody in the chain is active", async () => {
         const em = mockEntityManager({
-            query: [
-                [FIND_OWNERSHIP, [OWNERSHIP]],
-                [LIST_ACTIVE_MEMBER_IDS, []],
-                [FIND_WORKSPACE_OWNER, []],
-            ],
+            findOne: [AgentEntity, OWNERSHIP],
+            find: [WorkspaceMemberEntity, []],
+            query: [FIND_WORKSPACE_OWNER, []],
         })
         const { service } = await build(em)
 
@@ -118,7 +120,7 @@ describe("AgentOwnershipService ownerOf", () => {
     })
 
     it("refuses an agent that does not exist", async () => {
-        const { service } = await build(mockEntityManager({ query: [FIND_OWNERSHIP, []] }))
+        const { service } = await build(mockEntityManager({ findOne: [AgentEntity, null] }))
 
         await expect(service.ownerOf("ghost")).rejects.toMatchObject({
             code: AgentsErrorCode.AgentNotFound,
@@ -127,81 +129,101 @@ describe("AgentOwnershipService ownerOf", () => {
     })
 })
 
-const TAG_CONTEXT = {
-    from_status: "active",
-    to_status: "active",
-    same_workspace: true,
-    listed: true,
-    same_agent: false,
-}
-
 describe("AgentOwnershipService canTag", () => {
+    const from = agentEntityOf({ id: "a1", canTagAgentIds: ["a2"] })
+    const to = agentEntityOf({ id: "a2", name: "Accounting AI" })
+
     it("admits a listed agent", async () => {
-        const em = mockEntityManager({ query: [FIND_TAG_CONTEXT, [TAG_CONTEXT]] })
+        const em = mockEntityManager({ find: [AgentEntity, [from, to]] })
         const { service } = await build(em)
 
         await expect(service.canTag("a1", "a2")).resolves.toBe(true)
-        expect(em.query).toHaveBeenCalledWith(FIND_TAG_CONTEXT, ["a1", "a2"])
+        expect(em.find).toHaveBeenCalledWith(AgentEntity, {
+            where: { id: expect.objectContaining({ _value: ["a1", "a2"] }) },
+            take: 2,
+        })
     })
 
     it("refuses an agent that is not on the list", async () => {
-        const em = mockEntityManager({ query: [FIND_TAG_CONTEXT, [{ ...TAG_CONTEXT, listed: false }]] })
+        const em = mockEntityManager({ find: [AgentEntity, [from, agentEntityOf({ id: "a3" })]] })
         const { service } = await build(em)
 
         await expect(service.canTag("a1", "a3")).resolves.toBe(false)
     })
 
     it("refuses an agent that does not exist", async () => {
-        const { service } = await build(mockEntityManager({ query: [FIND_TAG_CONTEXT, []] }))
+        const { service } = await build(mockEntityManager({ find: [AgentEntity, [from]] }))
 
         await expect(service.canTag("a1", "ghost")).resolves.toBe(false)
     })
 })
 
-const ASSIGN_CONTEXT = {
-    role: "staff",
-    member_status: "active",
-    agent_status: "active",
-    assignable_roles: ["owner", "manager"],
-    assignable_rooms: ["sales"],
-    member_rooms: ["sales"],
-}
+const OPEN_AGENT = agentEntityOf({
+    id: "a1",
+    workspaceId: "w1",
+    assignableRoles: ["owner", "manager"],
+    assignableRooms: ["sales"],
+})
+const LAN = seatOf({ id: "m-lan", userId: "u-lan", role: "staff" })
 
 describe("AgentOwnershipService canAssign", () => {
     it("admits a staff member who sits in an open room", async () => {
-        const em = mockEntityManager({ query: [FIND_ASSIGN_CONTEXT, [ASSIGN_CONTEXT]] })
+        const em = mockEntityManager({
+            findOne: [
+                [AgentEntity, OPEN_AGENT],
+                [WorkspaceMemberEntity, LAN],
+            ],
+        })
+        queueQueryBuilders(em, [{ getRawMany: [{ userId: "u-lan", key: "sales" }] }])
         const { service } = await build(em)
 
         await expect(service.canAssign("m-lan", "a1")).resolves.toBe(true)
-        expect(em.query).toHaveBeenCalledWith(FIND_ASSIGN_CONTEXT, ["a1", "m-lan"])
+        expect(em.findOne).toHaveBeenCalledWith(AgentEntity, { where: { id: "a1" } })
+        expect(em.findOne).toHaveBeenCalledWith(WorkspaceMemberEntity, { where: { id: "m-lan", workspaceId: "w1" } })
     })
 
     it("refuses once the room was revoked from the agent", async () => {
-        const em = mockEntityManager({ query: [FIND_ASSIGN_CONTEXT, [{ ...ASSIGN_CONTEXT, assignable_rooms: [] }]] })
+        const em = mockEntityManager({
+            findOne: [
+                [AgentEntity, { ...OPEN_AGENT, assignableRooms: [] }],
+                [WorkspaceMemberEntity, LAN],
+            ],
+        })
+        queueQueryBuilders(em, [{ getRawMany: [{ userId: "u-lan", key: "sales" }] }])
         const { service } = await build(em)
 
         await expect(service.canAssign("m-lan", "a1")).resolves.toBe(false)
     })
 
     it("refuses a member or agent that does not exist", async () => {
-        const { service } = await build(mockEntityManager({ query: [FIND_ASSIGN_CONTEXT, []] }))
+        const absentMember = mockEntityManager({
+            findOne: [
+                [AgentEntity, OPEN_AGENT],
+                [WorkspaceMemberEntity, null],
+            ],
+        })
+        await expect((await build(absentMember)).service.canAssign("ghost", "a1")).resolves.toBe(false)
+        const { service } = await build(mockEntityManager({ findOne: [AgentEntity, null] }))
 
-        await expect(service.canAssign("ghost", "a1")).resolves.toBe(false)
+        await expect(service.canAssign("m-lan", "ghost")).resolves.toBe(false)
     })
 })
 
 describe("AgentOwnershipService memberIdOf", () => {
     it("answers the member row of the signed-in account", async () => {
-        const em = mockEntityManager({ query: [FIND_MEMBER_ID, [{ id: "m-minh" }]] })
+        const em = mockEntityManager({ findOne: [WorkspaceMemberEntity, seatOf({ id: "m-minh" })] })
         const { service, members } = await build(em)
 
         await expect(service.memberIdOf("u1", "w1")).resolves.toBe("m-minh")
         expect(members.require).toHaveBeenCalledWith("u1", "w1")
-        expect(em.query).toHaveBeenCalledWith(FIND_MEMBER_ID, ["w1", "u1"])
+        expect(em.findOne).toHaveBeenCalledWith(WorkspaceMemberEntity, {
+            select: { id: true },
+            where: { workspaceId: "w1", userId: "u1" },
+        })
     })
 
     it("refuses an account whose row cannot be read back", async () => {
-        const { service } = await build(mockEntityManager({ query: [FIND_MEMBER_ID, []] }))
+        const { service } = await build(mockEntityManager({ findOne: [WorkspaceMemberEntity, null] }))
 
         await expect(service.memberIdOf("u1", "w1")).rejects.toMatchObject({
             code: AgentsErrorCode.OwnershipInvalid,
@@ -210,26 +232,42 @@ describe("AgentOwnershipService memberIdOf", () => {
     })
 
     it("refuses a row without an id", async () => {
-        const { service } = await build(mockEntityManager({ query: [FIND_MEMBER_ID, [{ id: null }]] }))
+        const { service } = await build(
+            mockEntityManager({ findOne: [WorkspaceMemberEntity, { ...seatOf(), id: null as never }] }),
+        )
 
         await expect(service.memberIdOf("u1", "w1")).rejects.toMatchObject({ code: AgentsErrorCode.OwnershipInvalid })
     })
 })
 
-const MEMBER_STATES = [
-    { id: "m-minh", display_name: "Minh", role: "manager", status: "active", room_key: "sales" },
-    { id: "m-nam", display_name: "Nam", role: "owner", status: "active", room_key: null },
-]
-const OWNERSHIP_ANSWERS = [
-    [FIND_OWNERSHIP, [OWNERSHIP]],
-    [FIND_WORKSPACE_OWNER, [{ id: "m-nam" }]],
-    [LIST_ROOM_LABELS, [{ key: "sales", name: "Sales" }]],
-    [LIST_TAG_TARGETS, [{ id: "a2", name: "Accounting AI", module: "accounting", status: "active" }]],
-] as const
+const MINH = seatOf({ id: "m-minh", userId: "u-minh", displayName: "Minh", role: "manager" })
+const NAM = seatOf({ id: "m-nam", userId: "u-nam", displayName: "Nam", role: "owner" })
+const TARGET = agentEntityOf({ id: "a2", name: "Accounting AI", module: "accounting" })
+
+/** The world one ownership read sees: the agent, its seats, the workspace owner, its tag targets, then the room lookups in call order. */
+const ownershipWorld = (
+    seats: ReadonlyArray<WorkspaceMemberEntity>,
+    owner: string | null,
+    agent: AgentEntity = OWNERSHIP,
+) => {
+    const em = mockEntityManager({
+        findOne: [AgentEntity, agent],
+        find: [
+            [WorkspaceMemberEntity, seats],
+            [AgentEntity, [TARGET]],
+        ],
+        query: [FIND_WORKSPACE_OWNER, ownerRow(owner)],
+    })
+    const [labels, seatRooms] = queueQueryBuilders(em, [
+        { getRawMany: [{ key: "sales", name: "Sales" }] },
+        { getRawMany: [{ userId: "u-minh", key: "sales" }] },
+    ])
+    return { em, labels, seatRooms }
+}
 
 describe("AgentOwnershipService ownershipOf", () => {
     it("shows the owner, the fallback, who may give the agent work and whom it may tag", async () => {
-        const em = mockEntityManager({ query: [...OWNERSHIP_ANSWERS, [LIST_MEMBER_STATES, MEMBER_STATES]] })
+        const { em, labels } = ownershipWorld([MINH, NAM], "m-nam")
         const { service, members } = await build(em)
 
         await expect(service.ownershipOf("u1", "w1", "a1")).resolves.toEqual({
@@ -242,16 +280,15 @@ describe("AgentOwnershipService ownershipOf", () => {
             canTag: [{ id: "a2", name: "Accounting AI", module: "accounting", status: "active" }],
         })
         expect(members.require).toHaveBeenCalledWith("u1", "w1")
-        expect(em.query).toHaveBeenCalledWith(LIST_MEMBER_STATES, ["w1", ["m-minh", "m-nam"]])
-        expect(em.query).toHaveBeenCalledWith(LIST_ROOM_LABELS, ["w1", ["sales"]])
-        expect(em.query).toHaveBeenCalledWith(LIST_TAG_TARGETS, ["w1", ["a2"]])
+        expect(labels?.callsOf("where")).toEqual([
+            ["r.workspace_id = :workspaceId AND r.key IN (:...keys)", { workspaceId: "w1", keys: ["sales"] }],
+        ])
+        expect(em.find).toHaveBeenCalledWith(AgentEntity, expect.objectContaining({ take: 50 }))
     })
 
     it("shows a disabled owner as inactive and answers through the fallback", async () => {
-        const disabled = [{ ...MEMBER_STATES[0], status: "disabled" }, MEMBER_STATES[1]]
-        const { service } = await build(
-            mockEntityManager({ query: [...OWNERSHIP_ANSWERS, [LIST_MEMBER_STATES, disabled]] }),
-        )
+        const { em } = ownershipWorld([{ ...MINH, status: "disabled" }, NAM], "m-nam")
+        const { service } = await build(em)
 
         await expect(service.ownershipOf("u1", "w1", "a1")).resolves.toMatchObject({
             owner: { memberId: "m-minh", active: false },
@@ -260,9 +297,8 @@ describe("AgentOwnershipService ownershipOf", () => {
     })
 
     it("shows no card for a member who left", async () => {
-        const { service } = await build(
-            mockEntityManager({ query: [...OWNERSHIP_ANSWERS, [LIST_MEMBER_STATES, [MEMBER_STATES[1]]]] }),
-        )
+        const { em } = ownershipWorld([NAM], "m-nam")
+        const { service } = await build(em)
 
         await expect(service.ownershipOf("u1", "w1", "a1")).resolves.toMatchObject({
             owner: null,
@@ -272,15 +308,7 @@ describe("AgentOwnershipService ownershipOf", () => {
     })
 
     it("refuses when the whole chain is gone", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_OWNERSHIP, [OWNERSHIP]],
-                [LIST_MEMBER_STATES, []],
-                [FIND_WORKSPACE_OWNER, []],
-                [LIST_ROOM_LABELS, []],
-                [LIST_TAG_TARGETS, []],
-            ],
-        })
+        const { em } = ownershipWorld([], null)
         const { service } = await build(em)
 
         await expect(service.ownershipOf("u1", "w1", "a1")).rejects.toMatchObject({
@@ -289,8 +317,8 @@ describe("AgentOwnershipService ownershipOf", () => {
     })
 
     it("refuses an agent of another workspace", async () => {
-        const other = { ...OWNERSHIP, workspace_id: "w2" }
-        const { service } = await build(mockEntityManager({ query: [FIND_OWNERSHIP, [other]] }))
+        const other = { ...OWNERSHIP, workspaceId: "w2" }
+        const { service } = await build(mockEntityManager({ findOne: [AgentEntity, other] }))
 
         await expect(service.ownershipOf("u1", "w1", "a1")).rejects.toMatchObject({
             code: AgentsErrorCode.AgentNotFound,
@@ -298,7 +326,7 @@ describe("AgentOwnershipService ownershipOf", () => {
     })
 
     it("refuses an agent that does not exist", async () => {
-        const { service } = await build(mockEntityManager({ query: [FIND_OWNERSHIP, []] }))
+        const { service } = await build(mockEntityManager({ findOne: [AgentEntity, null] }))
 
         await expect(service.ownershipOf("u1", "w1", "ghost")).rejects.toMatchObject({
             code: AgentsErrorCode.AgentNotFound,
@@ -313,50 +341,61 @@ const CHANGE = {
     assignableRooms: ["sales", "sales"],
     canTagAgentIds: ["a2", "a2"],
 }
-const WRITABLE = [
-    [COUNT_ACTIVE_MEMBERS, [{ n: 2 }]],
-    [COUNT_WORKSPACE_AGENTS, [{ n: 1 }]],
-    [SET_OWNERSHIP, [{ id: "a1" }]],
-] as const
+/** A manager world: both owners are active members, the tag target exists, and the update lands on one row. */
+const writable = (counts: { members?: number; agents?: number; affected?: number } = {}) =>
+    mockEntityManager({
+        count: [
+            [WorkspaceMemberEntity, counts.members ?? 2],
+            [AgentEntity, counts.agents ?? 1],
+        ],
+        update: [AgentEntity, { affected: counts.affected ?? 1 }],
+    })
 
 describe("AgentOwnershipService setOwnership", () => {
     it("replaces the ownership of an agent with each id once; a manager only", async () => {
-        const em = mockEntityManager({ query: WRITABLE })
+        const em = writable()
         const { service, members } = await build(em)
 
         await service.setOwnership("u1", "w1", "a1", CHANGE)
 
         expect(members.require).toHaveBeenCalledWith("u1", "w1", ["owner", "manager"])
-        expect(em.query).toHaveBeenCalledWith(COUNT_ACTIVE_MEMBERS, ["w1", ["m-minh", "m-nam"]])
-        expect(em.query).toHaveBeenCalledWith(COUNT_WORKSPACE_AGENTS, ["w1", ["a2"]])
-        expect(em.query).toHaveBeenCalledWith(SET_OWNERSHIP, [
-            "a1",
-            "w1",
-            "m-minh",
-            "m-nam",
-            ["manager"],
-            ["sales"],
-            ["a2"],
-        ])
+        expect(em.count).toHaveBeenCalledWith(WorkspaceMemberEntity, {
+            where: {
+                workspaceId: "w1",
+                id: expect.objectContaining({ _value: ["m-minh", "m-nam"] }),
+                status: "active",
+            },
+        })
+        expect(em.count).toHaveBeenCalledWith(AgentEntity, {
+            where: { workspaceId: "w1", id: expect.objectContaining({ _value: ["a2"] }) },
+        })
+        expect(em.update).toHaveBeenCalledWith(
+            AgentEntity,
+            { id: "a1", workspaceId: "w1" },
+            {
+                ownerMemberId: "m-minh",
+                fallbackMemberId: "m-nam",
+                assignableRoles: ["manager"],
+                assignableRooms: ["sales"],
+                canTagAgentIds: ["a2"],
+            },
+        )
     })
 
     it("accepts an owner who is also the fallback and an empty tag list without counting agents", async () => {
-        const em = mockEntityManager({
-            query: [
-                [COUNT_ACTIVE_MEMBERS, [{ n: 1 }]],
-                [SET_OWNERSHIP, [{ id: "a1" }]],
-            ],
-        })
+        const em = writable({ members: 1 })
         const { service } = await build(em)
 
         await service.setOwnership("u1", "w1", "a1", { ...CHANGE, fallbackMemberId: "m-minh", canTagAgentIds: [] })
 
-        expect(em.query).toHaveBeenCalledWith(COUNT_ACTIVE_MEMBERS, ["w1", ["m-minh"]])
-        expect(em.query).not.toHaveBeenCalledWith(COUNT_WORKSPACE_AGENTS, expect.anything())
+        expect(em.count).toHaveBeenCalledWith(WorkspaceMemberEntity, {
+            where: { workspaceId: "w1", id: expect.objectContaining({ _value: ["m-minh"] }), status: "active" },
+        })
+        expect(em.count).not.toHaveBeenCalledWith(AgentEntity, expect.anything())
     })
 
     it("refuses an owner who is not an active member of the workspace", async () => {
-        const { service } = await build(mockEntityManager({ query: [COUNT_ACTIVE_MEMBERS, [{ n: 1 }]] }))
+        const { service } = await build(writable({ members: 1 }))
 
         await expect(service.setOwnership("u1", "w1", "a1", CHANGE)).rejects.toMatchObject({
             code: AgentsErrorCode.OwnershipInvalid,
@@ -365,7 +404,7 @@ describe("AgentOwnershipService setOwnership", () => {
     })
 
     it("refuses a count the database cannot answer", async () => {
-        const { service } = await build(mockEntityManager({ query: [COUNT_ACTIVE_MEMBERS, []] }))
+        const { service } = await build(writable({ members: 0 }))
 
         await expect(service.setOwnership("u1", "w1", "a1", CHANGE)).rejects.toMatchObject({
             params: { field: "owner" },
@@ -375,7 +414,7 @@ describe("AgentOwnershipService setOwnership", () => {
 
 describe("AgentOwnershipService setOwnership refusals", () => {
     it("refuses a role that does not exist", async () => {
-        const { service } = await build(mockEntityManager({ query: WRITABLE }))
+        const { service } = await build(writable())
 
         await expect(
             service.setOwnership("u1", "w1", "a1", { ...CHANGE, assignableRoles: ["boss"] }),
@@ -383,7 +422,7 @@ describe("AgentOwnershipService setOwnership refusals", () => {
     })
 
     it("refuses a room that does not exist", async () => {
-        const { service } = await build(mockEntityManager({ query: WRITABLE }))
+        const { service } = await build(writable())
 
         await expect(
             service.setOwnership("u1", "w1", "a1", { ...CHANGE, assignableRooms: ["garage"] }),
@@ -391,7 +430,7 @@ describe("AgentOwnershipService setOwnership refusals", () => {
     })
 
     it("refuses an agent that tags itself", async () => {
-        const { service } = await build(mockEntityManager({ query: WRITABLE }))
+        const { service } = await build(writable())
 
         await expect(
             service.setOwnership("u1", "w1", "a1", { ...CHANGE, canTagAgentIds: ["a1"] }),
@@ -399,13 +438,7 @@ describe("AgentOwnershipService setOwnership refusals", () => {
     })
 
     it("refuses a tag target of another workspace", async () => {
-        const em = mockEntityManager({
-            query: [
-                [COUNT_ACTIVE_MEMBERS, [{ n: 2 }]],
-                [COUNT_WORKSPACE_AGENTS, [{ n: 0 }]],
-            ],
-        })
-        const { service } = await build(em)
+        const { service } = await build(writable({ agents: 0 }))
 
         await expect(service.setOwnership("u1", "w1", "a1", CHANGE)).rejects.toMatchObject({
             params: { field: "canTagAgentIds" },
@@ -413,14 +446,7 @@ describe("AgentOwnershipService setOwnership refusals", () => {
     })
 
     it("refuses an agent that is not in the workspace", async () => {
-        const em = mockEntityManager({
-            query: [
-                [COUNT_ACTIVE_MEMBERS, [{ n: 2 }]],
-                [COUNT_WORKSPACE_AGENTS, [{ n: 1 }]],
-                [SET_OWNERSHIP, []],
-            ],
-        })
-        const { service } = await build(em)
+        const { service } = await build(writable({ affected: 0 }))
 
         await expect(service.setOwnership("u1", "w1", "ghost", CHANGE)).rejects.toMatchObject({
             code: AgentsErrorCode.AgentNotFound,

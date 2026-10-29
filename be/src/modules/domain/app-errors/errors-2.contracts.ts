@@ -1,7 +1,7 @@
 import { APPROVAL_REQUESTS_ERROR_KINDS } from "@modules/domain/approval-requests"
 import { AUTHORITY_RULES_ERROR_KINDS } from "@modules/domain/authority-rules"
 import { MEMBER_GRANTS_ERROR_KINDS } from "@modules/domain/member-grants"
-import { DEEPSEEK_ERROR_KINDS } from "@modules/integrations/deepseek"
+import { AI_TASKS_ERROR_KINDS } from "@modules/domain/ai-tasks"
 import { EXECUTIONS_ERROR_KINDS } from "@modules/domain/executions"
 import { OFFICE_COMMAND_CANDIDATES_ERROR_KINDS } from "@modules/domain/office-command-candidates"
 import { OPENCLAW_AGENT_SYNC_ERROR_KINDS } from "@modules/domain/openclaw-agent-sync"
@@ -36,7 +36,7 @@ export const API_ERROR_KINDS_2 = [
     AUTHORITY_RULES_ERROR_KINDS,
     MEMBER_GRANTS_ERROR_KINDS,
     APPROVAL_REQUESTS_ERROR_KINDS,
-    DEEPSEEK_ERROR_KINDS,
+    AI_TASKS_ERROR_KINDS,
     EXECUTIONS_ERROR_KINDS,
     OFFICE_COMMAND_CANDIDATES_ERROR_KINDS,
     OPENCLAW_AGENT_SYNC_ERROR_KINDS,

@@ -5,7 +5,7 @@ import type {
     PaymentOrderRequestStatus,
     PaymentOrderRequestKind,
 } from "./payment-order-requests.contracts"
-import type { RequestStatusRow } from "./persistence/payment-order-requests.rows"
+import type { PaymentOrderRequestEntity } from "./persistence/entities"
 
 const REQUEST_KINDS: ReadonlySet<PaymentOrderRequestKind> = new Set([
     "plan",
@@ -42,16 +42,18 @@ export const selectionOf = (params: PaymentOrderRequestParams): RequestSelection
     return { cycle, tierCredits, seats }
 }
 
-const REQUEST_STATUSES: Readonly<Record<RequestStatusRow["status"], PaymentOrderRequestStatus["status"]>> = {
+const REQUEST_STATUSES: Readonly<Record<PaymentOrderRequestEntity["status"], PaymentOrderRequestStatus["status"]>> = {
     pending: "queued",
     done: "succeeded",
     failed: "failed",
 }
 
 /** Presents a request as queued until its worker writes a terminal outcome. */
-export const toRequestStatus = (row: RequestStatusRow): PaymentOrderRequestStatus => ({
+export const toRequestStatus = (
+    row: Pick<PaymentOrderRequestEntity, "id" | "status" | "orderId" | "fault">,
+): PaymentOrderRequestStatus => ({
     id: row.id,
     status: REQUEST_STATUSES[row.status],
-    resultId: row.order_id,
+    resultId: row.orderId,
     errorCode: row.fault,
 })

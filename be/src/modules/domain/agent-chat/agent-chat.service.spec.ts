@@ -1,4 +1,6 @@
 import { Test } from "@nestjs/testing"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { AgentConversationsErrorCode, AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { ChatConversation, ConversationTarget } from "@modules/domain/agent-conversations"
@@ -16,8 +18,7 @@ import { ChatTurnQueue } from "@modules/queues/chat-turn"
 import { AgentChatService } from "./agent-chat.service"
 import { AGENT_CHAT_FOUNDING_OFFER } from "./agent-chat.templates"
 import { AgentChatErrorCode } from "./errors/agent-chat.error"
-import type { ChatAgentRow, ChatTurnMessageRow } from "./persistence/agent-chat.rows"
-import { FIND_CHAT_AGENT, FIND_CHAT_TURN_MESSAGE, FIND_FOUNDING_PURCHASE } from "./persistence/agent-chat.sql"
+import type { ChatAgentFacts, ChatTurnFacts } from "./agent-chat.contracts"
 
 const NOW = "2026-10-13T02:00:00.000Z"
 const PAGE = { workspaceId: "w1", agentId: "a1", welcome: true }
@@ -32,7 +33,7 @@ const MEMBER: WorkspaceMember = {
     status: "active",
 }
 
-const AGENT: ChatAgentRow = { id: "a1", module: "chatbot", status: "active", greeting: "Welcome" }
+const AGENT: ChatAgentFacts = { id: "a1", module: "chatbot", status: "active", greeting: "Welcome" }
 
 const PROFILE: AgentProfile = {
     id: "a1",
@@ -64,20 +65,22 @@ const TARGET: ConversationTarget = {
 
 const THREAD: AgentThreadMessage = { id: "m1", role: "user", body: "Hi", createdAt: NOW }
 
-const TURN: ChatTurnMessageRow = {
+const TURN: ChatTurnFacts = {
     id: "m1",
-    conversation_id: "c1",
+    conversationId: "c1",
     channel: "website",
     role: "user",
-    delivery_status: null,
-    reply_id: "r1",
-    reply_delivery_status: null,
+    deliveryStatus: null,
+    replyId: "r1",
+    replyDeliveryStatus: null,
 }
 
-type QueryAnswers = ReadonlyArray<readonly [string, ReadonlyArray<object>]>
+/** The answer of a single-row raw read: the row, or nothing. */
+const row = (value: object | undefined): QueryBuilderAnswers => ({ getRawOne: value })
 
-const build = async (stubs: QueryAnswers = []) => {
-    const tx = fakeTransaction(mockEntityManager({ query: stubs }))
+const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = []) => {
+    const tx = fakeTransaction(mockEntityManager())
+    const builders = queueQueryBuilders(tx.em, answers)
     const clock = new FakeClock(NOW)
     const members = mock<WorkspaceMembersService>()
     const agents = mock<AgentsService>()
@@ -102,6 +105,7 @@ const build = async (stubs: QueryAnswers = []) => {
     return {
         service: moduleRef.get(AgentChatService),
         tx,
+        builders,
         clock,
         members,
         agents,
@@ -115,10 +119,7 @@ const build = async (stubs: QueryAnswers = []) => {
 describe("AgentChatService", () => {
     describe("page", () => {
         it("returns the agent page and the welcome when a founding purchase sits inside the offer", async () => {
-            const { service, agents, tx } = await build([
-                [FIND_CHAT_AGENT, [AGENT]],
-                [FIND_FOUNDING_PURCHASE, [{ id: "purchase-1" }]],
-            ])
+            const { service, agents, builders } = await build([row(AGENT), row({ id: "purchase-1" })])
             agents.profileOf.mockResolvedValue(PROFILE)
 
             await expect(service.page("u1", PAGE)).resolves.toEqual({
@@ -132,25 +133,26 @@ describe("AgentChatService", () => {
                 workspaceId: "w1",
                 showWelcome: true,
             })
-            expect(tx.em.query).toHaveBeenCalledWith(FIND_FOUNDING_PURCHASE, [
-                "w1",
-                AGENT_CHAT_FOUNDING_OFFER.startsAt,
-                AGENT_CHAT_FOUNDING_OFFER.endsAt,
+            const { startsAt, endsAt } = AGENT_CHAT_FOUNDING_OFFER
+            expect(builders[1]?.callsOf("where")).toEqual([
+                [expect.stringContaining("e.kind = 'module.purchased'"), { workspaceId: "w1", startsAt, endsAt }],
             ])
         })
 
         it("hides the welcome outside the offer and does not read purchases", async () => {
-            const { service, agents, clock, tx } = await build([[FIND_CHAT_AGENT, [AGENT]]])
+            const { service, agents, clock, builders } = await build([row(AGENT)])
             clock.set("2026-11-01T00:00:00.000Z")
             agents.profileOf.mockResolvedValue(PROFILE)
 
             await expect(service.page("u1", PAGE)).resolves.toMatchObject({ showWelcome: false, isActive: true })
-            expect(tx.em.query).toHaveBeenCalledTimes(1)
-            expect(tx.em.query).toHaveBeenCalledWith(FIND_CHAT_AGENT, ["w1", "a1"])
+            expect(builders).toHaveLength(1)
+            expect(builders[0]?.callsOf("where")).toEqual([
+                ["a.workspace_id = :workspaceId AND a.id = :agentId", { workspaceId: "w1", agentId: "a1" }],
+            ])
         })
 
         it("hides the welcome for a module that has no customer channel", async () => {
-            const { service, agents, tx } = await build([[FIND_CHAT_AGENT, [{ ...AGENT, module: "sales" }]]])
+            const { service, agents, tx } = await build([row({ ...AGENT, module: "sales" })])
             agents.profileOf.mockResolvedValue(PROFILE)
 
             await expect(service.page("u1", PAGE)).resolves.toEqual({
@@ -164,14 +166,14 @@ describe("AgentChatService", () => {
                 workspaceId: "w1",
                 showWelcome: false,
             })
-            expect(tx.em.query).not.toHaveBeenCalledWith(FIND_FOUNDING_PURCHASE, expect.anything())
+            expect(tx.em.createQueryBuilder).toHaveBeenCalledTimes(1)
         })
 
         it.each([
-            { name: "agent row", rows: [], profile: PROFILE },
-            { name: "agent profile", rows: [AGENT], profile: null },
-        ])("refuses a missing $name", async ({ rows, profile }) => {
-            const { service, agents } = await build([[FIND_CHAT_AGENT, rows]])
+            { name: "agent row", found: undefined, profile: PROFILE },
+            { name: "agent profile", found: AGENT, profile: null },
+        ])("refuses a missing $name", async ({ found, profile }) => {
+            const { service, agents } = await build([row(found)])
             agents.profileOf.mockResolvedValue(profile)
 
             await expect(service.page("u1", PAGE)).rejects.toMatchObject({ code: AgentChatErrorCode.AgentNotFound })
@@ -182,7 +184,7 @@ describe("AgentChatService", () => {
 describe("AgentChatService", () => {
     describe("listConversations", () => {
         it("returns the agent's history after proving the agent", async () => {
-            const { service, conversations } = await build([[FIND_CHAT_AGENT, [AGENT]]])
+            const { service, conversations } = await build([row(AGENT)])
             conversations.listChat.mockResolvedValue([CONVERSATION])
 
             await expect(service.listConversations("u1", { workspaceId: "w1", agentId: "a1" })).resolves.toEqual([
@@ -217,7 +219,7 @@ describe("AgentChatService", () => {
 describe("AgentChatService", () => {
     describe("start", () => {
         it("opens a test chat under the member's name and stores the greeting", async () => {
-            const { service, conversations, messages, tx } = await build([[FIND_CHAT_AGENT, [AGENT]]])
+            const { service, conversations, messages, tx } = await build([row(AGENT)])
             conversations.openChat.mockResolvedValue(CONVERSATION)
 
             await expect(
@@ -232,9 +234,7 @@ describe("AgentChatService", () => {
         })
 
         it("keeps a customer name within 80 characters and skips an empty greeting", async () => {
-            const { service, conversations, messages, tx } = await build([
-                [FIND_CHAT_AGENT, [{ ...AGENT, greeting: "" }]],
-            ])
+            const { service, conversations, messages, tx } = await build([row({ ...AGENT, greeting: "" })])
             conversations.openChat.mockResolvedValue(CONVERSATION)
 
             await expect(
@@ -254,7 +254,7 @@ describe("AgentChatService", () => {
         })
 
         it("does not open a chat when the agent is missing", async () => {
-            const { service, conversations, tx } = await build([[FIND_CHAT_AGENT, []]])
+            const { service, conversations, tx } = await build([row(undefined)])
 
             await expect(
                 service.start("u1", { workspaceId: "w1", agentId: "a1", kind: "customer", visitorName: null }),
@@ -367,7 +367,7 @@ describe("AgentChatService", () => {
 describe("AgentChatService", () => {
     describe("turnStatus", () => {
         it("reports a queued turn and the stored reply id", async () => {
-            const { service, queueStatus } = await build([[FIND_CHAT_TURN_MESSAGE, [TURN]]])
+            const { service, queueStatus } = await build([row(TURN)])
             queueStatus.status.mockResolvedValue({ id: "job-1", state: "queued", attempts: 0 })
 
             await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).resolves.toEqual({
@@ -382,7 +382,7 @@ describe("AgentChatService", () => {
         })
 
         it("reports running, then succeeded once a website turn is done", async () => {
-            const { service, queueStatus } = await build([[FIND_CHAT_TURN_MESSAGE, [TURN]]])
+            const { service, queueStatus } = await build([row(TURN), row(TURN)])
             queueStatus.status.mockResolvedValueOnce({ id: "job-1", state: "running", attempts: 1 })
             queueStatus.status.mockResolvedValueOnce({ id: "job-1", state: "done", attempts: 1 })
 
@@ -398,14 +398,14 @@ describe("AgentChatService", () => {
         })
 
         it("reports a failed delivery on a channel other than website", async () => {
-            const delivered: ChatTurnMessageRow = {
+            const delivered: ChatTurnFacts = {
                 ...TURN,
                 channel: "zalo",
                 role: "agent",
-                delivery_status: "failed",
-                reply_id: null,
+                deliveryStatus: "failed",
+                replyId: null,
             }
-            const { service, queueStatus } = await build([[FIND_CHAT_TURN_MESSAGE, [delivered]]])
+            const { service, queueStatus } = await build([row(delivered)])
             queueStatus.status.mockResolvedValue({ id: "job-2", state: "done", attempts: 1 })
 
             await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).resolves.toEqual({
@@ -420,7 +420,7 @@ describe("AgentChatService", () => {
         })
 
         it("reports a failed queue job as a turn failure", async () => {
-            const { service, queueStatus } = await build([[FIND_CHAT_TURN_MESSAGE, [TURN]]])
+            const { service, queueStatus } = await build([row(TURN)])
             queueStatus.status.mockResolvedValue({ id: "job-3", state: "failed", attempts: 2 })
 
             await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).resolves.toMatchObject({
@@ -430,12 +430,12 @@ describe("AgentChatService", () => {
         })
 
         it("refuses a message or a job the workspace does not have", async () => {
-            const missing = await build([[FIND_CHAT_TURN_MESSAGE, []]])
+            const missing = await build([row(undefined)])
             await expect(missing.service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).rejects.toMatchObject({
                 code: AgentChatErrorCode.TurnNotFound,
             })
 
-            const { service, queueStatus } = await build([[FIND_CHAT_TURN_MESSAGE, [TURN]]])
+            const { service, queueStatus } = await build([row(TURN)])
             queueStatus.status.mockResolvedValue(null)
             await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).rejects.toMatchObject({
                 code: AgentChatErrorCode.TurnNotFound,
@@ -449,7 +449,7 @@ describe("AgentChatService", () => {
         { kind: "test", visitorName: "Lan" },
         { kind: "customer", visitorName: null },
     ] as const)("defaults a nameless $kind chat to $visitorName", async ({ kind, visitorName }) => {
-        const { service, tx, conversations, messages } = await build([[FIND_CHAT_AGENT, [AGENT]]])
+        const { service, tx, conversations, messages } = await build([row(AGENT)])
         conversations.openChat.mockResolvedValue(CONVERSATION)
         await expect(service.start("u1", { workspaceId: "w1", agentId: "a1", kind, visitorName: null })).resolves.toBe(
             "c1",
@@ -480,8 +480,8 @@ describe("AgentChatService", () => {
         ["failed", "failed", "CHAT_DELIVERY_FAILED"],
         ["sent", "succeeded", null],
     ] as const)("reports a completed external turn whose reply delivery is %s", async (delivery, status, errorCode) => {
-        const row: ChatTurnMessageRow = { ...TURN, channel: "telegram", reply_delivery_status: delivery }
-        const { service, tx, members, queueStatus } = await build([[FIND_CHAT_TURN_MESSAGE, [row]]])
+        const external: ChatTurnFacts = { ...TURN, channel: "telegram", replyDeliveryStatus: delivery }
+        const { service, builders, members, queueStatus } = await build([row(external)])
         queueStatus.status.mockResolvedValue({ id: "job-1", state: "done", attempts: 2 })
         await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).resolves.toEqual({
             id: "m1",
@@ -492,7 +492,9 @@ describe("AgentChatService", () => {
             errorCode,
         })
         expect(members.require).toHaveBeenCalledWith("u1", "w1")
-        expect(tx.em.query).toHaveBeenCalledWith(FIND_CHAT_TURN_MESSAGE, ["w1", "m1"])
+        expect(builders[0]?.callsOf("where")).toEqual([
+            [expect.stringContaining("m.id = :id"), { workspaceId: "w1", id: "m1" }],
+        ])
         expect(queueStatus.status).toHaveBeenCalledWith("w1", "chat_turn", "chat-turn.turn:m1")
     })
 })

@@ -130,3 +130,15 @@ describe("PerformerKitService", () => {
         expect(catalog.get).toHaveBeenCalledWith("performers.stage.won", {}, "vi")
     })
 })
+
+describe("PerformerKitService drafting", () => {
+    it("gives a drafting prompt the customer lane of the sales agent, so its notes are public ones", async () => {
+        const { kit } = await build()
+
+        expect(kit.draftScope(english)).toEqual({
+            workspaceId: "ws-1",
+            locale: "en",
+            lane: { module: "sales", installationId: null, audience: "customer" },
+        })
+    })
+})

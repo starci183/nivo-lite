@@ -1,21 +1,21 @@
 import { Test } from "@nestjs/testing"
 import { toPaymentOrder } from "./payment-orders.mapper"
-import type { OrderRow } from "./persistence/payment-orders.rows"
+import { PaymentOrderEntity } from "./persistence/entities"
 
-const ROW: OrderRow = {
+const ROW: PaymentOrderEntity = Object.assign(new PaymentOrderEntity(), {
     id: "order-1",
-    workspace_id: "ws-1",
-    plan_code: "starter",
-    amount_vnd: 990000,
-    order_code: "NIVO8F3K2",
+    workspaceId: "ws-1",
+    planCode: "starter",
+    amountVnd: 990000,
+    orderCode: "NIVO8F3K2",
     status: "pending",
-    expires_at: "2026-10-12T10:30:00+00:00",
-    paid_at: null,
-    created_at: "2026-10-12T10:00:00+00:00",
+    expiresAt: new Date("2026-10-12T10:30:00+00:00"),
+    paidAt: null,
+    createdAt: new Date("2026-10-12T10:00:00+00:00"),
     kind: "topup",
-    pack_code: "credits_1000",
+    packCode: "credits_1000",
     detail: { credits: 1000 },
-}
+})
 
 const SUBJECT = Symbol("payment-orders.mapper")
 
@@ -49,14 +49,16 @@ describe("payment orders mapper", () => {
     it("keeps the instant a paid order was settled", async () => {
         const subject = await buildSubject()
 
-        expect(subject.toPaymentOrder({ ...ROW, paid_at: "2026-10-12T10:05:00+00:00" }).paidAt).toBe(
-            "2026-10-12T10:05:00.000Z",
-        )
+        expect(
+            subject.toPaymentOrder(
+                Object.assign(new PaymentOrderEntity(), ROW, { paidAt: new Date("2026-10-12T10:05:00+00:00") }),
+            ).paidAt,
+        ).toBe("2026-10-12T10:05:00.000Z")
     })
 
     it.each([[[1]], ["text"], [5]])("counts the stored detail %p as no detail", async (detail) => {
         const subject = await buildSubject()
 
-        expect(subject.toPaymentOrder({ ...ROW, detail }).detail).toEqual({})
+        expect(subject.toPaymentOrder(Object.assign(new PaymentOrderEntity(), ROW, { detail })).detail).toEqual({})
     })
 })

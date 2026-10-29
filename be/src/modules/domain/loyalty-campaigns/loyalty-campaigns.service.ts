@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { LoyaltyCustomerLinksService } from "@modules/domain/loyalty-customer-links"
 import { LoyaltyLedgerService } from "@modules/domain/loyalty-ledger"
@@ -7,7 +8,6 @@ import { LoyaltyProgramsService } from "@modules/domain/loyalty-programs"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { sql } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LoyaltyCampaignsError, LoyaltyCampaignsErrorCode } from "./errors/loyalty-campaigns.error"
@@ -20,16 +20,9 @@ import type {
     SegmentPreview,
 } from "./loyalty-campaigns.contracts"
 import { loyaltyCampaignOf } from "./loyalty-campaigns.mapper"
-import type { LoyaltyCampaignRow } from "./persistence/loyalty-campaigns.rows"
-import {
-    ATTACH_CAMPAIGN_DECISION,
-    COUNT_SENT_SINCE,
-    FAIL_CAMPAIGN_DRAFT,
-    FINISH_CAMPAIGN_DRAFT,
-    INSERT_CAMPAIGN,
-    INSERT_WAITING_CAMPAIGN,
-    LIST_CAMPAIGNS,
-} from "./persistence/loyalty-campaigns.sql"
+import type { CampaignListRaw } from "./loyalty-campaigns.mapper"
+import { LoyaltyCampaignEntity, LoyaltySendEntity } from "./persistence/entities"
+import type { LoyaltyCampaignStatus } from "./persistence/entities"
 import { inSegment, segmentParts } from "./policies/segment.policy"
 
 const SAMPLE_SIZE = 5
@@ -66,27 +59,23 @@ export class LoyaltyCampaignsService {
 
     /** Writes a campaign as a draft with the template message filled with the offer; refuses a segment nobody belongs to. */
     create(params: CampaignParams): Promise<CampaignDraft> {
-        return this.writeDraft(params, this.entityManager, INSERT_CAMPAIGN, "draft")
+        return this.writeDraft(params, this.entityManager, "draft")
     }
 
     /** Writes a waiting campaign in the producer's transaction; the worker may replace its safe template draft. */
     prepare(params: CampaignParams, tx: EntityManager): Promise<CampaignDraft> {
-        return this.writeDraft(params, tx, INSERT_WAITING_CAMPAIGN, "waiting")
+        return this.writeDraft(params, tx, "waiting")
     }
 
     /** The newest campaigns and delivery counts, always inside the selected workspace. */
     async list(workspaceId: string, limit: number = 20): Promise<ReadonlyArray<LoyaltyCampaignView>> {
-        const rows = await this.entityManager.query<Array<LoyaltyCampaignRow>>(LIST_CAMPAIGNS, [
-            workspaceId,
-            null,
-            Math.min(100, Math.max(1, limit)),
-        ])
+        const rows = await this.views(workspaceId, null, Math.min(100, Math.max(1, limit)))
         return rows.map(loyaltyCampaignOf)
     }
 
     /** Reads one campaign for polling; ids from a different workspace disclose nothing. */
     async get(workspaceId: string, id: string): Promise<LoyaltyCampaignView> {
-        const [row] = await this.entityManager.query<Array<LoyaltyCampaignRow>>(LIST_CAMPAIGNS, [workspaceId, id, 1])
+        const [row] = await this.views(workspaceId, id, 1)
         if (row === undefined) throw new LoyaltyCampaignsError({ code: LoyaltyCampaignsErrorCode.NotFound })
         return loyaltyCampaignOf(row)
     }
@@ -99,12 +88,20 @@ export class LoyaltyCampaignsService {
         draft: string,
         durationMs: number,
     ): Promise<void> {
-        await tx.query(FINISH_CAMPAIGN_DRAFT, [workspaceId, campaignId, draft, durationMs])
+        await tx.update(
+            LoyaltyCampaignEntity,
+            { workspaceId, id: campaignId, status: "waiting" },
+            { draft, draftMs: durationMs, status: "draft" },
+        )
     }
 
     /** The queue exhausted its retries; completed drafts and approved campaigns are left alone. */
     async failDraft(workspaceId: string, campaignId: string): Promise<void> {
-        await this.entityManager.query(FAIL_CAMPAIGN_DRAFT, [workspaceId, campaignId])
+        await this.entityManager.update(
+            LoyaltyCampaignEntity,
+            { workspaceId, id: campaignId, status: "waiting" },
+            { status: "failed", finishedAt: () => "now()" },
+        )
     }
 
     /** Records the work item that decides a finished draft. A draft that moved on answers nothing. */
@@ -114,20 +111,18 @@ export class LoyaltyCampaignsService {
         workItemId: string,
         status: string,
     ): Promise<boolean> {
-        const rows = await this.entityManager.query<Array<{ id: string }>>(ATTACH_CAMPAIGN_DECISION, [
-            workspaceId,
-            campaignId,
-            workItemId,
-            status,
-        ])
-        return rows[0] !== undefined
+        const result = await this.entityManager.update(
+            LoyaltyCampaignEntity,
+            { workspaceId, id: campaignId, status: "draft", workItemId: IsNull() },
+            { workItemId, status: status as LoyaltyCampaignStatus },
+        )
+        return (result.affected ?? 0) > 0
     }
 
     private async writeDraft(
         params: CampaignParams,
         tx: EntityManager,
-        statement: ReturnType<typeof sql>,
-        status: string,
+        status: "draft" | "waiting",
     ): Promise<CampaignDraft> {
         const members = await this.membersOf(params.workspaceId, params.segment)
         if (members.length === 0) throw new LoyaltyCampaignsError({ code: LoyaltyCampaignsErrorCode.NoRecipients })
@@ -138,22 +133,61 @@ export class LoyaltyCampaignsService {
                 : params.brief.trim()
         const draft = this.messages.get("loyalty.promo.template", { shop, offer }, STORED_LOCALE)
         const name = (params.name.trim() === "" ? await this.defaultName(params) : params.name.trim()).slice(0, 100)
-        const [row] = await tx.query<Array<{ id: string }>>(statement, [
-            params.workspaceId,
+        const result = await tx.insert(LoyaltyCampaignEntity, {
+            workspaceId: params.workspaceId,
             name,
-            JSON.stringify(params.segment),
+            segment: params.segment,
             draft,
-            members.length,
-            params.createdBy,
-        ])
-        if (row === undefined) throw new LoyaltyCampaignsError({ code: LoyaltyCampaignsErrorCode.NotCreated })
-        return { campaignId: row.id, status, recipients: members.length, draft }
+            status,
+            recipients: members.length,
+            createdBy: params.createdBy,
+        })
+        const id = (result.identifiers[0] as { readonly id?: string } | undefined)?.id
+        if (id === undefined) throw new LoyaltyCampaignsError({ code: LoyaltyCampaignsErrorCode.NotCreated })
+        return { campaignId: id, status, recipients: members.length, draft }
     }
 
     /** How many promotions went out since an instant. */
     async sentSince(workspaceId: string, sinceIso: string): Promise<number> {
-        const rows = await this.entityManager.query<Array<{ total: number }>>(COUNT_SENT_SINCE, [workspaceId, sinceIso])
-        return rows.reduce((sum, row) => sum + row.total, 0)
+        const row = await this.entityManager
+            .createQueryBuilder(LoyaltySendEntity, "s")
+            .select("count(*)::int", "total")
+            .where("s.workspace_id = :workspaceId AND s.status = 'sent' AND s.sent_at >= :since", {
+                workspaceId,
+                since: new Date(sinceIso),
+            })
+            .getRawOne<{ total: number }>()
+        return row?.total ?? 0
+    }
+
+    /** The newest campaigns, or the one named, with their delivery counts, inside the workspace. */
+    private views(workspaceId: string, id: string | null, limit: number): Promise<Array<CampaignListRaw>> {
+        const query = this.entityManager
+            .createQueryBuilder(LoyaltyCampaignEntity, "c")
+            .select("c.id", "id")
+            .addSelect("c.name", "name")
+            .addSelect("c.segment", "segment")
+            .addSelect("c.draft", "draft")
+            .addSelect("c.status", "status")
+            .addSelect("c.workItemId", "work_item_id")
+            .addSelect("c.recipients", "recipients")
+            .addSelect("c.draftMs", "draft_ms")
+            .addSelect("c.createdBy", "created_by")
+            .addSelect("c.createdAt", "created_at")
+            .addSelect("c.finishedAt", "finished_at")
+            .addSelect("count(s.id) FILTER (WHERE s.status = 'sent')::int", "sent")
+            .addSelect("count(s.id) FILTER (WHERE s.status = 'queued')::int", "queued")
+            .addSelect("count(s.id) FILTER (WHERE s.status = 'failed')::int", "failed")
+            .addSelect("count(s.id) FILTER (WHERE s.status = 'skipped')::int", "skipped")
+            .leftJoin(LoyaltySendEntity, "s", "s.campaign_id = c.id AND s.workspace_id = c.workspace_id")
+            .where("c.workspaceId = :workspaceId", { workspaceId })
+        if (id !== null) query.andWhere("c.id = :id", { id })
+        return query
+            .groupBy("c.id")
+            .orderBy("c.createdAt", "DESC")
+            .addOrderBy("c.id", "DESC")
+            .limit(limit)
+            .getRawMany<CampaignListRaw>()
     }
 
     private async membersOf(workspaceId: string, segment: Segment): Promise<ReadonlyArray<LoyaltyMember>> {

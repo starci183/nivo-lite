@@ -1,19 +1,18 @@
 import { Test } from "@nestjs/testing"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { isTransactionManager } from "@starci/jest-preset/entity-manager"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { EventsService } from "@modules/domain/events"
 import { InvoicesService } from "@modules/domain/invoices"
 import type { InvoiceRow } from "@modules/domain/invoices"
 import { TransactionsService } from "@modules/domain/transactions"
-import type { OptionalTransaction } from "@modules/domain/transactions"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AccountingAdjustmentsService } from "./accounting-adjustments.service"
 import { AccountingAdjustmentsErrorCode } from "./errors/accounting-adjustments.error"
-import type { AccountingAdjustmentRow } from "./persistence/accounting-adjustments.rows"
-import { INSERT_ADJUSTMENT, LIST_ADJUSTMENTS } from "./persistence/accounting-adjustments.sql"
+import type { AccountingAdjustmentRow } from "./accounting-adjustments.contracts"
+import { AccountingAdjustmentEntity } from "./persistence/entities"
 
 const WORKSPACE = "ws-1"
 const USER = "user-1"
@@ -35,7 +34,19 @@ const adjustmentOf = builder<AccountingAdjustmentRow>({
     note: "Customer paid less",
     corrected_amount_vnd: 90000,
     created_by: "Lan",
-    created_at: "2026-10-12T10:00:00+00",
+    created_at: "2026-10-12T10:00:00.000Z",
+})
+
+const entityOf = builder<AccountingAdjustmentEntity>({
+    id: "adj-1",
+    workspaceId: WORKSPACE,
+    targetType: "invoice",
+    targetId: TARGET,
+    note: "Customer paid less",
+    correctedAmountVnd: "90000",
+    createdBy: "Lan",
+    createdByUser: null,
+    createdAt: new Date("2026-10-12T10:00:00Z"),
 })
 
 const invoiceOf = builder<InvoiceRow>({
@@ -74,23 +85,23 @@ const build = async (entityManager: MockEntityManager) => {
 describe("AccountingAdjustmentsService", () => {
     describe("history", () => {
         it("answers the corrections of the workspace as ready", async () => {
-            const { service } = await build(mockEntityManager({ query: [LIST_ADJUSTMENTS, [adjustmentOf()]] }))
+            const { service } = await build(mockEntityManager({ find: [AccountingAdjustmentEntity, [entityOf()]] }))
 
             await expect(service.history(WORKSPACE)).resolves.toEqual({ items: [adjustmentOf()], ready: true })
         })
 
         it("answers an empty, not ready history while the correction table is not migrated", async () => {
-            const em = mockEntityManager({ query: [LIST_ADJUSTMENTS, []] })
-            em.query.mockRejectedValueOnce({ driverError: { code: "42P01" } })
+            const em = mockEntityManager({ find: [AccountingAdjustmentEntity, []] })
+            em.find.mockRejectedValueOnce({ driverError: { code: "42P01" } })
             const { service } = await build(em)
 
             await expect(service.history(WORKSPACE)).resolves.toEqual({ items: [], ready: false })
         })
 
         it("lets any other database failure through", async () => {
-            const em = mockEntityManager({ query: [LIST_ADJUSTMENTS, []] })
+            const em = mockEntityManager({ find: [AccountingAdjustmentEntity, []] })
             const failure = new Error("connection reset")
-            em.query.mockRejectedValueOnce(failure)
+            em.find.mockRejectedValueOnce(failure)
             const { service } = await build(em)
 
             await expect(service.history(WORKSPACE)).rejects.toBe(failure)
@@ -99,32 +110,58 @@ describe("AccountingAdjustmentsService", () => {
         it.each([null, "connection reset", { code: "23505" }, { driverError: null }])(
             "preserves a non-migration database failure: %p",
             async (failure) => {
-                const em = mockEntityManager({ query: [LIST_ADJUSTMENTS, []] })
-                em.query.mockRejectedValueOnce(failure)
+                const em = mockEntityManager({ find: [AccountingAdjustmentEntity, []] })
+                em.find.mockRejectedValueOnce(failure)
                 const { service } = await build(em)
 
                 await expect(service.history(WORKSPACE)).rejects.toBe(failure)
-                expect(em.query).toHaveBeenCalledWith(LIST_ADJUSTMENTS, [WORKSPACE])
+                expect(em.find).toHaveBeenCalledWith(AccountingAdjustmentEntity, {
+                    where: { workspaceId: WORKSPACE },
+                    order: { createdAt: "DESC", id: "DESC" },
+                    take: 500,
+                })
             },
         )
 
         it("recognizes PostgreSQL's missing-table code directly", async () => {
-            const em = mockEntityManager({ query: [LIST_ADJUSTMENTS, []] })
-            em.query.mockRejectedValueOnce({ code: "42P01" })
+            const em = mockEntityManager({ find: [AccountingAdjustmentEntity, []] })
+            em.find.mockRejectedValueOnce({ code: "42P01" })
             const { service } = await build(em)
 
             await expect(service.history(WORKSPACE)).resolves.toEqual({ items: [], ready: false })
-            expect(em.query).toHaveBeenCalledWith(LIST_ADJUSTMENTS, [WORKSPACE])
+            expect(em.find).toHaveBeenCalledWith(AccountingAdjustmentEntity, {
+                where: { workspaceId: WORKSPACE },
+                order: { createdAt: "DESC", id: "DESC" },
+                take: 500,
+            })
         })
     })
 })
 
+const createdRow = (overrides: Record<string, unknown> = {}) => ({
+    id: "adj-1",
+    target_type: "invoice",
+    target_id: TARGET,
+    note: "Customer paid less",
+    corrected_amount_vnd: "90000",
+    created_by: "Lan",
+    created_at: new Date("2026-10-12T10:00:00Z"),
+    ...overrides,
+})
+
+/** A manager whose appending statement answers `raw`. */
+const appending = (raw: ReadonlyArray<unknown>) => {
+    const em = mockEntityManager()
+    const fake = fakeQueryBuilder({ execute: { raw } })
+    em.createQueryBuilder.mockReturnValue(fake.builder)
+    return { em, fake }
+}
+
 describe("AccountingAdjustmentsService", () => {
     describe("create", () => {
         it("appends the correction and its evidence line in one transaction under the member's name", async () => {
-            const { service, tx, members, events } = await build(
-                mockEntityManager({ query: [INSERT_ADJUSTMENT, [adjustmentOf()]] }),
-            )
+            const { em, fake } = appending([createdRow()])
+            const { service, tx, members, events } = await build(em)
 
             const created = await service.create(USER, WORKSPACE, {
                 targetType: "invoice",
@@ -136,12 +173,20 @@ describe("AccountingAdjustmentsService", () => {
             expect(created).toEqual(adjustmentOf())
             expect(members.require).toHaveBeenCalledWith(USER, WORKSPACE, ["owner", "manager"])
             expect(tx.commits).toBe(1)
-            expect(tx.committedWrites).toEqual([
-                {
-                    method: "query",
-                    args: [INSERT_ADJUSTMENT, [WORKSPACE, "invoice", TARGET, "Customer paid less", 90000, "Lan"]],
-                },
+            expect(em.createQueryBuilder).toHaveBeenCalledWith(AccountingAdjustmentEntity, "aa")
+            expect(fake.callsOf("values")).toEqual([
+                [
+                    {
+                        workspaceId: WORKSPACE,
+                        targetType: "invoice",
+                        targetId: TARGET,
+                        note: "Customer paid less",
+                        correctedAmountVnd: "90000",
+                        createdBy: "Lan",
+                    },
+                ],
             ])
+            expect(fake.callsOf("returning")).toEqual([[expect.stringContaining("created_at")]])
             expect(events.record.mock.calls[0]?.[0]).toEqual({
                 workspaceId: WORKSPACE,
                 leadId: "lead-1",
@@ -168,9 +213,14 @@ describe("AccountingAdjustmentsService", () => {
                 service.create(USER, WORKSPACE, { targetType: "invoice", targetId: TARGET, note: "no" }),
             ).rejects.toMatchObject({ code: AccountingAdjustmentsErrorCode.Invalid })
         })
+    })
+})
 
+describe("AccountingAdjustmentsService", () => {
+    describe("create", () => {
         it("rolls back when the insert answers no row", async () => {
-            const { service, tx, events } = await build(mockEntityManager({ query: [INSERT_ADJUSTMENT, []] }))
+            const { em } = appending([])
+            const { service, tx, events } = await build(em)
 
             await expect(
                 service.create(USER, WORKSPACE, { targetType: "invoice", targetId: TARGET, note: "Note only fix" }),
@@ -178,57 +228,18 @@ describe("AccountingAdjustmentsService", () => {
             expect(tx.rollbacks).toBe(1)
             expect(events.record).not.toHaveBeenCalled()
         })
-    })
-})
 
-describe("AccountingAdjustmentsService", () => {
-    describe("create", () => {
-        it("records a transaction note without a lead or corrected amount", async () => {
-            const adjustment = adjustmentOf({ target_type: "transaction", corrected_amount_vnd: null })
-            const { service, tx, invoices, transactions, events } = await build(
-                mockEntityManager({ query: [INSERT_ADJUSTMENT, [adjustment]] }),
-            )
-            const transaction: OptionalTransaction = {
-                id: TARGET,
-                workspace_id: WORKSPACE,
-                inbound_event_id: null,
-                amount_vnd: 100000,
-                reference: "Payment reference",
-                payer: "Mai",
-                invoice_id: null,
-                status: "unmatched",
-            }
-            transactions.find.mockResolvedValueOnce(transaction)
+        it("rolls back when the insert fails", async () => {
+            const em = mockEntityManager()
+            const failure = fakeQueryBuilder({ execute: () => Promise.reject(new Error("insert failed")) })
+            em.createQueryBuilder.mockReturnValue(failure.builder)
+            const { service, tx, events } = await build(em)
 
             await expect(
-                service.create(USER, WORKSPACE, {
-                    targetType: "transaction",
-                    targetId: TARGET,
-                    note: "  Customer   paid less ",
-                }),
-            ).resolves.toEqual(adjustment)
-
-            expect(transactions.find).toHaveBeenCalledWith(WORKSPACE, TARGET)
-            expect(invoices.find).not.toHaveBeenCalled()
-            expect(tx.commits).toBe(1)
-            expect(tx.committedWrites).toEqual([
-                {
-                    method: "query",
-                    args: [INSERT_ADJUSTMENT, [WORKSPACE, "transaction", TARGET, "Customer paid less", null, "Lan"]],
-                },
-            ])
-            expect(events.record).toHaveBeenCalledWith(
-                {
-                    workspaceId: WORKSPACE,
-                    leadId: null,
-                    kind: "accounting.adjustment",
-                    actor: "Lan",
-                    summary: "Customer paid less",
-                    evidence: "Customer paid less",
-                },
-                expect.any(Object),
-            )
-            expect(isTransactionManager(events.record.mock.calls[0]?.[1])).toBe(true)
+                service.create(USER, WORKSPACE, { targetType: "invoice", targetId: TARGET, note: "Note only fix" }),
+            ).rejects.toThrow("insert failed")
+            expect(tx.rollbacks).toBe(1)
+            expect(events.record).not.toHaveBeenCalled()
         })
     })
 })

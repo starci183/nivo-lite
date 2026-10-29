@@ -7,16 +7,7 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { MentionDirectoryService } from "./mention-directory.service"
-import {
-    FIND_AGENT_REFS,
-    FIND_MEMBER_ID,
-    FIND_MEMBER_NAME,
-    FIND_MEMBER_REFS,
-    FIND_ROOM_GROUPS,
-    LIST_DIRECTORY_AGENTS,
-    LIST_DIRECTORY_MEMBERS,
-    LIST_DIRECTORY_ROOMS,
-} from "./persistence/thread-messages.sql"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 
 const MEMBER: WorkspaceMember = {
     userId: "van",
@@ -34,31 +25,35 @@ interface Answers {
     readonly people?: ReadonlyArray<unknown>
     readonly agents?: ReadonlyArray<unknown>
     readonly rooms?: ReadonlyArray<unknown>
-    readonly name?: ReadonlyArray<unknown>
-    readonly memberId?: ReadonlyArray<unknown>
 }
 
-/** What the database double answers: rows per statement. */
-type DatabaseStubs = {
-    readonly query: ReadonlyArray<readonly [string, unknown]>
+/**
+ * A manager double for a resolve or a directory read: the first query builder answers the members, the second the agents and the
+ * third the rooms, each overridable per spec.
+ */
+const managerOf = (answers: Answers = {}) => {
+    const em = mockEntityManager()
+    const people = fakeQueryBuilder({
+        getRawMany: answers.people ?? [{ id: MINH, display_name: "Mr Minh", role: "manager", room_key: "sales" }],
+    })
+    const agents = fakeQueryBuilder({
+        getRawMany: answers.agents ?? [{ id: SALES_AI, name: "AI Sales", module: "sales" }],
+    })
+    const rooms = fakeQueryBuilder({ getRawMany: answers.rooms ?? [{ key: "sales", name: "Sales" }] })
+    em.createQueryBuilder
+        .mockReturnValueOnce(people.builder as never)
+        .mockReturnValueOnce(agents.builder as never)
+        .mockReturnValueOnce(rooms.builder as never)
+    return { em, people, agents, rooms }
 }
 
-/** The rows the database double answers for each statement, overridable per spec. */
-const stubsOf = (answers: Answers = {}): DatabaseStubs => ({
-    query: [
-        [
-            FIND_MEMBER_REFS,
-            answers.people ?? [{ id: MINH, display_name: "Mr Minh", role: "manager", room_key: "sales" }],
-        ],
-        [FIND_AGENT_REFS, answers.agents ?? [{ id: SALES_AI, name: "AI Sales" }]],
-        [FIND_ROOM_GROUPS, answers.rooms ?? [{ key: "sales", name: "Sales" }]],
-        [LIST_DIRECTORY_MEMBERS, [{ id: MINH, display_name: "Mr Minh", role: "manager", room_key: "sales" }]],
-        [LIST_DIRECTORY_AGENTS, [{ id: SALES_AI, name: "AI Sales", module: "sales" }]],
-        [LIST_DIRECTORY_ROOMS, [{ key: "sales", name: "Sales" }]],
-        [FIND_MEMBER_NAME, answers.name ?? [{ display_name: "Mr Minh" }]],
-        [FIND_MEMBER_ID, answers.memberId ?? [{ id: MINH }]],
-    ],
-})
+/** A manager double whose only query builder answers a single raw row, or nothing. */
+const singleRowOf = (row: unknown) => {
+    const em = mockEntityManager()
+    const read = fakeQueryBuilder({ getRawOne: row })
+    em.createQueryBuilder.mockReturnValueOnce(read.builder as never)
+    return { em, read }
+}
 
 const build = async (em: ReturnType<typeof mockEntityManager>) => {
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(MEMBER) })
@@ -81,11 +76,18 @@ const build = async (em: ReturnType<typeof mockEntityManager>) => {
 const registerDirectory = () => {
     describe("directory", () => {
         it("lists people, active agents and groups for a member of the workspace", async () => {
-            const { service, members } = await build(mockEntityManager(stubsOf()))
+            const { em, people, agents, rooms } = managerOf()
+            const { service, members } = await build(em)
 
             const directory = await service.directory("van", "ws-1", "vi")
 
             expect(members.require).toHaveBeenCalledWith("van", "ws-1")
+            expect(people.callsOf("from")).toContainEqual(["public.workspace_members", "m"])
+            expect(people.callsOf("limit")).toContainEqual([200])
+            expect(agents.callsOf("from")).toEqual([["public.agents", "a"]])
+            expect(agents.callsOf("limit")).toEqual([[100]])
+            expect(rooms.callsOf("from")).toContainEqual(["public.office_rooms", "r"])
+            expect(rooms.callsOf("limit")).toContainEqual([20])
             expect(directory.members).toEqual([{ kind: "member", id: MINH, name: "Mr Minh", role: "manager" }])
             expect(directory.agents).toEqual([{ kind: "agent", id: SALES_AI, name: "AI Sales", role: "sales" }])
             expect(directory.groups).toEqual([
@@ -101,7 +103,7 @@ const registerDirectory = () => {
 const registerResolve = () => {
     describe("resolve", () => {
         it("names a member, an agent, a role group and a room group", async () => {
-            const em = mockEntityManager(stubsOf())
+            const { em, people, agents, rooms } = managerOf()
             const { service } = await build(em)
 
             const views = await service.resolve(
@@ -122,13 +124,18 @@ const registerResolve = () => {
                 { kind: "group", id: "role:manager", name: "thread.group.role.manager" },
                 { kind: "group", id: "room:sales", name: "thread.group.room:Sales" },
             ])
-            expect(em.query).toHaveBeenCalledWith(FIND_MEMBER_REFS, ["ws-1", [MINH]])
-            expect(em.query).toHaveBeenCalledWith(FIND_AGENT_REFS, ["ws-1", [SALES_AI]])
-            expect(em.query).toHaveBeenCalledWith(FIND_ROOM_GROUPS, ["ws-1", ["sales"]])
+            expect(people.callsOf("andWhere")).toEqual([["m.id = ANY(:memberIds)", { memberIds: [MINH] }]])
+            expect(agents.callsOf("where")).toEqual([
+                [
+                    "a.workspace_id = :workspaceId AND a.status = 'active' AND a.id = ANY(:agentIds)",
+                    { workspaceId: "ws-1", agentIds: [SALES_AI] },
+                ],
+            ])
+            expect(rooms.callsOf("andWhere")).toContainEqual(["r.key = ANY(:keys)", { keys: ["sales"] }])
         })
 
         it("refuses a member who is not an active member of the workspace", async () => {
-            const em = mockEntityManager(stubsOf({ people: [] }))
+            const { em } = managerOf({ people: [] })
             const { service } = await build(em)
 
             await expect(service.resolve(em, "ws-1", [{ kind: "member", id: MINH }], "vi")).rejects.toMatchObject({
@@ -138,7 +145,7 @@ const registerResolve = () => {
         })
 
         it("refuses an agent that is not an active agent of the workspace", async () => {
-            const em = mockEntityManager(stubsOf({ agents: [] }))
+            const { em } = managerOf({ agents: [] })
             const { service } = await build(em)
 
             await expect(service.resolve(em, "ws-1", [{ kind: "agent", id: SALES_AI }], "vi")).rejects.toMatchObject({
@@ -147,7 +154,7 @@ const registerResolve = () => {
         })
 
         it("refuses a room nobody sits in", async () => {
-            const em = mockEntityManager(stubsOf({ rooms: [] }))
+            const { em } = managerOf({ rooms: [] })
             const { service } = await build(em)
 
             await expect(service.resolve(em, "ws-1", [{ kind: "group", id: "room:care" }], "vi")).rejects.toMatchObject(
@@ -163,15 +170,18 @@ const registerResolve = () => {
 const registerIdentity = () => {
     describe("identity", () => {
         it("finds the member id of a signed-in account", async () => {
-            const em = mockEntityManager(stubsOf())
+            const { em, read } = singleRowOf({ id: MINH })
             const { service } = await build(em)
 
             await expect(service.memberIdOf(em, "ws-1", "auth-user")).resolves.toBe(MINH)
-            expect(em.query).toHaveBeenCalledWith(FIND_MEMBER_ID, ["ws-1", "auth-user"])
+            expect(read.callsOf("from")).toEqual([["public.workspace_members", "m"]])
+            expect(read.callsOf("where")).toEqual([
+                ["m.workspace_id = :workspaceId AND m.user_id = :userId", { workspaceId: "ws-1", userId: "auth-user" }],
+            ])
         })
 
         it("refuses an account that is not a member of the workspace", async () => {
-            const em = mockEntityManager(stubsOf({ memberId: [] }))
+            const { em } = singleRowOf(undefined)
             const { service } = await build(em)
 
             await expect(service.memberIdOf(em, "ws-1", "stranger")).rejects.toMatchObject({
@@ -180,8 +190,8 @@ const registerIdentity = () => {
         })
 
         it("accepts an active member id and refuses any other", async () => {
-            const active = mockEntityManager(stubsOf())
-            const absent = mockEntityManager(stubsOf({ people: [] }))
+            const active = managerOf().em
+            const absent = managerOf({ people: [] }).em
             const { service } = await build(active)
 
             await expect(service.ensureMember(active, "ws-1", MINH)).resolves.toBeUndefined()
@@ -195,19 +205,39 @@ const registerIdentity = () => {
 const registerNames = () => {
     describe("names", () => {
         it("names a member of the workspace and answers empty for one that is not", async () => {
-            const em = mockEntityManager(stubsOf())
+            const { em } = singleRowOf({ display_name: "Mr Minh" })
             const { service } = await build(em)
-            const gone = mockEntityManager(stubsOf({ name: [] }))
+            const gone = singleRowOf(undefined).em
 
             await expect(service.nameOfMember(em, "ws-1", MINH)).resolves.toBe("Mr Minh")
             await expect(service.nameOfMember(gone, "ws-1", "nobody")).resolves.toBe("")
         })
 
         it("maps the active members among some ids to their names", async () => {
-            const em = mockEntityManager(stubsOf())
+            const { em, people } = managerOf()
             const { service } = await build(em)
 
             await expect(service.namesOf(em, "ws-1", [MINH, "left"])).resolves.toEqual({ [MINH]: "Mr Minh" })
+            expect(people.callsOf("andWhere")).toEqual([["m.id = ANY(:memberIds)", { memberIds: [MINH, "left"] }]])
+        })
+    })
+}
+
+const registerAgent = () => {
+    describe("findAgent", () => {
+        it("finds an agent of the workspace by id, or answers null", async () => {
+            const found = singleRowOf({ id: SALES_AI, name: "AI Sales" })
+            const missing = singleRowOf(undefined)
+            const { service } = await build(found.em)
+
+            await expect(service.findAgent(found.em, "ws-1", SALES_AI)).resolves.toEqual({
+                id: SALES_AI,
+                name: "AI Sales",
+            })
+            await expect(service.findAgent(missing.em, "ws-1", "nobody")).resolves.toBeNull()
+            expect(found.read.callsOf("where")).toEqual([
+                ["a.workspace_id = :workspaceId AND a.id = :agentId", { workspaceId: "ws-1", agentId: SALES_AI }],
+            ])
         })
     })
 }
@@ -217,4 +247,5 @@ describe("MentionDirectoryService", () => {
     registerResolve()
     registerIdentity()
     registerNames()
+    registerAgent()
 })

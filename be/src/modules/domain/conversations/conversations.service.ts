@@ -13,8 +13,25 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ChatTurnQueue } from "@modules/queues/chat-turn"
 import type { FrontAgent, MetaInbound, TelegramInbound, ZaloInbound } from "./conversations.contracts"
-import type { FrontAgentRow } from "./persistence/conversations.rows"
-import { FIND_FRONT_AGENT } from "./persistence/conversations.sql"
+
+/** The agent modules that may greet a visitor, in the order they are preferred. */
+const FRONT_MODULES = ["chatbot", "booking", "loyalty"] as const
+
+/** The front-door agent of a connection. */
+interface FrontAgentRow {
+    /** The agent id. */
+    readonly id: string
+    /** The greeting that opens a visit. */
+    readonly greeting: string
+}
+
+const isFrontAgentRow = (value: unknown): value is FrontAgentRow =>
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    typeof value.id === "string" &&
+    "greeting" in value &&
+    typeof value.greeting === "string"
 
 /** The language of the lines the workspace customers and staff read from the system. */
 const LOCALE = "vi"
@@ -256,7 +273,20 @@ export class ConversationsService {
     }
 
     private async frontAgentOf(connectionId: string, manager: EntityManager): Promise<FrontAgent | undefined> {
-        const row = (await manager.query<Array<FrontAgentRow>>(FIND_FRONT_AGENT, [connectionId]))[0]
+        const rows: ReadonlyArray<unknown> = await manager
+            .createQueryBuilder()
+            .select("a.id", "id")
+            .addSelect("a.greeting", "greeting")
+            .from("public.agent_connections", "l")
+            .innerJoin("agents", "a", "a.id = l.agent_id")
+            .where("l.connection_id = :connectionId", { connectionId })
+            .andWhere("l.purpose = 'inbound_chat' AND l.access <> 'read' AND a.status = 'active'")
+            .andWhere("a.module IN (:...modules)", { modules: FRONT_MODULES })
+            .orderBy("array_position(ARRAY['chatbot', 'booking', 'loyalty'], a.module)")
+            .addOrderBy("a.created_at")
+            .limit(1)
+            .getRawMany()
+        const row = rows.find(isFrontAgentRow)
         return row === undefined ? undefined : { id: row.id, greeting: row.greeting }
     }
 }

@@ -1,4 +1,9 @@
 import type { EntityManager } from "typeorm"
+import { AgentEntity } from "@modules/domain/agents"
+import { mcpToolGrantsEntities } from "@modules/domain/mcp-tool-grants"
+import { WorkspaceEntity } from "@modules/domain/workspaces"
+
+const [McpToolGrantEntity] = mcpToolGrantsEntities
 
 /** The explicit identities of one MCP credential scenario, supplied by the world. */
 interface McpAgentIdentity {
@@ -11,20 +16,30 @@ interface McpAgentIdentity {
 export const persistMcpAgentRows = async (manager: EntityManager, identity: McpAgentIdentity): Promise<void> => {
     await manager.transaction(async (tx) => {
         await tx.insert("auth.users", { id: identity.userId })
-        await tx.insert("public.workspaces", { id: identity.workspaceId, owner_id: identity.userId, name: "MCP proof" })
-        await tx.insert("public.agents", {
+        await tx.insert(WorkspaceEntity, { id: identity.workspaceId, ownerId: identity.userId, name: "MCP proof" })
+        await tx.insert(AgentEntity, {
             id: identity.agentId,
-            workspace_id: identity.workspaceId,
+            workspaceId: identity.workspaceId,
             name: "Desk agent",
             handle: "desk",
             role: "Reads the bank feed",
             instructions: "Answer from the bank feed only.",
         })
-        await tx.insert("public.mcp_tool_grants", {
-            workspace_id: identity.workspaceId,
-            agent_id: identity.agentId,
+        await tx.insert(McpToolGrantEntity, {
+            workspaceId: identity.workspaceId,
+            agentId: identity.agentId,
             tool: "sepay.transactions.list",
             mode: "auto",
         })
     })
+}
+
+/** Grants an agent every tool of a connector in auto mode. */
+export const grantConnectorTools = async (
+    manager: EntityManager,
+    workspaceId: string,
+    agentId: string,
+    tool: string,
+): Promise<void> => {
+    await manager.insert(McpToolGrantEntity, { workspaceId, agentId, tool, mode: "auto" })
 }

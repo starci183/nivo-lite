@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
 import { AgentsService } from "@modules/domain/agents"
-import { AutomationBusinessEventsService, BusinessEventsService } from "@modules/domain/automations"
 import { EvidenceService } from "@modules/domain/decisions"
 import type {
     Performed,
@@ -18,6 +18,10 @@ import type { LeadRecordRow } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
 import type { OptionalOrder } from "@modules/domain/orders"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
+import { DealWonEvent, LeadCapturedEvent, OrderConfirmedEvent } from "@modules/events/api"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectEventBus } from "@modules/platform/event-bus"
+import type { EventBus } from "@modules/platform/event-bus"
 import { WorkPerformersError, WorkPerformersErrorCode } from "./errors/work-performers.error"
 import { InjectPromptWriter } from "./work-performers.decorators"
 import type { PromptWriter } from "./work-performers.port"
@@ -34,10 +38,10 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
         private readonly inbound: InboundEventsService,
         private readonly agents: AgentsService,
         private readonly responsibilities: ResponsibilityJournalService,
-        @InjectPromptWriter() private readonly deepseek: PromptWriter,
+        @InjectPromptWriter() private readonly prompts: PromptWriter,
         private readonly evidence: EvidenceService,
-        private readonly events: AutomationBusinessEventsService,
-        private readonly leadEvents: BusinessEventsService,
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectEventBus() private readonly bus: EventBus,
     ) {}
 
     /** Drafts the order of the input (reading it with one model call only when the channel gave no amount) and finds its customer. */
@@ -47,7 +51,7 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
         const given = numberOf(fields.amount_vnd) ?? item.proposal.amount_vnd ?? event?.amount_vnd ?? null
         const read =
             given === null && event !== null && event.body.trim() !== ""
-                ? await this.deepseek.extractOrder(this.kit.scope(ctx), event.body)
+                ? await this.prompts.extractOrder(this.kit.scope(ctx), event.body)
                 : null
         const amount = given ?? read?.amount_vnd ?? null
         const items = firstText([textOf(fields.items), read?.items ?? "", event?.body.trim() ?? ""])
@@ -71,75 +75,94 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
         }
     }
 
-    /** Confirms the draft once (a repeat never re-confirms or rolls back), marks the deal won and leaves the evidence line. */
+    /**
+     * Confirms the draft once (a repeat never re-confirms or rolls back), marks the deal won, leaves the evidence line and publishes
+     * `order_confirmed` and `deal_won`, all in one transaction.
+     */
     async perform(ctx: WorkContext, item: WorkItem, proposal: Proposal, by: PerformedBy): Promise<Performed> {
         const orderId = this.orderIdOf(item)
         const amount = proposal.amount_vnd ?? numberOf(proposal.fields.amount_vnd)
-        const order = await this.orders.confirm({
-            workspaceId: ctx.workspaceId,
-            orderId,
-            amountVnd: amount,
-            items: textOf(proposal.fields.items),
-            confirmedBy: by.name,
+        const confirmed = await this.entityManager.transaction(async (tx) => {
+            const order = await this.orders.confirm(
+                {
+                    workspaceId: ctx.workspaceId,
+                    orderId,
+                    amountVnd: amount,
+                    items: textOf(proposal.fields.items),
+                    confirmedBy: by.name,
+                },
+                tx,
+            )
+            if (order === null) return null
+            if (order.lead_id !== null) await this.leads.markWon(ctx.workspaceId, order.lead_id, tx)
+            const summary = this.kit.text(ctx, "orderConfirmed", {
+                no: order.order_no,
+                amount: this.kit.money(ctx, amount),
+            })
+            await this.evidence.log(
+                ctx,
+                {
+                    lead_id: order.lead_id,
+                    work_item_id: item.id,
+                    kind: "order.confirmed",
+                    actor: by.name,
+                    summary,
+                    evidence: textOf(proposal.fields.items) === "" ? null : textOf(proposal.fields.items),
+                },
+                tx,
+            )
+            await this.publishConfirmed(ctx, order, proposal, by, amount, tx)
+            return { order, summary }
         })
-        if (order === null) return this.alreadyConfirmed(ctx, orderId)
-        if (order.lead_id !== null) await this.leads.markWon(ctx.workspaceId, order.lead_id)
-        const summary = this.kit.text(ctx, "orderConfirmed", {
-            no: order.order_no,
-            amount: this.kit.money(ctx, amount),
-        })
-        await this.evidence.log(ctx, {
-            lead_id: order.lead_id,
-            work_item_id: item.id,
-            kind: "order.confirmed",
-            actor: by.name,
-            summary,
-            evidence: textOf(proposal.fields.items) === "" ? null : textOf(proposal.fields.items),
-        })
-        await this.publishConfirmed(ctx, order, proposal, by, amount)
-        return { summary, evidence: "captured", href: leadHref(order.lead_id), lead_id: order.lead_id }
+        if (confirmed === null) return this.alreadyConfirmed(ctx, orderId)
+        return {
+            summary: confirmed.summary,
+            evidence: "captured",
+            href: leadHref(confirmed.order.lead_id),
+            lead_id: confirmed.order.lead_id,
+        }
     }
 
-    /** `order.confirmed` for the order, and `deal.won` for its customer when it has one: the pipelines and webhooks listening hear them. */
+    /** `order_confirmed` for the order, and `deal_won` for its customer when it has one: the reactors listening hear them once committed. */
     private async publishConfirmed(
         ctx: WorkContext,
         order: NonNullable<OptionalOrder>,
         proposal: Proposal,
         by: PerformedBy,
         amount: number | null,
+        tx: EntityManager,
     ): Promise<void> {
         const buyer = order.lead_id === null ? null : await this.leads.find(ctx.workspaceId, order.lead_id)
         const customer = buyer?.contact_name ?? textOf(proposal.fields.customer)
-        await this.events.publish(
-            ctx.workspaceId,
-            "order.confirmed",
-            {
-                order_id: order.id,
-                order_no: order.order_no,
-                lead_id: order.lead_id,
+        await this.bus.publish(
+            OrderConfirmedEvent.create({
+                workspaceId: ctx.workspaceId,
+                orderId: order.id,
+                orderNo: order.order_no,
+                leadId: order.lead_id,
                 customer,
                 items: textOf(proposal.fields.items),
-                amount_vnd: amount,
+                amountVnd: amount,
                 channel: buyer?.channel ?? null,
-                confirmed_by: by.name,
-                status: "confirmed",
-            },
-            `order.confirmed:${order.id}`,
+                confirmedBy: by.name,
+            }),
+            tx,
+            `order_confirmed:${order.id}`,
         )
         if (order.lead_id === null) return
-        await this.events.publish(
-            ctx.workspaceId,
-            "deal.won",
-            {
-                lead_id: order.lead_id,
+        await this.bus.publish(
+            DealWonEvent.create({
+                workspaceId: ctx.workspaceId,
+                leadId: order.lead_id,
                 name: customer,
                 company: buyer?.company ?? null,
                 channel: buyer?.channel ?? null,
                 need: buyer?.need ?? null,
-                order_no: order.order_no,
-                amount_vnd: amount,
-            },
-            `deal.won:${order.lead_id}`,
+                orderNo: order.order_no,
+                amountVnd: amount,
+            }),
+            tx,
+            `deal_won:${order.lead_id}`,
         )
     }
 
@@ -225,27 +248,52 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
         })
         if (known !== null) return known
         const contactName = event?.sender_name ?? ""
-        const lead = await this.leads.capture({
-            workspaceId: ctx.workspaceId,
-            contactName: contactName === "" ? this.kit.text(ctx, "notShared") : contactName,
-            company: this.kit.text(ctx, "notShared"),
-            channel: channel === "" ? "—" : channel,
-            need: need === "" ? "—" : need,
-            phone,
-            email,
+        const channelLabel = channel === "" ? "—" : channel
+        const actor =
+            (await this.agents.agentOfDepartment(ctx.workspaceId, "chatbot", null))?.name ??
+            (await this.kit.department(ctx, "chatbot"))
+        const lead = await this.entityManager.transaction(async (tx) => {
+            const created = await this.leads.capture(
+                {
+                    workspaceId: ctx.workspaceId,
+                    contactName: contactName === "" ? this.kit.text(ctx, "notShared") : contactName,
+                    company: this.kit.text(ctx, "notShared"),
+                    channel: channelLabel,
+                    need: need === "" ? "—" : need,
+                    phone,
+                    email,
+                },
+                tx,
+            )
+            await this.evidence.log(
+                ctx,
+                {
+                    lead_id: created.id,
+                    work_item_id: item.id,
+                    kind: "lead.captured",
+                    actor,
+                    summary: this.kit.text(ctx, "capturedFrom", { channel: created.channel }),
+                    evidence: event?.body === undefined || event.body === "" ? null : event.body,
+                },
+                tx,
+            )
+            await this.bus.publish(
+                LeadCapturedEvent.create({
+                    workspaceId: ctx.workspaceId,
+                    leadId: created.id,
+                    contactName: created.contact_name,
+                    company: created.company,
+                    channel: created.channel,
+                    need: created.need,
+                    phone: created.phone,
+                    email: created.email,
+                }),
+                tx,
+                `lead_captured:${created.id}`,
+            )
+            return created
         })
         await this.responsibilities.ensureFor(ctx, lead.id)
-        await this.leadEvents.leadCreated(ctx.workspaceId, lead)
-        await this.evidence.log(ctx, {
-            lead_id: lead.id,
-            work_item_id: item.id,
-            kind: "lead.captured",
-            actor:
-                (await this.agents.agentOfDepartment(ctx.workspaceId, "chatbot", null))?.name ??
-                (await this.kit.department(ctx, "chatbot")),
-            summary: this.kit.text(ctx, "capturedFrom", { channel: lead.channel }),
-            evidence: event?.body === undefined || event.body === "" ? null : event.body,
-        })
         return lead
     }
 }

@@ -3,27 +3,26 @@ import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { LeadsError, LeadsErrorCode } from "./errors/leads.error"
 import { LeadGenWorkbenchService } from "./leadgen-workbench.service"
-import type { LeadGenLeadRow } from "./persistence/leadgen-workbench.rows"
-import {
-    LIST_LEADGEN_CONVERSATIONS,
-    LIST_LEADGEN_ITEMS,
-    LIST_LEADGEN_LEADS,
-    LIST_LEADGEN_MESSAGES,
-} from "./persistence/leadgen-workbench.sql"
+import type { LeadGenLeadRecord } from "./leadgen-workbench.contracts"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 
 const NOW = Date.parse("2026-10-12T03:00:00.000Z")
 const SINCE = new Date(NOW - 90 * 86_400_000).toISOString()
 
-const build = async () => {
-    const em = mockEntityManager({
-        query: [
-            [LIST_LEADGEN_LEADS, []],
-            [LIST_LEADGEN_ITEMS, []],
-            [LIST_LEADGEN_CONVERSATIONS, []],
-            [LIST_LEADGEN_MESSAGES, []],
-        ],
-    })
+/** Four empty datasets, in the order the workbench reads them: leads, work items, conversations, messages. */
+const EMPTY: ReadonlyArray<QueryBuilderAnswers> = [
+    { getRawMany: [] },
+    { getRawMany: [] },
+    { getRawMany: [] },
+    { getRawMany: [] },
+]
+
+const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = EMPTY) => {
+    const em = mockEntityManager()
+    const fakes = queueQueryBuilders(em, answers)
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue({
         userId: "user-1",
@@ -41,12 +40,12 @@ const build = async () => {
             { provide: WorkspaceMembersService, useValue: members },
         ],
     }).compile()
-    return { bench: moduleRef.get(LeadGenWorkbenchService), em, members }
+    return { bench: moduleRef.get(LeadGenWorkbenchService), em, members, fakes }
 }
 
 describe("LeadGenWorkbenchService", () => {
     it("answers an empty workbench for a workspace with no lead-gen rows", async () => {
-        const { bench, em, members } = await build()
+        const { bench, fakes, members } = await build()
 
         await expect(bench.read("user-1", "ws-1", null)).resolves.toEqual({
             metrics: {
@@ -66,14 +65,18 @@ describe("LeadGenWorkbenchService", () => {
         })
 
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-        expect(em.query).toHaveBeenCalledWith(LIST_LEADGEN_MESSAGES, ["ws-1", SINCE])
+        expect(fakes[3]?.callsOf("where")).toEqual([
+            [
+                "m.workspace_id = :workspaceId AND m.created_at >= CAST(:since AS timestamptz)",
+                { workspaceId: "ws-1", since: SINCE },
+            ],
+        ])
     })
 })
 
 describe("LeadGenWorkbenchService", () => {
     it("reads every dataset for the authorized workspace and treats omitted installation scope as all instances", async () => {
-        const { bench, em } = await build()
-        const normal = mock<LeadGenLeadRow>({
+        const normal = mock<LeadGenLeadRecord>({
             id: "normal",
             contact_name: "An",
             company: "Acme",
@@ -83,13 +86,16 @@ describe("LeadGenWorkbenchService", () => {
             installation_id: "agent-2",
             created_at: "2026-10-12T02:00:00.000Z",
         })
-        const testContact = mock<LeadGenLeadRow>({ ...normal, id: "test-contact", contact_name: "UAT person" })
-        const testCompany = mock<LeadGenLeadRow>({ ...normal, id: "test-company", company: "DBG company" })
-        const absentNames = Object.assign(mock<LeadGenLeadRow>({ ...normal, id: "legacy" }), {
+        const testContact = mock<LeadGenLeadRecord>({ ...normal, id: "test-contact", contact_name: "UAT person" })
+        const testCompany = mock<LeadGenLeadRecord>({ ...normal, id: "test-company", company: "DBG company" })
+        const absentNames = Object.assign(mock<LeadGenLeadRecord>({ ...normal, id: "legacy" }), {
             contact_name: undefined,
             company: undefined,
         })
-        em.query.mockResolvedValueOnce([normal, testContact, testCompany, absentNames])
+        const { bench, em, fakes } = await build([
+            { getRawMany: [normal, testContact, testCompany, absentNames] },
+            ...EMPTY.slice(1),
+        ])
 
         const result = await bench.read("user-1", "ws-1", undefined)
 
@@ -118,18 +124,17 @@ describe("LeadGenWorkbenchService", () => {
             },
         ])
         expect(result.metrics.newToday).toBe(2)
-        expect(em.query).toHaveBeenCalledTimes(4)
-        expect(em.query).toHaveBeenNthCalledWith(1, LIST_LEADGEN_LEADS, ["ws-1"])
-        expect(em.query).toHaveBeenNthCalledWith(2, LIST_LEADGEN_ITEMS, ["ws-1"])
-        expect(em.query).toHaveBeenNthCalledWith(3, LIST_LEADGEN_CONVERSATIONS, ["ws-1"])
-        expect(em.query).toHaveBeenNthCalledWith(4, LIST_LEADGEN_MESSAGES, ["ws-1", SINCE])
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(4)
+        expect(fakes.map((fake) => fake.callsOf("limit"))).toEqual([[[500]], [[600]], [[1000]], [[8000]]])
+        expect(fakes[1]?.callsOf("from")).toEqual([["public.work_items", "w"]])
+        expect(fakes[2]?.callsOf("from")).toEqual([["public.agent_conversations", "c"]])
+        expect(fakes[3]?.callsOf("from")).toEqual([["public.agent_messages", "m"]])
     })
 })
 
 describe("LeadGenWorkbenchService", () => {
     it("applies an explicit installation scope", async () => {
-        const { bench, em } = await build()
-        const own = mock<LeadGenLeadRow>({
+        const own = mock<LeadGenLeadRecord>({
             id: "own",
             contact_name: "An",
             company: "Acme",
@@ -139,8 +144,8 @@ describe("LeadGenWorkbenchService", () => {
             installation_id: "agent-1",
             created_at: "2026-10-12T02:00:00.000Z",
         })
-        const other = mock<LeadGenLeadRow>({ ...own, id: "other", installation_id: "agent-2" })
-        em.query.mockResolvedValueOnce([own, other])
+        const other = mock<LeadGenLeadRecord>({ ...own, id: "other", installation_id: "agent-2" })
+        const { bench } = await build([{ getRawMany: [own, other] }, ...EMPTY.slice(1)])
 
         const result = await bench.read("user-1", "ws-1", "agent-1")
 
@@ -149,23 +154,25 @@ describe("LeadGenWorkbenchService", () => {
     })
 
     it("propagates membership refusal before reading workspace data", async () => {
-        const { bench, em, members } = await build()
+        const { bench, em, members } = await build([])
         const refusal = { code: "workspace.not_member", params: { workspaceId: "ws-1" } }
         members.require.mockRejectedValueOnce(refusal)
 
         await expect(bench.read("outsider", "ws-1", null)).rejects.toBe(refusal)
 
         expect(members.require).toHaveBeenCalledWith("outsider", "ws-1")
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("propagates a failed dataset read", async () => {
-        const { bench, em } = await build()
-        const failure = { code: "database.unavailable" }
-        em.query.mockRejectedValueOnce(failure)
+        const { bench, em } = await build(EMPTY.slice(0, 1))
+        const failure = new LeadsError({ code: LeadsErrorCode.NotFound, params: { id: "database" } })
+        em.createQueryBuilder.mockImplementationOnce(() => {
+            throw failure
+        })
 
         await expect(bench.read("user-1", "ws-1", null)).rejects.toBe(failure)
 
-        expect(em.query).toHaveBeenCalledTimes(4)
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(2)
     })
 })

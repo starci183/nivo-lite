@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConnectorInterestModule } from "@modules/domain/connector-interest"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./connections.module-definition"
+import { ConnectionsUpkeepService } from "./connections-upkeep.service"
 import { ConnectionsService } from "./connections.service"
 
 @Module({})
@@ -13,7 +14,7 @@ export class ConnectionsModule extends ConfigurableModuleClass {
         return {
             ...base,
             imports: [...(base.imports ?? []), ConnectorInterestModule.register({})],
-            providers: [...(base.providers ?? []), ConnectionsService],
+            providers: [...(base.providers ?? []), ConnectionsService, ConnectionsUpkeepService],
             exports: [ConnectionsService],
         }
     }

@@ -3,9 +3,13 @@ import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { JobHistoryRetentionService } from "./job-history-retention.service"
-import { SWEEP_SYSTEM_HISTORY } from "./persistence/job-ops.sql"
 
-const counts = (outbox: number, jobs = 0, cron = 0, http = 0) => [{ result: { outbox, jobs, cron, http } }]
+/** The statement `callDbFunction` sends for the sweep function. */
+const SWEEP_SYSTEM_HISTORY = "SELECT * FROM public.system_history_sweep($1, $2, $3)"
+
+const counts = (outbox: number, jobs = 0, cron = 0, http = 0) => [
+    { system_history_sweep: { outbox, jobs, cron, http } },
+]
 
 const build = async (em: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({

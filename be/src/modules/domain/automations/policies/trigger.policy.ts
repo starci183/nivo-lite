@@ -1,6 +1,5 @@
 import type { EventData, ShopWithHours } from "../automations.contracts"
 import type { PipelineConfig } from "@modules/domain/automation-pipelines"
-import { hhmmToMinutes, isOutsideHours, vnClock } from "./hours.policy"
 
 /** One day in milliseconds. */
 export const DAY_MS = 86_400_000
@@ -75,16 +74,6 @@ export const planTrigger = (input: TriggerInput): TriggerPlan | null => {
     }
     if (templateKey === "sheet_orders" && SHEET_EVENTS.has(event)) {
         return plan(`sheet:${dedupe}`, textOf(data.order_no) || textOf(data.lead_id), { event, data, at })
-    }
-    if (templateKey === "after_hours" && event === "message.inbound") {
-        const range = input.shop.hoursRange ?? {
-            from: hhmmToMinutes(String(config.openFrom)),
-            to: hhmmToMinutes(String(config.openTo)),
-        }
-        const clock = vnClock(input.at)
-        if (!isOutsideHours(clock.minute, range)) return null
-        const conversation = textOf(data.conversation_id)
-        return plan(`after:${conversation}:${clock.day}`, conversation, { ...data, dedupe })
     }
     return null
 }

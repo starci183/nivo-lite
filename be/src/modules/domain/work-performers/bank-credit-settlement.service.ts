@@ -1,8 +1,12 @@
 import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
 import { WorkEngineService } from "@modules/domain/decisions"
 import type { WorkContext } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
-import { isBankCreditPayload } from "@modules/queues/bank-credit"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectInbox } from "@modules/platform/inbox"
+import type { Inbox } from "@modules/platform/inbox"
+import type { BankCreditBookedPayload } from "@modules/events/api"
 import { ReconcilePaymentPerformerService } from "./reconcile-payment-performer.service"
 
 /** The action that reconciles a payment with the invoice it settles. */
@@ -19,25 +23,33 @@ const RECORD_LOCALE = "vi"
  */
 export class BankCreditSettlementService {
     constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectInbox() private readonly inbox: Inbox,
         private readonly reconcile: ReconcilePaymentPerformerService,
         private readonly engine: WorkEngineService,
         private readonly inbound: InboundEventsService,
     ) {}
 
-    /** The effect of one reconcile-bank-credit job; any other payload changes nothing. */
-    async settle(payload: object): Promise<void> {
-        if (!isBankCreditPayload(payload)) return
-        const ctx: WorkContext = { workspaceId: payload.workspaceId, actor: "NIVO", locale: RECORD_LOCALE }
-        if (await this.reconcile.clearlyMatches(ctx, payload.inboundEventId)) {
-            await this.engine.startInboundWork(
-                ctx,
-                { id: payload.inboundEventId },
-                RECONCILE,
-                { amount_vnd: payload.amountVnd },
-                null,
-            )
-            return
-        }
-        await this.inbound.holdForOwnerCheck(payload.inboundEventId)
+    /**
+     * The effect of the `accounting` reactor of `bank_credit_booked`, once per delivery key: the inbox claim and the hold share one
+     * transaction, and the reconcile work is keyed on the credit's inbound event, so a redelivery changes nothing twice. It reads the
+     * current inbound event, never the payload's word, and leaves an event already past the owner check as it is.
+     */
+    async settle(consumer: string, dedupeKey: string, payload: BankCreditBookedPayload): Promise<void> {
+        await this.entityManager.transaction(async (tx) => {
+            if (!(await this.inbox.claim(consumer, dedupeKey, tx))) return
+            const ctx: WorkContext = { workspaceId: payload.workspaceId, actor: "NIVO", locale: RECORD_LOCALE }
+            if (await this.reconcile.clearlyMatches(ctx, payload.inboundEventId)) {
+                await this.engine.startInboundWork(
+                    ctx,
+                    { id: payload.inboundEventId },
+                    RECONCILE,
+                    { amount_vnd: payload.amountVnd },
+                    null,
+                )
+                return
+            }
+            await this.inbound.holdForOwnerCheck(payload.inboundEventId, tx)
+        })
     }
 }

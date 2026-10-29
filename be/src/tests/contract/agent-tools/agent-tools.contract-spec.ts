@@ -4,10 +4,16 @@ import type { ICommandHandler, IQueryHandler } from "@nestjs/cqrs"
 import { Reflector } from "@nestjs/core"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { AuthGuard, Credential, CredentialGuard, IdentityModule, Public, PublicReason } from "@modules/domain/identity"
-import { Secret } from "@modules/platform/config"
+import {
+    AuthGuard,
+    Credential,
+    CredentialGuard,
+    IdentityModule,
+    Public,
+    PublicReason,
+    refuseSessions,
+} from "@modules/domain/identity"
 import type { OperationRequest } from "@modules/platform/http-security"
-import { createSupabaseAccessTokenVerifier } from "@modules/integrations/supabase"
 import type { JsonResult, ToolManifestEntry } from "@modules/domain/agent-tools"
 import { GetToolManifestQuery } from "../../../features/api/agent-tools/application/get-tool-manifest.query"
 import { RunToolCommand } from "../../../features/api/agent-tools/application/run-tool.command"
@@ -37,10 +43,7 @@ const build = async () => {
         imports: [
             CqrsModule.forRoot(),
             IdentityModule.register({
-                verifyAccessToken: createSupabaseAccessTokenVerifier({
-                    url: "https://supabase.invalid",
-                    serviceRoleKey: new Secret("contract-fixture"),
-                }),
+                verifyAccessToken: refuseSessions,
             }),
         ],
         providers: [AgentToolsController, ManifestConsumer, ToolConsumer],

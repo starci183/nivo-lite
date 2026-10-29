@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { VideoBrandKitsModule } from "@modules/domain/video-brand-kits"
 import { VideoDelegationsModule } from "@modules/domain/video-delegations"
+import { INBOX, InboxService } from "@modules/platform/inbox"
 import { VideoRenderModule } from "@modules/queues/video-render"
 import { VideoMediaService } from "./video-media.service"
 import { VideoWorkbenchService } from "./video-workbench.service"
@@ -11,6 +12,7 @@ import { VideoApprovalPerformerService } from "./video-approval-performer.servic
 import { VideoSharingService } from "./video-sharing.service"
 import { VideoScriptingContextService } from "./video-scripting-context.service"
 import { VideoScriptingService } from "./video-scripting.service"
+import { VideoGenerationCompletionService } from "./video-generation-completion.service"
 import { VideoScriptingCompletionService } from "./video-scripting-completion.service"
 import { RendererService } from "./renderer.service"
 import { VideoRenderCommandsService } from "./video-render-commands.service"
@@ -39,6 +41,7 @@ export class VideoModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 { provide: VIDEO_ASSETS, useExisting: options.assets },
+                { provide: INBOX, useClass: InboxService },
                 RendererService,
                 VideoService,
                 VideoRenderService,
@@ -50,6 +53,7 @@ export class VideoModule extends ConfigurableModuleClass {
                 VideoSharingService,
                 VideoScriptingService,
                 VideoScriptingCompletionService,
+                VideoGenerationCompletionService,
                 VideoScriptingContextService,
                 VideoRenderCommandsService,
                 EditorRoomService,

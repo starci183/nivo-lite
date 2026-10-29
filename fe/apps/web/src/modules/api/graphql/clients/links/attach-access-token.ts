@@ -8,11 +8,11 @@ interface OperationHeaders {
 
 /** Parameters of the access-token link. */
 export interface CreateAttachAccessTokenLinkParams {
-    /** Where the token comes from; defaults to the Supabase browser session. */
+    /** Where the token comes from; defaults to the in-memory session token. */
     getToken?: () => Promise<string | undefined>
 }
 
-/** Attaches `Authorization: Bearer <access token>` of the Supabase browser session to every operation (none when signed out). */
+/** Attaches `Authorization: Bearer <access token>` of the browser session to every operation (none when signed out). */
 export const createAttachAccessTokenLink = ({
     getToken = sessionAccessToken,
 }: CreateAttachAccessTokenLinkParams = {}) =>

@@ -1,5 +1,8 @@
 import { Injectable } from "@nestjs/common"
+import { Between, In, IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
+import { StaffEntity } from "@modules/domain/staff"
+import { WorkItemEntity } from "@modules/domain/work-items"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -21,35 +24,15 @@ import type {
     ShiftsWorkItemView,
 } from "./shifts-workbench.contracts"
 import {
-    COUNT_OPEN_GAPS,
-    COUNT_PENDING_LEAVES,
-    SELECT_ALL_AVAILABILITY,
-    SELECT_ATTENDANCE,
-    SELECT_LEAVES,
-    SELECT_POSTED_SHIFTS,
-    SELECT_PROFILE_OF_MEMBER,
-    SELECT_REMINDER_ON,
-    SELECT_SHIFTS_BY_IDS,
-    SELECT_SHOP_STAFF,
-    SELECT_SWAPS,
-    SELECT_WEEK_SCHEDULES,
-    SELECT_WORK_ITEMS,
-    SUM_MONTH_MINUTES,
-} from "./persistence/shifts-workbench.sql"
-import type {
-    CountRow,
-    EnabledRow,
-    MinutesRow,
-    WorkbenchAttendanceRow,
-    WorkbenchAvailabilityRow,
-    WorkbenchItemRow,
-    WorkbenchLeaveRow,
-    WorkbenchScheduleRow,
-    WorkbenchShiftRow,
-    WorkbenchStaffRow,
-    WorkbenchSwapRow,
-} from "./persistence/shifts-workbench.rows"
-import type { ShiftsIdRow } from "./persistence/shifts.rows"
+    ShiftsAttendanceEntity,
+    ShiftsAvailabilityEntity,
+    ShiftsLeaveRequestEntity,
+    ShiftsScheduleEntity,
+    ShiftsShiftEntity,
+    ShiftsSwapRequestEntity,
+} from "./persistence/entities"
+import { profileIdOfMember } from "./persistence/shifts-profile.query"
+import { isReminderOn } from "./persistence/shifts-pipeline.query"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { isDay } from "./policies/input-text.policy"
 import { addDays, mondayOf, todayVn } from "./policies/time.policy"
@@ -58,6 +41,28 @@ import { addDays, mondayOf, todayVn } from "./policies/time.policy"
 const MINE_DAYS = 14
 /** Days ahead the open-gap figure counts. */
 const GAP_DAYS = 14
+/** The scheduled minutes of a month, the one aggregate the workbench reads raw. */
+interface MinutesRead {
+    /** The minutes. */
+    readonly minutes: number | string
+}
+
+/** The most versions of one week one read answers. */
+const VERSIONS_MAX = 20
+/** The most leave and swap requests one read answers. */
+const REQUESTS_MAX = 200
+/** The most availability statements one read answers. */
+const AVAILABILITY_MAX = 500
+/** The most decision rows one read answers. */
+const ITEMS_MAX = 200
+/** The most check-ins one read answers. */
+const ATTENDANCE_MAX = 2000
+/** The most shifts of a range of days one read answers. */
+const POSTED_MAX = 2000
+/** The most shifts of the swap request lines one read answers. */
+const SWAP_SHIFTS_MAX = 500
+/** The most shop staff rows one read answers. */
+const SHOP_STAFF_MAX = 500
 /** Matches no person; filters the requests of a member without a shifts profile. */
 const UNLINKED_STAFF = "00000000-0000-0000-0000-000000000000"
 
@@ -74,34 +79,41 @@ const summaryOf = (value: unknown): string | null => {
     return typeof summary === "string" ? summary : null
 }
 
-const itemOf = (row: WorkbenchItemRow): ShiftsWorkItemView => ({
+const recordOf = (value: unknown): Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value)
+        ? Object.fromEntries(Object.entries(value))
+        : {}
+
+const itemOf = (
+    row: Pick<WorkItemEntity, "id" | "status" | "proposal" | "result" | "decidedPath">,
+): ShiftsWorkItemView => ({
     id: row.id,
     status: row.status,
     summary: summaryOf(row.proposal) ?? "",
     resultSummary: summaryOf(row.result),
-    decidedPath: row.decided_path,
+    decidedPath: row.decidedPath,
 })
 
-const availView = (row: WorkbenchAvailabilityRow): ShiftsAvailabilityView => ({
+const availView = (row: ShiftsAvailabilityEntity): ShiftsAvailabilityView => ({
     id: row.id,
-    staffId: row.staff_id,
+    staffId: row.staffId,
     weekday: row.weekday,
-    date: row.shift_date,
-    start: row.start_time.slice(0, 5),
-    end: row.end_time.slice(0, 5),
+    date: row.shiftDate,
+    start: row.startTime.slice(0, 5),
+    end: row.endTime.slice(0, 5),
     available: row.available,
     note: row.note,
     status: row.status,
-    createdAt: iso(row.created_at) ?? "",
+    createdAt: iso(row.createdAt) ?? "",
 })
 
-const shiftOf = (row: WorkbenchShiftRow): Shift => ({
+const shiftOf = (row: ShiftsShiftEntity): Shift => ({
     id: row.id,
-    date: row.shift_date,
-    start: row.start_time.slice(0, 5),
-    end: row.end_time.slice(0, 5),
-    positionId: row.position_id,
-    staffId: row.staff_id,
+    date: row.shiftDate,
+    start: row.startTime.slice(0, 5),
+    end: row.endTime.slice(0, 5),
+    positionId: row.positionId,
+    staffId: row.staffId,
     status: row.status,
 })
 
@@ -143,16 +155,14 @@ export class ShiftsWorkbenchService {
         const [setup, myProfileId, reminderOn] = await Promise.all([
             this.data.loadSetup(workspaceId, isManager),
             this.profileOfMember(workspaceId, userId, member.staffId),
-            this.reminderOn(workspaceId),
+            isReminderOn(this.entityManager, workspaceId),
         ])
         const [weekView, requests, staffRows, allAvailability, figures] = await Promise.all([
             this.weekView(workspaceId, monday, setup, isManager),
             this.requestsView(workspaceId, setup.positions, isManager ? null : (myProfileId ?? UNLINKED_STAFF)),
             isManager ? this.shopStaff(workspaceId) : Promise.resolve<Array<ShiftsStaffRowView>>([]),
             isManager
-                ? this.entityManager
-                      .query<Array<WorkbenchAvailabilityRow>>(SELECT_ALL_AVAILABILITY, [workspaceId, null])
-                      .then((rows) => rows.map(availView))
+                ? this.availability(workspaceId, null).then((rows) => rows.map(availView))
                 : Promise.resolve<Array<ShiftsAvailabilityView>>([]),
             isManager ? this.figures(workspaceId, today) : Promise.resolve<null>(null),
         ])
@@ -190,19 +200,21 @@ export class ShiftsWorkbenchService {
         const setup = await this.data.loadSetup(workspaceId, false)
         const positions = new Map(setup.positions.map((position) => [position.id, position.name]))
         const [posted, requests] = await Promise.all([
-            this.entityManager.query<Array<WorkbenchShiftRow>>(SELECT_POSTED_SHIFTS, [
-                workspaceId,
-                today,
-                addDays(today, MINE_DAYS),
-            ]),
+            this.entityManager.find(ShiftsShiftEntity, {
+                where: {
+                    workspaceId,
+                    shiftDate: Between(today, addDays(today, MINE_DAYS)),
+                    status: In(["published", "swapped"]),
+                },
+                order: { shiftDate: "ASC", startTime: "ASC" },
+                take: POSTED_MAX,
+            }),
             this.requestsView(workspaceId, setup.positions, profileId, positions),
         ])
         const shifts = posted.map(shiftOf)
         const mineIds = shifts.filter((shift) => shift.staffId === profileId).map((shift) => shift.id)
-        const attendance = mineIds.length
-            ? await this.entityManager.query<Array<WorkbenchAttendanceRow>>(SELECT_ATTENDANCE, [workspaceId, mineIds])
-            : []
-        const checked = new Set(attendance.map((row) => row.shift_id))
+        const attendance = mineIds.length ? await this.attendance(workspaceId, mineIds) : []
+        const checked = new Set(attendance.map((row) => row.shiftId))
         return {
             profileId,
             today,
@@ -226,16 +238,16 @@ export class ShiftsWorkbenchService {
         isManager: boolean,
     ): Promise<ShiftsWeekView> {
         const [scheduleRows, env] = await Promise.all([
-            this.entityManager.query<Array<WorkbenchScheduleRow>>(SELECT_WEEK_SCHEDULES, [workspaceId, monday]),
+            this.weekSchedules(workspaceId, monday),
             this.data.loadEnv(workspaceId, monday, setup),
         ])
         const versions = scheduleRows.map((row) => ({
             id: row.id,
             version: row.version,
             status: row.status,
-            costVnd: Number(row.cost_vnd) || 0,
-            createdAt: iso(row.created_at) ?? "",
-            publishedAt: iso(row.published_at),
+            costVnd: Number(row.costVnd) || 0,
+            createdAt: iso(row.createdAt) ?? "",
+            publishedAt: iso(row.publishedAt),
         }))
         const currentRow =
             scheduleRows.find((row) => row.status === "draft") ??
@@ -245,14 +257,14 @@ export class ShiftsWorkbenchService {
             currentRow === null
                 ? Promise.resolve<Array<Shift>>([])
                 : this.data.scheduleShifts(workspaceId, currentRow.id),
-            this.workItems(currentRow?.work_item_id ? [currentRow.work_item_id] : []),
+            this.workItems(currentRow?.workItemId ? [currentRow.workItemId] : []),
         ])
         const attendance =
             isManager && shifts.length
-                ? await this.entityManager.query<Array<WorkbenchAttendanceRow>>(SELECT_ATTENDANCE, [
+                ? await this.attendance(
                       workspaceId,
                       shifts.map((shift) => shift.id),
-                  ])
+                  )
                 : []
         const staffSees = currentRow?.status === "published"
         const current: ShiftsScheduleView | null =
@@ -262,29 +274,29 @@ export class ShiftsWorkbenchService {
             versions,
             current,
             shifts: isManager || staffSees ? shifts : [],
-            publishItem: currentRow?.work_item_id ? (items.get(currentRow.work_item_id) ?? null) : null,
-            checkins: attendance.map((row) => ({ shiftId: row.shift_id, checkedInAt: iso(row.checked_in_at) ?? "" })),
+            publishItem: currentRow?.workItemId ? (items.get(currentRow.workItemId) ?? null) : null,
+            checkins: attendance.map((row) => ({ shiftId: row.shiftId, checkedInAt: iso(row.checkedInAt) ?? "" })),
             approvedAvail: env.avail,
             approvedLeaves: env.leaves,
             prior: [...(env.prior?.entries() ?? [])].map(([staffId, segs]) => ({ staffId, segs })),
         }
     }
 
-    private scheduleView(row: WorkbenchScheduleRow, isManager: boolean): ShiftsScheduleView {
+    private scheduleView(row: ShiftsScheduleEntity, isManager: boolean): ShiftsScheduleView {
         return {
             id: row.id,
-            weekStart: row.week_start,
+            weekStart: row.weekStart,
             version: row.version,
             status: row.status,
             source: row.source,
-            costVnd: Number(row.cost_vnd) || 0,
+            costVnd: Number(row.costVnd) || 0,
             explanation: row.explanation,
-            solverMs: row.solver_ms,
-            summary: isManager ? (row.summary ?? {}) : {},
-            evidence: isManager ? (row.evidence ?? {}) : {},
-            workItemId: row.work_item_id,
-            createdAt: iso(row.created_at) ?? "",
-            publishedAt: iso(row.published_at),
+            solverMs: row.solverMs,
+            summary: isManager ? recordOf(row.summary) : {},
+            evidence: isManager ? recordOf(row.evidence) : {},
+            workItemId: row.workItemId,
+            createdAt: iso(row.createdAt) ?? "",
+            publishedAt: iso(row.publishedAt),
         }
     }
 
@@ -296,24 +308,35 @@ export class ShiftsWorkbenchService {
     ): Promise<ShiftsRequestsView> {
         const pos = posNames ?? new Map(positions.map((position) => [position.id, position.name]))
         const [leaves, swaps, availability] = await Promise.all([
-            this.entityManager.query<Array<WorkbenchLeaveRow>>(SELECT_LEAVES, [workspaceId, onlyStaff]),
-            this.entityManager.query<Array<WorkbenchSwapRow>>(SELECT_SWAPS, [workspaceId, onlyStaff]),
-            this.entityManager.query<Array<WorkbenchAvailabilityRow>>(SELECT_ALL_AVAILABILITY, [
-                workspaceId,
-                onlyStaff,
-            ]),
+            this.entityManager.find(ShiftsLeaveRequestEntity, {
+                where: onlyStaff === null ? { workspaceId } : { workspaceId, staffId: onlyStaff },
+                order: { createdAt: "DESC" },
+                take: REQUESTS_MAX,
+            }),
+            this.entityManager.find(ShiftsSwapRequestEntity, {
+                where:
+                    onlyStaff === null
+                        ? { workspaceId }
+                        : [
+                              { workspaceId, fromStaffId: onlyStaff },
+                              { workspaceId, toStaffId: onlyStaff },
+                          ],
+                order: { createdAt: "DESC" },
+                take: REQUESTS_MAX,
+            }),
+            this.availability(workspaceId, onlyStaff),
         ])
-        const itemIds = [...leaves.map((row) => row.work_item_id), ...swaps.map((row) => row.work_item_id)].filter(
+        const itemIds = [...leaves.map((row) => row.workItemId), ...swaps.map((row) => row.workItemId)].filter(
             (id): id is string => id !== null,
         )
         const [items, shiftRows] = await Promise.all([
             this.workItems(itemIds),
             swaps.length
-                ? this.entityManager.query<Array<WorkbenchShiftRow>>(SELECT_SHIFTS_BY_IDS, [
-                      workspaceId,
-                      [...new Set(swaps.map((row) => row.shift_id))],
-                  ])
-                : Promise.resolve<Array<WorkbenchShiftRow>>([]),
+                ? this.entityManager.find(ShiftsShiftEntity, {
+                      where: { workspaceId, id: In([...new Set(swaps.map((row) => row.shiftId))]) },
+                      take: SWAP_SHIFTS_MAX,
+                  })
+                : Promise.resolve<Array<ShiftsShiftEntity>>([]),
         ])
         const swapShifts = new Map(shiftRows.map((row) => [row.id, shiftOf(row)]))
         return {
@@ -323,22 +346,22 @@ export class ShiftsWorkbenchService {
         }
     }
 
-    private leaveView(row: WorkbenchLeaveRow, items: Map<string, ShiftsWorkItemView>): ShiftsLeaveView {
+    private leaveView(row: ShiftsLeaveRequestEntity, items: Map<string, ShiftsWorkItemView>): ShiftsLeaveView {
         return {
             id: row.id,
-            staffId: row.staff_id,
-            from: row.from_date,
-            to: row.to_date,
+            staffId: row.staffId,
+            from: row.fromDate,
+            to: row.toDate,
             reason: row.reason,
             status: row.status,
-            workItemId: row.work_item_id,
-            createdAt: iso(row.created_at) ?? "",
-            item: row.work_item_id ? (items.get(row.work_item_id) ?? null) : null,
+            workItemId: row.workItemId,
+            createdAt: iso(row.createdAt) ?? "",
+            item: row.workItemId ? (items.get(row.workItemId) ?? null) : null,
         }
     }
 
     private swapView(
-        row: WorkbenchSwapRow,
+        row: ShiftsSwapRequestEntity,
         items: Map<string, ShiftsWorkItemView>,
         swapShifts: Map<string, Shift>,
         positions: Map<string, string>,
@@ -346,44 +369,102 @@ export class ShiftsWorkbenchService {
         return {
             id: row.id,
             kind: row.kind,
-            shiftId: row.shift_id,
-            fromStaffId: row.from_staff_id,
-            toStaffId: row.to_staff_id,
+            shiftId: row.shiftId,
+            fromStaffId: row.fromStaffId,
+            toStaffId: row.toStaffId,
             reason: row.reason,
             status: row.status,
-            checks: row.checks ?? [],
-            workItemId: row.work_item_id,
-            createdAt: iso(row.created_at) ?? "",
-            item: row.work_item_id ? (items.get(row.work_item_id) ?? null) : null,
-            shiftLine: shiftLine(swapShifts.get(row.shift_id), positions),
+            checks: Array.isArray(row.checks)
+                ? row.checks.filter((check): check is string => typeof check === "string")
+                : [],
+            workItemId: row.workItemId,
+            createdAt: iso(row.createdAt) ?? "",
+            item: row.workItemId ? (items.get(row.workItemId) ?? null) : null,
+            shiftLine: shiftLine(swapShifts.get(row.shiftId), positions),
         }
     }
 
     private async workItems(ids: ReadonlyArray<string>): Promise<Map<string, ShiftsWorkItemView>> {
         if (!ids.length) return new Map()
-        const rows = await this.entityManager.query<Array<WorkbenchItemRow>>(SELECT_WORK_ITEMS, [[...new Set(ids)]])
+        const rows = await this.entityManager.find(WorkItemEntity, {
+            select: { id: true, status: true, proposal: true, result: true, decidedPath: true },
+            where: { id: In([...new Set(ids)]) },
+            take: ITEMS_MAX,
+        })
         return new Map(rows.map((row) => [row.id, itemOf(row)]))
     }
 
-    private shopStaff(workspaceId: string): Promise<Array<ShiftsStaffRowView>> {
-        return this.entityManager.query<Array<WorkbenchStaffRow>>(SELECT_SHOP_STAFF, [workspaceId])
+    private weekSchedules(workspaceId: string, monday: string): Promise<Array<ShiftsScheduleEntity>> {
+        return this.entityManager.find(ShiftsScheduleEntity, {
+            select: {
+                id: true,
+                weekStart: true,
+                version: true,
+                status: true,
+                source: true,
+                costVnd: true,
+                explanation: true,
+                solverMs: true,
+                summary: true,
+                evidence: true,
+                workItemId: true,
+                createdAt: true,
+                publishedAt: true,
+            },
+            where: { workspaceId, weekStart: monday },
+            order: { version: "DESC" },
+            take: VERSIONS_MAX,
+        })
     }
 
-    private async reminderOn(workspaceId: string): Promise<boolean> {
-        const [row] = await this.entityManager.query<Array<EnabledRow>>(SELECT_REMINDER_ON, [workspaceId])
-        return row?.enabled === true
+    private availability(workspaceId: string, onlyStaff: string | null): Promise<Array<ShiftsAvailabilityEntity>> {
+        return this.entityManager.find(ShiftsAvailabilityEntity, {
+            where: onlyStaff === null ? { workspaceId } : { workspaceId, staffId: onlyStaff },
+            order: { createdAt: "DESC" },
+            take: AVAILABILITY_MAX,
+        })
+    }
+
+    private attendance(workspaceId: string, shiftIds: ReadonlyArray<string>): Promise<Array<ShiftsAttendanceEntity>> {
+        return this.entityManager.find(ShiftsAttendanceEntity, {
+            select: { shiftId: true, checkedInAt: true },
+            where: { workspaceId, shiftId: In([...shiftIds]) },
+            take: ATTENDANCE_MAX,
+        })
+    }
+
+    private async shopStaff(workspaceId: string): Promise<Array<ShiftsStaffRowView>> {
+        const rows = await this.entityManager.find(StaffEntity, {
+            select: { id: true, name: true },
+            where: { workspaceId, active: true },
+            order: { createdAt: "ASC" },
+            take: SHOP_STAFF_MAX,
+        })
+        return rows.map((row) => ({ id: row.id, name: row.name }))
     }
 
     private async figures(workspaceId: string, today: string): Promise<ShiftsFiguresView> {
         const month = monthBounds(today)
         const [scheduleRows, gaps, leaves, minutes] = await Promise.all([
-            this.entityManager.query<Array<WorkbenchScheduleRow>>(SELECT_WEEK_SCHEDULES, [
-                workspaceId,
-                mondayOf(today),
-            ]),
-            this.entityManager.query<Array<CountRow>>(COUNT_OPEN_GAPS, [workspaceId, today, addDays(today, GAP_DAYS)]),
-            this.entityManager.query<Array<CountRow>>(COUNT_PENDING_LEAVES, [workspaceId]),
-            this.entityManager.query<Array<MinutesRow>>(SUM_MONTH_MINUTES, [workspaceId, month.from, month.to]),
+            this.weekSchedules(workspaceId, mondayOf(today)),
+            this.entityManager.count(ShiftsShiftEntity, {
+                where: {
+                    workspaceId,
+                    status: "published",
+                    staffId: IsNull(),
+                    shiftDate: Between(today, addDays(today, GAP_DAYS)),
+                },
+            }),
+            this.entityManager.count(ShiftsLeaveRequestEntity, { where: { workspaceId, status: "pending" } }),
+            this.entityManager
+                .createQueryBuilder(ShiftsShiftEntity, "s")
+                .select("coalesce(sum(extract(epoch from (s.end_time - s.start_time)) / 60), 0)::int", "minutes")
+                .where(
+                    "s.workspace_id = :workspaceId AND s.status IN ('published', 'swapped') AND s.staff_id IS NOT NULL " +
+                        "AND s.shift_date >= :from AND s.shift_date < :to",
+                    { workspaceId, from: month.from, to: month.to },
+                )
+                .getRawOne<MinutesRead>(),
         ])
         const current =
             scheduleRows.find((row) => row.status === "draft") ?? scheduleRows.find((row) => row.status === "published")
@@ -392,22 +473,13 @@ export class ShiftsWorkbenchService {
             weekFilled: shifts.filter((shift) => shift.staffId !== null).length,
             weekTotal: shifts.length,
             weekHasSchedule: current !== undefined,
-            openGaps: Number(gaps[0]?.n ?? 0),
-            leavePending: Number(leaves[0]?.n ?? 0),
-            hoursMonth: Math.round(Number(minutes[0]?.minutes ?? 0) / 6) / 10,
+            openGaps: gaps,
+            leavePending: leaves,
+            hoursMonth: Math.round(Number(minutes?.minutes ?? 0) / 6) / 10,
         }
     }
 
-    private async profileOfMember(
-        workspaceId: string,
-        userId: string,
-        staffRowId: string | null,
-    ): Promise<string | null> {
-        const [row] = await this.entityManager.query<Array<ShiftsIdRow>>(SELECT_PROFILE_OF_MEMBER, [
-            workspaceId,
-            userId,
-            staffRowId,
-        ])
-        return row?.id ?? null
+    private profileOfMember(workspaceId: string, userId: string, staffRowId: string | null): Promise<string | null> {
+        return profileIdOfMember(this.entityManager, workspaceId, userId, staffRowId)
     }
 }

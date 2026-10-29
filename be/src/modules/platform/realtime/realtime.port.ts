@@ -1,5 +1,6 @@
 import type { MessageEvent } from "@nestjs/common"
 import type { Observable } from "rxjs"
+import type { EntityManager } from "typeorm"
 
 /** A named channel of frames of one type: the one object a publisher pushes to and a door subscribes to, built by the owning domain contract. */
 export interface RealtimeTopic<T extends object> {
@@ -13,10 +14,7 @@ export interface RealtimeTopic<T extends object> {
  * The transaction a publisher is inside of. A hub that keeps its frames in the same database writes the frame in it, so the frame is
  * committed and announced together with the publisher's own write, and a rolled-back write publishes nothing. Any entity manager satisfies it.
  */
-export interface RealtimeTransaction {
-    /** Runs one statement in the transaction. */
-    query(text: string, parameters?: Array<unknown>): Promise<unknown>
-}
+export type RealtimeTransaction = EntityManager
 
 /** What a client may ask of a subscription when it reconnects. */
 export interface RealtimeSubscribeOptions {

@@ -1,31 +1,16 @@
 import { Test } from "@nestjs/testing"
 import { builder, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { IsNull, Not } from "typeorm"
+import {
+    ANY_FUNCTION,
+    answerQueryBuilders,
+    fakeQueryBuilder,
+} from "@tests/fixtures/builders/fake-query-builder.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { InstallationRecordsService } from "./installation-records.service"
 import type { InstallationRecord, NewInstallation } from "./module-installations.contracts"
-import {
-    REMOVE_INSTALLATION,
-    ACTIVATE_VERSION,
-    FIND_FIRST_OF_MODULE,
-    FIND_INSTALLATION,
-    FIND_INSTALLATION_BY_ID,
-    FIND_OF_AGENT,
-    FIND_REQUIREMENT_FACTS,
-    FIND_SYNC_STATUS,
-    INSERT_INSTALLATION,
-    INSTALLATION_OF_RECORD,
-    LIST_BOUND_AGENTS,
-    LIST_INSTALLATIONS,
-    LIST_INSTANCE_NAMES,
-    LIST_ON_OPENCLAW,
-    LIST_WORKSPACES_OF_MODULE,
-    RENAME_INSTALLATION,
-    SAVE_SETTINGS,
-    SET_LIVE,
-    SET_OPERATING_MODE,
-    SETTLE_CONNECTION,
-} from "./persistence/module-installations.sql"
+import { ModuleInstallationEntity } from "./persistence/entities"
 
 const RECORD_ID = "0b6c5d1e-2f3a-4b5c-8d9e-0f1a2b3c4d5e"
 
@@ -50,6 +35,12 @@ const recordOf = builder<InstallationRecord>({
     createdAt: "2026-10-01T00:00:00.000Z",
 })
 
+/** The projection a read query answers: the record with a Date in place of the ISO text. */
+const projectionOf = (over: Partial<InstallationRecord> = {}) => {
+    const record = recordOf(over)
+    return { ...record, createdAt: new Date(record.createdAt) }
+}
+
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
         providers: [InstallationRecordsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
@@ -67,135 +58,192 @@ const installation: NewInstallation = {
 
 const row = { syncedVersion: 1, activeVersion: 2, checkedAt: "2026-10-01T00:00:00.000Z", error: null }
 
+const syncProjection = (state: string | null) => ({ ...row, state, checkedAt: new Date(row.checkedAt) })
+
 describe("InstallationRecordsService", () => {
     it("lists the installations of the workspace", async () => {
         const records = [recordOf(), recordOf({ id: "inst-2", name: "Bookings" })]
-        const em = mockEntityManager({ query: [LIST_INSTALLATIONS, records] })
+        const em = mockEntityManager()
+        const query = fakeQueryBuilder({ getRawMany: records.map((record) => projectionOf(record)) })
+        answerQueryBuilders(em, query)
         const service = await build(em)
 
         await expect(service.list("ws-1")).resolves.toEqual(records)
 
-        expect(em.query).toHaveBeenCalledWith(LIST_INSTALLATIONS, ["ws-1"])
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(ModuleInstallationEntity, "i")
+        expect(query.argsOf("where")).toEqual([
+            ["i.workspaceId = :workspaceId AND i.status <> 'removed'", { workspaceId: "ws-1" }],
+        ])
+        expect(query.argsOf("orderBy")).toEqual([["i.createdAt", "ASC"]])
+        expect(query.argsOf("addOrderBy")).toEqual([["i.id", "ASC"]])
+        expect(query.argsOf("limit")).toEqual([[200]])
+        expect(query.argsOf("leftJoin").map((args) => args[1])).toEqual(["a", "v"])
     })
     it("finds an installation by id or answers null", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_INSTALLATION_BY_ID, [recordOf()]],
-                [FIND_INSTALLATION_BY_ID, []],
-            ],
-        })
+        const em = mockEntityManager()
+        const found = fakeQueryBuilder({ getRawOne: projectionOf() })
+        const none = fakeQueryBuilder({ getRawOne: undefined })
+        answerQueryBuilders(em, found, none)
         const service = await build(em)
 
         await expect(service.findById("inst-1")).resolves.toEqual(recordOf())
         await expect(service.findById("missing")).resolves.toBeNull()
 
-        expect(em.query).toHaveBeenNthCalledWith(1, FIND_INSTALLATION_BY_ID, ["inst-1"])
-        expect(em.query).toHaveBeenNthCalledWith(2, FIND_INSTALLATION_BY_ID, ["missing"])
+        expect(found.argsOf("where")).toEqual([["i.id = :installationId", { installationId: "inst-1" }]])
+        expect(none.argsOf("where")).toEqual([["i.id = :installationId", { installationId: "missing" }]])
     })
     it("finds the first installation of a module or answers null", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_FIRST_OF_MODULE, [recordOf()]],
-                [FIND_FIRST_OF_MODULE, []],
-            ],
-        })
+        const em = mockEntityManager()
+        const found = fakeQueryBuilder({ getRawOne: projectionOf() })
+        const none = fakeQueryBuilder({ getRawOne: undefined })
+        answerQueryBuilders(em, found, none)
         const service = await build(em)
 
         await expect(service.firstOfModule("ws-1", "sales")).resolves.toEqual(recordOf())
         await expect(service.firstOfModule("ws-1", "booking")).resolves.toBeNull()
 
-        expect(em.query).toHaveBeenNthCalledWith(1, FIND_FIRST_OF_MODULE, ["ws-1", "sales"])
-        expect(em.query).toHaveBeenNthCalledWith(2, FIND_FIRST_OF_MODULE, ["ws-1", "booking"])
+        expect(found.argsOf("where")).toEqual([
+            [
+                "i.workspaceId = :workspaceId AND i.moduleKey = :moduleKey AND i.status <> 'removed'",
+                { workspaceId: "ws-1", moduleKey: "sales" },
+            ],
+        ])
+        expect(found.argsOf("orderBy")).toEqual([["i.createdAt", "ASC"]])
+        expect(found.argsOf("limit")).toEqual([[1]])
     })
+})
+
+describe("InstallationRecordsService", () => {
     it("lists the workspaces where a module is installed", async () => {
-        const em = mockEntityManager({ query: [LIST_WORKSPACES_OF_MODULE, [{ id: "ws-1" }]] })
+        const em = mockEntityManager()
+        const query = fakeQueryBuilder({ getRawMany: [{ id: "ws-1" }] })
+        answerQueryBuilders(em, query)
         const service = await build(em)
 
         await expect(service.workspacesOf("accounting")).resolves.toEqual(["ws-1"])
-        expect(em.query).toHaveBeenCalledWith(LIST_WORKSPACES_OF_MODULE, ["accounting"])
+
+        expect(query.argsOf("select")).toEqual([["i.workspaceId", "id"]])
+        expect(query.argsOf("distinct")).toEqual([[true]])
+        expect(query.argsOf("where")).toEqual([
+            ["i.moduleKey = :moduleKey AND i.status <> 'removed'", { moduleKey: "accounting" }],
+        ])
+        expect(query.argsOf("limit")).toEqual([[1000]])
     })
     it("finds the installation driven by an agent or answers null", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_OF_AGENT, [recordOf()]],
-                [FIND_OF_AGENT, []],
-            ],
-        })
+        const em = mockEntityManager()
+        const found = fakeQueryBuilder({ getRawOne: projectionOf() })
+        const none = fakeQueryBuilder({ getRawOne: undefined })
+        answerQueryBuilders(em, found, none)
         const service = await build(em)
 
         await expect(service.ofAgent("ws-1", "agent-1")).resolves.toEqual(recordOf())
         await expect(service.ofAgent("ws-1", "unbound")).resolves.toBeNull()
 
-        expect(em.query).toHaveBeenNthCalledWith(1, FIND_OF_AGENT, ["ws-1", "agent-1"])
-        expect(em.query).toHaveBeenNthCalledWith(2, FIND_OF_AGENT, ["ws-1", "unbound"])
+        expect(found.argsOf("where")).toEqual([
+            ["i.workspaceId = :workspaceId AND i.agentId = :agentId", { workspaceId: "ws-1", agentId: "agent-1" }],
+        ])
     })
 })
 
 describe("InstallationRecordsService", () => {
     it("lists the names of instances with the requested exclusion", async () => {
         const names = [{ id: "inst-2", name: "Front desk" }]
-        const em = mockEntityManager({ query: [LIST_INSTANCE_NAMES, names] })
+        const stored = names.map((name) => Object.assign(new ModuleInstallationEntity(), name))
+        const em = mockEntityManager({ find: [ModuleInstallationEntity, stored] })
         const service = await build(em)
 
         await expect(service.instanceNames("ws-1", "sales", "inst-1")).resolves.toEqual(names)
         await expect(service.instanceNames("ws-1", "sales", null)).resolves.toEqual(names)
 
-        expect(em.query).toHaveBeenNthCalledWith(1, LIST_INSTANCE_NAMES, ["ws-1", "sales", "inst-1"])
-        expect(em.query).toHaveBeenNthCalledWith(2, LIST_INSTANCE_NAMES, ["ws-1", "sales", null])
+        expect(em.find).toHaveBeenNthCalledWith(1, ModuleInstallationEntity, {
+            select: { id: true, name: true },
+            where: { workspaceId: "ws-1", moduleKey: "sales", status: Not("removed"), id: Not("inst-1") },
+            take: 1000,
+        })
+        expect(em.find).toHaveBeenNthCalledWith(2, ModuleInstallationEntity, {
+            select: { id: true, name: true },
+            where: { workspaceId: "ws-1", moduleKey: "sales", status: Not("removed") },
+            take: 1000,
+        })
     })
 })
 
 describe("InstallationRecordsService", () => {
     it("reads the workspace requirement facts", async () => {
         const facts = { providers: ["facebook", "instagram"], chatAgents: 2, staff: 3, members: 9 }
-        const em = mockEntityManager({ query: [FIND_REQUIREMENT_FACTS, [facts]] })
+        const em = mockEntityManager()
+        answerQueryBuilders(
+            em,
+            fakeQueryBuilder({ getRawMany: [{ provider: "facebook" }, { provider: "instagram" }] }),
+            fakeQueryBuilder({ getRawOne: { total: 2 } }),
+            fakeQueryBuilder({ getRawOne: { total: 3 } }),
+            fakeQueryBuilder({ getRawOne: { total: 9 } }),
+        )
         const service = await build(em)
 
         await expect(service.requirementFacts("ws-1")).resolves.toEqual(facts)
 
-        expect(em.query).toHaveBeenCalledWith(FIND_REQUIREMENT_FACTS, ["ws-1"])
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(4)
     })
     it("lists OpenClaw installations within the requested workspace and limit", async () => {
         const installations = [{ id: "inst-1", workspaceId: "ws-1" }]
-        const em = mockEntityManager({ query: [LIST_ON_OPENCLAW, installations] })
+        const em = mockEntityManager()
+        const scoped = fakeQueryBuilder({ getRawMany: installations })
+        const everywhere = fakeQueryBuilder({ getRawMany: installations })
+        answerQueryBuilders(em, scoped, everywhere)
         const service = await build(em)
 
         await expect(service.onOpenclaw("ws-1", 20)).resolves.toEqual(installations)
         await expect(service.onOpenclaw(null, 100)).resolves.toEqual(installations)
 
-        expect(em.query).toHaveBeenNthCalledWith(1, LIST_ON_OPENCLAW, ["ws-1", 20])
-        expect(em.query).toHaveBeenNthCalledWith(2, LIST_ON_OPENCLAW, [null, 100])
+        expect(scoped.argsOf("andWhere")).toEqual([
+            ["COALESCE(i.settings ->> 'processor', '') <> 'nivo'"],
+            ["i.workspaceId = :workspaceId", { workspaceId: "ws-1" }],
+        ])
+        expect(scoped.argsOf("limit")).toEqual([[20]])
+        expect(everywhere.argsOf("andWhere")).toEqual([["COALESCE(i.settings ->> 'processor', '') <> 'nivo'"]])
+        expect(everywhere.argsOf("limit")).toEqual([[100]])
     })
 })
 
 describe("InstallationRecordsService / installationOfRecord", () => {
     it("answers no installation for an id that is not a record id, without reading", async () => {
-        const service = await build(mockEntityManager())
+        const em = mockEntityManager()
+        const service = await build(em)
 
         await expect(service.installationOfRecord("ws-1", "not-a-uuid")).resolves.toEqual({ installationId: null })
+
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
     it("answers the installation that owns the record, or none", async () => {
-        const em = mockEntityManager({
-            query: [
-                [INSTALLATION_OF_RECORD, [{ installationId: "inst-1" }]],
-                [INSTALLATION_OF_RECORD, []],
-            ],
-        })
+        const em = mockEntityManager()
+        const miss = () => fakeQueryBuilder({ getRawOne: undefined })
+        answerQueryBuilders(
+            em,
+            miss(),
+            miss(),
+            fakeQueryBuilder({ getRawOne: { installationId: "inst-1" } }),
+            miss(),
+            miss(),
+        )
         const service = await build(em)
 
         await expect(service.installationOfRecord("ws-1", RECORD_ID)).resolves.toEqual({ installationId: "inst-1" })
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(5)
+
+        answerQueryBuilders(em, miss())
         await expect(service.installationOfRecord("ws-1", RECORD_ID)).resolves.toEqual({ installationId: null })
     })
 })
 
 describe("InstallationRecordsService / find", () => {
     it("answers the row or null", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_INSTALLATION, [recordOf()]],
-                [FIND_INSTALLATION, []],
-            ],
-        })
+        const em = mockEntityManager()
+        answerQueryBuilders(
+            em,
+            fakeQueryBuilder({ getRawOne: projectionOf() }),
+            fakeQueryBuilder({ getRawOne: undefined }),
+        )
         const service = await build(em)
 
         await expect(service.find("ws-1", "inst-1")).resolves.toEqual(recordOf())
@@ -205,69 +253,73 @@ describe("InstallationRecordsService / find", () => {
 
 describe("InstallationRecordsService / boundAgentIds", () => {
     it("answers the ids of the bound agents", async () => {
-        const service = await build(
-            mockEntityManager({ query: [LIST_BOUND_AGENTS, [{ id: "agent-1" }, { id: "agent-2" }]] }),
+        const stored = ["agent-1", "agent-2"].map((agentId) =>
+            Object.assign(new ModuleInstallationEntity(), { agentId }),
         )
+        const em = mockEntityManager({ find: [ModuleInstallationEntity, stored] })
+        const service = await build(em)
 
         await expect(service.boundAgentIds("ws-1")).resolves.toEqual(["agent-1", "agent-2"])
+
+        expect(em.find).toHaveBeenCalledWith(ModuleInstallationEntity, {
+            select: { agentId: true },
+            where: { workspaceId: "ws-1", agentId: Not(IsNull()) },
+            take: 1000,
+        })
     })
 })
 
 describe("InstallationRecordsService / insert", () => {
     it("answers the id of the new installation", async () => {
-        const em = mockEntityManager({ query: [INSERT_INSTALLATION, [{ id: "inst-9" }]] })
+        const em = mockEntityManager({ insert: [ModuleInstallationEntity, { identifiers: [{ id: "inst-9" }] }] })
         const service = await build(em)
 
         await expect(service.insert(installation)).resolves.toBe("inst-9")
-        expect(em.query).toHaveBeenCalledWith(INSERT_INSTALLATION, ["ws-1", "sales", "Sales", "agent-1", "assist"])
+        expect(em.insert).toHaveBeenCalledWith(ModuleInstallationEntity, {
+            workspaceId: "ws-1",
+            moduleKey: "sales",
+            name: "Sales",
+            agentId: "agent-1",
+            status: "setup",
+            operatingMode: "assist",
+        })
     })
     it("answers null when the label or the agent is taken", async () => {
-        const em = mockEntityManager({ query: [INSERT_INSTALLATION, []] })
-        em.query.mockRejectedValueOnce(UNIQUE_VIOLATION)
+        const em = mockEntityManager()
+        em.insert.mockRejectedValueOnce(UNIQUE_VIOLATION)
         const service = await build(em)
 
         await expect(service.insert(installation)).resolves.toBeNull()
     })
     it("lets any other failure through", async () => {
         const failure = { code: "57014" }
-        const em = mockEntityManager({ query: [INSERT_INSTALLATION, []] })
-        em.query.mockRejectedValueOnce(failure)
+        const em = mockEntityManager()
+        em.insert.mockRejectedValueOnce(failure)
         const service = await build(em)
 
         await expect(service.insert(installation)).rejects.toBe(failure)
     })
-    it("answers null when an insert returns no row", async () => {
-        const em = mockEntityManager({ query: [INSERT_INSTALLATION, []] })
+    it("answers null when an insert returns no identifier", async () => {
+        const em = mockEntityManager({ insert: [ModuleInstallationEntity, { identifiers: [] }] })
         const service = await build(em)
 
         await expect(service.insert(installation)).resolves.toBeNull()
-
-        expect(em.query).toHaveBeenCalledWith(INSERT_INSTALLATION, ["ws-1", "sales", "Sales", "agent-1", "assist"])
     })
     it.each([null, "database down", { message: "database down" }])(
         "preserves a failure that does not report a database code: %p",
         async (failure) => {
             const em = mockEntityManager()
-            em.query.mockRejectedValue(failure)
+            em.insert.mockRejectedValue(failure)
             const service = await build(em)
 
             await expect(service.insert(installation)).rejects.toBe(failure)
-
-            expect(em.query).toHaveBeenCalledWith(INSERT_INSTALLATION, ["ws-1", "sales", "Sales", "agent-1", "assist"])
         },
     )
 })
 
 describe("InstallationRecordsService / writes", () => {
     it("writes the installation name, operating mode, live state and active version", async () => {
-        const em = mockEntityManager({
-            query: [
-                [RENAME_INSTALLATION, [{ id: "inst-1" }]],
-                [SET_OPERATING_MODE, [{ id: "inst-1" }]],
-                [SET_LIVE, [{ id: "inst-1" }]],
-                [ACTIVATE_VERSION, [{ id: "inst-1" }]],
-            ],
-        })
+        const em = mockEntityManager({ update: [ModuleInstallationEntity, { affected: 1 }] })
         const service = await build(em)
 
         await expect(service.rename("ws-1", "inst-1", "Front desk")).resolves.toBe("done")
@@ -275,43 +327,64 @@ describe("InstallationRecordsService / writes", () => {
         await expect(service.setLive("ws-1", "inst-1", true, false)).resolves.toBe("done")
         await expect(service.activateVersion("ws-1", "inst-1", "version-2", "ready")).resolves.toBe("done")
 
-        expect(em.query).toHaveBeenNthCalledWith(1, RENAME_INSTALLATION, ["inst-1", "ws-1", "Front desk"])
-        expect(em.query).toHaveBeenNthCalledWith(2, SET_OPERATING_MODE, ["inst-1", "ws-1", "autopilot"])
-        expect(em.query).toHaveBeenNthCalledWith(3, SET_LIVE, ["inst-1", "ws-1", true, "live"])
-        expect(em.query).toHaveBeenNthCalledWith(4, ACTIVATE_VERSION, ["inst-1", "ws-1", "version-2", "ready"])
+        const where = { id: "inst-1", workspaceId: "ws-1" }
+        expect(em.update).toHaveBeenNthCalledWith(1, ModuleInstallationEntity, where, { name: "Front desk" })
+        expect(em.update).toHaveBeenNthCalledWith(2, ModuleInstallationEntity, where, { operatingMode: "autopilot" })
+        expect(em.update).toHaveBeenNthCalledWith(
+            3,
+            ModuleInstallationEntity,
+            { ...where, activeContextVersionId: Not(IsNull()) },
+            { liveEnabled: true, status: "live" },
+        )
+        expect(em.update).toHaveBeenNthCalledWith(4, ModuleInstallationEntity, where, {
+            activeContextVersionId: "version-2",
+            status: "ready",
+        })
     })
     it("answers done when the row changed and missing when there was none", async () => {
         const em = mockEntityManager({
-            query: [
-                [RENAME_INSTALLATION, [{ id: "inst-1" }]],
-                [SET_LIVE, []],
+            update: [
+                [ModuleInstallationEntity, { affected: 1 }],
+                [ModuleInstallationEntity, { affected: 0 }],
             ],
         })
         const service = await build(em)
 
         await expect(service.rename("ws-1", "inst-1", "Front desk")).resolves.toBe("done")
         await expect(service.setLive("ws-1", "inst-9", false, false)).resolves.toBe("missing")
-        expect(em.query).toHaveBeenCalledWith(SET_LIVE, ["inst-9", "ws-1", false, "paused"])
+        expect(em.update).toHaveBeenLastCalledWith(
+            ModuleInstallationEntity,
+            { id: "inst-9", workspaceId: "ws-1" },
+            { liveEnabled: false, status: "paused" },
+        )
     })
     it("records a live agent that waits for a connection as needs_connection", async () => {
-        const em = mockEntityManager({ query: [SET_LIVE, [{ id: "inst-1" }]] })
+        const em = mockEntityManager({ update: [ModuleInstallationEntity, { affected: 1 }] })
         const service = await build(em)
 
         await expect(service.setLive("ws-1", "inst-1", true, true)).resolves.toBe("done")
-        expect(em.query).toHaveBeenCalledWith(SET_LIVE, ["inst-1", "ws-1", true, "needs_connection"])
+        expect(em.update).toHaveBeenCalledWith(
+            ModuleInstallationEntity,
+            { id: "inst-1", workspaceId: "ws-1", activeContextVersionId: Not(IsNull()) },
+            { liveEnabled: true, status: "needs_connection" },
+        )
     })
-    it("answers taken on a unique violation and stores the settings as JSON", async () => {
-        const em = mockEntityManager({ query: [SAVE_SETTINGS, []] })
-        em.query.mockRejectedValueOnce(UNIQUE_VIOLATION)
+    it("answers taken on a unique violation and stores the settings", async () => {
+        const em = mockEntityManager()
+        em.update.mockRejectedValueOnce(UNIQUE_VIOLATION)
         const service = await build(em)
 
         await expect(service.saveSettings("ws-1", "inst-1", { holdingMessage: "One moment" })).resolves.toBe("taken")
-        expect(em.query).toHaveBeenCalledWith(SAVE_SETTINGS, ["inst-1", "ws-1", '{"holdingMessage":"One moment"}'])
+        expect(em.update).toHaveBeenCalledWith(
+            ModuleInstallationEntity,
+            { id: "inst-1", workspaceId: "ws-1" },
+            { settings: { holdingMessage: "One moment" } },
+        )
     })
     it("lets any other write failure through", async () => {
         const failure = { code: "57014" }
-        const em = mockEntityManager({ query: [SET_LIVE, []] })
-        em.query.mockRejectedValueOnce(failure)
+        const em = mockEntityManager()
+        em.update.mockRejectedValueOnce(failure)
         const service = await build(em)
 
         await expect(service.setLive("ws-1", "inst-1", true, false)).rejects.toBe(failure)
@@ -320,21 +393,39 @@ describe("InstallationRecordsService / writes", () => {
 
 describe("InstallationRecordsService / syncStatus", () => {
     it("keeps a known state and reads anything else as none", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_SYNC_STATUS, [{ ...row, state: "ok" }]],
-                [FIND_SYNC_STATUS, [{ ...row, state: "error" }]],
-                [FIND_SYNC_STATUS, [{ ...row, state: null }]],
-            ],
-        })
+        const em = mockEntityManager()
+        answerQueryBuilders(
+            em,
+            fakeQueryBuilder({ getRawOne: syncProjection("ok") }),
+            fakeQueryBuilder({ getRawOne: syncProjection("error") }),
+            fakeQueryBuilder({ getRawOne: syncProjection(null) }),
+        )
         const service = await build(em)
 
         await expect(service.syncStatus("ws-1", "inst-1")).resolves.toEqual({ ...row, state: "ok" })
         await expect(service.syncStatus("ws-1", "inst-1")).resolves.toEqual({ ...row, state: "error" })
         await expect(service.syncStatus("ws-1", "inst-1")).resolves.toEqual({ ...row, state: "none" })
     })
+    it("answers a missing check time as null", async () => {
+        const em = mockEntityManager()
+        answerQueryBuilders(
+            em,
+            fakeQueryBuilder({ getRawOne: { ...syncProjection(null), checkedAt: null, syncedVersion: null } }),
+        )
+        const service = await build(em)
+
+        await expect(service.syncStatus("ws-1", "inst-1")).resolves.toEqual({
+            state: "none",
+            syncedVersion: null,
+            activeVersion: 2,
+            checkedAt: null,
+            error: null,
+        })
+    })
     it("answers null for an installation of another workspace", async () => {
-        const service = await build(mockEntityManager({ query: [FIND_SYNC_STATUS, []] }))
+        const em = mockEntityManager()
+        answerQueryBuilders(em, fakeQueryBuilder({ getRawOne: undefined }))
+        const service = await build(em)
 
         await expect(service.syncStatus("ws-2", "inst-1")).resolves.toBeNull()
     })
@@ -342,32 +433,37 @@ describe("InstallationRecordsService / syncStatus", () => {
 
 describe("InstallationRecordsService / settleConnection", () => {
     it("answers the status the connection check moved the installation to, or null when it did not move", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SETTLE_CONNECTION, [{ status: "needs_connection" }]],
-                [SETTLE_CONNECTION, []],
-            ],
-        })
+        const em = mockEntityManager()
+        const moved = fakeQueryBuilder({ execute: { raw: [{ status: "needs_connection" }] } })
+        const stayed = fakeQueryBuilder({ execute: { raw: [] } })
+        answerQueryBuilders(em, moved, stayed)
         const service = await build(em)
 
         await expect(service.settleConnection("ws-1", "inst-1", false)).resolves.toBe("needs_connection")
         await expect(service.settleConnection("ws-1", "inst-1", true)).resolves.toBeNull()
-        expect(em.query.mock.calls).toEqual([
-            [SETTLE_CONNECTION, ["inst-1", "ws-1", false]],
-            [SETTLE_CONNECTION, ["inst-1", "ws-1", true]],
+
+        expect(moved.argsOf("where")).toEqual([
+            ["id = :installationId AND workspace_id = :workspaceId", { installationId: "inst-1", workspaceId: "ws-1" }],
         ])
+        expect(moved.argsOf("setParameter")).toEqual([["ready", false]])
+        expect(stayed.argsOf("setParameter")).toEqual([["ready", true]])
+        expect(moved.argsOf("returning")).toEqual([["status"]])
     })
 })
 
 describe("InstallationRecordsService > markRemoved", () => {
     it("removes the row through the manager it is given, and says when there is nothing to remove", async () => {
-        const em = mockEntityManager({ query: [REMOVE_INSTALLATION, [{ id: "inst-1" }]] })
+        const em = mockEntityManager({ update: [ModuleInstallationEntity, { affected: 1 }] })
         const service = await build(mockEntityManager())
 
         await expect(service.markRemoved("ws-1", "inst-1", "Lan", em)).resolves.toBe("done")
-        expect(em.query).toHaveBeenCalledWith(REMOVE_INSTALLATION, ["inst-1", "ws-1", "Lan"])
+        expect(em.update).toHaveBeenCalledWith(
+            ModuleInstallationEntity,
+            { id: "inst-1", workspaceId: "ws-1", status: Not("removed") },
+            { status: "removed", liveEnabled: false, removedAt: ANY_FUNCTION, removedBy: "Lan" },
+        )
 
-        const none = mockEntityManager({ query: [REMOVE_INSTALLATION, []] })
+        const none = mockEntityManager({ update: [ModuleInstallationEntity, { affected: 0 }] })
         await expect(service.markRemoved("ws-1", "inst-1", "Lan", none)).resolves.toBe("missing")
     })
 })

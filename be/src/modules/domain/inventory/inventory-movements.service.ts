@@ -1,12 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InventoryReplenishQueue } from "@modules/queues/inventory-replenish"
 import { InventoryError, InventoryErrorCode } from "./errors/inventory.error"
 import type { AppliedMovement, MovementParams } from "./inventory.contracts"
 import { InventoryLocationsService } from "./inventory-locations.service"
 import { columnNumber } from "./policies/number-format.policy"
-import { APPLY_MOVEMENT, SELECT_ALL_TOTALS, SELECT_LEVEL_QTY, SELECT_TOTALS } from "./persistence/inventory.sql"
+import { InventoryStockLevelEntity } from "./persistence/entities"
 
 /** The author of a movement nobody typed: the system. */
 export const SYSTEM_ACTOR = "NIVO"
@@ -19,7 +19,7 @@ interface MovementResult {
 }
 
 interface MovementResultRow {
-    readonly result: MovementResult | null
+    readonly inventory_apply_movement: MovementResult | null
 }
 
 interface TotalRow {
@@ -27,9 +27,8 @@ interface TotalRow {
     readonly qty: number | string
 }
 
-interface LevelRow {
-    readonly qty: number | string
-}
+/** The most items one totals read answers. */
+const TOTALS_LIMIT = 5000
 
 @Injectable()
 /** The one way a quantity changes: signed movements through the database function, plus stock totals and the low-stock follow-up. */
@@ -43,7 +42,7 @@ export class InventoryMovementsService {
     /** Applies one movement (row-locked and idempotent by its dedupe key) at its location, the default one when none is named. */
     async apply(workspaceId: string, movement: MovementParams): Promise<AppliedMovement> {
         const locationId = movement.locationId ?? (await this.locations.defaultLocation(workspaceId))
-        const [row] = await this.entityManager.query<Array<MovementResultRow>>(APPLY_MOVEMENT, [
+        const [row] = await callDbFunction<MovementResultRow>(this.entityManager, "public.inventory_apply_movement", [
             workspaceId,
             movement.itemId,
             locationId,
@@ -58,7 +57,7 @@ export class InventoryMovementsService {
             movement.dedupe ?? null,
             movement.unitCost ?? null,
         ])
-        const result = row?.result
+        const result = row?.inventory_apply_movement
         if (result === null || result === undefined) {
             throw new InventoryError({ code: InventoryErrorCode.MovementNotApplied })
         }
@@ -72,16 +71,25 @@ export class InventoryMovementsService {
 
     /** The quantity of one item at one location. */
     async levelAt(itemId: string, locationId: string): Promise<number> {
-        const [row] = await this.entityManager.query<Array<LevelRow>>(SELECT_LEVEL_QTY, [itemId, locationId])
-        return columnNumber(row?.qty)
+        const level = await this.entityManager.findOne(InventoryStockLevelEntity, {
+            select: { qty: true },
+            where: { itemId, locationId },
+        })
+        return columnNumber(level?.qty)
     }
 
     /** The total stock of each item across all locations; the named items only, or every item when none are named. */
     async totals(workspaceId: string, itemIds?: ReadonlyArray<string>): Promise<Map<string, number>> {
-        const rows =
-            itemIds === undefined
-                ? await this.entityManager.query<Array<TotalRow>>(SELECT_ALL_TOTALS, [workspaceId])
-                : await this.entityManager.query<Array<TotalRow>>(SELECT_TOTALS, [workspaceId, [...itemIds]])
+        const query = this.entityManager
+            .createQueryBuilder(InventoryStockLevelEntity, "level")
+            .select("level.item_id", "item_id")
+            .addSelect("SUM(level.qty)", "qty")
+            .where("level.workspace_id = :workspaceId", { workspaceId })
+            .groupBy("level.item_id")
+            .limit(TOTALS_LIMIT)
+        if (itemIds !== undefined)
+            query.andWhere("level.item_id = ANY(CAST(:itemIds AS uuid[]))", { itemIds: [...itemIds] })
+        const rows = await query.getRawMany<TotalRow>()
         return new Map(rows.map((row) => [row.item_id, columnNumber(row.qty)]))
     }
 

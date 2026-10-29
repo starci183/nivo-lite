@@ -3,8 +3,8 @@ import { basename, join } from "node:path"
 import { Injectable } from "@nestjs/common"
 import { MEDIA_BUCKET } from "@modules/domain/video"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InjectSupabaseObjects } from "@modules/integrations/supabase"
-import type { SupabaseObjectsPort } from "@modules/integrations/supabase"
+import { InjectStorageObjects } from "@modules/integrations/object-storage"
+import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { InjectFfmpeg } from "@modules/integrations/ffmpeg"
 import type { Ffmpeg } from "@modules/integrations/ffmpeg"
 import { ContentAiError, ContentAiErrorCode } from "./errors/content-ai.error"
@@ -41,7 +41,7 @@ export interface ComposeRequest {
 export class BrandImagesService {
     constructor(
         @InjectContentAiOptions() private readonly options: ContentAiOptions,
-        @InjectSupabaseObjects() private readonly objects: SupabaseObjectsPort,
+        @InjectStorageObjects() private readonly objects: StorageObjectsPort,
         @InjectMarketingAssets() private readonly assets: MarketingAssets,
         @InjectFfmpeg() private readonly ffmpeg: Ffmpeg,
     ) {}

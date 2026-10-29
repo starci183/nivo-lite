@@ -1,4 +1,4 @@
 export { McpCallLogModule } from "./mcp-call-log.module"
 export { McpCallLogService } from "./mcp-call-log.service"
-export type { CallLogLine } from "./mcp-call-log.contracts"
-export type { McpCallLogRow } from "./persistence/mcp-call-log.rows"
+export type { CallLogLine, CallLogRecord } from "./mcp-call-log.contracts"
+export { mcpCallLogEntities } from "./persistence/entities"

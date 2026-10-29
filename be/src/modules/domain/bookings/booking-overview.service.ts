@@ -1,25 +1,28 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import { And, LessThan, MoreThan, MoreThanOrEqual } from "typeorm"
+import type { EntityManager, FindOptionsWhere } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import type { DepositsDueFacts, FinishedCountFacts } from "./booking-facts.contracts"
+import { toFigureRow } from "./booking-model.mapper"
 import { BookingModelService } from "./booking-model.service"
+import { ACTIVE_STATUSES } from "./bookings.contracts"
 import type { BookingOverview, OverviewParams } from "./bookings.contracts"
-import {
-    SELECT_DEPOSITS_DUE,
-    SELECT_FINISHED_COUNTS,
-    SELECT_OVERLAPPING_BOOKINGS,
-    SELECT_WINDOW_BOOKINGS,
-} from "./persistence/booking-overview.sql"
-import { toFigureRow } from "./persistence/booking.rows"
-import type { DepositsRow, FinishedCountRow, WindowRow } from "./persistence/booking.rows"
+import { BookingEntity } from "./persistence/entities"
 import { utilisation } from "./policies/availability.policy"
 import { noShowShare, startingBetween, summariseRange, weightedUtilisation } from "./policies/booking-rules.policy"
-import { addDays, bookingIsoOf, localDate, mondayOf, zonedMs } from "./policies/zoned-time.policy"
+import { addDays, localDate, mondayOf, zonedMs } from "./policies/zoned-time.policy"
 
 const DAY_MS = 86_400_000
 const FINISHED_WINDOW_DAYS = 30
+const WINDOW_LIMIT = 5000
+const FIGURE_COLUMNS = { status: true, resourceId: true, partySize: true, priceVnd: true, startAt: true, endAt: true }
+
+/** The instance filter of a window read: none for every instance, never a null that TypeORM would ignore silently. */
+const instanceOf = (instance: string | null): FindOptionsWhere<BookingEntity> =>
+    instance === null ? {} : { installationId: instance }
 
 @Injectable()
 /** The figures of the booking workbench: today, this week, the last 30 days, the deposits still due and the statistics of a date range. */
@@ -46,24 +49,26 @@ export class BookingOverviewService {
         const weekEnd = zonedMs(addDays(sunday, 1), "00:00", timeZone)
         const instance = params.installationId ?? null
         const [week, finished, deposits, range] = await Promise.all([
-            this.entityManager.query<Array<WindowRow>>(SELECT_WINDOW_BOOKINGS, [
-                params.workspaceId,
-                bookingIsoOf(weekStart),
-                bookingIsoOf(weekEnd),
-                instance,
-            ]),
-            this.entityManager.query<Array<FinishedCountRow>>(SELECT_FINISHED_COUNTS, [
-                params.workspaceId,
-                bookingIsoOf(nowMs - FINISHED_WINDOW_DAYS * DAY_MS),
-                bookingIsoOf(nowMs),
-                instance,
-            ]),
-            this.entityManager.query<Array<DepositsRow>>(SELECT_DEPOSITS_DUE, [params.workspaceId, instance]),
-            this.entityManager.query<Array<WindowRow>>(SELECT_OVERLAPPING_BOOKINGS, [
-                params.workspaceId,
-                bookingIsoOf(zonedMs(params.from, "00:00", timeZone)),
-                bookingIsoOf(zonedMs(addDays(params.to, 1), "00:00", timeZone)),
-            ]),
+            this.entityManager.find(BookingEntity, {
+                select: FIGURE_COLUMNS,
+                where: {
+                    workspaceId: params.workspaceId,
+                    startAt: And(MoreThanOrEqual(new Date(weekStart)), LessThan(new Date(weekEnd))),
+                    ...instanceOf(instance),
+                },
+                take: WINDOW_LIMIT,
+            }),
+            this.finishedCounts(params.workspaceId, nowMs - FINISHED_WINDOW_DAYS * DAY_MS, nowMs, instance),
+            this.depositsDue(params.workspaceId, instance),
+            this.entityManager.find(BookingEntity, {
+                select: FIGURE_COLUMNS,
+                where: {
+                    workspaceId: params.workspaceId,
+                    startAt: LessThan(new Date(zonedMs(addDays(params.to, 1), "00:00", timeZone))),
+                    endAt: MoreThan(new Date(zonedMs(params.from, "00:00", timeZone))),
+                },
+                take: WINDOW_LIMIT,
+            }),
         ])
         const weekRows = week.map(toFigureRow)
         const weekly = utilisation(
@@ -103,5 +108,34 @@ export class BookingOverviewService {
                 total: range.length,
             },
         }
+    }
+
+    private finishedCounts(
+        workspaceId: string,
+        fromMs: number,
+        toMs: number,
+        instance: string | null,
+    ): Promise<Array<FinishedCountFacts>> {
+        const counts = this.entityManager
+            .createQueryBuilder(BookingEntity, "b")
+            .select("b.status", "status")
+            .addSelect("CAST(count(*) AS int)", "total")
+            .where("b.workspaceId = :workspaceId", { workspaceId })
+            .andWhere("b.status IN ('done', 'no_show')")
+            .andWhere("b.startAt >= :from AND b.startAt < :to", { from: new Date(fromMs), to: new Date(toMs) })
+        if (instance !== null) counts.andWhere("b.installationId = :instance", { instance })
+        return counts.groupBy("b.status").limit(2).getRawMany<FinishedCountFacts>()
+    }
+
+    private async depositsDue(workspaceId: string, instance: string | null): Promise<Array<DepositsDueFacts>> {
+        const due = this.entityManager
+            .createQueryBuilder(BookingEntity, "b")
+            .select("CAST(count(*) AS int)", "total")
+            .addSelect("CAST(COALESCE(sum(b.depositVnd), 0) AS float8)", "amount_vnd")
+            .where("b.workspaceId = :workspaceId AND b.depositStatus = 'due'", { workspaceId })
+            .andWhere("b.status IN (:...open)", { open: ACTIVE_STATUSES })
+        if (instance !== null) due.andWhere("b.installationId = :instance", { instance })
+        const total = await due.getRawOne<DepositsDueFacts>()
+        return total === undefined ? [] : [total]
     }
 }

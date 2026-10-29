@@ -1,6 +1,29 @@
 import { builder } from "@starci/jest-preset"
+import { AgentEntity } from "@modules/domain/agents"
 import type { Installation } from "@modules/domain/agents"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
+
+/** An agent row of the agents spec workspace (a chatbot named Bot, active, owned by nobody yet). */
+export const agentEntityOf = builder<AgentEntity>({
+    id: "a1",
+    workspaceId: "w1",
+    module: "chatbot",
+    name: "Bot",
+    handle: "bot",
+    role: "Front desk",
+    instructions: "Be kind",
+    knowledge: "Open 9-5",
+    greeting: "",
+    approvalRule: "Ask first",
+    status: "active",
+    createdAt: new Date("2026-10-01T00:00:00.000Z"),
+    ownerMemberId: null,
+    fallbackMemberId: null,
+    assignableRoles: ["owner", "manager"],
+    assignableRooms: [],
+    canTagAgentIds: [],
+    avatarUrl: null,
+})
 
 /** An installation of the agents spec workspace, driven by agent a1. */
 export const agentInstallationOf = builder<Installation>({

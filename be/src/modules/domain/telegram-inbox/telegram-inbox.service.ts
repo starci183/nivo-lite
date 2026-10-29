@@ -1,24 +1,17 @@
 import { InjectInbox } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
+import type { EntityInbox } from "@modules/platform/inbox"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
-import type {
-    PendingTelegramInboxReceipt,
-    TelegramDeliveryRecorded,
-    TelegramRawDelivery,
-} from "./telegram-inbox.contracts"
+import type { TelegramDeliveryRecorded, TelegramRawDelivery } from "./telegram-inbox.contracts"
 import { TELEGRAM_DELIVERY_QUEUE } from "./telegram-inbox.contracts"
 import { Injectable } from "@nestjs/common"
+import { IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { ConversationsService, readTelegramUpdate } from "@modules/domain/conversations"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import {
-    COMPLETE_TELEGRAM_INBOX,
-    FIND_PENDING_TELEGRAM_INBOX,
-    INSERT_TELEGRAM_INBOX,
-} from "./persistence/telegram-inbox.sql"
+import { TelegramInboxEntity } from "./persistence/entities"
 
 @Injectable()
 /** Claims each Telegram update once, then publishes its durable receipt; a deferred consumer stores the message and queues its answer. */
@@ -27,7 +20,7 @@ export class TelegramInboxService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly conversations: ConversationsService,
-        @InjectInbox() private readonly inbox: Inbox,
+        @InjectInbox() private readonly inbox: EntityInbox,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
     ) {}
 
@@ -38,9 +31,9 @@ export class TelegramInboxService {
             const inbound = readTelegramUpdate(`[${this.catalog.get("conversations.photoSent", {}, "vi")}]`, rawBody)
             const deliveryId = inbound.kind === "ok" ? `${payload.connection}:${inbound.value.updateId}` : ""
             if (
-                !(await this.inbox.claim("telegram", deliveryId, manager, {
-                    insert: INSERT_TELEGRAM_INBOX,
-                    payload,
+                !(await this.inbox.claimRow("telegram", deliveryId, manager, {
+                    entity: TelegramInboxEntity,
+                    row: { provider: "telegram", deliveryId, payload },
                 }))
             )
                 return
@@ -54,15 +47,16 @@ export class TelegramInboxService {
     /** Resolves and processes a committed receipt atomically; retries leave a failed receipt pending. */
     processRecordedDelivery(message: TelegramDeliveryRecorded): Promise<void> {
         return this.entityManager.transaction(async (manager) => {
-            const [pending] = await manager.query<Array<PendingTelegramInboxReceipt>>(FIND_PENDING_TELEGRAM_INBOX, [
-                message.deliveryId,
-            ])
-            if (pending === undefined) return
+            const pending = await manager.findOne(TelegramInboxEntity, {
+                where: { provider: "telegram", deliveryId: message.deliveryId, processedAt: IsNull() },
+                lock: { mode: "pessimistic_write" },
+            })
+            if (pending === null) return
             const rawBody = Buffer.from(pending.payload.rawBody, "utf8")
             const inbound = readTelegramUpdate(`[${this.catalog.get("conversations.photoSent", {}, "vi")}]`, rawBody)
             if (inbound.kind === "ok")
                 await this.conversations.acceptTelegram(pending.payload.connection, inbound.value, manager)
-            await manager.query(COMPLETE_TELEGRAM_INBOX, [pending.id])
+            await manager.update(TelegramInboxEntity, { id: pending.id }, { processedAt: () => "now()" })
         })
     }
 }

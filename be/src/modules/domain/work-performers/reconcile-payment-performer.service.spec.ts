@@ -1,7 +1,5 @@
-import { mock } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { AutomationBusinessEventsService } from "@modules/domain/automations"
-import { ContractsService } from "@modules/domain/contracts"
 import { DecisionsErrorCode, EvidenceService } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { InvoicesService } from "@modules/domain/invoices"
@@ -9,11 +7,12 @@ import { LeadRecordsService } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
 import { TransactionsService } from "@modules/domain/transactions"
 import { WorkItemsService } from "@modules/domain/work-items"
-import { LOGGER } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { PaymentReconciledEvent } from "@modules/events/api"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { EVENT_BUS } from "@modules/platform/event-bus"
+import type { BaseEvent } from "@modules/platform/event-bus"
 import { PerformerKitService } from "./performer-kit.service"
 import { ReconcilePaymentPerformerService } from "./reconcile-payment-performer.service"
-import { WorkPerformersLogEvent } from "./work-performers.log-events"
 import {
     ctx,
     eventOf,
@@ -23,7 +22,6 @@ import {
     leadOf,
     orderOf,
     proposalOf,
-    renewedContract,
     transactionOf,
 } from "@tests/fixtures/builders/reconcile-payment-performer.builder"
 
@@ -49,15 +47,15 @@ const build = async () => {
         }),
     ])
     invoices.markPaid.mockResolvedValue(invoiceOf())
+    invoices.find.mockResolvedValue(invoiceOf())
     const orders = mock<OrdersService>()
     const inbound = mock<InboundEventsService>()
     const workItems = mock<WorkItemsService>()
     workItems.settleClaims.mockResolvedValue([])
     const evidence = mock<EvidenceService>()
     const leads = mock<LeadRecordsService>()
-    const events = mock<AutomationBusinessEventsService>()
-    const contracts = mock<ContractsService>()
-    const logger = mock<Logger>()
+    const bus = recordingEventBus<BaseEvent>()
+    const tx = fakeTransaction(mockEntityManager())
     const moduleRef = await Test.createTestingModule({
         providers: [
             ReconcilePaymentPerformerService,
@@ -69,9 +67,8 @@ const build = async () => {
             { provide: WorkItemsService, useValue: workItems },
             { provide: EvidenceService, useValue: evidence },
             { provide: LeadRecordsService, useValue: leads },
-            { provide: AutomationBusinessEventsService, useValue: events },
-            { provide: ContractsService, useValue: contracts },
-            { provide: LOGGER, useValue: logger },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: EVENT_BUS, useValue: bus },
         ],
     }).compile()
     return {
@@ -83,9 +80,8 @@ const build = async () => {
         workItems,
         evidence,
         leads,
-        events,
-        contracts,
-        logger,
+        bus,
+        tx,
     }
 }
 
@@ -193,7 +189,7 @@ describe("ReconcilePaymentPerformerService prepare", () => {
 
 describe("ReconcilePaymentPerformerService perform", () => {
     it("marks the chosen invoice paid, links the payment and settles the waiting claims", async () => {
-        const { service, transactions, orders, inbound, workItems, evidence } = await build()
+        const { service, invoices, transactions, orders, inbound, workItems, evidence } = await build()
         workItems.settleClaims.mockResolvedValue([
             { id: "item-7", inbound_event_id: "ev-7" },
             { id: "item-8", inbound_event_id: null },
@@ -207,15 +203,16 @@ describe("ReconcilePaymentPerformerService perform", () => {
             lead_id: "lead-1",
             detail: "matchedByCodeAmount",
         })
-        expect(transactions.match).toHaveBeenCalledWith("ws-1", "tx-1", "inv-1")
-        expect(orders.markPaid).toHaveBeenCalledWith("ws-1", "ord-1")
-        expect(inbound.mark).toHaveBeenCalledWith("ws-1", "ev-1", null, "lead-1")
+        expect(transactions.match).toHaveBeenCalledWith("ws-1", "tx-1", "inv-1", expect.anything())
+        expect(orders.markPaid).toHaveBeenCalledWith("ws-1", "ord-1", expect.anything())
+        expect(inbound.mark).toHaveBeenCalledWith("ws-1", "ev-1", null, "lead-1", expect.anything())
         expect(inbound.mark).toHaveBeenCalledWith("ws-1", "ev-7", "processed", null)
         expect(inbound.mark).toHaveBeenCalledTimes(2)
         expect(workItems.settleClaims).toHaveBeenCalledWith("ws-1", "item-1", "reconcile_payment:invoice:inv-1", {
             summary: "claimSettled|INV-1",
             href: "/leads/lead-1",
         })
+        expect(invoices.markPaid).toHaveBeenCalledWith("ws-1", "inv-1", expect.anything())
         const [matched, ...settled] = evidence.log.mock.calls.map(([, entry]) => entry)
         expect([
             matched,
@@ -265,7 +262,7 @@ describe("ReconcilePaymentPerformerService perform", () => {
             lead_id: null,
             detail: null,
         })
-        expect(invoices.markPaid).toHaveBeenCalledWith("ws-1", "inv-1")
+        expect(invoices.markPaid).toHaveBeenCalledWith("ws-1", "inv-1", expect.anything())
         expect(transactions.match).not.toHaveBeenCalled()
         expect(orders.markPaid).not.toHaveBeenCalled()
         expect(inbound.mark).not.toHaveBeenCalled()
@@ -300,8 +297,8 @@ describe("ReconcilePaymentPerformerService perform", () => {
 })
 
 describe("ReconcilePaymentPerformerService perform", () => {
-    it("publishes the settled invoice with its known customer and order", async () => {
-        const { service, leads, orders, events } = await build()
+    it("publishes the settled invoice with its known customer and order in the transaction that paid it", async () => {
+        const { service, leads, orders, bus, tx } = await build()
         leads.find.mockResolvedValue(leadOf())
         orders.find.mockResolvedValue(orderOf())
 
@@ -310,29 +307,49 @@ describe("ReconcilePaymentPerformerService perform", () => {
         expect(performed.summary).toBe("paymentMatched|450000 VND|INV-1")
         expect(leads.find).toHaveBeenCalledWith("ws-1", "lead-1")
         expect(orders.find).toHaveBeenCalledWith("ws-1", "ord-1")
-        expect(events.publish).toHaveBeenCalledWith(
-            "ws-1",
-            "payment.received",
-            {
-                invoice_id: "inv-1",
-                transaction_id: "tx-1",
-                invoice_no: "INV-1",
-                order_id: "ord-1",
-                order_no: "SO-9",
-                lead_id: "lead-1",
-                customer: "Mai",
-                amount_vnd: 450000,
-                paid_at: "2026-10-12T10:00:00.000Z",
-                channel: "Zalo",
-            },
-            "payment.received:inv-1",
-        )
+        expect(bus.writes.map((event) => [event.constructor, event.payload])).toEqual([
+            [
+                PaymentReconciledEvent,
+                {
+                    dedupeKey: "inv-1",
+                    workspaceId: "ws-1",
+                    invoiceId: "inv-1",
+                    invoiceNo: "INV-1",
+                    amountVnd: 450000,
+                    paidAt: "2026-10-12T10:00:00.000Z",
+                    transactionId: "tx-1",
+                    workItemId: "item-1",
+                    subjectType: "transaction",
+                    subjectId: "tx-1",
+                    orderId: "ord-1",
+                    orderNo: "SO-9",
+                    leadId: "lead-1",
+                    customer: "Mai",
+                    channel: "Zalo",
+                    contractId: null,
+                    periodEndsOn: null,
+                },
+            ],
+        ])
+        expect(bus.allInTransaction).toBe(true)
+        expect(tx.commits).toBe(1)
+    })
+
+    it("rolls the payment back and publishes nothing when the fact cannot be sent", async () => {
+        const failure = new Error("bus down")
+        const { service, bus, tx, workItems } = await build()
+        bus.failNext("publish", failure)
+
+        await expect(service.perform(ctx, itemOf(), proposalOf(), { name: "Mai" })).rejects.toBe(failure)
+
+        expect(tx.rollbacks).toBe(1)
+        expect(workItems.settleClaims).not.toHaveBeenCalled()
     })
 })
 
 describe("ReconcilePaymentPerformerService perform", () => {
     it("publishes an invoice-only receipt with proposal payer and invoice amount when records are missing", async () => {
-        const { service, leads, orders, events, evidence } = await build()
+        const { service, leads, orders, bus, evidence } = await build()
         leads.find.mockResolvedValue(null)
         orders.find.mockResolvedValue(null)
         const proposal = proposalOf({ amount_vnd: null, fields: { payer: "Customer", reference: "TRANSFER-9" } })
@@ -346,31 +363,44 @@ describe("ReconcilePaymentPerformerService perform", () => {
             lead_id: "lead-1",
             detail: null,
         })
-        expect(evidence.log).toHaveBeenCalledWith(ctx, {
-            lead_id: "lead-1",
-            work_item_id: "item-1",
-            kind: "payment.matched",
-            actor: "Mai",
-            summary: "paymentMatched|no amount|INV-1",
-            evidence: "TRANSFER-9",
-        })
-        expect(events.publish).toHaveBeenCalledWith(
-            "ws-1",
-            "payment.received",
+        expect(evidence.log).toHaveBeenCalledWith(
+            ctx,
             {
-                invoice_id: "inv-1",
-                transaction_id: null,
-                invoice_no: "INV-1",
-                order_id: "ord-1",
-                order_no: null,
                 lead_id: "lead-1",
-                customer: "Customer",
-                amount_vnd: 450000,
-                paid_at: "2026-10-12T10:00:00.000Z",
-                channel: null,
+                work_item_id: "item-1",
+                kind: "payment.matched",
+                actor: "Mai",
+                summary: "paymentMatched|no amount|INV-1",
+                evidence: "TRANSFER-9",
             },
-            "payment.received:inv-1",
+            expect.anything(),
         )
+        expect(bus.writes[0]?.payload).toMatchObject({
+            invoiceId: "inv-1",
+            transactionId: null,
+            subjectType: "invoice",
+            orderId: "ord-1",
+            orderNo: null,
+            leadId: "lead-1",
+            customer: "Customer",
+            amountVnd: 450000,
+            channel: null,
+        })
+    })
+
+    it("names the renewed contract and its term in the fact so the contracts reactor can renew it", async () => {
+        const { service, invoices, bus } = await build()
+        invoices.markPaid.mockResolvedValue(
+            invoiceOf({ contract_id: "contract-1", period_ends_on: "2027-01-01", invoice_no: "INV-202612-0001" }),
+        )
+
+        await service.perform(ctx, itemOf(), proposalOf(), { name: "Mai" })
+
+        expect(bus.writes[0]?.payload).toMatchObject({
+            invoiceNo: "INV-202612-0001",
+            contractId: "contract-1",
+            periodEndsOn: "2027-01-01",
+        })
     })
 })
 
@@ -410,84 +440,5 @@ describe("ReconcilePaymentPerformerService clearlyMatches", () => {
 
         await expect(service.clearlyMatches(ctx, "ev-1")).resolves.toBe(clear)
         expect(inbound.find).toHaveBeenCalledWith("ws-1", "ev-1")
-    })
-})
-
-describe("ReconcilePaymentPerformerService perform", () => {
-    const renewal = invoiceOf({
-        contract_id: "contract-1",
-        period_ends_on: "2027-01-01",
-        invoice_no: "INV-202612-0001",
-    })
-
-    it("moves the contract of a paid renewal invoice to its next term and records it", async () => {
-        const { service, invoices, contracts, evidence } = await build()
-        invoices.markPaid.mockResolvedValue(renewal)
-        contracts.extendForPaidRenewal.mockResolvedValue({
-            extended: true,
-            previousEndsOn: "2027-01-01",
-            contract: renewedContract,
-        })
-
-        await service.perform(ctx, itemOf(), proposalOf(), { name: "Mai" })
-
-        expect(contracts.extendForPaidRenewal).toHaveBeenCalledWith(
-            "ws-1",
-            "contract-1",
-            "2027-01-01",
-            "INV-202612-0001",
-        )
-        expect(evidence.log).toHaveBeenCalledWith(ctx, {
-            lead_id: "lead-1",
-            work_item_id: "item-1",
-            kind: "contract.renewed",
-            actor: "NIVO",
-            summary: "contractRenewed|INV-202612-0001|01/01/2028",
-            evidence: "2027-01-01 → 2028-01-01",
-        })
-    })
-
-    it("records nothing more when the renewal was already applied", async () => {
-        const { service, invoices, contracts, evidence } = await build()
-        invoices.markPaid.mockResolvedValue(renewal)
-        contracts.extendForPaidRenewal.mockResolvedValue({
-            extended: false,
-            previousEndsOn: "2028-01-01",
-            contract: renewedContract,
-        })
-
-        await service.perform(ctx, itemOf(), proposalOf(), { name: "Mai" })
-
-        expect(evidence.log.mock.calls.map(([, entry]) => entry.kind)).not.toContain("contract.renewed")
-    })
-
-    it.each([
-        ["no contract", { contract_id: null, period_ends_on: "2027-01-01" }],
-        ["no renewed period", { contract_id: "contract-1", period_ends_on: null }],
-    ])("renews nothing for an invoice with %s", async (_name, change) => {
-        const { service, invoices, contracts } = await build()
-        invoices.markPaid.mockResolvedValue(invoiceOf(change))
-
-        await service.perform(ctx, itemOf(), proposalOf(), { name: "Mai" })
-
-        expect(contracts.extendForPaidRenewal).not.toHaveBeenCalled()
-    })
-
-    it("keeps the payment when the renewal fails and logs the failure", async () => {
-        const { service, invoices, contracts, logger, events } = await build()
-        invoices.markPaid.mockResolvedValue(renewal)
-        const cause = new Error("contracts down")
-        contracts.extendForPaidRenewal.mockRejectedValue(cause)
-
-        await expect(service.perform(ctx, itemOf(), proposalOf(), { name: "Mai" })).resolves.toMatchObject({
-            evidence: "verified",
-        })
-
-        expect(logger.error).toHaveBeenCalledWith(WorkPerformersLogEvent.ContractRenewalFailed, cause, {
-            workItemId: "item-1",
-            invoiceId: "inv-1",
-            contractId: "contract-1",
-        })
-        expect(events.publish).toHaveBeenCalled()
     })
 })

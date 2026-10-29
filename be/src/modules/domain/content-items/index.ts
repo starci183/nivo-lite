@@ -10,6 +10,7 @@ export type {
     ContentFigures,
     ContentItem,
     ContentWorkbench,
+    OptionalPlanSummary,
     CreateContentItem,
     SaveContentItem,
 } from "./content-editor.contracts"
@@ -20,3 +21,4 @@ export { ContentAiStoreService } from "./content-ai-store.service"
 export type { ContentPublishedResult } from "./content-approval-store.contracts"
 export type { ContentGeneratedPlan } from "./content-ai-store.contracts"
 export type { ContentMediaRef } from "./content-editor.contracts"
+export { ContentItemEntity, contentItemsEntities } from "./persistence/entities"

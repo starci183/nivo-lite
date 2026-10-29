@@ -2,11 +2,13 @@ import type {
     LeadGenComment,
     LeadGenHandoff,
     LeadGenLead,
+    LeadGenLeadRecord,
     LeadGenSource,
     LeadGenWorkbenchData,
+    LeadGenWorkbenchInput,
+    LeadGenWorkItemRecord,
     LeadOrigin,
 } from "./leadgen-workbench.contracts"
-import type { LeadGenLeadRow, LeadGenWorkbenchRow, LeadGenWorkItemRow } from "./persistence/leadgen-workbench.rows"
 import { conversationFacts, median, vnDayStart } from "./leadgen-conversations.mapper"
 import { clip, firstText, leadOriginOf, platformOf, scoreFromFields, text } from "./leadgen-origin.policy"
 
@@ -14,15 +16,15 @@ const DAY_MS = 86_400_000
 const CONVERSION_WINDOW_DAYS = 90
 const OPEN_STAGES: ReadonlySet<string> = new Set(["new", "qualified", "proposal"])
 const MAX_LEAD_ROWS = 100
-const fieldsOf = (item: Pick<LeadGenWorkItemRow, "proposal">): Record<string, unknown> => item.proposal?.fields ?? {}
+const fieldsOf = (item: Pick<LeadGenWorkItemRecord, "proposal">): Record<string, unknown> => item.proposal?.fields ?? {}
 
 /** The oldest instant used to measure lead conversion and replies. */
 export const conversionSinceIso = (nowMs: number): string =>
     new Date(nowMs - CONVERSION_WINDOW_DAYS * DAY_MS).toISOString()
 
 /** The newest work item of each lead for one action. */
-const latestBy = (items: ReadonlyArray<LeadGenWorkItemRow>, action: string): Map<string, LeadGenWorkItemRow> => {
-    const out = new Map<string, LeadGenWorkItemRow>()
+const latestBy = (items: ReadonlyArray<LeadGenWorkItemRecord>, action: string): Map<string, LeadGenWorkItemRecord> => {
+    const out = new Map<string, LeadGenWorkItemRecord>()
     for (const item of items)
         if (item.action === action && item.lead_id && !out.has(item.lead_id)) out.set(item.lead_id, item)
     return out
@@ -43,7 +45,7 @@ const sourcesOf = (leadRows: ReadonlyArray<LeadGenLead>): Array<LeadGenSource> =
 }
 
 /** Maps public replies waiting for approval. */
-const commentsOf = (leadGenItems: ReadonlyArray<LeadGenWorkItemRow>): Array<LeadGenComment> => {
+const commentsOf = (leadGenItems: ReadonlyArray<LeadGenWorkItemRecord>): Array<LeadGenComment> => {
     return leadGenItems
         .filter((item) => item.action === "reply_comment_public" && item.status === "waiting_decision")
         .map((item) => {
@@ -67,10 +69,10 @@ const commentsOf = (leadGenItems: ReadonlyArray<LeadGenWorkItemRow>): Array<Lead
 
 /** Maps completed handoffs with their current lead and classification state. */
 const handoffsOf = (
-    leads: ReadonlyArray<LeadGenLeadRow>,
+    leads: ReadonlyArray<LeadGenLeadRecord>,
     leadRows: ReadonlyArray<LeadGenLead>,
-    handoffItem: ReadonlyMap<string, LeadGenWorkItemRow>,
-    classify: ReadonlyMap<string, LeadGenWorkItemRow>,
+    handoffItem: ReadonlyMap<string, LeadGenWorkItemRecord>,
+    classify: ReadonlyMap<string, LeadGenWorkItemRecord>,
 ): Array<LeadGenHandoff> => {
     const leadById = new Map(leads.map((lead) => [lead.id, lead]))
     const scoreById = new Map(leadRows.map((row) => [row.id, row.score]))
@@ -95,9 +97,9 @@ const handoffsOf = (
 /**
  * Derives the whole Lead Gen workbench from the rows the flow already writes; every source field is read defensively.
  */
-export const buildLeadGenWorkbench = (rows: LeadGenWorkbenchRow): LeadGenWorkbenchData => {
+export const buildLeadGenWorkbench = (rows: LeadGenWorkbenchInput): LeadGenWorkbenchData => {
     const { nowMs, installationId } = rows
-    const ownLead = (lead: LeadGenLeadRow): boolean =>
+    const ownLead = (lead: LeadGenLeadRecord): boolean =>
         installationId === null || lead.installation_id === installationId
     const leadGenItems = rows.items.filter(
         (item) =>

@@ -8,11 +8,12 @@ import type { ThreadMessage } from "@modules/domain/thread-messages"
 import { ThreadWorkService } from "@modules/domain/thread-work"
 import { persistOfficeRows, persistStoryLead } from "../../fixtures/builders/office-chain.builder"
 import type { OfficeIdentity, OfficeMembers } from "../../fixtures/builders/office-chain.builder"
-import { CLEAN_USERS, EXPIRE_REQUEST_NOW, WORK_ITEMS_OF_THREAD } from "../../fixtures/persistence/office-chain.sql"
-import { CLEAN_WORKSPACE } from "../../fixtures/persistence/proof.sql"
+
 import { API_APP_MODULES } from "../../world/api-app.options"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import { useTestWorld } from "../../world/use-test-world"
+import { expireApprovalRequestNow, workItemsOfThread } from "../../world/office-chain-database.service"
+import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 
 const world = useTestWorld({ modules: API_APP_MODULES })
 
@@ -35,13 +36,6 @@ interface StoryState {
 const story: StoryState = { members: { nam: "", minh: "", ha: "", van: "", lan: "" }, threadId: "" }
 
 /** One work item of the thread as the database holds it. */
-interface WorkItemState {
-    readonly action: string
-    readonly status: string
-    readonly decided_path: string | null
-    readonly tax_code: string | null
-}
-
 const messagesOf = async (): Promise<ReadonlyArray<ThreadMessage>> =>
     (await world.resolve(ThreadFeedService).read(identity.users.nam, WS, story.threadId)).messages
 
@@ -104,8 +98,8 @@ const authority = () => ({
 
 beforeAll(async () => {
     world.cleanup(async () => {
-        await world.db.primary.query(CLEAN_WORKSPACE, [WS])
-        await world.db.primary.query(CLEAN_USERS, [Object.values(identity.users)])
+        await removeWorkspace(world.db.primary, WS)
+        await removeAuthUsers(world.db.primary, Object.values(identity.users))
     })
     await world.resolve(ModulesService).sync()
     story.members = await persistOfficeRows(world.db.primary, identity)
@@ -183,7 +177,7 @@ describe("v0.3.2 video chain in the real api: the agents' turns come from their 
 
 describe("v0.3.2 video chain in the real api: what the chain recorded", () => {
     it("the work engine did every step, and the chain reads 6 steps and 2 decisions by people", async () => {
-        const items = await world.db.primary.query<Array<WorkItemState>>(WORK_ITEMS_OF_THREAD, [WS, LEAD])
+        const items = await workItemsOfThread(world.db.primary, WS, LEAD)
         expect(items).toEqual([
             expect.objectContaining({ action: "give_discount", status: "done", decided_path: "human" }),
             expect.objectContaining({
@@ -258,7 +252,7 @@ describe("v0.3.2 decision history: what people decide outside an agent's work an
         const card = (
             await world.resolve(ThreadFeedService).read(identity.users.nam, WS, opened.threadId)
         ).messages.find((message) => message.approval !== null)
-        await world.db.primary.query(EXPIRE_REQUEST_NOW, [card?.approval?.requestId])
+        await expireApprovalRequestNow(world.db.primary, card?.approval?.requestId ?? "")
         await world.resolve(ApprovalRequestsService).sweep()
         await world.resolve(ThreadWorkService).resumeSettled()
 

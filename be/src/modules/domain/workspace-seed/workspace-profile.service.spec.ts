@@ -18,7 +18,6 @@ import { Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { PROFILE_RECEIPT_PREFIX } from "./messages/workspace-seed.messages"
-import { ENSURE_OFFICE_ROOMS, MOVE_AGENT_HOME, ROOMS_FUNCTION_PRESENT } from "./persistence/workspace-profile.sql"
 import { HAKUEN_PROFILE } from "./profiles/hakuen-profile.templates"
 import { WORKSPACE_PROFILES } from "./profiles/workspace-profiles.templates"
 import { ProfileActivationService } from "./profile-activation.service"
@@ -132,9 +131,12 @@ const build = async (em: MockEntityManager, input?: unknown, profileInput: unkno
     return { service, print, ...doubles }
 }
 
+const ROOMS_FUNCTION_PRESENT = "SELECT * FROM to_regproc($1)"
+const ENSURE_OFFICE_ROOMS = "SELECT * FROM public.ensure_office_rooms($1)"
+const MOVE_AGENT_HOME = "SELECT * FROM public.move_office_agent_home($1, $2, $3)"
 const ROOMS_READY = {
     query: [
-        [ROOMS_FUNCTION_PRESENT, [{ present: true }]],
+        [ROOMS_FUNCTION_PRESENT, [{ to_regproc: "public.ensure_office_rooms" }]],
         [ENSURE_OFFICE_ROOMS, []],
         [MOVE_AGENT_HOME, [{ moved: true }]],
     ],
@@ -426,7 +428,7 @@ describe("WorkspaceProfileService", () => {
             await owners.service.apply(TARGET, { ...PROFILE, documents: [] }, [])
 
             expect(em.query.mock.calls).toEqual([
-                [ROOMS_FUNCTION_PRESENT],
+                [ROOMS_FUNCTION_PRESENT, ["public.ensure_office_rooms"]],
                 [ENSURE_OFFICE_ROOMS, [WS]],
                 [MOVE_AGENT_HOME, [WS, "sales", "a1"]],
             ])

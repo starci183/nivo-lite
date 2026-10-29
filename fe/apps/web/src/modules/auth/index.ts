@@ -1,7 +1,5 @@
 export {
-    changeEmail,
-    changePassword,
-    signOutOthers,
+    confirmEmail,
     requestPasswordReset,
     resendConfirmation,
     signInWithPassword,
@@ -10,6 +8,6 @@ export {
     startOAuth,
     updatePassword,
 } from "./actions"
+export { checkSession } from "./server-client"
+export { onPublicOrigin } from "./request-origin"
 export { sessionAccessToken, sessionUser, renewSessionToken, subscribeToAuthChange } from "./session"
-export type { PasswordChange } from "./actions"
-export { callbackNext } from "./callback"

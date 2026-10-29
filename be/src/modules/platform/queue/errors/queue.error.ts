@@ -19,6 +19,8 @@ export enum QueueErrorCode {
     RedisDeadline = "QUEUE_REDIS_DEADLINE",
     /** A delivery did not settle before the shutdown deadline. */
     ShutdownDeadline = "QUEUE_SHUTDOWN_DEADLINE",
+    /** The database answered no uuid for the identity of a job written with none. */
+    IdentityUnavailable = "QUEUE_IDENTITY_UNAVAILABLE",
 }
 
 /** How each queue code travels. */
@@ -31,6 +33,7 @@ export const QUEUE_ERROR_KINDS: Record<QueueErrorCode, ErrorKind> = {
     [QueueErrorCode.RedisConfigurationInvalid]: "internal",
     [QueueErrorCode.RedisDeadline]: "internal",
     [QueueErrorCode.ShutdownDeadline]: "internal",
+    [QueueErrorCode.IdentityUnavailable]: "internal",
 }
 
 /** The one error class of the queue capability. */

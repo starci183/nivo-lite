@@ -12,7 +12,12 @@ import { CATCH_UP_ROWS, NOTIFY_CHANNEL, RECONNECT_DELAY_MS } from "./realtime.co
 import { REALTIME_LISTENER, REALTIME_MANAGERS } from "./realtime.decorators"
 import { RealtimeLogEvent } from "./realtime.log-events"
 import type { RealtimeTopic } from "./realtime.port"
-import { NOTIFY_PROBE, SELECT_EVENT, SELECT_MISSED_EVENTS, SELECT_TOPIC_HIGHEST_SEQ } from "./persistence/realtime.sql"
+import {
+    SELECT_EVENT,
+    SELECT_MISSED_EVENTS,
+    SELECT_TOPIC_HIGHEST_SEQ,
+    scriptRealtimeReads,
+} from "@tests/fixtures/builders/realtime-statements.builder"
 
 interface Frame {
     readonly id: string
@@ -79,6 +84,7 @@ const build = async (watermarks: Readonly<Record<string, number>> = {}) => {
     em.query.mockImplementation((sql: string, args: Array<unknown> = []) =>
         Promise.resolve(answers.get(sql)?.(args) ?? []),
     )
+    scriptRealtimeReads(em)
     const transactions = fakeTransaction(em)
     const handlers: CapturedHandlers = {
         current: {
@@ -128,7 +134,7 @@ describe("PostgresRealtimeHubService start and stop", () => {
 
         await handlers.current.probe("probe:abc")
 
-        expect(em.query).toHaveBeenCalledWith(NOTIFY_PROBE, [NOTIFY_CHANNEL, "probe:abc"])
+        expect(em.query).toHaveBeenCalledWith("SELECT pg_notify($1, $2)", [NOTIFY_CHANNEL, "probe:abc"])
     })
 
     it("stops the listener when the app shuts down", async () => {
@@ -172,7 +178,7 @@ describe("PostgresRealtimeHubService start and stop", () => {
         await destroyed
 
         expect(deliveredWhenDestroyed).toBe(true)
-        expect(em.query).toHaveBeenCalledWith(SELECT_EVENT, [1])
+        expect(em.query).toHaveBeenCalledWith(SELECT_EVENT, ["1"])
     })
 })
 
@@ -190,7 +196,7 @@ describe("PostgresRealtimeHubService reload bookkeeping", () => {
         handlers.current.resumed()
         await settle()
 
-        expect(em.query).not.toHaveBeenCalledWith(SELECT_EVENT, [12])
+        expect(em.query).not.toHaveBeenCalledWith(SELECT_EVENT, ["12"])
         expect(logger.error).toHaveBeenCalledWith(RealtimeLogEvent.CatchUpFailed, expect.any(Error))
         expect(scheduled[0]?.delayMs).toBe(RECONNECT_DELAY_MS)
         answers.set(SELECT_MISSED_EVENTS, (args) => reloadAnswer?.(args))
@@ -296,7 +302,7 @@ describe("PostgresRealtimeHubService reload bookkeeping (part 2)", () => {
         gate.open()
         await stopped
 
-        expect(em.query).not.toHaveBeenCalledWith(SELECT_EVENT, [1])
+        expect(em.query).not.toHaveBeenCalledWith(SELECT_EVENT, ["1"])
         expect(scheduled).toHaveLength(0)
     })
 })

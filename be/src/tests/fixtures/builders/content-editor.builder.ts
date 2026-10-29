@@ -1,4 +1,4 @@
-import type { ContentEditorRow } from "../../../modules/domain/content-items/persistence/content-editor.rows"
+import { ContentItemEntity } from "@modules/domain/content-items"
 
 /** The fixed instant used by content editing scenarios. */
 export const at = "2026-01-01T00:00:00.000Z"
@@ -29,23 +29,24 @@ const shared = {
 }
 
 /** A persisted content item with optional field overrides. */
-export const row = (patch: Partial<ContentEditorRow> = {}): ContentEditorRow => ({
-    ...shared,
-    workspace_id: "workspace-1",
-    plan_id: null,
-    pillar_id: null,
-    scheduled_at: null,
-    holiday_key: null,
-    work_item_id: null,
-    drafted_at: null,
-    approved_by: null,
-    approved_at: null,
-    published_at: null,
-    created_by: "Mai",
-    created_at: new Date(at),
-    updated_at: at,
-    ...patch,
-})
+export const row = (patch: Partial<ContentItemEntity> = {}): ContentItemEntity =>
+    Object.assign(new ContentItemEntity(), {
+        ...shared,
+        workspaceId: "workspace-1",
+        planId: null,
+        pillarId: null,
+        scheduledAt: null,
+        holidayKey: null,
+        workItemId: null,
+        draftedAt: null,
+        approvedBy: null,
+        approvedAt: null,
+        publishedAt: null,
+        createdBy: "Mai",
+        createdAt: new Date(at),
+        updatedAt: new Date(at),
+        ...patch,
+    })
 
 /** The API projection of the persisted content item. */
 export const item = {
@@ -65,58 +66,11 @@ export const item = {
     updatedAt: at,
 }
 
-/** The expected audit entry for an edit. */
-const edited = JSON.stringify([{ at, kind: "edited", by: "Mai", text: "edited" }])
+/** The expected audit trail of an edit. */
+export const editedEvidence = [{ at, kind: "edited", by: "Mai", text: "edited" }]
 
-interface ContentSaveBindings {
-    readonly schedule: string | null
-    readonly variants: string
-    readonly media: string
-    readonly status: string
-    readonly draftedAt: string | null
-}
-
-/** Expected SQL bindings for the standard content row with explicit scenario changes. */
-export const saveBindings = (patch: Partial<ContentSaveBindings> = {}): Array<unknown> => {
-    const values: ContentSaveBindings = {
-        schedule: null,
-        variants: "{}",
-        media: "[]",
-        status: "idea",
-        draftedAt: null,
-        ...patch,
-    }
-    return [
-        "workspace-1",
-        "item-1",
-        "Launch",
-        "Explain launch",
-        null,
-        ["facebook"],
-        values.schedule,
-        values.variants,
-        [],
-        "[]",
-        values.media,
-        values.status,
-        values.draftedAt,
-        edited,
-    ]
-}
-
-/** Expected bindings for creating the explicitly selected pillar and schedule. */
-export const createdPillarBindings = [
-    "workspace-1",
-    "x".repeat(200),
-    ["zalo"],
-    "2026-02-01",
-    "pillar-1",
-    "Mai",
-    JSON.stringify([{ at, kind: "created", by: "Mai", text: "created" }]),
-]
-
-/** Expected workspace and Vietnam month boundaries at the fixed clock instant. */
-export const monthBindings = ["workspace-1", at, "2025-12-31T17:00:00.000Z", "2026-01-31T17:00:00.000Z"]
+/** The expected audit trail of a creation. */
+export const createdEvidence = [{ at, kind: "created", by: "Mai", text: "created" }]
 
 /** Legacy attachments retained when a post is moved. */
 export const legacyAttachments = [

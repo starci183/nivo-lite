@@ -1,18 +1,18 @@
 import { Test } from "@nestjs/testing"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import type { EffectsRow } from "./booking-facts.contracts"
 import { BookingModelService } from "./booking-model.service"
 import type { BookingNotice, BookingNoticeKind, BookingNotifier } from "./booking-notice.contracts"
 import { BookingNoticesService } from "./booking-notices.service"
+import { DEFAULT_SETTINGS } from "./bookings.contracts"
 import type { BookingSettings } from "./bookings.contracts"
 import { BOOKINGS_NOTIFIER } from "./bookings.decorators"
 import { BOOKINGS_MESSAGES } from "./messages/bookings.messages"
-import { SELECT_BOOKING_FOR_NOTICE } from "./persistence/booking-effects.sql"
-import { DEFAULT_SETTINGS } from "./persistence/booking.rows"
-import type { EffectsRow } from "./persistence/booking.rows"
 import type { NoticeFacts } from "./policies/booking-notice-text.policy"
 
 const WORKSPACE = "ws-1"
@@ -61,8 +61,10 @@ const settingsOf = builder<BookingSettings>({
     address: "12 L\u00ea L\u1ee3i",
     cancelWindowHours: 24,
 })
-const build = async (stubs: ReadonlyArray<readonly [string, unknown]> = [], shop = "Nivo Salon") => {
-    const em = mockEntityManager({ query: stubs })
+const build = async (row?: EffectsRow, shop = "Nivo Salon") => {
+    const em = mockEntityManager()
+    const read = fakeQueryBuilder({ getRawOne: row })
+    em.createQueryBuilder.mockReturnValue(read.builder)
     const models = mock<BookingModelService>()
     models.settings.mockResolvedValue(settingsOf())
     const workspaces = mock<WorkspacesService>()
@@ -87,29 +89,35 @@ const build = async (stubs: ReadonlyArray<readonly [string, unknown]> = [], shop
             { provide: BOOKINGS_NOTIFIER, useValue: notifier },
         ],
     }).compile()
-    return { service: moduleRef.get(BookingNoticesService), em, models, workspaces, messages, catalog, notifier }
+    return { service: moduleRef.get(BookingNoticesService), em, read, models, workspaces, messages, catalog, notifier }
 }
 
 describe("BookingNoticesService", () => {
     it("reads the booking in its workspace without locking it", async () => {
         const row = rowOf()
-        const { service, em } = await build([[SELECT_BOOKING_FOR_NOTICE, [row]]])
+        const { service, read } = await build(row)
 
         await expect(service.bookingOf(WORKSPACE, BOOKING_ID)).resolves.toBe(row)
 
-        expect(em.query.mock.calls).toEqual([[SELECT_BOOKING_FOR_NOTICE, [WORKSPACE, BOOKING_ID]]])
+        expect(read.callsOf("where")).toEqual([
+            ["b.workspaceId = :workspaceId AND b.id = :bookingId", { workspaceId: WORKSPACE, bookingId: BOOKING_ID }],
+        ])
+        expect(read.callsOf("setLock")).toEqual([])
     })
 
     it("returns null when the booking query returns no row", async () => {
-        const { service, em } = await build([[SELECT_BOOKING_FOR_NOTICE, []]])
+        const { service, read } = await build()
 
         await expect(service.bookingOf(WORKSPACE, BOOKING_ID)).resolves.toBeNull()
 
-        expect(em.query.mock.calls).toEqual([[SELECT_BOOKING_FOR_NOTICE, [WORKSPACE, BOOKING_ID]]])
+        expect(read.callsOf("where")).toEqual([
+            ["b.workspaceId = :workspaceId AND b.id = :bookingId", { workspaceId: WORKSPACE, bookingId: BOOKING_ID }],
+        ])
+        expect(read.callsOf("setLock")).toEqual([])
     })
 
     it("combines the trimmed workspace name, row, settings and current fee", async () => {
-        const { service, workspaces } = await build([], "  Nivo Salon \t")
+        const { service, workspaces } = await build(undefined, "  Nivo Salon \t")
 
         await expect(service.factsOf(WORKSPACE, rowOf(), settingsOf(), 50000)).resolves.toEqual(factsOf())
 
@@ -117,7 +125,7 @@ describe("BookingNoticesService", () => {
     })
 
     it.each(["", " \t\n "])("uses NIVO when the workspace name is blank: %j", async (name) => {
-        const { service, workspaces } = await build([], name)
+        const { service, workspaces } = await build(undefined, name)
 
         await expect(service.factsOf(WORKSPACE, rowOf(), settingsOf(), 0)).resolves.toEqual(
             factsOf({ shop: "NIVO", feeVnd: 0 }),

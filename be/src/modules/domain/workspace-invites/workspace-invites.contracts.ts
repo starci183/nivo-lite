@@ -90,3 +90,19 @@ export interface InviteState {
     /** When the link stops working, ISO 8601. */
     readonly expiresAt: string
 }
+
+/** The invitation fields a rotation or a revocation answers. */
+export interface ChangedInvite {
+    /** The invitation id. */
+    readonly id: string
+    /** The invited address. */
+    readonly email: string
+    /** The role it grants. */
+    readonly role: string
+}
+
+/** A freshly minted invitation token. */
+export interface MintedToken {
+    /** The raw token, shown once inside the invitation link. */
+    readonly token: string
+}

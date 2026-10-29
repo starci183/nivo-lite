@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { In, LessThan, MoreThanOrEqual } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { OfficeLog, OutboundMail } from "@modules/domain/module-ops"
 import { InjectClock } from "@modules/platform/clock"
@@ -12,15 +13,14 @@ import { InventoryMovementsService, SYSTEM_ACTOR } from "./inventory-movements.s
 import { InventoryReplenishService } from "./inventory-replenish.service"
 import { columnNumber, formatDay, formatMoney, formatQty } from "./policies/number-format.policy"
 import { toInventoryItem } from "./policies/item-row.policy"
-import type { ItemRowColumns } from "./policies/item-row.policy"
+import { ITEM_LIMIT, OPEN_PO_STATUSES, itemRowOf } from "./policies/inventory-row.mapper"
 import { stockStatus } from "./policies/stock.policy"
 import {
-    SELECT_ACTIVE_ITEMS,
-    SELECT_MOVEMENTS_SINCE,
-    SELECT_OPEN_POS,
-    SELECT_OVERDUE_POS,
-    SELECT_PO_FOR_REMINDER,
-} from "./persistence/inventory.sql"
+    InventoryItemEntity,
+    InventoryMovementEntity,
+    InventoryPurchaseOrderEntity,
+    InventorySupplierEntity,
+} from "./persistence/entities"
 
 const DAY_MS = 86_400_000
 
@@ -28,12 +28,17 @@ const DAY_MS = 86_400_000
 const LOW_LIST_MAX = 8
 const ORDER_LIST_MAX = 6
 
-interface MovementRow {
-    readonly kind: string
-    readonly qty: number | string
-    readonly unit_cost_vnd: number | string | null
-    readonly item_id: string
-}
+/** The most movements of a week the report reads. */
+const MOVEMENT_LIMIT = 20_000
+
+/** The most open orders the report reads. */
+const OPEN_ORDER_LIMIT = 500
+
+/** The most overdue orders one run reminds. */
+const OVERDUE_LIMIT = 20
+
+/** An order may be reminded at most this many times. */
+const REMINDER_MAX = 2
 
 interface OpenPoRow {
     readonly po_no: string
@@ -90,30 +95,20 @@ export class InventoryAutomationService {
 
     /** Posts the weekly stock report to the Office and mails it to `email` when it is not empty. */
     async runWeeklyReport(workspaceId: string, email: string): Promise<WeeklyReport> {
-        const items = (await this.entityManager.query<Array<ItemRowColumns>>(SELECT_ACTIVE_ITEMS, [workspaceId])).map(
-            toInventoryItem,
-        )
+        const itemEntities = await this.entityManager.find(InventoryItemEntity, {
+            where: { workspaceId, active: true },
+            order: { name: "ASC" },
+            take: ITEM_LIMIT,
+        })
+        const items = itemEntities.map((entity) => toInventoryItem(itemRowOf(entity)))
         const totals = await this.movements.totals(workspaceId)
         const valueVnd = items.reduce((sum, item) => sum + Math.max(0, totals.get(item.id) ?? 0) * item.costVnd, 0)
         const low = items.filter((item) => {
             const status = stockStatus(item, totals.get(item.id) ?? 0)
             return (status === "out" || status === "low") && item.reorderPoint > 0
         })
-        const since = new Date(this.clock.now().getTime() - 7 * DAY_MS).toISOString()
-        const moves = await this.entityManager.query<Array<MovementRow>>(SELECT_MOVEMENTS_SINCE, [workspaceId, since])
-        const costOf = new Map(items.map((item) => [item.id, item.costVnd]))
-        const goodsOut = moves
-            .filter((move) => move.kind === "out")
-            .reduce((sum, move) => sum + Math.abs(columnNumber(move.qty)) * (costOf.get(move.item_id) ?? 0), 0)
-        const goodsIn = moves
-            .filter((move) => move.kind === "in")
-            .reduce(
-                (sum, move) =>
-                    sum +
-                    columnNumber(move.qty) * (columnNumber(move.unit_cost_vnd) || (costOf.get(move.item_id) ?? 0)),
-                0,
-            )
-        const orders = await this.entityManager.query<Array<OpenPoRow>>(SELECT_OPEN_POS, [workspaceId])
+        const { goodsIn, goodsOut } = await this.weekFlow(workspaceId, items)
+        const orders = await this.openOrders(workspaceId)
         const shop = await this.office.workspaceName(workspaceId)
         const lowLine = this.reportLowLine(low, totals)
         const ordersLine =
@@ -163,18 +158,39 @@ export class InventoryAutomationService {
     async overdueOrderIds(workspaceId: string, graceDays: number): Promise<Array<string>> {
         const now = this.clock.now().getTime()
         const cutoffDay = new Date(now - Math.max(0, graceDays) * DAY_MS).toISOString().slice(0, 10)
-        const lastReminderCutoff = new Date(now - 2 * DAY_MS).toISOString()
-        const rows = await this.entityManager.query<Array<{ id: string }>>(SELECT_OVERDUE_POS, [
-            workspaceId,
-            cutoffDay,
-            lastReminderCutoff,
-        ])
+        const lastReminderCutoff = new Date(now - 2 * DAY_MS)
+        const sentStates = In(["sent", "partially_received"])
+        const rows = await this.entityManager.find(InventoryPurchaseOrderEntity, {
+            select: { id: true },
+            where: [
+                { workspaceId, status: sentStates, expectedAt: LessThan(cutoffDay), reminders: 0 },
+                {
+                    workspaceId,
+                    status: sentStates,
+                    expectedAt: LessThan(cutoffDay),
+                    reminders: LessThan(REMINDER_MAX),
+                    updatedAt: LessThan(lastReminderCutoff),
+                },
+            ],
+            take: OVERDUE_LIMIT,
+        })
         return rows.map((row) => row.id)
     }
 
     /** Writes a polite reminder for the supplier of an overdue order and asks the owner to approve sending it. */
     async remindOverdue(workspaceId: string, poId: string): Promise<OverdueResult> {
-        const [po] = await this.entityManager.query<Array<ReminderPoRow>>(SELECT_PO_FOR_REMINDER, [workspaceId, poId])
+        const po = await this.entityManager
+            .createQueryBuilder(InventoryPurchaseOrderEntity, "po")
+            .select("po.id", "id")
+            .addSelect("po.po_no", "po_no")
+            .addSelect("po.status", "status")
+            .addSelect("po.reminders", "reminders")
+            .addSelect("to_char(po.expected_at, 'YYYY-MM-DD')", "expected_at")
+            .addSelect("supplier.name", "supplier_name")
+            .leftJoin(InventorySupplierEntity, "supplier", "supplier.id = po.supplier_id")
+            .where("po.workspace_id = :workspaceId AND po.id = :poId", { workspaceId, poId })
+            .limit(1)
+            .getRawOne<ReminderPoRow>()
         if (po === undefined || (po.status !== "sent" && po.status !== "partially_received")) {
             return { state: "skipped", workItemId: null, reminder: 0, poNo: po?.po_no ?? "" }
         }
@@ -189,6 +205,49 @@ export class InventoryAutomationService {
             reminder: po.reminders + 1,
             poNo: po.po_no,
         }
+    }
+
+    /** The value of the goods that came in and went out during the last seven days. */
+    private async weekFlow(
+        workspaceId: string,
+        items: ReadonlyArray<InventoryItem>,
+    ): Promise<{ goodsIn: number; goodsOut: number }> {
+        const since = new Date(this.clock.now().getTime() - 7 * DAY_MS)
+        const moves = await this.entityManager.find(InventoryMovementEntity, {
+            select: { kind: true, qty: true, unitCostVnd: true, itemId: true },
+            where: { workspaceId, createdAt: MoreThanOrEqual(since) },
+            take: MOVEMENT_LIMIT,
+        })
+        const costOf = new Map(items.map((item) => [item.id, item.costVnd]))
+        const goodsOut = moves
+            .filter((move) => move.kind === "out")
+            .reduce((sum, move) => sum + Math.abs(columnNumber(move.qty)) * (costOf.get(move.itemId) ?? 0), 0)
+        const goodsIn = moves
+            .filter((move) => move.kind === "in")
+            .reduce(
+                (sum, move) =>
+                    sum + columnNumber(move.qty) * (columnNumber(move.unitCostVnd) || (costOf.get(move.itemId) ?? 0)),
+                0,
+            )
+        return { goodsIn, goodsOut }
+    }
+
+    /** The orders that still wait on goods or a decision, oldest first, with the name of their supplier. */
+    private openOrders(workspaceId: string): Promise<Array<OpenPoRow>> {
+        return this.entityManager
+            .createQueryBuilder(InventoryPurchaseOrderEntity, "po")
+            .select("po.po_no", "po_no")
+            .addSelect("po.status", "status")
+            .addSelect("po.total_vnd", "total_vnd")
+            .addSelect("supplier.name", "supplier_name")
+            .leftJoin(InventorySupplierEntity, "supplier", "supplier.id = po.supplier_id")
+            .where("po.workspace_id = :workspaceId AND po.status IN (:...open)", {
+                workspaceId,
+                open: [...OPEN_PO_STATUSES],
+            })
+            .orderBy("po.created_at")
+            .limit(OPEN_ORDER_LIMIT)
+            .getRawMany<OpenPoRow>()
     }
 
     private reportLowLine(low: ReadonlyArray<InventoryItem>, totals: ReadonlyMap<string, number>): string {

@@ -7,10 +7,12 @@ import { BookingServicesModule } from "@modules/domain/booking-services"
 import { BookingSettingsModule } from "@modules/domain/booking-settings"
 import { BookingWaitlistModule } from "@modules/domain/booking-waitlist"
 import { BookingRemindersModule } from "@modules/domain/booking-reminders"
+import { INBOX, InboxService } from "@modules/platform/inbox"
 import { BookingDeskService } from "./booking-desk.service"
 import { BookingBoardService } from "./booking-board.service"
 import { BookingSetupService } from "./booking-setup.service"
 import { BookingEffectsService } from "./booking-effects.service"
+import { BookingStatusChangedConsumer } from "./booking-status-changed.consumer"
 import { BookingModelService } from "./booking-model.service"
 import { BookingNoticesService } from "./booking-notices.service"
 import { BookingOverviewService } from "./booking-overview.service"
@@ -43,6 +45,7 @@ export class BookingsModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 { provide: BOOKINGS_NOTIFIER, useClass: options.notifier },
+                { provide: INBOX, useClass: InboxService },
                 BookingModelService,
                 BookingNoticesService,
                 BookingReservationService,
@@ -50,6 +53,7 @@ export class BookingsModule extends ConfigurableModuleClass {
                 BookingDeskService,
                 BookingOverviewService,
                 BookingEffectsService,
+                BookingStatusChangedConsumer,
                 BookingBoardService,
                 BookingSetupService,
                 BookingChatLookupService,

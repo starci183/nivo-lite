@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { INBOX, InboxService } from "@modules/platform/inbox"
+import { ApprovalResolvedConsumer } from "./approval-resolved.consumer"
 import { MentionDirectoryService } from "./mention-directory.service"
 import { ThreadApprovalOutcomesService } from "./thread-approval-outcomes.service"
 import { ThreadApprovalsService } from "./thread-approvals.service"
@@ -22,9 +24,11 @@ export class ThreadMessagesModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 { provide: APPROVAL_GATE, useExisting: options.approvalGate },
                 { provide: AGENT_RULES, useExisting: options.agentRules },
+                { provide: INBOX, useClass: InboxService },
                 MentionDirectoryService,
                 ThreadMessagesService,
                 ThreadApprovalOutcomesService,
+                ApprovalResolvedConsumer,
                 ThreadApprovalsService,
                 ThreadAgentPostsService,
                 ThreadAssignmentsService,

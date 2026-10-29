@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { AI_GENERATIONS_COMPLETION, AI_GENERATIONS_OPTIONS, AI_GENERATIONS_USAGE } from "./ai-generations.decorators"
-import { GenerationCompletionService } from "./generation-completion.service"
+import { AI_GENERATIONS_OPTIONS, AI_GENERATIONS_USAGE } from "./ai-generations.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./ai-generations.module-definition"
 import { DirectGenerationService } from "./direct-generation.service"
 import { GenerationRunnerService } from "./generation-runner.service"
@@ -22,8 +21,6 @@ export class AiGenerationsModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 { provide: AI_GENERATIONS_OPTIONS, useValue: parsed },
                 { provide: AI_GENERATIONS_USAGE, useClass: options.usage },
-                GenerationCompletionService,
-                { provide: AI_GENERATIONS_COMPLETION, useExisting: options.completion ?? GenerationCompletionService },
                 GenerationsService,
                 DirectGenerationService,
                 GenerationRunnerService,

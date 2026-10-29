@@ -1,9 +1,11 @@
 import { VideoRendersService } from "@modules/domain/video-renders"
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import { And, In, LessThan, MoreThanOrEqual } from "typeorm"
+import type { EntityManager, FindOperator } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
+import { ContentPillarEntity } from "@modules/domain/content-pillars"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { ContentItemsError, ContentItemsErrorCode } from "./errors/content-items.error"
 import type {
@@ -16,30 +18,24 @@ import type {
     ContentWorkbench,
     CreateContentItem,
     SaveContentItem,
+    PlanReader,
 } from "./content-editor.contracts"
-import type {
-    ContentEditorIdRow,
-    ContentEditorRow,
-    ContentFiguresRow,
-    ContentPlanSummaryRow,
-} from "./persistence/content-editor.rows"
 import { contentInstant, toContentItem } from "./content-editor.mapper"
 import { contentChannels, contentTransition, mergeContentPatch, requireContentInput } from "./content-editor.policy"
-import {
-    CONTENT_FIGURES,
-    CREATE_CONTENT_ITEM,
-    DELETE_CONTENT_ITEM,
-    FIND_CONTENT_ITEM,
-    FIND_CONTENT_PILLAR,
-    LAST_CONTENT_PLAN,
-    LIST_CONTENT_ITEMS,
-    LOCK_CONTENT_ITEM,
-    NEXT_CONTENT_ITEM,
-    SAVE_CONTENT_ITEM,
-    TRANSITION_CONTENT_ITEM,
-} from "./persistence/content-editor.sql"
+import { contentItemOfRaw } from "./persistence/content-item-projection"
+import { ContentItemEntity } from "./persistence/entities"
 
 const OFFSET_MS = 7 * 3_600_000
+const DAY_MS = 86_400_000
+
+/** The window of a calendar read: half-open, with either end optional. */
+const windowOf = (range: ContentRange): FindOperator<Date> | undefined => {
+    const bounds = [
+        ...(range.from === undefined || range.from === null ? [] : [MoreThanOrEqual(new Date(range.from))]),
+        ...(range.to === undefined || range.to === null ? [] : [LessThan(new Date(range.to))]),
+    ]
+    return bounds.length === 0 ? undefined : And(...bounds)
+}
 
 @Injectable()
 /** Content reads and editor writes over the existing content tables, with the caller's membership proved on every public operation. */
@@ -65,18 +61,19 @@ export class ContentEditorService {
     async list(userId: string, workspaceId: string, range: ContentRange = {}): Promise<Array<ContentItem>> {
         await this.members.require(userId, workspaceId)
         this.validateRange(range)
-        const rows = await this.entityManager.query<Array<ContentEditorRow>>(LIST_CONTENT_ITEMS, [
-            workspaceId,
-            range.from ?? null,
-            range.to ?? null,
-        ])
+        const window = windowOf(range)
+        const rows = await this.entityManager.find(ContentItemEntity, {
+            where: { workspaceId, ...(window === undefined ? {} : { scheduledAt: window }) },
+            order: { scheduledAt: { direction: "ASC", nulls: "LAST" }, createdAt: "DESC" },
+            take: 500,
+        })
         return rows.map(toContentItem)
     }
 
     /** A workspace-scoped row for trusted application orchestration. */
     async get(workspaceId: string, id: string): Promise<ContentItem> {
-        const [row] = await this.entityManager.query<Array<ContentEditorRow>>(FIND_CONTENT_ITEM, [workspaceId, id])
-        if (row === undefined) throw new ContentItemsError({ code: ContentItemsErrorCode.NotFound })
+        const row = await this.entityManager.findOne(ContentItemEntity, { where: { workspaceId, id } })
+        if (row === null) throw new ContentItemsError({ code: ContentItemsErrorCode.NotFound })
         return toContentItem(row)
     }
 
@@ -94,15 +91,24 @@ export class ContentEditorService {
         await this.requirePillar(this.entityManager, workspaceId, input.pillarId ?? null)
         const at = this.clock.now().toISOString()
         const evidence = [{ at, kind: "created", by: member.displayName, text: "created" }]
-        const [row] = await this.entityManager.query<Array<ContentEditorRow>>(CREATE_CONTENT_ITEM, [
-            workspaceId,
-            input.title.trim().slice(0, 200),
-            contentChannels(input.channels),
-            input.scheduledAt ?? null,
-            input.pillarId ?? null,
-            member.displayName,
-            JSON.stringify(evidence),
-        ])
+        const inserted = await this.entityManager
+            .createQueryBuilder(ContentItemEntity, "ci")
+            .insert()
+            .values({
+                workspaceId,
+                title: input.title.trim().slice(0, 200),
+                channels: contentChannels(input.channels),
+                scheduledAt: () => ":scheduledAt::timestamptz",
+                pillarId: input.pillarId ?? null,
+                status: "idea",
+                source: "manual",
+                createdBy: member.displayName,
+                evidence: () => ":evidence::jsonb",
+            })
+            .setParameters({ scheduledAt: input.scheduledAt ?? null, evidence: JSON.stringify(evidence) })
+            .returning("*")
+            .execute()
+        const row = contentItemOfRaw(inserted.raw)
         if (row === undefined) throw new ContentItemsError({ code: ContentItemsErrorCode.NotWritten })
         return toContentItem(row)
     }
@@ -120,22 +126,38 @@ export class ContentEditorService {
                 ...item.evidence,
                 { at: this.clock.now().toISOString(), kind: "edited", by: member.displayName, text: "edited" },
             ].slice(-60)
-            const [row] = await tx.query<Array<ContentEditorRow>>(SAVE_CONTENT_ITEM, [
-                workspaceId,
-                id,
-                next.title,
-                next.brief,
-                next.pillarId,
-                next.channels,
-                next.scheduledAt,
-                JSON.stringify(next.variants),
-                next.hashtags,
-                JSON.stringify(next.links),
-                JSON.stringify(next.media),
-                next.status,
-                next.status === "draft" && item.draftedAt === null ? this.clock.now().toISOString() : item.draftedAt,
-                JSON.stringify(evidence),
-            ])
+            const saved = await tx
+                .createQueryBuilder(ContentItemEntity, "ci")
+                .update()
+                .set({
+                    title: next.title,
+                    brief: next.brief,
+                    pillarId: next.pillarId,
+                    channels: [...next.channels],
+                    scheduledAt: () => ":scheduledAt::timestamptz",
+                    variants: () => ":variants::jsonb",
+                    hashtags: [...next.hashtags],
+                    links: () => ":links::jsonb",
+                    media: () => ":media::jsonb",
+                    status: next.status,
+                    draftedAt: () => ":draftedAt::timestamptz",
+                    evidence: () => ":evidence::jsonb",
+                })
+                .where({ workspaceId, id })
+                .setParameters({
+                    scheduledAt: next.scheduledAt,
+                    variants: JSON.stringify(next.variants),
+                    links: JSON.stringify(next.links),
+                    media: JSON.stringify(next.media),
+                    draftedAt:
+                        next.status === "draft" && item.draftedAt === null
+                            ? this.clock.now().toISOString()
+                            : item.draftedAt,
+                    evidence: JSON.stringify(evidence),
+                })
+                .returning("*")
+                .execute()
+            const row = contentItemOfRaw(saved.raw)
             if (row === undefined) throw new ContentItemsError({ code: ContentItemsErrorCode.NotWritten })
             return toContentItem(row)
         })
@@ -154,20 +176,24 @@ export class ContentEditorService {
             if (kind === "delete") {
                 if (!["idea", "draft", "skipped"].includes(item.status))
                     throw new ContentItemsError({ code: ContentItemsErrorCode.WrongStatus })
-                await tx.query(DELETE_CONTENT_ITEM, [workspaceId, id])
+                await tx.delete(ContentItemEntity, { workspaceId, id, status: In(["idea", "draft", "skipped"]) })
             } else {
                 const status = contentTransition(item, kind)
                 const evidence = [
                     ...item.evidence,
                     { at: this.clock.now().toISOString(), kind, by: member.displayName, text: kind },
                 ].slice(-60)
-                await tx.query(TRANSITION_CONTENT_ITEM, [
-                    workspaceId,
-                    id,
-                    status,
-                    JSON.stringify(evidence),
-                    kind === "reopen",
-                ])
+                await tx
+                    .createQueryBuilder(ContentItemEntity, "ci")
+                    .update()
+                    .set({
+                        status,
+                        evidence: () => ":evidence::jsonb",
+                        ...(kind === "reopen" ? { approvedBy: null, approvedAt: null } : {}),
+                    })
+                    .where({ workspaceId, id })
+                    .setParameter("evidence", JSON.stringify(evidence))
+                    .execute()
             }
             return { id }
         })
@@ -178,36 +204,48 @@ export class ContentEditorService {
         await this.members.require(userId, workspaceId)
         const now = this.clock.now()
         const shifted = new Date(now.getTime() + OFFSET_MS)
-        const boundary = (month: number): string =>
-            new Date(Date.UTC(shifted.getUTCFullYear(), month, 1) - OFFSET_MS).toISOString()
-        const [counts, upcoming] = await Promise.all([
-            this.entityManager.query<Array<ContentFiguresRow>>(CONTENT_FIGURES, [
-                workspaceId,
-                now.toISOString(),
-                boundary(shifted.getUTCMonth()),
-                boundary(shifted.getUTCMonth() + 1),
-            ]),
-            this.entityManager.query<Array<ContentEditorRow>>(NEXT_CONTENT_ITEM, [workspaceId, now.toISOString()]),
+        const boundary = (month: number): Date => new Date(Date.UTC(shifted.getUTCFullYear(), month, 1) - OFFSET_MS)
+        const [from, to] = [boundary(shifted.getUTCMonth()), boundary(shifted.getUTCMonth() + 1)]
+        const manager = this.entityManager
+        const [awaitingApproval, published30, covered, total, upcoming] = await Promise.all([
+            manager.count(ContentItemEntity, { where: { workspaceId, status: "waiting_approval" } }),
+            manager.count(ContentItemEntity, {
+                where: {
+                    workspaceId,
+                    status: "published",
+                    publishedAt: MoreThanOrEqual(new Date(now.getTime() - 30 * DAY_MS)),
+                },
+            }),
+            manager
+                .createQueryBuilder(ContentPillarEntity, "p")
+                .where("p.workspaceId = :workspaceId AND p.active", { workspaceId })
+                .andWhere(
+                    "EXISTS (SELECT 1 FROM public.content_items i WHERE i.workspace_id = :workspaceId AND i.pillar_id = p.id AND i.status <> 'skipped' AND i.scheduled_at >= :from AND i.scheduled_at < :to)",
+                    { from, to },
+                )
+                .getCount(),
+            manager.count(ContentPillarEntity, { where: { workspaceId, active: true } }),
+            manager.findOne(ContentItemEntity, {
+                where: { workspaceId, status: "approved", scheduledAt: MoreThanOrEqual(now) },
+                order: { scheduledAt: "ASC" },
+            }),
         ])
-        const row = counts[0]
-        const next = upcoming[0]
         return {
-            awaitingApproval: row?.awaiting_approval ?? 0,
-            published30: row?.published_30 ?? 0,
-            next: next?.scheduled_at ? { at: contentInstant(next.scheduled_at), title: next.title } : null,
-            pillars: { covered: row?.covered ?? 0, total: row?.total ?? 0 },
+            awaitingApproval,
+            published30,
+            next: upcoming?.scheduledAt ? { at: contentInstant(upcoming.scheduledAt), title: upcoming.title } : null,
+            pillars: { covered, total },
         }
     }
 
     /** Core page data with authorization proved before reading the latest plan. */
-    async workbench(userId: string, workspaceId: string): Promise<ContentWorkbench> {
+    async workbench(userId: string, workspaceId: string, readPlan: PlanReader): Promise<ContentWorkbench> {
         const actor = await this.actor(userId, workspaceId)
-        const [items, figures, plans] = await Promise.all([
+        const [items, figures, plan] = await Promise.all([
             this.list(userId, workspaceId),
             this.figures(userId, workspaceId),
-            this.entityManager.query<Array<ContentPlanSummaryRow>>(LAST_CONTENT_PLAN, [workspaceId]),
+            readPlan(workspaceId),
         ])
-        const plan = plans[0]
         return {
             nowIso: this.clock.now().toISOString(),
             workspaceId,
@@ -218,12 +256,7 @@ export class ContentEditorService {
             lastPlan:
                 plan === undefined
                     ? null
-                    : {
-                          month: plan.month,
-                          ideas: plan.idea_count,
-                          ms: plan.ai_ms,
-                          createdAt: contentInstant(plan.created_at),
-                      },
+                    : { month: plan.month, ideas: plan.ideas, ms: plan.ms, createdAt: contentInstant(plan.createdAt) },
         }
     }
 
@@ -249,14 +282,16 @@ export class ContentEditorService {
     }
 
     private async lock(tx: EntityManager, workspaceId: string, id: string): Promise<ContentItem> {
-        const [row] = await tx.query<Array<ContentEditorRow>>(LOCK_CONTENT_ITEM, [workspaceId, id])
-        if (row === undefined) throw new ContentItemsError({ code: ContentItemsErrorCode.NotFound })
+        const row = await tx.findOne(ContentItemEntity, {
+            where: { workspaceId, id },
+            lock: { mode: "pessimistic_write" },
+        })
+        if (row === null) throw new ContentItemsError({ code: ContentItemsErrorCode.NotFound })
         return toContentItem(row)
     }
 
     private async requirePillar(tx: EntityManager, workspaceId: string, id: string | null): Promise<void> {
         if (id === null) return
-        const rows = await tx.query<Array<ContentEditorIdRow>>(FIND_CONTENT_PILLAR, [workspaceId, id])
-        requireContentInput(rows.length === 1)
+        requireContentInput(await tx.exists(ContentPillarEntity, { where: { workspaceId, id } }))
     }
 }

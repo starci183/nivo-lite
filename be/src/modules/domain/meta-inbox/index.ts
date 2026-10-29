@@ -13,3 +13,4 @@ export { META_EVENT_TAKER } from "./meta-inbox.decorators"
 export { MetaDeliveryService } from "./meta-delivery.service"
 
 export { MetaReceiptPolicy } from "./meta-receipt.policy"
+export { metaInboxEntities } from "./persistence/entities"

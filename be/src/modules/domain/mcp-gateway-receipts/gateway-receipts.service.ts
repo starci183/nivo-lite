@@ -7,11 +7,7 @@ import type { Inbox } from "@modules/platform/inbox"
 import { parseJsonText } from "@modules/platform/primitives"
 import { McpGatewayReceiptsError, McpGatewayReceiptsErrorCode } from "./errors/mcp-gateway-receipts.error"
 import type { GatewayCallResult, GatewayJson, GatewayReceiptOperation } from "./mcp-gateway-receipts.contracts"
-import {
-    INSERT_GATEWAY_RECEIPT,
-    SELECT_GATEWAY_RECEIPT,
-    UPDATE_GATEWAY_RECEIPT,
-} from "./persistence/gateway-receipts.sql"
+import { McpGatewayReceiptEntity } from "./persistence/entities"
 
 const PENDING: GatewayCallResult = { ok: false, code: "unknown_outcome", detail: "operation_pending" }
 
@@ -57,26 +53,30 @@ export class GatewayReceiptsService {
             if (!(await this.inbox.claim("mcp.gateway", `${workspaceId}:${key}`, manager))) {
                 return this.read(workspaceId, key, manager)
             }
-            await manager.query(INSERT_GATEWAY_RECEIPT, [workspaceId, key, this.secrets.seal(JSON.stringify(PENDING))])
+            await manager.insert(McpGatewayReceiptEntity, {
+                workspaceId,
+                operationKey: key,
+                resultSealed: this.secrets.seal(JSON.stringify(PENDING)),
+            })
             return null
         })
         if (previous !== null) return previous
         const result = await operation()
-        await this.entityManager.query(UPDATE_GATEWAY_RECEIPT, [
-            workspaceId,
-            key,
-            this.secrets.seal(JSON.stringify(result)),
-        ])
+        await this.entityManager.update(
+            McpGatewayReceiptEntity,
+            { workspaceId, operationKey: key },
+            { resultSealed: this.secrets.seal(JSON.stringify(result)) },
+        )
         return result
     }
 
     private async read(workspaceId: string, key: string, manager: EntityManager): Promise<GatewayCallResult> {
-        const [row] = await manager.query<Array<{ readonly result_sealed: string }>>(SELECT_GATEWAY_RECEIPT, [
-            workspaceId,
-            key,
-        ])
-        if (row === undefined) throw new McpGatewayReceiptsError({ code: McpGatewayReceiptsErrorCode.Unreadable })
-        const opened = this.secrets.open(row.result_sealed)
+        const row = await manager.findOne(McpGatewayReceiptEntity, {
+            select: { resultSealed: true },
+            where: { workspaceId, operationKey: key },
+        })
+        if (row === null) throw new McpGatewayReceiptsError({ code: McpGatewayReceiptsErrorCode.Unreadable })
+        const opened = this.secrets.open(row.resultSealed)
         if (opened.kind !== "ok") throw new McpGatewayReceiptsError({ code: McpGatewayReceiptsErrorCode.Unreadable })
         const parsed = parseJsonText(opened.value)
         if (!parsed.ok || !isResult(parsed.value))

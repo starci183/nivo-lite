@@ -2,7 +2,7 @@ import { AUTHORITY_MESSAGES } from "@modules/domain/authority"
 import { APPROVAL_REQUESTS_MESSAGES } from "@modules/domain/approval-requests"
 import { AUTHORITY_RULES_MESSAGES } from "@modules/domain/authority-rules"
 import { MEMBER_GRANTS_MESSAGES } from "@modules/domain/member-grants"
-import { DEEPSEEK_MESSAGES } from "@modules/integrations/deepseek"
+import { AI_TASKS_MESSAGES } from "@modules/domain/ai-tasks"
 import { EXECUTIONS_MESSAGES } from "@modules/domain/executions"
 import { OFFICE_COMMAND_CANDIDATES_MESSAGES } from "@modules/domain/office-command-candidates"
 import { OPENCLAW_AGENT_SYNC_MESSAGES } from "@modules/domain/openclaw-agent-sync"
@@ -37,7 +37,7 @@ export const API_MESSAGES_2 = [
     AUTHORITY_RULES_MESSAGES,
     MEMBER_GRANTS_MESSAGES,
     APPROVAL_REQUESTS_MESSAGES,
-    DEEPSEEK_MESSAGES,
+    AI_TASKS_MESSAGES,
     EXECUTIONS_MESSAGES,
     OFFICE_COMMAND_CANDIDATES_MESSAGES,
     OPENCLAW_AGENT_SYNC_MESSAGES,

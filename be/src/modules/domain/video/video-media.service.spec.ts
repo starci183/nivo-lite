@@ -3,19 +3,21 @@ import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { EntitlementsService } from "@modules/domain/billing"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { SUPABASE_OBJECTS } from "@modules/integrations/supabase"
-import type { SupabaseObjectsPort } from "@modules/integrations/supabase"
+import { STORAGE_OBJECTS } from "@modules/integrations/object-storage"
+import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import { VideoErrorCode } from "./errors/video.error"
-import type { WorkbenchRenderRow } from "./persistence/video-workbench.rows"
-import { SELECT_VIDEO_MEDIA_ID } from "./persistence/video-media.sql"
+import type { StoredRender } from "./video-stored.contracts"
 import { VideoMediaService } from "./video-media.service"
+
+/** The statement `callDbFunction` sends to generate an upload identity. */
+const SELECT_VIDEO_MEDIA_ID = "SELECT * FROM gen_random_uuid()"
 
 const WS = "workspace-1"
 const UPLOAD_ID = "00000000-0000-4000-8000-000000000001"
 
-const DONE: WorkbenchRenderRow = {
+const DONE: StoredRender = {
     id: "render-1",
     status: "done",
     progress: 100,
@@ -30,7 +32,7 @@ const signedOf = (paths: ReadonlyArray<string>) =>
     ok(paths.map((path) => ({ path, signedUrl: `https://cdn/${path}?token=1` })))
 
 const build = async (em: MockEntityManager) => {
-    const storage = mock<SupabaseObjectsPort>()
+    const storage = mock<StorageObjectsPort>()
     storage.signedUrls.mockImplementation((_bucket, paths) => Promise.resolve(signedOf(paths)))
     const members = mock<WorkspaceMembersService>()
     const entitlements = mock<EntitlementsService>()
@@ -38,7 +40,7 @@ const build = async (em: MockEntityManager) => {
         providers: [
             VideoMediaService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
-            { provide: SUPABASE_OBJECTS, useValue: storage },
+            { provide: STORAGE_OBJECTS, useValue: storage },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: EntitlementsService, useValue: entitlements },
         ],
@@ -86,7 +88,7 @@ describe("VideoMediaService", () => {
 
         it("fails when the folder cannot be listed", async () => {
             const { media, storage } = await build(mockEntityManager({}))
-            storage.list.mockResolvedValue(refused("SUPABASE_PROVIDER_UNAVAILABLE"))
+            storage.list.mockResolvedValue(refused("OBJECT_STORAGE_UNAVAILABLE"))
 
             await expect(media.list("person-1", WS)).rejects.toMatchObject({
                 code: VideoErrorCode.StorageFailed,
@@ -112,7 +114,7 @@ describe("VideoMediaService", () => {
         const file = { name: "B\u00e1nh m\u00ec ngon!.JPG", type: "image/jpeg", size: 1000 }
 
         it("gives a manager a ticket for a sanitized path inside the workspace", async () => {
-            const em = mockEntityManager({ query: [SELECT_VIDEO_MEDIA_ID, [{ id: UPLOAD_ID }]] })
+            const em = mockEntityManager({ query: [SELECT_VIDEO_MEDIA_ID, [{ gen_random_uuid: UPLOAD_ID }]] })
             const { media, storage, members, entitlements } = await build(em)
             const path = `${WS}/${UPLOAD_ID}-Banh-mi-ngon-.JPG`
             storage.signedUpload.mockResolvedValue(ok({ path, token: "token-1", signedUrl: "https://up/1" }))
@@ -141,7 +143,7 @@ describe("VideoMediaService", () => {
         })
 
         it("names a file with no usable characters 'file'", async () => {
-            const em = mockEntityManager({ query: [SELECT_VIDEO_MEDIA_ID, [{ id: UPLOAD_ID }]] })
+            const em = mockEntityManager({ query: [SELECT_VIDEO_MEDIA_ID, [{ gen_random_uuid: UPLOAD_ID }]] })
             const { media, storage } = await build(em)
             storage.signedUpload.mockResolvedValue(ok({ path: "p", token: "t", signedUrl: "u" }))
 
@@ -161,9 +163,9 @@ describe("VideoMediaService", () => {
         })
 
         it("fails when storage refuses the upload address", async () => {
-            const em = mockEntityManager({ query: [SELECT_VIDEO_MEDIA_ID, [{ id: UPLOAD_ID }]] })
+            const em = mockEntityManager({ query: [SELECT_VIDEO_MEDIA_ID, [{ gen_random_uuid: UPLOAD_ID }]] })
             const { media, storage } = await build(em)
-            storage.signedUpload.mockResolvedValue(refused("SUPABASE_PROVIDER_UNAVAILABLE"))
+            storage.signedUpload.mockResolvedValue(refused("OBJECT_STORAGE_UNAVAILABLE"))
 
             await expect(media.createUpload("person-1", WS, file)).rejects.toMatchObject({
                 code: VideoErrorCode.StorageFailed,
@@ -306,7 +308,7 @@ describe("VideoMediaService", () => {
 
         it("fails when storage cannot sign", async () => {
             const { media, storage } = await build(mockEntityManager({}))
-            storage.signedUrls.mockResolvedValue(refused("SUPABASE_PROVIDER_UNAVAILABLE"))
+            storage.signedUrls.mockResolvedValue(refused("OBJECT_STORAGE_UNAVAILABLE"))
 
             await expect(media.shareLink(WS, `${WS}/r/video.mp4`)).rejects.toMatchObject({
                 code: VideoErrorCode.StorageFailed,

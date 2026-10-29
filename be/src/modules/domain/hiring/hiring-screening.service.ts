@@ -5,15 +5,13 @@ import type { PerformContext, PerformResult } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { HiringError, HiringErrorCode } from "./errors/hiring.error"
 import type { OptionalGateOutcome, ScoreLabel, ScoreReason } from "./hiring.contracts"
 import { HiringLogEvent } from "./hiring.log-events"
 import type { RescreenOutput, RescreenParams } from "./hiring-operations.contracts"
 import { HiringDataService } from "./hiring-data.service"
 import { HiringTextService } from "./hiring-text.service"
-import { SET_SCREENED } from "./persistence/hiring.sql"
-import type { FlagRow } from "./persistence/hiring.rows"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { findFairnessViolations, scrubProtected } from "./policies/fairness.policy"
 import { parseJson, parseLooseJson, textField, textList } from "./policies/json.policy"
@@ -193,16 +191,20 @@ export class HiringScreeningService {
                 .join("\n\n") || null
         const scoreLabel = isScoreLabel(label) ? label : "consider"
         const text = this.words.text(`hiring.scoreLabel.${scoreLabel}`)
-        await this.entityManager.query<Array<FlagRow>>(SET_SCREENED, [
-            context.workspaceId,
-            candidate.id,
-            score,
-            scoreLabel,
-            JSON.stringify(reasonsOf(fieldText(context.fields, "reasons"))),
-            summary,
-            context.actor,
-            this.words.text("hiring.event.screened", { score, label: text }),
-        ])
+        await callDbFunction<{ hiring_candidate_screened: boolean }>(
+            this.entityManager,
+            "public.hiring_candidate_screened",
+            [
+                context.workspaceId,
+                candidate.id,
+                score,
+                scoreLabel,
+                JSON.stringify(reasonsOf(fieldText(context.fields, "reasons"))),
+                summary,
+                context.actor,
+                this.words.text("hiring.event.screened", { score, label: text }),
+            ],
+        )
         return {
             summary: this.words.text("hiring.screen.done", { name: candidate.name, score, label: text }),
             evidence: "captured",

@@ -21,7 +21,7 @@ import type {
     ChatTurnRuntime,
     CustomerOutcomes,
 } from "./conversations.contracts"
-import { FIND_HOLDING_SETTING } from "./persistence/conversations.sql"
+import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
 
 const registerRunFromJob = () => {
     describe("runFromJob", () => {
@@ -253,9 +253,9 @@ const registerHoldingReplies = () => {
         "sends the owner own holding line, trimmed and bounded, and falls back to the default " +
             "when it is empty or unset",
         async () => {
-            const custom = await build({ setting: [{ holding_message: `  ${"x".repeat(500)}  ` }] })
-            const blank = await build({ setting: [{ holding_message: "   " }] })
-            const unset = await build({ setting: [{ holding_message: null }] })
+            const custom = await build({ setting: [{ holdingMessage: `  ${"x".repeat(500)}  ` }] })
+            const blank = await build({ setting: [{ holdingMessage: "   " }] })
+            const unset = await build({ setting: [{ holdingMessage: null }] })
 
             await custom.service.run(turnPayload)
             await blank.service.run(turnPayload)
@@ -393,7 +393,8 @@ const pluggable = () => {
 }
 
 const build = async (setup: Setup = {}) => {
-    const em = mockEntityManager({ query: [FIND_HOLDING_SETTING, setup.setting ?? []] })
+    const em = mockEntityManager()
+    answerByTable(em, { "public.module_installations": setup.setting ?? [] })
     const conversations = mock<AgentConversationsService>()
     conversations.turnOf.mockResolvedValue(
         setup.conversation === null

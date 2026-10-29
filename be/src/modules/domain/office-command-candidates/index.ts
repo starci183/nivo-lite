@@ -12,3 +12,4 @@ export type {
     ProposeOutcome,
 } from "./office-command-candidates.contracts"
 export { DecisionsQueueService } from "./decisions-queue.service"
+export { officeCommandCandidatesEntities } from "./persistence/entities"

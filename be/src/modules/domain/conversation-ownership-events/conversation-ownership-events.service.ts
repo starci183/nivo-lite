@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { RecordOwnershipMoveParams } from "./conversation-ownership-events.contracts"
-import { INSERT_OWNERSHIP_EVENT } from "./persistence/conversation-ownership-events.sql"
+import { ConversationOwnershipEventEntity } from "./persistence/entities"
 
 @Injectable()
 /**
@@ -10,12 +10,12 @@ import { INSERT_OWNERSHIP_EVENT } from "./persistence/conversation-ownership-eve
 export class ConversationOwnershipEventsService {
     /** Records one move in the caller's transaction. */
     async record(params: RecordOwnershipMoveParams): Promise<void> {
-        await params.manager.query(INSERT_OWNERSHIP_EVENT, [
-            params.workspaceId,
-            params.conversationId,
-            params.fromAgentId,
-            params.toAgentId,
-            params.reason,
-        ])
+        await params.manager.insert(ConversationOwnershipEventEntity, {
+            workspaceId: params.workspaceId,
+            conversationId: params.conversationId,
+            fromAgentId: params.fromAgentId,
+            toAgentId: params.toAgentId,
+            reason: params.reason,
+        })
     }
 }

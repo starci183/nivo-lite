@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { campaignSegmentOf, loyaltyCampaignOf } from "./loyalty-campaigns.mapper"
-import type { LoyaltyCampaignRow } from "./persistence/loyalty-campaigns.rows"
+import type { CampaignListRaw } from "./loyalty-campaigns.mapper"
 
 const SUBJECT = Symbol("loyalty-campaigns.mapper")
 
@@ -12,7 +12,7 @@ const build = async () => {
     return moduleRef.get<typeof import("./loyalty-campaigns.mapper")>(SUBJECT)
 }
 
-const rowOf = builder<LoyaltyCampaignRow>({
+const rowOf = builder<CampaignListRaw>({
     id: "campaign-1",
     name: "Autumn",
     segment: { tiers: ["silver"], inactiveDays: 30, birthdayThisMonth: true, minSpendVnd: 500_000 },

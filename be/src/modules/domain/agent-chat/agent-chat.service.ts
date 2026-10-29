@@ -1,9 +1,10 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
-import { AgentsService } from "@modules/domain/agents"
+import { AgentConversationEntity, AgentConversationsService } from "@modules/domain/agent-conversations"
+import { AgentMessageEntity, AgentMessagesService } from "@modules/domain/agent-messages"
+import { AgentEntity, AgentsService } from "@modules/domain/agents"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { EventEntity } from "@modules/domain/events"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -20,6 +21,8 @@ import type {
     AgentChatPageRequest,
     AgentChatTurnStatus,
     AgentChatTurnStatusRequest,
+    ChatAgentFacts,
+    ChatTurnFacts,
     QueuedAgentChatTurn,
     SendAgentChatRequest,
     StartAgentChatRequest,
@@ -27,8 +30,6 @@ import type {
 } from "./agent-chat.contracts"
 import { AGENT_CHAT_FOUNDING_OFFER } from "./agent-chat.templates"
 import { AgentChatError, AgentChatErrorCode } from "./errors/agent-chat.error"
-import type { ChatAgentRow, ChatTurnMessageRow, FoundingPurchaseRow } from "./persistence/agent-chat.rows"
-import { FIND_CHAT_AGENT, FIND_CHAT_TURN_MESSAGE, FIND_FOUNDING_PURCHASE } from "./persistence/agent-chat.sql"
 
 const BODY_MAX = 4000
 const VISITOR_MAX = 80
@@ -160,10 +161,27 @@ export class AgentChatService {
     /** Reads queue state rather than treating a failed retry attempt as a terminal failure. */
     async turnStatus(userId: string, request: AgentChatTurnStatusRequest): Promise<AgentChatTurnStatus> {
         await this.members.require(userId, request.workspaceId)
-        const [message] = await this.entityManager.query<Array<ChatTurnMessageRow>>(FIND_CHAT_TURN_MESSAGE, [
-            request.workspaceId,
-            request.id,
-        ])
+        const message = await this.entityManager
+            .createQueryBuilder(AgentMessageEntity, "m")
+            .select("m.id", "id")
+            .addSelect("m.conversation_id", "conversationId")
+            .addSelect("c.channel", "channel")
+            .addSelect("m.role", "role")
+            .addSelect("m.delivery_status", "deliveryStatus")
+            .addSelect("r.id", "replyId")
+            .addSelect("r.delivery_status", "replyDeliveryStatus")
+            .innerJoin(AgentConversationEntity, "c", "c.id = m.conversation_id AND c.workspace_id = m.workspace_id")
+            .leftJoin(
+                AgentMessageEntity,
+                "r",
+                "r.conversation_id = m.conversation_id AND r.workspace_id = m.workspace_id AND r.in_reply_to = m.id AND r.role = 'agent'",
+            )
+            .where("m.workspace_id = :workspaceId AND m.id = :id AND m.role IN ('user', 'agent')", {
+                workspaceId: request.workspaceId,
+                id: request.id,
+            })
+            .limit(1)
+            .getRawOne<ChatTurnFacts>()
         if (message === undefined) throw new AgentChatError({ code: AgentChatErrorCode.TurnNotFound })
         const kind = message.role === "agent" ? "deliver" : "turn"
         const queued = await this.queueStatus.status(
@@ -174,7 +192,7 @@ export class AgentChatService {
         if (queued === null) throw new AgentChatError({ code: AgentChatErrorCode.TurnNotFound })
         const deliveryFailed =
             message.channel !== "website" &&
-            (kind === "deliver" ? message.delivery_status === "failed" : message.reply_delivery_status === "failed")
+            (kind === "deliver" ? message.deliveryStatus === "failed" : message.replyDeliveryStatus === "failed")
         let status: AgentChatTurnStatus["status"] = "queued"
         if (queued.state === "running") status = "running"
         if (queued.state === "failed" || (queued.state === "done" && deliveryFailed)) status = "failed"
@@ -184,18 +202,23 @@ export class AgentChatService {
         return {
             id: message.id,
             jobId: queued.id,
-            conversationId: message.conversation_id,
+            conversationId: message.conversationId,
             status,
-            resultMessageId: kind === "deliver" ? message.id : message.reply_id,
+            resultMessageId: kind === "deliver" ? message.id : message.replyId,
             errorCode,
         }
     }
 
-    private async requireAgent(request: AgentChatAgentRequest): Promise<ChatAgentRow> {
-        const [row] = await this.entityManager.query<Array<ChatAgentRow>>(FIND_CHAT_AGENT, [
-            request.workspaceId,
-            request.agentId,
-        ])
+    private async requireAgent(request: AgentChatAgentRequest): Promise<ChatAgentFacts> {
+        const row = await this.entityManager
+            .createQueryBuilder(AgentEntity, "a")
+            .select(["a.id AS id", "a.module AS module", "a.status AS status", "a.greeting AS greeting"])
+            .where("a.workspace_id = :workspaceId AND a.id = :agentId", {
+                workspaceId: request.workspaceId,
+                agentId: request.agentId,
+            })
+            .limit(1)
+            .getRawOne<ChatAgentFacts>()
         if (row === undefined) throw new AgentChatError({ code: AgentChatErrorCode.AgentNotFound })
         return row
     }
@@ -210,14 +233,15 @@ export class AgentChatService {
         const offer = AGENT_CHAT_FOUNDING_OFFER
         const now = this.clock.now().getTime()
         if (!offer.enabled || now < Date.parse(offer.startsAt) || now > Date.parse(offer.endsAt)) return false
-        return (
-            (
-                await this.entityManager.query<Array<FoundingPurchaseRow>>(FIND_FOUNDING_PURCHASE, [
-                    workspaceId,
-                    offer.startsAt,
-                    offer.endsAt,
-                ])
-            ).length > 0
-        )
+        const purchase = await this.entityManager
+            .createQueryBuilder(EventEntity, "e")
+            .select("e.id", "id")
+            .where(
+                "e.workspace_id = :workspaceId AND e.kind = 'module.purchased' AND e.created_at >= :startsAt AND e.created_at <= :endsAt",
+                { workspaceId, startsAt: offer.startsAt, endsAt: offer.endsAt },
+            )
+            .limit(1)
+            .getRawOne<{ id: string }>()
+        return purchase !== undefined
     }
 }

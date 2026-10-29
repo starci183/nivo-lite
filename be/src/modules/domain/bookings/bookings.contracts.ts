@@ -155,6 +155,25 @@ export interface BookingSettings extends BookingPolicy {
     readonly address: string
 }
 
+/** The settings of a workspace that never saved any. */
+export const DEFAULT_SETTINGS: BookingSettings = {
+    timezone: "Asia/Ho_Chi_Minh",
+    slotStepMin: 15,
+    minLeadMin: 60,
+    maxAdvanceDays: 60,
+    cancelWindowHours: 24,
+    depositPct: 0,
+    lateCancelFeePct: 0,
+    noShowFeeVnd: 0,
+    autoConfirm: true,
+    handoffOrder: false,
+    reminderHours: [24, 2],
+    publicEnabled: false,
+    publicSlug: null,
+    publicNote: "",
+    address: "",
+}
+
 /** A service the owner sells by appointment, as the public page and the desk list it. */
 export interface BookableService extends ServiceSpec {
     /** The name shown to customers. */
@@ -432,7 +451,15 @@ export interface StatusChange {
 }
 /** Why a booking event was sent: it was created, its status changed, or its time or resource changed. */
 export type BookingEventKind = "created" | "status" | "moved"
-/** One change of a booking, as the booking_status queue carries it (ids and codes only). */
+/** What a delivery of the event bus gives the inbox: the consumer's queue and the business key, claimed once per effect. */
+export interface InboxClaim {
+    /** The reactor's queue, the first half of the inbox key. */
+    readonly consumer: string
+    /** The business key of the fact, the second half. */
+    readonly dedupeKey: string
+}
+
+/** One change of a booking, as `booking_status_changed` carries it (ids and codes only). */
 export interface BookingEvent {
     /** The workspace of the booking. */
     readonly workspaceId: string

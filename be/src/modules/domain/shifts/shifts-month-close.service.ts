@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { Like } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { OfficeLog, OutboundMail } from "@modules/domain/module-ops"
 import { InjectAccountDirectory } from "@modules/domain/workspace-members"
@@ -7,13 +8,10 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { Logger } from "@modules/platform/logging"
-import type { AlertShiftRow, DoneRow, MonthCloseWorkspaceRow, OwnerRow } from "./persistence/shifts-alerts.rows"
-import {
-    SELECT_MONTH_CLOSE_WORKSPACES,
-    SELECT_MONTH_SHIFTS,
-    SELECT_OWNER,
-    SELECT_PAYROLL_DONE,
-} from "./persistence/shifts-alerts.sql"
+import { ShiftsNotificationEntity } from "./persistence/entities"
+import type { AlertShiftRead, MonthCloseWorkspaceRead, OwnerRead } from "./persistence/shifts-alerts.reads"
+import { selectAlertShifts } from "./persistence/shifts-alert-shift.query"
+import { MONTH_CLOSE_TEMPLATE, selectEnabledPipelines } from "./persistence/shifts-pipeline.query"
 import { money } from "./policies/labels.policy"
 import { monthCsvOf, monthLabel, monthSummaryOf, payrollMarker } from "./policies/month-summary.policy"
 import { monthToClose, toAlertShift } from "./policies/shift-alerts.policy"
@@ -23,6 +21,9 @@ import { ShiftsDataService } from "./shifts-data.service"
 import { ShiftsNotifyService } from "./shifts-notify.service"
 import { ShiftsTextService } from "./shifts-text.service"
 import { ShiftsLogEvent } from "./shifts.log-events"
+
+/** The most shifts one month close reads. */
+const MONTH_SHIFTS_MAX = 5000
 
 /** Who closes the month, as the log shows it. */
 const ACTOR = "NIVO"
@@ -57,7 +58,9 @@ export class ShiftsMonthCloseService {
 
     /** Closes the month in every workspace where it is due; answers how many closed now. A failing workspace is logged and retried next tick. */
     async tick(now: Date): Promise<number> {
-        const workspaces = await this.entityManager.query<Array<MonthCloseWorkspaceRow>>(SELECT_MONTH_CLOSE_WORKSPACES)
+        const workspaces = await selectEnabledPipelines(this.entityManager, MONTH_CLOSE_TEMPLATE)
+            .select(["p.workspace_id AS workspace_id", "p.config AS config"])
+            .getRawMany<MonthCloseWorkspaceRead>()
         const clock = clockVn(now)
         let closed = 0
         await eachInOrder(workspaces, async (workspace) => {
@@ -78,11 +81,10 @@ export class ShiftsMonthCloseService {
     /** Closes one month of one workspace; a month already closed answers `done: false` and changes nothing. */
     async close(workspaceId: string, month: string): Promise<MonthClose> {
         const marker = payrollMarker(month)
-        const [already] = await this.entityManager.query<Array<DoneRow>>(SELECT_PAYROLL_DONE, [
-            workspaceId,
-            `${marker}%`,
-        ])
-        if (already?.done === true) return { done: false, emailed: false, total: 0 }
+        const already = await this.entityManager.exists(ShiftsNotificationEntity, {
+            where: { workspaceId, kind: "payroll", body: Like(`${marker}%`) },
+        })
+        if (already) return { done: false, emailed: false, total: 0 }
         const summary = await this.summary(workspaceId, month)
         const label = monthLabel(month)
         const body = this.words.text("shifts.payrollOffice", {
@@ -126,14 +128,26 @@ export class ShiftsMonthCloseService {
         const { from, to } = monthRange(month)
         const [setup, rows] = await Promise.all([
             this.data.loadSetup(workspaceId, true),
-            this.entityManager.query<Array<AlertShiftRow>>(SELECT_MONTH_SHIFTS, [workspaceId, from, to]),
+            selectAlertShifts(this.entityManager, workspaceId, false)
+                .andWhere("s.shift_date BETWEEN :from AND :to", { from, to })
+                .orderBy("s.shift_date", "ASC")
+                .addOrderBy("s.start_time", "ASC")
+                .limit(MONTH_SHIFTS_MAX)
+                .getRawMany<AlertShiftRead>(),
         ])
         return monthSummaryOf(setup, rows.map(toAlertShift))
     }
 
     /** Mails the summary with its CSV to the owner (an owner-facing notice); true only when the mail left. */
     private async mailOwner(workspaceId: string, month: string, text: string, summary: MonthSummary): Promise<boolean> {
-        const [owner] = await this.entityManager.query<Array<OwnerRow>>(SELECT_OWNER, [workspaceId])
+        const owner = await this.entityManager
+            .createQueryBuilder()
+            .select("m.user_id", "user_id")
+            .from("public.workspace_members", "m")
+            .where("m.workspace_id = :workspaceId AND m.role = 'owner' AND m.status = 'active'", { workspaceId })
+            .orderBy("m.created_at", "ASC")
+            .limit(1)
+            .getRawOne<OwnerRead>()
         if (owner === undefined) return false
         const account = await this.accounts.accountOf(owner.user_id)
         if (account.kind !== "ok" || account.value.email === "") return false

@@ -9,8 +9,6 @@ import { openCard } from "./approval-card.policy"
 import { ThreadMessagesError, ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { vetMentions, vetQuotes } from "./mention.policy"
 import { MentionDirectoryService } from "./mention-directory.service"
-import type { AgentRow } from "./persistence/thread-messages.rows"
-import { FIND_AGENT } from "./persistence/thread-messages.sql"
 import { refOf, selfStepOf, tagStepOf } from "./thread-step.policy"
 import { stepTitleOf } from "./thread-text.policy"
 import type {
@@ -62,8 +60,8 @@ export class ThreadAgentPostsService {
      * the agent's owner instead; an approval ask opens a request and the message carries its card.
      */
     async postAsAgent(post: AgentPost): Promise<PostedAgentMessage> {
-        const [agent] = await this.entityManager.query<Array<AgentRow>>(FIND_AGENT, [post.workspaceId, post.agentId])
-        if (agent === undefined) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.AgentNotFound })
+        const agent = await this.directory.findAgent(this.entityManager, post.workspaceId, post.agentId)
+        if (agent === null) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.AgentNotFound })
         const mentions = unwrapOutcome(vetMentions(post.mentions), ThreadMessagesError)
         const quoted = unwrapOutcome(vetQuotes(post.quoted), ThreadMessagesError)
         const views = await this.directory.resolve(this.entityManager, post.workspaceId, mentions, post.locale)

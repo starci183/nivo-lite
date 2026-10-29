@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import type { WorkThread } from "@modules/domain/work-threads"
-import type { ThreadDigestRow, ThreadMessageRow } from "./persistence/thread-messages.rows"
+import type { ThreadDigestRecord, ThreadMessageRecord } from "./thread-messages.contracts"
 import { toListing, toMessage } from "./thread.mapper"
 
 const SUBJECT = Symbol("thread.mapper")
@@ -24,15 +24,15 @@ const thread: WorkThread = {
     updatedAt: "2026-10-22T02:45:00.000Z",
 }
 
-const digest: ThreadDigestRow = {
+const digest: ThreadDigestRecord = {
     thread_id: "thread-1",
     last_body: "Confirmation sent.",
-    last_at: "2026-10-22T09:45:00+07:00",
+    last_at: new Date("2026-10-22T09:45:00+07:00"),
     message_count: 7,
     waiting_approval: true,
 }
 
-const messageRow = (overrides: Partial<ThreadMessageRow> = {}): ThreadMessageRow => ({
+const messageRow = (overrides: Partial<ThreadMessageRecord> = {}): ThreadMessageRecord => ({
     id: "msg-1",
     thread_id: "thread-1",
     workspace_id: "ws-1",
@@ -44,7 +44,7 @@ const messageRow = (overrides: Partial<ThreadMessageRow> = {}): ThreadMessageRow
     quoted: [],
     mentions: [{ kind: "member", id: "minh", name: "Mr Minh" }],
     approval: null,
-    created_at: "2026-10-22T09:41:00+07:00",
+    created_at: new Date("2026-10-22T09:41:00+07:00"),
     ...overrides,
 })
 

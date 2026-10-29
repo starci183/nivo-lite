@@ -137,7 +137,7 @@ describe("toRequestStatus", () => {
     ] as const)("presents a $status request", async ({ status, order_id, fault, expected }) => {
         const subject = await buildSubject()
 
-        expect(subject.toRequestStatus({ id: "request-1", status, order_id, fault })).toEqual({
+        expect(subject.toRequestStatus({ id: "request-1", status, orderId: order_id, fault })).toEqual({
             id: "request-1",
             status: expected,
             resultId: order_id,

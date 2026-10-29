@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { mock, mockEntityManager } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -16,13 +16,28 @@ import type {
 import { buildPipelineRow, buildShop, buildTemplate } from "@tests/fixtures/builders/automations.builder"
 import { AUTOMATION_GATE, AUTOMATION_OFFICE, AUTOMATION_TEXT } from "./automations.decorators"
 import { AutomationsErrorCode } from "./errors/automations.error"
-import { SELECT_FIRST_STAFF, SELECT_LATEST_CONVERSATION, SELECT_LEAD } from "./persistence/automation-readers.sql"
-import type { LeadReadRow } from "./persistence/automations.rows"
+import type { LeadRead } from "./automation-reads.contracts"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+
+/** The manager of {@link readingOf}. */
+interface ReadingManager {
+    /** The manager whose reads answer the given results. */
+    readonly em: MockEntityManager
+}
+
+/** A manager whose reads (and the snapshot transaction around some of them) answer `answers`, one fake statement each, in order. */
+const readingOf = (...answers: Array<QueryBuilderAnswers>): ReadingManager => {
+    const em = mockEntityManager()
+    fakeTransaction(em)
+    queueQueryBuilders(em, answers)
+    return { em }
+}
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 const textLike = (text: string): unknown => expect.stringContaining(text)
 
-const LEAD: LeadReadRow = {
+const LEAD: LeadRead = {
     id: "l-1",
     contact_name: "An",
     company: "",
@@ -112,13 +127,12 @@ describe("AutomationMessagesService words", () => {
 })
 describe("AutomationMessagesService loaders", () => {
     it("reads a lead, the conversation of a lead and the first staff member", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_LEAD, [LEAD]],
-                [SELECT_LATEST_CONVERSATION, [{ id: "cv-1" }]],
-                [SELECT_FIRST_STAFF, [{ name: "Lan" }]],
-            ],
-        })
+        const em = readingOf(
+            { getRawOne: LEAD },
+            { getRawOne: LEAD },
+            { getRawOne: { id: "cv-1" } },
+            { getRawOne: { name: "Lan" } },
+        ).em
         const { service } = await build(em)
 
         await expect(service.lead("ws-1", "l-1")).resolves.toEqual(LEAD)
@@ -128,13 +142,7 @@ describe("AutomationMessagesService loaders", () => {
     })
 
     it("answers none when there is nothing to read", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_LEAD, []],
-                [SELECT_LATEST_CONVERSATION, []],
-                [SELECT_FIRST_STAFF, []],
-            ],
-        })
+        const em = readingOf({ getRawOne: undefined }, { getRawOne: undefined }, { getRawOne: undefined }).em
         const { service } = await build(em)
 
         await expect(service.lead("ws-1", "l-1")).resolves.toBeNull()

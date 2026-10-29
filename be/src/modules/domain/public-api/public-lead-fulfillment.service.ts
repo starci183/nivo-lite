@@ -1,11 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AutomationBusinessEventsService } from "@modules/domain/automations"
 import { DurableWorkService, EvidenceService } from "@modules/domain/decisions"
 import type { WorkContext, WorkItem } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { LeadRecordsService, contactParts } from "@modules/domain/leads"
 import type { LeadRecordRow } from "@modules/domain/leads"
+import { DealWonEvent } from "@modules/events/api"
+import { InjectEventBus } from "@modules/platform/event-bus"
+import type { EventBus } from "@modules/platform/event-bus"
 import { PublicApiError, PublicApiErrorCode } from "./errors/public-api.error"
 import type { LeadRequestBody, LegacyLeadRequestBody, PublicLeadFulfillmentResult } from "./public-api.contracts"
 import { DEFAULT_API_NEED } from "./public-api.policy"
@@ -19,7 +21,7 @@ export class PublicLeadFulfillmentService {
         private readonly leads: LeadRecordsService,
         private readonly work: DurableWorkService,
         private readonly evidence: EvidenceService,
-        private readonly events: AutomationBusinessEventsService,
+        @InjectEventBus() private readonly eventBus: EventBus,
     ) {}
 
     /** Records the manual input and its gated handoff together; a new customer is captured only after that gate permits it. */
@@ -218,19 +220,18 @@ export class PublicLeadFulfillmentService {
             },
             tx,
         )
-        await this.events.publish(
-            ctx.workspaceId,
-            "deal.won",
-            {
-                lead_id: lead.id,
+        await this.eventBus.publish(
+            DealWonEvent.create({
+                workspaceId: ctx.workspaceId,
+                leadId: lead.id,
                 name: lead.contact_name,
                 company: lead.company,
                 channel: lead.channel,
                 need: lead.need,
                 source,
-            },
-            `deal.won:${lead.id}`,
+            }),
             tx,
+            `deal-won:${lead.id}`,
         )
     }
 }

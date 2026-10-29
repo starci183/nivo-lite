@@ -1,9 +1,9 @@
 import type { OptionalCancellableBooking } from "../booking-chat.contracts"
-import type { CancellableBookingRow } from "../persistence/booking.rows"
+import type { CancellableFacts } from "../booking-facts.contracts"
 import { bookingIsoOf } from "./zoned-time.policy"
 
 /** A booking a customer may ask to cancel or move, from its row; none for no row. */
-export const cancellableOf = (row: CancellableBookingRow | undefined): OptionalCancellableBooking =>
+export const cancellableOf = (row: CancellableFacts | undefined): OptionalCancellableBooking =>
     row === undefined
         ? null
         : {

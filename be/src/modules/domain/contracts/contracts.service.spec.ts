@@ -11,14 +11,9 @@ import { ContractLinkService } from "./contract-link.service"
 import type { SaveContractParams } from "./contracts.contracts"
 import { ContractsService } from "./contracts.service"
 import { ContractsErrorCode } from "./errors/contracts.error"
-import {
-    ATTACH_CONTRACT_LEAD,
-    EXTEND_CONTRACT_TERM,
-    INSERT_CONTRACT,
-    LIST_CONTRACTS,
-    LOCK_CONTRACT,
-    UPDATE_CONTRACT,
-} from "./persistence/contracts.sql"
+import { ContractEntity } from "./persistence/entities"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
+import { entityRowBuilder, namedCalls, stampedValues } from "@tests/fixtures/builders/entity-row.builder"
 
 const paramsOf = builder<SaveContractParams>({
     workspaceId: "ws-1",
@@ -35,19 +30,32 @@ const paramsOf = builder<SaveContractParams>({
     acceptLanguage: "en",
 })
 
-const ROW = {
+const rowOf = entityRowBuilder<ContractEntity>({
     id: "contract-1",
-    lead_id: "lead-1",
-    customer_name: "Anh Minh",
+    workspaceId: "ws-1",
+    leadId: "lead-1",
+    customerName: "Anh Minh",
     plan: "Monthly",
-    starts_on: "2026-10-01",
-    ends_on: "2027-09-30",
-    amount_vnd: 5_000_000,
+    startsOn: "2026-10-01",
+    endsOn: "2027-09-30",
+    amountVnd: 5_000_000,
+    status: "active",
+    note: "",
+    createdAt: new Date("2026-10-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-10-01T00:00:00.000Z"),
+})
+const ROW = rowOf()
+
+const FIELDS = {
+    leadId: "lead-1",
+    customerName: "Anh Minh",
+    plan: "Monthly",
+    startsOn: "2026-10-01",
+    endsOn: "2027-09-30",
+    amountVnd: 5_000_000,
     status: "active",
     note: "",
 }
-
-const FIELDS = ["lead-1", "Anh Minh", "Monthly", "2026-10-01", "2027-09-30", 5_000_000, "active", ""]
 
 const build = async (entityManager: MockEntityManager) => {
     const messages = mock<MessageCatalog>()
@@ -84,7 +92,8 @@ const build = async (entityManager: MockEntityManager) => {
 describe("ContractsService", () => {
     describe("saveContract", () => {
         it("adds a contract linked to a lead of the workspace and logs it in the same transaction", async () => {
-            const tx = fakeTransaction(mockEntityManager({ query: [INSERT_CONTRACT, [ROW]] }))
+            const tx = fakeTransaction(mockEntityManager())
+            const [lead, insert] = queueQueryBuilders(tx.em, [{ getRawOne: { id: "lead-1" } }, { execute: { raw: [ROW] } }])
             const { contracts, events, requestLocale } = await build(tx.em)
 
             await expect(contracts.saveContract(paramsOf())).resolves.toEqual({
@@ -99,7 +108,8 @@ describe("ContractsService", () => {
                 note: "",
             })
 
-            expect(tx.em.query).toHaveBeenCalledWith(INSERT_CONTRACT, ["ws-1", ...FIELDS])
+            expect(lead?.callsOf("setLock")).toEqual([["pessimistic_read"]])
+            expect(insert?.callsOf("values")).toEqual([[{ workspaceId: "ws-1", ...FIELDS }]])
             expect(requestLocale.of).toHaveBeenCalledWith("en")
             expect(events.record).toHaveBeenCalledWith(
                 {
@@ -117,14 +127,16 @@ describe("ContractsService", () => {
         })
 
         it("edits a contract of the workspace without a lead link and logs the update", async () => {
-            const tx = fakeTransaction(mockEntityManager({ query: [UPDATE_CONTRACT, [{ ...ROW, lead_id: null }]] }))
+            const tx = fakeTransaction(mockEntityManager())
+            const [update] = queueQueryBuilders(tx.em, [{ execute: { raw: [{ ...ROW, leadId: null }] } }])
             const { contracts, events } = await build(tx.em)
 
             await expect(
                 contracts.saveContract(paramsOf({ contractId: "contract-1", leadId: null })),
             ).resolves.toMatchObject({ id: "contract-1", leadId: null })
 
-            expect(tx.em.query).toHaveBeenCalledWith(UPDATE_CONTRACT, ["ws-1", "contract-1", null, ...FIELDS.slice(1)])
+            expect(update?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", contractId: "contract-1", leadId: null })
+            expect(update?.callsOf("set")[0]?.[0]).toMatchObject({ ...FIELDS, leadId: null })
             expect(events.record).toHaveBeenCalledWith(
                 expect.objectContaining({
                     leadId: null,
@@ -136,6 +148,11 @@ describe("ContractsService", () => {
             expect(isTransactionManager(events.record.mock.calls[0]?.[1])).toBe(true)
         })
 
+    })
+})
+
+describe("ContractsService", () => {
+    describe("saveContract policy", () => {
         it("refuses a contract that fails the policy and writes nothing", async () => {
             const tx = fakeTransaction(mockEntityManager())
             const { contracts, events } = await build(tx.em)
@@ -144,7 +161,7 @@ describe("ContractsService", () => {
                 code: ContractsErrorCode.CustomerRequired,
             })
 
-            expect(tx.em.query).not.toHaveBeenCalled()
+            expect(tx.em.createQueryBuilder).not.toHaveBeenCalled()
             expect(events.record).not.toHaveBeenCalled()
             expect(tx.rollbacks).toBe(1)
         })
@@ -162,9 +179,10 @@ describe("ContractsService", () => {
 })
 
 describe("ContractsService", () => {
-    describe("saveContract", () => {
+    describe("saveContract refusals", () => {
         it("refuses a lead the workspace does not have", async () => {
-            const tx = fakeTransaction(mockEntityManager({ query: [INSERT_CONTRACT, []] }))
+            const tx = fakeTransaction(mockEntityManager())
+            const [, insert] = queueQueryBuilders(tx.em, [{ getRawOne: undefined }, { execute: { raw: [] } }])
             const { contracts, events } = await build(tx.em)
 
             await expect(contracts.saveContract(paramsOf())).rejects.toMatchObject({
@@ -172,11 +190,13 @@ describe("ContractsService", () => {
                 params: { id: "lead-1" },
             })
 
+            expect(insert?.callsOf("execute")).toEqual([])
             expect(events.record).not.toHaveBeenCalled()
         })
 
         it("refuses an edit of a contract the workspace does not have", async () => {
-            const tx = fakeTransaction(mockEntityManager({ query: [UPDATE_CONTRACT, []] }))
+            const tx = fakeTransaction(mockEntityManager())
+            queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
             const { contracts } = await build(tx.em)
 
             await expect(
@@ -187,20 +207,19 @@ describe("ContractsService", () => {
 
     describe("attachLead", () => {
         it("links the lead to the workspace's contract on the system's behalf", async () => {
-            const em = mockEntityManager({ query: [ATTACH_CONTRACT_LEAD, []] })
+            const em = mockEntityManager()
+            const [attach] = queueQueryBuilders(em, [{ execute: {} }])
             const { contracts, members } = await build(em)
 
             await expect(contracts.attachLead("ws-1", "contract-1", "lead-9")).resolves.toBeUndefined()
-            expect(em.query).toHaveBeenCalledWith(ATTACH_CONTRACT_LEAD, ["ws-1", "contract-1", "lead-9"])
+            expect(attach?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", contractId: "contract-1", leadId: "lead-9" })
             expect(members.require).not.toHaveBeenCalled()
         })
     })
 
     describe("list", () => {
         it("lists the workspace contracts after proving membership", async () => {
-            const em = mockEntityManager({
-                query: [LIST_CONTRACTS, [ROW, { ...ROW, id: "contract-2", lead_id: null }]],
-            })
+            const em = mockEntityManager({ find: [ContractEntity, [ROW, rowOf({ id: "contract-2", leadId: null })]] })
             const { contracts, members } = await build(em)
 
             await expect(contracts.list("ws-1", "user-1")).resolves.toEqual([
@@ -228,13 +247,15 @@ describe("ContractsService", () => {
                 },
             ])
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-            expect(em.query).toHaveBeenCalledWith(LIST_CONTRACTS, ["ws-1"])
+            expect(namedCalls(em.find.mock.calls)).toEqual([
+                ["ContractEntity", { where: { workspaceId: "ws-1" }, order: { endsOn: "ASC", id: "ASC" }, take: 300 }],
+            ])
         })
     })
 })
 
-const CURRENT = { ...ROW, starts_on: "2026-01-01", ends_on: "2027-01-01", note: "VIP" }
-const RENEWED = { ...CURRENT, starts_on: "2027-01-01", ends_on: "2028-01-01", note: "VIP\ncontracts.renewalNote" }
+const CURRENT = rowOf({ startsOn: "2026-01-01", endsOn: "2027-01-01", note: "VIP" })
+const RENEWED = { ...CURRENT, startsOn: "2027-01-01", endsOn: "2028-01-01", note: "VIP\ncontracts.renewalNote" }
 const RESULT_2028 = {
     id: "contract-1",
     leadId: "lead-1",
@@ -249,16 +270,23 @@ const RESULT_2028 = {
 
 describe("ContractsService", () => {
     describe("extendForPaidRenewal", () => {
+        it("renews inside the manager of the caller's transaction without opening one", async () => {
+            const own = mockEntityManager()
+            const callers = mockEntityManager()
+            queueQueryBuilders(callers, [{ getOne: CURRENT }, { execute: { raw: [RENEWED] } }])
+            const { contracts } = await build(own)
+
+            await expect(
+                contracts.extendForPaidRenewal("ws-1", "contract-1", "2027-01-01", "INV-202612-0001", callers),
+            ).resolves.toMatchObject({ extended: true, previousEndsOn: "2027-01-01" })
+
+            expect(own.transaction).not.toHaveBeenCalled()
+            expect(callers.transaction).not.toHaveBeenCalled()
+        })
 
         it("moves a contract still ending on the paid period to its next term and logs it in the same transaction", async () => {
-            const tx = fakeTransaction(
-                mockEntityManager({
-                    query: [
-                        [LOCK_CONTRACT, [CURRENT]],
-                        [EXTEND_CONTRACT_TERM, [RENEWED]],
-                    ],
-                }),
-            )
+            const tx = fakeTransaction(mockEntityManager())
+            const [lock, extend] = queueQueryBuilders(tx.em, [{ getOne: CURRENT }, { execute: { raw: [RENEWED] } }])
             const { contracts, events, members } = await build(tx.em)
 
             await expect(
@@ -269,15 +297,20 @@ describe("ContractsService", () => {
                 contract: RESULT_2028,
             })
 
-            expect(tx.em.query).toHaveBeenCalledWith(LOCK_CONTRACT, ["ws-1", "contract-1"])
-            expect(tx.em.query).toHaveBeenCalledWith(EXTEND_CONTRACT_TERM, [
-                "ws-1",
-                "contract-1",
-                "2027-01-01",
-                "2027-01-01",
-                "2028-01-01",
-                "VIP\ncontracts.renewalNote:{\"until\":\"01/01/2028\",\"no\":\"INV-202612-0001\"}",
-            ])
+            expect(lock?.callsOf("setLock")).toEqual([["pessimistic_write"]])
+            expect(lock?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", contractId: "contract-1" })
+            expect(extend?.callsOf("where")[0]?.[1]).toEqual({
+                workspaceId: "ws-1",
+                contractId: "contract-1",
+                periodEndsOn: "2027-01-01",
+            })
+            expect(stampedValues(extend?.callsOf("set")[0]?.[0])).toEqual({
+                startsOn: "2027-01-01",
+                endsOn: "2028-01-01",
+                status: "active",
+                note: "VIP\ncontracts.renewalNote:{\"until\":\"01/01/2028\",\"no\":\"INV-202612-0001\"}",
+                updatedAt: "function",
+            })
             expect(events.record).toHaveBeenCalledWith(
                 {
                     workspaceId: "ws-1",
@@ -300,14 +333,8 @@ describe("ContractsService", () => {
 describe("ContractsService", () => {
     describe("extendForPaidRenewal", () => {
         it("re-activates an ended contract", async () => {
-            const tx = fakeTransaction(
-                mockEntityManager({
-                    query: [
-                        [LOCK_CONTRACT, [{ ...CURRENT, status: "ended" }]],
-                        [EXTEND_CONTRACT_TERM, [RENEWED]],
-                    ],
-                }),
-            )
+            const tx = fakeTransaction(mockEntityManager())
+            queueQueryBuilders(tx.em, [{ getOne: { ...CURRENT, status: "ended" } }, { execute: { raw: [RENEWED] } }])
             const { contracts } = await build(tx.em)
 
             await expect(
@@ -316,29 +343,24 @@ describe("ContractsService", () => {
         })
 
         it.each([
-            ["the contract moved to another term", { ends_on: "2028-01-01" }, "2028-01-01"],
+            ["the contract moved to another term", { endsOn: "2028-01-01" }, "2028-01-01"],
             ["the contract was cancelled", { status: "cancelled" }, "2027-01-01"],
         ])("changes nothing when %s", async (_name, change, previousEndsOn) => {
-            const tx = fakeTransaction(mockEntityManager({ query: [LOCK_CONTRACT, [{ ...CURRENT, ...change }]] }))
+            const tx = fakeTransaction(mockEntityManager())
+            queueQueryBuilders(tx.em, [{ getOne: { ...CURRENT, ...change } }])
             const { contracts, events } = await build(tx.em)
 
             await expect(
                 contracts.extendForPaidRenewal("ws-1", "contract-1", "2027-01-01", "INV-1"),
             ).resolves.toMatchObject({ extended: false, previousEndsOn })
 
-            expect(tx.em.query).not.toHaveBeenCalledWith(EXTEND_CONTRACT_TERM, expect.anything())
+            expect(tx.em.createQueryBuilder).toHaveBeenCalledTimes(1)
             expect(events.record).not.toHaveBeenCalled()
         })
 
         it("changes nothing when the guarded write finds the term already moved", async () => {
-            const tx = fakeTransaction(
-                mockEntityManager({
-                    query: [
-                        [LOCK_CONTRACT, [CURRENT]],
-                        [EXTEND_CONTRACT_TERM, []],
-                    ],
-                }),
-            )
+            const tx = fakeTransaction(mockEntityManager())
+            queueQueryBuilders(tx.em, [{ getOne: CURRENT }, { execute: { raw: [] } }])
             const { contracts, events } = await build(tx.em)
 
             await expect(
@@ -348,7 +370,8 @@ describe("ContractsService", () => {
         })
 
         it("refuses a contract the workspace does not have", async () => {
-            const tx = fakeTransaction(mockEntityManager({ query: [LOCK_CONTRACT, []] }))
+            const tx = fakeTransaction(mockEntityManager())
+            queueQueryBuilders(tx.em, [{ getOne: null }])
             const { contracts } = await build(tx.em)
 
             await expect(

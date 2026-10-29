@@ -19,19 +19,43 @@ import type {
     MessageRow,
     WaitingRow,
 } from "./persistence/chatbot-workbench.rows"
-import {
-    FIND_CHATBOT_CONVERSATION,
-    FIND_CHATBOT_LEAD,
-    FIND_CHATBOT_STAFF,
-    LIST_CHATBOT_AGENTS,
-    LIST_CHATBOT_CONVERSATIONS,
-    LIST_CHATBOT_INSTALLATIONS,
-    LIST_CHATBOT_LEAD_BRIEFS,
-    LIST_CHATBOT_LENSES,
-    LIST_CHATBOT_MESSAGE_BRIEFS,
-    LIST_CHATBOT_MESSAGES,
-    LIST_CHATBOT_WAITING,
-} from "./persistence/chatbot-workbench.sql"
+import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
+import type { TableAnswers } from "@tests/fixtures/builders/table-query-builder.builder"
+
+/** The table each read of the capability asks, so a spec names the read it answers. */
+const FIND_CHATBOT_CONVERSATION = "public.agent_conversations"
+const LIST_CHATBOT_CONVERSATIONS = "public.agent_conversations"
+const LIST_CHATBOT_MESSAGE_BRIEFS = "public.agent_messages"
+const LIST_CHATBOT_MESSAGES = "public.agent_messages"
+const LIST_CHATBOT_WAITING = "public.work_items"
+const LIST_CHATBOT_LEAD_BRIEFS = "public.leads"
+const FIND_CHATBOT_STAFF = "public.staff"
+const LIST_CHATBOT_INSTALLATIONS = "public.module_installations"
+const LIST_CHATBOT_AGENTS = "public.agents"
+
+type TableStub = readonly [string, ReadonlyArray<unknown>]
+
+const SEEN = new WeakMap<object, TableAnswers>()
+
+const isPair = (value: TableStub | ReadonlyArray<TableStub>): value is TableStub => typeof value[0] === "string"
+
+/** A manager whose tables answer the given rows; `query` names them as a pair or a list of pairs. */
+const tablesEm = (stubs: { readonly query?: TableStub | ReadonlyArray<TableStub> } = {}) => {
+    const em = mockEntityManager()
+    const given = stubs.query ?? []
+    const pairs: ReadonlyArray<TableStub> = isPair(given) ? [given] : given
+    SEEN.set(em, answerByTable(em, Object.fromEntries(pairs)))
+    return { em }
+}
+
+/** The named parameters of every condition the subject put on its n-th read of a table. */
+const parametersOf = (em: object, table: string, nth = 0): unknown =>
+    Object.assign(
+        {},
+        ...(SEEN.get(em)?.queriesOf(table)[nth]?.calls ?? [])
+            .filter((call) => call.method === "where" || call.method === "andWhere")
+            .map((call) => call.args[1]),
+    )
 
 const NOW = "2026-10-13T03:00:00.000Z"
 
@@ -219,7 +243,7 @@ const EXPECTED_THREAD = {
 
 describe("ChatbotWorkbenchService overview", () => {
     it("lists every Chatbot conversation newest first with today's response figures", async () => {
-        const em = mockEntityManager({
+        const { em } = tablesEm({
             query: [
                 [LIST_CHATBOT_AGENTS, [{ id: "a-1" }]],
                 [
@@ -264,19 +288,19 @@ describe("ChatbotWorkbenchService overview", () => {
             EXPECTED_OVERVIEW,
         )
         expect(members.require).toHaveBeenCalledWith("u-1", "ws-1")
-        expect(em.query).toHaveBeenCalledWith(LIST_CHATBOT_CONVERSATIONS, ["ws-1", ["a-1"]])
-        expect(em.query).toHaveBeenCalledWith(LIST_CHATBOT_MESSAGE_BRIEFS, [
-            "ws-1",
-            ["c-2", "c-1"],
-            new Date("2026-09-13T03:00:00.000Z"),
-        ])
-        expect(em.query).toHaveBeenCalledWith(LIST_CHATBOT_LEAD_BRIEFS, ["ws-1", ["l-1"]])
+        expect(parametersOf(em, LIST_CHATBOT_CONVERSATIONS)).toEqual({ workspaceId: "ws-1", agents: ["a-1"] })
+        expect(parametersOf(em, LIST_CHATBOT_MESSAGE_BRIEFS)).toEqual({
+            workspaceId: "ws-1",
+            ids: ["c-2", "c-1"],
+            since: new Date("2026-09-13T03:00:00.000Z"),
+        })
+        expect(parametersOf(em, LIST_CHATBOT_LEAD_BRIEFS)).toEqual({ workspaceId: "ws-1", leadIds: ["l-1"] })
     })
 })
 
 describe("ChatbotWorkbenchService overview", () => {
     it("answers an empty inbox when the selected installation is not in the workspace", async () => {
-        const em = mockEntityManager({ query: [LIST_CHATBOT_INSTALLATIONS, [{ id: "i-1", agent_id: "a-1" }]] })
+        const { em } = tablesEm({ query: [LIST_CHATBOT_INSTALLATIONS, [{ id: "i-1", agent_id: "a-1" }]] })
         const { service } = await build(em)
 
         await expect(service.overview("u-1", { workspaceId: "ws-1", installationId: "i-9" })).resolves.toEqual({
@@ -288,7 +312,7 @@ describe("ChatbotWorkbenchService overview", () => {
     })
 
     it("reads only the installation's own agent when the workspace has several", async () => {
-        const em = mockEntityManager({
+        const { em } = tablesEm({
             query: [
                 [
                     LIST_CHATBOT_INSTALLATIONS,
@@ -305,11 +329,11 @@ describe("ChatbotWorkbenchService overview", () => {
         const overview = await service.overview("u-1", { workspaceId: "ws-1", installationId: "i-2" })
 
         expect(overview.conversations).toEqual([])
-        expect(em.query).toHaveBeenCalledWith(LIST_CHATBOT_CONVERSATIONS, ["ws-1", ["a-2"]])
+        expect(parametersOf(em, LIST_CHATBOT_CONVERSATIONS)).toEqual({ workspaceId: "ws-1", agents: ["a-2"] })
     })
 
     it("answers an empty inbox for one of several installations without an agent", async () => {
-        const em = mockEntityManager({
+        const { em } = tablesEm({
             query: [
                 LIST_CHATBOT_INSTALLATIONS,
                 [
@@ -326,7 +350,7 @@ describe("ChatbotWorkbenchService overview", () => {
     })
 
     it("combines the legacy agents for a single installation", async () => {
-        const em = mockEntityManager({
+        const { em } = tablesEm({
             query: [
                 [LIST_CHATBOT_INSTALLATIONS, [{ id: "i-1", agent_id: "a-1" }]],
                 [LIST_CHATBOT_AGENTS, [{ id: "a-1" }, { id: "a-0" }]],
@@ -338,13 +362,13 @@ describe("ChatbotWorkbenchService overview", () => {
         const overview = await service.overview("u-1", { workspaceId: "ws-1", installationId: "i-1" })
 
         expect(overview.conversations).toEqual([])
-        expect(em.query).toHaveBeenCalledWith(LIST_CHATBOT_CONVERSATIONS, ["ws-1", ["a-1", "a-0"]])
+        expect(parametersOf(em, LIST_CHATBOT_CONVERSATIONS)).toEqual({ workspaceId: "ws-1", agents: ["a-1", "a-0"] })
     })
 })
 
 describe("ChatbotWorkbenchService thread", () => {
     it("answers the thread with its lead and the escalation assigned to a staff member", async () => {
-        const em = mockEntityManager({
+        const { em } = tablesEm({
             query: [
                 [FIND_CHATBOT_CONVERSATION, [conversationOf({ handled_at: "2026-10-13T02:30:00.000Z" })]],
                 [
@@ -376,25 +400,25 @@ describe("ChatbotWorkbenchService thread", () => {
                         }),
                     ],
                 ],
-                [FIND_CHATBOT_LEAD, [LEAD]],
+                [LIST_CHATBOT_LEAD_BRIEFS, [LEAD]],
                 [FIND_CHATBOT_STAFF, [{ name: "Minh" }]],
             ],
         })
         const { service } = await build(em)
 
         await expect(service.thread("u-1", "ws-1", "c-1")).resolves.toEqual(EXPECTED_THREAD)
-        expect(em.query).toHaveBeenCalledWith(FIND_CHATBOT_STAFF, ["ws-1", "st-1"])
+        expect(parametersOf(em, FIND_CHATBOT_STAFF)).toEqual({ workspaceId: "ws-1", staffId: "st-1" })
     })
 })
 
 describe("ChatbotWorkbenchService thread", () => {
     it("answers a thread without lead or escalation without reading staff", async () => {
-        const em = mockEntityManager({
+        const { em } = tablesEm({
             query: [
                 [FIND_CHATBOT_CONVERSATION, [conversationOf({ lead_id: null, visitor_name: "Minh" })]],
                 [LIST_CHATBOT_MESSAGES, []],
                 [LIST_CHATBOT_WAITING, [waitingOf()]],
-                [FIND_CHATBOT_LEAD, []],
+                [LIST_CHATBOT_LEAD_BRIEFS, []],
             ],
         })
         const { service } = await build(em)
@@ -409,17 +433,17 @@ describe("ChatbotWorkbenchService thread", () => {
             lastAt: "2026-10-13T01:00:00.000Z",
             lastRole: null,
         })
-        expect(em.query).toHaveBeenCalledWith(FIND_CHATBOT_LEAD, ["ws-1", null])
+        expect(parametersOf(em, LIST_CHATBOT_LEAD_BRIEFS)).toEqual({ workspaceId: "ws-1", leadId: null })
     })
 
     it("refuses a conversation of another workspace", async () => {
-        const em = mockEntityManager({ query: [FIND_CHATBOT_CONVERSATION, []] })
+        const { em } = tablesEm({ query: [FIND_CHATBOT_CONVERSATION, []] })
         const { service } = await build(em)
 
         await expect(service.thread("u-1", "ws-1", "c-9")).rejects.toMatchObject({
             code: AgentConversationsErrorCode.NotFound,
         })
-        expect(em.query).toHaveBeenCalledTimes(1)
+        expect(SEEN.get(em)?.queries).toHaveLength(1)
     })
 })
 
@@ -427,7 +451,7 @@ describe("ChatbotWorkbenchService gaps", () => {
     it.each([{ key: "chatbot" }, { key: "chatbot", audience: undefined }, { key: "chatbot", audience: null }])(
         "defaults a catalog lens with a missing or nullish audience to internal: %p",
         async (definition) => {
-            const em = mockEntityManager({ query: [LIST_CHATBOT_LENSES, [{ module: "chatbot", name: "Mai" }]] })
+            const { em } = tablesEm({ query: [LIST_CHATBOT_AGENTS, [{ module: "chatbot", name: "Mai" }]] })
             const { service, modules } = await build(em)
             const module = Object.assign({ ...mock<ModuleDefinition>({ key: "chatbot" }) }, definition)
             modules.catalog.mockResolvedValue({
@@ -443,9 +467,9 @@ describe("ChatbotWorkbenchService gaps", () => {
     )
 
     it("answers the open gaps and one lens per known module", async () => {
-        const em = mockEntityManager({
+        const { em } = tablesEm({
             query: [
-                LIST_CHATBOT_LENSES,
+                LIST_CHATBOT_AGENTS,
                 [
                     { module: "chatbot", name: "Mai" },
                     { module: "chatbot", name: "Mai 2" },
@@ -478,9 +502,9 @@ describe("ChatbotWorkbenchService gaps", () => {
     })
 
     it("preserves the gaps when every active agent belongs to a retired module", async () => {
-        const em = mockEntityManager({
+        const { em } = tablesEm({
             query: [
-                LIST_CHATBOT_LENSES,
+                LIST_CHATBOT_AGENTS,
                 [
                     { module: "retired", name: "Old" },
                     { module: "retired", name: "Old duplicate" },
@@ -493,6 +517,7 @@ describe("ChatbotWorkbenchService gaps", () => {
 
         expect(members.require.mock.calls).toEqual([["u-1", "ws-1", ["owner", "manager"]]])
         expect(knowledgeGaps.list.mock.calls).toEqual([["ws-1", ["open"], 50]])
-        expect(em.query.mock.calls).toEqual([[LIST_CHATBOT_LENSES, ["ws-1"]]])
+        expect(SEEN.get(em)?.queries.map((query) => query.table)).toEqual([LIST_CHATBOT_AGENTS])
+        expect(parametersOf(em, LIST_CHATBOT_AGENTS)).toEqual({ workspaceId: "ws-1" })
     })
 })

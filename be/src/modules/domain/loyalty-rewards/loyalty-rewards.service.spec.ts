@@ -1,23 +1,35 @@
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { IsNull, Not } from "typeorm"
+import { builder, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { LoyaltyRewardsService } from "./loyalty-rewards.service"
 import type { RewardEdit } from "./loyalty-rewards.contracts"
-import {
-    LOCK_REWARD,
-    SELECT_ACTIVE_REWARDS,
-    SELECT_REWARDS,
-    SELECT_REWARD_BY_ID,
-    SELECT_REWARD_BY_KEY,
-    TAKE_STOCK,
-    UPDATE_REWARD,
-    INSERT_REWARD,
-    DELETE_REWARD,
-    INSERT_REWARD_PRESETS,
-} from "./persistence/loyalty-rewards.sql"
+import { LoyaltyRewardEntity } from "./persistence/entities"
+import type { RewardRaw } from "./policies/reward.mapper"
 
-const ROW = {
+/** Matches the SQL expression function a retried key is written with. */
+const ANY_FUNCTION: unknown = expect.any(Function)
+
+const entityOf = builder<LoyaltyRewardEntity>({
+    id: "r1",
+    workspaceId: "ws-1",
+    key: "voucher",
+    name: "Voucher",
+    kind: "voucher",
+    valueVnd: 50000,
+    percent: null,
+    pointsCost: 500,
+    stock: 3,
+    perCustomerLimit: 2,
+    minTierKey: "bac",
+    note: "n",
+    active: true,
+    sortOrder: 100,
+    createdAt: new Date("2026-10-01T00:00:00.000Z"),
+})
+const rawOf = builder<RewardRaw>({
     id: "r1",
     key: "voucher",
     name: "Voucher",
@@ -30,7 +42,7 @@ const ROW = {
     min_tier_key: "bac",
     note: "n",
     active: true,
-}
+})
 const REWARD = {
     id: "r1",
     key: "voucher",
@@ -58,7 +70,18 @@ const EDIT: RewardEdit = {
     note: " n ",
     active: true,
 }
-const FIELDS = ["Voucher", "voucher", 50000, null, 500, 3, 2, "bac", "n", true]
+const FIELDS = {
+    name: "Voucher",
+    kind: "voucher",
+    valueVnd: 50000,
+    percent: null,
+    pointsCost: 500,
+    stock: 3,
+    perCustomerLimit: 2,
+    minTierKey: "bac",
+    note: "n",
+    active: true,
+}
 
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
@@ -70,45 +93,47 @@ const build = async (entityManager: MockEntityManager) => {
 describe("LoyaltyRewardsService list", () => {
     it("reads the whole catalogue or only the rewards that can be redeemed", async () => {
         const entityManager = mockEntityManager({
-            query: [
-                [SELECT_REWARDS, [ROW, ROW]],
-                [SELECT_ACTIVE_REWARDS, [ROW]],
+            find: [
+                [LoyaltyRewardEntity, [entityOf(), entityOf()]],
+                [LoyaltyRewardEntity, [entityOf()]],
             ],
         })
         const rewards = await build(entityManager)
 
         await expect(rewards.list("ws-1", false)).resolves.toEqual([REWARD, REWARD])
         await expect(rewards.list("ws-1", true)).resolves.toEqual([REWARD])
+        expect(entityManager.find.mock.calls.map(([, options]) => options)).toEqual([
+            { where: { workspaceId: "ws-1" }, order: { sortOrder: "ASC", pointsCost: "ASC" }, take: 200 },
+            {
+                where: { workspaceId: "ws-1", active: true },
+                order: { sortOrder: "ASC", pointsCost: "ASC" },
+                take: 200,
+            },
+        ])
     })
 })
 
 describe("LoyaltyRewardsService byId, byKey and lock", () => {
     it("answer the reward a row holds", async () => {
-        const rewards = await build(
-            mockEntityManager({
-                query: [
-                    [SELECT_REWARD_BY_ID, [ROW]],
-                    [SELECT_REWARD_BY_KEY, [ROW]],
-                ],
-            }),
-        )
-        const manager = mockEntityManager({ query: [LOCK_REWARD, [ROW]] })
+        const entityManager = mockEntityManager({ findOne: [LoyaltyRewardEntity, entityOf()] })
+        const rewards = await build(entityManager)
+        const manager = mockEntityManager({ findOne: [LoyaltyRewardEntity, entityOf()] })
 
         await expect(rewards.byId("ws-1", "r1")).resolves.toEqual(REWARD)
         await expect(rewards.byKey("ws-1", "voucher")).resolves.toEqual(REWARD)
         await expect(rewards.lock(manager, "ws-1", "r1")).resolves.toEqual(REWARD)
+        expect(entityManager.findOne.mock.calls.map(([, options]) => options)).toEqual([
+            { where: { workspaceId: "ws-1", id: "r1" } },
+            { where: { workspaceId: "ws-1", key: "voucher", active: true } },
+        ])
+        expect(manager.findOne.mock.calls.map(([, options]) => options)).toEqual([
+            { where: { workspaceId: "ws-1", id: "r1" }, lock: { mode: "pessimistic_write" } },
+        ])
     })
 
     it("answer null when there is no such reward", async () => {
-        const rewards = await build(
-            mockEntityManager({
-                query: [
-                    [SELECT_REWARD_BY_ID, []],
-                    [SELECT_REWARD_BY_KEY, []],
-                ],
-            }),
-        )
-        const manager = mockEntityManager({ query: [LOCK_REWARD, []] })
+        const rewards = await build(mockEntityManager({ findOne: [LoyaltyRewardEntity, null] }))
+        const manager = mockEntityManager({ findOne: [LoyaltyRewardEntity, null] })
 
         await expect(rewards.byId("ws-1", "zzz")).resolves.toBeNull()
         await expect(rewards.byKey("ws-1", "zzz")).resolves.toBeNull()
@@ -118,32 +143,42 @@ describe("LoyaltyRewardsService byId, byKey and lock", () => {
 
 describe("LoyaltyRewardsService takeOne", () => {
     it("takes one unit out of the stock inside the transaction", async () => {
-        const manager = mockEntityManager({ query: [TAKE_STOCK, []] })
+        const manager = mockEntityManager({ decrement: [LoyaltyRewardEntity, {}] })
         const rewards = await build(mockEntityManager())
 
         await rewards.takeOne(manager, "ws-1", "r1")
 
-        expect(manager.query).toHaveBeenCalledWith(TAKE_STOCK, ["ws-1", "r1"])
+        expect(manager.decrement).toHaveBeenCalledWith(
+            LoyaltyRewardEntity,
+            { workspaceId: "ws-1", id: "r1", stock: Not(IsNull()) },
+            "stock",
+            1,
+        )
     })
 })
 
 describe("LoyaltyRewardsService save", () => {
     it("updates the existing reward with bounded and trimmed fields", async () => {
-        const entityManager = mockEntityManager({ query: [UPDATE_REWARD, [ROW]] })
+        const entityManager = mockEntityManager()
+        const [update] = queueQueryBuilders(entityManager, [{ execute: { raw: [rawOf()] } }])
         const rewards = await build(entityManager)
 
         await expect(rewards.save("ws-1", { ...EDIT, id: "r1" })).resolves.toEqual(REWARD)
 
-        expect(entityManager.query).toHaveBeenCalledWith(UPDATE_REWARD, ["ws-1", "r1", ...FIELDS])
+        expect(update?.callsOf("update")).toEqual([[]])
+        expect(update?.callsOf("set")).toEqual([[FIELDS]])
+        expect(update?.callsOf("where")).toEqual([
+            ["workspace_id = :workspaceId AND id = :id", { workspaceId: "ws-1", id: "r1" }],
+        ])
+        expect(update?.callsOf("returning")[0]?.[0]).toContain("value_vnd::float8 AS value_vnd")
     })
 
     it("reports a reward that disappeared before the update", async () => {
-        const entityManager = mockEntityManager({ query: [UPDATE_REWARD, []] })
+        const entityManager = mockEntityManager()
+        queueQueryBuilders(entityManager, [{ execute: { raw: [] } }])
         const rewards = await build(entityManager)
 
         await expect(rewards.save("ws-1", { ...EDIT, id: "r1" })).resolves.toBeNull()
-
-        expect(entityManager.query).toHaveBeenCalledWith(UPDATE_REWARD, ["ws-1", "r1", ...FIELDS])
     })
 
     it.each([
@@ -151,94 +186,125 @@ describe("LoyaltyRewardsService save", () => {
         { key: "   ", expectedKey: "voucher" },
         { key: " \u0110\u1ed5i qu\u00e0 ", expectedKey: "doi-qua" },
     ])("allocates a new reward key from $key", async ({ key, expectedKey }) => {
-        const entityManager = mockEntityManager({ query: [INSERT_REWARD, [ROW]] })
+        const entityManager = mockEntityManager()
+        const [insert] = queueQueryBuilders(entityManager, [{ execute: { raw: [rawOf()] } }])
         const rewards = await build(entityManager)
 
         await expect(rewards.save("ws-1", { ...EDIT, key })).resolves.toEqual(REWARD)
 
-        expect(entityManager.query).toHaveBeenCalledWith(INSERT_REWARD, ["ws-1", expectedKey, ...FIELDS, 100, false])
+        expect(insert?.callsOf("values")).toEqual([
+            [{ ...FIELDS, workspaceId: "ws-1", key: expectedKey, sortOrder: 100 }],
+        ])
+        expect(insert?.callsOf("orIgnore")).toHaveLength(1)
+        expect(insert?.callsOf("setParameter")).toEqual([["wantedKey", expectedKey]])
     })
+})
 
+describe("LoyaltyRewardsService save retries", () => {
     it("retries a colliding key with a suffix and advancing display order", async () => {
         const entityManager = mockEntityManager()
-        entityManager.query.mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce([ROW])
+        const attempts = queueQueryBuilders(entityManager, [
+            { execute: { raw: [] } },
+            { execute: { raw: [] } },
+            { execute: { raw: [rawOf()] } },
+        ])
         const rewards = await build(entityManager)
 
         await expect(rewards.save("ws-1", EDIT)).resolves.toEqual(REWARD)
 
-        expect(entityManager.query.mock.calls).toEqual([
-            [INSERT_REWARD, ["ws-1", "voucher", ...FIELDS, 100, false]],
-            [INSERT_REWARD, ["ws-1", "voucher", ...FIELDS, 101, true]],
-            [INSERT_REWARD, ["ws-1", "voucher", ...FIELDS, 102, true]],
+        const written = attempts.map((attempt) => attempt.callsOf("values")[0]?.[0])
+        expect(written).toEqual([
+            { ...FIELDS, workspaceId: "ws-1", key: "voucher", sortOrder: 100 },
+            { ...FIELDS, workspaceId: "ws-1", key: ANY_FUNCTION, sortOrder: 101 },
+            { ...FIELDS, workspaceId: "ws-1", key: ANY_FUNCTION, sortOrder: 102 },
         ])
     })
 
     it("returns null after four unsuccessful key allocations", async () => {
-        const entityManager = mockEntityManager({ query: [INSERT_REWARD, []] })
+        const entityManager = mockEntityManager()
+        const attempts = queueQueryBuilders(entityManager, [
+            { execute: { raw: [] } },
+            { execute: { raw: [] } },
+            { execute: { raw: [] } },
+            { execute: { raw: [] } },
+        ])
         const rewards = await build(entityManager)
 
         await expect(rewards.save("ws-1", EDIT)).resolves.toBeNull()
 
-        expect(entityManager.query.mock.calls).toEqual([
-            [INSERT_REWARD, ["ws-1", "voucher", ...FIELDS, 100, false]],
-            [INSERT_REWARD, ["ws-1", "voucher", ...FIELDS, 101, true]],
-            [INSERT_REWARD, ["ws-1", "voucher", ...FIELDS, 102, true]],
-            [INSERT_REWARD, ["ws-1", "voucher", ...FIELDS, 103, true]],
+        expect(attempts.map((attempt) => attempt.callsOf("values")[0]?.[0])).toMatchObject([
+            { sortOrder: 100 },
+            { sortOrder: 101 },
+            { sortOrder: 102 },
+            { sortOrder: 103 },
         ])
+        expect(entityManager.createQueryBuilder).toHaveBeenCalledTimes(4)
     })
 })
 
 describe("LoyaltyRewardsService remove", () => {
+    /** A transactional manager holding a locked reward, with a ledger lookup answering `used`. */
+    const removing = (used: unknown, outcome: object) => {
+        const entityManager = mockEntityManager({
+            findOne: [LoyaltyRewardEntity, entityOf()],
+            delete: [LoyaltyRewardEntity, outcome],
+            update: [LoyaltyRewardEntity, outcome],
+        })
+        const transaction = fakeTransaction(entityManager)
+        queueQueryBuilders(entityManager, [{ getRawOne: used }])
+        return { entityManager, transaction }
+    }
+
     it("commits without removing anything when the reward is missing", async () => {
-        const entityManager = mockEntityManager({ query: [LOCK_REWARD, []] })
+        const entityManager = mockEntityManager({ findOne: [LoyaltyRewardEntity, null] })
         const transaction = fakeTransaction(entityManager)
         const rewards = await build(entityManager)
 
         await expect(rewards.remove("ws-1", "gone")).resolves.toBe("missing")
 
-        expect(entityManager.query.mock.calls).toEqual([[LOCK_REWARD, ["ws-1", "gone"]]])
+        expect(entityManager.createQueryBuilder).not.toHaveBeenCalled()
         expect(transaction.outcomes).toEqual(["commit"])
     })
 
-    it.each(["deleted", "retired"] as const)("returns the committed %s outcome", async (outcome) => {
-        const entityManager = mockEntityManager({
-            query: [
-                [LOCK_REWARD, [ROW]],
-                [DELETE_REWARD, [{ outcome }]],
-            ],
-        })
-        const transaction = fakeTransaction(entityManager)
+    it("deletes an unused reward", async () => {
+        const { entityManager, transaction } = removing(undefined, { affected: 1 })
         const rewards = await build(entityManager)
 
-        await expect(rewards.remove("ws-1", "r1")).resolves.toBe(outcome)
+        await expect(rewards.remove("ws-1", "r1")).resolves.toBe("deleted")
 
-        expect(entityManager.query.mock.calls).toEqual([
-            [LOCK_REWARD, ["ws-1", "r1"]],
-            [DELETE_REWARD, ["ws-1", "r1"]],
-        ])
+        expect(entityManager.delete).toHaveBeenCalledWith(LoyaltyRewardEntity, { workspaceId: "ws-1", id: "r1" })
+        expect(entityManager.update).not.toHaveBeenCalled()
         expect(transaction.outcomes).toEqual(["commit"])
     })
 
-    it("reports missing when the removal statement returns no outcome", async () => {
-        const entityManager = mockEntityManager({
-            query: [
-                [LOCK_REWARD, [ROW]],
-                [DELETE_REWARD, []],
-            ],
-        })
-        const transaction = fakeTransaction(entityManager)
+    it("pauses a reward the ledger refers to", async () => {
+        const { entityManager, transaction } = removing({ used: 1 }, { affected: 1 })
+        const rewards = await build(entityManager)
+
+        await expect(rewards.remove("ws-1", "r1")).resolves.toBe("retired")
+
+        expect(entityManager.update).toHaveBeenCalledWith(
+            LoyaltyRewardEntity,
+            { workspaceId: "ws-1", id: "r1" },
+            { active: false },
+        )
+        expect(entityManager.delete).not.toHaveBeenCalled()
+        expect(transaction.outcomes).toEqual(["commit"])
+    })
+
+    it("reports missing when the removal changes no row", async () => {
+        const { entityManager, transaction } = removing(undefined, { affected: 0 })
         const rewards = await build(entityManager)
 
         await expect(rewards.remove("ws-1", "r1")).resolves.toBe("missing")
-
-        expect(entityManager.query).toHaveBeenCalledWith(DELETE_REWARD, ["ws-1", "r1"])
         expect(transaction.outcomes).toEqual(["commit"])
     })
 })
 
 describe("LoyaltyRewardsService addPresets", () => {
-    it("serializes every preset field in display order and counts the inserted rows", async () => {
-        const entityManager = mockEntityManager({ query: [INSERT_REWARD_PRESETS, [{ id: "r1" }, { id: "r2" }]] })
+    it("writes every preset field in display order and counts the inserted rows", async () => {
+        const entityManager = mockEntityManager()
+        const [insert] = queueQueryBuilders(entityManager, [{ execute: { raw: [{ id: "r1" }, { id: "r2" }] } }])
         const rewards = await build(entityManager)
         const first: RewardEdit = { ...EDIT, key: "voucher", name: "Voucher", minTierKey: "bac", note: "n" }
         const second: RewardEdit = {
@@ -253,45 +319,33 @@ describe("LoyaltyRewardsService addPresets", () => {
 
         await expect(rewards.addPresets("ws-1", [first, second])).resolves.toBe(2)
 
-        expect(entityManager.query).toHaveBeenCalledWith(INSERT_REWARD_PRESETS, [
-            "ws-1",
-            JSON.stringify([
-                {
-                    key: "voucher",
-                    name: "Voucher",
-                    kind: "voucher",
-                    value_vnd: 50000,
-                    percent: null,
-                    points_cost: 500,
-                    stock: 3,
-                    per_customer_limit: 2,
-                    min_tier_key: "bac",
-                    note: "n",
-                    sort_order: 100,
-                },
-                {
-                    key: "discount",
-                    name: "Voucher",
-                    kind: "percent",
-                    value_vnd: 50000,
-                    percent: 10,
-                    points_cost: 500,
-                    stock: null,
-                    per_customer_limit: null,
-                    min_tier_key: null,
-                    note: "n",
-                    sort_order: 101,
-                },
-            ]),
+        expect(insert?.callsOf("values")).toEqual([
+            [
+                [
+                    { ...FIELDS, workspaceId: "ws-1", key: "voucher", sortOrder: 100 },
+                    {
+                        ...FIELDS,
+                        workspaceId: "ws-1",
+                        key: "discount",
+                        kind: "percent",
+                        percent: 10,
+                        stock: null,
+                        perCustomerLimit: null,
+                        minTierKey: null,
+                        sortOrder: 101,
+                    },
+                ].map((row) => ({ ...row, active: true })),
+            ],
         ])
+        expect(insert?.callsOf("orIgnore")).toHaveLength(1)
     })
 
-    it("returns zero when no presets were inserted", async () => {
-        const entityManager = mockEntityManager({ query: [INSERT_REWARD_PRESETS, []] })
+    it("returns zero when no presets were given and writes nothing", async () => {
+        const entityManager = mockEntityManager()
         const rewards = await build(entityManager)
 
         await expect(rewards.addPresets("ws-1", [])).resolves.toBe(0)
 
-        expect(entityManager.query).toHaveBeenCalledWith(INSERT_REWARD_PRESETS, ["ws-1", "[]"])
+        expect(entityManager.createQueryBuilder).not.toHaveBeenCalled()
     })
 })

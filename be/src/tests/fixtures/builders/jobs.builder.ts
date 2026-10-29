@@ -22,7 +22,7 @@ export const jobsBuilder = (manager: EntityManager, key: string) => {
     const successorClaims = new JobClaimService([manager], clock)
     const logger = mock<Logger>()
     const runner = new JobRunnerService(
-        { connection: PRIMARY_ENTITY_MANAGER, workerId: "worker-1", leaseMs: LEASE_MS },
+        { connection: PRIMARY_ENTITY_MANAGER, workerId: "worker-1", leaseMs: LEASE_MS, scheduler: { enabled: false } },
         claims,
         mock<QueueWorkerRegistry>(),
         logger,

@@ -8,10 +8,10 @@ import { ERRORS_SERVICE } from "@modules/platform/errors"
 import type { ErrorsService } from "@modules/platform/errors"
 import type { OperationRequest } from "@modules/platform/http-security"
 import { persistMcpAgentRows } from "../../fixtures/builders/mcp-agent.builder"
-import { DELETE_AGENT, MCP_CALLS_OF_AGENT } from "../../fixtures/persistence/mcp-agent.sql"
 import { MCP_CREDENTIAL_MODULES } from "../../world/mcp-credential-capabilities.options"
 import { cleanupWorkspace } from "../../world/proof-database.service"
 import { useTestWorld } from "../../world/use-test-world"
+import { mcpCallsOfAgent, deleteAgent } from "../../world/inbox-database.service"
 
 /** The door of the mcp app's endpoint, with the same credential metadata as its controller. */
 @Credential({ kind: "tool-token", workflow: "mcp-gateway" })
@@ -79,7 +79,7 @@ describe("MCP endpoint per-agent credential", () => {
             workspaceId: identity.workspaceId,
         })
         expect(reply.body).toMatchObject({ jsonrpc: "2.0", id: 1, result: { isError: false } })
-        await expect(world.db.primary.query(MCP_CALLS_OF_AGENT, [identity.agentId])).resolves.toEqual([
+        await expect(mcpCallsOfAgent(world.db.primary, identity.agentId)).resolves.toEqual([
             { tool: "sepay.transactions.list", outcome: "ok" },
         ])
     })
@@ -99,7 +99,7 @@ describe("MCP endpoint per-agent credential", () => {
     })
 
     it("answers 401 once the agent is deleted, its key going with it", async () => {
-        await world.db.primary.query(DELETE_AGENT, [identity.agentId])
+        await deleteAgent(world.db.primary, identity.agentId)
 
         await expect(statusOf(`Bearer ${agentKey}`)).resolves.toBe(401)
     })

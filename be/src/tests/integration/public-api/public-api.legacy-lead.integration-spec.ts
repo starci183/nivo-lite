@@ -2,11 +2,11 @@ import assert from "node:assert/strict"
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
 import { WorkEngineService } from "@modules/domain/decisions"
 import { persistPublicApiInbound } from "../../fixtures/builders/public-api.builder"
-import * as statements from "../../fixtures/persistence/public-api.sql"
 import { PUBLIC_API_PROOF_MODULES } from "../../world/public-api-capabilities.options"
 import { publicApiWork } from "../../world/public-api-proof.service"
 import { preparePublicApiProof } from "../../world/public-api-suite.service"
 import { useTestWorld } from "../../world/use-test-world"
+import { apiLead, apiInbound } from "../../world/public-api-database.service"
 
 describe("Public API legacy-lead (persisted local integration)", () => {
     const world = useTestWorld({ modules: [...PUBLIC_API_PROOF_MODULES, ProcessPublicApiQueueModule.register({})] })
@@ -17,14 +17,14 @@ describe("Public API legacy-lead (persisted local integration)", () => {
         const inboundEventId = world.id()
         await persistPublicApiInbound(world.db.primary, {
             id: inboundEventId,
-            workspace_id: identity.workspaceId,
+            workspaceId: identity.workspaceId,
             channel: "manual",
             kind: "lead",
-            sender_name: "Historical customer",
+            senderName: "Historical customer",
             body: "Historical service need",
-            external_ref: "api:Public API proof",
-            event_id: world.id(),
-            dedupe_key: `api:historical:${world.id()}`,
+            externalRef: "api:Public API proof",
+            eventId: world.id(),
+            dedupeKey: `api:historical:${world.id()}`,
         })
         const payload = {
             kind: "lead",
@@ -39,7 +39,7 @@ describe("Public API legacy-lead (persisted local integration)", () => {
         }
         await deliver(payload, "public_api")
         await deliver(payload, "public_api")
-        expect(await world.db.primary.query(statements.API_INBOUND, [identity.workspaceId])).toEqual([
+        expect(await apiInbound(world.db.primary, identity.workspaceId)).toEqual([
             expect.objectContaining({ id: inboundEventId, body: "Historical service need" }),
         ])
         const work = await publicApiWork(world, identity.workspaceId)
@@ -51,7 +51,7 @@ describe("Public API legacy-lead (persisted local integration)", () => {
             .runQueuedItem({ workspaceId: identity.workspaceId, actor: "NIVO", locale: "en" }, handoff.id)
         expect(completed).toMatchObject({ status: "done" })
         assert(completed?.lead_id !== null && completed?.lead_id !== undefined)
-        expect(await world.db.primary.query(statements.API_LEAD, [identity.workspaceId, completed.lead_id])).toEqual([
+        expect(await apiLead(world.db.primary, identity.workspaceId, completed.lead_id)).toEqual([
             expect.objectContaining({
                 need: "Historical service need",
                 company: "Historical company",

@@ -17,5 +17,6 @@ export type {
 } from "./connections.contracts"
 export { ConnectionsModule } from "./connections.module"
 export { ConnectionsService } from "./connections.service"
+export { ConnectionEntity, connectionsEntities } from "./persistence/entities"
 export { CONNECTIONS_ERROR_KINDS, ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
 export { CONNECTIONS_MESSAGES } from "./messages/connections.messages"

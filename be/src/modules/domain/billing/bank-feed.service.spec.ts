@@ -7,32 +7,39 @@ import {
     incoming,
     feedDelivery,
 } from "@tests/fixtures/builders/bank-feed-receipts.builder"
+import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { Test } from "@nestjs/testing"
-import { FakeClock, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
+import {
+    FakeClock,
+    fakeTransaction,
+    mock,
+    mockEntityManager,
+    recordingEventBus,
+    recordingQueueOutbox,
+} from "@starci/jest-preset"
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
+import { AgentConnectionEntity } from "@modules/domain/agent-connections"
 import { EventsService } from "@modules/domain/events"
 import { TransactionsService } from "@modules/domain/transactions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { BankFeedReceiptService } from "@modules/domain/bank-feed-inbox"
 import { SepayConnectionService } from "@modules/domain/channel-connections"
+import { BankCreditBookedEvent } from "@modules/events/api"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { EVENT_BUS } from "@modules/platform/event-bus"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
-import { BANK_CREDIT_QUEUE, BankCreditQueue } from "@modules/queues/bank-credit"
 import { BANK_FEED_DELIVERY_QUEUE } from "@modules/queues/bank-feed-delivery"
 import { BankFeedService } from "./bank-feed.service"
 import type { BankFeedProvider } from "./billing.contracts"
 import { BillingError, BillingErrorCode } from "./errors/billing.error"
 import { PaymentProofService } from "./payment-proof.service"
-import {
-    SELECT_FEED_CONNECTION,
-    MARK_CONNECTION_FED,
-    SELECT_BOUND_ACCOUNTING_AGENT,
-    SELECT_CONNECTION_STATE,
-} from "./persistence/bank-feed.sql"
+import type { ConnectionStateRead } from "./billing-reads.contracts"
+
+const MARK_CONNECTION_FED = "SELECT * FROM public.connection_mark_fed($1, $2, $3)"
 
 /** What `run` throws, read as `unknown`; the matcher then judges its fields. */
 const thrownBy = (run: () => unknown): unknown => {
@@ -46,19 +53,45 @@ const thrownBy = (run: () => unknown): unknown => {
 
 const textLike = (text: string): unknown => expect.stringContaining(text)
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
-type Stub = readonly [string, unknown]
-const STATE: Stub = [SELECT_CONNECTION_STATE, [{ name: "Bank", environment: "live" }]]
-const FED: Stub = [MARK_CONNECTION_FED, []]
-const AGENT: Stub = [SELECT_BOUND_ACCOUNTING_AGENT, [{ id: "agent-1" }]]
+/** What the connection tables answer: a key set to undefined is a missing row. */
+interface FeedWorld {
+    /** The connection row that names the workspace. */
+    readonly owner: { readonly workspace_id: string } | undefined
+    /** The name and environment of the connection. */
+    readonly state: ConnectionStateRead | undefined
+    /** The accounting agent bound to the connection for its bank feed. */
+    readonly agent: { readonly id: string } | undefined
+}
+const LIVE_STATE: ConnectionStateRead = { name: "Bank", environment: "live" }
+const TEST_STATE: ConnectionStateRead = { name: "Test", environment: "test" }
+const FEED_WORLD: FeedWorld = { owner: { workspace_id: "ws-1" }, state: LIVE_STATE, agent: { id: "agent-1" } }
+const NO_STATE: Partial<FeedWorld> = { state: undefined }
+const NO_AGENT: Partial<FeedWorld> = { agent: undefined }
+const NO_OWNER: Partial<FeedWorld> = { owner: undefined }
+const TEST_ENVIRONMENT: Partial<FeedWorld> = { state: TEST_STATE }
+
+/** Hands each query builder of the manager the answer of the table it reads: the agent grant, the connection state or its owner. */
+const answerFeedReads = (
+    em: { readonly createQueryBuilder: { mockImplementation(fn: never): unknown } },
+    world: FeedWorld,
+) => {
+    em.createQueryBuilder.mockImplementation(((entity?: unknown) => {
+        const fake = fakeQueryBuilder({
+            getRawOne: () => {
+                if (entity === AgentConnectionEntity) return Promise.resolve(world.agent)
+                const selected = JSON.stringify(fake.callsOf("select")[0])
+                return Promise.resolve(selected.includes("environment") ? world.state : world.owner)
+            },
+        })
+        return fake.builder
+    }) as never)
+}
 const raw = (body: object): Buffer => Buffer.from(JSON.stringify(body))
 const refusal = new BillingError({ code: BillingErrorCode.WebhookInvalid })
 const cases = receiptCasesOf(tx1, incoming)
-const build = async (stubs: ReadonlyArray<Stub> = []) => {
-    const tx = fakeTransaction(
-        mockEntityManager({
-            query: [...stubs, STATE, FED, AGENT, [SELECT_FEED_CONNECTION, [{ workspace_id: "ws-1" }]]],
-        }),
-    )
+const build = async (world: Partial<FeedWorld> = {}) => {
+    const tx = fakeTransaction(mockEntityManager({ query: [MARK_CONNECTION_FED, []] }))
+    answerFeedReads(tx.em, { ...FEED_WORLD, ...world })
     const outbox = recordingQueueOutbox()
     const write = jest.spyOn(outbox, "write")
     const catalog = mock<MessageCatalog>()
@@ -66,10 +99,8 @@ const build = async (stubs: ReadonlyArray<Stub> = []) => {
     const proof = mock<PaymentProofService>()
     const inbound = mock<InboundEventsService>()
     inbound.recordBankPayment.mockResolvedValue({ duplicate: false, inboundEventId: "event-1" })
-    const credits = mock<BankCreditQueue>()
-    credits.enqueueBankCredit.mockImplementation((payload, manager) =>
-        outbox.write(manager, BANK_CREDIT_QUEUE, payload),
-    )
+    const bus = recordingEventBus<BankCreditBookedEvent>()
+    const publish = jest.spyOn(bus, "publish")
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue({
         userId: "user-1",
@@ -95,7 +126,7 @@ const build = async (stubs: ReadonlyArray<Stub> = []) => {
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: PaymentProofService, useValue: proof },
             { provide: InboundEventsService, useValue: inbound },
-            { provide: BankCreditQueue, useValue: credits },
+            { provide: EVENT_BUS, useValue: bus },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: EventsService, useValue: events },
             { provide: TransactionsService, useValue: transactions },
@@ -111,7 +142,8 @@ const build = async (stubs: ReadonlyArray<Stub> = []) => {
         write,
         proof,
         inbound,
-        credits,
+        bus,
+        publish,
         members,
         events,
         transactions,
@@ -135,7 +167,7 @@ const consumeFeed = async (harness: Awaited<ReturnType<typeof build>>, provider:
 const manual = { amount: 150000.4, date: "2026-10-12", content: "NIVO8F3K2", note: "cash", payer: "" }
 describe("BankFeedService manual credits", () => {
     it("books manual money as live with the member as actor of its evidence, in the same transaction", async () => {
-        const { feed, inbound, credits, members, events } = await build()
+        const { feed, inbound, bus, members, events } = await build()
         await expect(feed.acceptManualCredit("user-1", "ws-1", manual)).resolves.toBe(false)
         const manager = inbound.recordBankPayment.mock.calls[0]?.[0].manager
         expect(isTransactionManager(manager)).toBe(true)
@@ -151,10 +183,10 @@ describe("BankFeedService manual credits", () => {
                 body: 'vi:billing.bankEventBody:{"bank":"vi:billing.manualBank:{}","content":"NIVO8F3K2 - cash"}',
             }),
         )
-        expect(credits.enqueueBankCredit).toHaveBeenCalledWith(
-            { workspaceId: "ws-1", inboundEventId: "event-1", amountVnd: 150000 },
-            manager,
-        )
+        expect(bus.writes.map((event) => event.payload)).toEqual([
+            { dedupeKey: "event-1", workspaceId: "ws-1", inboundEventId: "event-1", amountVnd: 150000 },
+        ])
+        expect(bus.entries[0]?.tx).toBe(manager)
         expect(events.record).toHaveBeenCalledWith(
             {
                 workspaceId: "ws-1",
@@ -167,10 +199,10 @@ describe("BankFeedService manual credits", () => {
         )
     })
     it("does not reconcile or log duplicate evidence", async () => {
-        const { feed, inbound, credits, events } = await build()
+        const { feed, inbound, bus, events } = await build()
         inbound.recordBankPayment.mockResolvedValue({ duplicate: true, inboundEventId: "event-1" })
         await expect(feed.acceptManualCredit("u", "ws-1", manual)).resolves.toBe(true)
-        expect(credits.enqueueBankCredit).not.toHaveBeenCalled()
+        expect(bus.writes).toEqual([])
         expect(events.record).not.toHaveBeenCalled()
     })
     it.each([undefined, "Lan"])("handles payer %p and absent notes", async (payer) => {
@@ -203,6 +235,7 @@ describe("BankFeedService provider receipt intake", () => {
         )
         expect(inbound.recordBankPayment).not.toHaveBeenCalled()
         expect(tx.em.query).not.toHaveBeenCalled()
+        expect(tx.em.createQueryBuilder).not.toHaveBeenCalled()
     })
     it.each(cases)("acknowledges duplicate $provider receipts", async ({ provider, body }) => {
         const { feed, feedInbox, outbox, tx } = await build()
@@ -273,7 +306,7 @@ describe("BankFeedService SePay connection page", () => {
 })
 describe("BankFeedService deferred receipt effects", () => {
     it.each(providers)("locks, books and completes %s in the same transaction", async (provider) => {
-        const { feed, feedInbox, inbound, credits, tx } = await build()
+        const { feed, feedInbox, inbound, bus, publish, tx } = await build()
         await expect(feed.processRecordedFeedDelivery({ provider, deliveryId: "c-1:7" })).resolves.toEqual([
             { status: "booked" },
         ])
@@ -289,14 +322,13 @@ describe("BankFeedService deferred receipt effects", () => {
                 sender: null,
             }),
         )
-        expect(credits.enqueueBankCredit).toHaveBeenCalledWith(
-            { workspaceId: "ws-1", inboundEventId: "event-1", amountVnd: 125000 },
-            manager,
-        )
+        expect(bus.writes.map((event) => event.payload)).toEqual([
+            { dedupeKey: "event-1", workspaceId: "ws-1", inboundEventId: "event-1", amountVnd: 125000 },
+        ])
+        expect(bus.entries[0]?.tx).toBe(manager)
+        expect(bus.allInTransaction).toBe(true)
         expect(feedInbox.complete).toHaveBeenCalledWith(manager, "receipt-1")
-        expect(feedInbox.complete.mock.invocationCallOrder[0]).toBeGreaterThan(
-            credits.enqueueBankCredit.mock.invocationCallOrder[0] ?? 0,
-        )
+        expect(feedInbox.complete.mock.invocationCallOrder[0]).toBeGreaterThan(publish.mock.invocationCallOrder[0] ?? 0)
         expect(tx.commits).toBe(1)
     })
     it("answers no credit for an absent or already completed receipt", async () => {
@@ -307,9 +339,7 @@ describe("BankFeedService deferred receipt effects", () => {
         expect(feedInbox.complete).not.toHaveBeenCalled()
     })
     it.each(["missing connection", "empty credits"])("completes %s without booking", async (scenario) => {
-        const { feed, feedInbox, inbound } = await build(
-            scenario === "missing connection" ? [[SELECT_FEED_CONNECTION, []]] : [],
-        )
+        const { feed, feedInbox, inbound } = await build(scenario === "missing connection" ? NO_OWNER : {})
         if (scenario === "empty credits")
             feedInbox.lock.mockResolvedValue({ ...receipt, payload: { ...receipt.payload, credits: [] } })
         await expect(feed.processRecordedFeedDelivery({ provider: "casso", deliveryId: "c-1:7" })).resolves.toEqual([])
@@ -342,7 +372,7 @@ describe("BankFeedService booking policies", () => {
         ])
     })
     it("only marks a connection with no bound accounting agent", async () => {
-        const harness = await build([[SELECT_BOUND_ACCOUNTING_AGENT, []]])
+        const harness = await build(NO_AGENT)
         await expect(
             harness.feed.processRecordedFeedDelivery({ provider: "casso", deliveryId: "id" }),
         ).resolves.toEqual([{ status: "unbound" }])
@@ -352,14 +382,14 @@ describe("BankFeedService booking policies", () => {
     it.each(providers)(
         "refuses a %s credit of a test-environment connection before any business record",
         async (provider) => {
-            const harness = await build([[SELECT_CONNECTION_STATE, [{ name: "Test", environment: "test" }]]])
+            const harness = await build(TEST_ENVIRONMENT)
             await expect(harness.feed.processRecordedFeedDelivery({ provider, deliveryId: "id" })).resolves.toEqual([
                 { status: "refused", code: "test_environment" },
             ])
             expect(harness.tx.em.query).toHaveBeenCalledWith(MARK_CONNECTION_FED, expect.anything())
-            expect(harness.tx.em.query).not.toHaveBeenCalledWith(SELECT_BOUND_ACCOUNTING_AGENT, expect.anything())
+            expect(harness.tx.em.createQueryBuilder).not.toHaveBeenCalledWith(AgentConnectionEntity, "ac")
             expect(harness.inbound.recordBankPayment).not.toHaveBeenCalled()
-            expect(harness.credits.enqueueBankCredit).not.toHaveBeenCalled()
+            expect(harness.bus.writes).toEqual([])
             expect(harness.feedInbox.complete).toHaveBeenCalledWith(expect.anything(), "receipt-1")
             expect(harness.tx.commits).toBe(1)
         },
@@ -369,7 +399,7 @@ describe("BankFeedService booked credit details", () => {
     it.each(cases)(
         "uses the $provider bank fallback and original event identity",
         async ({ provider, body, credits }) => {
-            const harness = await build([[SELECT_CONNECTION_STATE, []]])
+            const harness = await build(NO_STATE)
             await consumeFeed(harness, provider, body)
             expect(harness.inbound.recordBankPayment).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -384,14 +414,14 @@ describe("BankFeedService booked credit details", () => {
         { code: "CODE1", expected: "CODE1" },
         { expected: null },
     ])("uses SePay content fallback $expected", async ({ expected, ...fields }) => {
-        const harness = await build([[SELECT_CONNECTION_STATE, []]])
+        const harness = await build(NO_STATE)
         await consumeFeed(harness, "sepay-feed", { id: 7, transferType: "in", transferAmount: 10, ...fields })
         expect(harness.inbound.recordBankPayment).toHaveBeenCalledWith(
             objectLike({ externalRef: expected, body: textLike('"bank":"SePay"') }),
         )
     })
     it("rounds and displays empty content, then completes duplicate credits without another job", async () => {
-        const { feed, feedInbox, inbound, credits } = await build()
+        const { feed, feedInbox, inbound, bus } = await build()
         feedInbox.lock.mockResolvedValue({
             ...receipt,
             payload: {
@@ -411,19 +441,17 @@ describe("BankFeedService booked credit details", () => {
                 body: 'vi:billing.bankEventBody:{"bank":"Bank","content":"—"}',
             }),
         )
-        expect(credits.enqueueBankCredit).not.toHaveBeenCalled()
+        expect(bus.writes).toEqual([])
         expect(feedInbox.complete).toHaveBeenCalled()
     })
-    it("rolls back a reconcile queue failure before completing the receipt", async () => {
-        const { feed, outbox, feedInbox, tx } = await build()
-        outbox.failNext("write", refusal)
+    it("rolls back a failed bank_credit_booked publish before completing the receipt", async () => {
+        const { feed, bus, feedInbox, tx } = await build()
+        bus.failNext("publish", refusal)
         await expect(feed.processRecordedFeedDelivery({ provider: "payos", deliveryId: "c-1:7" })).rejects.toBe(refusal)
         expect(feedInbox.complete).not.toHaveBeenCalled()
         expect(tx.rollbacks).toBe(1)
     })
 })
-const TEST_STATE: Stub = [SELECT_CONNECTION_STATE, [{ name: "Test", environment: "test" }]]
-const NO_AGENT: Stub = [SELECT_BOUND_ACCOUNTING_AGENT, []]
 describe("BankFeedService debits", () => {
     const outgoing = { ...incoming, id: 654, transferType: "out", transferAmount: 45000.4, content: "Pay supplier" }
     it("claims a SePay transfer out as a debit receipt", async () => {
@@ -458,7 +486,7 @@ describe("BankFeedService debits", () => {
             manager,
         )
         expect(harness.inbound.recordBankPayment).not.toHaveBeenCalled()
-        expect(harness.credits.enqueueBankCredit).not.toHaveBeenCalled()
+        expect(harness.bus.writes).toEqual([])
         expect(harness.feedInbox.complete).toHaveBeenCalledWith(manager, "receipt-1")
     })
     it("answers debited and stores no reference for an empty content", async () => {
@@ -478,10 +506,10 @@ describe("BankFeedService debits", () => {
         expect(transactions.open).toHaveBeenCalledWith(expect.objectContaining({ reference: null }), expect.anything())
     })
     it.each([
-        ["a test-environment", TEST_STATE, { status: "refused", code: "test_environment" }],
+        ["a test-environment", TEST_ENVIRONMENT, { status: "refused", code: "test_environment" }],
         ["an unbound", NO_AGENT, { status: "unbound" }],
-    ])("books no debit of %s connection", async (_name, stub, answer) => {
-        const { feed, feedInbox, transactions, tx } = await build([stub])
+    ])("books no debit of %s connection", async (_name, world, answer) => {
+        const { feed, feedInbox, transactions, tx } = await build(world)
         feedInbox.lock.mockResolvedValue({
             ...receipt,
             payload: {

@@ -7,14 +7,22 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import { InjectInbox } from "@modules/platform/inbox"
+import type { Inbox } from "@modules/platform/inbox"
 import { pendingOf, settleCard, withVote } from "./approval-card.policy"
 import { ThreadMessagesError, ThreadMessagesErrorCode } from "./errors/thread-messages.error"
 import { MentionDirectoryService } from "./mention-directory.service"
-import type { ApprovalMessageRow, ThreadMessageRow } from "./persistence/thread-messages.rows"
-import { FIND_MESSAGE_BY_APPROVAL, LOCK_MESSAGE, UPDATE_MESSAGE_APPROVAL } from "./persistence/thread-messages.sql"
+import { ThreadMessageEntity } from "./persistence/entities"
+import { selectMessagesWithAuthor } from "./persistence/thread-message.query"
 import { toMessage } from "./thread.mapper"
 import { ThreadMessagesService } from "./thread-messages.service"
-import type { ApprovalCard, ApprovalResolved, ThreadMessage } from "./thread-messages.contracts"
+import type {
+    ApprovalCard,
+    ApprovalResolved,
+    InboxClaim,
+    ThreadMessage,
+    ThreadMessageRecord,
+} from "./thread-messages.contracts"
 
 /** The language of the lines a settled request writes when no person's screen asked for it (the deadline, another door). */
 const RESOLVED_LINE_LOCALE: Locale = "vi"
@@ -32,13 +40,15 @@ const verdictOf = (event: ApprovalResolved): "approve" | "reject" =>
 @Injectable()
 /**
  * What happens to an approval card when its request ends: the card, the chain step and the thread are settled together and a refused
- * or expired ask goes back to the owner of the agent. It follows `approval.resolved` of the approval capability (the app root binds
- * it as that capability's events port), so it never asks the gate anything and the two capabilities do not wait on each other.
+ * or expired ask goes back to the owner of the agent. It is the `thread_outcomes` reactor of `approval_resolved`: the approval
+ * capability publishes the event in the transaction that ends a request, so a failure here is retried by the bus and never strands
+ * the card, and the two capabilities do not wait on each other.
  */
 export class ThreadApprovalOutcomesService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
+        @InjectInbox() private readonly inbox: Inbox,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly directory: MentionDirectoryService,
         private readonly threads: WorkThreadsService,
@@ -47,16 +57,19 @@ export class ThreadApprovalOutcomesService {
     ) {}
 
     /**
-     * `approval.resolved`: the approval capability ended a request (a member's verdict, the deadline): settles the card that carries
-     * it, with the decider's verdict on their line. A request no card carries, or a card already settled, is left as it is.
+     * `approval_resolved`: the approval capability ended a request (a member's verdict, the deadline): settles the card that carries
+     * it, with the decider's verdict on their line. A request no card carries, or a card already settled, is left as it is. The
+     * delivery is claimed in the inbox in the transaction of the effect, so a redelivery settles nothing twice.
      */
-    async resolved(event: ApprovalResolved): Promise<void> {
-        const [found] = await this.entityManager.query<Array<ApprovalMessageRow>>(FIND_MESSAGE_BY_APPROVAL, [
-            event.requestId,
-        ])
-        if (found === undefined) return
+    async resolved(event: ApprovalResolved, claim: InboxClaim): Promise<void> {
+        const found = await this.entityManager.findOne(ThreadMessageEntity, {
+            select: { id: true, workspaceId: true },
+            where: { approvalRequestId: event.requestId },
+        })
+        if (found === null) return
         await this.entityManager.transaction(async (tx) => {
-            const locked = await this.lock(tx, found.workspace_id, found.id)
+            if (!(await this.inbox.claim(claim.consumer, claim.dedupeKey, tx))) return
+            const locked = await this.lock(tx, found.workspaceId, found.id)
             const pending = pendingOf(locked)
             if (pending === null) return
             const card =
@@ -66,22 +79,26 @@ export class ThreadApprovalOutcomesService {
     }
 
     /** Locks the message of a card for the rest of the transaction. */
-    async lock(tx: EntityManager, workspaceId: string, messageId: string): Promise<ThreadMessageRow> {
-        const [row] = await tx.query<Array<ThreadMessageRow>>(LOCK_MESSAGE, [workspaceId, messageId])
+    async lock(tx: EntityManager, workspaceId: string, messageId: string): Promise<ThreadMessageRecord> {
+        const row = await selectMessagesWithAuthor(tx, workspaceId)
+            .andWhere("m.id = :messageId", { messageId })
+            .limit(1)
+            .setLock("pessimistic_write", undefined, ["m"])
+            .getRawOne<ThreadMessageRecord>()
         if (row === undefined) throw new ThreadMessagesError({ code: ThreadMessagesErrorCode.MessageNotFound })
         return row
     }
 
     /** A vote that does not end the request: the card shows who voted. */
-    async keep(tx: EntityManager, locked: ThreadMessageRow, card: ApprovalCard): Promise<ThreadMessage> {
-        await tx.query(UPDATE_MESSAGE_APPROVAL, [locked.workspace_id, locked.id, JSON.stringify(card)])
+    async keep(tx: EntityManager, locked: ThreadMessageRecord, card: ApprovalCard): Promise<ThreadMessage> {
+        await tx.update(ThreadMessageEntity, { workspaceId: locked.workspace_id, id: locked.id }, { approval: card })
         return toMessage({ ...locked, approval: card })
     }
 
     /** The request ended: the card says how and by whom, the chain step and the thread follow, and a bad end goes to the owner. */
     async settle(
         tx: EntityManager,
-        locked: ThreadMessageRow,
+        locked: ThreadMessageRecord,
         card: ApprovalCard,
         ending: CardOutcome,
         locale: Locale,
@@ -90,7 +107,7 @@ export class ThreadApprovalOutcomesService {
         const decidedByName =
             ending.decidedBy === null ? null : await this.directory.nameOfMember(tx, workspaceId, ending.decidedBy)
         const settled = settleCard(card, { ...ending, decidedByName }, this.clock.now())
-        await tx.query(UPDATE_MESSAGE_APPROVAL, [workspaceId, locked.id, JSON.stringify(settled)])
+        await tx.update(ThreadMessageEntity, { workspaceId, id: locked.id }, { approval: settled })
         await this.chains.settleApproval(
             {
                 workspaceId,
@@ -114,7 +131,7 @@ export class ThreadApprovalOutcomesService {
     /** A refused or expired ask goes back to the person who answers for the agent: the agent says so and tags them. */
     private async returnToOwner(
         tx: EntityManager,
-        locked: ThreadMessageRow,
+        locked: ThreadMessageRecord,
         card: ApprovalCard,
         outcome: "rejected" | "expired",
         locale: Locale,

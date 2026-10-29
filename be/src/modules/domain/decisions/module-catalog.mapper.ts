@@ -46,11 +46,25 @@ export const toModuleEntry = (row: ModuleRow): ModuleEntry => ({
     accepts: acceptsOf(row.definition),
 })
 
+/** The text a jsonb array element has as `jsonb_array_elements_text`: a string as itself, any other scalar or structure as its JSON. */
+const jsonText = (value: Json | undefined): string => (typeof value === "string" ? value : JSON.stringify(value))
+
+/** The actions the definition queues after one action, in the order the definition lists them (camelCase key first, then snake_case). */
+const nextOf = (definition: Json | undefined, action: string): ReadonlyArray<string> => {
+    const holder = isObject(definition) ? definition : {}
+    const listed = holder.authorityActions ?? holder.authority_actions
+    const entries = Array.isArray(listed) ? listed : []
+    return entries
+        .filter(isObject)
+        .filter((entry) => entry.action === action)
+        .flatMap((entry) => (Array.isArray(entry.next) ? entry.next.filter((item) => item !== null).map(jsonText) : []))
+}
+
 /** The part of a stored authority action the engine reads. */
 export const toActionEntry = (row: ActionRow): ActionEntry => ({
     action: row.action,
     moduleKey: row.module_key,
     maxMode: row.max_mode,
-    next: row.next,
+    next: nextOf(row.definition, row.action),
     label: bilingualOf(row.label),
 })

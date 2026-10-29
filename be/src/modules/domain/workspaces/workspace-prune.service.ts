@@ -3,11 +3,14 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { WorkspacesError, WorkspacesErrorCode } from "./errors/workspaces.error"
-import { COUNT_ALL_WORKSPACES, DELETE_ONE_WORKSPACE, LIST_ALL_WORKSPACES } from "./persistence/workspace-prune.sql"
+import { WorkspaceEntity } from "./persistence/entities"
 import { CONFIRMATION_WORD, NIVO_WORKSPACE_ID } from "./workspaces.contracts"
 import type { PruneConsole, PruneReport, PruneRequest, WorkspaceBrief } from "./workspaces.contracts"
 
 const NO_PLAN = "no plan"
+
+/** The most workspaces one prune reads. */
+const WORKSPACES_MAX = 1000
 
 @Injectable()
 /**
@@ -22,7 +25,17 @@ export class WorkspacePruneService {
     async prune(request: PruneRequest, terminal: PruneConsole): Promise<PruneReport> {
         const keep = new Set([...(request.default === false ? [] : [NIVO_WORKSPACE_ID]), ...(request.keep ?? [])])
         if (keep.size === 0) throw new WorkspacesError({ code: WorkspacesErrorCode.NothingToKeep })
-        const all = await this.entityManager.query<Array<WorkspaceBrief>>(LIST_ALL_WORKSPACES)
+        const stored = await this.entityManager.find(WorkspaceEntity, {
+            select: { id: true, name: true, planCode: true, status: true },
+            order: { createdAt: "ASC" },
+            take: WORKSPACES_MAX,
+        })
+        const all: ReadonlyArray<WorkspaceBrief> = stored.map((workspace) => ({
+            id: workspace.id,
+            name: workspace.name,
+            plan_code: workspace.planCode,
+            status: workspace.status,
+        }))
         const kept = all.filter((workspace) => keep.has(workspace.id))
         const doomed = all.filter((workspace) => !keep.has(workspace.id))
         terminal.print("KEEP:")
@@ -49,8 +62,7 @@ export class WorkspacePruneService {
             }
         }
         const failed = await this.remove(doomed, terminal)
-        const [counted] = await this.entityManager.query<Array<{ total: number }>>(COUNT_ALL_WORKSPACES)
-        const left = counted?.total ?? 0
+        const left = await this.entityManager.count(WorkspaceEntity)
         terminal.print(`Done. ${doomed.length - failed} deleted, ${failed} failed, ${left} workspace(s) left.`)
         if (failed > 0) {
             throw new WorkspacesError({ code: WorkspacesErrorCode.DeleteFailed, params: { failed } })
@@ -62,7 +74,7 @@ export class WorkspacePruneService {
     private async remove(doomed: ReadonlyArray<WorkspaceBrief>, terminal: PruneConsole): Promise<number> {
         let failed = 0
         await eachInOrder(doomed, (workspace) =>
-            this.entityManager.query(DELETE_ONE_WORKSPACE, [workspace.id]).then(
+            this.entityManager.delete(WorkspaceEntity, { id: workspace.id }).then(
                 () => terminal.print(`  deleted ${workspace.name}`),
                 (cause: unknown) => {
                     failed += 1

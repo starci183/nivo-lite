@@ -1,6 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { builder, fakeInbox, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
+import { PROCESSED_LEDGER_ROW, ledgerRowOf, ledgerRowOfKind } from "@tests/fixtures/builders/public-api-ledger.builder"
 import { EventsService } from "@modules/domain/events"
 import { ApiKnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -12,8 +14,8 @@ import type { QueueDelivery } from "@modules/platform/queue"
 import { PublicApiQueueJob, PUBLIC_API_QUEUE } from "@modules/queues/public-api"
 import { PublicApiError, PublicApiErrorCode } from "./errors/public-api.error"
 import { PublicApiProcessingService } from "./public-api-processing.service"
-import type { PublicApiProcessingRow } from "./persistence/public-api-processing.rows"
-import { COMPLETE_PUBLIC_API_REQUEST, LOCK_PUBLIC_API_REQUEST } from "./persistence/public-api-processing.sql"
+import { PublicApiEntity } from "./persistence/entities"
+import { PublicApiLedgerService } from "./public-api-ledger.service"
 import { PublicLeadFulfillmentService } from "./public-lead-fulfillment.service"
 import { PublicMessageFulfillmentService } from "./public-message-fulfillment.service"
 
@@ -51,15 +53,25 @@ const messageBody = {
     source,
 }
 const ADMITTED_AT = new Date("2026-10-24T08:00:00Z")
-const rowOf = builder<PublicApiProcessingRow>({
-    id: REQUEST,
-    kind: "knowledge",
-    payload: knowledgeBody,
-    need_supplied: null,
-    lead_id: null,
-    processed_at: null,
-    created_at: ADMITTED_AT,
-})
+/** A manager whose lock read finds the given ledger row (or none) and whose completion write is recorded. */
+const managerWith = (row: PublicApiEntity | null) => {
+    const tx = mockEntityManager({ findOne: [PublicApiEntity, row] })
+    const complete = fakeQueryBuilder({ execute: {} })
+    answerQueryBuilders(tx, complete)
+    return { tx, complete }
+}
+
+/** Asserts that the request was completed with the given customer, once, under its workspace. */
+const expectCompleted = (
+    tx: ReturnType<typeof managerWith>["tx"],
+    complete: ReturnType<typeof fakeQueryBuilder>,
+    leadId: string | null,
+): void => {
+    expect(tx.createQueryBuilder).toHaveBeenCalledWith(PublicApiEntity, "p")
+    expect(complete.callsOf("update")).toEqual([[]])
+    expect(complete.argsOf("where")[0]?.[1]).toEqual({ workspaceId: WORKSPACE, requestId: REQUEST })
+    expect(complete.argsOf("setParameter")).toEqual([["leadId", leadId]])
+}
 const deliveryOf = builder<QueueDelivery>({
     id: "outbox-1",
     queue: PUBLIC_API_QUEUE,
@@ -92,6 +104,7 @@ const build = async (manager: MockEntityManager = mockEntityManager()) => {
             { provide: PublicLeadFulfillmentService, useValue: leads },
             { provide: PublicMessageFulfillmentService, useValue: messages },
             { provide: EventsService, useValue: events },
+            PublicApiLedgerService,
         ],
     }).compile()
     return {
@@ -119,12 +132,7 @@ const claimedJobOf = builder<ClaimedJob>({
 describe("PublicApiProcessingService / fenced execution", () => {
     it("advances the current token before fulfilling inside the supplied fence transaction", async () => {
         const built = await build()
-        const tx = mockEntityManager({
-            query: [
-                [LOCK_PUBLIC_API_REQUEST, [rowOf()]],
-                [COMPLETE_PUBLIC_API_REQUEST, []],
-            ],
-        })
+        const { tx, complete } = managerWith(ledgerRowOf())
         const claims = mock<JobClaims>()
         const fence = mock<JobFenceService>()
         fence.write.mockImplementation((_job, action) => action(tx))
@@ -135,7 +143,7 @@ describe("PublicApiProcessingService / fenced execution", () => {
         expect(claims.advance).toHaveBeenCalledWith({ jobId: "job-1", expectedFencingToken: 7, step: "public-api" })
         expect(fence.write).toHaveBeenCalledWith(job, expect.any(Function))
         expect(claims.advance.mock.invocationCallOrder[0]).toBeLessThan(fence.write.mock.invocationCallOrder[0] ?? 0)
-        expect(tx.query).toHaveBeenLastCalledWith(COMPLETE_PUBLIC_API_REQUEST, [WORKSPACE, REQUEST, null])
+        expectCompleted(tx, complete, null)
     })
 
     it("rejects an unsupported name before advancing or entering the fence", async () => {
@@ -165,16 +173,14 @@ describe("PublicApiProcessingService / ledger admissions", () => {
 
     it("creates the promised knowledge identity and completion inside the caller's transaction", async () => {
         const built = await build()
-        const tx = mockEntityManager({
-            query: [
-                [LOCK_PUBLIC_API_REQUEST, [rowOf({ lead_id: LEAD })]],
-                [COMPLETE_PUBLIC_API_REQUEST, []],
-            ],
-        })
+        const { tx, complete } = managerWith(ledgerRowOf({ leadId: LEAD }))
 
         await built.service.process(ledgerJob, tx)
 
-        expect(tx.query).toHaveBeenNthCalledWith(1, LOCK_PUBLIC_API_REQUEST, [WORKSPACE, REQUEST])
+        expect(tx.findOne).toHaveBeenCalledWith(PublicApiEntity, {
+            where: { workspaceId: WORKSPACE, id: REQUEST },
+            lock: { mode: "pessimistic_write" },
+        })
         expect(built.claim).toHaveBeenCalledWith(PUBLIC_API_QUEUE, `${WORKSPACE}:${REQUEST}`, tx)
         expect(built.knowledge.addText).toHaveBeenCalledWith(
             { sourceId: REQUEST, workspaceId: WORKSPACE, ...knowledgeBody, origin: source },
@@ -190,40 +196,30 @@ describe("PublicApiProcessingService / ledger admissions", () => {
             },
             tx,
         )
-        expect(tx.query).toHaveBeenLastCalledWith(COMPLETE_PUBLIC_API_REQUEST, [WORKSPACE, REQUEST, LEAD])
-        expect(built.manager.query).not.toHaveBeenCalled()
+        expectCompleted(tx, complete, LEAD)
+        expect(built.manager.createQueryBuilder).not.toHaveBeenCalled()
         expect(built.manager.transaction).not.toHaveBeenCalled()
     })
 
     it("passes the persisted future need flag to the lead owner and stores its resolved customer", async () => {
         const built = await build()
-        const tx = mockEntityManager({
-            query: [
-                [LOCK_PUBLIC_API_REQUEST, [rowOf({ kind: "lead", payload: leadBody, need_supplied: true })]],
-                [COMPLETE_PUBLIC_API_REQUEST, []],
-            ],
-        })
+        const { tx, complete } = managerWith(ledgerRowOfKind("lead", leadBody, true))
 
         await built.service.process(ledgerJob, tx)
 
         expect(built.leads.fulfill).toHaveBeenCalledWith(WORKSPACE, REQUEST, { ...leadBody, needSupplied: true }, tx)
-        expect(tx.query).toHaveBeenLastCalledWith(COMPLETE_PUBLIC_API_REQUEST, [WORKSPACE, REQUEST, LEAD])
+        expectCompleted(tx, complete, LEAD)
     })
 
     it("hands off an admitted message with its admission time without performing a customer send", async () => {
         const built = await build()
         const body = { ...messageBody, leadId: null }
-        const tx = mockEntityManager({
-            query: [
-                [LOCK_PUBLIC_API_REQUEST, [rowOf({ kind: "message", payload: body })]],
-                [COMPLETE_PUBLIC_API_REQUEST, []],
-            ],
-        })
+        const { tx, complete } = managerWith(ledgerRowOfKind("message", body))
 
         await built.service.process(ledgerJob, tx)
 
         expect(built.messages.fulfill).toHaveBeenCalledWith(WORKSPACE, REQUEST, body, ADMITTED_AT, tx)
-        expect(tx.query).toHaveBeenLastCalledWith(COMPLETE_PUBLIC_API_REQUEST, [WORKSPACE, REQUEST, LEAD])
+        expectCompleted(tx, complete, LEAD)
     })
 })
 
@@ -231,55 +227,40 @@ describe("PublicApiProcessingService / ledger replay and rollback", () => {
     it("rejects a workspace/request mismatch without claiming the inbox", async () => {
         const built = await build()
 
-        await expect(
-            built.service.process(ledgerJob, mockEntityManager({ query: [LOCK_PUBLIC_API_REQUEST, []] })),
-        ).rejects.toThrow(PublicApiErrorCode.RequestNotFound)
+        await expect(built.service.process(ledgerJob, managerWith(null).tx)).rejects.toThrow(
+            PublicApiErrorCode.RequestNotFound,
+        )
 
         expect(built.inbox.claims).toEqual([])
     })
 
     it("acknowledges a completed request replay without any domain effect or new inbox claim", async () => {
         const built = await build()
-        const tx = mockEntityManager({
-            query: [
-                [LOCK_PUBLIC_API_REQUEST, [rowOf({ processed_at: new Date("2026-10-25T00:00:00Z") })]],
-                [COMPLETE_PUBLIC_API_REQUEST, []],
-            ],
-        })
+        const { tx } = managerWith(PROCESSED_LEDGER_ROW)
 
         await built.service.process(ledgerJob, tx)
 
-        expect(tx.query).toHaveBeenCalledTimes(1)
+        expect(tx.findOne).toHaveBeenCalledTimes(1)
+        expect(tx.createQueryBuilder).not.toHaveBeenCalled()
         expect(built.inbox.claims).toEqual([])
         expect(built.knowledge.addText).not.toHaveBeenCalled()
     })
 
     it("retains an inconsistent inbox receipt as a recoverable error instead of silently completing the ledger", async () => {
         const built = await build()
-        const tx = mockEntityManager({
-            query: [
-                [LOCK_PUBLIC_API_REQUEST, [rowOf()]],
-                [COMPLETE_PUBLIC_API_REQUEST, []],
-            ],
-        })
+        const { tx } = managerWith(ledgerRowOf())
         built.inbox.seen(PUBLIC_API_QUEUE, `${WORKSPACE}:${REQUEST}`)
 
         await expect(built.service.process(ledgerJob, tx)).rejects.toThrow(PublicApiErrorCode.InboxInconsistent)
 
-        expect(tx.query).toHaveBeenCalledTimes(1)
+        expect(tx.findOne).toHaveBeenCalledTimes(1)
+        expect(tx.createQueryBuilder).not.toHaveBeenCalled()
         expect(built.knowledge.addText).not.toHaveBeenCalled()
     })
 
     it("propagates owner failure so the enclosing fence transaction rolls back claim and effects", async () => {
         const built = await build()
-        const tx = fakeTransaction(
-            mockEntityManager({
-                query: [
-                    [LOCK_PUBLIC_API_REQUEST, [rowOf({ kind: "message", payload: messageBody })]],
-                    [COMPLETE_PUBLIC_API_REQUEST, []],
-                ],
-            }),
-        )
+        const tx = fakeTransaction(managerWith(ledgerRowOfKind("message", messageBody)).tx)
         built.messages.fulfill.mockRejectedValue(new Error("work insertion failed"))
 
         await expect(tx.em.transaction((manager) => built.service.process(ledgerJob, manager))).rejects.toThrow(
@@ -287,7 +268,8 @@ describe("PublicApiProcessingService / ledger replay and rollback", () => {
         )
 
         expect(tx.rollbacks).toBe(1)
-        expect(tx.em.query).toHaveBeenCalledTimes(1)
+        expect(tx.em.findOne).toHaveBeenCalledTimes(1)
+        expect(tx.em.createQueryBuilder).not.toHaveBeenCalled()
     })
 })
 
@@ -312,7 +294,7 @@ describe("PublicApiProcessingService / pre-ledger deliveries", () => {
 
         expect(built.leads.fulfillExistingInbound).toHaveBeenCalledWith(WORKSPACE, INBOUND, body, tx)
         expect(built.claim).toHaveBeenCalledWith(PUBLIC_API_QUEUE, `${WORKSPACE}:lead:${INBOUND}`, tx)
-        expect(tx.query).not.toHaveBeenCalled()
+        expect(tx.findOne).not.toHaveBeenCalled()
     })
 
     it("retains the original message work dedupe and approval requirement, with no admission time", async () => {
@@ -351,13 +333,16 @@ describe("PublicApiProcessingService / pre-ledger deliveries", () => {
 
 describe("PublicApiProcessingService / terminal failure evidence", () => {
     it("records one exhausted request event inside its own transaction", async () => {
-        const tx = fakeTransaction(mockEntityManager({ query: [LOCK_PUBLIC_API_REQUEST, [rowOf()]] }))
+        const tx = fakeTransaction(managerWith(ledgerRowOf()).tx)
         const built = await build(tx.em)
 
         await built.service.failDelivery(deliveryOf())
 
         expect(tx.commits).toBe(1)
-        expect(tx.em.query).toHaveBeenCalledWith(LOCK_PUBLIC_API_REQUEST, [WORKSPACE, REQUEST])
+        expect(tx.em.findOne).toHaveBeenCalledWith(PublicApiEntity, {
+            where: { workspaceId: WORKSPACE, id: REQUEST },
+            lock: { mode: "pessimistic_write" },
+        })
         expect(built.claim).toHaveBeenCalledWith("public_api.failed", "outbox-1", expect.anything())
         expect(built.events.record).toHaveBeenCalledWith(
             {
@@ -371,10 +356,10 @@ describe("PublicApiProcessingService / terminal failure evidence", () => {
         )
     })
 
-    it.each([{ rows: [] }, { rows: [rowOf({ processed_at: new Date("2026-10-25T00:00:00Z") })] }])(
+    it.each([{ row: null }, { row: PROCESSED_LEDGER_ROW }])(
         "does not mark a missing or already processed ledger as failed: %o",
-        async ({ rows }) => {
-            const tx = fakeTransaction(mockEntityManager({ query: [LOCK_PUBLIC_API_REQUEST, rows] }))
+        async ({ row }) => {
+            const tx = fakeTransaction(managerWith(row).tx)
             const built = await build(tx.em)
 
             await built.service.failDelivery(deliveryOf())
@@ -393,7 +378,7 @@ describe("PublicApiProcessingService / terminal failure evidence", () => {
             deliveryOf({ payload: { kind: "knowledge", workspaceId: WORKSPACE, sourceId: REQUEST } }),
         )
 
-        expect(tx.em.query).not.toHaveBeenCalled()
+        expect(tx.em.findOne).not.toHaveBeenCalled()
         expect(built.events.record).not.toHaveBeenCalled()
     })
 

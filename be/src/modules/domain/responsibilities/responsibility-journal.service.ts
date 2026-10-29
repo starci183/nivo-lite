@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import { Not } from "typeorm"
+import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { EventsService } from "@modules/domain/events"
 import { InjectAgentDirectory } from "@modules/domain/messages"
 import type { AgentDirectory } from "@modules/domain/messages"
@@ -21,22 +22,41 @@ import type {
     ResponsibilityScope,
     ResponsibilityStatus,
 } from "./responsibility-journal.contracts"
-import type { LeadNameRow, ResponsibilityIdRow } from "./persistence/responsibility-journal.rows"
-import {
-    FIND_LEAD_NAME,
-    FIND_OPEN_RESPONSIBILITY,
-    FIND_OPEN_TITLED_RESPONSIBILITY,
-    FIND_RESPONSIBILITY,
-    INSERT_RESPONSIBILITY,
-    LIST_RESPONSIBILITIES,
-    LIST_LEAD_RESPONSIBILITIES,
-    LIST_OPEN_RESPONSIBILITIES,
-    LIST_BOARD_RESPONSIBILITIES,
-    UPDATE_RESPONSIBILITY_NEXT_ACTION,
-    UPDATE_RESPONSIBILITY_STATUS,
-} from "./persistence/responsibility-journal.sql"
+import { ResponsibilityEntity } from "./persistence/entities"
 
 const DAY_MS = 86_400_000
+const LISTING_LIMIT = 200
+const LEAD_STEPS_LIMIT = 200
+const OPEN_STEPS_LIMIT = 500
+const BOARD_STEPS_LIMIT = 100
+
+/** The name of a customer, as the follow-up title is worded from it. */
+interface LeadName {
+    /** The customer's name. */
+    readonly contact_name: string
+}
+
+/** The columns of a step as the contract carries them, the instants as the JSON text of the stored value. */
+const RECORD_RETURNING =
+    "id, workspace_id, lead_id, title, owner_kind, owner_agent_id, owner_member_id, owner_name, next_action, " +
+    "to_json(due_at) #>> '{}' AS due_at, status, to_json(created_at) #>> '{}' AS created_at"
+
+/** Selects the step columns of the contract from `ResponsibilityEntity` aliased `r`. */
+const recordOf = (manager: EntityManager): SelectQueryBuilder<ResponsibilityEntity> =>
+    manager
+        .createQueryBuilder(ResponsibilityEntity, "r")
+        .select("r.id", "id")
+        .addSelect("r.workspace_id", "workspace_id")
+        .addSelect("r.lead_id", "lead_id")
+        .addSelect("r.title", "title")
+        .addSelect("r.owner_kind", "owner_kind")
+        .addSelect("r.owner_agent_id", "owner_agent_id")
+        .addSelect("r.owner_member_id", "owner_member_id")
+        .addSelect("r.owner_name", "owner_name")
+        .addSelect("r.next_action", "next_action")
+        .addSelect("to_json(r.due_at) #>> '{}'", "due_at")
+        .addSelect("r.status", "status")
+        .addSelect("to_json(r.created_at) #>> '{}'", "created_at")
 
 @Injectable()
 /** What somebody owes a customer: the follow-up every new customer gets and the board the Responsibilities page shows. */
@@ -56,14 +76,23 @@ export class ResponsibilityJournalService {
      * owner (a concrete member) when there is no agent, due in a day.
      */
     async ensureFor(ctx: ResponsibilityScope, leadId: string): Promise<ResponsibilityRecord> {
-        const open = (
-            await this.entityManager.query<Array<ResponsibilityRecord>>(FIND_OPEN_RESPONSIBILITY, [
-                ctx.workspaceId,
+        const open = await recordOf(this.entityManager)
+            .where("r.workspaceId = :workspaceId AND r.leadId = :leadId AND r.status <> 'done'", {
+                workspaceId: ctx.workspaceId,
                 leadId,
-            ])
-        )[0]
+            })
+            .orderBy("r.createdAt", "DESC")
+            .addOrderBy("r.id", "DESC")
+            .limit(1)
+            .getRawOne<ResponsibilityRecord>()
         if (open !== undefined) return open
-        const lead = (await this.entityManager.query<Array<LeadNameRow>>(FIND_LEAD_NAME, [ctx.workspaceId, leadId]))[0]
+        const lead = await this.entityManager
+            .createQueryBuilder()
+            .select("l.contact_name", "contact_name")
+            .from("public.leads", "l")
+            .where("l.workspace_id = :workspaceId AND l.id = :leadId", { workspaceId: ctx.workspaceId, leadId })
+            .limit(1)
+            .getRawOne<LeadName>()
         if (lead === undefined) throw new ResponsibilitiesError({ code: ResponsibilitiesErrorCode.NotFound })
         const sales = await this.agents.agentOfDepartment(ctx.workspaceId, "sales", null)
         const owner: ResolvedOwner =
@@ -88,12 +117,10 @@ export class ResponsibilityJournalService {
      * workspace owner.
      */
     async openNamed(workspaceId: string, task: NamedFollowUp): Promise<boolean> {
-        const open = await this.entityManager.query<Array<ResponsibilityIdRow>>(FIND_OPEN_TITLED_RESPONSIBILITY, [
-            workspaceId,
-            task.leadId,
-            task.title,
-        ])
-        if (open.length > 0) return false
+        const open = await this.entityManager.exists(ResponsibilityEntity, {
+            where: { workspaceId, leadId: task.leadId, title: task.title, status: Not("done") },
+        })
+        if (open) return false
         const owner =
             (await this.owners.memberNamed(workspaceId, task.ownerName)) ??
             (await this.owners.workspaceOwner(workspaceId))
@@ -108,26 +135,54 @@ export class ResponsibilityJournalService {
     /** The workspace's responsibilities with their customer, open ones first. */
     async list(principalId: string, workspaceId: string): Promise<ReadonlyArray<ResponsibilityListing>> {
         await this.members.require(principalId, workspaceId)
-        return this.entityManager.query<Array<ResponsibilityListing>>(LIST_RESPONSIBILITIES, [workspaceId])
+        return recordOf(this.entityManager)
+            .innerJoin("leads", "l", "l.id = r.leadId")
+            .addSelect("l.contact_name", "contact_name")
+            .addSelect("l.company", "company")
+            .addSelect("l.stage", "leadStage")
+            .where("r.workspaceId = :workspaceId", { workspaceId })
+            .orderBy("(r.status = 'done')", "ASC")
+            .addOrderBy("r.createdAt", "DESC")
+            .addOrderBy("r.id", "DESC")
+            .limit(LISTING_LIMIT)
+            .getRawMany<ResponsibilityListing>()
     }
 
     /** The steps of a workspace's customer in journey order, after membership is proved by the reader. */
     listForLead(workspaceId: string, leadId: string): Promise<Array<ResponsibilityRecord>> {
-        return this.entityManager.query<Array<ResponsibilityRecord>>(LIST_LEAD_RESPONSIBILITIES, [workspaceId, leadId])
+        return recordOf(this.entityManager)
+            .where("r.workspaceId = :workspaceId AND r.leadId = :leadId", { workspaceId, leadId })
+            .orderBy("r.createdAt", "ASC")
+            .addOrderBy("r.id", "ASC")
+            .limit(LEAD_STEPS_LIMIT)
+            .getRawMany<ResponsibilityRecord>()
     }
 
     /** The open follow-ups of the workspace, earliest due first, after membership is proved by the reader. */
     listOpen(workspaceId: string): Promise<Array<ResponsibilityRecord>> {
-        return this.entityManager.query<Array<ResponsibilityRecord>>(LIST_OPEN_RESPONSIBILITIES, [workspaceId])
+        return recordOf(this.entityManager)
+            .where("r.workspaceId = :workspaceId AND r.status <> 'done'", { workspaceId })
+            .orderBy("r.dueAt", "ASC", "NULLS LAST")
+            .addOrderBy("r.createdAt", "ASC")
+            .addOrderBy("r.id", "ASC")
+            .limit(OPEN_STEPS_LIMIT)
+            .getRawMany<ResponsibilityRecord>()
     }
 
     /** The oldest open step of each lead in the current board page, without a workspace-wide history cutoff. */
     listForBoard(workspaceId: string, leadIds: ReadonlyArray<string>): Promise<Array<ResponsibilityRecord>> {
         if (leadIds.length === 0) return Promise.resolve([])
-        return this.entityManager.query<Array<ResponsibilityRecord>>(LIST_BOARD_RESPONSIBILITIES, [
-            workspaceId,
-            leadIds,
-        ])
+        return recordOf(this.entityManager)
+            .distinctOn(["r.lead_id"])
+            .where("r.workspaceId = :workspaceId AND r.leadId = ANY(:leadIds::uuid[]) AND r.status <> 'done'", {
+                workspaceId,
+                leadIds,
+            })
+            .orderBy("r.lead_id")
+            .addOrderBy("r.createdAt", "ASC")
+            .addOrderBy("r.id", "ASC")
+            .limit(BOARD_STEPS_LIMIT)
+            .getRawMany<ResponsibilityRecord>()
     }
 
     /** Adds a responsibility and its evidence, inside the caller's transaction when one is supplied. */
@@ -161,24 +216,25 @@ export class ResponsibilityJournalService {
         status: ResponsibilityStatus,
     ): Promise<ResponsibilityRecord> {
         await this.members.require(principalId, workspaceId)
-        const row = (
-            await this.entityManager.query<Array<ResponsibilityRecord>>(UPDATE_RESPONSIBILITY_STATUS, [
-                workspaceId,
-                responsibilityId,
-                status,
-            ])
-        )[0]
+        const updated = await this.entityManager
+            .createQueryBuilder(ResponsibilityEntity, "r")
+            .update()
+            .set({ status })
+            .where({ workspaceId, id: responsibilityId })
+            .returning(RECORD_RETURNING)
+            .execute()
+        const [row]: Array<ResponsibilityRecord> = updated.raw
         if (row === undefined) throw new ResponsibilitiesError({ code: ResponsibilitiesErrorCode.NotFound })
         return row
     }
 
     /** Marks one of the workspace's responsibilities as waiting for the owner's approval; the card is open. */
     async markWaitingApproval(scope: ResponsibilityScope, responsibilityId: string): Promise<void> {
-        await this.entityManager.query(UPDATE_RESPONSIBILITY_STATUS, [
-            scope.workspaceId,
-            responsibilityId,
-            "waiting_approval",
-        ])
+        await this.entityManager.update(
+            ResponsibilityEntity,
+            { workspaceId: scope.workspaceId, id: responsibilityId },
+            { status: "waiting_approval" },
+        )
     }
 
     /** One responsibility of the workspace, or null when there is none with that id. */
@@ -187,11 +243,11 @@ export class ResponsibilityJournalService {
         responsibilityId: string,
         manager: EntityManager = this.entityManager,
     ): Promise<OptionalResponsibility> {
-        const rows = await manager.query<Array<ResponsibilityRecord>>(FIND_RESPONSIBILITY, [
-            workspaceId,
-            responsibilityId,
-        ])
-        return rows[0] ?? null
+        const row = await recordOf(manager)
+            .where("r.workspaceId = :workspaceId AND r.id = :responsibilityId", { workspaceId, responsibilityId })
+            .limit(1)
+            .getRawOne<ResponsibilityRecord>()
+        return row ?? null
     }
 
     /** Moves a responsibility to a status on the engine's behalf; the engine already proved who may act. */
@@ -201,16 +257,16 @@ export class ResponsibilityJournalService {
         status: ResponsibilityStatus,
         manager: EntityManager = this.entityManager,
     ): Promise<void> {
-        await manager.query(UPDATE_RESPONSIBILITY_STATUS, [scope.workspaceId, responsibilityId, status])
+        await manager.update(ResponsibilityEntity, { workspaceId: scope.workspaceId, id: responsibilityId }, { status })
     }
 
     /** Sets the next step of a responsibility. */
     async setNextAction(scope: ResponsibilityScope, responsibilityId: string, nextAction: string): Promise<void> {
-        await this.entityManager.query(UPDATE_RESPONSIBILITY_NEXT_ACTION, [
-            scope.workspaceId,
-            responsibilityId,
-            nextAction,
-        ])
+        await this.entityManager.update(
+            ResponsibilityEntity,
+            { workspaceId: scope.workspaceId, id: responsibilityId },
+            { nextAction },
+        )
     }
 
     private async insert(
@@ -219,20 +275,49 @@ export class ResponsibilityJournalService {
         owner: ResolvedOwner,
         manager: EntityManager = this.entityManager,
     ): Promise<ResponsibilityRecord> {
-        const row = (
-            await manager.query<Array<ResponsibilityRecord>>(INSERT_RESPONSIBILITY, [
-                workspaceId,
-                input.lead_id,
-                input.title,
-                owner.kind,
-                owner.agentId,
-                owner.name,
-                input.next_action,
-                input.due_at,
-                owner.memberId,
-            ])
-        )[0]
+        const row = await (manager.queryRunner?.isTransactionActive === true
+            ? this.insertForLead(manager, workspaceId, input, owner)
+            : manager.transaction((tx) => this.insertForLead(tx, workspaceId, input, owner)))
         if (row === undefined) throw new ResponsibilitiesError({ code: ResponsibilitiesErrorCode.NotFound })
+        return row
+    }
+
+    /**
+     * Inserts the step for a customer of the workspace and answers it, or answers undefined when the customer is not in it: the
+     * customer row is held `FOR SHARE` in the same transaction, so it cannot go away between the check and the insert.
+     */
+    private async insertForLead(
+        tx: EntityManager,
+        workspaceId: string,
+        input: Omit<NewResponsibility, "owner">,
+        owner: ResolvedOwner,
+    ): Promise<ResponsibilityRecord | undefined> {
+        const lead = await tx
+            .createQueryBuilder()
+            .select("l.id", "id")
+            .from("public.leads", "l")
+            .where("l.workspace_id = :workspaceId AND l.id = :leadId", { workspaceId, leadId: input.lead_id })
+            .limit(1)
+            .setLock("pessimistic_read")
+            .getRawOne<{ id: string }>()
+        if (lead === undefined) return undefined
+        const inserted = await tx
+            .createQueryBuilder(ResponsibilityEntity, "r")
+            .insert()
+            .values({
+                workspaceId,
+                leadId: input.lead_id,
+                title: input.title,
+                ownerKind: owner.kind,
+                ownerAgentId: owner.agentId,
+                ownerMemberId: owner.memberId,
+                ownerName: owner.name,
+                nextAction: input.next_action,
+                dueAt: input.due_at === null ? null : new Date(input.due_at),
+            })
+            .returning(RECORD_RETURNING)
+            .execute()
+        const [row]: [ResponsibilityRecord] = inserted.raw
         return row
     }
 }

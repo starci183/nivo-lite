@@ -1,18 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { WorkspacePruneService } from "@modules/domain/workspaces"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { WorkspaceEntity, WorkspacePruneService } from "@modules/domain/workspaces"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { WorkspaceCleanupError, WorkspaceCleanupErrorCode } from "./errors/workspace-cleanup.error"
 import { CLEANUP_RECEIPT_PREFIX } from "./messages/workspace-cleanup.messages"
-import type { KeptUserRow, UserReferenceRow, WorkspaceFootprintRow } from "./persistence/workspace-cleanup.rows"
-import {
-    KEPT_USERS_MAX,
-    LIST_KEPT_USERS,
-    LIST_USER_REFERENCES,
-    LIST_WORKSPACE_FOOTPRINTS,
-    WORKSPACE_SCAN_MAX,
-} from "./persistence/workspace-cleanup.sql"
+import type { UserReferenceRow, WorkspaceFootprintRow } from "./persistence/workspace-cleanup.rows"
 import { assertUserReferences, userReferencesOf } from "./user-references.policy"
 import {
     buildReceipt,
@@ -32,6 +25,21 @@ import type {
 } from "./workspace-cleanup.contracts"
 import { InjectCleanupAccounts, InjectWorkspaceCleanupOptions } from "./workspace-cleanup.decorators"
 import type { CleanupAccounts, CleanupAuthUser, WorkspaceCleanupOptions } from "./workspace-cleanup.options"
+
+/** One account id a kept workspace holds. */
+interface KeptUser {
+    /** The Auth user id. */
+    readonly user_id: string
+}
+
+/** The most workspaces one cleanup scans; a scan that reaches it is refused, never cut short. */
+const WORKSPACE_SCAN_MAX = 1000
+
+/** The most accounts the kept workspaces may hold; a read that reaches it is refused, so no kept account is missed. */
+const KEPT_USERS_MAX = 5000
+
+/** The most accounts one cleanup reads the references of: every account a bounded Auth scan can list. */
+const USER_REFERENCES_MAX = 10000
 
 const USERS_PER_PAGE = 200
 const USER_PAGES_MAX = 50
@@ -87,17 +95,60 @@ export class WorkspaceCleanupService {
 
     /** Reads the workspaces with their footprint, the kept and the orphan accounts and their references, into the receipt. */
     private async survey(keep: ReadonlyArray<string>, allowKeptCascade: boolean): Promise<CleanupReceipt> {
-        const workspaces = await this.entityManager.query<Array<WorkspaceFootprintRow>>(LIST_WORKSPACE_FOOTPRINTS, [
-            keep,
-        ])
+        const workspaces = await this.footprints(keep)
         if (workspaces.length >= WORKSPACE_SCAN_MAX) incomplete()
         keptWorkspacesOf(keep, workspaces)
-        const kept = await this.entityManager.query<Array<KeptUserRow>>(LIST_KEPT_USERS, [keep])
-        if (kept.length >= KEPT_USERS_MAX) incomplete()
-        const orphans = orphanAccountsOf(await this.listUsers(), new Set(kept.map((row) => row.user_id)))
+        const kept = await this.keptUserIds(keep)
+        if (kept.size >= KEPT_USERS_MAX) incomplete()
+        const orphans = orphanAccountsOf(await this.listUsers(), kept)
         const references = await this.referencesOf(orphans, keep)
         assertUserReferences(references, allowKeptCascade)
         return buildReceipt({ keep, workspaces, orphans, references, allowKeptCascade })
+    }
+
+    /** Every workspace by id, bounded by the scan size, with the footprint of each one that is not kept (null for a kept one, which is never counted). */
+    private async footprints(keep: ReadonlyArray<string>): Promise<ReadonlyArray<WorkspaceFootprintRow>> {
+        const found = await this.entityManager.find(WorkspaceEntity, {
+            select: { id: true, name: true },
+            order: { id: "ASC" },
+            take: WORKSPACE_SCAN_MAX,
+        })
+        const rows: Array<WorkspaceFootprintRow> = []
+        await eachInOrder(found, async (workspace) => {
+            if (keep.includes(workspace.id)) {
+                rows.push({ id: workspace.id, name: workspace.name, footprint: null })
+                return
+            }
+            const [answer] = await callDbFunction<{ workspace_footprint: unknown }>(
+                this.entityManager,
+                "public.workspace_footprint",
+                [workspace.id],
+            )
+            rows.push({ id: workspace.id, name: workspace.name, footprint: answer?.workspace_footprint ?? null })
+        })
+        return rows
+    }
+
+    /** The accounts the kept workspaces hold: every member and every owner, each read bounded by the read size. */
+    private async keptUserIds(keep: ReadonlyArray<string>): Promise<ReadonlySet<string>> {
+        const members = await this.entityManager
+            .createQueryBuilder()
+            .select("m.user_id", "user_id")
+            .distinct(true)
+            .from("workspace_members", "m")
+            .where("m.workspace_id = ANY(CAST(:keep AS uuid[]))", { keep })
+            .orderBy("m.user_id")
+            .limit(KEPT_USERS_MAX)
+            .getRawMany<KeptUser>()
+        const owners = await this.entityManager
+            .createQueryBuilder(WorkspaceEntity, "w")
+            .select("w.owner_id", "user_id")
+            .distinct(true)
+            .where("w.id = ANY(CAST(:keep AS uuid[]))", { keep })
+            .orderBy("w.owner_id")
+            .limit(KEPT_USERS_MAX)
+            .getRawMany<KeptUser>()
+        return new Set([...members, ...owners].map((row) => row.user_id))
     }
 
     /** What deleting each orphan account would do to kept data; no query when there is no orphan. */
@@ -107,7 +158,15 @@ export class WorkspaceCleanupService {
     ): Promise<ReadonlyMap<string, UserReferences>> {
         const ids = orphans.map((user) => user.id)
         if (ids.length === 0) return new Map()
-        const rows = await this.entityManager.query<Array<UserReferenceRow>>(LIST_USER_REFERENCES, [ids, keep])
+        const rows: Array<UserReferenceRow> = []
+        await eachInOrder(ids.slice(0, USER_REFERENCES_MAX), async (id) => {
+            const [answer] = await callDbFunction<{ workspace_user_references: unknown }>(
+                this.entityManager,
+                "public.workspace_user_references",
+                [id, keep],
+            )
+            if (answer !== undefined) rows.push({ user_id: id, refs: answer.workspace_user_references })
+        })
         return userReferencesOf(ids, rows)
     }
 

@@ -3,7 +3,7 @@ import { builder, mock } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { OrdersReadService } from "./orders-read.service"
 import { OrdersService } from "./orders.service"
-import type { SalesOrderListRow } from "./persistence/orders.rows"
+import type { SalesOrderListRow } from "./orders.contracts"
 
 const orderOf = builder<SalesOrderListRow>({
     id: "order-1",

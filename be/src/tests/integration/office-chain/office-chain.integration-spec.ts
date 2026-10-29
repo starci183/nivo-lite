@@ -10,16 +10,13 @@ import type { ThreadMessage } from "@modules/domain/thread-messages"
 import { eachInOrder } from "@modules/platform/primitives"
 import { persistOfficeRows } from "../../fixtures/builders/office-chain.builder"
 import type { OfficeIdentity, OfficeMembers } from "../../fixtures/builders/office-chain.builder"
-import {
-    CLEAN_USERS,
-    EVENTS_OF_KIND,
-    EXPIRE_REQUEST_NOW,
-    REQUEST_STATE,
-} from "../../fixtures/persistence/office-chain.sql"
-import { CLEAN_WORKSPACE } from "../../fixtures/persistence/proof.sql"
+
 import { agentPostsOf, OFFICE_CHAIN_MODULES } from "../../world/office-chain-capabilities.options"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import { useTestWorld } from "../../world/use-test-world"
+import { approvalRequestState, expireApprovalRequestNow, eventsOfKind } from "../../world/office-chain-database.service"
+import type { ApprovalRequestState } from "../../world/office-chain-database.service"
+import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 
 /** A Jest type matcher as an untyped value, so it can stand in a typed expectation. */
 const anyOf = (type: unknown): unknown => expect.any(type)
@@ -41,16 +38,8 @@ interface OfficeState {
 /** The member ids of the story, filled once the office is persisted. */
 const office: OfficeState = { members: { nam: "", minh: "", ha: "", van: "", lan: "" } }
 
-/** The state of a request as the database holds it. */
-interface RequestState {
-    readonly status: string
-    readonly resolved_by: string | null
-    readonly escalated_to: string | null
-    readonly verdicts: number
-}
-
-const requestState = async (requestId: string): Promise<RequestState> => {
-    const [row] = await world.db.primary.query<Array<RequestState>>(REQUEST_STATE, [requestId])
+const requestState = async (requestId: string): Promise<ApprovalRequestState> => {
+    const row = await approvalRequestState(world.db.primary, requestId)
     if (row === undefined) throw new TestWorldError({ code: TestWorldErrorCode.RowMissing, params: { requestId } })
     return row
 }
@@ -114,8 +103,8 @@ const decide = (messageId: string, user: string, verdict: "approve" | "reject" =
 
 beforeAll(async () => {
     world.cleanup(async () => {
-        await world.db.primary.query(CLEAN_WORKSPACE, [WS])
-        await world.db.primary.query(CLEAN_USERS, [Object.values(identity.users)])
+        await removeWorkspace(world.db.primary, WS)
+        await removeAuthUsers(world.db.primary, Object.values(identity.users))
     })
     office.members = await persistOfficeRows(world.db.primary, identity)
     await world.resolve(OfficeAuthorityService).apply(WS, {
@@ -210,10 +199,7 @@ describe("v0.3.2 office chain: any one of the group decides, once", () => {
         const state = await requestState(card.requestId)
         expect(state).toMatchObject({ status: "approved", verdicts: 1 })
         expect([office.members.minh, office.members.ha]).toContain(state.resolved_by)
-        const resolvedLines = await world.db.primary.query<Array<{ evidence: string }>>(EVENTS_OF_KIND, [
-            WS,
-            "approval.resolved",
-        ])
+        const resolvedLines = await eventsOfKind(world.db.primary, WS, "approval.resolved")
         expect(resolvedLines.filter((line) => line.evidence.includes(card.requestId))).toHaveLength(1)
     })
 })
@@ -222,7 +208,7 @@ describe("v0.3.2 office chain: an unanswered request goes to the owner of the ag
     it("expires the request at its deadline and hands the work to anh Minh, who answers for AI Sales", async () => {
         const posted = await askDiscount(await openThread("expiry"), 8)
         const card = cardOf(posted.message)
-        await world.db.primary.query(EXPIRE_REQUEST_NOW, [card.requestId])
+        await expireApprovalRequestNow(world.db.primary, card.requestId)
 
         const swept = await world.resolve(ApprovalRequestsService).sweep()
 

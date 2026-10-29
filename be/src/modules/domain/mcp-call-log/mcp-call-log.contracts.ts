@@ -35,3 +35,27 @@ export interface CallLogPage {
     /** How many lines, already bounded by the caller. */
     readonly limit: number
 }
+
+/** One audit line as the console reads it, with the agent name. */
+export interface CallLogRecord {
+    /** The line. */
+    readonly id: string
+    /** The full tool name. */
+    readonly tool: string
+    /** The agent name, or empty. */
+    readonly agent_name: string
+    /** The outcome. */
+    readonly outcome: string
+    /** The failure code, or null. */
+    readonly error_code: string | null
+    /** The masked arguments as JSON text. */
+    readonly args_masked: string
+    /** The masked result summary. */
+    readonly result_summary: string
+    /** How long it took, milliseconds. */
+    readonly duration_ms: number
+    /** Who approved, or null. */
+    readonly approved_by: string | null
+    /** When it was written. */
+    readonly created_at: Date | string
+}

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { builder } from "@starci/jest-preset"
 import type { CallLogLine } from "@modules/domain/mcp-call-log"
 import type { McpConnectorRow } from "@modules/domain/mcp-connectors"
-import type { McpToolGrantRow } from "@modules/domain/mcp-tool-grants"
+import type { McpToolGrantView } from "@modules/domain/mcp-tool-grants"
 import type { GatewayCaller, GatewayJson, RemoteTarget, RoleReadiness } from "@modules/domain/mcp-gateway"
 import type { McpEndpoint } from "@modules/integrations/mcp"
 import { Secret } from "@modules/platform/config"
@@ -79,7 +79,7 @@ export const remoteConnectorRowOf = builder<McpConnectorRow>({
 })
 
 /** A grant of every tool of the remote connector, auto, with one data constraint. */
-export const toolGrantRowOf = builder<McpToolGrantRow>({
+export const toolGrantRowOf = builder<McpToolGrantView>({
     tool: "hakuen.*",
     mode: "auto",
     limit_vnd: null,
@@ -123,6 +123,6 @@ export const roleProvidersOf = builder<RoleReadiness["providers"]>({
 /** What a gateway spec sets up: the connector and grant rows and the default time limit. */
 export interface GatewaySpecSetup {
     readonly rows?: ReadonlyArray<McpConnectorRow>
-    readonly grants?: ReadonlyArray<McpToolGrantRow>
+    readonly grants?: ReadonlyArray<McpToolGrantView>
     readonly timeoutMs?: number
 }

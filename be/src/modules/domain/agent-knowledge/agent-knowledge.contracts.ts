@@ -79,3 +79,11 @@ export interface Recalled {
     /** The confirmed facts the brief quotes, so the cards of the turn can name them as its sources. */
     readonly facts: ReadonlyArray<FactRecord>
 }
+
+/** What a task the system runs for an agent asks of the business notes: the lane of the agent and a question. */
+export interface AgentNotesRequest extends KnowledgeView {
+    /** What the notes are looked up for. */
+    readonly question: string
+    /** The most passages wanted. */
+    readonly limit: number
+}

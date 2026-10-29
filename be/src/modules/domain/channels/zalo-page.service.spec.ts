@@ -11,13 +11,42 @@ import { ok, refused } from "@modules/platform/primitives"
 import { ChannelDeliveryService } from "./channel-delivery.service"
 import type { ZaloSecret } from "./channels.contracts"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
-import {
-    FIND_LAST_ZALO_REPLY,
-    FIND_ZALO_INBOX_FACTS,
-    LIST_ZALO_FOLLOW_EVENTS,
-    LIST_ZALO_MESSAGE_EVENTS,
-    LIST_ZALO_RECIPIENTS,
-} from "./persistence/zalo-page.sql"
+import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
+import type { TableAnswers, TableQuery } from "@tests/fixtures/builders/table-query-builder.builder"
+
+/** The name of each read of the capability, so a spec answers the read it means. */
+const LIST_ZALO_RECIPIENTS = "recipients"
+const FIND_ZALO_INBOX_FACTS = "facts"
+const FIND_LAST_ZALO_REPLY = "lastReply"
+const LIST_ZALO_MESSAGE_EVENTS = "messages"
+const LIST_ZALO_FOLLOW_EVENTS = "follows"
+
+const limitOf = (query: TableQuery): unknown => query.callsOf("limit")[0]?.[0]
+
+/** A manager whose tables answer the named reads; the reads of one table are told apart by their limit. */
+const tablesEm = (answers: Record<string, ReadonlyArray<unknown>>) => {
+    const em = mockEntityManager()
+    const seen = answerByTable(em, {
+        "public.agent_conversations": answers[LIST_ZALO_RECIPIENTS] ?? [],
+        "public.agent_messages": (query) =>
+            (limitOf(query) === 1 ? answers[FIND_LAST_ZALO_REPLY] : answers[LIST_ZALO_MESSAGE_EVENTS]) ?? [],
+        "public.zalo_inbox": (query) =>
+            (limitOf(query) === 20 ? answers[LIST_ZALO_FOLLOW_EVENTS] : answers[FIND_ZALO_INBOX_FACTS]) ?? [],
+    })
+    SEEN.set(em, seen)
+    return em
+}
+
+const SEEN = new WeakMap<object, TableAnswers>()
+
+/** The named parameters of every condition the subject put on its read of a table. */
+const parametersOf = (em: object, table: string): unknown =>
+    Object.assign(
+        {},
+        ...(SEEN.get(em)?.queriesOf(table)[0]?.calls ?? [])
+            .filter((call) => call.method === "where" || call.method === "andWhere")
+            .map((call) => call.args[1]),
+    )
 import { ZaloCredentialsService } from "./zalo-credentials.service"
 import { ZaloPageService } from "./zalo-page.service"
 
@@ -85,7 +114,7 @@ const build = async (answers: Answers = {}, record: Partial<ConnectionRecord> = 
     credentials.accessToken.mockResolvedValue("access-token")
     const delivery = mock<ChannelDeliveryService>()
     delivery.sendToPerson.mockResolvedValue(undefined)
-    const em = mockEntityManager({ query: Object.entries({ ...DEFAULT_ANSWERS, ...answers }) })
+    const em = tablesEm({ ...DEFAULT_ANSWERS, ...answers })
     const moduleRef = await Test.createTestingModule({
         providers: [
             ZaloPageService,
@@ -130,7 +159,11 @@ describe("ZaloPageService view", () => {
         ])
         expect(JSON.stringify(page)).not.toContain("app-secret-1234")
         expect(JSON.stringify(page)).not.toContain("access-token")
-        expect(em.query).toHaveBeenCalledWith(LIST_ZALO_RECIPIENTS, ["ws-1", "c-1", "2026-10-26T10:00:00.000Z"])
+        expect(parametersOf(em, "public.agent_conversations")).toEqual({
+            workspaceId: "ws-1",
+            connectionId: "c-1",
+            since: "2026-10-26T10:00:00.000Z",
+        })
     })
 
     it("closes the send and asks for attention when the token ended and nothing can renew it", async () => {
@@ -152,7 +185,9 @@ describe("ZaloPageService view", () => {
         })
         expect(page.checks[3]?.code).toBe("permissions_unknown")
     })
+})
 
+describe("ZaloPageService view fallbacks", () => {
     it("falls back to the stored facts when the credential cannot be read", async () => {
         const { service, credentials } = await build({ [FIND_ZALO_INBOX_FACTS]: [] }, { meta: { app_id: "999999" } })
         credentials.load.mockResolvedValue(refused(ChannelsErrorCode.SecretUnreadable))
@@ -216,7 +251,7 @@ describe("ZaloPageService events", () => {
             ["m-2", "agent_reply", "not_sent", "token_expired"],
             ["f-1", "follow", "received", null],
         ])
-        expect(em.query).toHaveBeenCalledWith(LIST_ZALO_MESSAGE_EVENTS, ["ws-1", "c-1"])
+        expect(parametersOf(em, "public.agent_messages")).toEqual({ workspaceId: "ws-1", connectionId: "c-1" })
     })
 })
 

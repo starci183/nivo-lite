@@ -10,7 +10,7 @@ import { SetupMessagesService } from "@modules/domain/module-setup-messages"
 import type { SetupMessageRecord } from "@modules/domain/module-setup-messages"
 import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
 import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
-import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
+import { InstallationChangesService } from "./installation-changes.service"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -107,7 +107,7 @@ const build = async () => {
     modules.find.mockResolvedValue(ACCOUNTING_MODULE)
     const agents = mock<AgentsService>()
     const events = mock<EventsService>()
-    const sync = mock<AgentSyncService>()
+    const sync = mock<InstallationChangesService>()
     const cards = mock<SetupCardsService>()
     const readiness = mock<ModuleReadinessService>()
     readiness.settle.mockResolvedValue("ready")
@@ -129,7 +129,7 @@ const build = async () => {
             { provide: ModulesService, useValue: modules },
             { provide: AgentsService, useValue: agents },
             { provide: EventsService, useValue: events },
-            { provide: AgentSyncService, useValue: sync },
+            { provide: InstallationChangesService, useValue: sync },
             { provide: SetupCardsService, useValue: cards },
             { provide: ModuleReadinessService, useValue: readiness },
         ],
@@ -338,7 +338,7 @@ describe("SetupChatService > apply", () => {
             actor: "Lan",
             summary: `${ACCOUNTING_MODULE.name.en} v2`,
         })
-        expect(sync.requestNow).toHaveBeenCalledWith({
+        expect(sync.announceNow).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             installationId: "inst-1",
             force: false,

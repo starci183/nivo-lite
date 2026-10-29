@@ -1,6 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { answerQueryBuildersByTable } from "@tests/fixtures/builders/fake-query-builder.builder"
+import type { FakeQueryBuilder, QueryBuilderAnswers } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { DeskDailyService, renewalSectionOf } from "@modules/domain/accounting"
 import type { RenewalCashReport } from "@modules/domain/accounting"
 import { ACCOUNT_DIRECTORY } from "@modules/domain/workspace-members"
@@ -11,30 +13,32 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ok, refused } from "@modules/platform/primitives"
 import { N8nDataService } from "./n8n-data.service"
-import {
-    SELECT_DAY_NUMBERS,
-    SELECT_LEAD_CONTACTS,
-    SELECT_LEDGER_INVOICES,
-    SELECT_LEDGER_TRANSACTIONS,
-    SELECT_OVERDUE_INVOICES,
-    SELECT_OWNER_MEMBERS,
-    SELECT_RECEIPT_INVOICE,
-    SELECT_RECEIPT_TRANSACTION,
-    SELECT_REMINDED_INVOICES,
-    SELECT_SHOP_NAME,
-} from "./persistence/n8n-data.sql"
 
 /** A pattern matcher, typed `unknown` so it flows into any slot. */
 const stringMatch = (pattern: RegExp | string): unknown => expect.stringMatching(pattern)
-
-/** The match-anything matcher, typed `unknown` so it flows into any slot. */
-const anything = (): unknown => expect.anything()
 
 /** A by-constructor matcher, typed `unknown` so it flows into any slot. */
 const anyOf = (type: unknown): unknown => expect.any(type)
 
 const NOW = "2026-10-12T10:00:00.000Z"
 const RENEWAL_REPORT = mock<RenewalCashReport>({ lines: ["   - Renewal line"] })
+
+/** The query builders of a spec: the answers by table and the doubles that were built, to inspect. */
+const queries = (answers: Readonly<Record<string, QueryBuilderAnswers>>) => {
+    const em = mockEntityManager()
+    const built = answerQueryBuildersByTable(em, answers)
+    return { em, built }
+}
+
+/** The double built for a table (and alias), or undefined when none was. */
+const builtFor = (
+    built: ReadonlyArray<FakeQueryBuilder>,
+    table: string,
+    alias?: string,
+): FakeQueryBuilder | undefined =>
+    built.find((builder) =>
+        builder.argsOf("from").some((args) => args[0] === table && (alias === undefined || args[1] === alias)),
+    )
 
 const build = async (em: MockEntityManager) => {
     const catalog = mock<MessageCatalog>()
@@ -69,8 +73,8 @@ const build = async (em: MockEntityManager) => {
 describe("N8nDataService", () => {
     describe("shopName", () => {
         it("answers the name of the shop, or NIVO when it has none", async () => {
-            const named = await build(mockEntityManager({ query: [SELECT_SHOP_NAME, [{ name: "Tiem Hoa" }]] }))
-            const unnamed = await build(mockEntityManager({ query: [SELECT_SHOP_NAME, []] }))
+            const named = await build(queries({ "public.workspaces": { getRawOne: { name: "Tiem Hoa" } } }).em)
+            const unnamed = await build(queries({ "public.workspaces": { getRawOne: undefined } }).em)
 
             await expect(named.shopName("ws-1")).resolves.toBe("Tiem Hoa")
             await expect(unnamed.shopName("ws-1")).resolves.toBe("NIVO")
@@ -80,39 +84,35 @@ describe("N8nDataService", () => {
     describe("ownerRecipients", () => {
         it("answers the owners and managers who have an address, in lower case", async () => {
             const members = [
-                { user_id: "u-1", display_name: "Lan" },
-                { user_id: "u-2", display_name: "No address" },
-                { user_id: "u-3", display_name: "Unknown" },
+                { userId: "u-1", displayName: "Lan" },
+                { userId: "u-2", displayName: "No address" },
+                { userId: "u-3", displayName: "Unknown" },
             ]
-            const service = await build(mockEntityManager({ query: [SELECT_OWNER_MEMBERS, members] }))
+            const { em, built } = queries({ "public.workspace_members": { getRawMany: members } })
+            const service = await build(em)
 
             await expect(service.ownerRecipients("ws-1")).resolves.toEqual([{ email: "owner@shop.vn", name: "Lan" }])
+
+            expect(builtFor(built, "public.workspace_members")?.argsOf("limit")).toEqual([[50]])
         })
     })
 })
 
 describe("N8nDataService", () => {
     describe("dailySummary", () => {
-        const numbers = {
-            new_leads: 2,
-            orders_confirmed: 1,
-            money_in: "500000",
-            money_in_count: 1,
-            invoiced: "700000",
-            invoices_issued: 2,
-            waiting_decisions: 3,
-            overdue_count: 1,
-            overdue_total: "200000",
+        const answers: Readonly<Record<string, QueryBuilderAnswers>> = {
+            "public.leads l": { getRawOne: { total: 2, amount: 0 } },
+            "public.orders o": { getRawOne: { total: 1, amount: 0 } },
+            "public.transactions t": { getRawOne: { total: 1, amount: "500000" } },
+            "public.invoices i": { getRawOne: { total: 2, amount: "700000" } },
+            "public.work_items w": { getRawOne: { total: 3, amount: 0 } },
+            "public.invoices d": { getRawOne: { total: 1, amount: "200000" } },
+            "public.workspaces": { getRawOne: { name: "Tiem Hoa" } },
+            "public.workspace_members": { getRawMany: [] },
         }
 
         it("reports the figures of the named day in words, with what waits and what is overdue", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_DAY_NUMBERS, [numbers]],
-                    [SELECT_SHOP_NAME, [{ name: "Tiem Hoa" }]],
-                    [SELECT_OWNER_MEMBERS, []],
-                ],
-            })
+            const { em, built } = queries(answers)
             const service = await build(em)
 
             const summary = await service.dailySummary("ws-1", "2026-10-11")
@@ -132,21 +132,24 @@ describe("N8nDataService", () => {
                 stringMatch(/^overdueAmount/),
                 ...renewalSectionOf(RENEWAL_REPORT).split("\n"),
             ])
-            expect(em.query).toHaveBeenCalledWith(SELECT_DAY_NUMBERS, [
-                "ws-1",
-                "2026-10-10T17:00:00.000Z",
-                "2026-10-11T17:00:00.000Z",
-                NOW,
-            ])
+            const range = { workspaceId: "ws-1", from: "2026-10-10T17:00:00.000Z", to: "2026-10-11T17:00:00.000Z" }
+            expect(builtFor(built, "public.leads", "l")?.argsOf("where")[0]?.[1]).toEqual(range)
+            expect(builtFor(built, "public.invoices", "d")?.argsOf("where")[0]?.[1]).toEqual({
+                workspaceId: "ws-1",
+                now: NOW,
+            })
         })
 
         it("reports an empty day: today, nothing overdue, nothing waiting", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_DAY_NUMBERS, []],
-                    [SELECT_SHOP_NAME, []],
-                    [SELECT_OWNER_MEMBERS, []],
-                ],
+            const { em } = queries({
+                "public.leads l": { getRawOne: undefined },
+                "public.orders o": { getRawOne: undefined },
+                "public.transactions t": { getRawOne: undefined },
+                "public.invoices i": { getRawOne: undefined },
+                "public.work_items w": { getRawOne: undefined },
+                "public.invoices d": { getRawOne: undefined },
+                "public.workspaces": { getRawOne: undefined },
+                "public.workspace_members": { getRawMany: [] },
             })
             const service = await build(em)
 
@@ -160,29 +163,39 @@ describe("N8nDataService", () => {
     })
 })
 
+const OVERDUE_INVOICES = [
+    {
+        id: "i-1",
+        invoiceNo: "HD1",
+        amountVnd: "100000",
+        dueAt: new Date("2026-10-01T00:00:00Z"),
+        leadId: "l-1",
+    },
+    { id: "i-2", invoiceNo: "HD2", amountVnd: "200000", dueAt: null, leadId: "l-2" },
+    {
+        id: "i-3",
+        invoiceNo: "HD3",
+        amountVnd: "300000",
+        dueAt: new Date("2026-10-02T00:00:00Z"),
+        leadId: "l-3",
+    },
+    { id: "i-4", invoiceNo: "HD4", amountVnd: "400000", dueAt: new Date("2026-10-02T00:00:00Z"), leadId: null },
+]
+
+const OVERDUE_LEADS = [
+    { id: "l-1", contactName: "An", email: "An@Mail.com" },
+    { id: "l-2", contactName: "Binh", email: "binh@mail.com" },
+    { id: "l-3", contactName: "Chi", email: null },
+]
+
 describe("N8nDataService", () => {
     describe("overdueInvoices", () => {
-        const invoices = [
-            { id: "i-1", invoice_no: "HD1", amount_vnd: "100000", due_at: "2026-10-01T00:00:00Z", lead_id: "l-1" },
-            { id: "i-2", invoice_no: "HD2", amount_vnd: "200000", due_at: null, lead_id: "l-2" },
-            { id: "i-3", invoice_no: "HD3", amount_vnd: "300000", due_at: "2026-10-02T00:00:00Z", lead_id: "l-3" },
-            { id: "i-4", invoice_no: "HD4", amount_vnd: "400000", due_at: "2026-10-02T00:00:00Z", lead_id: null },
-        ]
-
-        const leads = [
-            { id: "l-1", contact_name: "An", email: "An@Mail.com" },
-            { id: "l-2", contact_name: "Binh", email: "binh@mail.com" },
-            { id: "l-3", contact_name: "Chi", email: null },
-        ]
-
         it("lists reminders for addressed invoices not reminded lately and counts the others", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_OVERDUE_INVOICES, invoices],
-                    [SELECT_LEAD_CONTACTS, leads],
-                    [SELECT_REMINDED_INVOICES, [{ invoice_id: "i-2" }]],
-                    [SELECT_SHOP_NAME, [{ name: "Tiem Hoa" }]],
-                ],
+            const { em, built } = queries({
+                "public.invoices i": { getRawMany: OVERDUE_INVOICES },
+                "public.leads l": { getRawMany: OVERDUE_LEADS },
+                "public.email_messages e": { getRawMany: [{ invoiceId: "i-2" }] },
+                "public.workspaces": { getRawOne: { name: "Tiem Hoa" } },
             })
             const service = await build(em)
 
@@ -203,25 +216,35 @@ describe("N8nDataService", () => {
                     so_ngay_tre: 11,
                 },
             })
-            expect(em.query).toHaveBeenCalledWith(SELECT_OVERDUE_INVOICES, ["ws-1", "2026-10-07T10:00:00.000Z"])
-            expect(em.query).toHaveBeenCalledWith(SELECT_REMINDED_INVOICES, ["ws-1", "2026-10-02T10:00:00.000Z"])
+            expect(builtFor(built, "public.invoices")?.argsOf("where")[0]?.[1]).toEqual({
+                workspaceId: "ws-1",
+                cutoff: "2026-10-07T10:00:00.000Z",
+            })
+            expect(builtFor(built, "public.email_messages")?.argsOf("where")[0]?.[1]).toEqual({
+                workspaceId: "ws-1",
+                since: "2026-10-02T10:00:00.000Z",
+            })
+            expect(builtFor(built, "public.leads")?.argsOf("where")).toEqual([
+                ["l.id IN (:...ids)", { ids: ["l-1", "l-2", "l-3"] }],
+            ])
         })
 
         it("uses default delays, skips absent leads and treats missing due dates as due now", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_OVERDUE_INVOICES, [{ ...invoices[3], lead_id: null }]],
-                    [SELECT_REMINDED_INVOICES, []],
-                    [SELECT_SHOP_NAME, []],
-                ],
+            const { em, built } = queries({
+                "public.invoices i": { getRawMany: [{ ...OVERDUE_INVOICES[3], leadId: null }] },
+                "public.email_messages e": { getRawMany: [] },
+                "public.workspaces": { getRawOne: undefined },
             })
             const service = await build(em)
 
             const result = await service.overdueInvoices("ws-1", {})
 
             expect(result).toEqual({ shop_name: "NIVO", items: [], skipped: { no_email: 1, reminded_recently: 0 } })
-            expect(em.query).toHaveBeenCalledWith(SELECT_OVERDUE_INVOICES, ["ws-1", "2026-10-09T10:00:00.000Z"])
-            expect(em.query).not.toHaveBeenCalledWith(SELECT_LEAD_CONTACTS, anything())
+            expect(builtFor(built, "public.invoices")?.argsOf("where")[0]?.[1]).toEqual({
+                workspaceId: "ws-1",
+                cutoff: "2026-10-09T10:00:00.000Z",
+            })
+            expect(builtFor(built, "public.leads")).toBeUndefined()
         })
     })
 })
@@ -229,26 +252,28 @@ describe("N8nDataService", () => {
 describe("N8nDataService", () => {
     describe("overdueInvoices", () => {
         const invoices = [
-            { id: "i-1", invoice_no: "HD1", amount_vnd: "100000", due_at: "2026-10-01T00:00:00Z", lead_id: "l-1" },
-            { id: "i-2", invoice_no: "HD2", amount_vnd: "200000", due_at: null, lead_id: "l-2" },
-            { id: "i-3", invoice_no: "HD3", amount_vnd: "300000", due_at: "2026-10-02T00:00:00Z", lead_id: "l-3" },
-            { id: "i-4", invoice_no: "HD4", amount_vnd: "400000", due_at: "2026-10-02T00:00:00Z", lead_id: null },
+            {
+                id: "i-1",
+                invoiceNo: "HD1",
+                amountVnd: "100000",
+                dueAt: new Date("2026-10-01T00:00:00Z"),
+                leadId: "l-1",
+            },
+            { id: "i-2", invoiceNo: "HD2", amountVnd: "200000", dueAt: null, leadId: "l-2" },
         ]
 
         const leads = [
-            { id: "l-1", contact_name: "An", email: "An@Mail.com" },
-            { id: "l-2", contact_name: "Binh", email: "binh@mail.com" },
-            { id: "l-3", contact_name: "Chi", email: null },
+            { id: "l-1", contactName: "An", email: "An@Mail.com" },
+            { id: "l-2", contactName: "Binh", email: "binh@mail.com" },
+            { id: "l-3", contactName: "Chi", email: null },
         ]
 
         it("dates an invoice with no due date today", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_OVERDUE_INVOICES, [{ ...invoices[1] }]],
-                    [SELECT_LEAD_CONTACTS, leads],
-                    [SELECT_REMINDED_INVOICES, []],
-                    [SELECT_SHOP_NAME, []],
-                ],
+            const { em } = queries({
+                "public.invoices i": { getRawMany: [{ ...invoices[1] }] },
+                "public.leads l": { getRawMany: leads },
+                "public.email_messages e": { getRawMany: [] },
+                "public.workspaces": { getRawOne: undefined },
             })
             const service = await build(em)
 
@@ -260,21 +285,18 @@ describe("N8nDataService", () => {
         it("keeps at most fifty reminders", async () => {
             const many = Array.from({ length: 60 }, (_item, index) => ({
                 id: `i-${index}`,
-                invoice_no: `HD${index}`,
-                amount_vnd: "1000",
-                due_at: "2026-10-01T00:00:00Z",
-                lead_id: "l-1",
+                invoiceNo: `HD${index}`,
+                amountVnd: "1000",
+                dueAt: new Date("2026-10-01T00:00:00Z"),
+                leadId: "l-1",
             }))
-            const service = await build(
-                mockEntityManager({
-                    query: [
-                        [SELECT_OVERDUE_INVOICES, many],
-                        [SELECT_LEAD_CONTACTS, leads],
-                        [SELECT_REMINDED_INVOICES, []],
-                        [SELECT_SHOP_NAME, []],
-                    ],
-                }),
-            )
+            const { em } = queries({
+                "public.invoices i": { getRawMany: many },
+                "public.leads l": { getRawMany: leads },
+                "public.email_messages e": { getRawMany: [] },
+                "public.workspaces": { getRawOne: undefined },
+            })
+            const service = await build(em)
 
             await expect(service.overdueInvoices("ws-1", {})).resolves.toMatchObject({ items: anyOf(Array) })
             expect((await service.overdueInvoices("ws-1", {})).items).toHaveLength(50)
@@ -285,35 +307,31 @@ describe("N8nDataService", () => {
 describe("N8nDataService", () => {
     describe("monthLedger", () => {
         it("writes a month of payments and invoices as csv, with the totals as variables", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [
-                        SELECT_LEDGER_TRANSACTIONS,
-                        [
-                            {
-                                occurred_at: "2026-09-05T03:00:00Z",
-                                amount_vnd: "100000",
-                                reference: "R1",
-                                payer: "An",
-                                channel: "bank",
-                                status: "ok",
-                            },
-                        ],
+            const { em, built } = queries({
+                "public.transactions t": {
+                    getRawMany: [
+                        {
+                            occurredAt: new Date("2026-09-05T03:00:00Z"),
+                            amountVnd: "100000",
+                            reference: "R1",
+                            payer: "An",
+                            channel: "bank",
+                            status: "ok",
+                        },
                     ],
-                    [
-                        SELECT_LEDGER_INVOICES,
-                        [
-                            {
-                                invoice_no: "HD1",
-                                amount_vnd: "250000",
-                                issued_at: "2026-09-06T03:00:00Z",
-                                status: "issued",
-                            },
-                            { invoice_no: "HD2", amount_vnd: "50000", issued_at: null, status: "draft" },
-                        ],
+                },
+                "public.invoices i": {
+                    getRawMany: [
+                        {
+                            invoiceNo: "HD1",
+                            amountVnd: "250000",
+                            issuedAt: new Date("2026-09-06T03:00:00Z"),
+                            status: "issued",
+                        },
+                        { invoiceNo: "HD2", amountVnd: "50000", issuedAt: null, status: "draft" },
                     ],
-                    [SELECT_SHOP_NAME, [{ name: "Tiem Hoa" }]],
-                ],
+                },
+                "public.workspaces": { getRawOne: { name: "Tiem Hoa" } },
             })
             const service = await build(em)
 
@@ -329,20 +347,19 @@ describe("N8nDataService", () => {
             expect(ledger.csv).toContain("06/09/2026,csvInvoice{},250000,HD1,,,issued")
             expect(ledger.csv).toContain("01/09/2026,csvInvoice{},50000,HD2,,,draft")
             expect(ledger.variables.tom_tat).toContain('ledgerMoney{"amount":')
-            expect(em.query).toHaveBeenCalledWith(SELECT_LEDGER_TRANSACTIONS, [
-                "ws-1",
-                "2026-08-31T17:00:00.000Z",
-                "2026-09-30T17:00:00.000Z",
-            ])
+            expect(builtFor(built, "public.transactions")?.argsOf("where")[0]?.[1]).toEqual({
+                workspaceId: "ws-1",
+                from: "2026-08-31T17:00:00.000Z",
+                to: "2026-09-30T17:00:00.000Z",
+            })
+            expect(builtFor(built, "public.transactions")?.argsOf("limit")).toEqual([[5000]])
         })
 
         it("reads last month when none is named", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_LEDGER_TRANSACTIONS, []],
-                    [SELECT_LEDGER_INVOICES, []],
-                    [SELECT_SHOP_NAME, []],
-                ],
+            const { em } = queries({
+                "public.transactions t": { getRawMany: [] },
+                "public.invoices i": { getRawMany: [] },
+                "public.workspaces": { getRawOne: undefined },
             })
             const service = await build(em)
 
@@ -355,33 +372,33 @@ describe("N8nDataService", () => {
     describe("paymentReceipt", () => {
         const invoice = {
             id: "i-1",
-            invoice_no: "HD1",
-            amount_vnd: "250000",
-            lead_id: "l-1",
-            paid_at: "2026-10-10T03:00:00Z",
+            invoiceNo: "HD1",
+            amountVnd: "250000",
+            leadId: "l-1",
+            paidAt: new Date("2026-10-10T03:00:00Z"),
         }
 
-        const lead = { id: "l-1", contact_name: "An", email: "An@Mail.com" }
+        const lead = { id: "l-1", contactName: "An", email: "An@Mail.com" }
 
-        const payment = { invoice_id: "i-1", amount_vnd: "100000", occurred_at: "2026-10-11T03:00:00Z" }
+        const payment = { invoiceId: "i-1", amountVnd: "100000", occurredAt: new Date("2026-10-11T03:00:00Z") }
 
         it("answers nothing without a payment or an invoice", async () => {
-            const service = await build(mockEntityManager())
+            const { em } = queries({})
+            const service = await build(em)
 
             await expect(service.paymentReceipt("ws-1", "", "")).resolves.toBeNull()
+
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
 
         it("answers the receipt of a payment matched to an invoice, once per payment", async () => {
-            const service = await build(
-                mockEntityManager({
-                    query: [
-                        [SELECT_RECEIPT_TRANSACTION, [payment]],
-                        [SELECT_RECEIPT_INVOICE, [invoice]],
-                        [SELECT_LEAD_CONTACTS, [lead]],
-                        [SELECT_SHOP_NAME, [{ name: "Tiem Hoa" }]],
-                    ],
-                }),
-            )
+            const { em } = queries({
+                "public.transactions t": { getRawOne: payment },
+                "public.invoices i": { getRawOne: invoice },
+                "public.leads l": { getRawMany: [lead] },
+                "public.workspaces": { getRawOne: { name: "Tiem Hoa" } },
+            })
+            const service = await build(em)
 
             const receipt = await service.paymentReceipt("ws-1", "t-1", "")
 
@@ -397,15 +414,12 @@ describe("N8nDataService", () => {
         })
 
         it("answers the receipt of an invoice alone, with the invoice amount and its paid date", async () => {
-            const service = await build(
-                mockEntityManager({
-                    query: [
-                        [SELECT_RECEIPT_INVOICE, [invoice]],
-                        [SELECT_LEAD_CONTACTS, [lead]],
-                        [SELECT_SHOP_NAME, [{ name: "Tiem Hoa" }]],
-                    ],
-                }),
-            )
+            const { em, built } = queries({
+                "public.invoices i": { getRawOne: invoice },
+                "public.leads l": { getRawMany: [lead] },
+                "public.workspaces": { getRawOne: { name: "Tiem Hoa" } },
+            })
+            const service = await build(em)
 
             const receipt = await service.paymentReceipt("ws-1", "", "i-1")
 
@@ -413,6 +427,7 @@ describe("N8nDataService", () => {
                 dedupe: "receipt:i-1",
                 data: { refs: { transaction_id: null }, variables: { ngay: "10/10/2026" } },
             })
+            expect(builtFor(built, "public.transactions")).toBeUndefined()
         })
     })
 })
@@ -421,26 +436,23 @@ describe("N8nDataService", () => {
     describe("paymentReceipt", () => {
         const invoice = {
             id: "i-1",
-            invoice_no: "HD1",
-            amount_vnd: "250000",
-            lead_id: "l-1",
-            paid_at: "2026-10-10T03:00:00Z",
+            invoiceNo: "HD1",
+            amountVnd: "250000",
+            leadId: "l-1",
+            paidAt: new Date("2026-10-10T03:00:00Z"),
         }
 
-        const lead = { id: "l-1", contact_name: "An", email: "An@Mail.com" }
+        const lead = { id: "l-1", contactName: "An", email: "An@Mail.com" }
 
-        const payment = { invoice_id: "i-1", amount_vnd: "100000", occurred_at: "2026-10-11T03:00:00Z" }
+        const payment = { invoiceId: "i-1", amountVnd: "100000", occurredAt: new Date("2026-10-11T03:00:00Z") }
 
         it("dates the receipt today when neither the payment nor the invoice has a date", async () => {
-            const service = await build(
-                mockEntityManager({
-                    query: [
-                        [SELECT_RECEIPT_INVOICE, [{ ...invoice, paid_at: null }]],
-                        [SELECT_LEAD_CONTACTS, [lead]],
-                        [SELECT_SHOP_NAME, []],
-                    ],
-                }),
-            )
+            const { em } = queries({
+                "public.invoices i": { getRawOne: { ...invoice, paidAt: null } },
+                "public.leads l": { getRawMany: [lead] },
+                "public.workspaces": { getRawOne: undefined },
+            })
+            const service = await build(em)
 
             await expect(service.paymentReceipt("ws-1", "", "i-1")).resolves.toMatchObject({
                 data: { variables: { ngay: "12/10/2026" } },
@@ -448,19 +460,19 @@ describe("N8nDataService", () => {
         })
 
         it("answers nothing when the payment is not matched to an invoice", async () => {
-            const service = await build(
-                mockEntityManager({ query: [SELECT_RECEIPT_TRANSACTION, [{ ...payment, invoice_id: null }]] }),
+            const matchless = await build(
+                queries({ "public.transactions t": { getRawOne: { ...payment, invoiceId: null } } }).em,
             )
-            const unknown = await build(mockEntityManager({ query: [SELECT_RECEIPT_TRANSACTION, []] }))
+            const unknown = await build(queries({ "public.transactions t": { getRawOne: undefined } }).em)
 
-            await expect(service.paymentReceipt("ws-1", "t-1", "")).resolves.toBeNull()
+            await expect(matchless.paymentReceipt("ws-1", "t-1", "")).resolves.toBeNull()
             await expect(unknown.paymentReceipt("ws-1", "t-1", "")).resolves.toBeNull()
         })
 
         it("answers nothing when the invoice is unknown or has no customer", async () => {
-            const none = await build(mockEntityManager({ query: [SELECT_RECEIPT_INVOICE, []] }))
+            const none = await build(queries({ "public.invoices i": { getRawOne: undefined } }).em)
             const anonymous = await build(
-                mockEntityManager({ query: [SELECT_RECEIPT_INVOICE, [{ ...invoice, lead_id: null }]] }),
+                queries({ "public.invoices i": { getRawOne: { ...invoice, leadId: null } } }).em,
             )
 
             await expect(none.paymentReceipt("ws-1", "", "i-1")).resolves.toBeNull()
@@ -469,20 +481,16 @@ describe("N8nDataService", () => {
 
         it("answers nothing when the customer has no address", async () => {
             const service = await build(
-                mockEntityManager({
-                    query: [
-                        [SELECT_RECEIPT_INVOICE, [invoice]],
-                        [SELECT_LEAD_CONTACTS, [{ ...lead, email: null }]],
-                    ],
-                }),
+                queries({
+                    "public.invoices i": { getRawOne: invoice },
+                    "public.leads l": { getRawMany: [{ ...lead, email: null }] },
+                }).em,
             )
             const missing = await build(
-                mockEntityManager({
-                    query: [
-                        [SELECT_RECEIPT_INVOICE, [invoice]],
-                        [SELECT_LEAD_CONTACTS, []],
-                    ],
-                }),
+                queries({
+                    "public.invoices i": { getRawOne: invoice },
+                    "public.leads l": { getRawMany: [] },
+                }).em,
             )
 
             await expect(service.paymentReceipt("ws-1", "", "i-1")).resolves.toBeNull()

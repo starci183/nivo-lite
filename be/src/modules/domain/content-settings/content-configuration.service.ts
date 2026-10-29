@@ -18,14 +18,7 @@ import type {
 import { toContentBrandSettings } from "./content-configuration.mapper"
 import { CONTENT_CADENCE_PRESETS, contentPillarPresets } from "./content-configuration.templates"
 import { ContentSettingsError, ContentSettingsErrorCode } from "./errors/content-settings.error"
-import type { ContentBrandRow } from "./persistence/content-configuration.rows"
-import {
-    ENSURE_CONFIGURATION,
-    LOCK_CONFIGURATION,
-    SAVE_CONFIGURATION_BRAND,
-    SELECT_CONFIGURATION_BRAND,
-    SET_CONFIGURATION_AUTOMATION,
-} from "./persistence/content-configuration.sql"
+import { ContentSettingsEntity } from "./persistence/entities"
 
 @Injectable()
 /** The workspace's content themes, posting rhythm and brand settings; writes require an owner or manager. */
@@ -49,12 +42,12 @@ export class ContentConfigurationService {
         const [pillars, cadence, brand] = await Promise.all([
             this.pillars.list(workspaceId),
             this.cadence.list(workspaceId),
-            this.entityManager.query<Array<ContentBrandRow>>(SELECT_CONFIGURATION_BRAND, [workspaceId]),
+            this.entityManager.findOne(ContentSettingsEntity, { where: { workspaceId } }),
         ])
         return {
             pillars,
             cadence,
-            settings: toContentBrandSettings(workspaceId, brand[0]),
+            settings: toContentBrandSettings(workspaceId, brand ?? undefined),
         }
     }
 
@@ -129,13 +122,18 @@ export class ContentConfigurationService {
                     .map((tag) => `#${tag}`),
             ),
         ]
-        await this.entityManager.query(SAVE_CONFIGURATION_BRAND, [
-            workspaceId,
-            brand.brandVoice.trim(),
-            brand.avoid.trim(),
-            brand.cta.trim(),
-            hashtags,
-        ])
+        await this.entityManager
+            .createQueryBuilder(ContentSettingsEntity, "cs")
+            .insert()
+            .values({
+                workspaceId,
+                brandVoice: brand.brandVoice.trim(),
+                avoid: brand.avoid.trim(),
+                cta: brand.cta.trim(),
+                hashtags,
+            })
+            .orUpdate(["brand_voice", "avoid", "cta", "hashtags"], ["workspace_id"])
+            .execute()
         return this.readBrand(workspaceId)
     }
 
@@ -147,18 +145,37 @@ export class ContentConfigurationService {
         on: boolean,
     ): Promise<ContentBrandSettings> {
         await this.members.require(userId, workspaceId, ["owner", "manager"])
-        await this.entityManager.query(SET_CONFIGURATION_AUTOMATION, [workspaceId, JSON.stringify({ [key]: on })])
+        await this.entityManager
+            .createQueryBuilder(ContentSettingsEntity, "content_settings")
+            .insert()
+            .values({ workspaceId, automations: () => ":automation::jsonb" })
+            .setParameter("automation", JSON.stringify({ [key]: on }))
+            .onConflict(
+                `("workspace_id") DO UPDATE SET "automations" = "content_settings"."automations" || EXCLUDED."automations"`,
+            )
+            .execute()
         return this.readBrand(workspaceId)
     }
 
     private async readBrand(workspaceId: string): Promise<ContentBrandSettings> {
-        const [row] = await this.entityManager.query<Array<ContentBrandRow>>(SELECT_CONFIGURATION_BRAND, [workspaceId])
-        return toContentBrandSettings(workspaceId, row)
+        const row = await this.entityManager.findOne(ContentSettingsEntity, { where: { workspaceId } })
+        return toContentBrandSettings(workspaceId, row ?? undefined)
     }
 
     private async lockConfiguration(transaction: EntityManager, workspaceId: string): Promise<void> {
-        await transaction.query(ENSURE_CONFIGURATION, [workspaceId])
-        await transaction.query(LOCK_CONFIGURATION, [workspaceId])
+        await transaction
+            .createQueryBuilder(ContentSettingsEntity, "cs")
+            .insert()
+            .values({ workspaceId })
+            .orIgnore()
+            .execute()
+        await transaction
+            .createQueryBuilder(ContentSettingsEntity, "settings")
+            .select("settings.workspaceId")
+            .where("settings.workspaceId = :workspaceId", { workspaceId })
+            .limit(1)
+            .setLock("pessimistic_write")
+            .getOne()
     }
 
     private requireUnique(values: ReadonlyArray<string>): void {

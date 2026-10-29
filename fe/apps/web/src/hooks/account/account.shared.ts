@@ -47,20 +47,16 @@ export const parseUserAgent = (userAgent: string | null | undefined): Device => 
     }
 }
 
-/** The catalog keys (`account` namespace) of the failure sentences of the password and e-mail cards. */
-export type AccountErrorKey = "errEmail" | "errEmailSame" | "errWrongCurrent" | "errNoPassword" | "unknownError"
+/** The catalog keys (`account` namespace) of the failure sentences of the password card. */
+export type AccountErrorKey = "errWrongCurrent" | "errMin" | "unknownError"
 
-/** The sentence that explains a failed Auth call of the account page. */
+/** The sentence that explains a failed change-password call (the `extensions.code` of the back end failure). */
 export const accountErrorKey = (code: string): AccountErrorKey => {
     switch (code) {
-        case "email-same":
-            return "errEmailSame"
-        case "email-input":
-            return "errEmail"
-        case "wrong-current":
+        case "IDENTITY_INVALID_CREDENTIALS":
             return "errWrongCurrent"
-        case "no-password":
-            return "errNoPassword"
+        case "IDENTITY_PASSWORD_INVALID":
+            return "errMin"
         default:
             return "unknownError"
     }

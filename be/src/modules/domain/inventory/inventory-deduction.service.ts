@@ -1,30 +1,29 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { OfficeLog } from "@modules/domain/module-ops"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InventoryOrderQueue, isDeductOrderPayload } from "@modules/queues/inventory-order"
+import { InjectInbox } from "@modules/platform/inbox"
+import type { Inbox } from "@modules/platform/inbox"
 import type { DeductResult, DeductedLine, MatchRecipe } from "./inventory.contracts"
-import type { DeductOrderParams } from "./inventory-operations.contracts"
 import { InventoryLocationsService } from "./inventory-locations.service"
 import { InventoryMovementsService, SYSTEM_ACTOR } from "./inventory-movements.service"
-import { ANY_MEMBER } from "./policies/access-roles.policy"
 import { toInventoryItem } from "./policies/item-row.policy"
-import type { ItemRowColumns } from "./policies/item-row.policy"
+import { ITEM_LIMIT, itemRowOf } from "./policies/inventory-row.mapper"
 import { formatQty } from "./policies/number-format.policy"
 import { matchOrderLine, parseOrderLines } from "./policies/order-lines.policy"
-import { SELECT_ACTIVE_ITEMS, SELECT_ACTIVE_RECIPES, SELECT_RECIPE_LINES } from "./persistence/inventory.sql"
-import type { InventoryRecipeLinesRow, InventoryRecipesRow } from "./persistence/inventory.rows"
+import { InventoryItemEntity, InventoryRecipeEntity, InventoryRecipeLineEntity } from "./persistence/entities"
 
 /** The longest order text kept as evidence. */
 const EVIDENCE_MAX = 300
 
-type RecipeRow = Pick<InventoryRecipesRow, "id" | "name" | "aliases">
+/** The most recipes one deduction reads. */
+const RECIPE_LIMIT = 1000
 
-type RecipeLineRow = Pick<InventoryRecipeLinesRow, "recipe_id" | "item_id" | "qty">
+/** The most recipe lines one deduction reads. */
+const RECIPE_LINE_LIMIT = 10_000
 
 interface OrderText {
     readonly workspaceId: string
@@ -38,32 +37,27 @@ interface OrderText {
 export class InventoryDeductionService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        private readonly members: WorkspaceMembersService,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly office: OfficeLog,
         private readonly movements: InventoryMovementsService,
         private readonly locations: InventoryLocationsService,
-        private readonly orderQueue: InventoryOrderQueue,
+        @InjectInbox() private readonly inbox: Inbox,
     ) {}
 
     private text(key: string, params: Record<string, string | number>): string {
         return this.catalog.get(key, params, "vi")
     }
 
-    /** Schedules the deduction of a confirmed order's goods; the job exists exactly when the request is stored. */
-    async enqueueDeduct(userId: string, workspaceId: string, request: DeductOrderParams): Promise<void> {
-        await this.members.require(userId, workspaceId, ANY_MEMBER)
-        await this.entityManager.transaction((tx) =>
-            this.orderQueue.enqueueDeductOrder(
-                { workspaceId, orderId: request.orderId, orderNo: request.orderNo, items: request.items },
-                tx,
-            ),
-        )
-    }
-
-    /** The effect of one deduct-order job; a payload of any other job changes nothing. */
-    async deductOrderJob(payload: object): Promise<void> {
-        if (isDeductOrderPayload(payload)) await this.deductForOrder(payload)
+    /**
+     * The effect of the `inventory` reactor of `order_confirmed`: the confirmed order takes its goods out of stock once per delivery
+     * key. The inbox claim shares one transaction with the deduction, so a failure releases the claim and the redelivery runs again;
+     * every movement is keyed on the order and the item, so a run that already happened changes nothing twice.
+     */
+    async deductConfirmedOrder(consumer: string, dedupeKey: string, order: OrderText): Promise<void> {
+        await this.entityManager.transaction(async (tx) => {
+            if (!(await this.inbox.claim(consumer, dedupeKey, tx))) return
+            await this.deductForOrder(order)
+        })
     }
 
     /**
@@ -76,12 +70,24 @@ export class InventoryDeductionService {
         const nothing: DeductResult = { deducted: [], unmatched: [] }
         const { workspaceId, orderId, orderNo, items: orderText } = order
         if (orderId === "" || orderText.trim() === "") return nothing
-        const itemRows = await this.entityManager.query<Array<ItemRowColumns>>(SELECT_ACTIVE_ITEMS, [workspaceId])
-        if (itemRows.length === 0) return nothing
-        const items = itemRows.map(toInventoryItem)
+        const itemEntities = await this.entityManager.find(InventoryItemEntity, {
+            where: { workspaceId, active: true },
+            order: { name: "ASC" },
+            take: ITEM_LIMIT,
+        })
+        if (itemEntities.length === 0) return nothing
+        const items = itemEntities.map((entity) => toInventoryItem(itemRowOf(entity)))
         const byId = new Map(items.map((item) => [item.id, item]))
-        const recipeRows = await this.entityManager.query<Array<RecipeRow>>(SELECT_ACTIVE_RECIPES, [workspaceId])
-        const lineRows = await this.entityManager.query<Array<RecipeLineRow>>(SELECT_RECIPE_LINES, [workspaceId])
+        const recipeRows = await this.entityManager.find(InventoryRecipeEntity, {
+            select: { id: true, name: true, aliases: true },
+            where: { workspaceId, active: true },
+            take: RECIPE_LIMIT,
+        })
+        const lineRows = await this.entityManager.find(InventoryRecipeLineEntity, {
+            select: { recipeId: true, itemId: true, qty: true },
+            where: { workspaceId },
+            take: RECIPE_LINE_LIMIT,
+        })
         const recipes: Array<MatchRecipe> = recipeRows.map((row) => ({
             id: row.id,
             name: row.name,
@@ -89,9 +95,9 @@ export class InventoryDeductionService {
         }))
         const recipeLines = new Map<string, Array<{ itemId: string; qty: number }>>()
         for (const line of lineRows) {
-            recipeLines.set(line.recipe_id, [
-                ...(recipeLines.get(line.recipe_id) ?? []),
-                { itemId: line.item_id, qty: Number(line.qty) },
+            recipeLines.set(line.recipeId, [
+                ...(recipeLines.get(line.recipeId) ?? []),
+                { itemId: line.itemId, qty: Number(line.qty) },
             ])
         }
         const take = new Map<string, number>()

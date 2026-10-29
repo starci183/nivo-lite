@@ -3,19 +3,17 @@ import { JOB_CLAIMS, JobRunnerService } from "@modules/platform/jobs"
 import type { ClaimedJob, FencedProcessor, JobClaims } from "@modules/platform/jobs"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
-import * as statements from "../../fixtures/persistence/queue-fencing.sql"
 import { jobSnapshot } from "../../world/proof-database.service"
 import { worldIds } from "../../world/lite-world.service"
 import { redisJobsModules } from "../../world/redis-capabilities.options"
-import { startQueueRelay, transportOf, waitForProof } from "../../world/redis-proof.service"
+import {
+    cleanFencingRows,
+    fencingOutbox,
+    startQueueRelay,
+    transportOf,
+    waitForProof,
+} from "../../world/redis-proof.service"
 import { useTestWorld } from "../../world/use-test-world"
-
-/** The persisted admission observed independently of the broker state. */
-interface FencingOutboxRow {
-    readonly id: string
-    readonly state: string
-    readonly attempts: number
-}
 
 describe("Queue fenced claim recovery (private Redis and local Supabase)", () => {
     const world = useTestWorld({ modules: redisJobsModules(`fencing-${worldIds.next()}`, 1000) })
@@ -27,12 +25,11 @@ describe("Queue fenced claim recovery (private Redis and local Supabase)", () =>
         await world.db.primary.transaction((tx) =>
             world.resolve<QueueOutbox>(QUEUE_OUTBOX).write(tx, queue, payload, { dedupeKey }),
         )
-        const read = () => world.db.primary.query<Array<FencingOutboxRow>>(statements.FENCING_OUTBOX, [dedupeKey])
+        const read = () => fencingOutbox(world.db.primary, dedupeKey)
         const [row] = await read()
         assert(row !== undefined)
         world.cleanup(async () => {
-            await world.db.primary.query(statements.CLEAN_FENCING_JOB, [row.id])
-            await world.db.primary.query(statements.CLEAN_FENCING_OUTBOX, [row.id])
+            await cleanFencingRows(world.db.primary, row.id)
         })
         const claims = world.resolve<JobClaims>(JOB_CLAIMS)
         const foreign = await claims.claim({ kind: queue, jobKey: row.id, payload, workerId: "foreign", leaseMs: 2000 })

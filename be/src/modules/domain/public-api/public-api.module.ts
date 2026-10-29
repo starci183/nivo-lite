@@ -11,6 +11,8 @@ import { PublicApiProcessingService } from "./public-api-processing.service"
 import { PublicLeadFulfillmentService } from "./public-lead-fulfillment.service"
 import { PublicMessageFulfillmentService } from "./public-message-fulfillment.service"
 import { PublicLeadCompletionService } from "./public-lead-completion.service"
+import { PublicApiLedgerService } from "./public-api-ledger.service"
+import { PublicConversationsService } from "./public-conversations.service"
 
 @Module({})
 /** The public-api capability over the primary Supabase PostgreSQL connection; an accepted request enqueues its follow-up work. */
@@ -32,6 +34,8 @@ export class PublicApiModule extends ConfigurableModuleClass {
                 PublicLeadFulfillmentService,
                 PublicMessageFulfillmentService,
                 PublicLeadCompletionService,
+                PublicApiLedgerService,
+                PublicConversationsService,
             ],
             exports: [
                 PublicEventsService,

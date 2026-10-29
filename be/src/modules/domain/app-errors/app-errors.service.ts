@@ -1,12 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { ErrorReportContext, ErrorReporter } from "@modules/platform/errors"
 import { InjectLogger, redactValue } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AppErrorsLogEvent } from "./app-errors.log-events"
 import { MESSAGE_MAX, SCOPE_MAX, STACK_MAX, clean, messageOf, uuidOrNull } from "./app-errors.policy"
-import { RECORD_APP_ERROR } from "./persistence/app-errors.sql"
 
 @Injectable()
 /**
@@ -26,17 +25,15 @@ export class AppErrorsService implements ErrorReporter {
         const connection = uuidOrNull(connectionId)
         const stack = error instanceof Error && error.stack !== undefined ? clean(error.stack, STACK_MAX) : null
         const record = connection === null ? facts : { ...facts, connectionId: connection }
-        await this.entityManager
-            .query(RECORD_APP_ERROR, [
-                clean(scope, SCOPE_MAX),
-                clean(messageOf(error), MESSAGE_MAX),
-                stack,
-                uuidOrNull(workspaceId),
-                connection,
-                JSON.stringify(redactValue(record)),
-            ])
-            .catch((cause: unknown) => {
-                this.logger.error(AppErrorsLogEvent.ReportFailed, cause, { scope })
-            })
+        await callDbFunction(this.entityManager, "public.app_errors_record", [
+            clean(scope, SCOPE_MAX),
+            clean(messageOf(error), MESSAGE_MAX),
+            stack,
+            uuidOrNull(workspaceId),
+            connection,
+            JSON.stringify(redactValue(record)),
+        ]).catch((cause: unknown) => {
+            this.logger.error(AppErrorsLogEvent.ReportFailed, cause, { scope })
+        })
     }
 }

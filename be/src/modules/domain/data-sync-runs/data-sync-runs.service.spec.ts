@@ -1,20 +1,22 @@
 import { Test } from "@nestjs/testing"
-import { builder, mockEntityManager } from "@starci/jest-preset"
+import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { entityRowBuilder, namedCalls } from "@tests/fixtures/builders/entity-row.builder"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { DataSyncRunsService } from "./data-sync-runs.service"
-import type { DataSyncRunRow } from "./persistence/data-sync-runs.rows"
-import { FIND_SYNC_RUN, FINISH_SYNC_RUN, INSERT_SYNC_RUN } from "./persistence/data-sync-runs.sql"
+import { DataSyncRunEntity } from "./persistence/entities"
 
-const rowOf = builder<DataSyncRunRow>({
+const rowOf = entityRowBuilder<DataSyncRunEntity>({
     id: "run-1",
-    connection_id: "conn-1",
+    workspaceId: "ws-1",
+    connectionId: "conn-1",
     trigger: "manual",
     status: "running",
-    rows_upserted: 0,
+    rowsUpserted: 0,
     error: null,
-    started_at: "2026-10-13T03:00:00.000Z",
-    finished_at: null,
+    startedAt: new Date("2026-10-13T03:00:00.000Z"),
+    finishedAt: null,
 })
 
 const build = async (em: MockEntityManager) => {
@@ -27,7 +29,8 @@ const build = async (em: MockEntityManager) => {
 describe("DataSyncRunsService / open", () => {
     it("opens a running run in the caller's transaction and answers it", async () => {
         const own = mockEntityManager()
-        const tx = mockEntityManager({ query: [INSERT_SYNC_RUN, [rowOf({ trigger: "schedule" })]] })
+        const tx = mockEntityManager()
+        const [insert] = queueQueryBuilders(tx, [{ execute: { raw: [rowOf({ trigger: "schedule" })] } }])
         const runs = await build(own)
 
         await expect(runs.open(tx, "ws-1", "conn-1", "schedule")).resolves.toEqual({
@@ -40,42 +43,50 @@ describe("DataSyncRunsService / open", () => {
             startedAt: "2026-10-13T03:00:00.000Z",
             finishedAt: null,
         })
-        expect(tx.query.mock.calls).toEqual([[INSERT_SYNC_RUN, ["ws-1", "conn-1", "schedule"]]])
-        expect(own.query).not.toHaveBeenCalled()
+        expect(insert?.callsOf("insert")).toEqual([[]])
+        expect(insert?.callsOf("values")).toEqual([
+            [{ workspaceId: "ws-1", connectionId: "conn-1", trigger: "schedule" }],
+        ])
+        expect(own.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("answers null when the insert returns no row", async () => {
-        const tx = mockEntityManager({ query: [INSERT_SYNC_RUN, []] })
+        const tx = mockEntityManager()
+        queueQueryBuilders(tx, [{ execute: { raw: [] } }])
         const runs = await build(mockEntityManager())
 
-        await expect(runs.open(tx, "ws-1", "conn-1", "push")).resolves.toBeNull()
+        await expect(runs.open(tx, "ws-1", "conn-1", "manual")).resolves.toBeNull()
     })
 })
 
 describe("DataSyncRunsService / finish", () => {
     it("settles the run with its state, rows and failure", async () => {
-        const em = mockEntityManager({ query: [FINISH_SYNC_RUN, []] })
+        const em = mockEntityManager({ update: [DataSyncRunEntity, { affected: 1 }] })
         const runs = await build(em)
 
         await expect(runs.finish("run-1", "failed", 12, "Sheet not shared")).resolves.toBeUndefined()
 
-        expect(em.query.mock.calls).toEqual([[FINISH_SYNC_RUN, ["run-1", "failed", 12, "Sheet not shared"]]])
+        expect(namedCalls(em.update.mock.calls, 2)).toEqual([
+            [
+                "DataSyncRunEntity",
+                { id: "run-1", status: "running" },
+                { status: "failed", rowsUpserted: 12, error: "Sheet not shared", finishedAt: "function" },
+            ],
+        ])
     })
 })
 
 describe("DataSyncRunsService / find", () => {
     it("answers a settled run of the workspace", async () => {
         const em = mockEntityManager({
-            query: [
-                FIND_SYNC_RUN,
-                [
-                    rowOf({
-                        status: "ok",
-                        rows_upserted: 40,
-                        finished_at: "2026-10-13T03:01:00.000Z",
-                        trigger: "upload",
-                    }),
-                ],
+            findOne: [
+                DataSyncRunEntity,
+                rowOf({
+                    status: "ok",
+                    rowsUpserted: 40,
+                    finishedAt: new Date("2026-10-13T03:01:00.000Z"),
+                    trigger: "upload",
+                }),
             ],
         })
         const runs = await build(em)
@@ -90,18 +101,20 @@ describe("DataSyncRunsService / find", () => {
             startedAt: "2026-10-13T03:00:00.000Z",
             finishedAt: "2026-10-13T03:01:00.000Z",
         })
-        expect(em.query).toHaveBeenCalledWith(FIND_SYNC_RUN, ["ws-1", "run-1"])
+        expect(em.findOne).toHaveBeenCalledWith(DataSyncRunEntity, { where: { workspaceId: "ws-1", id: "run-1" } })
     })
 
     it("reads an unknown trigger as manual and an unknown status as running", async () => {
-        const em = mockEntityManager({ query: [FIND_SYNC_RUN, [rowOf({ trigger: "legacy", status: "queued" })]] })
+        const em = mockEntityManager({
+            findOne: [DataSyncRunEntity, Object.assign(rowOf(), { trigger: "legacy", status: "queued" })],
+        })
         const runs = await build(em)
 
         await expect(runs.find("ws-1", "run-1")).resolves.toMatchObject({ trigger: "manual", state: "running" })
     })
 
     it("answers null for a run the workspace does not have", async () => {
-        const em = mockEntityManager({ query: [FIND_SYNC_RUN, []] })
+        const em = mockEntityManager({ findOne: [DataSyncRunEntity, null] })
         const runs = await build(em)
 
         await expect(runs.find("ws-1", "run-9")).resolves.toBeNull()

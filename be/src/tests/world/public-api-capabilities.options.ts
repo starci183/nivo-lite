@@ -1,3 +1,4 @@
+import { ContractLinkService, ContractsService } from "@modules/domain/contracts"
 import { Injectable, Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ApiKeysService } from "@modules/domain/api-keys"
@@ -6,9 +7,8 @@ import { AgentsService } from "@modules/domain/agents"
 import { AuthorityService } from "@modules/domain/authority"
 import { AuthorityActionsModule } from "@modules/domain/authority-actions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import { AutomationBusinessEventsService, BusinessEventsService } from "@modules/domain/automations"
 import { DurableWorkService, EvidenceService, WorkEngineService } from "@modules/domain/decisions"
-import type { InboundEventStatus, LeadGenFlow, OutboundAccessGate, PaymentReceipts } from "@modules/domain/decisions"
+import type { InboundEventStatus, LeadGenFlow, OutboundAccessGate } from "@modules/domain/decisions"
 import { EventsModule } from "@modules/domain/events"
 import { ExecutionsModule } from "@modules/domain/executions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
@@ -20,6 +20,8 @@ import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule } from "@modules/domai
 import { PublicApiModule } from "@modules/domain/public-api"
 import { ResponsibilitiesModule } from "@modules/domain/responsibilities"
 import { StaffModule } from "@modules/domain/staff"
+import { EVENT_BUS } from "@modules/platform/event-bus"
+import type { EventBus } from "@modules/platform/event-bus"
 import { WebhookEventsService } from "@modules/domain/webhook-connections"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import type { AccountDirectory } from "@modules/domain/workspace-members"
@@ -27,6 +29,7 @@ import { WorkItemsService } from "@modules/domain/work-items"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { I18nModule } from "@modules/platform/i18n"
 import { INBOX, InboxService } from "@modules/platform/inbox"
+import { IdsModule } from "@modules/platform/ids"
 import { JobsModule } from "@modules/platform/jobs"
 import { QueueModule } from "@modules/platform/queue"
 import type { QueueOptions } from "@modules/platform/queue"
@@ -36,11 +39,9 @@ import { ModuleCatalogService } from "../../modules/domain/decisions/module-cata
 import { WorkApprovalService } from "../../modules/domain/decisions/work-approval.service"
 import { WorkChainService } from "../../modules/domain/decisions/work-chain.service"
 import {
-    DECISION_EVENTS,
     INBOUND_EVENT_STATUS,
     LEAD_GEN_FLOW,
     OUTBOUND_ACCESS_GATE,
-    PAYMENT_RECEIPTS,
 } from "../../modules/domain/decisions/work-engine.decorators"
 import { WorkIntakeService } from "../../modules/domain/decisions/work-intake.service"
 import { WORK_PERFORMER_REGISTRY } from "../../modules/domain/decisions/work-performer.port"
@@ -75,11 +76,7 @@ export class PublicApiProofAccess implements OutboundAccessGate {
 
 /** A message explicitly has no chain; reaching another department is a failed proof. */
 @Injectable()
-class PublicApiProofChain implements PaymentReceipts, LeadGenFlow {
-    receiptFor(): Promise<void> {
-        return Promise.reject(new TestWorldError({ code: TestWorldErrorCode.TransactionRefused }))
-    }
-
+class PublicApiProofChain implements LeadGenFlow {
     continueAfter(): Promise<void> {
         return Promise.reject(new TestWorldError({ code: TestWorldErrorCode.TransactionRefused }))
     }
@@ -101,8 +98,9 @@ class PublicApiProofPeersModule {
             ApiKeysService,
             AgentConversationsService,
             ApiKnowledgeSourcesService,
+            ContractsService,
+            ContractLinkService,
             AuthorityService,
-            AutomationBusinessEventsService,
             CommandPlannerService,
             DurableWorkService,
             EvidenceService,
@@ -133,16 +131,12 @@ class PublicApiProofPeersModule {
                 { provide: AgentsService, useExisting: PublicApiProofDirectory },
                 { provide: INBOX, useClass: InboxService },
                 { provide: INBOUND_EVENT_STATUS, useClass: PublicApiProofInbound },
-                { provide: DECISION_EVENTS, useExisting: AutomationBusinessEventsService },
-                { provide: PAYMENT_RECEIPTS, useClass: PublicApiProofChain },
                 { provide: LEAD_GEN_FLOW, useClass: PublicApiProofChain },
                 { provide: OUTBOUND_ACCESS_GATE, useExisting: PublicApiProofAccess },
                 { provide: WORK_PERFORMER_REGISTRY, useExisting: WorkPerformersService },
                 {
-                    provide: BusinessEventsService,
-                    useFactory: (): Pick<BusinessEventsService, "leadCreated"> => ({
-                        leadCreated: () => Promise.resolve(),
-                    }),
+                    provide: EVENT_BUS,
+                    useFactory: (): Pick<EventBus, "publish"> => ({ publish: () => Promise.resolve() }),
                 },
                 {
                     provide: WebhookEventsService,
@@ -163,8 +157,11 @@ export const publicApiProofModules = (options: QueueOptions) => [
         connection: PRIMARY_ENTITY_MANAGER,
         workerId: "public-api-proof",
         leaseMs: 1000,
+        scheduler: { enabled: false },
     }),
     I18nModule.register({ isGlobal: true, bundles: [] }),
+    // The real work items service stamps each new item with an id from this port.
+    IdsModule.register({ isGlobal: true }),
     EventsModule.register({ isGlobal: true }),
     AuthorityActionsModule.register({ isGlobal: true }),
     StaffModule.register({ isGlobal: true }),

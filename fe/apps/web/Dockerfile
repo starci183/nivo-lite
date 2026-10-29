@@ -3,7 +3,7 @@
 #
 #   docker build -f fe/apps/web/Dockerfile -t nivo-lite/web:<tag> .
 #
-# Pass the public values with --build-arg: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_API_URL (default https://api.nivo.vn), NEXT_PUBLIC_DEVELOPER_API_URL (default https://api.nivo.vn),
+# Pass the public values with --build-arg: NEXT_PUBLIC_API_URL (default https://api.nivo.vn), NEXT_PUBLIC_DEVELOPER_API_URL (default https://api.nivo.vn),
 # NEXT_PUBLIC_SITE_URL (default https://app.nivo.vn), NEXT_PUBLIC_LANDING_URL (default https://nivo.vn).
 #
 # NEXT_PUBLIC_* values are published to every browser by design, so they are the one kind of build argument; every server-only
@@ -21,15 +21,11 @@ RUN find fe -type f ! -name package.json -delete \
 
 FROM node:22.14.0-alpine3.21 AS build
 WORKDIR /app
-ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ARG NEXT_PUBLIC_API_URL=https://api.nivo.vn
 ARG NEXT_PUBLIC_DEVELOPER_API_URL=https://api.nivo.vn
 ARG NEXT_PUBLIC_SITE_URL=https://app.nivo.vn
 ARG NEXT_PUBLIC_LANDING_URL=https://nivo.vn
-ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
-    NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
-    NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_PUBLIC_DEVELOPER_API_URL=$NEXT_PUBLIC_DEVELOPER_API_URL \
     NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
     NEXT_PUBLIC_LANDING_URL=$NEXT_PUBLIC_LANDING_URL \
@@ -40,7 +36,6 @@ RUN npm ci --ignore-scripts
 COPY turbo.json ./
 COPY scripts scripts
 COPY be/contracts be/contracts
-COPY supabase/types supabase/types
 COPY db/migrations db/migrations
 COPY fe/tsconfig.json fe/tsconfig.json
 COPY fe/packages fe/packages

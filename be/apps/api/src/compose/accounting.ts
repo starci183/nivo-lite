@@ -12,7 +12,7 @@ import { TransactionsModule } from "@modules/domain/transactions"
 import { WorkPerformersModule } from "@modules/domain/work-performers"
 import { OfficeCommandCandidatesModule } from "@modules/domain/office-command-candidates"
 import { OfficeRoomsModule } from "@modules/domain/office-rooms"
-import { DeepseekClient } from "@modules/integrations/deepseek"
+import { AiTasksService } from "@modules/domain/ai-tasks"
 /** The accounting area of the API, in registration order. */
 export const accountingModules = (): Array<DynamicModule> => [
     OrdersModule.register({ isGlobal: true }),
@@ -25,7 +25,7 @@ export const accountingModules = (): Array<DynamicModule> => [
     InvoicesModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),
     EmailMessagesModule.register({ isGlobal: true }),
-    WorkPerformersModule.register({ isGlobal: true, writer: DeepseekClient }),
-    OfficeCommandCandidatesModule.register({ isGlobal: true, reader: DeepseekClient }),
+    WorkPerformersModule.register({ isGlobal: true, writer: AiTasksService }),
+    OfficeCommandCandidatesModule.register({ isGlobal: true, reader: AiTasksService }),
     OfficeRoomsModule.register({ isGlobal: true }),
 ]

@@ -1,6 +1,7 @@
 import { createCipheriv, randomBytes } from "node:crypto"
 import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
@@ -8,7 +9,6 @@ import type { Logger } from "@modules/platform/logging"
 import { BILLING_OPTIONS } from "./billing.decorators"
 import type { BillingOptions } from "./billing.options"
 import { PaymentSecretsService } from "./payment-secrets.service"
-import { SELECT_CONNECTION_SECRET } from "./persistence/bank-feed.sql"
 
 const KEY = randomBytes(32).toString("base64")
 const CONNECTION_ID = "0b5d3f4e-1c2a-4b6d-8e7f-9a0b1c2d3e4f"
@@ -27,7 +27,8 @@ const OPTIONS: BillingOptions = {
 }
 
 const build = async (rows: Array<object>, options: Partial<BillingOptions> = {}) => {
-    const em = mockEntityManager({ query: [SELECT_CONNECTION_SECRET, rows] })
+    const em = mockEntityManager()
+    const [fake] = queueQueryBuilders(em, [{ getRawOne: rows[0] }])
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -37,7 +38,7 @@ const build = async (rows: Array<object>, options: Partial<BillingOptions> = {})
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { secrets: moduleRef.get(PaymentSecretsService), em, logger }
+    return { secrets: moduleRef.get(PaymentSecretsService), em, fake, logger }
 }
 
 const row = (over: Record<string, unknown> = {}) => ({
@@ -51,21 +52,21 @@ const row = (over: Record<string, unknown> = {}) => ({
 
 describe("PaymentSecretsService", () => {
     it("answers the workspace, the decrypted credential and the webhook secret of a connection of the provider", async () => {
-        const { secrets, em } = await build([row()])
+        const { secrets, fake } = await build([row()])
 
         await expect(secrets.load(CONNECTION_ID, "casso")).resolves.toEqual({
             workspaceId: "ws-1",
             credential: JSON.stringify({ secureKey: "k" }),
             webhookSecret: "hook",
         })
-        expect(em.query).toHaveBeenCalledWith(SELECT_CONNECTION_SECRET, [CONNECTION_ID])
+        expect(fake?.callsOf("where")).toEqual([["c.id = :connectionId", { connectionId: CONNECTION_ID }]])
     })
 
     it("answers null for an id that is not a connection id without asking the database", async () => {
         const { secrets, em } = await build([row()])
 
         await expect(secrets.load("not-a-uuid", "casso")).resolves.toBeNull()
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("answers null for a missing connection, another provider and a disconnected connection", async () => {

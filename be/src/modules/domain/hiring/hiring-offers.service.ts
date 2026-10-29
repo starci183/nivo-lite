@@ -7,7 +7,7 @@ import type { PerformContext, PerformResult } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { HiringError, HiringErrorCode } from "./errors/hiring.error"
 import type { JobRecord, OfferRecord, OfferTerms } from "./hiring.contracts"
 import type { CancelOfferParams, RequestOfferOutput, RequestOfferParams } from "./hiring-operations.contracts"
@@ -22,8 +22,6 @@ import { HiringDataService } from "./hiring-data.service"
 import { HiringLinksService } from "./hiring-links.service"
 import { HiringNotifyService } from "./hiring-notify.service"
 import { HiringTextService } from "./hiring-text.service"
-import { ANSWER_OFFER, CANCEL_OFFER, CREATE_OFFER, LINK_OFFER, MARK_OFFER_SENT } from "./persistence/hiring.sql"
-import type { FlagRow, CancelledOfferRow, IdRow, TextRow } from "./persistence/hiring.rows"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { findFairnessViolations } from "./policies/fairness.policy"
 import { fieldText } from "./policies/gate-fields.policy"
@@ -142,16 +140,13 @@ export class HiringOffersService {
             })
         }
         const job = await this.requireJob(workspaceId, candidate.jobId)
-        const [created] = await this.entityManager.query<Array<IdRow>>(CREATE_OFFER, [
-            workspaceId,
-            candidate.id,
-            job.id,
-            JSON.stringify(termsJson(terms)),
-            await this.data.newToken(),
-            userId,
-        ])
-        if (created?.id === null || created?.id === undefined)
-            throw new HiringError({ code: HiringErrorCode.OfferNotFound })
+        const [row] = await callDbFunction<{ hiring_offer_create: string | null }>(
+            this.entityManager,
+            "public.hiring_offer_create",
+            [workspaceId, candidate.id, job.id, JSON.stringify(termsJson(terms)), await this.data.newToken(), userId],
+        )
+        const created = row?.hiring_offer_create
+        if (created === null || created === undefined) throw new HiringError({ code: HiringErrorCode.OfferNotFound })
         const { draft, usedModel } = await this.letter(workspaceId, candidate.name, job, terms)
         const outcome = await this.gate.request({
             workspaceId,
@@ -159,7 +154,7 @@ export class HiringOffersService {
             action: "send_offer",
             subjectType: "candidate",
             subjectId: candidate.id,
-            dedupeKey: `send_offer:${created.id}`,
+            dedupeKey: `send_offer:${created}`,
             summary: this.words.text(usedModel ? "hiring.offer.summary" : "hiring.offer.summaryTemplate", {
                 name: candidate.name,
                 title: terms.title === "" ? job.title : terms.title,
@@ -168,12 +163,17 @@ export class HiringOffersService {
             draft,
             fields: {
                 candidate_id: candidate.id,
-                offer_id: created.id,
+                offer_id: created,
                 contact: candidate.email === "" ? candidate.phone : candidate.email,
             },
         })
         const status = STATUS_OF_DECISION[outcome.status] ?? "draft"
-        await this.entityManager.query(LINK_OFFER, [workspaceId, created.id, outcome.workItemId, status])
+        await callDbFunction<unknown>(this.entityManager, "public.hiring_offer_link", [
+            workspaceId,
+            created,
+            outcome.workItemId,
+            status,
+        ])
         return {
             status: outcome.status,
             summary: this.words.text("hiring.offer.asked", { name: candidate.name }),
@@ -209,7 +209,7 @@ export class HiringOffersService {
             text: `${body}\n\n${this.words.text("hiring.offer.replyAt", { link })}`,
             workItemId: context.workItemId,
         })
-        await this.entityManager.query<Array<FlagRow>>(MARK_OFFER_SENT, [
+        await callDbFunction<{ hiring_offer_sent: boolean }>(this.entityManager, "public.hiring_offer_sent", [
             workspaceId,
             offer.id,
             body,
@@ -227,25 +227,33 @@ export class HiringOffersService {
 
     /** The owner did not approve the letter: the offer is cancelled and the candidate stays where they were. */
     async reject(context: PerformContext): Promise<void> {
-        await this.entityManager.query<Array<CancelledOfferRow>>(CANCEL_OFFER, [
-            context.workspaceId,
-            fieldText(context.fields, "offer_id"),
-            ["draft", "waiting"],
-            context.actor,
-            this.words.text("hiring.event.offerNotApproved"),
-        ])
+        await callDbFunction<{ candidate_id: string; work_item_id: string | null }>(
+            this.entityManager,
+            "public.hiring_offer_cancel",
+            [
+                context.workspaceId,
+                fieldText(context.fields, "offer_id"),
+                ["draft", "waiting"],
+                context.actor,
+                this.words.text("hiring.event.offerNotApproved"),
+            ],
+        )
     }
 
     /** Cancels an offer that is a draft, waiting or sent, and drops the decision it waits for. */
     async cancel(userId: string, workspaceId: string, request: CancelOfferParams): Promise<void> {
         const { displayName } = await this.members.require(userId, workspaceId, MANAGER_ROLES)
-        const [row] = await this.entityManager.query<Array<CancelledOfferRow>>(CANCEL_OFFER, [
-            workspaceId,
-            request.id,
-            ["draft", "waiting", "sent"],
-            displayName,
-            this.words.text("hiring.event.offerCancelled"),
-        ])
+        const [row] = await callDbFunction<{ candidate_id: string; work_item_id: string | null }>(
+            this.entityManager,
+            "public.hiring_offer_cancel",
+            [
+                workspaceId,
+                request.id,
+                ["draft", "waiting", "sent"],
+                displayName,
+                this.words.text("hiring.event.offerCancelled"),
+            ],
+        )
         if (row === undefined) throw new HiringError({ code: HiringErrorCode.OfferNotCancellable })
         if (row.work_item_id !== null) {
             await this.gate.decide({
@@ -310,14 +318,20 @@ export class HiringOffersService {
         const items = Array.from({ length: ONBOARDING_STEPS }, (_, index) =>
             this.words.text(`hiring.onboarding.${index + 1}`),
         )
-        const [row] = await this.entityManager.query<Array<TextRow>>(ANSWER_OFFER, [
-            request.token,
-            request.accept,
-            items,
-            name,
-            this.words.text(request.accept ? "hiring.event.offerAccepted" : "hiring.event.offerDeclined"),
-        ])
-        if (row?.value !== "accepted" && row?.value !== "declined") return { outcome: "stale" }
+        const [row] = await callDbFunction<{ hiring_offer_answer: string | null }>(
+            this.entityManager,
+            "public.hiring_offer_answer",
+            [
+                request.token,
+                request.accept,
+                items,
+                name,
+                this.words.text(request.accept ? "hiring.event.offerAccepted" : "hiring.event.offerDeclined"),
+            ],
+        )
+        if (row?.hiring_offer_answer !== "accepted" && row?.hiring_offer_answer !== "declined") {
+            return { outcome: "stale" }
+        }
         await this.office.postOffice(
             offer.workspaceId,
             this.words.text(request.accept ? "hiring.office.offerAccepted" : "hiring.office.offerDeclined", {

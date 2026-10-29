@@ -9,8 +9,8 @@ import type { AuthorityRuleRecord, RuleMode } from "@modules/domain/authority-ru
 import { EvidenceService, ModuleCatalogService, formatVnd } from "@modules/domain/decisions"
 import type { Proposal, WorkContext } from "@modules/domain/decisions"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
-import { InjectDeepseekClient } from "@modules/integrations/deepseek"
-import type { DeepseekClient } from "@modules/integrations/deepseek"
+import { InjectAiTasks } from "@modules/domain/ai-tasks"
+import type { AiTasksService } from "@modules/domain/ai-tasks"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
@@ -29,7 +29,7 @@ import { FlowEngineError, FlowEngineErrorCode } from "./errors/flow-engine.error
 import type { AuthorityChatAnswer } from "./flow-engine.contracts"
 
 /** What the model read from the owner's message. */
-type AuthorityChange = Awaited<ReturnType<DeepseekClient["parseAuthorityChat"]>>
+type AuthorityChange = Awaited<ReturnType<AiTasksService["parseAuthorityChat"]>>
 
 /** One rule change of the model, with the limit the message may fill in. */
 interface ModelRule {
@@ -76,7 +76,7 @@ export class AuthorityChatService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
-        @InjectDeepseekClient() private readonly ai: DeepseekClient,
+        @InjectAiTasks() private readonly ai: AiTasksService,
         private readonly authority: AuthorityService,
         private readonly rules: AuthorityRulesService,
         private readonly actions: AuthorityActionsService,

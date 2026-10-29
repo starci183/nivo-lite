@@ -25,5 +25,10 @@ export const redisQueueModules = (prefix: string): ReadonlyArray<DynamicModule> 
 /** The queue over the private Redis plus the fenced job runner, whose claim leases last `leaseMs`. */
 export const redisJobsModules = (prefix: string, leaseMs: number): ReadonlyArray<DynamicModule> => [
     ...redisQueueModules(prefix),
-    JobsModule.register({ connection: PRIMARY_ENTITY_MANAGER, workerId: "successor", leaseMs }),
+    JobsModule.register({
+        connection: PRIMARY_ENTITY_MANAGER,
+        workerId: "successor",
+        leaseMs,
+        scheduler: { enabled: false },
+    }),
 ]

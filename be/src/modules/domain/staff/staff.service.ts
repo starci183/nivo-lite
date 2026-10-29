@@ -3,14 +3,22 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { StaffError, StaffErrorCode } from "./errors/staff.error"
 import type { OptionalStaffName, StaffWrite } from "./staff.contracts"
+import { StaffEntity } from "./persistence/entities"
 import type { StaffRow } from "./persistence/staff.rows"
-import { FIND_STAFF_NAME, INSERT_STAFF, LIST_STAFF, UPDATE_STAFF } from "./persistence/staff.sql"
 
-/** The name a staff lookup answers. */
-interface StaffNameRow {
-    /** The display name. */
-    readonly name: string
-}
+/** The most staff rows one workspace lists. */
+const STAFF_ROWS_MAX = 500
+
+/** Maps an entity to the staff contract the accounting and shifts capabilities read. */
+const rowOf = (staff: StaffEntity): StaffRow => ({
+    id: staff.id,
+    workspace_id: staff.workspaceId,
+    name: staff.name,
+    role: staff.role,
+    email: staff.email,
+    active: staff.active,
+    created_at: staff.createdAt.toISOString(),
+})
 
 /** A name with its spaces collapsed. */
 const collapsed = (value: string): string => value.trim().replace(/\s+/g, " ")
@@ -28,30 +36,58 @@ export class StaffService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** Lists the staff of the selected workspace, active first. Callers must prove membership before reading. */
-    list(workspaceId: string): Promise<Array<StaffRow>> {
-        return this.entityManager.query<Array<StaffRow>>(LIST_STAFF, [workspaceId])
+    async list(workspaceId: string): Promise<Array<StaffRow>> {
+        const staff = await this.entityManager.find(StaffEntity, {
+            where: { workspaceId },
+            order: { active: "DESC", createdAt: "ASC", id: "ASC" },
+            take: STAFF_ROWS_MAX,
+        })
+        return staff.map(rowOf)
     }
 
     /** The name of one staff row of the workspace, or null when there is none. */
     async nameOf(workspaceId: string, staffId: string): Promise<OptionalStaffName> {
-        const rows = await this.entityManager.query<Array<StaffNameRow>>(FIND_STAFF_NAME, [workspaceId, staffId])
-        return rows[0]?.name ?? null
+        const staff = await this.entityManager.findOne(StaffEntity, {
+            select: { name: true },
+            where: { workspaceId, id: staffId },
+        })
+        return staff?.name ?? null
     }
 
     /** Adds a staff row, or replaces one. The caller has already proved they may manage the workspace. */
     async save(input: StaffWrite): Promise<StaffRow> {
         const name = collapsed(input.name)
         if (name.length === 0) throw new StaffError({ code: StaffErrorCode.NameRequired })
-        const values = [input.workspaceId, name, collapsed(input.role), emailOf(input.email), input.active ?? null]
-        const rows = await this.write(input.id ?? null, values)
-        const saved = rows[0]
-        if (saved === undefined) throw new StaffError({ code: StaffErrorCode.NotFound })
-        return saved
+        const values = { name, role: collapsed(input.role), email: emailOf(input.email) }
+        const saved =
+            input.id === null || input.id === undefined
+                ? await this.insert(input.workspaceId, values, input.active ?? true)
+                : await this.update(input.workspaceId, input.id, values, input.active ?? null)
+        if (saved === null) throw new StaffError({ code: StaffErrorCode.NotFound })
+        return rowOf(saved)
     }
 
-    private write(id: string | null, values: ReadonlyArray<string | boolean | null>): Promise<Array<StaffRow>> {
-        if (id === null) return this.entityManager.query<Array<StaffRow>>(INSERT_STAFF, [...values])
-        const [workspaceId, name, role, email, active] = values
-        return this.entityManager.query<Array<StaffRow>>(UPDATE_STAFF, [workspaceId, id, name, role, email, active])
+    private insert(
+        workspaceId: string,
+        values: Pick<StaffEntity, "name" | "role" | "email">,
+        active: boolean,
+    ): Promise<StaffEntity> {
+        return this.entityManager.save(StaffEntity, { workspaceId, ...values, active })
+    }
+
+    /** Replaces the editable fields of a workspace's row; the active flag changes only when given. */
+    private async update(
+        workspaceId: string,
+        id: string,
+        values: Pick<StaffEntity, "name" | "role" | "email">,
+        active: boolean | null,
+    ): Promise<StaffEntity | null> {
+        const result = await this.entityManager.update(
+            StaffEntity,
+            { workspaceId, id },
+            active === null ? values : { ...values, active },
+        )
+        if (result.affected === 0) return null
+        return this.entityManager.findOneBy(StaffEntity, { workspaceId, id })
     }
 }

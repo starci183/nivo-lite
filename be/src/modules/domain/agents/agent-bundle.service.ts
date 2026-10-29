@@ -21,8 +21,7 @@ import { AgentsLogEvent } from "./agents.log-events"
 import { personaOf } from "./agents.mapper"
 import type { Installation, InstallationDirectory, KnowledgeLens, ModuleProfiles } from "./agents.port"
 import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
-import type { AgentRow } from "./persistence/agents.rows"
-import { FIND_AGENT } from "./persistence/agents.sql"
+import { AgentEntity } from "./persistence/entities"
 
 /** The language the files of an agent workspace are written in. */
 const BUNDLE_LOCALE: Locale = "vi"
@@ -115,8 +114,8 @@ export class AgentBundleService {
 
     private async personaOf(workspaceId: string, agentId: string | null): Promise<OptionalAgentPersona> {
         if (agentId === null) return null
-        const [row] = await this.entityManager.query<Array<AgentRow>>(FIND_AGENT, [agentId, workspaceId])
-        return row === undefined ? null : personaOf(row)
+        const row = await this.entityManager.findOne(AgentEntity, { where: { id: agentId, workspaceId } })
+        return row === null ? null : personaOf(row)
     }
 
     /** The shared brain must never stop a sync: when it cannot be read the bundle goes without it. */

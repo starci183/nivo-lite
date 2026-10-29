@@ -9,18 +9,18 @@ import {
 } from "@modules/domain/connection-secrets"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { EventsModule } from "@modules/domain/events"
-import { IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule } from "@modules/domain/identity"
+import { IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule, refuseSessions } from "@modules/domain/identity"
 import { LivenessModule } from "@modules/domain/liveness"
 import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from "@modules/domain/mcp-gateway"
 import { MCP_GATEWAY_RECEIPTS_ERROR_KINDS, MCP_GATEWAY_RECEIPTS_MESSAGES } from "@modules/domain/mcp-gateway-receipts"
 import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
 import { appPgTypes } from "@modules/integrations/data-sources"
 import { MCP_ERROR_KINDS, MCP_MESSAGES } from "@modules/integrations/mcp"
-import { refuseSupabaseSessions } from "@modules/integrations/supabase"
 import { ClockModule } from "@modules/platform/clock"
 import { CONFIG_ERROR_KINDS } from "@modules/platform/config"
 import { CqrsModule } from "@modules/platform/cqrs"
 import { DatabaseModule } from "@modules/platform/database"
+import { PRIMARY_ENTITIES } from "@modules/platform/database/entities"
 import { ERRORS_MESSAGES, ErrorsModule } from "@modules/platform/errors"
 import { HTTP_SECURITY_ERROR_KINDS, HTTP_SECURITY_MESSAGES, HttpSecurityModule } from "@modules/platform/http-security"
 import { I18nModule } from "@modules/platform/i18n"
@@ -68,13 +68,18 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule> => [
     }),
     CqrsModule.register({ isGlobal: true }),
     HttpSecurityModule.register({ isGlobal: true, ...options.httpSecurity }),
-    DatabaseModule.register({ isGlobal: true, connections: [options.database], typeParsers: appPgTypes }),
+    DatabaseModule.register({
+        isGlobal: true,
+        connections: [options.database],
+        entities: PRIMARY_ENTITIES,
+        typeParsers: appPgTypes,
+    }),
     QueueModule.register({ isGlobal: true, schedulers: [], ...options.queue, enabled: false }),
     EventsModule.register({ isGlobal: true }),
     ApiKeysModule.register({ isGlobal: true }),
     IdentityModule.register({
         isGlobal: true,
-        verifyAccessToken: refuseSupabaseSessions,
+        verifyAccessToken: refuseSessions,
         credentialAuthenticator: McpAgentAuthenticatorService,
     }),
     LivenessModule.register({ isGlobal: true }),

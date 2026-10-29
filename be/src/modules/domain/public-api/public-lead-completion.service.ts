@@ -9,12 +9,10 @@ import { PublicApiError, PublicApiErrorCode } from "./errors/public-api.error"
 import type { LeadRequestBody } from "./public-api.contracts"
 import { parsePublicLeadBody } from "./public-api-job.policy"
 import { DEFAULT_API_NEED } from "./public-api.policy"
+import { PublicApiLedgerService } from "./public-api-ledger.service"
 import { PublicLeadFulfillmentService } from "./public-lead-fulfillment.service"
 import type { PublicLeadMetadata } from "./public-lead-metadata.contracts"
 import { parsePublicLeadMetadata, PUBLIC_API_LEAD_METADATA } from "./public-lead-metadata.policy"
-import type { PublicApiProcessingRow } from "./persistence/public-api-processing.rows"
-import { LOCK_PUBLIC_API_REQUEST } from "./persistence/public-api-processing.sql"
-import { LINK_PUBLIC_API_LEAD } from "./persistence/public-lead-completion.sql"
 
 @Injectable()
 /** Settles admitted API details after the ordinary handoff gate has resolved a customer. */
@@ -24,6 +22,7 @@ export class PublicLeadCompletionService {
         @InjectInbox() private readonly inbox: Inbox,
         private readonly inbound: InboundEventsService,
         private readonly fulfillment: PublicLeadFulfillmentService,
+        private readonly ledger: PublicApiLedgerService,
     ) {}
 
     /** Preserves new-lead notes and stages across delayed approval, with one transactional completion per admission. */
@@ -57,7 +56,7 @@ export class PublicLeadCompletionService {
             }
             await this.fulfillment.applyDetails({ ...ctx, actor: body.source }, leadId, details, tx)
             if (metadata.ledgerRequestId !== null) {
-                await tx.query(LINK_PUBLIC_API_LEAD, [ctx.workspaceId, metadata.ledgerRequestId, leadId])
+                await this.ledger.linkLead(ctx.workspaceId, metadata.ledgerRequestId, leadId, tx)
             }
         })
     }
@@ -82,12 +81,9 @@ export class PublicLeadCompletionService {
                 return this.invalid()
             return body
         }
-        const [row] = await tx.query<Array<PublicApiProcessingRow>>(LOCK_PUBLIC_API_REQUEST, [
-            workspaceId,
-            metadata.ledgerRequestId,
-        ])
-        if (row?.kind !== "lead" || row.processed_at === null) return this.invalid()
-        const body = parsePublicLeadBody(row.payload, row.need_supplied)
+        const row = await this.ledger.lock(workspaceId, metadata.ledgerRequestId, tx)
+        if (row?.kind !== "lead" || row.processedAt === null) return this.invalid()
+        const body = parsePublicLeadBody(row.payload, row.needSupplied)
         if (event.event_id !== `api:${metadata.completionId}` || event.external_ref !== body.source)
             return this.invalid()
         return body

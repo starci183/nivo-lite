@@ -1,5 +1,6 @@
 import { randomInt } from "node:crypto"
 import { Injectable } from "@nestjs/common"
+import { IsNull, MoreThan, MoreThanOrEqual } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -8,15 +9,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { LoyaltyOtpsError, LoyaltyOtpsErrorCode } from "./errors/loyalty-otps.error"
 import { InjectOtpPepper } from "./loyalty-otps.decorators"
 import type { CodeCheck, IssuedCode } from "./loyalty-otps.contracts"
-import {
-    BUMP_ATTEMPTS,
-    COUNT_CUSTOMER_CODES,
-    COUNT_WORKSPACE_CODES,
-    DELETE_CODE,
-    INSERT_CODE,
-    MARK_USED,
-    SELECT_OPEN_CODE,
-} from "./persistence/loyalty-otps.sql"
+import { LoyaltyOtpEntity } from "./persistence/entities"
 import { OTP_MAX_ATTEMPTS, codeHash, codeText, sameHash } from "./policies/otp.policy"
 
 const CODE_SPACE = 1_000_000
@@ -31,54 +24,52 @@ export class LoyaltyOtpsService {
     ) {}
 
     /** How many codes a workspace issued since an instant. */
-    async workspaceCodesSince(workspaceId: string, sinceIso: string): Promise<number> {
-        const rows = await this.entityManager.query<Array<{ total: number }>>(COUNT_WORKSPACE_CODES, [
-            workspaceId,
-            sinceIso,
-        ])
-        return rows.reduce((sum, row) => sum + row.total, 0)
+    workspaceCodesSince(workspaceId: string, sinceIso: string): Promise<number> {
+        return this.entityManager.count(LoyaltyOtpEntity, {
+            where: { workspaceId, createdAt: MoreThanOrEqual(new Date(sinceIso)) },
+        })
     }
 
     /** How many codes a customer was issued since an instant. */
-    async customerCodesSince(customerId: string, sinceIso: string): Promise<number> {
-        const rows = await this.entityManager.query<Array<{ total: number }>>(COUNT_CUSTOMER_CODES, [
-            customerId,
-            sinceIso,
-        ])
-        return rows.reduce((sum, row) => sum + row.total, 0)
+    customerCodesSince(customerId: string, sinceIso: string): Promise<number> {
+        return this.entityManager.count(LoyaltyOtpEntity, {
+            where: { customerId, createdAt: MoreThanOrEqual(new Date(sinceIso)) },
+        })
     }
 
     /** Draws a code, stores its hash and answers the plain code. */
     async issue(workspaceId: string, customerId: string, expiresIso: string): Promise<IssuedCode> {
         const code = codeText(randomInt(0, CODE_SPACE))
-        const [row] = await this.entityManager.query<Array<{ id: string }>>(INSERT_CODE, [
+        const result = await this.entityManager.insert(LoyaltyOtpEntity, {
             workspaceId,
             customerId,
-            this.hashCode(customerId, code),
-            expiresIso,
-        ])
-        if (row === undefined) throw new LoyaltyOtpsError({ code: LoyaltyOtpsErrorCode.NotIssued })
-        return { id: row.id, code }
+            codeHash: this.hashCode(customerId, code),
+            expiresAt: new Date(expiresIso),
+        })
+        const id = (result.identifiers[0] as { readonly id?: string } | undefined)?.id
+        if (id === undefined) throw new LoyaltyOtpsError({ code: LoyaltyOtpsErrorCode.NotIssued })
+        return { id, code }
     }
 
     /** Drops a code that could not be delivered, so a code nobody received cannot be guessed at. */
     async discard(codeId: string): Promise<void> {
-        await this.entityManager.query(DELETE_CODE, [codeId])
+        await this.entityManager.delete(LoyaltyOtpEntity, { id: codeId })
     }
 
     /** Checks the code a customer typed against the newest open one; a right code is used up and a wrong one counts a try. */
     async check(customerId: string, code: string): Promise<CodeCheck> {
         const nowIso = this.clock.now().toISOString()
-        const [open] = await this.entityManager.query<Array<{ id: string; code_hash: string; attempts: number }>>(
-            SELECT_OPEN_CODE,
-            [customerId, nowIso],
-        )
-        if (open === undefined || open.attempts >= OTP_MAX_ATTEMPTS) return "rejected"
-        if (!sameHash(open.code_hash, this.hashCode(customerId, code))) {
-            await this.entityManager.query(BUMP_ATTEMPTS, [open.id])
+        const open = await this.entityManager.findOne(LoyaltyOtpEntity, {
+            select: { id: true, codeHash: true, attempts: true },
+            where: { customerId, usedAt: IsNull(), expiresAt: MoreThan(new Date(nowIso)) },
+            order: { createdAt: "DESC" },
+        })
+        if (open === null || open.attempts >= OTP_MAX_ATTEMPTS) return "rejected"
+        if (!sameHash(open.codeHash, this.hashCode(customerId, code))) {
+            await this.entityManager.increment(LoyaltyOtpEntity, { id: open.id }, "attempts", 1)
             return "rejected"
         }
-        await this.entityManager.query(MARK_USED, [open.id, nowIso])
+        await this.entityManager.update(LoyaltyOtpEntity, { id: open.id }, { usedAt: new Date(nowIso) })
         return "accepted"
     }
 

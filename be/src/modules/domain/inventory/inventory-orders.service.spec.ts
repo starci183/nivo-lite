@@ -1,29 +1,36 @@
 import { Test } from "@nestjs/testing"
+import { Like } from "typeorm"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { ApprovalGate, OfficeLog } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { inventoryPurchaseOrderOf, inventorySupplierOf } from "@tests/fixtures/builders/inventory.builder"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InventoryErrorCode } from "./errors/inventory.error"
 import { InventoryOrdersService } from "./inventory-orders.service"
+import { InventoryPurchaseOrderEntity, InventorySupplierEntity } from "./persistence/entities"
 import {
     ADD_PO_LINES,
     CANCEL_PO,
     EDIT_PO_DRAFT,
     INSERT_PO,
     RECOMPUTE_PO_TOTAL,
-    SELECT_LAST_PO_NO,
-    SELECT_PO,
-    SELECT_PO_LINES,
-    SELECT_PO_STATUS,
-    SELECT_SUPPLIER_LEAD_TIME,
-} from "./persistence/inventory.sql"
+} from "@tests/fixtures/builders/inventory-calls.builder"
 
 const UUID = "0b8c1f0e-3a49-4b7e-9d3f-2c1f6a5d7e90"
 const UUID_2 = "1c9d2a1f-4b5a-4c8f-8e4a-3d2a7b6e8fa1"
+
+const supplierRow = (
+    overrides: { [K in keyof InventorySupplierEntity]?: InventorySupplierEntity[K] } = {},
+): InventorySupplierEntity => inventorySupplierOf(overrides)
+
+const purchaseOrderRow = (
+    overrides: { [K in keyof InventoryPurchaseOrderEntity]?: InventoryPurchaseOrderEntity[K] } = {},
+): InventoryPurchaseOrderEntity => inventoryPurchaseOrderOf(overrides)
 
 const build = async (entityManager: MockEntityManager) => {
     const catalog = mock<MessageCatalog>()
@@ -72,25 +79,23 @@ const poRow = (overrides: Record<string, unknown> = {}) => ({
 
 describe("InventoryOrdersService / loadPo", () => {
     it("loads the order with its supplier and lines", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_PO, [poRow()]],
-                [
-                    SELECT_PO_LINES,
-                    [
-                        {
-                            id: "line-1",
-                            item_id: "item-1",
-                            qty_ordered: "10.000",
-                            qty_received: "2.500",
-                            unit_cost_vnd: "6000.00",
-                            item_name: "Tea",
-                            item_unit: "kg",
-                        },
-                    ],
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [
+            { getRawOne: poRow() },
+            {
+                getRawMany: [
+                    {
+                        id: "line-1",
+                        item_id: "item-1",
+                        qty_ordered: "10.000",
+                        qty_received: "2.500",
+                        unit_cost_vnd: "6000.00",
+                        item_name: "Tea",
+                        item_unit: "kg",
+                    },
                 ],
-            ],
-        })
+            },
+        ])
         const { service } = await build(em)
 
         await expect(service.loadPo("ws-1", "po-1")).resolves.toEqual({
@@ -118,16 +123,15 @@ describe("InventoryOrdersService / loadPo", () => {
     })
 
     it("defaults absent supplier details and unknown channels, and omits an absent supplier", async () => {
-        const em = mockEntityManager({
-            query: [
-                [SELECT_PO, [poRow({ supplier_contact: null, supplier_channel: "phone", supplier_lead_time: null })]],
-                [SELECT_PO_LINES, []],
-                [SELECT_PO, [poRow({ supplier_channel: "fax" })]],
-                [SELECT_PO_LINES, []],
-                [SELECT_PO, [poRow({ supplier_name: null, supplier_id: null })]],
-                [SELECT_PO_LINES, []],
-            ],
-        })
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [
+            { getRawOne: poRow({ supplier_contact: null, supplier_channel: "phone", supplier_lead_time: null }) },
+            { getRawMany: [] },
+            { getRawOne: poRow({ supplier_channel: "fax" }) },
+            { getRawMany: [] },
+            { getRawOne: poRow({ supplier_name: null, supplier_id: null }) },
+            { getRawMany: [] },
+        ])
         const { service } = await build(em)
 
         await expect(service.loadPo("ws-1", "po-1")).resolves.toMatchObject({
@@ -140,7 +144,8 @@ describe("InventoryOrdersService / loadPo", () => {
 
 describe("InventoryOrdersService / loadPo", () => {
     it("refuses an order the workspace does not have", async () => {
-        const em = mockEntityManager({ query: [SELECT_PO, []] })
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ getRawOne: undefined }])
         const { service } = await build(em)
 
         await expect(service.loadPo("ws-1", "po-9")).rejects.toMatchObject({ code: InventoryErrorCode.PoNotFound })
@@ -150,9 +155,9 @@ describe("InventoryOrdersService / loadPo", () => {
 describe("InventoryOrdersService / leadTimeOf", () => {
     it("reads the delivery time of a supplier or the default", async () => {
         const em = mockEntityManager({
-            query: [
-                [SELECT_SUPPLIER_LEAD_TIME, [{ lead_time_days: 5 }]],
-                [SELECT_SUPPLIER_LEAD_TIME, []],
+            findOne: [
+                [InventorySupplierEntity, supplierRow({ leadTimeDays: 5 })],
+                [InventorySupplierEntity, null],
             ],
         })
         const { service } = await build(em)
@@ -173,9 +178,9 @@ describe("InventoryOrdersService / createPoRecord", () => {
     it("writes the order, its lines and its total in one transaction, dated from the lead time", async () => {
         const tx = fakeTransaction(
             mockEntityManager({
+                findOne: [InventoryPurchaseOrderEntity, purchaseOrderRow({ poNo: "PO-202610-0007" })],
                 query: [
-                    [SELECT_LAST_PO_NO, [{ po_no: "PO-202610-0007" }]],
-                    [INSERT_PO, [{ id: "po-1" }]],
+                    [INSERT_PO, [{ inventory_insert_po: "po-1" }]],
                     [ADD_PO_LINES, []],
                     [RECOMPUTE_PO_TOTAL, [{ total: "400" }]],
                 ],
@@ -185,7 +190,11 @@ describe("InventoryOrdersService / createPoRecord", () => {
 
         await expect(service.createPoRecord("ws-1", input)).resolves.toBe("po-1")
 
-        expect(tx.em.query).toHaveBeenCalledWith(SELECT_LAST_PO_NO, ["ws-1", "PO-202610-%"])
+        expect(tx.em.findOne).toHaveBeenCalledWith(InventoryPurchaseOrderEntity, {
+            select: { poNo: true },
+            where: { workspaceId: "ws-1", poNo: Like("PO-202610-%") },
+            order: { poNo: "DESC" },
+        })
         expect(tx.em.query).toHaveBeenCalledWith(INSERT_PO, [
             "ws-1",
             "PO-202610-0008",
@@ -202,11 +211,13 @@ describe("InventoryOrdersService / createPoRecord", () => {
     it("retries with the next number when the first is taken and keeps a typed expected day", async () => {
         const tx = fakeTransaction(
             mockEntityManager({
+                findOne: [
+                    [InventoryPurchaseOrderEntity, null],
+                    [InventoryPurchaseOrderEntity, purchaseOrderRow({ poNo: "PO-202610-0001" })],
+                ],
                 query: [
-                    [SELECT_LAST_PO_NO, []],
-                    [INSERT_PO, [{ id: null }]],
-                    [SELECT_LAST_PO_NO, [{ po_no: "PO-202610-0001" }]],
-                    [INSERT_PO, [{ id: "po-2" }]],
+                    [INSERT_PO, [{ inventory_insert_po: null }]],
+                    [INSERT_PO, [{ inventory_insert_po: "po-2" }]],
                     [ADD_PO_LINES, []],
                     [RECOMPUTE_PO_TOTAL, [{ total: "400" }]],
                 ],
@@ -246,10 +257,8 @@ describe("InventoryOrdersService / createPoRecord", () => {
         leadTimeDays: 3,
     }
     it("gives up after four numbers were taken", async () => {
-        const taken = [SELECT_LAST_PO_NO, []] as const
-        const refused = [INSERT_PO, []] as const
         const tx = fakeTransaction(
-            mockEntityManager({ query: [taken, refused, taken, refused, taken, refused, taken, refused] }),
+            mockEntityManager({ findOne: [InventoryPurchaseOrderEntity, null], query: [INSERT_PO, []] }),
         )
         const { service } = await build(tx.em)
 
@@ -288,10 +297,12 @@ describe("InventoryOrdersService / createPo", () => {
     it("creates an order from the usable lines with the supplier lead time", async () => {
         const tx = fakeTransaction(
             mockEntityManager({
+                findOne: [
+                    [InventorySupplierEntity, supplierRow({ leadTimeDays: 1 })],
+                    [InventoryPurchaseOrderEntity, null],
+                ],
                 query: [
-                    [SELECT_SUPPLIER_LEAD_TIME, [{ lead_time_days: 1 }]],
-                    [SELECT_LAST_PO_NO, []],
-                    [INSERT_PO, [{ id: "po-1" }]],
+                    [INSERT_PO, [{ inventory_insert_po: "po-1" }]],
                     [ADD_PO_LINES, []],
                     [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
                 ],
@@ -319,9 +330,9 @@ describe("InventoryOrdersService / createPo", () => {
     it("creates an order without a supplier, dated from the default delivery time or a typed day", async () => {
         const tx = fakeTransaction(
             mockEntityManager({
+                findOne: [InventoryPurchaseOrderEntity, null],
                 query: [
-                    [SELECT_LAST_PO_NO, []],
-                    [INSERT_PO, [{ id: "po-1" }]],
+                    [INSERT_PO, [{ inventory_insert_po: "po-1" }]],
                     [ADD_PO_LINES, []],
                     [RECOMPUTE_PO_TOTAL, [{ total: "1" }]],
                 ],
@@ -363,10 +374,8 @@ describe("InventoryOrdersService / updatePoDraft", () => {
     }
     it("edits a draft in one database step", async () => {
         const em = mockEntityManager({
-            query: [
-                [SELECT_PO_STATUS, [{ id: "po-1", status: "draft" }]],
-                [EDIT_PO_DRAFT, []],
-            ],
+            findOne: [InventoryPurchaseOrderEntity, purchaseOrderRow({ id: "po-1", status: "draft" })],
+            query: [[EDIT_PO_DRAFT, []]],
         })
         const { service } = await build(em)
 
@@ -384,10 +393,8 @@ describe("InventoryOrdersService / updatePoDraft", () => {
 
     it("clears an unusable supplier and day", async () => {
         const em = mockEntityManager({
-            query: [
-                [SELECT_PO_STATUS, [{ id: "po-1", status: "draft" }]],
-                [EDIT_PO_DRAFT, []],
-            ],
+            findOne: [InventoryPurchaseOrderEntity, purchaseOrderRow({ id: "po-1", status: "draft" })],
+            query: [[EDIT_PO_DRAFT, []]],
         })
         const { service } = await build(em)
 
@@ -398,9 +405,9 @@ describe("InventoryOrdersService / updatePoDraft", () => {
 
     it("refuses an unknown order and an order that is no longer a draft", async () => {
         const em = mockEntityManager({
-            query: [
-                [SELECT_PO_STATUS, []],
-                [SELECT_PO_STATUS, [{ id: "po-1", status: "sent" }]],
+            findOne: [
+                [InventoryPurchaseOrderEntity, null],
+                [InventoryPurchaseOrderEntity, purchaseOrderRow({ id: "po-1", status: "sent" })],
             ],
         })
         const { service } = await build(em)

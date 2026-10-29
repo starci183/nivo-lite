@@ -4,18 +4,16 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { readConnection } from "@modules/platform/pagination"
 import type { Connection, PageRequest } from "@modules/platform/pagination"
 import { WorkThreadsError, WorkThreadsErrorCode } from "./errors/work-threads.error"
-import type { OwnedIdRow, ThreadRow } from "./persistence/work-threads.rows"
-import {
-    FIND_LEAD,
-    FIND_ORDER,
-    FIND_THREAD,
-    INSERT_THREAD,
-    LIST_THREADS,
-    LOCK_THREAD,
-    SET_THREAD_STATUS,
-} from "./persistence/work-threads.sql"
+import { WorkThreadEntity } from "./persistence/entities"
+import { THREAD_RETURNING, selectThreads } from "./persistence/work-thread.query"
 import { toThread } from "./thread.mapper"
-import type { NewMemberThread, WorkThreadLeadFilter, ThreadStatus, WorkThread } from "./work-threads.contracts"
+import type {
+    NewMemberThread,
+    ThreadStatus,
+    WorkThread,
+    WorkThreadLeadFilter,
+    WorkThreadRecord,
+} from "./work-threads.contracts"
 
 @Injectable()
 /** The work threads of a workspace as rows: opening, finding, locking and the status of each; the only writer of work_threads. */
@@ -25,27 +23,36 @@ export class WorkThreadsService {
     /** Opens a thread for a member id the caller already proved is an active member of the workspace; it joins the caller's transaction when it hands one. */
     async createFor(input: NewMemberThread, manager: EntityManager = this.entityManager): Promise<WorkThread> {
         if (input.leadId !== null) {
-            const [lead] = await manager.query<Array<OwnedIdRow>>(FIND_LEAD, [input.workspaceId, input.leadId])
+            const lead = await this.ownedId(manager, "public.leads", input.workspaceId, input.leadId)
             if (lead === undefined) throw new WorkThreadsError({ code: WorkThreadsErrorCode.LeadNotFound })
         }
         if (input.orderId !== null) {
-            const [order] = await manager.query<Array<OwnedIdRow>>(FIND_ORDER, [input.workspaceId, input.orderId])
+            const order = await this.ownedId(manager, "public.orders", input.workspaceId, input.orderId)
             if (order === undefined) throw new WorkThreadsError({ code: WorkThreadsErrorCode.OrderNotFound })
         }
-        const [row] = await manager.query<Array<ThreadRow>>(INSERT_THREAD, [
-            input.workspaceId,
-            input.title,
-            input.leadId,
-            input.orderId,
-            input.memberId,
-        ])
+        const result = await manager
+            .createQueryBuilder(WorkThreadEntity, "w")
+            .insert()
+            .values({
+                workspaceId: input.workspaceId,
+                title: input.title,
+                leadId: input.leadId,
+                orderId: input.orderId,
+                createdBy: input.memberId,
+            })
+            .returning(THREAD_RETURNING)
+            .execute()
+        const [row] = result.raw as Array<WorkThreadRecord>
         if (row === undefined) throw new WorkThreadsError({ code: WorkThreadsErrorCode.NotStored })
         return toThread(row)
     }
 
     /** The thread of the workspace, or a refusal when the workspace has no such thread. */
     async find(workspaceId: string, threadId: string): Promise<WorkThread> {
-        const [row] = await this.entityManager.query<Array<ThreadRow>>(FIND_THREAD, [workspaceId, threadId])
+        const row = await selectThreads(this.entityManager, workspaceId)
+            .andWhere("t.id = :threadId", { threadId })
+            .limit(1)
+            .getRawOne<WorkThreadRecord>()
         if (row === undefined) throw new WorkThreadsError({ code: WorkThreadsErrorCode.ThreadNotFound })
         return toThread(row)
     }
@@ -58,15 +65,31 @@ export class WorkThreadsService {
     ): Promise<Connection<WorkThread>> {
         const filter = leadId ?? null
         const scope = `${workspaceId}:workThreads:${filter ?? "all"}`
-        const connection = await readConnection(request, scope, (parameters) =>
-            this.entityManager.query<Array<ThreadRow>>(LIST_THREADS, [workspaceId, filter, ...parameters]),
-        )
+        const connection = await readConnection(request, scope, ([cursorAt, cursorId, limit]) => {
+            const read = selectThreads(this.entityManager, workspaceId)
+            if (filter !== null) read.andWhere("t.lead_id = :leadId", { leadId: filter })
+            if (cursorAt !== null && cursorId !== null) {
+                read.andWhere("(t.created_at, t.id) < (CAST(:cursorAt AS timestamptz), CAST(:cursorId AS uuid))", {
+                    cursorAt,
+                    cursorId,
+                })
+            }
+            return read
+                .orderBy("t.created_at", "DESC")
+                .addOrderBy("t.id", "DESC")
+                .limit(limit)
+                .getRawMany<WorkThreadRecord>()
+        })
         return { nodes: connection.nodes.map(toThread), pageInfo: connection.pageInfo }
     }
 
     /** Locks the thread of the workspace for the rest of the caller's transaction, or refuses when it has no such thread. */
     async lock(manager: EntityManager, workspaceId: string, threadId: string): Promise<WorkThread> {
-        const [row] = await manager.query<Array<ThreadRow>>(LOCK_THREAD, [workspaceId, threadId])
+        const row = await selectThreads(manager, workspaceId)
+            .andWhere("t.id = :threadId", { threadId })
+            .limit(1)
+            .setLock("pessimistic_write")
+            .getRawOne<WorkThreadRecord>()
         if (row === undefined) throw new WorkThreadsError({ code: WorkThreadsErrorCode.ThreadNotFound })
         return toThread(row)
     }
@@ -78,6 +101,21 @@ export class WorkThreadsService {
         threadId: string,
         status: ThreadStatus,
     ): Promise<void> {
-        await manager.query(SET_THREAD_STATUS, [workspaceId, threadId, status])
+        await manager.update(WorkThreadEntity, { workspaceId, id: threadId }, { status, updatedAt: () => "now()" })
+    }
+
+    private ownedId(
+        manager: EntityManager,
+        table: "public.leads" | "public.orders",
+        workspaceId: string,
+        id: string,
+    ): Promise<{ id: string } | undefined> {
+        return manager
+            .createQueryBuilder()
+            .select("x.id", "id")
+            .from(table, "x")
+            .where("x.workspace_id = :workspaceId AND x.id = :id", { workspaceId, id })
+            .limit(1)
+            .getRawOne<{ id: string }>()
     }
 }

@@ -8,14 +8,15 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
+import type { InboxClaim } from "./video.contracts"
 import type { VideoScriptRequest, VideoScriptStatus } from "./video-scripting.contracts"
 import { VideoScriptingCompletionService } from "./video-scripting-completion.service"
 import { VIDEO_SCRIPT_STALE_MS, videoScriptProgress } from "./video-scripting.policy"
 import { videoScriptMessages, videoScriptSourcesText } from "./video-scripting-prompt.policy"
 import { VideoScriptingContextService } from "./video-scripting-context.service"
 import { videoInputsOf, videoRecord } from "./video-workbench.policy"
-import type { VideoScriptSourceRow, VideoScriptingRow } from "./persistence/video-scripting.rows"
-import { LOCK_SCRIPT_PROJECT, READ_SCRIPT_PROJECT, READ_SCRIPT_SOURCES } from "./persistence/video-scripting.sql"
+import type { ScriptProject } from "./video-stored.contracts"
+import { readScriptProject, readScriptSources } from "./persistence/video-scripting.query"
 
 @Injectable()
 /** Queues script writing with its project state, and exposes read-only progress for the workbench. */
@@ -41,10 +42,11 @@ export class VideoScriptingService {
             const meta = videoRecord(project.script_meta)
             const previous = await this.currentRequest(tx, workspaceId, project, meta)
             if (previous !== null) return previous
-            const sources = await tx.query<Array<VideoScriptSourceRow>>(READ_SCRIPT_SOURCES, [
+            const sources = await readScriptSources(
+                tx,
                 workspaceId,
-                [...videoInputsOf(project.inputs, workspaceId).sourceIds],
-            ])
+                videoInputsOf(project.inputs, workspaceId).sourceIds,
+            )
             const publicSources = videoScriptSourcesText(sources)
             const context = await this.context.forProject(tx, workspaceId, project, publicSources)
             const queued = await this.generations.request(
@@ -112,9 +114,9 @@ export class VideoScriptingService {
         return { id, projectId, ...videoScriptProgress(active?.status ?? "running"), resultId: null, errorCode: null }
     }
 
-    /** The existing agent job calls this after the engine closes its generation row. */
-    complete(workspaceId: string, generationId: string): Promise<void> {
-        return this.completion.complete(workspaceId, generationId)
+    /** The `video` reactor of `ai_generation_completed` calls this after the engine closes its generation row. */
+    complete(workspaceId: string, generationId: string, claim: InboxClaim): Promise<void> {
+        return this.completion.complete(workspaceId, generationId, claim)
     }
 
     private async project(
@@ -122,11 +124,8 @@ export class VideoScriptingService {
         workspaceId: string,
         projectId: string,
         lock = false,
-    ): Promise<VideoScriptingRow> {
-        const [row] = await tx.query<Array<VideoScriptingRow>>(lock ? LOCK_SCRIPT_PROJECT : READ_SCRIPT_PROJECT, [
-            workspaceId,
-            projectId,
-        ])
+    ): Promise<ScriptProject> {
+        const row = await readScriptProject(tx, workspaceId, projectId, lock)
         if (row === undefined) throw new VideoError({ code: VideoErrorCode.ProjectNotFound, params: { projectId } })
         return row
     }
@@ -134,7 +133,7 @@ export class VideoScriptingService {
     private async currentRequest(
         tx: EntityManager,
         workspaceId: string,
-        project: VideoScriptingRow,
+        project: ScriptProject,
         meta: Record<string, unknown>,
     ): Promise<VideoScriptRequest | null> {
         if (project.status !== "scripting") return null

@@ -4,14 +4,9 @@ import { ApiKeysService } from "@modules/domain/api-keys"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { PublicApiQueue } from "@modules/queues/public-api"
 import { PublicApiError, PublicApiErrorCode } from "./errors/public-api.error"
-import type {
-    AcceptKnowledgeParams,
-    AcceptedKnowledge,
-    KnowledgeRequestBody,
-    RecordedRequest,
-} from "./public-api.contracts"
+import type { AcceptKnowledgeParams, AcceptedKnowledge, KnowledgeRequestBody } from "./public-api.contracts"
 import { checkContent, cleanTags, dedupePrefix, visibilityOf } from "./public-api.policy"
-import { INSERT_REQUEST } from "./persistence/public-api.sql"
+import { PublicApiLedgerService } from "./public-api-ledger.service"
 
 @Injectable()
 /** The knowledge the public API adds to the workspace of a key, reached only through the shared primary EntityManager; writing and indexing the source is a job. */
@@ -20,6 +15,7 @@ export class PublicKnowledgeService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly queue: PublicApiQueue,
         private readonly keys: ApiKeysService,
+        private readonly ledger: PublicApiLedgerService,
     ) {}
 
     /** Accepts a text knowledge source: the request is recorded in the ledger and its job is enqueued in one transaction. */
@@ -37,14 +33,17 @@ export class PublicKnowledgeService {
             source: `api:${who.name}`,
         }
         return this.entityManager.transaction(async (tx) => {
-            const [request] = await tx.query<Array<RecordedRequest>>(INSERT_REQUEST, [
-                who.workspaceId,
-                who.keyId,
-                "knowledge",
-                dedupePrefix("knowledge", who.keyId),
-                "",
-                JSON.stringify(body),
-            ])
+            const request = await this.ledger.record(
+                {
+                    workspaceId: who.workspaceId,
+                    keyId: who.keyId,
+                    kind: "knowledge",
+                    prefix: dedupePrefix("knowledge", who.keyId),
+                    suffix: "",
+                    body,
+                },
+                tx,
+            )
             if (request === undefined) throw new PublicApiError({ code: PublicApiErrorCode.NotWritten })
             await this.queue.enqueueRequest({ requestId: request.id, workspaceId: who.workspaceId }, tx)
             return { id: request.id, status: "queued" }

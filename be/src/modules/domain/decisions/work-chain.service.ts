@@ -4,10 +4,8 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { CommandPlannerService } from "./command-planner.service"
 import type { SendCommandInput, WorkContext, WorkItem } from "./decisions.contracts"
 import { ModuleCatalogService } from "./module-catalog.service"
-import type { LeadStageRow, PendingRow } from "./persistence/chain-reads.rows"
-import { FIND_LEAD_STAGE, FOLLOW_UP_IS_PENDING } from "./persistence/chain-reads.sql"
-import { InjectLeadGenFlow, InjectPaymentReceipts } from "./work-engine.decorators"
-import type { LeadGenFlow, PaymentReceipts } from "./work-engine.port"
+import { InjectLeadGenFlow } from "./work-engine.decorators"
+import type { LeadGenFlow } from "./work-engine.port"
 import { WorkIntakeService } from "./work-intake.service"
 
 @Injectable()
@@ -19,7 +17,6 @@ import { WorkIntakeService } from "./work-intake.service"
 export class WorkChainService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectPaymentReceipts() private readonly receipts: PaymentReceipts,
         @InjectLeadGenFlow() private readonly leadGen: LeadGenFlow,
         private readonly modules: ModuleCatalogService,
         private readonly planner: CommandPlannerService,
@@ -28,12 +25,6 @@ export class WorkChainService {
 
     /** Queues the next department's step for a finished item. */
     async continueChain(ctx: WorkContext, item: WorkItem): Promise<void> {
-        if (item.action === "reconcile_payment") {
-            await this.receipts.receiptFor(ctx, {
-                transactionId: item.subject_type === "transaction" ? item.subject_id : null,
-                invoiceId: this.settledInvoice(item) ?? (item.subject_type === "invoice" ? item.subject_id : null),
-            })
-        }
         // Lead generation steps chain by the lead flow's own state machine; only the hand-off to sales uses the generic loop.
         if (item.department === "lead_gen" && item.action !== "handoff_to_sales") {
             await this.leadGen.continueAfter(ctx, item)
@@ -116,14 +107,25 @@ export class WorkChainService {
     /** A lost lead, a customer who already bought and a customer with a follow-up already waiting get no new follow-up. */
     private async followUpWanted(ctx: WorkContext, item: WorkItem, leadId: string): Promise<boolean> {
         if (item.proposal.fields.stage === "lost") return false
-        const lead = (
-            await this.entityManager.query<Array<LeadStageRow>>(FIND_LEAD_STAGE, [ctx.workspaceId, leadId])
-        )[0]
+        const lead = await this.entityManager
+            .createQueryBuilder()
+            .select("l.stage", "stage")
+            .from("public.leads", "l")
+            .where("l.workspace_id = :workspaceId AND l.id = :leadId", { workspaceId: ctx.workspaceId, leadId })
+            .limit(1)
+            .getRawOne<{ stage: string }>()
         if (lead?.stage === "won") return false
-        const waiting = (
-            await this.entityManager.query<Array<PendingRow>>(FOLLOW_UP_IS_PENDING, [ctx.workspaceId, leadId])
-        )[0]
-        return waiting?.pending !== true
+        const waiting = await this.entityManager
+            .createQueryBuilder()
+            .select("1", "pending")
+            .from("public.work_items", "w")
+            .where(
+                "w.workspace_id = :workspaceId AND w.lead_id = :leadId AND w.action = 'send_follow_up' AND w.status = 'waiting_decision'",
+                { workspaceId: ctx.workspaceId, leadId },
+            )
+            .limit(1)
+            .getRawOne<{ pending: number }>()
+        return waiting === undefined
     }
 
     /** A hand-off is a typed command: a refusal is logged by the planner and never stops the finished item. */

@@ -9,3 +9,4 @@ export {
 export { CONNECTION_SECRETS_MESSAGES } from "./messages/connection-secrets.messages"
 export { openSecretWithBase64Key, randomSecret, safeEqual } from "./secret-cipher.policy"
 export type { ConnectionSecret, OptionalStoredSecret } from "./connection-secrets.contracts"
+export { ConnectionSecretEntity, connectionSecretsEntities } from "./persistence/entities"

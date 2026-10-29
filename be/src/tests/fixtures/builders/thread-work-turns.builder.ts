@@ -2,12 +2,7 @@ import type { ApprovalSetup } from "@modules/domain/authority-rules"
 import type { ActionEntry, ModuleCommand, WorkItem } from "@modules/domain/decisions"
 import { MODULE_CATALOG } from "@modules/domain/modules"
 import { itemOf } from "@tests/fixtures/builders/work-decision.builder"
-import type { ThreadWorkRow, WorkAgentRow } from "../../../modules/domain/thread-work/persistence/thread-work.rows"
-import {
-    INSERT_THREAD_WORK,
-    LIST_WORK_AGENTS,
-    UPDATE_THREAD_WORK,
-} from "../../../modules/domain/thread-work/persistence/thread-work.sql"
+import type { ThreadWorkRecord, WorkAgentRecord } from "../../../modules/domain/thread-work/thread-work.contracts"
 
 /** The sales agent that can pass work to Accounting. */
 const SALES_AI = {
@@ -17,7 +12,7 @@ const SALES_AI = {
     canTag: ["agent-accounting"],
 }
 /** The active Accounting receiver returned by the database. */
-export const ACCOUNTING_ROW: WorkAgentRow = {
+export const ACCOUNTING_ROW: WorkAgentRecord = {
     id: "agent-accounting",
     name: "Ke toan AI",
     module: "accounting",
@@ -69,7 +64,7 @@ export const SETUP: ApprovalSetup = {
 }
 
 /** Builds the persisted state of a thread step. */
-export const rowOf = (state: ThreadWorkRow["state"]): ThreadWorkRow => ({
+export const rowOf = (state: ThreadWorkRecord["state"]): ThreadWorkRecord => ({
     id: "work-1",
     workspace_id: "ws-1",
     thread_id: "thread-1",
@@ -96,20 +91,11 @@ export const DISCOUNT: WorkItem = itemOf({
 /** Optional response data supplied to the spec doubles. */
 export interface Doubles {
     readonly commands?: ReadonlyArray<ModuleCommand>
-    readonly inserted?: ReadonlyArray<ThreadWorkRow>
+    readonly inserted?: ReadonlyArray<ThreadWorkRecord>
     readonly setup?: ApprovalSetup | null
     readonly stopped?: "limit" | "loop" | null
     readonly requestId?: string | null
 }
-
-/** The rows the database double answers for each statement. */
-export const stubsOf = (inserted: ReadonlyArray<ThreadWorkRow>) => ({
-    query: [
-        [INSERT_THREAD_WORK, inserted],
-        [LIST_WORK_AGENTS, [ACCOUNTING_ROW]],
-        [UPDATE_THREAD_WORK, []],
-    ] as const,
-})
 
 /** The structured customer assignment given to Sales. */
 export const STEP = {
@@ -122,14 +108,6 @@ export const STEP = {
     parentId: null,
     actorName: "Lan",
 }
-
-/** The persisted transition arguments expected by thread scenarios. */
-export const moved = (
-    state: string,
-    requestId: string | null = null,
-    memberId: string | null = null,
-    missing: Array<string> = [],
-) => ["ws-1", "work-1", state, requestId, memberId, missing]
 
 /** A neighboring command that must not be chosen for invoice work. */
 export const unrelated: ModuleCommand = {

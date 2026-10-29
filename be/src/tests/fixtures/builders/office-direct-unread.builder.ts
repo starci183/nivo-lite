@@ -1,5 +1,16 @@
+import assert from "node:assert/strict"
 import type { EntityManager } from "typeorm"
 import { eachInOrder } from "@modules/platform/primitives"
+import { AgentConversationEntity } from "@modules/domain/agent-conversations"
+import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { AgentEntity } from "@modules/domain/agents"
+import { AgentMessageEntity } from "@modules/domain/agent-messages"
+import { leadsEntities } from "@modules/domain/leads"
+import { messagesEntities } from "@modules/domain/messages"
+import { WorkspaceEntity } from "@modules/domain/workspaces"
+
+const [LeadEntity] = leadsEntities
+const [MessageEntity] = messagesEntities
 
 /** The ids of one direct-unread proof: two home conversations and one foreign workspace whose rows must never surface. */
 export interface OfficeDirectUnreadIdentity {
@@ -31,47 +42,53 @@ export const officeDirectUnreadIdentity = (next: () => string): OfficeDirectUnre
 /** The caller's current display name; legacy human lines (no account id) under it never count against the caller's unread. */
 export const OFFICE_DIRECT_OWNER = "Owner Person"
 
+/** Narrows an indexed fixture id that the persisted story always provides. */
+const required = <T>(value: T | undefined): T => {
+    assert(value !== undefined)
+    return value
+}
+
 const T0 = "2026-01-01T00:00:00+00:00"
 
 const agentOf = (id: string, workspaceId: string, name: string) => ({
     id,
-    workspace_id: workspaceId,
+    workspaceId: workspaceId,
     module: "sales",
     name,
     handle: `unread-proof-${id}`,
     role: "Unread proof",
     instructions: "Persisted direct-unread proof.",
-    status: "active",
-    created_at: T0,
+    status: "active" as const,
+    createdAt: T0,
 })
 
 const leadOf = (id: string, workspaceId: string, name: string) => ({
     id,
-    workspace_id: workspaceId,
-    contact_name: name,
+    workspaceId: workspaceId,
+    contactName: name,
     company: `${name} Co`,
     channel: "web",
     need: "Direct unread proof",
-    created_at: T0,
+    createdAt: T0,
 })
 
 const lineOf = (
     workspaceId: string,
     agentId: string | null,
     leadId: string | null,
-    authorKind: string,
+    authorKind: InstanceType<typeof MessageEntity>["authorKind"],
     authorName: string,
     createdAt: string,
     authorUserId: string | null = null,
 ) => ({
-    workspace_id: workspaceId,
-    author_kind: authorKind,
-    author_name: authorName,
+    workspaceId: workspaceId,
+    authorKind: authorKind,
+    authorName: authorName,
     body: `line from ${authorName}`,
-    agent_id: agentId,
-    lead_id: leadId,
-    created_at: createdAt,
-    author_user_id: authorUserId,
+    agentId: agentId,
+    leadId: leadId,
+    createdAt: createdAt,
+    authorUserId: authorUserId,
 })
 
 /**
@@ -137,22 +154,22 @@ type Tx = EntityManager
 const persistPeople = async (tx: Tx, identity: OfficeDirectUnreadIdentity): Promise<void> => {
     await tx.insert("auth.users", { id: identity.ownerId })
     await tx.insert("auth.users", { id: identity.foreignUserId })
-    await tx.insert("public.workspaces", { id: identity.workspaceId, owner_id: identity.ownerId, name: "Unread proof" })
-    await tx.insert("public.workspaces", {
+    await tx.insert(WorkspaceEntity, { id: identity.workspaceId, ownerId: identity.ownerId, name: "Unread proof" })
+    await tx.insert(WorkspaceEntity, {
         id: identity.foreignWorkspaceId,
-        owner_id: identity.foreignUserId,
+        ownerId: identity.foreignUserId,
         name: "Foreign unread proof",
     })
     // The workspace trigger already seats each owner; the proof only names them.
     await tx.update(
-        "public.workspace_members",
-        { workspace_id: identity.workspaceId, user_id: identity.ownerId },
-        { display_name: OFFICE_DIRECT_OWNER },
+        WorkspaceMemberEntity,
+        { workspaceId: identity.workspaceId, userId: identity.ownerId },
+        { displayName: OFFICE_DIRECT_OWNER },
     )
     await tx.update(
-        "public.workspace_members",
-        { workspace_id: identity.foreignWorkspaceId, user_id: identity.foreignUserId },
-        { display_name: "Foreign Person" },
+        WorkspaceMemberEntity,
+        { workspaceId: identity.foreignWorkspaceId, userId: identity.foreignUserId },
+        { displayName: "Foreign Person" },
     )
 }
 
@@ -160,19 +177,19 @@ const persistPeople = async (tx: Tx, identity: OfficeDirectUnreadIdentity): Prom
 const persistParties = async (tx: Tx, identity: OfficeDirectUnreadIdentity): Promise<void> => {
     const workspaceOf = (index: number): string => (index === 2 ? identity.foreignWorkspaceId : identity.workspaceId)
     await eachInOrder(identity.agentIds, (id, index) =>
-        tx.insert("public.agents", agentOf(id, workspaceOf(index), `Agent ${index + 1}`)),
+        tx.insert(AgentEntity, agentOf(id, workspaceOf(index), `Agent ${index + 1}`)),
     )
     // An agent's direct conversation is the member test chat it answers: one 'test' conversation per agent holds its lines.
     await eachInOrder(identity.agentIds, (id, index) =>
-        tx.insert("public.agent_conversations", {
-            id: identity.conversationIds[index],
-            workspace_id: workspaceOf(index),
-            agent_id: id,
+        tx.insert(AgentConversationEntity, {
+            id: required(identity.conversationIds[index]),
+            workspaceId: workspaceOf(index),
+            agentId: id,
             kind: "test",
         }),
     )
     await eachInOrder(identity.leadIds, (id, index) =>
-        tx.insert("public.leads", leadOf(id, workspaceOf(index), `Lead ${index + 1}`)),
+        tx.insert(LeadEntity, leadOf(id, workspaceOf(index), `Lead ${index + 1}`)),
     )
 }
 
@@ -182,17 +199,17 @@ const persistLine = (
     identity: OfficeDirectUnreadIdentity,
     row: ReturnType<typeof lineOf>,
 ): Promise<unknown> => {
-    const index = identity.agentIds.findIndex((id) => id === row.agent_id)
-    if (index < 0) return tx.insert("public.messages", row)
-    return tx.insert("public.agent_messages", {
-        workspace_id: row.workspace_id,
-        conversation_id: identity.conversationIds[index],
-        role: row.author_kind === "human" ? "user" : "agent",
+    const index = identity.agentIds.findIndex((id) => id === row.agentId)
+    if (index < 0) return tx.insert(MessageEntity, row)
+    return tx.insert(AgentMessageEntity, {
+        workspaceId: row.workspaceId,
+        conversationId: required(identity.conversationIds[index]),
+        role: row.authorKind === "human" ? "user" : "agent",
         body: row.body,
-        created_at: row.created_at,
-        author_kind: row.author_kind === "human" ? "human" : "ai",
-        author_name: row.author_name,
-        author_user_id: row.author_user_id,
+        createdAt: row.createdAt,
+        authorKind: row.authorKind === "human" ? "human" : "ai",
+        authorName: row.authorName,
+        authorUserId: row.authorUserId,
     })
 }
 

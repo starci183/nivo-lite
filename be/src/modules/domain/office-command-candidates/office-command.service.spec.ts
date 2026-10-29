@@ -1,12 +1,17 @@
 import { Test } from "@nestjs/testing"
+import { agentEntityOf } from "@tests/fixtures/builders/agents.builder"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { AgentEntity } from "@modules/domain/agents"
+import { OrderEntity } from "@modules/domain/orders"
 import { CommandBusService, ModuleCatalogService } from "@modules/domain/decisions"
 import { OfficeLinesService } from "@modules/domain/messages"
 import type { ModuleCommand, CommandResult, ModuleEntry, WorkItem } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
-import type { ProposedCommand } from "@modules/integrations/deepseek"
+import type { ProposedCommand } from "@modules/domain/ai-tasks"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -18,23 +23,18 @@ import { COMMAND_READER } from "./office-command-candidates.decorators"
 import { OfficeCommandCandidatesLogEvent } from "./office-command-candidates.log-events"
 import type { CommandReader } from "./office-command-candidates.port"
 import { OfficeCommandService } from "./office-command.service"
-import type { MessageTextRow } from "./persistence/office-command.rows"
-import {
-    ATTACH_WORK_ITEM,
-    CANCEL_CANDIDATE,
-    CLAIM_CANDIDATE,
-    FIND_CANDIDATE,
-    FIND_CANDIDATE_BY_MESSAGE,
-    FIND_MESSAGE,
-    INSERT_CANDIDATE,
-    LIST_AGENTS_BY_HANDLE,
-    LIST_CANDIDATES,
-    LIST_LEAD_REFS,
-    LIST_ORDER_REFS,
-    RELEASE_CANDIDATE,
-} from "./persistence/office-command.sql"
+import type { LeadPoolLine, MessageText } from "./office-reads.contracts"
+import { OfficeCommandCandidateEntity } from "./persistence/entities"
 
-type Query = readonly [sql: string, rows: unknown]
+/** What a spec's database holds, in the order the service reaches for it: the query builders it creates, then the finds. */
+interface Plan {
+    /** The answers of the query builders, in the order the service creates them. */
+    readonly builders: ReadonlyArray<QueryBuilderAnswers>
+    /** The active agents a handle lookup finds. */
+    readonly agents?: ReadonlyArray<AgentEntity>
+    /** The recent orders the reference pool reads. */
+    readonly orders?: ReadonlyArray<OrderEntity>
+}
 
 const manager: WorkspaceMember = {
     userId: "u-1",
@@ -58,8 +58,10 @@ const accounting: ModuleEntry = {
     name: { vi: "Ke toan", en: "Accounting" },
     accepts: [receipt],
 }
-const humanMessage: MessageTextRow = { id: "m-1", author_kind: "human", body: "@ke-toan phieu thu cho don #DH-1" }
-const agentRow = { id: "a-1", handle: "ke-toan", module: "accounting", name: "Mai" }
+const humanMessage: MessageText = { id: "m-1", author_kind: "human", body: "@ke-toan phieu thu cho don #DH-1" }
+const agentRow = agentEntityOf({ id: "a-1", handle: "ke-toan", module: "accounting", name: "Mai" })
+const orderRow = { id: "o-1", orderNo: "DH-1", leadId: "l-1" } as OrderEntity
+const leadRow: LeadPoolLine = { id: "l-1", contact_name: "Lan", company: null }
 const candidateOf = builder<CandidateView>({
     id: "c-1",
     message_id: "m-1",
@@ -88,17 +90,27 @@ const sentOk = (created: boolean): CommandResult => ({
     depth: 0,
 })
 
-/** Queries before proposing: message, no candidate yet, agent and the two reference pools. */
-const reaching = (message: MessageTextRow = humanMessage): ReadonlyArray<Query> => [
-    [FIND_MESSAGE, [message]],
-    [FIND_CANDIDATE_BY_MESSAGE, []],
-    [LIST_AGENTS_BY_HANDLE, [agentRow]],
-    [LIST_LEAD_REFS, [{ id: "l-1", contact_name: "Lan", company: null }]],
-    [LIST_ORDER_REFS, [{ id: "o-1", order_no: "DH-1", lead_id: "l-1" }]],
-]
+/** The world before proposing: the message, no candidate yet, the agent, the two reference pools and the answer of the insert. */
+const reaching = (message: MessageText | null = humanMessage, insert: ReadonlyArray<CandidateView> = []): Plan => ({
+    builders: [
+        { getRawOne: message ?? undefined },
+        { getRawOne: undefined },
+        { getRawMany: [leadRow] },
+        { execute: { raw: insert } },
+    ],
+    agents: [agentRow],
+    orders: [orderRow],
+})
 
-const build = async (queries: ReadonlyArray<Query>, entry: ModuleEntry | null = accounting) => {
-    const entityManager = mockEntityManager({ query: queries })
+const build = async (plan: Plan, entry: ModuleEntry | null = accounting) => {
+    const entityManager = mockEntityManager({
+        find: [
+            [AgentEntity, plan.agents ?? []],
+            [OrderEntity, plan.orders ?? []],
+        ],
+        update: [OfficeCommandCandidateEntity, { affected: 1 }],
+    })
+    const fakes = queueQueryBuilders(entityManager, plan.builders)
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(manager) })
     const modules = mock<ModuleCatalogService>({
         acceptsOf: jest.fn().mockResolvedValue(entry?.accepts ?? []),
@@ -126,7 +138,7 @@ const build = async (queries: ReadonlyArray<Query>, entry: ModuleEntry | null = 
         ],
     }).compile()
     const service = moduleRef.get(OfficeCommandService)
-    return { service, entityManager, members, lines, bus, reader, events, catalog, logger }
+    return { service, entityManager, members, lines, bus, reader, events, catalog, logger, fakes }
 }
 
 const request = { messageId: "m-1", locale: "en" } as const
@@ -136,10 +148,9 @@ const reply = (key: string) => ({ kind: "reply", body: `[${key}]` })
 describe("OfficeCommandService propose", () => {
     it("turns a message into a confirm card and records the evidence", async () => {
         const created = candidateOf()
-        const { service, entityManager, members, reader, events } = await build([
-            ...reaching(),
-            [INSERT_CANDIDATE, [created]],
-        ])
+        const { service, entityManager, members, reader, events, fakes } = await build(
+            reaching(humanMessage, [created]),
+        )
 
         await expect(service.propose("u-1", "ws-1", request)).resolves.toEqual({ kind: "card", candidate: created })
 
@@ -154,17 +165,28 @@ describe("OfficeCommandService propose", () => {
                 text: humanMessage.body,
             },
         )
-        expect(entityManager.query).toHaveBeenCalledWith(LIST_AGENTS_BY_HANDLE, ["ws-1", ["ke-toan"]])
-        expect(entityManager.query).toHaveBeenCalledWith(INSERT_CANDIDATE, [
-            "ws-1",
-            "m-1",
-            "accounting",
-            "issue_receipt",
-            '{"subject_type":"order","subject_id":"o-1","lead_id":"l-1"}',
-            "[office.cmdFor]",
-            `[{"key":"customer","label":"[office.cmdFieldCustomer]","value":"Lan"},` +
-                `{"key":"order","label":"[office.cmdFieldOrder]","value":"#DH-1"}]`,
-            "An",
+        expect(entityManager.find).toHaveBeenCalledWith(AgentEntity, {
+            select: { id: true, handle: true, module: true, name: true },
+            where: { workspaceId: "ws-1", status: "active", handle: expect.objectContaining({ _value: ["ke-toan"] }) },
+            order: { handle: "ASC" },
+            take: 10,
+        })
+        expect(fakes[3]?.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "ws-1",
+                    messageId: "m-1",
+                    module: "accounting",
+                    command: "issue_receipt",
+                    payload: { subject_type: "order", subject_id: "o-1", lead_id: "l-1" },
+                    summary: "[office.cmdFor]",
+                    shown: [
+                        { key: "customer", label: "[office.cmdFieldCustomer]", value: "Lan" },
+                        { key: "order", label: "[office.cmdFieldOrder]", value: "#DH-1" },
+                    ],
+                    createdBy: "An",
+                },
+            ],
         ])
         expect(events.record).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -180,23 +202,24 @@ describe("OfficeCommandService propose", () => {
             ...accounting,
             accepts: [{ ...receipt, subjectType: "stock", requiredFields: ["note"] }],
         }
-        const { service, entityManager, reader, catalog } = await build(
-            [...reaching(), [INSERT_CANDIDATE, [candidateOf()]]],
-            stock,
-        )
+        const { service, reader, catalog, fakes } = await build(reaching(humanMessage, [candidateOf()]), stock)
         reader.proposeCommands.mockResolvedValue(choiceOf({ subject_id: null, fields: { note: "x" } }))
 
         await service.propose("u-1", "ws-1", request)
 
-        expect(entityManager.query).toHaveBeenCalledWith(INSERT_CANDIDATE, [
-            "ws-1",
-            "m-1",
-            "accounting",
-            "issue_receipt",
-            '{"subject_type":"stock","note":"x"}',
-            "issue a receipt",
-            '[{"key":"note","label":"note","value":"x"}]',
-            "An",
+        expect(fakes[3]?.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "ws-1",
+                    messageId: "m-1",
+                    module: "accounting",
+                    command: "issue_receipt",
+                    payload: { subject_type: "stock", note: "x" },
+                    summary: "issue a receipt",
+                    shown: [{ key: "note", label: "note", value: "x" }],
+                    createdBy: "An",
+                },
+            ],
         ])
         expect(catalog.get.mock.calls.map(([key]) => key)).not.toContain("office.cmdFor")
     })
@@ -204,10 +227,7 @@ describe("OfficeCommandService propose", () => {
 describe("OfficeCommandService propose", () => {
     it("answers the existing card of a message without a second model call", async () => {
         const existing = candidateOf()
-        const { service, reader } = await build([
-            [FIND_MESSAGE, [humanMessage]],
-            [FIND_CANDIDATE_BY_MESSAGE, [existing]],
-        ])
+        const { service, reader } = await build({ builders: [{ getRawOne: humanMessage }, { getRawOne: existing }] })
 
         await expect(service.propose("u-1", "ws-1", request)).resolves.toEqual({
             kind: "card",
@@ -217,11 +237,11 @@ describe("OfficeCommandService propose", () => {
     })
 
     it("rejects a message that is missing or not a person's", async () => {
-        const missing = await build([[FIND_MESSAGE, []]])
+        const missing = await build({ builders: [{ getRawOne: undefined }] })
         await expect(missing.service.propose("u-1", "ws-1", request)).rejects.toMatchObject({
             code: OfficeCommandCandidatesErrorCode.MessageNotFound,
         })
-        const system = await build([[FIND_MESSAGE, [{ ...humanMessage, author_kind: "system" }]]])
+        const system = await build({ builders: [{ getRawOne: { ...humanMessage, author_kind: "system" } }] })
         await expect(system.service.propose("u-1", "ws-1", request)).rejects.toMatchObject({
             code: OfficeCommandCandidatesErrorCode.MessageNotHuman,
         })
@@ -233,12 +253,7 @@ describe("OfficeCommandService propose", () => {
         ["an unknown handle", humanMessage, [], accounting],
         ["an agent that accepts nothing", humanMessage, [agentRow], null],
     ])("leaves the message to the chat for %s", async (_name, message, agents, entry) => {
-        const queries: ReadonlyArray<Query> = [
-            [FIND_MESSAGE, [message]],
-            [FIND_CANDIDATE_BY_MESSAGE, []],
-            [LIST_AGENTS_BY_HANDLE, agents],
-        ]
-        const { service } = await build(queries, entry)
+        const { service } = await build({ builders: [{ getRawOne: message }, { getRawOne: undefined }], agents }, entry)
 
         await expect(service.propose("u-1", "ws-1", request)).resolves.toEqual({ kind: "chat" })
     })
@@ -289,12 +304,16 @@ describe("OfficeCommandService propose", () => {
             ...accounting,
             accepts: [{ ...receipt, requiredFields: ["subject_id", "amount"] }],
         }
-        const queries: ReadonlyArray<Query> = [
-            ...reaching({ ...humanMessage, body: "@ke-toan phieu thu" }).slice(0, 3),
-            [LIST_LEAD_REFS, []],
-            [LIST_ORDER_REFS, []],
-        ]
-        const { service, reader, catalog } = await build(queries, needy)
+        const plan: Plan = {
+            builders: [
+                { getRawOne: { ...humanMessage, body: "@ke-toan phieu thu" } },
+                { getRawOne: undefined },
+                { getRawMany: [] },
+            ],
+            agents: [agentRow],
+            orders: [],
+        }
+        const { service, reader, catalog } = await build(plan, needy)
         reader.proposeCommands.mockResolvedValue(choiceOf({ subject_id: null }))
 
         await expect(service.propose("u-1", "ws-1", request)).resolves.toEqual(reply("office.cmdMissing"))
@@ -308,7 +327,7 @@ describe("OfficeCommandService propose", () => {
     })
 
     it("keeps the card when the evidence line cannot be written", async () => {
-        const { service, events, logger } = await build([...reaching(), [INSERT_CANDIDATE, [candidateOf()]]])
+        const { service, events, logger } = await build(reaching(humanMessage, [candidateOf()]))
         const cause = new TypeError("down")
         events.record.mockRejectedValue(cause)
 
@@ -319,7 +338,7 @@ describe("OfficeCommandService propose", () => {
     })
 
     it("fails loudly when the insert answers no row", async () => {
-        const { service } = await build([...reaching(), [INSERT_CANDIDATE, []]])
+        const { service } = await build(reaching(humanMessage, []))
 
         await expect(service.propose("u-1", "ws-1", request)).rejects.toMatchObject({
             code: OfficeCommandCandidatesErrorCode.CandidateNotFound,
@@ -329,15 +348,16 @@ describe("OfficeCommandService propose", () => {
 describe("OfficeCommandService list", () => {
     it("lists the latest candidates for owners and managers", async () => {
         const rows = [candidateOf()]
-        const { service, entityManager, members } = await build([[LIST_CANDIDATES, rows]])
+        const { service, members, fakes } = await build({ builders: [{ getRawMany: rows }] })
 
         await expect(service.list("u-1", "ws-1")).resolves.toEqual(rows)
         expect(members.require).toHaveBeenCalledWith("u-1", "ws-1")
-        expect(entityManager.query).toHaveBeenCalledWith(LIST_CANDIDATES, ["ws-1", 60])
+        expect(fakes[0]?.callsOf("where")).toEqual([["c.workspaceId = :workspaceId", { workspaceId: "ws-1" }]])
+        expect(fakes[0]?.callsOf("limit")).toEqual([[60]])
     })
 
     it("shows staff none", async () => {
-        const { service, members } = await build([])
+        const { service, members } = await build({ builders: [] })
         members.require.mockResolvedValue({ ...manager, role: "staff" })
 
         await expect(service.list("u-1", "ws-1")).resolves.toEqual([])
@@ -346,10 +366,7 @@ describe("OfficeCommandService list", () => {
 describe("OfficeCommandService confirm", () => {
     it("claims the candidate, sends the command as the owner and links the work item", async () => {
         const claimed = candidateOf({ status: "sent" })
-        const { service, entityManager, bus } = await build([
-            [CLAIM_CANDIDATE, [claimed]],
-            [ATTACH_WORK_ITEM, []],
-        ])
+        const { service, entityManager, bus, fakes } = await build({ builders: [{ execute: { raw: [claimed] } }] })
 
         await expect(service.confirm("u-1", "ws-1", confirmRequest)).resolves.toEqual({
             workItemId: "w-1",
@@ -366,24 +383,27 @@ describe("OfficeCommandService confirm", () => {
                 reason: "office:m-1",
             },
         )
-        expect(entityManager.query).toHaveBeenCalledWith(ATTACH_WORK_ITEM, ["ws-1", "c-1", "w-1"])
+        expect(fakes[0]?.callsOf("set")).toEqual([
+            [{ status: "sent", decidedAt: expect.any(Function), refusalDetail: null }],
+        ])
+        expect(entityManager.update).toHaveBeenCalledWith(
+            OfficeCommandCandidateEntity,
+            { workspaceId: "ws-1", id: "c-1" },
+            { workItemId: "w-1" },
+        )
     })
 
     it("reports an existing work item as not created", async () => {
-        const { service, bus } = await build([
-            [CLAIM_CANDIDATE, [candidateOf()]],
-            [ATTACH_WORK_ITEM, []],
-        ])
+        const { service, bus } = await build({ builders: [{ execute: { raw: [candidateOf()] } }] })
         bus.sendCommand.mockResolvedValue(sentOk(false))
 
         await expect(service.confirm("u-1", "ws-1", confirmRequest)).resolves.toMatchObject({ created: false })
     })
 
     it("answers where an already sent candidate went instead of sending twice", async () => {
-        const { service, bus } = await build([
-            [CLAIM_CANDIDATE, []],
-            [FIND_CANDIDATE, [candidateOf({ status: "sent", work_item_id: "w-9" })]],
-        ])
+        const { service, bus } = await build({
+            builders: [{ execute: { raw: [] } }, { getRawOne: candidateOf({ status: "sent", work_item_id: "w-9" }) }],
+        })
 
         await expect(service.confirm("u-1", "ws-1", confirmRequest)).resolves.toEqual({
             workItemId: "w-9",
@@ -396,94 +416,92 @@ describe("OfficeCommandService confirm", () => {
     it.each([
         [
             "a cancelled candidate",
-            [candidateOf({ status: "cancelled" })],
+            candidateOf({ status: "cancelled" }),
             OfficeCommandCandidatesErrorCode.CandidateCancelled,
         ],
-        ["an unknown candidate", [], OfficeCommandCandidatesErrorCode.CandidateNotFound],
+        ["an unknown candidate", undefined, OfficeCommandCandidatesErrorCode.CandidateNotFound],
         [
             "a candidate still being sent",
-            [candidateOf({ status: "sent" })],
+            candidateOf({ status: "sent" }),
             OfficeCommandCandidatesErrorCode.CandidateInProgress,
         ],
     ])("refuses %s", async (_name, found, code) => {
-        const { service } = await build([
-            [CLAIM_CANDIDATE, []],
-            [FIND_CANDIDATE, found],
-        ])
+        const { service } = await build({ builders: [{ execute: { raw: [] } }, { getRawOne: found }] })
 
         await expect(service.confirm("u-1", "ws-1", confirmRequest)).rejects.toMatchObject({ code })
     })
 })
 describe("OfficeCommandService confirm", () => {
     it("puts the card back when the receiving module is not in the registry", async () => {
-        const { service, entityManager, bus } = await build(
-            [
-                [CLAIM_CANDIDATE, [candidateOf()]],
-                [RELEASE_CANDIDATE, []],
-            ],
-            null,
-        )
+        const { service, entityManager, bus } = await build({ builders: [{ execute: { raw: [candidateOf()] } }] }, null)
 
         await expect(service.confirm("u-1", "ws-1", confirmRequest)).rejects.toMatchObject({
             code: OfficeCommandCandidatesErrorCode.ModuleUnknown,
             params: { module: "accounting" },
         })
-        expect(entityManager.query).toHaveBeenCalledWith(RELEASE_CANDIDATE, ["ws-1", "c-1", "no agent accounting"])
+        expect(entityManager.update).toHaveBeenCalledWith(
+            OfficeCommandCandidateEntity,
+            { workspaceId: "ws-1", id: "c-1" },
+            { status: "pending", decidedAt: null, refusalDetail: "no agent accounting" },
+        )
         expect(bus.sendCommand).not.toHaveBeenCalled()
     })
 
     it("puts the card back with the reason when the bus refuses", async () => {
-        const { service, entityManager, bus } = await build([
-            [CLAIM_CANDIDATE, [candidateOf()]],
-            [RELEASE_CANDIDATE, []],
-        ])
+        const { service, entityManager, bus } = await build({ builders: [{ execute: { raw: [candidateOf()] } }] })
         bus.sendCommand.mockResolvedValue({ ok: false, refused: "missing_fields", detail: "needs amount" })
 
         await expect(service.confirm("u-1", "ws-1", confirmRequest)).rejects.toMatchObject({
             code: OfficeCommandCandidatesErrorCode.CommandRefused,
             params: { detail: "needs amount" },
         })
-        expect(entityManager.query).toHaveBeenCalledWith(RELEASE_CANDIDATE, ["ws-1", "c-1", "needs amount"])
+        expect(entityManager.update).toHaveBeenCalledWith(
+            OfficeCommandCandidateEntity,
+            { workspaceId: "ws-1", id: "c-1" },
+            { status: "pending", decidedAt: null, refusalDetail: "needs amount" },
+        )
     })
 
     it("puts the card back and rethrows when the bus fails", async () => {
-        const { service, entityManager, bus } = await build([
-            [CLAIM_CANDIDATE, [candidateOf()]],
-            [RELEASE_CANDIDATE, []],
-        ])
+        const { service, entityManager, bus } = await build({ builders: [{ execute: { raw: [candidateOf()] } }] })
         const cause = new TypeError("bus down")
         bus.sendCommand.mockRejectedValue(cause)
 
         await expect(service.confirm("u-1", "ws-1", confirmRequest)).rejects.toBe(cause)
-        expect(entityManager.query).toHaveBeenCalledWith(RELEASE_CANDIDATE, ["ws-1", "c-1", "bus down"])
+        expect(entityManager.update).toHaveBeenCalledWith(
+            OfficeCommandCandidateEntity,
+            { workspaceId: "ws-1", id: "c-1" },
+            { status: "pending", decidedAt: null, refusalDetail: "bus down" },
+        )
     })
 })
 describe("OfficeCommandService cancel", () => {
     it("cancels a pending candidate", async () => {
-        const { service, entityManager, members } = await build([[CANCEL_CANDIDATE, [{ id: "c-1" }]]])
+        const { service, members, fakes } = await build({ builders: [{ execute: { raw: [{ id: "c-1" }] } }] })
 
         await expect(service.cancel("u-1", "ws-1", "c-1")).resolves.toBeUndefined()
         expect(members.require).toHaveBeenCalledWith("u-1", "ws-1", ["owner", "manager"])
-        expect(entityManager.query).toHaveBeenCalledWith(CANCEL_CANDIDATE, ["ws-1", "c-1"])
+        expect(fakes[0]?.callsOf("where")).toEqual([
+            [
+                "workspace_id = :workspaceId AND id = :candidateId AND status = 'pending'",
+                { workspaceId: "ws-1", candidateId: "c-1" },
+            ],
+        ])
     })
 
     it("treats a second cancel as done", async () => {
-        const { service } = await build([
-            [CANCEL_CANDIDATE, []],
-            [FIND_CANDIDATE, [candidateOf({ status: "cancelled" })]],
-        ])
+        const { service } = await build({
+            builders: [{ execute: { raw: [] } }, { getRawOne: candidateOf({ status: "cancelled" }) }],
+        })
 
         await expect(service.cancel("u-1", "ws-1", "c-1")).resolves.toBeUndefined()
     })
 
     it.each([
-        ["unknown", [], OfficeCommandCandidatesErrorCode.CandidateNotFound],
-        ["already sent", [candidateOf({ status: "sent" })], OfficeCommandCandidatesErrorCode.CandidateSent],
+        ["unknown", undefined, OfficeCommandCandidatesErrorCode.CandidateNotFound],
+        ["already sent", candidateOf({ status: "sent" }), OfficeCommandCandidatesErrorCode.CandidateSent],
     ])("refuses a candidate that is %s", async (_name, found, code) => {
-        const { service } = await build([
-            [CANCEL_CANDIDATE, []],
-            [FIND_CANDIDATE, found],
-        ])
+        const { service } = await build({ builders: [{ execute: { raw: [] } }, { getRawOne: found }] })
 
         await expect(service.cancel("u-1", "ws-1", "c-1")).rejects.toMatchObject({ code })
     })

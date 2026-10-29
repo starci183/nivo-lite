@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { openCard, pendingOf, settleCard, withVote } from "./approval-card.policy"
 import type { CardSource } from "./approval-card.policy"
-import type { ThreadMessageRow } from "./persistence/thread-messages.rows"
+import type { ThreadMessageRecord } from "./thread-messages.contracts"
 
 const SUBJECT = Symbol("approval-card.policy")
 
@@ -31,7 +31,7 @@ const source: CardSource = {
     owner: { kind: "member", id: "minh", name: "Mr Minh" },
 }
 
-const messageRow = (approval: ThreadMessageRow["approval"]): ThreadMessageRow => ({
+const messageRow = (approval: ThreadMessageRecord["approval"]): ThreadMessageRecord => ({
     id: "msg-1",
     thread_id: "thread-1",
     workspace_id: "ws-1",
@@ -43,7 +43,7 @@ const messageRow = (approval: ThreadMessageRow["approval"]): ThreadMessageRow =>
     quoted: [],
     mentions: [],
     approval,
-    created_at: "2026-10-22T09:41:00+07:00",
+    created_at: new Date("2026-10-22T09:41:00+07:00"),
 })
 
 const registerPending = () => {

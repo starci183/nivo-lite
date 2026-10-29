@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
@@ -16,10 +17,14 @@ import {
     NOW,
     OWNER,
     grantOf,
-    approvalRequestOf,
+    approvalRequestEntityOf,
     setupFor,
     setupOf,
     verdictOf,
+    expiredRequestSettledNow,
+    requestPastItsTime,
+    requestForMinhAndHa,
+    sequentialRequestForMinhAndHa,
 } from "@tests/fixtures/builders/approval-requests.builder"
 import type { Arrangement } from "@tests/fixtures/builders/approval-requests.builder"
 import { ApprovalAnnouncerService } from "./approval-announcer.service"
@@ -27,7 +32,17 @@ import { ApprovalDecidingService } from "./approval-deciding.service"
 import { ApprovalEscalationService } from "./approval-escalation.service"
 import type { ApprovalResolved } from "./approval-requests.contracts"
 import { ApprovalRequestsErrorCode } from "./errors/approval-requests.error"
-import { INSERT_VERDICT, LIST_VERDICTS, LOCK_REQUEST, RESOLVE_REQUEST } from "./persistence/approval-requests.sql"
+import { ApprovalRequestEntity } from "./persistence/entities"
+
+/** A manager whose lock answers `row`; the verdict write and the settling update succeed. */
+const deciding = (row: ApprovalRequestEntity | null) => {
+    const em = mockEntityManager({
+        findOne: [ApprovalRequestEntity, row],
+        update: [ApprovalRequestEntity, { affected: 1 }],
+    })
+    const fakes = queueQueryBuilders(em, [{ execute: {} }])
+    return { em, fakes }
+}
 
 const EXPIRED: ApprovalResolved = {
     requestId: "request-1",
@@ -73,14 +88,7 @@ const build = async (em: MockEntityManager, arrangement: Arrangement = {}) => {
 
 describe("ApprovalDecidingService > any one", () => {
     it("takes the lock first, then settles the request with the first approval and announces it", async () => {
-        const em = mockEntityManager({
-            query: [
-                [LOCK_REQUEST, [approvalRequestOf()]],
-                [LIST_VERDICTS, []],
-                [INSERT_VERDICT, []],
-                [RESOLVE_REQUEST, [{ id: "request-1" }]],
-            ],
-        })
+        const { em, fakes } = deciding(approvalRequestEntityOf())
         const { service, announcer, transaction } = await build(em)
 
         const progress = await service.decide(answer("member-minh"))
@@ -91,13 +99,33 @@ describe("ApprovalDecidingService > any one", () => {
             approvedBy: ["member-minh"],
             remaining: [],
         })
-        expect(em.query.mock.calls.map((call) => call[0])).toEqual([
-            LOCK_REQUEST,
-            LIST_VERDICTS,
-            INSERT_VERDICT,
-            RESOLVE_REQUEST,
+        expect(em.findOne).toHaveBeenCalledWith(ApprovalRequestEntity, {
+            where: { id: "request-1" },
+            lock: { mode: "pessimistic_write" },
+        })
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(ApprovalRequestEntity, "ar")
+        expect(fakes[0]?.callsOf("where")).toEqual([
+            [
+                "id = :requestId AND status = 'pending'",
+                {
+                    requestId: "request-1",
+                    memberId: "member-minh",
+                    verdict: "approve",
+                    decidedAt: NOW,
+                },
+            ],
         ])
-        expect(String(LOCK_REQUEST)).toContain("FOR UPDATE")
+        expect(em.update).toHaveBeenCalledWith(
+            ApprovalRequestEntity,
+            { id: "request-1", status: "pending" },
+            { status: "approved", resolvedBy: "member-minh", resolvedAt: new Date(NOW), escalatedTo: null },
+        )
+        const order = [
+            em.findOne.mock.invocationCallOrder[0] ?? 0,
+            em.createQueryBuilder.mock.invocationCallOrder[0] ?? 0,
+            em.update.mock.invocationCallOrder[0] ?? 0,
+        ]
+        expect(order).toEqual([...order].sort((a, b) => a - b))
         expect(announcer.resolved.mock.calls.map((call) => call[0])).toEqual([
             {
                 requestId: "request-1",
@@ -114,16 +142,7 @@ describe("ApprovalDecidingService > any one", () => {
     })
 
     it("settles the request as rejected with a rejection", async () => {
-        const { service, announcer } = await build(
-            mockEntityManager({
-                query: [
-                    [LOCK_REQUEST, [approvalRequestOf()]],
-                    [LIST_VERDICTS, []],
-                    [INSERT_VERDICT, []],
-                    [RESOLVE_REQUEST, [{ id: "request-1" }]],
-                ],
-            }),
-        )
+        const { service, announcer } = await build(deciding(approvalRequestEntityOf()).em)
 
         await expect(service.decide(answer("member-minh", "reject"))).resolves.toMatchObject({
             status: "rejected",
@@ -138,12 +157,12 @@ describe("ApprovalDecidingService > any one, a request settled before", () => {
         { status: "approved" as const, code: ApprovalRequestsErrorCode.AlreadyApproved },
         { status: "rejected" as const, code: ApprovalRequestsErrorCode.AlreadyRejected },
     ])("tells the one who came second who $status it and when, and writes nothing", async ({ status, code }) => {
-        const settled = approvalRequestOf({
+        const settled = approvalRequestEntityOf({
             status,
-            resolved_by: "member-minh",
-            resolved_at: "2026-10-22T02:42:00.000Z",
+            resolvedBy: "member-minh",
+            resolvedAt: new Date("2026-10-22T02:42:00.000Z"),
         })
-        const em = mockEntityManager({ query: [LOCK_REQUEST, [settled]] })
+        const { em } = deciding(settled)
         const { service, announcer, transaction } = await build(em)
 
         await expect(service.decide(answer("member-ha"))).rejects.toMatchObject({
@@ -151,15 +170,14 @@ describe("ApprovalDecidingService > any one, a request settled before", () => {
             params: { name: "Anh Minh", time: "09:42" },
         })
 
-        expect(em.query).toHaveBeenCalledTimes(1)
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+        expect(em.update).not.toHaveBeenCalled()
         expect(announcer.resolved).not.toHaveBeenCalled()
         expect(transaction.rollbacks).toBe(1)
     })
 
     it("tells a late answer that the request already ran out of time", async () => {
-        const em = mockEntityManager({
-            query: [LOCK_REQUEST, [approvalRequestOf({ status: "expired", resolved_at: NOW })]],
-        })
+        const { em } = deciding(expiredRequestSettledNow())
         const { service } = await build(em)
 
         await expect(service.decide(answer("member-minh"))).rejects.toMatchObject({
@@ -168,7 +186,7 @@ describe("ApprovalDecidingService > any one, a request settled before", () => {
     })
 
     it("refuses a request that does not exist", async () => {
-        const { service } = await build(mockEntityManager({ query: [LOCK_REQUEST, []] }))
+        const { service } = await build(deciding(null).em)
 
         await expect(service.decide(answer("member-minh"))).rejects.toMatchObject({
             code: ApprovalRequestsErrorCode.NotFound,
@@ -176,8 +194,8 @@ describe("ApprovalDecidingService > any one, a request settled before", () => {
     })
 
     it("settles a request past its time as expired, commits that, announces it and refuses the answer", async () => {
-        const late = approvalRequestOf({ expires_at: "2026-10-22T09:00:00.000Z" })
-        const em = mockEntityManager({ query: [LOCK_REQUEST, [late]] })
+        const late = requestPastItsTime()
+        const { em } = deciding(late)
         const { service, escalation, announcer, transaction } = await build(em)
 
         await expect(service.decide(answer("member-minh"))).rejects.toMatchObject({
@@ -205,21 +223,21 @@ describe("ApprovalDecidingService > who may answer", () => {
         },
         { name: "a stranger", memberId: "member-9", code: ApprovalRequestsErrorCode.NotInGroup },
     ])("refuses $name before anything is written", async ({ memberId, code }) => {
-        const em = mockEntityManager({ query: [LOCK_REQUEST, [approvalRequestOf({ approvers: [MINH_REF, HA_REF] })]] })
+        const em = deciding(requestForMinhAndHa()).em
         const { service, announcer, transaction } = await build(em)
 
         await expect(service.decide(answer(memberId))).rejects.toMatchObject({ code })
 
-        expect(em.query).toHaveBeenCalledTimes(1)
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+        expect(em.update).not.toHaveBeenCalled()
         expect(announcer.resolved).not.toHaveBeenCalled()
         expect(transaction.rollbacks).toBe(1)
     })
 
     it("refuses a member who was disabled after the request opened", async () => {
-        const { service } = await build(
-            mockEntityManager({ query: [LOCK_REQUEST, [approvalRequestOf({ approvers: [MINH_REF, HA_REF] })]] }),
-            { directory: [OWNER, { ...MINH, status: "disabled" }, HA, LAN] },
-        )
+        const { service } = await build(deciding(requestForMinhAndHa()).em, {
+            directory: [OWNER, { ...MINH, status: "disabled" }, HA, LAN],
+        })
 
         await expect(service.decide(answer("member-minh"))).rejects.toMatchObject({
             code: ApprovalRequestsErrorCode.MemberInactive,
@@ -227,10 +245,7 @@ describe("ApprovalDecidingService > who may answer", () => {
     })
 
     it("refuses a member whose grant was revoked after the request opened, though the snapshot named them", async () => {
-        const { service } = await build(
-            mockEntityManager({ query: [LOCK_REQUEST, [approvalRequestOf({ approvers: [MINH_REF, HA_REF] })]] }),
-            { grants: [] },
-        )
+        const { service } = await build(deciding(requestForMinhAndHa()).em, { grants: [] })
 
         await expect(service.decide(answer("member-minh"))).rejects.toMatchObject({
             code: ApprovalRequestsErrorCode.NoGrant,
@@ -241,42 +256,19 @@ describe("ApprovalDecidingService > who may answer", () => {
 describe("ApprovalDecidingService > what changed since the request opened", () => {
     it("lets a member answer who was granted the right after it opened", async () => {
         const grants = [...GRANTS, grantOf({ id: "grant-9", member_id: "member-lan", max_amount: 50 })]
-        const { service } = await build(
-            mockEntityManager({
-                query: [
-                    [LOCK_REQUEST, [approvalRequestOf()]],
-                    [LIST_VERDICTS, []],
-                    [INSERT_VERDICT, []],
-                    [RESOLVE_REQUEST, [{ id: "request-1" }]],
-                ],
-            }),
-            { grants },
-        )
+        const { service } = await build(deciding(approvalRequestEntityOf()).em, { grants })
 
         await expect(service.decide(answer("member-lan"))).resolves.toMatchObject({ status: "approved" })
     })
 
     it("falls back to the people the request named when the rule is gone", async () => {
-        const { service } = await build(
-            mockEntityManager({
-                query: [
-                    [LOCK_REQUEST, [approvalRequestOf()]],
-                    [LIST_VERDICTS, []],
-                    [INSERT_VERDICT, []],
-                    [RESOLVE_REQUEST, [{ id: "request-1" }]],
-                ],
-            }),
-            { setup: null },
-        )
+        const { service } = await build(deciding(approvalRequestEntityOf()).em, { setup: null })
 
         await expect(service.decide(answer("member-minh"))).resolves.toMatchObject({ status: "approved" })
     })
 
     it("refuses everyone but the people the request named when the rule is gone", async () => {
-        const { service } = await build(
-            mockEntityManager({ query: [LOCK_REQUEST, [approvalRequestOf({ approvers: [MINH_REF, HA_REF] })]] }),
-            { setup: null },
-        )
+        const { service } = await build(deciding(requestForMinhAndHa()).em, { setup: null })
 
         await expect(service.decide(answer("member-lan"))).rejects.toMatchObject({
             code: ApprovalRequestsErrorCode.NotInGroup,
@@ -289,13 +281,7 @@ describe("ApprovalDecidingService > all", () => {
     const both = { policy: "all" as const, approvers: [MINH_REF, HA_REF] }
 
     it("keeps a request open until every approver approved, and tells who is still awaited", async () => {
-        const em = mockEntityManager({
-            query: [
-                [LOCK_REQUEST, [approvalRequestOf(both)]],
-                [LIST_VERDICTS, []],
-                [INSERT_VERDICT, []],
-            ],
-        })
+        const em = deciding(approvalRequestEntityOf(both)).em
         const { service, announcer, transaction } = await build(em, { setup: setupOf({ policy: "all" }), grants })
 
         await expect(service.decide(answer("member-minh"))).resolves.toEqual({
@@ -305,20 +291,14 @@ describe("ApprovalDecidingService > all", () => {
             remaining: [HA_REF],
         })
 
-        expect(em.query.mock.calls.map((call) => call[0])).not.toContain(RESOLVE_REQUEST)
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
+        expect(em.update).not.toHaveBeenCalled()
         expect(announcer.resolved).not.toHaveBeenCalled()
         expect(transaction.commits).toBe(1)
     })
 
     it("approves with the last approval and counts the earlier ones", async () => {
-        const em = mockEntityManager({
-            query: [
-                [LOCK_REQUEST, [approvalRequestOf(both)]],
-                [LIST_VERDICTS, [verdictOf()]],
-                [INSERT_VERDICT, []],
-                [RESOLVE_REQUEST, [{ id: "request-1" }]],
-            ],
-        })
+        const em = deciding(approvalRequestEntityOf({ ...both, verdicts: [verdictOf()] })).em
         const { service } = await build(em, { setup: setupOf({ policy: "all" }), grants })
 
         await expect(service.decide(answer("member-ha"))).resolves.toEqual({
@@ -330,12 +310,7 @@ describe("ApprovalDecidingService > all", () => {
     })
 
     it("refuses a member who already answered", async () => {
-        const em = mockEntityManager({
-            query: [
-                [LOCK_REQUEST, [approvalRequestOf(both)]],
-                [LIST_VERDICTS, [verdictOf()]],
-            ],
-        })
+        const em = deciding(approvalRequestEntityOf({ ...both, verdicts: [verdictOf()] })).em
         const { service, transaction } = await build(em, { setup: setupOf({ policy: "all" }), grants })
 
         await expect(service.decide(answer("member-minh"))).rejects.toMatchObject({
@@ -350,12 +325,7 @@ describe("ApprovalDecidingService > in order", () => {
     const named = { roles: [], rooms: [], members: ["member-minh", "member-ha"] }
 
     it("refuses the second approver before the first has answered, naming who is next", async () => {
-        const em = mockEntityManager({
-            query: [
-                [LOCK_REQUEST, [approvalRequestOf({ policy: "sequential", approvers: [MINH_REF, HA_REF] })]],
-                [LIST_VERDICTS, []],
-            ],
-        })
+        const em = deciding(sequentialRequestForMinhAndHa()).em
         const setup = setupOf({ policy: "sequential", group: named })
         const { service } = await build(em, { setup, grants })
 
@@ -366,13 +336,7 @@ describe("ApprovalDecidingService > in order", () => {
     })
 
     it("passes the turn to the next approver after an approval", async () => {
-        const em = mockEntityManager({
-            query: [
-                [LOCK_REQUEST, [approvalRequestOf({ policy: "sequential", approvers: [MINH_REF, HA_REF] })]],
-                [LIST_VERDICTS, []],
-                [INSERT_VERDICT, []],
-            ],
-        })
+        const em = deciding(sequentialRequestForMinhAndHa()).em
         const { service } = await build(em, { setup: setupOf({ policy: "sequential", group: named }), grants })
 
         await expect(service.decide(answer("member-minh"))).resolves.toMatchObject({

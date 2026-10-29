@@ -1,12 +1,10 @@
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { eachInOrder } from "@modules/platform/primitives"
 import { persistInboundInputWorkspace } from "../../fixtures/builders/inbound-input.builder"
-import { INPUT_EVENT } from "../../fixtures/persistence/inbound-input.sql"
-import { INBOX_CLAIM } from "../../fixtures/persistence/inbox-dedupe.sql"
-import { CLEAN_API_INBOX } from "../../fixtures/persistence/public-api.sql"
-import { CLEAN_USER, CLEAN_WORKSPACE } from "../../fixtures/persistence/proof.sql"
 import { InboundInputProofModule } from "../../world/inbound-input-proof.module"
 import { useTestWorld } from "../../world/use-test-world"
+import { inboxClaims, cleanApiInbox, inboundInput } from "../../world/inbox-database.service"
+import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 
 const world = useTestWorld({ modules: [InboundInputProofModule.register()] })
 const first = { workspaceId: world.id(), ownerId: world.id() }
@@ -25,14 +23,14 @@ const inputOf = (workspaceId: string, eventId: string) => ({
 })
 
 const claimOf = (workspaceId: string, kind: string, eventId: string) =>
-    world.db.primary.query(INBOX_CLAIM, ["telegram", `${workspaceId}:telegram:${kind}:${eventId}`])
+    inboxClaims(world.db.primary, "telegram", `${workspaceId}:telegram:${kind}:${eventId}`)
 
 beforeAll(async () => {
     world.cleanup(async () => {
         await eachInOrder([first, second, recovery], async (identity) => {
-            await world.db.primary.query(CLEAN_API_INBOX, [identity.workspaceId])
-            await world.db.primary.query(CLEAN_WORKSPACE, [identity.workspaceId])
-            await world.db.primary.query(CLEAN_USER, [identity.ownerId])
+            await cleanApiInbox(world.db.primary, identity.workspaceId)
+            await removeWorkspace(world.db.primary, identity.workspaceId)
+            await removeAuthUsers(world.db.primary, [identity.ownerId])
         })
     })
     await eachInOrder([first, second], (identity) => persistInboundInputWorkspace(world.db.primary, identity))
@@ -88,11 +86,11 @@ describe("inbound input recovery over PostgreSQL", () => {
 
         await expect(events.recordInput(input)).rejects.toMatchObject({ code: "23503" })
         expect(await claimOf(recovery.workspaceId, "message", eventId)).toHaveLength(0)
-        expect(await world.db.primary.query(INPUT_EVENT, [recovery.workspaceId, key])).toEqual([])
+        expect(await inboundInput(world.db.primary, recovery.workspaceId, key)).toEqual([])
         await persistInboundInputWorkspace(world.db.primary, recovery)
         const recorded = await events.recordInput(input)
         expect(recorded.duplicate).toBe(false)
-        expect(await world.db.primary.query(INPUT_EVENT, [recovery.workspaceId, key])).toEqual([
+        expect(await inboundInput(world.db.primary, recovery.workspaceId, key)).toEqual([
             { id: recorded.inboundEventId, event_id: eventId },
         ])
         await expect(events.recordInput(input)).resolves.toEqual({ ...recorded, duplicate: true })
@@ -107,9 +105,7 @@ describe("inbound input recovery over PostgreSQL", () => {
         expect(results.filter((result) => !result.duplicate)).toHaveLength(1)
         expect(new Set(results.map((result) => result.inboundEventId)).size).toBe(1)
         expect(results.every((result) => result.inboundEventId !== "")).toBe(true)
-        expect(
-            await world.db.primary.query(INPUT_EVENT, [first.workspaceId, `telegram:message:${eventId}`]),
-        ).toHaveLength(1)
+        expect(await inboundInput(world.db.primary, first.workspaceId, `telegram:message:${eventId}`)).toHaveLength(1)
         expect(await claimOf(first.workspaceId, "message", eventId)).toHaveLength(1)
     })
 })

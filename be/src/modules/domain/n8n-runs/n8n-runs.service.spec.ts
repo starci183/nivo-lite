@@ -1,10 +1,12 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
+import { FakeClock, fakeIds, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { N8N_CLIENT, N8nError, N8nErrorCode } from "@modules/integrations/n8n"
 import type { N8nClient } from "@modules/integrations/n8n"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { IDS } from "@modules/platform/ids"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
@@ -14,13 +16,7 @@ import { N8nRunsErrorCode } from "./errors/n8n-runs.error"
 import type { N8nRunContext, StartN8nRun } from "./n8n-runs.contracts"
 import { N8nRunsLogEvent } from "./n8n-runs.log-events"
 import { N8nRunsService } from "./n8n-runs.service"
-import {
-    COMPLETE_N8N_RUN,
-    INSERT_N8N_RUN,
-    SELECT_API_BASE,
-    SELECT_N8N_RUN,
-    SELECT_RUN_PIPELINE,
-} from "./persistence/n8n-runs.sql"
+import { N8nPlatformConfigEntity, N8nRunEntity } from "./persistence/entities"
 import { hashToken } from "./policies/n8n-run.policy"
 
 /** A partial-object matcher, typed `unknown` so it flows into any slot. */
@@ -42,6 +38,9 @@ const thrownBy = (run: () => unknown): unknown => {
 const NOW = "2026-10-12T10:00:00.000Z"
 const RUN_ID = "11111111-2222-4333-8444-555555555555"
 const TOKEN = `${RUN_ID}.secret`
+/** The first id of `fakeIds()` is the run, the next two make the secret of its token. */
+const STARTED_ID = "00000000-0000-4000-8000-000000000001"
+const STARTED_TOKEN = `${STARTED_ID}.00000000000040008000000000000002` + "00000000000040008000000000000003"
 const START: StartN8nRun = {
     workspaceId: "ws-1",
     templateKey: "email-daily-report",
@@ -72,6 +71,7 @@ const build = async (em: MockEntityManager) => {
             N8nRunsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
+            { provide: IDS, useValue: fakeIds() },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
             { provide: N8N_CLIENT, useValue: n8n },
@@ -81,37 +81,51 @@ const build = async (em: MockEntityManager) => {
     return { runs: moduleRef.get(N8nRunsService), n8n, queue, logger }
 }
 
+/** What the pipeline query answers: the settings and the wording of the run's template. */
+interface PipelineAnswer {
+    readonly config: Record<string, unknown>
+    readonly body: string | null
+}
+
 describe("N8nRunsService", () => {
     describe("startRun", () => {
         it("writes the run and its delivery job in one transaction and answers the run id", async () => {
             const tx = fakeTransaction(
                 mockEntityManager({
-                    query: [
-                        [SELECT_API_BASE, [{ value: "https://api.example" }]],
-                        [INSERT_N8N_RUN, [{ id: RUN_ID, token: TOKEN }]],
-                    ],
+                    findOne: [N8nPlatformConfigEntity, { key: "api_base", value: "https://api.example" }],
                 }),
             )
+            const insert = fakeQueryBuilder({ execute: { raw: [{ id: STARTED_ID }] } })
+            answerQueryBuilders(tx.em, insert)
             const { runs, queue } = await build(tx.em)
 
-            await expect(runs.startRun(START)).resolves.toBe(RUN_ID)
+            await expect(runs.startRun(START)).resolves.toBe(STARTED_ID)
 
-            expect(tx.em.query).toHaveBeenCalledWith(INSERT_N8N_RUN, [
-                "ws-1",
-                "email-daily-report",
-                "day-1",
-                new Date("2026-10-12T10:30:00.000Z"),
+            expect(tx.em.createQueryBuilder).toHaveBeenCalledWith(N8nRunEntity, "n")
+            expect(insert.argsOf("insert")).toEqual([[]])
+            expect(insert.argsOf("values")).toEqual([
+                [
+                    {
+                        id: STARTED_ID,
+                        workspaceId: "ws-1",
+                        templateKey: "email-daily-report",
+                        dedupeKey: "day-1",
+                        tokenHash: hashToken(STARTED_TOKEN),
+                        expiresAt: new Date("2026-10-12T10:30:00.000Z"),
+                    },
+                ],
             ])
+            expect(insert.argsOf("orIgnore")).toHaveLength(1)
             expect(queue.enqueueEmit).toHaveBeenCalledWith(
                 {
                     workspaceId: "ws-1",
-                    runId: RUN_ID,
+                    runId: STARTED_ID,
                     event: "pipeline.email-daily-report",
                     urls: [],
                     paths: ["nivo/email-daily-report"],
                     data: {
-                        run_id: RUN_ID,
-                        run_token: TOKEN,
+                        run_id: STARTED_ID,
+                        run_token: STARTED_TOKEN,
                         api_base: "https://api.example",
                         template_key: "email-daily-report",
                         config: { time: "08:00" },
@@ -125,12 +139,10 @@ describe("N8nRunsService", () => {
         it("answers none for an occurrence that already started a run", async () => {
             const tx = fakeTransaction(
                 mockEntityManager({
-                    query: [
-                        [SELECT_API_BASE, [{ value: "https://api.example" }]],
-                        [INSERT_N8N_RUN, []],
-                    ],
+                    findOne: [N8nPlatformConfigEntity, { key: "api_base", value: "https://api.example" }],
                 }),
             )
+            answerQueryBuilders(tx.em, fakeQueryBuilder({ execute: { raw: [] } }))
             const { runs, queue } = await build(tx.em)
 
             await expect(runs.startRun(START)).resolves.toBeNull()
@@ -147,7 +159,7 @@ describe("N8nRunsService", () => {
         })
 
         it("refuses to start without a public base url", async () => {
-            const { runs } = await build(mockEntityManager({ query: [SELECT_API_BASE, []] }))
+            const { runs } = await build(mockEntityManager({ findOne: [N8nPlatformConfigEntity, null] }))
 
             await expect(runs.startRun(START)).rejects.toMatchObject({ code: N8nRunsErrorCode.ApiBaseMissing })
         })
@@ -190,7 +202,7 @@ describe("N8nRunsService", () => {
         })
 
         it("closes the run as failed when n8n refuses it for good", async () => {
-            const em = mockEntityManager({ query: [COMPLETE_N8N_RUN, [{ id: RUN_ID }]] })
+            const em = mockEntityManager({ update: [N8nRunEntity, { affected: 1 }] })
             const { runs, n8n, logger } = await build(em)
             n8n.deliver.mockRejectedValue(new N8nError({ code: N8nErrorCode.TargetRefused }))
 
@@ -200,30 +212,34 @@ describe("N8nRunsService", () => {
                 runId: RUN_ID,
                 code: N8nErrorCode.TargetRefused,
             })
-            expect(em.query).toHaveBeenCalledWith(COMPLETE_N8N_RUN, [RUN_ID, "ws-1", "failed", "Bi tu choi", null])
+            expect(em.update).toHaveBeenCalledWith(
+                N8nRunEntity,
+                { id: RUN_ID, workspaceId: "ws-1" },
+                { status: "failed", summary: "Bi tu choi", result: null, finishedAt: anything() },
+            )
         })
     })
 })
 
 describe("N8nRunsService", () => {
     describe("verifyRun", () => {
-        const stored = (overrides: Record<string, unknown> = {}) => ({
-            id: RUN_ID,
-            workspace_id: "ws-1",
-            template_key: "email-daily-report",
-            token_hash: hashToken(TOKEN),
-            expires_at: "2026-10-12T10:20:00.000Z",
-            status: "running",
-            ...overrides,
-        })
+        const stored = (overrides: Record<string, unknown> = {}) =>
+            Object.assign(new N8nRunEntity(), {
+                id: RUN_ID,
+                workspaceId: "ws-1",
+                templateKey: "email-daily-report",
+                tokenHash: hashToken(TOKEN),
+                expiresAt: new Date("2026-10-12T10:20:00.000Z"),
+                status: "running",
+                ...overrides,
+            })
 
         it("answers the context of the run with its settings and wording", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_N8N_RUN, [stored()]],
-                    [SELECT_RUN_PIPELINE, [{ config: { time: "08:00" }, body: "Hello" }]],
-                ],
-            })
+            const em = mockEntityManager({ findOne: [N8nRunEntity, stored()] })
+            answerQueryBuilders(
+                em,
+                fakeQueryBuilder({ getRawOne: { config: { time: "08:00" }, body: "Hello" } satisfies PipelineAnswer }),
+            )
             const { runs } = await build(em)
 
             await expect(runs.verifyRun({ authorization: `Bearer ${TOKEN}`, expectedRunId: RUN_ID })).resolves.toEqual({
@@ -235,22 +251,15 @@ describe("N8nRunsService", () => {
         })
 
         it("answers the settings alone when the pipeline has no wording or does not exist", async () => {
-            const { runs } = await build(
-                mockEntityManager({
-                    query: [
-                        [SELECT_N8N_RUN, [stored()]],
-                        [SELECT_RUN_PIPELINE, [{ config: { a: 1 }, body: null }]],
-                    ],
-                }),
+            const withBody = mockEntityManager({ findOne: [N8nRunEntity, stored()] })
+            const without = mockEntityManager({ findOne: [N8nRunEntity, stored()] })
+            answerQueryBuilders(
+                withBody,
+                fakeQueryBuilder({ getRawOne: { config: { a: 1 }, body: null } satisfies PipelineAnswer }),
             )
-            const { runs: bare } = await build(
-                mockEntityManager({
-                    query: [
-                        [SELECT_N8N_RUN, [stored()]],
-                        [SELECT_RUN_PIPELINE, []],
-                    ],
-                }),
-            )
+            answerQueryBuilders(without, fakeQueryBuilder({ getRawOne: undefined }))
+            const { runs } = await build(withBody)
+            const { runs: bare } = await build(without)
 
             await expect(
                 runs.verifyRun({ authorization: `Bearer ${TOKEN}`, expectedRunId: undefined }),
@@ -280,23 +289,24 @@ describe("N8nRunsService", () => {
 
 describe("N8nRunsService", () => {
     describe("verifyRun", () => {
-        const stored = (overrides: Record<string, unknown> = {}) => ({
-            id: RUN_ID,
-            workspace_id: "ws-1",
-            template_key: "email-daily-report",
-            token_hash: hashToken(TOKEN),
-            expires_at: "2026-10-12T10:20:00.000Z",
-            status: "running",
-            ...overrides,
-        })
+        const stored = (overrides: Record<string, unknown> = {}) =>
+            Object.assign(new N8nRunEntity(), {
+                id: RUN_ID,
+                workspaceId: "ws-1",
+                templateKey: "email-daily-report",
+                tokenHash: hashToken(TOKEN),
+                expiresAt: new Date("2026-10-12T10:20:00.000Z"),
+                status: "running",
+                ...overrides,
+            })
 
         it.each([
-            ["an unknown run", []],
-            ["a wrong token", [stored({ token_hash: hashToken("other") })]],
-            ["an expired token", [stored({ expires_at: "2026-10-12T09:59:59.000Z" })]],
-            ["a finished run", [stored({ status: "done" })]],
-        ])("answers none for %s", async (_name, rows) => {
-            const { runs } = await build(mockEntityManager({ query: [SELECT_N8N_RUN, rows] }))
+            ["an unknown run", null],
+            ["a wrong token", stored({ tokenHash: hashToken("other") })],
+            ["an expired token", stored({ expiresAt: new Date("2026-10-12T09:59:59.000Z") })],
+            ["a finished run", stored({ status: "done" })],
+        ])("answers none for %s", async (_name, row) => {
+            const { runs } = await build(mockEntityManager({ findOne: [N8nRunEntity, row] }))
 
             await expect(
                 runs.verifyRun({ authorization: `Bearer ${TOKEN}`, expectedRunId: undefined }),
@@ -308,31 +318,38 @@ describe("N8nRunsService", () => {
         const run: N8nRunContext = { runId: RUN_ID, workspaceId: "ws-1", templateKey: "email-daily-report", config: {} }
 
         it("closes the run with the status, the summary and the result n8n reported", async () => {
-            const em = mockEntityManager({ query: [COMPLETE_N8N_RUN, [{ id: RUN_ID }]] })
+            const em = mockEntityManager({ update: [N8nRunEntity, { affected: 1 }] })
             const { runs } = await build(em)
 
             await runs.completeRun(run, { status: "failed", summary: "oops", result: { n: 1 } })
 
-            expect(em.query).toHaveBeenCalledWith(COMPLETE_N8N_RUN, [RUN_ID, "ws-1", "failed", "oops", '{"n":1}'])
+            expect(em.update).toHaveBeenCalledWith(
+                N8nRunEntity,
+                { id: RUN_ID, workspaceId: "ws-1" },
+                { status: "failed", summary: "oops", result: { n: 1 }, finishedAt: anything() },
+            )
         })
 
         it("words the counters when no summary came, and knows an unnamed counter by its key", async () => {
-            const em = mockEntityManager({ query: [COMPLETE_N8N_RUN, [{ id: RUN_ID }]] })
+            const em = mockEntityManager({ update: [N8nRunEntity, { affected: 1 }] })
             const { runs } = await build(em)
 
             await runs.completeRun(run, { result: { counts: { sent: 2, other: 1 } } })
 
-            expect(em.query).toHaveBeenCalledWith(COMPLETE_N8N_RUN, [
-                RUN_ID,
-                "ws-1",
-                "done",
-                "Da gui: 2 · other: 1",
-                '{"counts":{"sent":2,"other":1}}',
-            ])
+            expect(em.update).toHaveBeenCalledWith(
+                N8nRunEntity,
+                { id: RUN_ID, workspaceId: "ws-1" },
+                {
+                    status: "done",
+                    summary: "Da gui: 2 · other: 1",
+                    result: { counts: { sent: 2, other: 1 } },
+                    finishedAt: anything(),
+                },
+            )
         })
 
         it("fails when the run cannot be closed", async () => {
-            const { runs } = await build(mockEntityManager({ query: [COMPLETE_N8N_RUN, []] }))
+            const { runs } = await build(mockEntityManager({ update: [N8nRunEntity, { affected: 0 }] }))
 
             await expect(runs.completeRun(run, {})).rejects.toMatchObject({ code: N8nRunsErrorCode.NotClosed })
         })

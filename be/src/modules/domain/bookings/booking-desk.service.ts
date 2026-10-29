@@ -18,15 +18,9 @@ import type {
     StatusChange,
 } from "./bookings.contracts"
 import { BookingsError, BookingsErrorCode } from "./errors/bookings.error"
-import {
-    CANCEL_BOOKING,
-    CHECK_IN_BOOKING,
-    CONFIRM_BOOKING,
-    FINISH_BOOKING,
-    MARK_NO_SHOW,
-    SELECT_BOOKING_FOR_UPDATE,
-} from "./persistence/booking-write.sql"
-import type { BookingStateRow } from "./persistence/booking.rows"
+import { BookingServiceEntity } from "@modules/domain/booking-services"
+import type { BookingStateFacts } from "./booking-facts.contracts"
+import { BookingEntity } from "./persistence/entities"
 import { checkSlot } from "./policies/availability.policy"
 import type { SlotCheck } from "./policies/availability.policy"
 import {
@@ -39,7 +33,7 @@ import {
     normalisePhone,
     planInputOf,
 } from "./policies/booking-rules.policy"
-import { bookingIsoOf, zonedMs } from "./policies/zoned-time.policy"
+import { zonedMs } from "./policies/zoned-time.policy"
 
 const MINUTE_MS = 60_000
 const DAY_MS = 86_400_000
@@ -176,7 +170,11 @@ export class BookingDeskService {
         return this.entityManager.transaction(async (manager) => {
             const booking = await this.lock(manager, ref)
             if (booking.status !== "requested") return { status: booking.status, feeDue: false }
-            await manager.query(CONFIRM_BOOKING, [ref.workspaceId, ref.id, bookingIsoOf(nowMs)])
+            await manager.update(
+                BookingEntity,
+                { workspaceId: ref.workspaceId, id: ref.id },
+                { status: "confirmed", holdsSlot: true, conflictNote: "", updatedAt: new Date(nowMs) },
+            )
             await this.reminders.schedule({
                 manager,
                 workspaceId: ref.workspaceId,
@@ -195,7 +193,11 @@ export class BookingDeskService {
         const nowMs = this.clock.now().getTime()
         return this.entityManager.transaction(async (manager) => {
             await this.lockActive(manager, ref)
-            await manager.query(CHECK_IN_BOOKING, [ref.workspaceId, ref.id, bookingIsoOf(nowMs)])
+            await manager.update(
+                BookingEntity,
+                { workspaceId: ref.workspaceId, id: ref.id },
+                { checkedInAt: new Date(nowMs), status: "confirmed", updatedAt: new Date(nowMs) },
+            )
             return { status: "confirmed", feeDue: false }
         })
     }
@@ -206,7 +208,18 @@ export class BookingDeskService {
         const nowMs = this.clock.now().getTime()
         return this.entityManager.transaction(async (manager) => {
             await this.lockActive(manager, ref)
-            await manager.query(FINISH_BOOKING, [ref.workspaceId, ref.id, bookingIsoOf(nowMs)])
+            await manager
+                .createQueryBuilder(BookingEntity, "bo")
+                .update()
+                .set({
+                    status: "done",
+                    doneAt: new Date(nowMs),
+                    checkedInAt: () => "COALESCE(checked_in_at, :now)",
+                    updatedAt: new Date(nowMs),
+                })
+                .where({ workspaceId: ref.workspaceId, id: ref.id })
+                .setParameter("now", new Date(nowMs))
+                .execute()
             await this.reminders.cancel(manager, ref.id, "booking_done")
             return { status: "done", feeDue: false }
         })
@@ -219,7 +232,11 @@ export class BookingDeskService {
         const nowMs = this.clock.now().getTime()
         return this.entityManager.transaction(async (manager) => {
             await this.lockActive(manager, ref)
-            await manager.query(MARK_NO_SHOW, [ref.workspaceId, ref.id, bookingIsoOf(nowMs)])
+            await manager.update(
+                BookingEntity,
+                { workspaceId: ref.workspaceId, id: ref.id },
+                { status: "no_show", updatedAt: new Date(nowMs) },
+            )
             await this.reminders.cancel(manager, ref.id, "no_show")
             return { status: "no_show", feeDue: settings.noShowFeeVnd > 0 }
         })
@@ -231,7 +248,7 @@ export class BookingDeskService {
         const nowMs = this.clock.now().getTime()
         return this.entityManager.transaction(async (manager) => {
             await this.lockActive(manager, ref)
-            await manager.query(CANCEL_BOOKING, [ref.workspaceId, ref.id, bookingIsoOf(nowMs), "owner_cancelled"])
+            await this.cancelRow(manager, ref, nowMs, "owner_cancelled")
             await this.reminders.cancel(manager, ref.id, "owner_cancelled")
             return { status: "cancelled", feeDue: false }
         })
@@ -239,14 +256,14 @@ export class BookingDeskService {
 
     /**
      * Cancels a booking the gate let a customer's request through for; a booking that is already closed answers its status and changes
-     * nothing. The fee of a late cancellation and the notice to the customer follow from the status change (booking_status job).
+     * nothing. The fee of a late cancellation and the notice to the customer follow from the status change (the booking_status_changed reactor).
      */
     cancelApproved(ref: BookingRef, reason: string): Promise<StatusChange> {
         const nowMs = this.clock.now().getTime()
         return this.entityManager.transaction(async (manager) => {
             const booking = await this.lock(manager, ref)
             if (!isActiveStatus(booking.status)) return { status: booking.status, feeDue: false }
-            await manager.query(CANCEL_BOOKING, [ref.workspaceId, ref.id, bookingIsoOf(nowMs), reason])
+            await this.cancelRow(manager, ref, nowMs, reason)
             await this.reminders.cancel(manager, ref.id, "customer_cancelled")
             return { status: "cancelled", feeDue: false }
         })
@@ -263,13 +280,40 @@ export class BookingDeskService {
         return fallbackResource(model.resources, service.resourceKind)?.id ?? ""
     }
 
-    private async lock(manager: EntityManager, ref: BookingRef): Promise<BookingStateRow> {
-        const [row] = await manager.query<Array<BookingStateRow>>(SELECT_BOOKING_FOR_UPDATE, [ref.workspaceId, ref.id])
+    private async cancelRow(manager: EntityManager, ref: BookingRef, nowMs: number, reason: string): Promise<void> {
+        await manager.update(
+            BookingEntity,
+            { workspaceId: ref.workspaceId, id: ref.id },
+            {
+                status: "cancelled",
+                holdsSlot: false,
+                cancelledAt: new Date(nowMs),
+                cancelReason: reason,
+                updatedAt: new Date(nowMs),
+            },
+        )
+    }
+
+    private async lock(manager: EntityManager, ref: BookingRef): Promise<BookingStateFacts> {
+        const row = await manager
+            .createQueryBuilder(BookingEntity, "b")
+            .innerJoin(BookingServiceEntity, "s", "s.id = b.serviceId")
+            .select("b.id", "id")
+            .addSelect("b.resourceId", "resource_id")
+            .addSelect("b.partySize", "party_size")
+            .addSelect("b.status", "status")
+            .addSelect("s.durationMin", "duration_min")
+            .addSelect("s.bufferMin", "buffer_min")
+            .addSelect("CAST(extract(epoch FROM b.startAt) * 1000 AS float8)", "start_ms")
+            .where("b.workspaceId = :workspaceId AND b.id = :id", { workspaceId: ref.workspaceId, id: ref.id })
+            .limit(1)
+            .setLock("pessimistic_write", undefined, ["b"])
+            .getRawOne<BookingStateFacts>()
         if (row === undefined) throw new BookingsError({ code: BookingsErrorCode.NotFound })
         return row
     }
 
-    private async lockActive(manager: EntityManager, ref: BookingRef): Promise<BookingStateRow> {
+    private async lockActive(manager: EntityManager, ref: BookingRef): Promise<BookingStateFacts> {
         const row = await this.lock(manager, ref)
         if (!isActiveStatus(row.status)) throw new BookingsError({ code: BookingsErrorCode.NotChangeable })
         return row

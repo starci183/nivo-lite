@@ -9,22 +9,25 @@ import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 import { InjectModulesOptions } from "./modules.decorators"
 import type { ModuleDefinition, ModulesCatalog, ModulesOutput, ModulesSyncReport } from "./modules.contracts"
 import type { ModulesOptions } from "./modules.options"
-import type { ModulesRow } from "./persistence/modules.rows"
-import { LIST_MODULE_KEYS, UPSERT_MODULES } from "./persistence/modules.sql"
+import { ModuleEntity } from "./persistence/entities"
 import { checkCatalog } from "./policies/catalog.policy"
 import { defaultRulesOf } from "./policies/instance.policy"
 
-const toModuleRecord = (module: ModuleDefinition) => ({
+/** How many module rows are read back at once. */
+const MODULES_LIMIT = 500
+
+const toModuleRecord = (module: ModuleDefinition, syncedAt: Date) => ({
     key: module.key,
-    sort_order: module.order,
+    sortOrder: module.order,
     status: module.status,
     category: module.category,
     audience: module.audience,
-    knowledge_folder: module.knowledgeFolder,
+    knowledgeFolder: module.knowledgeFolder,
     workbench: module.workbench,
-    default_operating_mode: module.defaultOperatingMode,
-    multi_instance: module.multiInstance,
+    defaultOperatingMode: module.defaultOperatingMode,
+    multiInstance: module.multiInstance,
     definition: module,
+    updatedAt: syncedAt,
 })
 
 const toActionRecords = (module: ModuleDefinition): ReadonlyArray<AuthorityActionRecord> =>
@@ -75,13 +78,18 @@ export class ModulesService {
                 new ModulesError({ code: ModulesErrorCode.CatalogInvalid, params: { problems: problems.join("; ") } }),
             )
         }
-        const modules = JSON.stringify(this.options.catalog.map(toModuleRecord))
         const actions = this.options.catalog.flatMap(toActionRecords)
         const syncedAt = this.clock.now()
+        const modules = this.options.catalog.map((module) => toModuleRecord(module, syncedAt))
         return this.entityManager.transaction(async (tx) => {
-            const written = await tx.query<Array<Pick<ModulesRow, "key">>>(UPSERT_MODULES, [modules, syncedAt])
+            const upserted = await tx.upsert(ModuleEntity, modules, ["key"])
+            const written = upserted.identifiers.map((identifier) => ({ key: String(identifier.key) }))
             const synced = await this.authorityActions.upsertAll(tx, actions)
-            const held = await tx.query<Array<Pick<ModulesRow, "key">>>(LIST_MODULE_KEYS)
+            const held = await tx.find(ModuleEntity, {
+                select: { key: true },
+                order: { key: "ASC" },
+                take: MODULES_LIMIT,
+            })
             const keys = new Set(written.map((row) => row.key))
             return {
                 modules: written.length,

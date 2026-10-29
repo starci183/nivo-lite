@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { InjectInbox } from "@modules/platform/inbox"
 import type { Inbox } from "@modules/platform/inbox"
 import { Injectable } from "@nestjs/common"
+import { IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { ConnectionsService } from "@modules/domain/connections"
 import { ConversationsService } from "@modules/domain/conversations"
@@ -17,7 +18,8 @@ import { isMetaInboundJob, META_INBOUND_QUEUE, META_DELIVERY_QUEUE } from "./met
 import { InjectMetaEventTaker } from "./meta-inbox.decorators"
 import type { MetaEventTaker } from "./meta-inbox.port"
 import type { DeliverySignature, MetaDeliveryRecorded, MetaInboundJob, RawDelivery } from "./meta-inbox.contracts"
-import { COMPLETE_META_INBOX, FIND_PENDING_META_INBOX, INSERT_META_INBOX } from "./persistence/meta-inbox.sql"
+import { MetaInboxEntity } from "./persistence/entities"
+import { INSERT_META_INBOX } from "./persistence/meta-inbox.sql"
 
 @Injectable()
 /**
@@ -66,13 +68,14 @@ export class MetaInboxService {
     /** Processes the pending receipt after commit; the row lock and completion protect against replay. */
     processRecordedDelivery(message: MetaDeliveryRecorded): Promise<void> {
         return this.entityManager.transaction(async (manager) => {
-            const [pending] = await manager.query<Array<{ readonly id: string; readonly payload: object }>>(
-                FIND_PENDING_META_INBOX,
-                [message.deliveryId],
-            )
-            if (pending === undefined) return
+            const pending = await manager.findOne(MetaInboxEntity, {
+                select: { id: true, payload: true },
+                where: { provider: "meta", deliveryId: message.deliveryId, processedAt: IsNull() },
+                lock: { mode: "pessimistic_write" },
+            })
+            if (pending === null) return
             await this.process(this.receipts.parse(pending.payload), manager)
-            await manager.query(COMPLETE_META_INBOX, [pending.id])
+            await manager.update(MetaInboxEntity, { id: pending.id }, { processedAt: () => "now()" })
         })
     }
 

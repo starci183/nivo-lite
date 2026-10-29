@@ -4,12 +4,12 @@ import { WorkspacesService } from "@modules/domain/workspaces"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { effectsQuery } from "./booking-effects.query"
+import type { EffectsRow } from "./booking-facts.contracts"
 import { BookingModelService } from "./booking-model.service"
 import type { BookingNotice, BookingNoticeKind, BookingNoticeResult, BookingNotifier } from "./booking-notice.contracts"
 import type { BookingSettings } from "./bookings.contracts"
 import { InjectBookingNotifier } from "./bookings.decorators"
-import { SELECT_BOOKING_FOR_NOTICE } from "./persistence/booking-effects.sql"
-import type { EffectsRow } from "./persistence/booking.rows"
 import {
     REMINDER_NEUTRAL,
     cancelledText,
@@ -49,10 +49,7 @@ export class BookingNoticesService {
 
     /** The booking as a notice needs it (not locked), or null when it does not exist in the workspace. */
     async bookingOf(workspaceId: string, bookingId: string): Promise<OptionalBooking> {
-        const [row] = await this.entityManager.query<Array<EffectsRow>>(SELECT_BOOKING_FOR_NOTICE, [
-            workspaceId,
-            bookingId,
-        ])
+        const row = await effectsQuery(this.entityManager, workspaceId, bookingId).getRawOne<EffectsRow>()
         return row ?? null
     }
 

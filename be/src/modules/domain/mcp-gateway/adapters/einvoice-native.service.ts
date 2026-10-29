@@ -1,10 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import type { EntityManager, ObjectLiteral, SelectQueryBuilder } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { McpGatewayError, McpGatewayErrorCode } from "../errors/mcp-gateway.error"
 import type { GatewayJson, NativeAdapter, NativeConnectorManifest } from "../mcp-gateway.contracts"
-import { FIND_INVOICE_MAIL, LIST_INVOICE_MAILS } from "../persistence/einvoice-native.sql"
-import type { InvoiceMailRow } from "../persistence/einvoice-native.rows"
 import {
     EINVOICE_GET_INPUT_SCHEMA,
     EINVOICE_LIST_INPUT_SCHEMA,
@@ -39,6 +37,17 @@ export const EINVOICE_MANIFEST: NativeConnectorManifest = {
             argumentSchema: EinvoiceGetSchema,
         },
     ],
+}
+
+/** The most mails one `einvoice.list` reads. */
+const MAIL_LIMIT = 200
+
+/** One mail record of the IMAP sync with its attachments. */
+interface InvoiceMailRow {
+    /** The data record. */
+    readonly id: string
+    /** The attachments (a JSON array; a small `.xml` attachment keeps its text under `xml`). */
+    readonly attachments: unknown
 }
 
 /** One parsed invoice of a mail, with its id `<record>:<attachment index>`. */
@@ -128,10 +137,14 @@ export class EinvoiceNativeService implements NativeAdapter {
             throw new McpGatewayError({ code: McpGatewayErrorCode.InvalidArguments, params: { tool: "list" } })
         }
         const { since, limit } = parsed.data
-        const rows = await this.entityManager.query<Array<InvoiceMailRow>>(LIST_INVOICE_MAILS, [
-            workspaceId,
-            since ?? null,
-        ])
+        const query = this.mailQuery(workspaceId)
+            .andWhere("jsonb_path_exists(r.data, CAST(:attachmentsPath AS jsonpath))", {
+                attachmentsPath: "$.attachments[*].xml",
+            })
+            .orderBy("r.occurred_at", "DESC", "NULLS LAST")
+            .limit(MAIL_LIMIT)
+        if (since !== undefined) query.andWhere("r.occurred_at >= CAST(:since AS date)", { since })
+        const rows = await query.getRawMany<InvoiceMailRow>()
         return { invoices: rows.flatMap(invoicesOf).slice(0, limit).map(summaryOf) }
     }
 
@@ -142,8 +155,21 @@ export class EinvoiceNativeService implements NativeAdapter {
         }
         const { id } = parsed.data
         const recordId = id.split(":", 1).join("")
-        const rows = await this.entityManager.query<Array<InvoiceMailRow>>(FIND_INVOICE_MAIL, [workspaceId, recordId])
+        const rows = await this.mailQuery(workspaceId)
+            .andWhere("CAST(r.id AS text) = :recordId", { recordId })
+            .limit(1)
+            .getRawMany<InvoiceMailRow>()
         const found = rows.flatMap(invoicesOf).find((entry) => entry.id === id)
         return found === undefined ? { found: false } : detailOf(found)
+    }
+
+    /** The mail records of the workspace, read by table name: the data hub owns the table. */
+    private mailQuery(workspaceId: string): SelectQueryBuilder<ObjectLiteral> {
+        return this.entityManager
+            .createQueryBuilder()
+            .select("r.id", "id")
+            .addSelect("r.data -> 'attachments'", "attachments")
+            .from("public.data_records", "r")
+            .where("r.workspace_id = :workspaceId AND r.entity = 'message'", { workspaceId })
     }
 }

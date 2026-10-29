@@ -3,3 +3,4 @@ export { SepayTransactionsService } from "./sepay-transactions.service"
 export type { ReviewTransaction } from "./sepay-transactions.contracts"
 
 export { SepayReviewService } from "./sepay-review.service"
+export { sepayTransactionsEntities } from "./persistence/entities"

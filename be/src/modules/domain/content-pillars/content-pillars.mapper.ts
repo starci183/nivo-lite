@@ -1,10 +1,10 @@
 import type { ContentPillar, ContentPillarDraft } from "./content-pillars.contracts"
-import type { ContentPillarRow } from "./persistence/content-pillars.rows"
+import type { ContentPillarEntity } from "./persistence/entities"
 
 /** Maps a stored theme. */
-export const toContentPillar = (row: ContentPillarRow): ContentPillar => ({
+export const toContentPillar = (row: ContentPillarEntity): ContentPillar => ({
     id: row.id,
-    workspaceId: row.workspace_id,
+    workspaceId: row.workspaceId,
     name: row.name,
     description: row.description,
     weight: row.weight,

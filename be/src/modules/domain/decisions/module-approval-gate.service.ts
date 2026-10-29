@@ -1,15 +1,12 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import { ApprovalGate } from "@modules/domain/module-ops"
 import type { ApprovalDecision, ModuleApprovalRequest, ModuleApprovalResult } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { Locale } from "@modules/platform/i18n"
 import type { Decider, WorkContext, WorkItem } from "./decisions.contracts"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { proposalOf, subjectTypeOf } from "./module-gate.policy"
-import type { WorkItemViewRow } from "./persistence/work-item-views.rows"
-import { FIND_WORK_ITEM_VIEW } from "./persistence/work-item-views.sql"
+import { WorkItemViewsService } from "./work-item-views.service"
 import { deciderOf } from "./work-decision.policy"
 import { WorkEngineService } from "./work-engine.service"
 
@@ -30,7 +27,7 @@ export class ModuleApprovalGateService extends ApprovalGate {
     constructor(
         private readonly engine: WorkEngineService,
         private readonly members: WorkspaceMembersService,
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly views: WorkItemViewsService,
     ) {
         super()
     }
@@ -68,10 +65,7 @@ export class ModuleApprovalGateService extends ApprovalGate {
     }
 
     private async current(decision: ApprovalDecision): Promise<ModuleApprovalResult> {
-        const [row] = await this.entityManager.query<Array<WorkItemViewRow>>(FIND_WORK_ITEM_VIEW, [
-            decision.workspaceId,
-            decision.workItemId,
-        ])
+        const row = await this.views.find(decision.workspaceId, decision.workItemId)
         if (row === undefined) throw new DecisionsError({ code: DecisionsErrorCode.NotFound })
         return resultOf(row)
     }

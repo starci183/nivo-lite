@@ -1,5 +1,5 @@
 import type { DynamicModule } from "@nestjs/common"
-import { SUPABASE_OBJECTS, SUPABASE_STORAGE } from "@modules/integrations/supabase"
+import { STORAGE_ASSETS, STORAGE_OBJECTS, ObjectStorageModule } from "@modules/integrations/object-storage"
 import type { ApiOptions } from "../api.options"
 import { ContentModule } from "@modules/domain/content"
 import { ContentItemsModule } from "@modules/domain/content-items"
@@ -19,19 +19,20 @@ import { VideoGraphqlModule } from "@features/api/video"
 import { RendersGraphqlModule } from "@features/api/renders"
 /** The content area of the API, in registration order. */
 export const contentModules = (options: ApiOptions): Array<DynamicModule> => [
+    ObjectStorageModule.register({ isGlobal: true, ...options.storage }),
     ContentItemsModule.register({ isGlobal: true }),
     ContentSettingsModule.register({ isGlobal: true }),
     ContentPillarsModule.register({ isGlobal: true }),
     ContentCadenceModule.register({ isGlobal: true }),
     ContentAiModule.register({
         isGlobal: true,
-        assets: SUPABASE_STORAGE,
+        assets: STORAGE_ASSETS,
         fontsDir: options.video.fontsDir,
         workDir: options.video.workDir,
     }),
     ContentPlansModule.register({ isGlobal: true }),
     ContentPublishingModule.register({ isGlobal: true }),
-    ContentMediaModule.register({ isGlobal: true, storage: SUPABASE_OBJECTS }),
+    ContentMediaModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
     ContentGraphqlModule.register({}),
     ContentSettingsGraphqlModule.register({}),
     ContentAiGraphqlModule.register({}),

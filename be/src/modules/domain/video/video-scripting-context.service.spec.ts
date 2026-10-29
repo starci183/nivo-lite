@@ -1,18 +1,18 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { AuthorityService } from "@modules/domain/authority"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import type { FactRecord } from "@modules/domain/brain-facts"
 import { KnowledgeSearchService } from "@modules/domain/knowledge"
 import type { Passage } from "@modules/domain/knowledge"
-import type { VideoScriptingRow } from "./persistence/video-scripting.rows"
-import { READ_SCRIPT_BASE, READ_SCRIPT_SETUP } from "./persistence/video-scripting.sql"
+import type { ScriptProject } from "./video-stored.contracts"
 import { VideoScriptingContextService } from "./video-scripting-context.service"
 import { VIDEO_SCRIPT_GOALS } from "./video-scripting.templates"
 
 const WS = "workspace-1"
 
-const projectOf = builder<VideoScriptingRow>({
+const projectOf = builder<ScriptProject>({
     id: "project-1",
     title: "Spring offer",
     goal: "offer",
@@ -64,12 +64,8 @@ describe("VideoScriptingContextService", () => {
     describe("forProject", () => {
         it("answers nothing when the workspace has no rules, setup, voice, facts or documents", async () => {
             const { context } = await build()
-            const tx = mockEntityManager({
-                query: [
-                    [READ_SCRIPT_SETUP, []],
-                    [READ_SCRIPT_BASE, []],
-                ],
-            })
+            const tx = mockEntityManager()
+            queueQueryBuilders(tx, [{ getRawMany: [] }, { getRawMany: [] }])
 
             await expect(context.forProject(tx, WS, projectOf(), "")).resolves.toBe("")
         })
@@ -87,12 +83,11 @@ describe("VideoScriptingContextService", () => {
                 passageOf(),
                 passageOf({ title: "Costs", content: "secret", visibility: "internal" }),
             ])
-            const tx = mockEntityManager({
-                query: [
-                    [READ_SCRIPT_SETUP, [{ snapshot: { summary: "Sell bread" } }]],
-                    [READ_SCRIPT_BASE, [{ title: "Honesty", body: "Never invent prices" }]],
-                ],
-            })
+            const tx = mockEntityManager()
+            queueQueryBuilders(tx, [
+                { getRawMany: [{ snapshot: { summary: "Sell bread" } }] },
+                { getRawMany: [{ title: "Honesty", body: "Never invent prices" }] },
+            ])
 
             const text = await context.forProject(tx, WS, projectOf(), "Menu source")
 
@@ -117,12 +112,8 @@ describe("VideoScriptingContextService", () => {
 
         it("uses the custom goal for an unknown one", async () => {
             const { context, facts } = await build()
-            const tx = mockEntityManager({
-                query: [
-                    [READ_SCRIPT_SETUP, []],
-                    [READ_SCRIPT_BASE, []],
-                ],
-            })
+            const tx = mockEntityManager()
+            queueQueryBuilders(tx, [{ getRawMany: [] }, { getRawMany: [] }])
 
             await context.forProject(tx, WS, projectOf({ goal: "unknown", inputs: {} }), "")
 

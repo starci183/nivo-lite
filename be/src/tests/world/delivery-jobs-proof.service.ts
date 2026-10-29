@@ -11,8 +11,9 @@ import {
     deliveryClaimBuilder,
 } from "../fixtures/builders/delivery-jobs.builder"
 import type { DeliveryKind } from "../fixtures/builders/delivery-jobs.builder"
-import type { ReceiptRow, WebhookJobRow, WebhookMessageRow } from "../fixtures/persistence/proof.rows"
-import * as statements from "../fixtures/builders/delivery-jobs.sql"
+import type { WebhookJobRow, WebhookMessageRow } from "../fixtures/persistence/proof.rows"
+import * as statements from "./delivery-jobs.sql"
+import { receiptsOf, removeReceipts } from "./receipts-database.service"
 
 /** Owns cleanup while a persisting builder creates the scenario's parent rows. */
 export const persistDeliveryWorkspace = async (world: LiteWorld, workspaceId: string): Promise<void> => {
@@ -40,10 +41,10 @@ export const deliveryIntakeFixture = async (world: LiteWorld, kind: DeliveryKind
     world.cleanup(async () => {
         await world.db.primary.query(statements.CLEAN_MESSAGES, [kind, deliveryId])
         await world.db.primary.query(statements.CLEAN_PUBLICATIONS, [fixture.queue, deliveryId])
-        await world.db.primary.query(statements.CLEAN_RECEIPTS, [kind, deliveryId])
+        await removeReceipts(world.db.primary, kind, deliveryId)
     })
     const state = async () => ({
-        receipts: await world.db.primary.query<Array<ReceiptRow>>(statements.RECEIPTS, [kind, deliveryId]),
+        receipts: await receiptsOf(world.db.primary, kind, deliveryId),
         jobs: await world.db.primary.query<Array<WebhookJobRow>>(statements.PUBLICATIONS, [fixture.queue, deliveryId]),
         messages: await world.db.primary.query<Array<WebhookMessageRow>>(statements.MESSAGES, [kind, deliveryId]),
     })

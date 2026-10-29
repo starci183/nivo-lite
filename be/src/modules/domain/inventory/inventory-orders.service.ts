@@ -1,10 +1,11 @@
 import { Injectable } from "@nestjs/common"
+import { Like } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { ApprovalGate, OfficeLog } from "@modules/domain/module-ops"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InventoryError, InventoryErrorCode } from "./errors/inventory.error"
@@ -19,19 +20,12 @@ import { isIsoDay, uuidOrNull } from "./policies/input-text.policy"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { columnNumber, parseNumber } from "./policies/number-format.policy"
 import { poNumberOf, poNumberPrefix } from "./policies/purchase-order.policy"
-import type { InventoryPoLinesRow, InventoryPurchaseOrdersRow } from "./persistence/inventory.rows"
 import {
-    ADD_PO_LINES,
-    CANCEL_PO,
-    EDIT_PO_DRAFT,
-    INSERT_PO,
-    RECOMPUTE_PO_TOTAL,
-    SELECT_LAST_PO_NO,
-    SELECT_PO,
-    SELECT_PO_LINES,
-    SELECT_PO_STATUS,
-    SELECT_SUPPLIER_LEAD_TIME,
-} from "./persistence/inventory.sql"
+    InventoryItemEntity,
+    InventoryPoLineEntity,
+    InventoryPurchaseOrderEntity,
+    InventorySupplierEntity,
+} from "./persistence/entities"
 
 /** The delivery time assumed when a supplier has none, in days. */
 export const DEFAULT_LEAD_TIME_DAYS = 2
@@ -42,10 +36,18 @@ const PO_NUMBER_ATTEMPTS = 4
 /** Day length in milliseconds. */
 const DAY_MS = 86_400_000
 
-type PoRow = Pick<
-    InventoryPurchaseOrdersRow,
-    "id" | "po_no" | "supplier_id" | "status" | "total_vnd" | "expected_at" | "message" | "reminders"
-> & {
+/** The most lines one order read answers. */
+const PO_LINE_LIMIT = 1000
+
+interface PoRow {
+    readonly id: string
+    readonly po_no: string
+    readonly supplier_id: string | null
+    readonly status: string
+    readonly total_vnd: number | string
+    readonly expected_at: string | null
+    readonly message: string
+    readonly reminders: number
     readonly supplier_name: string | null
     readonly supplier_contact: string | null
     readonly supplier_email: string | null
@@ -53,17 +55,18 @@ type PoRow = Pick<
     readonly supplier_lead_time: number | null
 }
 
-type PoLineRow = Pick<InventoryPoLinesRow, "id" | "item_id" | "qty_ordered" | "qty_received" | "unit_cost_vnd"> & {
+interface PoLineRow {
+    readonly id: string
+    readonly item_id: string
+    readonly qty_ordered: number | string
+    readonly qty_received: number | string
+    readonly unit_cost_vnd: number | string
     readonly item_name: string | null
     readonly item_unit: string | null
 }
 
-interface IdRow {
-    readonly id: string | null
-}
-
-interface SupplierLeadRow {
-    readonly lead_time_days: number
+interface InsertedPoRow {
+    readonly inventory_insert_po: string | null
 }
 
 interface CancelledRow {
@@ -88,9 +91,40 @@ export class InventoryOrdersService {
 
     /** Loads one purchase order with its supplier and lines; a refusal when the workspace has no such order. */
     async loadPo(workspaceId: string, poId: string): Promise<LoadedPo> {
-        const [row] = await this.entityManager.query<Array<PoRow>>(SELECT_PO, [workspaceId, poId])
+        const row = await this.entityManager
+            .createQueryBuilder(InventoryPurchaseOrderEntity, "po")
+            .select("po.id", "id")
+            .addSelect("po.po_no", "po_no")
+            .addSelect("po.supplier_id", "supplier_id")
+            .addSelect("po.status", "status")
+            .addSelect("po.total_vnd", "total_vnd")
+            .addSelect("to_char(po.expected_at, 'YYYY-MM-DD')", "expected_at")
+            .addSelect("po.message", "message")
+            .addSelect("po.reminders", "reminders")
+            .addSelect("supplier.name", "supplier_name")
+            .addSelect("supplier.contact_name", "supplier_contact")
+            .addSelect("supplier.email", "supplier_email")
+            .addSelect("supplier.channel", "supplier_channel")
+            .addSelect("supplier.lead_time_days", "supplier_lead_time")
+            .leftJoin(InventorySupplierEntity, "supplier", "supplier.id = po.supplier_id")
+            .where("po.workspace_id = :workspaceId AND po.id = :poId", { workspaceId, poId })
+            .limit(1)
+            .getRawOne<PoRow>()
         if (row === undefined) throw new InventoryError({ code: InventoryErrorCode.PoNotFound })
-        const lineRows = await this.entityManager.query<Array<PoLineRow>>(SELECT_PO_LINES, [poId])
+        const lineRows = await this.entityManager
+            .createQueryBuilder(InventoryPoLineEntity, "line")
+            .select("line.id", "id")
+            .addSelect("line.item_id", "item_id")
+            .addSelect("line.qty_ordered", "qty_ordered")
+            .addSelect("line.qty_received", "qty_received")
+            .addSelect("line.unit_cost_vnd", "unit_cost_vnd")
+            .addSelect("item.name", "item_name")
+            .addSelect("item.unit", "item_unit")
+            .leftJoin(InventoryItemEntity, "item", "item.id = line.item_id")
+            .where("line.po_id = :poId", { poId })
+            .orderBy("line.id")
+            .limit(PO_LINE_LIMIT)
+            .getRawMany<PoLineRow>()
         const lines: Array<PoLine> = lineRows.map((line) => ({
             id: line.id,
             itemId: line.item_id,
@@ -126,11 +160,11 @@ export class InventoryOrdersService {
 
     /** The delivery time of a supplier in days, or the default when it has none. */
     async leadTimeOf(workspaceId: string, supplierId: string): Promise<number> {
-        const [row] = await this.entityManager.query<Array<SupplierLeadRow>>(SELECT_SUPPLIER_LEAD_TIME, [
-            workspaceId,
-            supplierId,
-        ])
-        return row?.lead_time_days ?? DEFAULT_LEAD_TIME_DAYS
+        const supplier = await this.entityManager.findOne(InventorySupplierEntity, {
+            select: { leadTimeDays: true },
+            where: { workspaceId, id: supplierId },
+        })
+        return supplier?.leadTimeDays ?? DEFAULT_LEAD_TIME_DAYS
     }
 
     /** Creates a draft order with its lines and total in one transaction; a clashing number is retried with the next one. */
@@ -154,17 +188,21 @@ export class InventoryOrdersService {
     ): Promise<string> {
         if (attemptsLeft === 0) throw new InventoryError({ code: InventoryErrorCode.PoNumberUnavailable })
         const prefix = poNumberPrefix(this.clock.now())
-        const [last] = await tx.query<Array<{ po_no: string }>>(SELECT_LAST_PO_NO, [workspaceId, `${prefix}%`])
-        const [made] = await tx.query<Array<IdRow>>(INSERT_PO, [
+        const last = await tx.findOne(InventoryPurchaseOrderEntity, {
+            select: { poNo: true },
+            where: { workspaceId, poNo: Like(`${prefix}%`) },
+            order: { poNo: "DESC" },
+        })
+        const [made] = await callDbFunction<InsertedPoRow>(tx, "public.inventory_insert_po", [
             workspaceId,
-            poNumberOf(prefix, last?.po_no ?? null),
+            poNumberOf(prefix, last?.poNo ?? null),
             input.supplierId,
             expected,
             "",
             input.source,
             input.by,
         ])
-        return made?.id ?? (await this.insertPo(tx, workspaceId, input, expected, attemptsLeft - 1))
+        return made?.inventory_insert_po ?? (await this.insertPo(tx, workspaceId, input, expected, attemptsLeft - 1))
     }
 
     private async writeLines(
@@ -173,14 +211,14 @@ export class InventoryOrdersService {
         poId: string,
         lines: ReadonlyArray<PoLineInput>,
     ): Promise<void> {
-        await tx.query(ADD_PO_LINES, [
+        await callDbFunction(tx, "public.inventory_add_po_lines", [
             workspaceId,
             poId,
             lines.map((line) => line.itemId),
             lines.map((line) => line.qty),
             lines.map((line) => line.unitCost),
         ])
-        await tx.query(RECOMPUTE_PO_TOTAL, [poId])
+        await callDbFunction(tx, "public.inventory_recompute_po_total", [poId])
     }
 
     /** Adds lines to an existing draft and refreshes its total, in one transaction. */
@@ -216,13 +254,13 @@ export class InventoryOrdersService {
     /** Edits a draft order: its supplier, expected day, quantities and prices; a line set to zero is removed. */
     async updatePoDraft(userId: string, workspaceId: string, request: UpdatePoDraftParams): Promise<void> {
         await this.members.require(userId, workspaceId, MANAGER_ROLES)
-        const [po] = await this.entityManager.query<Array<{ id: string; status: string }>>(SELECT_PO_STATUS, [
-            workspaceId,
-            request.poId,
-        ])
-        if (po === undefined) throw new InventoryError({ code: InventoryErrorCode.PoNotFound })
+        const po = await this.entityManager.findOne(InventoryPurchaseOrderEntity, {
+            select: { id: true, status: true },
+            where: { workspaceId, id: request.poId },
+        })
+        if (po === null) throw new InventoryError({ code: InventoryErrorCode.PoNotFound })
         if (po.status !== "draft") throw new InventoryError({ code: InventoryErrorCode.PoNotDraft })
-        await this.entityManager.query(EDIT_PO_DRAFT, [
+        await callDbFunction(this.entityManager, "public.inventory_edit_po_draft", [
             po.id,
             uuidOrNull(request.supplierId),
             isIsoDay(request.expectedAt) ? request.expectedAt : null,
@@ -235,7 +273,10 @@ export class InventoryOrdersService {
     /** Cancels an order that has not been received and closes the decision still waiting for it. */
     async cancelPo(userId: string, workspaceId: string, request: CancelPoParams): Promise<void> {
         const { displayName: actor } = await this.members.require(userId, workspaceId, MANAGER_ROLES)
-        const [row] = await this.entityManager.query<Array<CancelledRow>>(CANCEL_PO, [workspaceId, request.poId])
+        const [row] = await callDbFunction<CancelledRow>(this.entityManager, "public.inventory_cancel_po", [
+            workspaceId,
+            request.poId,
+        ])
         if (row === undefined) throw new InventoryError({ code: InventoryErrorCode.PoNotCancellable })
         if (row.work_item_id !== null) {
             await this.gate.decide({

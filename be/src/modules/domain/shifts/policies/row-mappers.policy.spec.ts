@@ -1,5 +1,12 @@
 import { Test } from "@nestjs/testing"
-import type { ShiftsSettingsRow, ShiftsShiftRow, ShiftsStaffRow } from "../persistence/shifts.rows"
+import {
+    ShiftsAvailabilityEntity,
+    ShiftsCoverageEntity,
+    ShiftsLeaveRequestEntity,
+    ShiftsSettingsEntity,
+    ShiftsShiftEntity,
+    ShiftsStaffEntity,
+} from "../persistence/entities"
 import {
     DEFAULT_SETTINGS,
     priorOf,
@@ -35,42 +42,40 @@ const build = async () => {
     return moduleRef.get<typeof import("./row-mappers.policy")>(SUBJECT)
 }
 
-const staffRow: ShiftsStaffRow = {
+const staffRow = Object.assign(new ShiftsStaffEntity(), {
     id: "staff-1",
     name: "Alex",
-    staff_id: "office-1",
+    staffId: "office-1",
     phone: "0123456789",
-    telegram_chat_id: "telegram-1",
-    zalo_user_id: "zalo-1",
-    position_ids: ["position-1"],
+    telegramChatId: "telegram-1",
+    zaloUserId: "zalo-1",
+    positionIds: ["position-1"],
     skills: ["Latte art"],
-    max_hours_week: "40",
-    max_hours_day: "8",
-    min_rest_hours: "12",
+    maxHoursWeek: "40",
+    maxHoursDay: "8",
+    minRestHours: "12",
     active: true,
-}
+})
 
-const settingsRow: ShiftsSettingsRow = {
-    opening_hours: { 0: { open: "07:00", close: "22:00" }, 6: { open: "09:00", close: "18:00" } },
-    swap_notice_hours: 12,
-    leave_notice_days: 3,
-    remind_minutes: 30,
-    noshow_minutes: 15,
-    overtime_hours_week: "40",
-}
+const settingsRow = Object.assign(new ShiftsSettingsEntity(), {
+    openingHours: { 0: { open: "07:00", close: "22:00" }, 6: { open: "09:00", close: "18:00" } },
+    swapNoticeHours: 12,
+    leaveNoticeDays: 3,
+    remindMinutes: 30,
+    noshowMinutes: 15,
+    overtimeHoursWeek: "40",
+})
 
-const shiftRow: ShiftsShiftRow = {
+const shiftRow = Object.assign(new ShiftsShiftEntity(), {
     id: "shift-1",
-    schedule_id: "schedule-1",
-    shift_date: "2026-10-11",
-    start_time: "08:30:00",
-    end_time: "17:00:00",
-    position_id: "position-1",
-    staff_id: "staff-1",
+    scheduleId: "schedule-1",
+    shiftDate: "2026-10-11",
+    startTime: "08:30:00",
+    endTime: "17:00:00",
+    positionId: "position-1",
+    staffId: "staff-1",
     status: "published",
-    schedule_status: "published",
-    week_start: "2026-10-05",
-}
+})
 
 describe("row mappers", () => {
     it("keeps a position color and supplies the default for empty color", async () => {
@@ -109,8 +114,8 @@ describe("row mappers", () => {
     })
 
     it.each([
-        { max_hours_week: 0, max_hours_day: "unreadable", min_rest_hours: -1 },
-        { max_hours_week: "unreadable", max_hours_day: 0, min_rest_hours: "unreadable" },
+        { maxHoursWeek: 0, maxHoursDay: "unreadable", minRestHours: -1 },
+        { maxHoursWeek: "unreadable", maxHoursDay: 0, minRestHours: "unreadable" },
     ])("uses default limits for zero or unreadable hours and invalid rest %p", async (limits) => {
         const subject = await build()
 
@@ -119,10 +124,10 @@ describe("row mappers", () => {
                 {
                     ...staffRow,
                     ...limits,
-                    staff_id: null,
+                    staffId: null,
                     phone: null,
-                    telegram_chat_id: null,
-                    zalo_user_id: null,
+                    telegramChatId: null,
+                    zaloUserId: null,
                     active: false,
                 },
                 0,
@@ -149,7 +154,7 @@ describe("row mappers", () => {
     it("allows a zero rest limit", async () => {
         const subject = await build()
 
-        expect(subject.toStaff({ ...staffRow, min_rest_hours: 0 }, 0)).toEqual({
+        expect(subject.toStaff({ ...staffRow, minRestHours: 0 }, 0)).toEqual({
             id: "staff-1",
             name: "Alex",
             staffRowId: "office-1",
@@ -170,16 +175,18 @@ describe("row mappers", () => {
         const subject = await build()
 
         expect(
-            subject.toBlock({
-                id: "block-1",
-                weekday: 2,
-                start_time: "08:30:00",
-                end_time: "12:00:00",
-                position_id: "position-1",
-                min_staff: 2,
-                ideal_staff: 3,
-                is_peak: true,
-            }),
+            subject.toBlock(
+                Object.assign(new ShiftsCoverageEntity(), {
+                    id: "block-1",
+                    weekday: 2,
+                    startTime: "08:30:00",
+                    endTime: "12:00:00",
+                    positionId: "position-1",
+                    minStaff: 2,
+                    idealStaff: 3,
+                    isPeak: true,
+                }),
+            ),
         ).toEqual({
             id: "block-1",
             weekday: 2,
@@ -224,10 +231,10 @@ describe("row mappers", () => {
 })
 
 describe("row mappers", () => {
-    it.each([undefined, null, [], "invalid", 1])("ignores non-record opening hours %p", async (opening_hours) => {
+    it.each([undefined, null, [], "invalid", 1])("ignores non-record opening hours %p", async (openingHours) => {
         const subject = await build()
 
-        expect(subject.toSettings({ ...settingsRow, opening_hours, overtime_hours_week: 0 })).toEqual({
+        expect(subject.toSettings({ ...settingsRow, openingHours, overtimeHoursWeek: 0 })).toEqual({
             openingHours: [],
             swapNoticeHours: 12,
             leaveNoticeDays: 3,
@@ -243,7 +250,7 @@ describe("row mappers", () => {
         expect(
             subject.toSettings({
                 ...settingsRow,
-                opening_hours: {
+                openingHours: {
                     0: null,
                     1: [],
                     2: { open: 7, close: "22:00" },
@@ -252,7 +259,7 @@ describe("row mappers", () => {
                     5: { open: "07:00" },
                     6: { open: "09:00", close: "18:00" },
                 },
-                overtime_hours_week: "invalid",
+                overtimeHoursWeek: "invalid",
             }),
         ).toEqual({
             openingHours: [{ weekday: 6, open: "09:00", close: "18:00" }],
@@ -268,14 +275,16 @@ describe("row mappers", () => {
         const subject = await build()
 
         expect(
-            subject.toAvail({
-                staff_id: "staff-1",
-                weekday: null,
-                shift_date: "2026-10-12",
-                start_time: "09:00:00",
-                end_time: "15:00:00",
-                available: false,
-            }),
+            subject.toAvail(
+                Object.assign(new ShiftsAvailabilityEntity(), {
+                    staffId: "staff-1",
+                    weekday: null,
+                    shiftDate: "2026-10-12",
+                    startTime: "09:00:00",
+                    endTime: "15:00:00",
+                    available: false,
+                }),
+            ),
         ).toEqual({
             staffId: "staff-1",
             weekday: null,
@@ -292,14 +301,16 @@ describe("row mappers", () => {
         const subject = await build()
 
         expect(
-            subject.toLeave({
-                id: "leave-1",
-                staff_id: "staff-1",
-                from_date: "2026-10-12",
-                to_date: "2026-10-14",
-                reason: "Holiday",
-                status: "approved",
-            }),
+            subject.toLeave(
+                Object.assign(new ShiftsLeaveRequestEntity(), {
+                    id: "leave-1",
+                    staffId: "staff-1",
+                    fromDate: "2026-10-12",
+                    toDate: "2026-10-14",
+                    reason: "Holiday",
+                    status: "approved",
+                }),
+            ),
         ).toEqual({
             staffId: "staff-1",
             from: "2026-10-12",
@@ -329,10 +340,10 @@ describe("row mappers", () => {
         expect(subject.priorOf([])).toEqual(new Map())
         expect(
             subject.priorOf([
-                { ...shiftRow, staff_id: null },
+                { ...shiftRow, staffId: null },
                 shiftRow,
-                { ...shiftRow, id: "shift-2", start_time: "18:00:00", end_time: "21:00:00" },
-                { ...shiftRow, id: "shift-3", staff_id: "staff-2" },
+                { ...shiftRow, id: "shift-2", startTime: "18:00:00", endTime: "21:00:00" },
+                { ...shiftRow, id: "shift-3", staffId: "staff-2" },
             ]),
         ).toEqual(
             new Map([

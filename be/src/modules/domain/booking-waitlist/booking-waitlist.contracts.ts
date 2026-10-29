@@ -21,3 +21,9 @@ export interface WaitlistEntry {
     /** What the customer added. */
     readonly note: string
 }
+
+/** An owned waitlist entry whose status changed. */
+export interface BookingWaitlistSaved {
+    /** The waitlist entry id. */
+    readonly id: string
+}

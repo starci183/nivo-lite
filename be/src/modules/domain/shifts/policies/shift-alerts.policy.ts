@@ -1,5 +1,5 @@
 import type { Shift, WallClock } from "../shifts.contracts"
-import type { AlertShiftRow } from "../persistence/shifts-alerts.rows"
+import type { AlertShiftRead } from "../persistence/shifts-alerts.reads"
 import { DEFAULT_SETTINGS } from "./row-mappers.policy"
 import { hhmm, instantOf, previousMonth, toMin } from "./time.policy"
 
@@ -44,7 +44,7 @@ export const alertMinutesOf = (
 })
 
 /** A shift row with its flags. */
-export const toAlertShift = (row: AlertShiftRow): AlertShift => ({
+export const toAlertShift = (row: AlertShiftRead): AlertShift => ({
     shift: {
         id: row.id,
         date: row.shift_date,

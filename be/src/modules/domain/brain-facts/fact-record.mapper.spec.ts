@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
-import type { BrainFactRow } from "./persistence/brain-facts.rows"
 import { isoOf, toFactRecord } from "./fact-record.mapper"
+import type { StoredFact } from "./fact-record.mapper"
 const SUBJECT = Symbol("fact-record.mapper")
 
 const build = async () => {
@@ -10,34 +10,33 @@ const build = async () => {
     return moduleRef.get<typeof import("./fact-record.mapper")>(SUBJECT)
 }
 
-const row = (overrides: Partial<BrainFactRow> = {}): BrainFactRow => ({
+const row = (overrides: Partial<StoredFact> = {}): StoredFact => ({
     id: "f1",
-    workspace_id: "w1",
-    subject_type: "product",
-    subject_key: "combo",
-    subject_label: "Combo",
+    subjectType: "product",
+    subjectKey: "combo",
+    subjectLabel: "Combo",
     attribute: "price",
-    attribute_label: "Price",
+    attributeLabel: "Price",
     value: "650000 VND",
-    value_number: "650000",
+    valueNumber: "650000",
     unit: "VND",
     scope: "restricted",
     modules: ["chatbot"],
-    installation_id: "i1",
+    installationId: "i1",
     status: "active",
-    source_kind: "owner",
+    sourceKind: "owner",
     trust: 95,
-    valid_from: new Date("2026-01-01T00:00:00.000Z"),
-    valid_to: "2027-01-01T00:00:00.000Z",
-    supersedes_id: "f0",
-    conflict_with: "f2",
-    proposal_kind: "retire",
+    validFrom: new Date("2026-01-01T00:00:00.000Z"),
+    validTo: "2027-01-01T00:00:00.000Z",
+    supersedesId: "f0",
+    conflictWith: "f2",
+    proposalKind: "retire",
     evidence: [{ kind: "manual", ref: "m1", label: "Owner" }],
-    proposed_by: "u1",
-    proposed_at: new Date("2025-12-01T00:00:00.000Z"),
-    decided_by: "u2",
-    decided_at: "2025-12-02T00:00:00.000Z",
-    decision_note: "Approved",
+    proposedBy: "u1",
+    proposedAt: new Date("2025-12-01T00:00:00.000Z"),
+    decidedBy: "u2",
+    decidedAt: "2025-12-02T00:00:00.000Z",
+    decisionNote: "Approved",
     ...overrides,
 })
 
@@ -90,20 +89,20 @@ describe("fact records", () => {
         expect(
             subject.toFactRecord(
                 row({
-                    value_number: null,
+                    valueNumber: null,
                     unit: null,
                     modules: null,
-                    installation_id: null,
-                    valid_from: null,
-                    valid_to: null,
-                    supersedes_id: null,
-                    conflict_with: null,
-                    proposal_kind: null,
+                    installationId: null,
+                    validFrom: null,
+                    validTo: null,
+                    supersedesId: null,
+                    conflictWith: null,
+                    proposalKind: null,
                     evidence: null,
-                    proposed_at: "2025-12-01T00:00:00.000Z",
-                    decided_by: null,
-                    decided_at: null,
-                    decision_note: null,
+                    proposedAt: "2025-12-01T00:00:00.000Z",
+                    decidedBy: null,
+                    decidedAt: null,
+                    decisionNote: null,
                 }),
             ),
         ).toEqual({

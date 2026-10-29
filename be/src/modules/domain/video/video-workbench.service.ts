@@ -12,13 +12,13 @@ import type {
     VideoWorkbenchScope,
 } from "./video-workbench.contracts"
 import type { BrandKit } from "./video-script.policy"
-import type { WorkbenchBrandRow, WorkbenchProjectRow, VideoSourceRow } from "./persistence/video-workbench.rows"
+import type { StoredProject } from "./video-stored.contracts"
 import {
-    LIST_WORKBENCH_PROJECTS,
-    LIST_VIDEO_SOURCES,
-    READ_VIDEO_FIGURES,
-    READ_WORKBENCH_BRAND,
-} from "./persistence/video-workbench.sql"
+    listVideoSources,
+    listWorkbenchProjects,
+    readVideoFigures,
+    readWorkbenchBrand,
+} from "./persistence/video-workbench.query"
 import { workbenchProjectOf } from "./video-workbench.policy"
 
 @Injectable()
@@ -43,22 +43,14 @@ export class VideoWorkbenchService {
         includeArchived: boolean = false,
     ): Promise<ReadonlyArray<WorkbenchProject>> {
         await this.members.require(principalId, workspaceId)
-        const rows = await this.entityManager.query<Array<WorkbenchProjectRow>>(LIST_WORKBENCH_PROJECTS, [
-            workspaceId,
-            null,
-            includeArchived,
-        ])
+        const rows = await listWorkbenchProjects(this.entityManager, workspaceId, null, includeArchived)
         return Promise.all(rows.map((row) => this.view(row, workspaceId)))
     }
 
     /** One selected project in the authenticated workspace. */
     async get(principalId: string, workspaceId: string, projectId: string): Promise<WorkbenchProject> {
         await this.members.require(principalId, workspaceId)
-        const [row] = await this.entityManager.query<Array<WorkbenchProjectRow>>(LIST_WORKBENCH_PROJECTS, [
-            workspaceId,
-            projectId,
-            true,
-        ])
+        const [row] = await listWorkbenchProjects(this.entityManager, workspaceId, projectId, true)
         if (row === undefined) throw new VideoError({ code: VideoErrorCode.ProjectNotFound, params: { projectId } })
         return this.view(row, workspaceId)
     }
@@ -73,7 +65,7 @@ export class VideoWorkbenchService {
     /** The brand defaults to the workspace name until a manager saves it. */
     async brand(principalId: string, workspaceId: string): Promise<BrandKit> {
         await this.members.require(principalId, workspaceId)
-        const [row] = await this.entityManager.query<Array<WorkbenchBrandRow>>(READ_WORKBENCH_BRAND, [workspaceId])
+        const row = await readWorkbenchBrand(this.entityManager, workspaceId)
         if (row === undefined)
             throw new VideoError({ code: VideoErrorCode.ProjectNotFound, params: { projectId: workspaceId } })
         return {
@@ -89,18 +81,18 @@ export class VideoWorkbenchService {
     /** Only shared, public and readable video knowledge enters this source picker. */
     async sources(principalId: string, workspaceId: string): Promise<ReadonlyArray<VideoSourceChoice>> {
         await this.members.require(principalId, workspaceId)
-        return this.entityManager.query<Array<VideoSourceRow>>(LIST_VIDEO_SOURCES, [workspaceId])
+        return listVideoSources(this.entityManager, workspaceId)
     }
 
     /** Current status counts and credits used in the last thirty days. */
     async figures(principalId: string, workspaceId: string): Promise<WorkbenchFigures> {
         await this.members.require(principalId, workspaceId)
-        const [row] = await this.entityManager.query<Array<WorkbenchFigures>>(READ_VIDEO_FIGURES, [workspaceId])
+        const row = await readVideoFigures(this.entityManager, workspaceId)
         if (row === undefined) throw new VideoError({ code: VideoErrorCode.InputInvalid })
         return row
     }
 
-    private async view(row: WorkbenchProjectRow, workspaceId: string): Promise<WorkbenchProject> {
+    private async view(row: StoredProject, workspaceId: string): Promise<WorkbenchProject> {
         return workbenchProjectOf(row, workspaceId, await this.media.render(row.render, workspaceId, row.title))
     }
 }

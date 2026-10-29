@@ -1,11 +1,11 @@
 import type { GenMessage } from "@modules/domain/ai-generations"
-import type { VideoScriptSourceRow, VideoScriptingRow } from "./persistence/video-scripting.rows"
+import type { ScriptSource, ScriptProject } from "./video-stored.contracts"
 import { videoInputsOf } from "./video-workbench.policy"
 import { VIDEO_SCRIPT_GOALS, VIDEO_SCRIPT_SYSTEM } from "./video-scripting.templates"
 import { videoScriptRoleAt } from "./video-scripting.policy"
 
 /** Bounded public document text, preserving the source title. */
-export const videoScriptSourcesText = (sources: ReadonlyArray<VideoScriptSourceRow>): string => {
+export const videoScriptSourcesText = (sources: ReadonlyArray<ScriptSource>): string => {
     let remaining = 5200
     const selected: Array<string> = []
     for (const source of sources) {
@@ -25,7 +25,7 @@ export const videoScriptSourcesText = (sources: ReadonlyArray<VideoScriptSourceR
 
 /** Builds a short Vietnamese marketing prompt entirely from public business knowledge. */
 export const videoScriptMessages = (
-    project: VideoScriptingRow,
+    project: ScriptProject,
     workspaceId: string,
     sources: string,
     publicFacts: string,

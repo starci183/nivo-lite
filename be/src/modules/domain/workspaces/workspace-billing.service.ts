@@ -5,14 +5,7 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { extendedPaidUntil } from "./billing.policy"
 import { WorkspacesError, WorkspacesErrorCode } from "./errors/workspaces.error"
-import type { BillingRow, PlanRow } from "./persistence/workspace-billing.rows"
-import {
-    FIND_ACTIVE_PLAN,
-    FIND_BILLING,
-    UPDATE_PAID_UNTIL,
-    UPDATE_PLAN,
-    UPDATE_STATUS,
-} from "./persistence/workspace-billing.sql"
+import { WorkspaceEntity } from "./persistence/entities"
 import type { BillingChange, SupportStatus } from "./workspaces.contracts"
 
 @Injectable()
@@ -26,31 +19,43 @@ export class WorkspaceBillingService {
     /** Adds `days` to the subscription, counted from today when it already lapsed. */
     async extend(workspaceId: string, days: number): Promise<BillingChange> {
         const before = await this.billingOf(workspaceId)
-        const current = before.paid_until === null ? null : new Date(before.paid_until)
-        const paidUntil = extendedPaidUntil(current, this.clock.now(), days).toISOString()
-        await this.entityManager.query(UPDATE_PAID_UNTIL, [workspaceId, paidUntil])
-        return { from: current?.toISOString() ?? null, to: paidUntil }
+        const paidUntil = extendedPaidUntil(before.paidUntil, this.clock.now(), days)
+        await this.entityManager.update(WorkspaceEntity, { id: workspaceId }, { paidUntil })
+        return { from: before.paidUntil?.toISOString() ?? null, to: paidUntil.toISOString() }
     }
 
     /** Marks the workspace active or past due; billing status only. */
     async setStatus(workspaceId: string, status: SupportStatus): Promise<BillingChange> {
         const before = await this.billingOf(workspaceId)
-        await this.entityManager.query(UPDATE_STATUS, [workspaceId, status])
+        await this.entityManager.update(WorkspaceEntity, { id: workspaceId }, { status })
         return { from: before.status, to: status }
     }
 
     /** Moves the workspace to an active plan; paid-until is untouched, extending handles the period. */
     async setPlan(workspaceId: string, planCode: string): Promise<BillingChange> {
-        const [plan] = await this.entityManager.query<Array<PlanRow>>(FIND_ACTIVE_PLAN, [planCode])
+        const plan = await this.entityManager
+            .createQueryBuilder()
+            .select("p.code", "code")
+            .from("plans", "p")
+            .where("p.code = :planCode AND p.active = true", { planCode })
+            .limit(1)
+            .getRawOne<{ readonly code: string }>()
         if (plan === undefined) throw new WorkspacesError({ code: WorkspacesErrorCode.PlanUnknown })
         const before = await this.billingOf(workspaceId)
-        await this.entityManager.query(UPDATE_PLAN, [workspaceId, plan.code])
-        return { from: before.plan_code, to: plan.code }
+        await this.entityManager.update(
+            WorkspaceEntity,
+            { id: workspaceId },
+            { planCode: plan.code, tierCredits: null, seatCount: null },
+        )
+        return { from: before.planCode, to: plan.code }
     }
 
-    private async billingOf(workspaceId: string): Promise<BillingRow> {
-        const [row] = await this.entityManager.query<Array<BillingRow>>(FIND_BILLING, [workspaceId])
-        if (row === undefined) throw new WorkspacesError({ code: WorkspacesErrorCode.NotFound })
+    private async billingOf(workspaceId: string): Promise<WorkspaceEntity> {
+        const row = await this.entityManager.findOne(WorkspaceEntity, {
+            select: { paidUntil: true, status: true, planCode: true },
+            where: { id: workspaceId },
+        })
+        if (row === null) throw new WorkspacesError({ code: WorkspacesErrorCode.NotFound })
         return row
     }
 }

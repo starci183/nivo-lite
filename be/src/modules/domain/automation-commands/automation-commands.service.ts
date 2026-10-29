@@ -4,9 +4,8 @@ import { AutomationsError, AutomationsService } from "@modules/domain/automation
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { CommandRow } from "./automation-commands.contracts"
 import { commandIdOf } from "./policies/command.policy"
-import { SELECT_QUEUED_COMMAND, SETTLE_COMMAND } from "./persistence/automation-commands.sql"
+import { AutomationCommandEntity } from "./persistence/entities"
 
 @Injectable()
 /**
@@ -25,22 +24,24 @@ export class AutomationCommandsService {
     async execute(payload: unknown): Promise<void> {
         const id = commandIdOf(payload)
         if (id === null) return
-        const [row] = await this.entityManager.query<Array<CommandRow>>(SELECT_QUEUED_COMMAND, [id])
-        if (row === undefined) return
+        const command = await this.entityManager.findOne(AutomationCommandEntity, {
+            where: { id, status: "queued" },
+        })
+        if (command === null) return
         try {
-            await this.settle(row.id, "done", await this.run(row), null)
+            await this.settle(command.id, "done", await this.run(command), null)
         } catch (error) {
             if (!(error instanceof AutomationsError)) throw error
-            await this.settle(row.id, "failed", null, error.code)
+            await this.settle(command.id, "failed", null, error.code)
         }
     }
 
-    private async run(row: CommandRow): Promise<object> {
+    private async run(row: AutomationCommandEntity): Promise<object> {
         if (row.kind === "run_now") {
-            await this.automations.runNow(row.created_by, row.workspace_id, row.template_key)
+            await this.automations.runNow(row.createdBy, row.workspaceId, row.templateKey)
             return {}
         }
-        const proposal = await this.automations.proposeBody(row.created_by, row.workspace_id, row.template_key)
+        const proposal = await this.automations.proposeBody(row.createdBy, row.workspaceId, row.templateKey)
         return { body: proposal.body, generated: proposal.generated }
     }
 
@@ -50,12 +51,10 @@ export class AutomationCommandsService {
         result: object | null,
         fault: string | null,
     ): Promise<void> {
-        await this.entityManager.query(SETTLE_COMMAND, [
-            id,
-            status,
-            result === null ? null : JSON.stringify(result),
-            fault,
-            this.clock.now(),
-        ])
+        await this.entityManager.update(
+            AutomationCommandEntity,
+            { id, status: "queued" },
+            { status, result, faultCode: fault, finishedAt: this.clock.now() },
+        )
     }
 }

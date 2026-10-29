@@ -9,6 +9,8 @@ export enum VideoRendersErrorCode {
     NotWritten = "VIDEO_RENDERS_NOT_WRITTEN",
     /** The workspace already has the most renders it may have waiting or running. */
     TooMany = "VIDEO_RENDERS_TOO_MANY",
+    /** The text of a spec or script meant to be JSON is not JSON. */
+    JsonUnreadable = "VIDEO_RENDERS_JSON_UNREADABLE",
 }
 
 /** How each video-renders code travels. */
@@ -16,6 +18,7 @@ export const VIDEO_RENDERS_ERROR_KINDS: Record<VideoRendersErrorCode, ErrorKind>
     [VideoRendersErrorCode.NotFound]: "not-found",
     [VideoRendersErrorCode.NotWritten]: "internal",
     [VideoRendersErrorCode.TooMany]: "conflict",
+    [VideoRendersErrorCode.JsonUnreadable]: "internal",
 }
 
 /** The one error class of the video-renders capability. */

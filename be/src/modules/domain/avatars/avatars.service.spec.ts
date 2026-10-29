@@ -4,23 +4,24 @@ import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AgentIdentityService } from "@modules/domain/agents"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { SupabaseObjectsPort } from "@modules/integrations/supabase"
+import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import type { AvatarAccounts } from "./avatars.contracts"
 import { AVATARS_ACCOUNTS, AVATARS_STORAGE } from "./avatars.decorators"
 import { AvatarsService } from "./avatars.service"
 import { AvatarsErrorCode } from "./errors/avatars.error"
-import { NEW_AVATAR_OBJECT_ID } from "./persistence/avatars.sql"
 
+/** The statement `callDbFunction` sends to allocate a picture object name. */
+const NEW_AVATAR_OBJECT_ID = "SELECT * FROM gen_random_uuid()"
 const ID = "0f8fad5b-d9cb-469f-a165-70867728950e"
 const PUBLIC_BASE = "https://s.test/storage/v1/object/public/avatars_public"
 const PNG = { contentType: "image/png", sizeBytes: 4096 }
 
 const build = async (
-    entityManager: MockEntityManager = mockEntityManager({ query: [NEW_AVATAR_OBJECT_ID, [{ id: ID }]] }),
+    entityManager: MockEntityManager = mockEntityManager({ query: [NEW_AVATAR_OBJECT_ID, [{ gen_random_uuid: ID }]] }),
 ) => {
-    const storage = mock<SupabaseObjectsPort>()
+    const storage = mock<StorageObjectsPort>()
     storage.signedUpload.mockImplementation((_bucket, path) =>
         Promise.resolve(ok({ path, token: "t", signedUrl: `https://s.test/upload/${path}` })),
     )
@@ -70,7 +71,7 @@ describe("AvatarsService > uploads", () => {
     })
 
     it("refuses a picture of another type or size before allocating anything", async () => {
-        const em = mockEntityManager({ query: [NEW_AVATAR_OBJECT_ID, [{ id: ID }]] })
+        const em = mockEntityManager({ query: [NEW_AVATAR_OBJECT_ID, [{ gen_random_uuid: ID }]] })
         const { service, storage } = await build(em)
 
         await expect(service.requestPersonUpload({ contentType: "image/gif", sizeBytes: 10 })).rejects.toMatchObject({
@@ -87,7 +88,7 @@ describe("AvatarsService > uploads", () => {
         })
 
         const down = await build()
-        down.storage.signedUpload.mockResolvedValueOnce(refused("SUPABASE_PROVIDER_UNAVAILABLE"))
+        down.storage.signedUpload.mockResolvedValueOnce(refused("OBJECT_STORAGE_UNAVAILABLE"))
         await expect(down.service.requestPersonUpload(PNG)).rejects.toMatchObject({
             code: AvatarsErrorCode.Unavailable,
         })
@@ -129,7 +130,7 @@ describe("AvatarsService > a person's picture", () => {
 
     it("reports the account unavailable when Auth refuses the change", async () => {
         const { service, accounts } = await build()
-        accounts.setUploadedAvatar.mockResolvedValue(refused("SUPABASE_ACCOUNT_NOT_FOUND"))
+        accounts.setUploadedAvatar.mockResolvedValue(refused("IDENTITY_ACCOUNT_NOT_FOUND"))
 
         await expect(service.setPersonAvatar("u1", null)).rejects.toMatchObject({ code: AvatarsErrorCode.Unavailable })
     })

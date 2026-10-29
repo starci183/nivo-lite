@@ -1,10 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import { MoreThanOrEqual } from "typeorm"
+import type { EntityManager, FindOptionsWhere } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { EmailRecord, OptionalVia } from "./email-messages.contracts"
 import { EmailMessagesError, EmailMessagesErrorCode } from "./errors/email-messages.error"
-import type { EmailCountRow, EmailMessageIdRow } from "./persistence/email-messages.rows"
-import { COUNT_SENT_EMAILS, FIND_WAITING_EMAIL, INSERT_EMAIL_MESSAGE } from "./persistence/email-messages.sql"
+import { EmailMessageEntity } from "./persistence/entities"
+import type { EmailMessageRefs } from "./persistence/entities"
 
 @Injectable()
 /** The log of every email attempt of a workspace: the only writer of public.email_messages. */
@@ -13,38 +14,44 @@ export class EmailMessagesService {
 
     /** Writes down one send attempt and answers its id. */
     async record(entry: EmailRecord): Promise<string> {
-        const [row] = await this.entityManager.query<Array<EmailMessageIdRow>>(INSERT_EMAIL_MESSAGE, [
-            entry.workspaceId,
-            entry.connectionId,
-            entry.to,
-            entry.subject,
-            entry.purpose,
-            entry.status,
-            entry.via,
-            entry.providerMessageId,
-            entry.error,
-            JSON.stringify(entry.refs),
-        ])
-        if (row === undefined) throw new EmailMessagesError({ code: EmailMessagesErrorCode.NotRecorded })
-        return row.id
+        const result = await this.entityManager.insert(EmailMessageEntity, {
+            workspaceId: entry.workspaceId,
+            connectionId: entry.connectionId,
+            toAddress: entry.to.slice(0, 254),
+            subject: entry.subject.slice(0, 300),
+            purpose: entry.purpose.slice(0, 60),
+            status: entry.status,
+            via: entry.via,
+            providerMessageId: entry.providerMessageId,
+            error: entry.error === null ? null : entry.error.slice(0, 600),
+            refs: { ...entry.refs } as EmailMessageRefs,
+        })
+        const id = (result.identifiers[0] as { readonly id?: string } | undefined)?.id
+        if (id === undefined) throw new EmailMessagesError({ code: EmailMessagesErrorCode.NotRecorded })
+        return id
     }
 
     /** How many messages the workspace sent since a time, optionally only through one sender. */
-    async sentSince(workspaceId: string, since: Date, via: OptionalVia): Promise<number> {
-        const [row] = await this.entityManager.query<Array<EmailCountRow>>(COUNT_SENT_EMAILS, [
+    sentSince(workspaceId: string, since: Date, via: OptionalVia): Promise<number> {
+        const where: FindOptionsWhere<EmailMessageEntity> = {
             workspaceId,
-            since.toISOString(),
-            via,
-        ])
-        return row?.n ?? 0
+            status: "sent",
+            createdAt: MoreThanOrEqual(since),
+        }
+        if (via !== null) where.via = via
+        return this.entityManager.count(EmailMessageEntity, { where })
     }
 
     /** True when a customer email waiting for the decision on this work item is already written down. */
     async isWaitingFor(workspaceId: string, workItemId: string): Promise<boolean> {
-        const rows = await this.entityManager.query<Array<EmailMessageIdRow>>(FIND_WAITING_EMAIL, [
-            workspaceId,
-            workItemId,
-        ])
-        return rows.length > 0
+        const row = await this.entityManager
+            .createQueryBuilder(EmailMessageEntity, "email")
+            .select("email.id")
+            .where("email.workspaceId = :workspaceId", { workspaceId })
+            .andWhere("email.status = 'waiting_decision'")
+            .andWhere("email.refs ->> 'work_item_id' = :workItemId", { workItemId })
+            .limit(1)
+            .getOne()
+        return row !== null
     }
 }

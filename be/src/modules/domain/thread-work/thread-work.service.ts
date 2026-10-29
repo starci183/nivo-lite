@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { ModuleCatalogService, WorkDrainService, WorkEngineService } from "@modules/domain/decisions"
 import { ThreadApprovalsService, ThreadMessagesService } from "@modules/domain/thread-messages"
@@ -10,25 +10,23 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { ThreadWorkError, ThreadWorkErrorCode } from "./errors/thread-work.error"
-import type {
-    DeciderRow,
-    SettledAskRow,
-    ThreadWorkRow,
-    WorkAgentRow,
-    WorkLeadRow,
-} from "./persistence/thread-work.rows"
-import {
-    FIND_DECIDER,
-    FIND_SETTLED_ASK,
-    FIND_WAITING_FOR_MEMBER,
-    FIND_WORK_AGENT,
-    FIND_WORK_LEAD,
-    LIST_SETTLED_ASKS,
-} from "./persistence/thread-work.sql"
+import { ThreadWorkEntity } from "./persistence/entities"
 import { ThreadWorkLogEvent } from "./thread-work.log-events"
+import { toThreadWorkRecord } from "./thread-work.mapper"
 import { deciderOf, replyEdits, seedOf, workAgentOf } from "./thread-work.policy"
 import { ThreadWorkTurnsService } from "./thread-work-turns.service"
-import type { MemberDecider, MemberReply, ThreadWorkStart, ThreadWorkTick, WorkAgent } from "./thread-work.contracts"
+import type {
+    DeciderRecord,
+    MemberDecider,
+    MemberReply,
+    SettledAskRecord,
+    ThreadWorkRecord,
+    ThreadWorkStart,
+    ThreadWorkTick,
+    WorkAgent,
+    WorkAgentRecord,
+    WorkLeadRecord,
+} from "./thread-work.contracts"
 
 /** The most settled approvals one tick moves on. */
 const SETTLED_BATCH = 20
@@ -93,10 +91,16 @@ export class ThreadWorkService {
         if (entry?.moduleKey !== agent.module) {
             throw new ThreadWorkError({ code: ThreadWorkErrorCode.ActionNotOfAgent })
         }
-        const [lead] = await this.entityManager.query<Array<WorkLeadRow>>(FIND_WORK_LEAD, [
-            input.workspaceId,
-            input.task.leadId,
-        ])
+        const lead = await this.entityManager
+            .createQueryBuilder()
+            .select(["l.id AS id", "l.contact_name AS contact_name"])
+            .from("public.leads", "l")
+            .where("l.workspace_id = :workspaceId AND l.id = :leadId", {
+                workspaceId: input.workspaceId,
+                leadId: input.task.leadId,
+            })
+            .limit(1)
+            .getRawOne<WorkLeadRecord>()
         if (lead === undefined) throw new ThreadWorkError({ code: ThreadWorkErrorCode.LeadNotFound })
         const setup = await this.rules.approvalSetup(input.workspaceId, input.task.action)
         await this.turns.run({
@@ -113,11 +117,16 @@ export class ThreadWorkService {
 
     /** A member answered in a thread: the work that waited for their data resumes with it. Answers whether one did. */
     async memberReplied(reply: MemberReply): Promise<boolean> {
-        const [row] = await this.entityManager.query<Array<ThreadWorkRow>>(FIND_WAITING_FOR_MEMBER, [
-            reply.workspaceId,
-            reply.threadId,
-            reply.memberId,
-        ])
+        const found = await this.entityManager.findOne(ThreadWorkEntity, {
+            where: {
+                workspaceId: reply.workspaceId,
+                threadId: reply.threadId,
+                waitingMemberId: reply.memberId,
+                state: "waiting_member",
+            },
+            order: { updatedAt: "ASC" },
+        })
+        const row = found === null ? undefined : toThreadWorkRecord(found)
         const decider = row === undefined ? null : await this.deciderOf(row.workspace_id, reply.memberId)
         if (row === undefined || decider === null) return false
         try {
@@ -130,13 +139,19 @@ export class ThreadWorkService {
 
     /** Moves on the work of one approval request once it is settled (right after a member decided it). */
     async approvalSettled(requestId: string): Promise<void> {
-        const rows = await this.entityManager.query<Array<SettledAskRow>>(FIND_SETTLED_ASK, [requestId])
+        const rows = await this.settledAsks()
+            .andWhere("w.approval_request_id = :requestId", { requestId })
+            .limit(1)
+            .getRawMany<SettledAskRecord>()
         await eachInOrder(rows, (row) => this.settle(row))
     }
 
     /** The minute tick: moves on the work whose approval was settled by any door (a decision, the deadline). Answers how many. */
     async resumeSettled(): Promise<number> {
-        const rows = await this.entityManager.query<Array<SettledAskRow>>(LIST_SETTLED_ASKS, [SETTLED_BATCH])
+        const rows = await this.settledAsks()
+            .orderBy("w.updated_at", "ASC")
+            .limit(SETTLED_BATCH)
+            .getRawMany<SettledAskRecord>()
         await eachInOrder(rows, (row) => this.settle(row))
         return rows.length
     }
@@ -145,7 +160,7 @@ export class ThreadWorkService {
      * Approved: the work resumes as the decider's and the agent goes on. Refused: the work stops as the decider's (the thread already
      * sent it back to the owner). Expired: the work waits for the owner, who the thread already tagged.
      */
-    private async settle(row: SettledAskRow): Promise<void> {
+    private async settle(row: SettledAskRecord): Promise<void> {
         const decider = row.resolved_by === null ? null : await this.deciderOf(row.workspace_id, row.resolved_by)
         try {
             if (row.request_status === "approved" && decider !== null) {
@@ -170,7 +185,7 @@ export class ThreadWorkService {
     }
 
     private async resume(
-        row: ThreadWorkRow,
+        row: ThreadWorkRecord,
         decision: ResumeDecision,
         edits: WorkEdits,
         by: MemberDecider,
@@ -184,17 +199,53 @@ export class ThreadWorkService {
         )
     }
 
-    private ctxOf(row: ThreadWorkRow): WorkContext {
+    private ctxOf(row: ThreadWorkRecord): WorkContext {
         return { workspaceId: row.workspace_id, actor: RUNTIME_ACTOR, locale: "vi" }
     }
 
     private async agentOf(workspaceId: string, agentId: string): Promise<WorkAgent | null> {
-        const [row] = await this.entityManager.query<Array<WorkAgentRow>>(FIND_WORK_AGENT, [workspaceId, agentId])
+        const row = await this.entityManager
+            .createQueryBuilder()
+            .select(["a.id AS id", "a.name AS name", "a.module AS module", "a.can_tag_agent_ids AS can_tag_agent_ids"])
+            .from("public.agents", "a")
+            .where("a.workspace_id = :workspaceId AND a.id = :agentId AND a.status = 'active'", {
+                workspaceId,
+                agentId,
+            })
+            .limit(1)
+            .getRawOne<WorkAgentRecord>()
         return row === undefined ? null : workAgentOf(row)
     }
 
     private async deciderOf(workspaceId: string, memberId: string): Promise<MemberDecider | null> {
-        const [row] = await this.entityManager.query<Array<DeciderRow>>(FIND_DECIDER, [workspaceId, memberId])
+        const row = await this.entityManager
+            .createQueryBuilder()
+            .select(["m.id AS id", "m.display_name AS display_name", "m.role AS role"])
+            .from("public.workspace_members", "m")
+            .where("m.workspace_id = :workspaceId AND m.id = :memberId", { workspaceId, memberId })
+            .limit(1)
+            .getRawOne<DeciderRecord>()
         return row === undefined ? null : deciderOf(row)
+    }
+
+    /** The thread work that asked for an approval whose request has since been settled, with how it ended. */
+    private settledAsks(): SelectQueryBuilder<ThreadWorkEntity> {
+        return this.entityManager
+            .createQueryBuilder(ThreadWorkEntity, "w")
+            .innerJoin("approval_requests", "r", "r.id = w.approval_request_id")
+            .select([
+                "w.id AS id",
+                "w.workspace_id AS workspace_id",
+                "w.thread_id AS thread_id",
+                "w.work_item_id AS work_item_id",
+                "w.agent_id AS agent_id",
+                "w.state AS state",
+                "w.approval_request_id AS approval_request_id",
+                "w.waiting_member_id AS waiting_member_id",
+                "w.missing_fields AS missing_fields",
+                "r.status AS request_status",
+                "r.resolved_by AS resolved_by",
+            ])
+            .where("w.state = 'asked' AND r.status <> 'pending'")
     }
 }

@@ -22,7 +22,7 @@ export interface PaymentOrderRequestParams {
 /** The cycle, usage tier and seats a plan request carries, bounded. */
 export interface RequestSelection {
     /** The billing cycle, or null for a request that is not a plan order. */
-    readonly cycle: string | null
+    readonly cycle: "monthly" | "annual" | null
     /** The usage tier, or null. */
     readonly tierCredits: number | null
     /** The seats, or null. */

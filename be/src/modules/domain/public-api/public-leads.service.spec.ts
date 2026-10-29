@@ -1,19 +1,15 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import type { MockEntityManager, RecordingQueueOutbox } from "@starci/jest-preset"
+import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
+import { ledgerExpected, ledgerWritten } from "@tests/fixtures/builders/public-api-ledger.builder"
 import { ApiKeysService } from "@modules/domain/api-keys"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { PUBLIC_API_QUEUE, PublicApiQueue } from "@modules/queues/public-api"
 import { PublicApiErrorCode } from "./errors/public-api.error"
 import type { AcceptLeadParams } from "./public-api.contracts"
 import { PublicLeadsService } from "./public-leads.service"
-import {
-    INSERT_REQUEST,
-    LIST_LEADS,
-    MATCH_LEAD_BY_EMAIL,
-    MATCH_LEAD_BY_NAME,
-    MATCH_LEAD_BY_PHONE,
-} from "./persistence/public-api.sql"
+import { PublicApiLedgerService } from "./public-api-ledger.service"
 
 const WHO = { keyId: "key-1", workspaceId: "workspace-1", name: "n8n", scopes: [] }
 
@@ -58,18 +54,45 @@ const build = async (entityManager: MockEntityManager) => {
             PublicLeadsService,
             { provide: PublicApiQueue, useValue: queue },
             { provide: ApiKeysService, useValue: keys },
+            PublicApiLedgerService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
         ],
     }).compile()
     return { service: moduleRef.get(PublicLeadsService), outbox, keys }
 }
 
-const transactionOf = (...stubs: ReadonlyArray<readonly [string, ReadonlyArray<object>]>) =>
-    fakeTransaction(mockEntityManager({ query: stubs }))
+const MATCH_LEAD_BY_PHONE = "l.phone = :phone"
+const MATCH_LEAD_BY_EMAIL = "l.email = :email"
+const MATCH_LEAD_BY_NAME = "l.contact_name = :name AND l.channel = :channel"
+const INSERT_REQUEST = "insert"
+
+/** A transaction whose query builders answer in call order: the customer matches, then the ledger insert. */
+const transactionOf = (...stubs: ReadonlyArray<readonly [string, ReadonlyArray<object>]>) => {
+    const matches = stubs
+        .filter(([tag]) => tag !== INSERT_REQUEST)
+        .map(([, rows]) => fakeQueryBuilder({ getRawOne: rows[0] }))
+    const write = fakeQueryBuilder({ execute: { raw: stubs.find(([tag]) => tag === INSERT_REQUEST)?.[1] ?? [] } })
+    const em = mockEntityManager()
+    answerQueryBuilders(em, ...matches, write)
+    return Object.assign(fakeTransaction(em), { matches, write })
+}
+
+/** The ledger record a lead request makes. */
+const leadRecord = (suffix: string, body: object, needSupplied: boolean) => ({
+    workspaceId: "workspace-1",
+    keyId: "key-1",
+    kind: "lead" as const,
+    prefix: "lead:key-1:",
+    suffix,
+    body,
+    needSupplied,
+})
 
 describe("PublicLeadsService / listLeads", () => {
     it("admits the key for leads:read and lists the workspace customers with the stage filter and the limit", async () => {
-        const em = mockEntityManager({ query: [LIST_LEADS, [LEAD_ROW]] })
+        const em = mockEntityManager()
+        const read = fakeQueryBuilder({ getRawMany: [LEAD_ROW] })
+        answerQueryBuilders(em, read)
         const { service, keys } = await build(em)
 
         await expect(service.listLeads({ authorization: AUTH, stage: "new", limit: "20" })).resolves.toEqual([
@@ -87,17 +110,27 @@ describe("PublicLeadsService / listLeads", () => {
         ])
 
         expect(keys.authenticate).toHaveBeenCalledWith("leads:read", AUTH)
-        expect(em.query).toHaveBeenCalledWith(LIST_LEADS, ["workspace-1", "new", 20])
+        expect(read.argsOf("from")).toEqual([["public.leads", "l"]])
+        expect(read.argsOf("where")).toEqual([
+            [
+                "l.workspace_id = :workspaceId AND (:stage::text IS NULL OR l.stage = :stage)",
+                { workspaceId: "workspace-1", stage: "new" },
+            ],
+        ])
+        expect(read.argsOf("orderBy")).toEqual([["l.created_at", "DESC"]])
+        expect(read.argsOf("limit")).toEqual([[20]])
     })
     it("asks for every stage, fifty customers when none is named and at most two hundred", async () => {
-        const em = mockEntityManager({ query: [LIST_LEADS, [{ ...LEAD_ROW, phone: undefined, email: undefined }]] })
+        const em = mockEntityManager()
+        const read = fakeQueryBuilder({ getRawMany: [{ ...LEAD_ROW, phone: undefined, email: undefined }] })
+        answerQueryBuilders(em, read)
         const { service } = await build(em)
 
         await expect(service.listLeads({ authorization: AUTH })).resolves.toMatchObject([{ phone: null, email: null }])
         await service.listLeads({ authorization: AUTH, limit: "9999" })
 
-        expect(em.query).toHaveBeenNthCalledWith(1, LIST_LEADS, ["workspace-1", null, 50])
-        expect(em.query).toHaveBeenNthCalledWith(2, LIST_LEADS, ["workspace-1", null, 200])
+        expect(read.argsOf("limit")).toEqual([[50], [200]])
+        expect(read.argsOf("where")[0]?.[1]).toEqual({ workspaceId: "workspace-1", stage: null })
     })
     it("stops at a refused key before any query", async () => {
         const em = mockEntityManager()
@@ -107,7 +140,7 @@ describe("PublicLeadsService / listLeads", () => {
 
         await expect(service.listLeads({ authorization: undefined })).rejects.toBe(refused)
 
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 })
 
@@ -119,26 +152,34 @@ describe("PublicLeadsService / acceptLead", () => {
         await expect(service.acceptLead(LEAD)).resolves.toEqual({ leadId: "lead-7", status: "accepted" })
 
         expect(keys.authenticate).toHaveBeenCalledWith("leads:write", AUTH)
-        expect(tx.em.query).toHaveBeenCalledWith(MATCH_LEAD_BY_PHONE, ["workspace-1", "84912000701"])
-        expect(tx.em.query).toHaveBeenCalledWith(INSERT_REQUEST, [
-            "workspace-1",
-            "key-1",
-            "lead",
-            "lead:key-1:",
-            "crm-9",
-            JSON.stringify({
-                name: "Nguyen A",
-                contact: "84912000701",
-                need: "price",
-                needSupplied: true,
-                channel: "Zalo",
-                company: "ACME",
-                note: "vip",
-                stage: "qualified",
-                externalId: "crm-9",
-                source: "api:n8n",
-            }),
+        expect(tx.matches[0]?.argsOf("where")).toEqual([
+            [
+                `l.workspace_id = :workspaceId AND ${MATCH_LEAD_BY_PHONE}`,
+                { workspaceId: "workspace-1", phone: "84912000701" },
+            ],
         ])
+        expect(tx.matches[0]?.argsOf("orderBy")).toEqual([["l.created_at"]])
+        expect(tx.matches[0]?.argsOf("limit")).toEqual([[1]])
+        expect(ledgerWritten(tx.write)).toEqual(
+            ledgerExpected(
+                leadRecord(
+                    "crm-9",
+                    {
+                        name: "Nguyen A",
+                        contact: "84912000701",
+                        need: "price",
+                        needSupplied: true,
+                        channel: "Zalo",
+                        company: "ACME",
+                        note: "vip",
+                        stage: "qualified",
+                        externalId: "crm-9",
+                        source: "api:n8n",
+                    },
+                    true,
+                ),
+            ),
+        )
         expect(outbox.jobsOf(PUBLIC_API_QUEUE)).toEqual([
             { queue: PUBLIC_API_QUEUE, payload: { requestId: "request-1", workspaceId: "workspace-1" } },
         ])
@@ -154,26 +195,32 @@ describe("PublicLeadsService / acceptLead", () => {
             status: "accepted",
         })
 
-        expect(tx.em.query).toHaveBeenCalledWith(MATCH_LEAD_BY_EMAIL, ["workspace-1", "a@b.co"])
-        expect(tx.em.query).toHaveBeenCalledWith(INSERT_REQUEST, [
-            "workspace-1",
-            "key-1",
-            "lead",
-            "lead:key-1:",
-            "",
-            JSON.stringify({
-                name: "Nguyen A",
-                contact: "a@b.co",
-                need: "Created through the API",
-                needSupplied: false,
-                channel: "API",
-                company: "",
-                note: "",
-                stage: null,
-                externalId: "",
-                source: "api:n8n",
-            }),
+        expect(tx.matches[0]?.argsOf("where")).toEqual([
+            [
+                `l.workspace_id = :workspaceId AND ${MATCH_LEAD_BY_EMAIL}`,
+                { workspaceId: "workspace-1", email: "a@b.co" },
+            ],
         ])
+        expect(ledgerWritten(tx.write)).toEqual(
+            ledgerExpected(
+                leadRecord(
+                    "",
+                    {
+                        name: "Nguyen A",
+                        contact: "a@b.co",
+                        need: "Created through the API",
+                        needSupplied: false,
+                        channel: "API",
+                        company: "",
+                        note: "",
+                        stage: null,
+                        externalId: "",
+                        source: "api:n8n",
+                    },
+                    false,
+                ),
+            ),
+        )
     })
 })
 
@@ -188,25 +235,26 @@ describe("PublicLeadsService / acceptLead", () => {
 
         await service.acceptLead({ ...LEAD, need })
 
-        expect(tx.em.query).toHaveBeenCalledWith(INSERT_REQUEST, [
-            "workspace-1",
-            "key-1",
-            "lead",
-            "lead:key-1:",
-            "crm-9",
-            JSON.stringify({
-                name: "Nguyen A",
-                contact: "84912000701",
-                need: "Created through the API",
-                needSupplied,
-                channel: "Zalo",
-                company: "ACME",
-                note: "vip",
-                stage: "qualified",
-                externalId: "crm-9",
-                source: "api:n8n",
-            }),
-        ])
+        expect(ledgerWritten(tx.write)).toEqual(
+            ledgerExpected(
+                leadRecord(
+                    "crm-9",
+                    {
+                        name: "Nguyen A",
+                        contact: "84912000701",
+                        need: "Created through the API",
+                        needSupplied,
+                        channel: "Zalo",
+                        company: "ACME",
+                        note: "vip",
+                        stage: "qualified",
+                        externalId: "crm-9",
+                        source: "api:n8n",
+                    },
+                    needSupplied,
+                ),
+            ),
+        )
     })
 })
 
@@ -227,7 +275,12 @@ describe("PublicLeadsService / customer matching", () => {
         await expect(service.acceptLead({ ...LEAD, phone: "", email: "" })).resolves.toMatchObject({
             leadId: "lead-3",
         })
-        expect(tx.em.query).toHaveBeenCalledWith(MATCH_LEAD_BY_NAME, ["workspace-1", "Nguyen A", "Zalo"])
+        expect(tx.matches[0]?.argsOf("where")).toEqual([
+            [
+                `l.workspace_id = :workspaceId AND ${MATCH_LEAD_BY_NAME}`,
+                { workspaceId: "workspace-1", name: "Nguyen A", channel: "Zalo" },
+            ],
+        ])
     })
     it("treats a name that matches nobody as a new customer and a phone that matches nobody likewise", async () => {
         const named = transactionOf([MATCH_LEAD_BY_NAME, []], [INSERT_REQUEST, [RECORDED]])
@@ -299,6 +352,6 @@ describe("PublicLeadsService / acceptLead", () => {
 
         await expect(service.acceptLead(LEAD)).rejects.toBe(refused)
 
-        expect(em.query).not.toHaveBeenCalled()
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 })

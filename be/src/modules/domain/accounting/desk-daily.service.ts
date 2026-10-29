@@ -29,8 +29,7 @@ import {
 } from "./daily-summary.policy"
 import { EinvoiceReviewService } from "./einvoice-review.service"
 import { SUMMARY_COPY } from "./messages/accounting-desk.messages"
-import { SELECT_RENEWAL_CASH } from "./persistence/renewal-cash.sql"
-import type { RenewalCashRow } from "./persistence/renewal-cash.rows"
+import { readRenewalCash } from "./renewal-cash.query"
 import { ReceivableReconcileService } from "./receivable-reconcile.service"
 import { SupplierPaymentsService } from "./supplier-payments.service"
 import { payablesDue, remindersToday, upcomingDues } from "./tax-calendar.policy"
@@ -163,14 +162,14 @@ export class DeskDailyService {
     /** The renewal-to-cash story of a window, read only from the invoices, contracts and inbound payments, with its lines. */
     async renewalOf(workspaceId: string, window: RenewalWindow): Promise<RenewalCashReport> {
         const horizonDay = dayAfter(window.day, HORIZON_DAYS)
-        const [row] = await this.entityManager.query<Array<RenewalCashRow>>(SELECT_RENEWAL_CASH, [
+        const row = await readRenewalCash(this.entityManager, {
             workspaceId,
-            window.from.toISOString(),
-            window.to.toISOString(),
-            window.day,
+            from: window.from,
+            to: window.to,
+            day: window.day,
             horizonDay,
-            RENEWAL_ROWS,
-        ])
+            bound: RENEWAL_ROWS,
+        })
         return renewalReport(renewalStoryOf(row, window.day, horizonDay))
     }
 

@@ -12,7 +12,7 @@ import { MODULE_CATALOG } from "./modules.catalog.contracts"
 import { MODULES_OPTIONS } from "./modules.decorators"
 import type { ModulesOptions } from "./modules.options"
 import { ModulesService } from "./modules.service"
-import { LIST_MODULE_KEYS, UPSERT_MODULES } from "./persistence/modules.sql"
+import { ModuleEntity } from "./persistence/entities"
 
 /** A partial-object matcher, typed `unknown` so it flows into any slot. */
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
@@ -29,6 +29,7 @@ const anything = (): unknown => expect.anything()
 const AT = "2026-03-04T05:06:07.000Z"
 const OPTIONS: ModulesOptions = { categories: MODULE_CATEGORIES, catalog: MODULE_CATALOG }
 const KEYS = MODULE_CATALOG.map((module) => ({ key: module.key }))
+const entityOf = (key: string): ModuleEntity => Object.assign(new ModuleEntity(), { key })
 const ACTIONS = MODULE_CATALOG.flatMap((module) => module.authorityActions)
 
 /** Builds the service over the catalogue options (with `overrides`) and the given entity manager. */
@@ -53,10 +54,8 @@ const build = async (
 const syncTransaction = (held = KEYS) =>
     fakeTransaction(
         mockEntityManager({
-            query: [
-                [UPSERT_MODULES, KEYS],
-                [LIST_MODULE_KEYS, held],
-            ],
+            upsert: [ModuleEntity, { identifiers: KEYS }],
+            find: [ModuleEntity, held.map((row) => entityOf(row.key))],
         }),
     )
 
@@ -156,17 +155,18 @@ describe("ModulesService > sync", () => {
 
         const expected = MODULE_CATALOG.map((module) => ({
             key: module.key,
-            sort_order: module.order,
+            sortOrder: module.order,
             status: module.status,
             category: module.category,
             audience: module.audience,
-            knowledge_folder: module.knowledgeFolder,
+            knowledgeFolder: module.knowledgeFolder,
             workbench: module.workbench,
-            default_operating_mode: module.defaultOperatingMode,
-            multi_instance: module.multiInstance,
+            defaultOperatingMode: module.defaultOperatingMode,
+            multiInstance: module.multiInstance,
             definition: module,
+            updatedAt: new Date(AT),
         }))
-        expect(tx.em.query).toHaveBeenCalledWith(UPSERT_MODULES, [JSON.stringify(expected), new Date(AT)])
+        expect(tx.em.upsert).toHaveBeenCalledWith(ModuleEntity, expected, ["key"])
     })
 
     it("reports persisted modules missing from the catalogue without deleting them", async () => {

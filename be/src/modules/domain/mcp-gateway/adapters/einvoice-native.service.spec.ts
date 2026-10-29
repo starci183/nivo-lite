@@ -3,8 +3,8 @@ import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { tt78Xml } from "@tests/fixtures/builders/einvoice.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { McpGatewayErrorCode } from "../errors/mcp-gateway.error"
-import { FIND_INVOICE_MAIL, LIST_INVOICE_MAILS } from "../persistence/einvoice-native.sql"
 import { EINVOICE_MANIFEST, EinvoiceNativeService } from "./einvoice-native.service"
 
 const MAIL = {
@@ -21,7 +21,8 @@ const build = async (entityManager: MockEntityManager): Promise<EinvoiceNativeSe
 
 describe("EinvoiceNativeService.list", () => {
     it("lists the TT78 invoices of the mails with their summary and the reader's draft", async () => {
-        const em = mockEntityManager({ query: [LIST_INVOICE_MAILS, [MAIL, { id: "rec-2", attachments: null }]] })
+        const em = mockEntityManager()
+        const [mails] = queueQueryBuilders(em, [{ getRawMany: [MAIL, { id: "rec-2", attachments: null }] }])
         const einvoice = await build(em)
 
         const listed = await einvoice.invoke("ws-1", "list", { since: "2026-10-01", limit: 5 })
@@ -42,7 +43,19 @@ describe("EinvoiceNativeService.list", () => {
                 },
             ],
         })
-        expect(em.query).toHaveBeenCalledWith(LIST_INVOICE_MAILS, ["ws-1", "2026-10-01"])
+        expect(mails?.callsOf("from")).toEqual([["public.data_records", "r"]])
+        expect(mails?.callsOf("where")).toEqual([
+            ["r.workspace_id = :workspaceId AND r.entity = 'message'", { workspaceId: "ws-1" }],
+        ])
+        expect(mails?.callsOf("andWhere")).toEqual([
+            [
+                "jsonb_path_exists(r.data, CAST(:attachmentsPath AS jsonpath))",
+                { attachmentsPath: "$.attachments[*].xml" },
+            ],
+            ["r.occurred_at >= CAST(:since AS date)", { since: "2026-10-01" }],
+        ])
+        expect(mails?.callsOf("orderBy")).toEqual([["r.occurred_at", "DESC", "NULLS LAST"]])
+        expect(mails?.callsOf("limit")).toEqual([[200]])
         expect(einvoice.manifest).toBe(EINVOICE_MANIFEST)
         expect(EINVOICE_MANIFEST.tools[0]?.inputSchema).toMatchObject({
             properties: {
@@ -55,12 +68,8 @@ describe("EinvoiceNativeService.list", () => {
 
     it("defaults an omitted date and limit, and honors the supplied count", async () => {
         const many = { id: "rec-3", attachments: [{ xml: tt78Xml() }, { xml: tt78Xml({ SHDon: "18" }) }] }
-        const em = mockEntityManager({
-            query: [
-                [LIST_INVOICE_MAILS, [many]],
-                [LIST_INVOICE_MAILS, [many]],
-            ],
-        })
+        const em = mockEntityManager()
+        const fakes = queueQueryBuilders(em, [{ getRawMany: [many] }, { getRawMany: [many] }])
         const einvoice = await build(em)
 
         await expect(einvoice.invoke("ws-1", "list", {})).resolves.toMatchObject({
@@ -69,10 +78,11 @@ describe("EinvoiceNativeService.list", () => {
         await expect(einvoice.invoke("ws-1", "list", { limit: 1 })).resolves.toMatchObject({
             invoices: [{ id: "rec-3:0" }],
         })
-        expect(em.query.mock.calls).toEqual([
-            [LIST_INVOICE_MAILS, ["ws-1", null]],
-            [LIST_INVOICE_MAILS, ["ws-1", null]],
-        ])
+        for (const fake of fakes) {
+            expect(fake.callsOf("andWhere").map(([condition]) => condition)).toEqual([
+                "jsonb_path_exists(r.data, CAST(:attachmentsPath AS jsonpath))",
+            ])
+        }
     })
 
     it.each([{ since: "19/10/2026" }, { limit: 0 }, { limit: 51 }, { limit: 1.5 }, { limit: "5" }])(
@@ -85,14 +95,15 @@ describe("EinvoiceNativeService.list", () => {
                 code: McpGatewayErrorCode.InvalidArguments,
                 params: { tool: "list" },
             })
-            expect(em.query).not.toHaveBeenCalled()
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         },
     )
 })
 
 describe("EinvoiceNativeService.get", () => {
     it("answers one invoice with its lines, unit prices and VAT rates", async () => {
-        const em = mockEntityManager({ query: [FIND_INVOICE_MAIL, [MAIL]] })
+        const em = mockEntityManager()
+        const [mails] = queueQueryBuilders(em, [{ getRawMany: [MAIL] }])
         const einvoice = await build(em)
 
         await expect(einvoice.invoke("ws-1", "get", { id: "rec-1:1" })).resolves.toEqual({
@@ -111,7 +122,8 @@ describe("EinvoiceNativeService.get", () => {
             totalVnd: 4400000,
             vatVnd: 200000,
         })
-        expect(em.query).toHaveBeenCalledWith(FIND_INVOICE_MAIL, ["ws-1", "rec-1"])
+        expect(mails?.callsOf("andWhere")).toEqual([["CAST(r.id AS text) = :recordId", { recordId: "rec-1" }]])
+        expect(mails?.callsOf("limit")).toEqual([[1]])
         expect(EINVOICE_MANIFEST.tools[1]?.inputSchema).toMatchObject({
             properties: { id: { type: "string", minLength: 1, maxLength: 200 } },
             required: ["id"],
@@ -121,7 +133,8 @@ describe("EinvoiceNativeService.get", () => {
 
     it("answers a zero unit price for a line without quantity", async () => {
         const xml = tt78Xml().replace("<SLuong>20</SLuong>", "<SLuong>0</SLuong>")
-        const em = mockEntityManager({ query: [FIND_INVOICE_MAIL, [{ id: "rec-4", attachments: [{ xml }] }]] })
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ getRawMany: [{ id: "rec-4", attachments: [{ xml }] }] }])
         const einvoice = await build(em)
 
         await expect(einvoice.invoke("ws-1", "get", { id: "rec-4:0" })).resolves.toMatchObject({
@@ -130,17 +143,13 @@ describe("EinvoiceNativeService.get", () => {
     })
 
     it("answers not found for an id no mail holds", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_INVOICE_MAIL, [MAIL]],
-                [FIND_INVOICE_MAIL, []],
-            ],
-        })
+        const em = mockEntityManager()
+        const [, second] = queueQueryBuilders(em, [{ getRawMany: [MAIL] }, { getRawMany: [] }])
         const einvoice = await build(em)
 
         await expect(einvoice.invoke("ws-1", "get", { id: "rec-1:7" })).resolves.toEqual({ found: false })
         await expect(einvoice.invoke("ws-1", "get", { id: "rec-2:0" })).resolves.toEqual({ found: false })
-        expect(em.query.mock.calls[1]).toEqual([FIND_INVOICE_MAIL, ["ws-1", "rec-2"]])
+        expect(second?.callsOf("andWhere")).toEqual([["CAST(r.id AS text) = :recordId", { recordId: "rec-2" }]])
     })
 
     it.each([{}, { id: 7 }, { id: "" }, { id: "a".repeat(201) }])(
@@ -153,7 +162,7 @@ describe("EinvoiceNativeService.get", () => {
                 code: McpGatewayErrorCode.InvalidArguments,
                 params: { tool: "get" },
             })
-            expect(em.query).not.toHaveBeenCalled()
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         },
     )
 

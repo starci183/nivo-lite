@@ -8,7 +8,10 @@ import { DataSource } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { EnvSource } from "@modules/platform/config"
 import { parsePrimaryDatabaseConfig, PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { PRIMARY_ENTITIES } from "@modules/platform/database/entities"
 import { ClockModule } from "@modules/platform/clock"
+import { EventBusModule } from "@modules/platform/event-bus"
+import { INBOX, InboxService } from "@modules/platform/inbox"
 import { HttpModule } from "@modules/platform/http"
 import { LoggingModule } from "@modules/platform/logging"
 import { RealtimeModule } from "@modules/platform/realtime"
@@ -29,8 +32,11 @@ class LocalDatabaseModule {
         return {
             module: LocalDatabaseModule,
             global: true,
-            providers: [{ provide: PRIMARY_ENTITY_MANAGER, useFactory: () => manager }],
-            exports: [PRIMARY_ENTITY_MANAGER],
+            providers: [
+                { provide: PRIMARY_ENTITY_MANAGER, useFactory: () => manager },
+                { provide: INBOX, useFactory: () => new InboxService(manager) },
+            ],
+            exports: [PRIMARY_ENTITY_MANAGER, INBOX],
         }
     }
 }
@@ -61,6 +67,8 @@ export const createLiteWorld = (modules: ReadonlyArray<DynamicModule>, sandbox?:
                 name: config.name,
                 url,
                 ...schema,
+                entities: [...PRIMARY_ENTITIES],
+                uuidExtension: "pgcrypto",
                 synchronize: false,
                 connectTimeoutMS: 5000,
             })
@@ -69,6 +77,7 @@ export const createLiteWorld = (modules: ReadonlyArray<DynamicModule>, sandbox?:
                 imports: [
                     LocalDatabaseModule.register(database().primary),
                     ClockModule.register({ isGlobal: true }),
+                    EventBusModule.register({ isGlobal: true }),
                     HttpModule.register({ isGlobal: true }),
                     LoggingModule.register({ isGlobal: true }),
                     RetryModule.register({ isGlobal: true }),

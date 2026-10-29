@@ -23,7 +23,7 @@ const ENTITY_MANAGER_TOKENS: ReadonlyMap<string, EntityManagerToken> = new Map<s
 
 @Module({})
 /**
- * Opens each named Supabase PostgreSQL connection and exposes its shared EntityManager without entities or migrations.
+ * Opens each named Supabase PostgreSQL connection and exposes its shared EntityManager mapping the entities the app passes in (`PRIMARY_ENTITIES`); schema changes stay in `db/migrations` and `synchronize` is off.
  */
 export class DatabaseModule extends ConfigurableModuleClass {
     /** Registers the capability once per app with the connections it opens. */
@@ -71,6 +71,8 @@ export class DatabaseModule extends ConfigurableModuleClass {
                         type: "postgres",
                         url: connection.url.reveal(),
                         ...schema,
+                        entities: [...options.entities],
+                        uuidExtension: "pgcrypto",
                         synchronize: false,
                         retryAttempts: 2,
                         extra: { types: options.typeParsers() },

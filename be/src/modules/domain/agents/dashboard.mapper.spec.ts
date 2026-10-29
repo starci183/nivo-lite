@@ -13,7 +13,7 @@ import {
     knowledgeOf,
     totalOf,
 } from "./dashboard.mapper"
-import type { DashboardItemRow } from "./persistence/dashboard.rows"
+import type { DashboardLine } from "./agents-reads.contracts"
 
 type Subject = {
     clip: typeof clip
@@ -26,14 +26,14 @@ type Subject = {
     agentOf: typeof agentOf
 }
 
-const rowOf = builder<DashboardItemRow>({
+const rowOf = builder<DashboardLine>({
     id: "wi1",
     action: "reply_customer",
-    lead_id: "l1",
+    leadId: "l1",
     at: "2026-10-12T09:00:00.000Z",
     summary: "  Customer asks   the price ",
     customer: "An",
-    result_href: null,
+    resultHref: null,
     total: "7",
 })
 
@@ -101,12 +101,12 @@ describe("dashboard mapper", () => {
     it("fills what a row lacks and keeps a recorded href", async () => {
         const subject = await buildSubject()
 
-        expect(subject.itemOf(rowOf({ summary: null, customer: null, result_href: "/leads/l1" }), "/x")).toMatchObject({
+        expect(subject.itemOf(rowOf({ summary: null, customer: null, resultHref: "/leads/l1" }), "/x")).toMatchObject({
             title: "",
             customer: "",
             resultHref: "/leads/l1",
         })
-        expect(subject.itemOf(rowOf({ result_href: "" }), "/x").resultHref).toBeNull()
+        expect(subject.itemOf(rowOf({ resultHref: "" }), "/x").resultHref).toBeNull()
     })
 
     it("reads the total of a page from its first row", async () => {

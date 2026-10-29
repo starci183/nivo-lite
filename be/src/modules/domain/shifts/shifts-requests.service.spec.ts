@@ -7,12 +7,15 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ShiftsErrorCode } from "./errors/shifts.error"
-import { CREATE_LEAVE, CREATE_SWAP, LINK_LEAVE, LINK_SWAP } from "./persistence/shifts.sql"
-import type { ShiftsShiftRow } from "./persistence/shifts.rows"
+import { ShiftsLeaveRequestEntity, ShiftsSwapRequestEntity } from "./persistence/entities"
+import type { ShiftWithSchedule } from "./shifts-records.contracts"
 import { ShiftsDataService } from "./shifts-data.service"
 import { ShiftsRequestsService } from "./shifts-requests.service"
 import { ShiftsTextService } from "./shifts-text.service"
 import type { Env, Setup, Shift, ShiftStaff } from "./shifts.contracts"
+
+const CREATE_SWAP = "SELECT * FROM public.shifts_create_swap($1, $2, $3, $4, $5, $6)"
+const CREATE_LEAVE = "SELECT * FROM public.shifts_create_leave($1, $2, $3, $4, $5)"
 
 const text = (key: string, params: Record<string, string | number> = {}): string => `${key}${JSON.stringify(params)}`
 
@@ -46,17 +49,17 @@ const setupOf = (staff: ReadonlyArray<ShiftStaff> = [person("staff-1", "Alice"),
     },
 })
 
-const rowOf = (overrides: Partial<ShiftsShiftRow> = {}): ShiftsShiftRow => ({
+const rowOf = (overrides: Partial<ShiftWithSchedule> = {}): ShiftWithSchedule => ({
     id: "shift-1",
-    schedule_id: "schedule-1",
-    shift_date: "2026-10-15",
-    start_time: "09:00:00",
-    end_time: "13:00:00",
-    position_id: "position-1",
-    staff_id: "staff-1",
+    scheduleId: "schedule-1",
+    shiftDate: "2026-10-15",
+    startTime: "09:00:00",
+    endTime: "13:00:00",
+    positionId: "position-1",
+    staffId: "staff-1",
     status: "published",
-    schedule_status: "published",
-    week_start: "2026-10-12",
+    scheduleStatus: "published",
+    weekStart: "2026-10-12",
     ...overrides,
 })
 
@@ -120,10 +123,8 @@ const build = async (entityManager: MockEntityManager, setup = setupOf()) => {
 describe("ShiftsRequestsService requestSwap", () => {
     it("records a clean handover and links the owner's decision", async () => {
         const em = mockEntityManager({
-            query: [
-                [CREATE_SWAP, [{ id: "swap-1" }]],
-                [LINK_SWAP, []],
-            ],
+            query: [[CREATE_SWAP, [{ shifts_create_swap: "swap-1" }]]],
+            update: [ShiftsSwapRequestEntity, { affected: 1 }],
         })
         const { service, words, members, data, gate, setup } = await build(em)
 
@@ -162,7 +163,9 @@ describe("ShiftsRequestsService requestSwap", () => {
         ])
         expect(em.query.mock.calls).toEqual([
             [CREATE_SWAP, ["ws-1", "swap", "shift-1", "staff-1", "staff-2", "Appointment"]],
-            [LINK_SWAP, ["ws-1", "swap-1", "[]", "work-1"]],
+        ])
+        expect(em.update.mock.calls).toEqual([
+            [ShiftsSwapRequestEntity, { id: "swap-1", workspaceId: "ws-1" }, { checks: [], workItemId: "work-1" }],
         ])
     })
 })
@@ -170,13 +173,11 @@ describe("ShiftsRequestsService requestSwap", () => {
 describe("ShiftsRequestsService requestSwap", () => {
     it("claims an open shift for the asking member and keeps every finding", async () => {
         const em = mockEntityManager({
-            query: [
-                [CREATE_SWAP, []],
-                [LINK_SWAP, []],
-            ],
+            query: [[CREATE_SWAP, []]],
+            update: [ShiftsSwapRequestEntity, { affected: 1 }],
         })
         const { service, data, gate, words } = await build(em)
-        data.shiftRow.mockResolvedValue(rowOf({ staff_id: null, status: "draft" }))
+        data.shiftRow.mockResolvedValue(rowOf({ staffId: null, status: "draft" }))
         data.staffShifts.mockResolvedValue([{ ...shift, id: "other", staffId: "staff-1" }])
         gate.request.mockResolvedValue({ status: "done", workItemId: "work-2" })
         const sentences = [text("shifts.finding.not-posted"), text("shifts.finding.rule-overlap", { name: "Alice" })]
@@ -218,9 +219,9 @@ describe("ShiftsRequestsService requestSwap", () => {
                 },
             ],
         ])
-        expect(em.query.mock.calls).toEqual([
-            [CREATE_SWAP, ["ws-1", "claim", "shift-1", null, "staff-1", "Available"]],
-            [LINK_SWAP, ["ws-1", "", JSON.stringify(sentences), "work-2"]],
+        expect(em.query.mock.calls).toEqual([[CREATE_SWAP, ["ws-1", "claim", "shift-1", null, "staff-1", "Available"]]])
+        expect(em.update.mock.calls).toEqual([
+            [ShiftsSwapRequestEntity, { id: "", workspaceId: "ws-1" }, { checks: sentences, workItemId: "work-2" }],
         ])
     })
 })
@@ -228,10 +229,8 @@ describe("ShiftsRequestsService requestSwap", () => {
 describe("ShiftsRequestsService requestSwap", () => {
     it("uses fallback names when the setup no longer contains either person", async () => {
         const em = mockEntityManager({
-            query: [
-                [CREATE_SWAP, [{ id: "swap-2" }]],
-                [LINK_SWAP, []],
-            ],
+            query: [[CREATE_SWAP, [{ shifts_create_swap: "swap-2" }]]],
+            update: [ShiftsSwapRequestEntity, { affected: 1 }],
         })
         const { service, gate } = await build(em, setupOf([]))
 
@@ -325,7 +324,7 @@ describe("ShiftsRequestsService requestSwap", () => {
 describe("ShiftsRequestsService checkSwap", () => {
     it("checks the recipient's posted work in the shift's week", async () => {
         const { service, data, setup, env } = await build(mockEntityManager())
-        data.shiftRow.mockResolvedValue(rowOf({ shift_date: "2026-11-05" }))
+        data.shiftRow.mockResolvedValue(rowOf({ shiftDate: "2026-11-05" }))
         data.staffShifts.mockResolvedValue([{ ...shift, id: "existing", date: "2026-11-05", staffId: "staff-2" }])
 
         await expect(
@@ -367,10 +366,8 @@ describe("ShiftsRequestsService checkSwap", () => {
 describe("ShiftsRequestsService requestLeave", () => {
     it("records the original reason and asks with the trimmed reason and affected shift count", async () => {
         const em = mockEntityManager({
-            query: [
-                [CREATE_LEAVE, [{ id: "leave-1" }]],
-                [LINK_LEAVE, []],
-            ],
+            query: [[CREATE_LEAVE, [{ shifts_create_leave: "leave-1" }]]],
+            update: [ShiftsLeaveRequestEntity, { affected: 1 }],
         })
         const { service, data, gate, members, words } = await build(em)
         data.staffShifts.mockResolvedValue([shift, { ...shift, id: "shift-2" }])
@@ -406,7 +403,9 @@ describe("ShiftsRequestsService requestLeave", () => {
         ])
         expect(em.query.mock.calls).toEqual([
             [CREATE_LEAVE, ["ws-1", "staff-1", "2026-10-15", "2026-10-17", "  Travel  "]],
-            [LINK_LEAVE, ["ws-1", "leave-1", "work-1"]],
+        ])
+        expect(em.update.mock.calls).toEqual([
+            [ShiftsLeaveRequestEntity, { id: "leave-1", workspaceId: "ws-1" }, { workItemId: "work-1" }],
         ])
     })
 })
@@ -414,10 +413,8 @@ describe("ShiftsRequestsService requestLeave", () => {
 describe("ShiftsRequestsService requestLeave", () => {
     it("omits a blank reason and links a request even when insert returned no id", async () => {
         const em = mockEntityManager({
-            query: [
-                [CREATE_LEAVE, []],
-                [LINK_LEAVE, []],
-            ],
+            query: [[CREATE_LEAVE, []]],
+            update: [ShiftsLeaveRequestEntity, { affected: 1 }],
         })
         const { service, gate, catalog } = await build(em)
         gate.request.mockResolvedValue({ status: "done", workItemId: "work-2" })
@@ -448,9 +445,9 @@ describe("ShiftsRequestsService requestLeave", () => {
         expect(catalog.get.mock.calls).toEqual([
             ["shifts.leaveAskSummary", { name: "Alice", range: "leave range", reason: "", count: 0 }, "vi"],
         ])
-        expect(em.query.mock.calls).toEqual([
-            [CREATE_LEAVE, ["ws-1", "staff-1", "2026-10-15", "2026-10-15", "  "]],
-            [LINK_LEAVE, ["ws-1", "", "work-2"]],
+        expect(em.query.mock.calls).toEqual([[CREATE_LEAVE, ["ws-1", "staff-1", "2026-10-15", "2026-10-15", "  "]]])
+        expect(em.update.mock.calls).toEqual([
+            [ShiftsLeaveRequestEntity, { id: "", workspaceId: "ws-1" }, { workItemId: "work-2" }],
         ])
     })
 

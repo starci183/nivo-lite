@@ -1,15 +1,15 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import { InventoryError, InventoryErrorCode } from "../errors/inventory.error"
-import { SAVE_ITEM } from "../persistence/inventory.sql"
-import { savedId } from "./saved-id.policy"
+import { SAVE_ITEM } from "@tests/fixtures/builders/inventory-calls.builder"
+import { idColumn, savedId } from "./saved-id.policy"
 import type { IdRow } from "./saved-id.policy"
 
 const SUBJECT = Symbol("saved-id.policy")
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { savedId } }],
+        providers: [{ provide: SUBJECT, useValue: { idColumn, savedId } }],
     }).compile()
     return moduleRef.get<typeof import("./saved-id.policy")>(SUBJECT)
 }
@@ -44,5 +44,24 @@ describe("savedId", () => {
 
         await expect(result).rejects.toBeInstanceOf(InventoryError)
         await expect(result).rejects.toMatchObject({ code, params: {} })
+    })
+})
+
+describe("idColumn", () => {
+    it("renames the column named after the function to id", async () => {
+        const subject = await buildSubject()
+
+        await expect(
+            subject.idColumn(Promise.resolve([{ inventory_save_item: "item-1" }]), "inventory_save_item"),
+        ).resolves.toEqual([{ id: "item-1" }])
+    })
+
+    it("answers a null id for a null or missing column and nothing for no rows", async () => {
+        const subject = await buildSubject()
+
+        await expect(
+            subject.idColumn(Promise.resolve([{ inventory_save_item: null }, {}]), "inventory_save_item"),
+        ).resolves.toEqual([{ id: null }, { id: null }])
+        await expect(subject.idColumn(Promise.resolve([]), "inventory_save_item")).resolves.toEqual([])
     })
 })

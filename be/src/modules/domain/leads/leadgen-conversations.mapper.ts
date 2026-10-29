@@ -1,5 +1,5 @@
 import type { LeadGenConversationFacts, LeadGenLastMessage } from "./leadgen-conversations.contracts"
-import type { LeadGenWorkbenchRow, LeadGenMessageRow } from "./persistence/leadgen-workbench.rows"
+import type { LeadGenWorkbenchInput, LeadGenMessageRecord } from "./leadgen-workbench.contracts"
 import { clip } from "./leadgen-origin.policy"
 
 const DAY_MS = 86_400_000
@@ -21,7 +21,7 @@ export const median = (values: ReadonlyArray<number>): number | null => {
 const retainLast = (
     last: Map<string, LeadGenLastMessage>,
     leadId: string | null | undefined,
-    final: LeadGenMessageRow | undefined,
+    final: LeadGenMessageRecord | undefined,
 ): void => {
     if (!leadId || !final) return
     const current = last.get(leadId)
@@ -29,11 +29,11 @@ const retainLast = (
 }
 
 /** Last message per lead and the minutes from a first message to its first reply inside the reply window. */
-export const conversationFacts = (rows: LeadGenWorkbenchRow): LeadGenConversationFacts => {
+export const conversationFacts = (rows: LeadGenWorkbenchInput): LeadGenConversationFacts => {
     const leadOfConversation = new Map(
         rows.conversations.map((conversation) => [conversation.id, conversation.lead_id]),
     )
-    const byConversation = new Map<string, Array<LeadGenMessageRow>>()
+    const byConversation = new Map<string, Array<LeadGenMessageRecord>>()
     for (const message of rows.messages) {
         if (!leadOfConversation.has(message.conversation_id)) continue
         const list = byConversation.get(message.conversation_id)

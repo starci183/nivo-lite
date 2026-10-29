@@ -1,5 +1,7 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import type { FactRecord } from "@modules/domain/brain-facts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
@@ -14,8 +16,7 @@ import { AccountingRoomService } from "./accounting-room.service"
 import { DeskDailyService, vnDayOf } from "./desk-daily.service"
 import { EinvoiceReviewService } from "./einvoice-review.service"
 import { CARD_COPY, RENEWAL_COPY, kindText } from "./messages/accounting-desk.messages"
-import type { RenewalCashRow } from "./persistence/renewal-cash.rows"
-import { SELECT_RENEWAL_CASH } from "./persistence/renewal-cash.sql"
+import type { RenewalCashFacts } from "./renewal-cash.contracts"
 import { ReceivableReconcileService } from "./receivable-reconcile.service"
 import { SupplierPaymentsService } from "./supplier-payments.service"
 
@@ -51,11 +52,25 @@ interface BuildOptions {
     /** The optional features the workspace has tools for. */
     readonly connected?: DeskConnections
     /** The rows the renewal-to-cash reader answers. */
-    readonly renewal?: ReadonlyArray<RenewalCashRow>
+    readonly renewal?: ReadonlyArray<RenewalCashFacts>
 }
 
+/** What the reader's ten statements answer, in the order it runs them: a tally then a list for each part of the story. */
+const renewalAnswers = (row: RenewalCashFacts | undefined): ReadonlyArray<QueryBuilderAnswers> => [
+    { getRawOne: row && { count: row.issued_count, total: row.issued_total } },
+    { getRawMany: row?.issued ?? [] },
+    { getRawOne: row && { count: row.paid_count, total: row.paid_total } },
+    { getRawMany: row?.paid ?? [] },
+    { getRawOne: row && { count: row.unpaid_count, total: row.unpaid_total } },
+    { getRawMany: row?.unpaid ?? [] },
+    { getRawOne: row && { count: row.expiring_count, total: row.expiring_total } },
+    { getRawMany: row?.expiring ?? [] },
+    { getRawOne: row && { count: row.unmatched_count, total: row.unmatched_total } },
+    { getRawMany: row?.unmatched ?? [] },
+]
+
 /** A day whose one renewal invoice was paid and extended its contract. */
-const PAID_DAY: RenewalCashRow = {
+const PAID_DAY: RenewalCashFacts = {
     issued_count: 0,
     issued_total: 0,
     issued: [],
@@ -133,7 +148,9 @@ const build = async ({
         post: jest.fn(() => Promise.resolve()),
         postCard: jest.fn((_workspaceId: string, card: HubCardPayload) => Promise.resolve(card)),
     })
-    const entityManager = mockEntityManager({ query: [SELECT_RENEWAL_CASH, renewal] })
+    const entityManager = mockEntityManager()
+    fakeTransaction(entityManager)
+    const statements = queueQueryBuilders(entityManager, renewalAnswers(renewal[0]))
     // 06:30 in Vietnam on 20/10.
     const clock = new FakeClock("2026-10-19T23:30:00Z")
     const moduleRef = await Test.createTestingModule({
@@ -160,6 +177,7 @@ const build = async ({
         receivables,
         room,
         entityManager,
+        statements,
     }
 }
 
@@ -262,18 +280,27 @@ describe("DeskDailyService run guard and optional roles", () => {
 
 describe("DeskDailyService renewal-to-cash story", () => {
     it("reads the calendar day in Vietnam with a 30-day horizon and answers the story with its lines", async () => {
-        const { daily, entityManager } = await build({ renewal: [PAID_DAY] })
+        const { daily, entityManager, statements } = await build({ renewal: [PAID_DAY] })
 
         const report = await daily.renewalOfDay(WS, "2026-10-27")
 
-        expect(entityManager.query).toHaveBeenCalledWith(SELECT_RENEWAL_CASH, [
-            WS,
-            "2026-10-26T17:00:00.000Z",
-            "2026-10-27T17:00:00.000Z",
-            "2026-10-27",
-            "2026-11-26",
-            20,
+        expect(entityManager.transaction).toHaveBeenCalledWith("REPEATABLE READ", expect.any(Function))
+        expect(statements[0]?.callsOf("where")).toEqual([["i.workspace_id = :workspaceId", { workspaceId: WS }]])
+        expect(statements[0]?.callsOf("andWhere")).toContainEqual([
+            "i.issued_at >= :from AND i.issued_at < :to",
+            { from: new Date("2026-10-26T17:00:00.000Z"), to: new Date("2026-10-27T17:00:00.000Z") },
         ])
+        expect(statements[4]?.callsOf("andWhere")).toContainEqual([
+            "i.due_at < (:horizonDay::date + 1)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'",
+            { horizonDay: "2026-11-26" },
+        ])
+        expect(statements[6]?.callsOf("andWhere")).toContainEqual([
+            "c.ends_on >= :day::date AND c.ends_on <= :horizonDay::date",
+            { day: "2026-10-27", horizonDay: "2026-11-26" },
+        ])
+        expect(statements.filter((_, index) => index % 2 === 1).map((one) => one.callsOf("limit"))).toEqual(
+            Array.from({ length: 5 }, () => [[20]]),
+        )
         expect(report.story.paid.items).toEqual([
             {
                 invoiceNo: "INV-202610-0001",
@@ -303,17 +330,17 @@ describe("DeskDailyService renewal-to-cash story", () => {
     })
 
     it("adds the story of the last 24 hours to the morning card", async () => {
-        const { daily, entityManager, room } = await build({ renewal: [PAID_DAY] })
+        const { daily, statements, room } = await build({ renewal: [PAID_DAY] })
 
         const outcome = await daily.run(WS)
 
-        expect(entityManager.query).toHaveBeenCalledWith(SELECT_RENEWAL_CASH, [
-            WS,
-            "2026-10-18T23:30:00.000Z",
-            "2026-10-19T23:30:00.000Z",
-            "2026-10-20",
-            "2026-11-19",
-            20,
+        expect(statements[0]?.callsOf("andWhere")).toContainEqual([
+            "i.issued_at >= :from AND i.issued_at < :to",
+            { from: new Date("2026-10-18T23:30:00.000Z"), to: new Date("2026-10-19T23:30:00.000Z") },
+        ])
+        expect(statements[6]?.callsOf("andWhere")).toContainEqual([
+            "c.ends_on >= :day::date AND c.ends_on <= :horizonDay::date",
+            { day: "2026-10-20", horizonDay: "2026-11-19" },
         ])
         expect(outcome.card?.text).toContain(RENEWAL_COPY.paid(1, CARD_COPY.money(2_160_000)))
         expect(outcome.card?.hub.data?.["renewal"]).toEqual(

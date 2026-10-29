@@ -3,22 +3,11 @@ import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
 import { StaffService } from "@modules/domain/staff"
 import type { StaffWrite } from "@modules/domain/staff"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused, unwrapOutcome } from "@modules/platform/primitives"
+import { storedAvatarAddress } from "@modules/integrations/object-storage"
 import { WorkspaceMembersError, WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
-import type { MemberIdRow, MemberListingRow, MemberRow } from "./persistence/workspace-members.rows"
-import {
-    DELETE_MEMBER,
-    ENSURE_MEMBER,
-    FIND_MEMBER,
-    FIND_MEMBER_ID,
-    LIST_MEMBERS,
-    LOCK_MEMBER,
-    RENAME_MEMBER_EVERYWHERE,
-    UPDATE_MEMBER_ROLE,
-    UPDATE_MEMBER_STATUS,
-    UPSERT_MEMBER,
-} from "./persistence/workspace-members.sql"
+import { WorkspaceMemberEntity } from "./persistence/entities"
 import { admitMember, isManagerRole, judgeSeatChange, presentedRole } from "./role.policy"
 import type { PresentedRole } from "./role.policy"
 import type {
@@ -34,14 +23,38 @@ import type {
 } from "./workspace-members.contracts"
 import { InjectAccountDirectory } from "./workspace-members.port"
 
-const toMember = (row: MemberRow): WorkspaceMember => ({
-    userId: row.user_id,
-    workspaceId: row.workspace_id,
+const toMember = (row: WorkspaceMemberEntity): WorkspaceMember => ({
+    userId: row.userId,
+    workspaceId: row.workspaceId,
     role: row.role,
-    staffId: row.staff_id,
-    displayName: row.display_name,
+    staffId: row.staffId,
+    displayName: row.displayName,
     status: row.status,
 })
+
+/** The role a join names, held to the three the table allows (the table's own check would refuse any other). */
+const roleOf = (value: string): WorkspaceRole => {
+    if (value === "owner" || value === "manager" || value === "staff") return value
+    throw new TypeError(`${value} is not a workspace role`)
+}
+
+/** The directory is bounded to the most members a workspace lists. */
+const LIST_LIMIT = 500
+
+/** The pictures `be_access.workspace_member_avatars` answers, one row per account that has one. */
+interface MemberAvatarRow {
+    readonly id: string
+    readonly avatar_url: string | null
+}
+
+/** Owners first, then managers, then staff: the order the directory lists. */
+const ROLE_RANK = "CASE m.role WHEN 'owner' THEN 0 WHEN 'manager' THEN 1 ELSE 2 END"
+
+/** The conflict clause of a join: an owner is never demoted, a staff link is never dropped, and the seat is active again. */
+const JOIN_CONFLICT = `("workspace_id", "user_id") DO UPDATE SET
+    "role" = CASE WHEN "workspace_members"."role" = 'owner' THEN 'owner' ELSE EXCLUDED."role" END,
+    "staff_id" = coalesce(EXCLUDED."staff_id", "workspace_members"."staff_id"),
+    "status" = 'active'`
 
 const MANAGERS = ["owner", "manager"] as const
 
@@ -67,9 +80,8 @@ export class WorkspaceMembersService {
         workspaceId: string,
         roles: ReadonlyArray<WorkspaceRole> = [],
     ): Promise<WorkspaceMember> {
-        const row = (await this.entityManager.query<Array<MemberRow>>(FIND_MEMBER, [workspaceId, userId]))[0]
-        const outcome =
-            row === undefined ? refused(WorkspaceMembersErrorCode.NotMember) : admitMember(toMember(row), roles)
+        const row = await this.entityManager.findOne(WorkspaceMemberEntity, { where: { workspaceId, userId } })
+        const outcome = row === null ? refused(WorkspaceMembersErrorCode.NotMember) : admitMember(toMember(row), roles)
         return unwrapOutcome(outcome, WorkspaceMembersError)
     }
 
@@ -78,9 +90,12 @@ export class WorkspaceMembersService {
      * name this id, never the Auth user id and never a free-text name.
      */
     async idOf(userId: string, workspaceId: string): Promise<string> {
-        const row = (await this.entityManager.query<Array<MemberIdRow>>(FIND_MEMBER_ID, [workspaceId, userId]))[0]
+        const row = await this.entityManager.findOne(WorkspaceMemberEntity, {
+            select: { id: true },
+            where: { workspaceId, userId, status: "active" },
+        })
         return unwrapOutcome(
-            row === undefined ? refused(WorkspaceMembersErrorCode.NotMember) : ok(row.id),
+            row === null ? refused(WorkspaceMembersErrorCode.NotMember) : ok(row.id),
             WorkspaceMembersError,
         )
     }
@@ -101,15 +116,28 @@ export class WorkspaceMembersService {
     /** Everyone in the caller's workspace, owners first; emails and sign-ins are blank for staff callers. */
     async list(userId: string, workspaceId: string): Promise<ReadonlyArray<MemberListing>> {
         const viewer = await this.require(userId, workspaceId)
-        const rows = await this.entityManager.query<Array<MemberListingRow>>(LIST_MEMBERS, [workspaceId])
+        const rows = await this.entityManager
+            .createQueryBuilder(WorkspaceMemberEntity, "m")
+            .where("m.workspaceId = :workspaceId", { workspaceId })
+            .orderBy(ROLE_RANK)
+            .addOrderBy("m.createdAt", "ASC")
+            .addOrderBy("m.id", "ASC")
+            .limit(LIST_LIMIT)
+            .getMany()
+        const avatars = await callDbFunction<MemberAvatarRow>(
+            this.entityManager,
+            "be_access.workspace_member_avatars",
+            [workspaceId, rows.map((row) => row.userId)],
+        )
+        const avatarOf = new Map(avatars.map((avatar) => [avatar.id, avatar.avatar_url]))
         const showContact = isManagerRole(viewer.role)
         return Promise.all(
             rows.map(async (row) => {
-                const account = showContact ? await this.accounts.accountOf(row.user_id) : undefined
+                const account = showContact ? await this.accounts.accountOf(row.userId) : undefined
                 const known = account?.kind === "ok" ? account.value : undefined
                 return {
                     ...toMember(row),
-                    avatarUrl: row.avatar_url,
+                    avatarUrl: storedAvatarAddress(avatarOf.get(row.userId) ?? null),
                     email: known?.email ?? "",
                     lastSignInAt: known?.lastSignInAt ?? null,
                 }
@@ -137,7 +165,9 @@ export class WorkspaceMembersService {
             forbidSelf: false,
         })
         if (target.role === role) return
-        await this.apply(UPDATE_MEMBER_ROLE, [workspaceId, targetId, role])
+        await this.apply(() =>
+            this.entityManager.update(WorkspaceMemberEntity, { workspaceId, userId: targetId }, { role }),
+        )
         await this.events.record({
             workspaceId,
             kind: "member.role_changed",
@@ -149,7 +179,9 @@ export class WorkspaceMembersService {
     /** Disables (cannot sign in to the workspace) or enables a member; never one's own account. */
     async setStatus(actorId: string, workspaceId: string, targetId: string, status: MemberStatus): Promise<void> {
         const { actor, target } = await this.seats(actorId, workspaceId, targetId, { forbidSelf: true })
-        await this.apply(UPDATE_MEMBER_STATUS, [workspaceId, targetId, status])
+        await this.apply(() =>
+            this.entityManager.update(WorkspaceMemberEntity, { workspaceId, userId: targetId }, { status }),
+        )
         await this.events.record({
             workspaceId,
             kind: status === "disabled" ? "member.disabled" : "member.enabled",
@@ -161,7 +193,7 @@ export class WorkspaceMembersService {
     /** Removes a member from the workspace (their account and past work stay); never one's own account. */
     async remove(actorId: string, workspaceId: string, targetId: string): Promise<void> {
         const { actor, target } = await this.seats(actorId, workspaceId, targetId, { forbidSelf: true })
-        await this.apply(DELETE_MEMBER, [workspaceId, targetId])
+        await this.apply(() => this.entityManager.delete(WorkspaceMemberEntity, { workspaceId, userId: targetId }))
         await this.events.record({
             workspaceId,
             kind: "member.removed",
@@ -172,34 +204,55 @@ export class WorkspaceMembersService {
 
     /** Saves the display name a person carries in every workspace they actively belong to. */
     async renameSelf(userId: string, displayName: string): Promise<void> {
-        await this.entityManager.query(RENAME_MEMBER_EVERYWHERE, [userId, displayName.trim()])
+        await this.entityManager.update(
+            WorkspaceMemberEntity,
+            { userId, status: "active" },
+            { displayName: displayName.trim() },
+        )
     }
 
     /** Creates or reactivates a membership; an owner is never demoted and a staff link is never dropped. */
     async join(entry: JoinEntry): Promise<void> {
-        await this.entityManager.query(UPSERT_MEMBER, [
-            entry.workspaceId,
-            entry.userId,
-            entry.role,
-            entry.staffId,
-            entry.displayName,
-        ])
+        await this.entityManager
+            .createQueryBuilder(WorkspaceMemberEntity, "workspace_members")
+            .insert()
+            .values({
+                workspaceId: entry.workspaceId,
+                userId: entry.userId,
+                role: roleOf(entry.role),
+                staffId: entry.staffId,
+                displayName: () =>
+                    "coalesce((SELECT s.name FROM public.staff s WHERE s.id = :staffId LIMIT 1), :displayName)",
+            })
+            .onConflict(JOIN_CONFLICT)
+            .setParameters({ staffId: entry.staffId, displayName: entry.displayName })
+            .execute()
     }
 
     /** An authenticated owner may add a missing seat; reruns retain existing state and refuse conflicting roles. */
     ensure(actorId: string, entry: JoinEntry): Promise<WorkspaceMember> {
         return this.entityManager.transaction(async (tx) => {
-            const [actor] = await tx.query<Array<MemberRow>>(LOCK_MEMBER, [entry.workspaceId, actorId])
-            if (actor === undefined) throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.NotMember })
+            const actor = await tx.findOne(WorkspaceMemberEntity, {
+                where: { workspaceId: entry.workspaceId, userId: actorId },
+                lock: { mode: "pessimistic_write" },
+            })
+            if (actor === null) throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.NotMember })
             unwrapOutcome(admitMember(toMember(actor), ["owner"]), WorkspaceMembersError)
-            await tx.query(ENSURE_MEMBER, [
-                entry.workspaceId,
-                entry.userId,
-                entry.role,
-                entry.staffId,
-                entry.displayName,
-            ])
-            const [row] = await tx.query<Array<MemberRow>>(FIND_MEMBER, [entry.workspaceId, entry.userId])
+            await tx
+                .createQueryBuilder(WorkspaceMemberEntity, "w")
+                .insert()
+                .values({
+                    workspaceId: entry.workspaceId,
+                    userId: entry.userId,
+                    role: roleOf(entry.role),
+                    staffId: entry.staffId,
+                    displayName: entry.displayName,
+                })
+                .orIgnore()
+                .execute()
+            const row = await tx.findOne(WorkspaceMemberEntity, {
+                where: { workspaceId: entry.workspaceId, userId: entry.userId },
+            })
             if (row?.role !== entry.role || row.status !== "active")
                 throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.EnsureConflict })
             return toMember(row)
@@ -208,22 +261,23 @@ export class WorkspaceMembersService {
 
     private async seats(actorId: string, workspaceId: string, targetId: string, rule: SeatRule): Promise<SeatPair> {
         const actor = await this.require(actorId, workspaceId, MANAGERS)
-        const row = (await this.entityManager.query<Array<MemberRow>>(FIND_MEMBER, [workspaceId, targetId]))[0]
-        if (row === undefined) throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.MemberNotFound })
+        const row = await this.entityManager.findOne(WorkspaceMemberEntity, {
+            where: { workspaceId, userId: targetId },
+        })
+        if (row === null) throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.MemberNotFound })
         const pair: SeatPair = { actor, target: toMember(row) }
         unwrapOutcome(judgeSeatChange(pair, rule), WorkspaceMembersError)
         return pair
     }
 
-    private async apply(statement: typeof DELETE_MEMBER, params: ReadonlyArray<string>): Promise<void> {
-        const changed = await this.entityManager
-            .query<Array<{ user_id: string }>>(statement, [...params])
-            .catch((cause: unknown) => {
-                if (isLastOwnerFailure(cause)) {
-                    throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.LastOwner, cause })
-                }
-                throw cause
-            })
-        if (changed.length === 0) throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.MemberNotFound })
+    private async apply(change: () => Promise<{ readonly affected?: number | null }>): Promise<void> {
+        const changed = await change().catch((cause: unknown) => {
+            if (isLastOwnerFailure(cause)) {
+                throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.LastOwner, cause })
+            }
+            throw cause
+        })
+        if ((changed.affected ?? 0) === 0)
+            throw new WorkspaceMembersError({ code: WorkspaceMembersErrorCode.MemberNotFound })
     }
 }

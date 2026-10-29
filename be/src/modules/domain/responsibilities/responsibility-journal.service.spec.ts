@@ -1,37 +1,33 @@
-import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { Not } from "typeorm"
+import {
+    LEAD,
+    agentOwner,
+    answerInsert,
+    assignedEvent,
+    ctx,
+    inputOf,
+    memberOf,
+    personOf,
+    rowOf,
+    stepOf,
+    task,
+} from "@tests/fixtures/builders/responsibilities.builder"
+import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { EventsService } from "@modules/domain/events"
 import { AGENT_DIRECTORY } from "@modules/domain/messages"
 import type { AgentDirectory, OptionalAgentIdentity } from "@modules/domain/messages"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ResponsibilitiesError, ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
-import type { ResolvedOwner } from "./responsibility-owner.policy"
 import { ResponsibilityOwnersService } from "./responsibility-owners.service"
-import type {
-    NewResponsibility,
-    ResponsibilityListing,
-    ResponsibilityRecord,
-    ResponsibilityScope,
-} from "./responsibility-journal.contracts"
-import {
-    FIND_LEAD_NAME,
-    FIND_OPEN_RESPONSIBILITY,
-    FIND_OPEN_TITLED_RESPONSIBILITY,
-    FIND_RESPONSIBILITY,
-    INSERT_RESPONSIBILITY,
-    LIST_BOARD_RESPONSIBILITIES,
-    LIST_LEAD_RESPONSIBILITIES,
-    LIST_OPEN_RESPONSIBILITIES,
-    LIST_RESPONSIBILITIES,
-    UPDATE_RESPONSIBILITY_NEXT_ACTION,
-    UPDATE_RESPONSIBILITY_STATUS,
-} from "./persistence/responsibility-journal.sql"
+import type { ResponsibilityListing } from "./responsibility-journal.contracts"
+import { ResponsibilityEntity } from "./persistence/entities"
 import { ResponsibilityJournalService } from "./responsibility-journal.service"
 
 const registerEnsureFor = () => {
@@ -48,12 +44,14 @@ const registerEnsureFor = () => {
                 company: "Binh Co",
                 leadStage: "new",
             }
-            const em = mockEntityManager({ query: [LIST_RESPONSIBILITIES, [listing]] })
+            const em = mockEntityManager()
+            const read = fakeQueryBuilder({ getRawMany: [listing] })
+            answerQueryBuilders(em, read)
             const { service, members } = await build(em)
 
             await expect(service.list("user-1", "ws-1")).resolves.toEqual([listing])
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-            expect(em.query).toHaveBeenCalledWith(LIST_RESPONSIBILITIES, ["ws-1"])
+            expect(read.argsOf("where")).toEqual([["r.workspaceId = :workspaceId", { workspaceId: "ws-1" }]])
         })
     })
 }
@@ -62,44 +60,44 @@ const registerCreate = () => {
     describe("create", () => {
         it("adds a responsibility owned by the member the caller names and logs it", async () => {
             const created = rowOf({ owner_kind: "human", owner_agent_id: null, owner_name: "An", next_action: "Call" })
-            const em = mockEntityManager({ query: [INSERT_RESPONSIBILITY, [created]] })
-            const { service, events, owners } = await build(em)
+            const em = mockEntityManager()
+            const { read, write } = answerInsert(em, { id: "lead-1" }, [created])
+            const tx = fakeTransaction(em)
+            const { service, events, owners } = await build(tx.em)
             owners.resolve.mockResolvedValue(personOf())
 
             await expect(service.create("user-1", "ws-1", inputOf())).resolves.toEqual(created)
 
             expect(owners.resolve.mock.calls).toEqual([[em, "ws-1", "member-1"]])
-            expect(em.query.mock.calls[0]?.[1]).toEqual([
-                "ws-1",
-                "lead-1",
-                "Call Binh",
-                "human",
-                null,
-                "An",
-                "Call",
-                null,
-                "member-1",
+            expect(read.argsOf("where")).toEqual([
+                ["l.workspace_id = :workspaceId AND l.id = :leadId", { workspaceId: "ws-1", leadId: "lead-1" }],
             ])
+            expect(read.argsOf("setLock")).toEqual([["pessimistic_read"]])
+            expect(em.createQueryBuilder).toHaveBeenCalledWith(ResponsibilityEntity, "r")
+            expect(write.callsOf("insert")).toEqual([[]])
+            expect(write.argsOf("values")).toEqual([[stepOf()]])
+            expect(write.argsOf("returning")).toEqual([[expect.stringContaining("to_json(due_at) #>> '{}' AS due_at")]])
+            expect(tx.commits).toBe(1)
             expect(events.record).toHaveBeenCalledWith(assignedEvent("An: Call"), em)
         })
 
         it("adds a responsibility owned by one of the workspace's agents, with no member", async () => {
-            const em = mockEntityManager({ query: [INSERT_RESPONSIBILITY, [rowOf()]] })
-            const { service, owners } = await build(em)
+            const em = mockEntityManager()
+            const { write } = answerInsert(em, { id: "lead-1" }, [rowOf()])
+            const { service, owners } = await build(fakeTransaction(em).em)
             owners.resolve.mockResolvedValue(agentOwner())
 
             await service.create("user-1", "ws-1", inputOf({ owner: "agent-1" }))
 
-            expect(em.query.mock.calls[0]?.[1]).toEqual([
-                "ws-1",
-                "lead-1",
-                "Call Binh",
-                "agent",
-                "agent-1",
-                "Sales Agent",
-                "Call",
-                null,
-                null,
+            expect(write.argsOf("values")).toEqual([
+                [
+                    stepOf({
+                        ownerKind: "agent",
+                        ownerAgentId: "agent-1",
+                        ownerMemberId: null,
+                        ownerName: "Sales Agent",
+                    }),
+                ],
             ])
         })
 
@@ -111,7 +109,7 @@ const registerCreate = () => {
 
             await expect(service.create("user-1", "ws-1", inputOf({ owner: "agent-9" }))).rejects.toBe(refusal)
 
-            expect(em.query).not.toHaveBeenCalled()
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
     })
 }
@@ -119,18 +117,25 @@ const registerCreate = () => {
 const registerUpdateStatus = () => {
     describe("updateStatus", () => {
         it("moves the responsibility", async () => {
-            const em = mockEntityManager({ query: [UPDATE_RESPONSIBILITY_STATUS, [rowOf({ status: "done" })]] })
+            const em = mockEntityManager()
+            const write = fakeQueryBuilder({ execute: { raw: [rowOf({ status: "done" })] } })
+            answerQueryBuilders(em, write)
             const { service, members } = await build(em)
 
             await expect(service.updateStatus("user-1", "ws-1", "resp-1", "done")).resolves.toEqual(
                 rowOf({ status: "done" }),
             )
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-            expect(em.query).toHaveBeenCalledWith(UPDATE_RESPONSIBILITY_STATUS, ["ws-1", "resp-1", "done"])
+            expect(em.createQueryBuilder).toHaveBeenCalledWith(ResponsibilityEntity, "r")
+            expect(write.callsOf("update")).toEqual([[]])
+            expect(write.argsOf("set")).toEqual([[{ status: "done" }]])
+            expect(write.argsOf("where")).toEqual([[{ workspaceId: "ws-1", id: "resp-1" }]])
         })
 
         it("refuses a responsibility that is not in the workspace", async () => {
-            const { service } = await build(mockEntityManager({ query: [UPDATE_RESPONSIBILITY_STATUS, []] }))
+            const em = mockEntityManager()
+            answerQueryBuilders(em, fakeQueryBuilder({ execute: { raw: [] } }))
+            const { service } = await build(em)
 
             await expect(service.updateStatus("user-1", "ws-1", "resp-9", "open")).rejects.toMatchObject({
                 code: ResponsibilitiesErrorCode.NotFound,
@@ -140,14 +145,16 @@ const registerUpdateStatus = () => {
 
     describe("markWaitingApproval", () => {
         it("moves the responsibility to waiting for approval", async () => {
-            const em = mockEntityManager({
-                query: [UPDATE_RESPONSIBILITY_STATUS, [rowOf({ status: "waiting_approval" })]],
-            })
+            const em = mockEntityManager({ update: [ResponsibilityEntity, { affected: 1 }] })
             const { service } = await build(em)
 
             await service.markWaitingApproval(ctx, "resp-1")
 
-            expect(em.query).toHaveBeenCalledWith(UPDATE_RESPONSIBILITY_STATUS, ["ws-1", "resp-1", "waiting_approval"])
+            expect(em.update).toHaveBeenCalledWith(
+                ResponsibilityEntity,
+                { workspaceId: "ws-1", id: "resp-1" },
+                { status: "waiting_approval" },
+            )
         })
     })
 }
@@ -155,54 +162,58 @@ const registerUpdateStatus = () => {
 const registerOpenNamed = () => {
     describe("openNamed", () => {
         it("opens a follow-up owned by the active member with the named name", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [FIND_OPEN_TITLED_RESPONSIBILITY, []],
-                    [INSERT_RESPONSIBILITY, [rowOf({ owner_kind: "human", owner_agent_id: null, owner_name: "Linh" })]],
-                ],
-            })
-            const { service, owners } = await build(em)
+            const em = mockEntityManager({ exists: [ResponsibilityEntity, false] })
+            const { write } = answerInsert(em, { id: "lead-1" }, [
+                rowOf({ owner_kind: "human", owner_agent_id: null, owner_name: "Linh" }),
+            ])
+            const { service, owners } = await build(fakeTransaction(em).em)
             owners.memberNamed.mockResolvedValue({ ...personOf(), memberId: "member-2", name: "Linh" })
 
             await expect(service.openNamed("ws-1", task)).resolves.toBe(true)
             expect(owners.memberNamed.mock.calls).toEqual([["ws-1", "Linh"]])
-            expect(em.query).toHaveBeenCalledWith(FIND_OPEN_TITLED_RESPONSIBILITY, ["ws-1", "lead-1", "Nurture Binh"])
-            expect(em.query.mock.calls[1]?.[1]?.slice(3)).toEqual([
-                "human",
-                null,
-                "Linh",
-                "Call back",
-                "2026-10-14T10:00:00.000Z",
-                "member-2",
+            expect(em.exists).toHaveBeenCalledWith(ResponsibilityEntity, {
+                where: { workspaceId: "ws-1", leadId: "lead-1", title: "Nurture Binh", status: Not("done") },
+            })
+            expect(write.argsOf("values")).toEqual([
+                [
+                    stepOf({
+                        title: "Nurture Binh",
+                        ownerMemberId: "member-2",
+                        ownerName: "Linh",
+                        nextAction: "Call back",
+                        dueAt: new Date("2026-10-14T10:00:00.000Z"),
+                    }),
+                ],
             ])
         })
 
         it("falls to the workspace owner when no active member carries the name", async () => {
-            const em = mockEntityManager({
-                query: [
-                    [FIND_OPEN_TITLED_RESPONSIBILITY, []],
-                    [INSERT_RESPONSIBILITY, [rowOf()]],
-                ],
-            })
-            const { service, owners } = await build(em)
+            const em = mockEntityManager({ exists: [ResponsibilityEntity, false] })
+            const { write } = answerInsert(em, { id: "lead-1" }, [rowOf()])
+            const { service, owners } = await build(fakeTransaction(em).em)
             owners.memberNamed.mockResolvedValue(null)
             owners.workspaceOwner.mockResolvedValue({ ...personOf(), memberId: "member-9", name: "Chu Van" })
 
             await expect(service.openNamed("ws-1", task)).resolves.toBe(true)
-            expect(em.query.mock.calls[1]?.[1]?.slice(5)).toEqual([
-                "Chu Van",
-                "Call back",
-                "2026-10-14T10:00:00.000Z",
-                "member-9",
+            expect(write.argsOf("values")).toEqual([
+                [
+                    stepOf({
+                        title: "Nurture Binh",
+                        ownerMemberId: "member-9",
+                        ownerName: "Chu Van",
+                        nextAction: "Call back",
+                        dueAt: new Date("2026-10-14T10:00:00.000Z"),
+                    }),
+                ],
             ])
         })
 
         it("opens nothing when the customer has an open one with the same title", async () => {
-            const em = mockEntityManager({ query: [FIND_OPEN_TITLED_RESPONSIBILITY, [{ id: "resp-1" }]] })
+            const em = mockEntityManager({ exists: [ResponsibilityEntity, true] })
             const { service } = await build(em)
 
             await expect(service.openNamed("ws-1", task)).resolves.toBe(false)
-            expect(em.query).not.toHaveBeenCalledWith(INSERT_RESPONSIBILITY, expect.anything())
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
     })
 }
@@ -211,29 +222,47 @@ const registerJourneyAndBoardReaders = () => {
     describe("journey and board readers", () => {
         it("returns the customer's journey in the query's order", async () => {
             const rows = [rowOf(), rowOf({ id: "resp-2", status: "done" })]
-            const em = mockEntityManager({ query: [LIST_LEAD_RESPONSIBILITIES, rows] })
+            const em = mockEntityManager()
+            const read = fakeQueryBuilder({ getRawMany: rows })
+            answerQueryBuilders(em, read)
             const { service } = await build(em)
 
             await expect(service.listForLead("ws-1", "lead-1")).resolves.toEqual(rows)
-            expect(em.query).toHaveBeenCalledWith(LIST_LEAD_RESPONSIBILITIES, ["ws-1", "lead-1"])
+            expect(read.argsOf("where")).toEqual([
+                ["r.workspaceId = :workspaceId AND r.leadId = :leadId", { workspaceId: "ws-1", leadId: "lead-1" }],
+            ])
+            expect(read.argsOf("limit")).toEqual([[200]])
         })
 
         it("returns the workspace's open follow-ups", async () => {
-            const em = mockEntityManager({ query: [LIST_OPEN_RESPONSIBILITIES, [rowOf()]] })
+            const em = mockEntityManager()
+            const read = fakeQueryBuilder({ getRawMany: [rowOf()] })
+            answerQueryBuilders(em, read)
             const { service } = await build(em)
 
             await expect(service.listOpen("ws-1")).resolves.toEqual([rowOf()])
-            expect(em.query).toHaveBeenCalledWith(LIST_OPEN_RESPONSIBILITIES, ["ws-1"])
+            expect(read.argsOf("where")).toEqual([
+                ["r.workspaceId = :workspaceId AND r.status <> 'done'", { workspaceId: "ws-1" }],
+            ])
+            expect(read.argsOf("orderBy")).toEqual([["r.dueAt", "ASC", "NULLS LAST"]])
         })
 
         it("scopes the oldest open board steps to the workspace and current page's lead ids", async () => {
             const rows = [rowOf(), rowOf({ id: "older-step", lead_id: "older-lead" })]
-            const em = mockEntityManager({ query: [LIST_BOARD_RESPONSIBILITIES, rows] })
+            const em = mockEntityManager()
+            const read = fakeQueryBuilder({ getRawMany: rows })
+            answerQueryBuilders(em, read)
             const { service } = await build(em)
             const leadIds = ["lead-1", "older-lead"]
 
             await expect(service.listForBoard("ws-1", leadIds)).resolves.toEqual(rows)
-            expect(em.query).toHaveBeenCalledWith(LIST_BOARD_RESPONSIBILITIES, ["ws-1", leadIds])
+            expect(read.argsOf("distinctOn")).toEqual([[["r.lead_id"]]])
+            expect(read.argsOf("where")).toEqual([
+                [
+                    "r.workspaceId = :workspaceId AND r.leadId = ANY(:leadIds::uuid[]) AND r.status <> 'done'",
+                    { workspaceId: "ws-1", leadIds },
+                ],
+            ])
         })
 
         it("answers no board steps without querying when the page has no leads", async () => {
@@ -242,7 +271,7 @@ const registerJourneyAndBoardReaders = () => {
 
             await expect(service.listForBoard("ws-1", [])).resolves.toEqual([])
 
-            expect(em.query).not.toHaveBeenCalled()
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
     })
 }
@@ -250,51 +279,68 @@ const registerJourneyAndBoardReaders = () => {
 const registerEngineUpdates = () => {
     describe("engine updates", () => {
         it("finds a responsibility with the primary manager", async () => {
-            const em = mockEntityManager({ query: [FIND_RESPONSIBILITY, [rowOf()]] })
+            const em = mockEntityManager()
+            const read = fakeQueryBuilder({ getRawOne: rowOf() })
+            answerQueryBuilders(em, read)
             const { service } = await build(em)
 
             await expect(service.find("ws-1", "resp-1")).resolves.toEqual(rowOf())
-            expect(em.query).toHaveBeenCalledWith(FIND_RESPONSIBILITY, ["ws-1", "resp-1"])
+            expect(read.argsOf("where")).toEqual([
+                [
+                    "r.workspaceId = :workspaceId AND r.id = :responsibilityId",
+                    { workspaceId: "ws-1", responsibilityId: "resp-1" },
+                ],
+            ])
         })
 
         it("returns null for a missing responsibility using the caller's transaction", async () => {
             const em = mockEntityManager()
-            const transaction = mockEntityManager({ query: [FIND_RESPONSIBILITY, []] })
+            const transaction = mockEntityManager()
+            const read = fakeQueryBuilder({ getRawOne: undefined })
+            answerQueryBuilders(transaction, read)
             const { service } = await build(em)
 
             await expect(service.find("ws-2", "missing", transaction)).resolves.toBeNull()
-            expect(transaction.query).toHaveBeenCalledWith(FIND_RESPONSIBILITY, ["ws-2", "missing"])
-            expect(em.query).not.toHaveBeenCalled()
+            expect(read.argsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-2", responsibilityId: "missing" })
+            expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
 
         it("sets a status through the primary manager", async () => {
-            const em = mockEntityManager({ query: [UPDATE_RESPONSIBILITY_STATUS, []] })
+            const em = mockEntityManager({ update: [ResponsibilityEntity, { affected: 1 }] })
             const { service } = await build(em)
 
             await expect(service.setStatus(ctx, "resp-1", "done")).resolves.toBeUndefined()
-            expect(em.query).toHaveBeenCalledWith(UPDATE_RESPONSIBILITY_STATUS, ["ws-1", "resp-1", "done"])
+            expect(em.update).toHaveBeenCalledWith(
+                ResponsibilityEntity,
+                { workspaceId: "ws-1", id: "resp-1" },
+                { status: "done" },
+            )
         })
 
         it("sets a status inside the supplied transaction", async () => {
             const em = mockEntityManager()
-            const transaction = mockEntityManager({ query: [UPDATE_RESPONSIBILITY_STATUS, []] })
+            const transaction = mockEntityManager({ update: [ResponsibilityEntity, { affected: 1 }] })
             const { service } = await build(em)
 
             await expect(service.setStatus(ctx, "resp-1", "waiting_approval", transaction)).resolves.toBeUndefined()
-            expect(transaction.query).toHaveBeenCalledWith(UPDATE_RESPONSIBILITY_STATUS, [
-                "ws-1",
-                "resp-1",
-                "waiting_approval",
-            ])
-            expect(em.query).not.toHaveBeenCalled()
+            expect(transaction.update).toHaveBeenCalledWith(
+                ResponsibilityEntity,
+                { workspaceId: "ws-1", id: "resp-1" },
+                { status: "waiting_approval" },
+            )
+            expect(em.update).not.toHaveBeenCalled()
         })
 
         it("sets the responsibility's next action", async () => {
-            const em = mockEntityManager({ query: [UPDATE_RESPONSIBILITY_NEXT_ACTION, []] })
+            const em = mockEntityManager({ update: [ResponsibilityEntity, { affected: 1 }] })
             const { service } = await build(em)
 
             await expect(service.setNextAction(ctx, "resp-1", "Send quote")).resolves.toBeUndefined()
-            expect(em.query).toHaveBeenCalledWith(UPDATE_RESPONSIBILITY_NEXT_ACTION, ["ws-1", "resp-1", "Send quote"])
+            expect(em.update).toHaveBeenCalledWith(
+                ResponsibilityEntity,
+                { workspaceId: "ws-1", id: "resp-1" },
+                { nextAction: "Send quote" },
+            )
         })
     })
 }
@@ -302,7 +348,8 @@ const registerEngineUpdates = () => {
 const registerAgentAssignment = () => {
     it("creates and records an agent assignment in the caller's transaction", async () => {
         const em = mockEntityManager()
-        const transaction = mockEntityManager({ query: [INSERT_RESPONSIBILITY, [rowOf()]] })
+        const transaction = fakeTransaction(mockEntityManager()).em
+        const { write } = answerInsert(transaction, { id: "lead-1" }, [rowOf()])
         const { service, members, events, owners } = await build(em)
         owners.resolve.mockResolvedValue(agentOwner())
 
@@ -312,78 +359,77 @@ const registerAgentAssignment = () => {
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
         expect(owners.resolve.mock.calls).toEqual([[transaction, "ws-1", "agent-1"]])
         expect(events.record).toHaveBeenCalledWith(assignedEvent("Sales Agent: Classify"), transaction)
-        expect(em.query).not.toHaveBeenCalled()
+        expect(write.argsOf("values")).toHaveLength(1)
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 }
 
 const registerResponsibilityOwnership = () => {
     it("answers the open responsibility of the customer", async () => {
-        const em = mockEntityManager({ query: [FIND_OPEN_RESPONSIBILITY, [rowOf()]] })
+        const em = mockEntityManager()
+        const open = fakeQueryBuilder({ getRawOne: rowOf() })
+        answerQueryBuilders(em, open)
         const { service } = await build(em)
 
         await expect(service.ensureFor(ctx, "lead-1")).resolves.toEqual(rowOf())
-        expect(em.query).toHaveBeenCalledWith(FIND_OPEN_RESPONSIBILITY, ["ws-1", "lead-1"])
+        expect(open.argsOf("where")).toEqual([
+            [
+                "r.workspaceId = :workspaceId AND r.leadId = :leadId AND r.status <> 'done'",
+                { workspaceId: "ws-1", leadId: "lead-1" },
+            ],
+        ])
+        expect(em.transaction).not.toHaveBeenCalled()
     })
 
     it("creates one owned by the Sales agent, due in a day", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_OPEN_RESPONSIBILITY, []],
-                [FIND_LEAD_NAME, [{ contact_name: "Binh" }]],
-                [INSERT_RESPONSIBILITY, [rowOf()]],
-            ],
-        })
-        const { service, directory } = await build(em, { id: "agent-1", name: "Sales Agent" })
+        const em = mockEntityManager()
+        const { write } = answerCustomerLookups(em, LEAD, [rowOf()])
+        const { service, directory } = await build(fakeTransaction(em).em, { id: "agent-1", name: "Sales Agent" })
 
         await expect(service.ensureFor(ctx, "lead-1")).resolves.toEqual(rowOf())
 
         expect(directory.agentOfDepartment).toHaveBeenCalledWith("ws-1", "sales", null)
-        expect(em.query).toHaveBeenCalledWith(INSERT_RESPONSIBILITY, [
-            "ws-1",
-            "lead-1",
-            "responsibility.title:Binh",
-            "agent",
-            "agent-1",
-            "Sales Agent",
-            "responsibility.next:",
-            "2026-10-13T10:00:00.000Z",
-            null,
+        expect(write.argsOf("values")).toEqual([
+            [
+                stepOf({
+                    title: "responsibility.title:Binh",
+                    ownerKind: "agent",
+                    ownerAgentId: "agent-1",
+                    ownerMemberId: null,
+                    ownerName: "Sales Agent",
+                    nextAction: "responsibility.next:",
+                    dueAt: new Date("2026-10-13T10:00:00.000Z"),
+                }),
+            ],
         ])
     })
 
     it("is owned by the workspace owner member when the workspace has no Sales agent", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_OPEN_RESPONSIBILITY, []],
-                [FIND_LEAD_NAME, [{ contact_name: "Binh" }]],
-                [INSERT_RESPONSIBILITY, [rowOf({ owner_kind: "human", owner_agent_id: null, owner_name: "Chu Van" })]],
-            ],
-        })
-        const { service, owners } = await build(em)
+        const em = mockEntityManager()
+        const { write } = answerCustomerLookups(em, LEAD, [
+            rowOf({ owner_kind: "human", owner_agent_id: null, owner_name: "Chu Van" }),
+        ])
+        const { service, owners } = await build(fakeTransaction(em).em)
         owners.workspaceOwner.mockResolvedValue({ ...personOf(), memberId: "member-9", name: "Chu Van" })
 
         await service.ensureFor(ctx, "lead-1")
 
-        expect(em.query.mock.calls[2]?.[1]).toEqual([
-            "ws-1",
-            "lead-1",
-            "responsibility.title:Binh",
-            "human",
-            null,
-            "Chu Van",
-            "responsibility.next:",
-            "2026-10-13T10:00:00.000Z",
-            "member-9",
+        expect(write.argsOf("values")).toEqual([
+            [
+                stepOf({
+                    title: "responsibility.title:Binh",
+                    ownerMemberId: "member-9",
+                    ownerName: "Chu Van",
+                    nextAction: "responsibility.next:",
+                    dueAt: new Date("2026-10-13T10:00:00.000Z"),
+                }),
+            ],
         ])
     })
 
     it("refuses a customer that is not in the workspace", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_OPEN_RESPONSIBILITY, []],
-                [FIND_LEAD_NAME, []],
-            ],
-        })
+        const em = mockEntityManager()
+        answerCustomerLookups(em, undefined)
         const { service } = await build(em)
 
         await expect(service.ensureFor(ctx, "lead-9")).rejects.toMatchObject({
@@ -394,74 +440,34 @@ const registerResponsibilityOwnership = () => {
 
 const registerMissingCustomer = () => {
     it("refuses when the customer vanished before the insert", async () => {
-        const em = mockEntityManager({
-            query: [
-                [FIND_OPEN_RESPONSIBILITY, []],
-                [FIND_LEAD_NAME, [{ contact_name: "Binh" }]],
-                [INSERT_RESPONSIBILITY, []],
-            ],
-        })
-        const { service } = await build(em)
+        const em = mockEntityManager()
+        const { write } = answerCustomerLookups(em, LEAD, [], null)
+        const { service } = await build(fakeTransaction(em).em)
 
         await expect(service.ensureFor(ctx, "lead-1")).rejects.toMatchObject({
             code: ResponsibilitiesErrorCode.NotFound,
         })
+        expect(write.argsOf("values")).toEqual([])
     })
 }
 
-const assignedEvent = (summary: string) => ({
-    workspaceId: "ws-1",
-    kind: "responsibility.assigned",
-    actor: "An",
-    summary,
-    leadId: "lead-1",
-})
-
-const task = {
-    leadId: "lead-1",
-    title: "Nurture Binh",
-    ownerName: "Linh",
-    nextAction: "Call back",
-    dueAt: "2026-10-14T10:00:00.000Z",
-}
-
-const ctx: ResponsibilityScope = { workspaceId: "ws-1", actor: "An", locale: "en" }
-
-const rowOf = builder<ResponsibilityRecord>({
-    id: "resp-1",
-    workspace_id: "ws-1",
-    lead_id: "lead-1",
-    title: "Follow up with Binh",
-    owner_kind: "agent",
-    owner_agent_id: "agent-1",
-    owner_member_id: null,
-    owner_name: "Sales Agent",
-    next_action: "Classify",
-    due_at: "2026-10-13T10:00:00.000Z",
-    status: "open",
-    created_at: "2026-10-12T10:00:00.000Z",
-})
-
-const memberOf = builder<WorkspaceMember>({
-    userId: "user-1",
-    workspaceId: "ws-1",
-    role: "staff",
-    staffId: null,
-    displayName: "An",
-    status: "active",
-})
-
-const personOf = builder<ResolvedOwner>({ kind: "human", agentId: null, memberId: "member-1", name: "An" })
-
-const agentOwner = builder<ResolvedOwner>({ kind: "agent", agentId: "agent-1", memberId: null, name: "Sales Agent" })
-
-const inputOf = builder<NewResponsibility>({
-    lead_id: "lead-1",
-    title: "Call Binh",
-    owner: "member-1",
-    next_action: "Call",
-    due_at: null,
-})
+/**
+ * Answers the open-step lookup with nothing, the customer lookup with the given customer, then the guarding read of the insert
+ * (`guard`, null meaning the customer vanished) and the insert with `inserted`.
+ */
+const answerCustomerLookups = (
+    em: MockEntityManager,
+    lead: typeof LEAD | undefined,
+    inserted: ReadonlyArray<unknown> = [],
+    guard: { readonly id: string } | null = { id: "lead-1" },
+) =>
+    answerInsert(
+        em,
+        guard ?? undefined,
+        inserted,
+        fakeQueryBuilder({ getRawOne: undefined }),
+        fakeQueryBuilder({ getRawOne: lead }),
+    )
 
 const build = async (entityManager: MockEntityManager, sales: OptionalAgentIdentity = null) => {
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(memberOf()) })

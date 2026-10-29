@@ -8,7 +8,7 @@ import type { CustomerTurn, ChatTurnProposal, ChatTurnRuntime, RuntimeAnswer } f
 import { HiringPublicService } from "@modules/domain/hiring"
 import { ModuleReadinessService } from "@modules/domain/modules"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
-import { authorityBrief } from "@modules/integrations/deepseek"
+import { authorityBrief } from "@modules/domain/ai-tasks"
 import { InjectOpenclawAgentRegistry, InjectOpenclawGateway } from "@modules/integrations/openclaw"
 import type { AgentRegistryService, GatewayClient } from "@modules/integrations/openclaw"
 import { InjectMessageCatalog } from "@modules/platform/i18n"

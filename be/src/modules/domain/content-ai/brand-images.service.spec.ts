@@ -5,8 +5,8 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { FFMPEG } from "@modules/integrations/ffmpeg"
 import type { Ffmpeg } from "@modules/integrations/ffmpeg"
-import { SUPABASE_OBJECTS } from "@modules/integrations/supabase"
-import type { SupabaseObjectsPort } from "@modules/integrations/supabase"
+import { STORAGE_OBJECTS } from "@modules/integrations/object-storage"
+import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { MEDIA_BUCKET } from "@modules/domain/video"
 import { BrandImagesService } from "./brand-images.service"
 import { CONTENT_AI_OPTIONS, MARKETING_ASSETS } from "./content-agent.decorators"
@@ -21,7 +21,7 @@ const COPIES = [
 
 const build = async () => {
     const workDir = await mkdtemp(join(tmpdir(), "marketing-spec-"))
-    const objects = mock<SupabaseObjectsPort>()
+    const objects = mock<StorageObjectsPort>()
     const assets = mock<MarketingAssets>()
     const ffmpeg = mock<Ffmpeg>()
     ffmpeg.run.mockImplementation(async (_tool, args, run) => {
@@ -34,7 +34,7 @@ const build = async () => {
         providers: [
             BrandImagesService,
             { provide: CONTENT_AI_OPTIONS, useValue: { assets: MARKETING_ASSETS, fontsDir: "/fonts", workDir } },
-            { provide: SUPABASE_OBJECTS, useValue: objects },
+            { provide: STORAGE_OBJECTS, useValue: objects },
             { provide: MARKETING_ASSETS, useValue: assets },
             { provide: FFMPEG, useValue: ffmpeg },
         ],
@@ -83,13 +83,13 @@ describe("BrandImagesService compose", () => {
 
     it("uses the plain canvas when the library is unavailable, a photo is gone and there is no logo", async () => {
         const { service, objects, ffmpeg } = await build()
-        objects.list.mockResolvedValueOnce({ kind: "refused", code: "SUPABASE_PROVIDER_UNAVAILABLE" })
+        objects.list.mockResolvedValueOnce({ kind: "refused", code: "OBJECT_STORAGE_UNAVAILABLE" })
 
         await service.compose({ workspaceId: "ws-1", key: "k2", copies: COPIES.slice(0, 1), kit: null, logoPath: null })
 
         expect(ffmpeg.run.mock.calls[0]?.[1]).not.toContain("logo")
         objects.list.mockResolvedValueOnce({ kind: "ok", value: [{ name: "a.jpg", createdAt: null }] })
-        objects.download.mockResolvedValueOnce({ kind: "refused", code: "SUPABASE_OBJECT_NOT_FOUND" })
+        objects.download.mockResolvedValueOnce({ kind: "refused", code: "OBJECT_STORAGE_NOT_FOUND" })
         await service.compose({ workspaceId: "ws-1", key: "k3", copies: COPIES.slice(0, 1), kit: null, logoPath: null })
         expect(ffmpeg.run.mock.calls[1]?.[1]).not.toContain("photo-0")
     })
@@ -122,7 +122,7 @@ describe("BrandImagesService urlsOf", () => {
 
     it("answers none for no paths and when signing is refused", async () => {
         const { service, objects } = await build()
-        objects.signedUrls.mockResolvedValue({ kind: "refused", code: "SUPABASE_PROVIDER_UNAVAILABLE" })
+        objects.signedUrls.mockResolvedValue({ kind: "refused", code: "OBJECT_STORAGE_UNAVAILABLE" })
 
         await expect(service.urlsOf([])).resolves.toEqual([])
         await expect(service.urlsOf(["a"])).resolves.toEqual([])

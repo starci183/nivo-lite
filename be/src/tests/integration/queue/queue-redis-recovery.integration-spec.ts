@@ -1,8 +1,13 @@
-import { JOB_START } from "../../../modules/platform/queue/persistence/queue.sql"
-import { LAPSE_REDIS_JOB } from "../../fixtures/persistence/redis-proof.sql"
+import { callDbFunction } from "../../../modules/platform/database"
 import { worldIds } from "../../world/lite-world.service"
 import { redisQueueModules } from "../../world/redis-capabilities.options"
-import { redisJobProof, startQueueRelay, transportOf, waitForProof } from "../../world/redis-proof.service"
+import {
+    redisJobProof,
+    startQueueRelay,
+    transportOf,
+    waitForProof,
+    lapseRedisJob,
+} from "../../world/redis-proof.service"
 import { useTestWorld } from "../../world/use-test-world"
 
 describe("Queue crash recovery over private Redis and Supabase", () => {
@@ -16,14 +21,14 @@ describe("Queue crash recovery over private Redis and Supabase", () => {
         const queue = world.key("recovered")
         const key = `recovered:${world.key("recovered-job")}`
         const row = await enqueue(queue, key)
-        const [start] = await world.db.primary.query<Array<{ readonly outcome: string }>>(JOB_START, [
+        const [start] = await callDbFunction<{ readonly outcome: string }>(world.db.primary, "public.job_start", [
             queue,
             row.id,
             1,
             5,
         ])
         expect(start?.outcome).toBe("started")
-        await world.db.primary.query(LAPSE_REDIS_JOB, [row.id])
+        await lapseRedisJob(world.db.primary, row.id)
         const attempts: Array<number> = []
         await transportOf(world).work(
             {

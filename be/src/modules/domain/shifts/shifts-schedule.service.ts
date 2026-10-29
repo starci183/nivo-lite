@@ -4,7 +4,7 @@ import { ApprovalGate, ModuleTextGenerator } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { ShiftsError, ShiftsErrorCode } from "./errors/shifts.error"
 import { ShiftsDataService } from "./shifts-data.service"
 import { ShiftsTextService } from "./shifts-text.service"
@@ -21,14 +21,7 @@ import type {
     RequestOutput,
     RequestPublishParams,
 } from "./shifts-operations.contracts"
-import {
-    ADD_SHIFTS,
-    LINK_SCHEDULE,
-    REASSIGN_SHIFT,
-    REMOVE_SHIFT,
-    SAVE_SCHEDULE,
-    SET_EXPLANATION,
-} from "./persistence/shifts.sql"
+import { ShiftsScheduleEntity, ShiftsShiftEntity } from "./persistence/entities"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { coverageOf } from "./policies/coverage.policy"
 import { isDay, isTime } from "./policies/input-text.policy"
@@ -82,21 +75,26 @@ export class ShiftsScheduleService {
         })
         const cells = coverageOf(setup.blocks, monday, solved.shifts)
         const short = cells.filter((cell) => cell.status === "short").length
-        const [saved] = await this.entityManager.query<Array<{ id: string | null }>>(SAVE_SCHEDULE, [
-            workspaceId,
-            monday,
-            Math.round(solved.report.costVnd),
-            JSON.stringify({ coverage: cells, hours: solved.report.hoursByStaff }),
-            JSON.stringify({ solver: solved.report }),
-            Math.round(solved.report.ms),
-            displayName,
-        ])
-        if (saved?.id === undefined || saved.id === null)
+        const [saved] = await callDbFunction<{ shifts_save_schedule: string | null }>(
+            this.entityManager,
+            "public.shifts_save_schedule",
+            [
+                workspaceId,
+                monday,
+                Math.round(solved.report.costVnd),
+                JSON.stringify({ coverage: cells, hours: solved.report.hoursByStaff }),
+                JSON.stringify({ solver: solved.report }),
+                Math.round(solved.report.ms),
+                displayName,
+            ],
+        )
+        const scheduleId = saved?.shifts_save_schedule
+        if (scheduleId === undefined || scheduleId === null)
             throw new ShiftsError({ code: ShiftsErrorCode.ScheduleNotSaved })
-        await this.addShifts(workspaceId, saved.id, solved.shifts, "solver")
-        const schedule = await this.data.scheduleRow(workspaceId, saved.id)
+        await this.addShifts(workspaceId, scheduleId, solved.shifts, "solver")
+        const schedule = await this.data.scheduleRow(workspaceId, scheduleId)
         const output: ProposeWeekOutput = {
-            scheduleId: saved.id,
+            scheduleId,
             version: schedule?.version ?? 1,
             shifts: solved.report.shiftCount,
             open: solved.report.openCount,
@@ -120,16 +118,16 @@ export class ShiftsScheduleService {
         if (schedule === undefined) throw new ShiftsError({ code: ShiftsErrorCode.ScheduleNotFound })
         const shifts = await this.data.scheduleShifts(workspaceId, schedule.id)
         const setup = await this.data.loadSetup(workspaceId, false)
-        const short = coverageOf(setup.blocks, schedule.week_start, shifts).filter(
+        const short = coverageOf(setup.blocks, schedule.weekStart, shifts).filter(
             (cell) => cell.status === "short",
         ).length
-        const explanation = await this.describe(workspaceId, schedule.week_start, {
+        const explanation = await this.describe(workspaceId, schedule.weekStart, {
             scheduleId: schedule.id,
             version: schedule.version,
             shifts: shifts.filter((shift) => shift.staffId !== null).length,
             open: shifts.filter((shift) => shift.staffId === null).length,
             short,
-            costVnd: Math.round(Number(schedule.cost_vnd) || 0),
+            costVnd: Math.round(Number(schedule.costVnd) || 0),
             ms: 0,
             iterations: 0,
         })
@@ -146,16 +144,16 @@ export class ShiftsScheduleService {
         const row = await this.requireDraftShift(workspaceId, request.shiftId)
         const staffId = request.staffId ?? null
         if (staffId === null) {
-            await this.entityManager.query(REASSIGN_SHIFT, [workspaceId, request.shiftId, null])
+            await callDbFunction(this.entityManager, "public.shifts_reassign", [workspaceId, request.shiftId, null])
             return { warnings: [] }
         }
         const setup = await this.data.loadSetup(workspaceId, false)
         if (!setup.staff.some((item) => item.id === staffId && item.active)) {
             throw new ShiftsError({ code: ShiftsErrorCode.StaffNotFound })
         }
-        await this.entityManager.query(REASSIGN_SHIFT, [workspaceId, request.shiftId, staffId])
-        const env = await this.data.loadEnv(workspaceId, row.week_start, setup)
-        const shifts = await this.data.scheduleShifts(workspaceId, row.schedule_id)
+        await callDbFunction(this.entityManager, "public.shifts_reassign", [workspaceId, request.shiftId, staffId])
+        const env = await this.data.loadEnv(workspaceId, row.weekStart, setup)
+        const shifts = await this.data.scheduleShifts(workspaceId, row.scheduleId)
         return { warnings: this.warningsOf(setup, env, shifts, request.shiftId, staffId) }
     }
 
@@ -185,7 +183,7 @@ export class ShiftsScheduleService {
     async removeDraftShift(userId: string, workspaceId: string, request: RemoveDraftShiftParams): Promise<void> {
         await this.members.require(userId, workspaceId, MANAGER_ROLES)
         await this.requireDraftShift(workspaceId, request.shiftId)
-        await this.entityManager.query(REMOVE_SHIFT, [workspaceId, request.shiftId])
+        await this.entityManager.delete(ShiftsShiftEntity, { id: request.shiftId, workspaceId, status: "draft" })
     }
 
     /** Puts a draft schedule before the owner; a repeated ask while a decision waits changes nothing. */
@@ -205,16 +203,20 @@ export class ShiftsScheduleService {
             subjectId: schedule.id,
             dedupeKey: `publish_schedule:${schedule.id}:${attempt}`,
             summary: this.words.text("shifts.publishAskSummary", {
-                week: this.words.week(schedule.week_start),
+                week: this.words.week(schedule.weekStart),
                 version: schedule.version,
                 shifts: shifts.length,
                 open: shifts.filter((shift) => shift.staffId === null).length,
-                cost: money(Number(schedule.cost_vnd) || 0),
+                cost: money(Number(schedule.costVnd) || 0),
             }),
-            fields: { schedule_id: schedule.id, week_start: schedule.week_start },
+            fields: { schedule_id: schedule.id, week_start: schedule.weekStart },
         })
         if (verdict.status === "waiting_decision") {
-            await this.entityManager.query(LINK_SCHEDULE, [workspaceId, schedule.id, verdict.workItemId])
+            await this.entityManager.update(
+                ShiftsScheduleEntity,
+                { id: schedule.id, workspaceId },
+                { workItemId: verdict.workItemId },
+            )
         }
         return { status: verdict.status }
     }
@@ -226,7 +228,7 @@ export class ShiftsScheduleService {
         source: "solver" | "manual",
     ): Promise<void> {
         if (shifts.length === 0) return
-        await this.entityManager.query(ADD_SHIFTS, [
+        await callDbFunction(this.entityManager, "public.shifts_add_shifts", [
             workspaceId,
             scheduleId,
             shifts.map((shift) => shift.date),
@@ -241,7 +243,7 @@ export class ShiftsScheduleService {
     private async requireDraftShift(workspaceId: string, shiftId: string) {
         const row = await this.data.shiftRow(workspaceId, shiftId)
         if (row === undefined) throw new ShiftsError({ code: ShiftsErrorCode.ShiftNotFound })
-        if (row.schedule_status !== "draft") throw new ShiftsError({ code: ShiftsErrorCode.ShiftNotEditable })
+        if (row.scheduleStatus !== "draft") throw new ShiftsError({ code: ShiftsErrorCode.ShiftNotEditable })
         return row
     }
 
@@ -298,12 +300,11 @@ export class ShiftsScheduleService {
                 ? written.output.trim()
                 : this.words.text("shifts.explain.fallback", params)
         const schedule = await this.data.scheduleRow(workspaceId, facts.scheduleId)
-        await this.entityManager.query(SET_EXPLANATION, [
-            workspaceId,
-            facts.scheduleId,
-            text,
-            JSON.stringify(schedule?.evidence ?? {}),
-        ])
+        await this.entityManager.update(
+            ShiftsScheduleEntity,
+            { id: facts.scheduleId, workspaceId },
+            { explanation: text, evidence: schedule?.evidence ?? {} },
+        )
         return text
     }
 }

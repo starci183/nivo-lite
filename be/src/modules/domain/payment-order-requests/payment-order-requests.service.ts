@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { BillingService } from "@modules/domain/billing"
 import { CreditsError, CreditsErrorCode, CreditsService } from "@modules/domain/credits"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { isDomainError } from "@modules/platform/errors"
 import { isPaymentOrderRequestPayload, PAYMENT_ORDER_REQUEST_QUEUE } from "./payment-order-requests.contracts"
 import type {
@@ -13,16 +13,7 @@ import type {
 } from "./payment-order-requests.contracts"
 import { PaymentOrderRequestsError, PaymentOrderRequestsErrorCode } from "./errors/payment-order-requests.error"
 import { selectionOf, targetOf, toRequestStatus } from "./payment-order-requests.policy"
-import type { InsertedRequestRow, RequestRow, RequestStatusRow } from "./persistence/payment-order-requests.rows"
-import {
-    ENQUEUE_REQUEST,
-    INSERT_REQUEST,
-    MARK_EXHAUSTED_REQUEST_FAILED,
-    MARK_REQUEST_DONE,
-    MARK_REQUEST_FAILED,
-    SELECT_REQUEST,
-    SELECT_REQUEST_STATUS,
-} from "./persistence/payment-order-requests.sql"
+import { PaymentOrderRequestEntity } from "./persistence/entities"
 
 @Injectable()
 /**
@@ -42,32 +33,38 @@ export class PaymentOrderRequestsService {
         const selection = selectionOf(params)
         await this.requireTarget(params.kind, target)
         return this.entityManager.transaction(async (manager) => {
-            const [row] = await manager.query<Array<InsertedRequestRow>>(INSERT_REQUEST, [
-                params.workspaceId,
-                userId,
-                params.kind,
+            const inserted = await manager.insert(PaymentOrderRequestEntity, {
+                workspaceId: params.workspaceId,
+                requestedBy: userId,
+                kind: params.kind,
                 target,
-                selection.cycle,
-                selection.tierCredits,
-                selection.seats,
-            ])
-            if (row === undefined) {
+                cycle: selection.cycle,
+                tierCredits: selection.tierCredits,
+                seats: selection.seats,
+            })
+            const identifier: { id?: string } | undefined = inserted.identifiers[0]
+            if (identifier?.id === undefined) {
                 throw new PaymentOrderRequestsError({ code: PaymentOrderRequestsErrorCode.NotCreated })
             }
-            await manager.query(ENQUEUE_REQUEST, [params.workspaceId, PAYMENT_ORDER_REQUEST_QUEUE, row.id])
-            return { id: row.id, status: "queued" }
+            await callDbFunction(manager, "public.job_enqueue", [
+                params.workspaceId,
+                PAYMENT_ORDER_REQUEST_QUEUE,
+                PAYMENT_ORDER_REQUEST_QUEUE,
+                { workspaceId: params.workspaceId, requestId: identifier.id },
+                `payment-order-request:${identifier.id}`,
+            ])
+            return { id: identifier.id, status: "queued" }
         })
     }
 
     /** Reads only this manager's own request; another caller or workspace receives no row. */
     async status(userId: string, workspaceId: string, id: string): Promise<PaymentOrderRequestStatusLookup> {
         await this.billing.requireManager(userId, workspaceId)
-        const [row] = await this.entityManager.query<Array<RequestStatusRow>>(SELECT_REQUEST_STATUS, [
-            id,
-            workspaceId,
-            userId,
-        ])
-        return row === undefined ? null : toRequestStatus(row)
+        const row = await this.entityManager.findOne(PaymentOrderRequestEntity, {
+            select: { id: true, status: true, orderId: true, fault: true },
+            where: { id, workspaceId, requestedBy: userId },
+        })
+        return row === null ? null : toRequestStatus(row)
     }
 
     /**
@@ -77,18 +74,17 @@ export class PaymentOrderRequestsService {
      */
     async answer(payload: unknown): Promise<RequestOutcome> {
         if (!isPaymentOrderRequestPayload(payload)) return "ignored"
-        const [request] = await this.entityManager.query<Array<RequestRow>>(SELECT_REQUEST, [
-            payload.requestId,
-            payload.workspaceId,
-        ])
+        const request = await this.entityManager.findOne(PaymentOrderRequestEntity, {
+            where: { id: payload.requestId, workspaceId: payload.workspaceId },
+        })
         if (request?.status !== "pending") return "ignored"
         try {
             const orderId = await this.place(request)
-            await this.entityManager.query(MARK_REQUEST_DONE, [request.id, orderId])
+            await this.close(request.id, undefined, { status: "done", orderId })
             return "ordered"
         } catch (cause) {
             if (!isDomainError(cause)) throw cause
-            await this.entityManager.query(MARK_REQUEST_FAILED, [request.id, cause.code])
+            await this.close(request.id, undefined, { status: "failed", fault: cause.code })
             return "failed"
         }
     }
@@ -97,7 +93,20 @@ export class PaymentOrderRequestsService {
     async fail(payload: unknown, cause: unknown): Promise<void> {
         if (!isPaymentOrderRequestPayload(payload)) return
         const code = isDomainError(cause) ? cause.code : PaymentOrderRequestsErrorCode.JobFailed
-        await this.entityManager.query(MARK_EXHAUSTED_REQUEST_FAILED, [payload.requestId, payload.workspaceId, code])
+        await this.close(payload.requestId, payload.workspaceId, { status: "failed", fault: code })
+    }
+
+    /** Answers a request that is still pending; one already answered stays as it is. */
+    private async close(
+        id: string,
+        workspaceId: string | undefined,
+        answer: Pick<Partial<PaymentOrderRequestEntity>, "status" | "orderId" | "fault">,
+    ): Promise<void> {
+        await this.entityManager.update(
+            PaymentOrderRequestEntity,
+            { id, status: "pending", ...(workspaceId === undefined ? {} : { workspaceId }) },
+            { ...answer, answeredAt: () => "now()" },
+        )
     }
 
     private async requireTarget(kind: PaymentOrderRequestParams["kind"], target: string | null): Promise<void> {
@@ -112,9 +121,9 @@ export class PaymentOrderRequestsService {
         }
     }
 
-    private async place(request: RequestRow): Promise<string> {
-        const userId = request.requested_by
-        const workspaceId = request.workspace_id
+    private async place(request: PaymentOrderRequestEntity): Promise<string> {
+        const userId = request.requestedBy
+        const workspaceId = request.workspaceId
         const target = request.target ?? ""
         switch (request.kind) {
             case "plan":
@@ -124,7 +133,7 @@ export class PaymentOrderRequestsService {
                         planCode: target,
                         selection: {
                             cycle: request.cycle ?? "monthly",
-                            tierCredits: request.tier_credits,
+                            tierCredits: request.tierCredits,
                             seats: request.seats ?? 1,
                         },
                     })

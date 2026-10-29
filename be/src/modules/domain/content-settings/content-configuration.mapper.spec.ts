@@ -3,7 +3,7 @@ import {
     ContentAutomationMarksMapper,
     toContentBrandSettings as realToContentBrandSettings,
 } from "./content-configuration.mapper"
-import type { ContentBrandRow } from "./persistence/content-configuration.rows"
+import type { StoredContentBrand } from "./content-configuration.mapper"
 
 const MAPPER = Symbol("ContentBrandSettingsMapper")
 
@@ -14,9 +14,8 @@ const buildSubject = async () => {
     return moduleRef.get<readonly [typeof realToContentBrandSettings]>(MAPPER)[0]
 }
 
-const row: ContentBrandRow = {
-    workspace_id: "ws-1",
-    brand_voice: "warm",
+const row: StoredContentBrand = {
+    brandVoice: "warm",
     avoid: "slang",
     cta: "Book",
     hashtags: ["#tea"],
@@ -53,7 +52,7 @@ describe("toContentBrandSettings", () => {
 
     it("treats a missing marks object as none", async () => {
         const toContentBrandSettings = await buildSubject()
-        const bare: ContentBrandRow = { ...row }
+        const bare: StoredContentBrand = { ...row }
         Reflect.deleteProperty(bare, "marks")
         expect(toContentBrandSettings("ws-1", bare).marks).toEqual({})
     })

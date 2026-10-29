@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import type { ThreadRow } from "./persistence/work-threads.rows"
+import type { WorkThreadRecord } from "./work-threads.contracts"
 import { toThread } from "./thread.mapper"
 
 const SUBJECT = Symbol("thread.mapper")
@@ -11,7 +11,7 @@ const buildSubject = async () => {
     return moduleRef.get<typeof import("./thread.mapper")>(SUBJECT)
 }
 
-const threadRow = (overrides: Partial<ThreadRow> = {}): ThreadRow => ({
+const threadRow = (overrides: Partial<WorkThreadRecord> = {}): WorkThreadRecord => ({
     id: "thread-1",
     workspace_id: "ws-1",
     title: "Villa booking for Ms Thao",

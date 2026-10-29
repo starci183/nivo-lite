@@ -2,22 +2,14 @@
 
 import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
-import {
-    authErrorKey,
-    isLinkInvalid,
-    passwordStrength,
-    strengthKey,
-    useQueryAuthUserSwr,
-    authActionsOf,
-} from "@/hooks/auth"
+import { authErrorKey, isLinkInvalid, passwordStrength, strengthKey, authActionsOf } from "@/hooks/auth"
 import { useResetForm } from "@/hooks/rhf"
-import { slotOfSwr } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { AUTH_ROUTES, loginResetPath } from "@/modules/routes"
 import { ResetFormBase } from "./component"
 
 /** What the reset page tells the card: whether the recovery link is already unusable. */
-type ResetFormProps = { readonly expired: boolean }
+type ResetFormProps = { readonly expired: boolean; readonly token: string }
 
 /** Reset password: new password and confirmation, or a clear "link expired" state with a way to request another. */
 export const ResetForm = (props: ResetFormProps) => {
@@ -27,9 +19,6 @@ export const ResetForm = (props: ResetFormProps) => {
     const form = useResetForm()
     const [failure, setFailure] = useState<{ readonly text: string; readonly expired: boolean }>()
     const [isPending, startTransition] = useTransition()
-    const [isDone, setDone] = useState(false)
-    // The session read only decides the shape: no session (a used or expired link) draws the expired screen.
-    const session = slotOfSwr(useQueryAuthUserSwr())
 
     const password = form.watch("password")
     const confirm = form.watch("confirm")
@@ -37,9 +26,8 @@ export const ResetForm = (props: ResetFormProps) => {
     const submit = form.handleSubmit((values) => {
         setFailure(undefined)
         startTransition(async () => {
-            const outcome = await auth.updatePassword({ password: values.password })
+            const outcome = await auth.updatePassword({ token: props.token, password: values.password })
             if (outcome.success) {
-                setDone(true)
                 router.push(loginResetPath())
                 return
             }
@@ -49,9 +37,7 @@ export const ResetForm = (props: ResetFormProps) => {
 
     return (
         <ResetFormBase
-            shape={
-                props.expired || failure?.expired === true || (session.items === null && !isDone) ? "expired" : "form"
-            }
+            shape={props.expired || failure?.expired === true ? "expired" : "form"}
             props={{
                 title: t("resetTitle"),
                 text: t("resetText"),

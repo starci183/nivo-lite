@@ -1,13 +1,13 @@
 import type { ApprovalView } from "./office-command-candidates.contracts"
-import type { ApprovalRow } from "./persistence/office-thread.rows"
+import type { ApprovalLine } from "./office-reads.contracts"
 
-const leadNameOf = (row: ApprovalRow): string | null => {
+const leadNameOf = (row: ApprovalLine): string | null => {
     if (row.contact_name === null) return null
     return row.company === null || row.company === "" ? row.contact_name : `${row.contact_name} - ${row.company}`
 }
 
 /** An execution row as the approval card reads it: the customer as one label, the agent falling back to the owner. */
-export const toApprovalView = (row: ApprovalRow): ApprovalView => ({
+export const toApprovalView = (row: ApprovalLine): ApprovalView => ({
     id: row.id,
     responsibility_id: row.responsibility_id,
     agent_id: row.agent_id,

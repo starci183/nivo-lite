@@ -1,7 +1,7 @@
 import type * as SubjectModule from "./connection-commands.mapper"
 import { Test } from "@nestjs/testing"
 import { toConnectionCommand } from "./connection-commands.mapper"
-import type { ConnectionCommandRow } from "./persistence/connection-commands.rows"
+import type { ConnectionCommandEntity } from "./persistence/entities"
 
 const SUBJECT = Symbol("connection-commands.mapper")
 type Subject = Pick<typeof SubjectModule, "toConnectionCommand">
@@ -13,13 +13,16 @@ const buildSubject = async () => {
     return moduleRef.get<Subject>(SUBJECT)
 }
 
-const row: ConnectionCommandRow = {
+const row: ConnectionCommandEntity = {
     id: "command-1",
-    workspace_id: "workspace-1",
-    user_id: "user-1",
+    workspaceId: "workspace-1",
+    userId: "user-1",
     kind: "telegram.connect",
     input: { name: "Shop bot", token: "telegram-token" },
     status: "pending",
+    outcome: null,
+    createdAt: new Date("2026-10-13T02:00:00.000Z"),
+    finishedAt: null,
 }
 
 describe("toConnectionCommand", () => {

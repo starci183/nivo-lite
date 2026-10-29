@@ -6,6 +6,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import type { GuideAsk } from "./ai-generations.contracts"
@@ -13,20 +14,17 @@ import { AiGenerationsErrorCode } from "./errors/ai-generations.error"
 import { GenerationsService } from "./generations.service"
 import { GUIDE_ASKS_PER_WINDOW, GUIDE_TIMEOUT_MS, guidePrompt } from "./guide.policy"
 import { GuideService } from "./guide.service"
-import { COUNT_GUIDE_ASKS, LOCK_GUIDE_ASKER } from "./persistence/ai-generations.sql"
+import { AiGenerationEntity } from "./persistence/entities"
+
+/** The statement `advisoryXactLock` sends. */
+const LOCK_GUIDE_ASKER = "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))"
 
 const NOW = new Date("2026-10-13T10:00:00.000Z")
 const ASK: GuideAsk = { workspaceId: "w1", question: "Where are my leads?", path: "/chat", history: [], locale: "vi" }
 
 const build = async (asked: number | undefined, role: WorkspaceMember["role"] = "staff") => {
-    const tx: FakeTransaction = fakeTransaction(
-        mockEntityManager({
-            query: [
-                [LOCK_GUIDE_ASKER, [{}]],
-                [COUNT_GUIDE_ASKS, asked === undefined ? [] : [{ asked: String(asked) }]],
-            ],
-        }),
-    )
+    const tx: FakeTransaction = fakeTransaction(mockEntityManager({ query: [LOCK_GUIDE_ASKER, []] }))
+    const [count] = queueQueryBuilders(tx.em, [{ getCount: asked ?? 0 }])
     const generations = mock<GenerationsService>({
         request: jest.fn(() => Promise.resolve({ id: "g1", status: "queued" as const })),
     })
@@ -53,7 +51,7 @@ const build = async (asked: number | undefined, role: WorkspaceMember["role"] = 
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
         ],
     }).compile()
-    return { service: moduleRef.get(GuideService), tx, generations, members, catalog }
+    return { service: moduleRef.get(GuideService), tx, count, generations, members, catalog }
 }
 
 describe("GuideService", () => {
@@ -78,12 +76,21 @@ describe("GuideService", () => {
     })
 
     it("counts the member's questions of the last ten minutes under a per-member lock", async () => {
-        const { service, tx } = await build(3)
+        const { service, tx, count } = await build(3)
 
         await service.ask("u1", ASK)
 
         expect(tx.em.query).toHaveBeenCalledWith(LOCK_GUIDE_ASKER, ["guide:w1:u1"])
-        expect(tx.em.query).toHaveBeenCalledWith(COUNT_GUIDE_ASKS, ["w1", "u1", new Date("2026-10-13T09:50:00.000Z")])
+        expect(tx.em.createQueryBuilder).toHaveBeenCalledWith(AiGenerationEntity, "g")
+        expect(count?.callsOf("where")).toEqual([
+            [
+                "g.workspace_id = :workspaceId AND g.usage_kind = 'guide' AND g.created_at >= :since",
+                { workspaceId: "w1", since: new Date("2026-10-13T09:50:00.000Z") },
+            ],
+        ])
+        expect(count?.callsOf("andWhere")).toEqual([
+            ["g.input -> 'context' ->> 'requestedBy' = :userId", { userId: "u1" }],
+        ])
     })
 
     it("refuses once the member reached the limit and queues nothing", async () => {

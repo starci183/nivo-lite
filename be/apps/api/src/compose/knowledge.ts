@@ -14,15 +14,17 @@ import { KnowledgeModule } from "@modules/domain/knowledge"
 import { KnowledgeSourcesModule } from "@modules/domain/knowledge-sources"
 import { CORE_FOLDER, NivoKnowledgeModule } from "@modules/domain/nivo-knowledge"
 import { DocumentsModule } from "@modules/integrations/documents"
-import { AiPoolModule } from "@modules/integrations/ai-pool"
-import { SUPABASE_OBJECTS } from "@modules/integrations/supabase"
+import { AiGatewayModule } from "@modules/integrations/ai-gateway"
+import { AiModule } from "@modules/integrations/ai"
+import { STORAGE_OBJECTS } from "@modules/integrations/object-storage"
 import { MODULE_KNOWLEDGE_FOLDERS } from "@modules/domain/modules"
 import type { ApiOptions } from "../api.options"
 /** The knowledge area of the API, in registration order. */
 export const knowledgeModules = (options: ApiOptions): Array<DynamicModule> => [
-    AiPoolModule.register({ isGlobal: true, ...options.aiPool }),
+    AiGatewayModule.register({ isGlobal: true, ...options.aiGateway }),
+    AiModule.register({ isGlobal: true, ...options.aiTasks.endpoint }),
     DocumentsModule.register({ isGlobal: true, ...options.documents }),
-    KnowledgeSourcesModule.register({ isGlobal: true, storage: SUPABASE_OBJECTS }),
+    KnowledgeSourcesModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
     KnowledgeChunksModule.register({ isGlobal: true }),
     KnowledgeSuggestionStateModule.register({ isGlobal: true }),
     NivoKnowledgeModule.register({

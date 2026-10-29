@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
@@ -8,7 +8,6 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import type { QuotaStatus, UsageKind, UsageRecord } from "./knowledge.contracts"
 import { KnowledgeLogEvent } from "./knowledge.log-events"
 import type { QuotaStatusRow } from "./persistence/usage.rows"
-import { POST_USAGE_NOTICE, RECORD_USAGE_EVENT, SELECT_QUOTA_STATUS } from "./persistence/usage.sql"
 import { figuresOf, isBlocked, quotaStatusOf } from "./usage.policy"
 
 const number = new Intl.NumberFormat("vi-VN")
@@ -47,7 +46,7 @@ export class UsageMeterService {
                 promptChars: input.promptChars ?? 0,
                 completionChars: input.completionChars ?? 0,
             })
-            await this.entityManager.query(RECORD_USAGE_EVENT, [
+            await callDbFunction(this.entityManager, "public.record_ai_usage", [
                 input.workspaceId,
                 input.kind,
                 input.module,
@@ -77,7 +76,9 @@ export class UsageMeterService {
     /** This month's use against the allowance; null when it cannot be read. */
     private async statusOf(workspaceId: string): Promise<QuotaStatus | null> {
         try {
-            const [row] = await this.entityManager.query<Array<QuotaStatusRow>>(SELECT_QUOTA_STATUS, [workspaceId])
+            const [row] = await callDbFunction<QuotaStatusRow>(this.entityManager, "public.ai_quota_status", [
+                workspaceId,
+            ])
             return row === undefined ? null : quotaStatusOf(row)
         } catch (cause) {
             this.logger.error(KnowledgeLogEvent.QuotaReadFailed, cause, { workspaceId })
@@ -93,7 +94,12 @@ export class UsageMeterService {
                 { percent: Math.round(status.ratio * 100), use: useOf(status) },
                 "vi",
             )
-            await this.entityManager.query(POST_USAGE_NOTICE, [workspaceId, status.periodStart, level, body])
+            await callDbFunction(this.entityManager, "public.post_ai_usage_notice", [
+                workspaceId,
+                status.periodStart,
+                level,
+                body,
+            ])
         } catch (cause) {
             this.logger.error(KnowledgeLogEvent.NoticeFailed, cause, { workspaceId })
         }

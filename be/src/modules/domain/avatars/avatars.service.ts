@@ -2,14 +2,17 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentIdentityService } from "@modules/domain/agents"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { SupabaseObjectsPort } from "@modules/integrations/supabase"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import type { StorageObjectsPort } from "@modules/integrations/object-storage"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { AvatarAccounts, AvatarFile, AvatarOwner, AvatarUpload, OptionalAvatarPath } from "./avatars.contracts"
 import { InjectAvatarsAccounts, InjectAvatarsStorage } from "./avatars.decorators"
 import { AVATAR_BUCKET, avatarExtensionOf, avatarPathOf, isAvatarPath, isHttpsAddress } from "./avatars.policy"
 import { AvatarsError, AvatarsErrorCode } from "./errors/avatars.error"
-import type { AvatarObjectIdRow } from "./persistence/avatars.rows"
-import { NEW_AVATAR_OBJECT_ID } from "./persistence/avatars.sql"
+
+/** The one row `gen_random_uuid()` answers: the new picture object name. */
+interface AllocatedId {
+    readonly gen_random_uuid: string
+}
 
 const GOVERNORS = ["owner", "manager"] as const
 
@@ -22,7 +25,7 @@ const GOVERNORS = ["owner", "manager"] as const
 export class AvatarsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectAvatarsStorage() private readonly storage: SupabaseObjectsPort,
+        @InjectAvatarsStorage() private readonly storage: StorageObjectsPort,
         @InjectAvatarsAccounts() private readonly accounts: AvatarAccounts,
         private readonly members: WorkspaceMembersService,
         private readonly identity: AgentIdentityService,
@@ -60,9 +63,12 @@ export class AvatarsService {
     private async issue(owner: AvatarOwner, file: AvatarFile): Promise<AvatarUpload> {
         const extension = avatarExtensionOf(file)
         if (extension === null) throw new AvatarsError({ code: AvatarsErrorCode.FileInvalid })
-        const [allocated] = await this.entityManager.query<Array<AvatarObjectIdRow>>(NEW_AVATAR_OBJECT_ID)
+        const [allocated] = await callDbFunction<AllocatedId>(this.entityManager, "gen_random_uuid", [])
         if (allocated === undefined) throw new AvatarsError({ code: AvatarsErrorCode.Unavailable })
-        const signed = await this.storage.signedUpload(AVATAR_BUCKET, avatarPathOf(owner, allocated.id, extension))
+        const signed = await this.storage.signedUpload(
+            AVATAR_BUCKET,
+            avatarPathOf(owner, allocated.gen_random_uuid, extension),
+        )
         if (signed.kind !== "ok") throw new AvatarsError({ code: AvatarsErrorCode.Unavailable })
         return { ...signed.value, publicUrl: this.storage.publicUrl(AVATAR_BUCKET, signed.value.path) }
     }
