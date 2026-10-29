@@ -73,6 +73,7 @@ const build = async (
     mail.sendThroughPlatform.mockResolvedValue({ messageId: "m1" })
     const resets = mock<IdentityPasswordResetService>()
     resets.mint.mockResolvedValue("minted-token")
+    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             IdentitySignupService,
@@ -84,10 +85,10 @@ const build = async (
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: IDS, useValue: fakeIds() },
             { provide: IDENTITY_AUTH_OPTIONS, useValue: OPTIONS },
-            { provide: LOGGER, useValue: mock<Logger>() },
+            { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { service: moduleRef.get(IdentitySignupService), em, mail, attempts, resets }
+    return { service: moduleRef.get(IdentitySignupService), em, mail, attempts, resets, logger }
 }
 
 describe("IdentitySignupService / signup", () => {
@@ -112,6 +113,27 @@ describe("IdentitySignupService / signup", () => {
         const sent = mail.sendThroughPlatform.mock.calls[0]?.[0]
         expect(sent?.to).toBe("an@example.test")
         expect(sent?.text).toContain("https://app.example.test/auth/confirm?token=minted-token")
+    })
+
+    it("mails the link to the generated id when the create door answers none", async () => {
+        const { service, resets } = await build([
+            [USER_BY_EMAIL, []],
+            [CREATE_USER, []],
+        ])
+
+        await service.signup("An", "an@example.test", "a-long-password")
+
+        expect(resets.mint).toHaveBeenCalledWith(CREATED, "confirm", 3600)
+    })
+
+    it("still answers when the confirmation mail cannot be sent, and logs it", async () => {
+        const { service, mail, logger } = await build([[USER_BY_EMAIL, [unconfirmed]]])
+        const failure = new Error("smtp down")
+        mail.sendThroughPlatform.mockRejectedValue(failure)
+
+        await expect(service.signup("An", "an@example.test", "a-long-password")).resolves.toBeUndefined()
+
+        expect(logger.error).toHaveBeenCalledWith("identity.mail.failed", failure, { kind: "confirm" })
     })
 
     it("answers an address that already has a confirmed account the same way, without mailing or creating anything", async () => {

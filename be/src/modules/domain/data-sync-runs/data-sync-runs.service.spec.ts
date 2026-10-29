@@ -3,6 +3,7 @@ import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { entityRowBuilder, namedCalls } from "@tests/fixtures/builders/entity-row.builder"
+import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { DataSyncRunsService } from "./data-sync-runs.service"
 import { DataSyncRunEntity } from "./persistence/entities"
@@ -50,6 +51,22 @@ describe("DataSyncRunsService / open", () => {
         expect(own.createQueryBuilder).not.toHaveBeenCalled()
     })
 
+    it("keeps only the returned rows that name a run", async () => {
+        const tx = mockEntityManager()
+        queueQueryBuilders(tx, [{ execute: { raw: [null, "stray", { name: "no id" }, { id: 7 }, rowOf()] } }])
+        const runs = await build(mockEntityManager())
+
+        await expect(runs.open(tx, "ws-1", "conn-1", "manual")).resolves.toMatchObject({ id: "run-1" })
+    })
+
+    it("answers null when the insert returns no list of rows", async () => {
+        const tx = mockEntityManager()
+        queueQueryBuilders(tx, [{ execute: { raw: undefined } }])
+        const runs = await build(mockEntityManager())
+
+        await expect(runs.open(tx, "ws-1", "conn-1", "manual")).resolves.toBeNull()
+    })
+
     it("answers null when the insert returns no row", async () => {
         const tx = mockEntityManager()
         queueQueryBuilders(tx, [{ execute: { raw: [] } }])
@@ -73,6 +90,12 @@ describe("DataSyncRunsService / finish", () => {
                 { status: "failed", rowsUpserted: 12, error: "Sheet not shared", finishedAt: "function" },
             ],
         ])
+        expect(expressionValues(em.update.mock.calls[0]?.[2])).toEqual({
+            status: "failed",
+            rowsUpserted: 12,
+            error: "Sheet not shared",
+            finishedAt: "now()",
+        })
     })
 })
 

@@ -7,6 +7,7 @@ import { TABLE } from "@modules/integrations/data-sources"
 import { CLOCK } from "@modules/platform/clock"
 import { DomainError } from "@modules/platform/errors"
 import type { ContractImportRequest } from "./contract-import.contracts"
+import * as importPolicy from "./contract-import.policy"
 import { CONTRACT_IMPORT_MAX_ROWS, ContractImportService } from "./contract-import.service"
 import { DataHubErrorCode } from "./errors/data-hub.error"
 import { CONTRACT_IMPORT_COPY } from "./messages/contract-import.messages"
@@ -140,6 +141,19 @@ describe("ContractImportService.preview", () => {
             expect(preview.rows[0]?.customerName).toBe("Hosting")
         })
 
+        it("reads the first tab of an uploaded file when no tab is named", async () => {
+            const { service, table } = await build()
+
+            await service.preview({
+                workspaceId: "ws-1",
+                userId: "user-1",
+                file: { name: "hop-dong.xlsx", contentBase64: Buffer.from("PK").toString("base64") },
+                sheet: null,
+            })
+
+            expect(table.readFile).toHaveBeenCalledWith("hop-dong.xlsx", expect.any(Uint8Array), undefined)
+        })
+
         it("refuses a request with neither a file nor pasted text", async () => {
             const { service } = await build()
 
@@ -204,6 +218,18 @@ describe("ContractImportService.importContracts", () => {
 
             expect(result.created).toBe(1)
             expect(result.skipped).toContainEqual({ row: 2, reason: "CONTRACTS_DATE_INVALID" })
+        })
+
+        it("skips a row without an end day as missing even when the policy named no problem", async () => {
+            const { service, contracts } = await build()
+            const skipReason = jest.spyOn(importPolicy, "skipReason").mockReturnValue(null)
+
+            const result = await service.importContracts(request)
+            skipReason.mockRestore()
+
+            expect(result.skipped).toEqual([{ row: 3, reason: "endsOnMissing" }])
+            expect(result.created).toBe(3)
+            expect(contracts.saveContract).toHaveBeenCalledTimes(3)
         })
 
         it("lets an unexpected failure through", async () => {

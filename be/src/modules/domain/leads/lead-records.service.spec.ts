@@ -5,6 +5,7 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { FakeQueryBuilder, QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
 import { LeadsErrorCode } from "./errors/leads.error"
 import type { LeadRecord } from "./lead-records.contracts"
 import { LeadRecordsService } from "./lead-records.service"
@@ -35,20 +36,9 @@ const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = [], em: MockE
     return { records: moduleRef.get(LeadRecordsService), em, fakes }
 }
 
-/** The SQL text a `() => "..."` expression function returns, read from its source. */
-const expressionText = (source: string): string => /"([^"]*)"/u.exec(source)?.[1] ?? source
-
-/** What an update query builder was told to set; a function value is read as the SQL text it returns. */
-const setBy = (fake: FakeQueryBuilder | undefined): Record<string, unknown> => {
-    const [values] = fake?.callsOf("set")[0] ?? []
-    const set = typeof values === "object" && values !== null ? values : {}
-    return Object.fromEntries(
-        Object.entries(set).map(([key, value]) => [
-            key,
-            typeof value === "function" ? expressionText(String(value)) : value,
-        ]),
-    )
-}
+/** What an update query builder was told to set; a function value is called for the SQL text it returns. */
+const setBy = (fake: FakeQueryBuilder | undefined): Record<string, unknown> =>
+    expressionValues(fake?.callsOf("set")[0]?.[0])
 
 describe("LeadRecordsService", () => {
     it("reads one lead of the workspace", async () => {
@@ -85,6 +75,26 @@ describe("LeadRecordsService", () => {
         expect(fakes[0]?.callsOf("setParameters")).toEqual([
             [{ phone: "84912000701", email: null, name: "", channel: "Zalo" }],
         ])
+    })
+
+    it("matches a customer by email when the input carries no name at all", async () => {
+        const { records, fakes } = await build([found(ROW)])
+
+        await expect(
+            records.match({ workspaceId: "ws-1", phone: null, email: "an@example.test", name: null, channel: null }),
+        ).resolves.toEqual(ROW)
+
+        expect(fakes[0]?.callsOf("setParameters")).toEqual([
+            [{ phone: null, email: "an@example.test", name: "", channel: null }],
+        ])
+    })
+
+    it("answers null when no lead holds the contact", async () => {
+        const { records } = await build([found(undefined)])
+
+        await expect(
+            records.match({ workspaceId: "ws-1", phone: "84912000701", email: null, name: null, channel: null }),
+        ).resolves.toBeNull()
     })
 
     it("captures a customer and answers the inserted row", async () => {
@@ -347,6 +357,7 @@ describe("LeadRecordsService public API transaction", () => {
         await expect(records.applyPublicStage("ws-1", "lead-1", "won", manager)).resolves.toEqual(expected)
 
         expect(stage?.callsOf("setParameter")).toEqual([["stage", "won"]])
+        expect(setBy(stage)).toEqual({ stage: "CAST(:stage AS text)" })
         expect(stage?.callsOf("returning")[0]?.[0]).toContain("context_summary")
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })

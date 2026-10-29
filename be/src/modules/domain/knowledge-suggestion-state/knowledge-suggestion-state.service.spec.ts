@@ -5,11 +5,9 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
 import { KnowledgeSuggestionStateService } from "./knowledge-suggestion-state.service"
 import { KnowledgeSuggestionStateEntity } from "./persistence/entities"
-
-/** Matches the `() => "now()"` function a write hands the database for a time column. */
-const ANY_FUNCTION: unknown = expect.any(Function)
 
 const member: WorkspaceMember = {
     userId: "user-1",
@@ -83,16 +81,15 @@ describe("KnowledgeSuggestionStateService", () => {
         const { state, em } = await build(mockEntityManager({ upsert: [KnowledgeSuggestionStateEntity, {}] }))
 
         await expect(state.decide("user-1", "ws-1", "hours", "dismissed")).resolves.toBeUndefined()
-        expect(em.upsert).toHaveBeenCalledWith(
-            KnowledgeSuggestionStateEntity,
-            {
-                workspaceId: "ws-1",
-                suggestionKey: "hours",
-                state: "dismissed",
-                decidedBy: "user-1",
-                decidedAt: ANY_FUNCTION,
-            },
-            ["workspaceId", "suggestionKey"],
-        )
+        const [target, row, keys] = em.upsert.mock.calls[0] ?? []
+        expect(target).toBe(KnowledgeSuggestionStateEntity)
+        expect(expressionValues(row)).toEqual({
+            workspaceId: "ws-1",
+            suggestionKey: "hours",
+            state: "dismissed",
+            decidedBy: "user-1",
+            decidedAt: "now()",
+        })
+        expect(keys).toEqual(["workspaceId", "suggestionKey"])
     })
 })

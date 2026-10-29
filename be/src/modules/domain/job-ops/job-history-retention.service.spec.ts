@@ -44,6 +44,14 @@ describe("JobHistoryRetentionService", () => {
         expect(beforeBatch).toHaveBeenCalledTimes(3)
     })
 
+    it("deletes nothing when the sweep function answers no row", async () => {
+        const em = mockEntityManager()
+        em.query.mockResolvedValueOnce([])
+        const deleted = await (await build(em)).sweep({}, () => Promise.resolve())
+        expect(deleted).toBe(0)
+        expect(em.query).toHaveBeenCalledTimes(1)
+    })
+
     it("runs no batch once the fence rejects", async () => {
         const em = mockEntityManager()
         const beforeBatch = jest.fn().mockRejectedValue(new Error("fenced out"))

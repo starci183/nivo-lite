@@ -242,3 +242,51 @@ describe("IdentityAuthenticatorService / signInWithGoogle (new accounts and refu
         })
     })
 })
+
+describe("IdentityAuthenticatorService / signInWithGoogle (sparse profiles and lost accounts)", () => {
+    const created = "00000000-0000-4000-8000-000000000001"
+    const sparse = [
+        [USER_BY_GOOGLE, [{ be_auth_user_by_google: null }]],
+        [USER_BY_EMAIL, []],
+        [LINK_GOOGLE, []],
+        [TOUCH_USER, []],
+        [USER_BY_ID, [PERSON]],
+    ] as const
+
+    it("keeps only the verified keys of a profile without a name or a picture, and the generated id when the door answers none", async () => {
+        const { service, em } = await build({ query: [...sparse, [CREATE_USER, []]] })
+
+        await expect(service.signInWithGoogle({ ...GOOGLE, name: null, picture: null })).resolves.toMatchObject({
+            userId: "u9",
+        })
+
+        expect(em.query).toHaveBeenCalledWith(CREATE_USER, [
+            created,
+            "an@example.test",
+            null,
+            true,
+            '{"email":"An@Example.test","email_verified":true}',
+            new Date(NOW),
+        ])
+        expect(em.query).toHaveBeenCalledWith(LINK_GOOGLE, [
+            created,
+            "g-1",
+            expect.stringContaining("g-1"),
+            new Date(NOW),
+        ])
+    })
+
+    it("refuses an account that vanished or has no email once it is linked", async () => {
+        const gone = await build({ query: [...sparse.slice(0, 4), [USER_BY_ID, []], [CREATE_USER, []]] })
+        await expect(gone.service.signInWithGoogle(GOOGLE)).rejects.toMatchObject({
+            code: IdentityErrorCode.AccountNotFound,
+        })
+
+        const mailless = await build({
+            query: [...sparse.slice(0, 4), [USER_BY_ID, [{ ...PERSON, email: null }]], [CREATE_USER, []]],
+        })
+        await expect(mailless.service.signInWithGoogle(GOOGLE)).rejects.toMatchObject({
+            code: IdentityErrorCode.AccountNotFound,
+        })
+    })
+})

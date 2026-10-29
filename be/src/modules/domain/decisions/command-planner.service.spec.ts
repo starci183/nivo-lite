@@ -53,12 +53,11 @@ const rowsAt = (queries: Queries, key: string): ReadonlyArray<Record<string, unk
 const serve = (queries: Queries = []): MockEntityManager => {
     if (queries.length === 0) return mockEntityManager()
     const resolved = rowsAt(queries, RESOLVE_INSTALLATION)
-    const em =
-        resolved.length === 0
-            ? mockEntityManager()
-            : mockEntityManager({
-                  query: [RESOLVE_INSTALLATION, resolved.map(({ installation_id, via }) => ({ installation_id, via }))],
-              })
+    const em = queries.some(([key]) => key === RESOLVE_INSTALLATION)
+        ? mockEntityManager({
+              query: [RESOLVE_INSTALLATION, resolved.map(({ installation_id, via }) => ({ installation_id, via }))],
+          })
+        : mockEntityManager()
     const failing = queries.some(([key]) => key === UNREADABLE)
     const answer = (rows: ReadonlyArray<unknown>) => (failing ? Promise.reject(new RangeError("lookup failed")) : rows)
     const label = () => answer(rowsAt(queries, FIND_SUBJECT_LABEL))

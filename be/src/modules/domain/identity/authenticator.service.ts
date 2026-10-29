@@ -20,11 +20,14 @@ import { IdentityAuthLogEvent } from "./identity-auth.log-events"
 import { isPresentablePassword, normalizeEmail } from "./password.policy"
 import { authDoors } from "./persistence/identity-auth.sql"
 
+/** A Google profile whose email Google verified, so it has one. */
+type VerifiedProfile = GoogleProfile & { readonly email: string }
+
 /** The profile keys a Google sign-in may fill on the account; they never overwrite what the person already set. */
-const profileKeysOf = (profile: GoogleProfile): Record<string, string | boolean> => ({
+const profileKeysOf = (profile: VerifiedProfile): Record<string, string | boolean> => ({
     ...(profile.name === null ? {} : { full_name: profile.name, name: profile.name }),
     ...(profile.picture === null ? {} : { avatar_url: profile.picture, picture: profile.picture }),
-    ...(profile.email === null ? {} : { email: profile.email }),
+    email: profile.email,
     email_verified: profile.emailVerified,
 })
 
@@ -62,12 +65,13 @@ export class IdentityAuthenticatorService implements PassportAuthenticator {
             throw new IdentityError({ code: IdentityErrorCode.GoogleEmailUnverified })
         }
         const address = normalizeEmail(profile.email)
+        const verified: VerifiedProfile = { ...profile, email: profile.email }
         const now = this.clock.now()
         const userId = await this.entityManager.transaction(async (scoped) => {
             const linked = await authDoors.userByGoogle(scoped, profile.subject)
             const byEmail = linked === null ? await authDoors.userByEmail(scoped, address) : undefined
             const known = linked ?? byEmail?.id
-            const id = known ?? (await this.createFor(scoped, address, profile, now))
+            const id = known ?? (await this.createFor(scoped, address, verified, now))
             await authDoors.linkGoogle(
                 scoped,
                 id,
@@ -81,7 +85,7 @@ export class IdentityAuthenticatorService implements PassportAuthenticator {
                 }),
                 now,
             )
-            await authDoors.touchUser(scoped, id, now, true, JSON.stringify(profileKeysOf(profile)))
+            await authDoors.touchUser(scoped, id, now, true, JSON.stringify(profileKeysOf(verified)))
             return id
         })
         const user = await authDoors.userById(this.entityManager, userId)
@@ -95,7 +99,7 @@ export class IdentityAuthenticatorService implements PassportAuthenticator {
     private async createFor(
         scoped: EntityManager,
         address: string,
-        profile: GoogleProfile,
+        profile: VerifiedProfile,
         now: Date,
     ): Promise<string> {
         const id = this.ids.next()

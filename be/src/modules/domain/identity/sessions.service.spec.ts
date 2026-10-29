@@ -158,6 +158,13 @@ describe("IdentitySessionsService / refresh", () => {
         await expect(expired.service.refresh("old")).rejects.toMatchObject({ code: IdentityErrorCode.RefreshInvalid })
     })
 
+    it("refuses an empty token without reading anything", async () => {
+        const { service, em } = await build([])
+
+        await expect(service.refresh("")).rejects.toMatchObject({ code: IdentityErrorCode.RefreshInvalid })
+        expect(em.findOne).not.toHaveBeenCalled()
+    })
+
     it("ends the session of an account that was disabled after sign-in", async () => {
         const { service, em } = await build(
             [
@@ -202,6 +209,19 @@ describe("IdentitySessionsService / access", () => {
         expect(em.query).toHaveBeenCalledWith(CLOSE_SESSION, ["s1"])
     })
 
+    it("ends the session of an account that was disabled after sign-in", async () => {
+        const { service, em } = await build(
+            [
+                [USER_BY_ID, person(true)],
+                [CLOSE_SESSION, [{ be_auth_close_session: true }]],
+            ],
+            tokenRow(null),
+        )
+
+        await expect(service.access("cookie-token")).rejects.toMatchObject({ code: IdentityErrorCode.AccountDisabled })
+        expect(em.query).toHaveBeenCalledWith(CLOSE_SESSION, ["s1"])
+    })
+
     it("refuses an empty, unknown or expired token", async () => {
         await expect((await build([])).service.access("")).rejects.toMatchObject({
             code: IdentityErrorCode.RefreshInvalid,
@@ -210,6 +230,15 @@ describe("IdentitySessionsService / access", () => {
         await expect(unknown.service.access("nope")).rejects.toMatchObject({ code: IdentityErrorCode.RefreshInvalid })
         const expired = await build([], tokenRow(null, "2026-11-09T09:00:00.000Z"))
         await expect(expired.service.access("old")).rejects.toMatchObject({ code: IdentityErrorCode.RefreshInvalid })
+    })
+})
+
+describe("IdentitySessionsService / jwks", () => {
+    it("serves the public key document of the token client", async () => {
+        const { service, tokens } = await build([])
+        tokens.jwks.mockResolvedValue({ keys: [{ kid: "k1", kty: "OKP" }] })
+
+        await expect(service.jwks()).resolves.toEqual({ keys: [{ kid: "k1", kty: "OKP" }] })
     })
 })
 
@@ -236,6 +265,10 @@ describe("IdentitySessionsService / end", () => {
         const known = await build([[CLOSE_SESSION, [{ be_auth_close_session: true }]]], tokenRow(null))
         await known.service.end("cookie-token")
         expect(known.em.query).toHaveBeenCalledWith(CLOSE_SESSION, ["s1"])
+
+        const empty = await build([], tokenRow(null))
+        await empty.service.end("")
+        expect(empty.em.findOne).not.toHaveBeenCalled()
 
         const unknown = await build([], null)
         await unknown.service.end("other")

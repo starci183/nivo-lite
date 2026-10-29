@@ -13,6 +13,7 @@ import { ContractLinkService } from "./contract-link.service"
 import type { ContractLinkRead, CustomerRecordRead } from "./contract-link.policy"
 import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
 import type { TableQuery } from "@tests/fixtures/builders/table-query-builder.builder"
+import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
 
 /** The statement `advisoryXactLock` sends. */
 const LOCK_CONTRACT_LINKING = "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))"
@@ -50,7 +51,11 @@ const contractOf = builder<ContractLinkRead>({
 const RECORD: CustomerRecordRead = {
     externalId: "HTL-250728",
     title: "H\u00c0 TRUNG L\u01afU",
-    data: { "T\u00ean kh\u00e1ch h\u00e0ng": "H\u00c0 TRUNG L\u01afU", SDT: "0786346888", "M\u00e3 kh\u00e1ch h\u00e0ng": "HTL-250728" },
+    data: {
+        "T\u00ean kh\u00e1ch h\u00e0ng": "H\u00c0 TRUNG L\u01afU",
+        SDT: "0786346888",
+        "M\u00e3 kh\u00e1ch h\u00e0ng": "HTL-250728",
+    },
     source: "Kh\u00e1ch h\u00e0ng NIVO 2026",
 }
 
@@ -68,17 +73,29 @@ const leadRowOf = builder<LeadRecordRow>({
 })
 
 /** A link run whose reads answer the contracts and the customer record, and whose n-th relink answers the n-th rows given. */
-const linkRun = (contracts: ReadonlyArray<ContractLinkRead>, ...relinks: ReadonlyArray<ReadonlyArray<unknown>>) => {
+const linkRunOf = (
+    record: CustomerRecordRead,
+    contracts: ReadonlyArray<ContractLinkRead>,
+    ...relinks: ReadonlyArray<ReadonlyArray<unknown>>
+) => {
     const tx = fakeTransaction(mockEntityManager({ query: [LOCK_CONTRACT_LINKING, []] }))
     let relinked = 0
     const seen = answerByTable(tx.em, {
         "": (query: TableQuery) => {
-            if (query.callsOf("leftJoin").some(([target]) => target === ConnectionEntity)) return [RECORD]
+            if (query.callsOf("leftJoin").some(([target]) => target === ConnectionEntity)) return [record]
             return query.callsOf("update").length > 0 ? (relinks[relinked++] ?? []) : contracts
         },
     })
-    return { tx, relinkWheres: () => seen.queries.filter((query) => query.callsOf("update").length > 0).map((query) => query.callsOf("where")[0]?.[1]) }
+    const relinkQueries = () => seen.queries.filter((query) => query.callsOf("update").length > 0)
+    return {
+        tx,
+        relinkWheres: () => relinkQueries().map((query) => query.callsOf("where")[0]?.[1]),
+        relinkSets: () => relinkQueries().map((query) => expressionValues(query.callsOf("set")[0]?.[0])),
+    }
 }
+
+const linkRun = (contracts: ReadonlyArray<ContractLinkRead>, ...relinks: ReadonlyArray<ReadonlyArray<unknown>>) =>
+    linkRunOf(RECORD, contracts, ...relinks)
 
 describe("ContractLinkService", () => {
     describe("linkCustomers", () => {
@@ -101,7 +118,7 @@ describe("ContractLinkService", () => {
                     contactName: "H\u00c0 TRUNG L\u01afU",
                     company: "\u2014",
                     channel: "Kh\u00e1ch h\u00e0ng NIVO 2026",
-                    need: "contracts.linkNeed:{\"plan\":\"Hosting\"}",
+                    need: 'contracts.linkNeed:{"plan":"Hosting"}',
                     phone: PHONE,
                     email: null,
                 },
@@ -119,6 +136,34 @@ describe("ContractLinkService", () => {
             expect(tx.commits).toBe(1)
         })
 
+        it("opens a lead named after a company customer that has no source, on the default channel", async () => {
+            const company: CustomerRecordRead = {
+                ...RECORD,
+                source: null,
+                data: { ...RECORD.data, "Khách hàng": "Công ty" },
+            }
+            const { tx, relinkSets } = linkRunOf(company, [contractOf()], [{ id: "contract-1" }])
+            const { links, leads } = await build(tx.em)
+            leads.matchAllByContact.mockResolvedValue([])
+            leads.capture.mockResolvedValue(leadRowOf())
+
+            await expect(links.linkCustomers("ws-1")).resolves.toEqual({ linked: 1, created: 1, unmatched: [] })
+
+            expect(leads.capture).toHaveBeenCalledWith(
+                {
+                    workspaceId: "ws-1",
+                    contactName: "HÀ TRUNG LƯU",
+                    company: "HÀ TRUNG LƯU",
+                    channel: "contracts.linkChannel:{}",
+                    need: 'contracts.linkNeed:{"plan":"Hosting"}',
+                    phone: PHONE,
+                    email: null,
+                },
+                expect.anything(),
+            )
+            expect(relinkSets()).toEqual([{ leadId: "lead-9", updatedAt: "now()" }])
+        })
+
         it("changes nothing on a repeat: the contract already links to the lead holding the phone", async () => {
             const { tx, relinkWheres } = linkRun([contractOf({ leadId: "lead-9", leadPhone: PHONE })])
             const { links, leads } = await build(tx.em)
@@ -130,7 +175,6 @@ describe("ContractLinkService", () => {
             expect(leads.fillContact).not.toHaveBeenCalled()
             expect(relinkWheres()).toEqual([])
         })
-
     })
 })
 
@@ -159,7 +203,6 @@ describe("ContractLinkService", () => {
             )
             expect(leads.capture).not.toHaveBeenCalled()
         })
-
     })
 })
 
@@ -181,14 +224,25 @@ describe("ContractLinkService", () => {
         it("reports the contracts it cannot reach and leaves alone one whose lead already has a contact", async () => {
             const { tx } = linkRun([
                 contractOf({ id: "contract-x", customerName: "Ch\u01b0a x\u00e1c \u0111\u1ecbnh kh\u00e1ch" }),
-                contractOf({ id: "contract-y", customerName: "Kh\u00e1ch kh\u00e1c", leadId: "lead-2", leadEmail: "k@x.vn" }),
+                contractOf({
+                    id: "contract-y",
+                    customerName: "Kh\u00e1ch kh\u00e1c",
+                    leadId: "lead-2",
+                    leadEmail: "k@x.vn",
+                }),
             ])
             const { links, leads } = await build(tx.em)
 
             await expect(links.linkCustomers("ws-1")).resolves.toEqual({
                 linked: 0,
                 created: 0,
-                unmatched: [{ contractId: "contract-x", customerName: "Ch\u01b0a x\u00e1c \u0111\u1ecbnh kh\u00e1ch", reason: "noCustomer" }],
+                unmatched: [
+                    {
+                        contractId: "contract-x",
+                        customerName: "Ch\u01b0a x\u00e1c \u0111\u1ecbnh kh\u00e1ch",
+                        reason: "noCustomer",
+                    },
+                ],
             })
 
             expect(leads.matchAllByContact).not.toHaveBeenCalled()

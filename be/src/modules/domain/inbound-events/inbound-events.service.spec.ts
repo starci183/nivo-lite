@@ -6,12 +6,12 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
 import { InboundEventsErrorCode } from "./errors/inbound-events.error"
 import { InboundEventsService } from "./inbound-events.service"
 import { InboundEventEntity } from "./persistence/entities"
 
 /** Matches the `() => "now()"` function a write hands the database for a time column. */
-const ANY_FUNCTION: unknown = expect.any(Function)
 
 const NOW = "2026-10-12T10:00:00.000Z"
 
@@ -103,7 +103,10 @@ describe("InboundEventsService recordBankPayment", () => {
         })
 
         expect(bump?.callsOf("update")).toEqual([[]])
-        expect(bump?.callsOf("set")).toEqual([[{ duplicateCount: ANY_FUNCTION, lastDuplicateAt: new Date(NOW) }]])
+        expect(expressionValues(bump?.callsOf("set")[0]?.[0])).toEqual({
+            duplicateCount: "duplicate_count + 1",
+            lastDuplicateAt: new Date(NOW),
+        })
         expect(bump?.callsOf("where")).toEqual([
             ["workspace_id = :workspaceId AND dedupe_key = :key", { workspaceId: "ws-1", key: "bank:payment:casso:7" }],
         ])

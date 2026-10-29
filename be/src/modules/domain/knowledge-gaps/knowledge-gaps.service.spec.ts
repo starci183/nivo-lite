@@ -1,3 +1,4 @@
+import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
 import { Test } from "@nestjs/testing"
 import { builder, mockEntityManager } from "@starci/jest-preset"
 import { In, Not } from "typeorm"
@@ -55,6 +56,20 @@ const CANDIDATES_QUERY = (module = "chatbot") => [
     { where: { workspaceId: WS, module }, order: { lastSeenAt: "DESC" }, take: 300 },
 ]
 const NOW: unknown = expect.any(Function)
+
+/** What each expression of the counting statement writes. */
+const BUMP_SQL = {
+    count: "count + 1",
+    lastSeenAt: "now()",
+    updatedAt: "now()",
+    topic: "coalesce(topic, :subject)",
+    attributeGuess: "coalesce(attribute_guess, :attribute)",
+    exampleConversationId: "coalesce(example_conversation_id, CAST(:conversationId AS uuid))",
+    status: "CASE WHEN status = 'answered' THEN 'open' ELSE status END",
+    answeredAt: "CASE WHEN status = 'answered' THEN NULL ELSE answered_at END",
+    answeredBy: "CASE WHEN status = 'answered' THEN NULL ELSE answered_by END",
+    reopenedCount: "CASE WHEN status = 'answered' THEN reopened_count + 1 ELSE reopened_count END",
+}
 
 const inputOf = (changes: Partial<GapInput> = {}): GapInput => ({
     module: "chatbot",
@@ -214,6 +229,7 @@ describe("KnowledgeGapsService", () => {
 
             expect(bump?.callsOf("update")).toEqual([[]])
             expect(bump?.callsOf("set")).toEqual([[BUMP_SET]])
+            expect(expressionValues(bump?.callsOf("set")[0]?.[0])).toEqual(BUMP_SQL)
             expect(bump?.callsOf("where")).toEqual([BUMP_WHERE])
             expect(bump?.callsOf("setParameters")).toEqual([
                 [{ subject: "Tea", attribute: "Price", conversationId: "c1" }],
@@ -292,6 +308,19 @@ describe("KnowledgeGapsService", () => {
             expect(em.find).toHaveBeenCalledTimes(2)
             expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
         })
+    })
+
+    it("writes now() for the times a dismissal or an answer stamps", async () => {
+        const em = mockEntityManager({ update: [KnowledgeGapEntity, {}] })
+        const service = await build(em)
+
+        await service.dismiss(WS, "g1", "u1")
+        await service.answer(WS, "g2", "owner")
+
+        expect(em.update.mock.calls.map(([, , changes]) => expressionValues(changes))).toEqual([
+            { status: "dismissed", dismissedAt: "now()", dismissedBy: "u1", updatedAt: "now()" },
+            { status: "answered", answeredAt: "now()", answeredBy: "owner", updatedAt: "now()" },
+        ])
     })
 
     it("stamps dismissals and answers with the caller's reason", async () => {
