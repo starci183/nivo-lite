@@ -1,5 +1,5 @@
 export { OrdersLabelReadService } from "./orders-label-read.service"
-export type { OrderNumber } from "./orders-label-read.contracts"
+export type { OrderNumber, OrderSummary } from "./orders-label-read.contracts"
 export { ORDERS_ERROR_KINDS, OrdersError, OrdersErrorCode } from "./errors/orders.error"
 export { ORDERS_MESSAGES } from "./messages/orders.messages"
 export { OrdersModule } from "./orders.module"

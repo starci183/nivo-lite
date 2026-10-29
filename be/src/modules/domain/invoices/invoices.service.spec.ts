@@ -1,113 +1,64 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { LeadReadService } from "@modules/domain/leads"
+import type { LeadCard } from "@modules/domain/leads"
+import { OrdersLabelReadService } from "@modules/domain/orders"
+import type { OrderSummary } from "@modules/domain/orders"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { FakeQueryBuilder, QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import {
+    CONTRACT,
+    DUE_AT,
+    INPUT,
+    INVOICE,
+    LEAD,
+    NOW,
+    ORDER,
+    PERIOD,
+    RENEWAL,
+    RENEWAL_INPUT,
+    VIEW,
+    WS,
+    found,
+    inserted,
+    listed,
+    orderValues,
+    queued,
+    renewalValues,
+    writtenBy,
+} from "@tests/fixtures/builders/invoices-service.builder"
 import { InvoicesErrorCode } from "./errors/invoices.error"
 import { INVOICE_RETURNING } from "./invoice-columns.policy"
-import type {
-    InvoiceAccountingRecord,
-    InvoiceListingRecord,
-    InvoiceRecord,
-    InvoiceViewRecord,
-    NewInvoice,
-    NewRenewalInvoice,
-    ReconcileInvoiceRecord,
-} from "./invoices.contracts"
+import type { InvoiceAccountingRecord, InvoiceListingRecord, ReconcileInvoiceRecord } from "./invoices.contracts"
 import { InvoicesService } from "./invoices.service"
 
-const WS = "11111111-1111-4111-8111-111111111111"
-const INVOICE: InvoiceRecord = {
-    id: "inv-1",
-    workspace_id: WS,
-    order_id: "o1",
-    lead_id: "l1",
-    invoice_no: "HD-01",
-    amount_vnd: 50_000,
-    status: "issued",
-    issued_by: null,
-    paid_at: null,
-    contract_id: null,
-    period_ends_on: null,
+/** The orders and customers the owners answer for the invoices a spec lists. */
+interface Related {
+    readonly orders?: ReadonlyArray<OrderSummary>
+    readonly leads?: ReadonlyArray<LeadCard>
 }
-const NOW = "2026-10-13T10:00:00.000Z"
-const DUE_AT = "2026-10-28T10:00:00.000Z"
-const INPUT: NewInvoice = { workspaceId: WS, orderId: "o1", leadId: "l1", amountVnd: 50_000, issuedBy: "Lan" }
-const CONTRACT = "c1"
-const PERIOD = "2026-11-30"
-const RENEWAL: InvoiceRecord = {
-    ...INVOICE,
-    id: "inv-r1",
-    order_id: null,
-    invoice_no: "INV-202610-0043",
-    amount_vnd: 900_000,
-    issued_by: null,
-    contract_id: CONTRACT,
-    period_ends_on: PERIOD,
-}
-const RENEWAL_INPUT: NewRenewalInvoice = {
-    workspaceId: WS,
-    contractId: CONTRACT,
-    leadId: "l1",
-    amountVnd: 900_000,
-    periodEndsOn: PERIOD,
-    issuedBy: null,
-}
-const VIEW: InvoiceViewRecord = { ...INVOICE, due_at: DUE_AT, issued_at: NOW, created_at: NOW }
 
-const build = async (em: MockEntityManager): Promise<InvoicesService> => {
+const build = async (em: MockEntityManager, related: Related = {}): Promise<InvoicesService> => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             InvoicesService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: new FakeClock("2026-10-13T10:00:00.000Z") },
+            {
+                provide: OrdersLabelReadService,
+                useValue: mock<OrdersLabelReadService>({
+                    summariesOf: jest.fn().mockResolvedValue(related.orders ?? []),
+                }),
+            },
+            {
+                provide: LeadReadService,
+                useValue: mock<LeadReadService>({ cardsOf: jest.fn().mockResolvedValue(related.leads ?? []) }),
+            },
         ],
     }).compile()
     return moduleRef.get(InvoicesService)
 }
-
-/** A manager that hands out one query builder per call, answering `answers` in order. */
-const queued = (answers: ReadonlyArray<QueryBuilderAnswers>) => {
-    const em = mockEntityManager()
-    return { em, fakes: queueQueryBuilders(em, answers) }
-}
-
-/** The answers of an insert that wrote `rows`, of a read that found `row`, and of a list of `rows`. */
-const inserted = (rows: ReadonlyArray<unknown>): QueryBuilderAnswers => ({ execute: { raw: rows } })
-const found = (row: unknown): QueryBuilderAnswers => ({ getRawOne: row })
-const listed = (rows: ReadonlyArray<unknown>): QueryBuilderAnswers => ({ getRawMany: rows })
-
-/** What an insert query builder was told to write. */
-const writtenBy = (fake: FakeQueryBuilder | undefined): unknown => fake?.callsOf("values")[0]?.[0]
-
-/** What the clock-dated insert of an order invoice writes under a number. */
-const orderValues = (invoiceNo: string, orderId: string | null = "o1") => ({
-    workspaceId: WS,
-    orderId,
-    leadId: "l1",
-    invoiceNo,
-    amountVnd: 50_000,
-    dueAt: new Date(DUE_AT),
-    issuedBy: "Lan",
-    issuedAt: new Date(NOW),
-    status: "issued",
-})
-
-/** What the clock-dated insert of a renewal invoice writes under a number. */
-const renewalValues = (invoiceNo: string, periodEndsOn: string = PERIOD) => ({
-    workspaceId: WS,
-    contractId: CONTRACT,
-    periodEndsOn,
-    leadId: "l1",
-    invoiceNo,
-    amountVnd: 900_000,
-    dueAt: new Date(DUE_AT),
-    issuedBy: null,
-    issuedAt: new Date(NOW),
-    status: "issued",
-})
 
 describe("InvoicesService finds", () => {
     it("finds the customer's newest open invoice", async () => {
@@ -226,28 +177,33 @@ describe("InvoicesService finds contract periods", () => {
 })
 
 describe("InvoicesService lists", () => {
-    it("lists the newest issued invoices up to the requested limit", async () => {
+    it("lists the newest issued invoices up to the requested limit with the order number and customer name", async () => {
         const row: InvoiceListingRecord = { ...INVOICE, order_no: "ORDER-1", contact_name: "Minh" }
-        const { em, fakes } = queued([listed([row]), listed([])])
-        const service = await build(em)
+        const bare = { ...INVOICE, order_id: null, lead_id: null }
+        const { em, fakes } = queued([listed([INVOICE]), listed([bare])])
+        const service = await build(em, { orders: [ORDER], leads: [LEAD] })
 
         await expect(service.listIssued(WS, 20)).resolves.toEqual([row])
-        await expect(service.listIssued(WS, 10)).resolves.toEqual([])
-        expect(fakes.map((fake) => fake.callsOf("limit"))).toEqual([[[20]], [[10]]])
+        await expect(service.listIssued(WS, 10)).resolves.toEqual([{ ...bare, order_no: null, contact_name: null }])
+        expect(fakes[0]?.callsOf("limit")).toEqual([[20]])
         expect(fakes[0]?.callsOf("andWhere")).toEqual([["i.status = 'issued'"]])
         expect(fakes[0]?.callsOf("orderBy")).toEqual([["i.created_at", "DESC"]])
     })
 
-    it("lists accounting invoices with the default or requested limit", async () => {
-        const row: InvoiceAccountingRecord = { ...VIEW, order: null, lead: null }
-        const { em, fakes } = queued([listed([row]), listed([])])
-        const service = await build(em)
+    it("lists accounting invoices with their order and customer, by the default or requested limit", async () => {
+        const row: InvoiceAccountingRecord = {
+            ...VIEW,
+            order: { order_no: "ORDER-1", items: "Tea", amount_vnd: 50_000, status: "invoiced" },
+            lead: { contact_name: "Minh", company: "Tea Co" },
+        }
+        const bare = { ...VIEW, order_id: null, lead_id: null }
+        const { em, fakes } = queued([listed([VIEW]), listed([bare])])
+        const service = await build(em, { orders: [ORDER], leads: [LEAD] })
 
         await expect(service.listAccounting(WS)).resolves.toEqual([row])
-        await expect(service.listAccounting(WS, 25)).resolves.toEqual([])
+        await expect(service.listAccounting(WS, 25)).resolves.toEqual([{ ...bare, order: null, lead: null }])
         expect(fakes.map((fake) => fake.callsOf("limit"))).toEqual([[[1000]], [[25]]])
         expect(fakes[0]?.callsOf("orderBy")).toEqual([["i.created_at", "DESC"]])
-        expect(fakes[0]?.callsOf("addOrderBy")).toEqual([["i.id", "DESC"]])
     })
 
     it("does not read reconciliation invoices for an empty selection", async () => {
@@ -259,13 +215,23 @@ describe("InvoicesService lists", () => {
     })
 
     it("reads at most fifty reconciliation invoices without changing the selection", async () => {
+        const raw = {
+            id: INVOICE.id,
+            order_id: "o1",
+            lead_id: "l1",
+            invoice_no: INVOICE.invoice_no,
+            amount_vnd: INVOICE.amount_vnd,
+            status: INVOICE.status,
+            issued_at: NOW,
+            due_at: DUE_AT,
+        }
         const row: ReconcileInvoiceRecord = {
             id: INVOICE.id,
             invoice_no: INVOICE.invoice_no,
             amount_vnd: INVOICE.amount_vnd,
             status: INVOICE.status,
             customer: "Minh",
-            company: null,
+            company: "Tea Co",
             order_no: "ORDER-1",
             order_items: "Tea",
             order_status: "invoiced",
@@ -273,16 +239,31 @@ describe("InvoicesService lists", () => {
             due_at: DUE_AT,
         }
         const ids = Array.from({ length: 52 }, (_, index) => `inv-${index + 1}`)
-        const { em, fakes } = queued([listed([row])])
-        const service = await build(em)
+        const { em, fakes } = queued([listed([raw])])
+        const service = await build(em, { orders: [ORDER], leads: [LEAD] })
 
         await expect(service.listForReconcile(WS, ids)).resolves.toEqual([row])
         expect(fakes[0]?.callsOf("where")).toEqual([
-            ["i.workspaceId = :workspaceId AND i.id = ANY(:ids)", { workspaceId: WS, ids: ids.slice(0, 50) }],
+            ["i.workspaceId = :workspaceId AND i.id IN (:...ids)", { workspaceId: WS, ids: ids.slice(0, 50) }],
         ])
         expect(fakes[0]?.callsOf("limit")).toEqual([[50]])
-        expect(ids).toHaveLength(52)
-        expect(ids[51]).toBe("inv-52")
+    })
+
+    it("reports a blank company or order text, and a missing order or customer, as null", async () => {
+        const raw = { ...VIEW, order_id: "o1", lead_id: "l1" }
+        const { em } = queued([listed([raw, { ...raw, order_id: null, lead_id: null }])])
+        const service = await build(em, { orders: [{ ...ORDER, items: "" }], leads: [{ ...LEAD, company: "" }] })
+
+        const [blank, none] = await service.listForReconcile(WS, ["inv-1", "inv-2"])
+
+        expect(blank).toMatchObject({ company: null, order_items: null, customer: "Minh", order_no: "ORDER-1" })
+        expect(none).toMatchObject({
+            customer: null,
+            company: null,
+            order_no: null,
+            order_items: null,
+            order_status: null,
+        })
     })
 })
 

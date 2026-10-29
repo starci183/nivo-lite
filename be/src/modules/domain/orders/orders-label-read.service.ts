@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { OrderNumber } from "./orders-label-read.contracts"
+import type { OrderNumber, OrderSummary } from "./orders-label-read.contracts"
 import { OrderEntity } from "./persistence/entities"
 
 @Injectable()
@@ -19,5 +19,22 @@ export class OrdersLabelReadService {
             take: orderIds.length,
         })
         return rows.map((row) => ({ id: row.id, orderNo: row.orderNo }))
+    }
+
+    /** The summary of each given order of the workspace; an order that does not exist is missing. */
+    async summariesOf(workspaceId: string, orderIds: ReadonlyArray<string>): Promise<Array<OrderSummary>> {
+        if (orderIds.length === 0) return []
+        const rows = await this.entityManager.find(OrderEntity, {
+            select: { id: true, orderNo: true, items: true, amountVnd: true, status: true },
+            where: { workspaceId, id: In([...new Set(orderIds)]) },
+            take: orderIds.length,
+        })
+        return rows.map((row) => ({
+            id: row.id,
+            orderNo: row.orderNo,
+            items: row.items,
+            amountVnd: row.amountVnd === null ? null : Number(row.amountVnd),
+            status: row.status,
+        }))
     }
 }
