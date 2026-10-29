@@ -30,9 +30,6 @@ const readingOf = (...answers: Array<QueryBuilderAnswers>): ReadingManager => {
     return { em }
 }
 
-/** The fake statements of a manager made by {@link readingOf}, in the order the subject built them. */
-const readsOf = (em: object): ReadonlyArray<FakeQueryBuilder> => READS.get(em) ?? []
-
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 
 const NOW = "2026-10-12T10:00:00.000Z"
