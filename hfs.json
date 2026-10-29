@@ -583,6 +583,10 @@
         {
           "name": "extensions.crypt",
           "reason": "hashes an owner password with pgcrypto bcrypt"
+        },
+        {
+          "name": "public.knowledge_fold",
+          "reason": "folds Vietnamese text to its unaccented lower-case search form"
         }
       ]
     },
