@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { LoyaltyCustomersService } from "@modules/domain/loyalty-customers"
 import { LoyaltyLedgerService, expiryDate, pointsFor } from "@modules/domain/loyalty-ledger"
-import { LoyaltyProgramsService, tierFor, tierOf, tierRank } from "@modules/domain/loyalty-programs"
+import { LoyaltyProgramsService, tierFor, tierByKey, tierRank } from "@modules/domain/loyalty-programs"
 import type { LoyaltyConfig } from "@modules/domain/loyalty-programs"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -77,7 +77,7 @@ export class LoyaltyEarningService {
             })
             if (customerId === null) throw new LoyaltyError({ code: LoyaltyErrorCode.CustomerNotCreated })
             const member = await this.ledger.member(params.workspaceId, customerId)
-            const tier = tierOf(config, member?.tierKey ?? null) ?? tierFor(config, member?.lifetimeSpendVnd ?? 0)
+            const tier = tierByKey(config, member?.tierKey ?? null) ?? tierFor(config, member?.lifetimeSpendVnd ?? 0)
             const calc = pointsFor(config, { amountVnd: params.amountVnd, items: params.items }, tier)
             if (calc.points <= 0) return { customerId, status: "no_points" as const }
             const entry = await this.ledger.post({

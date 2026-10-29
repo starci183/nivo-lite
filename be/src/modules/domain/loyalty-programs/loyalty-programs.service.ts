@@ -7,8 +7,7 @@ import type { LoyaltyConfig, ProgramMatch, ProgramPatch } from "./loyalty-progra
 import { LoyaltyProgramEntity } from "./persistence/entities"
 import { DEFAULT_CONFIG, resolveConfig } from "./policies/loyalty-config.policy"
 import { programSlug } from "./policies/program-slug.policy"
-import { toProgram } from "./policies/program.mapper"
-import type { ProgramFields } from "./policies/program.mapper"
+import { firstProgramRow, toProgram } from "./policies/program.mapper"
 
 const SLUG_ATTEMPTS = 5
 
@@ -55,7 +54,7 @@ export class LoyaltyProgramsService {
     }
 
     /** The name of the shop that runs the programme; empty when the workspace is gone. */
-    async shopName(workspaceId: string): Promise<string> {
+    shopName(workspaceId: string): Promise<string> {
         return this.workspaces.nameOf(workspaceId)
     }
 
@@ -96,7 +95,7 @@ export class LoyaltyProgramsService {
             .orIgnore()
             .returning(PROGRAM_RETURNING)
             .execute()
-        const [row] = result.raw as Array<ProgramFields>
+        const row = firstProgramRow(result.raw)
         if (row !== undefined) return toProgram(row)
         const raced = await this.update(workspaceId, patch)
         if (raced !== null) return raced
@@ -121,7 +120,7 @@ export class LoyaltyProgramsService {
             })
             .returning(PROGRAM_RETURNING)
             .execute()
-        const [row] = result.raw as Array<ProgramFields>
+        const row = firstProgramRow(result.raw)
         return row === undefined ? null : toProgram(row)
     }
 }
