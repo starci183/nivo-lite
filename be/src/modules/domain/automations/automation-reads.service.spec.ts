@@ -99,7 +99,7 @@ describe("AutomationReadsService lead and conversation reads", () => {
 describe("AutomationReadsService money and contract reads", () => {
     it("reads the last activity of leads with the bound of the scan", async () => {
         const { reads, events } = await build()
-        const activity: Awaited<ReturnType<AutomationReadsService["leadActivity"]>> = []
+        const activity: Awaited<ReturnType<EventsActivityReadService["lastAtByLead"]>> = []
         events.lastAtByLead.mockResolvedValue(activity)
 
         await expect(reads.leadActivity("ws-1", ["lead-1"])).resolves.toBe(activity)
@@ -139,7 +139,7 @@ describe("AutomationReadsService dayFigures", () => {
         const { reads, transaction, leads, orders, invoices, events, work } = await build()
         leads.countCreatedSince.mockResolvedValue(3)
         orders.confirmedSince.mockResolvedValue({ count: 2, total: "900000" })
-        invoices.paidTotalSince.mockResolvedValue("500000")
+        invoices.paidTotalSince.mockResolvedValue(500000)
         events.leadIdsOfKindSince.mockResolvedValue(["lead-1", "lead-2"])
         leads.countWonAmong.mockResolvedValue(1)
         work.waitingSummaries.mockResolvedValue(["Send quote", null])
@@ -148,7 +148,7 @@ describe("AutomationReadsService dayFigures", () => {
             new_leads: 3,
             confirmed_orders: 2,
             confirmed_total: "900000",
-            money_in: "500000",
+            money_in: 500000,
             won_leads: 1,
             waiting: ["Send quote", null],
         })

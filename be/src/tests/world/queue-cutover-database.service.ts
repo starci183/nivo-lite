@@ -1,5 +1,6 @@
 import type { EntityManager } from "typeorm"
 import { sql } from "@modules/platform/database"
+import { eachInOrder } from "@modules/platform/primitives"
 import {
     archiveCutoverDelivery,
     archiveEnvelope,
@@ -113,9 +114,9 @@ export const seedCutoverOutbox = async (manager: EntityManager): Promise<void> =
 
 /** Seeds raw cron envelopes and dead letters the cutover adopts: raw envelopes have no outbox id, raw dead letters no ledger row. */
 export const seedCutoverRaw = async (manager: EntityManager): Promise<void> => {
-    for (const proof of ["raw", "raw-inflight", "raw-dead", "raw-done"]) await sendRawEnvelope(manager, proof)
+    await eachInOrder(["raw", "raw-inflight", "raw-dead", "raw-done"], (proof) => sendRawEnvelope(manager, proof))
     await claimEnvelopes(manager, ["raw-inflight", "raw-done"])
-    for (const envelope of await readEnvelopes(manager, ["raw-dead"])) await archiveEnvelope(manager, envelope)
+    await eachInOrder(await readEnvelopes(manager, ["raw-dead"]), (envelope) => archiveEnvelope(manager, envelope))
     await insertLegacyClaims(manager, await readEnvelopes(manager, ["raw-inflight", "raw-done"]))
     await manager.query(RENAME_DONE_ENVELOPE)
     await sendCutoverBusEvent(manager)
