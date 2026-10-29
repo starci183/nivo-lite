@@ -36,6 +36,13 @@ const FIND_PROFILE = {
     lock: { mode: "pessimistic_write" },
 }
 const found = builder<KnowledgeSourceEntity>(row)
+const KEY = { id: "s1", workspaceId: WS }
+/** An update the service wrote: the entity, the key of the document and the changes with the instant of the change. */
+const updateOf = (changes: object): [typeof KnowledgeSourceEntity, object, object] => [
+    KnowledgeSourceEntity,
+    KEY,
+    { ...changes, updatedAt: anyOf(Function) },
+]
 
 const build = async (em: MockEntityManager) => {
     const queue = mock<KnowledgeQueue>()
@@ -87,7 +94,9 @@ describe("ProfileSourcesService", () => {
 
         it("leaves a document whose text is unchanged alone", async () => {
             const tx = fakeTransaction(
-                mockEntityManager({ findOne: [KnowledgeSourceEntity, found({ content: "# Rooms" })] }),
+                mockEntityManager({
+                    findOne: [KnowledgeSourceEntity, Object.assign(found(), { content: "# Rooms" })],
+                }),
             )
             const { service, queue } = await build(tx.em)
 
@@ -103,7 +112,7 @@ describe("ProfileSourcesService", () => {
         it("queues a changed text again with its metadata and clears the module of a shared document", async () => {
             const tx = fakeTransaction(
                 mockEntityManager({
-                    findOne: [KnowledgeSourceEntity, found({ content: "" })],
+                    findOne: [KnowledgeSourceEntity, Object.assign(found(), { content: "" })],
                     update: [KnowledgeSourceEntity, { affected: 1 }],
                 }),
             )
@@ -111,16 +120,8 @@ describe("ProfileSourcesService", () => {
 
             await expect(service.keep(sourceOf({ visibility: "internal" }))).resolves.toBe("requeued")
             expect(tx.em.update.mock.calls).toEqual([
-                [
-                    KnowledgeSourceEntity,
-                    { id: "s1", workspaceId: WS },
-                    { status: "queued", progress: 0, error: null, content: "# Rooms", updatedAt: anyOf(Function) },
-                ],
-                [
-                    KnowledgeSourceEntity,
-                    { id: "s1", workspaceId: WS },
-                    { topic: "Rooms", module: null, visibility: "internal", updatedAt: anyOf(Function) },
-                ],
+                updateOf({ status: "queued", progress: 0, error: null, content: "# Rooms" }),
+                updateOf({ topic: "Rooms", module: null, visibility: "internal" }),
             ])
             expect(queue.enqueueIndex).toHaveBeenCalledWith(
                 { sourceId: "s1", workspaceId: WS },
@@ -132,7 +133,7 @@ describe("ProfileSourcesService", () => {
         it("keeps the module of a module document when it is queued again", async () => {
             const tx = fakeTransaction(
                 mockEntityManager({
-                    findOne: [KnowledgeSourceEntity, found({ content: "old" })],
+                    findOne: [KnowledgeSourceEntity, Object.assign(found(), { content: "old" })],
                     update: [KnowledgeSourceEntity, { affected: 1 }],
                 }),
             )
@@ -140,9 +141,7 @@ describe("ProfileSourcesService", () => {
 
             await expect(service.keep(sourceOf({ module: "accounting" }))).resolves.toBe("requeued")
             expect(tx.em.update).toHaveBeenLastCalledWith(
-                KnowledgeSourceEntity,
-                { id: "s1", workspaceId: WS },
-                { topic: "Rooms", module: "accounting", visibility: "public", updatedAt: anyOf(Function) },
+                ...updateOf({ topic: "Rooms", module: "accounting", visibility: "public" }),
             )
         })
 
