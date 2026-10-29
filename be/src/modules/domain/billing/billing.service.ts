@@ -25,7 +25,7 @@ import type { BillingWorkspaceRead, PromoHistoryRead, WorkspaceBillingRead } fro
 import { PlanEntity, PlanUsageTierEntity } from "./persistence/entities"
 import { qrImageUrl } from "./sepay.policy"
 import { WorkspaceEntity } from "@modules/domain/workspaces"
-import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 
 /** The selection with the plan's own monthly base for whatever the caller left out. */
 const selectionOf = (selection: PlanSelectionInput | undefined): PlanSelection => ({
@@ -35,6 +35,9 @@ const selectionOf = (selection: PlanSelectionInput | undefined): PlanSelection =
 })
 
 /** Roles that may pay for a workspace. */
+/** The most workspaces one caller lists. */
+const WORKSPACE_LIMIT = 200
+
 const MANAGER_ROLES: ReadonlySet<string> = new Set(["owner", "manager"])
 
 @Injectable()
@@ -44,6 +47,7 @@ export class BillingService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly orders: PaymentOrdersService,
         @InjectBillingOptions() private readonly options: BillingOptions,
+        private readonly seats: WorkspaceMemberSeatsService,
     ) {}
 
     /** The configured recipient account, available before a workspace creates a payment order. */
@@ -64,21 +68,27 @@ export class BillingService {
 
     /** The caller's active workspaces and billing state; the user id is taken only from the verified principal. */
     async workspaces(userId: string): Promise<Array<BillingWorkspace>> {
-        const rows = await this.billingWorkspaces(userId)
+        const seated = await this.seats.activeSeatsOfUser(userId, WORKSPACE_LIMIT)
+        if (seated.length === 0) return []
+        const rows = await this.billingWorkspaces()
+            .where("w.id IN (:...workspaceIds)", { workspaceIds: seated.map((seat) => seat.workspaceId) })
             .orderBy("w.created_at", "DESC")
-            .limit(200)
-            .getRawMany<BillingWorkspaceRead>()
-        return rows.map(toBillingWorkspace)
+            .limit(WORKSPACE_LIMIT)
+            .getRawMany<Omit<BillingWorkspaceRead, "role">>()
+        const roles = new Map(seated.map((seat) => [seat.workspaceId, seat.role]))
+        return rows.map((row) => toBillingWorkspace({ ...row, role: roles.get(row.id) ?? "staff" }))
     }
 
-    /** One workspace's billing state, proving the caller's active membership through the selected row. */
+    /** One workspace's billing state, proving the caller's active membership through the seat. */
     async workspace(userId: string, workspaceId: string): Promise<BillingWorkspace> {
-        const row = await this.billingWorkspaces(userId)
-            .andWhere("w.id = :workspaceId", { workspaceId })
+        const seat = await this.seats.activeSeatOfUser(workspaceId, userId)
+        if (seat === null) throw new BillingError({ code: BillingErrorCode.NotMember })
+        const row = await this.billingWorkspaces()
+            .where("w.id = :workspaceId", { workspaceId })
             .limit(1)
-            .getRawOne<BillingWorkspaceRead>()
+            .getRawOne<Omit<BillingWorkspaceRead, "role">>()
         if (row === undefined) throw new BillingError({ code: BillingErrorCode.NotMember })
-        return toBillingWorkspace(row)
+        return toBillingWorkspace({ ...row, role: seat.role })
     }
 
     /** One active plan with its usage tiers (on sale or not), or null when no active plan has the code. */
@@ -208,16 +218,8 @@ export class BillingService {
     }
 
     private async roleOf(userId: string, workspaceId: string): Promise<string | null> {
-        const member = await this.entityManager
-            .createQueryBuilder(WorkspaceMemberEntity, "m")
-            .select("m.role", "role")
-            .where("m.workspace_id = :workspaceId AND m.user_id = :userId AND m.status = 'active'", {
-                workspaceId,
-                userId,
-            })
-            .limit(1)
-            .getRawOne<{ role: string }>()
-        return member === undefined ? null : member.role
+        const seat = await this.seats.activeSeatOfUser(workspaceId, userId)
+        return seat === null ? null : seat.role
     }
 
     /** The usage tiers of every plan, smallest allowance first. */
@@ -225,18 +227,15 @@ export class BillingService {
         return this.entityManager.find(PlanUsageTierEntity, { order: { planCode: "ASC", sort: "ASC" }, take: 500 })
     }
 
-    /** The caller's active memberships joined to their workspaces, as the billing columns of each. */
-    private billingWorkspaces(userId: string): SelectQueryBuilder<ObjectLiteral> {
+    /** The billing columns of the workspaces, as the selection every billing read shares. */
+    private billingWorkspaces(): SelectQueryBuilder<ObjectLiteral> {
         return this.entityManager
-            .createQueryBuilder(WorkspaceMemberEntity, "m")
+            .createQueryBuilder(WorkspaceEntity, "w")
             .select(["w.id AS id", "w.name AS name", "w.status AS status", "w.plan_code AS plan_code"])
             .addSelect("w.paid_until", "paid_until")
             .addSelect("w.tier_credits::float8", "tier_credits")
             .addSelect("w.seat_count", "seat_count")
             .addSelect("w.billing_cycle", "billing_cycle")
             .addSelect("w.billed_monthly_vnd::float8", "billed_monthly_vnd")
-            .addSelect("m.role", "role")
-            .innerJoin(WorkspaceEntity, "w", "w.id = m.workspace_id")
-            .where("m.user_id = :userId AND m.status = 'active'", { userId })
     }
 }
