@@ -2,7 +2,6 @@ import { Test } from "@nestjs/testing"
 import { builder, fakeTransaction, mock, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
 import type { AgentProfile } from "@modules/domain/agents"
 import type { FlowFields } from "./lead-flow-fields.policy"
-
 import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
 import type { WorkContext, WorkItem, WorkPerformerRegistry } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
@@ -14,13 +13,11 @@ import { EVENT_BUS } from "@modules/platform/event-bus"
 import { CaptureLeadPerformerService } from "./capture-lead-performer.service"
 import { LeadFlowsError, LeadFlowsErrorCode } from "./errors/lead-flows.error"
 import { LeadFlowConversationService } from "./lead-flow-conversation.service"
-
 import { LeadFlowKitService } from "./lead-flow-kit.service"
 import { LeadFlowMetaService } from "./lead-flow-meta.service"
 import { LeadFlowStoreService } from "./lead-flow-store.service"
 import { EMPTY_SIGNALS } from "./lead-flow-score.policy"
 import type { LeadFlow, LeadSource } from "./lead-flows.contracts"
-
 const NOW = "2026-10-12T10:00:00.000Z"
 
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
@@ -172,9 +169,7 @@ const build = async (flow: LeadFlow = flowOf({ phone: "84912345678", psid: null 
 }
 
 const captured = { summary: "capture.done", evidence: "captured", lead_id: "lead-1", detail: null }
-
 const merged = { ...captured, summary: "capture.merged" }
-
 describe("CaptureLeadPerformerService", () => {
     it("registers capture_lead at boot and summarises where the lead came from", async () => {
         const { performer, registry, kit } = await build()
