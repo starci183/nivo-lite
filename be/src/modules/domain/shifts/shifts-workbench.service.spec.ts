@@ -7,9 +7,28 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { routedQueryBuilder } from "@tests/fixtures/builders/routed-query.builder"
-import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { entityOf } from "@tests/fixtures/builders/entity.builder"
+import {
+    answerWorkbenchReads,
+    approvedItemOf,
+    availabilityOf,
+    bareScheduleOf,
+    colleagueShiftRowOf,
+    leaveOf,
+    nextDayShiftRowOf,
+    noticeSwapOf,
+    olderScheduleOf,
+    openShiftRowOf,
+    orphanLeaveOf,
+    orphanSwapOf,
+    publishItemOf,
+    publishedScheduleOf,
+    scheduleOf,
+    shiftRowOf,
+    strayShiftRowOf,
+    swapOf,
+    unlinkedLeaveOf,
+} from "@tests/fixtures/builders/shifts-workbench-rows.builder"
+import type { WorkbenchAnswers } from "@tests/fixtures/builders/shifts-workbench-rows.builder"
 import { ShiftsErrorCode } from "./errors/shifts.error"
 import {
     ShiftsAttendanceEntity,
@@ -47,32 +66,6 @@ const SETUP: Setup = {
 
 const ENV: Env = { staff: new Map(), avail: [], leaves: [], overtimeHoursWeek: 40 }
 
-const scheduleOf = entityOf(ShiftsScheduleEntity, {
-    id: "schedule-2",
-    weekStart: "2026-10-12",
-    version: 2,
-    status: "draft",
-    source: "solver",
-    costVnd: "120000",
-    explanation: "Why",
-    solverMs: 40,
-    summary: { gaps: 0 },
-    evidence: { source: "saved" },
-    workItemId: "item-1",
-    createdAt: new Date("2026-10-13T01:00:00.000Z"),
-    publishedAt: null,
-})
-
-const shiftRowOf = entityOf(ShiftsShiftEntity, {
-    id: "shift-1",
-    shiftDate: "2026-10-14",
-    startTime: "08:00:00",
-    endTime: "10:00:00",
-    positionId: "position-1",
-    staffId: "profile-1",
-    status: "published",
-})
-
 const shiftOf = (overrides: Partial<Shift> = {}): Shift => ({
     id: "shift-1",
     date: "2026-10-14",
@@ -84,85 +77,9 @@ const shiftOf = (overrides: Partial<Shift> = {}): Shift => ({
     ...overrides,
 })
 
-const leaveOf = entityOf(ShiftsLeaveRequestEntity, {
-    id: "leave-1",
-    staffId: "profile-1",
-    fromDate: "2026-10-20",
-    toDate: "2026-10-21",
-    reason: "Trip",
-    status: "pending",
-    workItemId: "item-2",
-    createdAt: new Date("2026-10-13T02:00:00.000Z"),
-})
-
-const swapOf = entityOf(ShiftsSwapRequestEntity, {
-    id: "swap-1",
-    kind: "swap",
-    shiftId: "shift-1",
-    fromStaffId: "profile-1",
-    toStaffId: "profile-2",
-    reason: "Exam",
-    status: "pending",
-    checks: [],
-    workItemId: null,
-    createdAt: new Date("2026-10-13T03:00:00.000Z"),
-})
-
-const availabilityOf = entityOf(ShiftsAvailabilityEntity, {
-    id: "avail-1",
-    staffId: "profile-1",
-    weekday: 2,
-    shiftDate: null,
-    startTime: "08:00:00",
-    endTime: "12:00:00",
-    available: false,
-    note: "School",
-    status: "approved",
-    createdAt: new Date("2026-10-01T00:00:00.000Z"),
-})
-
-const itemOf = entityOf(WorkItemEntity, { id: "item-1", status: "done", proposal: {}, result: null, decidedPath: null })
-
-/** What the reads answer: the rows of each entity, whether the member has a profile, the reminder switch and the figures. */
-interface Answers {
-    /** The rows `find` answers per entity; an entity not listed answers no rows. */
-    readonly find?: ReadonlyMap<unknown, ReadonlyArray<object>>
-    /** Whether the member has a shifts profile. */
-    readonly profile?: boolean
-    /** The reminder switch; null when the workspace has no pipeline row. */
-    readonly reminder?: boolean | null
-    /** The open published shifts counted. */
-    readonly gaps?: number
-    /** The pending leaves counted. */
-    readonly pending?: number
-    /** The scheduled minutes of the month. */
-    readonly minutes?: string
-}
-
-const fromOf = (fake: FakeQueryBuilder): unknown => fake.callsOf("from")[0]?.[0]
-
-const build = async (answers: Answers = {}, member: WorkspaceMember = memberOf()) => {
+const build = async (answers: WorkbenchAnswers = {}, member: WorkspaceMember = memberOf()) => {
     const em = mockEntityManager()
-    em.find.mockImplementation(((entity: unknown) => Promise.resolve(answers.find?.get(entity) ?? [])) as never)
-    em.findOne.mockImplementation((() =>
-        Promise.resolve(answers.profile === true ? entityOf(ShiftsStaffEntity, { id: "profile-1" })() : null)) as never)
-    em.count.mockImplementation(((entity: unknown) =>
-        Promise.resolve(entity === ShiftsShiftEntity ? (answers.gaps ?? 0) : (answers.pending ?? 0))) as never)
-    em.createQueryBuilder.mockImplementation(() => {
-        const fake: FakeQueryBuilder = routedQueryBuilder({
-            getRawOne: (read) =>
-                Promise.resolve(
-                    fromOf(read) === "public.automation_pipelines"
-                        ? answers.reminder === undefined || answers.reminder === null
-                            ? undefined
-                            : { enabled: answers.reminder }
-                        : answers.minutes === undefined
-                          ? undefined
-                          : { minutes: answers.minutes },
-                ),
-        })
-        return fake.builder as never
-    })
+    answerWorkbenchReads(em, answers)
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(member)
     const data = mock<ShiftsDataService>()
@@ -181,26 +98,43 @@ const build = async (answers: Answers = {}, member: WorkspaceMember = memberOf()
     return { workbench: moduleRef.get(ShiftsWorkbenchService), em, members, data }
 }
 
-const managerBenchRows: Answers = {
+const managerBenchRows: WorkbenchAnswers = {
     profile: true,
     reminder: true,
     gaps: 3,
     pending: 2,
     minutes: "750",
     find: new Map<unknown, ReadonlyArray<object>>([
-        [
-            ShiftsScheduleEntity,
-            [scheduleOf(), scheduleOf({ id: "schedule-1", version: 1, status: "published", workItemId: null })],
-        ],
+        [ShiftsScheduleEntity, [scheduleOf(), olderScheduleOf()]],
         [ShiftsAttendanceEntity, [{ shiftId: "shift-1", checkedInAt: new Date("2026-10-14T00:55:00.000Z") }]],
-        [
-            WorkItemEntity,
-            [itemOf({ id: "item-1", status: "waiting_decision", proposal: { summary: "Publish" } as never })],
-        ],
+        [WorkItemEntity, [publishItemOf()]],
         [StaffEntity, [{ id: "staff-row-1", name: "Lan" }]],
         [ShiftsSwapRequestEntity, [swapOf()]],
         [ShiftsShiftEntity, [shiftRowOf()]],
     ]),
+}
+
+const PRIOR_SEGS = [{ date: "2026-10-11", s: 480, e: 600, pos: "position-1" }]
+
+/** The bench of rows whose timestamps are missing (`nullDates`) and whose work item holds the given malformed JSON. */
+const benchOfEdgeRows = async (proposal: unknown, result: unknown, nullDates: boolean) => {
+    const dateOf = (date: Date | string): Date | string | null => (nullDates ? null : date)
+    const dated = <Row extends { createdAt: Date | string }>(row: Row) => ({ ...row, createdAt: dateOf(row.createdAt) })
+    const published = new Date("2026-10-13T02:00:00.000Z")
+    const item = { id: "item-1", status: "done", proposal, result, decidedPath: null }
+    const { workbench, data } = await build({
+        find: new Map<unknown, ReadonlyArray<object>>([
+            [ShiftsScheduleEntity, [{ ...dated(bareScheduleOf()), workItemId: "absent", publishedAt: published }]],
+            [ShiftsLeaveRequestEntity, [unlinkedLeaveOf(), dated(orphanLeaveOf())]],
+            [ShiftsSwapRequestEntity, [noticeSwapOf(), dated(orphanSwapOf())]],
+            [ShiftsAvailabilityEntity, [dated(availabilityOf())]],
+            [ShiftsAttendanceEntity, [{ shiftId: "shift-1", checkedInAt: dateOf("2026-10-14T00:55:00.000Z") }]],
+            [ShiftsShiftEntity, [strayShiftRowOf()]],
+            [WorkItemEntity, [item]],
+        ]),
+    })
+    data.loadEnv.mockResolvedValue({ ...ENV, prior: new Map([["profile-1", PRIOR_SEGS]]) })
+    return workbench.bench("user-1", "ws-1")
 }
 
 describe("ShiftsWorkbenchService", () => {
@@ -214,49 +148,23 @@ describe("ShiftsWorkbenchService", () => {
     ])(
         "maps missing timestamps and malformed work-item JSON %j / %j (null dates=%s)",
         async (proposal, result, nullDates) => {
-            const item = { id: "item-1", status: "done", proposal, result, decidedPath: null }
-            const published = new Date("2026-10-13T02:00:00.000Z")
-            const dateOf = (date: Date | string): Date | string | null => (nullDates ? null : date)
-            const dated = <Row extends { createdAt: Date | string }>(row: Row) => ({
-                ...row,
-                createdAt: dateOf(row.createdAt),
-            })
-            const schedule = dated(scheduleOf({ status: "published", costVnd: "0", summary: null, evidence: null }))
-            const missingLeave = dated(leaveOf({ id: "leave-2", workItemId: "absent" }))
-            const missingSwap = dated(swapOf({ id: "swap-2", shiftId: "absent", workItemId: "absent" }))
-            const { workbench, data } = await build({
-                find: new Map<unknown, ReadonlyArray<object>>([
-                    [ShiftsScheduleEntity, [{ ...schedule, workItemId: "absent", publishedAt: published }]],
-                    [ShiftsLeaveRequestEntity, [leaveOf({ workItemId: null }), missingLeave]],
-                    [
-                        ShiftsSwapRequestEntity,
-                        [swapOf({ workItemId: "item-1", checks: ["Notice short"] }), missingSwap],
-                    ],
-                    [ShiftsAvailabilityEntity, [dated(availabilityOf())]],
-                    [ShiftsAttendanceEntity, [{ shiftId: "shift-1", checkedInAt: dateOf("2026-10-14T00:55:00.000Z") }]],
-                    [ShiftsShiftEntity, [shiftRowOf({ positionId: "absent" })]],
-                    [WorkItemEntity, [item]],
-                ]),
-            })
-            const segs = [{ date: "2026-10-11", s: 480, e: 600, pos: "position-1" }]
-            data.loadEnv.mockResolvedValue({ ...ENV, prior: new Map([["profile-1", segs]]) })
-            const view = await workbench.bench("user-1", "ws-1")
-            expect(view.week.prior).toEqual([{ staffId: "profile-1", segs }])
+            const view = await benchOfEdgeRows(proposal, result, nullDates)
+            const at = (iso: string): string => (nullDates ? "" : iso)
+
+            expect(view.week.prior).toEqual([{ staffId: "profile-1", segs: PRIOR_SEGS }])
             expect(view.week.current).toMatchObject({ costVnd: 0, summary: {}, evidence: {} })
             expect(view.week.current?.publishedAt).toBe("2026-10-13T02:00:00.000Z")
             expect(view.week.versions[0]?.publishedAt).toBe("2026-10-13T02:00:00.000Z")
-            expect(view.week.current?.createdAt).toBe(nullDates ? "" : "2026-10-13T01:00:00.000Z")
-            expect(view.week.versions[0]?.createdAt).toBe(nullDates ? "" : "2026-10-13T01:00:00.000Z")
-            expect(view.week.checkins).toEqual([
-                { shiftId: "shift-1", checkedInAt: nullDates ? "" : "2026-10-14T00:55:00.000Z" },
-            ])
-            expect(view.requests.leaves[1]?.createdAt).toBe(nullDates ? "" : "2026-10-13T02:00:00.000Z")
-            expect(view.requests.swaps[1]?.createdAt).toBe(nullDates ? "" : "2026-10-13T03:00:00.000Z")
-            expect(view.allAvailability[0]?.createdAt).toBe(nullDates ? "" : "2026-10-01T00:00:00.000Z")
-            expect(view.requests.availability[0]?.createdAt).toBe(nullDates ? "" : "2026-10-01T00:00:00.000Z")
+            expect(view.week.current?.createdAt).toBe(at("2026-10-13T01:00:00.000Z"))
+            expect(view.week.versions[0]?.createdAt).toBe(at("2026-10-13T01:00:00.000Z"))
+            expect(view.week.checkins).toEqual([{ shiftId: "shift-1", checkedInAt: at("2026-10-14T00:55:00.000Z") }])
+            expect(view.requests.leaves[1]?.createdAt).toBe(at("2026-10-13T02:00:00.000Z"))
+            expect(view.requests.swaps[1]?.createdAt).toBe(at("2026-10-13T03:00:00.000Z"))
+            expect(view.allAvailability[0]?.createdAt).toBe(at("2026-10-01T00:00:00.000Z"))
+            expect(view.requests.availability[0]?.createdAt).toBe(at("2026-10-01T00:00:00.000Z"))
             expect(view.week.publishItem).toBeNull()
             expect(view.requests.leaves.map((row) => row.item)).toEqual([null, null])
-            expect(view.requests.swaps[0]?.checks).toEqual(["Notice short"])
+            expect(view.requests.swaps.map((row) => row.checks)).toEqual([["Notice short"], []])
             expect(view.requests.swaps[0]?.item).toEqual({
                 id: "item-1",
                 status: "done",
@@ -349,6 +257,15 @@ describe("ShiftsWorkbenchService bench", () => {
                 shiftLine: "14/10 08:00–10:00 Cashier",
             },
         ])
+    })
+})
+
+describe("ShiftsWorkbenchService bench reads", () => {
+    it("reads the week, the requests, the attendance and the pending leave count of a manager", async () => {
+        const { workbench, data, em } = await build(managerBenchRows)
+
+        await workbench.bench("user-1", "ws-1")
+
         expect(data.loadSetup).toHaveBeenCalledWith("ws-1", true)
         expect(data.scheduleShifts).toHaveBeenCalledWith("ws-1", "schedule-2")
         expect(em.find).toHaveBeenCalledWith(
@@ -414,9 +331,7 @@ describe("ShiftsWorkbenchService bench", () => {
         const { workbench } = await build(
             {
                 profile: true,
-                find: new Map<unknown, ReadonlyArray<object>>([
-                    [ShiftsScheduleEntity, [scheduleOf({ status: "published", workItemId: null })]],
-                ]),
+                find: new Map<unknown, ReadonlyArray<object>>([[ShiftsScheduleEntity, [publishedScheduleOf()]]]),
             },
             memberOf({ role: "staff" }),
         )
@@ -452,18 +367,7 @@ describe("ShiftsWorkbenchService bench", () => {
         const { workbench } = await build({
             find: new Map<unknown, ReadonlyArray<object>>([
                 [ShiftsLeaveRequestEntity, [leaveOf()]],
-                [
-                    WorkItemEntity,
-                    [
-                        itemOf({
-                            id: "item-2",
-                            status: "done",
-                            proposal: null as never,
-                            result: { summary: "Approved" } as never,
-                            decidedPath: "human",
-                        }),
-                    ],
-                ],
+                [WorkItemEntity, [approvedItemOf()]],
                 [ShiftsAvailabilityEntity, [availabilityOf()]],
             ]),
         })
@@ -536,15 +440,7 @@ describe("ShiftsWorkbenchService mine", () => {
         const { workbench, em } = await build({
             profile: true,
             find: new Map<unknown, ReadonlyArray<object>>([
-                [
-                    ShiftsShiftEntity,
-                    [
-                        shiftRowOf(),
-                        shiftRowOf({ id: "shift-2", staffId: null }),
-                        shiftRowOf({ id: "shift-3", staffId: "profile-2" }),
-                        shiftRowOf({ id: "shift-4", shiftDate: "2026-10-15" }),
-                    ],
-                ],
+                [ShiftsShiftEntity, [shiftRowOf(), openShiftRowOf(), colleagueShiftRowOf(), nextDayShiftRowOf()]],
                 [ShiftsAttendanceEntity, [{ shiftId: "shift-1", checkedInAt: new Date("2026-10-14T00:55:00.000Z") }]],
             ]),
         })

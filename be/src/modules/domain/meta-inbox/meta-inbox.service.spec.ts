@@ -1,3 +1,4 @@
+import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder"
 import {
     replayReceiptBody,
     expectedSurfaceLookups,
@@ -32,7 +33,6 @@ import type { FakeTransaction } from "@starci/jest-preset"
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import { IsNull } from "typeorm"
 import { Test } from "@nestjs/testing"
-import type { EntityManager } from "typeorm"
 import { ConnectionsService } from "@modules/domain/connections"
 import { ConversationsService } from "@modules/domain/conversations"
 import { MetaCommentsService } from "@modules/domain/meta-comments"
@@ -42,18 +42,15 @@ import { parseWebhook } from "@modules/integrations/meta"
 import type { MetaClient, MetaEvent } from "@modules/integrations/meta"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
-import type { Inbox, InboxReceipt } from "@modules/platform/inbox"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { META_INBOUND_QUEUE, META_DELIVERY_QUEUE } from "./meta-inbox.contracts"
 import { META_EVENT_TAKER } from "./meta-inbox.decorators"
 import type { MetaEventTaker } from "./meta-inbox.port"
 import type { MetaInboundJob } from "./meta-inbox.contracts"
+import { attachReceiptClaim } from "@tests/fixtures/builders/receipt-claim-inbox.builder"
 import { MetaInboxService } from "./meta-inbox.service"
 import { MetaInboxEntity } from "./persistence/entities"
 import { INSERT_META_INBOX } from "./persistence/meta-inbox.sql"
-
-/** Matches the `() => "now()"` function a write hands the database for a time column. */
-const ANY_FUNCTION: unknown = expect.any(Function)
 
 const FIND_CALL = [
     MetaInboxEntity,
@@ -63,14 +60,14 @@ const FIND_CALL = [
         lock: { mode: "pessimistic_write" },
     },
 ]
-const COMPLETE_CALL = [MetaInboxEntity, { id: "inbox-1" }, { processedAt: ANY_FUNCTION }]
+const COMPLETE_CALL = ["MetaInboxEntity", { id: "inbox-1" }, { processedAt: "now()" }]
 
 const pendingReceipt = (payload: object) => Object.assign(new MetaInboxEntity(), { id: "inbox-1", payload })
 
 /** The consumer locked the pending receipt and then completed it. */
 const expectConsumed = (tx: FakeTransaction): void => {
     expect(tx.em.findOne.mock.calls).toEqual([FIND_CALL])
-    expect(tx.em.update.mock.calls).toEqual([COMPLETE_CALL])
+    expect(evaluatedCalls(tx.em.update.mock.calls, 2)).toEqual([COMPLETE_CALL])
 }
 
 /** The consumer locked the pending receipt and wrote no completion. */
@@ -81,25 +78,6 @@ const expectLockedOnly = (tx: FakeTransaction): void => {
 
 /** A partial-object matcher, typed `unknown` so it flows into any slot. */
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
-
-const attachReceiptClaim = (inbox: ReturnType<typeof fakeInbox>): void => {
-    const claim = inbox.claim.bind(inbox)
-    const claimReceipt: Inbox["claim"] = async (
-        source: string,
-        eventId: string,
-        manager?: EntityManager,
-        receipt?: InboxReceipt,
-    ) => {
-        if (eventId === "" || manager === undefined || receipt === undefined) return false
-        const rows = await manager.query<Array<{ readonly id: string }>>(receipt.insert, [
-            source,
-            eventId,
-            JSON.stringify(receipt.payload),
-        ])
-        return rows.length > 0 && claim(source, eventId)
-    }
-    inbox.claim = claimReceipt
-}
 
 const build = async (
     events: ReadonlyArray<MetaEvent> = [],
@@ -362,7 +340,7 @@ describe("MetaInboxService consumer transaction", () => {
                 }),
             }),
         ])
-        expect(tx.em.update).toHaveBeenCalledWith(...COMPLETE_CALL)
+        expect(evaluatedCalls(tx.em.update.mock.calls, 2)).toEqual([COMPLETE_CALL])
         const committed = outbox.jobs.length
         tx.em.findOne.mockResolvedValueOnce(null)
         await service.processRecordedDelivery({ deliveryId: DELIVERY_ID })

@@ -108,11 +108,12 @@ export class PublicLeadsService {
         const who = await this.keys.authenticate("leads:write", params.authorization)
         const lead = leadFacts(params)
         const contact = lead.phone || lead.email || null
+        const needSupplied = lead.need !== ""
         const body: LeadRequestBody = {
             name: lead.name,
             contact: normaliseContact(contact),
             need: lead.need || DEFAULT_API_NEED,
-            needSupplied: lead.need !== "",
+            needSupplied,
             channel: lead.channel,
             company: lead.company,
             note: lead.note,
@@ -130,7 +131,7 @@ export class PublicLeadsService {
                     prefix: dedupePrefix("lead", who.keyId),
                     suffix: lead.externalId,
                     body,
-                    needSupplied: body.needSupplied ?? null,
+                    needSupplied,
                 },
                 tx,
             )

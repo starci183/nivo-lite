@@ -3,6 +3,7 @@ import { Not, In } from "typeorm"
 import { builder, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { MemberGrantsErrorCode } from "./errors/member-grants.error"
@@ -17,13 +18,10 @@ const build = async (entityManager: MockEntityManager) => {
     return moduleRef.get(MemberGrantsService)
 }
 
-/** What an insert query builder was told to write; a function value (the save time) is read as its source text. */
+/** What an insert query builder was told to write; a function value (the save time) is read by calling it. */
 const writtenBy = (fake: FakeQueryBuilder | undefined): Record<string, unknown> => {
     const [values] = fake?.callsOf("values")[0] ?? []
-    const written = typeof values === "object" && values !== null ? values : {}
-    return Object.fromEntries(
-        Object.entries(written).map(([key, value]) => [key, typeof value === "function" ? String(value) : value]),
-    )
+    return evaluatedValues(values)
 }
 
 const directoryRowOf = builder<{
@@ -119,8 +117,8 @@ describe("MemberGrantsService > replaceForAction", () => {
         ])
         const { updatedAt: stamp1, ...saved1 } = writtenBy(insert1)
         const { updatedAt: stamp2, ...saved2 } = writtenBy(insert2)
-        expect(String(stamp1)).toContain("now()")
-        expect(String(stamp2)).toContain("now()")
+        expect(stamp1).toBe("now()")
+        expect(stamp2).toBe("now()")
         expect(saved1).toEqual({
             workspaceId: "ws-1",
             memberId: "member-1",

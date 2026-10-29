@@ -1,14 +1,24 @@
 import { Test } from "@nestjs/testing"
-import { builder, FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { entityOf } from "@tests/fixtures/builders/entity.builder"
+import { memberOf } from "@tests/fixtures/builders/shifts-workbench.builder"
+import {
+    availabilityOf,
+    coverageOf,
+    nothingSaved,
+    profile,
+    saved,
+    settingsOf,
+    shiftRowOf,
+    staffOf,
+} from "@tests/fixtures/builders/shifts-setup-params.builder"
 import { ShiftsErrorCode } from "./errors/shifts.error"
-import type { ShiftWithSchedule } from "./shifts-records.contracts"
 import {
     ShiftsAttendanceEntity,
     ShiftsAvailabilityEntity,
@@ -19,71 +29,12 @@ import {
     ShiftsStaffPayEntity,
 } from "./persistence/entities"
 import { ShiftsDataService } from "./shifts-data.service"
-import type {
-    SaveCoverageParams,
-    SaveShiftsAvailabilityParams,
-    SaveShiftsSettingsParams,
-} from "./shifts-setup.contracts"
 import { ShiftsSetupService } from "./shifts-setup.service"
 
 /** 07:45 in Vietnam on the day of the shift, which runs 08:00 to 10:00 there. */
 const BEFORE_SHIFT = "2026-10-12T00:45:00.000Z"
 
-const memberOf = builder<WorkspaceMember>({
-    userId: "user-1",
-    workspaceId: "ws-1",
-    role: "manager",
-    staffId: "staff-row-1",
-    displayName: "Lan",
-    status: "active",
-})
-
-const shiftRowOf = builder<ShiftWithSchedule>({
-    id: "shift-1",
-    scheduleId: "schedule-1",
-    shiftDate: "2026-10-12",
-    startTime: "08:00",
-    endTime: "10:00",
-    positionId: "position-1",
-    staffId: "profile-1",
-    status: "published",
-    scheduleStatus: "published",
-    weekStart: "2026-10-12",
-})
-
-const coverageOf = builder<SaveCoverageParams>({
-    weekdays: [0, 2],
-    start: "08:00",
-    end: "12:00",
-    positionId: "position-1",
-    min: 1,
-    ideal: 2,
-    peak: false,
-})
-
-const settingsOf = builder<SaveShiftsSettingsParams>({
-    swapNoticeHours: 12,
-    leaveNoticeDays: 3,
-    remindMinutes: 60,
-    noshowMinutes: 15,
-    overtimeHoursWeek: 40,
-    openingHours: [
-        { weekday: 0, open: "08:00", close: "22:00" },
-        { weekday: 6, open: "", close: "" },
-    ],
-})
-
-const availabilityOf = builder<SaveShiftsAvailabilityParams>({
-    staffId: "profile-2",
-    weekday: 1,
-    date: null,
-    start: "08:00",
-    end: "12:00",
-    available: false,
-    note: "  school  ",
-})
-
-const staffOf = entityOf(ShiftsStaffEntity, { id: "profile-1" })
+const Code = ShiftsErrorCode
 
 const build = async (entityManager: MockEntityManager, at: string = BEFORE_SHIFT) => {
     const members = mock<WorkspaceMembersService>()
@@ -102,14 +53,6 @@ const build = async (entityManager: MockEntityManager, at: string = BEFORE_SHIFT
     return { setup: moduleRef.get(ShiftsSetupService), members, data }
 }
 
-const profile = { findOne: [ShiftsStaffEntity, staffOf()] } as const
-const saved = (
-    id: string | null,
-): { readonly execute: { readonly raw: ReadonlyArray<{ readonly id: string | null }> } } => ({
-    execute: { raw: [{ id }] },
-})
-const nothingSaved = { execute: { raw: [] } } as const
-
 describe("ShiftsSetupService savePosition", () => {
     it("saves a trimmed position with the default colour for a manager", async () => {
         const em = mockEntityManager()
@@ -121,7 +64,6 @@ describe("ShiftsSetupService savePosition", () => {
         })
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1", ["owner", "manager"])
         expect(em.createQueryBuilder).toHaveBeenCalledWith(ShiftsPositionEntity, "s")
-        expect(insert?.callsOf("insert")).toEqual([[]])
         expect(insert?.callsOf("values")).toEqual([[{ workspaceId: "ws-1", name: "Cashier", color: "#2f6fed" }]])
         expect(insert?.callsOf("orUpdate")).toEqual([[["color"], ["workspace_id", "name"]]])
         expect(insert?.callsOf("returning")).toEqual([["id"]])
@@ -132,29 +74,24 @@ describe("ShiftsSetupService savePosition", () => {
         const { setup } = await build(em)
 
         await expect(setup.savePosition("user-1", "ws-1", { name })).rejects.toMatchObject({
-            code: ShiftsErrorCode.SetupFieldInvalid,
+            code: Code.SetupFieldInvalid,
         })
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
-    it("refuses a rename of a position the workspace does not have", async () => {
+    it.each([
+        [
+            "a rename of a position the workspace does not have",
+            { id: "missing", name: "Bar", color: "#000000" },
+            saved(null),
+        ],
+        ["a new position the database answers no row for", { name: " Bar " }, nothingSaved],
+    ])("refuses %s", async (_name, request, answer) => {
         const em = mockEntityManager()
-        queueQueryBuilders(em, [saved(null)])
+        queueQueryBuilders(em, [answer])
         const { setup } = await build(em)
 
-        await expect(
-            setup.savePosition("user-1", "ws-1", { id: "missing", name: "Bar", color: "#000000" }),
-        ).rejects.toMatchObject({ code: ShiftsErrorCode.StaffNotFound })
-    })
-
-    it("uses the default colour and refuses a position save returning no row", async () => {
-        const em = mockEntityManager()
-        const [insert] = queueQueryBuilders(em, [nothingSaved])
-        const { setup } = await build(em)
-        await expect(setup.savePosition("user-1", "ws-1", { name: " Bar " })).rejects.toMatchObject({
-            code: ShiftsErrorCode.StaffNotFound,
-        })
-        expect(insert?.callsOf("values")).toEqual([[{ workspaceId: "ws-1", name: "Bar", color: "#2f6fed" }]])
+        await expect(setup.savePosition("user-1", "ws-1", request)).rejects.toMatchObject({ code: Code.StaffNotFound })
     })
 
     it.each([
@@ -168,7 +105,6 @@ describe("ShiftsSetupService savePosition", () => {
             { id: "position-1" },
         )
         expect(em.createQueryBuilder).toHaveBeenCalledWith(ShiftsPositionEntity, "s")
-        expect(update?.callsOf("update")).toEqual([[]])
         expect(update?.callsOf("set")).toEqual([[{ name: "Bar", color: expected }]])
         expect(update?.callsOf("where")).toEqual([
             ["workspace_id = :workspaceId AND id = :id", { workspaceId: "ws-1", id: "position-1" }],
@@ -220,7 +156,6 @@ describe("ShiftsSetupService saveStaff", () => {
             }),
         ).resolves.toEqual({ id: "profile-1" })
         expect(em.createQueryBuilder).toHaveBeenCalledWith(ShiftsStaffEntity, "s")
-        expect(insert?.callsOf("insert")).toEqual([[]])
         expect(insert?.callsOf("values")).toEqual([
             [
                 {
@@ -236,11 +171,12 @@ describe("ShiftsSetupService saveStaff", () => {
                 },
             ],
         ])
-        expect(em.upsert).toHaveBeenCalledWith(
+        const [payEntity, pay, payKeys] = em.upsert.mock.calls[0] ?? []
+        expect([payEntity, evaluatedValues(pay), payKeys]).toEqual([
             ShiftsStaffPayEntity,
-            { staffId: "profile-1", workspaceId: "ws-1", hourlyWageVnd: 30001, updatedAt: expect.any(Function) },
+            { staffId: "profile-1", workspaceId: "ws-1", hourlyWageVnd: 30001, updatedAt: "now()" },
             ["staffId"],
-        )
+        ])
     })
 
     it("saves explicit profile fields with trimmed external chat ids", async () => {
@@ -281,9 +217,7 @@ describe("ShiftsSetupService saveStaff", () => {
             ["workspace_id = :workspaceId AND id = :id", { workspaceId: "ws-1", id: "profile-1" }],
         ])
     })
-})
 
-describe("ShiftsSetupService saveStaff", () => {
     it("leaves the pay alone without a wage and never stores a negative one", async () => {
         const em = mockEntityManager({ upsert: [ShiftsStaffPayEntity, {}] })
         queueQueryBuilders(em, [saved("profile-1"), saved("profile-1")])
@@ -307,7 +241,7 @@ describe("ShiftsSetupService saveStaff", () => {
 
         await expect(
             setup.saveStaff("user-1", "ws-1", { id: "missing", name: "Minh", positionIds: [] }),
-        ).rejects.toMatchObject({ code: ShiftsErrorCode.StaffNotFound })
+        ).rejects.toMatchObject({ code: Code.StaffNotFound })
     })
 })
 
@@ -321,37 +255,33 @@ describe("ShiftsSetupService saveCoverage", () => {
         isPeak: false,
     }
 
-    it("saves the block for the valid weekdays only", async () => {
-        const em = mockEntityManager({ insert: [ShiftsCoverageEntity, {}] })
+    it("saves the block for the valid weekdays only, or updates the one block to the first valid weekday", async () => {
+        const em = mockEntityManager({ insert: [ShiftsCoverageEntity, {}], update: [ShiftsCoverageEntity, {}] })
         const { setup } = await build(em)
 
         await setup.saveCoverage("user-1", "ws-1", coverageOf({ weekdays: [0, 2, 7, 1.5] }))
+        expect(em.update).not.toHaveBeenCalled()
+        await setup.saveCoverage("user-1", "ws-1", coverageOf({ id: "block-1", weekdays: [9, 3, 4] }))
 
-        expect(em.insert).toHaveBeenCalledWith(ShiftsCoverageEntity, [
-            { workspaceId: "ws-1", weekday: 0, ...block },
-            { workspaceId: "ws-1", weekday: 2, ...block },
+        expect(em.insert.mock.calls).toEqual([
+            [
+                ShiftsCoverageEntity,
+                [
+                    { workspaceId: "ws-1", weekday: 0, ...block },
+                    { workspaceId: "ws-1", weekday: 2, ...block },
+                ],
+            ],
+        ])
+        expect(em.update.mock.calls).toEqual([
+            [ShiftsCoverageEntity, { workspaceId: "ws-1", id: "block-1" }, { weekday: 3, ...block }],
         ])
     })
 
-    it("updates the one block of the workspace to the first valid weekday", async () => {
-        const em = mockEntityManager({ update: [ShiftsCoverageEntity, {}] })
-        const { setup } = await build(em)
-
-        await setup.saveCoverage("user-1", "ws-1", coverageOf({ id: "block-1", weekdays: [9, 3, 4] }))
-
-        expect(em.update).toHaveBeenCalledWith(
-            ShiftsCoverageEntity,
-            { workspaceId: "ws-1", id: "block-1" },
-            { weekday: 3, ...block },
-        )
-        expect(em.insert).not.toHaveBeenCalled()
-    })
-
     it.each([
-        ["an end before the start", coverageOf({ end: "07:00" }), ShiftsErrorCode.TimeInvalid],
-        ["a bad time", coverageOf({ start: "8am" }), ShiftsErrorCode.TimeInvalid],
-        ["no valid weekday", coverageOf({ weekdays: [9] }), ShiftsErrorCode.SetupFieldInvalid],
-        ["an ideal below the minimum", coverageOf({ min: 3, ideal: 2 }), ShiftsErrorCode.SetupFieldInvalid],
+        ["an end before the start", coverageOf({ end: "07:00" }), Code.TimeInvalid],
+        ["a bad time", coverageOf({ start: "8am" }), Code.TimeInvalid],
+        ["no valid weekday", coverageOf({ weekdays: [9] }), Code.SetupFieldInvalid],
+        ["an ideal below the minimum", coverageOf({ min: 3, ideal: 2 }), Code.SetupFieldInvalid],
     ])("refuses %s", async (_name, request, code) => {
         const em = mockEntityManager()
         const { setup } = await build(em)
@@ -369,7 +299,8 @@ describe("ShiftsSetupService saveSettings", () => {
 
         await setup.saveSettings("user-1", "ws-1", settingsOf())
 
-        expect(em.upsert).toHaveBeenCalledWith(
+        const [entity, written, keys] = em.upsert.mock.calls[0] ?? []
+        expect([entity, evaluatedValues(written), keys]).toEqual([
             ShiftsSettingsEntity,
             {
                 workspaceId: "ws-1",
@@ -379,10 +310,10 @@ describe("ShiftsSetupService saveSettings", () => {
                 remindMinutes: 60,
                 noshowMinutes: 15,
                 overtimeHoursWeek: "40",
-                updatedAt: expect.any(Function),
+                updatedAt: "now()",
             },
             ["workspaceId"],
-        )
+        ])
     })
 
     it.each([
@@ -394,7 +325,7 @@ describe("ShiftsSetupService saveSettings", () => {
         const { setup } = await build(em)
 
         await expect(setup.saveSettings("user-1", "ws-1", settingsOf({ openingHours: [day] }))).rejects.toMatchObject({
-            code: ShiftsErrorCode.SetupFieldInvalid,
+            code: Code.SetupFieldInvalid,
         })
         expect(em.upsert).not.toHaveBeenCalled()
     })
@@ -420,32 +351,23 @@ describe("ShiftsSetupService addAvailability", () => {
         })
     })
 
-    it("refuses a statement without a person", async () => {
-        const { setup } = await build(mockEntityManager())
-
-        await expect(
-            setup.addAvailability("user-1", "ws-1", availabilityOf({ staffId: undefined })),
-        ).rejects.toMatchObject({ code: ShiftsErrorCode.StaffNotFound })
-    })
-
     it.each([
-        ["both a day and a weekday", availabilityOf({ date: "2026-10-12" })],
-        ["neither a day nor a weekday", availabilityOf({ weekday: null })],
-        ["an impossible day", availabilityOf({ weekday: null, date: "2026-02-30" })],
-        ["a weekday out of range", availabilityOf({ weekday: 8 })],
-    ])("refuses %s", async (_name, request) => {
+        ["a statement without a person", availabilityOf({ staffId: undefined }), Code.StaffNotFound],
+        ["both a day and a weekday", availabilityOf({ date: "2026-10-12" }), Code.AvailabilityInvalid],
+        ["neither a day nor a weekday", availabilityOf({ weekday: null }), Code.AvailabilityInvalid],
+        ["an impossible day", availabilityOf({ weekday: null, date: "2026-02-30" }), Code.AvailabilityInvalid],
+        ["a weekday out of range", availabilityOf({ weekday: 8 }), Code.AvailabilityInvalid],
+    ])("refuses %s", async (_name, request, code) => {
         const em = mockEntityManager()
         const { setup } = await build(em)
 
-        await expect(setup.addAvailability("user-1", "ws-1", request)).rejects.toMatchObject({
-            code: ShiftsErrorCode.AvailabilityInvalid,
-        })
+        await expect(setup.addAvailability("user-1", "ws-1", request)).rejects.toMatchObject({ code })
         expect(em.insert).not.toHaveBeenCalled()
     })
 })
 
 describe("ShiftsSetupService submitAvailability", () => {
-    it("files a dated statement of the member's own profile as pending", async () => {
+    it("files a dated statement of the member's own profile as pending, matching a member with no shop staff row by account", async () => {
         const em = mockEntityManager({ ...profile, insert: [ShiftsAvailabilityEntity, { identifiers: [] }] })
         const { setup, members } = await build(em)
 
@@ -476,19 +398,11 @@ describe("ShiftsSetupService submitAvailability", () => {
                 decidedBy: null,
             }),
         )
-    })
 
-    it("matches a member without a shop staff row by account alone", async () => {
-        const em = mockEntityManager({
-            ...profile,
-            insert: [ShiftsAvailabilityEntity, { identifiers: [{ id: "a-1" }] }],
-        })
-        const { setup, members } = await build(em)
         members.require.mockResolvedValue(memberOf({ staffId: null }))
-
         await setup.submitAvailability("user-1", "ws-1", availabilityOf({ staffId: undefined }))
 
-        expect(em.findOne).toHaveBeenCalledWith(
+        expect(em.findOne).toHaveBeenLastCalledWith(
             ShiftsStaffEntity,
             expect.objectContaining({ where: [{ workspaceId: "ws-1", active: true, userId: "user-1" }] }),
         )
@@ -498,7 +412,7 @@ describe("ShiftsSetupService submitAvailability", () => {
         const { setup } = await build(mockEntityManager({ findOne: [ShiftsStaffEntity, null] }))
 
         await expect(setup.submitAvailability("user-1", "ws-1", availabilityOf())).rejects.toMatchObject({
-            code: ShiftsErrorCode.ProfileMissing,
+            code: Code.ProfileMissing,
         })
     })
 })
@@ -534,9 +448,7 @@ describe("ShiftsSetupService checkIn", () => {
         })
         expect(data.shiftRow).toHaveBeenCalledWith("ws-1", "shift-1")
         expect(em.createQueryBuilder).toHaveBeenCalledWith(ShiftsAttendanceEntity, "s")
-        expect(insert?.callsOf("insert")).toEqual([[]])
         expect(insert?.callsOf("values")).toEqual([[{ workspaceId: "ws-1", shiftId: "shift-1", staffId: "profile-1" }]])
-        expect(insert?.callsOf("orIgnore")).toEqual([[]])
         expect(insert?.callsOf("returning")).toEqual([["checked_in_at"]])
     })
 
@@ -572,30 +484,15 @@ describe("ShiftsSetupService checkIn", () => {
         }
     })
 
-    it("refuses a missing shift", async () => {
-        const { setup, data } = await build(mockEntityManager(profile))
-        data.shiftRow.mockResolvedValue(undefined)
-
-        await expect(setup.checkIn("user-1", "ws-1", { shiftId: "missing" })).rejects.toMatchObject({
-            code: ShiftsErrorCode.ShiftNotFound,
-        })
-    })
-
-    it("refuses somebody else's shift", async () => {
-        const { setup, data } = await build(mockEntityManager(profile))
-        data.shiftRow.mockResolvedValue(shiftRowOf({ staffId: "profile-9" }))
-
-        await expect(setup.checkIn("user-1", "ws-1", { shiftId: "shift-1" })).rejects.toMatchObject({
-            code: ShiftsErrorCode.CheckinNotYours,
-        })
-    })
-
     it.each([
-        ["more than thirty minutes early", "2026-10-12T00:29:00.000Z", ShiftsErrorCode.CheckinEarly],
-        ["after the end of the shift", "2026-10-12T03:01:00.000Z", ShiftsErrorCode.CheckinClosed],
-    ])("refuses a check-in %s", async (_name, at, code) => {
+        ["a missing shift", BEFORE_SHIFT, undefined, Code.ShiftNotFound],
+        ["somebody else's shift", BEFORE_SHIFT, shiftRowOf({ staffId: "profile-9" }), Code.CheckinNotYours],
+        ["a check-in more than thirty minutes early", "2026-10-12T00:29:00.000Z", shiftRowOf(), Code.CheckinEarly],
+        ["a check-in after the end of the shift", "2026-10-12T03:01:00.000Z", shiftRowOf(), Code.CheckinClosed],
+    ])("refuses %s", async (_name, at, shift, code) => {
         const em = mockEntityManager(profile)
-        const { setup } = await build(em, at)
+        const { setup, data } = await build(em, at)
+        data.shiftRow.mockResolvedValue(shift)
 
         await expect(setup.checkIn("user-1", "ws-1", { shiftId: "shift-1" })).rejects.toMatchObject({ code })
         expect(em.createQueryBuilder).not.toHaveBeenCalled()

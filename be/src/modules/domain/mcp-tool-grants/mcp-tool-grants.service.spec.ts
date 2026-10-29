@@ -3,13 +3,17 @@ import { builder, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In, Not } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { McpToolGrantRecord, McpToolGrantView, McpWorkspaceGrantView } from "./mcp-tool-grants.contracts"
 import { McpToolGrantsService } from "./mcp-tool-grants.service"
 import { McpToolGrantEntity } from "./persistence/entities"
 
-/** Matches the `() => "now()"` function a write hands the database for a time column. */
-const ANY_FUNCTION: unknown = expect.any(Function)
+/** The first upsert the manager was asked for: entity, rows as written and conflict keys. */
+const upsertedOf = (em: MockEntityManager): ReadonlyArray<unknown> => {
+    const [entity, rows, keys] = em.upsert.mock.calls[0] ?? []
+    return [entity, Array.isArray(rows) ? rows.map(evaluatedValues) : evaluatedValues(rows), keys]
+}
 
 const grantOf = builder<McpToolGrantView>({ tool: "hakuen.*", mode: "auto", limit_vnd: null, constraints: [] })
 
@@ -34,6 +38,18 @@ const recordOf = builder<McpToolGrantRecord>({
     constraints: [{ arg: "discountPct", max: 5 }],
 })
 
+/** One grant row as written to the database, with any column overridden. */
+const writtenOf = builder<Record<string, unknown>>({
+    workspaceId: "ws-1",
+    agentId: "agent-1",
+    tool: "hakuen.booking.confirm",
+    mode: "auto",
+    limitVnd: null,
+    constraints: [{ arg: "discountPct", max: 5 }],
+    updatedBy: null,
+    updatedAt: "now()",
+})
+
 const build = async (entityManager: MockEntityManager): Promise<McpToolGrantsService> => {
     const moduleRef = await Test.createTestingModule({
         providers: [McpToolGrantsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
@@ -43,8 +59,7 @@ const build = async (entityManager: MockEntityManager): Promise<McpToolGrantsSer
 
 /** A manager whose query builder answers the given raw rows. */
 const managerAnswering = (em: MockEntityManager, rows: ReadonlyArray<unknown>) => {
-    const fake = fakeQueryBuilder({ getRawMany: rows })
-    em.createQueryBuilder.mockReturnValue(fake.builder as never)
+    const [fake] = queueQueryBuilders(em, [{ getRawMany: rows }])
     return { em, fake }
 }
 
@@ -68,11 +83,11 @@ describe("McpToolGrantsService reads", () => {
         const grants = await build(em)
 
         await expect(grants.listOfWorkspace("ws-1")).resolves.toEqual([row])
-        expect(fake.callsOf("innerJoin")).toEqual([["agents", "a", "a.id = g.agent_id"]])
-        expect(fake.callsOf("where")).toEqual([["g.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
-        expect(fake.callsOf("orderBy")).toEqual([["a.name", "ASC"]])
-        expect(fake.callsOf("addOrderBy")).toEqual([["g.tool", "ASC"]])
-        expect(fake.callsOf("limit")).toEqual([[500]])
+        expect(fake?.callsOf("innerJoin")).toEqual([["agents", "a", "a.id = g.agent_id"]])
+        expect(fake?.callsOf("where")).toEqual([["g.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
+        expect(fake?.callsOf("orderBy")).toEqual([["a.name", "ASC"]])
+        expect(fake?.callsOf("addOrderBy")).toEqual([["g.tool", "ASC"]])
+        expect(fake?.callsOf("limit")).toEqual([[500]])
     })
 
     it("answers each granted agent once, in grant order", async () => {
@@ -109,20 +124,11 @@ describe("McpToolGrantsService.set", () => {
         const grants = await build(em)
 
         await expect(grants.set({ ...recordOf({ limitVnd: 500000 }), updatedBy: "person-1" })).resolves.toBe(true)
-        expect(em.upsert).toHaveBeenCalledWith(
+        expect(upsertedOf(em)).toEqual([
             McpToolGrantEntity,
-            {
-                workspaceId: "ws-1",
-                agentId: "agent-1",
-                tool: "hakuen.booking.confirm",
-                mode: "auto",
-                limitVnd: 500000,
-                constraints: [{ arg: "discountPct", max: 5 }],
-                updatedBy: "person-1",
-                updatedAt: ANY_FUNCTION,
-            },
+            writtenOf({ limitVnd: 500000, updatedBy: "person-1" }),
             ["agentId", "tool"],
-        )
+        ])
     })
 
     it("answers false and writes nothing when the agent is not one of the workspace", async () => {
@@ -155,33 +161,12 @@ describe("McpToolGrantsService.upsert", () => {
                 recordOf({ mode: "never" }),
             ]),
         ).resolves.toBe(2)
-        expect(fake.callsOf("where")).toEqual([["a.id IN (:...agentIds)", { agentIds: ["agent-1"] }]])
-        expect(em.upsert).toHaveBeenCalledWith(
+        expect(fake?.callsOf("where")).toEqual([["a.id IN (:...agentIds)", { agentIds: ["agent-1"] }]])
+        expect(upsertedOf(em)).toEqual([
             McpToolGrantEntity,
-            [
-                {
-                    workspaceId: "ws-1",
-                    agentId: "agent-1",
-                    tool: "hakuen.booking.confirm",
-                    mode: "never",
-                    limitVnd: null,
-                    constraints: [{ arg: "discountPct", max: 5 }],
-                    updatedBy: null,
-                    updatedAt: ANY_FUNCTION,
-                },
-                {
-                    workspaceId: "ws-1",
-                    agentId: "agent-1",
-                    tool: "sepay.*",
-                    mode: "auto",
-                    limitVnd: null,
-                    constraints: [],
-                    updatedBy: null,
-                    updatedAt: ANY_FUNCTION,
-                },
-            ],
+            [writtenOf({ mode: "never" }), writtenOf({ tool: "sepay.*", constraints: [] })],
             ["agentId", "tool"],
-        )
+        ])
     })
 
     it("skips a record whose agent is not of its workspace", async () => {

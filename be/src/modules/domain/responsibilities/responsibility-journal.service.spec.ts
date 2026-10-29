@@ -2,6 +2,7 @@ import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jes
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { Not } from "typeorm"
+import type { EntityManager } from "typeorm"
 import {
     LEAD,
     agentOwner,
@@ -29,6 +30,11 @@ import { ResponsibilityOwnersService } from "./responsibility-owners.service"
 import type { ResponsibilityListing } from "./responsibility-journal.contracts"
 import { ResponsibilityEntity } from "./persistence/entities"
 import { ResponsibilityJournalService } from "./responsibility-journal.service"
+
+/** The responsibility `resp-1` of the workspace was changed to these values. */
+const expectChanged = (em: MockEntityManager, changes: object): void => {
+    expect(em.update).toHaveBeenCalledWith(ResponsibilityEntity, { workspaceId: "ws-1", id: "resp-1" }, changes)
+}
 
 const registerEnsureFor = () => {
     describe("ensureFor", () => {
@@ -150,11 +156,7 @@ const registerUpdateStatus = () => {
 
             await service.markWaitingApproval(ctx, "resp-1")
 
-            expect(em.update).toHaveBeenCalledWith(
-                ResponsibilityEntity,
-                { workspaceId: "ws-1", id: "resp-1" },
-                { status: "waiting_approval" },
-            )
+            expectChanged(em, { status: "waiting_approval" })
         })
     })
 }
@@ -310,11 +312,7 @@ const registerEngineUpdates = () => {
             const { service } = await build(em)
 
             await expect(service.setStatus(ctx, "resp-1", "done")).resolves.toBeUndefined()
-            expect(em.update).toHaveBeenCalledWith(
-                ResponsibilityEntity,
-                { workspaceId: "ws-1", id: "resp-1" },
-                { status: "done" },
-            )
+            expectChanged(em, { status: "done" })
         })
 
         it("sets a status inside the supplied transaction", async () => {
@@ -323,11 +321,7 @@ const registerEngineUpdates = () => {
             const { service } = await build(em)
 
             await expect(service.setStatus(ctx, "resp-1", "waiting_approval", transaction)).resolves.toBeUndefined()
-            expect(transaction.update).toHaveBeenCalledWith(
-                ResponsibilityEntity,
-                { workspaceId: "ws-1", id: "resp-1" },
-                { status: "waiting_approval" },
-            )
+            expectChanged(transaction, { status: "waiting_approval" })
             expect(em.update).not.toHaveBeenCalled()
         })
 
@@ -336,11 +330,7 @@ const registerEngineUpdates = () => {
             const { service } = await build(em)
 
             await expect(service.setNextAction(ctx, "resp-1", "Send quote")).resolves.toBeUndefined()
-            expect(em.update).toHaveBeenCalledWith(
-                ResponsibilityEntity,
-                { workspaceId: "ws-1", id: "resp-1" },
-                { nextAction: "Send quote" },
-            )
+            expectChanged(em, { nextAction: "Send quote" })
         })
     })
 }
@@ -353,12 +343,16 @@ const registerAgentAssignment = () => {
         const { service, members, events, owners } = await build(em)
         owners.resolve.mockResolvedValue(agentOwner())
 
-        await expect(service.create("user-1", "ws-1", inputOf({ owner: "agent-1" }), transaction)).resolves.toEqual(
-            rowOf(),
-        )
+        let open: EntityManager | undefined
+        const created = await transaction.transaction((view) => {
+            open = view
+            return service.create("user-1", "ws-1", inputOf({ owner: "agent-1" }), view)
+        })
+
+        expect(created).toEqual(rowOf())
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-        expect(owners.resolve.mock.calls).toEqual([[transaction, "ws-1", "agent-1"]])
-        expect(events.record).toHaveBeenCalledWith(assignedEvent("Sales Agent: Classify"), transaction)
+        expect(owners.resolve.mock.calls).toEqual([[open, "ws-1", "agent-1"]])
+        expect(events.record).toHaveBeenCalledWith(assignedEvent("Sales Agent: Classify"), open)
         expect(write.argsOf("values")).toHaveLength(1)
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })

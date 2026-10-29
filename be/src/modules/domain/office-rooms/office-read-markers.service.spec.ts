@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { OfficeReadMarkersService } from "./office-read-markers.service"
 import { OfficeRoomReadEntity } from "./persistence/entities"
@@ -18,8 +19,8 @@ describe("OfficeReadMarkersService", () => {
         expect(manager.createQueryBuilder).toHaveBeenCalledWith(OfficeRoomReadEntity, "office_rooms_reads")
 
         expect(write.callsOf("insert")).toEqual([[]])
-        expect(write.callsOf("values")).toEqual([
-            [{ workspaceId: "workspace", userId: "account", room: "sales", lastReadAt: expect.any(Function) }],
+        expect(write.callsOf("values").map((args) => args.map((values) => evaluatedValues(values)))).toEqual([
+            [{ workspaceId: "workspace", userId: "account", room: "sales", lastReadAt: ":createdAt::timestamptz" }],
         ])
         expect(write.callsOf("setParameter")).toEqual([["createdAt", "2026-10-25T01:00:00Z"]])
         expect(write.callsOf("execute")).toHaveLength(1)

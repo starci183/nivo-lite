@@ -2,11 +2,8 @@ import { Test } from "@nestjs/testing"
 import { builder, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { IsNull, Not } from "typeorm"
-import {
-    ANY_FUNCTION,
-    answerQueryBuilders,
-    fakeQueryBuilder,
-} from "@tests/fixtures/builders/fake-query-builder.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
+import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { InstallationRecordsService } from "./installation-records.service"
 import type { InstallationRecord, NewInstallation } from "./module-installations.contracts"
@@ -184,6 +181,15 @@ describe("InstallationRecordsService", () => {
         await expect(service.requirementFacts("ws-1")).resolves.toEqual(facts)
 
         expect(em.createQueryBuilder).toHaveBeenCalledTimes(4)
+
+        const empty = mockEntityManager()
+        answerQueryBuilders(empty, fakeQueryBuilder({ getRawMany: [] }), fakeQueryBuilder({ getRawOne: undefined }))
+        await expect((await build(empty)).requirementFacts("ws-1")).resolves.toEqual({
+            providers: [],
+            chatAgents: 0,
+            staff: 0,
+            members: 0,
+        })
     })
     it("lists OpenClaw installations within the requested workspace and limit", async () => {
         const installations = [{ id: "inst-1", workspaceId: "ws-1" }]
@@ -253,7 +259,7 @@ describe("InstallationRecordsService / find", () => {
 
 describe("InstallationRecordsService / boundAgentIds", () => {
     it("answers the ids of the bound agents", async () => {
-        const stored = ["agent-1", "agent-2"].map((agentId) =>
+        const stored = ["agent-1", "agent-2", null].map((agentId) =>
             Object.assign(new ModuleInstallationEntity(), { agentId }),
         )
         const em = mockEntityManager({ find: [ModuleInstallationEntity, stored] })
@@ -448,22 +454,35 @@ describe("InstallationRecordsService / settleConnection", () => {
         expect(moved.argsOf("setParameter")).toEqual([["ready", false]])
         expect(stayed.argsOf("setParameter")).toEqual([["ready", true]])
         expect(moved.argsOf("returning")).toEqual([["status"]])
+        expect(moved.argsOf("set").map((args) => args.map((values) => evaluatedValues(values)))).toEqual([
+            [
+                {
+                    status: "CASE WHEN NOT :ready::boolean THEN 'needs_connection' WHEN live_enabled THEN 'live' ELSE 'ready' END",
+                },
+            ],
+        ])
     })
 })
 
 describe("InstallationRecordsService > markRemoved", () => {
     it("removes the row through the manager it is given, and says when there is nothing to remove", async () => {
-        const em = mockEntityManager({ update: [ModuleInstallationEntity, { affected: 1 }] })
+        const em = mockEntityManager({
+            update: [
+                [ModuleInstallationEntity, { affected: 1 }],
+                [ModuleInstallationEntity, { affected: 0 }],
+                [ModuleInstallationEntity, {}],
+            ],
+        })
         const service = await build(mockEntityManager())
 
         await expect(service.markRemoved("ws-1", "inst-1", "Lan", em)).resolves.toBe("done")
-        expect(em.update).toHaveBeenCalledWith(
+        await expect(service.markRemoved("ws-1", "inst-1", "Lan", em)).resolves.toBe("missing")
+        await expect(service.markRemoved("ws-1", "inst-1", "Lan", em)).resolves.toBe("missing")
+        const [entity, criteria, values] = em.update.mock.calls[0] ?? []
+        expect([entity, criteria, evaluatedValues(values)]).toEqual([
             ModuleInstallationEntity,
             { id: "inst-1", workspaceId: "ws-1", status: Not("removed") },
-            { status: "removed", liveEnabled: false, removedAt: ANY_FUNCTION, removedBy: "Lan" },
-        )
-
-        const none = mockEntityManager({ update: [ModuleInstallationEntity, { affected: 0 }] })
-        await expect(service.markRemoved("ws-1", "inst-1", "Lan", none)).resolves.toBe("missing")
+            { status: "removed", liveEnabled: false, removedAt: "now()", removedBy: "Lan" },
+        ])
     })
 })

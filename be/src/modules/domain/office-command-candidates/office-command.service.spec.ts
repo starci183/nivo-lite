@@ -1,8 +1,11 @@
 import { Test } from "@nestjs/testing"
+import { In } from "typeorm"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { agentEntityOf } from "@tests/fixtures/builders/agents.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import type { MockEntityManager } from "@starci/jest-preset"
 import { AgentEntity } from "@modules/domain/agents"
 import { OrderEntity } from "@modules/domain/orders"
 import { CommandBusService, ModuleCatalogService } from "@modules/domain/decisions"
@@ -60,7 +63,7 @@ const accounting: ModuleEntry = {
 }
 const humanMessage: MessageText = { id: "m-1", author_kind: "human", body: "@ke-toan phieu thu cho don #DH-1" }
 const agentRow = agentEntityOf({ id: "a-1", handle: "ke-toan", module: "accounting", name: "Mai" })
-const orderRow = { id: "o-1", orderNo: "DH-1", leadId: "l-1" } as OrderEntity
+const orderRow = Object.assign(new OrderEntity(), { id: "o-1", orderNo: "DH-1", leadId: "l-1" })
 const leadRow: LeadPoolLine = { id: "l-1", contact_name: "Lan", company: null }
 const candidateOf = builder<CandidateView>({
     id: "c-1",
@@ -141,6 +144,17 @@ const build = async (plan: Plan, entry: ModuleEntry | null = accounting) => {
     return { service, entityManager, members, lines, bus, reader, events, catalog, logger, fakes }
 }
 
+/** The card went back to pending with the reason it could not be sent. */
+const expectPutBack = (entityManager: MockEntityManager, refusalDetail: string): void => {
+    expect(entityManager.update).toHaveBeenCalledWith(
+        OfficeCommandCandidateEntity,
+        { workspaceId: "ws-1", id: "c-1" },
+        { status: "pending", decidedAt: null, refusalDetail },
+    )
+}
+
+const Code = OfficeCommandCandidatesErrorCode
+const WS = { workspaceId: "ws-1" }
 const request = { messageId: "m-1", locale: "en" } as const
 const confirmRequest = { candidateId: "c-1", locale: "vi" } as const
 const reply = (key: string) => ({ kind: "reply", body: `[${key}]` })
@@ -167,7 +181,7 @@ describe("OfficeCommandService propose", () => {
         )
         expect(entityManager.find).toHaveBeenCalledWith(AgentEntity, {
             select: { id: true, handle: true, module: true, name: true },
-            where: { workspaceId: "ws-1", status: "active", handle: expect.objectContaining({ _value: ["ke-toan"] }) },
+            where: { workspaceId: "ws-1", status: "active", handle: In(["ke-toan"]) },
             order: { handle: "ASC" },
             take: 10,
         })
@@ -239,11 +253,11 @@ describe("OfficeCommandService propose", () => {
     it("rejects a message that is missing or not a person's", async () => {
         const missing = await build({ builders: [{ getRawOne: undefined }] })
         await expect(missing.service.propose("u-1", "ws-1", request)).rejects.toMatchObject({
-            code: OfficeCommandCandidatesErrorCode.MessageNotFound,
+            code: Code.MessageNotFound,
         })
         const system = await build({ builders: [{ getRawOne: { ...humanMessage, author_kind: "system" } }] })
         await expect(system.service.propose("u-1", "ws-1", request)).rejects.toMatchObject({
-            code: OfficeCommandCandidatesErrorCode.MessageNotHuman,
+            code: Code.MessageNotHuman,
         })
     })
 
@@ -277,9 +291,7 @@ describe("OfficeCommandService propose", () => {
             { handle: "ke-toan", agent: "Accounting", list: "issue a receipt", error: "offline" },
             "en",
         )
-        expect(logger.error).toHaveBeenCalledWith(OfficeCommandCandidatesLogEvent.CommandReadFailed, cause, {
-            workspaceId: "ws-1",
-        })
+        expect(logger.error).toHaveBeenCalledWith(OfficeCommandCandidatesLogEvent.CommandReadFailed, cause, WS)
         expect(lines.post).toHaveBeenCalledWith(
             { workspaceId: "ws-1", actor: "An", locale: "en" },
             { body: "[office.cmdReadFailed]", lead_id: null, work_item_id: null },
@@ -332,17 +344,13 @@ describe("OfficeCommandService propose", () => {
         events.record.mockRejectedValue(cause)
 
         await expect(service.propose("u-1", "ws-1", request)).resolves.toMatchObject({ kind: "card" })
-        expect(logger.error).toHaveBeenCalledWith(OfficeCommandCandidatesLogEvent.EvidenceFailed, cause, {
-            workspaceId: "ws-1",
-        })
+        expect(logger.error).toHaveBeenCalledWith(OfficeCommandCandidatesLogEvent.EvidenceFailed, cause, WS)
     })
 
     it("fails loudly when the insert answers no row", async () => {
         const { service } = await build(reaching(humanMessage, []))
 
-        await expect(service.propose("u-1", "ws-1", request)).rejects.toMatchObject({
-            code: OfficeCommandCandidatesErrorCode.CandidateNotFound,
-        })
+        await expect(service.propose("u-1", "ws-1", request)).rejects.toMatchObject({ code: Code.CandidateNotFound })
     })
 })
 describe("OfficeCommandService list", () => {
@@ -383,8 +391,8 @@ describe("OfficeCommandService confirm", () => {
                 reason: "office:m-1",
             },
         )
-        expect(fakes[0]?.callsOf("set")).toEqual([
-            [{ status: "sent", decidedAt: expect.any(Function), refusalDetail: null }],
+        expect(fakes[0]?.callsOf("set").map((args) => args.map((values) => evaluatedValues(values)))).toEqual([
+            [{ status: "sent", decidedAt: "now()", refusalDetail: null }],
         ])
         expect(entityManager.update).toHaveBeenCalledWith(
             OfficeCommandCandidateEntity,
@@ -414,17 +422,9 @@ describe("OfficeCommandService confirm", () => {
     })
 
     it.each([
-        [
-            "a cancelled candidate",
-            candidateOf({ status: "cancelled" }),
-            OfficeCommandCandidatesErrorCode.CandidateCancelled,
-        ],
-        ["an unknown candidate", undefined, OfficeCommandCandidatesErrorCode.CandidateNotFound],
-        [
-            "a candidate still being sent",
-            candidateOf({ status: "sent" }),
-            OfficeCommandCandidatesErrorCode.CandidateInProgress,
-        ],
+        ["a cancelled candidate", candidateOf({ status: "cancelled" }), Code.CandidateCancelled],
+        ["an unknown candidate", undefined, Code.CandidateNotFound],
+        ["a candidate still being sent", candidateOf({ status: "sent" }), Code.CandidateInProgress],
     ])("refuses %s", async (_name, found, code) => {
         const { service } = await build({ builders: [{ execute: { raw: [] } }, { getRawOne: found }] })
 
@@ -436,14 +436,10 @@ describe("OfficeCommandService confirm", () => {
         const { service, entityManager, bus } = await build({ builders: [{ execute: { raw: [candidateOf()] } }] }, null)
 
         await expect(service.confirm("u-1", "ws-1", confirmRequest)).rejects.toMatchObject({
-            code: OfficeCommandCandidatesErrorCode.ModuleUnknown,
+            code: Code.ModuleUnknown,
             params: { module: "accounting" },
         })
-        expect(entityManager.update).toHaveBeenCalledWith(
-            OfficeCommandCandidateEntity,
-            { workspaceId: "ws-1", id: "c-1" },
-            { status: "pending", decidedAt: null, refusalDetail: "no agent accounting" },
-        )
+        expectPutBack(entityManager, "no agent accounting")
         expect(bus.sendCommand).not.toHaveBeenCalled()
     })
 
@@ -452,14 +448,10 @@ describe("OfficeCommandService confirm", () => {
         bus.sendCommand.mockResolvedValue({ ok: false, refused: "missing_fields", detail: "needs amount" })
 
         await expect(service.confirm("u-1", "ws-1", confirmRequest)).rejects.toMatchObject({
-            code: OfficeCommandCandidatesErrorCode.CommandRefused,
+            code: Code.CommandRefused,
             params: { detail: "needs amount" },
         })
-        expect(entityManager.update).toHaveBeenCalledWith(
-            OfficeCommandCandidateEntity,
-            { workspaceId: "ws-1", id: "c-1" },
-            { status: "pending", decidedAt: null, refusalDetail: "needs amount" },
-        )
+        expectPutBack(entityManager, "needs amount")
     })
 
     it("puts the card back and rethrows when the bus fails", async () => {
@@ -468,11 +460,7 @@ describe("OfficeCommandService confirm", () => {
         bus.sendCommand.mockRejectedValue(cause)
 
         await expect(service.confirm("u-1", "ws-1", confirmRequest)).rejects.toBe(cause)
-        expect(entityManager.update).toHaveBeenCalledWith(
-            OfficeCommandCandidateEntity,
-            { workspaceId: "ws-1", id: "c-1" },
-            { status: "pending", decidedAt: null, refusalDetail: "bus down" },
-        )
+        expectPutBack(entityManager, "bus down")
     })
 })
 describe("OfficeCommandService cancel", () => {
@@ -481,6 +469,9 @@ describe("OfficeCommandService cancel", () => {
 
         await expect(service.cancel("u-1", "ws-1", "c-1")).resolves.toBeUndefined()
         expect(members.require).toHaveBeenCalledWith("u-1", "ws-1", ["owner", "manager"])
+        expect(fakes[0]?.callsOf("set").map((args) => args.map((values) => evaluatedValues(values)))).toEqual([
+            [{ status: "cancelled", decidedAt: "now()" }],
+        ])
         expect(fakes[0]?.callsOf("where")).toEqual([
             [
                 "workspace_id = :workspaceId AND id = :candidateId AND status = 'pending'",
@@ -498,8 +489,8 @@ describe("OfficeCommandService cancel", () => {
     })
 
     it.each([
-        ["unknown", undefined, OfficeCommandCandidatesErrorCode.CandidateNotFound],
-        ["already sent", candidateOf({ status: "sent" }), OfficeCommandCandidatesErrorCode.CandidateSent],
+        ["unknown", undefined, Code.CandidateNotFound],
+        ["already sent", candidateOf({ status: "sent" }), Code.CandidateSent],
     ])("refuses a candidate that is %s", async (_name, found, code) => {
         const { service } = await build({ builders: [{ execute: { raw: [] } }, { getRawOne: found }] })
 

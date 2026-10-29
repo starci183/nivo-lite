@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { ANY_FUNCTION } from "@tests/fixtures/builders/fake-query-builder.builder"
+import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { PAYABLE, PAYLOAD, REQUEST, answered, entityOf } from "@tests/fixtures/builders/payment-order-requests.builder"
 import { BillingError, BillingErrorCode, BillingService } from "@modules/domain/billing"
 import { CreditsError, CreditsErrorCode, CreditsService } from "@modules/domain/credits"
@@ -41,13 +41,15 @@ const expectNotCalled = (...doubles: ReadonlyArray<object>): void => {
     for (const double of doubles) expect(double).not.toHaveBeenCalled()
 }
 
+/** The criteria of a request that is still waiting for its answer. */
+const PENDING = { id: "request-1", status: "pending" }
+
+/** The updates the manager was asked for, the database expressions of their values run. */
+const updatesOf = (em: MockEntityManager): unknown => evaluatedCalls(em.update.mock.calls, 2)
+
 /** The arguments of the update that records a refused request with its stable fault code. */
 const failedAnswer = (fault: string) =>
-    [
-        PaymentOrderRequestEntity,
-        { id: "request-1", status: "pending" },
-        { status: "failed", fault, answeredAt: ANY_FUNCTION },
-    ] as const
+    ["PaymentOrderRequestEntity", PENDING, { status: "failed", fault, answeredAt: "now()" }] as const
 
 const expectAnswered = (entityManager: MockEntityManager) => {
     expect(entityManager.findOne).toHaveBeenCalledTimes(1)
@@ -55,11 +57,9 @@ const expectAnswered = (entityManager: MockEntityManager) => {
         where: { id: "request-1", workspaceId: "ws-1" },
     })
     expect(entityManager.update).toHaveBeenCalledTimes(1)
-    expect(entityManager.update).toHaveBeenCalledWith(
-        PaymentOrderRequestEntity,
-        { id: "request-1", status: "pending" },
-        { status: "done", orderId: "order-1", answeredAt: ANY_FUNCTION },
-    )
+    expect(updatesOf(entityManager)).toEqual([
+        ["PaymentOrderRequestEntity", PENDING, { status: "done", orderId: "order-1", answeredAt: "now()" }],
+    ])
 }
 
 describe("PaymentOrderRequestsService", () => {
@@ -234,11 +234,13 @@ describe("PaymentOrderRequestsService", () => {
 
         await expect(requests.fail(PAYLOAD, cause)).resolves.toBeUndefined()
 
-        expect(em.update).toHaveBeenCalledWith(
-            PaymentOrderRequestEntity,
-            { id: "request-1", status: "pending", workspaceId: "ws-1" },
-            { status: "failed", fault: code, answeredAt: ANY_FUNCTION },
-        )
+        expect(updatesOf(em)).toEqual([
+            [
+                "PaymentOrderRequestEntity",
+                { ...PENDING, workspaceId: "ws-1" },
+                { status: "failed", fault: code, answeredAt: "now()" },
+            ],
+        ])
     })
 
     it("uses the stored annual selection when answering a plan request", async () => {
@@ -363,7 +365,7 @@ describe("PaymentOrderRequestsService", () => {
         await expect(requests.answer(PAYLOAD)).resolves.toBe("failed")
 
         expect(em.update).toHaveBeenCalledTimes(1)
-        expect(em.update).toHaveBeenCalledWith(...failedAnswer("BILLING_FORBIDDEN"))
+        expect(updatesOf(em)).toEqual([failedAnswer("BILLING_FORBIDDEN")])
     })
 })
 
@@ -375,7 +377,7 @@ describe("PaymentOrderRequestsService refusals", () => {
 
         await expect(requests.answer(PAYLOAD)).resolves.toBe("failed")
 
-        expect(em.update).toHaveBeenCalledWith(...failedAnswer("CREDITS_PACK_NOT_FOUND"))
+        expect(updatesOf(em)).toEqual([failedAnswer("CREDITS_PACK_NOT_FOUND")])
     })
 
     it("rethrows an infrastructure failure while placing the order for retry", async () => {
@@ -422,6 +424,6 @@ describe("PaymentOrderRequestsService refusals", () => {
         await expect(requests.answer(PAYLOAD)).rejects.toBe(cause)
 
         expect(em.update).toHaveBeenCalledTimes(1)
-        expect(em.update).toHaveBeenCalledWith(...failedAnswer("BILLING_FORBIDDEN"))
+        expect(updatesOf(em)).toEqual([failedAnswer("BILLING_FORBIDDEN")])
     })
 })

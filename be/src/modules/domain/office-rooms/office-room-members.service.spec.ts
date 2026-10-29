@@ -117,7 +117,65 @@ describe("OfficeRoomMembersService.read the Office room", () => {
 
         expect(office?.preview.map((member) => member.name)).toEqual(["Agent", "A", "B", "C"])
     })
+})
 
+describe("OfficeRoomMembersService.read the Office room ties", () => {
+    it("keeps seats that are equal in time, seat and kind in the order they came, agents before people", async () => {
+        const em = mockEntityManager({ query: [LIST_MEMBER_AVATARS, []] })
+        fakeTransaction(em)
+        const at = "20261001000000000000"
+        queueSubQueryBuilders(em, [
+            { getRawOne: { count: 2 } },
+            { getRawOne: { count: 2 } },
+            { getRawMany: [person("0a", "u-1", "First", at), person("0a", "u-2", "Second", at)] },
+            { getRawMany: [agent("0a", "Alpha", at), agent("0a", "Beta", at)] },
+        ])
+        const service = await build(em)
+
+        const office = (await service.read("ws-1", [])).get(null)
+
+        expect(office?.preview.map((member) => member.name)).toEqual(["Alpha", "Beta", "First", "Second"])
+    })
+
+    it("orders the same whichever of two seats the sort hands over first", async () => {
+        const em = mockEntityManager({ query: [LIST_MEMBER_AVATARS, []] })
+        fakeTransaction(em)
+        const at = "20261001000000000000"
+        queueSubQueryBuilders(em, [
+            { getRawOne: { count: 1 } },
+            { getRawOne: { count: 1 } },
+            { getRawMany: [person("0a", "u-1", "Human", at)] },
+            { getRawMany: [agent("0a", "Agent", at)] },
+        ])
+        const service = await build(em)
+        const reversed = jest.spyOn(Array.prototype, "sort").mockImplementation(function (
+            this: Array<unknown>,
+            compare?: (left: unknown, right: unknown) => number,
+        ) {
+            const order = compare ?? (() => 0)
+            for (let index = 1; index < this.length; index += 1) {
+                const item = this[index]
+                let cursor = index - 1
+                while (cursor >= 0 && order(this[cursor], item) > 0) {
+                    this[cursor + 1] = this[cursor]
+                    cursor -= 1
+                }
+                this[cursor + 1] = item
+            }
+            return this
+        })
+
+        try {
+            const office = (await service.read("ws-1", [])).get(null)
+
+            expect(office?.preview.map((member) => member.name)).toEqual(["Agent", "Human"])
+        } finally {
+            reversed.mockRestore()
+        }
+    })
+})
+
+describe("OfficeRoomMembersService.read the Office room without seats", () => {
     it("asks Auth for no photos when no person is previewed", async () => {
         const em = mockEntityManager()
         fakeTransaction(em)
@@ -216,5 +274,32 @@ describe("OfficeRoomMembersService.read the department rooms", () => {
             count: 2,
             preview: [{ id: "u-1", kind: "human", module: null, name: "Owner", avatarUrl: null }],
         })
+    })
+})
+
+describe("OfficeRoomMembersService.read rooms with partial facts", () => {
+    it("counts a room whose seats or head counts the reads left out, and skips facts with no room", async () => {
+        const em = mockEntityManager({ query: [LIST_MEMBER_AVATARS, []] })
+        fakeTransaction(em)
+        queueSubQueryBuilders(em, [
+            { getRawOne: { count: 0 } },
+            { getRawOne: { count: 0 } },
+            { getRawMany: [] },
+            { getRawMany: [] },
+            { getRawMany: [{ key: "sales", count: 2 }, { count: 7 }] },
+            { getRawMany: [] },
+            { getRawOne: undefined },
+            {},
+            { getRawMany: [person("s-9", "u-9", "No room", "20261005000000000000")] },
+            {},
+            { getRawMany: [] },
+            { getRawMany: [] },
+        ])
+        const service = await build(em)
+
+        const views = await service.read("ws-1", ["sales", "care"])
+
+        expect(views.get("sales")).toEqual({ count: 2, preview: [] })
+        expect(views.get("care")).toEqual({ count: 0, preview: [] })
     })
 })

@@ -2,11 +2,8 @@ import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { In, Not } from "typeorm"
-import {
-    ANY_FUNCTION,
-    answerQueryBuilders,
-    fakeQueryBuilder,
-} from "@tests/fixtures/builders/fake-query-builder.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
+import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { CardClosing, FactCardRecord, ProposedCardRecord } from "./module-setup-writes.contracts"
 import { ModuleSetupWriteEntity } from "./persistence/entities"
@@ -186,14 +183,14 @@ describe("SetupWritesService", () => {
 
         await expect((await build(em)).close("ws-1", "card-1", closing)).resolves.toEqual(closed)
 
-        expect(update.argsOf("set")).toEqual([
+        expect(update.argsOf("set").map((args) => args.map((values) => evaluatedValues(values)))).toEqual([
             [
                 {
                     status: "applied",
                     payload,
                     result: closing.result,
                     decidedBy: "Lan",
-                    decidedAt: ANY_FUNCTION,
+                    decidedAt: "now()",
                 },
             ],
         ])

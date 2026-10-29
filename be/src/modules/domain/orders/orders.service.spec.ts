@@ -192,6 +192,16 @@ const registerReads = () => {
             ])
         })
 
+        it("lists an order with no amount and no customer labels as nulls", async () => {
+            const unpriced = orderOf({ id: "order-2", amount_vnd: null })
+            const em = mockEntityManager()
+            const orders = await build(em)
+            const withoutLabels = fakeQueryBuilder({ getRawAndEntities: { entities: [entityOf(unpriced)], raw: [] } })
+            answerQueryBuilders(em, withoutLabels)
+
+            await expect(orders.list("ws-1")).resolves.toEqual([{ ...unpriced, contact_name: null, company: null }])
+        })
+
         it("reads at least one order and 200 by default", async () => {
             const em = mockEntityManager()
             const small = fakeQueryBuilder({ getRawAndEntities: { entities: [], raw: [] } })
@@ -269,6 +279,15 @@ const registerShipAndLabels = () => {
                 ],
             ])
             expect(own.createQueryBuilder).not.toHaveBeenCalled()
+        })
+
+        it("keeps an order with no amount unpriced when it ships", async () => {
+            const shipped = orderOf({ status: "confirmed", amount_vnd: null, shipped_at: NOW, carrier: "GHN" })
+            const tx = mockEntityManager()
+            answerQueryBuilders(tx, fakeQueryBuilder({ execute: { raw: [writtenOf(shipped)] } }))
+            const orders = await build(mockEntityManager())
+
+            await expect(orders.ship("ws-1", "order-1", "GHN", "T1", tx)).resolves.toEqual(shipped)
         })
 
         it("answers null when the order cannot be shipped", async () => {
@@ -419,7 +438,9 @@ const registerTransitions = () => {
             ).resolves.toBeNull()
         })
     })
+}
 
+const registerSettlement = () => {
     describe("cancel", () => {
         it("answers the cancelled draft, or null once it is gone", async () => {
             const cancelled = orderOf({ status: "cancelled" })
@@ -473,4 +494,5 @@ describe("OrdersService", () => {
     registerShipAndLabels()
     registerDraft()
     registerTransitions()
+    registerSettlement()
 })

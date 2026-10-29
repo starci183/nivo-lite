@@ -1,3 +1,4 @@
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { Test } from "@nestjs/testing"
 import { IsNull, Not } from "typeorm"
 import { builder, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
@@ -9,8 +10,8 @@ import type { RewardEdit } from "./loyalty-rewards.contracts"
 import { LoyaltyRewardEntity } from "./persistence/entities"
 import type { RewardRaw } from "./policies/reward.mapper"
 
-/** Matches the SQL expression function a retried key is written with. */
-const ANY_FUNCTION: unknown = expect.any(Function)
+/** The SQL a retried key is written with, read by calling the expression the insert was handed. */
+const SUFFIXED_KEY_SQL = "CAST(:wantedKey AS text) || '-' || substr(replace(gen_random_uuid()::text, '-', ''), 1, 4)"
 
 const entityOf = builder<LoyaltyRewardEntity>({
     id: "r1",
@@ -212,11 +213,11 @@ describe("LoyaltyRewardsService save retries", () => {
 
         await expect(rewards.save("ws-1", EDIT)).resolves.toEqual(REWARD)
 
-        const written = attempts.map((attempt) => attempt.callsOf("values")[0]?.[0])
+        const written = attempts.map((attempt) => attempt.callsOf("values")[0]?.[0]).map(evaluatedValues)
         expect(written).toEqual([
             { ...FIELDS, workspaceId: "ws-1", key: "voucher", sortOrder: 100 },
-            { ...FIELDS, workspaceId: "ws-1", key: ANY_FUNCTION, sortOrder: 101 },
-            { ...FIELDS, workspaceId: "ws-1", key: ANY_FUNCTION, sortOrder: 102 },
+            { ...FIELDS, workspaceId: "ws-1", key: SUFFIXED_KEY_SQL, sortOrder: 101 },
+            { ...FIELDS, workspaceId: "ws-1", key: SUFFIXED_KEY_SQL, sortOrder: 102 },
         ])
     })
 
@@ -299,9 +300,34 @@ describe("LoyaltyRewardsService remove", () => {
         await expect(rewards.remove("ws-1", "r1")).resolves.toBe("missing")
         expect(transaction.outcomes).toEqual(["commit"])
     })
+
+    it("reports missing when the database does not count the changed rows", async () => {
+        const { entityManager } = removing(undefined, {})
+        const rewards = await build(entityManager)
+
+        await expect(rewards.remove("ws-1", "r1")).resolves.toBe("missing")
+    })
 })
 
 describe("LoyaltyRewardsService addPresets", () => {
+    it("inserts nothing and counts zero when there are no presets", async () => {
+        const entityManager = mockEntityManager()
+        const rewards = await build(entityManager)
+
+        await expect(rewards.addPresets("ws-1", [])).resolves.toBe(0)
+        expect(entityManager.createQueryBuilder).not.toHaveBeenCalled()
+    })
+
+    it("writes an empty key for a preset that names none", async () => {
+        const entityManager = mockEntityManager()
+        const [insert] = queueQueryBuilders(entityManager, [{ execute: { raw: [] } }])
+        const rewards = await build(entityManager)
+        const keyless: RewardEdit = { ...EDIT, name: "Voucher", minTierKey: "bac", note: "n", key: undefined }
+
+        await expect(rewards.addPresets("ws-1", [keyless])).resolves.toBe(0)
+        expect(insert?.callsOf("values")).toEqual([[[{ ...FIELDS, workspaceId: "ws-1", key: "", sortOrder: 100 }]]])
+    })
+
     it("writes every preset field in display order and counts the inserted rows", async () => {
         const entityManager = mockEntityManager()
         const [insert] = queueQueryBuilders(entityManager, [{ execute: { raw: [{ id: "r1" }, { id: "r2" }] } }])

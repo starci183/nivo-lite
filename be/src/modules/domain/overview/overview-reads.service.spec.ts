@@ -70,7 +70,9 @@ describe("OverviewReadsService", () => {
         expect(read.argsOf("orderBy")).toEqual([["e.created_at", "DESC"]])
         expect(read.argsOf("limit")).toEqual([[6]])
     })
+})
 
+describe("OverviewReadsService exceptions", () => {
     it("answers a null lead for an exception whose lead is gone", async () => {
         const em = mockEntityManager()
         queueSubQueryBuilders(em, [{ getRawMany: [{ id: "w-1", leadId: null, leadRef: null }] }])
@@ -96,5 +98,15 @@ describe("OverviewReadsService", () => {
         const [exception] = await service.exceptions("ws-1")
 
         expect(exception?.lead).toEqual({ id: "l-1", contactName: "An", company: "Co", channel: "zalo" })
+    })
+
+    it("reads the missing columns of a joined lead as empty text", async () => {
+        const em = mockEntityManager()
+        queueSubQueryBuilders(em, [{ getRawMany: [{ id: "w-1", leadRef: "l-1" }] }])
+        const service = await build(em)
+
+        const [exception] = await service.exceptions("ws-1")
+
+        expect(exception?.lead).toEqual({ id: "l-1", contactName: "", company: "", channel: "" })
     })
 })
