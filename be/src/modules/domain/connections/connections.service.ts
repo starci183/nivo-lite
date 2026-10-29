@@ -97,12 +97,12 @@ export class ConnectionsService {
 
     /** Requires an active member of the workspace holding one of the roles; answers who they are. */
     async authorize(actor: ConnectionActor, roles: ReadonlyArray<ConnectionRole>): Promise<ConnectionMember> {
-        const seat = await this.seats.activeSeatOfUser(actor.workspaceId, actor.principalId)
+        const row = await this.seats.activeSeatOfUser(actor.workspaceId, actor.principalId)
         const acceptedRoles: ReadonlyArray<string> = roles
-        if (seat === null || !acceptedRoles.includes(seat.role)) {
+        if (row === null || !acceptedRoles.includes(row.role)) {
             throw new ConnectionsError({ code: ConnectionsErrorCode.Forbidden })
         }
-        return { role: seat.role, displayName: seat.displayName }
+        return { role: row.role, displayName: row.displayName }
     }
 
     private selectConnections(manager: EntityManager): SelectQueryBuilder<ConnectionEntity> {

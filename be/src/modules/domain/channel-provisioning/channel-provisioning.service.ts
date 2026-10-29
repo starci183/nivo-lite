@@ -5,7 +5,7 @@ import { ConnectionGrantsService, purposeFor } from "@modules/domain/connection-
 import { randomSecret } from "@modules/domain/connection-secrets"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, Provider } from "@modules/domain/connections"
-import { WorkspaceMemberEntity } from "@modules/domain/workspace-members"
+import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { AgentEntity } from "@modules/domain/agents"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectChannelProvisioningOptions } from "./channel-provisioning.decorators"
@@ -15,12 +15,6 @@ import type { ChannelProvisioningOptions } from "./channel-provisioning.options"
 /** The most agents one bind reaches. */
 const AGENT_LIMIT = 500
 
-/** The owner of a workspace: the account provisioning acts in the name of. */
-interface OwnerRow {
-    /** The account that owns the workspace. */
-    readonly userId: string
-}
-
 /** One agent of a workspace and the module it works for. */
 interface AgentRow {
     /** The agent row id a channel binding points at. */
@@ -28,9 +22,6 @@ interface AgentRow {
     /** The product module the agent serves, used to pick the agent a new channel is bound to. */
     readonly module: string
 }
-
-const isOwnerRow = (value: unknown): value is OwnerRow =>
-    typeof value === "object" && value !== null && "userId" in value && typeof value.userId === "string"
 
 const isAgentRow = (value: unknown): value is AgentRow =>
     typeof value === "object" &&
@@ -62,24 +53,18 @@ export class ChannelProvisioningService {
         private readonly channels: ChannelConnectionsService,
         private readonly grants: ConnectionGrantsService,
         private readonly connections: ConnectionsService,
+        private readonly members: WorkspaceMemberDirectoryService,
     ) {}
 
     /** Connects the channel `kind` to the workspace of the flags; a missing flag or secret refuses the run before anything is stored. */
     async run(kind: string, flags: ProvisionFlags): Promise<void> {
         const workspaceId =
             flags.workspace !== undefined && UUID.test(flags.workspace) ? flags.workspace : invalid("workspace")
-        const rows: ReadonlyArray<unknown> = await this.entityManager
-            .createQueryBuilder(WorkspaceMemberEntity, "m")
-            .select("m.user_id", "userId")
-            .where("m.workspace_id = :workspaceId AND m.role = 'owner' AND m.status = 'active'", { workspaceId })
-            .orderBy("m.created_at")
-            .limit(1)
-            .getRawMany()
-        const owner = rows.find(isOwnerRow)
-        if (owner === undefined) {
+        const owner = await this.members.firstActiveOwnerUserId(workspaceId)
+        if (owner === null) {
             throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id: workspaceId } })
         }
-        const actor: ConnectionActor = { principalId: owner.userId, workspaceId }
+        const actor: ConnectionActor = { principalId: owner, workspaceId }
         if (kind === "telegram") return this.telegram(actor, flags)
         if (kind === "sepay") return this.sepay(actor, flags)
         if (kind === "zalo") return this.zalo(actor, flags)
