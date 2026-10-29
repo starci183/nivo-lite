@@ -567,7 +567,8 @@ environments:
               - {member: storage}
               - {member: ai}
               - {member: n8n, keys: [N8N_SIGNING_SECRET]}
-              - {member: openclaw, keys: [OPENCLAW_GATEWAY_TOKEN, OPENCLAW_MANAGE_AGENTS, OPENCLAW_TURN_TIMEOUT], fill: true}
+              # OPENCLAW_AI_KEY reaches the api too: the in-process gateway seeds the openclaw virtual key from it at boot.
+              - {member: openclaw, keys: [OPENCLAW_GATEWAY_TOKEN, OPENCLAW_MANAGE_AGENTS, OPENCLAW_TURN_TIMEOUT, OPENCLAW_AI_KEY], fill: true}
           # Redis starts with --requirepass from /run/secrets/QUEUE_REDIS_PASSWORD, so a boot without it fails instead of serving an open broker.
           - service: nivo-redis
             from:
