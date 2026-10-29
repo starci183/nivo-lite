@@ -14,7 +14,7 @@ const build = async (entityManager: MockEntityManager) => {
     return moduleRef.get(OfficeRoomDirectoryService)
 }
 
-describe("OfficeRoomDirectoryService", () => {
+describe("OfficeRoomDirectoryService, room labels", () => {
     it("asks for no label when no key is given", async () => {
         const em = mockEntityManager()
 
@@ -37,7 +37,9 @@ describe("OfficeRoomDirectoryService", () => {
         expect(read?.argsOf("addOrderBy")).toContainEqual(["r.key", "ASC"])
         expect(read?.argsOf("limit")).toContainEqual([10])
     })
+})
 
+describe("OfficeRoomDirectoryService, seats", () => {
     it("asks for no seat when no account is given", async () => {
         const em = mockEntityManager()
 
@@ -62,7 +64,9 @@ describe("OfficeRoomDirectoryService", () => {
         expect(read?.argsOf("orderBy")).toContainEqual(["r.position", "ASC"])
         expect(read?.argsOf("limit")).toContainEqual([50])
     })
+})
 
+describe("OfficeRoomDirectoryService, staffed rooms", () => {
     it("asks for no staffed room when the keys are an empty list", async () => {
         const em = mockEntityManager()
 
@@ -92,7 +96,9 @@ describe("OfficeRoomDirectoryService", () => {
         await expect((await build(em)).staffedRooms("ws-1", ["sales"], 20)).resolves.toEqual([])
         expect(read?.argsOf("andWhere")).toContainEqual(["r.key IN (:...keys)", { keys: ["sales"] }])
     })
+})
 
+describe("OfficeRoomDirectoryService, home room", () => {
     it("answers the name of the home room of an agent, null when it has none", async () => {
         const home = mockEntityManager({
             findOne: [

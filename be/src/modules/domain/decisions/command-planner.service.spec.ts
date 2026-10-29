@@ -152,8 +152,8 @@ describe("CommandPlannerService", () => {
             await plan.spec.onInserted?.(rowOf())
 
             expect(own.createQueryBuilder).not.toHaveBeenCalled()
-            expect(manager.chains.spotOf).toHaveBeenCalledWith("ws-1", "parent-1", manager.em)
-            expect(manager.chains.repeats).toHaveBeenCalledWith(
+            expect(built.served.chains.spotOf).toHaveBeenCalledWith("ws-1", "parent-1", manager.em)
+            expect(built.served.chains.repeats).toHaveBeenCalledWith(
                 expect.objectContaining({ chainId: "chain-1" }),
                 manager.em,
             )
