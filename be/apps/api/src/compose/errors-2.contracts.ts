@@ -1,5 +1,5 @@
 import { EVENT_BUS_ERROR_KINDS } from "@modules/platform/event-bus"
-import { EVENTS_ERROR_KINDS } from "@modules/events/api"
+import { API_ERROR_KINDS } from "@modules/events/api"
 import { APPROVAL_REQUESTS_ERROR_KINDS } from "@modules/domain/approval-requests"
 import { AUTHORITY_RULES_ERROR_KINDS } from "@modules/domain/authority-rules"
 import { MEMBER_GRANTS_ERROR_KINDS } from "@modules/domain/member-grants"
@@ -20,7 +20,7 @@ import { ACCOUNTING_ERROR_KINDS } from "@modules/domain/accounting"
 import { ACCOUNTING_ADJUSTMENTS_ERROR_KINDS } from "@modules/domain/accounting-adjustments"
 import { PAYMENT_ORDER_REQUESTS_ERROR_KINDS } from "@modules/domain/payment-order-requests"
 import { CREDITS_ERROR_KINDS } from "@modules/domain/credits"
-import { INBOUND_EVENTS_ERROR_KINDS } from "@modules/domain/inbound-events"
+import { INBOUND_API_ERROR_KINDS } from "@modules/domain/inbound-events"
 import { PAYMENT_ORDERS_ERROR_KINDS } from "@modules/domain/payment-orders"
 import { CHANNELS_ERROR_KINDS } from "@modules/domain/channels"
 import { CONNECTION_SECRETS_ERROR_KINDS } from "@modules/domain/connection-secrets"
@@ -55,7 +55,7 @@ export const API_ERROR_KINDS_2 = [
     ACCOUNTING_ADJUSTMENTS_ERROR_KINDS,
     PAYMENT_ORDER_REQUESTS_ERROR_KINDS,
     CREDITS_ERROR_KINDS,
-    INBOUND_EVENTS_ERROR_KINDS,
+    INBOUND_API_ERROR_KINDS,
     PAYMENT_ORDERS_ERROR_KINDS,
     CHANNELS_ERROR_KINDS,
     CONNECTION_SECRETS_ERROR_KINDS,
@@ -67,6 +67,6 @@ export const API_ERROR_KINDS_2 = [
     DATABASE_ERROR_KINDS,
     DOCUMENTS_ERROR_KINDS,
     HTTP_SECURITY_ERROR_KINDS,
-    EVENTS_ERROR_KINDS,
+    API_ERROR_KINDS,
     EVENT_BUS_ERROR_KINDS,
 ]
