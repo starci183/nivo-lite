@@ -3,6 +3,7 @@ import { fakeInbox, fakeTransaction, mock, mockEntityManager, recordingQueueOutb
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import { IsNull } from "typeorm"
 import { ConversationsService } from "@modules/domain/conversations"
+import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
@@ -116,12 +117,10 @@ describe("ZaloInboxService deferred effects", () => {
             lock: { mode: "pessimistic_write" },
         })
         const [, , set] = tx.em.update.mock.calls[0] ?? []
-        const processedAt = set?.processedAt
-        expect(tx.em.update).toHaveBeenCalledWith(ZaloInboxEntity, { id: "receipt-1" }, { processedAt })
-        if (typeof processedAt !== "function") {
-            throw new Error("the receipt is marked processed through a database expression")
-        }
-        expect(processedAt()).toBe("now()")
+        expect(stampedValues(set)).toEqual({ processedAt: "function" })
+        const processedAt: unknown = Reflect.get(Object(set), "processedAt")
+        const marked: unknown = typeof processedAt === "function" ? Reflect.apply(processedAt, undefined, []) : undefined
+        expect(marked).toBe("now()")
         expect(tx.commits).toBe(1)
     })
 

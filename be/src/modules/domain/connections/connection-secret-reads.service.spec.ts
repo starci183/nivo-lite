@@ -4,11 +4,11 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { ConnectionSecretsErrorCode, ConnectionSecretsService } from "@modules/domain/connection-secrets"
 import type { ConnectionSecret } from "@modules/domain/connection-secrets"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
+import { entityOf } from "@tests/fixtures/builders/entity.builder"
 import { ConnectionSecretReadsService } from "./connection-secret-reads.service"
 import { ConnectionEntity } from "./persistence/entities"
 
-const connectionOf = entityRowBuilder<ConnectionEntity>({
+const connectionOf = entityOf(ConnectionEntity, {
     id: "c-1",
     workspaceId: "ws-1",
     provider: "telegram",

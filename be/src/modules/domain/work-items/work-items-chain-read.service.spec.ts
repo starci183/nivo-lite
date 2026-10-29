@@ -52,7 +52,7 @@ describe("WorkItemsChainReadService", () => {
             where: { workspaceId: "ws-1", chainId: "c-1", action: "send_care", subjectType: "lead", dedupeKey: Not("k-1"), subjectId: "l-1" },
         })
         expect(em.exists).toHaveBeenNthCalledWith(2, WorkItemEntity, {
-            where: expect.objectContaining({ subjectId: IsNull() }),
+            where: { workspaceId: "ws-1", chainId: "c-1", action: "send_care", subjectType: "lead", dedupeKey: Not("k-1"), subjectId: IsNull() },
         })
     })
 })

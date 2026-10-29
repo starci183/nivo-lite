@@ -10,6 +10,12 @@ export interface ChainSpot {
     readonly depth: number
 }
 
+/** Where a work item sits in its chain; null when the workspace has no such item. */
+export type OptionalChainSpot = ChainSpot | null
+
+/** The depth of the deepest item of a chain; null when the chain has no item. */
+export type OptionalChainDepth = number | null
+
 /** What a command is checked against to find out whether the chain already ran it. */
 export interface ChainRepeatQuery {
     /** The workspace. */

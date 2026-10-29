@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { IsNull, Not } from "typeorm"
 import type { EntityManager, FindOptionsWhere } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { ChainRepeatQuery, ChainSpot } from "./work-items-chain-read.contracts"
+import type { ChainRepeatQuery, OptionalChainDepth, OptionalChainSpot } from "./work-items-chain-read.contracts"
 import { WorkItemEntity } from "./persistence/entities"
 
 @Injectable()
@@ -15,7 +15,7 @@ export class WorkItemsChainReadService {
         workspaceId: string,
         itemId: string,
         manager: EntityManager = this.entityManager,
-    ): Promise<ChainSpot | null> {
+    ): Promise<OptionalChainSpot> {
         const row = await manager.findOne(WorkItemEntity, {
             select: { id: true, chainId: true, depth: true },
             where: { workspaceId, id: itemId },
@@ -28,7 +28,7 @@ export class WorkItemsChainReadService {
         workspaceId: string,
         chainId: string,
         manager: EntityManager = this.entityManager,
-    ): Promise<number | null> {
+    ): Promise<OptionalChainDepth> {
         const row = await manager.findOne(WorkItemEntity, {
             select: { depth: true },
             where: { workspaceId, chainId },

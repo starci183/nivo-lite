@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { AgentMessageDeliveriesService } from "@modules/domain/agent-messages"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { AnswerProgressLine, ReplyProgress } from "./work-items-activity.contracts"
+import type { ReplyProgress } from "./work-items-activity.contracts"
 import { WorkItemEntity } from "./persistence/entities"
 
 /** The conversation a reply work item names: the proposal's field, else the subject when it is a conversation. */
