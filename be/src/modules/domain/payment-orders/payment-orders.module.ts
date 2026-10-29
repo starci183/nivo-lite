@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./payment-orders.module-definition"
+import { PaymentOrderHistoryService } from "./payment-order-history.service"
 import { PaymentOrdersService } from "./payment-orders.service"
 
 @Module({})
@@ -11,8 +12,8 @@ export class PaymentOrdersModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), PaymentOrdersService],
-            exports: [PaymentOrdersService],
+            providers: [...(base.providers ?? []), PaymentOrdersService, PaymentOrderHistoryService],
+            exports: [PaymentOrdersService, PaymentOrderHistoryService],
         }
     }
 }

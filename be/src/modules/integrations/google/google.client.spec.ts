@@ -8,6 +8,7 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { GoogleErrorCode } from "./errors/google.error"
 import { GoogleClient } from "./google.client"
+import { RENEWAL_GRANT_FIELD } from "./google.contracts"
 import { GOOGLE_OPTIONS } from "./google.decorators"
 import { GoogleLogEvent } from "./google.log-events"
 import type { GoogleOptions } from "./google.options"
@@ -86,12 +87,12 @@ describe("GoogleClient tokens", () => {
     it("exchanges a consent code with the redirect uri of the site", async () => {
         const { client, http } = await build()
         http.request.mockResolvedValue(
-            answer({ access_token: "at", refresh_token: "rt", expires_in: 100, id_token: "id", scope: "s" }),
+            answer({ access_token: "at", [RENEWAL_GRANT_FIELD]: "rt", expires_in: 100, id_token: "id", scope: "s" }),
         )
 
         await expect(client.exchangeCode("code-1")).resolves.toEqual({
             accessToken: "at",
-            refreshToken: "rt",
+            renewalToken: "rt",
             expiresAt: new Date("2026-10-12T03:00:00.000Z").getTime() + 100_000,
             idToken: "id",
             scope: "s",
@@ -115,14 +116,14 @@ describe("GoogleClient tokens", () => {
         http.request.mockResolvedValue(answer({ access_token: "at" }))
 
         await expect(client.refreshAccessToken("rt")).resolves.toMatchObject({
-            refreshToken: null,
+            renewalToken: null,
             idToken: null,
             scope: null,
             expiresAt: new Date("2026-10-12T03:00:00.000Z").getTime() + 3_600_000,
         })
         expect(http.request).toHaveBeenCalledWith(
             objectLike({
-                form: objectLike({ grant_type: "refresh_token", refresh_token: "rt" }),
+                form: objectLike({ grant_type: "refresh_token", [RENEWAL_GRANT_FIELD]: "rt" }),
             }),
         )
     })

@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import type {
     NivoEntry,
@@ -17,19 +17,8 @@ import { NivoKnowledgeItemEntity } from "./persistence/entities"
 /** The most items the Knowledge page lists. */
 const LIST_LIMIT = 500
 
-/** The condition under which an item keeps its vector: its title and body did not change. */
-const UNCHANGED = '"nivo_knowledge"."body" = EXCLUDED."body" AND "nivo_knowledge"."title" = EXCLUDED."title"'
-
-/**
- * The conflict clause that publishes an item by its slug: an unchanged text keeps its version and vector, a changed one takes
- * the next version and loses its vector.
- */
-const UPSERT_CONFLICT = `("slug") DO UPDATE SET
-    "module" = EXCLUDED."module", "title" = EXCLUDED."title", "body" = EXCLUDED."body", "kind" = EXCLUDED."kind",
-    "version" = CASE WHEN ${UNCHANGED} THEN "nivo_knowledge"."version" ELSE "nivo_knowledge"."version" + 1 END,
-    "embedding" = CASE WHEN ${UNCHANGED} THEN "nivo_knowledge"."embedding" ELSE NULL END,
-    "embedding_model" = CASE WHEN ${UNCHANGED} THEN "nivo_knowledge"."embedding_model" ELSE NULL END,
-    "updated_at" = now()`
+/** The row an insert or a delete returns for each item it touched. */
+const isTouchedRow = rowShape({ id: "string" })
 
 /** The vector of each id, picked from the two arrays the write carries. */
 const VECTOR_OF_ID =
@@ -61,15 +50,42 @@ export class NivoKnowledgeService {
                         body: item.body,
                         kind: item.kind,
                     })
-                    .onConflict(UPSERT_CONFLICT)
-                    .returning("(xmax = 0) AS inserted")
+                    .orIgnore()
+                    .returning("id")
                     .execute()
-                const [row] = result.raw as Array<{ inserted: boolean }>
-                if (row?.inserted === true) counts.inserted += 1
-                else counts.updated += 1
+                if (returnedRows(result.raw, isTouchedRow).length > 0) {
+                    counts.inserted += 1
+                    return
+                }
+                counts.updated += 1
+                await this.republish(tx, item)
             })
             return counts
         })
+    }
+
+    /** Republishes an item that exists: an unchanged text keeps its version and vector, a changed one takes the next version and loses its vector. */
+    private async republish(tx: EntityManager, item: NivoItemInput): Promise<void> {
+        const current = await tx.findOne(NivoKnowledgeItemEntity, {
+            select: { id: true, title: true, body: true },
+            where: { slug: item.slug },
+        })
+        if (current === null) return
+        const fields = { module: item.module, title: item.title, body: item.body, kind: item.kind }
+        const changed = current.title !== item.title || current.body !== item.body
+        await tx.update(
+            NivoKnowledgeItemEntity,
+            { id: current.id },
+            changed
+                ? {
+                      ...fields,
+                      version: () => '"version" + 1',
+                      embedding: null,
+                      embeddingModel: null,
+                      updatedAt: () => "now()",
+                  }
+                : { ...fields, updatedAt: () => "now()" },
+        )
     }
 
     /**
@@ -81,7 +97,7 @@ export class NivoKnowledgeService {
     }
 
     /** How many base-knowledge items belong to the named modules. */
-    async countFor(modules: ReadonlyArray<string>): Promise<number> {
+    countFor(modules: ReadonlyArray<string>): Promise<number> {
         return this.entityManager.count(NivoKnowledgeItemEntity, { where: { module: In([...modules]) } })
     }
 
@@ -126,7 +142,7 @@ export class NivoKnowledgeService {
             .where("slug <> ALL(CAST(:slugs AS text[]))", { slugs: [...slugs] })
             .returning("id")
             .execute()
-        return (removed.raw as Array<{ id: string }>).length
+        return returnedRows(removed.raw, isTouchedRow).length
     }
 
     /** Up to `limit` items without a vector of `model`, with the text to embed. */

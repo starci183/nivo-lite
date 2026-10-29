@@ -1,7 +1,7 @@
 import { isRecord } from "@modules/platform/primitives"
 import { PublicApiError, PublicApiErrorCode } from "./errors/public-api.error"
 import { LEAD_STAGES } from "./public-api.contracts"
-import type { LeadStage, LeadRequestBody, MessageRequestBody } from "./public-api.contracts"
+import type { PublicLeadStage, LeadRequestBody, MessageRequestBody } from "./public-api.contracts"
 import type { PublicApiBody, PublicApiJob } from "./public-api-job.contracts"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
@@ -35,7 +35,7 @@ const optionalChannelOf = (value: unknown): string | undefined => {
     return channel.trim() === "" ? invalid("channel") : channel
 }
 
-const stageOf = (value: unknown): LeadStage | null => {
+const stageOf = (value: unknown): PublicLeadStage | null => {
     if (value === null) return null
     return LEAD_STAGES.find((stage) => stage === value) ?? invalid("stage")
 }

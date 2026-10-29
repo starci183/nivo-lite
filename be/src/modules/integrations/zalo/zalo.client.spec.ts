@@ -4,6 +4,7 @@ import { HTTP_CLIENT } from "@modules/platform/http"
 import type { HttpClient } from "@modules/platform/http"
 import { ZaloErrorCode } from "./errors/zalo.error"
 import { ZaloClient } from "./zalo.client"
+import { RENEWAL_GRANT_FIELD } from "./zalo.contracts"
 import { ZALO_OPTIONS } from "./zalo.decorators"
 import type { ZaloOptions } from "./zalo.options"
 import { challengeOf } from "./zalo-oauth.policy"
@@ -47,12 +48,12 @@ describe("ZaloClient / exchangeCode and refreshTokens", () => {
         const { client, http } = await build()
         http.request.mockResolvedValue({
             status: 200,
-            body: { access_token: "access", refresh_token: "refresh", expires_in: "7200" },
+            body: { access_token: "access", [RENEWAL_GRANT_FIELD]: "refresh", expires_in: "7200" },
         })
 
         await expect(client.exchangeCode("app-1", "secret", "code-1", "verifier")).resolves.toEqual({
             accessToken: "access",
-            refreshToken: "refresh",
+            renewalToken: "refresh",
             expiresInSeconds: 7200,
         })
 
@@ -67,17 +68,17 @@ describe("ZaloClient / exchangeCode and refreshTokens", () => {
 
     it("posts the refresh grant and falls back to one hour when the answer gives no lifetime", async () => {
         const { client, http } = await build()
-        http.request.mockResolvedValue({ status: 200, body: { access_token: "a2", refresh_token: "r2" } })
+        http.request.mockResolvedValue({ status: 200, body: { access_token: "a2", [RENEWAL_GRANT_FIELD]: "r2" } })
 
         await expect(client.refreshTokens("app-1", "secret", "r1")).resolves.toEqual({
             accessToken: "a2",
-            refreshToken: "r2",
+            renewalToken: "r2",
             expiresInSeconds: 3600,
         })
 
         expect(http.request).toHaveBeenCalledWith(
             objectLike({
-                form: { refresh_token: "r1", app_id: "app-1", grant_type: "refresh_token" },
+                form: { [RENEWAL_GRANT_FIELD]: "r1", app_id: "app-1", grant_type: "refresh_token" },
             }),
         )
     })

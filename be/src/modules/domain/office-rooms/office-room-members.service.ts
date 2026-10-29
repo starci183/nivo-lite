@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import type { MemberSeat } from "@modules/domain/workspace-members"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { RoomMemberPreviewView, RoomMembersView } from "./office-rooms.contracts"
+import type { RoomMemberPreviewView, RoomMembersView, SeatTaken } from "./office-rooms.contracts"
 import { InjectRoomsAgents } from "./office-rooms.decorators"
 import type { RoomAgentSeat, RoomsAgents } from "./office-rooms.port"
 import { OfficeRoomEntity, OfficeRoomMemberEntity } from "./persistence/entities"
@@ -93,11 +93,7 @@ const groupByKey = (seats: ReadonlyArray<SeatFacts>): ReadonlyMap<string | undef
 }
 
 /** A person's seat as the preview draws it. */
-const humanSeatOf = (
-    seat: MemberSeat,
-    key?: string,
-    taken?: { readonly id: string; readonly at: string },
-): SeatFacts => ({
+const humanSeatOf = (seat: MemberSeat, key?: string, taken?: SeatTaken): SeatFacts => ({
     key,
     seat_id: taken?.id ?? seat.seat_id,
     id: seat.id,
@@ -108,11 +104,7 @@ const humanSeatOf = (
 })
 
 /** An agent's seat as the preview draws it. */
-const agentSeatOf = (
-    seat: RoomAgentSeat,
-    key?: string,
-    taken?: { readonly id: string; readonly at: string },
-): SeatFacts => ({
+const agentSeatOf = (seat: RoomAgentSeat, key?: string, taken?: SeatTaken): SeatFacts => ({
     key,
     seat_id: taken?.id ?? seat.id,
     id: seat.id,

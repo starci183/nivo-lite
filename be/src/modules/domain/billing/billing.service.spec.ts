@@ -4,7 +4,8 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { PaymentOrdersService } from "@modules/domain/payment-orders"
 import type { PaymentOrder } from "@modules/domain/payment-orders"
 import { Secret } from "@modules/platform/config"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { PaymentOrderHistoryService } from "@modules/domain/payment-orders"
+import { WorkspaceAdminReadService, WorkspaceBillingService } from "@modules/domain/workspaces"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import {
@@ -56,18 +57,57 @@ const PLAN_DETAIL = {
     listMonthlyVnd: 990000,
 }
 const NO_TIER = { tier_credits: null, seat_count: null, billing_cycle: null, billed_monthly_vnd: null }
-const WORKSPACE_ROW = { status: "active", plan_code: "starter", paid_until: null, ...NO_TIER }
+const WORKSPACE_ROW: BillingRow = { status: "active", plan_code: "starter", paid_until: null, ...NO_TIER }
 
 /** The role of the caller's active seat each manager's workspace holds; none when the caller has no active seat. */
 const ROLES = new WeakMap<MockEntityManager, string | null>()
 
+/** The billing columns of a workspace in the shape of the scenarios, as the owner of the workspaces answers them. */
+interface BillingRow {
+    readonly status: string
+    readonly plan_code: string | null
+    readonly paid_until: string | null
+    readonly tier_credits: number | null
+    readonly seat_count: number | null
+    readonly billing_cycle: "monthly" | "annual" | null
+    readonly billed_monthly_vnd: number | null
+}
+
+const factsOf = (row: BillingRow) => ({
+    status: row.status,
+    planCode: row.plan_code,
+    paidUntil: row.paid_until === null ? null : new Date(row.paid_until),
+    tierCredits: row.tier_credits,
+    seatCount: row.seat_count,
+    billingCycle: row.billing_cycle,
+    billedMonthlyVnd: row.billed_monthly_vnd,
+})
+
+/** The workspace row and the promo counts each manager's scenario holds. */
+const WORKSPACES = new WeakMap<MockEntityManager, BillingRow | null>()
+const PROMOS = new WeakMap<MockEntityManager, { full_price: number; promo: number } | undefined>()
+
 const build = async (entityManager: MockEntityManager) => {
+    const workspace = WORKSPACES.get(entityManager) ?? null
+    const workspaceBilling = mock<WorkspaceBillingService>()
+    workspaceBilling.factsOf.mockResolvedValue(workspace === null ? null : factsOf(workspace))
+    const workspaceReads = mock<WorkspaceAdminReadService>()
+    workspaceReads.namesOf.mockResolvedValue([{ id: "ws-1", name: "Shop" }])
+    const history = mock<PaymentOrderHistoryService>()
+    const promo = PROMOS.get(entityManager)
+    history.planPaymentsOf.mockResolvedValue({ fullPrice: promo?.full_price ?? 0, promo: promo?.promo ?? 0 })
     const role = ROLES.get(entityManager) ?? null
     const seats = mock<WorkspaceMemberSeatsService>()
     seats.activeSeatOfUser.mockResolvedValue(
         role === null
             ? null
-            : { memberId: "m-1", userId: "person-1", role: role as WorkspaceRole, displayName: "Lan", status: "active" },
+            : {
+                  memberId: "m-1",
+                  userId: "person-1",
+                  role: role as WorkspaceRole,
+                  displayName: "Lan",
+                  status: "active",
+              },
     )
     const orders = mock<PaymentOrdersService>()
     orders.create.mockResolvedValue(ORDER)
@@ -78,9 +118,12 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: PaymentOrdersService, useValue: orders },
             { provide: BILLING_OPTIONS, useValue: OPTIONS },
             { provide: WorkspaceMemberSeatsService, useValue: seats },
+            { provide: WorkspaceBillingService, useValue: workspaceBilling },
+            { provide: WorkspaceAdminReadService, useValue: workspaceReads },
+            { provide: PaymentOrderHistoryService, useValue: history },
         ],
     }).compile()
-    return { billing: moduleRef.get(BillingService), orders, seats }
+    return { billing: moduleRef.get(BillingService), orders, seats, workspaceBilling, workspaceReads, history }
 }
 
 /** What the database holds for one scenario: a key present is read (the query builders answer in the order role, workspace, promo). */
@@ -88,7 +131,7 @@ interface World {
     /** The role of the caller's membership, or null when there is none. */
     readonly role?: string | null
     /** The billing columns of the workspace, or null when it is gone. */
-    readonly workspace?: object | null
+    readonly workspace?: BillingRow | null
     /** The plan the code names, or null when none is active. */
     readonly plan?: PlanEntity | null
     /** The usage tiers of every plan. */
@@ -104,11 +147,8 @@ const worldOf = (world: World) => {
         findOne: [PlanEntity, world.plan ?? null],
         find: [PlanUsageTierEntity, world.tiers ?? []],
     })
-    const answers = [
-        ...("workspace" in world ? [{ getRawOne: world.workspace ?? undefined }] : []),
-        ...("promo" in world ? [{ getRawOne: world.promo }] : []),
-    ]
-    queueQueryBuilders(em, answers)
+    WORKSPACES.set(em, world.workspace ?? null)
+    PROMOS.set(em, world.promo)
     if ("role" in world) ROLES.set(em, world.role ?? null)
     return em
 }
@@ -176,7 +216,7 @@ describe("BillingService", () => {
             ...WORKSPACE_ROW,
             tier_credits: 3000,
             seat_count: 2,
-            billing_cycle: "monthly",
+            billing_cycle: "monthly" as const,
             billed_monthly_vnd: 990000,
         }
         const { billing } = await build(worldOf({ workspace: row }))
@@ -273,7 +313,7 @@ describe("BillingService > renew", () => {
         const unpaid = await build(
             worldOf({
                 role: "owner",
-                workspace: { status: "pending_payment", plan_code: null, paid_until: null },
+                workspace: { ...WORKSPACE_ROW, status: "pending_payment", plan_code: null },
                 plan: null,
             }),
         )
@@ -382,17 +422,12 @@ describe("BillingService > orderPlan", () => {
 })
 
 describe("BillingService > workspaces", () => {
-    const row = {
-        id: "ws-1",
-        name: "Shop",
-        role: "owner",
-        ...WORKSPACE_ROW,
-        paid_until: "2026-11-01T00:00:00.000Z",
-    }
+    const row = { ...WORKSPACE_ROW, paid_until: "2026-11-01T00:00:00.000Z" }
+
     it("lists the caller's active workspaces", async () => {
-        const em = mockEntityManager()
-        const [fake] = queueQueryBuilders(em, [{ getRawMany: [row] }])
-        const { billing, seats } = await build(em)
+        const em = membershipOf("owner")
+        WORKSPACES.set(em, row)
+        const { billing, seats, workspaceReads } = await build(em)
         seats.activeSeatsOfUser.mockResolvedValue([{ workspaceId: "ws-1", role: "owner" }])
 
         await expect(billing.workspaces("person-1")).resolves.toEqual([
@@ -410,36 +445,44 @@ describe("BillingService > workspaces", () => {
             },
         ])
         expect(seats.activeSeatsOfUser).toHaveBeenCalledWith("person-1", 200)
-        expect(fake?.callsOf("limit")).toEqual([[200]])
-        expect(fake?.callsOf("where")).toEqual([["w.id IN (:...workspaceIds)", { workspaceIds: ["ws-1"] }]])
+        expect(workspaceReads.namesOf).toHaveBeenCalledWith(["ws-1"], 200)
+    })
+
+    it("leaves out a workspace that is gone or has no name", async () => {
+        const { billing, seats } = await build(mockEntityManager())
+        seats.activeSeatsOfUser.mockResolvedValue([{ workspaceId: "ws-1", role: "owner" }])
+
+        await expect(billing.workspaces("person-1")).resolves.toEqual([])
     })
 
     it("lists nothing for a caller with no active seat", async () => {
         const em = mockEntityManager()
-        const { billing, seats } = await build(em)
+        const { billing, seats, workspaceBilling } = await build(em)
         seats.activeSeatsOfUser.mockResolvedValue([])
 
         await expect(billing.workspaces("person-1")).resolves.toEqual([])
-        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+        expect(workspaceBilling.factsOf).not.toHaveBeenCalled()
     })
 
     it("reads one workspace for a member and refuses anyone else", async () => {
         const member = membershipOf("owner")
+        WORKSPACES.set(member, row)
         const outside = membershipOf(null)
-        queueQueryBuilders(member, [{ getRawOne: row }])
         const { billing } = await build(member)
         const { billing: outsider } = await build(outside)
 
-        await expect(billing.workspace("person-1", "ws-1")).resolves.toMatchObject({ id: "ws-1", role: "owner" })
+        await expect(billing.workspace("person-1", "ws-1")).resolves.toMatchObject({
+            id: "ws-1",
+            name: "Shop",
+            role: "owner",
+        })
         await expect(outsider.workspace("person-1", "ws-1")).rejects.toMatchObject({
             code: BillingErrorCode.NotMember,
         })
     })
 
     it("refuses a member of a workspace that is gone", async () => {
-        const em = membershipOf("owner")
-        queueQueryBuilders(em, [{ getRawOne: undefined }])
-        const { billing } = await build(em)
+        const { billing } = await build(membershipOf("owner"))
 
         await expect(billing.workspace("person-1", "ws-1")).rejects.toMatchObject({
             code: BillingErrorCode.NotMember,

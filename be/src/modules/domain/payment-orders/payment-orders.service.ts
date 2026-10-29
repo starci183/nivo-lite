@@ -92,7 +92,9 @@ export class PaymentOrdersService {
                 .execute()
             const [written] = returnedRows(inserted.raw, isWrittenId)
             if (written === undefined) return attempt(left - 1)
-            return toPaymentOrder(await this.entityManager.findOneOrFail(PaymentOrderEntity, { where: { id: written.id } }))
+            return toPaymentOrder(
+                await this.entityManager.findOneOrFail(PaymentOrderEntity, { where: { id: written.id } }),
+            )
         }
         return await attempt(CODE_ATTEMPTS)
     }

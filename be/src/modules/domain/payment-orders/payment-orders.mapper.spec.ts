@@ -61,4 +61,16 @@ describe("payment orders mapper", () => {
 
         expect(subject.toPaymentOrder(Object.assign(new PaymentOrderEntity(), ROW, { detail })).detail).toEqual({})
     })
+
+    it("keeps only plain values of the stored detail", async () => {
+        const subject = await buildSubject()
+        const detail = { credits: 5, from: "starter", promo: true, none: null, nested: { a: 1 }, list: [1] }
+
+        expect(subject.toPaymentOrder(Object.assign(new PaymentOrderEntity(), ROW, { detail })).detail).toEqual({
+            credits: 5,
+            from: "starter",
+            promo: true,
+            none: null,
+        })
+    })
 })

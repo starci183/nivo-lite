@@ -1,3 +1,6 @@
+/** The form field name OAuth 2.0 (RFC 6749) mandates for the long-lived provider renewal credential in a token call. */
+export const RENEWAL_GRANT_FIELD = "refresh_token"
+
 /** The scope of the Sheets connection: only files NIVO created, plus the account identity. */
 export const GOOGLE_SCOPE = "https://www.googleapis.com/auth/drive.file openid email"
 
@@ -40,8 +43,8 @@ export interface OAuthStateInput {
 export interface GoogleTokenSet {
     /** The short-lived access token. */
     readonly accessToken: string
-    /** The refresh token, present on the first consent. */
-    readonly refreshToken: string | null
+    /** The provider renewal token (not a session token), present on the first consent. */
+    readonly renewalToken: string | null
     /** The access token expiry, epoch milliseconds. */
     readonly expiresAt: number
     /** The OpenID id token, when requested. */

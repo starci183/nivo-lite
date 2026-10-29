@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { RoomLabel, UserSeatRoom } from "./office-room-directory.contracts"
+import type { OptionalRoomKeys, RoomName, UserSeatRoom } from "./office-room-directory.contracts"
 import { OfficeRoomEntity, OfficeRoomMemberEntity } from "./persistence/entities"
 
 @Injectable()
@@ -10,7 +10,7 @@ export class OfficeRoomDirectoryService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** The names of the department rooms of a workspace by key, in room order. */
-    labelsOf(workspaceId: string, keys: ReadonlyArray<string>, limit: number): Promise<Array<RoomLabel>> {
+    labelsOf(workspaceId: string, keys: ReadonlyArray<string>, limit: number): Promise<Array<RoomName>> {
         if (keys.length === 0) return Promise.resolve([])
         return this.entityManager
             .createQueryBuilder(OfficeRoomEntity, "r")
@@ -20,14 +20,14 @@ export class OfficeRoomDirectoryService {
             .orderBy("r.position", "ASC")
             .addOrderBy("r.key", "ASC")
             .limit(limit)
-            .getRawMany<RoomLabel>()
+            .getRawMany<RoomName>()
     }
 
     /**
      * The department rooms of a workspace that have at least one person in them, in room order, bounded; `keys` narrows them to
      * those rooms (none given asks for every one).
      */
-    staffedRooms(workspaceId: string, keys: ReadonlyArray<string> | null, limit: number): Promise<Array<RoomLabel>> {
+    staffedRooms(workspaceId: string, keys: OptionalRoomKeys, limit: number): Promise<Array<RoomName>> {
         if (keys !== null && keys.length === 0) return Promise.resolve([])
         const rooms = this.entityManager
             .createQueryBuilder(OfficeRoomEntity, "r")
@@ -41,7 +41,7 @@ export class OfficeRoomDirectoryService {
             .where("rm.room_id = r.id AND rm.user_id IS NOT NULL")
         rooms.andWhereExists(seated)
         if (keys !== null) rooms.andWhere("r.key IN (:...keys)", { keys: [...keys] })
-        return rooms.orderBy("r.position", "ASC").addOrderBy("r.key", "ASC").limit(limit).getRawMany<RoomLabel>()
+        return rooms.orderBy("r.position", "ASC").addOrderBy("r.key", "ASC").limit(limit).getRawMany<RoomName>()
     }
 
     /** The department rooms the given accounts sit in, in room order (a room of another workspace never counts). */

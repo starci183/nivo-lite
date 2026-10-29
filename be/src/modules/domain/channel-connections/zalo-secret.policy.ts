@@ -23,14 +23,14 @@ export const parseZaloSecret = (plain: string): ZaloSetupSecret | null => {
     if (!isJson(parsed) || typeof parsed.appId !== "string" || typeof parsed.appSecret !== "string") return null
     const pkce = pkceOf(parsed.pkce)
     const accessToken = textOf(parsed.accessToken)
-    const refreshToken = textOf(parsed.refreshToken)
+    const renewalToken = textOf(parsed.renewalToken) ?? textOf(parsed.refreshToken)
     const refreshExpiresAt = textOf(parsed.refreshExpiresAt)
     return {
         appId: parsed.appId,
         appSecret: parsed.appSecret,
         oaSecret: textOf(parsed.oaSecret) ?? "",
         ...(accessToken ? { accessToken } : {}),
-        ...(refreshToken ? { refreshToken } : {}),
+        ...(renewalToken ? { renewalToken } : {}),
         ...(refreshExpiresAt ? { refreshExpiresAt } : {}),
         ...(pkce ? { pkce } : {}),
     }
@@ -38,7 +38,7 @@ export const parseZaloSecret = (plain: string): ZaloSetupSecret | null => {
 
 /** True when the credential holds a refresh token that has not expired at `now`. */
 export const hasLiveTokens = (secret: ZaloSetupSecret, now: number): boolean => {
-    if (!secret.refreshToken) return false
+    if (!secret.renewalToken) return false
     if (!secret.refreshExpiresAt) return true
     const expires = Date.parse(secret.refreshExpiresAt)
     return Number.isNaN(expires) || expires > now

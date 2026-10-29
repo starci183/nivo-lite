@@ -42,13 +42,11 @@ import { parseWebhook } from "@modules/integrations/meta"
 import type { MetaClient, MetaEvent } from "@modules/integrations/meta"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
-import type { EntityInbox } from "@modules/platform/inbox"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { META_INBOUND_QUEUE, META_DELIVERY_QUEUE } from "./meta-inbox.contracts"
 import { META_EVENT_TAKER } from "./meta-inbox.decorators"
 import type { MetaEventTaker } from "./meta-inbox.port"
 import type { MetaInboundJob } from "./meta-inbox.contracts"
-import type { RowClaim } from "@tests/fixtures/builders/row-claims.builder"
 import { MetaInboxService } from "./meta-inbox.service"
 import { MetaInboxEntity } from "./persistence/entities"
 
@@ -63,7 +61,8 @@ const FIND_CALL = [
 const RECEIPT_CLAIM = {
     source: "meta",
     eventId: DELIVERY_ID,
-    receipt: { entity: MetaInboxEntity, row: { provider: "meta", deliveryId: DELIVERY_ID, payload: BODY } },
+    entity: MetaInboxEntity,
+    row: { provider: "meta", deliveryId: DELIVERY_ID, payload: BODY },
 }
 const COMPLETE_CALL = ["MetaInboxEntity", { id: "inbox-1" }, { processedAt: "now()" }]
 
@@ -112,12 +111,7 @@ const build = async (
     const taker = mock<MetaEventTaker>()
     taker.take.mockResolvedValue(false)
     const inbox = fakeInbox()
-    const rowClaims: Array<RowClaim> = []
-    const claimRow: EntityInbox["claimRow"] = (source, eventId, _manager, receipt) => {
-        rowClaims.push({ source, eventId, receipt })
-        return claimed && eventId !== "" ? inbox.claim(source, eventId) : Promise.resolve(false)
-    }
-    Object.assign(inbox, { claimRow })
+    if (!claimed) inbox.seen("meta", DELIVERY_ID)
     const moduleRef = await Test.createTestingModule({
         providers: [
             MetaInboxService,
@@ -134,7 +128,6 @@ const build = async (
     }).compile()
     return {
         inbox,
-        rowClaims,
         service: moduleRef.get(MetaInboxService),
         tx,
         meta,
@@ -150,13 +143,15 @@ const build = async (
 
 describe("MetaInboxService receipt intake", () => {
     it("records a receipt and publishes only its reference before any business effect", async () => {
-        const { service, tx, meta, connections, write, rowClaims } = await build([event()])
+        const { service, tx, meta, connections, write, inbox } = await build([event()])
 
         await service.accept(RAW_BODY, SIGNATURE)
 
         const manager = write.mock.calls[0]?.[0]
         expect(isTransactionManager(manager)).toBe(true)
-        expect(rowClaims).toEqual([RECEIPT_CLAIM])
+        expect(inbox.receipts.map(({ source, eventId, entity, row }) => ({ source, eventId, entity, row }))).toEqual([
+            RECEIPT_CLAIM,
+        ])
         expect(write).toHaveBeenCalledWith(
             manager,
             META_DELIVERY_QUEUE,
@@ -169,27 +164,28 @@ describe("MetaInboxService receipt intake", () => {
     })
 
     it.each(unreadableReceipts)(
-        "does not publish an unreadable receipt: $rawBody / $signature",
+        "refuses an unreadable receipt, which has no delivery id to claim: $rawBody / $signature",
         async ({ rawBody, signature }) => {
             const { service, outbox, meta, tx } = await build()
-            await expect(service.accept(rawBody, signature)).resolves.toBeUndefined()
+            await expect(service.accept(rawBody, signature)).rejects.toThrow("DATABASE_WEBHOOK_DELIVERY_ID_REQUIRED")
             expect(outbox.jobs).toEqual([])
             expect(meta.verifyDelivery).not.toHaveBeenCalled()
             expect(meta.parse).not.toHaveBeenCalled()
             expect(tx.em.query).not.toHaveBeenCalled()
-            expect(tx.outcomes).toEqual(["commit"])
+            expect(tx.outcomes).toEqual(["rollback"])
         },
     )
 
     it("acknowledges a duplicate without another outbox message", async () => {
-        const { service, outbox, connections, meta, tx, rowClaims } = await build([event()], false)
+        const { service, outbox, connections, meta, tx, inbox } = await build([event()], false)
         await expect(service.accept(RAW_BODY, SIGNATURE)).resolves.toBeUndefined()
         expect(outbox.jobs).toEqual([])
         expect(meta.parse).not.toHaveBeenCalled()
         expect(connections.findLiveByMeta).not.toHaveBeenCalled()
         expect(connections.recordEvent).not.toHaveBeenCalled()
         expect(tx.commits).toBe(1)
-        expect(rowClaims).toEqual([RECEIPT_CLAIM])
+        expect(inbox.claims).toEqual([{ source: "meta", eventId: DELIVERY_ID }])
+        expect(inbox.receipts).toEqual([])
     })
 
     it("rolls back a receipt when publication fails", async () => {
@@ -204,14 +200,16 @@ describe("MetaInboxService receipt intake", () => {
 
 describe("MetaInboxService empty receipts", () => {
     it("defers parsing a signed body without events and completes it without downstream effects", async () => {
-        const { service, tx, meta, connections, outbox, rowClaims } = await build()
+        const { service, tx, meta, connections, outbox, inbox } = await build()
 
         await expect(service.accept(RAW_BODY, SIGNATURE)).resolves.toBeUndefined()
         expect(meta.parse).not.toHaveBeenCalled()
 
         await expect(service.processRecordedDelivery({ deliveryId: DELIVERY_ID })).resolves.toBeUndefined()
         expect(meta.parse).toHaveBeenCalledWith(BODY)
-        expect(rowClaims).toEqual([RECEIPT_CLAIM])
+        expect(inbox.receipts.map(({ source, eventId, entity, row }) => ({ source, eventId, entity, row }))).toEqual([
+            RECEIPT_CLAIM,
+        ])
         expectConsumed(tx)
         expect(connections.findLiveByMeta).not.toHaveBeenCalled()
         expect(connections.recordEvent).not.toHaveBeenCalled()
@@ -479,7 +477,7 @@ describe("MetaInboxService deferred delivery", () => {
     it("propagates a failed receipt claim and rolls back its transaction", async () => {
         const { service, tx, inbox, outbox } = await build()
         const failure = new Error("inbox unavailable")
-        inbox.failNext("claim", failure)
+        inbox.failNext("claimRow", failure)
         await expect(service.accept(RAW_BODY, SIGNATURE)).rejects.toBe(failure)
         expect(tx.rollbacks).toBe(1)
         expect(tx.commits).toBe(0)
