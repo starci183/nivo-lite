@@ -70,6 +70,18 @@ describe("ZaloCredentialsService", () => {
             await expect(service.load("c-1")).resolves.toMatchObject({ value: { expiresAt: null } })
         })
 
+        it.each(['"refreshToken":"old"', '"refreshToken":"old","renewalToken":"new"'])(
+            "reads the legacy refreshToken key of a stored secret as the renewal token (%s)",
+            async (keys) => {
+                const { service, secrets } = await build()
+                secrets.secretOf.mockResolvedValue(
+                    stored(`{"appId":"a","appSecret":"s","oaSecret":"o",${keys}}`),
+                )
+                const loaded = await service.load("c-1")
+                expect(loaded).toMatchObject({ kind: "ok", value: { secret: { renewalToken: keys.includes("new") ? "new" : "old" } } })
+            },
+        )
+
         it("refuses a missing connection and a credential that is not the Zalo document", async () => {
             const { service, secrets } = await build()
             secrets.secretOf.mockResolvedValueOnce(missing)
