@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectClock } from "@modules/platform/clock"
+import { isRecord } from "@modules/platform/primitives"
 import type { Clock } from "@modules/platform/clock"
 import type {
     DelegatedVideoProjectDraft,
@@ -24,6 +25,22 @@ interface ProjectIdentity {
     readonly id: string
 }
 
+/** The goals the table accepts, so a text from outside can be narrowed to one. */
+const GOALS: ReadonlyArray<VideoProjectGoal> = ["service", "offer", "testimonial", "behind_scenes", "hiring", "custom"]
+
+/** The shapes the table accepts. */
+const ASPECTS: ReadonlyArray<VideoProjectAspect> = ["9:16", "1:1", "16:9"]
+
+/** True when a RETURNING row names the project it saved. */
+const isIdentity = (value: unknown): value is ProjectIdentity => isRecord(value) && typeof value.id === "string"
+
+/** The projects a write answered. */
+const identitiesOf = (raw: unknown): Array<ProjectIdentity> => (Array.isArray(raw) ? raw.filter(isIdentity) : [])
+
+/** A JSON document for a jsonb column: the value when it is an object or a list, else the fallback. */
+const documentOf = (value: unknown, fallback: VideoProjectJson): VideoProjectJson =>
+    typeof value === "object" && value !== null ? value : fallback
+
 @Injectable()
 /** The owner of video_projects writes used by the manager workbench and approval gate. */
 export class VideoProjectWorkbenchWriterService {
@@ -39,6 +56,9 @@ export class VideoProjectWorkbenchWriterService {
         principalId: string,
         input: NewVideoProjectDraft,
     ): Promise<WrittenVideoProjectId> {
+        const goal = GOALS.find((candidate) => candidate === input.goal)
+        const aspect = ASPECTS.find((candidate) => candidate === input.aspect)
+        if (goal === undefined || aspect === undefined) return null
         const typed = input.title?.trim() ?? ""
         const result = await tx
             .createQueryBuilder(VideoProjectEntity, "v")
@@ -46,17 +66,16 @@ export class VideoProjectWorkbenchWriterService {
             .values({
                 workspaceId,
                 title: typed || `${input.goal} - ${this.clock.now().toISOString().slice(0, 10)}`,
-                goal: input.goal as VideoProjectGoal,
-                aspect: input.aspect as VideoProjectAspect,
+                goal,
+                aspect,
                 targetSeconds: input.targetSeconds,
-                inputs: input.inputs as VideoProjectJson,
+                inputs: documentOf(input.inputs, {}),
                 scriptMeta: typed === "" ? { auto_title: true } : {},
                 createdBy: principalId,
             })
             .returning("id")
             .execute()
-        const [row] = result.raw as Array<ProjectIdentity>
-        return row?.id ?? null
+        return identitiesOf(result.raw)[0]?.id ?? null
     }
 
     /** Creates the project of a delegated script in the caller's transaction; no person is its creator. */
@@ -65,24 +84,26 @@ export class VideoProjectWorkbenchWriterService {
         workspaceId: string,
         input: DelegatedVideoProjectDraft,
     ): Promise<WrittenVideoProjectId> {
+        const goal = GOALS.find((candidate) => candidate === input.goal)
+        const aspect = ASPECTS.find((candidate) => candidate === input.aspect)
+        if (goal === undefined || aspect === undefined) return null
         const result = await tx
             .createQueryBuilder(VideoProjectEntity, "v")
             .insert()
             .values({
                 workspaceId,
                 title: input.title,
-                goal: input.goal as VideoProjectGoal,
-                aspect: input.aspect as VideoProjectAspect,
+                goal,
+                aspect,
                 targetSeconds: input.targetSeconds,
-                script: input.script as VideoProjectJson,
+                script: documentOf(input.script, []),
                 inputs: {},
                 scriptMeta: { delegated: true },
                 createdBy: null,
             })
             .returning("id")
             .execute()
-        const [row] = result.raw as Array<ProjectIdentity>
-        return row?.id ?? null
+        return identitiesOf(result.raw)[0]?.id ?? null
     }
 
     /** Updates an idle project and invalidates a script approval. */
@@ -115,7 +136,7 @@ export class VideoProjectWorkbenchWriterService {
             })
             .returning("id")
             .execute()
-        return (result.raw as Array<ProjectIdentity>).length > 0
+        return identitiesOf(result.raw).length > 0
     }
 
     /** Copies a project into a fresh draft inside the caller's evidence transaction; null when the workspace has no such project. */
@@ -147,8 +168,7 @@ export class VideoProjectWorkbenchWriterService {
             })
             .returning("id")
             .execute()
-        const [row] = result.raw as Array<ProjectIdentity>
-        return row?.id ?? null
+        return identitiesOf(result.raw)[0]?.id ?? null
     }
 
     /** Changes only an idle project's archived status. */
@@ -164,7 +184,7 @@ export class VideoProjectWorkbenchWriterService {
             .setParameter("archived", archived)
             .returning("id")
             .execute()
-        return (result.raw as Array<ProjectIdentity>).length > 0
+        return identitiesOf(result.raw).length > 0
     }
 
     /** Publishes only an approved project inside the evidence transaction. */
@@ -179,7 +199,7 @@ export class VideoProjectWorkbenchWriterService {
             })
             .returning("id")
             .execute()
-        return (result.raw as Array<ProjectIdentity>).length > 0
+        return identitiesOf(result.raw).length > 0
     }
 
     /** Records the authority performer's human approval of a render the caller proved done; a repeated decision keeps the first approver. */
@@ -195,6 +215,6 @@ export class VideoProjectWorkbenchWriterService {
             })
             .returning("id")
             .execute()
-        return (result.raw as Array<ProjectIdentity>).length > 0
+        return identitiesOf(result.raw).length > 0
     }
 }
