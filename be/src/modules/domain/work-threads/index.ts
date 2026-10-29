@@ -1,4 +1,4 @@
-export { workThreadsEntities, WorkThreadEntity } from "./persistence/entities"
+export { workThreadsEntities } from "./persistence/entities"
 export { WORK_THREADS_ERROR_KINDS } from "./errors/work-threads.error"
 export { WORK_THREADS_MESSAGES } from "./messages/work-threads.messages"
 export type { WorkThreadLeadFilter, WorkThread } from "./work-threads.contracts"
