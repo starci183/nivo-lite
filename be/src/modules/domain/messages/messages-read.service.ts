@@ -10,7 +10,7 @@ import type {
     OptionalLineText,
     ReadInstant,
     ReadMark,
-    ThreadLine,
+    OfficeThreadLine,
 } from "./messages-read.contracts"
 import { MessageEntity } from "./persistence/entities"
 
@@ -118,7 +118,7 @@ export class MessagesReadService {
     }
 
     /** One page of the thread, newest first: one line more than asked, so the caller can tell whether an older page exists. */
-    page(workspaceId: string, query: LinePageQuery): Promise<Array<ThreadLine>> {
+    page(workspaceId: string, query: LinePageQuery): Promise<Array<OfficeThreadLine>> {
         const page = this.entityManager
             .createQueryBuilder(MessageEntity, "m")
             .select("m.id", "id")
@@ -144,7 +144,7 @@ export class MessagesReadService {
             .orderBy("m.created_at", "DESC")
             .addOrderBy("m.id", "DESC")
             .limit(query.size + 1)
-            .getRawMany<ThreadLine>()
+            .getRawMany<OfficeThreadLine>()
     }
 
     /** The author and text of one message of the workspace; undefined when there is none. */
