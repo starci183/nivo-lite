@@ -13,4 +13,4 @@ export {
 export { AGENT_CONVERSATIONS_MESSAGES } from "./messages/agent-conversations.messages"
 export type { ConversationRef, ConversationTarget, TurnConversation } from "./agent-conversations.contracts"
 export type { ChatConversation, CustomerChat } from "./agent-conversations.contracts"
-export { AgentConversationEntity, agentConversationsEntities } from "./persistence/entities"
+export { agentConversationsEntities } from "./persistence/entities"

@@ -45,4 +45,4 @@ export type {
     Region,
 } from "./agents.contracts"
 export type { AskAsAgentInput, AskedPassage } from "./agent-ask.contracts"
-export { AgentEntity, agentsEntities } from "./persistence/entities"
+export { agentsEntities } from "./persistence/entities"
