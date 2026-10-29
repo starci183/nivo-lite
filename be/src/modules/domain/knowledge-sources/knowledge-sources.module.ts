@@ -5,6 +5,7 @@ import { ApiKnowledgeSourcesService } from "./api-knowledge-sources.service"
 import { KNOWLEDGE_STORAGE } from "./knowledge-sources.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./knowledge-sources.module-definition"
 import { KnowledgeSourcesService } from "./knowledge-sources.service"
+import { KnowledgeSourcesReadableService } from "./knowledge-sources-readable.service"
 import { KnowledgeSourcesAdminReadService } from "./knowledge-sources-admin-read.service"
 import { KnowledgeSourcesReadService } from "./knowledge-sources-read.service"
 
@@ -21,6 +22,7 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 KnowledgeSourcesAdminReadService,
                 KnowledgeSourcesReadService,
+                KnowledgeSourcesReadableService,
                 { provide: KNOWLEDGE_STORAGE, useExisting: options.storage },
                 KnowledgeSourcesService,
                 ApiKnowledgeSourcesService,
@@ -28,6 +30,7 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
             exports: [
                 KnowledgeSourcesAdminReadService,
                 KnowledgeSourcesReadService,
+                KnowledgeSourcesReadableService,
                 KnowledgeSourcesService,
                 ApiKnowledgeSourcesService,
             ],

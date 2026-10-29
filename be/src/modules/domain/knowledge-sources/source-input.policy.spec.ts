@@ -247,12 +247,15 @@ describe("safeFileName", () => {
     })
 })
 
+/** Any function: the database instant a change carries. */
+const anyFunction: unknown = expect.any(Function)
+
 describe("metaChanges", () => {
     it("writes only what the change names, and the instant of the change", async () => {
         const subject = await buildSubject()
         const none = { title: null, topic: null, tags: null, module: null, visibility: null }
 
-        expect(subject.metaChanges(none)).toEqual({ updatedAt: expect.any(Function) })
+        expect(subject.metaChanges(none)).toEqual({ updatedAt: anyFunction })
         expect(subject.metaChanges({ title: "T", topic: "x", tags: ["a"], module: "m", visibility: "public" })).toEqual(
             {
                 title: "T",
@@ -260,7 +263,7 @@ describe("metaChanges", () => {
                 tags: ["a"],
                 module: "m",
                 visibility: "public",
-                updatedAt: expect.any(Function),
+                updatedAt: anyFunction,
             },
         )
     })
@@ -271,7 +274,7 @@ describe("metaChanges", () => {
         expect(subject.metaChanges({ title: null, topic: "", tags: null, module: "", visibility: null })).toEqual({
             topic: null,
             module: null,
-            updatedAt: expect.any(Function),
+            updatedAt: anyFunction,
         })
     })
 })

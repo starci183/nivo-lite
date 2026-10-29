@@ -14,7 +14,7 @@ import type {
 import type { FactRecord } from "@modules/domain/brain-facts"
 import { KnowledgeSearchService } from "@modules/domain/knowledge"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
-import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
+import { KnowledgeSourcesReadableService } from "@modules/domain/knowledge-sources"
 import { NivoKnowledgeService } from "@modules/domain/nivo-knowledge"
 import type { AgentNotesRequest } from "./agent-knowledge.contracts"
 import { KnowledgeRecallService } from "./knowledge-recall.service"
@@ -67,7 +67,7 @@ const isMissingTable = (cause: unknown): boolean => {
  */
 export class AgentKnowledgeLensService implements KnowledgeLens {
     constructor(
-        private readonly sources: KnowledgeSourcesService,
+        private readonly sources: KnowledgeSourcesReadableService,
         private readonly recall: KnowledgeRecallService,
         private readonly nivo: NivoKnowledgeService,
         private readonly gaps: KnowledgeGapsService,
