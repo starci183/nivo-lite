@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { ConnectionsService } from "@modules/domain/connections"
-import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
+import { ConnectionSecretReadsService, ConnectionsService } from "@modules/domain/connections"
 import { MessagesService } from "@modules/domain/messages"
 import { EventsService } from "@modules/domain/events"
 import { InjectTelegram } from "@modules/integrations/telegram"
@@ -23,7 +22,7 @@ export class VideoSharingService {
         private readonly reads: VideoWorkbenchReadsService,
         private readonly media: VideoMediaService,
         private readonly connections: ConnectionsService,
-        private readonly secrets: ConnectionSecretsService,
+        private readonly secrets: ConnectionSecretReadsService,
         private readonly messages: MessagesService,
         private readonly events: EventsService,
     ) {}

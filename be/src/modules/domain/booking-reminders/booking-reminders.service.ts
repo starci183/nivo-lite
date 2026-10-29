@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { In, LessThanOrEqual } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { AutomationPipelineEntity } from "@modules/domain/automation-pipelines"
+import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
+import type { PipelineRow } from "@modules/domain/automation-pipelines"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { BookingReminderEntity } from "./persistence/entities"
 import { cardReminderBody, cardReminderHours, reminderPlan } from "./policies/reminder-plan.policy"
@@ -41,7 +42,10 @@ const REMINDER_TEMPLATE = "appointment_reminder"
 @Injectable()
 /** Plans the reminders of a booking: one row per offset that is still ahead, rewritten when the booking moves. */
 export class BookingRemindersService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly pipelines: AutomationPipelinesService,
+    ) {}
 
     /** Takes up to `limit` reminders that are due at `nowMs`, oldest first; each is returned to one caller only. */
     async claimDue(nowMs: number, limit: number, note: string): Promise<ReadonlyArray<DueReminder>> {
@@ -90,20 +94,20 @@ export class BookingRemindersService {
 
     /** The offsets and the wording the owner set on the reminder card; none when the card is off. */
     async cardOf(workspaceId: string): Promise<ReminderCard> {
-        const card = await this.entityManager.findOne(AutomationPipelineEntity, {
-            select: { config: true, body: true },
-            where: { workspaceId, templateKey: REMINDER_TEMPLATE, enabled: true },
-        })
+        const card = await this.enabledCard(workspaceId)
         return { hours: cardReminderHours(card?.config ?? null), body: cardReminderBody(card?.body) }
+    }
+
+    /** The reminder card of a workspace when the owner switched it on. */
+    private async enabledCard(workspaceId: string): Promise<PipelineRow | null> {
+        const card = await this.pipelines.findPipeline(workspaceId, REMINDER_TEMPLATE)
+        return card !== null && card.enabled ? card : null
     }
 
     /** Writes the reminders still ahead and cancels those that are already due and no longer apply. */
     async schedule(target: ReminderTarget): Promise<ReadonlyArray<ReminderDue>> {
         const { manager } = target
-        const card = await manager.findOne(AutomationPipelineEntity, {
-            select: { config: true },
-            where: { workspaceId: target.workspaceId, templateKey: REMINDER_TEMPLATE, enabled: true },
-        })
+        const card = await this.enabledCard(target.workspaceId)
         const custom = cardReminderHours(card?.config ?? null)
         const plan = reminderPlan(target.startMs, custom.length > 0 ? custom : target.defaultHours, target.nowMs)
         if (plan.length > 0) {

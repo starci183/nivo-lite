@@ -27,7 +27,7 @@ import { findFairnessViolations } from "./policies/fairness.policy"
 import { fieldText } from "./policies/gate-fields.policy"
 import { parseLooseJson, textField } from "./policies/json.policy"
 import { cleanLetterPart, composeOffer, payPhrase, termsBlock } from "./policies/offer-letter.policy"
-import { termsJson } from "./policies/row-mappers.policy"
+import { termsJson } from "./policies/row-mappers-records.policy"
 import { clip, isToken } from "./policies/text.policy"
 import { addDays } from "./policies/vn-time.policy"
 

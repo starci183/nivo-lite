@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { ConnectionSecretsService, randomSecret, safeEqual } from "@modules/domain/connection-secrets"
-import { ConnectionsService } from "@modules/domain/connections"
+import { ConnectionSecretReadsService, ConnectionsService } from "@modules/domain/connections"
 import { InjectZalo, isZaloRefusal, newVerifier } from "@modules/integrations/zalo"
 import type { ZaloClient } from "@modules/integrations/zalo"
 import { InjectClock } from "@modules/platform/clock"
@@ -66,6 +66,7 @@ export class ZaloCredentialsService {
         @InjectLogger() private readonly logger: Logger,
         private readonly secrets: ConnectionSecretsService,
         private readonly connections: ConnectionsService,
+        private readonly secretReads: ConnectionSecretReadsService,
     ) {}
 
     /** The address to register on the Zalo app: Zalo sends the browser back here with code, oa_id and state. */
@@ -75,7 +76,7 @@ export class ZaloCredentialsService {
 
     /** The credential of a connected Zalo connection, or a refusal when it is missing, disconnected or unreadable. */
     async load(connectionId: string): Promise<Outcome<LoadedZalo, ChannelsErrorCode>> {
-        const found = await this.secrets.secretOf(connectionId, "zalo_oa")
+        const found = await this.secretReads.secretOf(connectionId, "zalo_oa")
         if (found.kind !== "ok") return refused(ChannelsErrorCode.ConnectionNotFound)
         const secret = this.parse(found.value.credential)
         if (secret.kind !== "ok") return secret
@@ -171,7 +172,7 @@ export class ZaloCredentialsService {
 
     /** Renews every Zalo connection whose access token ends within `withinMs`, which also keeps the 3-month refresh token rolling. */
     async refreshDue(withinMs: number): Promise<ZaloRefreshSummary> {
-        const due = await this.secrets.dueZalo(new Date(this.clock.now().getTime() + withinMs))
+        const due = await this.secretReads.dueZalo(new Date(this.clock.now().getTime() + withinMs))
         let refreshed = 0
         let failed = 0
         await eachInOrder(due, async (connectionId) => {

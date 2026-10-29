@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./invoices.module-definition"
 import { InvoicesService } from "./invoices.service"
+import { InvoicesCashReadService } from "./invoices-cash-read.service"
 import { InvoicesFiguresService } from "./invoices-figures.service"
 import { InvoicesLedgerService } from "./invoices-ledger.service"
 
@@ -13,8 +14,14 @@ export class InvoicesModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), InvoicesService, InvoicesLedgerService, InvoicesFiguresService],
-            exports: [InvoicesService, InvoicesLedgerService, InvoicesFiguresService],
+            providers: [
+                ...(base.providers ?? []),
+                InvoicesService,
+                InvoicesLedgerService,
+                InvoicesFiguresService,
+                InvoicesCashReadService,
+            ],
+            exports: [InvoicesService, InvoicesLedgerService, InvoicesFiguresService, InvoicesCashReadService],
         }
     }
 }

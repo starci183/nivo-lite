@@ -23,27 +23,21 @@ const LIST_ZALO_FOLLOW_EVENTS = "follows"
 
 const limitOf = (query: TableQuery): unknown => query.callsOf("limit")[0]?.[0]
 
-/** A manager whose tables answer the named reads; the reads of one table are told apart by their limit. */
-const tablesEm = (answers: Record<string, ReadonlyArray<unknown>>) => {
-    const em = mockEntityManager()
-    const seen = answerByTable(em, {
+/** Makes the kit manager's tables answer the named reads; the reads of one table are told apart by their limit. */
+const answerTables = (em: ReturnType<typeof mockEntityManager>, answers: Record<string, ReadonlyArray<unknown>>) =>
+    answerByTable(em, {
         "public.agent_conversations": answers[LIST_ZALO_RECIPIENTS] ?? [],
         "public.agent_messages": (query) =>
             (limitOf(query) === 1 ? answers[FIND_LAST_ZALO_REPLY] : answers[LIST_ZALO_MESSAGE_EVENTS]) ?? [],
         "public.zalo_inbox": (query) =>
             (limitOf(query) === 20 ? answers[LIST_ZALO_FOLLOW_EVENTS] : answers[FIND_ZALO_INBOX_FACTS]) ?? [],
     })
-    SEEN.set(em, seen)
-    return em
-}
-
-const SEEN = new WeakMap<object, TableAnswers>()
 
 /** The named parameters of every condition the subject put on its read of a table. */
-const parametersOf = (em: object, table: string): unknown =>
+const parametersOf = (seen: TableAnswers, table: string): unknown =>
     Object.assign(
         {},
-        ...(SEEN.get(em)?.queriesOf(table)[0]?.calls ?? [])
+        ...(seen.queriesOf(table)[0]?.calls ?? [])
             .filter((call) => call.method === "where" || call.method === "andWhere")
             .map((call) => call.args[1]),
     )
@@ -114,7 +108,8 @@ const build = async (answers: Answers = {}, record: Partial<ConnectionRecord> = 
     credentials.accessToken.mockResolvedValue("access-token")
     const delivery = mock<ChannelDeliveryService>()
     delivery.sendToPerson.mockResolvedValue(undefined)
-    const em = tablesEm({ ...DEFAULT_ANSWERS, ...answers })
+    const em = mockEntityManager()
+    const seen = answerTables(em, { ...DEFAULT_ANSWERS, ...answers })
     const moduleRef = await Test.createTestingModule({
         providers: [
             ZaloPageService,
@@ -126,12 +121,12 @@ const build = async (answers: Answers = {}, record: Partial<ConnectionRecord> = 
             { provide: ChannelDeliveryService, useValue: delivery },
         ],
     }).compile()
-    return { service: moduleRef.get(ZaloPageService), logger, connections, credentials, delivery, em }
+    return { service: moduleRef.get(ZaloPageService), logger, connections, credentials, delivery, seen }
 }
 
 describe("ZaloPageService view", () => {
     it("answers a healthy connection with masked secrets, the paste addresses, the check list and the 48-hour followers", async () => {
-        const { service, em } = await build()
+        const { service, seen } = await build()
 
         const page = await service.view(actor, "c-1")
 
@@ -159,7 +154,7 @@ describe("ZaloPageService view", () => {
         ])
         expect(JSON.stringify(page)).not.toContain("app-secret-1234")
         expect(JSON.stringify(page)).not.toContain("access-token")
-        expect(parametersOf(em, "public.agent_conversations")).toEqual({
+        expect(parametersOf(seen, "public.agent_conversations")).toEqual({
             workspaceId: "ws-1",
             connectionId: "c-1",
             since: "2026-10-26T10:00:00.000Z",
@@ -224,7 +219,7 @@ describe("ZaloPageService provider guard", () => {
 
 describe("ZaloPageService events", () => {
     it("lists customer texts and follows newest first, and words a failed reply by the token that cannot work", async () => {
-        const { service, credentials, em } = await build({
+        const { service, credentials, seen } = await build({
             [LIST_ZALO_MESSAGE_EVENTS]: [
                 {
                     id: "m-2",
@@ -251,7 +246,7 @@ describe("ZaloPageService events", () => {
             ["m-2", "agent_reply", "not_sent", "token_expired"],
             ["f-1", "follow", "received", null],
         ])
-        expect(parametersOf(em, "public.agent_messages")).toEqual({ workspaceId: "ws-1", connectionId: "c-1" })
+        expect(parametersOf(seen, "public.agent_messages")).toEqual({ workspaceId: "ws-1", connectionId: "c-1" })
     })
 })
 

@@ -23,7 +23,8 @@ import {
     HiringOfferEntity,
     HiringSettingEntity,
 } from "./persistence/entities"
-import { toCandidate, toInterview, toJob, toOffer, toSettings } from "./policies/row-mappers.policy"
+import { toJob, toSettings } from "./policies/row-mappers.policy"
+import { toCandidate, toInterview, toOffer } from "./policies/row-mappers-records.policy"
 import { hiringIsoOf } from "./policies/vn-time.policy"
 
 /** How many chat jobs the chat offers an applicant. */

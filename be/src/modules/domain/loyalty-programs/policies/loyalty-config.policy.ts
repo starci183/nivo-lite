@@ -139,7 +139,7 @@ export const tierFor = (config: LoyaltyConfig, lifetimeSpendVnd: number): TierMa
     config.tiers.findLast((tier) => lifetimeSpendVnd >= tier.minSpendVnd) ?? null
 
 /** The tier with a key, or null. */
-export const tierOf = (config: LoyaltyConfig, key: TierKey): TierMatch =>
+export const tierByKey = (config: LoyaltyConfig, key: TierKey): TierMatch =>
     config.tiers.find((tier) => tier.key === key) ?? null
 
 /** The position of a tier on the ladder, -1 when the key is unknown or empty. */
