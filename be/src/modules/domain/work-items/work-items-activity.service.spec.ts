@@ -103,3 +103,40 @@ describe("WorkItemsActivityService > waitingReplies", () => {
         expect(fake.callsOf("limit")).toEqual([[200]])
     })
 })
+
+describe("WorkItemsActivityService > waitingSummaries", () => {
+    it("lists the summaries of the items waiting for a decision, oldest first, bounded", async () => {
+        const { em, fake } = answering({ getRawMany: [{ summary: "Quote" }, { summary: null }] })
+
+        await expect((await build(em)).waitingSummaries("ws", 50)).resolves.toEqual(["Quote", null])
+        expect(fake.callsOf("orderBy")).toEqual([["w.created_at", "ASC"]])
+        expect(fake.callsOf("limit")).toEqual([[50]])
+    })
+
+    it("reads through the manager it is handed", async () => {
+        const own = mockEntityManager()
+        const { em: handed } = answering({ getRawMany: [] })
+
+        await (await build(own)).waitingSummaries("ws", 5, handed)
+
+        expect(own.createQueryBuilder).not.toHaveBeenCalled()
+    })
+})
+
+describe("WorkItemsActivityService > builtInCareOf", () => {
+    it("answers the work item of the care message the gate sent or holds", async () => {
+        const { em, fake } = answering({ getRawOne: { id: "w1" } })
+
+        await expect((await build(em)).builtInCareOf("ws", "lead-1", "2026-10-01")).resolves.toBe("w1")
+        expect(fake.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws", leadId: "lead-1" })
+        expect(fake.callsOf("andWhere")[0]?.[1]).toEqual({ since: "2026-10-01" })
+    })
+
+    it("answers null when there is none, reading through the manager it is handed", async () => {
+        const own = mockEntityManager()
+        const { em: handed } = answering({ getRawOne: undefined })
+
+        await expect((await build(own)).builtInCareOf("ws", "lead-1", "2026-10-01", handed)).resolves.toBeNull()
+        expect(own.createQueryBuilder).not.toHaveBeenCalled()
+    })
+})

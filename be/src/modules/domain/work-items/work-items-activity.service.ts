@@ -99,4 +99,43 @@ export class WorkItemsActivityService {
             .limit(limit)
             .getRawMany<WaitingReplyRow>()
     }
+
+    /** The one-line summaries of the items waiting for a decision, oldest first, at most `limit`. */
+    async waitingSummaries(
+        workspaceId: string,
+        limit: number,
+        manager: EntityManager = this.entityManager,
+    ): Promise<Array<string | null>> {
+        const rows = await manager
+            .createQueryBuilder(WorkItemEntity, "w")
+            .select("w.proposal ->> 'summary'", "summary")
+            .where("w.workspace_id = :workspaceId AND w.status = 'waiting_decision'", { workspaceId })
+            .orderBy("w.created_at", "ASC")
+            .limit(limit)
+            .getRawMany<{ summary: string | null }>()
+        return rows.map((row) => row.summary)
+    }
+
+    /** The work item of the built-in care message the gate sent, or still holds, for the lead since an instant; null when none. */
+    async builtInCareOf(
+        workspaceId: string,
+        leadId: string,
+        since: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<string | null> {
+        const row = await manager
+            .createQueryBuilder(WorkItemEntity, "w")
+            .select("w.id", "id")
+            .where("w.workspace_id = :workspaceId AND w.lead_id = :leadId AND w.action = 'send_care'", {
+                workspaceId,
+                leadId,
+            })
+            .andWhere(
+                "w.status IN ('done', 'waiting_decision') AND w.dedupe_key LIKE 'send_care:%' AND w.created_at >= :since",
+                { since },
+            )
+            .limit(1)
+            .getRawOne<{ id: string }>()
+        return row?.id ?? null
+    }
 }
