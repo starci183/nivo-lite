@@ -4,7 +4,7 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ContentWeeklyReportsService } from "./content-weekly-reports.service"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
-import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 
 const build = async (em: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
@@ -74,7 +74,7 @@ const registerStoring = () => {
         await service.store("ws-1", "2026-10-12", { posts: [POST], postCount: 8, suggestion: SUGGESTION }, "x")
         await service.store("ws-1", "2026-10-12", { posts: [], postCount: 0, suggestion: null }, "y")
 
-        expect(expressionValues(first?.callsOf("values")[0]?.[0])).toEqual({
+        expect(evaluatedValues(first?.callsOf("values")[0]?.[0])).toEqual({
             workspaceId: "ws-1",
             weekStart: "2026-10-12",
             posts: ":posts::jsonb",
@@ -112,7 +112,7 @@ const registerClaim = () => {
 
         await expect(service.claimPost("ws-1", "2026-10-12", "z")).resolves.toBe(true)
         await expect(service.claimPost("ws-1", "2026-10-12", "z")).resolves.toBe(false)
-        expect(expressionValues(claim?.callsOf("values")[0]?.[0])).toEqual({
+        expect(evaluatedValues(claim?.callsOf("values")[0]?.[0])).toEqual({
             workspaceId: "ws-1",
             weekStart: "2026-10-12",
             postedAt: ":postedAt::timestamptz",

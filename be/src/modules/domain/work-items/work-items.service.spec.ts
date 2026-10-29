@@ -19,7 +19,7 @@ import {
     rowOf,
     singleCall,
 } from "@tests/fixtures/builders/work-items.builder"
-import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { WorkItemEntity } from "./persistence/entities"
 import { WorkItemsService } from "./work-items.service"
 
@@ -130,7 +130,7 @@ describe("WorkItemsService persistence", () => {
         expect((await service.retry("ws-1", "item-1", ["failed"]))?.id).toBe("item-1")
         expect(await service.retry("ws-1", "item-1", ["rejected"], tx)).toBeNull()
         expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
-        expect(resolveFragments(singleCall(fake, "set"))).toEqual({
+        expect(evaluatedValues(singleCall(fake, "set"))).toEqual({
             status: "queued",
             error: null,
             reason: null,
@@ -330,7 +330,7 @@ describe("WorkItemsService holds and assignments", () => {
         expect(
             await (await build(em)).settleClaims("ws-1", "payment-1", "claim:invoice-1", { summary: "Paid" }),
         ).toEqual(rows)
-        expect(resolveFragments(singleCall(fake, "set"))).toEqual({
+        expect(evaluatedValues(singleCall(fake, "set"))).toEqual({
             status: "done",
             decidedPath: "auto",
             reason: "routine",
@@ -356,7 +356,7 @@ describe("WorkItemsService persistence", () => {
             await build(em)
         ).savePrepared("item-1", { proposal, subjectType: "order", subjectId: "o-1", leadId: null })
 
-        expect(resolveFragments(singleCall(fake, "set"))).toEqual({
+        expect(evaluatedValues(singleCall(fake, "set"))).toEqual({
             proposal,
             subjectType: "COALESCE(CAST(:subjectType AS text), subject_type)",
             subjectId: "COALESCE(CAST(:subjectId AS uuid), subject_id)",
@@ -417,7 +417,7 @@ describe("WorkItemsService persistence", () => {
             leadId: "lead-9",
         })
 
-        expect(resolveFragments(singleCall(fake, "set"))).toEqual({
+        expect(evaluatedValues(singleCall(fake, "set"))).toEqual({
             status: "done",
             decidedPath: "auto",
             proposal,

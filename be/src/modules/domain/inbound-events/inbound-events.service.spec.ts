@@ -6,7 +6,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { InboundEventsErrorCode } from "./errors/inbound-events.error"
 import { InboundEventsService } from "./inbound-events.service"
 import { InboundEventEntity } from "./persistence/entities"
@@ -103,7 +103,7 @@ describe("InboundEventsService recordBankPayment", () => {
         })
 
         expect(bump?.callsOf("update")).toEqual([[]])
-        expect(expressionValues(bump?.callsOf("set")[0]?.[0])).toEqual({
+        expect(evaluatedValues(bump?.callsOf("set")[0]?.[0])).toEqual({
             duplicateCount: "duplicate_count + 1",
             lastDuplicateAt: new Date(NOW),
         })

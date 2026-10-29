@@ -5,13 +5,13 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { DataRecordInput } from "./data-records.contracts"
 import { DataRecordsService } from "./data-records.service"
 import { DataRecordEntity } from "./persistence/entities"
-import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 
 const KEYS = ["connectionId", "entity", "externalId"]
 
 /** The rows of one upsert with their sync stamp (a function expression) called, so the SQL it writes can be compared. */
-const stamped = (rows: unknown): ReadonlyArray<unknown> => (Array.isArray(rows) ? rows.map(expressionValues) : [])
+const stamped = (rows: unknown): ReadonlyArray<unknown> => (Array.isArray(rows) ? rows.map(evaluatedValues) : [])
 
 /** What each upsert wrote: the entity, the stamped rows, and the conflict keys. */
 const upsertsOf = (em: MockEntityManager) =>

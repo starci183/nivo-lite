@@ -5,7 +5,7 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { FakeQueryBuilder, QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { LeadsErrorCode } from "./errors/leads.error"
 import type { LeadRecord } from "./lead-records.contracts"
 import { LeadRecordsService } from "./lead-records.service"
@@ -38,7 +38,7 @@ const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = [], em: MockE
 
 /** What an update query builder was told to set; a function value is called for the SQL text it returns. */
 const setBy = (fake: FakeQueryBuilder | undefined): Record<string, unknown> =>
-    expressionValues(fake?.callsOf("set")[0]?.[0])
+    evaluatedValues(fake?.callsOf("set")[0]?.[0])
 
 describe("LeadRecordsService", () => {
     it("reads one lead of the workspace", async () => {

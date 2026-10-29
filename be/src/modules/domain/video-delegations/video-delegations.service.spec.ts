@@ -2,13 +2,13 @@ import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { VideoDelegationEntity } from "./persistence/entities"
 import { VideoDelegationsService } from "./video-delegations.service"
 
 /** The set of the first update, its SQL fragments resolved to their text. */
-const firstSet = (em: MockEntityManager): Record<string, unknown> => resolveFragments(em.update.mock.calls[0]?.[2])
+const firstSet = (em: MockEntityManager): Record<string, unknown> => evaluatedValues(em.update.mock.calls[0]?.[2])
 
 const ROW = { id: "delegation-1", project_id: "project-1" }
 const ENTITY = Object.assign(new VideoDelegationEntity(), { id: "delegation-1", projectId: "project-1" })

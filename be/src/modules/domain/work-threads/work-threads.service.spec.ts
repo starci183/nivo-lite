@@ -2,7 +2,7 @@ import { mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { normalizePage } from "@modules/platform/pagination"
-import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { WorkThreadsErrorCode } from "./errors/work-threads.error"
@@ -259,7 +259,7 @@ const registerStatus = () => {
                 WorkThreadEntity,
                 { workspaceId: "ws-1", id: "thread-1" },
             ])
-            expect(resolveFragments(em.update.mock.calls[0]?.[2])).toEqual({ status: "waiting", updatedAt: "now()" })
+            expect(evaluatedValues(em.update.mock.calls[0]?.[2])).toEqual({ status: "waiting", updatedAt: "now()" })
         })
     })
 }

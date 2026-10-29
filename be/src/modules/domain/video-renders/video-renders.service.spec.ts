@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In, LessThanOrEqual } from "typeorm"
-import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { VideoRendersErrorCode } from "./errors/video-renders.error"
@@ -135,7 +135,7 @@ describe("VideoRendersService", () => {
                 ["id = :renderId AND status IN (:...open)", { renderId: "render-1", open: OPEN }],
             ])
             expect(update.callsOf("returning")).toEqual([[["id", "workspace_id", "spec", "meta"]]])
-            expect(resolveFragments(update.callsOf("set")[0]?.[0])).toEqual({
+            expect(evaluatedValues(update.callsOf("set")[0]?.[0])).toEqual({
                 status: "rendering",
                 startedAt: "COALESCE(started_at, now())",
                 error: null,
@@ -177,7 +177,7 @@ describe("VideoRendersService", () => {
 
             await renders.complete(manager, "render-1", DONE)
 
-            expect(resolveFragments(update.callsOf("set")[0]?.[0])).toEqual({
+            expect(evaluatedValues(update.callsOf("set")[0]?.[0])).toEqual({
                 status: "done",
                 progress: 100,
                 stage: null,
@@ -202,7 +202,7 @@ describe("VideoRendersService", () => {
 
             await renders.fail(manager, "render-1", "boom")
 
-            expect(resolveFragments(update.callsOf("set")[0]?.[0])).toEqual({
+            expect(evaluatedValues(update.callsOf("set")[0]?.[0])).toEqual({
                 status: "failed",
                 error: "left(:reason, 300)",
                 finishedAt: "now()",

@@ -13,7 +13,7 @@ import { ContractLinkService } from "./contract-link.service"
 import type { ContractLinkRead, CustomerRecordRead } from "./contract-link.policy"
 import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
 import type { TableQuery } from "@tests/fixtures/builders/table-query-builder.builder"
-import { expressionValues } from "@tests/fixtures/builders/sql-expression.builder"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 
 /** The statement `advisoryXactLock` sends. */
 const LOCK_CONTRACT_LINKING = "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))"
@@ -90,7 +90,7 @@ const linkRunOf = (
     return {
         tx,
         relinkWheres: () => relinkQueries().map((query) => query.callsOf("where")[0]?.[1]),
-        relinkSets: () => relinkQueries().map((query) => expressionValues(query.callsOf("set")[0]?.[0])),
+        relinkSets: () => relinkQueries().map((query) => evaluatedValues(query.callsOf("set")[0]?.[0])),
     }
 }
 
