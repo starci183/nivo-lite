@@ -1,5 +1,6 @@
 import type { EntityManager } from "typeorm"
 import { callDbFunction } from "@modules/platform/database"
+import { eachInOrder } from "@modules/platform/primitives"
 import { jobsEntities } from "@modules/platform/jobs"
 
 const [JobEntity, JobOutboxEntity] = jobsEntities
@@ -59,15 +60,9 @@ const PROOF_FILTER = "payload ->> 'proof' = :proof"
 
 /** Enqueues one durable delivery per proof tag through the legacy function. */
 export const enqueueCutoverProofs = async (manager: EntityManager, proofs: ReadonlyArray<string>): Promise<void> => {
-    for (const proof of proofs) {
-        await callDbFunction(manager, "public.job_enqueue", [
-            null,
-            QUEUE,
-            QUEUE,
-            JSON.stringify({ proof }),
-            `cutover:${proof}`,
-        ])
-    }
+    await eachInOrder(proofs, (proof) =>
+        callDbFunction(manager, "public.job_enqueue", [null, QUEUE, QUEUE, JSON.stringify({ proof }), `cutover:${proof}`]),
+    )
 }
 
 /** Moves the delivery of one proof tag to a state, writing only pre-expand columns. */
@@ -77,7 +72,7 @@ export const setCutoverOutboxState = async (
     next: CutoverOutboxState,
 ): Promise<void> => {
     await manager
-        .createQueryBuilder()
+        .createQueryBuilder(JobOutboxEntity, "o")
         .update(JobOutboxEntity)
         .set(next)
         .where(PROOF_FILTER, { proof })
@@ -118,7 +113,7 @@ export const sendCutoverDelivery = async (manager: EntityManager, proof: string)
 /** Inserts a delivery already marked sent whose pgmq message does not exist. */
 export const insertSentOutboxOnly = async (manager: EntityManager, proof: string): Promise<void> => {
     await manager
-        .createQueryBuilder()
+        .createQueryBuilder(JobOutboxEntity, "o")
         .insert()
         .into(JobOutboxEntity, OUTBOX_COLUMNS)
         .values({
@@ -134,7 +129,7 @@ export const insertSentOutboxOnly = async (manager: EntityManager, proof: string
 /** Marks a late delivery as already sent by a legacy producer. */
 export const markCutoverSentByLegacy = async (manager: EntityManager, proof: string, msgId: number): Promise<void> => {
     await manager
-        .createQueryBuilder()
+        .createQueryBuilder(JobOutboxEntity, "o")
         .update(JobOutboxEntity)
         .set({ msgId, sentAt: () => "now()" })
         .where(PROOF_FILTER, { proof })
@@ -162,9 +157,9 @@ export const sendCutoverBusEvent = async (manager: EntityManager): Promise<void>
 
 /** Inserts the fenced claims a legacy worker held on in-flight and done raw messages. */
 export const insertLegacyClaims = async (manager: EntityManager, envelopes: ReadonlyArray<CutoverEnvelope>): Promise<void> => {
-    for (const { msgId, proof } of envelopes) {
+    await eachInOrder(envelopes, async ({ msgId, proof }) => {
         await manager
-            .createQueryBuilder()
+            .createQueryBuilder(JobEntity, "j")
             .insert()
             .into(JobEntity, JOB_COLUMNS)
             .values({
@@ -180,5 +175,5 @@ export const insertLegacyClaims = async (manager: EntityManager, envelopes: Read
                 updatedAt: () => "now()",
             })
             .execute()
-    }
+    })
 }
