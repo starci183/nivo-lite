@@ -10,7 +10,7 @@ export interface MessageCursor {
 export type OptionalMessageCursor = MessageCursor | null
 
 /** A creation instant in the database's own text, or null when there is none. */
-export type OptionalCreatedAt = string | null
+export type OptionalCursorInstant = string | null
 
 /** A message room key, or null for any office room. */
-export type OptionalRoom = string | null
+export type OptionalCursorRoom = string | null

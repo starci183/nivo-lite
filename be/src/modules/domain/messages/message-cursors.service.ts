@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { OptionalCreatedAt, OptionalMessageCursor, OptionalRoom } from "./message-cursors.contracts"
+import type { OptionalCursorInstant, OptionalMessageCursor, OptionalCursorRoom } from "./message-cursors.contracts"
+import { createdAtOfRows, cursorOfRows } from "./message-cursor-rows.policy"
 import { MessageEntity } from "./persistence/entities"
 
 /** The creation instant as the database words it, so no precision is lost. */
@@ -16,7 +17,7 @@ export class MessageCursorsService {
     async newestAuthored(
         workspaceId: string,
         userId: string,
-        room: OptionalRoom,
+        room: OptionalCursorRoom,
         manager: EntityManager = this.entityManager,
     ): Promise<OptionalMessageCursor> {
         const rows: ReadonlyArray<unknown> = await manager
@@ -35,10 +36,10 @@ export class MessageCursorsService {
     /** The creation instant of a message posted in the room (any office room when `room` is null); null when there is no such message. */
     async createdAtOf(
         workspaceId: string,
-        room: OptionalRoom,
+        room: OptionalCursorRoom,
         messageId: string,
         manager: EntityManager = this.entityManager,
-    ): Promise<OptionalCreatedAt> {
+    ): Promise<OptionalCursorInstant> {
         const rows: ReadonlyArray<unknown> = await manager
             .createQueryBuilder(MessageEntity, "m")
             .select(CREATED_AT, "createdAt")
