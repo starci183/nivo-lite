@@ -1,4 +1,5 @@
 import type { DefaultRule } from "@modules/domain/authority-rules"
+import type { InstallationRecord } from "@modules/domain/module-installations"
 import type { ModuleDefinition } from "../modules.contracts"
 
 const NAME_MAX = 80
@@ -79,7 +80,7 @@ export const settingOf = (name: string, value: SettingValue): SettingChange | nu
 
 /** The settings with one change laid over them; a null value removes the setting. */
 export const withSetting = (
-    settings: Readonly<Record<string, unknown>>,
+    settings: InstallationRecord["settings"],
     change: SettingChange,
-): Readonly<Record<string, unknown>> =>
+): InstallationRecord["settings"] =>
     Object.fromEntries(Object.entries({ ...settings, [change.name]: change.value }).filter(([, kept]) => kept !== null))

@@ -31,7 +31,8 @@ const posted: NewSetupMessage = {
     body: "Noted",
 }
 
-const build = async (entityManager: MockEntityManager, sessions = mock<SetupSessionsService>()) => {
+const build = async (entityManager: MockEntityManager) => {
+    const sessions = mock<SetupSessionsService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             SetupMessagesService,
@@ -39,19 +40,19 @@ const build = async (entityManager: MockEntityManager, sessions = mock<SetupSess
             { provide: SetupSessionsService, useValue: sessions },
         ],
     }).compile()
-    return moduleRef.get(SetupMessagesService)
+    return { service: moduleRef.get(SetupMessagesService), sessions }
 }
 
 describe("SetupMessagesService", () => {
     it("lists the chat of an installation across its revisions", async () => {
         const em = mockEntityManager({ find: [ModuleSetupMessageEntity, [row]] })
-        const sessions = mock<SetupSessionsService>()
+        const { service, sessions } = await build(em)
         sessions.revisions.mockResolvedValue([
             { id: "ses-1", revision: 1, status: "applied" },
             { id: "ses-2", revision: 2, status: "draft" },
         ])
 
-        await expect((await build(em, sessions)).ofInstallation("inst-1")).resolves.toEqual([message])
+        await expect(service.ofInstallation("inst-1")).resolves.toEqual([message])
 
         expect(sessions.revisions).toHaveBeenCalledWith("inst-1")
         expect(em.find).toHaveBeenCalledWith(ModuleSetupMessageEntity, {
@@ -63,10 +64,10 @@ describe("SetupMessagesService", () => {
 
     it("lists nothing for an installation that never opened a session", async () => {
         const em = mockEntityManager()
-        const sessions = mock<SetupSessionsService>()
+        const { service, sessions } = await build(em)
         sessions.revisions.mockResolvedValue([])
 
-        await expect((await build(em, sessions)).ofInstallation("inst-1")).resolves.toEqual([])
+        await expect(service.ofInstallation("inst-1")).resolves.toEqual([])
 
         expect(em.find).not.toHaveBeenCalled()
     })
@@ -74,7 +75,7 @@ describe("SetupMessagesService", () => {
     it("lists the chat of one session", async () => {
         const em = mockEntityManager({ find: [ModuleSetupMessageEntity, [row]] })
 
-        await expect((await build(em)).ofSession("ses-1")).resolves.toEqual([message])
+        await expect((await build(em)).service.ofSession("ses-1")).resolves.toEqual([message])
 
         expect(em.find).toHaveBeenCalledWith(ModuleSetupMessageEntity, {
             where: { setupSessionId: "ses-1" },
@@ -82,11 +83,13 @@ describe("SetupMessagesService", () => {
             take: 2000,
         })
     })
+})
 
+describe("SetupMessagesService > lines", () => {
     it("finds one message of the workspace", async () => {
         const em = mockEntityManager({ findOne: [ModuleSetupMessageEntity, row] })
 
-        await expect((await build(em)).find("ws-1", "msg-1")).resolves.toEqual(message)
+        await expect((await build(em)).service.find("ws-1", "msg-1")).resolves.toEqual(message)
 
         expect(em.findOne).toHaveBeenCalledWith(ModuleSetupMessageEntity, {
             where: { id: "msg-1", workspaceId: "ws-1" },
@@ -96,7 +99,7 @@ describe("SetupMessagesService", () => {
     it("answers nothing when the message is not in the workspace", async () => {
         const em = mockEntityManager({ findOne: [ModuleSetupMessageEntity, null] })
 
-        await expect((await build(em)).find("ws-1", "missing")).resolves.toBeNull()
+        await expect((await build(em)).service.find("ws-1", "missing")).resolves.toBeNull()
     })
 
     it("stores one line of the chat", async () => {
@@ -115,7 +118,7 @@ describe("SetupMessagesService", () => {
         })
         const em = mockEntityManager({ save: [ModuleSetupMessageEntity, savedRow] })
 
-        await expect((await build(em)).post(posted)).resolves.toEqual(stored)
+        await expect((await build(em)).service.post(posted)).resolves.toEqual(stored)
 
         expect(em.save).toHaveBeenCalledWith(
             ModuleSetupMessageEntity,

@@ -10,9 +10,7 @@ import {
     Text,
 } from "@starci/grammar/common"
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { SlotView } from "@/components/composites/SlotView"
 import type { UsageCardData, UsageCardView } from "@/hooks/usageCard"
-import type { SlotLabels } from "@/modules/types"
 import {
     CHART_AXIS_CLASS_NAME,
     CHART_CLASS_NAME,
@@ -23,48 +21,22 @@ import {
     USAGE_BLOCK_CLASS_NAME,
 } from "./classNames"
 
-/** The presentation receives the usage slot with its placeholder and labels, and explicit interaction callbacks. */
+/** The usage figures (or their placeholder while the read is on its way), the waiting flag and the interaction callbacks. */
 interface UsageCardProps {
-    readonly slot: UsageCardView["slot"]
-    readonly placeholder: UsageCardView["placeholder"]
-    readonly labels: SlotLabels
+    readonly view: UsageCardData
+    /** True while the usage is read: the card keeps its title and rests as a line of skeleton text. */
+    readonly isSkeleton: boolean
     readonly on: UsageCardView["on"]
 }
 
-/** Monthly allowance, remaining credits, agent totals and daily usage; the read's status is drawn through SlotView. */
-export const UsageCard = (props: UsageCardProps) => (
-    <SlotView
-        slot={props.slot}
-        placeholder={props.placeholder}
-        labels={props.labels}
-        forbidden="hide"
-        onRetry={props.on.retry}
-    >
-        {(view, isSkeleton) =>
-            isSkeleton ? <UsageCardSkeleton view={view} /> : <UsageCardReady view={view} on={props.on} />
-        }
-    </SlotView>
-)
-
-/** The card while the usage is read: its title and one line of text as skeleton. */
-const UsageCardSkeleton = (props: { readonly view: UsageCardData }) => (
-    <SurfaceCard label={props.view.title} headingLevel={2}>
-        <Text tone="muted" isSkeleton>
-            {props.view.loading}
-        </Text>
-    </SurfaceCard>
-)
-
-type UsageCardReadyProps = { readonly view: UsageCardData; readonly on: UsageCardView["on"] }
-
-/** The card once the usage is read. */
-const UsageCardReady = (props: UsageCardReadyProps) => {
+/** Monthly allowance, remaining credits, agent totals and daily usage; while the read is on its way only the title and one line draw. */
+export const UsageCard = (props: UsageCardProps) => {
     const { view } = props
     return (
         <SurfaceCard label={view.title} headingLevel={2}>
             <div className={STACK_CLASS_NAME}>
-                <Text size="sm" tone="muted">
-                    {view.description}
+                <Text size="sm" tone="muted" isSkeleton={props.isSkeleton}>
+                    {props.isSkeleton ? view.loading : view.description}
                 </Text>
                 {view.alert ? (
                     <Alert
@@ -99,34 +71,44 @@ const UsageCardReady = (props: UsageCardReadyProps) => {
                         }))}
                     />
                 ) : null}
-                <div className={USAGE_BLOCK_CLASS_NAME}>
-                    <Heading level={3}>{view.modulesTitle}</Heading>
-                    {view.modules.length > 0 ? (
-                        <List className={MODULE_LIST_CLASS_NAME} label={view.modulesTitle}>
-                            {view.modules.map((module, index) => (
-                                <ListItem key={module.id} className={MODULE_ROW_CLASS_NAME}>
-                                    {index > 0 ? <Divider semantics="presentation" /> : null}
-                                    <div className={MODULE_LINE_CLASS_NAME}>
-                                        <Text weight="medium">{module.label}</Text>
-                                        <Text size="sm" tone="muted">
-                                            {module.reading}
-                                        </Text>
-                                    </div>
-                                </ListItem>
-                            ))}
-                        </List>
-                    ) : (
-                        <Text tone="muted">{view.empty}</Text>
-                    )}
-                </div>
+                {props.isSkeleton ? null : <UsageCardModules view={view} />}
                 {view.daily ? renderUsageCardDailyUsage(view.daily, props) : null}
             </div>
         </SurfaceCard>
     )
 }
 
+type UsageCardModulesProps = { readonly view: UsageCardData }
+
+/** The per-agent usage list of the card, or its empty line. */
+const UsageCardModules = (props: UsageCardModulesProps) => {
+    const { view } = props
+    return (
+        <div className={USAGE_BLOCK_CLASS_NAME}>
+            <Heading level={3}>{view.modulesTitle}</Heading>
+            {view.modules.length > 0 ? (
+                <List className={MODULE_LIST_CLASS_NAME} label={view.modulesTitle}>
+                    {view.modules.map((module, index) => (
+                        <ListItem key={module.id} className={MODULE_ROW_CLASS_NAME}>
+                            {index > 0 ? <Divider semantics="presentation" /> : null}
+                            <div className={MODULE_LINE_CLASS_NAME}>
+                                <Text weight="medium">{module.label}</Text>
+                                <Text size="sm" tone="muted">
+                                    {module.reading}
+                                </Text>
+                            </div>
+                        </ListItem>
+                    ))}
+                </List>
+            ) : (
+                <Text tone="muted">{view.empty}</Text>
+            )}
+        </div>
+    )
+}
+
 /** Renders the UsageCard daily usage section. */
-const renderUsageCardDailyUsage = (daily: NonNullable<UsageCardData["daily"]>, props: UsageCardReadyProps) => (
+const renderUsageCardDailyUsage = (daily: NonNullable<UsageCardData["daily"]>, props: UsageCardProps) => (
     <div className={USAGE_BLOCK_CLASS_NAME}>
         <Heading level={3}>{daily.title}</Heading>
         <div className={CHART_CLASS_NAME} role="img" aria-label={daily.accessibleLabel}>

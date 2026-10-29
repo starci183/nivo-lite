@@ -1,3 +1,5 @@
+import { EVENT_BUS_MESSAGES } from "@modules/platform/event-bus"
+import { EVENTS_MESSAGES } from "@modules/events/api"
 import { AUTOMATIONS_MESSAGES } from "@modules/domain/automations"
 import { DECISIONS_MESSAGES } from "@modules/domain/decisions"
 import { AUTOMATION_PORTS_MESSAGES } from "@modules/domain/automation-ports"
@@ -69,4 +71,6 @@ export const API_MESSAGES_1 = [
     TRANSACTIONS_MESSAGES,
     WORK_PERFORMERS_MESSAGES,
     API_KEYS_MESSAGES,
+    EVENTS_MESSAGES,
+    EVENT_BUS_MESSAGES,
 ]
