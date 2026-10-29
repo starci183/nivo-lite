@@ -121,3 +121,25 @@ describe("AgentConversationsReadService > onConnection", () => {
         })
     })
 })
+
+describe("AgentConversationsReadService > customerChannelsAmong", () => {
+    it("answers the channel of the customer conversations among the ids on the channels", async () => {
+        const em = mockEntityManager({ find: [AgentConversationEntity, [chatOf({ id: "c1", channel: "zalo" })]] })
+
+        await expect(
+            (await build(em)).customerChannelsAmong("w1", ["c1", "c2"], ["facebook", "zalo"]),
+        ).resolves.toEqual([{ id: "c1", channel: "zalo" }])
+        expect(em.find).toHaveBeenCalledWith(AgentConversationEntity, {
+            select: { id: true, channel: true },
+            where: { workspaceId: "w1", kind: "customer", id: In(["c1", "c2"]), channel: In(["facebook", "zalo"]) },
+            take: 2,
+        })
+    })
+
+    it("does not query without ids", async () => {
+        const em = mockEntityManager()
+
+        await expect((await build(em)).customerChannelsAmong("w1", [], ["zalo"])).resolves.toEqual([])
+        expect(em.find).not.toHaveBeenCalled()
+    })
+})

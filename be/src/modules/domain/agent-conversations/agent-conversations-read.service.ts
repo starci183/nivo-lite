@@ -4,6 +4,7 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     ConnectionConversation,
+    ConversationChannel,
     OptionalChannelText,
     OptionalCustomerChatRef,
     TestChatRef,
@@ -91,5 +92,20 @@ export class AgentConversationsReadService {
             take: limit,
         })
         return rows.map((row) => ({ id: row.id, externalId: row.externalId, visitorName: row.visitorName }))
+    }
+
+    /** The channel of each customer conversation among these ids that runs on one of the channels. */
+    async customerChannelsAmong(
+        workspaceId: string,
+        conversationIds: ReadonlyArray<string>,
+        channels: ReadonlyArray<string>,
+    ): Promise<Array<ConversationChannel>> {
+        if (conversationIds.length === 0) return []
+        const rows = await this.entityManager.find(AgentConversationEntity, {
+            select: { id: true, channel: true },
+            where: { workspaceId, kind: "customer", id: In([...conversationIds]), channel: In([...channels]) },
+            take: conversationIds.length,
+        })
+        return rows.map((row) => ({ id: row.id, channel: row.channel }))
     }
 }

@@ -29,3 +29,11 @@ export interface ConnectionConversation {
     /** The name on the conversation, or null. */
     readonly visitorName: string | null
 }
+
+/** The channel a customer conversation runs on. */
+export interface ConversationChannel {
+    /** The conversation. */
+    readonly id: string
+    /** Its channel. */
+    readonly channel: string
+}

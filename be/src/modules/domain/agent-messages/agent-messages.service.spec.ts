@@ -4,6 +4,7 @@ import { Test } from "@nestjs/testing"
 import { In, MoreThanOrEqual, Not } from "typeorm"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { ChatActivityService } from "@modules/domain/chat-activity"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentMessagesService } from "./agent-messages.service"
@@ -31,14 +32,16 @@ const withStatements = (em: MockEntityManager, ...answers: Array<QueryBuilderAns
 
 const build = async (em: MockEntityManager = mockEntityManager()) => {
     const activity = mock<ChatActivityService>()
+    const conversations = mock<AgentConversationsReadService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentMessagesService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: ChatActivityService, useValue: activity },
+            { provide: AgentConversationsReadService, useValue: conversations },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentMessagesService), em, activity }
+    return { service: moduleRef.get(AgentMessagesService), em, activity, conversations }
 }
 
 describe("AgentMessagesService listForConversations", () => {
@@ -416,15 +419,30 @@ describe("AgentMessagesService markDelivery", () => {
 })
 
 describe("AgentMessagesService customerMessagesPerDay", () => {
-    it("counts the customer messages per Vietnam day and channel", async () => {
-        const rows = [
+    it("sums the customer messages of the counted conversations per Vietnam day and channel", async () => {
+        const perConversation = [
+            { conversationId: "c1", day: "2026-10-12", messages: 3 },
+            { conversationId: "c2", day: "2026-10-12", messages: 1 },
+            { conversationId: "c3", day: "2026-10-12", messages: 2 },
+            { conversationId: "c9", day: "2026-10-12", messages: 7 },
+        ]
+        const { em, fakes } = withStatements(mockEntityManager(), { getRawMany: perConversation })
+        const { service, conversations } = await build(em)
+        conversations.customerChannelsAmong.mockResolvedValue([
+            { id: "c1", channel: "facebook" },
+            { id: "c2", channel: "facebook" },
+            { id: "c3", channel: "zalo" },
+        ])
+
+        await expect(service.customerMessagesPerDay("ws-1", "2026-10-05", "2026-10-19")).resolves.toEqual([
             { channel: "facebook", day: "2026-10-12", messages: 4 },
             { channel: "zalo", day: "2026-10-12", messages: 2 },
-        ]
-        const { em, fakes } = withStatements(mockEntityManager(), { getRawMany: rows })
-        const { service } = await build(em)
-
-        await expect(service.customerMessagesPerDay("ws-1", "2026-10-05", "2026-10-19")).resolves.toEqual(rows)
+        ])
+        expect(conversations.customerChannelsAmong).toHaveBeenCalledWith(
+            "ws-1",
+            ["c1", "c2", "c3", "c9"],
+            ["facebook", "zalo"],
+        )
         expect(fakes[0]?.callsOf("andWhere")).toContainEqual([
             "m.createdAt >= (:from::date::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')",
             { from: "2026-10-05" },
@@ -433,6 +451,6 @@ describe("AgentMessagesService customerMessagesPerDay", () => {
             "m.createdAt < (:to::date::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')",
             { to: "2026-10-19" },
         ])
-        expect(fakes[0]?.callsOf("limit")).toEqual([[400]])
+        expect(fakes[0]?.callsOf("limit")).toEqual([[5000]])
     })
 })
