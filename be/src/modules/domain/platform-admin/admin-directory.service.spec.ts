@@ -27,18 +27,18 @@ const FIRST = new Set<string>([READ.workspace, READ.workspaceActivity, READ.quot
 /** The stubbed answers of a spec; no stub means no rows. */
 const stubbing = (answers: Stubs = { query: [] }): Stubs => answers
 
-/** The directory reads double answering what the stubs say, one row for the reads that answer one. */
+/** The answers of the directory reads double, what the stubs say, one row for the reads that answer one. */
 const readsOf = (answers: Stubs) => {
     const rowsOf = (name: string): ReadonlyArray<unknown> => {
         const rows = answers.query.find(([key]) => key === name)?.[1]
         return Array.isArray(rows) ? rows : []
     }
     const answer = (name: string) => jest.fn().mockResolvedValue(FIRST.has(name) ? rowsOf(name)[0] : rowsOf(name))
-    return mock<AdminDirectoryReadsService>(Object.fromEntries(Object.values(READ).map((name) => [name, answer(name)])))
+    return Object.fromEntries(Object.values(READ).map((name) => [name, answer(name)]))
 }
 
 const build = async (answers: Stubs, auditRows: ReadonlyArray<typeof AUDIT> = [AUDIT]) => {
-    const reads = readsOf(answers)
+    const reads = mock<AdminDirectoryReadsService>(readsOf(answers))
     const access = mock<AdminAccessService>()
     access.requireAdmin.mockReturnValue(ADMIN)
     access.audit.mockResolvedValue(undefined)
