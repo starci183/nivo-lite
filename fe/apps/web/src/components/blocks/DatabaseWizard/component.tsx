@@ -5,8 +5,8 @@ import { DatabaseTableMapper } from "@/components/composites/DatabaseTableMapper
 import type { DatabaseTableMapperProps } from "@/components/composites/DatabaseTableMapper"
 import { SlotView } from "@/components/composites/SlotView"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import { backAction, closeAction, nextAction, WizardFooter } from "@/components/composites/WizardFooter"
-import type { WizardAction } from "@/components/composites/WizardFooter"
+import { backAction, closeAction, nextAction } from "@/components/branches/WizardFooter"
+import type { WizardAction } from "@/components/branches/WizardFooter"
 import { frameOf, WizardFrame } from "@/components/composites/WizardFrame"
 import type { AgentStepView, DataSlot, SlotLabels, WizardNote, WizardResume } from "@/modules/types"
 
@@ -198,11 +198,7 @@ export const DatabaseWizardBase = (props: DatabaseWizardBaseProps) => {
     return (
         <SlotView slot={view.resume} placeholder={RESUME_PLACEHOLDER} labels={view.slotLabels} onRetry={on.retry}>
             {(_resume, isSkeleton) => (
-                <WizardFrame
-                    {...frameOf(view)}
-                    isSkeleton={isSkeleton}
-                    footer={<WizardFooter actions={actionsOf(props)} isSkeleton={isSkeleton} />}
-                >
+                <WizardFrame {...frameOf(view)} isSkeleton={isSkeleton} actions={actionsOf(props)}>
                     {view.step === "connect" ? <DatabaseConnectFields {...view.connect} /> : null}
                     {view.step === "tables" && view.tables !== null ? (
                         <DatabaseTablesStep view={view.tables} isPending={view.isPending} on={on} />

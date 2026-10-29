@@ -3,7 +3,7 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { useCreditsPayDrawer, useCreditsPaymentState, useRetainedWhileClosing } from "@/hooks/credits"
 import { PayDrawerBase } from "./component"
-import type { PayDrawerShape } from "./component"
+import type { PayDrawerContent, PayDrawerShape } from "./component"
 
 const clock = (ms: number) => {
     const seconds = Math.max(0, Math.floor(ms / 1000))
@@ -45,51 +45,14 @@ export const PayDrawer = () => {
     const view =
         drawer.target === null
             ? null
-            : {
-                  shape,
-                  props: {
-                      isWaiting,
-                      isRegenerating: drawer.isRegenerating,
-                      isBankConfigured: Boolean(drawer.bank.account && drawer.bank.bank),
-                      hasOrder: drawer.order !== null,
-                      title,
-                      description: t("payText"),
-                      closeLabel: t("close"),
-                      paidTitle: t("paidTitle"),
-                      paidDescription,
-                      waitingLabel: t("waiting"),
-                      expiredTitle: t("expiredTitle"),
-                      expiredDescription: t("expiredText"),
-                      errorTitle: t("errGeneric"),
-                      regenerateError: drawer.regenerateError,
-                      regenerateLabel: t("regenerate"),
-                      scanLabel: t("scan"),
-                      qrAlt: t("qrAlt"),
-                      unconfiguredLabel: t("notConfigured"),
-                      countdown: left === null ? null : t("expiresIn", { time: clock(left) }),
-                      amountLabel: t("amount"),
-                      amount: drawer.order ? money(drawer.order.amount) : "",
-                      qrUrl: drawer.order?.qrUrl ?? "",
-                      proration,
-                      copyLabel: t("copy"),
-                      copiedLabel: t("copied"),
-                      details: [
-                          { id: "credits-pay-bank", label: t("bank"), value: drawer.bank.bank },
-                          { id: "credits-pay-account", label: t("account"), value: drawer.bank.account },
-                          { id: "credits-pay-holder", label: t("holder"), value: drawer.bank.holder },
-                          { id: "credits-pay-content", label: t("content"), value: drawer.order?.code ?? "" },
-                      ],
-                      contentWarning: t("contentWarn"),
-                  },
-              }
+            : { shape, props: payPropsOf({ drawer, t, money, left, isWaiting, proration, title, paidDescription }) }
     const shown = useRetainedWhileClosing(view)
     if (shown.value === null) return null
 
     return (
         <PayDrawerBase
             shape={shown.value.shape}
-            isOpen={shown.isOpen}
-            props={shown.value.props}
+            props={{ ...shown.value.props, isOpen: shown.isOpen }}
             on={{ close: drawer.onClose, regenerate: drawer.onRegenerate }}
         />
     )
@@ -114,3 +77,60 @@ const paymentCopy = (
     }
     return { title, paidDescription }
 }
+
+/** What the pieces of the drawer's content are resolved from. */
+interface PayContentInput {
+    readonly drawer: ReturnType<typeof useCreditsPayDrawer>
+    readonly t: ReturnType<typeof useTranslations<"credits">>
+    readonly money: (amount: number) => string
+    readonly left: number | null
+    readonly isWaiting: boolean
+    readonly proration: string | null
+    readonly title: string
+    readonly paidDescription: string
+}
+
+/** The words and figures the drawer draws, in the reader's language. */
+const payPropsOf = ({
+    drawer,
+    t,
+    money,
+    left,
+    isWaiting,
+    proration,
+    title,
+    paidDescription,
+}: PayContentInput): PayDrawerContent => ({
+    isWaiting,
+    isRegenerating: drawer.isRegenerating,
+    isBankConfigured: Boolean(drawer.bank.account && drawer.bank.bank),
+    hasOrder: drawer.order !== null,
+    title,
+    description: t("payText"),
+    closeLabel: t("close"),
+    paidTitle: t("paidTitle"),
+    paidDescription,
+    waitingLabel: t("waiting"),
+    expiredTitle: t("expiredTitle"),
+    expiredDescription: t("expiredText"),
+    errorTitle: t("errGeneric"),
+    regenerateError: drawer.regenerateError,
+    regenerateLabel: t("regenerate"),
+    scanLabel: t("scan"),
+    qrAlt: t("qrAlt"),
+    unconfiguredLabel: t("notConfigured"),
+    countdown: left === null ? null : t("expiresIn", { time: clock(left) }),
+    amountLabel: t("amount"),
+    amount: drawer.order ? money(drawer.order.amount) : "",
+    qrUrl: drawer.order?.qrUrl ?? "",
+    proration,
+    copyLabel: t("copy"),
+    copiedLabel: t("copied"),
+    details: [
+        { id: "credits-pay-bank", label: t("bank"), value: drawer.bank.bank },
+        { id: "credits-pay-account", label: t("account"), value: drawer.bank.account },
+        { id: "credits-pay-holder", label: t("holder"), value: drawer.bank.holder },
+        { id: "credits-pay-content", label: t("content"), value: drawer.order?.code ?? "" },
+    ],
+    contentWarning: t("contentWarn"),
+})
