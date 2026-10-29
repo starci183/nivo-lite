@@ -1,20 +1,15 @@
 import { Test } from "@nestjs/testing"
-import { entityOf } from "@tests/fixtures/builders/entity.builder"
+import {
+    botConnectionOf,
+    liveBotConnectionOf,
+    numericUsernameConnectionOf,
+} from "@tests/fixtures/builders/connections.builder"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ConnectionBindingsReadService } from "./connection-bindings-read.service"
 import { ConnectionEntity } from "./persistence/entities"
-
-const connectionOf = entityOf(ConnectionEntity, {
-    id: "c1",
-    provider: "telegram",
-    name: "Shop bot",
-    status: "connected",
-    createdAt: new Date("2026-10-01T00:00:00.000Z"),
-    publicMeta: { bot_username: "  shop_bot ", account_masked: "   ", other: 3 },
-})
 
 const build = async (em: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
@@ -25,7 +20,7 @@ const build = async (em: MockEntityManager) => {
 
 describe("ConnectionBindingsReadService > factsOf", () => {
     it("answers the facts of the connections, trimming the reported texts and dropping blank ones", async () => {
-        const em = mockEntityManager({ find: [ConnectionEntity, [connectionOf()]] })
+        const em = mockEntityManager({ find: [ConnectionEntity, [botConnectionOf()]] })
 
         await expect((await build(em)).factsOf(["c1", "c1"], 200)).resolves.toEqual([
             {
@@ -46,7 +41,7 @@ describe("ConnectionBindingsReadService > factsOf", () => {
     })
 
     it("treats a non-text report as none", async () => {
-        const em = mockEntityManager({ find: [ConnectionEntity, [connectionOf({ publicMeta: { bot_username: 5 } })]] })
+        const em = mockEntityManager({ find: [ConnectionEntity, [numericUsernameConnectionOf()]] })
 
         await expect((await build(em)).factsOf(["c1"], 5)).resolves.toMatchObject([
             { botUsername: null, accountMasked: null },
@@ -63,7 +58,7 @@ describe("ConnectionBindingsReadService > factsOf", () => {
 
 describe("ConnectionBindingsReadService > holds", () => {
     it("is true when the workspace holds the connection, read under a shared lock", async () => {
-        const handed = mockEntityManager({ findOne: [ConnectionEntity, connectionOf()] })
+        const handed = mockEntityManager({ findOne: [ConnectionEntity, botConnectionOf()] })
         const service = await build(mockEntityManager())
 
         await expect(service.holds("w1", "c1", handed)).resolves.toBe(true)
@@ -85,7 +80,7 @@ describe("ConnectionBindingsReadService > holds", () => {
 describe("ConnectionBindingsReadService > owner and state", () => {
     it("answers the workspace and the state of the connection", async () => {
         const handed = mockEntityManager({
-            findOne: [ConnectionEntity, connectionOf({ workspaceId: "w1", environment: "live" })],
+            findOne: [ConnectionEntity, liveBotConnectionOf()],
         })
         const service = await build(mockEntityManager())
 
