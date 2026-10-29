@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AgentConversationEntity, AgentConversationsService } from "@modules/domain/agent-conversations"
-import { AgentMessageEntity, AgentMessagesService } from "@modules/domain/agent-messages"
+import { AgentConversationsReadService, AgentConversationsService } from "@modules/domain/agent-conversations"
+import { AgentMessageDeliveriesService, AgentMessagesService } from "@modules/domain/agent-messages"
 import { AgentDirectoryService, AgentsService } from "@modules/domain/agents"
 import { EventsReadService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -44,6 +44,8 @@ export class AgentChatService {
         private readonly members: WorkspaceMembersService,
         private readonly agents: AgentsService,
         private readonly directory: AgentDirectoryService,
+        private readonly deliveries: AgentMessageDeliveriesService,
+        private readonly conversationReads: AgentConversationsReadService,
         private readonly conversations: AgentConversationsService,
         private readonly messages: AgentMessagesService,
         private readonly events: EventsReadService,
@@ -163,28 +165,22 @@ export class AgentChatService {
     /** Reads queue state rather than treating a failed retry attempt as a terminal failure. */
     async turnStatus(userId: string, request: AgentChatTurnStatusRequest): Promise<AgentChatTurnStatus> {
         await this.members.require(userId, request.workspaceId)
-        const message = await this.entityManager
-            .createQueryBuilder(AgentMessageEntity, "m")
-            .select("m.id", "id")
-            .addSelect("m.conversation_id", "conversationId")
-            .addSelect("c.channel", "channel")
-            .addSelect("m.role", "role")
-            .addSelect("m.delivery_status", "deliveryStatus")
-            .addSelect("r.id", "replyId")
-            .addSelect("r.delivery_status", "replyDeliveryStatus")
-            .innerJoin(AgentConversationEntity, "c", "c.id = m.conversation_id AND c.workspace_id = m.workspace_id")
-            .leftJoin(
-                AgentMessageEntity,
-                "r",
-                "r.conversation_id = m.conversation_id AND r.workspace_id = m.workspace_id AND r.in_reply_to = m.id AND r.role = 'agent'",
-            )
-            .where("m.workspace_id = :workspaceId AND m.id = :id AND m.role IN ('user', 'agent')", {
-                workspaceId: request.workspaceId,
-                id: request.id,
-            })
-            .limit(1)
-            .getRawOne<ChatTurnFacts>()
-        if (message === undefined) throw new AgentChatError({ code: AgentChatErrorCode.TurnNotFound })
+        const stored = await this.deliveries.turnMessageOf(request.workspaceId, request.id)
+        if (stored === null) throw new AgentChatError({ code: AgentChatErrorCode.TurnNotFound })
+        const [channel, reply] = await Promise.all([
+            this.conversationReads.channelOf(stored.conversationId),
+            this.deliveries.agentReplyTo(request.workspaceId, stored.conversationId, stored.id),
+        ])
+        if (channel === null) throw new AgentChatError({ code: AgentChatErrorCode.TurnNotFound })
+        const message: ChatTurnFacts = {
+            id: stored.id,
+            conversationId: stored.conversationId,
+            channel,
+            role: stored.role,
+            deliveryStatus: stored.deliveryStatus,
+            replyId: reply?.id ?? null,
+            replyDeliveryStatus: reply?.deliveryStatus ?? null,
+        }
         const kind = message.role === "agent" ? "deliver" : "turn"
         const queued = await this.queueStatus.status(
             request.workspaceId,

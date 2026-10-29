@@ -1,10 +1,12 @@
 import { Test } from "@nestjs/testing"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { AgentConversationsErrorCode, AgentConversationsService } from "@modules/domain/agent-conversations"
+import {
+    AgentConversationsErrorCode,
+    AgentConversationsReadService,
+    AgentConversationsService,
+} from "@modules/domain/agent-conversations"
 import type { ChatConversation, ConversationTarget } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
+import { AgentMessageDeliveriesService, AgentMessagesService } from "@modules/domain/agent-messages"
 import type { AgentThreadMessage } from "@modules/domain/agent-messages"
 import { AgentDirectoryService, AgentsService } from "@modules/domain/agents"
 import type { AgentProfile } from "@modules/domain/agents"
@@ -79,11 +81,26 @@ const TURN: ChatTurnFacts = {
 /** The answer of a single-row raw read: the row, or nothing. */
 const row = (value: object | undefined): QueryBuilderAnswers => ({ getRawOne: value })
 
-const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = [], agent: ChatAgentFacts | null = null) => {
+const build = async (agent: ChatAgentFacts | null = null, turn: ChatTurnFacts | null = null) => {
+    const deliveries = mock<AgentMessageDeliveriesService>()
+    deliveries.turnMessageOf.mockResolvedValue(
+        turn === null
+            ? null
+            : {
+                  id: turn.id,
+                  conversationId: turn.conversationId,
+                  role: turn.role,
+                  deliveryStatus: turn.deliveryStatus,
+              },
+    )
+    deliveries.agentReplyTo.mockResolvedValue(
+        turn === null || turn.replyId === null ? null : { id: turn.replyId, deliveryStatus: turn.replyDeliveryStatus },
+    )
+    const conversationReads = mock<AgentConversationsReadService>()
+    conversationReads.channelOf.mockResolvedValue(turn?.channel ?? null)
     const directory = mock<AgentDirectoryService>()
     directory.chatFactsOf.mockResolvedValue(agent)
     const tx = fakeTransaction(mockEntityManager())
-    const builders = queueQueryBuilders(tx.em, answers)
     const clock = new FakeClock(NOW)
     const members = mock<WorkspaceMembersService>()
     const agents = mock<AgentsService>()
@@ -102,6 +119,8 @@ const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = [], agent: Ch
             { provide: WorkspaceMembersService, useValue: members },
             { provide: AgentsService, useValue: agents },
             { provide: AgentDirectoryService, useValue: directory },
+            { provide: AgentMessageDeliveriesService, useValue: deliveries },
+            { provide: AgentConversationsReadService, useValue: conversationReads },
             { provide: AgentConversationsService, useValue: conversations },
             { provide: AgentMessagesService, useValue: messages },
             { provide: EventsReadService, useValue: events },
@@ -112,7 +131,6 @@ const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = [], agent: Ch
     return {
         service: moduleRef.get(AgentChatService),
         tx,
-        builders,
         clock,
         members,
         agents,
@@ -128,7 +146,7 @@ const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = [], agent: Ch
 describe("AgentChatService", () => {
     describe("page", () => {
         it("returns the agent page and the welcome when a founding purchase sits inside the offer", async () => {
-            const { service, agents, events } = await build([], AGENT)
+            const { service, agents, events } = await build(AGENT)
             agents.profileOf.mockResolvedValue(PROFILE)
             events.existsOfKindBetween.mockResolvedValue(true)
 
@@ -153,7 +171,7 @@ describe("AgentChatService", () => {
         })
 
         it("hides the welcome outside the offer and does not read purchases", async () => {
-            const { service, agents, clock, directory, events } = await build([], AGENT)
+            const { service, agents, clock, directory, events } = await build(AGENT)
             clock.set("2026-11-01T00:00:00.000Z")
             agents.profileOf.mockResolvedValue(PROFILE)
 
@@ -163,7 +181,7 @@ describe("AgentChatService", () => {
         })
 
         it("hides the welcome for a module that has no customer channel", async () => {
-            const { service, agents, tx } = await build([], { ...AGENT, module: "sales" })
+            const { service, agents } = await build({ ...AGENT, module: "sales" })
             agents.profileOf.mockResolvedValue(PROFILE)
 
             await expect(service.page("u1", PAGE)).resolves.toEqual({
@@ -177,14 +195,13 @@ describe("AgentChatService", () => {
                 workspaceId: "w1",
                 showWelcome: false,
             })
-            expect(tx.em.createQueryBuilder).toHaveBeenCalledTimes(1)
         })
 
         it.each([
             { name: "agent row", found: undefined, profile: PROFILE },
             { name: "agent profile", found: AGENT, profile: null },
         ])("refuses a missing $name", async ({ found, profile }) => {
-            const { service, agents } = await build([], found ?? null)
+            const { service, agents } = await build(found ?? null)
             agents.profileOf.mockResolvedValue(profile)
 
             await expect(service.page("u1", PAGE)).rejects.toMatchObject({ code: AgentChatErrorCode.AgentNotFound })
@@ -195,7 +212,7 @@ describe("AgentChatService", () => {
 describe("AgentChatService", () => {
     describe("listConversations", () => {
         it("returns the agent's history after proving the agent", async () => {
-            const { service, conversations } = await build([], AGENT)
+            const { service, conversations } = await build(AGENT)
             conversations.listChat.mockResolvedValue([CONVERSATION])
 
             await expect(service.listConversations("u1", { workspaceId: "w1", agentId: "a1" })).resolves.toEqual([
@@ -230,7 +247,7 @@ describe("AgentChatService", () => {
 describe("AgentChatService", () => {
     describe("start", () => {
         it("opens a test chat under the member's name and stores the greeting", async () => {
-            const { service, conversations, messages, tx } = await build([], AGENT)
+            const { service, conversations, messages, tx } = await build(AGENT)
             conversations.openChat.mockResolvedValue(CONVERSATION)
 
             await expect(
@@ -245,7 +262,7 @@ describe("AgentChatService", () => {
         })
 
         it("keeps a customer name within 80 characters and skips an empty greeting", async () => {
-            const { service, conversations, messages, tx } = await build([], { ...AGENT, greeting: "" })
+            const { service, conversations, messages, tx } = await build({ ...AGENT, greeting: "" })
             conversations.openChat.mockResolvedValue(CONVERSATION)
 
             await expect(
@@ -378,7 +395,7 @@ describe("AgentChatService", () => {
 describe("AgentChatService", () => {
     describe("turnStatus", () => {
         it("reports a queued turn and the stored reply id", async () => {
-            const { service, queueStatus } = await build([row(TURN)])
+            const { service, queueStatus } = await build(null, TURN)
             queueStatus.status.mockResolvedValue({ id: "job-1", state: "queued", attempts: 0 })
 
             await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).resolves.toEqual({
@@ -393,7 +410,7 @@ describe("AgentChatService", () => {
         })
 
         it("reports running, then succeeded once a website turn is done", async () => {
-            const { service, queueStatus } = await build([row(TURN), row(TURN)])
+            const { service, queueStatus } = await build(null, TURN)
             queueStatus.status.mockResolvedValueOnce({ id: "job-1", state: "running", attempts: 1 })
             queueStatus.status.mockResolvedValueOnce({ id: "job-1", state: "done", attempts: 1 })
 
@@ -416,7 +433,7 @@ describe("AgentChatService", () => {
                 deliveryStatus: "failed",
                 replyId: null,
             }
-            const { service, queueStatus } = await build([row(delivered)])
+            const { service, queueStatus } = await build(null, delivered)
             queueStatus.status.mockResolvedValue({ id: "job-2", state: "done", attempts: 1 })
 
             await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).resolves.toEqual({
@@ -431,7 +448,7 @@ describe("AgentChatService", () => {
         })
 
         it("reports a failed queue job as a turn failure", async () => {
-            const { service, queueStatus } = await build([row(TURN)])
+            const { service, queueStatus } = await build(null, TURN)
             queueStatus.status.mockResolvedValue({ id: "job-3", state: "failed", attempts: 2 })
 
             await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).resolves.toMatchObject({
@@ -441,12 +458,12 @@ describe("AgentChatService", () => {
         })
 
         it("refuses a message or a job the workspace does not have", async () => {
-            const missing = await build([row(undefined)])
+            const missing = await build()
             await expect(missing.service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).rejects.toMatchObject({
                 code: AgentChatErrorCode.TurnNotFound,
             })
 
-            const { service, queueStatus } = await build([row(TURN)])
+            const { service, queueStatus } = await build(null, TURN)
             queueStatus.status.mockResolvedValue(null)
             await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).rejects.toMatchObject({
                 code: AgentChatErrorCode.TurnNotFound,
@@ -460,7 +477,7 @@ describe("AgentChatService", () => {
         { kind: "test", visitorName: "Lan" },
         { kind: "customer", visitorName: null },
     ] as const)("defaults a nameless $kind chat to $visitorName", async ({ kind, visitorName }) => {
-        const { service, tx, conversations, messages } = await build([], AGENT)
+        const { service, tx, conversations, messages } = await build(AGENT)
         conversations.openChat.mockResolvedValue(CONVERSATION)
         await expect(service.start("u1", { workspaceId: "w1", agentId: "a1", kind, visitorName: null })).resolves.toBe(
             "c1",
@@ -492,7 +509,7 @@ describe("AgentChatService", () => {
         ["sent", "succeeded", null],
     ] as const)("reports a completed external turn whose reply delivery is %s", async (delivery, status, errorCode) => {
         const external: ChatTurnFacts = { ...TURN, channel: "telegram", replyDeliveryStatus: delivery }
-        const { service, builders, members, queueStatus } = await build([row(external)])
+        const { service, deliveries, members, queueStatus } = await build(null, external)
         queueStatus.status.mockResolvedValue({ id: "job-1", state: "done", attempts: 2 })
         await expect(service.turnStatus("u1", { workspaceId: "w1", id: "m1" })).resolves.toEqual({
             id: "m1",
@@ -503,9 +520,7 @@ describe("AgentChatService", () => {
             errorCode,
         })
         expect(members.require).toHaveBeenCalledWith("u1", "w1")
-        expect(builders[0]?.callsOf("where")).toEqual([
-            [expect.stringContaining("m.id = :id"), { workspaceId: "w1", id: "m1" }],
-        ])
+        expect(deliveries.turnMessageOf).toHaveBeenCalledWith("w1", "m1")
         expect(queueStatus.status).toHaveBeenCalledWith("w1", "chat_turn", "chat-turn.turn:m1")
     })
 })
