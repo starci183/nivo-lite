@@ -9,7 +9,7 @@ import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { CREATED } from "@tests/fixtures/builders/hiring-data.builder"
-import { entityRowBuilder, namedCalls } from "@tests/fixtures/builders/entity-row.builder"
+import { entityRowBuilder, namedCalls, plain } from "@tests/fixtures/builders/entity-row.builder"
 import { HiringCandidatesService } from "./hiring-candidates.service"
 import { HiringLinksService } from "./hiring-links.service"
 import { HiringSettingsService } from "./hiring-settings.service"
@@ -260,10 +260,10 @@ describe("HiringWorkbenchService", () => {
             expect(namedCalls(em.count.mock.calls)).toEqual([
                 ["HiringJobEntity", { where: { workspaceId: "ws-1", status: "open" } }],
                 ["HiringJobEntity", { where: { workspaceId: "ws-1" } }],
-                ["HiringCandidateEntity", { where: expect.objectContaining({ workspaceId: "ws-1" }) }],
+                ["HiringCandidateEntity", { where: plain(expect.objectContaining({ workspaceId: "ws-1" })) }],
                 [
                     "HiringInterviewEntity",
-                    { where: expect.objectContaining({ workspaceId: "ws-1", status: "confirmed" }) },
+                    { where: plain(expect.objectContaining({ workspaceId: "ws-1", status: "confirmed" })) },
                 ],
                 ["HiringOfferEntity", { where: { workspaceId: "ws-1", status: "waiting" } }],
                 ["HiringOfferEntity", { where: { workspaceId: "ws-1", status: "sent" } }],

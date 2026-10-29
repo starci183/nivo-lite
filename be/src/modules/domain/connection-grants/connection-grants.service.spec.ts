@@ -4,13 +4,13 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AgentAccessLogService } from "@modules/domain/agent-access-log"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ConnectionGrantsService } from "./connection-grants.service"
 import { ConnectionGrantsErrorCode } from "./errors/connection-grants.error"
-import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
 
 const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "ws-1" }
 const AGENT = { id: "a1", name: "Bot", module: "chatbot" }
@@ -31,6 +31,22 @@ const connection = (overrides: Partial<ConnectionRecord> = {}): ConnectionRecord
     ...overrides,
 })
 
+interface Grant {
+    readonly agentId: string
+    readonly connectionId: string
+    readonly access: string
+}
+
+/** The grants and agents the owners answer for one manager. */
+const FACTS = new WeakMap<object, { grants: ReadonlyArray<Grant>; agents: ReadonlyArray<typeof AGENT> }>()
+
+/** A manager whose scenario states the grants and the agents the owners answer. */
+const managerOf = (grants: ReadonlyArray<Grant> = [], agents: ReadonlyArray<typeof AGENT> = [AGENT]) => {
+    const em = mockEntityManager()
+    FACTS.set(em, { grants, agents })
+    return { em }
+}
+
 const build = async (em: MockEntityManager, found: ReadonlyArray<ConnectionRecord> = [connection()]) => {
     const tx = fakeTransaction(em)
     const connections = mock<ConnectionsService>()
@@ -47,7 +63,28 @@ const build = async (em: MockEntityManager, found: ReadonlyArray<ConnectionRecor
         displayName: "Lan",
         status: "active",
     })
+    const facts = FACTS.get(em) ?? { grants: [], agents: [] }
+    const directory = mock<AgentDirectoryService>()
+    directory.cardsOf.mockImplementation((_workspaceId, ids) =>
+        Promise.resolve(
+            facts.agents.filter((agent) => ids.includes(agent.id)).map((agent) => ({ ...agent, canTagAgentIds: [] })),
+        ),
+    )
     const bindings = mock<AgentBindingsService>()
+    bindings.grantsOfWorkspace.mockResolvedValue([...facts.grants])
+    bindings.grantsOfAgent.mockImplementation((_workspaceId, agentId) =>
+        Promise.resolve(facts.grants.filter((grant) => grant.agentId === agentId)),
+    )
+    bindings.grantsOfConnection.mockImplementation((_workspaceId, connectionId) =>
+        Promise.resolve(facts.grants.filter((grant) => grant.connectionId === connectionId)),
+    )
+    bindings.grantsAmong.mockImplementation((_workspaceId, agentIds, connectionIds) =>
+        Promise.resolve(
+            facts.grants.filter(
+                (grant) => agentIds.includes(grant.agentId) && connectionIds.includes(grant.connectionId),
+            ),
+        ),
+    )
     bindings.writeGrant.mockResolvedValue(undefined)
     bindings.removeGrant.mockResolvedValue(undefined)
     const accessLog = mock<AgentAccessLogService>()
@@ -59,23 +96,11 @@ const build = async (em: MockEntityManager, found: ReadonlyArray<ConnectionRecor
             { provide: ConnectionsService, useValue: connections },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: AgentBindingsService, useValue: bindings },
+            { provide: AgentDirectoryService, useValue: directory },
             { provide: AgentAccessLogService, useValue: accessLog },
         ],
     }).compile()
-    return { service: moduleRef.get(ConnectionGrantsService), tx, connections, bindings, accessLog }
-}
-
-interface Grant {
-    readonly agentId: string
-    readonly connectionId: string
-    readonly access: string
-}
-
-/** A manager whose agents and grants tables answer the given rows. */
-const managerOf = (grants: ReadonlyArray<Grant> = [], agents: ReadonlyArray<unknown> = [AGENT]) => {
-    const em = mockEntityManager()
-    const seen = answerByTable(em, { "public.agents": agents, "public.agent_connections": grants })
-    return { em, seen }
+    return { service: moduleRef.get(ConnectionGrantsService), tx, connections, bindings, accessLog, directory }
 }
 
 /** A grant write receives the transaction view, which is not the outer manager. */
@@ -111,14 +136,13 @@ describe("ConnectionGrantsService > candidates", () => {
     })
 
     it("refuses an id that is not an agent id before reading anything", async () => {
-        const em = mockEntityManager()
-        const { service } = await build(em)
+        const { service, directory } = await build(mockEntityManager())
 
         await expect(service.candidates("owner-1", "ws-1", "not-an-id")).rejects.toMatchObject({
             code: ConnectionsErrorCode.NotFound,
             params: { id: "not-an-id" },
         })
-        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+        expect(directory.cardsOf).not.toHaveBeenCalled()
     })
 })
 
@@ -315,19 +339,15 @@ describe("ConnectionGrantsService > setConnectionAgents", () => {
     })
 
     it("does nothing for a connection without agents when none are wanted", async () => {
-        const { em, seen } = managerOf()
-        const { service, tx } = await build(em)
+        const { service, tx, bindings } = await build(managerOf().em)
 
         await service.setConnectionAgents(actor, "c1", [])
 
         expect(tx.commits).toBe(1)
-        expect(seen.queries.map((query) => query.table)).toEqual(["public.agent_connections"])
-        expect(seen.queries[0]?.callsOf("where")).toEqual([
-            [
-                "g.workspace_id = :workspaceId AND g.connection_id = :connectionId",
-                { workspaceId: "ws-1", connectionId: "c1" },
-            ],
-        ])
+        expect(bindings.grantsOfConnection).toHaveBeenCalledWith("ws-1", "c1", expect.anything())
+        expect(isTransactionManager(bindings.grantsOfConnection.mock.calls[0]?.[2])).toBe(true)
+        expect(bindings.writeGrant).not.toHaveBeenCalled()
+        expect(bindings.removeGrant).not.toHaveBeenCalled()
     })
 })
 
@@ -362,12 +382,12 @@ describe("ConnectionGrantsService > board", () => {
     it("lists every connection with the agents that use it", async () => {
         const shop = connection({ meta: { bot_username: "shop_bot" } })
         const bank = connection({ id: "c2", provider: "sepay", name: "Bank", meta: { account_masked: "" } })
-        const { em, seen } = managerOf([
+        const { em } = managerOf([
             { agentId: "a1", connectionId: "c1", access: "read" },
             { agentId: "a2", connectionId: "c1", access: "nope" },
             { agentId: "a3", connectionId: "missing", access: "ask" },
         ])
-        const { service, connections } = await build(em, [shop, bank])
+        const { service, connections, bindings } = await build(em, [shop, bank])
 
         await expect(service.board(actor)).resolves.toEqual([
             {
@@ -383,8 +403,6 @@ describe("ConnectionGrantsService > board", () => {
         ])
         expect(connections.authorize).toHaveBeenCalledWith(actor, ["owner", "manager"])
         expect(connections.list).toHaveBeenCalledWith("ws-1")
-        expect(seen.queries[0]?.callsOf("where")).toEqual([["g.workspace_id = :workspaceId", { workspaceId: "ws-1" }]])
-        expect(seen.queries[0]?.callsOf("orderBy")).toEqual([["g.created_at"]])
-        expect(seen.queries[0]?.callsOf("limit")).toEqual([[500]])
+        expect(bindings.grantsOfWorkspace).toHaveBeenCalledWith("ws-1")
     })
 })

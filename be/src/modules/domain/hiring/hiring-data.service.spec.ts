@@ -7,6 +7,7 @@ import {
     interview as interviewFixture,
     offer as offerFixture,
 } from "@tests/fixtures/builders/hiring-data.builder"
+<<<<<<< HEAD
 import {
     settingsRow,
     jobRow,
@@ -16,9 +17,18 @@ import {
     availabilityRow,
 } from "@tests/fixtures/builders/hiring-rows.builder"
 import { candidateRowsOf, unslottedInterviewRow } from "@tests/fixtures/builders/hiring-data-rows.builder"
+=======
+import { settingsRow, jobRow, candidateRow, interviewRow, offerRow, availabilityRow } from "@tests/fixtures/builders/hiring-rows.builder"
+import {
+    busyInterviewsFind,
+    candidateRowsOf,
+    retentionCandidatesFind,
+    unslottedInterviewRow,
+} from "@tests/fixtures/builders/hiring-data-rows.builder"
+>>>>>>> main
 import { namedCalls } from "@tests/fixtures/builders/entity-row.builder"
 import { Test } from "@nestjs/testing"
-import { Between, In, IsNull, LessThan } from "typeorm"
+import { Between, In, IsNull } from "typeorm"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { WorkItemsDecisionsReadService } from "@modules/domain/work-items"
 import { MemberRosterService, WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
@@ -322,19 +332,7 @@ describe("HiringDataService job and retention lists", () => {
                 HiringJobEntity,
                 { select: { id: true }, where: { workspaceId: "ws-1", status: In(["open", "paused"]) }, take: 500 },
             ],
-            [
-                HiringCandidateEntity,
-                {
-                    select: { id: true },
-                    where: {
-                        workspaceId: "ws-1",
-                        stage: In(["rejected", "withdrawn"]),
-                        stageChangedAt: LessThan(cutoff),
-                    },
-                    order: { stageChangedAt: "ASC" },
-                    take: 200,
-                },
-            ],
+            retentionCandidatesFind(cutoff),
         ])
     })
 })
@@ -391,14 +389,7 @@ describe("HiringDataService lists", () => {
 
         await expect(service.busy("ws-1", "user-1")).resolves.toEqual([first, second, third, fourth])
         expect(namedCalls(em.find.mock.calls)).toEqual([
-            [
-                HiringInterviewEntity,
-                {
-                    select: { slotStart: true, slotEnd: true, proposedSlots: true, status: true },
-                    where: { workspaceId: "ws-1", interviewerUserId: "user-1", status: In(["proposed", "confirmed"]) },
-                    take: 500,
-                },
-            ],
+            busyInterviewsFind("user-1"),
         ])
     })
 })

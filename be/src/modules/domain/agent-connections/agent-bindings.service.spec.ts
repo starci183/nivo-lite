@@ -344,3 +344,38 @@ describe("AgentBindingsService > agentIdsOf", () => {
         })
     })
 })
+
+describe("AgentBindingsService > stored grants", () => {
+    const READ = { select: { agentId: true, connectionId: true, access: true }, order: { createdAt: "ASC" }, take: 500 }
+
+    it.each([
+        { name: "the workspace", ask: "grantsOfWorkspace", args: [] as Array<string>, where: { workspaceId: "w1" } },
+        { name: "an agent", ask: "grantsOfAgent", args: ["a1"], where: { workspaceId: "w1", agentId: "a1" } },
+        {
+            name: "a connection",
+            ask: "grantsOfConnection",
+            args: ["c1"],
+            where: { workspaceId: "w1", connectionId: "c1" },
+        },
+    ] as const)("lists the grants of $name, oldest first, bounded", async ({ ask, args, where }) => {
+        const em = mockEntityManager({ find: [AgentConnectionEntity, [linkOf({ access: "ask" })]] })
+        const { service } = await build(em)
+
+        await expect(service[ask]("w1", ...(args as [string]))).resolves.toEqual([
+            { agentId: "a1", connectionId: "c1", access: "ask" },
+        ])
+        expect(em.find).toHaveBeenCalledWith(AgentConnectionEntity, { ...READ, where })
+    })
+
+    it("lists the grants among some agents and connections", async () => {
+        const em = mockEntityManager({ find: [AgentConnectionEntity, [linkOf()]] })
+        const { service } = await build(em)
+
+        await service.grantsAmong("w1", ["a1"], ["c1"])
+
+        expect(em.find).toHaveBeenCalledWith(AgentConnectionEntity, {
+            ...READ,
+            where: { workspaceId: "w1", agentId: In(["a1"]), connectionId: In(["c1"]) },
+        })
+    })
+})

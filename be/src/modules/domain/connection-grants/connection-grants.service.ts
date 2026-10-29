@@ -1,12 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentAccessLogService } from "@modules/domain/agent-access-log"
-import { AgentBindingsService, AgentConnectionEntity } from "@modules/domain/agent-connections"
+import { AgentBindingsService } from "@modules/domain/agent-connections"
 import type { Access } from "@modules/domain/agent-connections"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionMember } from "@modules/domain/connections"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { AgentEntity } from "@modules/domain/agents"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { isAccess, normaliseAccess, planExactly, purposeFor } from "./connection-access.policy"
@@ -19,76 +19,6 @@ import type {
     ConnectionGrantWish,
 } from "./connection-grants.contracts"
 import { ConnectionGrantsError, ConnectionGrantsErrorCode } from "./errors/connection-grants.error"
-
-/** The most rows one grant lookup answers. */
-const GRANT_LIMIT = 500
-
-/** The agent columns a grant check reads. */
-interface AgentRow {
-    /** The agent row id a grant is keyed by. */
-    readonly id: string
-    /** The display name shown next to the grant in the console. */
-    readonly name: string
-    /** The product module the agent serves, which bounds the connections it may be granted. */
-    readonly module: string
-}
-
-/** The columns of a stored grant. */
-interface GrantRow {
-    /** The agent that holds the grant. */
-    readonly agentId: string
-    /** The connection the agent is allowed to use. */
-    readonly connectionId: string
-    /** The stored access level, parsed into an Access before use. */
-    readonly access: string
-}
-
-/** True when a raw row is an object whose named fields are all text. */
-const hasTextFields = (value: unknown, fields: ReadonlyArray<string>): boolean =>
-    typeof value === "object" &&
-    value !== null &&
-    fields.every((field) => typeof Reflect.get(value, field) === "string")
-
-const isAgentRow = (value: unknown): value is AgentRow => hasTextFields(value, ["id", "name", "module"])
-
-const isGrantRow = (value: unknown): value is GrantRow => hasTextFields(value, ["agentId", "connectionId", "access"])
-
-/** The agents of a workspace among the given ids. */
-const findAgents = async (
-    manager: EntityManager,
-    workspaceId: string,
-    agentIds: ReadonlyArray<string>,
-): Promise<Array<AgentRow>> => {
-    const rows: ReadonlyArray<unknown> = await manager
-        .createQueryBuilder(AgentEntity, "a")
-        .select("a.id", "id")
-        .addSelect("a.name", "name")
-        .addSelect("a.module", "module")
-        .where("a.workspace_id = :workspaceId AND a.id IN (:...agentIds)", { workspaceId, agentIds })
-        .limit(GRANT_LIMIT)
-        .getRawMany()
-    return rows.filter(isAgentRow)
-}
-
-/** The grants of a workspace matching the given condition (an agent, a connection, or the given agents and connections). */
-const findGrants = async (
-    manager: EntityManager,
-    workspaceId: string,
-    condition: string,
-    parameters: Readonly<Record<string, unknown>>,
-    ordered = false,
-): Promise<Array<GrantRow>> => {
-    const query = manager
-        .createQueryBuilder(AgentConnectionEntity, "g")
-        .select("g.agent_id", "agentId")
-        .addSelect("g.connection_id", "connectionId")
-        .addSelect("g.access", "access")
-        .where(`g.workspace_id = :workspaceId${condition}`, { workspaceId, ...parameters })
-    const rows: ReadonlyArray<unknown> = await (ordered ? query.orderBy("g.created_at") : query)
-        .limit(GRANT_LIMIT)
-        .getRawMany()
-    return rows.filter(isGrantRow)
-}
 
 const OWNER_ONLY = ["owner"] as const
 const MANAGER = ["owner", "manager"] as const
@@ -114,6 +44,7 @@ export class ConnectionGrantsService {
         private readonly connections: ConnectionsService,
         private readonly members: WorkspaceMembersService,
         private readonly bindings: AgentBindingsService,
+        private readonly agents: AgentDirectoryService,
         private readonly accessLog: AgentAccessLogService,
     ) {}
 
@@ -130,13 +61,13 @@ export class ConnectionGrantsService {
         if (!RECORD_ID.test(agentId)) {
             throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id: agentId } })
         }
-        const [agent] = await findAgents(this.entityManager, workspaceId, [agentId])
+        const [agent] = await this.agents.cardsOf(workspaceId, [agentId])
         if (agent === undefined) {
             throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id: agentId } })
         }
         const [listed, grants] = await Promise.all([
             this.connections.list(workspaceId),
-            findGrants(this.entityManager, workspaceId, " AND g.agent_id = :agentId", { agentId }),
+            this.bindings.grantsOfAgent(workspaceId, agentId),
         ])
         const accessOf = new Map(grants.map((row) => [row.connectionId, storedLevel(row.access)]))
         return listed.flatMap((connection) => {
@@ -162,7 +93,7 @@ export class ConnectionGrantsService {
         await this.connections.authorize(actor, MANAGER)
         const [connections, rows] = await Promise.all([
             this.connections.list(actor.workspaceId),
-            findGrants(this.entityManager, actor.workspaceId, "", {}, true),
+            this.bindings.grantsOfWorkspace(actor.workspaceId),
         ])
         const byConnection = new Map<string, Array<ConnectionGrantEntry>>()
         for (const row of rows) {
@@ -202,9 +133,7 @@ export class ConnectionGrantsService {
         const member = await this.connections.authorize(actor, OWNER_ONLY)
         await this.entityManager.transaction(async (tx) => {
             await this.connections.get(actor.workspaceId, connectionId, tx)
-            const rows = await findGrants(tx, actor.workspaceId, " AND g.connection_id = :connectionId", {
-                connectionId,
-            })
+            const rows = await this.bindings.grantsOfConnection(actor.workspaceId, connectionId, tx)
             const have = new Map(rows.map((row) => [row.agentId, storedLevel(row.access)]))
             const plan = planExactly(
                 have,
@@ -223,7 +152,7 @@ export class ConnectionGrantsService {
     ): Promise<void> {
         const member = await this.connections.authorize(actor, OWNER_ONLY)
         await this.entityManager.transaction(async (tx) => {
-            const rows = await findGrants(tx, actor.workspaceId, " AND g.agent_id = :agentId", { agentId })
+            const rows = await this.bindings.grantsOfAgent(actor.workspaceId, agentId, tx)
             const have = new Map(rows.map((row) => [row.connectionId, storedLevel(row.access)]))
             const plan = planExactly(
                 have,
@@ -249,14 +178,9 @@ export class ConnectionGrantsService {
         const agentIds = [...new Set(changes.map((change) => change.agentId))]
         const connectionIds = [...new Set(changes.map((change) => change.connectionId))]
         const [agents, connections, current] = await Promise.all([
-            findAgents(tx, actor.workspaceId, agentIds),
+            this.agents.cardsOf(actor.workspaceId, agentIds),
             this.connections.findMany(actor.workspaceId, connectionIds, tx),
-            findGrants(
-                tx,
-                actor.workspaceId,
-                " AND g.agent_id IN (:...agentIds) AND g.connection_id IN (:...connectionIds)",
-                { agentIds, connectionIds },
-            ),
+            this.bindings.grantsAmong(actor.workspaceId, agentIds, connectionIds, tx),
         ])
         const agentOf = new Map(agents.map((agent) => [agent.id, agent]))
         const connectionOf = new Map(connections.map((connection) => [connection.id, connection]))
