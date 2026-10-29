@@ -1,6 +1,7 @@
 // Read services lead the barrel: other capabilities import this barrel while it loads (import cycles), they must already be defined.
 export { MessagesReadService } from "./messages-read.service"
 export { MessageCursorsService } from "./message-cursors.service"
+export type { MessageCursor, OptionalMessageCursor } from "./message-cursors.contracts"
 export type {
     LineActivity,
     LineReader,

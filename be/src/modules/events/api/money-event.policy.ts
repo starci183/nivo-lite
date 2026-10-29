@@ -54,10 +54,13 @@ export const isAmountOrAbsent = (value: unknown): value is number | undefined =>
 /** A payload field that is there only when it has a value: an empty object, or an object holding the value under its name. */
 export type PresentField<Name extends string, Value> = { [Key in Name]?: Value }
 
+/** A payload value that may be missing: the value itself, null or undefined. */
+export type OptionalValue<Value> = Value | null | undefined
+
 /** A one-field object holding `value` under `name`, or an empty one when the value is absent (undefined or null), to spread into an optional payload field. */
 export const whenPresent = <Name extends string, Value>(
     name: Name,
-    value: Value | null | undefined,
+    value: OptionalValue<Value>,
 ): PresentField<Name, NonNullable<Value>> => {
     const field: PresentField<Name, NonNullable<Value>> = {}
     if (value !== undefined && value !== null) field[name] = value
