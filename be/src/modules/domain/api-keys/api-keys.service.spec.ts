@@ -49,15 +49,14 @@ const build = async (entityManager: MockEntityManager) => {
     return moduleRef.get(ApiKeysService)
 }
 
-/** A manager whose key lookup answers this verdict of the database function. */
-const authAnswering = (verdict: object | null) =>
-    mockEntityManager({ query: [API_KEY_AUTH, [{ api_key_auth: verdict }]] })
+/** The rows the key lookup answers for this verdict of the database function. */
+const verdictRows = (verdict: object | null) => [{ api_key_auth: verdict }]
 
 const WORKING = { id: "key-1", workspace_id: "workspace-1", scopes: ["leads:read"] }
 
 describe("ApiKeysService authenticate", () => {
     it("admits a working key with the hash of the bearer key as the only thing sent to the database", async () => {
-        const em = authAnswering({ ...WORKING, name: "n8n", hits: 3 })
+        const em = mockEntityManager({ query: [API_KEY_AUTH, verdictRows({ ...WORKING, name: "n8n", hits: 3 })] })
         const keys = await build(em)
 
         await expect(keys.authenticate("leads:read", "Bearer nvk_secret")).resolves.toEqual({
@@ -80,7 +79,7 @@ describe("ApiKeysService authenticate", () => {
     })
 
     it("refuses a key no workspace issued and an answer with no row at all", async () => {
-        const unknown = await build(authAnswering(null))
+        const unknown = await build(mockEntityManager({ query: [API_KEY_AUTH, verdictRows(null)] }))
         const empty = await build(mockEntityManager({ query: [API_KEY_AUTH, []] }))
 
         await expect(unknown.authenticate("leads:read", "Bearer nvk_unknown")).rejects.toMatchObject({
@@ -92,8 +91,8 @@ describe("ApiKeysService authenticate", () => {
     })
 
     it("refuses a revoked key and a key over its budget with the parameters of the refusal", async () => {
-        const revoked = await build(authAnswering({ revoked: true }))
-        const busy = await build(authAnswering({ ...WORKING, hits: 61 }))
+        const revoked = await build(mockEntityManager({ query: [API_KEY_AUTH, verdictRows({ revoked: true })] }))
+        const busy = await build(mockEntityManager({ query: [API_KEY_AUTH, verdictRows({ ...WORKING, hits: 61 })] }))
 
         await expect(revoked.authenticate("leads:read", "Bearer nvk_old")).rejects.toMatchObject({
             code: ApiKeysErrorCode.Revoked,
