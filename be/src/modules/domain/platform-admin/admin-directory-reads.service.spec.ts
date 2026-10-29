@@ -28,41 +28,42 @@ const AT = new Date("2026-10-12T03:00:00.000Z")
 const ISO = "2026-10-12T03:00:00.000Z"
 
 const build = async (entityManager: MockEntityManager = mockEntityManager()) => {
-    const owners = {
-        workspaces: mock<WorkspaceAdminReadService>(),
-        installations: mock<ModuleInstallationsAdminReadService>(),
-        connections: mock<ConnectionsAdminReadService>(),
-        appErrors: mock<AppErrorsReadService>(),
-        roster: mock<MemberRosterService>(),
-        invites: mock<WorkspaceInvitesAdminReadService>(),
-        orders: mock<PaymentOrdersService>(),
-        billingEvents: mock<BillingEventsReadService>(),
-        contextVersions: mock<ContextVersionsAdminReadService>(),
-        agentSync: mock<AgentSyncAdminReadService>(),
-        knowledge: mock<KnowledgeSourcesAdminReadService>(),
-        transfers: mock<SepayTransactionsAdminReadService>(),
-        quota: mock<AiQuotaOverridesAdminReadService>(),
-    }
+    const workspaces = mock<WorkspaceAdminReadService>()
+    const installations = mock<ModuleInstallationsAdminReadService>()
+    const connections = mock<ConnectionsAdminReadService>()
+    const appErrors = mock<AppErrorsReadService>()
+    const roster = mock<MemberRosterService>()
+    const invites = mock<WorkspaceInvitesAdminReadService>()
+    const orders = mock<PaymentOrdersService>()
+    const billingEvents = mock<BillingEventsReadService>()
+    const contextVersions = mock<ContextVersionsAdminReadService>()
+    const agentSync = mock<AgentSyncAdminReadService>()
+    const knowledge = mock<KnowledgeSourcesAdminReadService>()
+    const transfers = mock<SepayTransactionsAdminReadService>()
+    const quota = mock<AiQuotaOverridesAdminReadService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             AdminDirectoryReadsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: WorkspaceAdminReadService, useValue: owners.workspaces },
-            { provide: ModuleInstallationsAdminReadService, useValue: owners.installations },
-            { provide: ConnectionsAdminReadService, useValue: owners.connections },
-            { provide: AppErrorsReadService, useValue: owners.appErrors },
-            { provide: MemberRosterService, useValue: owners.roster },
-            { provide: WorkspaceInvitesAdminReadService, useValue: owners.invites },
-            { provide: PaymentOrdersService, useValue: owners.orders },
-            { provide: BillingEventsReadService, useValue: owners.billingEvents },
-            { provide: ContextVersionsAdminReadService, useValue: owners.contextVersions },
-            { provide: AgentSyncAdminReadService, useValue: owners.agentSync },
-            { provide: KnowledgeSourcesAdminReadService, useValue: owners.knowledge },
-            { provide: SepayTransactionsAdminReadService, useValue: owners.transfers },
-            { provide: AiQuotaOverridesAdminReadService, useValue: owners.quota },
+            { provide: WorkspaceAdminReadService, useValue: workspaces },
+            { provide: ModuleInstallationsAdminReadService, useValue: installations },
+            { provide: ConnectionsAdminReadService, useValue: connections },
+            { provide: AppErrorsReadService, useValue: appErrors },
+            { provide: MemberRosterService, useValue: roster },
+            { provide: WorkspaceInvitesAdminReadService, useValue: invites },
+            { provide: PaymentOrdersService, useValue: orders },
+            { provide: BillingEventsReadService, useValue: billingEvents },
+            { provide: ContextVersionsAdminReadService, useValue: contextVersions },
+            { provide: AgentSyncAdminReadService, useValue: agentSync },
+            { provide: KnowledgeSourcesAdminReadService, useValue: knowledge },
+            { provide: SepayTransactionsAdminReadService, useValue: transfers },
+            { provide: AiQuotaOverridesAdminReadService, useValue: quota },
         ],
     }).compile()
-    return { service: moduleRef.get(AdminDirectoryReadsService), ...owners }
+    const service = moduleRef.get(AdminDirectoryReadsService)
+    const owners = { workspaces, installations, connections, appErrors, roster, invites, orders }
+    return { service, ...owners, billingEvents, contextVersions, agentSync, knowledge, transfers, quota }
+}
 }
 
 const WORKSPACE_ROW = {
@@ -166,7 +167,9 @@ describe("AdminDirectoryReadsService installations and connections", () => {
         ])
         expect(installations.ofWorkspace).toHaveBeenCalledWith("ws-1", 50)
     })
+})
 
+describe("AdminDirectoryReadsService connections", () => {
     it("reads the live connections, bounded at 5000, with the last event only when there is one", async () => {
         const { service, connections } = await build()
         const row = {
@@ -319,7 +322,9 @@ describe("AdminDirectoryReadsService workspace detail", () => {
         await expect(service.billingEvents("ws-1")).resolves.toEqual([{ id: "b-1", kind: "paid", created_at: ISO }])
         expect(billingEvents.latestOfWorkspace).toHaveBeenCalledWith("ws-1", 20)
     })
+})
 
+describe("AdminDirectoryReadsService workspace detail: context and sync", () => {
     it("reads the context versions, bounded at 500", async () => {
         const { service, contextVersions } = await build()
         contextVersions.ofWorkspace.mockResolvedValue([{ id: "v-1", version: 3, appliedAt: AT }])
@@ -449,7 +454,9 @@ describe("AdminDirectoryReadsService database functions", () => {
         await expect(service.userEmails(["u-1"])).resolves.toEqual([{ id: "u-1", email: "a@b.c" }])
         expect(em.query).toHaveBeenCalledWith(USER_EMAILS, [["u-1"]])
     })
+})
 
+describe("AdminDirectoryReadsService database functions: quota and sign-ups", () => {
     it("reads this month's quota of a workspace and none when the function answers nothing", async () => {
         const em = mockEntityManager({
             query: [[QUOTA_STATUS, [{ credits_used: "1", credits_limit: "2", cost_usd: "0.1", period_start: "x" }]]],

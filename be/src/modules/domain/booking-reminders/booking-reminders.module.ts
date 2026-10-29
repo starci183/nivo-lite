@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { AutomationPipelinesModule } from "@modules/domain/automation-pipelines"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./booking-reminders.module-definition"
 import { BookingRemindersService } from "./booking-reminders.service"
 
@@ -11,6 +12,7 @@ export class BookingRemindersModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
+            imports: [...(base.imports ?? []), AutomationPipelinesModule.register({})],
             providers: [...(base.providers ?? []), BookingRemindersService],
             exports: [BookingRemindersService],
         }

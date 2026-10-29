@@ -87,3 +87,6 @@ export interface SyncCopy {
 
 /** The copy of an installation, or null when it has none. */
 export type OptionalSyncCopy = SyncCopy | null
+
+/** When the agent copies were last checked as ISO text, or null when none ever was. */
+export type OptionalCheckTime = string | null

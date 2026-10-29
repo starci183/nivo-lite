@@ -1,5 +1,5 @@
 /** An approval card as the decision flow reads it. */
-export interface ExecutionCard {
+export interface ExecutionRow {
     /** The execution id. */
     id: string
     /** `pending_approval`, `approved` or `rejected`. */
@@ -11,7 +11,7 @@ export interface ExecutionCard {
 }
 
 /** An approval card selected for a workspace's lead and sales views. */
-export interface ExecutionRecord extends ExecutionCard {
+export interface ExecutionRecordRow extends ExecutionRow {
     /** The workspace that owns the card. */
     readonly workspace_id: string
     /** The responsibility the draft belongs to. */
@@ -29,7 +29,7 @@ export interface ExecutionRecord extends ExecutionCard {
 }
 
 /** The status of one approval card. */
-export interface ExecutionStatus {
+export interface ExecutionStatusLine {
     /** The execution id. */
     readonly id: string
     /** `pending_approval`, `approved` or `rejected`. */
@@ -37,7 +37,7 @@ export interface ExecutionStatus {
 }
 
 /** A complete approval card, or null when the workspace has no such card. */
-export type OptionalExecutionRecord = ExecutionRecord | null
+export type OptionalExecutionRecord = ExecutionRecordRow | null
 
 /** What an approval card is made of. */
 export interface NewExecution {
@@ -57,7 +57,7 @@ export interface NewExecution {
 export type ExecutionDecision = "approved" | "rejected"
 
 /** An approval card, or null when the workspace has no such card. */
-export type OptionalExecution = ExecutionCard | null
+export type OptionalExecution = ExecutionRow | null
 
 /** What settling a card takes. */
 export interface ExecutionSettlement {

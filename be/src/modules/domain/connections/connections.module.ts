@@ -5,6 +5,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./connections.module-defi
 import { ConnectionsUpkeepService } from "./connections-upkeep.service"
 import { ConnectionsService } from "./connections.service"
 import { ConnectionsAdminReadService } from "./connections-admin-read.service"
+import { ConnectionSecretReadsService } from "./connection-secret-reads.service"
 
 @Module({})
 /** The connections capability over the primary Supabase PostgreSQL connection. */
@@ -18,10 +19,11 @@ export class ConnectionsModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 ConnectionsAdminReadService,
+                ConnectionSecretReadsService,
                 ConnectionsService,
                 ConnectionsUpkeepService,
             ],
-            exports: [ConnectionsAdminReadService, ConnectionsService],
+            exports: [ConnectionsAdminReadService, ConnectionSecretReadsService, ConnectionsService],
         }
     }
 }

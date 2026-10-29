@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { ExecutionsService } from "@modules/domain/executions"
-import type { ExecutionRecord } from "@modules/domain/executions"
+import type { ExecutionRecordRow } from "@modules/domain/executions"
 import { LeadReadService } from "@modules/domain/leads"
 import { MessagesReadService } from "@modules/domain/messages"
 import type { ThreadLine } from "@modules/domain/messages"
@@ -44,7 +44,7 @@ const lineOf = builder<ThreadLine>({
 
 const cardOf = (kind: string, id: string): string => JSON.stringify({ ref: { kind, id } })
 
-const recordOf = builder<ExecutionRecord>({
+const recordOf = builder<ExecutionRecordRow>({
     id: "x-1",
     workspace_id: "ws-1",
     responsibility_id: "r-1",
@@ -71,7 +71,7 @@ const itemOf = (id: string, status: WorkItem["status"], extra: Partial<WorkItem>
 /** What the owner capabilities answer; every read defaults to nothing. */
 interface Answers {
     readonly lines?: Array<ThreadLine>
-    readonly records?: Array<ExecutionRecord>
+    readonly records?: Array<ExecutionRecordRow>
     readonly statuses?: Array<{ id: string; status: string }>
     readonly items?: Array<WorkItem>
 }

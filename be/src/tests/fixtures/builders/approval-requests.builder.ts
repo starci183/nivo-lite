@@ -1,12 +1,15 @@
 import { builder } from "@starci/jest-preset"
 import type { ApprovalSetup } from "@modules/domain/authority-rules"
 import type { ApproverRef, DirectoryMember, MemberGrant } from "@modules/domain/member-grants"
-import { ApprovalRequestEntity } from "@modules/domain/approval-requests"
+import { approvalRequestsEntities } from "@modules/domain/approval-requests"
 import type {
     OpenApprovalParams,
     ApprovalRequestRecord,
     ApprovalVerdictRecord,
 } from "@modules/domain/approval-requests"
+
+const [ApprovalRequestEntity] = approvalRequestsEntities
+type ApprovalRequestEntity = InstanceType<typeof ApprovalRequestEntity>
 
 /** The moment the specs of the approval requests run at. */
 export const NOW = "2026-10-22T09:30:00.000Z"

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
-import { ConnectionSecretsService, safeEqual } from "@modules/domain/connection-secrets"
+import { safeEqual } from "@modules/domain/connection-secrets"
+import { ConnectionSecretReadsService } from "@modules/domain/connections"
 import { InjectWebhookProofRegistry } from "@modules/platform/http-security"
 import type { WebhookProof, WebhookProofRegistry, WebhookProofRequest } from "@modules/platform/http-security"
 
@@ -16,7 +17,7 @@ export class TelegramProofService implements WebhookProof, OnModuleInit {
 
     constructor(
         @InjectWebhookProofRegistry() private readonly registry: WebhookProofRegistry,
-        private readonly secrets: ConnectionSecretsService,
+        private readonly secrets: ConnectionSecretReadsService,
     ) {}
 
     /** Registers this proof for the telegram door. */

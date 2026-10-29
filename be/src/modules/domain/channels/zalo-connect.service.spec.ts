@@ -22,7 +22,7 @@ const stored: ZaloSecret = {
     appSecret: "app-secret",
     oaSecret: "",
     accessToken: "access-1",
-    refreshToken: "refresh-1",
+    renewalToken: "refresh-1",
 }
 
 const connection = builder<ConnectionRecord>({
@@ -198,7 +198,7 @@ describe("ZaloConnectService", () => {
                 appSecret: "app-secret",
                 oaSecret: key,
                 accessToken: "access-1",
-                refreshToken: "refresh-1",
+                renewalToken: "refresh-1",
             })
             expect(connections.authorize.mock.calls).toEqual([[actor, ["owner"]]])
             expect(credentials.load.mock.calls).toEqual([["c-1"]])

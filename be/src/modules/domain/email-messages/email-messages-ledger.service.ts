@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import type { ReminderInvoiceIds } from "./email-messages.contracts"
 import { EmailMessageEntity } from "./persistence/entities"
 
 @Injectable()
@@ -9,7 +10,7 @@ export class EmailMessagesLedgerService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** The invoice ids (null when a mail names none) a debt reminder was sent or is waiting for since the instant. */
-    async remindedInvoiceIds(workspaceId: string, since: Date, limit: number): Promise<Array<string | null>> {
+    async remindedInvoiceIds(workspaceId: string, since: Date, limit: number): Promise<ReminderInvoiceIds> {
         const rows = await this.entityManager
             .createQueryBuilder(EmailMessageEntity, "e")
             .select("e.refs ->> 'invoice_id'", "invoiceId")

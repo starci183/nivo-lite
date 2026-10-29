@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { ConversationTarget } from "@modules/domain/agent-conversations"
 import { AgentMessagesService } from "@modules/domain/agent-messages"
-import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
+import { ConnectionSecretReadsService } from "@modules/domain/connections"
 import { InjectTelegram } from "@modules/integrations/telegram"
 import type { TelegramClient } from "@modules/integrations/telegram"
 import { InjectZalo } from "@modules/integrations/zalo"
@@ -44,7 +44,7 @@ export class ChannelDeliveryService {
     constructor(
         private readonly conversations: AgentConversationsService,
         private readonly messages: AgentMessagesService,
-        private readonly secrets: ConnectionSecretsService,
+        private readonly secrets: ConnectionSecretReadsService,
         private readonly credentials: ZaloCredentialsService,
         private readonly zaloDelivery: ZaloDeliveryService,
         @InjectTelegram() private readonly telegram: TelegramClient,

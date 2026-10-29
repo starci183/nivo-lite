@@ -3,6 +3,7 @@ import type { EntityManager } from "typeorm"
 import { EngineStatusService } from "@modules/domain/agents"
 import type { EngineStatus } from "@modules/domain/agents"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import type { OptionalCheckTime } from "./openclaw-agent-sync.contracts"
 import { OpenclawAgentSyncEntity } from "./persistence/entities"
 
 @Injectable()
@@ -19,7 +20,7 @@ export class AgentSyncChecksService {
     }
 
     /** The latest check time of the workspace's agent copies as ISO text, or null when none was ever checked. */
-    async lastCheckAt(workspaceId: string): Promise<string | null> {
+    async lastCheckAt(workspaceId: string): Promise<OptionalCheckTime> {
         const latest = await this.entityManager.findOne(OpenclawAgentSyncEntity, {
             select: { checkedAt: true },
             where: { workspaceId },

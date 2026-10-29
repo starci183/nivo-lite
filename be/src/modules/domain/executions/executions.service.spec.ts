@@ -4,7 +4,7 @@ import { Test } from "@nestjs/testing"
 import { In } from "typeorm"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { fakeQueryBuilder, queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { ExecutionsErrorCode } from "./errors/executions.error"
 import type { NewExecution } from "./executions.contracts"
 import { ExecutionsService } from "./executions.service"
@@ -67,9 +67,8 @@ const build = async (entityManager: MockEntityManager) => {
 
 /** A manager whose update query builder answers `raw` and records its chain. */
 const settlingManager = (raw: ReadonlyArray<unknown>) => {
-    const fake = fakeQueryBuilder({ execute: { raw } })
     const manager = mockEntityManager()
-    manager.createQueryBuilder.mockReturnValue(fake.builder as never)
+    const [fake] = queueQueryBuilders(manager, [{ execute: { raw } }])
     return { fake, manager }
 }
 
@@ -215,6 +214,7 @@ describe("ExecutionsService approvals", () => {
         expect(em.find).toHaveBeenCalledWith(ExecutionEntity, {
             select: { id: true, status: true },
             where: { workspaceId: "ws-1", id: In(["exec-1"]) },
+            take: 1,
         })
     })
 })
@@ -225,8 +225,8 @@ describe("ExecutionsService settles", () => {
         const { fake, manager } = settlingManager([row])
 
         expect(await (await build(manager)).settle(settlement)).toEqual(row)
-        expect(fake.callsOf("update")).toEqual([[]])
-        expect(fake.callsOf("set")).toEqual([
+        expect(fake?.callsOf("update")).toEqual([[]])
+        expect(fake?.callsOf("set")).toEqual([
             [
                 {
                     status: "approved",
@@ -236,13 +236,13 @@ describe("ExecutionsService settles", () => {
                 },
             ],
         ])
-        expect(fake.callsOf("where")).toEqual([
+        expect(fake?.callsOf("where")).toEqual([
             [
                 "workspace_id = :workspaceId AND id = :executionId AND status = 'pending_approval'",
                 { workspaceId: "ws-1", executionId: "exec-1" },
             ],
         ])
-        expect(fake.callsOf("returning")).toEqual([["id, status, work_item_id, draft"]])
+        expect(fake?.callsOf("returning")).toEqual([["id, status, work_item_id, draft"]])
     })
 
     it("keeping the draft when nobody edited it", async () => {
@@ -250,7 +250,7 @@ describe("ExecutionsService settles", () => {
 
         await (await build(manager)).settle({ ...settlement, decision: "rejected", editedDraft: null })
 
-        expect(fake.callsOf("set")).toEqual([
+        expect(fake?.callsOf("set")).toEqual([
             [{ status: "rejected", decidedBy: "An", decidedAt: new Date("2026-10-12T10:00:00.000Z") }],
         ])
     })
