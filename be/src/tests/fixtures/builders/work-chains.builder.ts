@@ -1,7 +1,9 @@
 import { mockEntityManager, fakeQueryBuilder } from "@starci/jest-preset"
-import { WorkChainEntity } from "@modules/domain/work-chains"
+import { workChainsEntities } from "@modules/domain/work-chains"
 import type { ChainStepRead, ChainStepRecord, NewChainStep } from "@modules/domain/work-chains"
 import type { WorkThread } from "@modules/domain/work-threads"
+
+const [WorkChainEntity] = workChainsEntities
 
 /** The any-function matcher, typed `unknown` so it flows into any slot. */
 export const anyFunction = (): unknown => expect.any(Function)

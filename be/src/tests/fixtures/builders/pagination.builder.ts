@@ -4,8 +4,10 @@ import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { eachInOrder } from "@modules/platform/primitives"
 import { leadsEntities } from "@modules/domain/leads"
 import { ordersEntities } from "@modules/domain/orders"
-import { WorkThreadEntity } from "@modules/domain/work-threads"
+import { workThreadsEntities } from "@modules/domain/work-threads"
 import { workspacesEntities } from "@modules/domain/workspaces"
+
+const [WorkThreadEntity] = workThreadsEntities
 
 const [WorkspaceEntity] = workspacesEntities
 const [WorkspaceMemberEntity] = workspaceMembersEntities

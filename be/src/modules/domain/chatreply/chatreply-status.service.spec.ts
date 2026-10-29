@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import { AgentMessageEntity } from "@modules/domain/agent-messages"
-import { WorkItemEntity } from "@modules/domain/work-items"
+import { WorkItemsReplyProgressService } from "@modules/domain/work-items"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ChatReplyStatusService } from "./chatreply-status.service"
@@ -14,14 +14,17 @@ const JOB_STATUS = "SELECT * FROM public.job_status($1, $2, $3, $4)"
 const build = async () => {
     const entityManager = mockEntityManager()
     const members = mock<WorkspaceMembersService>()
+    const progress = mock<WorkItemsReplyProgressService>()
+    progress.answerProgress.mockResolvedValue(null)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChatReplyStatusService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: WorkspaceMembersService, useValue: members },
+            { provide: WorkItemsReplyProgressService, useValue: progress },
         ],
     }).compile()
-    return { service: moduleRef.get(ChatReplyStatusService), entityManager, members }
+    return { service: moduleRef.get(ChatReplyStatusService), entityManager, members, progress }
 }
 
 /** What the job function answers for one job: its row, or nothing for a job that does not exist. */
@@ -90,22 +93,19 @@ describe("ChatReplyStatusService", () => {
 describe("ChatReplyStatusService", () => {
     describe("answerStatus", () => {
         it("answerStatus exercises its first behavior through the compiled module", async () => {
-            const { service, entityManager, members } = await build()
-            const [read] = queueQueryBuilders(entityManager, [{ getRawOne: undefined }])
+            const { service, members, progress } = await build()
 
             await expect(service.answerStatus("user-1", "ws-1", "work-1")).rejects.toMatchObject({
                 code: ChatreplyErrorCode.NotFound,
             })
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-            expect(entityManager.createQueryBuilder).toHaveBeenCalledWith(WorkItemEntity, "w")
-            expect(read?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", workItemId: "work-1" })
+            expect(progress.answerProgress).toHaveBeenCalledWith("ws-1", "work-1")
 
             expect(service.answerStatus).toBeInstanceOf(Function)
         })
 
         it("refuses an answer absent from the verified workspace", async () => {
             const { service, entityManager, members } = await build()
-            queueQueryBuilders(entityManager, [{ getRawOne: undefined }])
 
             await expect(service.answerStatus("user-1", "ws-1", "work-1")).rejects.toMatchObject({
                 code: ChatreplyErrorCode.NotFound,
@@ -127,17 +127,13 @@ describe("ChatReplyStatusService", () => {
         ] as const)(
             "maps work %s, delivery %s and job %s",
             async (workStatus, deliveryStatus, jobState, messageId, status, errorCode) => {
-                const { service, entityManager, members } = await build()
-                queueQueryBuilders(entityManager, [
-                    {
-                        getRawOne: {
-                            id: "work-1",
-                            work_status: workStatus,
-                            delivery_status: deliveryStatus,
-                            message_id: messageId,
-                        },
-                    },
-                ])
+                const { service, entityManager, members, progress } = await build()
+                progress.answerProgress.mockResolvedValue({
+                    id: "work-1",
+                    work_status: workStatus,
+                    delivery_status: deliveryStatus,
+                    message_id: messageId,
+                })
                 entityManager.query.mockResolvedValue(jobAnswer(jobState))
 
                 await expect(service.answerStatus("user-1", "ws-1", "work-1")).resolves.toEqual({

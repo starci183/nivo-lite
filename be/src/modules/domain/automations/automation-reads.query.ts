@@ -3,7 +3,7 @@ import { AgentConversationEntity } from "@modules/domain/agent-conversations"
 import { EventEntity } from "@modules/domain/events"
 import { OrderEntity } from "@modules/domain/orders"
 import { InvoiceEntity } from "@modules/domain/invoices"
-import { WorkItemEntity } from "@modules/domain/work-items"
+import type { WorkItemsActivityService } from "@modules/domain/work-items"
 import { ContractEntity } from "@modules/domain/contracts"
 import { AgentMessageEntity } from "@modules/domain/agent-messages"
 import type { EntityManager } from "typeorm"
@@ -137,7 +137,12 @@ export const readLeadActivity = (
         .getRawMany<LeadActivity>()
 
 /** The figures of the day report from an instant on, read in one snapshot. */
-export const readDayFigures = (manager: EntityManager, workspaceId: string, start: string): Promise<DayFigures> =>
+export const readDayFigures = (
+    manager: EntityManager,
+    work: WorkItemsActivityService,
+    workspaceId: string,
+    start: string,
+): Promise<DayFigures> =>
     manager.transaction("REPEATABLE READ", async (tx) => {
         const from = { workspaceId, start }
         const newLeads = await tx
@@ -172,20 +177,14 @@ export const readDayFigures = (manager: EntityManager, workspaceId: string, star
                         .getQuery()}`,
             )
             .getRawOne<{ count: number }>()
-        const waiting = await tx
-            .createQueryBuilder(WorkItemEntity, "w")
-            .select("w.proposal ->> 'summary'", "summary")
-            .where("w.workspace_id = :workspaceId AND w.status = 'waiting_decision'", { workspaceId })
-            .orderBy("w.created_at", "ASC")
-            .limit(50)
-            .getRawMany<{ summary: string | null }>()
+        const waiting = await work.waitingSummaries(workspaceId, 50, tx)
         return {
             new_leads: newLeads?.count ?? 0,
             confirmed_orders: orders?.count ?? 0,
             confirmed_total: orders?.total ?? 0,
             money_in: moneyIn?.total ?? 0,
             won_leads: won?.count ?? 0,
-            waiting: waiting.map((one) => one.summary),
+            waiting,
         }
     })
 
@@ -290,26 +289,3 @@ export const readExpiringContracts = (
         .orderBy("c.ends_on", "ASC")
         .limit(100)
         .getRawMany<{ id: string; ends_on: string }>()
-
-/** The built-in care message the gate sent, or still holds, for a lead since an instant. */
-export const readBuiltInCare = (
-    manager: EntityManager,
-    workspaceId: string,
-    leadId: string,
-    since: string,
-): Promise<{ id: string } | undefined> =>
-    manager
-        .createQueryBuilder(WorkItemEntity, "w")
-        .select("w.id", "id")
-        .where("w.workspace_id = :workspaceId AND w.lead_id = :leadId AND w.action = 'send_care'", {
-            workspaceId,
-            leadId,
-        })
-        .andWhere(
-            "w.status IN ('done', 'waiting_decision') AND w.dedupe_key LIKE 'send_care:%' AND w.created_at >= :since",
-            {
-                since,
-            },
-        )
-        .limit(1)
-        .getRawOne<{ id: string }>()

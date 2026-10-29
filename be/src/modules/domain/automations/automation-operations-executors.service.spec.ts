@@ -9,6 +9,7 @@ import type { RunResult } from "@modules/domain/automation-runs"
 import { AutomationMessagesService } from "./automation-messages.service"
 import { AutomationRenewalPaymentService } from "./automation-renewal-payment.service"
 import { AUTOMATION_OFFICE, AUTOMATION_OWNER_CHAT, AUTOMATION_RECORDS } from "./automations.decorators"
+import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { AutomationOperationsExecutorsService } from "./automation-operations-executors.service"
 import type {
     AutomationOffice,
@@ -49,8 +50,17 @@ const dayFiguresAnswers = (figures: DayFigures | undefined): Array<QueryBuilderA
     { getRawOne: figures && { count: figures.confirmed_orders, total: figures.confirmed_total } },
     { getRawOne: figures && { total: figures.money_in } },
     { getRawOne: figures && { count: figures.won_leads } },
-    { getRawMany: (figures?.waiting ?? []).map((summary) => ({ summary })) },
 ]
+
+/** The summaries of the items waiting for a decision, as the work item reads answer them for each manager. */
+const WAITING = new WeakMap<MockEntityManager, ReadonlyArray<string | null>>()
+
+/** A manager whose four figure statements answer these figures and whose work item read answers their waiting list. */
+const dayEm = (figures: DayFigures | undefined): MockEntityManager => {
+    const { em } = readingOf(...dayFiguresAnswers(figures))
+    WAITING.set(em, figures?.waiting ?? [])
+    return em
+}
 
 const RENEWAL_REPORT = mock<RenewalCashReport>({ lines: ["   - Renewal line"] })
 const textLike = (text: string): unknown => expect.stringContaining(text)
@@ -116,6 +126,8 @@ const build = async (em: MockEntityManager = mockEntityManager(), useNullChat = 
     renewal.zaloWindowSteps.mockResolvedValue([])
     const desk = mock<DeskDailyService>()
     desk.renewalOfDay.mockResolvedValue(RENEWAL_REPORT)
+    const work = mock<WorkItemsActivityService>()
+    work.waitingSummaries.mockResolvedValue([...(WAITING.get(em) ?? [])])
     const moduleRef = await Test.createTestingModule({
         providers: [
             AutomationOperationsExecutorsService,
@@ -127,10 +139,11 @@ const build = async (em: MockEntityManager = mockEntityManager(), useNullChat = 
             { provide: AutomationMessagesService, useValue: messages },
             { provide: AutomationRenewalPaymentService, useValue: renewal },
             { provide: DeskDailyService, useValue: desk },
+            { provide: WorkItemsActivityService, useValue: work },
         ],
     }).compile()
     const service = moduleRef.get(AutomationOperationsExecutorsService)
-    return { office, records, chat, messages, renewal, desk, run: runner(service.executors()) }
+    return { office, records, chat, messages, renewal, desk, work, run: runner(service.executors()) }
 }
 
 const figures = {
@@ -144,7 +157,7 @@ const figures = {
 
 describe("AutomationOperationsExecutorsService daily_report", () => {
     it("posts the day to Office with the deals, the money and what waits", async () => {
-        const em = readingOf(...dayFiguresAnswers(figures)).em
+        const em = dayEm(figures)
         const { run, office, desk } = await build(em)
 
         const result = await run("daily_report", context(), { day: "2026-10-11" })
@@ -176,7 +189,7 @@ describe("AutomationOperationsExecutorsService daily_report", () => {
     })
 
     it("reports an empty day: today, no deals, nothing waiting", async () => {
-        const em = readingOf(...dayFiguresAnswers(undefined)).em
+        const em = dayEm(undefined)
         const { run, office } = await build(em)
 
         const result = await run("daily_report", context(), {})
@@ -194,7 +207,7 @@ describe("AutomationOperationsExecutorsService daily_report", () => {
     })
 
     it("also sends the report to the chat of the owner when asked", async () => {
-        const em = readingOf(...dayFiguresAnswers(figures)).em
+        const em = dayEm(figures)
         const { run, chat } = await build(em)
 
         const result = await run("daily_report", context({ toOwnerChat: true }), {})
@@ -204,9 +217,9 @@ describe("AutomationOperationsExecutorsService daily_report", () => {
     })
 
     it("says the chat was skipped when it cannot be reached or the null chat adapter is registered", async () => {
-        const unreachable = await build(readingOf(...dayFiguresAnswers(figures)).em)
+        const unreachable = await build(dayEm(figures))
         unreachable.chat.sendToOwner.mockResolvedValue(false)
-        const nullChat = await build(readingOf(...dayFiguresAnswers(figures)).em, true)
+        const nullChat = await build(dayEm(figures), true)
         const skipped = { label: "report.chatSkipped{}", status: "skipped", detail: "report.chatSkippedDetail{}" }
 
         const first = await unreachable.run("daily_report", context({ toOwnerChat: true }), {})

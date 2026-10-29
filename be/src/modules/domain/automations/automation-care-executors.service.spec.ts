@@ -4,6 +4,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { MockEntityManager } from "@starci/jest-preset"
 import type { RunResult } from "@modules/domain/automation-runs"
+import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { AutomationCareExecutorsService } from "./automation-care-executors.service"
 import { AutomationMessagesService } from "./automation-messages.service"
 import { AUTOMATION_OFFICE } from "./automations.decorators"
@@ -28,9 +29,6 @@ const readingOf = (...answers: Array<QueryBuilderAnswers>): ReadingManager => {
     READS.set(em, queueQueryBuilders(em, answers))
     return { em }
 }
-
-/** The fake statements of a manager made by {@link readingOf}, in the order the subject built them. */
-const readsOf = (em: object): ReadonlyArray<FakeQueryBuilder> => READS.get(em) ?? []
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 
@@ -62,7 +60,9 @@ const runner =
     (key: string, ctx: ExecutorContext, payload: ExecutorPayload): Promise<RunResult> =>
         executors[key]?.(ctx, payload) ?? Promise.reject(new TypeError(`no executor for ${key}`))
 
-const build = async (em: MockEntityManager = mockEntityManager()) => {
+const build = async (em: MockEntityManager = mockEntityManager(), care: string | null = null) => {
+    const work = mock<WorkItemsActivityService>()
+    work.builtInCareOf.mockResolvedValue(care)
     const office = mock<AutomationOffice>()
     const messages = mock<AutomationMessagesService>()
     messages.say.mockImplementation((key, params) => `${key}${JSON.stringify(params ?? {})}`)
@@ -86,17 +86,18 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: AUTOMATION_OFFICE, useValue: office },
             { provide: AutomationMessagesService, useValue: messages },
+            { provide: WorkItemsActivityService, useValue: work },
         ],
     }).compile()
     const service = moduleRef.get(AutomationCareExecutorsService)
-    return { service, office, messages, run: runner(service.executors()) }
+    return { service, office, messages, work, run: runner(service.executors()) }
 }
 
 describe("AutomationCareExecutorsService thank_payment", () => {
     const payload = { lead_id: "l-1", amount_vnd: 350000, invoice_id: "i-1", invoice_no: "HD1", at: NOW }
     it("thanks a payment through the gate", async () => {
-        const em = readingOf({ getRawOne: undefined }).em
-        const { run, messages } = await build(em)
+        const em = mockEntityManager()
+        const { run, messages, work } = await build(em)
 
         await expect(run("thank_payment", context(), payload)).resolves.toBe(SENT)
 
@@ -110,15 +111,12 @@ describe("AutomationCareExecutorsService thank_payment", () => {
                 vars: objectLike({ ten_khach: "An", ma_phieu: "HD1" }),
             }),
         )
-        expect(readsOf(em)[0]?.callsOf("andWhere")).toContainEqual([
-            expect.stringContaining("w.created_at >= :since"),
-            { since: "2026-10-12T09:50:00.000Z" },
-        ])
+        expect(work.builtInCareOf).toHaveBeenCalledWith("ws-1", "l-1", "2026-10-12T09:50:00.000Z", em)
     })
 
     it("falls back on the lead for the dedupe key and on the clock when the payment has no date", async () => {
-        const em = readingOf({ getRawOne: undefined }).em
-        const { run, messages } = await build(em)
+        const em = mockEntityManager()
+        const { run, messages, work } = await build(em)
 
         await run("thank_payment", context(), { lead_id: "l-1" })
 
@@ -126,10 +124,7 @@ describe("AutomationCareExecutorsService thank_payment", () => {
             expect.anything(),
             expect.objectContaining({ dedupe: "thank:l-1" }),
         )
-        expect(readsOf(em)[0]?.callsOf("andWhere")).toContainEqual([
-            expect.stringContaining("w.created_at >= :since"),
-            { since: "2026-10-12T09:40:00.000Z" },
-        ])
+        expect(work.builtInCareOf).toHaveBeenCalledWith("ws-1", "l-1", "2026-10-12T09:40:00.000Z", em)
     })
 
     it("skips a payment below the minimum amount", async () => {
@@ -141,8 +136,7 @@ describe("AutomationCareExecutorsService thank_payment", () => {
     })
 
     it("skips a missing lead, missing conversation and an existing built-in thank-you", async () => {
-        const em = readingOf({ getRawOne: { id: "w-9" } }).em
-        const { run, messages } = await build(em)
+        const { run, messages } = await build(mockEntityManager(), "w-9")
 
         messages.leadOf.mockResolvedValueOnce(null)
         await expect(run("thank_payment", context(), payload)).resolves.toMatchObject({ status: "skipped" })

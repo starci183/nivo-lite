@@ -3,6 +3,7 @@ import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builde
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AgentOwnershipService } from "@modules/domain/agents"
+import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { AuthorityRuleEntity } from "@modules/domain/authority-rules"
 import type { AgentOwnership } from "@modules/domain/agents"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -66,7 +67,9 @@ const RULE = builder<AuthorityRuleEntity>({
     agents: [],
 })
 
-const build = async (entityManager: MockEntityManager) => {
+const build = async (entityManager: MockEntityManager, recent: ReadonlyArray<RecentWorkRead> = []) => {
+    const activity = mock<WorkItemsActivityService>()
+    activity.recentOf.mockResolvedValue([...recent])
     const agents = mock<AgentOwnershipService>({ ownershipOf: jest.fn(() => Promise.resolve(OWNERSHIP)) })
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
@@ -75,16 +78,17 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: LOGGER, useValue: logger },
             { provide: AgentOwnershipService, useValue: agents },
+            { provide: WorkItemsActivityService, useValue: activity },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentProfileService), agents, logger }
+    return { service: moduleRef.get(AgentProfileService), agents, logger, activity }
 }
 
 describe("AgentProfileService", () => {
     it("composes the header, the ownership, the rules of its module and its recent work", async () => {
         const em = mockEntityManager({ find: [AuthorityRuleEntity, [RULE()]] })
-        const [head, recent] = queueQueryBuilders(em, [{ getRawOne: HEAD }, { getRawMany: [WORK] }])
-        const { service, agents } = await build(em)
+        const [head] = queueQueryBuilders(em, [{ getRawOne: HEAD }])
+        const { service, agents, activity } = await build(em, [WORK])
 
         const page = await service.page("u1", "w1", "a1")
 
@@ -117,15 +121,12 @@ describe("AgentProfileService", () => {
             order: { action: "ASC" },
             take: 50,
         })
-        expect(recent?.callsOf("where")).toEqual([
-            ["w.workspaceId = :workspaceId AND w.department = :department", { workspaceId: "w1", department: "sales" }],
-        ])
-        expect(recent?.callsOf("limit")).toEqual([[6]])
+        expect(activity.recentOf).toHaveBeenCalledWith("w1", "sales", 6)
     })
 
     it("fails the rules region in place (their statement is not answered) and keeps the rest of the page", async () => {
         const em = mockEntityManager()
-        queueQueryBuilders(em, [{ getRawOne: HEAD }, { getRawMany: [] }])
+        queueQueryBuilders(em, [{ getRawOne: HEAD }])
         const { service, logger } = await build(em)
 
         const page = await service.page("u1", "w1", "a1")
