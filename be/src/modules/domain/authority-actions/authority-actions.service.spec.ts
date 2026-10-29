@@ -109,6 +109,9 @@ describe("AuthorityActionsService", () => {
             })
         })
     })
+})
+
+describe("AuthorityActionsService", () => {
     describe("list", () => {
         it("reads an action without a default limit as null", async () => {
             const em = mockEntityManager({

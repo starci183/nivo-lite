@@ -49,89 +49,58 @@ const build = async (entityManager: MockEntityManager) => {
     return moduleRef.get(ApiKeysService)
 }
 
-describe("ApiKeysService", () => {
-    describe("authenticate", () => {
-        it("admits a working key with the hash of the bearer key as the only thing sent to the database", async () => {
-            const em = mockEntityManager({
-                query: [
-                    API_KEY_AUTH,
-                    [
-                        {
-                            api_key_auth: {
-                                id: "key-1",
-                                workspace_id: "workspace-1",
-                                name: "n8n",
-                                scopes: ["leads:read"],
-                                hits: 3,
-                            },
-                        },
-                    ],
-                ],
-            })
-            const keys = await build(em)
+/** A manager whose key lookup answers this verdict of the database function. */
+const authAnswering = (verdict: object | null) =>
+    mockEntityManager({ query: [API_KEY_AUTH, [{ api_key_auth: verdict }]] })
 
-            await expect(keys.authenticate("leads:read", "Bearer nvk_secret")).resolves.toEqual({
-                keyId: "key-1",
-                workspaceId: "workspace-1",
-                name: "n8n",
-                scopes: ["leads:read"],
-            })
+const WORKING = { id: "key-1", workspace_id: "workspace-1", scopes: ["leads:read"] }
 
-            expect(em.query).toHaveBeenCalledWith(API_KEY_AUTH, [hashKey("nvk_secret")])
+describe("ApiKeysService authenticate", () => {
+    it("admits a working key with the hash of the bearer key as the only thing sent to the database", async () => {
+        const em = authAnswering({ ...WORKING, name: "n8n", hits: 3 })
+        const keys = await build(em)
+
+        await expect(keys.authenticate("leads:read", "Bearer nvk_secret")).resolves.toEqual({
+            keyId: "key-1",
+            workspaceId: "workspace-1",
+            name: "n8n",
+            scopes: ["leads:read"],
         })
 
-        it("refuses a request with no bearer key without touching the database", async () => {
-            const em = mockEntityManager()
-            const keys = await build(em)
+        expect(em.query).toHaveBeenCalledWith(API_KEY_AUTH, [hashKey("nvk_secret")])
+    })
 
-            await expect(keys.authenticate("leads:read")).rejects.toMatchObject({
-                code: ApiKeysErrorCode.Unauthorized,
-            })
+    it("refuses a request with no bearer key without touching the database", async () => {
+        const em = mockEntityManager()
+        const keys = await build(em)
 
-            expect(em.query).not.toHaveBeenCalled()
+        await expect(keys.authenticate("leads:read")).rejects.toMatchObject({ code: ApiKeysErrorCode.Unauthorized })
+
+        expect(em.query).not.toHaveBeenCalled()
+    })
+
+    it("refuses a key no workspace issued and an answer with no row at all", async () => {
+        const unknown = await build(authAnswering(null))
+        const empty = await build(mockEntityManager({ query: [API_KEY_AUTH, []] }))
+
+        await expect(unknown.authenticate("leads:read", "Bearer nvk_unknown")).rejects.toMatchObject({
+            code: ApiKeysErrorCode.Unauthorized,
         })
-
-        it("refuses a key no workspace issued and an answer with no row at all", async () => {
-            const unknown = await build(mockEntityManager({ query: [API_KEY_AUTH, [{ api_key_auth: null }]] }))
-            await expect(unknown.authenticate("leads:read", "Bearer nvk_unknown")).rejects.toMatchObject({
-                code: ApiKeysErrorCode.Unauthorized,
-            })
-
-            const empty = await build(mockEntityManager({ query: [API_KEY_AUTH, []] }))
-            await expect(empty.authenticate("leads:read", "Bearer nvk_unknown")).rejects.toMatchObject({
-                code: ApiKeysErrorCode.Unauthorized,
-            })
+        await expect(empty.authenticate("leads:read", "Bearer nvk_unknown")).rejects.toMatchObject({
+            code: ApiKeysErrorCode.Unauthorized,
         })
+    })
 
-        it("refuses a revoked key and a key over its budget with the parameters of the refusal", async () => {
-            const revoked = await build(
-                mockEntityManager({ query: [API_KEY_AUTH, [{ api_key_auth: { revoked: true } }]] }),
-            )
-            await expect(revoked.authenticate("leads:read", "Bearer nvk_old")).rejects.toMatchObject({
-                code: ApiKeysErrorCode.Revoked,
-            })
+    it("refuses a revoked key and a key over its budget with the parameters of the refusal", async () => {
+        const revoked = await build(authAnswering({ revoked: true }))
+        const busy = await build(authAnswering({ ...WORKING, hits: 61 }))
 
-            const busy = await build(
-                mockEntityManager({
-                    query: [
-                        API_KEY_AUTH,
-                        [
-                            {
-                                api_key_auth: {
-                                    id: "key-1",
-                                    workspace_id: "workspace-1",
-                                    scopes: ["leads:read"],
-                                    hits: 61,
-                                },
-                            },
-                        ],
-                    ],
-                }),
-            )
-            await expect(busy.authenticate("leads:read", "Bearer nvk_busy")).rejects.toMatchObject({
-                code: ApiKeysErrorCode.RateLimited,
-                params: { limit: 60, retryAfter: 40 },
-            })
+        await expect(revoked.authenticate("leads:read", "Bearer nvk_old")).rejects.toMatchObject({
+            code: ApiKeysErrorCode.Revoked,
+        })
+        await expect(busy.authenticate("leads:read", "Bearer nvk_busy")).rejects.toMatchObject({
+            code: ApiKeysErrorCode.RateLimited,
+            params: { limit: 60, retryAfter: 40 },
         })
     })
 })

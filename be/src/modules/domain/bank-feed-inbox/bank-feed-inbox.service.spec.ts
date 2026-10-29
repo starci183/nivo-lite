@@ -1,9 +1,10 @@
 import { IsNull } from "typeorm"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { fakeInbox, mockEntityManager } from "@starci/jest-preset"
 import { INBOX } from "@modules/platform/inbox"
-import { fakeRowInbox } from "@tests/fixtures/builders/row-claims.builder"
+import type { EntityInbox } from "@modules/platform/inbox"
+import type { RowClaim } from "@tests/fixtures/builders/row-claims.builder"
 import { BankFeedReceiptService } from "./bank-feed-inbox.service"
 import type { FeedReceiptPayload } from "./bank-feed-inbox.contracts"
 import { BankFeedInboxEntity } from "./persistence/entities"
@@ -29,19 +30,25 @@ const build = async (row: BankFeedInboxEntity | null = pending) => {
         findOne: [BankFeedInboxEntity, row],
         update: [BankFeedInboxEntity, {}],
     })
-    const inbox = fakeRowInbox()
+    const inbox = fakeInbox()
+    const rowClaims: Array<RowClaim> = []
+    const claimRow: EntityInbox["claimRow"] = (source, eventId, _manager, receipt) => {
+        rowClaims.push({ source, eventId, receipt })
+        return inbox.claim(source, eventId)
+    }
+    Object.assign(inbox, { claimRow })
     const moduleRef = await Test.createTestingModule({
         providers: [BankFeedReceiptService, { provide: INBOX, useValue: inbox }],
     }).compile()
-    return { service: moduleRef.get(BankFeedReceiptService), inbox, manager }
+    return { service: moduleRef.get(BankFeedReceiptService), inbox, manager, rowClaims }
 }
 
 describe("BankFeedReceiptService", () => {
     it.each([true, false])("returns the claim result %s in the caller's transaction", async (claimed) => {
-        const { service, inbox, manager } = await build()
+        const { service, inbox, manager, rowClaims } = await build()
         if (!claimed) inbox.seen("payos", "delivery-1")
         await expect(service.claim(manager, "payos", "delivery-1", payload)).resolves.toBe(claimed)
-        expect(inbox.rowClaims).toEqual([
+        expect(rowClaims).toEqual([
             {
                 source: "payos",
                 eventId: "delivery-1",

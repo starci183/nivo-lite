@@ -1,13 +1,12 @@
 import { Test } from "@nestjs/testing"
 import { In } from "typeorm"
-import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, fakeTransaction, mock, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { OPENCLAW_GATEWAY } from "@modules/integrations/openclaw"
 import type { GatewayClient, TurnResult } from "@modules/integrations/openclaw"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { EVENT_BUS } from "@modules/platform/event-bus"
-import type { EventBus } from "@modules/platform/event-bus"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
@@ -83,8 +82,7 @@ const build = async (entityManager: MockEntityManager, setup: Setup = {}) => {
     })
     const usage = mock<UsageGate>({ record: jest.fn(() => Promise.resolve()) })
     const logger = mock<Logger>()
-    const bus = mock<EventBus>()
-    bus.publish.mockResolvedValue(undefined)
+    const bus = recordingEventBus()
     const moduleRef = await Test.createTestingModule({
         providers: [
             GenerationRunnerService,
@@ -101,7 +99,7 @@ const build = async (entityManager: MockEntityManager, setup: Setup = {}) => {
 }
 
 /** The event the runner publishes for generation g1 of workspace w1. */
-const completedAs = (status: "done" | "error" | "cancelled") =>
+const completedAs = (status: "done" | "error" | "cancelled"): unknown =>
     expect.objectContaining({
         eventName: "ai_generation_completed",
         eventId: "g1",
@@ -116,8 +114,7 @@ describe("GenerationRunnerService", () => {
 
         await expect(runner.runJob(job)).resolves.toBeUndefined()
 
-        expect(bus.publish).toHaveBeenCalledTimes(1)
-        expect(bus.publish).toHaveBeenCalledWith(completedAs("done"), expect.anything(), "g1")
+        expect(bus.writes).toEqual([completedAs("done")])
     })
 
     it("publishes nothing for a job of another shape", async () => {
@@ -126,13 +123,13 @@ describe("GenerationRunnerService", () => {
 
         await expect(runner.runJob(job)).resolves.toBeUndefined()
 
-        expect(bus.publish).not.toHaveBeenCalled()
+        expect(bus.writes).toEqual([])
     })
 
     it("lets a failure to publish undo the finishing write, so nothing is metered", async () => {
         const { em } = managerOf()
         const { runner, bus, usage } = await build(em)
-        bus.publish.mockRejectedValue(new Error("bus down"))
+        bus.failNext("publish", new Error("bus down"))
 
         await expect(runner.run(PAYLOAD)).rejects.toThrow("bus down")
 
@@ -192,7 +189,7 @@ describe("GenerationRunnerService", () => {
             usage: USAGE,
             completionChars: 5,
         })
-        expect(bus.publish).toHaveBeenCalledWith(completedAs("done"), expect.anything(), "g1")
+        expect(bus.writes).toEqual([completedAs("done")])
     })
 })
 
@@ -271,7 +268,7 @@ describe("GenerationRunnerService", () => {
 
         await expect(runner.run(PAYLOAD)).resolves.toBe("dropped")
         expect(usage.record).not.toHaveBeenCalled()
-        expect(bus.publish).not.toHaveBeenCalled()
+        expect(bus.writes).toEqual([])
     })
 
     it.each<[string, unknown]>([
@@ -286,7 +283,7 @@ describe("GenerationRunnerService", () => {
 
         await expect(runner.run(PAYLOAD)).resolves.toBe("dropped")
         expect(usage.record).not.toHaveBeenCalled()
-        expect(bus.publish).not.toHaveBeenCalled()
+        expect(bus.writes).toEqual([])
     })
 
     it("drops a payload of another shape", async () => {
@@ -325,7 +322,7 @@ describe("GenerationRunnerService", () => {
                 finishedAt: new Date("2026-10-12T10:00:00.000Z"),
             },
         )
-        expect(bus.publish).toHaveBeenCalledWith(completedAs("error"), expect.anything(), "g1")
+        expect(bus.writes).toEqual([completedAs("error")])
     })
 })
 
@@ -367,7 +364,7 @@ describe("GenerationRunnerService", () => {
                 finishedAt: new Date("2026-10-12T10:00:00.100Z"),
             },
         )
-        expect(bus.publish).toHaveBeenCalledWith(completedAs("error"), expect.anything(), "g1")
+        expect(bus.writes).toEqual([completedAs("error")])
     })
 })
 
@@ -384,7 +381,7 @@ describe("GenerationRunnerService", () => {
         expect(usage.record).not.toHaveBeenCalled()
         expect(em.findOne.mock.calls).toEqual([[AiGenerationEntity, FIND_OPTIONS]])
         expect(em.update.mock.calls).toEqual([STARTED, cancelledAt("2026-10-12T10:00:00.000Z")])
-        expect(bus.publish).toHaveBeenCalledWith(completedAs("cancelled"), expect.anything(), "g1")
+        expect(bus.writes).toEqual([completedAs("cancelled")])
         expect(logger.error).toHaveBeenCalledWith(
             AiGenerationsLogEvent.GenerationFailed,
             expect.objectContaining({ name: "TimeoutError" }),
@@ -406,7 +403,7 @@ describe("GenerationRunnerService", () => {
         ])
         expect(em.findOne.mock.calls).toEqual([[AiGenerationEntity, FIND_OPTIONS]])
         expect(em.update.mock.calls).toEqual([STARTED, cancelledAt("2026-10-12T10:00:00.100Z")])
-        expect(bus.publish).toHaveBeenCalledWith(completedAs("cancelled"), expect.anything(), "g1")
+        expect(bus.writes).toEqual([completedAs("cancelled")])
         expect(usage.record).not.toHaveBeenCalled()
     })
 })

@@ -62,7 +62,9 @@ describe("AgentIdentityService", () => {
             expect(em.update).not.toHaveBeenCalled()
         })
     })
+})
 
+describe("AgentIdentityService", () => {
     describe("setAvatar", () => {
         it("sets and clears the picture of an agent for a manager", async () => {
             const em = mockEntityManager({ update: [AgentEntity, { affected: 1 }] })
