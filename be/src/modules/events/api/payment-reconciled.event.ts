@@ -7,7 +7,7 @@ import { isAmountOrNull, isKey, isTextOrNull, openEnvelope } from "./money-event
  * matched). A reactor reads the current state of what it acts on and takes only identities and display facts from here. `dedupeKey`
  * is the invoice id: an invoice is settled once.
  */
-export interface PaymentReconciledPayload extends EventPayload {
+export interface PaymentReconciledInput {
     /** The workspace of the invoice. */
     readonly workspaceId: string
     /** The settled invoice; equals `dedupeKey`. */
@@ -42,6 +42,9 @@ export interface PaymentReconciledPayload extends EventPayload {
     readonly periodEndsOn: string | null
 }
 
+/** The payload of the event as published; the dedupe key is derived from the input. */
+export interface PaymentReconciledPayload extends EventPayload, PaymentReconciledInput {}
+
 /** Version 1 of `payment_reconciled`, published by the reconcile-payment work in the transaction that marks an invoice paid. */
 export class PaymentReconciledEvent extends BaseEvent {
     static readonly eventName = "payment_reconciled"
@@ -57,7 +60,7 @@ export class PaymentReconciledEvent extends BaseEvent {
     }
 
     /** The invoice id is the identity of the fact: an invoice is settled once. */
-    static create(payload: Omit<PaymentReconciledPayload, "dedupeKey">): PaymentReconciledEvent {
+    static create(payload: PaymentReconciledInput): PaymentReconciledEvent {
         return new PaymentReconciledEvent(payload.invoiceId, { ...payload, dedupeKey: payload.invoiceId })
     }
 

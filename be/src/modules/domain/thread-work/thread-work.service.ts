@@ -33,8 +33,7 @@ import type {
 /** The most settled approvals one tick moves on. */
 const SETTLED_BATCH = 20
 
-/** The asking work one read of the settled scan looks at, and the most it looks at in one tick. */
-const ASKED_PAGE = 100
+/** The most asking work one tick looks at. */
 const ASKED_SCAN_MAX = 1000
 
 /** Who the runtime acts as when no person is acting. */
@@ -219,30 +218,27 @@ export class ThreadWorkService {
 
     /**
      * The thread work that asked for an approval whose request has since been settled, with how it ended: the asking work oldest
-     * first (of one request when `requestId` names it), page by page, until `limit` of them are settled.
+     * first (of one request when `requestId` names it), read once up to the scan bound, `limit` of them kept.
      */
     private async settledAsks(limit: number, requestId: string | null): Promise<Array<SettledAskRecord>> {
-        const found: Array<SettledAskRecord> = []
-        for (let skip = 0; skip < ASKED_SCAN_MAX && found.length < limit; skip += ASKED_PAGE) {
-            const asked = await this.entityManager.find(ThreadWorkEntity, {
-                where: { state: "asked", approvalRequestId: requestId ?? Not(IsNull()) },
-                order: { updatedAt: "ASC", id: "ASC" },
-                skip,
-                take: requestId === null ? ASKED_PAGE : 1,
-            })
-            const ended = new Map(
-                (await this.requests.settledOf(asked.flatMap((row) => row.approvalRequestId ?? []))).map((request) => [
-                    request.id,
-                    request,
-                ]),
-            )
-            for (const row of asked) {
+        const asked = await this.entityManager.find(ThreadWorkEntity, {
+            where: { state: "asked", approvalRequestId: requestId ?? Not(IsNull()) },
+            order: { updatedAt: "ASC", id: "ASC" },
+            take: requestId === null ? ASKED_SCAN_MAX : 1,
+        })
+        const ended = new Map(
+            (await this.requests.settledOf(asked.flatMap((row) => row.approvalRequestId ?? []))).map((request) => [
+                request.id,
+                request,
+            ]),
+        )
+        return asked
+            .flatMap((row) => {
                 const end = ended.get(row.approvalRequestId ?? "")
-                if (end === undefined) continue
-                found.push({ ...toThreadWorkRecord(row), request_status: end.status, resolved_by: end.resolvedBy })
-            }
-            if (requestId !== null || asked.length < ASKED_PAGE) break
-        }
-        return found.slice(0, limit)
+                return end === undefined
+                    ? []
+                    : [{ ...toThreadWorkRecord(row), request_status: end.status, resolved_by: end.resolvedBy }]
+            })
+            .slice(0, limit)
     }
 }

@@ -1,11 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { ModuleReadinessService } from "@modules/domain/modules"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import type {
     DailyOutcome,
@@ -29,8 +27,8 @@ import {
 } from "./daily-summary.policy"
 import { EinvoiceReviewService } from "./einvoice-review.service"
 import { SUMMARY_COPY } from "./messages/accounting-desk.messages"
-import { readRenewalCash } from "./renewal-cash.query"
 import { ReceivableReconcileService } from "./receivable-reconcile.service"
+import { RenewalCashService } from "./renewal-cash.service"
 import { SupplierPaymentsService } from "./supplier-payments.service"
 import { payablesDue, remindersToday, upcomingDues } from "./tax-calendar.policy"
 import { suppliersOf, taxProfileOf } from "./tax-profile.policy"
@@ -97,7 +95,7 @@ export class DeskDailyService {
         private readonly supplierPayments: SupplierPaymentsService,
         private readonly room: AccountingRoomService,
         @InjectClock() private readonly clock: Clock,
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly renewal: RenewalCashService,
     ) {}
 
     /** Runs the morning for every workspace with the accounting module. */
@@ -162,7 +160,7 @@ export class DeskDailyService {
     /** The renewal-to-cash story of a window, read only from the invoices, contracts and inbound payments, with its lines. */
     async renewalOf(workspaceId: string, window: RenewalWindow): Promise<RenewalCashReport> {
         const horizonDay = dayAfter(window.day, HORIZON_DAYS)
-        const row = await readRenewalCash(this.entityManager, {
+        const row = await this.renewal.read({
             workspaceId,
             from: window.from,
             to: window.to,

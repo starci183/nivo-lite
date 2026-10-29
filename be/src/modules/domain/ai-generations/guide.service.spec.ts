@@ -100,6 +100,9 @@ describe("GuideService", () => {
         expect(generations.request).not.toHaveBeenCalled()
     })
 
+})
+
+describe("GuideService prompt", () => {
     it("treats an absent count row as zero and sends the localized staff prompt in the locked transaction", async () => {
         const { service, generations, tx, catalog } = await build(undefined)
 

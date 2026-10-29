@@ -1,26 +1,18 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import type { AgentCard } from "@modules/domain/agents"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
-import type { DirectoryMember } from "@modules/domain/workspace-members"
 import type { ThreadMessageRead, ThreadMessageRecord } from "./thread-messages.contracts"
 
-/** The agents and members that wrote some messages, by id. */
-interface Authors {
-    readonly agents: ReadonlyMap<string, AgentCard>
-    readonly members: ReadonlyMap<string, DirectoryMember>
-}
+/** The name and role an author shows under, by `kind:id`. */
+type Authors = ReadonlyMap<string, { readonly name: string; readonly role: string }>
+
+const authorKey = (kind: string, id: string): string => `${kind}:${id}`
 
 /** The message with the name of its author: an agent name and module, or a member display name and role; empty when the author is gone. */
 const namedBy = (row: ThreadMessageRead, authors: Authors): ThreadMessageRecord => {
-    const agent = row.author_kind === "agent" ? authors.agents.get(row.author_id) : undefined
-    const member = row.author_kind === "member" ? authors.members.get(row.author_id) : undefined
-    return {
-        ...row,
-        author_name: agent?.name ?? member?.displayName ?? "",
-        author_role: agent?.module ?? member?.role ?? "",
-    }
+    const author = authors.get(authorKey(row.author_kind, row.author_id))
+    return { ...row, author_name: author?.name ?? "", author_role: author?.role ?? "" }
 }
 
 @Injectable()
@@ -55,16 +47,17 @@ export class ThreadMessageAuthorsService {
         workspaceId: string,
         rows: ReadonlyArray<ThreadMessageRead>,
     ): Promise<Authors> {
-        const idsOf = (kind: string): Array<string> => [
-            ...new Set(rows.filter((row) => row.author_kind === kind).map((row) => row.author_id)),
-        ]
+        const authorIds = (kind: string): Array<string> =>
+            Array.from(new Set(rows.filter((row) => row.author_kind === kind).map((row) => row.author_id)))
         const [agents, members] = await Promise.all([
-            this.agents.cardsOf(workspaceId, idsOf("agent")),
-            this.members.byIds(workspaceId, idsOf("member"), manager),
+            this.agents.cardsOf(workspaceId, authorIds("agent")),
+            this.members.byIds(workspaceId, authorIds("member"), manager),
         ])
-        return {
-            agents: new Map(agents.map((agent) => [agent.id, agent])),
-            members: new Map(members.map((member) => [member.id, member])),
-        }
+        return new Map([
+            ...agents.map((agent) => [authorKey("agent", agent.id), { name: agent.name, role: agent.module }] as const),
+            ...members.map(
+                (member) => [authorKey("member", member.id), { name: member.displayName, role: member.role }] as const,
+            ),
+        ])
     }
 }

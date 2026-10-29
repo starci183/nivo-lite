@@ -28,6 +28,11 @@ turns every granted key into one versioned Swarm secret (see the production READ
 | `SITE_URL` | `api-public.conf` | The public origin of the console (`https://app.nivo.vn`); the browser return pages are served there. |
 | `PUBLIC_SITE_URL` | `api-public.conf` | The public origin of the console, used in links the api sends. |
 | `PUBLIC_API_URL` | `api-public.conf` | The public origin of the api (`https://api.nivo.vn`), used in webhook and callback URLs and as the base of the agents' tool door (`<origin>/agent-tools`); it must be https (http only for a loopback host) or the api refuses to boot. |
+| `AUTH_WEB_ORIGIN` | `api-public.conf` | The public origin of the console (`https://app.nivo.vn`) the own auth returns browsers to and trusts for cookies. |
+| `AUTH_GOOGLE_CALLBACK_URL` | `api-public.conf` | The Google sign-in callback registered with the OAuth client (`https://api.nivo.vn/auth/google/callback`). |
+| `STORAGE_ENDPOINT` | `api-public.conf` | The MinIO S3 address over the shared `nivo-edge-swarm` overlay (`http://academy-minio:9000`); public configuration, not a secret. |
+| `STORAGE_PUBLIC_URL` | `api-public.conf` | The origin browsers upload to and read from (`https://minio.starci.org`); presigned addresses are signed for it. |
+| `STORAGE_BUCKET_PREFIX` | `api-public.conf` | `nivo`: buckets are `<prefix>-avatars-public`, `-media`, `-videos`, `-hiring`, `-knowledge-uploads`. |
 | `PORT` | stack environment | The listener port (`8787`). |
 | `QUEUE_REDIS_PASSWORD` | its sealed member (see SECRETS-PLAN.md) | The password of the declared Redis (the BullMQ broker): the api reads it as `QUEUE_REDIS_PASSWORD_FILE`, the `nivo-redis` service starts with `--requirepass` from the same Swarm secret, and holds no trailing newline. Never printed, never read from a file by hand: `starci app secret set production api QUEUE_REDIS_PASSWORD --generate 32`. |
 | `QUEUE_REDIS_HOST` | stack environment | `nivo-redis`, the one Redis service on the private `agents` network. |
@@ -47,6 +52,8 @@ The capability is off while its keys are absent; a group is all-or-none where no
 | `OPENCLAW_GATEWAY_URL` | Gateway URL (`ws://nivo-openclaw:18790`), set by the deploy block; absent or without credentials = the gateway is off. |
 | `OPENCLAW_GATEWAY_TOKEN` | Gateway token, granted to the api and to openclaw from the sealed `openclaw`/`n8n` member. |
 | `OPENCLAW_GATEWAY_PASSWORD` | Alternative gateway credential when no token exists; not used in production. |
+| `OPENCLAW_AI_KEY` | The virtual key of the AI gateway that openclaw uses, sealed in the `openclaw` member and granted to the openclaw service only. |
+| `BACKUP_RUN_ONCE` | Stack environment of `nivo-postgres-backup`: `1` takes one backup now and exits (tests and the manual run); unset keeps the daily schedule. |
 | `OPENCLAW_TOOL_SECRET` | Sealed `api`, read only through `OPENCLAW_TOOL_SECRET_FILE`: signs the per-turn tool token OpenClaw calls the api back with. Without it no token is minted, so a turn of an agent holding connector grants fails closed (`tools_not_configured`); other agents answer without tools. |
 | `OPENCLAW_MANAGE_AGENTS` | `true` or `false`; granted from the sealed `openclaw`/`n8n` member. |
 | `META_APP_ID` | The Meta app credentials (both or none); the Meta channels are off while absent. |

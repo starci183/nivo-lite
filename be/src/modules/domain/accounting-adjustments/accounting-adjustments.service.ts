@@ -34,20 +34,6 @@ const toRow = (entity: AccountingAdjustmentEntity): AccountingAdjustmentRow => (
     created_at: entity.createdAt.toISOString(),
 })
 
-/** The columns the appending statement hands back. */
-const RETURNED_COLUMNS = "id, target_type, target_id, note, corrected_amount_vnd, created_by, created_at"
-
-/** The correction the appending statement hands back: the driver delivers bigint as text and timestamptz as a Date. */
-interface CreatedRow {
-    readonly id: string
-    readonly target_type: "invoice" | "transaction"
-    readonly target_id: string
-    readonly note: string
-    readonly corrected_amount_vnd: string | null
-    readonly created_by: string
-    readonly created_at: Date
-}
-
 @Injectable()
 /** The only owner of public.accounting_adjustments; every correction and its evidence line commit together. */
 export class AccountingAdjustmentsService {
@@ -92,22 +78,17 @@ export class AccountingAdjustmentsService {
         if (target === null) throw new AccountingAdjustmentsError({ code: AccountingAdjustmentsErrorCode.NotFound })
         const leadId = "lead_id" in target ? target.lead_id : null
         return this.entityManager.transaction(async (manager) => {
-            const inserted = await manager
-                .createQueryBuilder(AccountingAdjustmentEntity, "aa")
-                .insert()
-                .values({
+            const created = await manager.save(
+                AccountingAdjustmentEntity,
+                manager.create(AccountingAdjustmentEntity, {
                     workspaceId,
                     targetType: input.targetType,
                     targetId: input.targetId,
                     note: input.note,
                     correctedAmountVnd: input.correctedAmount === null ? null : String(input.correctedAmount),
                     createdBy: member.displayName,
-                })
-                .returning(RETURNED_COLUMNS)
-                .execute()
-            const [created] = Array.isArray(inserted.raw) ? (inserted.raw as Array<CreatedRow>) : []
-            if (created === undefined)
-                throw new AccountingAdjustmentsError({ code: AccountingAdjustmentsErrorCode.NotCreated })
+                }),
+            )
             await this.events.record(
                 {
                     workspaceId,
@@ -120,16 +101,7 @@ export class AccountingAdjustmentsService {
                 },
                 manager,
             )
-            return {
-                id: created.id,
-                target_type: created.target_type,
-                target_id: created.target_id,
-                note: created.note,
-                corrected_amount_vnd:
-                    created.corrected_amount_vnd === null ? null : Number(created.corrected_amount_vnd),
-                created_by: created.created_by,
-                created_at: created.created_at.toISOString(),
-            }
+            return toRow(created)
         })
     }
 }

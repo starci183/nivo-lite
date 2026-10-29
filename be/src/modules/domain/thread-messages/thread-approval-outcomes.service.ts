@@ -14,7 +14,7 @@ import { ThreadMessagesError, ThreadMessagesErrorCode } from "./errors/thread-me
 import { MentionDirectoryService } from "./mention-directory.service"
 import { ThreadMessageAuthorsService } from "./thread-message-authors.service"
 import { ThreadMessageEntity } from "./persistence/entities"
-import { selectMessages } from "./persistence/thread-message.query"
+import { selectMessageColumns } from "./persistence/thread-message.query"
 import { toMessage } from "./thread.mapper"
 import { ThreadMessagesService } from "./thread-messages.service"
 import type {
@@ -83,7 +83,7 @@ export class ThreadApprovalOutcomesService {
 
     /** Locks the message of a card for the rest of the transaction. */
     async lock(tx: EntityManager, workspaceId: string, messageId: string): Promise<ThreadMessageRecord> {
-        const row = await selectMessages(tx, workspaceId)
+        const row = await selectMessageColumns(tx.createQueryBuilder(ThreadMessageEntity, "m"), workspaceId)
             .andWhere("m.id = :messageId", { messageId })
             .limit(1)
             .setLock("pessimistic_write", undefined, ["m"])

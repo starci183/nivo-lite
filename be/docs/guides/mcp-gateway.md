@@ -104,7 +104,7 @@ connector-specific argument shapes.
   user session, so every access token is refused.
 - The door is a `@Credential({ kind: "tool-token", workflow: "mcp-gateway" })` door. Its credential is an agent key: an API key
   of `be/src/modules/domain/api-keys` bound to one agent of the workspace (`api_keys.agent_id`, migration
-  `supabase/migrations/20261101000903_api-key-agent-binding.sql`) that carries only the `tools:call` scope. An owner or manager creates it with
+  `db/migrations/20261101000903_api-key-agent-binding.sql`) that carries only the `tools:call` scope. An owner or manager creates it with
   `createApiKey(input: { name, agentId })`; the secret is shown once and only its hash is stored.
 - `McpAgentAuthenticatorService` of `be/src/modules/domain/api-credentials` verifies it (`ApiKeysService.verifyAgentKey`): the
   caller is the agent the key is bound to, in the only workspace the key acts for. A missing or unknown key, a revoked key, a
@@ -166,7 +166,7 @@ assume nothing happened.
   `tools/list`). Rotate it with `setMcpConnectorCredential(input: { key, credential })`, which seals the new value and reads the
   catalog with it. The tools stay unapproved until an owner or manager reviews the pinned tools (`mcpConnectors`) and approves them
   with `approveMcpConnector(input: { key })`.
-- Migration `supabase/migrations/20261103000100_mcp-sealed-credential_contract_drop.sql` drops `credential_ref`: a row that named a gateway variable
+- Migration `db/migrations/20261103000100_mcp-sealed-credential_contract_drop.sql` drops `credential_ref`: a row that named a gateway variable
   becomes `needed`, and its credential is entered once in the console.
 
 ## Known limits

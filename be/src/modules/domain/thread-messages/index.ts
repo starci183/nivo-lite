@@ -11,7 +11,7 @@ export type {
 } from "./thread-messages.contracts"
 export { MentionDirectoryService } from "./mention-directory.service"
 export { ThreadMessageAuthorsService } from "./thread-message-authors.service"
-export type { ThreadMessageRead, ThreadMessageRecord } from "./thread-messages.contracts"
+export type { ThreadMessageRead } from "./thread-messages.contracts"
 export { ThreadApprovalsService } from "./thread-approvals.service"
 export { ThreadAgentPostsService } from "./thread-agent-posts.service"
 export { ThreadAssignmentsService } from "./thread-assignments.service"

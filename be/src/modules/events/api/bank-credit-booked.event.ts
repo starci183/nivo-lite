@@ -6,7 +6,7 @@ import { isKey, openEnvelope } from "./money-event.policy"
  * The payload of the `bank_credit_booked` event: a verified credit became one inbound payment event and now waits for its settlement.
  * `dedupeKey` is the inbound event id: a credit is booked once.
  */
-export interface BankCreditBookedPayload extends EventPayload {
+export interface BankCreditBookedInput {
     /** The workspace the credit belongs to. */
     readonly workspaceId: string
     /** The inbound payment event the credit became; equals `dedupeKey`. */
@@ -14,6 +14,9 @@ export interface BankCreditBookedPayload extends EventPayload {
     /** The credited amount in VND. */
     readonly amountVnd: number
 }
+
+/** The payload of the event as published; the dedupe key is derived from the input. */
+export interface BankCreditBookedPayload extends EventPayload, BankCreditBookedInput {}
 
 /** Version 1 of `bank_credit_booked`, published by billing in the transaction that books a credit as an inbound payment event. */
 export class BankCreditBookedEvent extends BaseEvent {
@@ -30,7 +33,7 @@ export class BankCreditBookedEvent extends BaseEvent {
     }
 
     /** The inbound event id is the identity of the fact: a credit is booked once. */
-    static create(payload: Omit<BankCreditBookedPayload, "dedupeKey">): BankCreditBookedEvent {
+    static create(payload: BankCreditBookedInput): BankCreditBookedEvent {
         return new BankCreditBookedEvent(payload.inboundEventId, { ...payload, dedupeKey: payload.inboundEventId })
     }
 

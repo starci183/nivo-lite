@@ -5,7 +5,7 @@ import { isAmountOrNull, isKey, isTextOrNull, openEnvelope } from "./money-event
 /**
  * The payload of the `order_confirmed` event: a drafted order was confirmed. `dedupeKey` is the order id: an order is confirmed once.
  */
-export interface OrderConfirmedPayload extends EventPayload {
+export interface OrderConfirmedInput {
     /** The workspace of the order. */
     readonly workspaceId: string
     /** The confirmed order; equals `dedupeKey`. */
@@ -26,6 +26,9 @@ export interface OrderConfirmedPayload extends EventPayload {
     readonly confirmedBy: string
 }
 
+/** The payload of the event as published; the dedupe key is derived from the input. */
+export interface OrderConfirmedPayload extends EventPayload, OrderConfirmedInput {}
+
 /** Version 1 of `order_confirmed`, published by the confirm-order work in the transaction that confirms an order. */
 export class OrderConfirmedEvent extends BaseEvent {
     static readonly eventName = "order_confirmed"
@@ -41,7 +44,7 @@ export class OrderConfirmedEvent extends BaseEvent {
     }
 
     /** The order id is the identity of the fact: an order is confirmed once. */
-    static create(payload: Omit<OrderConfirmedPayload, "dedupeKey">): OrderConfirmedEvent {
+    static create(payload: OrderConfirmedInput): OrderConfirmedEvent {
         return new OrderConfirmedEvent(payload.orderId, { ...payload, dedupeKey: payload.orderId })
     }
 

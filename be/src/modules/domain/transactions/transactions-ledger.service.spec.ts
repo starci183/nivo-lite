@@ -22,10 +22,7 @@ const payment = (): TransactionEntity =>
         invoiceId: "i-1",
     })
 
-const build = async (
-    answers: ReadonlyArray<QueryBuilderAnswers> = [],
-    em: MockEntityManager = mockEntityManager(),
-) => {
+const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = [], em: MockEntityManager = mockEntityManager()) => {
     const fakes = queueQueryBuilders(em, answers)
     const moduleRef = await Test.createTestingModule({
         providers: [TransactionsLedgerService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],

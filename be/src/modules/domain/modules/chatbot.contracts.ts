@@ -1,3 +1,4 @@
+import { MODULE_AUDIENCES } from "@modules/domain/module-audiences"
 import { catalogCopy, catalogList, catalogText } from "./policies/catalog-copy.policy"
 import type { ModuleDefinition } from "./modules.contracts"
 
@@ -19,7 +20,7 @@ export const CHATBOT_MODULE: ModuleDefinition = {
     mascot: "/images/promo/mascot-chat.png",
     category: "sales_customer",
     status: "stable",
-    audience: "customer",
+    audience: MODULE_AUDIENCES.chatbot,
     includedWithWorkspace: false,
     available: true,
     knowledgeFolder: "chatbot",
