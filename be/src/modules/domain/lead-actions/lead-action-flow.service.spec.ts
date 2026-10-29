@@ -14,8 +14,7 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LeadActionsErrorCode } from "./errors/lead-actions.error"
 import { LeadActionFlowService } from "./lead-action-flow.service"
-import type { LeadActionInput } from "./lead-actions.contracts"
-import type { LeadActionRunRow } from "./persistence/lead-actions.rows"
+import type { LeadActionInput, LeadActionRun } from "./lead-actions.contracts"
 
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "vi" }
 
@@ -32,16 +31,16 @@ const lead: LeadRecordRow = {
     email: null,
 }
 
-const run: LeadActionRunRow = {
+const run: LeadActionRun = {
     id: "run-1",
-    workspace_id: "ws-1",
-    requested_by: "user-1",
+    workspaceId: "ws-1",
+    requestedBy: "user-1",
     action: "settle-won",
     input: { leadId: "lead-1" },
     locale: "vi",
     status: "running",
     result: null,
-    error_code: null,
+    errorCode: null,
 }
 
 const work: WorkItem = {

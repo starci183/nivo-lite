@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { Brackets, In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import type { WorkContext } from "@modules/domain/decisions"
 import { LeadRecordsService } from "@modules/domain/leads"
@@ -23,18 +24,12 @@ import type {
     LeadActionLanguage,
     LeadActionQueued,
     LeadActionResult,
+    LeadActionRun,
     LeadActionStatus,
 } from "./lead-actions.contracts"
 import { inputOf } from "./lead-action-input.policy"
-import type { LeadActionRunRow } from "./persistence/lead-actions.rows"
-import {
-    BEGIN_LEAD_ACTION,
-    FAIL_LEAD_ACTION,
-    FIND_LEAD_ACTION,
-    INSERT_LEAD_ACTION,
-    REFUSE_LEAD_ACTION,
-    SUCCEED_LEAD_ACTION,
-} from "./persistence/lead-actions.sql"
+import { LeadActionEntity } from "./persistence/entities"
+import { returnedRows, runOfRaw } from "./persistence/lead-action-projection"
 
 @Injectable()
 /** Owns backend run rows: membership-proved enqueue, workspace-scoped status and results under the platform-held fence. */
@@ -64,14 +59,15 @@ export class LeadActionsService {
         const normalized = unwrapOutcome(inputOf(action, input), LeadActionsError)
         await this.requireTarget(workspaceId, action, normalized)
         return this.entityManager.transaction(async (manager) => {
-            const [run] = await manager.query<Array<{ id: string }>>(INSERT_LEAD_ACTION, [
+            const inserted = await manager.insert(LeadActionEntity, {
                 workspaceId,
-                userId,
+                requestedBy: userId,
                 action,
-                JSON.stringify(normalized),
-                this.locale.of(acceptLanguage),
-            ])
-            if (run === undefined) throw new LeadActionsError({ code: LeadActionsErrorCode.NotFound })
+                input: normalized,
+                locale: this.locale.of(acceptLanguage),
+            })
+            const [run] = inserted.identifiers
+            if (typeof run?.id !== "string") throw new LeadActionsError({ code: LeadActionsErrorCode.NotFound })
             await this.queue.enqueue({ workspaceId, runId: run.id }, manager)
             return { id: run.id, status: "queued" }
         })
@@ -80,42 +76,40 @@ export class LeadActionsService {
     /** Returns progress only after proving membership of the selected workspace. */
     async status(userId: string, workspaceId: string, id: string): Promise<LeadActionStatus> {
         await this.members.require(userId, workspaceId)
-        const [run] = await this.entityManager.query<Array<LeadActionRunRow>>(FIND_LEAD_ACTION, [workspaceId, id])
-        if (run === undefined) throw new LeadActionsError({ code: LeadActionsErrorCode.NotFound })
-        return { id: run.id, status: run.status, result: run.result, errorCode: run.error_code }
+        const run = await this.entityManager.findOne(LeadActionEntity, {
+            select: { id: true, status: true, result: true, errorCode: true },
+            where: { workspaceId, id },
+        })
+        if (run === null) throw new LeadActionsError({ code: LeadActionsErrorCode.NotFound })
+        return { id: run.id, status: run.status, result: run.result, errorCode: run.errorCode }
     }
 
     /** Runs the stored input as its requester; the calling step holds the job fence for this entire operation. */
     async run(job: ClaimedJob): Promise<void> {
         if (!isLeadActionPayload(job.payload)) return
         const payload = job.payload
-        const [run] = await this.entityManager.query<Array<LeadActionRunRow>>(BEGIN_LEAD_ACTION, [
-            payload.workspaceId,
-            payload.runId,
-            job.jobId,
-            job.fencingToken,
-        ])
+        const begun = await this.entityManager
+            .createQueryBuilder(LeadActionEntity, "la")
+            .update()
+            .set({ status: "running", jobId: job.jobId, fencingToken: job.fencingToken, updatedAt: () => "now()" })
+            .where({ workspaceId: payload.workspaceId, id: payload.runId, status: In(["queued", "running"]) })
+            .returning("id, workspace_id, requested_by, action, input, locale, status, result, error_code")
+            .execute()
+        const run = runOfRaw(begun.raw)
         if (run === undefined) return
-        const write = [run.id, run.workspace_id, job.jobId, job.fencingToken]
+        const write = { id: run.id, workspaceId: run.workspaceId, jobId: job.jobId, fencingToken: job.fencingToken }
         try {
-            const member = await this.members.require(run.requested_by, run.workspace_id)
+            const member = await this.members.require(run.requestedBy, run.workspaceId)
             const stored = { ...run, input: unwrapOutcome(inputOf(run.action, run.input), LeadActionsError) }
-            const ctx = { workspaceId: run.workspace_id, actor: member.displayName, locale: run.locale }
+            const ctx = { workspaceId: run.workspaceId, actor: member.displayName, locale: run.locale }
             const result = await this.execute(ctx, stored)
-            this.requireOwned(
-                await this.entityManager.query<Array<{ id: string }>>(SUCCEED_LEAD_ACTION, [
-                    ...write,
-                    JSON.stringify(result),
-                ]),
-            )
+            this.requireOwned(await this.finish(write, { status: "succeeded", result, errorCode: null }))
         } catch (cause) {
             if (!isDomainError(cause)) throw cause
             const kind = this.errors.describe(cause).kind
             const workFailed = cause instanceof LeadActionsError && cause.code === LeadActionsErrorCode.WorkFailed
             if (!workFailed && (kind === "unavailable" || kind === "internal" || kind === "rate-limited")) throw cause
-            this.requireOwned(
-                await this.entityManager.query<Array<{ id: string }>>(REFUSE_LEAD_ACTION, [...write, cause.code]),
-            )
+            this.requireOwned(await this.finish(write, { status: "failed", errorCode: cause.code }))
         }
     }
 
@@ -125,24 +119,31 @@ export class LeadActionsService {
         const payload = delivery.payload
         const code = isDomainError(cause) ? cause.code : LeadActionsErrorCode.WorkFailed
         await this.claims.withFailedFence(delivery.id, async (fence) => {
-            await this.entityManager.query(FAIL_LEAD_ACTION, [
-                payload.workspaceId,
-                payload.runId,
-                code,
-                fence.jobId,
-                fence.expectedFencingToken,
-            ])
+            await this.entityManager
+                .createQueryBuilder(LeadActionEntity, "la")
+                .update()
+                .set({ status: "failed", errorCode: code, updatedAt: () => "now()" })
+                .where({ workspaceId: payload.workspaceId, id: payload.runId, status: In(["queued", "running"]) })
+                .andWhere(
+                    new Brackets((held) =>
+                        held.where("job_id IS NULL").orWhere("job_id = :jobId AND fencing_token = :fencingToken", {
+                            jobId: fence.jobId,
+                            fencingToken: fence.expectedFencingToken,
+                        }),
+                    ),
+                )
+                .execute()
         })
     }
 
-    private execute(ctx: WorkContext, run: LeadActionRunRow): Promise<LeadActionResult> {
+    private execute(ctx: WorkContext, run: LeadActionRun): Promise<LeadActionResult> {
         switch (run.action) {
             case "create":
                 return this.flow.create(ctx, run)
             case "refresh-context":
                 return this.ai.refreshContext(ctx, run.input.leadId ?? "")
             case "suggest-owner":
-                return this.ai.suggestOwner(ctx, run.requested_by, run.input.leadId ?? "")
+                return this.ai.suggestOwner(ctx, run.requestedBy, run.input.leadId ?? "")
             case "draft-execution":
                 return this.flow.draft(ctx, run)
             case "settle-won":
@@ -150,7 +151,33 @@ export class LeadActionsService {
         }
     }
 
-    private requireOwned(rows: ReadonlyArray<{ id: string }>): void {
+    /** Writes the terminal state of a run only for the worker whose fence the platform still holds; answers the rows written. */
+    private async finish(
+        held: {
+            readonly id: string
+            readonly workspaceId: string
+            readonly jobId: string
+            readonly fencingToken: number
+        },
+        change: Partial<Pick<LeadActionEntity, "status" | "result" | "errorCode">>,
+    ): Promise<ReadonlyArray<object>> {
+        const written = await this.entityManager
+            .createQueryBuilder(LeadActionEntity, "la")
+            .update()
+            .set({ ...change, updatedAt: () => "now()" })
+            .where({
+                id: held.id,
+                workspaceId: held.workspaceId,
+                jobId: held.jobId,
+                fencingToken: held.fencingToken,
+                status: "running",
+            })
+            .returning("id")
+            .execute()
+        return returnedRows(written.raw)
+    }
+
+    private requireOwned(rows: ReadonlyArray<object>): void {
         if (rows.length === 0) throw new LeadActionsError({ code: LeadActionsErrorCode.NotFound })
     }
 

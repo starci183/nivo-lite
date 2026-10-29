@@ -65,6 +65,8 @@ import { knowledgeChunksEntities } from "@modules/domain/knowledge-chunks"
 import { knowledgeGapsEntities } from "@modules/domain/knowledge-gaps"
 import { knowledgeSourcesEntities } from "@modules/domain/knowledge-sources"
 import { knowledgeSuggestionStateEntities } from "@modules/domain/knowledge-suggestion-state"
+import { leadActionsEntities } from "@modules/domain/lead-actions"
+import { leadFlowsEntities } from "@modules/domain/lead-flows"
 import { leadsEntities } from "@modules/domain/leads"
 import { loyaltyCampaignsEntities } from "@modules/domain/loyalty-campaigns"
 import { loyaltyCustomerLinksEntities } from "@modules/domain/loyalty-customer-links"
@@ -197,6 +199,8 @@ export const PRIMARY_ENTITIES = [
     ...knowledgeGapsEntities,
     ...knowledgeSourcesEntities,
     ...knowledgeSuggestionStateEntities,
+    ...leadActionsEntities,
+    ...leadFlowsEntities,
     ...leadsEntities,
     ...loyaltyCampaignsEntities,
     ...loyaltyCustomerLinksEntities,

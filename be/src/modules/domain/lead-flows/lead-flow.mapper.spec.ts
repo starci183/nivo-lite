@@ -5,16 +5,16 @@ import {
     sourceKindOf as realSourceKindOf,
     leadSourceOf as realLeadSourceOf,
     toLeadFlow as realToLeadFlow,
-    saveParams as realSaveParams,
+    saveValues as realSaveValues,
 } from "./lead-flow.mapper"
 import type { Analysis, FlowState, LeadFlow, LeadSource, Signals, SourceKind } from "./lead-flows.contracts"
-import type { LeadFlowRow } from "./persistence/lead-flows.rows"
+import type { LeadFlowEntity } from "./persistence/entities"
 
 const SUBJECT = Symbol("lead-flow.mapper")
 
 type Subject = Pick<
     typeof import("./lead-flow.mapper"),
-    "platformOf" | "sourceKindOf" | "leadSourceOf" | "toLeadFlow" | "saveParams"
+    "platformOf" | "sourceKindOf" | "leadSourceOf" | "toLeadFlow" | "saveValues"
 >
 
 const build = async () => {
@@ -27,7 +27,7 @@ const build = async () => {
                     sourceKindOf: realSourceKindOf,
                     leadSourceOf: realLeadSourceOf,
                     toLeadFlow: realToLeadFlow,
-                    saveParams: realSaveParams,
+                    saveValues: realSaveValues,
                 },
             },
         ],
@@ -37,12 +37,12 @@ const build = async () => {
 
 const NOW = "2026-10-12T10:00:00.000Z"
 
-const rowOf = builder<LeadFlowRow>({
+const rowOf = builder<LeadFlowEntity>({
     id: "flow-1",
-    workspace_id: "ws-1",
-    lead_id: "lead-1",
-    connection_id: "connection-1",
-    conversation_id: "conversation-1",
+    workspaceId: "ws-1",
+    leadId: "lead-1",
+    connectionId: "connection-1",
+    conversationId: "conversation-1",
     platform: null,
     psid: "person-1",
     igsid: null,
@@ -50,26 +50,29 @@ const rowOf = builder<LeadFlowRow>({
     email: "lan@example.com",
     name: "Lan",
     state: "invalid",
-    resume_state: null,
+    resumeState: null,
     source: null,
     touches: null,
     answers: null,
     asked: 0,
-    pending_question: null,
-    contact_asked_at: null,
+    pendingQuestion: null,
+    contactAskedAt: null,
     signals: null,
     score: null,
-    score_reasons: null,
-    scored_at: null,
+    scoreReasons: null,
+    scoredAt: null,
     analysis: null,
-    last_user_at: null,
-    last_user_text: null,
-    greeted_at: null,
-    handed_off_at: null,
-    followed_up_at: null,
-    closed_at: null,
-    escalated_at: null,
-    escalation_reason: null,
+    lastUserAt: null,
+    lastUserText: null,
+    greetedAt: null,
+    handedOffAt: null,
+    followedUpAt: null,
+    closedAt: null,
+    escalatedAt: null,
+    escalationReason: null,
+    createdAt: new Date(NOW),
+    updatedAt: new Date(NOW),
+    installationId: null,
 })
 
 const SIGNALS: Signals = {
@@ -210,7 +213,7 @@ describe("lead flow mapping", () => {
         expect(subject.toLeadFlow(rowOf())).toEqual(EMPTY_FLOW)
         expect(
             subject.toLeadFlow(
-                rowOf({ touches: {}, answers: "bad", score_reasons: 1, signals: {}, analysis: { turn: " " } }),
+                rowOf({ touches: {}, answers: "bad", scoreReasons: 1, signals: {}, analysis: { turn: " " } }),
             ),
         ).toEqual(EMPTY_FLOW)
     })
@@ -226,26 +229,26 @@ describe("lead flow mapping", () => {
                 rowOf({
                     platform: "instagram",
                     state: "scored",
-                    resume_state: "qualifying",
+                    resumeState: "qualifying",
                     source: SOURCE,
                     touches: [SOURCE, {}, null],
                     answers: [answer, { i: 2, question: 5, answer: null }, { i: "3" }, null],
                     asked: 2,
-                    pending_question: 2,
-                    contact_asked_at: new Date(NOW),
+                    pendingQuestion: 2,
+                    contactAskedAt: new Date(NOW),
                     signals: { ...SIGNALS, need: "  Tea  ", interest: "high" },
                     score: "hot",
-                    score_reasons: [" need ", 1, null],
-                    scored_at: NOW,
+                    scoreReasons: [" need ", 1, null],
+                    scoredAt: new Date(NOW),
                     analysis: { ...ANALYSIS, turn: " turn-1 " },
-                    last_user_at: new Date(NOW),
-                    last_user_text: "I'd like tea",
-                    greeted_at: NOW,
-                    handed_off_at: new Date(NOW),
-                    followed_up_at: NOW,
-                    closed_at: new Date(NOW),
-                    escalated_at: NOW,
-                    escalation_reason: "complaint",
+                    lastUserAt: new Date(NOW),
+                    lastUserText: "I'd like tea",
+                    greetedAt: new Date(NOW),
+                    handedOffAt: new Date(NOW),
+                    followedUpAt: new Date(NOW),
+                    closedAt: new Date(NOW),
+                    escalatedAt: new Date(NOW),
+                    escalationReason: "complaint",
                 }),
             ),
         ).toEqual({
@@ -282,7 +285,7 @@ describe("lead flow mapping", () => {
         async (state) => {
             const subject = await build()
 
-            expect(subject.toLeadFlow(rowOf({ state, resume_state: state }))).toEqual({
+            expect(subject.toLeadFlow(rowOf({ state, resumeState: state }))).toEqual({
                 ...EMPTY_FLOW,
                 state,
                 resume_state: state,
@@ -301,53 +304,52 @@ describe("lead flow mapping", () => {
             score: score === "unknown" ? null : score,
         })
     })
-    it("serializes absent JSON fields and places each save parameter in column order", async () => {
+    it("writes absent JSON fields as empty values and maps each mutable column", async () => {
         const subject = await build()
 
-        expect(subject.saveParams(EMPTY_FLOW)).toEqual([
-            "flow-1",
-            "ws-1",
-            "lead-1",
-            "connection-1",
-            "conversation-1",
-            null,
-            "person-1",
-            null,
-            "84912345678",
-            "lan@example.com",
-            "Lan",
-            "new",
-            null,
-            "{}",
-            "[]",
-            "[]",
-            0,
-            null,
-            null,
-            JSON.stringify(SIGNALS),
-            null,
-            "[]",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-        ])
+        expect(subject.saveValues(EMPTY_FLOW)).toEqual({
+            leadId: "lead-1",
+            connectionId: "connection-1",
+            conversationId: "conversation-1",
+            platform: null,
+            psid: "person-1",
+            igsid: null,
+            phone: "84912345678",
+            email: "lan@example.com",
+            name: "Lan",
+            state: "new",
+            resumeState: null,
+            source: {},
+            touches: [],
+            answers: [],
+            asked: 0,
+            pendingQuestion: null,
+            contactAskedAt: null,
+            signals: SIGNALS,
+            score: null,
+            scoreReasons: [],
+            scoredAt: null,
+            analysis: null,
+            lastUserAt: null,
+            lastUserText: null,
+            greetedAt: null,
+            handedOffAt: null,
+            followedUpAt: null,
+            closedAt: null,
+            escalatedAt: null,
+            escalationReason: null,
+        })
     })
 })
 
 describe("lead flow mapping", () => {
-    it("serializes source, touches, answers, signals, reasons and analysis, preserving scalars", async () => {
+    it("carries source, touches, answers, signals, reasons and analysis, and turns timestamps into dates", async () => {
         const subject = await build()
 
         const answer = { i: 0, question: "Need?", answer: "Tea", at: NOW }
+        const at = new Date(NOW)
         expect(
-            subject.saveParams({
+            subject.saveValues({
                 ...EMPTY_FLOW,
                 platform: "instagram",
                 igsid: "ig-1",
@@ -372,39 +374,37 @@ describe("lead flow mapping", () => {
                 escalated_at: NOW,
                 escalation_reason: "refund",
             }),
-        ).toEqual([
-            "flow-1",
-            "ws-1",
-            "lead-1",
-            "connection-1",
-            "conversation-1",
-            "instagram",
-            "person-1",
-            "ig-1",
-            "84912345678",
-            "lan@example.com",
-            "Lan",
-            "escalated",
-            "scored",
-            JSON.stringify(SOURCE),
-            JSON.stringify([SOURCE]),
-            JSON.stringify([answer]),
-            1,
-            0,
-            NOW,
-            JSON.stringify(SIGNALS),
-            "warm",
-            '["need"]',
-            NOW,
-            JSON.stringify(ANALYSIS),
-            NOW,
-            "Tea please",
-            NOW,
-            NOW,
-            NOW,
-            NOW,
-            NOW,
-            "refund",
-        ])
+        ).toEqual({
+            leadId: "lead-1",
+            connectionId: "connection-1",
+            conversationId: "conversation-1",
+            platform: "instagram",
+            psid: "person-1",
+            igsid: "ig-1",
+            phone: "84912345678",
+            email: "lan@example.com",
+            name: "Lan",
+            state: "escalated",
+            resumeState: "scored",
+            source: SOURCE,
+            touches: [SOURCE],
+            answers: [answer],
+            asked: 1,
+            pendingQuestion: 0,
+            contactAskedAt: at,
+            signals: SIGNALS,
+            score: "warm",
+            scoreReasons: ["need"],
+            scoredAt: at,
+            analysis: ANALYSIS,
+            lastUserAt: at,
+            lastUserText: "Tea please",
+            greetedAt: at,
+            handedOffAt: at,
+            followedUpAt: at,
+            closedAt: at,
+            escalatedAt: at,
+            escalationReason: "refund",
+        })
     })
 })

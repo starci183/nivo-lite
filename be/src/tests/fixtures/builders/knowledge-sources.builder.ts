@@ -1,13 +1,15 @@
+import type { KnowledgeSourceEntity } from "@modules/domain/knowledge-sources"
+
 /** Fixed document identity and time shared by the source row and its expected views. */
 const WS = "11111111-1111-4111-8111-111111111111"
 const AT = "2026-10-12T10:00:00.000Z"
 
 /** A queued text document, with every persisted column. */
-export const row = {
+export const row: KnowledgeSourceEntity = {
     id: "s1",
-    workspace_id: WS,
+    workspaceId: WS,
     module: null,
-    installation_id: null,
+    installationId: null,
     kind: "text",
     topic: null,
     tags: [],
@@ -16,14 +18,14 @@ export const row = {
     content: "c",
     status: "queued",
     error: null,
-    chunk_count: 0,
+    chunkCount: 0,
     progress: 0,
-    storage_path: null,
-    source_url: null,
+    storagePath: null,
+    sourceUrl: null,
     origin: null,
-    created_by: null,
-    created_at: AT,
-    updated_at: AT,
+    createdBy: null,
+    createdAt: new Date(AT),
+    updatedAt: new Date(AT),
 }
 /** The independent expected list view. */
 export const summary = {

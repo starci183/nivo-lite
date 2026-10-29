@@ -1,5 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import type { MockEntityManager } from "@starci/jest-preset"
+import { Brackets, In } from "typeorm"
 import type { WorkContext } from "@modules/domain/decisions"
 import { LeadRecordsService } from "@modules/domain/leads"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
@@ -15,21 +17,15 @@ import { LeadActionsQueue } from "@modules/queues/lead-actions"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { QueueDelivery } from "@modules/platform/queue"
 import type { ResponsibilityRecord } from "@modules/domain/responsibilities"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { memberOf, leadOf } from "@tests/fixtures/builders/lead-actions.builder"
 import { LeadActionsError, LeadActionsErrorCode } from "./errors/lead-actions.error"
 import { LeadActionAiService } from "./lead-action-ai.service"
 import { LeadActionFlowService } from "./lead-action-flow.service"
 import { LeadActionsService } from "./lead-actions.service"
-import type { LeadActionInput } from "./lead-actions.contracts"
-import type { LeadActionRunRow } from "./persistence/lead-actions.rows"
-import {
-    BEGIN_LEAD_ACTION,
-    FAIL_LEAD_ACTION,
-    FIND_LEAD_ACTION,
-    INSERT_LEAD_ACTION,
-    REFUSE_LEAD_ACTION,
-    SUCCEED_LEAD_ACTION,
-} from "./persistence/lead-actions.sql"
+import type { LeadActionInput, LeadActionRun } from "./lead-actions.contracts"
+import { LeadActionEntity } from "./persistence/entities"
 
 const LEAD = "11111111-1111-4111-8111-111111111111"
 const RESPONSIBILITY = "22222222-2222-4222-8222-222222222222"
@@ -44,20 +40,55 @@ const job: ClaimedJob = {
     payload: { workspaceId: "ws-1", runId: "run-1" },
 }
 
-const running: LeadActionRunRow = {
+const running: LeadActionRun = {
     id: "run-1",
-    workspace_id: "ws-1",
-    requested_by: "user-1",
+    workspaceId: "ws-1",
+    requestedBy: "user-1",
     action: "refresh-context",
     input: { leadId: LEAD },
     locale: "vi",
     status: "running",
     result: null,
-    error_code: null,
+    errorCode: null,
 }
 
-const build = async (stubs: ReadonlyArray<readonly [string, unknown]> = []) => {
-    const tx = fakeTransaction(mockEntityManager({ query: stubs }))
+/** The RETURNING row of a write that answered this run, as the database names its columns. */
+const returnedRun = (run: LeadActionRun): QueryBuilderAnswers => ({
+    execute: {
+        raw: [
+            {
+                id: run.id,
+                workspace_id: run.workspaceId,
+                requested_by: run.requestedBy,
+                action: run.action,
+                input: run.input,
+                locale: run.locale,
+                status: run.status,
+                result: run.result,
+                error_code: run.errorCode,
+            },
+        ],
+    },
+})
+
+/** The answer of a fenced write that changed one run, or none. */
+const owned: QueryBuilderAnswers = { execute: { raw: [{ id: "run-1" }] } }
+const lost: QueryBuilderAnswers = { execute: { raw: [] } }
+
+const FENCE = {
+    id: "run-1",
+    workspaceId: "ws-1",
+    jobId: "job-1",
+    fencingToken: 7,
+    status: "running",
+}
+
+const build = async (
+    statements: ReadonlyArray<QueryBuilderAnswers> = [],
+    em: MockEntityManager = mockEntityManager(),
+) => {
+    const tx = fakeTransaction(em)
+    const fakes = queueQueryBuilders(tx.em, statements)
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(memberOf())
     const leads = mock<LeadRecordsService>()
@@ -91,6 +122,7 @@ const build = async (stubs: ReadonlyArray<readonly [string, unknown]> = []) => {
     return {
         actions: moduleRef.get(LeadActionsService),
         tx,
+        fakes,
         queue,
         leads,
         errors,
@@ -137,11 +169,23 @@ describe("LeadActionsService", () => {
     })
 
     it("enqueues a validated capture and answers the queued run", async () => {
-        const { actions, queue } = await build([[INSERT_LEAD_ACTION, [{ id: "run-1" }]]])
+        const { actions, queue, tx } = await build(
+            [],
+            mockEntityManager({
+                insert: [LeadActionEntity, { identifiers: [{ id: "run-1" }] }],
+            }),
+        )
 
         await expect(actions.request("user-1", "ws-1", "create", createInput, "vi")).resolves.toEqual({
             id: "run-1",
             status: "queued",
+        })
+        expect(tx.em.insert).toHaveBeenCalledWith(LeadActionEntity, {
+            workspaceId: "ws-1",
+            requestedBy: "user-1",
+            action: "create",
+            input: createInput,
+            locale: "vi",
         })
         expect(queue.enqueue).toHaveBeenCalledWith({ workspaceId: "ws-1", runId: "run-1" }, expect.anything())
     })
@@ -155,18 +199,13 @@ describe("LeadActionsService", () => {
     })
 
     it("returns the stored progress of a run in the workspace", async () => {
-        const row: LeadActionRunRow = {
+        const row = Object.assign(new LeadActionEntity(), {
             id: "run-1",
-            workspace_id: "ws-1",
-            requested_by: "user-1",
-            action: "refresh-context",
-            input: { leadId: LEAD },
-            locale: "vi",
-            status: "succeeded",
+            status: "succeeded" as const,
             result: { leadId: LEAD, contextSummary: "brief" },
-            error_code: null,
-        }
-        const { actions } = await build([[FIND_LEAD_ACTION, [row]]])
+            errorCode: null,
+        })
+        const { actions, tx } = await build([], mockEntityManager({ findOne: [LeadActionEntity, row] }))
 
         await expect(actions.status("user-1", "ws-1", "run-1")).resolves.toEqual({
             id: "run-1",
@@ -174,10 +213,14 @@ describe("LeadActionsService", () => {
             result: { leadId: LEAD, contextSummary: "brief" },
             errorCode: null,
         })
+        expect(tx.em.findOne).toHaveBeenCalledWith(LeadActionEntity, {
+            select: { id: true, status: true, result: true, errorCode: true },
+            where: { workspaceId: "ws-1", id: "run-1" },
+        })
     })
 
     it("refuses a run the workspace does not have", async () => {
-        const { actions } = await build([[FIND_LEAD_ACTION, []]])
+        const { actions } = await build([], mockEntityManager({ findOne: [LeadActionEntity, null] }))
 
         await expect(actions.status("user-1", "ws-1", "missing")).rejects.toMatchObject({
             code: LeadActionsErrorCode.NotFound,
@@ -205,11 +248,14 @@ describe("LeadActionsService", () => {
         }
 
         await expect(actions.run(job)).resolves.toBeUndefined()
-        expect(tx.em.query).not.toHaveBeenCalled()
+        expect(tx.em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("rolls back when insertion returns no run", async () => {
-        const { actions, tx, queue } = await build([[INSERT_LEAD_ACTION, []]])
+        const { actions, tx, queue } = await build(
+            [],
+            mockEntityManager({ insert: [LeadActionEntity, { identifiers: [] }] }),
+        )
 
         await expect(actions.request("user-1", "ws-1", "create", createInput, "vi")).rejects.toMatchObject({
             code: LeadActionsErrorCode.NotFound,
@@ -219,9 +265,12 @@ describe("LeadActionsService", () => {
     })
 
     it("proves a responsibility target and stores only its normalized id", async () => {
-        const { actions, responsibilities, tx, members, locale } = await build([
-            [INSERT_LEAD_ACTION, [{ id: "run-1" }]],
-        ])
+        const { actions, responsibilities, tx, members, locale } = await build(
+            [],
+            mockEntityManager({
+                insert: [LeadActionEntity, { identifiers: [{ id: "run-1" }] }],
+            }),
+        )
         const target = mock<ResponsibilityRecord>({ id: RESPONSIBILITY, lead_id: LEAD })
         responsibilities.find.mockResolvedValue(target)
 
@@ -231,13 +280,13 @@ describe("LeadActionsService", () => {
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
         expect(responsibilities.find).toHaveBeenCalledWith("ws-1", RESPONSIBILITY)
         expect(locale.of).toHaveBeenCalledWith("en")
-        expect(tx.em.query).toHaveBeenCalledWith(INSERT_LEAD_ACTION, [
-            "ws-1",
-            "user-1",
-            "draft-execution",
-            JSON.stringify({ responsibilityId: RESPONSIBILITY }),
-            "vi",
-        ])
+        expect(tx.em.insert).toHaveBeenCalledWith(LeadActionEntity, {
+            workspaceId: "ws-1",
+            requestedBy: "user-1",
+            action: "draft-execution",
+            input: { responsibilityId: RESPONSIBILITY },
+            locale: "vi",
+        })
     })
 
     it("refuses a responsibility absent from the workspace before enqueueing", async () => {
@@ -256,7 +305,12 @@ describe("LeadActionsService", () => {
     it.each(["refresh-context", "suggest-owner", "settle-won"] as const)(
         "proves the lead before enqueueing %s",
         async (action) => {
-            const { actions, leads, queue } = await build([[INSERT_LEAD_ACTION, [{ id: "run-1" }]]])
+            const { actions, leads, queue } = await build(
+                [],
+                mockEntityManager({
+                    insert: [LeadActionEntity, { identifiers: [{ id: "run-1" }] }],
+                }),
+            )
             leads.require.mockResolvedValue(leadOf({ stage: "won" }))
 
             await expect(actions.request("user-1", "ws-1", action, { leadId: LEAD }, "vi")).resolves.toEqual({
@@ -269,11 +323,16 @@ describe("LeadActionsService", () => {
     )
 
     it("leaves an absent or terminal run untouched after attempting to begin", async () => {
-        const { actions, tx, members, ai } = await build([[BEGIN_LEAD_ACTION, []]])
+        const { actions, tx, fakes, members, ai } = await build([lost])
 
         await expect(actions.run(job)).resolves.toBeUndefined()
-        expect(tx.em.query).toHaveBeenCalledWith(BEGIN_LEAD_ACTION, ["ws-1", "run-1", "job-1", 7])
-        expect(tx.em.query).toHaveBeenCalledTimes(1)
+        expect(fakes[0]?.callsOf("set")).toEqual([
+            [{ status: "running", jobId: "job-1", fencingToken: 7, updatedAt: expect.any(Function) }],
+        ])
+        expect(fakes[0]?.callsOf("where")).toEqual([
+            [{ workspaceId: "ws-1", id: "run-1", status: In(["queued", "running"]) }],
+        ])
+        expect(tx.em.createQueryBuilder).toHaveBeenCalledTimes(1)
         expect(members.require).not.toHaveBeenCalled()
         expect(ai.refreshContext).not.toHaveBeenCalled()
     })
@@ -285,11 +344,8 @@ describe("LeadActionsService", () => {
         ["draft-execution", { responsibilityId: RESPONSIBILITY }],
         ["settle-won", { leadId: LEAD, evidence: "Agreed to buy" }],
     ] as const)("executes stored %s as its member and records the fenced result", async (action, input) => {
-        const row: LeadActionRunRow = { ...running, action, input }
-        const { actions, tx, ai, flow, members } = await build([
-            [BEGIN_LEAD_ACTION, [row]],
-            [SUCCEED_LEAD_ACTION, [{ id: "run-1" }]],
-        ])
+        const row: LeadActionRun = { ...running, action, input }
+        const { actions, fakes, ai, flow, members } = await build([returnedRun(row), owned])
         const result = { leadId: LEAD, workItemId: "work-1" }
         ai.refreshContext.mockResolvedValue(result)
         ai.suggestOwner.mockResolvedValue(result)
@@ -310,13 +366,10 @@ describe("LeadActionsService", () => {
             action === "refresh-context" ? [ctx, LEAD] : action === "suggest-owner" ? [ctx, "user-1", LEAD] : [ctx, row]
         expect(selected).toHaveBeenCalledWith(...args)
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-        expect(tx.em.query).toHaveBeenCalledWith(SUCCEED_LEAD_ACTION, [
-            "run-1",
-            "ws-1",
-            "job-1",
-            7,
-            JSON.stringify(result),
+        expect(fakes[1]?.callsOf("set")).toEqual([
+            [{ status: "succeeded", result, errorCode: null, updatedAt: expect.any(Function) }],
         ])
+        expect(fakes[1]?.callsOf("where")).toEqual([[FENCE]])
     })
 })
 
@@ -332,7 +385,7 @@ describe("LeadActionsService", () => {
         const { actions, ai } = await build()
         const input: LeadActionInput = {}
         Object.defineProperty(input, "leadId", { value: leadId })
-        const row: LeadActionRunRow = { ...running, action, input }
+        const row: LeadActionRun = { ...running, action, input }
         const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "vi" }
         const result = { leadId: "", contextSummary: "No lead" }
         ai.refreshContext.mockResolvedValue(result)
@@ -363,97 +416,77 @@ describe("LeadActionsService", () => {
     })
 
     it("records invalid persisted input as a domain refusal without executing", async () => {
-        const row: LeadActionRunRow = { ...running, input: {} }
-        const { actions, tx, ai } = await build([
-            [BEGIN_LEAD_ACTION, [row]],
-            [REFUSE_LEAD_ACTION, [{ id: "run-1" }]],
-        ])
+        const row: LeadActionRun = { ...running, input: {} }
+        const { actions, fakes, ai } = await build([returnedRun(row), owned])
 
         await expect(actions.run(job)).resolves.toBeUndefined()
         expect(ai.refreshContext).not.toHaveBeenCalled()
-        expect(tx.em.query).toHaveBeenCalledWith(REFUSE_LEAD_ACTION, [
-            "run-1",
-            "ws-1",
-            "job-1",
-            7,
-            LeadActionsErrorCode.InvalidInput,
+        expect(fakes[1]?.callsOf("set")).toEqual([
+            [{ status: "failed", errorCode: LeadActionsErrorCode.InvalidInput, updatedAt: expect.any(Function) }],
         ])
+        expect(fakes[1]?.callsOf("where")).toEqual([[FENCE]])
     })
 })
 
 describe("LeadActionsService", () => {
     it("records a permanent refusal from a different domain family", async () => {
-        const { actions, members, errors, tx } = await build([
-            [BEGIN_LEAD_ACTION, [running]],
-            [REFUSE_LEAD_ACTION, [{ id: "run-1" }]],
-        ])
+        const { actions, members, errors, fakes } = await build([returnedRun(running), owned])
         const cause = new MembershipError({ code: "MEMBERSHIP_FORBIDDEN" })
         members.require.mockRejectedValue(cause)
         errors.describe.mockReturnValue({ code: cause.code, kind: "forbidden", status: 403, params: {} })
 
         await expect(actions.run(job)).resolves.toBeUndefined()
         expect(errors.describe).toHaveBeenCalledWith(cause)
-        expect(tx.em.query).toHaveBeenCalledWith(REFUSE_LEAD_ACTION, ["run-1", "ws-1", "job-1", 7, cause.code])
+        expect(fakes[1]?.callsOf("set")).toEqual([
+            [{ status: "failed", errorCode: cause.code, updatedAt: expect.any(Function) }],
+        ])
     })
 
     it.each(transientKinds)("preserves a %s domain failure for retry", async (kind) => {
-        const { actions, ai, errors, tx } = await build([[BEGIN_LEAD_ACTION, [running]]])
+        const { actions, ai, errors, tx } = await build([returnedRun(running)])
         const cause = new LeadActionsError({ code: LeadActionsErrorCode.Busy })
         ai.refreshContext.mockRejectedValue(cause)
         errors.describe.mockReturnValue({ code: cause.code, kind, status: 503, params: {} })
 
         await expect(actions.run(job)).rejects.toBe(cause)
-        expect(tx.em.query).toHaveBeenCalledTimes(1)
+        expect(tx.em.createQueryBuilder).toHaveBeenCalledTimes(1)
     })
 
     it("records an engine work failure even though its domain kind is unavailable", async () => {
-        const { actions, ai, errors, tx } = await build([
-            [BEGIN_LEAD_ACTION, [running]],
-            [REFUSE_LEAD_ACTION, [{ id: "run-1" }]],
-        ])
+        const { actions, ai, errors, fakes } = await build([returnedRun(running), owned])
         const cause = new LeadActionsError({ code: LeadActionsErrorCode.WorkFailed })
         ai.refreshContext.mockRejectedValue(cause)
         errors.describe.mockReturnValue({ code: cause.code, kind: "unavailable", status: 503, params: {} })
 
         await expect(actions.run(job)).resolves.toBeUndefined()
-        expect(tx.em.query).toHaveBeenCalledWith(REFUSE_LEAD_ACTION, ["run-1", "ws-1", "job-1", 7, cause.code])
+        expect(fakes[1]?.callsOf("set")).toEqual([
+            [{ status: "failed", errorCode: cause.code, updatedAt: expect.any(Function) }],
+        ])
     })
 
     it("propagates an unexpected failure without describing or refusing it", async () => {
-        const { actions, ai, errors, tx } = await build([[BEGIN_LEAD_ACTION, [running]]])
+        const { actions, ai, errors, tx } = await build([returnedRun(running)])
         const cause = new Error("connection interrupted")
         ai.refreshContext.mockRejectedValue(cause)
 
         await expect(actions.run(job)).rejects.toBe(cause)
         expect(errors.describe).not.toHaveBeenCalled()
-        expect(tx.em.query).toHaveBeenCalledTimes(1)
+        expect(tx.em.createQueryBuilder).toHaveBeenCalledTimes(1)
     })
 })
 
 describe("LeadActionsService", () => {
     it("reports a missing run fence when both completion and refusal lose ownership", async () => {
-        const { actions, ai, tx } = await build([
-            [BEGIN_LEAD_ACTION, [running]],
-            [SUCCEED_LEAD_ACTION, []],
-            [REFUSE_LEAD_ACTION, []],
-        ])
+        const { actions, ai, fakes } = await build([returnedRun(running), lost, lost])
         const result = { leadId: LEAD, contextSummary: "brief" }
         ai.refreshContext.mockResolvedValue(result)
 
         await expect(actions.run(job)).rejects.toMatchObject({ code: LeadActionsErrorCode.NotFound })
-        expect(tx.em.query).toHaveBeenCalledWith(SUCCEED_LEAD_ACTION, [
-            "run-1",
-            "ws-1",
-            "job-1",
-            7,
-            JSON.stringify(result),
+        expect(fakes[1]?.callsOf("set")).toEqual([
+            [{ status: "succeeded", result, errorCode: null, updatedAt: expect.any(Function) }],
         ])
-        expect(tx.em.query).toHaveBeenCalledWith(REFUSE_LEAD_ACTION, [
-            "run-1",
-            "ws-1",
-            "job-1",
-            7,
-            LeadActionsErrorCode.NotFound,
+        expect(fakes[2]?.callsOf("set")).toEqual([
+            [{ status: "failed", errorCode: LeadActionsErrorCode.NotFound, updatedAt: expect.any(Function) }],
         ])
     })
 
@@ -462,17 +495,23 @@ describe("LeadActionsService", () => {
 
         await expect(actions.failDelivery({ ...delivery, payload: {} }, "failure")).resolves.toBeUndefined()
         expect(claims.withFailedFence).not.toHaveBeenCalled()
-        expect(tx.em.query).not.toHaveBeenCalled()
+        expect(tx.em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it.each([
         [new LeadActionsError({ code: LeadActionsErrorCode.Busy }), LeadActionsErrorCode.Busy],
         ["connection interrupted", LeadActionsErrorCode.WorkFailed],
     ])("records exhausted delivery cause %s under the failed worker's fence", async (cause, code) => {
-        const { actions, claims, tx } = await build([[FAIL_LEAD_ACTION, []]])
+        const { actions, claims, fakes } = await build([lost])
 
         await expect(actions.failDelivery(delivery, cause)).resolves.toBeUndefined()
         expect(claims.withFailedFence).toHaveBeenCalledWith("delivery-1", expect.anything())
-        expect(tx.em.query).toHaveBeenCalledWith(FAIL_LEAD_ACTION, ["ws-1", "run-1", code, "job-1", 7])
+        expect(fakes[0]?.callsOf("set")).toEqual([
+            [{ status: "failed", errorCode: code, updatedAt: expect.any(Function) }],
+        ])
+        expect(fakes[0]?.callsOf("where")).toEqual([
+            [{ workspaceId: "ws-1", id: "run-1", status: In(["queued", "running"]) }],
+        ])
+        expect(fakes[0]?.callsOf("andWhere")).toEqual([[expect.any(Brackets)]])
     })
 })

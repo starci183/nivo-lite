@@ -14,8 +14,7 @@ import type { EventBus } from "@modules/platform/event-bus"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LeadActionsError, LeadActionsErrorCode } from "./errors/lead-actions.error"
-import type { LeadActionResult } from "./lead-actions.contracts"
-import type { LeadActionRunRow } from "./persistence/lead-actions.rows"
+import type { LeadActionResult, LeadActionRun } from "./lead-actions.contracts"
 
 @Injectable()
 /** Core customer creation and the authority engine's draft and invoice paths, executed by the fenced lead-actions job. */
@@ -33,7 +32,7 @@ export class LeadActionFlowService {
     ) {}
 
     /** Creates a customer from the core surface and assigns a follow-up, independently of installed agent modules. */
-    async create(ctx: WorkContext, run: LeadActionRunRow): Promise<LeadActionResult> {
+    async create(ctx: WorkContext, run: LeadActionRun): Promise<LeadActionResult> {
         const input = run.input
         const phone = contactParts(input.phone).phone
         const email = contactParts(input.email).email
@@ -105,7 +104,7 @@ export class LeadActionFlowService {
     }
 
     /** Drafts the owning agent's next step through the gate: automatic delivery or the existing approval card. */
-    async draft(ctx: WorkContext, run: LeadActionRunRow): Promise<LeadActionResult> {
+    async draft(ctx: WorkContext, run: LeadActionRun): Promise<LeadActionResult> {
         const responsibility = await this.responsibilities.find(ctx.workspaceId, run.input.responsibilityId ?? "")
         if (responsibility === null) throw new LeadActionsError({ code: LeadActionsErrorCode.NotFound })
         const lead = await this.leads.require(ctx.workspaceId, responsibility.lead_id)
@@ -130,7 +129,7 @@ export class LeadActionFlowService {
     }
 
     /** Prepares the invoice through Accounting's authority and publishes the existing automation event once per won lead. */
-    async settleWon(ctx: WorkContext, run: LeadActionRunRow): Promise<LeadActionResult> {
+    async settleWon(ctx: WorkContext, run: LeadActionRun): Promise<LeadActionResult> {
         const lead = await this.leads.require(ctx.workspaceId, run.input.leadId ?? "")
         if (lead.stage !== "won") throw new LeadActionsError({ code: LeadActionsErrorCode.NotWon })
         const key = `issue_invoice:lead:${lead.id}`
