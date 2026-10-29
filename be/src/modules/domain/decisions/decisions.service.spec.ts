@@ -64,7 +64,9 @@ const itemOf = builder<WorkItem>({
     installation_id: null,
 })
 
-const viewOf = (id: string): WorkItemViewRow => ({ ...itemOf({ id }), cursor_at: CURSOR_AT })
+const viewOfItem = (item: WorkItem): WorkItemViewRow => ({ ...item, cursor_at: CURSOR_AT })
+
+const viewOf = (id: string): WorkItemViewRow => viewOfItem(itemOf({ id }))
 
 const profileOf = builder<AuthorityProfile>({
     policies: "P",
@@ -429,8 +431,8 @@ describe("DecisionsService", () => {
                     candidates,
                 },
             })
-            const em = managerWithView(item)
-            const { service, invoices, transactions, members } = await build(em)
+            const { service, views, invoices, transactions, members } = await build()
+            views.find.mockResolvedValue(viewOfItem(item))
             const moment = { amount_vnd: 2500, payer: "Payer", reference: "TRANSFER-1", occurred_at: CURSOR_AT }
             transactions.momentOf.mockResolvedValue(moment)
             invoices.listForReconcile.mockResolvedValue([invoiceOf(), invoiceOf({ id: "invoice-2" })])
@@ -449,8 +451,8 @@ describe("DecisionsService", () => {
                 subject_type: "invoice",
                 proposal: { summary: "Claim", amount_vnd: 1200, fields: { payer: "Minh", claim: "Paid cash" } },
             })
-            const em = managerWithView(item)
-            const { service, invoices, transactions } = await build(em)
+            const { service, views, invoices, transactions } = await build()
+            views.find.mockResolvedValue(viewOfItem(item))
 
             await expect(service.reconcileDetails("user-1", "ws-1", "item-1")).resolves.toEqual({
                 payment: { amount_vnd: 1200, payer: "Minh", reference: "Paid cash", occurred_at: CURSOR_AT },
@@ -468,8 +470,8 @@ describe("DecisionsService", () => {
                     subject_id,
                     proposal: { summary: "Match", fields: { payer: 9, claim: null } },
                 })
-                const em = managerWithView(item)
-                const { service, transactions } = await build(em)
+                const { service, views, transactions } = await build()
+                views.find.mockResolvedValue(viewOfItem(item))
 
                 await expect(service.reconcileDetails("user-1", "ws-1", "item-1")).resolves.toEqual({
                     payment: { amount_vnd: null, payer: null, reference: null, occurred_at: null },

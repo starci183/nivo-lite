@@ -2,7 +2,17 @@ import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { AgentCard, AgentHandleCard, AgentIdentityCard, AgentSeat, AgentSheet } from "./agent-directory.contracts"
+import type {
+    AgentCard,
+    AgentCreation,
+    AgentHandleCard,
+    AgentIdentityCard,
+    AgentSeat,
+    AgentSheet,
+    OptionalAgentCard,
+    OptionalAgentSheet,
+} from "./agent-directory.contracts"
+import type { OptionalId } from "./agents.contracts"
 import { AgentEntity } from "./persistence/entities"
 
 const CARD_COLUMNS = { id: true, name: true, module: true, canTagAgentIds: true } as const
@@ -71,13 +81,45 @@ export class AgentDirectoryService {
         const agents = await this.entityManager.find(AgentEntity, {
             select: CARD_COLUMNS,
             where: { workspaceId, status: "active", id: In([...agentIds]) },
+            take: agentIds.length,
         })
         const byId = new Map(agents.map((agent) => [agent.id, toCard(agent)]))
         return agentIds.flatMap((id) => byId.get(id) ?? []).slice(0, limit)
     }
 
+    /** The active agents among the given ids with the moment each was created, oldest first, at most `limit`. */
+    async activeCreatedAmong(
+        workspaceId: string,
+        agentIds: ReadonlyArray<string>,
+        limit: number,
+    ): Promise<Array<AgentCreation>> {
+        if (agentIds.length === 0) return []
+        const agents = await this.entityManager.find(AgentEntity, {
+            select: { id: true, module: true, name: true, createdAt: true },
+            where: { workspaceId, status: "active", id: In([...new Set(agentIds)]) },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: limit,
+        })
+        return agents.map((agent) => ({
+            id: agent.id,
+            module: agent.module,
+            name: agent.name,
+            createdAt: agent.createdAt,
+        }))
+    }
+
+    /** Whether the workspace holds the agent; the row is read with a shared lock so it stays until the transaction ends. */
+    async holds(workspaceId: string, agentId: string, manager: EntityManager): Promise<boolean> {
+        const agent = await manager.findOne(AgentEntity, {
+            select: { id: true },
+            where: { id: agentId, workspaceId },
+            lock: { mode: "pessimistic_read" },
+        })
+        return agent !== null
+    }
+
     /** One agent of the workspace by id, active or paused; null when there is none. */
-    async find(workspaceId: string, agentId: string): Promise<AgentCard | null> {
+    async find(workspaceId: string, agentId: string): Promise<OptionalAgentCard> {
         const agent = await this.entityManager.findOne(AgentEntity, {
             select: CARD_COLUMNS,
             where: { workspaceId, id: agentId },
@@ -86,7 +128,7 @@ export class AgentDirectoryService {
     }
 
     /** One active agent of the workspace by id; null when there is none or it is paused. */
-    async findActive(workspaceId: string, agentId: string): Promise<AgentCard | null> {
+    async findActive(workspaceId: string, agentId: string): Promise<OptionalAgentCard> {
         const agent = await this.entityManager.findOne(AgentEntity, {
             select: CARD_COLUMNS,
             where: { workspaceId, id: agentId, status: "active" },
@@ -106,7 +148,7 @@ export class AgentDirectoryService {
     }
 
     /** The id of the oldest active agent of a module in the workspace; null when the department has none. */
-    async firstActiveIdOfModule(workspaceId: string, module: string): Promise<string | null> {
+    async firstActiveIdOfModule(workspaceId: string, module: string): Promise<OptionalId> {
         const agent = await this.entityManager.findOne(AgentEntity, {
             select: { id: true },
             where: { workspaceId, module, status: "active" },
@@ -186,6 +228,7 @@ export class AgentDirectoryService {
         const agents = await this.entityManager.find(AgentEntity, {
             select: { id: true, name: true, handle: true, avatarUrl: true },
             where: { workspaceId, id: In([...new Set(agentIds)]) },
+            take: new Set(agentIds).size,
         })
         return agents.map((agent) => ({
             id: agent.id,
@@ -207,7 +250,7 @@ export class AgentDirectoryService {
     }
 
     /** The oldest agent of a module in the workspace, active or paused, with its whole sheet; null when the department has none. */
-    async earliestSheetOfModule(workspaceId: string, module: string): Promise<AgentSheet | null> {
+    async earliestSheetOfModule(workspaceId: string, module: string): Promise<OptionalAgentSheet> {
         const agent = await this.entityManager.findOne(AgentEntity, {
             select: SHEET_COLUMNS,
             where: { workspaceId, module },
@@ -216,8 +259,17 @@ export class AgentDirectoryService {
         return agent === null ? null : toSheet(agent)
     }
 
+    /** The greeting that opens a visit with an agent of the workspace; null when the agent is not there. */
+    async greetingOf(workspaceId: string, agentId: string): Promise<string | null> {
+        const agent = await this.entityManager.findOne(AgentEntity, {
+            select: { greeting: true },
+            where: { workspaceId, id: agentId },
+        })
+        return agent === null ? null : agent.greeting
+    }
+
     /** The oldest active agent of a module in the workspace; null when the department has none. */
-    async firstActiveCardOfModule(workspaceId: string, module: string): Promise<AgentCard | null> {
+    async firstActiveCardOfModule(workspaceId: string, module: string): Promise<OptionalAgentCard> {
         const agent = await this.entityManager.findOne(AgentEntity, {
             select: CARD_COLUMNS,
             where: { workspaceId, module, status: "active" },

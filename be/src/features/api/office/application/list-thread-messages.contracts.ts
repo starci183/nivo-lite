@@ -1,4 +1,4 @@
-import type { MessageCursor } from "@modules/domain/office-command-candidates"
+import type { MessageCursor } from "@modules/domain/messages"
 
 /** What reading the Office thread takes. */
 export interface ListThreadMessagesRequest {

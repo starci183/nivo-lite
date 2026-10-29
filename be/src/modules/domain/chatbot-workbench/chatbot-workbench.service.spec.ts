@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AgentConversationsErrorCode } from "@modules/domain/agent-conversations"
+import { LeadAutomationReadService, LeadReadService } from "@modules/domain/leads"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesService } from "@modules/domain/modules"
 import type { ModuleDefinition } from "@modules/domain/modules"
@@ -16,14 +17,13 @@ import {
     briefOf,
     conversationOf,
     GAP,
-    LEAD,
-    LEAD_BRIEF,
     MEMBER,
     messageOf,
     waitingOf,
     isInstallationRow,
     isWaitingRow,
 } from "@tests/fixtures/builders/chatbot-workbench.builder"
+import { LEAD_READ, LEAD_VIEW } from "@tests/fixtures/builders/chatbot-workbench-leads.builder"
 import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
 import type { TableAnswers } from "@tests/fixtures/builders/table-query-builder.builder"
 
@@ -33,7 +33,6 @@ const LIST_CHATBOT_CONVERSATIONS = "public.agent_conversations"
 const LIST_CHATBOT_MESSAGE_BRIEFS = "public.agent_messages"
 const LIST_CHATBOT_MESSAGES = "public.agent_messages"
 const LIST_CHATBOT_WAITING = "public.work_items"
-const LIST_CHATBOT_LEAD_BRIEFS = "public.leads"
 const LIST_CHATBOT_INSTALLATIONS = "public.module_installations"
 const LIST_CHATBOT_AGENTS = "public.agents"
 
@@ -76,7 +75,7 @@ const parametersOf = (em: object, table: string, nth = 0): unknown =>
 
 const NOW = "2026-10-13T03:00:00.000Z"
 
-const build = async (em: MockEntityManager) => {
+const build = async (em: MockEntityManager, leadViews: ReadonlyArray<typeof LEAD_VIEW> = []) => {
     const clock = new FakeClock(NOW)
     const members = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(MEMBER)) })
     const knowledgeGaps = mock<KnowledgeGapsService>({ list: jest.fn(() => Promise.resolve([GAP])) })
@@ -93,9 +92,15 @@ const build = async (em: MockEntityManager) => {
     installs.agentLinksOf.mockResolvedValue(
         (owned?.installations ?? []).filter(isInstallationRow).map((row) => ({ id: row.id, agentId: row.agent_id })),
     )
+    const leads = mock<LeadReadService>()
+    leads.listByIds.mockResolvedValue([...leadViews])
+    const leadFacts = mock<LeadAutomationReadService>()
+    leadFacts.lead.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChatbotWorkbenchService,
+            { provide: LeadReadService, useValue: leads },
+            { provide: LeadAutomationReadService, useValue: leadFacts },
             { provide: WorkItemsActivityService, useValue: work },
             { provide: InstallationOperationsService, useValue: installs },
             { provide: StaffDirectoryService, useValue: staff },
@@ -106,7 +111,17 @@ const build = async (em: MockEntityManager) => {
             { provide: ModulesService, useValue: modules },
         ],
     }).compile()
-    return { service: moduleRef.get(ChatbotWorkbenchService), members, knowledgeGaps, modules, staff, work, installs }
+    return {
+        service: moduleRef.get(ChatbotWorkbenchService),
+        members,
+        knowledgeGaps,
+        modules,
+        staff,
+        work,
+        installs,
+        leads,
+        leadFacts,
+    }
 }
 
 const EMPTY_METRICS = { today: 0, waiting: 0, p50FirstResponseMin: null, sample: 0, leadsCaptured7d: 0 }
@@ -239,10 +254,9 @@ describe("ChatbotWorkbenchService overview", () => {
                     ],
                 ],
                 [LIST_CHATBOT_WAITING, [waitingOf()]],
-                [LIST_CHATBOT_LEAD_BRIEFS, [LEAD_BRIEF]],
             ],
         })
-        const { service, members } = await build(em)
+        const { service, members, leads } = await build(em, [LEAD_VIEW])
 
         await expect(service.overview("u-1", { workspaceId: "ws-1", installationId: null })).resolves.toEqual(
             EXPECTED_OVERVIEW,
@@ -254,7 +268,7 @@ describe("ChatbotWorkbenchService overview", () => {
             ids: ["c-2", "c-1"],
             since: new Date("2026-09-13T03:00:00.000Z"),
         })
-        expect(parametersOf(em, LIST_CHATBOT_LEAD_BRIEFS)).toEqual({ workspaceId: "ws-1", leadIds: ["l-1"] })
+        expect(leads.listByIds).toHaveBeenCalledWith("ws-1", ["l-1"])
     })
 })
 
@@ -278,12 +292,12 @@ describe("ChatbotWorkbenchService overview", () => {
                 [LIST_CHATBOT_CONVERSATIONS, [conversationOf({ lead_id: null })]],
             ],
         })
-        const { service } = await build(em)
+        const { service, leads } = await build(em)
 
         const view = await service.overview("u-1", { workspaceId: "ws-1", installationId: null })
 
         expect(view.conversations.map((row) => row.id)).toEqual(["c-1"])
-        expect(SEEN.get(em)?.queriesOf(LIST_CHATBOT_LEAD_BRIEFS)).toEqual([])
+        expect(leads.listByIds).toHaveBeenCalledWith("ws-1", [])
     })
 
     it("reads only the installation's own agent when the workspace has several", async () => {
@@ -377,12 +391,13 @@ describe("ChatbotWorkbenchService thread", () => {
                         }),
                     ],
                 ],
-                [LIST_CHATBOT_LEAD_BRIEFS, [LEAD]],
             ],
         })
-        const { service, staff } = await build(em)
+        const { service, staff, leadFacts } = await build(em)
+        leadFacts.lead.mockResolvedValue(LEAD_READ)
 
         await expect(service.thread("u-1", "ws-1", "c-1")).resolves.toEqual(EXPECTED_THREAD)
+        expect(leadFacts.lead).toHaveBeenCalledWith("ws-1", "l-1")
         expect(staff.namesOf).toHaveBeenCalledWith("ws-1", ["st-1"])
     })
 })
@@ -394,10 +409,9 @@ describe("ChatbotWorkbenchService thread", () => {
                 [FIND_CHATBOT_CONVERSATION, [conversationOf({ lead_id: null, visitor_name: "Minh" })]],
                 [LIST_CHATBOT_MESSAGES, []],
                 [LIST_CHATBOT_WAITING, [waitingOf()]],
-                [LIST_CHATBOT_LEAD_BRIEFS, []],
             ],
         })
-        const { service, staff } = await build(em)
+        const { service, staff, leadFacts } = await build(em)
 
         const thread = await service.thread("u-1", "ws-1", "c-1")
 
@@ -410,7 +424,7 @@ describe("ChatbotWorkbenchService thread", () => {
             lastAt: "2026-10-13T01:00:00.000Z",
             lastRole: null,
         })
-        expect(parametersOf(em, LIST_CHATBOT_LEAD_BRIEFS)).toEqual({ workspaceId: "ws-1", leadId: null })
+        expect(leadFacts.lead).not.toHaveBeenCalled()
     })
 
     it("refuses a conversation of another workspace", async () => {

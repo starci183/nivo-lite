@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { AgentDirectoryService } from "@modules/domain/agents"
+import { AgentBindingsService } from "@modules/domain/agent-connections"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { ConversationRef } from "@modules/domain/agent-conversations"
 import { AgentMessagesService } from "@modules/domain/agent-messages"
@@ -13,28 +15,6 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ChatTurnQueue } from "@modules/queues/chat-turn"
 import type { FrontAgent, MetaInbound, TelegramInbound, ZaloInbound } from "./conversations.contracts"
-
-/** The agent modules that may greet a visitor, in the order they are preferred. */
-const FRONT_MODULES = ["chatbot", "booking", "loyalty"] as const
-
-/** The front-door agent of a connection. */
-interface FrontAgentRow {
-    /** The agent id. */
-    readonly id: string
-    /** The greeting that opens a visit. */
-    readonly greeting: string
-}
-
-const isFrontAgentRow = (value: unknown): value is FrontAgentRow =>
-    typeof value === "object" &&
-    value !== null &&
-    "id" in value &&
-    typeof value.id === "string" &&
-    "greeting" in value &&
-    typeof value.greeting === "string"
-
-/** The language of the lines the workspace customers and staff read from the system. */
-const LOCALE = "vi"
 
 /** Where a customer was met, and who answers them. */
 interface Meeting {
@@ -67,6 +47,8 @@ export class ConversationsService {
         private readonly messages: AgentMessagesService,
         private readonly inboundEvents: InboundEventsService,
         private readonly zaloCredentials: ZaloCredentialsService,
+        private readonly bindings: AgentBindingsService,
+        private readonly agents: AgentDirectoryService,
     ) {}
 
     /** One Telegram message: answered by the front-door agent of the connection, or only stored when none is bound. "/start" opens a new visit with the greeting. */
@@ -74,7 +56,7 @@ export class ConversationsService {
         const connection = await this.connections.intakeOf(connectionId, "telegram", manager)
         if (connection.kind !== "ok") return
         const channelEventId = `tg:${inbound.chatId}:${inbound.messageId}`
-        const agent = await this.frontAgentOf(connectionId, manager)
+        const agent = await this.frontAgentOf(connection.value.workspaceId, connectionId)
         if (agent === undefined) {
             await this.keepUnrouted(
                 connection.value,
@@ -123,7 +105,7 @@ export class ConversationsService {
             { amount: 0, content: visitor, at: this.clock.now().toISOString(), text: inbound.text.slice(0, 160) },
             manager,
         )
-        const agent = await this.frontAgentOf(connectionId, manager)
+        const agent = await this.frontAgentOf(connection.value.workspaceId, connectionId)
         if (agent === undefined) {
             await this.keepUnrouted(
                 connection.value,
@@ -155,7 +137,7 @@ export class ConversationsService {
         const connection = await this.connections.intakeOf(connectionId, "meta", manager)
         if (connection.kind !== "ok") return
         const visitor = inbound.visitor ?? this.catalog.get(`conversations.${inbound.platform}Guest`, {}, LOCALE)
-        const agent = await this.frontAgentOf(connectionId, manager)
+        const agent = await this.frontAgentOf(connection.value.workspaceId, connectionId)
         const eventId = `meta:${inbound.eventId}`
         if (agent === undefined) {
             await this.keepUnrouted(
@@ -272,21 +254,9 @@ export class ConversationsService {
         return loaded.kind === "ok" && loaded.value.secret.appId !== appId
     }
 
-    private async frontAgentOf(connectionId: string, manager: EntityManager): Promise<FrontAgent | undefined> {
-        const rows: ReadonlyArray<unknown> = await manager
-            .createQueryBuilder()
-            .select("a.id", "id")
-            .addSelect("a.greeting", "greeting")
-            .from("public.agent_connections", "l")
-            .innerJoin("agents", "a", "a.id = l.agent_id")
-            .where("l.connection_id = :connectionId", { connectionId })
-            .andWhere("l.purpose = 'inbound_chat' AND l.access <> 'read' AND a.status = 'active'")
-            .andWhere("a.module IN (:...modules)", { modules: FRONT_MODULES })
-            .orderBy("array_position(ARRAY['chatbot', 'booking', 'loyalty'], a.module)")
-            .addOrderBy("a.created_at")
-            .limit(1)
-            .getRawMany()
-        const row = rows.find(isFrontAgentRow)
-        return row === undefined ? undefined : { id: row.id, greeting: row.greeting }
+    private async frontAgentOf(workspaceId: string, connectionId: string): Promise<FrontAgent | undefined> {
+        const { front } = await this.bindings.routeInbound(connectionId)
+        if (front === null) return undefined
+        return { id: front.id, greeting: (await this.agents.greetingOf(workspaceId, front.id)) ?? "" }
     }
 }

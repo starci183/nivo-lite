@@ -4,14 +4,8 @@ import type { EntityManager, FindOptionsWhere } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { LeadFlowsError, LeadFlowsErrorCode } from "./errors/lead-flows.error"
 import { saveValues, toLeadFlow } from "./lead-flow.mapper"
-import type {
-    Identity,
-    LeadFlow,
-    LeadFlowPatch,
-    NewLeadFlow,
-    OptionalLeadFlow,
-    OptionalText,
-} from "./lead-flows.contracts"
+import type { Identity, LeadFlow, LeadFlowPatch, NewLeadFlow } from "./lead-flows.contracts"
+import type { OptionalLeadFlow, OptionalText } from "./lead-flow-delivery.contracts"
 import { LeadFlowEntity } from "./persistence/entities"
 import { NOW, leadFlowOfRaw } from "./persistence/lead-flow.projection"
 

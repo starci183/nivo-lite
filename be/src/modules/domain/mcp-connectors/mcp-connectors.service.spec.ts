@@ -6,11 +6,11 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { McpConnectorRecord } from "./mcp-connectors.contracts"
+import type { McpConnectorRow } from "./mcp-connectors.contracts"
 import { McpConnectorsService } from "./mcp-connectors.service"
 import { McpConnectorEntity } from "./persistence/entities"
 
-const rowOf = builder<McpConnectorRecord>({
+const rowOf = builder<McpConnectorRow>({
     key: "hakuen",
     name: "HAKUEN Back-office",
     kind: "remote",
@@ -186,11 +186,13 @@ describe("McpConnectorsService credential", () => {
         const [written, missing] = queueQueryBuilders(em, [
             { execute: { raw: [{ key: "hakuen" }] } },
             { execute: { raw: [] } },
+            { execute: { raw: "no rows" } },
         ])
         const connectors = await build(em)
         const record = { workspaceId: "ws-1", key: "hakuen", sealed: "sealed-text", setBy: "person-1" }
 
         await expect(connectors.setCredential(record)).resolves.toBe(true)
+        await expect(connectors.setCredential(record)).resolves.toBe(false)
         await expect(connectors.setCredential(record)).resolves.toBe(false)
         expect(setBy(written)).toEqual({
             credentialState: "set",
@@ -246,7 +248,11 @@ describe("McpConnectorsService credential", () => {
 describe("McpConnectorsService approval and health", () => {
     it("approves the catalog the approval was made on, and answers false when it changed", async () => {
         const em = mockEntityManager()
-        const [approved] = queueQueryBuilders(em, [{ execute: { raw: [{ key: "hakuen" }] } }, { execute: { raw: [] } }])
+        const [approved] = queueQueryBuilders(em, [
+            { execute: { raw: [{ key: "hakuen" }] } },
+            { execute: { raw: [] } },
+            { execute: { raw: "no rows" } },
+        ])
         const connectors = await build(em)
         const approval = {
             workspaceId: "ws-1",
@@ -257,6 +263,7 @@ describe("McpConnectorsService approval and health", () => {
         }
 
         await expect(connectors.approveCatalog(approval)).resolves.toBe(true)
+        await expect(connectors.approveCatalog(approval)).resolves.toBe(false)
         await expect(connectors.approveCatalog(approval)).resolves.toBe(false)
         expect(setBy(approved)).toEqual({
             approvedCatalog: "CAST(:approvedJson AS jsonb)",

@@ -4,14 +4,14 @@ import type { OrderSummary } from "@modules/domain/orders"
 import { queueQueryBuilders } from "./entity-query-builder-fake.builder"
 import type { FakeQueryBuilder, QueryBuilderAnswers } from "./entity-query-builder-fake.builder"
 import type {
-    InvoiceRecord,
-    InvoiceViewRecord,
+    InvoiceRow,
+    InvoiceViewRow,
     NewInvoice,
     NewRenewalInvoice,
 } from "@modules/domain/invoices/invoices.contracts"
 
 export const WS = "11111111-1111-4111-8111-111111111111"
-export const INVOICE: InvoiceRecord = {
+export const INVOICE: InvoiceRow = {
     id: "inv-1",
     workspace_id: WS,
     order_id: "o1",
@@ -29,7 +29,7 @@ export const DUE_AT = "2026-10-28T10:00:00.000Z"
 export const INPUT: NewInvoice = { workspaceId: WS, orderId: "o1", leadId: "l1", amountVnd: 50_000, issuedBy: "Lan" }
 export const CONTRACT = "c1"
 export const PERIOD = "2026-11-30"
-export const RENEWAL: InvoiceRecord = {
+export const RENEWAL: InvoiceRow = {
     ...INVOICE,
     id: "inv-r1",
     order_id: null,
@@ -47,7 +47,7 @@ export const RENEWAL_INPUT: NewRenewalInvoice = {
     periodEndsOn: PERIOD,
     issuedBy: null,
 }
-export const VIEW: InvoiceViewRecord = { ...INVOICE, due_at: DUE_AT, issued_at: NOW, created_at: NOW }
+export const VIEW: InvoiceViewRow = { ...INVOICE, due_at: DUE_AT, issued_at: NOW, created_at: NOW }
 
 export const ORDER: OrderSummary = { id: "o1", orderNo: "ORDER-1", items: "Tea", amountVnd: 50_000, status: "invoiced" }
 export const LEAD: LeadCard = {

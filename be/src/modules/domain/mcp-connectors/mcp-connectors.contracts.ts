@@ -87,7 +87,7 @@ export type OptionalStoredConnectorCredential = StoredConnectorCredential | null
 export type OptionalSealedCredential = string | null
 
 /** One public.mcp_connectors row as the list answers it; the sealed credential is never part of it. */
-export interface McpConnectorRecord {
+export interface McpConnectorRow {
     /** The namespace key. */
     readonly key: string
     /** The display name. */

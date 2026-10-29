@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
+import { ANY_FUNCTION } from "@tests/fixtures/builders/any-function.builder"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { In, LessThan, LessThanOrEqual, MoreThanOrEqual } from "typeorm"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
@@ -79,7 +80,7 @@ describe("AutomationRunsService > beginRun", () => {
                     workspaceId: "ws-1",
                     triggerRef: "t-1",
                     dedupeKey: "d-1",
-                    payload: expect.any(Function),
+                    payload: ANY_FUNCTION,
                     status: "running",
                     attempts: 1,
                     runAt: new Date(NOW),
@@ -414,7 +415,7 @@ describe("AutomationRunsService > markPayload", () => {
 
         await runs.markPayload("r-1", { y: 2 })
 
-        expect(fake.callsOf("set")).toEqual([[{ payload: expect.any(Function) }]])
+        expect(fake.callsOf("set")).toEqual([[{ payload: ANY_FUNCTION }]])
         expect(fake.callsOf("where")).toEqual([[{ id: "r-1" }]])
         expect(fake.callsOf("setParameter")).toEqual([["payload", '{"y":2}']])
     })

@@ -21,7 +21,8 @@ import { LeadFlowConversationService } from "./lead-flow-conversation.service"
 import { LeadFlowKitService } from "./lead-flow-kit.service"
 import { LeadFlowMetaService } from "./lead-flow-meta.service"
 import { LeadFlowStoreService } from "./lead-flow-store.service"
-import type { FlowState, LeadFlow, LeadFlowPatch, MentionRead } from "./lead-flows.contracts"
+import type { FlowState, LeadFlow, LeadFlowPatch } from "./lead-flows.contracts"
+import type { MentionRead } from "./lead-flow-delivery.contracts"
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 

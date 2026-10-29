@@ -188,7 +188,7 @@ export interface AutomationSuggestion {
 /** The raw rows the overview is assembled from (the `automations_data` function answers them in one call). */
 export interface OverviewRows {
     /** The installed modules with the context version each runs on. */
-    readonly installations: ReadonlyArray<InstallationRow>
+    readonly installations: ReadonlyArray<AutomationInstallationRow>
     /** The pipelines of the workspace. */
     readonly pipelines: ReadonlyArray<PipelineRow>
     /** The latest runs. */
@@ -230,7 +230,7 @@ export interface ContextSnapshot {
 }
 
 /** One installed module with its active context. */
-export interface InstallationRow {
+export interface AutomationInstallationRow {
     /** The module key. */
     readonly module_key: string
     /** The operating mode of the department. */
@@ -344,3 +344,6 @@ export interface RenewalPayment {
     /** The transfer content that matches the payment to the invoice. */
     readonly transferContent: string
 }
+
+/** A payment's bank transaction id or invoice id, or none when the payment does not have one. */
+export type OptionalPaymentReference = string | null

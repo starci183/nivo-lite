@@ -213,3 +213,6 @@ export interface CustomerChat {
     /** When the chat began. */
     readonly createdAt: Date
 }
+
+/** An installation id, or null when there is none. */
+export type OptionalInstallationId = string | null

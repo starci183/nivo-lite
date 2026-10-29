@@ -1,17 +1,12 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { entityOf } from "@tests/fixtures/builders/entity.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import {
+    waitingPaymentRow,
+    waitingPaymentWithoutAmountRow,
+} from "@tests/fixtures/builders/inbound-payments-rows.builder"
 import { InboundPaymentsReadService } from "./inbound-payments-read.service"
-import { InboundEventEntity } from "./persistence/entities"
-
-const eventOf = entityOf(InboundEventEntity, {
-    amountVnd: 500000,
-    senderName: "Lan",
-    externalRef: null,
-    body: "chuyen khoan",
-})
 
 const build = async (answers: Parameters<typeof queueQueryBuilders>[1]) => {
     const em = mockEntityManager()
@@ -26,7 +21,7 @@ describe("InboundPaymentsReadService", () => {
     it("tallies the waiting payments and lists the oldest ones with their memo", async () => {
         const { service, fakes } = await build([
             { getRawOne: { count: 2, total: 700000 } },
-            { getMany: [eventOf(), eventOf({ amountVnd: null, externalRef: "FT123" })] },
+            { getMany: [waitingPaymentRow(), waitingPaymentWithoutAmountRow()] },
         ])
 
         await expect(service.unmatched("ws-1", 10)).resolves.toEqual({

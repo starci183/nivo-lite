@@ -31,3 +31,6 @@ export interface BookingResourceCapacity {
     /** The capacity. */
     readonly capacity: number
 }
+
+/** The capacity of a locked resource, or null when it is not in the workspace. */
+export type OptionalBookingResourceCapacity = BookingResourceCapacity | null

@@ -1,14 +1,13 @@
 import { Test } from "@nestjs/testing"
-import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { builder, mock } from "@starci/jest-preset"
 import type { ModuleApprovalRequest } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { WorkItem } from "./decisions.contracts"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { ModuleApprovalGateService } from "./module-approval-gate.service"
+import type { WorkItemViewRow } from "./work-item-views.rows"
 import { WorkItemViewsService } from "./work-item-views.service"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { WorkEngineService } from "./work-engine.service"
 
 const MEMBER_ID = "11111111-1111-4111-8111-111111111111"
@@ -42,6 +41,8 @@ const itemOf = builder<WorkItem>({
     installation_id: null,
 })
 
+const viewOf = builder<WorkItemViewRow>({ ...itemOf(), cursor_at: "2026-10-12T10:00:00.000000Z" })
+
 const memberOf = builder<WorkspaceMember>({
     userId: MEMBER_ID,
     workspaceId: "ws-1",
@@ -65,20 +66,20 @@ const request: ModuleApprovalRequest = {
 
 const setup = async (
     engine: Partial<WorkEngineService>,
-    rows: ReadonlyArray<WorkItem> = [],
+    rows: ReadonlyArray<WorkItemViewRow> = [],
 ): Promise<ModuleApprovalGateService> => {
-    const em = mockEntityManager()
-    queueQueryBuilders(em, [{ getRawOne: rows[0] }])
     const moduleRef = await Test.createTestingModule({
         providers: [
             ModuleApprovalGateService,
-            WorkItemViewsService,
             { provide: WorkEngineService, useValue: mock<WorkEngineService>(engine) },
             {
                 provide: WorkspaceMembersService,
                 useValue: mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(memberOf()) }),
             },
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            {
+                provide: WorkItemViewsService,
+                useValue: mock<WorkItemViewsService>({ find: jest.fn().mockResolvedValue(rows[0]) }),
+            },
         ],
     }).compile()
     return moduleRef.get(ModuleApprovalGateService)
@@ -126,7 +127,7 @@ describe("ModuleApprovalGateService", () => {
 
     it("answers the current status of an item no longer waiting", async () => {
         const resumeWork = jest.fn().mockRejectedValue(new DecisionsError({ code: DecisionsErrorCode.NotWaiting }))
-        const subject = await setup({ resumeWork }, [itemOf({ status: "done" })])
+        const subject = await setup({ resumeWork }, [viewOf({ status: "done" })])
 
         await expect(
             subject.decide({ workspaceId: "ws-1", workItemId: "item-1", decision: "rejected", decidedBy: MEMBER_ID }),

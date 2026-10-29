@@ -8,6 +8,7 @@ import { InjectInbox } from "@modules/platform/inbox"
 import type { Inbox } from "@modules/platform/inbox"
 import { InboundEventsError, InboundEventsErrorCode } from "./errors/inbound-events.error"
 import { bankDedupeKey, eventDedupeKey } from "./inbound-dedupe.policy"
+import { returnedIdOf } from "./inbound-returned-id.policy"
 import type {
     BankPaymentEvent,
     BankPaymentRecorded,
@@ -36,7 +37,7 @@ const insertOnce = async (manager: EntityManager, event: NewInboundEvent): Promi
         .orIgnore()
         .returning("id")
         .execute()
-    return (result.raw as Array<{ id: string }>)[0]?.id
+    return returnedIdOf(result.raw)
 }
 
 /** A stored inbound event as the contract reads it. */
@@ -194,9 +195,9 @@ export class InboundEventsService {
             .where("workspace_id = :workspaceId AND dedupe_key = :key", { workspaceId, key })
             .returning("id")
             .execute()
-        const repeated = (result.raw as Array<{ id: string }>)[0]
-        if (repeated === undefined) throw new InboundEventsError({ code: InboundEventsErrorCode.Unreadable })
-        return { duplicate: true, inboundEventId: repeated.id }
+        const repeatedId = returnedIdOf(result.raw)
+        if (repeatedId === undefined) throw new InboundEventsError({ code: InboundEventsErrorCode.Unreadable })
+        return { duplicate: true, inboundEventId: repeatedId }
     }
 
     /** Hands a finished sale to the order chain, inside the caller's transaction; the same sale twice is one order. Answers whether it was new. */

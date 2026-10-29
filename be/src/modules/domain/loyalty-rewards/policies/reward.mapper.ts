@@ -1,3 +1,4 @@
+import { rowShape } from "@modules/platform/database"
 import type { LoyaltyReward } from "../loyalty-rewards.contracts"
 import type { LoyaltyRewardEntity } from "../persistence/entities"
 
@@ -49,6 +50,26 @@ export interface RewardRaw {
     /** Whether the reward can be redeemed. */
     readonly active: boolean
 }
+
+/** Whether a returned row holds every reward column with a value of its kind. */
+const isRewardColumns = rowShape({
+    id: "string",
+    key: "string",
+    name: "string",
+    kind: "string",
+    value_vnd: "number",
+    percent: "number?",
+    points_cost: "number",
+    stock: "number?",
+    per_customer_limit: "number?",
+    min_tier_key: "string?",
+    note: "string",
+    active: "boolean",
+})
+
+/** Whether a returned row is a reward row: every column of its kind, and a kind a reward can have. */
+export const isRewardRaw = (value: unknown): value is RewardRaw =>
+    isRewardColumns(value) && (value.kind === "voucher" || value.kind === "item" || value.kind === "percent")
 
 /** The reward a stored row holds. */
 export const toReward = (row: RewardFieldsOfEntity): LoyaltyReward => ({

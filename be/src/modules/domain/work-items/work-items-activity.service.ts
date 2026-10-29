@@ -4,10 +4,12 @@ import { LeadReadService } from "@modules/domain/leads"
 import type { LeadCard } from "@modules/domain/leads"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
+    CareWorkItemId,
     DashboardListLine,
     DashboardListQuery,
     RecentWorkLine,
     WaitingReplyRow,
+    WaitingSummary,
 } from "./work-items-activity.contracts"
 import { WorkItemEntity } from "./persistence/entities"
 
@@ -159,14 +161,14 @@ export class WorkItemsActivityService {
         workspaceId: string,
         limit: number,
         manager: EntityManager = this.entityManager,
-    ): Promise<Array<string | null>> {
+    ): Promise<Array<WaitingSummary>> {
         const rows = await manager
             .createQueryBuilder(WorkItemEntity, "w")
             .select("w.proposal ->> 'summary'", "summary")
             .where("w.workspace_id = :workspaceId AND w.status = 'waiting_decision'", { workspaceId })
             .orderBy("w.created_at", "ASC")
             .limit(limit)
-            .getRawMany<{ summary: string | null }>()
+            .getRawMany<{ summary: WaitingSummary }>()
         return rows.map((row) => row.summary)
     }
 
@@ -176,7 +178,7 @@ export class WorkItemsActivityService {
         leadId: string,
         since: string,
         manager: EntityManager = this.entityManager,
-    ): Promise<string | null> {
+    ): Promise<CareWorkItemId> {
         const row = await manager
             .createQueryBuilder(WorkItemEntity, "w")
             .select("w.id", "id")

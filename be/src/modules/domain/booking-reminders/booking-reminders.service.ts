@@ -101,7 +101,7 @@ export class BookingRemindersService {
     /** The reminder card of a workspace when the owner switched it on. */
     private async enabledCard(workspaceId: string): Promise<PipelineRow | null> {
         const card = await this.pipelines.findPipeline(workspaceId, REMINDER_TEMPLATE)
-        return card !== null && card.enabled ? card : null
+        return card?.enabled === true ? card : null
     }
 
     /** Writes the reminders still ahead and cancels those that are already due and no longer apply. */

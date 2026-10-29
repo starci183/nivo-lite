@@ -13,3 +13,6 @@ export interface CustomerChatRef {
     /** The customer it belongs to, or null while the visitor is unknown. */
     readonly leadId: string | null
 }
+
+/** A customer conversation, or none. */
+export type OptionalCustomerChatRef = CustomerChatRef | null

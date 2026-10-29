@@ -1,5 +1,15 @@
+import { Test } from "@nestjs/testing"
 import { toCustomer, toLeadContact } from "./customer.mapper"
 import type { CustomerFields, LeadContactRaw } from "./customer.mapper"
+
+const SUBJECT = Symbol("customer.mapper")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { toCustomer, toLeadContact } }],
+    }).compile()
+    return moduleRef.get<typeof import("./customer.mapper")>(SUBJECT)
+}
 
 const customerRow = (overrides: Partial<CustomerFields> = {}): CustomerFields => ({
     id: "c-1",
@@ -22,8 +32,9 @@ const leadRow = (overrides: Partial<LeadContactRaw> = {}): LeadContactRaw => ({
 })
 
 describe("toCustomer", () => {
-    it("maps every column and writes the join date as ISO text", () => {
-        expect(toCustomer(customerRow())).toEqual({
+    it("maps every column and writes the join date as ISO text", async () => {
+        const subject = await buildSubject()
+        expect(subject.toCustomer(customerRow())).toEqual({
             id: "c-1",
             name: "Nguyen Van A",
             phone: "84901234567",
@@ -35,8 +46,9 @@ describe("toCustomer", () => {
         })
     })
 
-    it("keeps absent optional columns as null", () => {
-        expect(toCustomer(customerRow({ phone: null, email: null, birthday: null, tierKey: null }))).toEqual({
+    it("keeps absent optional columns as null", async () => {
+        const subject = await buildSubject()
+        expect(subject.toCustomer(customerRow({ phone: null, email: null, birthday: null, tierKey: null }))).toEqual({
             id: "c-1",
             name: "Nguyen Van A",
             phone: null,
@@ -50,8 +62,9 @@ describe("toCustomer", () => {
 })
 
 describe("toLeadContact", () => {
-    it("normalises the phone and the email", () => {
-        expect(toLeadContact(leadRow())).toEqual({
+    it("normalises the phone and the email", async () => {
+        const subject = await buildSubject()
+        expect(subject.toLeadContact(leadRow())).toEqual({
             id: "l-1",
             name: "Tran B",
             phone: "84901234567",
@@ -59,14 +72,15 @@ describe("toLeadContact", () => {
         })
     })
 
-    it("answers null for an absent or malformed phone and email", () => {
-        expect(toLeadContact(leadRow({ phone: null, email: null }))).toEqual({
+    it("answers null for an absent or malformed phone and email", async () => {
+        const subject = await buildSubject()
+        expect(subject.toLeadContact(leadRow({ phone: null, email: null }))).toEqual({
             id: "l-1",
             name: "Tran B",
             phone: null,
             email: null,
         })
-        expect(toLeadContact(leadRow({ phone: "12", email: "not-an-email" }))).toEqual({
+        expect(subject.toLeadContact(leadRow({ phone: "12", email: "not-an-email" }))).toEqual({
             id: "l-1",
             name: "Tran B",
             phone: null,

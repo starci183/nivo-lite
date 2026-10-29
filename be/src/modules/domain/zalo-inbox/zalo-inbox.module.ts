@@ -3,6 +3,7 @@ import { INBOX, InboxService } from "@modules/platform/inbox"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./zalo-inbox.module-definition"
+import { ZaloInboxPageReadService } from "./zalo-inbox-page-read.service"
 import { ZaloInboxService } from "./zalo-inbox.service"
 
 @Module({})
@@ -17,9 +18,10 @@ export class ZaloInboxModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 { provide: INBOX, useClass: InboxService },
                 ZaloInboxService,
+                ZaloInboxPageReadService,
                 ZaloDeliveryPolicy,
             ],
-            exports: [ZaloInboxService, ZaloDeliveryPolicy],
+            exports: [ZaloInboxService, ZaloInboxPageReadService, ZaloDeliveryPolicy],
         }
     }
 }

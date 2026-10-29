@@ -1,6 +1,16 @@
+import { Test } from "@nestjs/testing"
 import { toEntry, toExpiryEntry, toMember, toTotal } from "./ledger.mapper"
 import type { LoyaltyCustomer } from "@modules/domain/loyalty-customers"
 import type { BalanceRaw, EntryFields, ExpiryFields, TotalRaw } from "./ledger.mapper"
+
+const SUBJECT = Symbol("ledger.mapper")
+
+const buildSubject = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { toEntry, toExpiryEntry, toMember, toTotal } }],
+    }).compile()
+    return moduleRef.get<typeof import("./ledger.mapper")>(SUBJECT)
+}
 
 const customer: LoyaltyCustomer = {
     id: "c-1",
@@ -40,8 +50,9 @@ const entryRow = (overrides: Partial<EntryFields> = {}): EntryFields => ({
 })
 
 describe("toMember", () => {
-    it("maps the customer columns and the balances", () => {
-        expect(toMember(customer, balanceRow())).toEqual({
+    it("maps the customer columns and the balances", async () => {
+        const subject = await buildSubject()
+        expect(subject.toMember(customer, balanceRow())).toEqual({
             id: "c-1",
             name: "Nguyen Van A",
             phone: "84901234567",
@@ -57,12 +68,14 @@ describe("toMember", () => {
         })
     })
 
-    it("answers a null last visit for a member who never earned", () => {
-        expect(toMember(customer, balanceRow({ last_visit_at: null })).lastVisitAt).toBeNull()
+    it("answers a null last visit for a member who never earned", async () => {
+        const subject = await buildSubject()
+        expect(subject.toMember(customer, balanceRow({ last_visit_at: null })).lastVisitAt).toBeNull()
     })
 
-    it("holds nothing for a customer the ledger has no entry for", () => {
-        expect(toMember(customer, undefined)).toMatchObject({
+    it("holds nothing for a customer the ledger has no entry for", async () => {
+        const subject = await buildSubject()
+        expect(subject.toMember(customer, undefined)).toMatchObject({
             points: 0,
             lifetimeSpendVnd: 0,
             visits: 0,
@@ -72,8 +85,9 @@ describe("toMember", () => {
 })
 
 describe("toEntry", () => {
-    it("maps every column and writes the dates as ISO text", () => {
-        expect(toEntry(entryRow())).toEqual({
+    it("maps every column and writes the dates as ISO text", async () => {
+        const subject = await buildSubject()
+        expect(subject.toEntry(entryRow())).toEqual({
             id: "e-1",
             customerId: "c-1",
             kind: "earn",
@@ -90,31 +104,35 @@ describe("toEntry", () => {
         })
     })
 
-    it("answers a null expiry for an entry that never expires", () => {
-        expect(toEntry(entryRow({ expiresAt: null })).expiresAt).toBeNull()
+    it("answers a null expiry for an entry that never expires", async () => {
+        const subject = await buildSubject()
+        expect(subject.toEntry(entryRow({ expiresAt: null })).expiresAt).toBeNull()
     })
 })
 
 describe("toExpiryEntry", () => {
     const expiryRow = (expiresAt: Date | null): ExpiryFields => ({ kind: "earn", points: 30, expiresAt })
 
-    it("writes the expiry as ISO text", () => {
-        expect(toExpiryEntry(expiryRow(new Date("2026-01-02T03:04:05.000Z")))).toEqual({
+    it("writes the expiry as ISO text", async () => {
+        const subject = await buildSubject()
+        expect(subject.toExpiryEntry(expiryRow(new Date("2026-01-02T03:04:05.000Z")))).toEqual({
             kind: "earn",
             points: 30,
             expiresAt: "2026-01-02T03:04:05.000Z",
         })
     })
 
-    it("keeps an absent expiry as null", () => {
-        expect(toExpiryEntry(expiryRow(null))).toEqual({ kind: "earn", points: 30, expiresAt: null })
+    it("keeps an absent expiry as null", async () => {
+        const subject = await buildSubject()
+        expect(subject.toExpiryEntry(expiryRow(null))).toEqual({ kind: "earn", points: 30, expiresAt: null })
     })
 })
 
 describe("toTotal", () => {
-    it("maps the grouped columns", () => {
+    it("maps the grouped columns", async () => {
+        const subject = await buildSubject()
         const row: TotalRaw = { kind: "redeem", entries: 3, points: -90, amount_vnd: 0 }
 
-        expect(toTotal(row)).toEqual({ kind: "redeem", entries: 3, points: -90, amountVnd: 0 })
+        expect(subject.toTotal(row)).toEqual({ kind: "redeem", entries: 3, points: -90, amountVnd: 0 })
     })
 })

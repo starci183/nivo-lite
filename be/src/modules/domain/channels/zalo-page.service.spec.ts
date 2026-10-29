@@ -1,6 +1,8 @@
 import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
+import { ZaloInboxPageReadService } from "@modules/domain/zalo-inbox"
+import type { ZaloFollowEventRow, ZaloInboxFactsRow } from "@modules/domain/zalo-inbox"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import { ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
 import { CLOCK } from "@modules/platform/clock"
@@ -16,10 +18,8 @@ import type { TableAnswers, TableQuery } from "@tests/fixtures/builders/table-qu
 
 /** The name of each read of the capability, so a spec answers the read it means. */
 const LIST_ZALO_RECIPIENTS = "recipients"
-const FIND_ZALO_INBOX_FACTS = "facts"
 const FIND_LAST_ZALO_REPLY = "lastReply"
 const LIST_ZALO_MESSAGE_EVENTS = "messages"
-const LIST_ZALO_FOLLOW_EVENTS = "follows"
 
 const limitOf = (query: TableQuery): unknown => query.callsOf("limit")[0]?.[0]
 
@@ -29,8 +29,6 @@ const answerTables = (em: ReturnType<typeof mockEntityManager>, answers: Record<
         "public.agent_conversations": answers[LIST_ZALO_RECIPIENTS] ?? [],
         "public.agent_messages": (query) =>
             (limitOf(query) === 1 ? answers[FIND_LAST_ZALO_REPLY] : answers[LIST_ZALO_MESSAGE_EVENTS]) ?? [],
-        "public.zalo_inbox": (query) =>
-            (limitOf(query) === 20 ? answers[LIST_ZALO_FOLLOW_EVENTS] : answers[FIND_ZALO_INBOX_FACTS]) ?? [],
     })
 
 /** The named parameters of every condition the subject put on its read of a table. */
@@ -87,15 +85,20 @@ const messageRow = {
 
 const DEFAULT_ANSWERS: Record<string, ReadonlyArray<unknown>> = {
     [LIST_ZALO_RECIPIENTS]: [recipientRow],
-    [FIND_ZALO_INBOX_FACTS]: [{ last_at: "2026-10-28T09:30:00.000Z", has_text: true, has_follow: false }],
     [FIND_LAST_ZALO_REPLY]: [{ delivery_status: "sent", delivery_error: null }],
     [LIST_ZALO_MESSAGE_EVENTS]: [messageRow],
-    [LIST_ZALO_FOLLOW_EVENTS]: [{ id: "f-1", received_at: "2026-10-28T08:00:00.000Z" }],
 }
 
 type Answers = Record<string, ReadonlyArray<unknown>>
 
-const build = async (answers: Answers = {}, record: Partial<ConnectionRecord> = {}) => {
+const FACTS: ZaloInboxFactsRow = { last_at: "2026-10-28T09:30:00.000Z", has_text: true, has_follow: false }
+const FOLLOW: ZaloFollowEventRow = { id: "f-1", received_at: "2026-10-28T08:00:00.000Z" }
+
+const build = async (
+    answers: Answers = {},
+    record: Partial<ConnectionRecord> = {},
+    facts: ZaloInboxFactsRow | null = FACTS,
+) => {
     const logger = mock<Logger>()
     const connections = mock<ConnectionsService>()
     connections.authorize.mockResolvedValue({ role: "owner", displayName: "Lan" })
@@ -108,6 +111,9 @@ const build = async (answers: Answers = {}, record: Partial<ConnectionRecord> = 
     credentials.accessToken.mockResolvedValue("access-token")
     const delivery = mock<ChannelDeliveryService>()
     delivery.sendToPerson.mockResolvedValue(undefined)
+    const inboxReads = mock<ZaloInboxPageReadService>()
+    inboxReads.followEvents.mockResolvedValue([FOLLOW])
+    inboxReads.factsOf.mockResolvedValue(facts)
     const em = mockEntityManager()
     const seen = answerTables(em, { ...DEFAULT_ANSWERS, ...answers })
     const moduleRef = await Test.createTestingModule({
@@ -118,6 +124,7 @@ const build = async (answers: Answers = {}, record: Partial<ConnectionRecord> = 
             { provide: LOGGER, useValue: logger },
             { provide: ConnectionsService, useValue: connections },
             { provide: ZaloCredentialsService, useValue: credentials },
+            { provide: ZaloInboxPageReadService, useValue: inboxReads },
             { provide: ChannelDeliveryService, useValue: delivery },
         ],
     }).compile()
@@ -184,7 +191,7 @@ describe("ZaloPageService view", () => {
 
 describe("ZaloPageService view fallbacks", () => {
     it("falls back to the stored facts when the credential cannot be read", async () => {
-        const { service, credentials } = await build({ [FIND_ZALO_INBOX_FACTS]: [] }, { meta: { app_id: "999999" } })
+        const { service, credentials } = await build({}, { meta: { app_id: "999999" } }, null)
         credentials.load.mockResolvedValue(refused(ChannelsErrorCode.SecretUnreadable))
 
         const page = await service.view(actor, "c-1")

@@ -33,6 +33,14 @@ export interface CustomerContact {
     readonly email: string | null
 }
 
+/** A row of a write that answered the ids it touched. */
+const isReturnedRow = (value: unknown): value is { readonly id: string } =>
+    typeof value === "object" && value !== null && "id" in value && typeof value.id === "string"
+
+/** The ids a write answered; nothing when the driver answered no rows. */
+const returnedIds = (raw: unknown): ReadonlyArray<string> =>
+    Array.isArray(raw) ? raw.filter(isReturnedRow).map((row) => row.id) : []
+
 /** The most leads one read answers. */
 const LEAD_LIMIT = 2000
 
@@ -83,7 +91,7 @@ export class LoyaltyCustomersService {
             .orIgnore()
             .returning("id")
             .execute()
-        const id = (created.raw as Array<{ id: string }>)[0]?.id
+        const [id] = returnedIds(created.raw)
         if (id !== undefined) return id
         return this.idOfPhone(manager, person.workspaceId, person.phone)
     }
@@ -102,7 +110,7 @@ export class LoyaltyCustomersService {
             })
             .returning("id")
             .execute()
-        return (moved.raw as Array<unknown>).length > 0
+        return returnedIds(moved.raw).length > 0
     }
 
     /** The leads of a workspace that carry a usable phone or email. */
@@ -145,7 +153,7 @@ export class LoyaltyCustomersService {
             .orIgnore()
             .returning("id")
             .execute()
-        return (result.raw as Array<unknown>).length
+        return returnedIds(result.raw).length
     }
 
     /** Changes the profile fields of a customer within a workspace, without moving their points or tier. */
@@ -164,7 +172,7 @@ export class LoyaltyCustomersService {
             .where("workspace_id = :workspaceId AND id = :customerId", { workspaceId, customerId })
             .returning("id")
             .execute()
-        return (changed.raw as Array<unknown>).length > 0
+        return returnedIds(changed.raw).length > 0
     }
 
     /** The newest customers of the workspace, at most `limit`. */

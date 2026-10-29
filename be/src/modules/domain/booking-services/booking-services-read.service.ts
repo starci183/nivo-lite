@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { BookingServiceRecord, BookingServiceTiming } from "./booking-services-read.contracts"
+import type { BookingServiceRecord, OptionalBookingServiceTiming } from "./booking-services-read.contracts"
 import { BookingServiceEntity } from "./persistence/entities"
 
 /** The most services a workspace lists. */
@@ -34,7 +34,7 @@ export class BookingServicesReadService {
     }
 
     /** How long a service holds a resource, or none when the service is gone. */
-    timingOf(workspaceId: string, id: string): Promise<BookingServiceTiming | null> {
+    timingOf(workspaceId: string, id: string): Promise<OptionalBookingServiceTiming> {
         return this.entityManager.findOne(BookingServiceEntity, {
             select: { durationMin: true, bufferMin: true },
             where: { workspaceId, id },

@@ -2,12 +2,11 @@ import { Injectable } from "@nestjs/common"
 import { IsNull, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { LoyaltyLedgerService } from "@modules/domain/loyalty-ledger"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import type { LoyaltyReward, RewardEdit, RewardMatch, RewardRemoval } from "./loyalty-rewards.contracts"
 import { LoyaltyRewardEntity } from "./persistence/entities"
 import { rewardKey, sanitizeReward } from "./policies/reward-edit.policy"
-import { REWARD_RETURNING, toReward, toRewardFromRaw } from "./policies/reward.mapper"
-import type { RewardRaw } from "./policies/reward.mapper"
+import { REWARD_RETURNING, isRewardRaw, toReward, toRewardFromRaw } from "./policies/reward.mapper"
 
 const KEY_ATTEMPTS = 4
 const NEW_REWARD_ORDER = 100
@@ -87,7 +86,7 @@ export class LoyaltyRewardsService {
                 .where("workspace_id = :workspaceId AND id = :id", { workspaceId, id: edit.id })
                 .returning(REWARD_RETURNING)
                 .execute()
-            const [row] = updated.raw as Array<RewardRaw>
+            const [row] = returnedRows(updated.raw, isRewardRaw)
             return row === undefined ? null : toRewardFromRaw(row)
         }
         const key = rewardKey(edit.key?.trim() || reward.name)
@@ -114,7 +113,7 @@ export class LoyaltyRewardsService {
             .orIgnore()
             .returning(REWARD_RETURNING)
             .execute()
-        const [row] = inserted.raw as Array<RewardRaw>
+        const [row] = returnedRows(inserted.raw, isRewardRaw)
         if (row !== undefined) return toRewardFromRaw(row)
         return attempt + 1 >= KEY_ATTEMPTS ? null : this.insertAttempt(workspaceId, key, fields, attempt + 1)
     }
@@ -160,6 +159,6 @@ export class LoyaltyRewardsService {
             .orIgnore()
             .returning("id")
             .execute()
-        return (inserted.raw as Array<unknown>).length
+        return returnedRows(inserted.raw, rowShape({ id: "string" })).length
     }
 }

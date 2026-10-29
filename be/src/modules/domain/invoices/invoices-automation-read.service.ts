@@ -32,8 +32,8 @@ export class InvoicesAutomationReadService {
             .getRawMany<AutomationDebtInvoice>()
     }
 
-    /** The money paid from an instant on (a bigint the driver answers as text), read through the transaction of the caller. */
-    async paidTotalSince(workspaceId: string, start: string, manager: EntityManager): Promise<string | number> {
+    /** The money paid from an instant on (a bigint the driver answers as text, read as a number), read through the transaction of the caller. */
+    async paidTotalSince(workspaceId: string, start: string, manager: EntityManager): Promise<number> {
         const row = await manager
             .createQueryBuilder(InvoiceEntity, "i")
             .select("coalesce(sum(i.amount_vnd), 0)::bigint", "total")
@@ -42,6 +42,6 @@ export class InvoicesAutomationReadService {
                 start,
             })
             .getRawOne<{ total: string | number }>()
-        return row?.total ?? 0
+        return Number(row?.total ?? 0)
     }
 }

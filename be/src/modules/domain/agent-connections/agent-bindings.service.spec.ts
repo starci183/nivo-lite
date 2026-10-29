@@ -1,375 +1,329 @@
 import { Test } from "@nestjs/testing"
+import { entityOf } from "@tests/fixtures/builders/entity.builder"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { In } from "typeorm"
+import { AgentDirectoryService } from "@modules/domain/agents"
+import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentBindingsService } from "./agent-bindings.service"
 import { AgentConnectionsErrorCode } from "./errors/agent-connections.error"
 import { AgentConnectionEntity } from "./persistence/entities"
 
-const AGENT_ROWS = [
-    {
-        id: "a2",
-        module: "booking",
-        name: "Booker",
-        created_at: new Date("2026-10-02T00:00:00.000Z"),
-        access: "auto",
-        purpose: "inbound_chat",
-    },
-    {
-        id: "a1",
-        module: "chatbot",
-        name: "Bot",
-        created_at: new Date("2026-10-01T00:00:00.000Z"),
-        access: "auto",
-        purpose: "inbound_chat",
-    },
-    {
-        id: "a3",
-        module: "sales",
-        name: "Seller",
-        created_at: new Date("2026-10-03T00:00:00.000Z"),
-        access: "auto",
-        purpose: "inbound_chat",
-    },
-]
+const linkOf = entityOf(AgentConnectionEntity, {
+    agentId: "a1",
+    connectionId: "c1",
+    workspaceId: "w1",
+    purpose: "inbound_chat",
+    access: "auto",
+})
 
-/** A manager whose query builders answer these raw reads, in order. */
-const reading = (...answers: Array<QueryBuilderAnswers>) => {
-    const em = mockEntityManager()
-    return { em, fakes: queueQueryBuilders(em, answers) }
+const agentOf = (id: string, module: string, name: string, day: number) => ({
+    id,
+    module,
+    name,
+    createdAt: new Date(`2026-10-0${day}T00:00:00.000Z`),
+})
+
+const connectionOf = (id: string, status: string, day: number, botUsername: string | null = null) => ({
+    id,
+    provider: "telegram",
+    name: `Bot ${id}`,
+    status,
+    createdAt: new Date(`2026-10-0${day}T00:00:00.000Z`),
+    botUsername,
+    accountMasked: null,
+})
+
+/** The agents and connections the owners answer, and whether the workspace holds the agent and the connection of a grant. */
+interface Owners {
+    readonly agents?: ReadonlyArray<ReturnType<typeof agentOf>>
+    readonly connections?: ReadonlyArray<ReturnType<typeof connectionOf>>
+    readonly holdsAgent?: boolean
+    readonly holdsConnection?: boolean
 }
 
-const build = async (entityManager: MockEntityManager) => {
+const build = async (entityManager: MockEntityManager, owners: Owners = {}) => {
     const members = mock<WorkspaceMembersService>()
+    const agents = mock<AgentDirectoryService>()
+    agents.activeCreatedAmong.mockResolvedValue([...(owners.agents ?? [])])
+    agents.holds.mockResolvedValue(owners.holdsAgent ?? true)
+    const connections = mock<ConnectionBindingsReadService>()
+    connections.factsOf.mockResolvedValue([...(owners.connections ?? [])])
+    connections.holds.mockResolvedValue(owners.holdsConnection ?? true)
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentBindingsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: WorkspaceMembersService, useValue: members },
+            { provide: AgentDirectoryService, useValue: agents },
+            { provide: ConnectionBindingsReadService, useValue: connections },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentBindingsService), members }
+    return { service: moduleRef.get(AgentBindingsService), members, agents, connections }
 }
 
-describe("AgentBindingsService", () => {
-    describe("agentsFor", () => {
-        it("lists the active agents bound for the purposes, oldest first", async () => {
-            const { em, fakes } = reading({ getRawMany: AGENT_ROWS })
-            const { service } = await build(em)
+const INBOUND_LINKS = ["a1", "a2", "a3"].map((agentId) => linkOf({ agentId }))
+const INBOUND_AGENTS = [
+    agentOf("a1", "chatbot", "Bot", 1),
+    agentOf("a2", "booking", "Booker", 2),
+    agentOf("a3", "sales", "Seller", 3),
+]
 
-            const agents = await service.agentsFor("c1", ["inbound_chat", "tool"])
+describe("AgentBindingsService > agentsFor", () => {
+    it("lists the active agents bound for the purposes, oldest first", async () => {
+        const em = mockEntityManager({ find: [AgentConnectionEntity, INBOUND_LINKS] })
+        const { service, agents } = await build(em, { agents: INBOUND_AGENTS })
 
-            expect(agents.map((agent) => agent.id)).toEqual(["a1", "a2", "a3"])
-            expect(fakes[0]?.callsOf("where")).toEqual([
-                [
-                    "ac.connection_id = :connectionId AND ac.purpose = ANY(:purposes) AND a.status = 'active'",
-                    { connectionId: "c1", purposes: ["inbound_chat", "tool"] },
-                ],
-            ])
-            expect(fakes[0]?.callsOf("limit")).toEqual([[200]])
+        const bound = await service.agentsFor("c1", ["inbound_chat", "tool"])
+
+        expect(bound.map((agent) => agent.id)).toEqual(["a1", "a2", "a3"])
+        expect(em.find).toHaveBeenCalledWith(AgentConnectionEntity, {
+            where: { connectionId: "c1", purpose: In(["inbound_chat", "tool"]) },
+            take: 200,
         })
+        expect(agents.activeCreatedAmong).toHaveBeenCalledWith("w1", ["a1", "a2", "a3"], 200)
+    })
 
-        it("takes one purpose as a list of one", async () => {
-            const { em, fakes } = reading({ getRawMany: [] })
-            const { service } = await build(em)
+    it("takes one purpose as a list of one and answers nothing for a connection nobody is bound to", async () => {
+        const em = mockEntityManager({ find: [AgentConnectionEntity, []] })
+        const { service, agents } = await build(em)
 
-            await service.agentsFor("c1", "inbound_chat", { acting: true })
+        await expect(service.agentsFor("c1", "inbound_chat", { acting: true })).resolves.toEqual([])
+        expect(agents.activeCreatedAmong).not.toHaveBeenCalled()
+    })
 
-            expect(fakes[0]?.callsOf("where")).toEqual([
-                [
-                    expect.stringContaining("ac.connection_id = :connectionId"),
-                    { connectionId: "c1", purposes: ["inbound_chat"] },
-                ],
-            ])
-        })
+    it("leaves out the bindings of agents the owner does not list as active", async () => {
+        const em = mockEntityManager({ find: [AgentConnectionEntity, INBOUND_LINKS] })
+        const { service } = await build(em, { agents: [INBOUND_AGENTS[0] ?? agentOf("a1", "chatbot", "Bot", 1)] })
+
+        const bound = await service.agentsFor("c1", "inbound_chat")
+
+        expect(bound.map((agent) => agent.id)).toEqual(["a1"])
     })
 })
 
-describe("AgentBindingsService", () => {
-    describe("connectionsFor", () => {
-        it("includes pending read grants with the default options", async () => {
-            const rows = [
-                {
-                    id: "c1",
-                    provider: "telegram",
-                    name: "Pending bot",
-                    bot_username: "shop_bot",
-                    account_masked: null,
-                    status: "pending",
-                    created_at: new Date("2026-10-01T00:00:00.000Z"),
-                    access: "read",
-                    purpose: "outbound_chat",
-                },
-            ]
-            const { em, fakes } = reading({ getRawMany: rows })
-            const { service } = await build(em)
+describe("AgentBindingsService > connectionsFor", () => {
+    it("includes pending read grants with the default options and names the bot", async () => {
+        const link = linkOf({ connectionId: "c1", purpose: "outbound_chat", access: "read" })
+        const em = mockEntityManager({ find: [AgentConnectionEntity, [link]] })
+        const { service } = await build(em, { connections: [connectionOf("c1", "pending", 1, "shop_bot")] })
 
-            await expect(service.connectionsFor("a1", "outbound_chat")).resolves.toEqual([
-                {
-                    id: "c1",
-                    provider: "telegram",
-                    name: "Pending bot",
-                    botUsername: "shop_bot",
-                    accountMasked: null,
-                    status: "pending",
-                    access: "read",
-                    purpose: "outbound_chat",
-                },
-            ])
-            expect(fakes[0]?.callsOf("where")).toEqual([
-                [
-                    "ac.agent_id = :agentId AND ac.purpose = ANY(:purposes)",
-                    { agentId: "a1", purposes: ["outbound_chat"] },
-                ],
-            ])
+        await expect(service.connectionsFor("a1", "outbound_chat")).resolves.toEqual([
+            {
+                id: "c1",
+                provider: "telegram",
+                name: "Bot c1",
+                botUsername: "shop_bot",
+                accountMasked: null,
+                status: "pending",
+                access: "read",
+                purpose: "outbound_chat",
+            },
+        ])
+        expect(em.find).toHaveBeenCalledWith(AgentConnectionEntity, {
+            where: { agentId: "a1", purpose: In(["outbound_chat"]) },
+            take: 200,
+        })
+    })
+
+    it("lists the connected connections of an agent, oldest connection first", async () => {
+        const links = ["c1", "c2", "c3"].map((connectionId) => linkOf({ connectionId, purpose: "outbound_chat" }))
+        const em = mockEntityManager({ find: [AgentConnectionEntity, links] })
+        const { service, connections } = await build(em, {
+            connections: [
+                connectionOf("c1", "connected", 2),
+                connectionOf("c2", "disconnected", 1),
+                connectionOf("c3", "connected", 2),
+            ],
         })
 
-        it("lists the connected connections of an agent", async () => {
-            const rows = [
-                {
-                    id: "c1",
-                    provider: "telegram",
-                    name: "Shop bot",
-                    status: "connected",
-                    created_at: new Date("2026-10-01T00:00:00.000Z"),
-                    access: "ask",
-                    purpose: "outbound_chat",
-                },
-                {
-                    id: "c2",
-                    provider: "telegram",
-                    name: "Old bot",
-                    status: "disconnected",
-                    created_at: new Date("2026-09-01T00:00:00.000Z"),
-                    access: "ask",
-                    purpose: "outbound_chat",
-                },
-            ]
-            const { em, fakes } = reading({ getRawMany: rows })
-            const { service } = await build(em)
+        const bound = await service.connectionsFor("a1", "outbound_chat", { connectedOnly: true })
 
-            const connections = await service.connectionsFor("a1", "outbound_chat", { connectedOnly: true })
-
-            expect(connections.map((connection) => connection.id)).toEqual(["c1"])
-            expect(fakes[0]?.callsOf("limit")).toEqual([[200]])
-        })
+        expect(bound.map((connection) => connection.id)).toEqual(["c1", "c3"])
+        expect(connections.factsOf).toHaveBeenCalledWith(["c1", "c2", "c3"], 200)
     })
 })
 
-describe("AgentBindingsService", () => {
-    describe("connectionsOfAgent", () => {
-        it("lists every connection of an agent of the workspace for a member, whatever the purpose", async () => {
-            const rows = [
-                {
-                    id: "c1",
-                    provider: "telegram",
-                    name: "Shop bot",
-                    status: "connected",
-                    created_at: new Date("2026-10-01T00:00:00.000Z"),
-                    access: "ask",
-                    purpose: "tool",
-                },
-            ]
-            const { em, fakes } = reading({ getRawMany: rows })
-            const { service, members } = await build(em)
+describe("AgentBindingsService > connectionsOfAgent", () => {
+    it("lists every connection of an agent of the workspace for a member, whatever the purpose", async () => {
+        const em = mockEntityManager({ find: [AgentConnectionEntity, [linkOf({ purpose: "tool" })]] })
+        const { service, members } = await build(em, { connections: [connectionOf("c1", "connected", 1)] })
 
-            const connections = await service.connectionsOfAgent("u1", "w1", "a1")
+        const bound = await service.connectionsOfAgent("u1", "w1", "a1")
 
-            expect(members.require).toHaveBeenCalledWith("u1", "w1")
-            expect(connections.map((connection) => connection.id)).toEqual(["c1"])
-            expect(fakes[0]?.callsOf("where")).toEqual([
-                [
-                    "ac.agent_id = :agentId AND ac.workspace_id = :workspaceId AND ac.purpose = ANY(:purposes)",
-                    {
-                        agentId: "a1",
-                        workspaceId: "w1",
-                        purposes: ["inbound_chat", "outbound_chat", "bank_feed", "data_source", "tool", "lead_source"],
-                    },
-                ],
-            ])
-        })
-
-        it("reads nothing for someone who is not a member", async () => {
-            const em = mockEntityManager()
-            const { service, members } = await build(em)
-            const refusal = new Error("not a member")
-            members.require.mockRejectedValue(refusal)
-
-            await expect(service.connectionsOfAgent("u1", "w1", "a1")).rejects.toBe(refusal)
-            expect(em.createQueryBuilder).not.toHaveBeenCalled()
+        expect(members.require).toHaveBeenCalledWith("u1", "w1")
+        expect(bound.map((connection) => connection.id)).toEqual(["c1"])
+        expect(em.find).toHaveBeenCalledWith(AgentConnectionEntity, {
+            where: {
+                agentId: "a1",
+                workspaceId: "w1",
+                purpose: In(["inbound_chat", "outbound_chat", "bank_feed", "data_source", "tool", "lead_source"]),
+            },
+            take: 200,
         })
     })
 
-    describe("routeInbound", () => {
-        it("makes the chatbot the front door and hands over to the booking agent", async () => {
-            const { service } = await build(reading({ getRawMany: AGENT_ROWS }).em)
+    it("reads nothing for someone who is not a member", async () => {
+        const em = mockEntityManager()
+        const { service, members } = await build(em)
+        const refusal = new Error("not a member")
+        members.require.mockRejectedValue(refusal)
 
-            const route = await service.routeInbound("c1")
-
-            expect(route.front?.id).toBe("a1")
-            expect(route.handovers.map((agent) => agent.id)).toEqual(["a2"])
-        })
-    })
-
-    describe("handoversOf", () => {
-        it("lists the bound agents of other modules", async () => {
-            const { service } = await build(reading({ getRawMany: AGENT_ROWS }).em)
-
-            const handovers = await service.handoversOf("c1", { module: "chatbot" })
-
-            expect(handovers.map((agent) => agent.id)).toEqual(["a2"])
-        })
-
-        it("hands over to nobody for a conversation without a connection", async () => {
-            const em = mockEntityManager()
-            const { service } = await build(em)
-
-            await expect(service.handoversOf(null, { module: "chatbot" })).resolves.toEqual([])
-            expect(em.createQueryBuilder).not.toHaveBeenCalled()
-        })
+        await expect(service.connectionsOfAgent("u1", "w1", "a1")).rejects.toBe(refusal)
+        expect(em.find).not.toHaveBeenCalled()
     })
 })
 
-describe("AgentBindingsService", () => {
-    describe("grant", () => {
-        const grant = {
-            workspaceId: "w1",
-            agentId: "a1",
-            connectionId: "c1",
-            purpose: "inbound_chat" as const,
-            access: "ask" as const,
-        }
+describe("AgentBindingsService > routing", () => {
+    it("makes the chatbot the front door and hands over to the booking agent", async () => {
+        const em = mockEntityManager({ find: [AgentConnectionEntity, INBOUND_LINKS] })
+        const { service } = await build(em, { agents: INBOUND_AGENTS })
 
-        it("lets a manager grant a connection to an agent of the workspace", async () => {
-            const { em, fakes } = reading({ getRawOne: { id: "a1" } }, { execute: {} })
-            fakeTransaction(em)
-            const { service, members } = await build(em)
+        const route = await service.routeInbound("c1")
 
-            await service.grant("u1", grant)
+        expect(route.front?.id).toBe("a1")
+        expect(route.handovers.map((agent) => agent.id)).toEqual(["a2"])
+    })
 
-            expect(members.require).toHaveBeenCalledWith("u1", "w1", ["owner", "manager"])
-            expect(fakes[0]?.callsOf("setLock")).toEqual([["pessimistic_read"]])
-            expect(fakes[0]?.callsOf("where")).toEqual([
-                [
-                    "a.id = :agentId AND c.id = :connectionId AND a.workspace_id = :workspaceId",
-                    { agentId: "a1", connectionId: "c1", workspaceId: "w1" },
-                ],
-            ])
-            expect(em.createQueryBuilder).toHaveBeenCalledWith(AgentConnectionEntity, "ac")
-            expect(fakes[1]?.callsOf("values")).toEqual([
-                [{ agentId: "a1", connectionId: "c1", workspaceId: "w1", purpose: "inbound_chat", access: "ask" }],
-            ])
-            expect(fakes[1]?.callsOf("orUpdate")).toEqual([
-                [
-                    ["purpose", "access"],
-                    ["agent_id", "connection_id"],
-                ],
-            ])
-        })
+    it("lists the bound agents of other modules a conversation can hand over to", async () => {
+        const em = mockEntityManager({ find: [AgentConnectionEntity, INBOUND_LINKS] })
+        const { service } = await build(em, { agents: INBOUND_AGENTS })
 
-        it("refuses an agent or connection that is not in the workspace", async () => {
-            const { em, fakes } = reading({ getRawOne: undefined })
-            fakeTransaction(em)
-            const { service } = await build(em)
+        const handovers = await service.handoversOf("c1", { module: "chatbot" })
 
-            await expect(service.grant("u1", grant)).rejects.toMatchObject({
-                code: AgentConnectionsErrorCode.TargetNotFound,
-                params: { agentId: "a1", connectionId: "c1" },
-            })
-            expect(fakes[0]?.callsOf("insert")).toEqual([])
-        })
+        expect(handovers.map((agent) => agent.id)).toEqual(["a2"])
+    })
 
-        it("writes nothing for someone who is not a manager", async () => {
-            const em = mockEntityManager()
-            const { service, members } = await build(em)
-            const refusal = new Error("not a manager")
-            members.require.mockRejectedValue(refusal)
+    it("hands over to nobody for a conversation without a connection", async () => {
+        const em = mockEntityManager()
+        const { service } = await build(em)
 
-            await expect(service.grant("u1", grant)).rejects.toBe(refusal)
-            expect(em.createQueryBuilder).not.toHaveBeenCalled()
-        })
+        await expect(service.handoversOf(null, { module: "chatbot" })).resolves.toEqual([])
+        expect(em.find).not.toHaveBeenCalled()
     })
 })
 
-describe("AgentBindingsService", () => {
-    describe("writeGrant", () => {
-        const grant = {
-            workspaceId: "w1",
-            agentId: "a1",
-            connectionId: "c1",
-            purpose: "tool" as const,
-            access: "auto" as const,
-        }
+const GRANT = {
+    workspaceId: "w1",
+    agentId: "a1",
+    connectionId: "c1",
+    purpose: "inbound_chat" as const,
+    access: "ask" as const,
+}
 
-        it("writes the proved grant with the primary manager by default", async () => {
-            const { em, fakes } = reading({ getRawOne: { id: "a1" } }, { execute: {} })
-            const { service, members } = await build(em)
+describe("AgentBindingsService > grant", () => {
+    it("lets a manager grant a connection to an agent of the workspace", async () => {
+        const em = mockEntityManager()
+        fakeTransaction(em)
+        const [write] = queueQueryBuilders(em, [{ execute: {} }])
+        const { service, members, agents, connections } = await build(em)
 
-            await expect(service.writeGrant(grant)).resolves.toBeUndefined()
+        await service.grant("u1", GRANT)
 
-            expect(fakes[1]?.callsOf("values")).toEqual([
-                [{ agentId: "a1", connectionId: "c1", workspaceId: "w1", purpose: "tool", access: "auto" }],
-            ])
-            expect(members.require).not.toHaveBeenCalled()
+        expect(members.require).toHaveBeenCalledWith("u1", "w1", ["owner", "manager"])
+        expect(agents.holds).toHaveBeenCalledWith("w1", "a1", expect.anything())
+        expect(connections.holds).toHaveBeenCalledWith("w1", "c1", expect.anything())
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(AgentConnectionEntity, "ac")
+        expect(write?.callsOf("values")).toEqual([
+            [{ agentId: "a1", connectionId: "c1", workspaceId: "w1", purpose: "inbound_chat", access: "ask" }],
+        ])
+        expect(write?.callsOf("orUpdate")).toEqual([
+            [
+                ["purpose", "access"],
+                ["agent_id", "connection_id"],
+            ],
+        ])
+    })
+
+    it.each([
+        { holdsAgent: false, holdsConnection: true },
+        { holdsAgent: true, holdsConnection: false },
+    ])("refuses an agent or connection that is not in the workspace: %j", async (owners) => {
+        const em = mockEntityManager()
+        fakeTransaction(em)
+        const { service } = await build(em, owners)
+
+        await expect(service.grant("u1", GRANT)).rejects.toMatchObject({
+            code: AgentConnectionsErrorCode.TargetNotFound,
+            params: { agentId: "a1", connectionId: "c1" },
         })
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+    })
 
-        it("writes the proved grant with the caller's transaction manager", async () => {
-            const em = mockEntityManager()
-            const { em: manager, fakes } = reading({ getRawOne: { id: "a1" } }, { execute: {} })
-            const { service, members } = await build(em)
+    it("writes nothing for someone who is not a manager", async () => {
+        const em = mockEntityManager()
+        const { service, members } = await build(em)
+        const refusal = new Error("not a manager")
+        members.require.mockRejectedValue(refusal)
 
-            await expect(service.writeGrant(grant, manager)).resolves.toBeUndefined()
-
-            expect(fakes[1]?.callsOf("values")).toEqual([
-                [{ agentId: "a1", connectionId: "c1", workspaceId: "w1", purpose: "tool", access: "auto" }],
-            ])
-            expect(em.createQueryBuilder).not.toHaveBeenCalled()
-            expect(members.require).not.toHaveBeenCalled()
-        })
+        await expect(service.grant("u1", GRANT)).rejects.toBe(refusal)
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 })
 
-const DELETED = { agentId: "a1", connectionId: "c1", workspaceId: "w1" }
+describe("AgentBindingsService > writeGrant", () => {
+    const grant = { ...GRANT, purpose: "tool" as const, access: "auto" as const }
+    const values = [{ agentId: "a1", connectionId: "c1", workspaceId: "w1", purpose: "tool", access: "auto" }]
 
-describe("AgentBindingsService", () => {
-    describe("removeGrant", () => {
-        const target = { workspaceId: "w1", agentId: "a1", connectionId: "c1" }
+    it("writes the proved grant with the primary manager by default", async () => {
+        const em = mockEntityManager()
+        const [write] = queueQueryBuilders(em, [{ execute: {} }])
+        const { service, members } = await build(em)
 
-        it("removes the proved grant with the primary manager by default", async () => {
-            const em = mockEntityManager({ delete: [AgentConnectionEntity, {}] })
-            const { service, members } = await build(em)
+        await expect(service.writeGrant(grant)).resolves.toBeUndefined()
 
-            await expect(service.removeGrant(target)).resolves.toBeUndefined()
-
-            expect(em.delete).toHaveBeenCalledWith(AgentConnectionEntity, DELETED)
-            expect(members.require).not.toHaveBeenCalled()
-        })
-
-        it("removes the proved grant with the caller's transaction manager", async () => {
-            const em = mockEntityManager()
-            const manager = mockEntityManager({ delete: [AgentConnectionEntity, {}] })
-            const { service, members } = await build(em)
-
-            await expect(service.removeGrant(target, manager)).resolves.toBeUndefined()
-
-            expect(manager.delete).toHaveBeenCalledWith(AgentConnectionEntity, DELETED)
-            expect(em.delete).not.toHaveBeenCalled()
-            expect(members.require).not.toHaveBeenCalled()
-        })
+        expect(write?.callsOf("values")).toEqual([values])
+        expect(members.require).not.toHaveBeenCalled()
     })
 
-    describe("revoke", () => {
-        it("removes the grant for a manager", async () => {
-            const em = mockEntityManager({ delete: [AgentConnectionEntity, {}] })
-            const { service, members } = await build(em)
+    it("writes the proved grant with the caller's transaction manager", async () => {
+        const em = mockEntityManager()
+        const manager = mockEntityManager()
+        const [write] = queueQueryBuilders(manager, [{ execute: {} }])
+        const { service } = await build(em)
 
-            await service.revoke("u1", { workspaceId: "w1", agentId: "a1", connectionId: "c1" })
+        await expect(service.writeGrant(grant, manager)).resolves.toBeUndefined()
 
-            expect(members.require).toHaveBeenCalledWith("u1", "w1", ["owner", "manager"])
-            expect(em.delete).toHaveBeenCalledWith(AgentConnectionEntity, DELETED)
-        })
+        expect(write?.callsOf("values")).toEqual([values])
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentBindingsService > removing grants", () => {
+    const target = { workspaceId: "w1", agentId: "a1", connectionId: "c1" }
+    const deleted = { agentId: "a1", connectionId: "c1", workspaceId: "w1" }
+
+    it("removes the proved grant with the primary manager by default", async () => {
+        const em = mockEntityManager({ delete: [AgentConnectionEntity, {}] })
+        const { service, members } = await build(em)
+
+        await expect(service.removeGrant(target)).resolves.toBeUndefined()
+
+        expect(em.delete).toHaveBeenCalledWith(AgentConnectionEntity, deleted)
+        expect(members.require).not.toHaveBeenCalled()
+    })
+
+    it("removes the proved grant with the caller's transaction manager", async () => {
+        const em = mockEntityManager()
+        const manager = mockEntityManager({ delete: [AgentConnectionEntity, {}] })
+        const { service } = await build(em)
+
+        await expect(service.removeGrant(target, manager)).resolves.toBeUndefined()
+
+        expect(manager.delete).toHaveBeenCalledWith(AgentConnectionEntity, deleted)
+        expect(em.delete).not.toHaveBeenCalled()
+    })
+
+    it("removes the grant for a manager", async () => {
+        const em = mockEntityManager({ delete: [AgentConnectionEntity, {}] })
+        const { service, members } = await build(em)
+
+        await service.revoke("u1", target)
+
+        expect(members.require).toHaveBeenCalledWith("u1", "w1", ["owner", "manager"])
+        expect(em.delete).toHaveBeenCalledWith(AgentConnectionEntity, deleted)
     })
 })

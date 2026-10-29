@@ -124,7 +124,6 @@ describe("OverviewReadsService", () => {
 
         expect(step?.dueAt).toBeNull()
     })
-
 })
 
 describe("OverviewReadsService lists", () => {
@@ -181,7 +180,6 @@ describe("OverviewReadsService lists", () => {
         ])
         expect(leads.summariesOf).toHaveBeenCalledWith("ws-1", 10_000)
     })
-
 })
 
 describe("OverviewReadsService pending work", () => {

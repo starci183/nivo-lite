@@ -17,8 +17,13 @@ export type {
 } from "./connections.contracts"
 export { ConnectionsModule } from "./connections.module"
 export { ConnectionsService } from "./connections.service"
-export { ConnectionEntity, connectionsEntities } from "./persistence/entities"
+export { connectionsEntities } from "./persistence/entities"
 export { CONNECTIONS_ERROR_KINDS, ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
 export { CONNECTIONS_MESSAGES } from "./messages/connections.messages"
 export { ConnectionsAdminReadService } from "./connections-admin-read.service"
 export { ConnectionSecretReadsService } from "./connection-secret-reads.service"
+<<<<<<< HEAD
+export type { ConnectionFeedState } from "./connection-feed-reads.service"
+=======
+export { ConnectionBindingsReadService } from "./connection-bindings-read.service"
+>>>>>>> lane/clean-d1

@@ -43,9 +43,11 @@ const PAYLOAD_JSON = () => "CAST(:payload AS jsonb)"
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
 
+const isRows = (value: unknown): value is ReadonlyArray<unknown> => Array.isArray(value)
+
 /** The id and attempts of the first row of a `RETURNING` clause, or none. */
 const startedOf = (raw: unknown): { id: string; attempts: number } | undefined => {
-    const [row] = Array.isArray(raw) ? raw : []
+    const [row] = isRows(raw) ? raw : []
     return isRecord(row) && typeof row.id === "string" && typeof row.attempts === "number"
         ? { id: row.id, attempts: row.attempts }
         : undefined
@@ -54,7 +56,7 @@ const startedOf = (raw: unknown): { id: string; attempts: number } | undefined =
 /** The claimed run of the first row of a `RETURNING` clause, or none. */
 const claimedOf = (raw: unknown): ClaimedRun | undefined => {
     const started = startedOf(raw)
-    const [row] = Array.isArray(raw) ? raw : []
+    const [row] = isRows(raw) ? raw : []
     return started === undefined || !isRecord(row) || !isRecord(row.payload)
         ? undefined
         : { ...started, payload: row.payload }

@@ -67,7 +67,7 @@ describe("McpCallLogService", () => {
     it("appends one audit line with every column, the masked arguments cast to jsonb by the database", async () => {
         const fake = fakeQueryBuilder({ execute: { raw: [] } })
         const em = mockEntityManager()
-        em.createQueryBuilder.mockReturnValue(fake.builder as never)
+        em.createQueryBuilder.mockReturnValue(fake.builder)
         const log = await build(em)
 
         await expect(log.append(LINE)).resolves.toBeUndefined()
@@ -95,7 +95,7 @@ describe("McpCallLogService", () => {
     it("hands the masked arguments over as text and leaves reading them to the database", async () => {
         const fake = fakeQueryBuilder({ execute: { raw: [] } })
         const em = mockEntityManager()
-        em.createQueryBuilder.mockReturnValue(fake.builder as never)
+        em.createQueryBuilder.mockReturnValue(fake.builder)
         const log = await build(em)
 
         await expect(log.append({ ...LINE, argsMaskedJson: "{not json" })).resolves.toBeUndefined()
@@ -113,7 +113,7 @@ describe("McpCallLogService", () => {
             ],
         })
         const em = mockEntityManager()
-        em.createQueryBuilder.mockReturnValue(fake.builder as never)
+        em.createQueryBuilder.mockReturnValue(fake.builder)
         const log = await build(em)
 
         await expect(log.latest({ workspaceId: "ws-1", limit: 50 })).resolves.toEqual([

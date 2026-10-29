@@ -20,7 +20,7 @@ export type {
 } from "./agents.port"
 export { AgentLensesService } from "./agent-lenses.service"
 export { AgentsService } from "./agents.service"
-export type { AgentCard, AgentHandleCard, AgentIdentityCard, AgentSeat, AgentSheet } from "./agent-directory.contracts"
+export type { AgentCard, AgentHandleCard, AgentSheet } from "./agent-directory.contracts"
 export { AgentIdentityService } from "./agent-identity.service"
 export { AgentOwnershipService } from "./agent-ownership.service"
 export { AgentRecordsService } from "./agent-records.service"

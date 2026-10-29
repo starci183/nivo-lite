@@ -4,6 +4,7 @@ export type {
     InstallationLifecycle,
     InstallationMode,
     InstallationRecord,
+    InstallationSettings,
     InstallationStatus,
     RecordInstallation,
     OptionalRowId,
@@ -18,4 +19,3 @@ export { ModuleInstallationsModule } from "./module-installations.module"
 export { moduleInstallationsEntities } from "./persistence/entities"
 export { ModuleInstallationsAdminReadService } from "./module-installations-admin-read.service"
 export { InstallationOperationsService } from "./installation-operations.service"
-export type { InstallationAgentLink } from "./installation-operations.contracts"
