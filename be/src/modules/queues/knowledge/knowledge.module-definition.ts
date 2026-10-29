@@ -3,4 +3,7 @@ import type { KnowledgeQueueOptions } from "./knowledge.options"
 
 /** The configurable-module base of the knowledge module. */
 export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } =
-    new ConfigurableModuleBuilder<KnowledgeQueueOptions>().setClassMethodName("register").build()
+    new ConfigurableModuleBuilder<KnowledgeQueueOptions>()
+        .setClassMethodName("register")
+        .setExtras({ isGlobal: false }, (definition, extras) => ({ ...definition, global: extras.isGlobal }))
+        .build()

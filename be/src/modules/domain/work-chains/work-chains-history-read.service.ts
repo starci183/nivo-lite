@@ -17,11 +17,11 @@ export class WorkChainsHistoryReadService {
     async threadsOfSteps(workspaceId: string, stepIds: ReadonlyArray<string>): Promise<Array<StepThread>> {
         if (stepIds.length === 0) return []
         const rows = await this.entityManager.find(WorkChainEntity, {
-            select: { id: true, threadId: true },
             where: { workspaceId, id: In([...stepIds]) },
             take: stepIds.length,
+            select: { id: true, threadId: true },
         })
-        return rows.map((row) => ({ id: row.id, threadId: row.threadId }))
+        return rows.map(({ id, threadId }) => ({ id, threadId }))
     }
 
     /** The hand-offs and assignments a member completed, newest first (ties by id, descending). */
