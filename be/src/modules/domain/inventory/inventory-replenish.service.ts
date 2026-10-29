@@ -23,7 +23,7 @@ import { ITEM_LIMIT, OPEN_PO_STATUSES, itemRowOf } from "./policies/inventory-ro
 import { columnNumber, formatMoney } from "./policies/number-format.policy"
 import { stockStatus, suggestOrderQty } from "./policies/stock.policy"
 import { InventoryItemEntity, InventoryPoLineEntity, InventoryPurchaseOrderEntity } from "./persistence/entities"
-import { AuthorityRuleEntity } from "@modules/domain/authority-rules"
+import { AuthorityRulesService } from "@modules/domain/authority-rules"
 
 interface TotalRow {
     readonly item_id: string
@@ -51,6 +51,7 @@ export class InventoryReplenishService {
         private readonly movements: InventoryMovementsService,
         private readonly orders: InventoryOrdersService,
         private readonly dispatch: InventoryDispatchService,
+        private readonly rules: AuthorityRulesService,
     ) {}
 
     private text(key: string, params: Record<string, string | number>): string {
@@ -98,15 +99,7 @@ export class InventoryReplenishService {
         const by = options.by ?? SYSTEM_ACTOR
         const low = await this.lowItems(workspaceId, options.itemIds)
         if (low.length === 0) return { poIds: [], lowCount: 0, skipped: [] }
-        const rule = await this.entityManager
-            .createQueryBuilder(AuthorityRuleEntity, "r")
-            .select("r.mode", "mode")
-            .where("r.workspace_id = :workspaceId AND r.action = :action", {
-                workspaceId,
-                action: "draft_purchase_order",
-            })
-            .limit(1)
-            .getRawOne<{ mode: string }>()
+        const rule = await this.rules.ruleFor({ workspaceId }, "draft_purchase_order", null)
         if (rule?.mode === "never")
             return { poIds: [], lowCount: low.length, skipped: low.map((entry) => entry.item.name) }
         const onOrderRows = await this.entityManager
