@@ -22,6 +22,7 @@ import {
     unrelated,
 } from "@tests/fixtures/builders/thread-work-turns.builder"
 import type { Doubles } from "@tests/fixtures/builders/thread-work-turns.builder"
+import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
 import { ThreadWorkEntity } from "./persistence/entities"
 import { ThreadWorkTurnsService } from "./thread-work-turns.service"
 
@@ -239,6 +240,7 @@ const registerMemberAsk = () => {
                 }),
             )
             expect(em.update).toHaveBeenCalledWith(...moved("waiting_member", null, "m-van", ["tax_code", "po"]))
+            expect(resolveFragments(em.update.mock.calls[0]?.[2]).updatedAt).toBe("now()")
         })
 
         it("missing data with nobody named: asks the owner of the agent; a stopped chain waits for nobody", async () => {

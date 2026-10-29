@@ -24,4 +24,14 @@ describe("appPgTypes", () => {
 
         expect(Reflect.apply(subject.appPgTypes().getTypeParser(23), undefined, ["42"])).toBe(42)
     })
+
+    it("passes a cell through as text when the driver has no callable parser for the type", async () => {
+        const subject = await buildSubject()
+        const driver = jest.requireActual<typeof import("pg-types")>("pg-types")
+        const lookup = jest.spyOn(driver, "getTypeParser").mockReturnValueOnce(null as never)
+
+        expect(Reflect.apply(subject.appPgTypes().getTypeParser(23), undefined, ["42"])).toBe("42")
+        expect(lookup).toHaveBeenCalledWith(23, undefined)
+        lookup.mockRestore()
+    })
 })

@@ -5,6 +5,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
+import { JobsErrorCode } from "./errors/jobs.error"
 import { JOB_TICKS } from "./job-ticks.contracts"
 import type { JobTick } from "./job-ticks.contracts"
 import { JOBS_MANAGERS } from "./jobs.decorators"
@@ -26,12 +27,12 @@ const TICK: JobTick = {
     payload: { kind: "nightly" },
 }
 
-const build = async (claimed: boolean) => {
+const build = async (claimed: boolean | null, managed = true) => {
     const transaction = fakeTransaction(
         mockEntityManager({
             query: [
                 [LOCK_TICK, []],
-                [CLAIM_TICK, [{ claimed }]],
+                [CLAIM_TICK, claimed === null ? [] : [{ claimed }]],
             ],
         }),
     )
@@ -43,7 +44,7 @@ const build = async (claimed: boolean) => {
         providers: [
             JobTickService,
             { provide: SchedulerRegistry, useValue: registry },
-            { provide: JOBS_MANAGERS, useValue: [transaction.em] },
+            { provide: JOBS_MANAGERS, useValue: managed ? [transaction.em] : [] },
             { provide: QUEUE_OUTBOX, useValue: outbox },
             { provide: CLOCK, useValue: new FakeClock(AT) },
             { provide: LOGGER, useValue: logger },
@@ -85,6 +86,22 @@ describe("JobTickService", () => {
         expect(outbox.jobs).toHaveLength(0)
     })
 
+    it("enqueues nothing when the database answers no claim", async () => {
+        const { ticks, outbox } = await build(null)
+
+        await expect(ticks.fire(TICK)).resolves.toBe(false)
+
+        expect(outbox.jobs).toHaveLength(0)
+    })
+
+    it("refuses to fire without a connection that holds the tick table", async () => {
+        const { ticks, outbox } = await build(true, false)
+
+        await expect(ticks.fire(TICK)).rejects.toMatchObject({ code: JobsErrorCode.ConnectionMissing })
+
+        expect(outbox.jobs).toHaveLength(0)
+    })
+
     it("holds the 13 ticks, each with a unique name and a five-field UTC cron expression", () => {
         expect(JOB_TICKS).toHaveLength(13)
         expect(new Set(JOB_TICKS.map((tick) => tick.name)).size).toBe(13)
@@ -101,6 +118,19 @@ describe("JobTickService", () => {
 
         expect(registry.addCronJob.mock.calls.map(([name]) => name)).toEqual(JOB_TICKS.map((tick) => tick.name))
         for (const [, job] of registry.addCronJob.mock.calls) void job.stop()
+    })
+
+    it("enqueues the job of the tick when its cron job fires", async () => {
+        const { ticks, outbox, registry, logger } = await build(true)
+        ticks.onApplicationBootstrap()
+        const [, first] = registry.addCronJob.mock.calls[0] ?? []
+
+        await expect(first?.fireOnTick()).resolves.toBeUndefined()
+        await new Promise((resolve) => setImmediate(resolve))
+        for (const [, job] of registry.addCronJob.mock.calls) void job.stop()
+
+        expect(outbox.jobs).toEqual([{ queue: JOB_TICKS[0]?.queue, payload: JOB_TICKS[0]?.payload }])
+        expect(logger.error).not.toHaveBeenCalled()
     })
 
     it("logs a failed firing by the name of the tick and does not throw", async () => {

@@ -9,7 +9,6 @@ import {
     AT,
     NOW,
     MINTED,
-    anyFunction,
     contractOf,
     entityOf,
     insertedValues,
@@ -20,6 +19,7 @@ import {
     rowOf,
     singleCall,
 } from "@tests/fixtures/builders/work-items.builder"
+import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
 import { WorkItemEntity } from "./persistence/entities"
 import { WorkItemsService } from "./work-items.service"
 
@@ -130,13 +130,13 @@ describe("WorkItemsService persistence", () => {
         expect((await service.retry("ws-1", "item-1", ["failed"]))?.id).toBe("item-1")
         expect(await service.retry("ws-1", "item-1", ["rejected"], tx)).toBeNull()
         expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
-        expect(singleCall(fake, "set")).toEqual({
+        expect(resolveFragments(singleCall(fake, "set"))).toEqual({
             status: "queued",
             error: null,
             reason: null,
             reasons: [],
             completedAt: null,
-            updatedAt: anyFunction(),
+            updatedAt: "created_at",
         })
         expect(fake.callsOf("where")).toEqual([
             [
@@ -255,6 +255,14 @@ describe("WorkItemsService persistence", () => {
         expect(fake.callsOf("addOrderBy")).toEqual([["w.id", "ASC"]])
     })
 
+    it("answers nothing when no queued step is free", async () => {
+        const { em } = managerAnswering({ getOne: null })
+        const service = await build(em)
+
+        expect(await service.nextQueued("ws-1")).toBeNull()
+        expect(await service.nextInboundQueued("ws-1", "event-1")).toBeNull()
+    })
+
     it("reopens an item that waits, and answers nothing for any other", async () => {
         const waiting = managerAnswering(returned([rowOf()]))
         const other = managerAnswering(returned([]))
@@ -322,7 +330,7 @@ describe("WorkItemsService holds and assignments", () => {
         expect(
             await (await build(em)).settleClaims("ws-1", "payment-1", "claim:invoice-1", { summary: "Paid" }),
         ).toEqual(rows)
-        expect(singleCall(fake, "set")).toEqual({
+        expect(resolveFragments(singleCall(fake, "set"))).toEqual({
             status: "done",
             decidedPath: "auto",
             reason: "routine",
@@ -348,17 +356,15 @@ describe("WorkItemsService persistence", () => {
             await build(em)
         ).savePrepared("item-1", { proposal, subjectType: "order", subjectId: "o-1", leadId: null })
 
-        expect(singleCall(fake, "set")).toEqual({
+        expect(resolveFragments(singleCall(fake, "set"))).toEqual({
             proposal,
-            subjectType: anyFunction(),
-            subjectId: anyFunction(),
-            leadId: anyFunction(),
+            subjectType: "COALESCE(CAST(:subjectType AS text), subject_type)",
+            subjectId: "COALESCE(CAST(:subjectId AS uuid), subject_id)",
+            leadId: "COALESCE(CAST(:leadId AS uuid), lead_id)",
             updatedAt: AT,
         })
         expect(fake.callsOf("setParameters")).toEqual([[{ subjectType: "order", subjectId: "o-1", leadId: null }]])
         expect(fake.callsOf("where")[0]).toEqual(["id = :id", { id: "item-1" }])
-        const set = fake.callsOf("set")[0]?.[0] as Record<string, () => string>
-        expect(set.subjectType?.()).toBe("COALESCE(CAST(:subjectType AS text), subject_type)")
     })
 
     it("marks an item failed", async () => {
@@ -411,7 +417,7 @@ describe("WorkItemsService persistence", () => {
             leadId: "lead-9",
         })
 
-        expect(singleCall(fake, "set")).toEqual({
+        expect(resolveFragments(singleCall(fake, "set"))).toEqual({
             status: "done",
             decidedPath: "auto",
             proposal,
@@ -420,15 +426,12 @@ describe("WorkItemsService persistence", () => {
             completedAt: AT,
             updatedAt: AT,
             error: null,
-            leadId: anyFunction(),
-            reason: anyFunction(),
-            reasons: anyFunction(),
+            leadId: "COALESCE(CAST(:leadId AS uuid), lead_id)",
+            reason: "CASE WHEN CAST(:path AS text) = 'auto' THEN 'routine' ELSE reason END",
+            reasons: "CASE WHEN CAST(:path AS text) = 'auto' THEN ARRAY['routine'] ELSE reasons END",
             missingFields: [],
         })
         expect(fake.callsOf("setParameters")).toEqual([[{ path: "auto", leadId: "lead-9" }]])
-        const set = fake.callsOf("set")[0]?.[0] as Record<string, () => string>
-        expect(set.reason?.()).toBe("CASE WHEN CAST(:path AS text) = 'auto' THEN 'routine' ELSE reason END")
-        expect(set.reasons?.()).toBe("CASE WHEN CAST(:path AS text) = 'auto' THEN ARRAY['routine'] ELSE reasons END")
     })
 
     it("closes an item as rejected", async () => {

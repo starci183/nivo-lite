@@ -4,6 +4,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import { BaseEvent } from "./event-bus.contracts"
 import type { EventDelivery, ParsedEvent } from "./event-bus.contracts"
+import { EventBusLogEvent } from "./event-bus.log-events"
 import { EVENT_BUS_OPTIONS } from "./event-bus.decorators"
 import type { EventBusOptions } from "./event-bus.options"
 import type { EventConsumer } from "./event-bus.port"
@@ -46,6 +47,19 @@ class ReceiptRecordedEvent extends BaseEvent {
         return typeof dedupeKey === "string"
             ? new ReceiptRecordedEvent(envelope.eventId, { dedupeKey, receiptId: dedupeKey })
             : null
+    }
+}
+
+/** An event whose parser accepts any message, so the envelope check behind the parser can be reached with a message that is no object. */
+class AnyMessageEvent extends BaseEvent {
+    static readonly eventName = "spec.any-message"
+    static readonly version = 1
+    readonly eventName = AnyMessageEvent.eventName
+    readonly eventId = "event-9"
+    readonly payload = { dedupeKey: "any-1" }
+
+    static parse(): ParsedEvent<AnyMessageEvent> {
+        return new AnyMessageEvent()
     }
 }
 
@@ -145,6 +159,84 @@ describe("EventConsumerService", () => {
         expect(primary.query).toHaveBeenCalledWith(BURY, [QUEUE, "1", row.read_ct, JSON.stringify(row.message), reason])
     })
 
+    it("falls back to the event id as the correlation id of a message with no metadata", async () => {
+        const { metadata: _metadata, ...bare } = envelope
+        const primary = mockEntityManager({
+            query: [
+                [READ, [{ msg_id: "1", read_ct: 1, message: bare }]],
+                [ARCHIVE, [{ event_bus_archive: true }]],
+            ],
+        })
+        const subject = await build(primary)
+        const consumer = new RecordingConsumer()
+
+        await subject.drain({ queue: QUEUE, consumer, maxDeliveries: 5 })
+
+        expect(consumer.deliveries.map((delivery) => delivery.correlationId)).toEqual(["event-1"])
+    })
+
+    it.each([null, "raw text"])("falls back to the event id for a message that is no object: %p", async (message) => {
+        const primary = mockEntityManager({
+            query: [
+                [READ, [{ msg_id: "1", read_ct: 1, message }]],
+                [ARCHIVE, [{ event_bus_archive: true }]],
+            ],
+        })
+        const subject = await build(primary)
+        const handled: Array<string> = []
+        const consumer: EventConsumer<AnyMessageEvent> = {
+            event: AnyMessageEvent,
+            handle: (delivery) => {
+                handled.push(delivery.correlationId)
+                return Promise.resolve()
+            },
+        }
+
+        await subject.drain({ queue: QUEUE, consumer, maxDeliveries: 5 })
+
+        expect(handled).toEqual(["event-9"])
+        expect(primary.query).toHaveBeenCalledWith(ARCHIVE, [QUEUE, "1"])
+    })
+
+    it("buries a message with no metadata whose event id is no safe correlation id", async () => {
+        const message = { eventId: "unsafe\nid", payload: { dedupeKey: "receipt-1" } }
+        const primary = mockEntityManager({
+            query: [
+                [READ, [{ msg_id: "1", read_ct: 1, message }]],
+                [BURY, [{ event_bus_bury: true }]],
+            ],
+        })
+        const subject = await build(primary)
+
+        await subject.drain({ queue: QUEUE, consumer: new RecordingConsumer(), maxDeliveries: 5 })
+
+        expect(primary.query).toHaveBeenCalledWith(BURY, [QUEUE, "1", 1, JSON.stringify(message), "malformed"])
+    })
+
+    it("reads the batch size and visibility timeout the options name", async () => {
+        const primary = mockEntityManager({ query: [READ, []] })
+        const subject = await build(primary, { visibilitySeconds: 45, batch: 3 })
+
+        await subject.drain({ queue: QUEUE, consumer: new RecordingConsumer(), maxDeliveries: 5 })
+
+        expect(primary.query).toHaveBeenCalledWith(READ, [QUEUE, 45, 3])
+    })
+
+    it.each([null, {}, "text"])("buries a message whose metadata is unusable: %p", async (metadata) => {
+        const message = { ...envelope, metadata }
+        const primary = mockEntityManager({
+            query: [
+                [READ, [{ msg_id: "1", read_ct: 1, message }]],
+                [BURY, [{ event_bus_bury: true }]],
+            ],
+        })
+        const subject = await build(primary)
+
+        await subject.drain({ queue: QUEUE, consumer: new RecordingConsumer(), maxDeliveries: 5 })
+
+        expect(primary.query).toHaveBeenCalledWith(BURY, [QUEUE, "1", 1, JSON.stringify(message), "malformed"])
+    })
+
     it("takes the default delivery budget of a subscription that names none", async () => {
         const primary = mockEntityManager({
             query: [
@@ -199,5 +291,31 @@ describe("EventConsumerService", () => {
         await subject.beforeApplicationShutdown()
 
         expect(primary.query).toHaveBeenCalledWith(READ, [QUEUE, 30, 10])
+    })
+
+    it("logs a failed read and keeps looping until shutdown", async () => {
+        const failure = new Error("database down")
+        const primary = mockEntityManager({ query: [READ, []] })
+        primary.query.mockRejectedValue(failure)
+        const subject = await build(primary, { consumersEnabled: true })
+        subject.subscribe(QUEUE, new RecordingConsumer())
+
+        subject.onApplicationBootstrap()
+        await new Promise((resolve) => setImmediate(resolve))
+        await subject.beforeApplicationShutdown()
+
+        expect(logger.error).toHaveBeenCalledWith(EventBusLogEvent.ReadFailed, failure, { queue: QUEUE })
+    })
+
+    it("settles nothing of a batch it read once shutdown was raised", async () => {
+        const primary = mockEntityManager({ query: [READ, [{ msg_id: "1", read_ct: 1, message: envelope }]] })
+        const subject = await build(primary)
+        const consumer = new RecordingConsumer()
+        await subject.beforeApplicationShutdown()
+
+        await expect(subject.drain({ queue: QUEUE, consumer, maxDeliveries: 5 })).resolves.toBe(1)
+
+        expect(consumer.deliveries).toEqual([])
+        expect(primary.query).toHaveBeenCalledTimes(1)
     })
 })

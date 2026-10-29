@@ -3,13 +3,11 @@ import { FakeClock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { VideoProjectEntity } from "./persistence/entities"
 import { VideoProjectWorkbenchWriterService } from "./video-project-workbench-writer.service"
-
-/** The any-function matcher, typed `unknown` so it flows into any slot. */
-const anyFunction = (): unknown => expect.any(Function)
 
 const build = async (em: MockEntityManager = mockEntityManager()) => {
     const moduleRef = await Test.createTestingModule({
@@ -33,6 +31,9 @@ const managerAnswering = (answers: QueryBuilderAnswers, em: MockEntityManager = 
 const returned = (rows: ReadonlyArray<{ readonly id: string }>): QueryBuilderAnswers => ({ execute: { raw: rows } })
 
 const ONE = [{ id: "project-1" }]
+
+const SCRIPTED_STATUS =
+    "CASE WHEN CAST(:script AS jsonb) IS NOT NULL AND status IN ('ready', 'approved', 'published') THEN 'draft' ELSE status END"
 
 const IDLE = "status NOT IN ('scripting', 'rendering')"
 
@@ -105,21 +106,19 @@ describe("VideoProjectWorkbenchWriterService > update", () => {
         expect(em.createQueryBuilder).toHaveBeenCalledWith(VideoProjectEntity, "v")
 
         expect(fake.callsOf("update")).toEqual([[]])
-        expect(fake.callsOf("set")).toEqual([
-            [
-                {
-                    title: anyFunction(),
-                    goal: anyFunction(),
-                    aspect: anyFunction(),
-                    targetSeconds: anyFunction(),
-                    inputs: anyFunction(),
-                    script: anyFunction(),
-                    status: anyFunction(),
-                    approvedAt: anyFunction(),
-                    approvedByName: anyFunction(),
-                    publishedAt: anyFunction(),
-                },
-            ],
+        expect(fake.callsOf("set").map(([set]) => resolveFragments(set))).toEqual([
+            {
+                title: "COALESCE(NULLIF(CAST(:title AS text), ''), title)",
+                goal: "COALESCE(CAST(:goal AS text), goal)",
+                aspect: "COALESCE(CAST(:aspect AS text), aspect)",
+                targetSeconds: "COALESCE(CAST(:targetSeconds AS integer), target_seconds)",
+                inputs: "COALESCE(CAST(:inputs AS jsonb), inputs)",
+                script: "COALESCE(CAST(:script AS jsonb), script)",
+                status: SCRIPTED_STATUS,
+                approvedAt: "CASE WHEN CAST(:script AS jsonb) IS NOT NULL THEN NULL ELSE approved_at END",
+                approvedByName: "CASE WHEN CAST(:script AS jsonb) IS NOT NULL THEN NULL ELSE approved_by_name END",
+                publishedAt: "CASE WHEN CAST(:script AS jsonb) IS NOT NULL THEN NULL ELSE published_at END",
+            },
         ])
         expect(fake.callsOf("where")).toEqual([
             [
@@ -131,22 +130,6 @@ describe("VideoProjectWorkbenchWriterService > update", () => {
             [{ title: "New", goal: null, aspect: null, targetSeconds: null, inputs: '{"notes":"x"}', script: "[]" }],
         ])
         expect(fake.callsOf("returning")).toEqual([["id"]])
-    })
-
-    it("writes the guarded expressions that keep, replace and invalidate", async () => {
-        const { em, fake } = managerAnswering(returned(ONE))
-        const writer = await build(em)
-
-        await writer.update("workspace-1", "project-1", { script: [] })
-
-        const set = fake.callsOf("set")[0]?.[0] as Record<string, () => string>
-        expect(set.title?.()).toBe("COALESCE(NULLIF(CAST(:title AS text), ''), title)")
-        expect(set.script?.()).toBe("COALESCE(CAST(:script AS jsonb), script)")
-        expect(set.status?.()).toBe(
-            "CASE WHEN CAST(:script AS jsonb) IS NOT NULL AND status IN ('ready', 'approved', 'published') THEN 'draft' ELSE status END",
-        )
-        expect(set.approvedAt?.()).toBe("CASE WHEN CAST(:script AS jsonb) IS NOT NULL THEN NULL ELSE approved_at END")
-        expect(set.publishedAt?.()).toBe("CASE WHEN CAST(:script AS jsonb) IS NOT NULL THEN NULL ELSE published_at END")
     })
 
     it("reports a busy project that did not change", async () => {
@@ -203,6 +186,17 @@ describe("VideoProjectWorkbenchWriterService > duplicate", () => {
         expect(missing.fake.callsOf("values")).toEqual([])
     })
 
+    it("answers null when the copy returned no id", async () => {
+        const source = Object.assign(new VideoProjectEntity(), {
+            id: "project-1",
+            workspaceId: "workspace-1",
+            title: "T",
+        })
+        const { em } = managerAnswering(returned([]), mockEntityManager({ findOne: [VideoProjectEntity, source] }))
+
+        await expect((await build()).duplicate(em, "workspace-1", "project-1", "person-1")).resolves.toBeNull()
+    })
+
     it("cuts the title of the copy at 120 characters", async () => {
         const source = Object.assign(new VideoProjectEntity(), {
             id: "project-1",
@@ -250,7 +244,9 @@ describe("VideoProjectWorkbenchWriterService > publish", () => {
 
         await expect(writer.publish(approved.em, "workspace-1", "project-1")).resolves.toBe(true)
         await expect(writer.publish(draft.em, "workspace-1", "project-1")).resolves.toBe(false)
-        expect(approved.fake.callsOf("set")).toEqual([[{ status: "published", publishedAt: anyFunction() }]])
+        expect(approved.fake.callsOf("set").map(([set]) => resolveFragments(set))).toEqual([
+            { status: "published", publishedAt: "now()" },
+        ])
         expect(approved.fake.callsOf("where")).toEqual([
             [
                 "workspace_id = :workspaceId AND id = :projectId AND status = 'approved'",
@@ -266,8 +262,8 @@ describe("VideoProjectWorkbenchWriterService > approve", () => {
         const writer = await build(em)
 
         await expect(writer.approve("workspace-1", "project-1", "render-1", "Lan")).resolves.toBe(true)
-        expect(fake.callsOf("set")).toEqual([
-            [{ status: "approved", approvedAt: anyFunction(), approvedByName: "Lan" }],
+        expect(fake.callsOf("set").map(([set]) => resolveFragments(set))).toEqual([
+            { status: "approved", approvedAt: "now()", approvedByName: "Lan" },
         ])
         expect(fake.callsOf("where")).toEqual([
             [

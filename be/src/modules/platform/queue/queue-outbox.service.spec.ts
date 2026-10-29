@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { QueueErrorCode } from "./errors/queue.error"
 import { QueueOutboxService } from "./queue-outbox.service"
 
 const ENQUEUE = "SELECT * FROM public.job_enqueue($1, $2, $3, $4, $5)"
@@ -59,6 +60,18 @@ describe("QueueOutboxService", () => {
                 JSON.stringify({ id: "m-1" }),
                 "mail:9d1c6e0e-3a54-4c53-8d16-0f2f6c1d7a11",
             ])
+        })
+
+        it("refuses a job with no identity when the database mints none, and writes nothing", async () => {
+            const outbox = await build()
+            const tx = fakeTransaction(mockEntityManager({ query: [[MINT, []]] }))
+
+            await expect(
+                tx.em.transaction((manager) => outbox.write(manager, "mail", { id: "m-1" })),
+            ).rejects.toMatchObject({ code: QueueErrorCode.IdentityUnavailable })
+
+            expect(tx.em.query).toHaveBeenCalledTimes(1)
+            expect(tx.rollbacks).toBe(1)
         })
 
         it("leaves no job behind when the transaction rolls back, and never touches the broker", async () => {

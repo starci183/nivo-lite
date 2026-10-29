@@ -8,14 +8,8 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { WorkChainsErrorCode } from "./errors/work-chains.error"
 import { WorkThreadEntity } from "@modules/domain/work-threads"
-import {
-    anyFunction,
-    chainedWith,
-    insertedValues,
-    managerOf,
-    rowOf,
-    stepOf,
-} from "@tests/fixtures/builders/work-chains.builder"
+import { chainedWith, insertedValues, managerOf, rowOf, stepOf } from "@tests/fixtures/builders/work-chains.builder"
+import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
 import { WorkChainEntity } from "./persistence/entities"
 import { CHAIN_OWNER_DIRECTORY } from "./work-chains.decorators"
 import type { ChainOwnerDirectory } from "./work-chains.port"
@@ -156,10 +150,11 @@ const registerStepKinds = () => {
 
             await service.record(stepOf({ kind: "hand_off", target: { kind: "group", id: "role:staff" } }))
 
-            expect(chainedWith(harness, "insert")?.callsOf("values")[0]?.[0]).toMatchObject({
+            expect(resolveFragments(chainedWith(harness, "insert")?.callsOf("values")[0]?.[0])).toMatchObject({
                 kind: "hand_off",
                 status: "done",
-                finishedAt: anyFunction(),
+                seq: "(SELECT coalesce(max(seq), 0) + 1 FROM public.work_chains WHERE thread_id = :seqThreadId)",
+                finishedAt: "now()",
             })
         })
 
@@ -339,11 +334,11 @@ const registerApprovalLinks = () => {
 
             await service.abandon("ws-1", "step-1")
 
-            expect(em.update).toHaveBeenCalledWith(
+            expect(em.update.mock.calls[0]?.slice(0, 2)).toEqual([
                 WorkChainEntity,
                 { workspaceId: "ws-1", id: "step-1", status: "waiting" },
-                { status: "stopped", finishedAt: anyFunction() },
-            )
+            ])
+            expect(resolveFragments(em.update.mock.calls[0]?.[2])).toEqual({ status: "stopped", finishedAt: "now()" })
         })
     })
 }
@@ -359,7 +354,9 @@ const registerSettleFor = () => {
             const update = chainedWith(harness, "update")
             expect(harness.em.createQueryBuilder).toHaveBeenCalledWith(WorkChainEntity, "w")
             expect(update?.callsOf("update")).toEqual([[]])
-            expect(update?.callsOf("set")).toEqual([[{ status: "done", finishedAt: anyFunction(), decidedBy: "van" }]])
+            expect(update?.callsOf("set").map(([set]) => resolveFragments(set))).toEqual([
+                { status: "done", finishedAt: "now()", decidedBy: "van" },
+            ])
             expect(update?.callsOf("where")[0]?.[1]).toEqual({
                 workspaceId: "ws-1",
                 threadId: "thread-1",
@@ -377,7 +374,9 @@ const registerSettleFor = () => {
             await service.settleFor("ws-1", "thread-1", { kind: "agent", id: "agent-2" }, other.em)
 
             const update = chainedWith(other, "update")
-            expect(update?.callsOf("set")).toEqual([[{ status: "done", finishedAt: anyFunction() }]])
+            expect(update?.callsOf("set").map(([set]) => resolveFragments(set))).toEqual([
+                { status: "done", finishedAt: "now()" },
+            ])
             expect(update?.callsOf("where")[0]?.[1]).toMatchObject({ actorKind: "agent", actorId: "agent-2" })
             expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
@@ -406,7 +405,9 @@ const registerSettleApproval = () => {
             await service.settleApproval(approval("approved", "minh"))
 
             const update = chainedWith(harness, "update")
-            expect(update?.callsOf("set")).toEqual([[{ status: "done", decidedBy: "minh", finishedAt: anyFunction() }]])
+            expect(update?.callsOf("set").map(([set]) => resolveFragments(set))).toEqual([
+                { status: "done", decidedBy: "minh", finishedAt: "now()" },
+            ])
             expect(update?.callsOf("where")).toEqual([
                 [
                     "workspace_id = :workspaceId AND approval_request_id = :requestId AND kind = 'ask_approval' AND status = 'waiting'",
@@ -438,10 +439,20 @@ const registerSettleApproval = () => {
 
             await service.settleApproval(approval("expired", null, "en"))
 
-            expect(chainedWith(harness, "update")?.callsOf("set")).toEqual([
-                [{ status: "expired", decidedBy: null, finishedAt: anyFunction() }],
-            ])
+            expect(
+                chainedWith(harness, "update")
+                    ?.callsOf("set")
+                    .map(([set]) => resolveFragments(set)),
+            ).toEqual([{ status: "expired", decidedBy: null, finishedAt: "now()" }])
             expect(events.record).toHaveBeenCalledWith(expect.objectContaining({ actor: "" }), expect.anything())
+        })
+
+        it("logs no lead when the thread of the settled step is gone", async () => {
+            const { service, events } = await build(managerOf({ thread: null }).em)
+
+            await service.settleApproval(approval("approved", "minh"))
+
+            expect(events.record).toHaveBeenCalledWith(expect.objectContaining({ leadId: null }), expect.anything())
         })
 
         it("names the decider as empty when the member is gone", async () => {

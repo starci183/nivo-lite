@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In, LessThanOrEqual } from "typeorm"
+import { resolveFragments } from "@tests/fixtures/builders/sql-fragments.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { VideoRendersErrorCode } from "./errors/video-renders.error"
@@ -134,11 +135,11 @@ describe("VideoRendersService", () => {
                 ["id = :renderId AND status IN (:...open)", { renderId: "render-1", open: OPEN }],
             ])
             expect(update.callsOf("returning")).toEqual([[["id", "workspace_id", "spec", "meta"]]])
-            expect(update.callsOf("set")[0]?.[0]).toMatchObject({
+            expect(resolveFragments(update.callsOf("set")[0]?.[0])).toEqual({
                 status: "rendering",
+                startedAt: "COALESCE(started_at, now())",
                 error: null,
-                startedAt: expect.any(Function),
-                meta: expect.any(Function),
+                meta: "jsonb_set(meta, '{attempts}', to_jsonb(COALESCE((meta ->> 'attempts')::int, 0) + 1))",
             })
         })
 
@@ -176,7 +177,7 @@ describe("VideoRendersService", () => {
 
             await renders.complete(manager, "render-1", DONE)
 
-            expect(update.callsOf("set")[0]?.[0]).toMatchObject({
+            expect(resolveFragments(update.callsOf("set")[0]?.[0])).toEqual({
                 status: "done",
                 progress: 100,
                 stage: null,
@@ -185,6 +186,8 @@ describe("VideoRendersService", () => {
                 durationMs: 12000,
                 sizeBytes: "345",
                 error: null,
+                meta: "meta || CAST(:report AS jsonb)",
+                finishedAt: "now()",
             })
             expect(update.callsOf("where")).toEqual([
                 ["id = :renderId AND status IN (:...open)", { renderId: "render-1", open: OPEN }],
@@ -199,7 +202,11 @@ describe("VideoRendersService", () => {
 
             await renders.fail(manager, "render-1", "boom")
 
-            expect(update.callsOf("set")[0]?.[0]).toMatchObject({ status: "failed", error: expect.any(Function) })
+            expect(resolveFragments(update.callsOf("set")[0]?.[0])).toEqual({
+                status: "failed",
+                error: "left(:reason, 300)",
+                finishedAt: "now()",
+            })
             expect(update.callsOf("setParameter")).toEqual([["reason", "boom"]])
             expect(update.callsOf("where")).toEqual([
                 ["id = :renderId AND status IN (:...open)", { renderId: "render-1", open: OPEN }],

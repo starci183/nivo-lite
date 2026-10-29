@@ -107,6 +107,12 @@ describe("AiClient chat", () => {
         await expect(client.chat({ ...ASK, json: true })).resolves.toMatchObject({ parsed: { a: 1 } })
     })
 
+    it("answers no parsed object when the model's answer is not JSON", async () => {
+        const { client } = await build("not json")
+
+        await expect(client.chat({ ...ASK, json: true })).resolves.toMatchObject({ content: "not json", parsed: null })
+    })
+
     it("puts the retrieved passages in the system message as business notes, cut to the limit, and counts them", async () => {
         const { client, http } = await build()
         const search = jest.fn().mockResolvedValue([
@@ -155,5 +161,32 @@ describe("AiClient embed", () => {
         expect(sentOf(http, 0)).toMatchObject({ timeoutMs: 4000 })
         expect(sentOf(http, 0).text).toContain('"model":"embed"')
         expect(sentOf(http, 0).text).toContain('"dimensions":2')
+    })
+})
+
+describe("AiClient gateway fetch", () => {
+    it("posts a URL or request target with its headers and string body, and returns the text answer", async () => {
+        const { client, http } = await build()
+        const fetcher = client["fetcher"](3000)
+
+        const fromUrl = await fetcher(new URL("http://gateway.test/v1/a"), { headers: { "x-a": "1" }, body: "payload" })
+        const fromRequest = await fetcher(new Request("http://gateway.test/v1/b", { method: "POST" }))
+
+        expect(await fromUrl.text()).toBe(completion("hello"))
+        expect(fromRequest.status).toBe(200)
+        expect(sentOf(http, 0)).toMatchObject({ url: "http://gateway.test/v1/a", timeoutMs: 3000, text: "payload" })
+        expect(sentOf(http, 0).headers).toEqual({ "x-a": "1" })
+        expect(sentOf(http, 1)).toMatchObject({ url: "http://gateway.test/v1/b", text: "" })
+    })
+
+    it("reads a non-text body as empty and a missing header set as none", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({ status: 200, body: new Uint8Array([1]) })
+
+        const answer = await client["fetcher"](1000)("http://gateway.test/v1/c", { body: new Uint8Array([1]) })
+
+        expect(answer.status).toBe(200)
+        expect(await answer.text()).toBe("")
+        expect(sentOf(http, 0).text).toBe("")
     })
 })

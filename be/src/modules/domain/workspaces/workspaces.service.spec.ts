@@ -233,6 +233,14 @@ describe("WorkspacesService", () => {
             )
         })
 
+        it("refuses as not found when the driver reports no affected rows", async () => {
+            const em = mockEntityManager({ update: [WorkspaceEntity, { raw: [], generatedMaps: [] }] })
+
+            await expect((await build(em)).setBrand("stranger", "ws-1", brand)).rejects.toMatchObject({
+                code: WorkspacesErrorCode.NotFound,
+            })
+        })
+
         it("refuses as not found when no owned workspace matched", async () => {
             const em = mockEntityManager({ update: [WorkspaceEntity, { affected: 0, raw: [], generatedMaps: [] }] })
 
@@ -277,6 +285,16 @@ describe("WorkspacesService", () => {
             expect(em.exists).toHaveBeenCalledWith(WorkspaceEntity, { where: { ownerId: "user-1" } })
             expect(em.insert).not.toHaveBeenCalled()
             expect(transaction.commits).toBe(1)
+        })
+
+        it("refuses as not found when the insert answers no id", async () => {
+            const { em } = managerAnswering({ getRawOne: undefined })
+            em.exists.mockResolvedValue(false)
+            em.insert.mockResolvedValue({ identifiers: [], generatedMaps: [], raw: [] } as never)
+            fakeTransaction(em)
+            const service = await build(em, { allowFreeWorkspace: true })
+
+            await expect(service.startFirst("user-1")).rejects.toMatchObject({ code: WorkspacesErrorCode.NotFound })
         })
 
         it("creates the first workspace when the person holds none", async () => {
