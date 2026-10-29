@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import { ContractsService } from "@modules/domain/contracts"
 import { InjectWorkPerformerRegistry } from "@modules/domain/decisions"
@@ -71,7 +71,7 @@ export class ScoreLeadPerformerService implements WorkPerformer, OnModuleInit {
     constructor(
         @InjectWorkPerformerRegistry() private readonly registry: WorkPerformerRegistry,
         private readonly kit: LeadFlowKitService,
-        @Inject(forwardRef(() => LeadFlowTurnService)) private readonly turns: LeadFlowTurnService,
+        private readonly turns: LeadFlowTurnService,
         private readonly leads: LeadRecordsService,
         private readonly contracts: ContractsService,
     ) {}

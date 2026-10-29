@@ -1,4 +1,7 @@
 import type { MockEntityManager } from "@starci/jest-preset"
+import { builderOf } from "./entity-query-builder-fake.builder"
+
+export { ANY_FUNCTION } from "./any-function.builder"
 
 /** The answers of the terminal calls of a query builder; an `Error` answer rejects and a function answer is called when the terminal runs. */
 export interface QueryBuilderAnswers {
@@ -58,19 +61,15 @@ export const fakeQueryBuilder = (
     const calls: Array<QueryBuilderCall> = []
     const argsOfMethod = (method: string): ReadonlyArray<ReadonlyArray<unknown>> =>
         calls.filter((call) => call.method === method).map((call) => call.args)
-    const proxy: object = new Proxy(
+    const builder: object = new Proxy(
         {},
         {
             get(_target, property) {
-                if (property === "calls") return calls
-                if (property === "builder") return proxy
-                if (property === "argsOf" || property === "callsOf") return argsOfMethod
-
                 if (typeof property !== "string" || property === "then") return undefined
                 return (...args: Array<unknown>) => {
                     calls.push({ method: property, args })
                     const terminal = TERMINALS.find((name) => name === property)
-                    if (terminal === undefined) return proxy
+                    if (terminal === undefined) return builder
                     const answers = typeof answering === "function" ? answering(calls) : answering
                     if (!Object.hasOwn(answers, terminal)) {
                         return Promise.reject(
@@ -84,17 +83,17 @@ export const fakeQueryBuilder = (
             },
         },
     )
-    return proxy as FakeQueryBuilder
+    return { builder, calls, argsOf: argsOfMethod, callsOf: argsOfMethod }
 }
 
 /** Makes `em.createQueryBuilder(...)` hand out the given doubles, one per call in order; the last one repeats. */
 export const answerQueryBuilders = (em: MockEntityManager, ...builders: ReadonlyArray<FakeQueryBuilder>): void => {
     let next = 0
-    em.createQueryBuilder.mockImplementation((() => {
-        const builder = builders[Math.min(next, builders.length - 1)]
+    em.createQueryBuilder.mockImplementation(() => {
+        const double = builders[Math.min(next, builders.length - 1)]
         next += 1
-        return builder
-    }) as never)
+        return builderOf(double?.builder ?? {})
+    })
 }
 
 /**
@@ -106,15 +105,15 @@ export const answerQueryBuildersByTable = (
     answers: Readonly<Record<string, QueryBuilderAnswers>>,
 ): ReadonlyArray<FakeQueryBuilder> => {
     const built: Array<FakeQueryBuilder> = []
-    em.createQueryBuilder.mockImplementation((() => {
+    em.createQueryBuilder.mockImplementation(() => {
         const builder = fakeQueryBuilder((calls) => {
             const from = calls.find((call) => call.method === "from")
             const table = String(from?.args[0])
             return answers[`${table} ${String(from?.args[1])}`] ?? answers[table] ?? {}
         })
         built.push(builder)
-        return builder
-    }) as never)
+        return builderOf(builder.builder)
+    })
     return built
 }
 
@@ -124,9 +123,6 @@ export const queueQueryBuilders = (
     answers: ReadonlyArray<QueryBuilderAnswers>,
 ): ReadonlyArray<FakeQueryBuilder> => {
     const fakes = answers.map((answer) => fakeQueryBuilder(answer))
-    for (const fake of fakes) manager.createQueryBuilder.mockReturnValueOnce(fake as never)
+    for (const fake of fakes) manager.createQueryBuilder.mockReturnValueOnce(builderOf(fake.builder))
     return fakes
 }
-
-/** Matches any function in an assertion (a `() => ...` SQL expression a spec cannot compare by value). */
-export const ANY_FUNCTION: unknown = expect.any(Function)

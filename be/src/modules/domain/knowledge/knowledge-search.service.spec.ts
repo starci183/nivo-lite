@@ -1,6 +1,5 @@
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
 import { KnowledgeChunksService } from "@modules/domain/knowledge-chunks"
 import type { ChunkHit } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
@@ -28,10 +27,11 @@ const chunk: ChunkHit = {
 }
 const item: NivoHit = { id: "nivo-1", module: "core", kind: "tone", title: "Tone", content: "Be kind", score: 0.95 }
 
-/** A manager that folds the question the way the database does: lower case, accent-free text. */
-const folding = (): MockEntityManager => mockEntityManager({ query: [FOLD, [{ knowledge_fold: "opening hours?" }]] })
+/** The rows the database folds a question into: lower case, accent-free text. */
+const FOLDED = [{ knowledge_fold: "opening hours?" }]
 
-const build = async (em: MockEntityManager = folding()) => {
+const build = async (folded: ReadonlyArray<{ knowledge_fold: string }> = FOLDED) => {
+    const em = mockEntityManager({ query: [FOLD, [...folded]] })
     const members = mock<WorkspaceMembersService>()
     const embeddings = mock<EmbeddingService>()
     embeddings.model.mockReturnValue("m1")
@@ -190,9 +190,7 @@ describe("KnowledgeSearchService", () => {
         })
 
         it("does not embed an empty query and has no words to match", async () => {
-            const { service, embeddings, chunks } = await build(
-                mockEntityManager({ query: [FOLD, [{ knowledge_fold: "" }]] }),
-            )
+            const { service, embeddings, chunks } = await build([{ knowledge_fold: "" }])
 
             await service.passages(lens, " ", 4)
 
@@ -201,7 +199,7 @@ describe("KnowledgeSearchService", () => {
         })
 
         it("treats a fold that answers no row as no words", async () => {
-            const { service, chunks } = await build(mockEntityManager({ query: [FOLD, []] }))
+            const { service, chunks } = await build([])
 
             await service.passages(lens, "x", 4)
 

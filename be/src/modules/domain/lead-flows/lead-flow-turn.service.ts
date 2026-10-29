@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import { AuthorityService } from "@modules/domain/authority"
 import type { AgentProfile } from "@modules/domain/agents"
 import { BrainFactsService, factLine } from "@modules/domain/brain-facts"
@@ -65,7 +65,7 @@ export interface TurnGapNote {
 export class LeadFlowTurnService {
     constructor(
         private readonly facts: BrainFactsService,
-        @Inject(forwardRef(() => KnowledgeSearchService)) private readonly knowledge: KnowledgeSearchService,
+        private readonly knowledge: KnowledgeSearchService,
         private readonly gaps: KnowledgeGapsService,
         private readonly authority: AuthorityService,
         @InjectLeadTurnReader() private readonly ai: LeadTurnReader,

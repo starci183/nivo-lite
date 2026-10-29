@@ -34,7 +34,7 @@ export const zaloUserIdOf = (externalId: string): string => {
 }
 
 const refreshLive = (secret: ZaloSecret, nowMs: number): boolean => {
-    if (secret.refreshToken === undefined || secret.refreshToken === "") return false
+    if (secret.renewalToken === undefined || secret.renewalToken === "") return false
     if (secret.refreshExpiresAt === undefined) return true
     const ends = Date.parse(secret.refreshExpiresAt)
     return Number.isNaN(ends) || ends > nowMs

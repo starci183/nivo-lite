@@ -6,6 +6,7 @@ import type { Clock } from "@modules/platform/clock"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectIds } from "@modules/platform/ids"
 import type { Ids } from "@modules/platform/ids"
+import { OwnersError, OwnersErrorCode } from "./errors/owners.error"
 import { InjectOwnersOptions } from "./owners.decorators"
 import type { OwnersOptions } from "./owners.options"
 
@@ -63,7 +64,7 @@ export class OwnersService {
             password,
             salt?.gen_salt,
         ])
-        if (hashed === undefined) throw new TypeError("the database did not hash the password")
+        if (hashed === undefined) throw new OwnersError({ code: OwnersErrorCode.PasswordNotHashed })
         return hashed.crypt
     }
 }

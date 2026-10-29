@@ -19,7 +19,7 @@ export const secretOf = (patch: Partial<ZaloSecret> = {}): ZaloSecret => ({
     appSecret: "app-secret",
     oaSecret: "oa-secret",
     accessToken: "access-1",
-    refreshToken: "refresh-1",
+    renewalToken: "refresh-1",
     ...patch,
 })
 /** Wrap the credential in the connection-secret read result. */

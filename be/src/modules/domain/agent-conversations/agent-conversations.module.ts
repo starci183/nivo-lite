@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-conversations.module-definition"
 import { AgentConversationReadService } from "./agent-conversation-reads.service"
 import { AgentConversationsReadService } from "./agent-conversations-read.service"
+import { AgentConversationsAutomationReadService } from "./agent-conversations-automation-read.service"
 import { AgentConversationsService } from "./agent-conversations.service"
 
 @Module({})
@@ -18,8 +19,14 @@ export class AgentConversationsModule extends ConfigurableModuleClass {
                 AgentConversationsService,
                 AgentConversationReadService,
                 AgentConversationsReadService,
+                AgentConversationsAutomationReadService,
             ],
-            exports: [AgentConversationsService, AgentConversationReadService, AgentConversationsReadService],
+            exports: [
+                AgentConversationsService,
+                AgentConversationReadService,
+                AgentConversationsReadService,
+                AgentConversationsAutomationReadService,
+            ],
         }
     }
 }

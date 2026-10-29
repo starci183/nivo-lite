@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
+import { WorkspaceBusinessTypeReadService } from "@modules/domain/workspaces"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { SuggestionContext, SuggestionDecision } from "./knowledge-suggestion-state.contracts"
 import { KnowledgeSuggestionStateEntity } from "./persistence/entities"
@@ -22,26 +23,21 @@ export class KnowledgeSuggestionStateService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
+        private readonly workspaces: WorkspaceBusinessTypeReadService,
     ) {}
 
     /** The decisions of the workspace with its business type; any member may read them. */
     async context(userId: string, workspaceId: string): Promise<SuggestionContext> {
         await this.members.require(userId, workspaceId)
-        const [states, kind] = await Promise.all([
+        const [states, businessType] = await Promise.all([
             this.entityManager.find(KnowledgeSuggestionStateEntity, {
                 select: { suggestionKey: true, state: true },
                 where: { workspaceId },
                 take: DECISION_LIMIT,
             }),
-            this.entityManager
-                .createQueryBuilder()
-                .select("w.business_type", "business_type")
-                .from("public.workspaces", "w")
-                .where("w.id = :workspaceId", { workspaceId })
-                .limit(1)
-                .getRawOne<{ business_type: string | null }>(),
+            this.workspaces.businessTypeOf(workspaceId),
         ])
-        return { decisions: states.flatMap(decisionOf), businessType: kind?.business_type ?? null }
+        return { decisions: states.flatMap(decisionOf), businessType }
     }
 
     /** Marks a suggestion dismissed or not applicable; an absent state brings it back. Owners and managers only. */

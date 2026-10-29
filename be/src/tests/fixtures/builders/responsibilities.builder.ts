@@ -94,8 +94,16 @@ export const stepOf = (overrides: Record<string, unknown> = {}) => ({
     ...overrides,
 })
 
+/** The customer lookup of the lead guard in the journal spec. */
+export interface LeadGuard {
+    /** Whether the guard holds the customer. */
+    held: boolean
+    /** The customer name the lookup answers, or undefined for no customer. */
+    name: { readonly contact_name: string } | undefined
+}
+
 /** What the lead capability answers in the journal spec: the customer name and whether the guard holds the customer. */
-export const leadGuard: { held: boolean; name: { readonly contact_name: string } | undefined } = {
+export const leadGuard: LeadGuard = {
     held: true,
     name: undefined,
 }

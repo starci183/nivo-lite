@@ -75,7 +75,7 @@ describe("toSourceRecord instants", () => {
     it("answers updatedAt as an ISO string", async () => {
         const subject = await buildSubject()
 
-        const record = subject.toSourceRecord(rowOf({ updatedAt: new Date("2026-10-02T00:00:00.000Z") }))
+        const record = subject.toSourceRecord(Object.assign(rowOf(), { updatedAt: new Date("2026-10-02T00:00:00.000Z") }))
 
         expect(record.updatedAt).toBe("2026-10-02T00:00:00.000Z")
     })

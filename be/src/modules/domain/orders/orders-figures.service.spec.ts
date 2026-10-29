@@ -50,6 +50,8 @@ describe("OrdersFiguresService", () => {
         expect(em.find).toHaveBeenCalledWith(OrderEntity, {
             select: { id: true, leadId: true, orderNo: true, items: true, amountVnd: true, status: true },
             where: { workspaceId: "ws-1", status: In(["confirmed", "invoiced", "paid"]) },
+            order: { createdAt: "DESC", id: "DESC" },
+            take: 5000,
         })
     })
 })

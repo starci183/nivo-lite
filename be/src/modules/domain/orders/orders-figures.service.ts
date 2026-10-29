@@ -5,6 +5,9 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { OrderFigure } from "./orders-figures.contracts"
 import { OrderEntity } from "./persistence/entities"
 
+/** The most orders the governance figures read at once; the newest are kept. */
+const FIGURES_LIMIT = 5000
+
 @Injectable()
 /** The dashboard counts and lists of a workspace's orders, always scoped to the workspace. */
 export class OrdersFiguresService {
@@ -27,6 +30,8 @@ export class OrdersFiguresService {
         const orders = await this.entityManager.find(OrderEntity, {
             select: { id: true, leadId: true, orderNo: true, items: true, amountVnd: true, status: true },
             where: { workspaceId, status: In(["confirmed", "invoiced", "paid"]) },
+            order: { createdAt: "DESC", id: "DESC" },
+            take: FIGURES_LIMIT,
         })
         return orders.map((order) => ({
             id: order.id,

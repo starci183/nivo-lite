@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { ConnectionSecretsService, randomSecret, safeEqual } from "@modules/domain/connection-secrets"
-import { ConnectionsService } from "@modules/domain/connections"
+import { ConnectionSecretReadsService, ConnectionsService } from "@modules/domain/connections"
 import { InjectZalo, isZaloRefusal, newVerifier } from "@modules/integrations/zalo"
 import type { ZaloClient } from "@modules/integrations/zalo"
 import { InjectClock } from "@modules/platform/clock"
@@ -45,6 +45,14 @@ const isZaloSecret = (value: unknown): value is ZaloSecret =>
     typeof Reflect.get(value, "appSecret") === "string" &&
     typeof Reflect.get(value, "oaSecret") === "string"
 
+/** Stored secrets written before the rename keep the single-use token under `refreshToken`; read it as `renewalToken`. */
+const withLegacyRenewal = (value: object): object => {
+    const legacy: unknown = Reflect.get(value, "refreshToken")
+    if (typeof legacy !== "string" || typeof Reflect.get(value, "renewalToken") === "string") return value
+    const { refreshToken: _legacy, ...rest } = Object.fromEntries(Object.entries(value))
+    return { ...rest, renewalToken: legacy }
+}
+
 @Injectable()
 /**
  * The Zalo OA credential: the sealed JSON of App ID, App secret, OA secret key and tokens. A refresh token works once, so a refresh holds a short
@@ -58,6 +66,7 @@ export class ZaloCredentialsService {
         @InjectLogger() private readonly logger: Logger,
         private readonly secrets: ConnectionSecretsService,
         private readonly connections: ConnectionsService,
+        private readonly secretReads: ConnectionSecretReadsService,
     ) {}
 
     /** The address to register on the Zalo app: Zalo sends the browser back here with code, oa_id and state. */
@@ -67,7 +76,7 @@ export class ZaloCredentialsService {
 
     /** The credential of a connected Zalo connection, or a refusal when it is missing, disconnected or unreadable. */
     async load(connectionId: string): Promise<Outcome<LoadedZalo, ChannelsErrorCode>> {
-        const found = await this.secrets.secretOf(connectionId, "zalo_oa")
+        const found = await this.secretReads.secretOf(connectionId, "zalo_oa")
         if (found.kind !== "ok") return refused(ChannelsErrorCode.ConnectionNotFound)
         const secret = this.parse(found.value.credential)
         if (secret.kind !== "ok") return secret
@@ -149,7 +158,7 @@ export class ZaloCredentialsService {
         const current = await this.require(connectionId)
         const fresh = this.freshToken(current, wish)
         if (fresh !== undefined) return fresh
-        if (current.secret.refreshToken === undefined)
+        if (current.secret.renewalToken === undefined)
             throw new ChannelsError({ code: ChannelsErrorCode.ZaloNotAuthorized })
         const now = this.clock.now()
         if (!(await this.secrets.takeLease(connectionId, new Date(now.getTime() + LEASE_MS), now))) {
@@ -163,7 +172,7 @@ export class ZaloCredentialsService {
 
     /** Renews every Zalo connection whose access token ends within `withinMs`, which also keeps the 3-month refresh token rolling. */
     async refreshDue(withinMs: number): Promise<ZaloRefreshSummary> {
-        const due = await this.secrets.dueZalo(new Date(this.clock.now().getTime() + withinMs))
+        const due = await this.secretReads.dueZalo(new Date(this.clock.now().getTime() + withinMs))
         let refreshed = 0
         let failed = 0
         await eachInOrder(due, async (connectionId) => {
@@ -196,10 +205,10 @@ export class ZaloCredentialsService {
             await this.releaseLease(connectionId)
             return fresh
         }
-        const refreshToken = again.secret.refreshToken
-        if (refreshToken === undefined) throw new ChannelsError({ code: ChannelsErrorCode.ZaloNotAuthorized })
+        const renewalToken = again.secret.renewalToken
+        if (renewalToken === undefined) throw new ChannelsError({ code: ChannelsErrorCode.ZaloNotAuthorized })
         const tokens = await this.zalo
-            .refreshTokens(again.secret.appId, again.secret.appSecret, refreshToken)
+            .refreshTokens(again.secret.appId, again.secret.appSecret, renewalToken)
             .catch(async (cause: unknown) => {
                 // Zalo answered and said no: the refresh token is used up, expired or revoked. Only a new authorization fixes that.
                 if (isZaloRefusal(cause)) await this.connections.markFailing(connectionId, ZALO_RECONNECT_REASON)
@@ -235,12 +244,12 @@ export class ZaloCredentialsService {
         return wish.stale !== undefined && safeEqual(token, wish.stale) ? undefined : token
     }
 
-    private withTokens(secret: ZaloSecret, accessToken: string, refreshToken: string): ZaloSecret {
+    private withTokens(secret: ZaloSecret, accessToken: string, renewalToken: string): ZaloSecret {
         const { pkce: _started, ...rest } = secret
         return {
             ...rest,
             accessToken,
-            refreshToken,
+            renewalToken,
             refreshExpiresAt: new Date(this.clock.now().getTime() + REFRESH_TTL_MS).toISOString(),
         }
     }
@@ -260,7 +269,9 @@ export class ZaloCredentialsService {
     private parse(credential: string): Outcome<ZaloSecret, ChannelsErrorCode> {
         try {
             const parsed: unknown = JSON.parse(credential)
-            return isZaloSecret(parsed) ? ok(parsed) : refused(ChannelsErrorCode.SecretUnreadable)
+            if (!isZaloSecret(parsed)) return refused(ChannelsErrorCode.SecretUnreadable)
+            const migrated = withLegacyRenewal(parsed)
+            return isZaloSecret(migrated) ? ok(migrated) : refused(ChannelsErrorCode.SecretUnreadable)
         } catch (cause) {
             return refused(ChannelsErrorCode.SecretUnreadable, { reason: String(cause) })
         }

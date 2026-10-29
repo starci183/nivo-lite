@@ -1,13 +1,13 @@
 import { Test } from "@nestjs/testing"
 
-import { DEFAULT_CONFIG, nextTier, resolveConfig, tierFor, tierOf, tierRank } from "./loyalty-config.policy"
+import { DEFAULT_CONFIG, nextTier, resolveConfig, tierFor, tierByKey, tierRank } from "./loyalty-config.policy"
 
 const SUBJECT = Symbol("loyalty-config.policy")
 
 type PolicySubject = {
     resolveConfig: typeof resolveConfig
     tierFor: typeof tierFor
-    tierOf: typeof tierOf
+    tierByKey: typeof tierByKey
     tierRank: typeof tierRank
     nextTier: typeof nextTier
 }
@@ -20,7 +20,7 @@ const buildSubject = async () => {
                 useValue: {
                     resolveConfig,
                     tierFor,
-                    tierOf,
+                    tierByKey,
                     tierRank,
                     nextTier,
                 },
@@ -210,9 +210,9 @@ describe("loyalty-config.policy", () => {
         it("finds a tier by key and its rank on the ladder", async () => {
             const { subject } = await buildSubject()
 
-            expect(subject.tierOf(config, "bac")?.name).toBe("Silver")
-            expect(subject.tierOf(config, "nope")).toBeNull()
-            expect(subject.tierOf(config, null)).toBeNull()
+            expect(subject.tierByKey(config, "bac")?.name).toBe("Silver")
+            expect(subject.tierByKey(config, "nope")).toBeNull()
+            expect(subject.tierByKey(config, null)).toBeNull()
             expect(subject.tierRank(config, "vang")).toBe(2)
             expect(subject.tierRank(config, null)).toBe(-1)
         })

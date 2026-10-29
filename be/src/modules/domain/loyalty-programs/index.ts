@@ -10,5 +10,5 @@ export type {
 } from "./loyalty-programs.contracts"
 export { LoyaltyProgramsModule } from "./loyalty-programs.module"
 export { LoyaltyProgramsService } from "./loyalty-programs.service"
-export { nextTier, tierFor, tierOf, tierRank } from "./policies/loyalty-config.policy"
+export { nextTier, tierFor, tierByKey, tierRank } from "./policies/loyalty-config.policy"
 export { loyaltyProgramsEntities } from "./persistence/entities"

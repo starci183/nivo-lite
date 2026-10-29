@@ -3,7 +3,7 @@ import { mock } from "@starci/jest-preset"
 import type { FactRecord, Scope } from "@modules/domain/brain-facts"
 import { KnowledgeSearchService } from "@modules/domain/knowledge"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
-import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
+import { KnowledgeSourcesReadableService } from "@modules/domain/knowledge-sources"
 import { NivoKnowledgeService } from "@modules/domain/nivo-knowledge"
 import { AgentKnowledgeLensService } from "./agent-knowledge-lens.service"
 import { KnowledgeRecallService } from "./knowledge-recall.service"
@@ -65,7 +65,7 @@ const PASSAGE = {
 }
 
 const build = async () => {
-    const sources = mock<KnowledgeSourcesService>({
+    const sources = mock<KnowledgeSourcesReadableService>({
         readableFor: jest.fn().mockResolvedValue([]),
         countReadable: jest.fn().mockResolvedValue(2),
     })
@@ -87,7 +87,7 @@ const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentKnowledgeLensService,
-            { provide: KnowledgeSourcesService, useValue: sources },
+            { provide: KnowledgeSourcesReadableService, useValue: sources },
             { provide: KnowledgeRecallService, useValue: recall },
             { provide: NivoKnowledgeService, useValue: nivo },
             { provide: KnowledgeGapsService, useValue: gaps },

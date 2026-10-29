@@ -92,3 +92,6 @@ export interface EmailRecord {
     /** The records it points at. */
     readonly refs: Readonly<Record<string, unknown>>
 }
+
+/** The invoice ids a set of mails names; null where a mail names none. */
+export type ReminderInvoiceIds = Array<string | null>

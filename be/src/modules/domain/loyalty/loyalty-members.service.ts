@@ -3,7 +3,7 @@ import type { EntityManager } from "typeorm"
 import { LoyaltyCustomerLinksService } from "@modules/domain/loyalty-customer-links"
 import { LoyaltyCustomersService } from "@modules/domain/loyalty-customers"
 import { LoyaltyLedgerService, expiringSoon } from "@modules/domain/loyalty-ledger"
-import { LoyaltyProgramsService, nextTier, tierOf } from "@modules/domain/loyalty-programs"
+import { LoyaltyProgramsService, nextTier, tierByKey } from "@modules/domain/loyalty-programs"
 import { LoyaltyRewardsService, redeemBlock } from "@modules/domain/loyalty-rewards"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
@@ -56,7 +56,7 @@ export class LoyaltyMembersService {
         return {
             member,
             ledger: timeline,
-            tierName: tierOf(config, member.tierKey)?.name ?? "",
+            tierName: tierByKey(config, member.tierKey)?.name ?? "",
             nextTier: nextTier(config, member.lifetimeSpendVnd),
             expiring:
                 config.expiry.months > 0
