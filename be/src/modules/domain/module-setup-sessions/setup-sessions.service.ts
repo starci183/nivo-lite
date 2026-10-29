@@ -25,26 +25,6 @@ const toRecord = (row: ModuleSetupSessionEntity): SetupSessionRecord => ({
     createdAt: row.createdAt.toISOString(),
 })
 
-/** The columns the saving update answers. */
-interface SavedRow {
-    /** The session. */
-    readonly id: string
-    /** The workspace. */
-    readonly workspace_id: string
-    /** The installation. */
-    readonly installation_id: string
-    /** The revision. */
-    readonly revision: number
-    /** Where it stands. */
-    readonly status: SetupSessionRecord["status"]
-    /** The draft. */
-    readonly draft_snapshot: SetupSessionRecord["draft"]
-    /** The evidence per gate. */
-    readonly gate_evidence: SetupSessionRecord["gateEvidence"]
-    /** When it was opened. */
-    readonly created_at: Date
-}
-
 @Injectable()
 /** The draft sessions of the setup chat: the only owner of the module_setup_sessions table. */
 export class SetupSessionsService {
@@ -97,25 +77,14 @@ export class SetupSessionsService {
 
     /** Stores the draft and the gate evidence on the open draft; null when the session is not a draft any more. */
     async save(sessionId: string, change: SetupSessionChange): Promise<OptionalSetupSessionRecord> {
-        const saved = await this.entityManager
-            .createQueryBuilder(ModuleSetupSessionEntity, "m")
-            .update()
-            .set({ draftSnapshot: change.draft, gateEvidence: change.gateEvidence })
-            .where({ id: sessionId, status: "draft" })
-            .returning("*")
-            .execute()
-        const [row] = saved.raw as Array<SavedRow>
-        if (row === undefined) return null
-        return {
-            id: row.id,
-            workspaceId: row.workspace_id,
-            installationId: row.installation_id,
-            revision: row.revision,
-            status: row.status,
-            draft: row.draft_snapshot,
-            gateEvidence: row.gate_evidence,
-            createdAt: row.created_at.toISOString(),
-        }
+        const saved = await this.entityManager.update(
+            ModuleSetupSessionEntity,
+            { id: sessionId, status: "draft" },
+            { draftSnapshot: change.draft, gateEvidence: change.gateEvidence },
+        )
+        if ((saved.affected ?? 0) === 0) return null
+        const row = await this.entityManager.findOne(ModuleSetupSessionEntity, { where: { id: sessionId } })
+        return row === null ? null : toRecord(row)
     }
 
     /** Closes the draft as applied. */
