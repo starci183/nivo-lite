@@ -1,12 +1,10 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import { ContractsReadService } from "@modules/domain/contracts"
 import type { ContractFacts } from "@modules/domain/contracts"
 import { InboundPaymentsReadService } from "@modules/domain/inbound-events"
 import { InvoicesCashReadService } from "@modules/domain/invoices"
 import type { CashInvoice } from "@modules/domain/invoices"
 import { LeadReadService } from "@modules/domain/leads"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     ExpiringItemFacts,
     RenewalCashFacts,
@@ -74,47 +72,48 @@ const vnDayOf = (at: Date): string => new Date(at.getTime() + VN_OFFSET_MS).toIS
 const afterHorizon = (horizonDay: string): Date => new Date(Date.parse(`${horizonDay}T00:00:00+07:00`) + DAY_MS)
 
 @Injectable()
-/** Reads the renewal-to-cash story of a window from the invoices, contracts, leads and inbound payments of the workspace. */
+/** Reads the renewal-to-cash story of a window through the read services of invoices, contracts, leads and inbound payments. */
 export class RenewalCashService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        private readonly contracts: ContractsReadService,
-        private readonly leads: LeadReadService,
         private readonly invoices: InvoicesCashReadService,
         private readonly payments: InboundPaymentsReadService,
+        private readonly contracts: ContractsReadService,
+        private readonly leads: LeadReadService,
     ) {}
 
     /**
-     * The renewal-to-cash story of a window, read only, in one snapshot: the renewal invoices issued in it, the renewal
+     * The renewal-to-cash story of a window, read only: the renewal invoices issued in it, the renewal
      * invoices paid in it with the contract end date now, the invoices still unpaid that fall due before the horizon, the
      * active contracts ending before the horizon with no renewal invoice for their period, and the payments received that
      * still wait for a decision. Each list is bounded; the counts and totals cover every row the story weighs.
      */
-    read(query: RenewalCashQuery): Promise<RenewalCashFacts> {
-        return this.entityManager.transaction("REPEATABLE READ", async () => {
-            const issued = await this.issuedOf(query)
-            const paid = await this.paidOf(query)
-            const unpaid = await this.unpaidOf(query)
-            const expiring = await this.expiringOf(query)
-            const unmatched = await this.unmatchedOf(query)
-            return {
-                issued_count: issued.tally.count,
-                issued_total: issued.tally.total,
-                issued: issued.items,
-                paid_count: paid.tally.count,
-                paid_total: paid.tally.total,
-                paid: paid.items,
-                unpaid_count: unpaid.tally.count,
-                unpaid_total: unpaid.tally.total,
-                unpaid: unpaid.items,
-                expiring_count: expiring.tally.count,
-                expiring_total: expiring.tally.total,
-                expiring: expiring.items,
-                unmatched_count: unmatched.tally.count,
-                unmatched_total: unmatched.tally.total,
-                unmatched: unmatched.items,
-            }
-        })
+    async read(query: RenewalCashQuery): Promise<RenewalCashFacts> {
+        const issued = await this.issuedOf(query)
+        const paid = await this.paidOf(query)
+        const unpaid = await this.unpaidOf(query)
+        const expiring = await this.expiringOf(query)
+        const unmatched = await this.payments.unmatched(query.workspaceId, query.bound)
+        return {
+            issued_count: issued.tally.count,
+            issued_total: issued.tally.total,
+            issued: issued.items,
+            paid_count: paid.tally.count,
+            paid_total: paid.tally.total,
+            paid: paid.items,
+            unpaid_count: unpaid.tally.count,
+            unpaid_total: unpaid.tally.total,
+            unpaid: unpaid.items,
+            expiring_count: expiring.tally.count,
+            expiring_total: expiring.tally.total,
+            expiring: expiring.items,
+            unmatched_count: unmatched.count,
+            unmatched_total: unmatched.total,
+            unmatched: unmatched.items.map((item): UnmatchedItemFacts => ({
+                amount_vnd: item.amountVnd,
+                sender_name: item.senderName,
+                memo: item.memo,
+            })),
+        }
     }
 
     /** The contracts the invoices name, by contract id. */
@@ -206,11 +205,11 @@ export class RenewalCashService {
             query.horizonDay,
             ROW_LIMIT,
         )
-        const periods = await this.invoices.invoicedPeriods(
+        const renewed = await this.invoices.invoicedPeriods(
             query.workspaceId,
             ending.map((contract) => contract.id),
         )
-        const taken = new Set(periods.map((period) => `${period.contractId}|${period.periodEndsOn}`))
+        const taken = new Set(renewed.map((period) => `${period.contractId}|${period.periodEndsOn}`))
         return partOf(
             ending.filter((contract) => !taken.has(`${contract.id}|${contract.endsOn}`)),
             (contract) => contract.amountVnd ?? 0,
@@ -222,18 +221,5 @@ export class RenewalCashService {
             }),
             query.bound,
         )
-    }
-
-    /** The payments received that still wait for a decision. */
-    private async unmatchedOf(query: RenewalCashQuery): Promise<Part<UnmatchedItemFacts>> {
-        const waiting = await this.payments.unmatched(query.workspaceId, query.bound)
-        return {
-            tally: { count: waiting.count, total: waiting.total },
-            items: waiting.items.map((item) => ({
-                amount_vnd: item.amountVnd,
-                sender_name: item.senderName,
-                memo: item.memo,
-            })),
-        }
     }
 }
