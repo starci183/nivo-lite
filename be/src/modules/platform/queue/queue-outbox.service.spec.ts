@@ -61,7 +61,11 @@ describe("QueueOutboxService", () => {
                 "mail:9d1c6e0e-3a54-4c53-8d16-0f2f6c1d7a11",
             ])
         })
+    })
+})
 
+describe("QueueOutboxService refusals", () => {
+    describe("write", () => {
         it("refuses a job with no identity when the database mints none, and writes nothing", async () => {
             const outbox = await build()
             const tx = fakeTransaction(mockEntityManager({ query: [[MINT, []]] }))
