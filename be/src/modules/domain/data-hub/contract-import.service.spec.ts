@@ -148,7 +148,9 @@ describe("ContractImportService.preview", () => {
 
         expect(table.readFile).toHaveBeenCalledWith("hop-dong.xlsx", expect.any(Uint8Array), undefined)
     })
+})
 
+describe("ContractImportService.preview refusals", () => {
     it("refuses a request with neither a file nor pasted text", async () => {
         const { service } = await build()
 

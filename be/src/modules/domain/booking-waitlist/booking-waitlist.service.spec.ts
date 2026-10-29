@@ -42,13 +42,6 @@ const savedOf = (overrides: Record<string, unknown> = {}) => ({
     ...overrides,
 })
 
-/** A manager whose join runs in a transaction that first has the service row locked, then checks and inserts. */
-const joining = (waiting: boolean) => {
-    const em = mockEntityManager({ exists: [BookingWaitlistEntity, waiting], insert: [BookingWaitlistEntity, {}] })
-    fakeTransaction(em)
-    return em
-}
-
 const services = mock<BookingServicesService>({ lock: jest.fn(() => Promise.resolve([{ id: "service-1" }])) })
 
 const build = async (entityManager: MockEntityManager) => {
@@ -93,7 +86,8 @@ describe("BookingWaitlistService cancel", () => {
 })
 describe("BookingWaitlistService join", () => {
     it("joins a customer to the service window and answers true when an entry was added", async () => {
-        const em = joining(false)
+        const em = mockEntityManager({ exists: [BookingWaitlistEntity, false], insert: [BookingWaitlistEntity, {}] })
+        fakeTransaction(em)
         const waitlist = await build(em)
 
         await expect(waitlist.join(entryOf())).resolves.toBe(true)
@@ -109,7 +103,8 @@ describe("BookingWaitlistService join", () => {
     })
 
     it("answers false when the customer is already waiting for that service window", async () => {
-        const em = joining(true)
+        const em = mockEntityManager({ exists: [BookingWaitlistEntity, true], insert: [BookingWaitlistEntity, {}] })
+        fakeTransaction(em)
         const waitlist = await build(em)
 
         await expect(waitlist.join(entryOf())).resolves.toBe(false)
@@ -118,7 +113,8 @@ describe("BookingWaitlistService join", () => {
     })
 
     it("preserves absent customer links and phone in the waitlist entry", async () => {
-        const em = joining(false)
+        const em = mockEntityManager({ exists: [BookingWaitlistEntity, false], insert: [BookingWaitlistEntity, {}] })
+        fakeTransaction(em)
         const waitlist = await build(em)
 
         await expect(waitlist.join(entryOf({ leadId: null, conversationId: null, customerPhone: null }))).resolves.toBe(
@@ -134,7 +130,8 @@ describe("BookingWaitlistService join", () => {
 })
 describe("BookingWaitlistService join", () => {
     it("trims the customer name and note before limiting their lengths", async () => {
-        const em = joining(false)
+        const em = mockEntityManager({ exists: [BookingWaitlistEntity, false], insert: [BookingWaitlistEntity, {}] })
+        fakeTransaction(em)
         const waitlist = await build(em)
 
         await expect(
@@ -155,7 +152,8 @@ describe("BookingWaitlistService join", () => {
         { supplied: 200.49, saved: 200 },
         { supplied: 201, saved: 200 },
     ])("rounds and clamps a party of $supplied to $saved", async ({ supplied, saved }) => {
-        const em = joining(false)
+        const em = mockEntityManager({ exists: [BookingWaitlistEntity, false], insert: [BookingWaitlistEntity, {}] })
+        fakeTransaction(em)
         const waitlist = await build(em)
 
         await expect(waitlist.join(entryOf({ partySize: supplied }))).resolves.toBe(true)
