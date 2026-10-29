@@ -101,17 +101,9 @@ const connectionOf = builder<ConnectionRecord>({
     createdAt: "2026-10-01T00:00:00.000Z",
 })
 
-/** A reads double that answers the workbench list with `rows`. */
-const readsOf = (rows: ReadonlyArray<StoredProject>) => {
+const build = async (rows: ReadonlyArray<StoredProject> = [rowOf()], project: WorkbenchProject = projectOf()) => {
     const reads = mock<VideoWorkbenchReadsService>()
     reads.projectsOf.mockResolvedValue([...rows])
-    return reads
-}
-
-const build = async (
-    reads: VideoWorkbenchReadsService = readsOf([rowOf()]),
-    project: WorkbenchProject = projectOf(),
-) => {
     const em = mockEntityManager()
     const telegram = mock<TelegramClient>()
     telegram.sendMessage.mockResolvedValue(undefined)
@@ -215,7 +207,7 @@ describe("VideoSharingService", () => {
             ["an unfinished render", [rowOf({ render: renderOf({ status: "rendering" }) })]],
             ["a render with no video", [rowOf({ render: renderOf({ output_path: null }) })]],
         ])("refuses %s to share", async (_label, rows) => {
-            const { sharing, media, events } = await build(readsOf(rows))
+            const { sharing, media, events } = await build(rows)
 
             await expect(sharing.share("person-1", WS, "project-1")).rejects.toMatchObject({
                 code: VideoErrorCode.NotApproved,

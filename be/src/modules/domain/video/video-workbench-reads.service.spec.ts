@@ -85,123 +85,121 @@ const build = async () => {
     }
 }
 
-describe("VideoWorkbenchReadsService", () => {
-    describe("projectsOf", () => {
-        it("nests the current render of each project, read once from the render owner", async () => {
-            const { reads, projects, renders } = await build()
-            projects.listForWorkbench.mockResolvedValue([
-                projectRowOf(),
-                projectRowOf({ id: "project-2", render_id: null }),
-                projectRowOf({ id: "project-3", render_id: "render-gone" }),
-            ])
-            renders.factsOf.mockResolvedValue([factsOf()])
+describe("VideoWorkbenchReadsService > projectsOf", () => {
+    it("nests the current render of each project, read once from the render owner", async () => {
+        const { reads, projects, renders } = await build()
+        projects.listForWorkbench.mockResolvedValue([
+            projectRowOf(),
+            projectRowOf({ id: "project-2", render_id: null }),
+            projectRowOf({ id: "project-3", render_id: "render-gone" }),
+        ])
+        renders.factsOf.mockResolvedValue([factsOf()])
 
-            await expect(reads.projectsOf(WS, null, false)).resolves.toEqual([
-                {
-                    ...projectRowOf(),
-                    render: {
-                        id: "render-1",
-                        status: "done",
-                        progress: 100,
-                        stage: null,
-                        duration_ms: 15_000,
-                        size_bytes: 2048,
-                        output_path: `${WS}/render-1/video.mp4`,
-                        poster_path: `${WS}/render-1/poster.jpg`,
-                        captions_path: `${WS}/render-1/captions.vtt`,
-                        captions_lang: "vi",
-                    },
+        await expect(reads.projectsOf(WS, null, false)).resolves.toEqual([
+            {
+                ...projectRowOf(),
+                render: {
+                    id: "render-1",
+                    status: "done",
+                    progress: 100,
+                    stage: null,
+                    duration_ms: 15_000,
+                    size_bytes: 2048,
+                    output_path: `${WS}/render-1/video.mp4`,
+                    poster_path: `${WS}/render-1/poster.jpg`,
+                    captions_path: `${WS}/render-1/captions.vtt`,
+                    captions_lang: "vi",
                 },
-                { ...projectRowOf({ id: "project-2", render_id: null }), render: null },
-                { ...projectRowOf({ id: "project-3", render_id: "render-gone" }), render: null },
-            ])
-            expect(projects.listForWorkbench).toHaveBeenCalledWith(WS, null, false)
-            expect(renders.factsOf).toHaveBeenCalledWith(WS, ["render-1", "render-gone"])
+            },
+            { ...projectRowOf({ id: "project-2", render_id: null }), render: null },
+            { ...projectRowOf({ id: "project-3", render_id: "render-gone" }), render: null },
+        ])
+        expect(projects.listForWorkbench).toHaveBeenCalledWith(WS, null, false)
+        expect(renders.factsOf).toHaveBeenCalledWith(WS, ["render-1", "render-gone"])
+    })
+})
+
+describe("VideoWorkbenchReadsService > brandOf", () => {
+    it("answers the workspace name with the saved kit", async () => {
+        const { reads, workspaces, brandKits } = await build()
+        workspaces.nameOf.mockResolvedValue("Bakery")
+        brandKits.kitOf.mockResolvedValue(kitOf())
+
+        await expect(reads.brandOf(WS)).resolves.toEqual({
+            workspace_name: "Bakery",
+            shop_name: "Bakery Shop",
+            primary_color: "#111111",
+            secondary_color: "#222222",
+            logo_path: `${WS}/logo.png`,
+            music_track: "calm-glow",
+            voice: "vi-VN-NamMinhNeural",
         })
     })
 
-    describe("brandOf", () => {
-        it("answers the workspace name with the saved kit", async () => {
-            const { reads, workspaces, brandKits } = await build()
-            workspaces.nameOf.mockResolvedValue("Bakery")
-            brandKits.kitOf.mockResolvedValue(kitOf())
+    it("answers the workspace name alone when no kit was saved", async () => {
+        const { reads, workspaces, brandKits } = await build()
+        workspaces.nameOf.mockResolvedValue("Bakery")
+        brandKits.kitOf.mockResolvedValue(null)
 
-            await expect(reads.brandOf(WS)).resolves.toEqual({
-                workspace_name: "Bakery",
-                shop_name: "Bakery Shop",
-                primary_color: "#111111",
-                secondary_color: "#222222",
-                logo_path: `${WS}/logo.png`,
-                music_track: "calm-glow",
-                voice: "vi-VN-NamMinhNeural",
-            })
-        })
-
-        it("answers the workspace name alone when no kit was saved", async () => {
-            const { reads, workspaces, brandKits } = await build()
-            workspaces.nameOf.mockResolvedValue("Bakery")
-            brandKits.kitOf.mockResolvedValue(null)
-
-            await expect(reads.brandOf(WS)).resolves.toEqual({
-                workspace_name: "Bakery",
-                shop_name: null,
-                primary_color: null,
-                secondary_color: null,
-                logo_path: null,
-                music_track: null,
-                voice: null,
-            })
-        })
-
-        it("answers nothing for a workspace without a name", async () => {
-            const { reads, workspaces, brandKits } = await build()
-            workspaces.nameOf.mockResolvedValue("")
-            brandKits.kitOf.mockResolvedValue(null)
-
-            await expect(reads.brandOf(WS)).resolves.toBeUndefined()
+        await expect(reads.brandOf(WS)).resolves.toEqual({
+            workspace_name: "Bakery",
+            shop_name: null,
+            primary_color: null,
+            secondary_color: null,
+            logo_path: null,
+            music_track: null,
+            voice: null,
         })
     })
 
-    describe("sourcesOf", () => {
-        it("lists the public video sources with a 220 character excerpt, at most forty", async () => {
-            const { reads, knowledge } = await build()
-            const sources = [{ id: "source-1", title: "Menu", topic: null, excerpt: "Bread" }]
-            knowledge.publicExcerpts.mockResolvedValue(sources)
+    it("answers nothing for a workspace without a name", async () => {
+        const { reads, workspaces, brandKits } = await build()
+        workspaces.nameOf.mockResolvedValue("")
+        brandKits.kitOf.mockResolvedValue(null)
 
-            await expect(reads.sourcesOf(WS)).resolves.toBe(sources)
-            expect(knowledge.publicExcerpts).toHaveBeenCalledWith(WS, "video", 220, 40)
+        await expect(reads.brandOf(WS)).resolves.toBeUndefined()
+    })
+})
+
+describe("VideoWorkbenchReadsService > sourcesOf", () => {
+    it("lists the public video sources with a 220 character excerpt, at most forty", async () => {
+        const { reads, knowledge } = await build()
+        const sources = [{ id: "source-1", title: "Menu", topic: null, excerpt: "Bread" }]
+        knowledge.publicExcerpts.mockResolvedValue(sources)
+
+        await expect(reads.sourcesOf(WS)).resolves.toBe(sources)
+        expect(knowledge.publicExcerpts).toHaveBeenCalledWith(WS, "video", 220, 40)
+    })
+})
+
+describe("VideoWorkbenchReadsService > figuresOf", () => {
+    it("joins the project counts with the video credits of the last thirty days", async () => {
+        const { reads, projects, usage } = await build()
+        projects.countsOf.mockResolvedValue({
+            rendering: 1,
+            scripting: 0,
+            readyToPublish: 2,
+            approved: 1,
+            published30: 3,
         })
+        usage.creditsUsedBy.mockResolvedValue(9)
+
+        await expect(reads.figuresOf(WS)).resolves.toEqual({
+            rendering: 1,
+            scripting: 0,
+            readyToPublish: 2,
+            approved: 1,
+            published30: 3,
+            credits30: 9,
+        })
+        expect(usage.creditsUsedBy).toHaveBeenCalledWith(WS, "video", 30)
     })
 
-    describe("figuresOf", () => {
-        it("joins the project counts with the video credits of the last thirty days", async () => {
-            const { reads, projects, usage } = await build()
-            projects.countsOf.mockResolvedValue({
-                rendering: 1,
-                scripting: 0,
-                readyToPublish: 2,
-                approved: 1,
-                published30: 3,
-            })
-            usage.creditsUsedBy.mockResolvedValue(9)
+    it("answers nothing when the counts cannot be read", async () => {
+        const { reads, projects, usage } = await build()
+        projects.countsOf.mockResolvedValue(undefined)
+        usage.creditsUsedBy.mockResolvedValue(0)
 
-            await expect(reads.figuresOf(WS)).resolves.toEqual({
-                rendering: 1,
-                scripting: 0,
-                readyToPublish: 2,
-                approved: 1,
-                published30: 3,
-                credits30: 9,
-            })
-            expect(usage.creditsUsedBy).toHaveBeenCalledWith(WS, "video", 30)
-        })
-
-        it("answers nothing when the counts cannot be read", async () => {
-            const { reads, projects, usage } = await build()
-            projects.countsOf.mockResolvedValue(undefined)
-            usage.creditsUsedBy.mockResolvedValue(0)
-
-            await expect(reads.figuresOf(WS)).resolves.toBeUndefined()
-        })
+        await expect(reads.figuresOf(WS)).resolves.toBeUndefined()
     })
 })
