@@ -26,24 +26,6 @@ export interface MessageEventRow {
     readonly visitor_name: string | null
 }
 
-/** One follow event of the OA. */
-export interface FollowEventRow {
-    /** The inbox row id. */
-    readonly id: string
-    /** When it was received. */
-    readonly received_at: string
-}
-
-/** What the inbox knows of a connection. */
-export interface InboxFactsRow {
-    /** When the latest event arrived. */
-    readonly last_at: string | null
-    /** A customer text arrived. */
-    readonly has_text: boolean
-    /** A follow event arrived. */
-    readonly has_follow: boolean
-}
-
 /** The latest delivery verdict of the agent. */
 export interface LastReplyRow {
     /** `sent` or `failed`. */
