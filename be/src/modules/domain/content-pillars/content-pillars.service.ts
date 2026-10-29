@@ -6,6 +6,9 @@ import type { ContentPillar, ContentPillarDraft } from "./content-pillars.contra
 import { toContentPillar } from "./content-pillars.mapper"
 import { ContentPillarEntity } from "./persistence/entities"
 
+/** The most themes one lookup by id answers. */
+const KNOWN_MAX = 100
+
 @Injectable()
 /** The sole owner of content_pillars reads and writes. */
 export class ContentPillarsService {
@@ -19,6 +22,35 @@ export class ContentPillarsService {
             take: 100,
         })
         return rows.map(toContentPillar)
+    }
+
+    /** The ids among `ids` that are themes of the workspace. */
+    async known(
+        workspaceId: string,
+        ids: ReadonlyArray<string>,
+        transaction: EntityManager = this.entityManager,
+    ): Promise<ReadonlyArray<string>> {
+        const rows = await transaction.find(ContentPillarEntity, {
+            where: { workspaceId, id: In([...ids]) },
+            select: { id: true },
+            take: KNOWN_MAX,
+        })
+        return rows.map((row) => row.id)
+    }
+
+    /** True when the workspace has a theme with this id. */
+    exists(workspaceId: string, id: string, transaction: EntityManager = this.entityManager): Promise<boolean> {
+        return transaction.exists(ContentPillarEntity, { where: { workspaceId, id } })
+    }
+
+    /** How many themes planning uses. */
+    countActive(workspaceId: string): Promise<number> {
+        return this.entityManager.count(ContentPillarEntity, { where: { workspaceId, active: true } })
+    }
+
+    /** How many of the themes among `ids` planning uses. */
+    countActiveAmong(workspaceId: string, ids: ReadonlyArray<string>): Promise<number> {
+        return this.entityManager.count(ContentPillarEntity, { where: { workspaceId, active: true, id: In([...ids]) } })
     }
 
     /** Replaces themes inside the caller's workspace configuration transaction. */

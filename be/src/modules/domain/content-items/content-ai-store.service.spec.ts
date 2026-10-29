@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { In, Not } from "typeorm"
-import { ContentPillarEntity } from "@modules/domain/content-pillars"
+import { Not } from "typeorm"
+import { ContentPillarsService } from "@modules/domain/content-pillars"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -19,16 +19,20 @@ const build = async (
 ) => {
     const clock = new FakeClock("2026-01-01T00:00:00.000Z")
     const members = mock<WorkspaceMembersService>()
+    const pillars = mock<ContentPillarsService>()
+    pillars.exists.mockResolvedValue(true)
+    pillars.known.mockResolvedValue([])
     const fakes = queueQueryBuilders(entityManager, answers)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ContentAiStoreService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: WorkspaceMembersService, useValue: members },
+            { provide: ContentPillarsService, useValue: pillars },
             { provide: CLOCK, useValue: clock },
         ],
     }).compile()
-    return { service: moduleRef.get(ContentAiStoreService), clock, entityManager, members, fakes }
+    return { service: moduleRef.get(ContentAiStoreService), clock, entityManager, members, fakes, pillars }
 }
 
 const member = {
@@ -166,7 +170,7 @@ describe("ContentAiStoreService applyDraft", () => {
     })
 
     it("serializes a complete draft into the supplied transaction", async () => {
-        const { service, entityManager } = await build()
+        const { service, entityManager, pillars } = await build()
         const tx = mockEntityManager()
         const [write] = queueQueryBuilders(tx, [{ execute: { raw: [{ id: "idea-1" }] } }])
         const media = [{ kind: "media", name: "Photo", path: "workspace-1/photo.jpg" }]
@@ -205,18 +209,27 @@ describe("ContentAiStoreService applyDraft", () => {
         ])
         expect(write?.callsOf("andWhere").map(([condition]) => condition)).toEqual([
             expect.stringContaining("date_trunc('milliseconds', updated_at)"),
-            expect.stringContaining("public.content_pillars"),
         ])
+        expect(pillars.exists).toHaveBeenCalledWith("workspace-1", "pillar-1", tx)
         expect(entityManager.createQueryBuilder).not.toHaveBeenCalled()
     })
 })
 
-describe("ContentAiStoreService applyDraft", () => {
+describe("ContentAiStoreService applyDraft refusals", () => {
     it("refuses a draft that no longer has an editable row", async () => {
         const { service } = await build([{ execute: { raw: [] } }])
         await expect(service.applyDraft("workspace-1", "idea-1", { variants, hashtags: [] })).rejects.toMatchObject({
             code: ContentItemsErrorCode.NotWritten,
         })
+    })
+
+    it("refuses a draft that names a theme outside the workspace without writing", async () => {
+        const { service, pillars, entityManager } = await build()
+        pillars.exists.mockResolvedValue(false)
+        await expect(
+            service.applyDraft("workspace-1", "idea-1", { variants, hashtags: [], pillarId: "ghost" }),
+        ).rejects.toMatchObject({ code: ContentItemsErrorCode.NotWritten })
+        expect(entityManager.createQueryBuilder).not.toHaveBeenCalled()
     })
 })
 
@@ -266,20 +279,14 @@ describe("ContentAiStoreService insertPlannedIdeas", () => {
     })
 
     it("replaces untouched ideas and serializes planned ideas and clock evidence", async () => {
-        const { service, entityManager } = await build()
-        const tx = mockEntityManager({
-            find: [ContentPillarEntity, [Object.assign(new ContentPillarEntity(), { id: "pillar-1" })]],
-        })
+        const { service, entityManager, pillars } = await build()
+        pillars.known.mockResolvedValue(["pillar-1"])
+        const tx = mockEntityManager()
         const [remove, insert] = queueQueryBuilders(tx, [{ execute: {} }, { execute: { raw: [{ id: "idea-1" }] } }])
         await expect(service.insertPlannedIdeas("workspace-1", "plan-1", plan([item]), tx)).resolves.toBe(1)
         expect(remove?.callsOf("where")).toEqual([[{ workspaceId: "workspace-1", status: "idea", source: "plan" }]])
         expect(remove?.callsOf("andWhere")[0]?.[1]).toEqual({ month: "2026-01-01" })
-        expect(evaluatedCalls(tx.find.mock.calls)).toEqual([
-            [
-                "ContentPillarEntity",
-                { where: { workspaceId: "workspace-1", id: In(["pillar-1"]) }, select: { id: true }, take: 100 },
-            ],
-        ])
+        expect(pillars.known).toHaveBeenCalledWith("workspace-1", ["pillar-1"], tx)
         expect(insert?.callsOf("values")).toEqual([
             [
                 [
@@ -305,7 +312,7 @@ describe("ContentAiStoreService insertPlannedIdeas", () => {
 
     it("refuses a plan when the inserted count does not match its items", async () => {
         const { service } = await build()
-        const tx = mockEntityManager({ find: [ContentPillarEntity, []] })
+        const tx = mockEntityManager()
         const [, insert] = queueQueryBuilders(tx, [{ execute: {} }, { execute: { raw: [] } }])
         await expect(service.insertPlannedIdeas("workspace-1", "plan-1", plan([item]), tx)).rejects.toMatchObject({
             code: ContentItemsErrorCode.NotWritten,
@@ -315,7 +322,7 @@ describe("ContentAiStoreService insertPlannedIdeas", () => {
 
     it("writes nothing and answers zero for a plan without items", async () => {
         const { service } = await build()
-        const tx = mockEntityManager({ find: [ContentPillarEntity, []] })
+        const tx = mockEntityManager()
         queueQueryBuilders(tx, [{ execute: {} }])
         await expect(service.insertPlannedIdeas("workspace-1", "plan-1", plan([]), tx)).resolves.toBe(0)
         expect(tx.createQueryBuilder).toHaveBeenCalledTimes(1)

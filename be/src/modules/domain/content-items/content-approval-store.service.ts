@@ -8,7 +8,7 @@ import type {
 } from "./content-approval-store.contracts"
 import type { ContentEvidence, PublishMark } from "./content-editor.contracts"
 import { ContentItemsError, ContentItemsErrorCode } from "./errors/content-items.error"
-import { returnedRows } from "./persistence/content-item-projection"
+import { returnedRows } from "./persistence/content-item.projection"
 import { ContentItemEntity } from "./persistence/entities"
 
 /** The history with one more line, kept to its newest sixty lines. */

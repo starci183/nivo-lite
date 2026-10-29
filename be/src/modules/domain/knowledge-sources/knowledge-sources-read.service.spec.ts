@@ -60,6 +60,36 @@ describe("KnowledgeSourcesReadService", () => {
         })
     })
 
+    describe("allPublicTexts", () => {
+        it("reads every shareable document oldest first, bounded", async () => {
+            const rows = [{ title: "Menu", topic: null, content: "Tea" }]
+            const { em, fake } = managerAnswering({ getRawMany: rows })
+
+            await expect((await build(em)).allPublicTexts("ws-1", "video", 20)).resolves.toBe(rows)
+
+            expectSharedPublic(fake, em)
+            expect(fake.callsOf("orderBy")).toEqual([["s.created_at", "ASC"]])
+            expect(fake.callsOf("limit")).toEqual([[20]])
+        })
+    })
+
+    describe("changedPublicSince", () => {
+        it("lists the documents changed after an instant, oldest change first, and drops malformed rows", async () => {
+            const good = { id: "s1", title: "Menu", topic: null, excerpt: "Tea", changedAt: "2026-10-01T00:00:00.000000Z" }
+            const { em, fake } = managerAnswering({ getRawMany: [good, { id: "s2" }, null] })
+
+            await expect(
+                (await build(em)).changedPublicSince("ws-1", "video", "2026-09-01T00:00:00Z", 400, 5),
+            ).resolves.toEqual([good])
+
+            expectSharedPublic(fake, em)
+            expect(fake.callsOf("andWhere")[2]).toEqual(["s.updated_at > :since::timestamptz", { since: "2026-09-01T00:00:00Z" }])
+            expect(fake.callsOf("setParameter")).toEqual([["excerptChars", 400]])
+            expect(fake.callsOf("orderBy")).toEqual([["s.updated_at"]])
+            expect(fake.callsOf("limit")).toEqual([[5]])
+        })
+    })
+
     describe("publicExcerpts", () => {
         it("lists the newest public documents with a short excerpt, bounded", async () => {
             const rows = [{ id: "s1", title: "Menu", topic: "food", excerpt: "Tea" }]

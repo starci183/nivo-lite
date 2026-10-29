@@ -1,11 +1,12 @@
 import { Injectable } from "@nestjs/common"
-import { MoreThan } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { ContentCadenceEntity } from "@modules/domain/content-cadence"
-import { ContentPillarEntity } from "@modules/domain/content-pillars"
+import { ContentCadenceService } from "@modules/domain/content-cadence"
+import { ContentPillarsService } from "@modules/domain/content-pillars"
+import type { ContentPillar } from "@modules/domain/content-pillars"
 import { EventsService } from "@modules/domain/events"
 import { ContentItemsService } from "@modules/domain/content-items"
-import { KnowledgeSourceEntity } from "@modules/domain/knowledge-sources"
+import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
+import type { ChangedPublicSource } from "@modules/domain/knowledge-sources"
 import type { DueItem } from "@modules/domain/content-items"
 import { ContentSettingsService } from "@modules/domain/content-settings"
 import type { TickWorkspace } from "@modules/domain/content-settings"
@@ -30,33 +31,13 @@ import {
 } from "./content-time.policy"
 
 /** One content theme. */
-type PillarRow = Pick<ContentPillarEntity, "id" | "name" | "active">
+type PillarRow = Pick<ContentPillar, "id" | "name" | "active">
 
-/** One public knowledge source that changed. */
-interface FreshSourceRow {
-    /** The source. */
-    readonly id: string
-    /** Its title. */
-    readonly title: string
-    /** Its topic, when it has one. */
-    readonly topic: string | null
-    /** The first 400 characters of its text. */
-    readonly excerpt: string
-    /** When it changed, as an ISO instant in UTC with microseconds. */
-    readonly changedAt: string
-}
+/** How many characters of a source the offer match reads. */
+const EXCERPT_CHARS = 400
 
-const isFreshSourceRow = (value: unknown): value is FreshSourceRow =>
-    typeof value === "object" &&
-    value !== null &&
-    "id" in value &&
-    typeof value.id === "string" &&
-    "title" in value &&
-    typeof value.title === "string" &&
-    "excerpt" in value &&
-    typeof value.excerpt === "string" &&
-    "changedAt" in value &&
-    typeof value.changedAt === "string"
+/** At most this many changed sources are read in one tick. */
+const FRESH_SOURCES_MAX = 5
 
 /** The id every uuid sorts after: where the keyset scan of the workspaces starts. */
 const NIL_UUID = "00000000-0000-0000-0000-000000000000"
@@ -86,6 +67,9 @@ export class ContentService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly items: ContentItemsService,
+        private readonly pillars: ContentPillarsService,
+        private readonly cadence: ContentCadenceService,
+        private readonly sources: KnowledgeSourcesReadService,
         private readonly events: EventsService,
         private readonly settings: ContentSettingsService,
         @InjectClock() private readonly clock: Clock,
@@ -175,7 +159,7 @@ export class ContentService {
         const workspaceId = workspace.workspaceId
         const window = lastWeekWindow(now)
         const items = await this.items.listBetween(workspaceId, window.from, window.to)
-        const pillars = await this.pillarsOf(workspaceId)
+        const pillars = await this.pillars.list(workspaceId)
         await this.notify(workspaceId, this.summaryBody(items, pillars))
         await this.events.record({
             workspaceId,
@@ -187,48 +171,10 @@ export class ContentService {
         return items.length
     }
 
-    /** The content themes of a workspace, in display order. */
-    private pillarsOf(workspaceId: string): Promise<Array<PillarRow>> {
-        return this.entityManager.find(ContentPillarEntity, {
-            select: { id: true, name: true, active: true },
-            where: { workspaceId },
-            order: { sort: "ASC", createdAt: "ASC" },
-            take: 100,
-        })
-    }
-
     /** The channels a workspace posts to at least once a week. */
     private async cadenceChannels(workspaceId: string): Promise<Array<string>> {
-        const rows = await this.entityManager.find(ContentCadenceEntity, {
-            select: { channel: true },
-            where: { workspaceId, postsPerWeek: MoreThan(0) },
-            order: { channel: "ASC" },
-            take: 10,
-        })
-        return rows.map((row) => row.channel)
-    }
-
-    /** The public, indexed knowledge sources shared with the content module that changed after an instant, oldest change first. */
-    private async freshSources(workspaceId: string, since: string): Promise<Array<FreshSourceRow>> {
-        const rows: ReadonlyArray<unknown> = await this.entityManager
-            .createQueryBuilder(KnowledgeSourceEntity, "s")
-            .select("s.id", "id")
-            .addSelect("s.title", "title")
-            .addSelect("s.topic", "topic")
-            .addSelect("left(s.content, 400)", "excerpt")
-            .addSelect("to_char(s.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"')", "changedAt")
-            .where(
-                "s.workspace_id = :workspaceId AND s.visibility = 'public' AND s.status IN ('ready', 'extracting_facts')",
-                {
-                    workspaceId,
-                },
-            )
-            .andWhere("(s.module IS NULL OR s.module = 'content') AND s.installation_id IS NULL")
-            .andWhere("s.updated_at > :since::timestamptz", { since })
-            .orderBy("s.updated_at")
-            .limit(5)
-            .getRawMany()
-        return rows.filter(isFreshSourceRow)
+        const rows = await this.cadence.list(workspaceId)
+        return rows.filter((row) => row.postsPerWeek > 0).map((row) => row.channel)
     }
 
     private summaryBody(items: ReadonlyArray<DueItem>, pillars: ReadonlyArray<PillarRow>): string {
@@ -267,13 +213,19 @@ export class ContentService {
             await this.settings.mergeMarks(workspaceId, { offer_seen_at: now.toISOString() })
             return null
         }
-        const sources = await this.freshSources(workspaceId, lastSeen ?? new Date(0).toISOString())
+        const sources = await this.sources.changedPublicSince(
+            workspaceId,
+            "content",
+            lastSeen ?? new Date(0).toISOString(),
+            EXCERPT_CHARS,
+            FRESH_SOURCES_MAX,
+        )
         const pattern = new RegExp(this.text("content.offer.pattern"), "iu")
         const fresh = sources
             .filter((source) => pattern.test(`${source.title} ${source.topic ?? ""} ${source.excerpt}`))
             .slice(0, OFFERS_PER_TICK)
         if (fresh.length === 0) return null
-        const [pillars, cadence] = await Promise.all([this.pillarsOf(workspaceId), this.cadenceChannels(workspaceId)])
+        const [pillars, cadence] = await Promise.all([this.pillars.list(workspaceId), this.cadenceChannels(workspaceId)])
         const pillarPattern = new RegExp(this.text("content.offer.pillar"), "iu")
         const offerPillar = pillars.find((pillar) => pillar.active && pillarPattern.test(pillar.name))
         const channels = cadence.length > 0 ? cadence : ["facebook"]
@@ -294,7 +246,7 @@ export class ContentService {
     /** Writes the idea of a post about one source, unless an earlier tick already made it; true when a new idea was written. */
     private async ideaFor(
         workspaceId: string,
-        source: FreshSourceRow,
+        source: ChangedPublicSource,
         pillarId: string | null,
         channels: ReadonlyArray<string>,
         now: Date,

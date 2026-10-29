@@ -5,7 +5,7 @@ import type { EntityManager, FindOperator } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { ContentPillarEntity } from "@modules/domain/content-pillars"
+import { ContentPillarsService } from "@modules/domain/content-pillars"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { ContentItemsError, ContentItemsErrorCode } from "./errors/content-items.error"
 import type {
@@ -22,17 +22,19 @@ import type {
 } from "./content-editor.contracts"
 import { contentInstant, toContentItem } from "./content-editor.mapper"
 import { contentChannels, contentTransition, mergeContentPatch, requireContentInput } from "./content-editor.policy"
-import { contentItemOfRaw } from "./persistence/content-item-projection"
+import { contentItemOfRaw } from "./persistence/content-item.projection"
 import { ContentItemEntity } from "./persistence/entities"
 
 const OFFSET_MS = 7 * 3_600_000
 const DAY_MS = 86_400_000
+/** The most themes a workspace holds. */
+const PILLARS_MAX = 100
 
 /** The window of a calendar read: half-open, with either end optional. */
 const windowOf = (range: ContentRange): FindOperator<Date> | undefined => {
     const bounds = [
-        ...(range.from === undefined || range.from === null ? [] : [MoreThanOrEqual(new Date(range.from))]),
-        ...(range.to === undefined || range.to === null ? [] : [LessThan(new Date(range.to))]),
+        ...(range.from === undefined ? [] : [MoreThanOrEqual(new Date(range.from))]),
+        ...(range.to === undefined ? [] : [LessThan(new Date(range.to))]),
     ]
     return bounds.length === 0 ? undefined : And(...bounds)
 }
@@ -44,6 +46,7 @@ export class ContentEditorService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         private readonly members: WorkspaceMembersService,
+        private readonly pillars: ContentPillarsService,
         private readonly renders: VideoRendersService,
     ) {}
 
@@ -216,15 +219,8 @@ export class ContentEditorService {
                     publishedAt: MoreThanOrEqual(new Date(now.getTime() - 30 * DAY_MS)),
                 },
             }),
-            manager
-                .createQueryBuilder(ContentPillarEntity, "p")
-                .where("p.workspaceId = :workspaceId AND p.active", { workspaceId })
-                .andWhere(
-                    "EXISTS (SELECT 1 FROM public.content_items i WHERE i.workspace_id = :workspaceId AND i.pillar_id = p.id AND i.status <> 'skipped' AND i.scheduled_at >= :from AND i.scheduled_at < :to)",
-                    { from, to },
-                )
-                .getCount(),
-            manager.count(ContentPillarEntity, { where: { workspaceId, active: true } }),
+            this.coveredPillars(workspaceId, from, to),
+            this.pillars.countActive(workspaceId),
             manager.findOne(ContentItemEntity, {
                 where: { workspaceId, status: "approved", scheduledAt: MoreThanOrEqual(now) },
                 order: { scheduledAt: "ASC" },
@@ -290,8 +286,24 @@ export class ContentEditorService {
         return toContentItem(row)
     }
 
+    /** How many active themes have a post scheduled in the window (a skipped post does not count). */
+    private async coveredPillars(workspaceId: string, from: Date, to: Date): Promise<number> {
+        const scheduled = await this.entityManager
+            .createQueryBuilder(ContentItemEntity, "i")
+            .select("i.pillar_id", "pillarId")
+            .distinct(true)
+            .where("i.workspace_id = :workspaceId AND i.status <> 'skipped' AND i.pillar_id IS NOT NULL", { workspaceId })
+            .andWhere("i.scheduled_at >= :from AND i.scheduled_at < :to", { from, to })
+            .limit(PILLARS_MAX)
+            .getRawMany<{ pillarId: string }>()
+        return this.pillars.countActiveAmong(
+            workspaceId,
+            scheduled.map((row) => row.pillarId),
+        )
+    }
+
     private async requirePillar(tx: EntityManager, workspaceId: string, id: string | null): Promise<void> {
         if (id === null) return
-        requireContentInput(await tx.exists(ContentPillarEntity, { where: { workspaceId, id } }))
+        requireContentInput(await this.pillars.exists(workspaceId, id, tx))
     }
 }
