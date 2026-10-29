@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./thread-work.module-definition"
 import { ThreadWorkService } from "./thread-work.service"
+import { ThreadWorkLinksReadService } from "./thread-work-links-read.service"
 import { ThreadWorkTurnsService } from "./thread-work-turns.service"
 
 @Module({})
@@ -15,8 +16,13 @@ export class ThreadWorkModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ThreadWorkTurnsService, ThreadWorkService],
-            exports: [ThreadWorkService],
+            providers: [
+                ...(base.providers ?? []),
+                ThreadWorkTurnsService,
+                ThreadWorkService,
+                ThreadWorkLinksReadService,
+            ],
+            exports: [ThreadWorkService, ThreadWorkLinksReadService],
         }
     }
 }

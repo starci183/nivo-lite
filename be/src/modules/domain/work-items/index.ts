@@ -1,4 +1,6 @@
 // Read services lead the barrel: other capabilities import this barrel while it loads (import cycles), they must already be defined.
+export { WorkItemsViewsReadService } from "./work-items-views-read.service"
+export type { WorkItemsPageQuery, WorkItemWithCursor } from "./work-items-views-read.contracts"
 export { WorkItemsActivityService } from "./work-items-activity.service"
 export { WorkItemsReplyProgressService } from "./work-items-reply-progress.service"
 export { workItemsEntities } from "./persistence/entities"

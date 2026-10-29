@@ -5,6 +5,7 @@ import { WorkItemsService } from "./work-items.service"
 import { WorkItemsActivityService } from "./work-items-activity.service"
 import { WorkItemsReplyProgressService } from "./work-items-reply-progress.service"
 import { WorkItemsReadService } from "./work-items-read.service"
+import { WorkItemsViewsReadService } from "./work-items-views-read.service"
 import { WorkItemsDecisionsReadService } from "./work-items-decisions-read.service"
 
 @Module({})
@@ -22,6 +23,7 @@ export class WorkItemsModule extends ConfigurableModuleClass {
                 WorkItemsActivityService,
                 WorkItemsReplyProgressService,
                 WorkItemsDecisionsReadService,
+                WorkItemsViewsReadService,
             ],
             exports: [
                 WorkItemsService,
@@ -29,6 +31,7 @@ export class WorkItemsModule extends ConfigurableModuleClass {
                 WorkItemsActivityService,
                 WorkItemsReplyProgressService,
                 WorkItemsDecisionsReadService,
+                WorkItemsViewsReadService,
             ],
         }
     }

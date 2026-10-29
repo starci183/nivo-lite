@@ -1,3 +1,6 @@
+// Read services lead the barrel: other capabilities import this barrel while it loads (import cycles), they must already be defined.
+export { WorkChainsHistoryReadService } from "./work-chains-history-read.service"
+export type { CompletedTask, StepThread } from "./work-chains-history-read.contracts"
 export { workChainsEntities } from "./persistence/entities"
 export { WORK_CHAINS_ERROR_KINDS } from "./errors/work-chains.error"
 export { WORK_CHAINS_MESSAGES } from "./messages/work-chains.messages"
