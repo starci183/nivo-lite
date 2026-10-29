@@ -8,13 +8,12 @@ import type {
     ZaloAccessView,
 } from "./zalo-page.contracts"
 import type {
-    FollowEventRow,
-    InboxFactsRow,
     LastReplyRow,
     MessageEventRow,
     RecipientRow,
 } from "./persistence/zalo-page.rows"
 import type { ZaloSecret } from "./channels.contracts"
+import type { ZaloFollowEventRow, ZaloInboxFactsRow } from "@modules/domain/zalo-inbox"
 
 const MINUTE_MS = 60_000
 const EXCERPT = 120
@@ -88,7 +87,7 @@ export interface ZaloCheckFacts {
     /** The access token. */
     readonly token: ZaloAccessView
     /** What the inbox holds. */
-    readonly inbox: InboxFactsRow | null
+    readonly inbox: ZaloInboxFactsRow | null
     /** The latest reply the agent tried to send. */
     readonly lastReply: LastReplyRow | null
 }
@@ -193,7 +192,7 @@ const messageEvent = (row: MessageEventRow, token: ZaloAccessView): ZaloPageEven
 /** The live panel: customer texts, follows, agent replies and renewal QRs, newest first. */
 export const eventsOf = (
     messages: ReadonlyArray<MessageEventRow>,
-    follows: ReadonlyArray<FollowEventRow>,
+    follows: ReadonlyArray<ZaloFollowEventRow>,
     token: ZaloAccessView,
 ): ReadonlyArray<ZaloPageEvent> => {
     const lines: Array<ZaloPageEvent> = [

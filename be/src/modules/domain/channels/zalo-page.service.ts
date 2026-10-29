@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
-import { ZaloInboxEntity } from "@modules/domain/zalo-inbox/persistence/entities"
+import { ZaloInboxPageReadService } from "@modules/domain/zalo-inbox"
 import { AgentMessageEntity } from "@modules/domain/agent-messages"
 import { AgentConversationEntity } from "@modules/domain/agent-conversations"
 import { zaloFailureOf } from "@modules/integrations/zalo"
@@ -15,25 +15,15 @@ import { ChannelDeliveryService } from "./channel-delivery.service"
 import type { LoadedZalo } from "./channels.contracts"
 import { ChannelsLogEvent } from "./channels.log-events"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
-import type {
-    FollowEventRow,
-    InboxFactsRow,
-    LastReplyRow,
-    MessageEventRow,
-    RecipientRow,
-} from "./persistence/zalo-page.rows"
-
-/** The Zalo conversations of a connection, which both message reads filter by. */
-const ZALO_CONVERSATION = "c.workspace_id = :workspaceId AND c.connection_id = :connectionId AND c.channel = 'zalo'"
-
-/** The webhook body test for one event name, as the inbox stores the raw body. */
-const eventNamed = (event: string): string =>
-    `i.payload->>'rawBody' ~ '"event_name"[[:space:]]*:[[:space:]]*"${event}"'`
+import type { LastReplyRow, MessageEventRow, RecipientRow } from "./persistence/zalo-page.rows"
 import type { ZaloPageEvent, ZaloPageView, ZaloTestSendResult } from "./zalo-page.contracts"
 import { checksOf, eventsOf, maskTail, recipientsOf, sendBlockOf, tokenUsable, tokenViewOf } from "./zalo-page.policy"
 import { ZALO_FREE_WINDOW_MS } from "./zalo-delivery.service"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
 import { znsRenewalOf } from "./zns-renewal.policy"
+
+/** The Zalo conversations of a connection, which both message reads filter by. */
+const ZALO_CONVERSATION = "c.workspace_id = :workspaceId AND c.connection_id = :connectionId AND c.channel = 'zalo'"
 
 const MANAGER = ["owner", "manager"] as const
 const PROVIDER = "zalo_oa"
@@ -56,6 +46,7 @@ export class ZaloPageService {
         private readonly connections: ConnectionsService,
         private readonly credentials: ZaloCredentialsService,
         private readonly delivery: ChannelDeliveryService,
+        private readonly inboxReads: ZaloInboxPageReadService,
     ) {}
 
     /** The page of a Zalo connection (owner or manager). */
@@ -85,15 +76,7 @@ export class ZaloPageService {
                 .orderBy("m.created_at", "DESC")
                 .limit(40)
                 .getRawMany<MessageEventRow>(),
-            this.entityManager
-                .createQueryBuilder(ZaloInboxEntity, "i")
-                .select("i.id", "id")
-                .addSelect("i.received_at::text", "received_at")
-                .where("i.payload->>'connection' = :connectionId", { connectionId: connection.id })
-                .andWhere(eventNamed("follow"))
-                .orderBy("i.received_at", "DESC")
-                .limit(20)
-                .getRawMany<FollowEventRow>(),
+            this.inboxReads.followEvents(connection.id),
         ])
         return eventsOf(messages, follows, token.view)
     }
@@ -153,14 +136,7 @@ export class ZaloPageService {
         const secret = loaded.secret
         const [recipients, inbox, lastReply, agentIds] = await Promise.all([
             this.recipientsOf(actor.workspaceId, connection.id),
-            this.entityManager
-                .createQueryBuilder(ZaloInboxEntity, "i")
-                .select("max(i.received_at)::text", "last_at")
-                .addSelect(`coalesce(bool_or(${eventNamed("user_send_text")}), false)`, "has_text")
-                .addSelect(`coalesce(bool_or(${eventNamed("follow")}), false)`, "has_follow")
-                .where("i.payload->>'connection' = :connectionId", { connectionId: connection.id })
-                .getRawMany<InboxFactsRow>()
-                .then((rows) => rows[0] ?? null),
+            this.inboxReads.factsOf(connection.id),
             this.entityManager
                 .createQueryBuilder(AgentMessageEntity, "m")
                 .select("m.delivery_status", "delivery_status")

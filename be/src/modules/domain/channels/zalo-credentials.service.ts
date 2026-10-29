@@ -45,11 +45,14 @@ const isZaloSecret = (value: unknown): value is ZaloSecret =>
     typeof Reflect.get(value, "appSecret") === "string" &&
     typeof Reflect.get(value, "oaSecret") === "string"
 
-/** Stored secrets written before the rename keep the single-use token under `refreshToken`; read it as `renewalToken`. */
+/** Secrets stored before the rename keep the single-use Zalo token under this key. */
+const LEGACY_RENEWAL_KEY = "refreshToken"
+
+/** Stored secrets written before the rename keep the single-use token under the legacy key; read it as `renewalToken`. */
 const withLegacyRenewal = (value: object): object => {
-    const legacy: unknown = Reflect.get(value, "refreshToken")
+    const legacy: unknown = Reflect.get(value, LEGACY_RENEWAL_KEY)
     if (typeof legacy !== "string" || typeof Reflect.get(value, "renewalToken") === "string") return value
-    const { refreshToken: _legacy, ...rest } = Object.fromEntries(Object.entries(value))
+    const rest = Object.fromEntries(Object.entries(value).filter(([key]) => key !== LEGACY_RENEWAL_KEY))
     return { ...rest, renewalToken: legacy }
 }
 
