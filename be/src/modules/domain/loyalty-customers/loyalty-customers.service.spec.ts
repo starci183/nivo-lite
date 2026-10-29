@@ -48,9 +48,14 @@ const build = async (entityManager: MockEntityManager) => {
     return moduleRef.get(LoyaltyCustomersService)
 }
 
+/** An update's `set` argument that stamps the save time with the database clock. */
+const hasClock = (value: unknown): value is { readonly updatedAt: () => string } =>
+    typeof value === "object" && value !== null && "updatedAt" in value && typeof value.updatedAt === "function"
+
 /** What an update query builder was told to set, without the always-present save time. */
 const setOf = (fake: FakeQueryBuilder | undefined): object => {
-    const [set] = (fake?.callsOf("set")[0] ?? []) as [{ updatedAt: () => string }]
+    const [set] = fake?.callsOf("set")[0] ?? []
+    if (!hasClock(set)) throw new Error("the update did not stamp updatedAt")
     expect(set.updatedAt()).toBe("now()")
     return { ...set, updatedAt: undefined }
 }
@@ -142,8 +147,21 @@ const registerEnsureByPhone = () => {
             await expect(customers.ensureByPhone(manager, { ...PERSON, phone: null })).resolves.toBe("c3")
             expect(manager.findOne).not.toHaveBeenCalled()
         })
-    })
 
+        it("reads rows the driver did not answer as not created, and skips rows without an id", async () => {
+            const missing = mockEntityManager({ findOne: [LoyaltyCustomerEntity, null] })
+            queueQueryBuilders(missing, [{ execute: { raw: "no rows" } }])
+            const odd = mockEntityManager({ findOne: [LoyaltyCustomerEntity, null] })
+            queueQueryBuilders(odd, [{ execute: { raw: [null, 7, {}, { id: 3 }] } }])
+            const customers = await build(mockEntityManager())
+
+            await expect(customers.ensureByPhone(missing, PERSON)).resolves.toBeNull()
+            await expect(customers.ensureByPhone(odd, PERSON)).resolves.toBeNull()
+        })
+    })
+}
+
+const registerMoveTier = () => {
     describe("moveTier", () => {
         it("is true when this call moved the customer and false when somebody did first", async () => {
             const moved = mockEntityManager()
@@ -339,6 +357,7 @@ describe("LoyaltyCustomersService", () => {
     registerListAndLock()
     registerByPhoneAndById()
     registerEnsureByPhone()
+    registerMoveTier()
     registerLeadContactsAndCreateFromLeads()
     registerUpdateProfile()
 })

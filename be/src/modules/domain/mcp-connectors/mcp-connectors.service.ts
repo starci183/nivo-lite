@@ -7,7 +7,7 @@ import type {
     CatalogApproval,
     CatalogSnapshot,
     HealthRecord,
-    McpConnectorRecord,
+    McpConnectorRow,
     RemoteConnectorRecord,
     SealedCredentialRecord,
     OptionalSealedCredential,
@@ -27,6 +27,9 @@ const APPROVED_JSON = () => "CAST(:approvedJson AS jsonb)"
 /** The database's own clock for a time column. */
 const NOW = () => "now()"
 
+/** True when a write answered at least one row. */
+const answeredRows = (raw: unknown): boolean => Array.isArray(raw) && raw.length > 0
+
 @Injectable()
 /**
  * The connectors of a workspace's MCP gateway: the one reader and writer of public.mcp_connectors. A remote connector's credential
@@ -37,7 +40,7 @@ export class McpConnectorsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** The connector rows of a workspace, by key; the times are selected as the ISO text the gateway always read. */
-    list(workspaceId: string): Promise<ReadonlyArray<McpConnectorRecord>> {
+    list(workspaceId: string): Promise<ReadonlyArray<McpConnectorRow>> {
         return this.entityManager
             .createQueryBuilder(McpConnectorEntity, "c")
             .select("c.key", "key")
@@ -57,7 +60,7 @@ export class McpConnectorsService {
             .where("c.workspaceId = :workspaceId", { workspaceId })
             .orderBy("c.key", "ASC")
             .limit(CONNECTOR_LIMIT)
-            .getRawMany<McpConnectorRecord>()
+            .getRawMany<McpConnectorRow>()
     }
 
     /** Registers a remote connector, or updates the one of that key; its catalog and its stored credential stay. */
@@ -106,7 +109,7 @@ export class McpConnectorsService {
             })
             .returning("key")
             .execute()
-        return (written.raw as Array<unknown>).length > 0
+        return answeredRows(written.raw)
     }
 
     /** The stored credential of a remote connector (its state and sealed text), or null when there is no such remote connector. */
@@ -168,7 +171,7 @@ export class McpConnectorsService {
             .setParameter("approvedJson", approval.approvedJson)
             .returning("key")
             .execute()
-        return (approved.raw as Array<unknown>).length > 0
+        return answeredRows(approved.raw)
     }
 
     /** Records one health check of a connector; a disabled connector stays disabled. */
