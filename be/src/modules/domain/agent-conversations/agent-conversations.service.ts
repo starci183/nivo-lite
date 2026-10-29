@@ -20,9 +20,9 @@ import type {
     ChatHolder,
     HandToAgentParams,
     OptionalConversationParty,
+    OptionalInstallationId,
     RememberPartyParams,
 } from "./agent-conversations.contracts"
-import type { OptionalInstallationId } from "./agent-conversations.contracts"
 import { AgentConversationsError, AgentConversationsErrorCode } from "./errors/agent-conversations.error"
 import { AgentConversationEntity } from "./persistence/entities"
 

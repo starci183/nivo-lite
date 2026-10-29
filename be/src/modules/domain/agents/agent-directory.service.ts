@@ -7,6 +7,7 @@ import type {
     AgentCreation,
     AgentModuleRef,
     OptionalAgentStatus,
+    OptionalGreeting,
     AgentHandleCard,
     AgentIdentityCard,
     AgentSeat,
@@ -282,7 +283,7 @@ export class AgentDirectoryService {
     }
 
     /** The greeting that opens a visit with an agent of the workspace; null when the agent is not there. */
-    async greetingOf(workspaceId: string, agentId: string): Promise<string | null> {
+    async greetingOf(workspaceId: string, agentId: string): Promise<OptionalGreeting> {
         const agent = await this.entityManager.findOne(AgentEntity, {
             select: { greeting: true },
             where: { workspaceId, id: agentId },

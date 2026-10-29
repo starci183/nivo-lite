@@ -75,7 +75,7 @@ const build = async (entityManager: MockEntityManager, world: World = {}) => {
             : {
                   memberId: "m-1",
                   userId: "person-1",
-                  role: role as WorkspaceRole,
+                  role,
                   displayName: "Lan",
                   status: "active",
               },
@@ -100,7 +100,7 @@ const build = async (entityManager: MockEntityManager, world: World = {}) => {
 /** What the database holds for one scenario: a key present is read (the query builders answer in the order role, workspace, promo). */
 interface World {
     /** The role of the caller's membership, or null when there is none. */
-    readonly role?: string | null
+    readonly role?: WorkspaceRole | null
     /** The billing columns of the workspace, or null when it is gone. */
     readonly workspace?: BillingRow | null
     /** The plan the code names, or null when none is active. */
@@ -195,7 +195,7 @@ describe("BillingService", () => {
 })
 
 describe("BillingService > membership", () => {
-    it.each(["owner", "manager"])("lets an active %s manage and be a member", async (role) => {
+    it.each(["owner", "manager"] as const)("lets an active %s manage and be a member", async (role) => {
         const { billing, seats } = await build(mockEntityManager(), { role })
 
         await expect(billing.requireManager("person-1", "ws-1")).resolves.toBeUndefined()

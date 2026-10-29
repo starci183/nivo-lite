@@ -102,3 +102,6 @@ export interface AgentModuleRef {
 
 /** The status of an agent, or null when there is none. */
 export type OptionalAgentStatus = string | null
+
+/** The greeting that opens a visit, or null when there is none. */
+export type OptionalGreeting = string | null

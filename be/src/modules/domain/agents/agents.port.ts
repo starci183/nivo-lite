@@ -1,8 +1,7 @@
+import type { AgentAccess, AgentPurpose } from "./agents-connections.contracts"
 import type { AskAsAgentInput, AskedPassage } from "./agent-ask.contracts"
 import type {
-    AgentAccess,
     AgentAudience,
-    AgentPurpose,
     LensCounts,
     LensLanes,
     OptionalId,
