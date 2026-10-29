@@ -170,6 +170,22 @@ describe("AuthorityRulesService > list", () => {
     })
 })
 
+describe("AuthorityRulesService > departmentRules", () => {
+    it("lists the rules of one department by action, bounded, as the lines its page shows", async () => {
+        const em = mockEntityManager({ find: [AuthorityRuleEntity, [entityOf()]] })
+        const service = await build(em)
+
+        await expect(service.departmentRules("ws-1", "sales", 50)).resolves.toEqual([
+            { action: "send_follow_up", department: "sales", mode: "auto", limitVnd: 20_000_000, note: "" },
+        ])
+        expect(em.find).toHaveBeenCalledWith(AuthorityRuleEntity, {
+            where: { workspaceId: "ws-1", department: "sales" },
+            order: { action: "ASC" },
+            take: 50,
+        })
+    })
+})
+
 describe("AuthorityRulesService > save", () => {
     it("saves the rule", async () => {
         const { em, fakes } = saving(upserted(askRuleEntity()))

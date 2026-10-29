@@ -5,6 +5,7 @@ import { InstallationOperationsService } from "@modules/domain/module-installati
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     AuthorityRuleRecord,
+    DepartmentRuleLine,
     DefaultRule,
     OptionalApprovalSetup,
     OptionalAuthorityRule,
@@ -121,6 +122,22 @@ export class AuthorityRulesService {
     async approvalSetup(workspaceId: string, action: string): Promise<OptionalApprovalSetup> {
         const stored = await this.entityManager.findOne(AuthorityRuleEntity, { where: { workspaceId, action } })
         return stored === null ? null : toApprovalSetup(stored)
+    }
+
+    /** The stored rules of one department of the workspace, by action, at most `limit`. */
+    async departmentRules(workspaceId: string, department: string, limit: number): Promise<Array<DepartmentRuleLine>> {
+        const rows = await this.entityManager.find(AuthorityRuleEntity, {
+            where: { workspaceId, department },
+            order: { action: "ASC" },
+            take: limit,
+        })
+        return rows.map((row) => ({
+            action: row.action,
+            department: row.department,
+            mode: row.mode,
+            limitVnd: row.limitVnd,
+            note: row.note,
+        }))
     }
 
     /** Every stored rule of the workspace. */

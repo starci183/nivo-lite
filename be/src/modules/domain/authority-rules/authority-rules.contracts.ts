@@ -253,3 +253,17 @@ export interface GateInput {
 
 /** An amount in VND, or none. */
 export type OptionalAmountVnd = number | null | undefined
+
+/** One stored rule as a department's page lists it, read only. */
+export interface DepartmentRuleLine {
+    /** The action the rule governs. */
+    readonly action: string
+    /** The department (module key) that owns the action. */
+    readonly department: string
+    /** The mode of the rule. */
+    readonly mode: RuleMode
+    /** The amount limit in VND, or null. */
+    readonly limitVnd: number | null
+    /** A note on the rule. */
+    readonly note: string
+}
