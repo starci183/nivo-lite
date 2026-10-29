@@ -1,14 +1,17 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { BookingServicesService } from "@modules/domain/booking-services"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { BookingWaitlistSaved, WaitlistEntry } from "./booking-waitlist.contracts"
-import { BookingServiceEntity } from "@modules/domain/booking-services"
 import { BookingWaitlistEntity } from "./persistence/entities"
 
 @Injectable()
 /** Owns waitlist status writes and joins the transaction supplied by its caller. */
 export class BookingWaitlistService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly services: BookingServicesService,
+    ) {}
 
     /** Cancels a workspace-owned entry without deleting its waitlist history. */
     async cancel(
@@ -37,12 +40,7 @@ export class BookingWaitlistService {
         ]
         return this.entityManager.transaction(async (manager) => {
             // Concurrent joins of one service queue on its row, so the check below and the insert never interleave.
-            await manager
-                .createQueryBuilder(BookingServiceEntity, "s")
-                .select("s.id")
-                .where("s.id = :serviceId", { serviceId: entry.serviceId })
-                .setLock("pessimistic_write")
-                .getOne()
+            await this.services.lock(entry.workspaceId, entry.serviceId, manager)
             if (waiting.length > 0 && (await manager.exists(BookingWaitlistEntity, { where: waiting }))) return false
             await manager.insert(BookingWaitlistEntity, {
                 workspaceId: entry.workspaceId,

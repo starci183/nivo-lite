@@ -23,11 +23,13 @@ import { BookingModelService } from "./booking-model.service"
 import { BookingPublicService } from "./booking-public.service"
 import { WorkspaceAdminReadService } from "@modules/domain/workspaces"
 import { BookingRemindersService } from "@modules/domain/booking-reminders"
+import { BookingServicesReadService } from "@modules/domain/booking-services"
+import { BookingSettingsReadService } from "@modules/domain/booking-settings"
 import { BookingReservationService } from "./booking-reservation.service"
 import { DEFAULT_SETTINGS } from "./bookings.contracts"
 import type { BookableService, BookingModel, TakenSpan } from "./bookings.contracts"
 import { BookingsErrorCode } from "./errors/bookings.error"
-import type { CancellableFacts } from "./booking-facts.contracts"
+import type { CancellableRowFacts } from "./booking-facts.contracts"
 import { BookingEntity } from "./persistence/entities"
 
 /** The booking an idempotency key found, as the keyed read selects it. */
@@ -122,20 +124,21 @@ const SCHEDULE = {
     nowMs: NOW,
     defaultHours: [24, 2],
 }
-const NEXT_ROW: CancellableFacts = {
+const NEXT_ROW: CancellableRowFacts = {
     id: "b-next",
     lead_id: "lead-1",
     customer_name: "Mai",
-    service_name: "Cut",
+    service_id: "s1",
     start_ms: Date.parse(MONDAY_NINE),
 }
 
 interface BuildOptions {
     readonly page?: boolean
     readonly nameless?: boolean
+    readonly serviceGone?: boolean
     readonly keyed?: ReadonlyArray<KeyedRow>
     readonly concurrentKeyed?: ReadonlyArray<KeyedRow>
-    readonly cancellable?: ReadonlyArray<CancellableFacts>
+    readonly cancellable?: ReadonlyArray<CancellableRowFacts>
     readonly model?: BookingModel
     readonly spans?: ReadonlyArray<TakenSpan>
 }
@@ -151,9 +154,7 @@ const build = async (options: BuildOptions = {}) => {
             ],
         }),
     )
-    const read = fakeQueryBuilder({
-        getRawOne: options.cancellable?.[0] ?? (options.page === false ? undefined : PAGE),
-    })
+    const read = fakeQueryBuilder({ getRawOne: options.cancellable?.[0] })
     tx.em.createQueryBuilder.mockReturnValue(read.builder)
     const models = mock<BookingModelService>()
     models.model.mockResolvedValue(options.model ?? modelOf())
@@ -164,6 +165,23 @@ const build = async (options: BuildOptions = {}) => {
     names.namesOf.mockResolvedValue(options.page === false || options.nameless === true ? [] : [{ id: WORKSPACE, name: PAGE.shop }])
     const reminders = mock<BookingRemindersService>()
     reminders.schedule.mockResolvedValue([])
+    const settingsRead = mock<BookingSettingsReadService>({
+        publishedBy: jest.fn(() =>
+            Promise.resolve(
+                options.page === false
+                    ? null
+                    : {
+                          workspaceId: PAGE.workspace_id,
+                          publicNote: PAGE.public_note,
+                          address: PAGE.address,
+                          timezone: PAGE.timezone,
+                      },
+            ),
+        ),
+    })
+    const servicesRead = mock<BookingServicesReadService>({
+        namesOf: jest.fn(() => Promise.resolve(new Map(options.serviceGone === true ? [] : [["s1", "Cut"]]))),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             BookingPublicService,
@@ -173,6 +191,8 @@ const build = async (options: BuildOptions = {}) => {
             { provide: BookingReservationService, useValue: reservation },
             { provide: BookingRemindersService, useValue: reminders },
             { provide: WorkspaceAdminReadService, useValue: names },
+            { provide: BookingSettingsReadService, useValue: settingsRead },
+            { provide: BookingServicesReadService, useValue: servicesRead },
         ],
     }).compile()
     return { service: moduleRef.get(BookingPublicService), models, reservation, reminders, tx }
@@ -269,6 +289,11 @@ describe("BookingPublicService", () => {
             )
             expect(tx.em.createQueryBuilder).toHaveBeenCalledTimes(1)
             expect(tx.em.createQueryBuilder).toHaveBeenCalledWith(BookingEntity, "b")
+        })
+
+        it("returns nothing when the service of the next booking is gone", async () => {
+            const { service } = await build({ cancellable: [NEXT_ROW], serviceGone: true })
+            await expect(service.nextCancellable(WORKSPACE, "0912 345 678", NOW)).resolves.toBeNull()
         })
     })
 

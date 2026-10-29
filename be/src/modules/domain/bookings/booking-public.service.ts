@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { BookingSettingEntity } from "@modules/domain/booking-settings"
+import { BookingSettingsReadService } from "@modules/domain/booking-settings"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -25,11 +25,11 @@ import type {
     WorkspaceTimesParams,
 } from "./bookings.contracts"
 import type { OptionalCancellableBooking } from "./booking-chat.contracts"
-import { cancellableOf } from "./policies/cancellable.policy"
+import { cancellableNamed } from "./booking-cancellable.query"
 import { BookingsError, BookingsErrorCode } from "./errors/bookings.error"
-import { BookingServiceEntity } from "@modules/domain/booking-services"
+import { BookingServicesReadService } from "@modules/domain/booking-services"
 import { WorkspaceAdminReadService } from "@modules/domain/workspaces"
-import type { CancellableFacts, PublishedPageFacts } from "./booking-facts.contracts"
+import type { CancellableRowFacts, PublishedPageFacts } from "./booking-facts.contracts"
 import { BookingEntity } from "./persistence/entities"
 import { checkSlot, findSlots, nearestSlots } from "./policies/availability.policy"
 import {
@@ -70,6 +70,8 @@ export class BookingPublicService {
         private readonly reservation: BookingReservationService,
         private readonly reminders: BookingRemindersService,
         private readonly workspaces: WorkspaceAdminReadService,
+        private readonly servicesRead: BookingServicesReadService,
+        private readonly settingsRead: BookingSettingsReadService,
     ) {}
 
     /** Supplies active workspace services and timezone to callers that do not use a published page. */
@@ -214,11 +216,10 @@ export class BookingPublicService {
         if (normalised === null) return null
         const row = await this.entityManager
             .createQueryBuilder(BookingEntity, "b")
-            .innerJoin(BookingServiceEntity, "s", "s.id = b.serviceId AND s.workspaceId = b.workspaceId")
             .select("b.id", "id")
             .addSelect("b.leadId", "lead_id")
             .addSelect("b.customerName", "customer_name")
-            .addSelect("s.name", "service_name")
+            .addSelect("b.serviceId", "service_id")
             .addSelect("CAST(extract(epoch FROM b.startAt) * 1000 AS float8)", "start_ms")
             .where("b.workspaceId = :workspaceId AND b.customerPhone = :phone", { workspaceId, phone: normalised })
             .andWhere("b.status IN ('requested', 'confirmed') AND b.checkedInAt IS NULL")
@@ -226,24 +227,22 @@ export class BookingPublicService {
             .orderBy("b.startAt", "ASC")
             .addOrderBy("b.id", "ASC")
             .limit(1)
-            .getRawOne<CancellableFacts>()
-        return cancellableOf(row)
+            .getRawOne<CancellableRowFacts>()
+        return cancellableNamed(this.servicesRead, workspaceId, row)
     }
 
     private async published(slug: string): Promise<PublishedPageFacts> {
-        const row = await this.entityManager
-            .createQueryBuilder(BookingSettingEntity, "s")
-            .select("s.workspaceId", "workspace_id")
-            .addSelect("s.publicNote", "public_note")
-            .addSelect("s.address", "address")
-            .addSelect("s.timezone", "timezone")
-            .where("s.publicSlug = :slug AND s.publicEnabled", { slug })
-            .limit(1)
-            .getRawOne<Omit<PublishedPageFacts, "shop">>()
-        if (row === undefined) throw new BookingsError({ code: BookingsErrorCode.PageNotFound })
-        const [named] = await this.workspaces.namesOf([row.workspace_id], 1)
+        const page = await this.settingsRead.publishedBy(slug)
+        if (page === null) throw new BookingsError({ code: BookingsErrorCode.PageNotFound })
+        const [named] = await this.workspaces.namesOf([page.workspaceId], 1)
         if (named === undefined) throw new BookingsError({ code: BookingsErrorCode.PageNotFound })
-        return { ...row, shop: named.name }
+        return {
+            workspace_id: page.workspaceId,
+            public_note: page.publicNote,
+            address: page.address,
+            timezone: page.timezone,
+            shop: named.name,
+        }
     }
 
     private async keyed(workspaceId: string, key: string): Promise<KeyedBooking | undefined> {

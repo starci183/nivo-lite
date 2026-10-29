@@ -18,8 +18,8 @@ import type {
     StatusChange,
 } from "./bookings.contracts"
 import { BookingsError, BookingsErrorCode } from "./errors/bookings.error"
-import { BookingServiceEntity } from "@modules/domain/booking-services"
-import type { BookingStateFacts } from "./booking-facts.contracts"
+import { BookingServicesReadService } from "@modules/domain/booking-services"
+import type { BookingStateFacts, BookingStateRowFacts } from "./booking-facts.contracts"
 import { BookingEntity } from "./persistence/entities"
 import { checkSlot } from "./policies/availability.policy"
 import type { SlotCheck } from "./policies/availability.policy"
@@ -50,6 +50,7 @@ export class BookingDeskService {
         private readonly models: BookingModelService,
         private readonly reservation: BookingReservationService,
         private readonly reminders: BookingRemindersService,
+        private readonly servicesRead: BookingServicesReadService,
     ) {}
 
     /** Adds a booking by hand: held and confirmed at once. An empty resource picks a free one; a taken place is refused unless forced. */
@@ -297,20 +298,20 @@ export class BookingDeskService {
     private async lock(manager: EntityManager, ref: BookingRef): Promise<BookingStateFacts> {
         const row = await manager
             .createQueryBuilder(BookingEntity, "b")
-            .innerJoin(BookingServiceEntity, "s", "s.id = b.serviceId")
             .select("b.id", "id")
             .addSelect("b.resourceId", "resource_id")
             .addSelect("b.partySize", "party_size")
             .addSelect("b.status", "status")
-            .addSelect("s.durationMin", "duration_min")
-            .addSelect("s.bufferMin", "buffer_min")
+            .addSelect("b.serviceId", "service_id")
             .addSelect("CAST(extract(epoch FROM b.startAt) * 1000 AS float8)", "start_ms")
             .where("b.workspaceId = :workspaceId AND b.id = :id", { workspaceId: ref.workspaceId, id: ref.id })
             .limit(1)
             .setLock("pessimistic_write", undefined, ["b"])
-            .getRawOne<BookingStateFacts>()
+            .getRawOne<BookingStateRowFacts>()
         if (row === undefined) throw new BookingsError({ code: BookingsErrorCode.NotFound })
-        return row
+        const timing = await this.servicesRead.timingOf(ref.workspaceId, row.service_id)
+        if (timing === null) throw new BookingsError({ code: BookingsErrorCode.NotFound })
+        return { ...row, duration_min: timing.durationMin, buffer_min: timing.bufferMin }
     }
 
     private async lockActive(manager: EntityManager, ref: BookingRef): Promise<BookingStateFacts> {

@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./booking-resources.module-definition"
+import { BookingResourcesReadService } from "./booking-resources-read.service"
 import { BookingResourcesService } from "./booking-resources.service"
 
 @Module({})
@@ -11,8 +12,8 @@ export class BookingResourcesModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), BookingResourcesService],
-            exports: [BookingResourcesService],
+            providers: [...(base.providers ?? []), BookingResourcesService, BookingResourcesReadService],
+            exports: [BookingResourcesService, BookingResourcesReadService],
         }
     }
 }
