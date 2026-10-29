@@ -10,6 +10,10 @@ import { AgentEntity } from "./persistence/entities"
  * the NIVO setup block its applied context version wrote ("### NIVO setup v<n>" to "### end NIVO setup"): any block in the given
  * text is dropped and the kept one is appended once, so a re-run never loses the applied setup and never doubles it.
  */
+/** Whether a RETURNING row carries the id of the stored agent. */
+const isIdRow = (value: unknown): value is { id: string } =>
+    typeof value === "object" && value !== null && "id" in value && typeof value.id === "string"
+
 const KEEP_SETUP_CONFLICT = `("workspace_id", "handle") DO UPDATE
 SET "module" = EXCLUDED."module", "name" = EXCLUDED."name", "role" = EXCLUDED."role",
     "instructions" = concat_ws(
@@ -51,7 +55,7 @@ export class AgentRecordsService {
             .onConflict(KEEP_SETUP_CONFLICT)
             .returning("id")
             .execute()
-        const [row] = result.raw as Array<{ id: string }>
+        const [row] = Array.isArray(result.raw) ? result.raw.filter(isIdRow) : []
         if (row === undefined) throw new AgentsError({ code: AgentsErrorCode.NotCreated })
         return row.id
     }

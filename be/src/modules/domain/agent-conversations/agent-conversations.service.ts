@@ -49,6 +49,14 @@ interface TurnConversationRead {
 }
 
 /** A chat conversation as the insert answers it (the columns the statement returns). */
+/** Whether a RETURNING row carries the id of a stored conversation. */
+const hasStoredId = (value: unknown): boolean =>
+    typeof value === "object" && value !== null && "id" in value && typeof value.id === "string"
+
+const isInsertedChatRow = (value: unknown): value is InsertedChatRow => hasStoredId(value)
+
+const isInsertedRefRow = (value: unknown): value is InsertedRefRow => hasStoredId(value)
+
 interface InsertedChatRow {
     readonly id: string
     readonly kind: string
@@ -172,7 +180,7 @@ export class AgentConversationsService {
             })
             .returning("id, kind, channel, visitor_name, lead_id, handled_by, created_at")
             .execute()
-        const [row] = inserted.raw as Array<InsertedChatRow>
+        const [row] = Array.isArray(inserted.raw) ? inserted.raw.filter(isInsertedChatRow) : []
         if (row === undefined) throw new AgentConversationsError({ code: AgentConversationsErrorCode.NotStored })
         return chatOf({
             id: row.id,
@@ -238,7 +246,7 @@ export class AgentConversationsService {
             })
             .returning("id, agent_id, lead_id, handled_by, visitor_name")
             .execute()
-        const [row] = inserted.raw as Array<InsertedRefRow>
+        const [row] = Array.isArray(inserted.raw) ? inserted.raw.filter(isInsertedRefRow) : []
         if (row === undefined) throw new AgentConversationsError({ code: AgentConversationsErrorCode.NotStored })
         return refOf({
             id: row.id,

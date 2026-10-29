@@ -55,6 +55,10 @@ const GOVERNORS = ["owner", "manager"] as const
 const AGENT_LIMIT = 200
 
 /** The agents newest columns the lists and finders order by: oldest first, the id as tie-break. */
+/** Whether a RETURNING row carries the id of a stored agent, the shape of the returned columns. */
+const isAgentRecord = (value: unknown): value is AgentRecord =>
+    typeof value === "object" && value !== null && "id" in value && typeof value.id === "string"
+
 const OLDEST_FIRST = { createdAt: "ASC", id: "ASC" } as const
 
 const isUniqueViolation = (cause: unknown): boolean =>
@@ -176,7 +180,7 @@ export class AgentsService {
                 if (!isUniqueViolation(cause)) throw cause
                 throw new AgentsError({ code: AgentsErrorCode.HandleTaken, params: { handle: agent.handle }, cause })
             })
-        const [row] = inserted.raw as Array<AgentRecord>
+        const [row] = Array.isArray(inserted.raw) ? inserted.raw.filter(isAgentRecord) : []
         if (row === undefined) throw new AgentsError({ code: AgentsErrorCode.NotCreated })
         return summaryOf(row)
     }

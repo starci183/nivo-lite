@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { OptionalLastCustomerMessage } from "./agent-messages-automation-read.contracts"
+import type { AutomationLastCustomerMessage, OptionalLastCustomerMessage } from "./agent-messages-automation-read.contracts"
 import { AgentMessageEntity } from "./persistence/entities"
 
 @Injectable()
