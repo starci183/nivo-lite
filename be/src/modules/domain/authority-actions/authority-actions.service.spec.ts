@@ -77,6 +77,9 @@ describe("AuthorityActionsService", () => {
             })
         })
     })
+})
+
+describe("AuthorityActionsService reads", () => {
     describe("registeredUnder", () => {
         it("reads the pair under a shared lock and answers whether the catalogue holds it", async () => {
             const em = mockEntityManager()
