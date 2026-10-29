@@ -1,3 +1,5 @@
+import { ANY_FUNCTION } from "./any-function.builder"
+import { builderOf } from "./entity-query-builder-fake.builder"
 import { mockEntityManager, fakeQueryBuilder } from "@starci/jest-preset"
 import { workChainsEntities } from "@modules/domain/work-chains"
 import type { ChainStepRead, ChainStepRecord, NewChainStep } from "@modules/domain/work-chains"
@@ -6,7 +8,7 @@ import type { WorkThread } from "@modules/domain/work-threads"
 const [WorkChainEntity] = workChainsEntities
 
 /** The any-function matcher, typed `unknown` so it flows into any slot. */
-export const anyFunction = (): unknown => expect.any(Function)
+export const anyFunction = (): unknown => ANY_FUNCTION
 
 /** A chain step row of the proof, overridable. */
 export const rowOf = (overrides: Partial<ChainStepRecord> = {}): ChainStepRecord => ({
@@ -122,7 +124,7 @@ export const managerOf = (answers: Answers = {}) => {
             })
         },
     })
-    em.createQueryBuilder.mockReturnValue(steps.builder as never)
+    em.createQueryBuilder.mockReturnValue(builderOf(steps.builder))
     return { em, steps }
 }
 
@@ -131,8 +133,14 @@ function readOfFirst(rows: ReadonlyArray<ChainStepRecord>): ChainStepRead | unde
     return first === undefined ? undefined : readOf(first)
 }
 
+/** What a chain spec holds on to: the chain builder double. */
+export interface ChainHarness {
+    /** The double that answers the step reads and writes. */
+    readonly steps: FakeBuilder
+}
+
 /** The chain builder when the chained call was made on it, or undefined. */
-export const chainedWith = (harness: { readonly steps: FakeBuilder }, method: string) =>
+export const chainedWith = (harness: ChainHarness, method: string) =>
     harness.steps.callsOf(method).length > 0 ? harness.steps : undefined
 
 /** The values a step insert is expected to carry. */

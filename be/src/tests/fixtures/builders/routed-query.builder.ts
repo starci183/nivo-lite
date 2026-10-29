@@ -31,7 +31,7 @@ export const routedQueryBuilder = (routes: QueryBuilderRoutes): FakeQueryBuilder
                 const method: unknown = Reflect.get(inner, property)
                 const route = routeOf(routes, property)
                 return (...args: Array<unknown>) => {
-                    const result = typeof method === "function" ? method(...args) : undefined
+                    const result: unknown = typeof method === "function" ? Reflect.apply(method, undefined, args) : undefined
                     if (route !== undefined) return route(routed)
                     return result === fake.builder ? wrap(inner) : result
                 }

@@ -1,4 +1,5 @@
 import type { MockEntityManager } from "@starci/jest-preset"
+import { builderOf } from "./entity-query-builder-fake.builder"
 import type { FakeQueryBuilder, QueryBuilderAnswers, QueryBuilderCall } from "./fake-query-builder.builder"
 
 /** The text a double query builder renders for any sub query, so a fragment built from it stays readable. */
@@ -13,27 +14,25 @@ export const subQueryBuilder = (answers: QueryBuilderAnswers): FakeQueryBuilder 
     const calls: Array<QueryBuilderCall> = []
     const argsOfMethod = (method: string): ReadonlyArray<ReadonlyArray<unknown>> =>
         calls.filter((call) => call.method === method).map((call) => call.args)
+    const answer = (property: string, args: Array<unknown>): unknown => {
+        calls.push({ method: property, args })
+        if (property === "getQuery") return SUB_QUERY_TEXT
+        if (property === "subQuery") return make()
+        if (!Object.hasOwn(answers, property)) return builder
+        return Promise.resolve(Reflect.get(answers, property))
+    }
     const make = (): object =>
         new Proxy(
             {},
             {
                 get: (_target, property) => {
-                    if (property === "calls") return calls
-                    if (property === "builder") return proxy
-                    if (property === "argsOf" || property === "callsOf") return argsOfMethod
                     if (typeof property !== "string" || property === "then") return undefined
-                    return (...args: Array<unknown>) => {
-                        calls.push({ method: property, args })
-                        if (property === "getQuery") return SUB_QUERY_TEXT
-                        if (property === "subQuery") return make()
-                        if (!Object.hasOwn(answers, property)) return proxy
-                        return Promise.resolve(Reflect.get(answers, property))
-                    }
+                    return (...args: Array<unknown>) => answer(property, args)
                 },
             },
         )
-    const proxy = make()
-    return proxy as FakeQueryBuilder
+    const builder = make()
+    return { builder, calls, argsOf: argsOfMethod, callsOf: argsOfMethod }
 }
 
 /** Makes the next `createQueryBuilder` calls of the manager hand out one {@link subQueryBuilder} per answer, in order, and gives them back. */
@@ -42,6 +41,6 @@ export const queueSubQueryBuilders = (
     answers: ReadonlyArray<QueryBuilderAnswers>,
 ): ReadonlyArray<FakeQueryBuilder> => {
     const doubles = answers.map((answer) => subQueryBuilder(answer))
-    for (const double of doubles) manager.createQueryBuilder.mockReturnValueOnce(double as never)
+    for (const double of doubles) manager.createQueryBuilder.mockReturnValueOnce(builderOf(double.builder))
     return doubles
 }

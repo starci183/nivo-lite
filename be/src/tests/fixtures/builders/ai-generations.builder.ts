@@ -1,5 +1,8 @@
-import type { AiGenerationEntity } from "@modules/domain/ai-generations/persistence/entities"
+import { aiGenerationsEntities } from "@modules/domain/ai-generations"
 import { entityRowBuilder } from "./entity-row.builder"
+
+const [AiGenerationEntity] = aiGenerationsEntities
+type AiGenerationEntity = InstanceType<typeof AiGenerationEntity>
 
 /** A stored generation: queued, with a one-line prompt, nothing answered yet; a case changes what it needs. */
 export const generationRow = entityRowBuilder<AiGenerationEntity>({

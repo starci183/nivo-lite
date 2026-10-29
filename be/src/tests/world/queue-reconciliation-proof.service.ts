@@ -1,16 +1,9 @@
 import type { EntityManager } from "typeorm"
 import { callDbFunction, sql } from "@modules/platform/database"
+import { seedDueJobs } from "../fixtures/builders/queue-reconciliation.builder"
+import type { SeededJob } from "../fixtures/builders/queue-reconciliation.builder"
 import type { AdmittedQueueRun, ClaimedReconcileJob } from "../fixtures/persistence/queue-reconciliation.rows"
 import type { LiteWorld } from "./lite-world.service"
-
-/** Seeds sent, due durable rows without contacting either broker; proof tags isolate cleanup. */
-const SEED_DUE_JOBS = sql`
-    INSERT INTO public.job_outbox (queue, name, payload, dedupe_key, sent_at, created_at, reconcile_at)
-    SELECT $2::text, $2::text, jsonb_build_object('proofId', $1::text), $1::text || ':' || n,
-           now(), '2000-01-01'::timestamptz + make_interval(secs => n), '2000-01-01'::timestamptz
-    FROM generate_series(1, $3::int) n
-    RETURNING id
-`
 
 /** Removes the exact rows seeded by a reconciliation proof. */
 const CLEAN_RECONCILE_JOBS = sql`DELETE FROM public.job_outbox WHERE payload->>'proofId' = $1`
@@ -20,11 +13,6 @@ const LOCK_RECONCILE_JOB = sql`SELECT id FROM public.job_outbox WHERE id = $1::u
 
 /** Expires one current run lease, modeling a lost process without waiting for wall-clock time. */
 const EXPIRE_QUEUE_RUN = sql`UPDATE public.job_outbox SET run_lease_until = now() - interval '1 second' WHERE id = $1::uuid`
-
-/** The canonical identity of one seeded outbox row. */
-export interface SeededJob {
-    readonly id: string
-}
 
 /** The single column a settlement function answers, named after the function. */
 type SettlementRow = Readonly<Record<string, boolean>>
@@ -97,7 +85,7 @@ export const reconciliationProof = (world: LiteWorld) => ({
         world.cleanup(async () => {
             await world.db.primary.query(CLEAN_RECONCILE_JOBS, [key])
         })
-        return world.db.primary.query<Array<SeededJob>>(SEED_DUE_JOBS, [key, queue, count])
+        return seedDueJobs(world.db.primary, key, queue, count)
     },
     claim: async (size: number): Promise<Array<ClaimedReconcileJob>> => {
         const rows = await callDbFunction<ClaimedReconcileJob>(world.db.primary, "public.job_reconcile", [
