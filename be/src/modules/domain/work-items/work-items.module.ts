@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./work-items.module-definition"
 import { WorkItemsService } from "./work-items.service"
+import { WorkItemsActivityService } from "./work-items-activity.service"
 import { WorkItemsReadService } from "./work-items-read.service"
 
 @Module({})
@@ -12,8 +13,8 @@ export class WorkItemsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), WorkItemsService, WorkItemsReadService],
-            exports: [WorkItemsService, WorkItemsReadService],
+            providers: [...(base.providers ?? []), WorkItemsService, WorkItemsReadService, WorkItemsActivityService],
+            exports: [WorkItemsService, WorkItemsReadService, WorkItemsActivityService],
         }
     }
 }

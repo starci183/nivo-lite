@@ -18,6 +18,14 @@ export type {
 export { WorkItemsModule } from "./work-items.module"
 export { WorkItemsService } from "./work-items.service"
 export { WorkItemsReadService } from "./work-items-read.service"
+export { WorkItemsActivityService } from "./work-items-activity.service"
+export type {
+    AnswerProgressLine,
+    DashboardListLine,
+    DashboardListQuery,
+    RecentWorkLine,
+    WaitingReplyRow,
+} from "./work-items-activity.contracts"
 export type { WorkException } from "./work-items-read.contracts"
 export { toProposal } from "./work-items.mapper"
 export type { WorkItemRecord } from "./work-items.contracts"
