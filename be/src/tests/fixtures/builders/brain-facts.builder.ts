@@ -1,6 +1,10 @@
 import { builder } from "@starci/jest-preset"
-import type { BrainFactEntity, Evidence, FactInput, FactRecord } from "@modules/domain/brain-facts"
+import type { Evidence, FactInput, FactRecord } from "@modules/domain/brain-facts"
+import { brainFactsEntities } from "@modules/domain/brain-facts"
 import { entityRowBuilder } from "./entity-row.builder"
+
+const [BrainFactEntity] = brainFactsEntities
+type BrainFactEntity = InstanceType<typeof BrainFactEntity>
 
 /** Shared, complete test data for the capability cases. */
 export const WS = "ws-1"
