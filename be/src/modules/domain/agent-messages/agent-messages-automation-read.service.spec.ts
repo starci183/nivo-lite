@@ -10,7 +10,10 @@ describe("AgentMessagesAutomationReadService", () => {
         const row = { created_at: "2026-10-12T03:00:00.000Z" }
         const [fake] = queueQueryBuilders(entityManager, [{ getRawOne: row }])
         const moduleRef = await Test.createTestingModule({
-            providers: [AgentMessagesAutomationReadService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
+            providers: [
+                AgentMessagesAutomationReadService,
+                { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            ],
         }).compile()
 
         await expect(moduleRef.get(AgentMessagesAutomationReadService).lastCustomerMessage("c1")).resolves.toBe(row)
