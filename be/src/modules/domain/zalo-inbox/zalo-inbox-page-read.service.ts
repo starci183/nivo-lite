@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { ZaloFollowEventRow, ZaloInboxFactsRow } from "./zalo-inbox.contracts"
+import type { OptionalZaloInboxFacts, ZaloFollowEventRow, ZaloInboxFactsRow } from "./zalo-inbox.contracts"
 import { ZaloInboxEntity } from "./persistence/entities"
 
 /** The most follow events a page reads. */
@@ -30,7 +30,7 @@ export class ZaloInboxPageReadService {
     }
 
     /** When the latest event arrived and whether a customer text and a follow event were seen; null when the inbox has no row of the connection. */
-    factsOf(connectionId: string): Promise<ZaloInboxFactsRow | null> {
+    factsOf(connectionId: string): Promise<OptionalZaloInboxFacts> {
         return this.entityManager
             .createQueryBuilder(ZaloInboxEntity, "i")
             .select("max(i.received_at)::text", "last_at")

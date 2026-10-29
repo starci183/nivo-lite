@@ -19,3 +19,6 @@ export interface WorkItemWithCursor {
     /** The creation instant as ISO text at full precision. */
     readonly cursorAt: string
 }
+
+/** One work item with its cursor; null when there is none. */
+export type OptionalWorkItemWithCursor = WorkItemWithCursor | null

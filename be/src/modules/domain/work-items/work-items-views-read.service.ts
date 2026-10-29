@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { WorkItemsPageQuery, WorkItemWithCursor } from "./work-items-views-read.contracts"
+import type { OptionalWorkItemWithCursor, WorkItemsPageQuery, WorkItemWithCursor } from "./work-items-views-read.contracts"
 import type { WorkItem } from "./work-items.contracts"
 import { toWorkItem, toWorkItemRecord } from "./work-items.mapper"
 import { WorkItemEntity } from "./persistence/entities"
@@ -15,7 +15,7 @@ export class WorkItemsViewsReadService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** One work item of the workspace with its cursor; null when there is none. */
-    async find(workspaceId: string, workItemId: string): Promise<WorkItemWithCursor | null> {
+    async find(workspaceId: string, workItemId: string): Promise<OptionalWorkItemWithCursor> {
         const [found] = await this.withCursors(
             this.entityManager
                 .createQueryBuilder(WorkItemEntity, "w")
