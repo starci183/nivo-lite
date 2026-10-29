@@ -7,9 +7,9 @@ const SUBJECT = Symbol("invoice-columns.policy")
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { INVOICE_COLUMNS, INVOICE_VIEW_COLUMNS, INVOICE_RETURNING, selectColumns } }],
+        providers: [{ provide: SUBJECT, useValue: { selectColumns } }],
     }).compile()
-    return moduleRef.get<typeof import("./invoice-columns.policy")>(SUBJECT)
+    return moduleRef.get<Pick<typeof import("./invoice-columns.policy"), "selectColumns">>(SUBJECT)
 }
 
 const queryOf = () => {
@@ -18,8 +18,7 @@ const queryOf = () => {
 }
 
 describe("invoice columns", () => {
-    it("lists the record columns with their aliases", async () => {
-        const { INVOICE_COLUMNS } = await buildSubject()
+    it("lists the record columns with their aliases", () => {
         expect(INVOICE_COLUMNS.map(([, alias]) => alias)).toEqual([
             "id",
             "workspace_id",
@@ -35,8 +34,7 @@ describe("invoice columns", () => {
         ])
     })
 
-    it("lists the view columns, with the dates as ISO text", async () => {
-        const { INVOICE_VIEW_COLUMNS } = await buildSubject()
+    it("lists the view columns, with the dates as ISO text", () => {
         expect(INVOICE_VIEW_COLUMNS.map(([, alias]) => alias)).toEqual([
             "id",
             "workspace_id",
@@ -56,8 +54,7 @@ describe("invoice columns", () => {
         expect(INVOICE_VIEW_COLUMNS[8]).toEqual(["to_json(i.paid_at) #>> '{}'", "paid_at"])
     })
 
-    it("names the returning clause", async () => {
-        const { INVOICE_RETURNING } = await buildSubject()
+    it("names the returning clause", () => {
         expect(INVOICE_RETURNING).toBe(
             "id, workspace_id, order_id, lead_id, invoice_no, amount_vnd::float8 AS amount_vnd, status, issued_by, paid_at::text AS paid_at, contract_id, period_ends_on::text AS period_ends_on",
         )

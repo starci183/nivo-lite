@@ -47,11 +47,14 @@ export const MISSING: QueryBuilderAnswers = { getRawOne: undefined }
 export const CLAIMED: QueryBuilderAnswers = { execute: { raw: [{ id: BOOKING_ID }] } }
 export const ALREADY_CLAIMED: QueryBuilderAnswers = { execute: { raw: [] } }
 export const RELEASED: QueryBuilderAnswers = { execute: { raw: [] } }
+/** The answers of a fee write that changed a row, or matched none when `changed` is false. */
 export const feeWritten = (changed: boolean): QueryBuilderAnswers => ({
     execute: { raw: changed ? [{ id: BOOKING_ID }] : [] },
 })
 export const SELECTED = "select"
+/** The trace entry of the claim statement marked `mark`. */
 export const claimOf = (mark: string) => `claim:${mark}`
+/** The trace entry of the release statement marked `mark`. */
 export const releaseOf = (mark: string) => `release:${mark}`
 
 /** What each statement was, in the order the service ran them. */
@@ -66,18 +69,6 @@ export const traceOf = (fakes: ReadonlyArray<FakeQueryBuilder>): Array<string> =
             const mark = String(fake.callsOf("setParameter")[0]?.[1])
             return fake.callsOf("andWhere").length > 0 ? claimOf(mark) : releaseOf(mark)
         })
-
-interface MockCalls {
-    readonly calls: ReadonlyArray<unknown>
-}
-interface Called {
-    readonly mock: MockCalls
-}
-
-/** Every given double was never called. */
-export const expectUntouched = (...doubles: ReadonlyArray<Called>): void => {
-    for (const double of doubles) expect(double.mock.calls).toEqual([])
-}
 
 /** The closed statuses with the policy fee, the fee recorded and whether the write changed a row. */
 export const FEE_CASES = [

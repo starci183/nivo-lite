@@ -1,6 +1,6 @@
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager, MockOf } from "@starci/jest-preset"
-import type { AgentDirectoryService } from "@modules/domain/agents"
+import type { AgentCard, AgentDirectoryService } from "@modules/domain/agents"
 import type { InvoicesLedgerService } from "@modules/domain/invoices"
 import type { LeadReadService } from "@modules/domain/leads"
 import type { InstallationRecord, InstallationRecordsService } from "@modules/domain/module-installations"
@@ -36,6 +36,11 @@ const textAt = (row: Record<string, unknown> | undefined, key: string): string |
     return typeof value === "string" ? value : null
 }
 
+const numberAt = (row: Record<string, unknown> | undefined, key: string): number | null => {
+    const value = row?.[key]
+    return typeof value === "number" ? value : null
+}
+
 /** The manager a spec runs against and the owner services it reads through, with the reads they answer. */
 export interface Served {
     readonly em: MockEntityManager
@@ -55,7 +60,12 @@ const senders = (queries: Queries): Pick<Served, "agents" | "installations"> => 
     const [agent] = rowsAt(queries, FIND_SENDER_AGENT)
     const [given] = rowsAt(queries, FIND_GIVEN_INSTALLATION)
     const [resolved] = rowsAt(queries, RESOLVE_INSTALLATION)
-    const card = { id: AGENT_ID, name: textAt(agent, "name"), module: textAt(agent, "module"), canTagAgentIds: [] }
+    const card: AgentCard = {
+        id: AGENT_ID,
+        name: textAt(agent, "name") ?? "",
+        module: textAt(agent, "module") ?? "",
+        canTagAgentIds: [],
+    }
     const agents = mock<AgentDirectoryService>()
     agents.find.mockResolvedValue(agent === undefined ? null : card)
     const installations = mock<InstallationRecordsService>()
@@ -71,10 +81,13 @@ const senders = (queries: Queries): Pick<Served, "agents" | "installations"> => 
 const chainsOf = (queries: Queries): MockOf<WorkItemsChainReadService> => {
     const [parent] = rowsAt(queries, FIND_PARENT_POSITION)
     const [top] = rowsAt(queries, FIND_CHAIN_TOP)
-    const spot = parent === undefined ? null : { id: parent.id, chainId: parent.chain_id, depth: parent.depth }
+    const spot: Awaited<ReturnType<WorkItemsChainReadService["spotOf"]>> =
+        parent === undefined
+            ? null
+            : { id: textAt(parent, "id") ?? "", chainId: textAt(parent, "chain_id"), depth: numberAt(parent, "depth") ?? 0 }
     const chains = mock<WorkItemsChainReadService>()
     chains.spotOf.mockResolvedValue(spot)
-    chains.topDepth.mockResolvedValue(top === undefined ? null : top.depth)
+    chains.topDepth.mockResolvedValue(numberAt(top, "depth"))
     chains.repeats.mockResolvedValue(rowsAt(queries, CHAIN_REPEATS_COMMAND).some((row) => row.repeats === true))
     return chains
 }

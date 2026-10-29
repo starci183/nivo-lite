@@ -1,6 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
+import { mock } from "@starci/jest-preset"
 import { ChannelConnectionsService } from "@modules/domain/channel-connections"
 import { ConnectionGrantsService } from "@modules/domain/connection-grants"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
@@ -8,7 +7,6 @@ import type { ConnectionRecord } from "@modules/domain/connections"
 import { Secret } from "@modules/platform/config"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { ProvisionFlags } from "./channel-provisioning.contracts"
 import { CHANNEL_PROVISIONING_OPTIONS } from "./channel-provisioning.decorators"
 import type { ChannelProvisioningOptions } from "./channel-provisioning.options"
@@ -34,14 +32,13 @@ const TELEGRAM: ConnectionRecord = {
     createdAt: "2026-10-13T00:00:00.000Z",
 }
 
-/** What a spec states about the database: the manager, the queries it answered and the account the directory names as owner. */
+/** What a spec states about the directories: the agents it answered and the account the directory names as owner. */
 interface Scenario {
-    readonly entityManager: MockEntityManager
     readonly agents: ReadonlyArray<{ readonly id: string; readonly module: string }>
     readonly owner: string | null
 }
 
-/** A scenario whose agents table answers the given rows and whose workspace has the given owners (the first one is the oldest). */
+/** A scenario whose agent directory answers the given rows and whose workspace has the given owners (the first one is the oldest). */
 /** Whether a stubbed row names an agent and its module. */
 const isAgentRef = (value: unknown): value is { readonly id: string; readonly module: string } =>
     typeof value === "object" && value !== null && "id" in value && "module" in value
@@ -50,9 +47,7 @@ const scenarioOf = (
     owners: ReadonlyArray<{ readonly userId: string }> = [{ userId: "owner-1" }],
     agents: ReadonlyArray<unknown> = [],
 ): Scenario => {
-    const entityManager = mockEntityManager()
     return {
-        entityManager,
         agents: agents.flatMap((agent) => (isAgentRef(agent) ? [agent] : [])),
         owner: owners[0]?.userId ?? null,
     }
@@ -99,7 +94,6 @@ const build = async (
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChannelProvisioningService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: scenario.entityManager },
             {
                 provide: CHANNEL_PROVISIONING_OPTIONS,
                 useValue: {
@@ -117,7 +111,6 @@ const build = async (
     }).compile()
     return {
         service: moduleRef.get(ChannelProvisioningService),
-        entityManager: scenario.entityManager,
         agentDirectory,
         channels,
         grants,
@@ -185,13 +178,12 @@ describe("ChannelProvisioningService refusals and telegram", () => {
     it.each<ProvisionFlags>([{}, { workspace: "" }, { workspace: "not-a-uuid" }, { workspace: `${WORKSPACE}extra` }])(
         "refuses workspace flags %j before querying or connecting",
         async (flags) => {
-            const { service, entityManager, channels, grants, print } = await build({}, scenarioOf())
+            const { service, channels, grants, print } = await build({}, scenarioOf())
 
             const result = service.run("telegram", flags)
 
             await expect(result).rejects.toBeInstanceOf(ConnectionsError)
             await expect(result).rejects.toEqual(invalid("workspace"))
-            expect(entityManager.createQueryBuilder).not.toHaveBeenCalled()
             expect(channels.connectTelegram).not.toHaveBeenCalled()
             expect(channels.startMoneyConnection).not.toHaveBeenCalled()
             expect(grants.setConnectionAgents).not.toHaveBeenCalled()
@@ -319,7 +311,7 @@ describe("ChannelProvisioningService", () => {
     })
 
     it("uses the supplied SePay name and environment and binds only accounting agents", async () => {
-        const { service, channels, grants, print } = await build({}, scenarioOf(undefined, AGENT_ROWS))
+        const { service, agentDirectory, channels, grants, print } = await build({}, scenarioOf(undefined, AGENT_ROWS))
 
         await service.run("sepay", {
             workspace: WORKSPACE,
