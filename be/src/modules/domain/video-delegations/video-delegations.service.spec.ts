@@ -5,6 +5,7 @@ import { VideoProjectsService } from "@modules/domain/video-projects"
 import { VideoRendersService } from "@modules/domain/video-renders"
 import type { SettledRender } from "@modules/domain/video-renders"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { writeExpressionOf } from "@tests/fixtures/builders/write-expression.builder"
 import { VideoDelegationEntity } from "./persistence/entities"
 import { VideoDelegationsService } from "./video-delegations.service"
 
@@ -25,8 +26,7 @@ const INPUT = {
 
 /** What the last update stamped as the change time. */
 const stamped = (em: MockEntityManager): string => {
-    const set = em.update.mock.calls.at(-1)?.[2] as { updatedAt: () => string } | undefined
-    return set?.updatedAt() ?? ""
+    return writeExpressionOf(em.update.mock.calls.at(-1)?.[2], "updatedAt") ?? ""
 }
 
 const SETTLED: SettledRender = {
@@ -41,11 +41,9 @@ const SETTLED: SettledRender = {
     error: null,
 }
 
-const build = async (
-    em: MockEntityManager,
-    projects: VideoProjectsService = mock<VideoProjectsService>(),
-    renders: VideoRendersService = mock<VideoRendersService>(),
-) => {
+const build = async (em: MockEntityManager) => {
+    const projects = mock<VideoProjectsService>()
+    const renders = mock<VideoRendersService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             VideoDelegationsService,
@@ -54,14 +52,16 @@ const build = async (
             { provide: VideoRendersService, useValue: renders },
         ],
     }).compile()
-    return moduleRef.get(VideoDelegationsService)
+    return { service: moduleRef.get(VideoDelegationsService), projects, renders }
 }
 
 describe("VideoDelegationsService > reads", () => {
     it("answers the delegation of a work item", async () => {
         const em = mockEntityManager({ findOne: [VideoDelegationEntity, ENTITY] })
 
-        await expect((await build(em)).ofWorkItem("workspace-1", "item-1")).resolves.toEqual(ROW)
+        const { service } = await build(em)
+
+        await expect(service.ofWorkItem("workspace-1", "item-1")).resolves.toEqual(ROW)
         expect(em.findOne).toHaveBeenCalledWith(VideoDelegationEntity, {
             select: { id: true, projectId: true },
             where: { workspaceId: "workspace-1", workItemId: "item-1" },
@@ -71,9 +71,14 @@ describe("VideoDelegationsService > reads", () => {
     it("answers null for a work item that made none", async () => {
         const em = mockEntityManager({ findOne: [VideoDelegationEntity, null] })
 
-        await expect((await build(em)).ofWorkItem("workspace-1", "item-1")).resolves.toBeNull()
+        const { service } = await build(em)
+
+        await expect(service.ofWorkItem("workspace-1", "item-1")).resolves.toBeNull()
     })
 
+})
+
+describe("VideoDelegationsService > settled renders", () => {
     it("answers the delegation of a settled render with its project and render", async () => {
         const delegation = Object.assign(new VideoDelegationEntity(), {
             id: "delegation-1",
@@ -84,12 +89,11 @@ describe("VideoDelegationsService > reads", () => {
             channels: ["facebook"],
         })
         const em = mockEntityManager({ findOne: [VideoDelegationEntity, delegation] })
-        const projects = mock<VideoProjectsService>()
+        const { service, projects, renders } = await build(em)
         projects.cardFactsOf.mockResolvedValue({ title: "Offer", aspect: "9:16", script: [{ caption: "A" }] })
-        const renders = mock<VideoRendersService>()
         renders.settledOf.mockResolvedValue(SETTLED)
 
-        await expect((await build(em, projects, renders)).ofSettledRender("render-1")).resolves.toEqual({
+        await expect(service.ofSettledRender("render-1")).resolves.toEqual({
             id: "delegation-1",
             workspace_id: "workspace-1",
             work_item_id: "item-1",
@@ -126,11 +130,9 @@ describe("VideoDelegationsService > reads", () => {
 
     it("answers null for a render nobody delegated", async () => {
         const em = mockEntityManager({ findOne: [VideoDelegationEntity, null] })
-        const renders = mock<VideoRendersService>()
+        const { service, renders } = await build(em)
 
-        await expect(
-            (await build(em, mock<VideoProjectsService>(), renders)).ofSettledRender("render-1"),
-        ).resolves.toBeNull()
+        await expect(service.ofSettledRender("render-1")).resolves.toBeNull()
         expect(renders.settledOf).not.toHaveBeenCalled()
     })
 
@@ -147,12 +149,11 @@ describe("VideoDelegationsService > reads", () => {
             channels: [],
         })
         const em = mockEntityManager({ findOne: [VideoDelegationEntity, delegation] })
-        const projects = mock<VideoProjectsService>()
+        const { service, projects, renders } = await build(em)
         projects.cardFactsOf.mockResolvedValue(project)
-        const renders = mock<VideoRendersService>()
         renders.settledOf.mockResolvedValue(render)
 
-        await expect((await build(em, projects, renders)).ofSettledRender("render-1")).resolves.toBeNull()
+        await expect(service.ofSettledRender("render-1")).resolves.toBeNull()
     })
 })
 
@@ -162,7 +163,9 @@ describe("VideoDelegationsService > writes", () => {
             insert: [VideoDelegationEntity, { identifiers: [{ id: "delegation-1" }], generatedMaps: [], raw: [] }],
         })
 
-        await expect((await build(mockEntityManager())).record(tx, INPUT)).resolves.toEqual(ROW)
+        const { service } = await build(mockEntityManager())
+
+        await expect(service.record(tx, INPUT)).resolves.toEqual(ROW)
         expect(tx.insert).toHaveBeenCalledWith(VideoDelegationEntity, {
             workspaceId: "workspace-1",
             workItemId: "item-1",
@@ -178,13 +181,17 @@ describe("VideoDelegationsService > writes", () => {
             insert: [VideoDelegationEntity, { identifiers: [], generatedMaps: [], raw: [] }],
         })
 
-        await expect((await build(mockEntityManager())).record(tx, INPUT)).resolves.toBeNull()
+        const { service } = await build(mockEntityManager())
+
+        await expect(service.record(tx, INPUT)).resolves.toBeNull()
     })
 
     it("links the queued render", async () => {
         const em = mockEntityManager({ update: [VideoDelegationEntity, { affected: 1 }] })
 
-        await (await build(em)).linkRender("delegation-1", "render-1")
+        const { service } = await build(em)
+
+        await service.linkRender("delegation-1", "render-1")
 
         expect(em.update).toHaveBeenCalledWith(
             VideoDelegationEntity,
@@ -197,7 +204,9 @@ describe("VideoDelegationsService > writes", () => {
     it("keeps the posted card as JSON", async () => {
         const em = mockEntityManager({ update: [VideoDelegationEntity, { affected: 1 }] })
 
-        await (await build(em)).saveCard("delegation-1", "approval-1", { v: 1 })
+        const { service } = await build(em)
+
+        await service.saveCard("delegation-1", "approval-1", { v: 1 })
 
         expect(em.update).toHaveBeenCalledWith(
             VideoDelegationEntity,
@@ -207,10 +216,15 @@ describe("VideoDelegationsService > writes", () => {
         expect(stamped(em)).toBe("now()")
     })
 
+})
+
+describe("VideoDelegationsService > settling", () => {
     it("answers true for the call that settled the delegation", async () => {
         const em = mockEntityManager({ update: [VideoDelegationEntity, { affected: 1 }] })
 
-        await expect((await build(em)).markFailed("delegation-1", "boom")).resolves.toBe(true)
+        const { service } = await build(em)
+
+        await expect(service.markFailed("delegation-1", "boom")).resolves.toBe(true)
         expect(em.update).toHaveBeenCalledWith(
             VideoDelegationEntity,
             { id: "delegation-1", status: "rendering" },
@@ -222,9 +236,11 @@ describe("VideoDelegationsService > writes", () => {
     it("answers false once the delegation was settled", async () => {
         const em = mockEntityManager({ update: [VideoDelegationEntity, { affected: 0 }] })
 
-        await expect((await build(em)).markReady("delegation-1")).resolves.toBe(false)
+        const { service } = await build(em)
 
-        const unreported = mockEntityManager({ update: [VideoDelegationEntity, {}] })
-        await expect((await build(unreported)).markReady("delegation-1")).resolves.toBe(false)
+        await expect(service.markReady("delegation-1")).resolves.toBe(false)
+
+        const unreported = await build(mockEntityManager({ update: [VideoDelegationEntity, {}] }))
+        await expect(unreported.service.markReady("delegation-1")).resolves.toBe(false)
     })
 })
