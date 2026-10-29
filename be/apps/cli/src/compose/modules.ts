@@ -51,7 +51,7 @@ import { LoggingModule, printConsoleLine } from "@modules/platform/logging"
 import type { CliAppOptions } from "../cli.options"
 
 /** The queue of the CLI: producers only, so no worker and no relay run. */
-const CLI_QUEUE: QueueOptions & { readonly isGlobal: true } = {
+const CLI_QUEUE: QueueOptions = {
     isGlobal: true,
     enabled: false,
     redisHost: "127.0.0.1",
@@ -95,7 +95,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     ObjectStorageModule.register({ isGlobal: true, ...options.storage }),
     VideoMusicModule.register({ isGlobal: true, store: STORAGE_ASSETS }),
     EventsModule.register({ isGlobal: true }),
-    QueueModule.register(CLI_QUEUE),
+    QueueModule.register({ isGlobal: true, ...CLI_QUEUE }),
     EventBusModule.register({ isGlobal: true }),
     JobOpsModule.register({ isGlobal: true }),
     StaffModule.register({ isGlobal: true }),

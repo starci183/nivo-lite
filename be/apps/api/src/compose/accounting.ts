@@ -27,6 +27,6 @@ export const accountingModules = (): Array<DynamicModule> => [
     EmailMessagesModule.register({ isGlobal: true }),
     WorkPerformersModule.register({ isGlobal: true, writer: AiTasksService }),
     OfficeCommandCandidatesModule.register({ isGlobal: true, reader: AiTasksService }),
-    OfficeRoomDirectoryModule,
+    OfficeRoomDirectoryModule.register({ isGlobal: true }),
     OfficeRoomsModule.register({ isGlobal: true }),
 ]

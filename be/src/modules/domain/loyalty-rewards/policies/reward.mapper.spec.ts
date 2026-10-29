@@ -1,15 +1,5 @@
-import { Test } from "@nestjs/testing"
 import { REWARD_RETURNING, isRewardRaw, toReward, toRewardFromRaw } from "./reward.mapper"
 import type { RewardFieldsOfEntity, RewardRaw } from "./reward.mapper"
-
-const SUBJECT = Symbol("reward.mapper")
-
-const build = async () => {
-    const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { REWARD_RETURNING, isRewardRaw, toReward, toRewardFromRaw } }],
-    }).compile()
-    return moduleRef.get<typeof import("./reward.mapper")>(SUBJECT)
-}
 
 const entityRow = (overrides: Partial<RewardFieldsOfEntity> = {}): RewardFieldsOfEntity => ({
     id: "r-1",
@@ -44,20 +34,16 @@ const rawRow = (overrides: Partial<RewardRaw> = {}): RewardRaw => ({
 })
 
 describe("REWARD_RETURNING", () => {
-    it("names the reward columns in column naming", async () => {
-        const subject = await build()
-
-        expect(subject.REWARD_RETURNING).toBe(
+    it("names the reward columns in column naming", () => {
+        expect(REWARD_RETURNING).toBe(
             "id, key, name, kind, value_vnd::float8 AS value_vnd, percent, points_cost, stock, per_customer_limit, min_tier_key, note, active",
         )
     })
 })
 
 describe("toReward", () => {
-    it("maps an entity row", async () => {
-        const subject = await build()
-
-        expect(subject.toReward(entityRow())).toEqual({
+    it("maps an entity row", () => {
+        expect(toReward(entityRow())).toEqual({
             id: "r-1",
             key: "coffee",
             name: "Free coffee",
@@ -75,10 +61,8 @@ describe("toReward", () => {
 })
 
 describe("toRewardFromRaw", () => {
-    it("maps a returning row, keeping absent optional columns as null", async () => {
-        const subject = await build()
-
-        expect(subject.toRewardFromRaw(rawRow())).toEqual({
+    it("maps a returning row, keeping absent optional columns as null", () => {
+        expect(toRewardFromRaw(rawRow())).toEqual({
             id: "r-1",
             key: "coffee",
             name: "Free coffee",
@@ -96,13 +80,12 @@ describe("toRewardFromRaw", () => {
 })
 
 describe("isRewardRaw", () => {
-    it("accepts a full reward row and refuses a missing column or an unknown kind", async () => {
-        const subject = await build()
+    it("accepts a full reward row and refuses a missing column or an unknown kind", () => {
         const withoutNote = Object.fromEntries(Object.entries(rawRow()).filter(([column]) => column !== "note"))
 
-        expect(subject.isRewardRaw(rawRow())).toBe(true)
-        expect(subject.isRewardRaw(withoutNote)).toBe(false)
-        expect(subject.isRewardRaw({ ...rawRow(), kind: "gift" })).toBe(false)
-        expect(subject.isRewardRaw(null)).toBe(false)
+        expect(isRewardRaw(rawRow())).toBe(true)
+        expect(isRewardRaw(withoutNote)).toBe(false)
+        expect(isRewardRaw({ ...rawRow(), kind: "gift" })).toBe(false)
+        expect(isRewardRaw(null)).toBe(false)
     })
 })
