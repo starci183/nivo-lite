@@ -160,6 +160,17 @@ describe("LoyaltyCustomerLinksService / linkLeads partial", () => {
         await expect(service.linkLeads(manager, "ws-1", [{ id: "l1", phone: null, email: null }])).resolves.toBe(0)
     })
 
+    it("counts no link when the driver returns no row list", async () => {
+        const manager = mockEntityManager({ find: [LoyaltyCustomerLinkEntity, []] })
+        queueQueryBuilders(manager, [{ execute: { raw: undefined } }])
+        const { service, customers } = await build(mockEntityManager())
+        customers.contactsMatching.mockResolvedValue([{ id: "c1", phone: "84912345678", email: null }])
+
+        await expect(
+            service.linkLeads(manager, "ws-1", [{ id: "l1", phone: "84912345678", email: null }]),
+        ).resolves.toBe(0)
+    })
+
     it("writes nothing for no leads", async () => {
         const manager = mockEntityManager()
         const { service } = await build(mockEntityManager())

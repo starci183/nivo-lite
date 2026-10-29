@@ -2,6 +2,8 @@ import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset
 import { Test } from "@nestjs/testing"
 import { AgentConversationsErrorCode, AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { ConversationRef } from "@modules/domain/agent-conversations"
+import { AgentBindingsService } from "@modules/domain/agent-connections"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { ChannelsErrorCode, ZaloCredentialsService } from "@modules/domain/channels"
 import { ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
@@ -10,27 +12,13 @@ import { CLOCK } from "@modules/platform/clock"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ChatTurnQueue } from "@modules/queues/chat-turn"
-import type { MetaInbound } from "./conversations.contracts"
+import type { FrontAgent, MetaInbound } from "./conversations.contracts"
 import { ConversationsService } from "./conversations.service"
-import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
-import type { TableAnswers } from "@tests/fixtures/builders/table-query-builder.builder"
-
-const SEEN = new WeakMap<object, TableAnswers>()
-
-/** A manager whose agent_connections table answers the given front-door rows. */
-const frontAgents = (rows: ReadonlyArray<unknown>) => {
-    const em = mockEntityManager()
-    SEEN.set(em, answerByTable(em, { "public.agent_connections": rows }))
-    return em
-}
-
-/** The where conditions of the front-door lookup the subject ran on a manager. */
-const frontLookup = (em: object) => SEEN.get(em)?.queries[0]?.callsOf("where")
 
 const registerTelegramRouting = () => {
     it("opens the conversation of a new customer, stores the message and enqueues the turn", async () => {
-        const manager = frontAgents([FRONT_AGENT])
-        const { service, queue, conversations, messages } = await build()
+        const manager = mockEntityManager()
+        const { service, queue, conversations, messages } = await build({}, [FRONT_AGENT])
 
         await expect(service.acceptTelegram(CONNECTION, telegram(), manager)).resolves.toBeUndefined()
         expect(conversations.open).toHaveBeenCalledWith(openingOf(), manager)
@@ -39,8 +27,8 @@ const registerTelegramRouting = () => {
     })
 
     it("continues the conversation of a known customer without opening or rebinding it", async () => {
-        const manager = frontAgents([FRONT_AGENT])
-        const { service, queue, conversations } = await build({ existing: known() })
+        const manager = mockEntityManager()
+        const { service, queue, conversations } = await build({ existing: known() }, [FRONT_AGENT])
 
         await expect(service.acceptTelegram(CONNECTION, telegram(), manager)).resolves.toBeUndefined()
         expect(conversations.open).not.toHaveBeenCalled()
@@ -49,16 +37,16 @@ const registerTelegramRouting = () => {
     })
 
     it("moves a conversation to the connection current front-door agent", async () => {
-        const manager = frontAgents([FRONT_AGENT])
-        const { service, conversations } = await build({ existing: known({ agentId: "agent-old" }) })
+        const manager = mockEntityManager()
+        const { service, conversations } = await build({ existing: known({ agentId: "agent-old" }) }, [FRONT_AGENT])
 
         await expect(service.acceptTelegram(CONNECTION, telegram(), manager)).resolves.toBeUndefined()
         expect(conversations.rebind).toHaveBeenCalledWith("conv-1", "agent-1", manager)
     })
 
     it("stores the message and enqueues nothing while a person holds the conversation", async () => {
-        const manager = frontAgents([FRONT_AGENT])
-        const { service, queue, messages } = await build({ existing: known({ handledBy: "Lan" }) })
+        const manager = mockEntityManager()
+        const { service, queue, messages } = await build({ existing: known({ handledBy: "Lan" }) }, [FRONT_AGENT])
 
         await expect(service.acceptTelegram(CONNECTION, telegram(), manager)).resolves.toBeUndefined()
         expect(messages.storeCustomer).toHaveBeenCalledTimes(1)
@@ -66,8 +54,8 @@ const registerTelegramRouting = () => {
     })
 
     it("only keeps the message in the inbox when no agent is bound to the connection", async () => {
-        const manager = frontAgents([])
-        const { service, queue, inboundEvents, conversations } = await build()
+        const manager = mockEntityManager()
+        const { service, queue, inboundEvents, conversations } = await build({}, [])
 
         await expect(service.acceptTelegram(CONNECTION, telegram(), manager)).resolves.toBeUndefined()
         expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, {
@@ -85,11 +73,11 @@ const registerTelegramRouting = () => {
 
 const registerTelegramGuards = () => {
     it("ignores a delivery for a connection that is gone", async () => {
-        const manager = frontAgents([FRONT_AGENT])
-        const { service, queue } = await build({ connection: false })
+        const manager = mockEntityManager()
+        const { service, queue, bindings } = await build({ connection: false }, [FRONT_AGENT])
 
         await expect(service.acceptTelegram(CONNECTION, telegram(), manager)).resolves.toBeUndefined()
-        expect(manager.createQueryBuilder).not.toHaveBeenCalled()
+        expect(bindings.routeInbound).not.toHaveBeenCalled()
         expect(queue.enqueueChatTurn).not.toHaveBeenCalled()
     })
 
@@ -97,8 +85,8 @@ const registerTelegramGuards = () => {
         "opens a new visit on /start: archives the old conversation and delivers the greeting of the agent " +
             "without an AI call",
         async () => {
-            const manager = frontAgents([FRONT_AGENT])
-            const { service, queue, conversations, messages } = await build()
+            const manager = mockEntityManager()
+            const { service, queue, conversations, messages } = await build({}, [FRONT_AGENT])
 
             await expect(
                 service.acceptTelegram(CONNECTION, telegram({ text: "/start", isStart: true }), manager),
@@ -121,8 +109,8 @@ const registerTelegramGuards = () => {
     )
 
     it("greets with the default line when the agent has no greeting of its own", async () => {
-        const manager = frontAgents([{ id: "agent-1", greeting: "  " }])
-        const { service, messages } = await build()
+        const manager = mockEntityManager()
+        const { service, messages } = await build({}, [{ id: "agent-1", greeting: "  " }])
 
         await expect(
             service.acceptTelegram(CONNECTION, telegram({ text: "/start", isStart: true }), manager),
@@ -138,8 +126,8 @@ const registerTelegramGuards = () => {
 
 const registerZaloRouting = () => {
     it("marks the connection received, opens the conversation and asks the job to look the customer name up", async () => {
-        const manager = frontAgents([FRONT_AGENT])
-        const { service, queue, connections, conversations, zalo } = await build()
+        const manager = mockEntityManager()
+        const { service, queue, connections, conversations, zalo } = await build({}, [FRONT_AGENT])
         zalo.load.mockResolvedValue({
             kind: "ok",
             value: {
@@ -170,8 +158,8 @@ const registerZaloRouting = () => {
     })
 
     it("keeps the name of a known customer, does not ask for it again and cuts the first event text at 160 characters", async () => {
-        const manager = frontAgents([FRONT_AGENT])
-        const { service, queue, connections } = await build({ existing: known() })
+        const manager = mockEntityManager()
+        const { service, queue, connections } = await build({ existing: known() }, [FRONT_AGENT])
 
         await expect(
             service.acceptZalo(CONNECTION, zaloMessage({ text: "x".repeat(300) }), manager),
@@ -185,8 +173,8 @@ const registerZaloRouting = () => {
     })
 
     it("falls back to the guest name for a known customer without one", async () => {
-        const manager = frontAgents([FRONT_AGENT])
-        const { service, connections } = await build({ existing: known({ visitorName: null }) })
+        const manager = mockEntityManager()
+        const { service, connections } = await build({ existing: known({ visitorName: null }) }, [FRONT_AGENT])
 
         await expect(service.acceptZalo(CONNECTION, zaloMessage(), manager)).resolves.toBeUndefined()
         expect(connections.markReceived).toHaveBeenCalledWith(
@@ -200,8 +188,8 @@ const registerZaloRouting = () => {
 
 const registerZaloInbox = () => {
     it("only keeps the message in the inbox when no agent is bound", async () => {
-        const manager = frontAgents([])
-        const { service, queue, inboundEvents } = await build()
+        const manager = mockEntityManager()
+        const { service, queue, inboundEvents } = await build({}, [])
 
         await expect(service.acceptZalo(CONNECTION, zaloMessage(), manager)).resolves.toBeUndefined()
         expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, {
@@ -215,8 +203,8 @@ const registerZaloInbox = () => {
     })
 
     it("ignores an event for another Zalo app and one for a connection that is gone", async () => {
-        const otherManager = frontAgents([FRONT_AGENT])
-        const other = await build()
+        const otherManager = mockEntityManager()
+        const other = await build({}, [FRONT_AGENT])
         other.zalo.load.mockResolvedValue({
             kind: "ok",
             value: {
@@ -237,8 +225,8 @@ const registerZaloInbox = () => {
     })
 
     it("accepts an event whose app cannot be checked because the credential is unreadable", async () => {
-        const manager = frontAgents([FRONT_AGENT])
-        const { service, connections, zalo } = await build()
+        const manager = mockEntityManager()
+        const { service, connections, zalo } = await build({}, [FRONT_AGENT])
         zalo.load.mockResolvedValue({ kind: "refused", code: ChannelsErrorCode.SecretUnreadable })
 
         await expect(service.acceptZalo(CONNECTION, zaloMessage({ appId: "app-1" }), manager)).resolves.toBeUndefined()
@@ -248,14 +236,15 @@ const registerZaloInbox = () => {
 
 const registerMetaGuards = () => {
     it("ignores a delivery for a refused connection", async () => {
-        const manager = frontAgents([FRONT_AGENT])
-        const { service, connections, conversations, messages, inboundEvents, queue, catalog } = await build({
-            connection: false,
-        })
+        const manager = mockEntityManager()
+        const { service, connections, bindings, conversations, messages, inboundEvents, queue, catalog } = await build(
+            { connection: false },
+            [FRONT_AGENT],
+        )
 
         await expect(service.acceptMeta(CONNECTION, metaMessage(), manager)).resolves.toBeUndefined()
         expect(connections.intakeOf).toHaveBeenCalledWith(CONNECTION, "meta", manager)
-        expect(manager.createQueryBuilder).not.toHaveBeenCalled()
+        expect(bindings.routeInbound).not.toHaveBeenCalled()
         expect(catalog.get).not.toHaveBeenCalled()
         expect(conversations.find).not.toHaveBeenCalled()
         expect(conversations.open).not.toHaveBeenCalled()
@@ -268,12 +257,13 @@ const registerMetaGuards = () => {
     it.each(["facebook", "instagram"] as const)(
         "keeps an unrouted %s delivery in the inbox with its connection-scoped event id",
         async (platform) => {
-            const manager = frontAgents([])
-            const { service, connections, conversations, messages, inboundEvents, queue, catalog } = await build()
+            const manager = mockEntityManager()
+            const { service, connections, bindings, conversations, messages, inboundEvents, queue, catalog } =
+                await build({}, [])
 
             await expect(service.acceptMeta(CONNECTION, metaMessage({ platform }), manager)).resolves.toBeUndefined()
             expect(connections.intakeOf).toHaveBeenCalledWith(CONNECTION, "meta", manager)
-            expect(frontLookup(manager)).toEqual([["l.connection_id = :connectionId", { connectionId: CONNECTION }]])
+            expect(bindings.routeInbound).toHaveBeenCalledWith(CONNECTION)
             expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, {
                 workspaceId: "ws-1",
                 channel: platform,
@@ -296,12 +286,13 @@ const registerMetaRouting = () => {
     it.each(["facebook", "instagram"] as const)(
         "opens a %s conversation for the person and stores and enqueues their message",
         async (platform) => {
-            const manager = frontAgents([FRONT_AGENT])
-            const { service, connections, conversations, messages, inboundEvents, queue, catalog } = await build()
+            const manager = mockEntityManager()
+            const { service, connections, bindings, conversations, messages, inboundEvents, queue, catalog } =
+                await build({}, [FRONT_AGENT])
 
             await expect(service.acceptMeta(CONNECTION, metaMessage({ platform }), manager)).resolves.toBeUndefined()
             expect(connections.intakeOf).toHaveBeenCalledWith(CONNECTION, "meta", manager)
-            expect(frontLookup(manager)).toEqual([["l.connection_id = :connectionId", { connectionId: CONNECTION }]])
+            expect(bindings.routeInbound).toHaveBeenCalledWith(CONNECTION)
             expect(conversations.find).toHaveBeenCalledWith("ws-1", platform, CONNECTION, "person-1", manager)
             expect(conversations.open).toHaveBeenCalledWith(
                 openingOf({ channel: platform, customerId: "person-1" }),
@@ -320,8 +311,8 @@ const registerMetaRouting = () => {
     it.each(["facebook", "instagram"] as const)(
         "uses the %s guest catalog line for an unnamed person with a front agent",
         async (platform) => {
-            const manager = frontAgents([FRONT_AGENT])
-            const { service, conversations, catalog } = await build()
+            const manager = mockEntityManager()
+            const { service, conversations, catalog } = await build({}, [FRONT_AGENT])
 
             await expect(
                 service.acceptMeta(CONNECTION, metaMessage({ platform, visitor: null }), manager),
@@ -343,8 +334,8 @@ const registerMetaGuestNames = () => {
     it.each(["facebook", "instagram"] as const)(
         "uses the %s guest catalog line for an unnamed unrouted person",
         async (platform) => {
-            const manager = frontAgents([])
-            const { service, inboundEvents, catalog } = await build()
+            const manager = mockEntityManager()
+            const { service, inboundEvents, catalog } = await build({}, [])
 
             await expect(
                 service.acceptMeta(CONNECTION, metaMessage({ platform, visitor: null }), manager),
@@ -361,8 +352,8 @@ const registerMetaGuestNames = () => {
     )
 
     it("preserves an empty visitor name supplied by Meta", async () => {
-        const manager = frontAgents([FRONT_AGENT])
-        const { service, conversations, catalog } = await build()
+        const manager = mockEntityManager()
+        const { service, conversations, catalog } = await build({}, [FRONT_AGENT])
 
         await expect(service.acceptMeta(CONNECTION, metaMessage({ visitor: "" }), manager)).resolves.toBeUndefined()
         expect(catalog.get).not.toHaveBeenCalled()
@@ -409,7 +400,20 @@ interface Setup {
     readonly existing?: ConversationRef
 }
 
-const build = async (setup: Setup = {}) => {
+const bindingOf = (agent: FrontAgent) => ({
+    id: agent.id,
+    module: "chatbot",
+    name: "Bot",
+    access: "auto" as const,
+    purpose: "inbound_chat" as const,
+})
+
+const build = async (setup: Setup = {}, front: ReadonlyArray<FrontAgent> = []) => {
+    const [first] = front
+    const bindings = mock<AgentBindingsService>()
+    bindings.routeInbound.mockResolvedValue({ front: first === undefined ? null : bindingOf(first), handovers: [] })
+    const agents = mock<AgentDirectoryService>()
+    agents.greetingOf.mockResolvedValue(first === undefined ? null : first.greeting)
     const queue = mock<ChatTurnQueue>()
     queue.enqueueChatTurn.mockResolvedValue(undefined)
     const connections = mock<ConnectionsService>()
@@ -447,6 +451,8 @@ const build = async (setup: Setup = {}) => {
             { provide: AgentMessagesService, useValue: messages },
             { provide: InboundEventsService, useValue: inboundEvents },
             { provide: ZaloCredentialsService, useValue: zalo },
+            { provide: AgentBindingsService, useValue: bindings },
+            { provide: AgentDirectoryService, useValue: agents },
         ],
     }).compile()
     return {
@@ -458,6 +464,7 @@ const build = async (setup: Setup = {}) => {
         inboundEvents,
         zalo,
         catalog,
+        bindings,
     }
 }
 

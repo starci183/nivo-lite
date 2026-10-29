@@ -4,6 +4,7 @@ export type {
     InstallationLifecycle,
     InstallationMode,
     InstallationRecord,
+    InstallationSettings,
     InstallationStatus,
     RecordInstallation,
     OptionalRowId,

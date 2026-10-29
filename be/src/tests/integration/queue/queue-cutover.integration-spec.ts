@@ -7,10 +7,9 @@ import type { LiteWorld } from "../../world/lite-world.service"
 import { CONTRACT_MIGRATION, EXPAND_MIGRATION, cutoverSandbox } from "../../world/queue-cutover-sandbox.service"
 import { redisJobsModules } from "../../world/redis-capabilities.options"
 import { startQueueRelay, transportOf, waitForProof } from "../../world/redis-proof.service"
+import { seedCutoverOutbox, seedCutoverRaw } from "../../fixtures/builders/cutover-seeds.builder"
 import { useTestWorld } from "../../world/use-test-world"
 import {
-    seedCutoverOutbox,
-    seedCutoverRaw,
     cutoverRows,
     originalCutoverRows,
     cutoverClaims,

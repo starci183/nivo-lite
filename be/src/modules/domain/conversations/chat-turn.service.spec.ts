@@ -1,12 +1,13 @@
-import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AgentConversationsErrorCode, AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { TurnConversation } from "@modules/domain/agent-conversations"
 import { AgentMessagesErrorCode, AgentMessagesService } from "@modules/domain/agent-messages"
 import { ChannelReceiptsService } from "@modules/domain/channel-receipts"
 import { ChannelDeliveryService } from "@modules/domain/channels"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
+import type { InstallationRecord, InstallationSettings } from "@modules/domain/module-installations"
 import { CLOCK } from "@modules/platform/clock"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
@@ -21,7 +22,22 @@ import type {
     ChatTurnRuntime,
     CustomerOutcomes,
 } from "./conversations.contracts"
-import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
+
+/** The installation of the conversation agent, carrying the given settings. */
+const installationOf = (settings: InstallationSettings): InstallationRecord => ({
+    id: "inst-1",
+    workspaceId: "ws-1",
+    moduleKey: "chatbot",
+    name: "Chatbot",
+    isMulti: false,
+    agentId: "agent-1",
+    status: "live",
+    operatingMode: "autopilot",
+    liveEnabled: true,
+    activeContextVersionId: null,
+    settings,
+    createdAt: "2026-10-12T10:00:00.000Z",
+})
 
 const registerRunFromJob = () => {
     describe("runFromJob", () => {
@@ -253,9 +269,9 @@ const registerHoldingReplies = () => {
         "sends the owner own holding line, trimmed and bounded, and falls back to the default " +
             "when it is empty or unset",
         async () => {
-            const custom = await build({ setting: [{ holdingMessage: `  ${"x".repeat(500)}  ` }] })
-            const blank = await build({ setting: [{ holdingMessage: "   " }] })
-            const unset = await build({ setting: [{ holdingMessage: null }] })
+            const custom = await build({ setting: { holdingMessage: `  ${"x".repeat(500)}  ` } })
+            const blank = await build({ setting: { holdingMessage: "   " } })
+            const unset = await build({ setting: { holdingMessage: null } })
 
             await custom.service.run(turnPayload)
             await blank.service.run(turnPayload)
@@ -360,7 +376,7 @@ const conversation = (patch: Partial<TurnConversation> = {}): TurnConversation =
 interface Setup {
     readonly conversation?: TurnConversation | null
     readonly message?: boolean
-    readonly setting?: ReadonlyArray<unknown>
+    readonly setting?: InstallationSettings
     readonly retry?: boolean
     readonly held?: boolean
     readonly sent?: boolean
@@ -393,8 +409,8 @@ const pluggable = () => {
 }
 
 const build = async (setup: Setup = {}) => {
-    const em = mockEntityManager()
-    answerByTable(em, { "public.module_installations": setup.setting ?? [] })
+    const installations = mock<InstallationRecordsService>()
+    installations.ofAgent.mockResolvedValue(setup.setting === undefined ? null : installationOf(setup.setting))
     const conversations = mock<AgentConversationsService>()
     conversations.turnOf.mockResolvedValue(
         setup.conversation === null
@@ -427,7 +443,6 @@ const build = async (setup: Setup = {}) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChatTurnService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>(catalog) },
             { provide: CHAT_TURN_EXTENSIONS, useValue: mock<ChatTurnExtensions>(extensions) },
@@ -436,11 +451,12 @@ const build = async (setup: Setup = {}) => {
             { provide: AgentMessagesService, useValue: messages },
             { provide: ChannelReceiptsService, useValue: receipts },
             { provide: ChannelDeliveryService, useValue: delivery },
+            { provide: InstallationRecordsService, useValue: installations },
         ],
     }).compile()
     return {
         service: moduleRef.get(ChatTurnService),
-        em,
+        installations,
         conversations,
         messages,
         receipts,

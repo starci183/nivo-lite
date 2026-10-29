@@ -327,4 +327,22 @@ describe("AgentDirectoryService", () => {
             await expect((await build(em)).firstActiveCardOfModule("w1", "accounting")).resolves.toBeNull()
         })
     })
+
+    describe("greetingOf", () => {
+        it("answers the greeting of the agent", async () => {
+            const em = mockEntityManager({ findOne: [AgentEntity, Object.assign(agentEntityOf(), { greeting: "Hi" })] })
+
+            await expect((await build(em)).greetingOf("w1", "a1")).resolves.toBe("Hi")
+            expect(em.findOne).toHaveBeenCalledWith(AgentEntity, {
+                select: { greeting: true },
+                where: { workspaceId: "w1", id: "a1" },
+            })
+        })
+
+        it("answers null when the agent is not there", async () => {
+            const em = mockEntityManager({ findOne: [AgentEntity, null] })
+
+            await expect((await build(em)).greetingOf("w1", "a1")).resolves.toBeNull()
+        })
+    })
 })

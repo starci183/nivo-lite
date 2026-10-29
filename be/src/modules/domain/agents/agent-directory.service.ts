@@ -227,6 +227,15 @@ export class AgentDirectoryService {
         return agent === null ? null : toSheet(agent)
     }
 
+    /** The greeting that opens a visit with an agent of the workspace; null when the agent is not there. */
+    async greetingOf(workspaceId: string, agentId: string): Promise<string | null> {
+        const agent = await this.entityManager.findOne(AgentEntity, {
+            select: { greeting: true },
+            where: { workspaceId, id: agentId },
+        })
+        return agent === null ? null : agent.greeting
+    }
+
     /** The oldest active agent of a module in the workspace; null when the department has none. */
     async firstActiveCardOfModule(workspaceId: string, module: string): Promise<OptionalAgentCard> {
         const agent = await this.entityManager.findOne(AgentEntity, {

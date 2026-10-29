@@ -35,10 +35,9 @@ import { cassoCredits, isCassoError } from "./casso.policy"
 import { BillingError, BillingErrorCode } from "./errors/billing.error"
 import { PaymentProofService } from "./payment-proof.service"
 import { payosBodyOf, readPayosDelivery } from "./payos.policy"
-import type { ConnectionStateRead } from "./billing-reads.contracts"
 import { isSepayPing, sepayPayloadOf } from "./sepay.policy"
 import { parseJsonObject } from "./webhook-body.policy"
-import { ConnectionEntity } from "@modules/domain/connections"
+import { ConnectionFeedReadsService } from "@modules/domain/connections"
 import { AgentEntity } from "@modules/domain/agents"
 
 /** The locale of the lines billing writes into the shared records: the workspace owners read them in Vietnamese. */
@@ -86,6 +85,7 @@ export class BankFeedService {
         private readonly transactions: TransactionsService,
         private readonly bankFeedInbox: BankFeedReceiptService,
         private readonly sepayPage: SepayConnectionService,
+        private readonly connections: ConnectionFeedReadsService,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
     ) {}
 
@@ -206,15 +206,10 @@ export class BankFeedService {
         return this.entityManager.transaction(async (manager) => {
             const pending = await this.bankFeedInbox.lock(manager, message.provider, message.deliveryId)
             if (pending === undefined) return []
-            const owner = await manager
-                .createQueryBuilder(ConnectionEntity, "c")
-                .select("c.workspace_id", "workspace_id")
-                .where("c.id = :connectionId", { connectionId: pending.payload.connection })
-                .limit(1)
-                .getRawOne<{ workspace_id: string }>()
+            const workspaceId = await this.connections.workspaceOf(pending.payload.connection, manager)
             const answers: Array<FeedCreditAnswer> = []
-            if (owner !== undefined) {
-                const connection = { connectionId: pending.payload.connection, workspaceId: owner.workspace_id }
+            if (workspaceId !== undefined) {
+                const connection = { connectionId: pending.payload.connection, workspaceId }
                 await eachInOrder(pending.payload.credits, async (credit) => {
                     answers.push(await this.feedInTransaction(manager, connection, credit))
                 })
@@ -251,12 +246,7 @@ export class BankFeedService {
         credit: IncomingCredit,
     ): Promise<FeedCreditAnswer> {
         const at = this.clock.now()
-        const state = await tx
-            .createQueryBuilder(ConnectionEntity, "c")
-            .select(["c.name AS name", "c.environment AS environment"])
-            .where("c.id = :connectionId", { connectionId: connection.connectionId })
-            .limit(1)
-            .getRawOne<ConnectionStateRead>()
+        const state = await this.connections.stateOf(connection.connectionId, tx)
         await callDbFunction(tx, "public.connection_mark_fed", [
             connection.connectionId,
             at,

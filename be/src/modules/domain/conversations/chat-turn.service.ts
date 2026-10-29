@@ -1,13 +1,12 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { TurnConversation } from "@modules/domain/agent-conversations"
 import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { ChannelDeliveryService } from "@modules/domain/channels"
 import { ChannelReceiptsService } from "@modules/domain/channel-receipts"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
@@ -18,18 +17,6 @@ import type { ChatTurnPayload } from "@modules/queues/chat-turn"
 import { InjectChatTurnExtensions } from "./conversations.decorators"
 import type { CustomerTurn, ChatTurnExtensions, ChatTurnProposal, TurnVerdict } from "./conversations.contracts"
 import { ConversationsLogEvent } from "./conversations.log-events"
-
-/** The owner's holding line as a module installation stores it. */
-interface HoldingSettingRow {
-    /** The configured text, null when none is set. */
-    readonly holdingMessage: string | null
-}
-
-const isHoldingSettingRow = (value: unknown): value is HoldingSettingRow =>
-    typeof value === "object" &&
-    value !== null &&
-    "holdingMessage" in value &&
-    (value.holdingMessage === null || typeof value.holdingMessage === "string")
 
 const LOCALE = "vi"
 /** A holding line goes out at most once per conversation per hour. */
@@ -50,7 +37,6 @@ const UNAVAILABLE = "openclaw_unavailable"
  */
 export class ChatTurnService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectChatTurnExtensions() private readonly extensions: ChatTurnExtensions,
@@ -59,6 +45,7 @@ export class ChatTurnService {
         private readonly messages: AgentMessagesService,
         private readonly receipts: ChannelReceiptsService,
         private readonly delivery: ChannelDeliveryService,
+        private readonly installations: InstallationRecordsService,
     ) {}
 
     /** Runs the job payload a worker claimed; a payload that is not a chat turn is ignored. */
@@ -165,17 +152,9 @@ export class ChatTurnService {
 
     /** The owner own words (module settings), else the default holding line. */
     private async holdingText(conversation: TurnConversation): Promise<string> {
-        const rows: ReadonlyArray<unknown> = await this.entityManager
-            .createQueryBuilder()
-            .select("m.settings ->> 'holdingMessage'", "holdingMessage")
-            .from("public.module_installations", "m")
-            .where("m.workspace_id = :workspaceId AND m.agent_id = :agentId", {
-                workspaceId: conversation.workspaceId,
-                agentId: conversation.agent.id,
-            })
-            .limit(1)
-            .getRawMany()
-        const custom = rows.find(isHoldingSettingRow)?.holdingMessage?.trim() ?? ""
+        const installation = await this.installations.ofAgent(conversation.workspaceId, conversation.agent.id)
+        const holding = installation?.settings.holdingMessage
+        const custom = typeof holding === "string" ? holding.trim() : ""
         return custom === "" ? this.catalog.get("conversations.holdingReply", {}, LOCALE) : custom.slice(0, HOLDING_MAX)
     }
 
