@@ -4,7 +4,7 @@ import { InjectOpenclawAgentRegistry, InjectOpenclawGateway } from "@modules/int
 import type { AgentRegistryService, GatewayClient } from "@modules/integrations/openclaw"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import type { EngineAvailability, EngineStatus, Processor } from "./agents.contracts"
+import type { EngineAvailability, EngineStatus, Processor, SyncCheckReader } from "./agents.contracts"
 import { InjectAgentsOptions, InjectInstallations } from "./agents.decorators"
 import type { AgentsOptions } from "./agents.options"
 import type { InstallationDirectory } from "./agents.port"
@@ -49,7 +49,7 @@ export class EngineStatusService {
     async status(
         userId: string,
         workspaceId: string,
-        lastSyncCheck: () => Promise<string | null>,
+        lastSyncCheck: SyncCheckReader,
     ): Promise<EngineStatus> {
         await this.members.require(userId, workspaceId)
         const lastSyncCheckAt = await lastSyncCheck()

@@ -8,3 +8,6 @@ export interface MessageCursor {
 
 /** A message position, or null when there is none. */
 export type OptionalMessageCursor = MessageCursor | null
+
+/** A creation instant in the database's own text, or null when there is none. */
+export type OptionalCreatedAt = string | null

@@ -73,3 +73,9 @@ export interface AgentSheet {
     /** When the agent was created. */
     readonly createdAt: Date
 }
+
+/** An agent card, or null when there is none. */
+export type OptionalAgentCard = AgentCard | null
+
+/** An agent sheet, or null when there is none. */
+export type OptionalAgentSheet = AgentSheet | null

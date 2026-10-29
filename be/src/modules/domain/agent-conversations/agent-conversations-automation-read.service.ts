@@ -1,10 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type {
-    AutomationChatLead,
-    AutomationConversationRead,
-} from "./agent-conversations-automation-read.contracts"
+import type { AutomationConversationRead, OptionalAutomationConversation } from "./agent-conversations-automation-read.contracts"
 import { AgentConversationEntity } from "./persistence/entities"
 
 /** The conversation columns an executor reads. */
@@ -25,7 +22,7 @@ export class AgentConversationsAutomationReadService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** One conversation of a workspace, or none. */
-    conversation(workspaceId: string, conversationId: string): Promise<AutomationConversationRead | undefined> {
+    conversation(workspaceId: string, conversationId: string): Promise<OptionalAutomationConversation> {
         return this.entityManager
             .createQueryBuilder(AgentConversationEntity, "c")
             .select(CONVERSATION_COLUMNS)
@@ -35,7 +32,7 @@ export class AgentConversationsAutomationReadService {
     }
 
     /** The latest real conversation of a lead (website chat, Telegram...): where a message to the customer leaves. */
-    latestOfLead(workspaceId: string, leadId: string): Promise<AutomationConversationRead | undefined> {
+    latestOfLead(workspaceId: string, leadId: string): Promise<OptionalAutomationConversation> {
         return this.entityManager
             .createQueryBuilder(AgentConversationEntity, "c")
             .select(CONVERSATION_COLUMNS)

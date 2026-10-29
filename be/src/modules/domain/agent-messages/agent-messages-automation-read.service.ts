@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { AutomationLastCustomerMessage } from "./agent-messages-automation-read.contracts"
+import type { OptionalLastCustomerMessage } from "./agent-messages-automation-read.contracts"
 import { AgentMessageEntity } from "./persistence/entities"
 
 @Injectable()
@@ -10,7 +10,7 @@ export class AgentMessagesAutomationReadService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** When the customer last wrote in a conversation, or none. */
-    lastCustomerMessage(conversationId: string): Promise<AutomationLastCustomerMessage | undefined> {
+    lastCustomerMessage(conversationId: string): Promise<OptionalLastCustomerMessage> {
         return this.entityManager
             .createQueryBuilder(AgentMessageEntity, "m")
             .select("m.created_at", "created_at")

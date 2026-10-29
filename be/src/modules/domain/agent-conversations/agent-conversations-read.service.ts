@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { In, IsNull, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { CustomerChatRef, TestChatRef } from "./agent-conversations-read.contracts"
+import type { CustomerChatRef, OptionalCustomerChatRef, TestChatRef } from "./agent-conversations-read.contracts"
 import { AgentConversationEntity } from "./persistence/entities"
 
 @Injectable()
@@ -41,7 +41,7 @@ export class AgentConversationsReadService {
         workspaceId: string,
         conversationId: string,
         manager: EntityManager = this.entityManager,
-    ): Promise<CustomerChatRef | null> {
+    ): Promise<OptionalCustomerChatRef> {
         const chat = await manager.findOne(AgentConversationEntity, {
             select: { id: true, leadId: true },
             where: { workspaceId, kind: "customer", id: conversationId },
@@ -54,7 +54,7 @@ export class AgentConversationsReadService {
         workspaceId: string,
         leadId: string,
         manager: EntityManager = this.entityManager,
-    ): Promise<CustomerChatRef | null> {
+    ): Promise<OptionalCustomerChatRef> {
         const chat = await manager.findOne(AgentConversationEntity, {
             select: { id: true, leadId: true },
             where: { workspaceId, kind: "customer", leadId },

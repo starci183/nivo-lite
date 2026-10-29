@@ -17,3 +17,6 @@ export interface AutomationChatLead {
     /** The lead id. */
     readonly lead_id: string
 }
+
+/** A conversation as the automations read it, or none. */
+export type OptionalAutomationConversation = AutomationConversationRead | undefined

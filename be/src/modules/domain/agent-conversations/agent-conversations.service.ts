@@ -22,6 +22,7 @@ import type {
     OptionalConversationParty,
     RememberPartyParams,
 } from "./agent-conversations.contracts"
+import type { OptionalInstallationId } from "./agent-conversations.contracts"
 import { AgentConversationsError, AgentConversationsErrorCode } from "./errors/agent-conversations.error"
 import { AgentConversationEntity } from "./persistence/entities"
 
@@ -125,7 +126,7 @@ export class AgentConversationsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** The installation that owns a conversation of the workspace; null when there is no such row or it names no installation. */
-    async installationIdOf(workspaceId: string, id: string): Promise<string | null> {
+    async installationIdOf(workspaceId: string, id: string): Promise<OptionalInstallationId> {
         const row = await this.entityManager.findOne(AgentConversationEntity, {
             select: { installationId: true },
             where: { workspaceId, id },
