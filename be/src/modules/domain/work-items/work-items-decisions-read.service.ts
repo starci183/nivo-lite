@@ -26,8 +26,15 @@ export class WorkItemsDecisionsReadService {
             .getRawMany<WaitingDecision>()
     }
 
-    /** How many work items of the workspace carry a dedupe key that starts with `prefix`. */
-    async countWithKeyPrefix(workspaceId: string, prefix: string): Promise<number> {
+    /** How many work items of the workspace wait for a decision in the department. */
+    countWaiting(workspaceId: string, department: string): Promise<number> {
+        return this.entityManager.count(WorkItemEntity, {
+            where: { workspaceId, department, status: "waiting_decision" },
+        })
+    }
+
+    /** How many work items of the workspace carry a dedupe key that starts with `prefix`, optionally of one action. */
+    async countWithKeyPrefix(workspaceId: string, prefix: string, action?: string): Promise<number> {
         const counted = await this.entityManager
             .createQueryBuilder(WorkItemEntity, "w")
             .select("CAST(COUNT(*) AS int)", "attempts")
@@ -35,6 +42,7 @@ export class WorkItemsDecisionsReadService {
                 workspaceId,
                 pattern: `${prefix}%`,
             })
+            .andWhere(action === undefined ? "true" : "w.action = :action", { action })
             .getRawOne<{ attempts: number }>()
         return counted?.attempts ?? 0
     }

@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { WorkItemEntity } from "@modules/domain/work-items"
-import { WorkspaceMemberEntity, WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { WorkItemsDecisionsReadService } from "@modules/domain/work-items"
+import { MemberRosterService, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -21,6 +21,8 @@ import {
     HiringOfferEntity,
     HiringOnboardingEntity,
 } from "./persistence/entities"
+
+type RosterMember = Awaited<ReturnType<MemberRosterService["oldestOf"]>>[number]
 
 const NOW = "2026-10-15T03:00:00.000Z"
 
@@ -64,9 +66,13 @@ const CANDIDATE: CandidateRecord = {
 
 const cvOf = builder<CandidateCvOutput>({ url: "https://files.test/cv", name: "cv-minh.pdf", mime: "application/pdf" })
 
-const build = async (em: MockEntityManager) => {
+const build = async (em: MockEntityManager, waiting = 0, members: ReadonlyArray<RosterMember> = []) => {
     const clock = new FakeClock(NOW)
-    const members = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(MEMBER)) })
+    const roster = mock<MemberRosterService>()
+    roster.oldestOf.mockResolvedValue([...members])
+    const decisions = mock<WorkItemsDecisionsReadService>()
+    decisions.countWaiting.mockResolvedValue(waiting)
+    const memberService = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(MEMBER)) })
     const settings = mock<HiringSettingsService>({ ensure: jest.fn(() => Promise.resolve(SETTINGS)) })
     const links = mock<HiringLinksService>({ siteOrigin: jest.fn(() => "https://nivo.vn") })
     const candidates = mock<HiringCandidatesService>({
@@ -78,19 +84,20 @@ const build = async (em: MockEntityManager) => {
             HiringWorkbenchService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: clock },
-            { provide: WorkspaceMembersService, useValue: members },
+            { provide: WorkspaceMembersService, useValue: memberService },
+            { provide: MemberRosterService, useValue: roster },
+            { provide: WorkItemsDecisionsReadService, useValue: decisions },
             { provide: HiringSettingsService, useValue: settings },
             { provide: HiringLinksService, useValue: links },
             { provide: HiringCandidatesService, useValue: candidates },
         ],
     }).compile()
-    return { service: moduleRef.get(HiringWorkbenchService), members, candidates, links }
+    return { service: moduleRef.get(HiringWorkbenchService), members: memberService, candidates, links }
 }
 
 /** The counts the ribbon and the approvals read, in the order the service asks for them. */
-const counts = (waiting: number, figures: ReadonlyArray<number>) =>
+const counts = (figures: ReadonlyArray<number>) =>
     [
-        [WorkItemEntity, waiting],
         [HiringJobEntity, figures[0] ?? 0],
         [HiringJobEntity, figures[1] ?? 0],
         [HiringCandidateEntity, figures[2] ?? 0],
@@ -207,10 +214,9 @@ describe("HiringWorkbenchService populated views", () => {
                 [HiringInterviewEntity, [interviewRow()]],
                 [HiringOfferEntity, [offerRow()]],
                 [HiringOnboardingEntity, []],
-                [WorkspaceMemberEntity, []],
                 [HiringAvailabilityEntity, []],
             ],
-            count: counts(0, []),
+            count: counts([]),
         })
         const { service, links } = await build(em)
         links.job.mockReturnValue("https://nivo.vn/tiem-ca-phe/cashier")

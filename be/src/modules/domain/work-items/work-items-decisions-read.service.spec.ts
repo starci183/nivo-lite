@@ -46,4 +46,21 @@ describe("WorkItemsDecisionsReadService", () => {
             ],
         ])
     })
+
+    it("counts the work items a department has waiting for a decision", async () => {
+        const em = mockEntityManager({ count: [WorkItemEntity, 4] })
+
+        await expect((await build(em)).countWaiting("ws-1", "hiring")).resolves.toBe(4)
+        expect(em.count).toHaveBeenCalledWith(WorkItemEntity, {
+            where: { workspaceId: "ws-1", department: "hiring", status: "waiting_decision" },
+        })
+    })
+
+    it("narrows the key count to one action when asked", async () => {
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [{ getRawOne: { attempts: 2 } }])
+
+        await expect((await build(em)).countWithKeyPrefix("ws-1", "offer:o1:", "send_offer")).resolves.toBe(2)
+        expect(fake?.callsOf("andWhere")).toEqual([["w.action = :action", { action: "send_offer" }]])
+    })
 })
