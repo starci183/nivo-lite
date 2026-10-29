@@ -1,6 +1,3 @@
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
-import { WorkThreadEntity } from "./entities"
-
 /**
  * The columns a thread read selects, as the contract carries them: the instants as `to_json` text, which keeps the microseconds the
  * page cursor seeks by.
@@ -20,10 +17,3 @@ export const THREAD_COLUMNS = [
 /** The same columns for an `INSERT ... RETURNING`, where the table has no alias. */
 export const THREAD_RETURNING =
     "id, workspace_id, title, lead_id, order_id, status, created_by, to_json(created_at) #>> '{}' AS created_at, to_json(updated_at) #>> '{}' AS updated_at"
-
-/** A read of the threads of one workspace; the caller adds its own filter, order, bound and lock. */
-export const selectThreads = (manager: EntityManager, workspaceId: string): SelectQueryBuilder<WorkThreadEntity> =>
-    manager
-        .createQueryBuilder(WorkThreadEntity, "t")
-        .select([...THREAD_COLUMNS])
-        .where("t.workspace_id = :workspaceId", { workspaceId })

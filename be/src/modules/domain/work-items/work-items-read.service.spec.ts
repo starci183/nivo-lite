@@ -56,4 +56,20 @@ describe("WorkItemsReadService", () => {
         expect(fake?.callsOf("orderBy")).toEqual([["w.createdAt", "ASC"]])
         expect(fake?.callsOf("limit")).toEqual([[100]])
     })
+
+    it("reads the newest work items of one department, bounded", async () => {
+        const em = mockEntityManager()
+        const row = { id: "w3", action: "send_quote", at: "2026-10-12T00:00:00.000Z" }
+        const [fake] = queueQueryBuilders(em, [{ getRawMany: [row] }])
+
+        await expect((await build(em)).recentOfDepartment("ws-1", "sales", 8)).resolves.toEqual([row])
+        expect(fake?.callsOf("where")).toEqual([
+            [
+                "w.workspaceId = :workspaceId AND w.department = :department",
+                { workspaceId: "ws-1", department: "sales" },
+            ],
+        ])
+        expect(fake?.callsOf("addSelect")).toContainEqual(["w.leadId", "leadId"])
+        expect(fake?.callsOf("limit")).toEqual([[8]])
+    })
 })

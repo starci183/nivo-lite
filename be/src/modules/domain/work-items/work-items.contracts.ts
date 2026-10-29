@@ -300,6 +300,9 @@ export interface WorkItemRecord {
     installation_id: string | null
 }
 
+/** The installation that owns an item, or null when there is no such item or it names none. */
+export type OptionalInstallationId = string | null
+
 /** An item closed as settled. */
 export interface ClosedClaim {
     /** The item id. */

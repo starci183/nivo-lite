@@ -33,7 +33,6 @@ import {
     ShiftsShiftEntity,
     ShiftsSwapRequestEntity,
 } from "./persistence/entities"
-import { profileIdOfMember } from "./persistence/shifts-profile.query"
 import { isReminderOn } from "./persistence/shifts-pipeline.query"
 import { MANAGER_ROLES } from "./policies/access-roles.policy"
 import { isDay } from "./policies/input-text.policy"
@@ -472,6 +471,6 @@ export class ShiftsWorkbenchService {
     }
 
     private profileOfMember(workspaceId: string, userId: string, staffRowId: string | null): Promise<string | null> {
-        return profileIdOfMember(this.entityManager, workspaceId, userId, staffRowId)
+        return this.data.profileIdOfMember(workspaceId, userId, staffRowId)
     }
 }

@@ -4,8 +4,11 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ZaloWizardDraftEntity } from "./persistence/entities"
 import { ZaloWizardDraftsService } from "./zalo-wizard-drafts.service"
 
-const draftOf = (keys: Pick<ZaloWizardDraftEntity, "appId" | "appSecret" | "oaSecret">): ZaloWizardDraftEntity =>
-    Object.assign(new ZaloWizardDraftEntity(), { connectionId: "c-1" }, keys)
+/** The criteria that name the draft of connection `c-1`. */
+const CONNECTION = { connectionId: "c-1" }
+
+const draftOf = (appId: string | null, appSecret: string | null, oaSecret: string | null): ZaloWizardDraftEntity =>
+    Object.assign(new ZaloWizardDraftEntity(), CONNECTION, { appId, appSecret, oaSecret })
 
 const build = async (found: ZaloWizardDraftEntity | null = null) => {
     const em = mockEntityManager({
@@ -20,7 +23,7 @@ const build = async (found: ZaloWizardDraftEntity | null = null) => {
 
 describe("ZaloWizardDraftsService", () => {
     it("reads the app and OA keys waiting for the connection", async () => {
-        const { service, em } = await build(draftOf({ appId: "app-1", appSecret: "app-secret", oaSecret: "oa-secret" }))
+        const { service, em } = await build(draftOf("app-1", "app-secret", "oa-secret"))
 
         await expect(service.draftOf("c-1")).resolves.toEqual({
             present: true,
@@ -28,14 +31,14 @@ describe("ZaloWizardDraftsService", () => {
             appSecret: "app-secret",
             oaSecret: "oa-secret",
         })
-        expect(em.findOneBy).toHaveBeenCalledWith(ZaloWizardDraftEntity, { connectionId: "c-1" })
+        expect(em.findOneBy).toHaveBeenCalledWith(ZaloWizardDraftEntity, CONNECTION)
     })
 
     it("answers empty keys for the null columns of a present draft", async () => {
-        const { service, em } = await build(draftOf({ appId: null, appSecret: null, oaSecret: null }))
+        const { service, em } = await build(draftOf(null, null, null))
 
         await expect(service.draftOf("c-1")).resolves.toEqual({ present: true, appId: "", appSecret: "", oaSecret: "" })
-        expect(em.findOneBy).toHaveBeenCalledWith(ZaloWizardDraftEntity, { connectionId: "c-1" })
+        expect(em.findOneBy).toHaveBeenCalledWith(ZaloWizardDraftEntity, CONNECTION)
     })
 
     it("answers an absent draft when the connection has none", async () => {
@@ -47,7 +50,7 @@ describe("ZaloWizardDraftsService", () => {
             appSecret: "",
             oaSecret: "",
         })
-        expect(em.findOneBy).toHaveBeenCalledWith(ZaloWizardDraftEntity, { connectionId: "c-1" })
+        expect(em.findOneBy).toHaveBeenCalledWith(ZaloWizardDraftEntity, CONNECTION)
     })
 
     it("drops the draft of the connection after its keys are sealed", async () => {
@@ -55,6 +58,6 @@ describe("ZaloWizardDraftsService", () => {
 
         await expect(service.dropDraft("c-1")).resolves.toBeUndefined()
 
-        expect(em.delete).toHaveBeenCalledWith(ZaloWizardDraftEntity, { connectionId: "c-1" })
+        expect(em.delete).toHaveBeenCalledWith(ZaloWizardDraftEntity, CONNECTION)
     })
 })

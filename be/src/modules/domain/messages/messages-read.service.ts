@@ -7,6 +7,8 @@ import type {
     LinePageQuery,
     LineReader,
     LineText,
+    OptionalLineText,
+    ReadInstant,
     ReadMark,
     ThreadLine,
 } from "./messages-read.contracts"
@@ -60,7 +62,7 @@ export class MessagesReadService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** Every line of the workspace as one conversation: unread since `readAt`, and the newest line. */
-    async activityOfWorkspace(workspaceId: string, reader: LineReader, readAt: string | null): Promise<LineActivity> {
+    async activityOfWorkspace(workspaceId: string, reader: LineReader, readAt: ReadInstant): Promise<LineActivity> {
         const unread = await this.entityManager
             .createQueryBuilder(MessageEntity, "m")
             .select("LEAST(99, count(*))::int", "unread")
@@ -146,7 +148,7 @@ export class MessagesReadService {
     }
 
     /** The author and text of one message of the workspace; undefined when there is none. */
-    textOf(workspaceId: string, messageId: string): Promise<LineText | undefined> {
+    textOf(workspaceId: string, messageId: string): Promise<OptionalLineText> {
         return this.entityManager
             .createQueryBuilder(MessageEntity, "m")
             .select("m.id", "id")

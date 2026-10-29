@@ -1,12 +1,12 @@
 import { Test } from "@nestjs/testing"
 import type { WorkThreadRecord } from "./work-threads.contracts"
-import { toThread } from "./thread.mapper"
+import { firstThreadRecord, toThread } from "./thread.mapper"
 
 const SUBJECT = Symbol("thread.mapper")
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { toThread } }],
+        providers: [{ provide: SUBJECT, useValue: { toThread, firstThreadRecord } }],
     }).compile()
     return moduleRef.get<typeof import("./thread.mapper")>(SUBJECT)
 }
@@ -45,5 +45,17 @@ describe("thread mapper", () => {
         const subject = await buildSubject()
 
         expect(subject.toThread(threadRow({ status: "mystery" })).status).toBe("open")
+    })
+
+    it("takes the first well-formed row a write answered", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.firstThreadRecord([{ id: 1 }, threadRow()])).toEqual(threadRow())
+    })
+
+    it.each([undefined, {}, [], [null]])("takes no row from the raw answer %p", async (raw) => {
+        const subject = await buildSubject()
+
+        expect(subject.firstThreadRecord(raw)).toBeUndefined()
     })
 })

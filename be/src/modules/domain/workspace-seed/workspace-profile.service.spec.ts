@@ -10,6 +10,7 @@ import {
     profileWireOf,
     seedInstallationOf as installationOf,
 } from "@tests/fixtures/builders/workspace-seed.builder"
+import { profileDocumentOf } from "@tests/fixtures/builders/workspace-profile-spec.builder"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
@@ -21,7 +22,7 @@ import { PROFILE_RECEIPT_PREFIX } from "./messages/workspace-seed.messages"
 import { HAKUEN_PROFILE } from "./profiles/hakuen-profile.templates"
 import { WORKSPACE_PROFILES } from "./profiles/workspace-profiles.templates"
 import { ProfileActivationService } from "./profile-activation.service"
-import type { ProfileAgent, ProfileDocument, ProfileReport, WorkspaceProfile } from "./workspace-profile.contracts"
+import type { ProfileAgent, ProfileReport, WorkspaceProfile } from "./workspace-profile.contracts"
 import { WorkspaceProfileService } from "./workspace-profile.service"
 import {
     SEED_AGENTS,
@@ -58,13 +59,6 @@ const agentOf = (handle: string, room: string | null): ProfileAgent => ({
               ],
     setup: [{ gate: "tone", evidence: "warm" }],
 })
-const documentOf = (title: string): ProfileDocument => ({
-    title,
-    topic: "topic",
-    module: null,
-    visibility: "internal",
-    content: `# ${title}`,
-})
 const PROFILE: WorkspaceProfile = {
     key: "test",
     workspaceName: "Test",
@@ -82,7 +76,7 @@ const PROFILE: WorkspaceProfile = {
         },
     ],
     connectors: [],
-    documents: [documentOf("new"), documentOf("same"), documentOf("changed")],
+    documents: [profileDocumentOf("new"), profileDocumentOf("same"), profileDocumentOf("changed")],
 }
 const EMPTY: WorkspaceProfile = { ...PROFILE, agents: [], documents: [], rules: [] }
 const PROFILE_WIRE = profileWireOf("hakuen")

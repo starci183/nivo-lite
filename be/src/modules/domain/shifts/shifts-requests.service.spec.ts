@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
+import type { EntityClass, MockEntityManager } from "@starci/jest-preset"
 import { ApprovalGate } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -72,6 +72,9 @@ const shift: Shift = {
     staffId: "staff-1",
     status: "published",
 }
+
+/** The `update` call that stamps one row of the workspace: the entity, its key and the changes. */
+const updatedRow = (entity: EntityClass, id: string, changes: object) => [entity, { id, workspaceId: "ws-1" }, changes]
 
 const build = async (entityManager: MockEntityManager, setup = setupOf()) => {
     const catalog = mock<MessageCatalog>()
@@ -165,7 +168,7 @@ describe("ShiftsRequestsService requestSwap", () => {
             [CREATE_SWAP, ["ws-1", "swap", "shift-1", "staff-1", "staff-2", "Appointment"]],
         ])
         expect(em.update.mock.calls).toEqual([
-            [ShiftsSwapRequestEntity, { id: "swap-1", workspaceId: "ws-1" }, { checks: [], workItemId: "work-1" }],
+            updatedRow(ShiftsSwapRequestEntity, "swap-1", { checks: [], workItemId: "work-1" }),
         ])
     })
 })
@@ -221,7 +224,7 @@ describe("ShiftsRequestsService requestSwap", () => {
         ])
         expect(em.query.mock.calls).toEqual([[CREATE_SWAP, ["ws-1", "claim", "shift-1", null, "staff-1", "Available"]]])
         expect(em.update.mock.calls).toEqual([
-            [ShiftsSwapRequestEntity, { id: "", workspaceId: "ws-1" }, { checks: sentences, workItemId: "work-2" }],
+            updatedRow(ShiftsSwapRequestEntity, "", { checks: sentences, workItemId: "work-2" }),
         ])
     })
 })
@@ -405,7 +408,7 @@ describe("ShiftsRequestsService requestLeave", () => {
             [CREATE_LEAVE, ["ws-1", "staff-1", "2026-10-15", "2026-10-17", "  Travel  "]],
         ])
         expect(em.update.mock.calls).toEqual([
-            [ShiftsLeaveRequestEntity, { id: "leave-1", workspaceId: "ws-1" }, { workItemId: "work-1" }],
+            updatedRow(ShiftsLeaveRequestEntity, "leave-1", { workItemId: "work-1" }),
         ])
     })
 })
@@ -446,9 +449,7 @@ describe("ShiftsRequestsService requestLeave", () => {
             ["shifts.leaveAskSummary", { name: "Alice", range: "leave range", reason: "", count: 0 }, "vi"],
         ])
         expect(em.query.mock.calls).toEqual([[CREATE_LEAVE, ["ws-1", "staff-1", "2026-10-15", "2026-10-15", "  "]]])
-        expect(em.update.mock.calls).toEqual([
-            [ShiftsLeaveRequestEntity, { id: "", workspaceId: "ws-1" }, { workItemId: "work-2" }],
-        ])
+        expect(em.update.mock.calls).toEqual([updatedRow(ShiftsLeaveRequestEntity, "", { workItemId: "work-2" })])
     })
 
     it.each([

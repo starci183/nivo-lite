@@ -37,8 +37,10 @@ export class ResponsibilityReadService {
     /** The given steps of the workspace (a missing step is missing from the answer). */
     async stepsOf(workspaceId: string, responsibilityIds: ReadonlyArray<string>): Promise<Array<ResponsibilitySheet>> {
         if (responsibilityIds.length === 0) return []
+        const ids = [...new Set(responsibilityIds)]
         const steps = await this.entityManager.find(ResponsibilityEntity, {
-            where: { workspaceId, id: In([...new Set(responsibilityIds)]) },
+            where: { workspaceId, id: In(ids) },
+            take: ids.length,
         })
         return steps.map(sheetOf)
     }
@@ -46,9 +48,12 @@ export class ResponsibilityReadService {
     /** The customer of each of the given steps (a missing step is missing from the answer). */
     async leadsOf(workspaceId: string, responsibilityIds: ReadonlyArray<string>): Promise<Array<ResponsibilityLead>> {
         if (responsibilityIds.length === 0) return []
+        const ids = [...new Set(responsibilityIds)]
         const steps = await this.entityManager.find(ResponsibilityEntity, {
             select: { id: true, leadId: true },
-            where: { workspaceId, id: In([...new Set(responsibilityIds)]) },
+            where: { workspaceId, id: In(ids) },
+            order: { id: "ASC" },
+            take: ids.length,
         })
         return steps.map((step) => ({ id: step.id, leadId: step.leadId }))
     }

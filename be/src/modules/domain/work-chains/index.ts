@@ -1,4 +1,4 @@
-export { workChainsEntities, WorkChainEntity } from "./persistence/entities"
+export { workChainsEntities } from "./persistence/entities"
 export { WORK_CHAINS_ERROR_KINDS } from "./errors/work-chains.error"
 export { WORK_CHAINS_MESSAGES } from "./messages/work-chains.messages"
 export type {

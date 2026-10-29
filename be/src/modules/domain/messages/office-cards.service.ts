@@ -7,21 +7,14 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { MessagesError, MessagesErrorCode } from "./errors/messages.error"
 import { MessagesLogEvent } from "./messages.log-events"
-import type { DepartmentCardPost, OfficeCardPost, OptionalRoom } from "./office-cards.contracts"
+import type { DepartmentCardPost, OfficeCardPost, OptionalRoom, PostedCard } from "./office-cards.contracts"
 import type { MessagesScope } from "./office-lines.contracts"
 import { InjectAgentDirectory } from "./office-lines.decorators"
 import type { AgentDirectory } from "./office-lines.port"
 import { parseOfficeCard } from "./office-card.policy"
+import { postedCardOf } from "./posted-rows.policy"
 import { MessageEntity } from "./persistence/entities"
 import { CORE_LINE_AUTHOR } from "./office-lines.service"
-
-/** The stored card line: its id and the room it landed in. */
-export interface PostedCard {
-    /** The message id. */
-    readonly id: string
-    /** The room the line landed in; null is the general Office room. */
-    readonly room: OptionalRoom
-}
 
 @Injectable()
 /** Agent result cards in the Hub: one validated card line per call, spoken by the agent, in a room or routed by the database. */
@@ -100,7 +93,7 @@ export class OfficeCardsService {
             .values(values)
             .returning("id, room")
             .execute()
-        return (result.raw as Array<PostedCard>)[0]
+        return postedCardOf(result.raw)
     }
 
     private async announced(

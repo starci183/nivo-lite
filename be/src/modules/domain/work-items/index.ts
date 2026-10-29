@@ -1,4 +1,4 @@
-export { workItemsEntities, WorkItemEntity } from "./persistence/entities"
+export { workItemsEntities } from "./persistence/entities"
 export { WORK_ITEMS_ERROR_KINDS } from "./errors/work-items.error"
 export { WORK_ITEMS_MESSAGES } from "./messages/work-items.messages"
 export { CLAIM_LEASE_SECONDS } from "./work-items.contracts"
@@ -18,6 +18,6 @@ export type {
 export { WorkItemsModule } from "./work-items.module"
 export { WorkItemsService } from "./work-items.service"
 export { WorkItemsReadService } from "./work-items-read.service"
-export type { WorkException, WorkFigure } from "./work-items-read.contracts"
+export type { WorkException } from "./work-items-read.contracts"
 export { toProposal } from "./work-items.mapper"
 export type { WorkItemRecord } from "./work-items.contracts"

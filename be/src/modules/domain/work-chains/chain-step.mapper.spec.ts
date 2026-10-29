@@ -1,12 +1,12 @@
 import { Test } from "@nestjs/testing"
-import { toChainStep } from "./chain-step.mapper"
+import { firstReturnedId, firstSettledStep, toChainStep } from "./chain-step.mapper"
 import type { ChainStepRecord } from "./work-chains.contracts"
 
 const SUBJECT = Symbol("chain-step.mapper")
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { toChainStep } }],
+        providers: [{ provide: SUBJECT, useValue: { toChainStep, firstSettledStep, firstReturnedId } }],
     }).compile()
     return moduleRef.get<typeof import("./chain-step.mapper")>(SUBJECT)
 }
@@ -99,5 +99,24 @@ describe("chain step mapper", () => {
             kind: "agent",
             id: "a-2",
         })
+    })
+})
+
+describe("returned rows", () => {
+    it("takes the first settled step and the first returned id", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.firstSettledStep([{ id: 1 }, { thread_id: "t1", action: "ask" }])).toEqual({
+            thread_id: "t1",
+            action: "ask",
+        })
+        expect(subject.firstReturnedId([{ nothing: true }, { id: "step-1" }])).toBe("step-1")
+    })
+
+    it.each([undefined, {}, [], [null], [{ id: 7 }]])("takes nothing from the raw answer %p", async (raw) => {
+        const subject = await buildSubject()
+
+        expect(subject.firstSettledStep(raw)).toBeUndefined()
+        expect(subject.firstReturnedId(raw)).toBeUndefined()
     })
 })

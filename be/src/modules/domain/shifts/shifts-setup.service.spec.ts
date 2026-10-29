@@ -12,11 +12,9 @@ import {
     availabilityOf,
     coverageOf,
     nothingSaved,
-    profile,
     saved,
     settingsOf,
     shiftRowOf,
-    staffOf,
 } from "@tests/fixtures/builders/shifts-setup-params.builder"
 import { ShiftsErrorCode } from "./errors/shifts.error"
 import {
@@ -36,11 +34,15 @@ const BEFORE_SHIFT = "2026-10-12T00:45:00.000Z"
 
 const Code = ShiftsErrorCode
 
+/** The key of one row of the workspace, the criteria of a write to it. */
+const rowKey = (id: string) => ({ workspaceId: "ws-1", id })
+
 const build = async (entityManager: MockEntityManager, at: string = BEFORE_SHIFT) => {
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(memberOf())
     const data = mock<ShiftsDataService>()
     data.shiftRow.mockResolvedValue(shiftRowOf())
+    data.profileIdOfMember.mockResolvedValue("profile-1")
     const moduleRef = await Test.createTestingModule({
         providers: [
             ShiftsSetupService,
@@ -106,9 +108,7 @@ describe("ShiftsSetupService savePosition", () => {
         )
         expect(em.createQueryBuilder).toHaveBeenCalledWith(ShiftsPositionEntity, "s")
         expect(update?.callsOf("set")).toEqual([[{ name: "Bar", color: expected }]])
-        expect(update?.callsOf("where")).toEqual([
-            ["workspace_id = :workspaceId AND id = :id", { workspaceId: "ws-1", id: "position-1" }],
-        ])
+        expect(update?.callsOf("where")).toEqual([["workspace_id = :workspaceId AND id = :id", rowKey("position-1")]])
         expect(update?.callsOf("returning")).toEqual([["id"]])
     })
 })
@@ -128,14 +128,10 @@ describe("ShiftsSetupService removePosition and removeCoverage and removeAvailab
         await setup.removeCoverage("user-1", "ws-1", { id: "block-1" })
         await setup.removeAvailability("user-1", "ws-1", { id: "avail-1" })
 
-        expect(em.update).toHaveBeenCalledWith(
-            ShiftsPositionEntity,
-            { workspaceId: "ws-1", id: "position-1" },
-            { active: false },
-        )
+        expect(em.update).toHaveBeenCalledWith(ShiftsPositionEntity, rowKey("position-1"), { active: false })
         expect(em.delete.mock.calls).toEqual([
-            [ShiftsCoverageEntity, { workspaceId: "ws-1", id: "block-1" }],
-            [ShiftsAvailabilityEntity, { workspaceId: "ws-1", id: "avail-1" }],
+            [ShiftsCoverageEntity, rowKey("block-1")],
+            [ShiftsAvailabilityEntity, rowKey("avail-1")],
         ])
     })
 })
@@ -213,11 +209,11 @@ describe("ShiftsSetupService saveStaff", () => {
                 },
             ],
         ])
-        expect(update?.callsOf("where")).toEqual([
-            ["workspace_id = :workspaceId AND id = :id", { workspaceId: "ws-1", id: "profile-1" }],
-        ])
+        expect(update?.callsOf("where")).toEqual([["workspace_id = :workspaceId AND id = :id", rowKey("profile-1")]])
     })
+})
 
+describe("ShiftsSetupService saveStaff pay and refusals", () => {
     it("leaves the pay alone without a wage and never stores a negative one", async () => {
         const em = mockEntityManager({ upsert: [ShiftsStaffPayEntity, {}] })
         queueQueryBuilders(em, [saved("profile-1"), saved("profile-1")])
@@ -272,9 +268,7 @@ describe("ShiftsSetupService saveCoverage", () => {
                 ],
             ],
         ])
-        expect(em.update.mock.calls).toEqual([
-            [ShiftsCoverageEntity, { workspaceId: "ws-1", id: "block-1" }, { weekday: 3, ...block }],
-        ])
+        expect(em.update.mock.calls).toEqual([[ShiftsCoverageEntity, rowKey("block-1"), { weekday: 3, ...block }]])
     })
 
     it.each([
@@ -368,8 +362,8 @@ describe("ShiftsSetupService addAvailability", () => {
 
 describe("ShiftsSetupService submitAvailability", () => {
     it("files a dated statement of the member's own profile as pending, matching a member with no shop staff row by account", async () => {
-        const em = mockEntityManager({ ...profile, insert: [ShiftsAvailabilityEntity, { identifiers: [] }] })
-        const { setup, members } = await build(em)
+        const em = mockEntityManager({ insert: [ShiftsAvailabilityEntity, { identifiers: [] }] })
+        const { setup, members, data } = await build(em)
 
         await expect(
             setup.submitAvailability(
@@ -379,14 +373,7 @@ describe("ShiftsSetupService submitAvailability", () => {
             ),
         ).resolves.toEqual({ id: "" })
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1", [])
-        expect(em.findOne).toHaveBeenCalledWith(ShiftsStaffEntity, {
-            select: { id: true },
-            where: [
-                { workspaceId: "ws-1", active: true, userId: "user-1" },
-                { workspaceId: "ws-1", active: true, staffId: "staff-row-1" },
-            ],
-            order: { createdAt: "ASC" },
-        })
+        expect(data.profileIdOfMember).toHaveBeenCalledWith("ws-1", "user-1", "staff-row-1")
         expect(em.insert).toHaveBeenCalledWith(
             ShiftsAvailabilityEntity,
             expect.objectContaining({
@@ -402,14 +389,12 @@ describe("ShiftsSetupService submitAvailability", () => {
         members.require.mockResolvedValue(memberOf({ staffId: null }))
         await setup.submitAvailability("user-1", "ws-1", availabilityOf({ staffId: undefined }))
 
-        expect(em.findOne).toHaveBeenLastCalledWith(
-            ShiftsStaffEntity,
-            expect.objectContaining({ where: [{ workspaceId: "ws-1", active: true, userId: "user-1" }] }),
-        )
+        expect(data.profileIdOfMember).toHaveBeenLastCalledWith("ws-1", "user-1", null)
     })
 
     it("refuses a member without a shifts profile", async () => {
-        const { setup } = await build(mockEntityManager({ findOne: [ShiftsStaffEntity, null] }))
+        const { setup, data } = await build(mockEntityManager())
+        data.profileIdOfMember.mockResolvedValue(null)
 
         await expect(setup.submitAvailability("user-1", "ws-1", availabilityOf())).rejects.toMatchObject({
             code: Code.ProfileMissing,
@@ -437,7 +422,7 @@ describe("ShiftsSetupService decideAvailability", () => {
 
 describe("ShiftsSetupService checkIn", () => {
     it("checks the person in to their own shift and answers the stored instant", async () => {
-        const em = mockEntityManager(profile)
+        const em = mockEntityManager()
         const [insert] = queueQueryBuilders(em, [
             { execute: { raw: [{ checked_in_at: "2026-10-12T00:45:00+00:00" }] } },
         ])
@@ -468,10 +453,7 @@ describe("ShiftsSetupService checkIn", () => {
         ],
     ])("answers %s", async (_name, raw, existing, at) => {
         const em = mockEntityManager({
-            findOne: [
-                [ShiftsStaffEntity, staffOf()],
-                [ShiftsAttendanceEntity, existing === null ? null : entityOf(ShiftsAttendanceEntity, existing)()],
-            ],
+            findOne: [ShiftsAttendanceEntity, existing === null ? null : entityOf(ShiftsAttendanceEntity, existing)()],
         })
         queueQueryBuilders(em, [{ execute: { raw } }])
         const { setup } = await build(em)
@@ -490,7 +472,7 @@ describe("ShiftsSetupService checkIn", () => {
         ["a check-in more than thirty minutes early", "2026-10-12T00:29:00.000Z", shiftRowOf(), Code.CheckinEarly],
         ["a check-in after the end of the shift", "2026-10-12T03:01:00.000Z", shiftRowOf(), Code.CheckinClosed],
     ])("refuses %s", async (_name, at, shift, code) => {
-        const em = mockEntityManager(profile)
+        const em = mockEntityManager()
         const { setup, data } = await build(em, at)
         data.shiftRow.mockResolvedValue(shift)
 

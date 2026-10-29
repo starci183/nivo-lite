@@ -1,4 +1,13 @@
-import type { Proposal, StoredProposal, WorkItem, WorkItemRecord } from "./work-items.contracts"
+import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
+import { isRecord } from "@modules/platform/primitives"
+import type {
+    ClosedClaim,
+    NewWorkItem,
+    Proposal,
+    StoredProposal,
+    WorkItem,
+    WorkItemRecord,
+} from "./work-items.contracts"
 import type { WorkItemEntity } from "./persistence/entities"
 import { WorkItemsError, WorkItemsErrorCode } from "./errors/work-items.error"
 
@@ -75,3 +84,35 @@ export const requireWorkItem = (rows: ReadonlyArray<WorkItemRecord>): WorkItem =
     if (row === undefined) throw new WorkItemsError({ code: WorkItemsErrorCode.NotFound })
     return toWorkItem(row)
 }
+
+/** A RETURNING row names its item; the columns beyond `id` are those the write asked for (`*` for a whole item). */
+const isWorkItemRecord = (value: unknown): value is WorkItemRecord => isRecord(value) && typeof value.id === "string"
+
+const isClosedClaim = (value: unknown): value is ClosedClaim => isRecord(value) && typeof value.id === "string"
+
+/** The item rows a RETURNING write answered; none when it answered no rows. */
+export const recordsOfRaw = (raw: unknown): Array<WorkItemRecord> =>
+    Array.isArray(raw) ? raw.filter(isWorkItemRecord) : []
+
+/** The claims a RETURNING write closed; none when it closed no rows. */
+export const closedClaimsOf = (raw: unknown): Array<ClosedClaim> =>
+    Array.isArray(raw) ? raw.filter(isClosedClaim) : []
+
+/** The columns of a queued item: a root item is the root of its own chain, so `id` names the chain when the item names none. */
+export const queuedValuesOf = (item: NewWorkItem, id: string): QueryDeepPartialEntity<WorkItemEntity> => ({
+    id,
+    workspaceId: item.workspaceId,
+    chainId: item.chainId ?? id,
+    depth: item.depth,
+    department: item.department,
+    action: item.action,
+    subjectType: item.subjectType,
+    subjectId: item.subjectId,
+    leadId: item.leadId,
+    inboundEventId: item.inboundEventId,
+    parentId: item.parentId,
+    dedupeKey: item.dedupeKey,
+    status: "queued",
+    proposal: item.proposal,
+    installationId: item.installationId,
+})

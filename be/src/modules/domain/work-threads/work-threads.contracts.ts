@@ -4,6 +4,9 @@ export type ThreadStatus = "open" | "waiting" | "done" | "stopped"
 /** A lead id to narrow a thread read to, or absent/null for no narrowing. */
 export type WorkThreadLeadFilter = string | null | undefined
 
+/** A thread, or null when the workspace has none by that id. */
+export type OptionalWorkThread = WorkThread | null
+
 /** One work thread. */
 export interface WorkThread {
     /** The thread id. */

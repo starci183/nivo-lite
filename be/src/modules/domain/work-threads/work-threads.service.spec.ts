@@ -4,6 +4,7 @@ import { LeadReadService } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { normalizePage } from "@modules/platform/pagination"
+import { writeExpressionOf } from "@tests/fixtures/builders/write-expression.builder"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { WorkThreadsErrorCode } from "./errors/work-threads.error"
@@ -14,12 +15,6 @@ import type { WorkThreadRecord } from "./work-threads.contracts"
 
 /** The any-function matcher, typed `unknown` so it flows into any slot. */
 const anyFunction = (): unknown => expect.any(Function)
-
-/** What the `updatedAt` expression of a column change evaluates to. */
-const nowOf = (change: unknown): unknown =>
-    typeof change === "object" && change !== null && "updatedAt" in change && typeof change.updatedAt === "function"
-        ? change.updatedAt()
-        : undefined
 
 const threadRow: WorkThreadRecord = {
     id: "thread-1",
@@ -54,7 +49,7 @@ const build = async (em: ReturnType<typeof mockEntityManager>, owned: { lead?: b
 const managerOf = (answers: ReadonlyArray<QueryBuilderAnswers>) => {
     const em = mockEntityManager()
     const fakes = answers.map((answer) => fakeQueryBuilder(answer))
-    for (const fake of fakes) em.createQueryBuilder.mockReturnValueOnce(fake.builder as never)
+    for (const fake of fakes) em.createQueryBuilder.mockReturnValueOnce(fake.builder)
     return { em, fakes }
 }
 
@@ -62,7 +57,7 @@ const managerOf = (answers: ReadonlyArray<QueryBuilderAnswers>) => {
 const managerWith = (answers: QueryBuilderAnswers) => {
     const em = mockEntityManager()
     const fake = fakeQueryBuilder(answers)
-    em.createQueryBuilder.mockReturnValue(fake.builder as never)
+    em.createQueryBuilder.mockReturnValue(fake.builder)
     return { em, fake }
 }
 
@@ -288,7 +283,7 @@ const registerStatus = () => {
                 { workspaceId: "ws-1", id: "thread-1" },
                 { status: "waiting", updatedAt: anyFunction() },
             )
-            expect(nowOf(em.update.mock.calls[0]?.[2])).toBe("now()")
+            expect(writeExpressionOf(em.update.mock.calls[0]?.[2], "updatedAt")).toBe("now()")
         })
     })
 }

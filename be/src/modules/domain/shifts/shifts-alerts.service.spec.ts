@@ -1,42 +1,39 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
+import { builder, FakeClock, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
-import type { PipelineRow } from "@modules/domain/automation-pipelines"
 import { ActionPerformerRegistry, ApprovalGate, OfficeLog } from "@modules/domain/module-ops"
 import type { PerformContext } from "@modules/domain/module-ops"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { isRecord } from "@modules/platform/primitives"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
+import { PIPELINE } from "@tests/fixtures/builders/shifts-workbench-bench.builder"
+import { SHIFT_STAFF } from "@tests/fixtures/builders/shifts-workbench.builder"
 import { routedQueryBuilder } from "@tests/fixtures/builders/routed-query.builder"
 import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { ShiftsSettingsEntity } from "./persistence/entities"
-import type { AlertShiftRead, ReminderWorkspaceRead } from "./persistence/shifts-alerts.reads"
+import type { AlertShiftRead, ReminderWorkspaceRead } from "./persistence/shifts-alerts.contracts"
 import { DEFAULT_SETTINGS } from "./policies/row-mappers.policy"
 import { ShiftsAlertsService } from "./shifts-alerts.service"
-import type { Setup } from "./shifts.contracts"
+import type { Setup, ShiftStaff } from "./shifts.contracts"
 import { ShiftsDataService } from "./shifts-data.service"
 import { ShiftsMonthCloseService } from "./shifts-month-close.service"
 import { ShiftsNotifyService } from "./shifts-notify.service"
 import { ShiftsTextService } from "./shifts-text.service"
 import { ShiftsLogEvent } from "./shifts.log-events"
 
-/** A partial-object matcher, typed `unknown` so it flows into any slot. */
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
-
-/** A substring matcher, typed `unknown` so it flows into any slot. */
 const stringLike = (text: string): unknown => expect.stringContaining(text)
-
-/** The match-anything matcher, typed `unknown` so it flows into any slot. */
 const anything = (): unknown => expect.anything()
 
 /** 07:00 in Vietnam on 2026-10-14: one hour before the 08:00 shift. */
 const NOW = "2026-10-14T00:00:00.000Z"
 
-const row = (flags: Partial<AlertShiftRead> = {}): AlertShiftRead => ({
+const row = builder<AlertShiftRead>({
     id: "s-1",
     schedule_id: "sch-1",
     shift_date: "2026-10-14",
@@ -48,102 +45,55 @@ const row = (flags: Partial<AlertShiftRead> = {}): AlertShiftRead => ({
     checked_in: false,
     reminded: false,
     alerted: false,
-    ...flags,
 })
+
+const staffOf = builder<ShiftStaff>(SHIFT_STAFF)
 
 const SETUP: Setup = {
     positions: [{ id: "pos-1", name: "Barista", color: "#000" }],
-    staff: [
-        {
-            id: "p-1",
-            name: "Lan",
-            positionIds: ["pos-1"],
-            skills: [],
-            wage: 0,
-            maxWeek: 48,
-            maxDay: 10,
-            minRest: 8,
-            staffRowId: null,
-            telegramChatId: null,
-            zaloUserId: null,
-            phone: null,
-            active: true,
-        },
-    ],
+    staff: [staffOf({ id: "p-1", name: "Lan", positionIds: ["pos-1"], wage: 0, maxWeek: 48, maxDay: 10, minRest: 8 })],
     blocks: [],
     settings: DEFAULT_SETTINGS,
 }
 
-const WORKSPACE: ReminderWorkspaceRead = { workspace_id: "ws-1", config: null, remind_minutes: 60, noshow_minutes: 10 }
+const WORKSPACE: ReminderWorkspaceRead = {
+    workspace_id: "ws-1",
+    config: null,
+    remind_minutes: 60,
+    noshow_minutes: 10,
+}
 
 /** What the reads of the service answer. */
 interface Answers {
-    /** The workspaces whose reminders are on. */
     readonly workspaces?: ReadonlyArray<ReminderWorkspaceRead>
-    /** The names of the others on duty; Minh by default. */
     readonly mates?: ReadonlyArray<{ readonly name: string }>
-    /** The workspace whose shift read fails. */
     readonly failFor?: string
 }
-
-/** The reminder pipeline the owner of automations answers; the specs set its switch and its workspace. */
-const PIPELINE: PipelineRow = {
-    id: "pipeline-1",
-    workspace_id: "ws-1",
-    template_key: "shifts_shift_reminder",
-    name: "Reminder",
-    module_key: "shifts",
-    enabled: true,
-    dismissed: false,
-    config: {},
-    body: null,
-    body_version: 0,
-    template_version: 1,
-    based_on_context: null,
-    approval_streak: 0,
-    trust_offered_at: null,
-    auto_send: false,
-    created_at: "2026-10-01T00:00:00.000Z",
-    updated_at: "2026-10-01T00:00:00.000Z",
-}
-
-/** What `answer` set up for a manager: the reminder switch and the workspaces the owner of automations lists. */
-interface Pipelines {
-    readonly enabled: boolean | null
-    readonly workspaces: ReadonlyArray<ReminderWorkspaceRead>
-}
-
-const pipelinesOfManager = new WeakMap<object, Pipelines>()
 
 /** Hands out one fake builder per read, answering the shifts, and answers back every builder it made. */
 const answer = (
     em: MockEntityManager,
     rows: ReadonlyArray<AlertShiftRead>,
-    enabled: boolean | null = true,
     options: Answers = {},
 ): Array<FakeQueryBuilder> => {
     const built: Array<FakeQueryBuilder> = []
     const workspaces = options.workspaces ?? [WORKSPACE]
-    pipelinesOfManager.set(em, { enabled, workspaces })
+    const rules = workspaces.filter((entry) => entry.remind_minutes !== null && entry.noshow_minutes !== null)
     em.find.mockResolvedValue(
-        workspaces.flatMap((workspace) =>
-            workspace.remind_minutes === null || workspace.noshow_minutes === null
-                ? []
-                : [
-                      Object.assign(new ShiftsSettingsEntity(), {
-                          workspaceId: workspace.workspace_id,
-                          remindMinutes: workspace.remind_minutes,
-                          noshowMinutes: workspace.noshow_minutes,
-                      }),
-                  ],
+        rules.map((entry) =>
+            Object.assign(new ShiftsSettingsEntity(), {
+                workspaceId: entry.workspace_id,
+                remindMinutes: entry.remind_minutes,
+                noshowMinutes: entry.noshow_minutes,
+            }),
         ),
     )
     em.createQueryBuilder.mockImplementation(() => {
         const fake: FakeQueryBuilder = routedQueryBuilder({
             getRawMany: (read) => {
                 if (read.callsOf("distinct").length > 0) return Promise.resolve(options.mates ?? [{ name: "Minh" }])
-                const where = read.callsOf("where")[0]?.[1] as { workspaceId?: string } | undefined
-                if (where?.workspaceId !== undefined && where.workspaceId === options.failFor) {
+                const where = read.callsOf("where")[0]?.[1]
+                if (isRecord(where) && where.workspaceId !== undefined && where.workspaceId === options.failFor) {
                     return Promise.reject(new TypeError("workspace query failed"))
                 }
                 return Promise.resolve(rows)
@@ -151,20 +101,22 @@ const answer = (
             getRawOne: () => Promise.resolve(rows[0]),
         })
         built.push(fake)
-        return fake.builder as never
+        return fake.builder
     })
     return built
 }
 
-const build = async (em: MockEntityManager, now = NOW) => {
-    const stored = pipelinesOfManager.get(em) ?? { enabled: true, workspaces: [WORKSPACE] }
+const build = async (
+    em: MockEntityManager,
+    now = NOW,
+    stored: { enabled: boolean | null; workspaces: ReadonlyArray<ReminderWorkspaceRead> } = {
+        enabled: true,
+        workspaces: [WORKSPACE],
+    },
+) => {
     const pipelines = mock<AutomationPipelinesService>()
     pipelines.enabledOfTemplate.mockResolvedValue(
-        stored.workspaces.map((workspace) => ({
-            ...PIPELINE,
-            workspace_id: workspace.workspace_id,
-            config: {},
-        })),
+        stored.workspaces.map((workspace) => ({ ...PIPELINE, workspace_id: workspace.workspace_id })),
     )
     pipelines.findPipeline.mockResolvedValue(stored.enabled === null ? null : { ...PIPELINE, enabled: stored.enabled })
     const outbox = recordingQueueOutbox()
@@ -219,6 +171,20 @@ const build = async (em: MockEntityManager, now = NOW) => {
     }
 }
 
+/** A manager answering the given shift rows, with the service built over it; `transactional` lets the service open transactions. */
+const prepare = async (
+    rows: ReadonlyArray<AlertShiftRead>,
+    enabled: boolean | null = true,
+    options: Answers = {},
+    now = NOW,
+    transactional = false,
+) => {
+    const em = transactional ? fakeTransaction(mockEntityManager()).em : mockEntityManager()
+    const built = answer(em, rows, options)
+    const stored = { enabled, workspaces: options.workspaces ?? [WORKSPACE] }
+    return { em, built, ...(await build(em, now, stored)) }
+}
+
 const context = (fields: PerformContext["fields"]): PerformContext => ({
     workspaceId: "ws-1",
     workItemId: "wi-1",
@@ -227,11 +193,17 @@ const context = (fields: PerformContext["fields"]): PerformContext => ({
     fields,
 })
 
+const FALLBACK_BODY = `shifts.remindBody${JSON.stringify({
+    position: "shifts.remindPosition",
+    start: "08:00",
+    end: "12:00",
+    shop: "shifts.remindShop",
+    mates: "",
+})}`
+
 describe("ShiftsAlertsService", () => {
     it("runs the registered performer and accepts rejection without sending a reminder", async () => {
-        const em = mockEntityManager()
-        answer(em, [])
-        const { service, registry, notify } = await build(em)
+        const { service, registry, notify } = await prepare([])
         service.onModuleInit()
         const performer = registry.add.mock.calls[0]?.[0]
 
@@ -243,13 +215,9 @@ describe("ShiftsAlertsService", () => {
         await expect(performer?.reject?.(context({}))).resolves.toBeUndefined()
         expect(notify.toStaff).not.toHaveBeenCalled()
     })
-})
 
-describe("ShiftsAlertsService scan", () => {
     it("returns zero counts without opening a transaction when no alerts are due", async () => {
-        const em = mockEntityManager()
-        const built = answer(em, [row({ reminded: true, checked_in: true })])
-        const { service, outbox } = await build(em)
+        const { service, outbox, built, em } = await prepare([row({ reminded: true, checked_in: true })])
 
         await expect(service.scan(new Date(NOW))).resolves.toEqual({ reminders: 0, noShows: 0 })
         expect(built.flatMap((fake) => fake.callsOf("andWhere"))).toContainEqual([
@@ -261,28 +229,26 @@ describe("ShiftsAlertsService scan", () => {
     })
 
     it("falls back to the default minutes for a workspace that has no shifts rules yet", async () => {
-        const em = fakeTransaction(mockEntityManager()).em
-        answer(em, [row()], true, {
-            workspaces: [{ workspace_id: "ws-1", config: null, remind_minutes: null, noshow_minutes: null }],
-        })
-        const { service } = await build(em)
+        const { service } = await prepare(
+            [row()],
+            true,
+            { workspaces: [{ workspace_id: "ws-1", config: null, remind_minutes: null, noshow_minutes: null }] },
+            NOW,
+            true,
+        )
 
         await expect(service.scan(new Date(NOW))).resolves.toEqual({ reminders: 1, noShows: 0 })
     })
 
     it("logs a failed workspace and queues both alert kinds for the next workspace", async () => {
-        const em = fakeTransaction(mockEntityManager()).em
         const failure = new TypeError("workspace query failed")
-        answer(
-            em,
+        const { service, outbox, logger } = await prepare(
             [row({ id: "reminder", staff_id: null, start_time: "09:00:00" }), row({ id: "noshow", reminded: true })],
             true,
-            {
-                workspaces: [{ ...WORKSPACE, workspace_id: "failed" }, WORKSPACE],
-                failFor: "failed",
-            },
+            { workspaces: [{ ...WORKSPACE, workspace_id: "failed" }, WORKSPACE], failFor: "failed" },
+            NOW,
+            true,
         )
-        const { service, outbox, logger } = await build(em)
         const write = jest.spyOn(outbox, "write")
 
         await expect(service.scan(new Date("2026-10-14T01:15:00.000Z"))).resolves.toEqual({
@@ -292,10 +258,6 @@ describe("ShiftsAlertsService scan", () => {
         expect(logger.error).toHaveBeenCalledWith(ShiftsLogEvent.AlertScanFailed, failure, {
             workspaceId: "failed",
         })
-        expect(outbox.jobs).toEqual([
-            { queue: "shifts_alerts", payload: { kind: "remind", workspaceId: "ws-1", shiftId: "reminder" } },
-            { queue: "shifts_alerts", payload: { kind: "noshow", workspaceId: "ws-1", shiftId: "noshow" } },
-        ])
         expect(outbox.allInTransaction).toBe(true)
         expect(write).toHaveBeenCalledWith(
             anything(),
@@ -312,21 +274,9 @@ describe("ShiftsAlertsService scan", () => {
     })
 })
 
-describe("ShiftsAlertsService", () => {
-    it("registers the remind_shift performer", async () => {
-        const { service, registry } = await build(mockEntityManager())
-
-        service.onModuleInit()
-
-        expect(registry.add).toHaveBeenCalledWith(objectLike({ action: "remind_shift" }))
-    })
-})
-
 describe("ShiftsAlertsService runJob", () => {
     it("on a tick queues the due reminder once per shift and person, then closes the month where due", async () => {
-        const em = fakeTransaction(mockEntityManager()).em
-        answer(em, [row()])
-        const { service, outbox, monthClose } = await build(em)
+        const { service, outbox, monthClose } = await prepare([row()], true, {}, NOW, true)
 
         await service.runJob({ kind: "tick" })
 
@@ -338,9 +288,7 @@ describe("ShiftsAlertsService runJob", () => {
     })
 
     it("queues a no-show check after the delay", async () => {
-        const em = fakeTransaction(mockEntityManager()).em
-        answer(em, [row({ reminded: true })])
-        const { service, outbox } = await build(em, "2026-10-14T01:15:00.000Z")
+        const { service, outbox } = await prepare([row({ reminded: true })], true, {}, "2026-10-14T01:15:00.000Z", true)
 
         await service.runJob({ kind: "tick" })
 
@@ -360,9 +308,7 @@ describe("ShiftsAlertsService runJob", () => {
     })
 
     it("asks the gate to remind the person of a queued shift", async () => {
-        const em = mockEntityManager()
-        answer(em, [row()])
-        const { service, gate } = await build(em)
+        const { service, gate } = await prepare([row()])
 
         await service.runJob({ kind: "remind", workspaceId: "ws-1", shiftId: "s-1" })
 
@@ -376,9 +322,12 @@ describe("ShiftsAlertsService runJob", () => {
     })
 
     it("tells the managers when nobody checked in", async () => {
-        const em = mockEntityManager()
-        answer(em, [row({ reminded: true })])
-        const { service, notify, office } = await build(em, "2026-10-14T01:15:00.000Z")
+        const { service, notify, office } = await prepare(
+            [row({ reminded: true })],
+            true,
+            {},
+            "2026-10-14T01:15:00.000Z",
+        )
 
         await service.runJob({ kind: "noshow", workspaceId: "ws-1", shiftId: "s-1" })
 
@@ -391,9 +340,7 @@ describe("ShiftsAlertsService runJob", () => {
 
 describe("ShiftsAlertsService remind", () => {
     it("returns the gate verdict with the exact reminder request", async () => {
-        const em = mockEntityManager()
-        answer(em, [row()])
-        const { service, gate } = await build(em)
+        const { service, gate } = await prepare([row()])
         gate.request.mockResolvedValue({ status: "pending", workItemId: "wi-pending" })
 
         await expect(service.remind("ws-1", "s-1")).resolves.toBe("pending")
@@ -409,35 +356,24 @@ describe("ShiftsAlertsService remind", () => {
         })
     })
 
-    it("skips an unassigned shift without asking the gate", async () => {
-        const em = mockEntityManager()
-        answer(em, [row({ staff_id: null })])
-        const { service, gate } = await build(em)
+    it("skips when the automation is off, the shift is gone or unassigned, or the person was reminded", async () => {
+        const off = await prepare([row()], false)
+        await expect(off.service.remind("ws-1", "s-1")).resolves.toBe("skipped: automation off")
 
-        await expect(service.remind("ws-1", "s-1")).resolves.toBe("skipped: shift not active")
-        expect(gate.request).not.toHaveBeenCalled()
-    })
+        const gone = await prepare([])
+        await expect(gone.service.remind("ws-1", "s-1")).resolves.toBe("skipped: shift not active")
+        const unassigned = await prepare([row({ staff_id: null })])
+        await expect(unassigned.service.remind("ws-1", "s-1")).resolves.toBe("skipped: shift not active")
+        expect(unassigned.gate.request).not.toHaveBeenCalled()
 
-    it("skips when the automation is off, the shift is gone or the person was reminded", async () => {
-        const off = mockEntityManager()
-        answer(off, [row()], false)
-        await expect((await build(off)).service.remind("ws-1", "s-1")).resolves.toBe("skipped: automation off")
-
-        const gone = mockEntityManager()
-        answer(gone, [])
-        await expect((await build(gone)).service.remind("ws-1", "s-1")).resolves.toBe("skipped: shift not active")
-
-        const done = mockEntityManager()
-        answer(done, [row({ reminded: true })])
-        await expect((await build(done)).service.remind("ws-1", "s-1")).resolves.toBe("skipped: already reminded")
+        const done = await prepare([row({ reminded: true })])
+        await expect(done.service.remind("ws-1", "s-1")).resolves.toBe("skipped: already reminded")
     })
 })
 
 describe("ShiftsAlertsService noShow", () => {
     it.each([{ rows: [] }, { rows: [row({ staff_id: null })] }])("skips inactive shift rows %p", async ({ rows }) => {
-        const em = mockEntityManager()
-        answer(em, rows)
-        const { service, notify, office } = await build(em)
+        const { service, notify, office } = await prepare(rows)
 
         await expect(service.noShow("ws-1", "s-1", new Date(NOW))).resolves.toBe("skipped: shift not active")
         expect(notify.toManagers).not.toHaveBeenCalled()
@@ -445,9 +381,7 @@ describe("ShiftsAlertsService noShow", () => {
     })
 
     it("skips when the enabled query has no row", async () => {
-        const em = mockEntityManager()
-        answer(em, [], null)
-        const { service, notify, pipelines } = await build(em)
+        const { service, notify, pipelines } = await prepare([], null)
 
         await expect(service.noShow("ws-1", "s-1", new Date(NOW))).resolves.toBe("skipped: automation off")
         expect(pipelines.findPipeline).toHaveBeenCalledWith("ws-1", "shifts_shift_reminder")
@@ -455,9 +389,7 @@ describe("ShiftsAlertsService noShow", () => {
     })
 
     it("records the exact no-show notice and evidence", async () => {
-        const em = mockEntityManager()
-        answer(em, [row()])
-        const { service, notify, office } = await build(em)
+        const { service, notify, office } = await prepare([row()])
 
         await expect(service.noShow("ws-1", "s-1", new Date("2026-10-14T01:15:00.000Z"))).resolves.toBe("alerted")
         expect(notify.toManagers).toHaveBeenCalledWith(
@@ -479,9 +411,7 @@ describe("ShiftsAlertsService noShow", () => {
         ["an alert already sent", row({ alerted: true }), "2026-10-14T01:15:00.000Z", "already alerted"],
         ["a shift that is over", row(), "2026-10-14T05:00:00.000Z", "skipped: shift is over"],
     ])("sends nothing for %s", async (_name, shift, now, verdict) => {
-        const em = mockEntityManager()
-        answer(em, [shift])
-        const { service, notify } = await build(em, now)
+        const { service, notify } = await prepare([shift], true, {}, now)
 
         await expect(service.noShow("ws-1", "s-1", new Date(now))).resolves.toBe(verdict)
         expect(notify.toManagers).not.toHaveBeenCalled()
@@ -493,9 +423,9 @@ describe("ShiftsAlertsService performRemind", () => {
         { telegram: false, zalo: true, key: "shifts.remindDoneZalo" },
         { telegram: null, zalo: null, key: "shifts.remindDoneOffice" },
     ])("uses fallback labels and reports delivery %p", async ({ telegram, zalo, key }) => {
-        const em = mockEntityManager()
-        const built = answer(em, [row({ position_id: "missing" })], true, { mates: [] })
-        const { service, notify, workspaces } = await build(em)
+        const { service, notify, workspaces, built } = await prepare([row({ position_id: "missing" })], true, {
+            mates: [],
+        })
         workspaces.nameOf.mockResolvedValue("")
         notify.toStaff.mockResolvedValue({ office: true, telegram, zalo })
 
@@ -508,25 +438,18 @@ describe("ShiftsAlertsService performRemind", () => {
             kind: "reminder",
             shiftId: "s-1",
             workItemId: "wi-1",
-            body: `shifts.remindBody${JSON.stringify({
-                position: "shifts.remindPosition",
-                start: "08:00",
-                end: "12:00",
-                shop: "shifts.remindShop",
-                mates: "",
-            })}`,
+            body: FALLBACK_BODY,
         })
-        expect(built.flatMap((fake) => fake.callsOf("where"))).toContainEqual([
-            expect.stringContaining("s.staff_id <> :personId"),
+        const where = built.flatMap((fake) => fake.callsOf("where"))
+        expect(where).toContainEqual([
+            stringLike("s.staff_id <> :personId"),
             { workspaceId: "ws-1", day: "2026-10-14", personId: "p-1" },
         ])
         expect(workspaces.nameOf).toHaveBeenCalledWith("ws-1")
     })
 
     it("returns a pending result for a person removed from setup", async () => {
-        const em = mockEntityManager()
-        answer(em, [row({ staff_id: "removed" })])
-        const { service, notify } = await build(em)
+        const { service, notify } = await prepare([row({ staff_id: "removed" })])
 
         await expect(service.performRemind(context({ shift_id: "s-1" }))).resolves.toEqual({
             summary: "shifts.remindNoPerson",
@@ -538,9 +461,7 @@ describe("ShiftsAlertsService performRemind", () => {
     it.each<PerformContext["fields"]>([{}, { shift_id: "s-1" }])(
         "does not send an unassigned reminder for fields %p",
         async (fields) => {
-            const em = mockEntityManager()
-            answer(em, [row({ staff_id: null })])
-            const { service, notify } = await build(em)
+            const { service, notify } = await prepare([row({ staff_id: null })])
 
             await expect(service.performRemind(context(fields))).resolves.toEqual({
                 summary: "shifts.remindInactive",
@@ -551,9 +472,7 @@ describe("ShiftsAlertsService performRemind", () => {
     )
 
     it("reminds the person with the others on duty and says where it went", async () => {
-        const em = mockEntityManager()
-        answer(em, [row()])
-        const { service, notify } = await build(em)
+        const { service, notify } = await prepare([row()])
 
         const result = await service.performRemind(context({ shift_id: "s-1", staff_id: "p-1" }))
 
@@ -566,13 +485,9 @@ describe("ShiftsAlertsService performRemind", () => {
             evidence: "captured",
         })
     })
-})
 
-describe("ShiftsAlertsService performRemind", () => {
     it("reminds nobody for a shift that is no longer active", async () => {
-        const em = mockEntityManager()
-        answer(em, [])
-        const { service, notify } = await build(em)
+        const { service, notify } = await prepare([])
 
         await expect(service.performRemind(context({ shift_id: "s-1" }))).resolves.toEqual({
             summary: "shifts.remindInactive",

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { LeadReadService } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -7,10 +7,11 @@ import { readConnection } from "@modules/platform/pagination"
 import type { Connection, PageRequest } from "@modules/platform/pagination"
 import { WorkThreadsError, WorkThreadsErrorCode } from "./errors/work-threads.error"
 import { WorkThreadEntity } from "./persistence/entities"
-import { THREAD_RETURNING, selectThreads } from "./persistence/work-thread.query"
-import { toThread } from "./thread.mapper"
+import { THREAD_COLUMNS, THREAD_RETURNING } from "./persistence/work-thread.query"
+import { firstThreadRecord, toThread } from "./thread.mapper"
 import type {
     NewMemberThread,
+    OptionalWorkThread,
     ThreadStatus,
     WorkThread,
     WorkThreadLeadFilter,
@@ -48,7 +49,7 @@ export class WorkThreadsService {
             })
             .returning(THREAD_RETURNING)
             .execute()
-        const [row] = result.raw as Array<WorkThreadRecord>
+        const row = firstThreadRecord(result.raw)
         if (row === undefined) throw new WorkThreadsError({ code: WorkThreadsErrorCode.NotStored })
         return toThread(row)
     }
@@ -65,8 +66,8 @@ export class WorkThreadsService {
         workspaceId: string,
         threadId: string,
         manager: EntityManager = this.entityManager,
-    ): Promise<WorkThread | null> {
-        const row = await selectThreads(manager, workspaceId)
+    ): Promise<OptionalWorkThread> {
+        const row = await this.threads(manager, workspaceId)
             .andWhere("t.id = :threadId", { threadId })
             .limit(1)
             .getRawOne<WorkThreadRecord>()
@@ -82,7 +83,7 @@ export class WorkThreadsService {
         const filter = leadId ?? null
         const scope = `${workspaceId}:workThreads:${filter ?? "all"}`
         const connection = await readConnection(request, scope, ([cursorAt, cursorId, limit]) => {
-            const read = selectThreads(this.entityManager, workspaceId)
+            const read = this.threads(this.entityManager, workspaceId)
             if (filter !== null) read.andWhere("t.lead_id = :leadId", { leadId: filter })
             if (cursorAt !== null && cursorId !== null) {
                 read.andWhere("(t.created_at, t.id) < (CAST(:cursorAt AS timestamptz), CAST(:cursorId AS uuid))", {
@@ -107,8 +108,8 @@ export class WorkThreadsService {
     }
 
     /** Locks the thread of the workspace for the rest of the caller's transaction; null when the workspace has no such thread. */
-    async lockIfAny(manager: EntityManager, workspaceId: string, threadId: string): Promise<WorkThread | null> {
-        const row = await selectThreads(manager, workspaceId)
+    async lockIfAny(manager: EntityManager, workspaceId: string, threadId: string): Promise<OptionalWorkThread> {
+        const row = await this.threads(manager, workspaceId)
             .andWhere("t.id = :threadId", { threadId })
             .limit(1)
             .setLock("pessimistic_write")
@@ -124,5 +125,13 @@ export class WorkThreadsService {
         status: ThreadStatus,
     ): Promise<void> {
         await manager.update(WorkThreadEntity, { workspaceId, id: threadId }, { status, updatedAt: () => "now()" })
+    }
+
+    /** A read of the threads of one workspace; the caller adds its own filter, order, bound and lock. */
+    private threads(manager: EntityManager, workspaceId: string): SelectQueryBuilder<WorkThreadEntity> {
+        return manager
+            .createQueryBuilder(WorkThreadEntity, "t")
+            .select([...THREAD_COLUMNS])
+            .where("t.workspace_id = :workspaceId", { workspaceId })
     }
 }

@@ -22,10 +22,6 @@ const ROOM_SEAT_MAX = 5000
 /** The unit a grant is counted in while the workspace has no rule for the action yet. */
 const DEFAULT_UNIT: MemberGrantUnit = "vnd"
 
-/** The columns the upsert answers, in the shape of the contract. */
-const GRANT_RETURNING =
-    "id, workspace_id, member_id, action, unit, max_amount::float8 AS max_amount, to_json(updated_at) #>> '{}' AS updated_at"
-
 const toMember = (row: MemberRow, rooms: ReadonlyArray<string>): DirectoryMember => ({
     memberId: row.id,
     name: row.display_name,
@@ -97,20 +93,20 @@ export class MemberGrantsService {
     /**
      * Creates or replaces the grant of one member for one action, counted in the unit of the workspace's rule for that action (VND
      * when the rule does not exist yet). Refuses when the member is not in the workspace or the action is not in the registry: the
-     * guard rows are read under a share lock, then one insert with ON CONFLICT writes the grant.
+     * guard rows are read under a share lock, then one upsert writes the grant.
      */
     private async saveGrant(
         tx: EntityManager,
         workspaceId: string,
         action: string,
         grant: MemberGrantChange,
-    ): Promise<MemberGrant> {
+    ): Promise<void> {
         const memberFound = await this.members.lockMember(tx, workspaceId, grant.memberId)
         if (!memberFound || !(await this.actions.exists(tx, action))) {
             throw new MemberGrantsError({ code: MemberGrantsErrorCode.UnknownTarget, params: { action } })
         }
         const setup = await this.rules.approvalSetup(workspaceId, action)
-        const saved = await tx
+        await tx
             .createQueryBuilder(MemberGrantEntity, "mg")
             .insert()
             .values({
@@ -122,9 +118,7 @@ export class MemberGrantsService {
                 updatedAt: () => "now()",
             })
             .orUpdate(["unit", "max_amount", "updated_at"], ["member_id", "action"])
-            .returning(GRANT_RETURNING)
             .execute()
-        return (saved.raw as Array<MemberGrant>)[0] as MemberGrant
     }
 
     /** The grants of one action; the limit as a number and the save time as ISO text, the shape the contract always had. */

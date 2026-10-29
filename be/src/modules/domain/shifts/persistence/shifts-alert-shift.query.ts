@@ -1,18 +1,17 @@
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
-import { ShiftsAttendanceEntity, ShiftsNotificationEntity, ShiftsShiftEntity } from "./entities"
+import type { ObjectLiteral, SelectQueryBuilder } from "typeorm"
+import { ShiftsAttendanceEntity, ShiftsNotificationEntity } from "./entities"
 
 /**
- * A read of the live assigned shifts of one workspace (published or swapped, with a person) selecting a shift's columns under their
+ * A read, over the shifts table under the alias `s`, of the live assigned shifts of one workspace (published or swapped, with a person) selecting a shift's columns under their
  * column names and whether the person checked in, was reminded and was reported as a no-show. `flags: false` answers reminded and alerted
  * as false without looking. The caller adds its own filter, order and bound.
  */
-export const selectAlertShifts = (
-    manager: EntityManager,
+export const selectAlertShiftColumns = <Row extends ObjectLiteral>(
+    builder: SelectQueryBuilder<Row>,
     workspaceId: string,
     flags: boolean,
-): SelectQueryBuilder<ShiftsShiftEntity> => {
-    const shifts = manager
-        .createQueryBuilder(ShiftsShiftEntity, "s")
+): SelectQueryBuilder<Row> => {
+    const shifts = builder
         .select([
             "s.id AS id",
             "s.schedule_id AS schedule_id",

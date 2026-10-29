@@ -55,3 +55,21 @@ export interface WorkException {
     /** The customer name inside the proposal, when it has one. */
     readonly customer: string | null
 }
+
+/** A recent work item of a department, as an agent profile lists it. */
+export interface DepartmentWork {
+    /** The work item id. */
+    readonly id: string
+    /** The action asked for. */
+    readonly action: string
+    /** The state of the work. */
+    readonly status: string
+    /** When it finished, or else when it last changed, as ISO text. */
+    readonly at: string
+    /** The result's summary, else the proposal's, or null. */
+    readonly summary: string | null
+    /** The customer name inside the proposal, or null. */
+    readonly customer: string | null
+    /** The customer, when there is one. */
+    readonly leadId: string | null
+}

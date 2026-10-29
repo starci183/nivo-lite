@@ -8,10 +8,10 @@ import { ChannelDeliveryService } from "@modules/domain/channels"
 import { OfficeLog } from "@modules/domain/module-ops"
 import { StaffDirectoryService } from "@modules/domain/staff"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { isRecord } from "@modules/platform/primitives"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ShiftsNotificationEntity, ShiftsStaffEntity } from "./persistence/entities"
-import { entityOf } from "@tests/fixtures/builders/entity.builder"
 import { ShiftsNotifyService } from "./shifts-notify.service"
 import { ShiftsTextService } from "./shifts-text.service"
 import { ShiftsLogEvent } from "./shifts.log-events"
@@ -33,32 +33,21 @@ const connection = (provider: string): BoundConnection => ({
     purpose: "outbound_chat",
 })
 
-const personOf = entityOf(ShiftsStaffEntity, {
-    id: "p-1",
-    name: "Lan",
-    staffId: null,
-    telegramChatId: null,
-    zaloUserId: null,
-})
+/** The shifts profile of the person the spec stands for, with the contacts it names. */
+const personRow = (person: Person): ShiftsStaffEntity =>
+    Object.assign(new ShiftsStaffEntity(), {
+        id: "p-1",
+        name: "Lan",
+        staffId: person.staffRow ?? null,
+        telegramChatId: person.telegram ?? null,
+        zaloUserId: person.zalo ?? null,
+    })
 
-const answer = (person: Person | null): MockEntityManager => {
+const build = async (person: Person | null, hasAgent = false) => {
     const em = mockEntityManager({
-        findOne: [
-            ShiftsStaffEntity,
-            person === null
-                ? null
-                : personOf({
-                      staffId: person.staffRow ?? null,
-                      telegramChatId: person.telegram ?? null,
-                      zaloUserId: person.zalo ?? null,
-                  }),
-        ],
+        findOne: [ShiftsStaffEntity, person === null ? null : personRow(person)],
         insert: [ShiftsNotificationEntity, {}],
     })
-    return em
-}
-
-const build = async (em: MockEntityManager, hasAgent = false) => {
     const office = mock<OfficeLog>()
     office.postOffice.mockResolvedValue(undefined)
     const bindings = mock<AgentBindingsService>()
@@ -85,31 +74,19 @@ const build = async (em: MockEntityManager, hasAgent = false) => {
             { provide: ShiftsTextService, useValue: words },
         ],
     }).compile()
-    return { service: moduleRef.get(ShiftsNotifyService), office, bindings, delivery, logger, words, agents, staff }
+    return { service: moduleRef.get(ShiftsNotifyService), em, office, bindings, delivery, logger, words, agents, staff }
 }
+
+const NOTE_FIELDS = ["workspaceId", "staffId", "scheduleId", "shiftId", "kind", "channel", "status", "body", "error"]
 
 const recorded = (em: MockEntityManager): Array<ReadonlyArray<unknown>> =>
     em.insert.mock.calls
         .filter(([entity]) => entity === ShiftsNotificationEntity)
-        .map(([, row]): ReadonlyArray<unknown> => {
-            const note = row as Partial<ShiftsNotificationEntity>
-            return [
-                note.workspaceId,
-                note.staffId,
-                note.scheduleId,
-                note.shiftId,
-                note.kind,
-                note.channel,
-                note.status,
-                note.body,
-                note.error,
-            ]
-        })
+        .map(([, row]): ReadonlyArray<unknown> => NOTE_FIELDS.map((field) => (isRecord(row) ? row[field] : undefined)))
 
 describe("ShiftsNotifyService toStaff", () => {
     it("tags the person in Office and records the line", async () => {
-        const em = answer({ staffRow: "row-1" })
-        const { service, office } = await build(em)
+        const { service, office, em } = await build({ staffRow: "row-1" })
 
         await expect(
             service.toStaff("ws-1", { staffId: "p-1", kind: "publish", body: "Your week", scheduleId: "sch-1" }),
@@ -122,8 +99,8 @@ describe("ShiftsNotifyService toStaff", () => {
     })
 
     it("sends on Telegram and Zalo through the connections bound to the shifts agent", async () => {
-        const em = answer({ telegram: "chat-9", zalo: "zu-9" })
-        const { service, bindings, delivery } = await build(em, true)
+        const { service, bindings, delivery, em } = await build({ telegram: "chat-9", zalo: "zu-9" }, true)
+
         bindings.connectionsFor.mockImplementation((_agent, _purpose, options) =>
             Promise.resolve([connection(options?.providers?.[0] ?? "")]),
         )
@@ -166,8 +143,8 @@ describe("ShiftsNotifyService toStaff", () => {
 
 describe("ShiftsNotifyService toStaff", () => {
     it("records a channel as skipped when nothing is bound and as failed when the send fails", async () => {
-        const em = answer({ telegram: "chat-9", zalo: "zu-9" })
-        const { service, bindings, delivery } = await build(em, true)
+        const { service, bindings, delivery, em } = await build({ telegram: "chat-9", zalo: "zu-9" }, true)
+
         bindings.connectionsFor.mockImplementation((_agent, _purpose, options) =>
             Promise.resolve(options?.providers?.[0] === "telegram" ? [connection("telegram")] : []),
         )
@@ -187,8 +164,7 @@ describe("ShiftsNotifyService toStaff", () => {
     })
 
     it("does nothing for an unknown person", async () => {
-        const em = answer(null)
-        const { service, office } = await build(em)
+        const { service, office } = await build(null)
 
         await expect(service.toStaff("ws-1", { staffId: "p-x", kind: "leave", body: "x" })).resolves.toEqual({
             office: false,
@@ -199,8 +175,8 @@ describe("ShiftsNotifyService toStaff", () => {
     })
 
     it("records a failed Office line without throwing", async () => {
-        const em = answer({})
-        const { service, office } = await build(em)
+        const { service, office, em } = await build({})
+
         office.postOffice.mockRejectedValue(new Error("office down"))
 
         await expect(service.toStaff("ws-1", { staffId: "p-1", kind: "leave", body: "Leave ok" })).resolves.toEqual({
@@ -212,8 +188,10 @@ describe("ShiftsNotifyService toStaff", () => {
     })
 
     it("uses the person's name when the linked staff row is missing and ignores empty channel ids", async () => {
-        const em = answer({ staffRow: "missing", telegram: "", zalo: "" })
-        const { service, office, words, bindings, delivery } = await build(em, true)
+        const { service, office, words, bindings, delivery, em } = await build(
+            { staffRow: "missing", telegram: "", zalo: "" },
+            true,
+        )
 
         await expect(service.toStaff("ws-1", { staffId: "p-1", kind: "publish", body: "Week ready" })).resolves.toEqual(
             {
@@ -233,8 +211,7 @@ describe("ShiftsNotifyService toStaff", () => {
 
 describe("ShiftsNotifyService toStaff", () => {
     it("skips both linked channels when there is no shifts agent", async () => {
-        const em = answer({ telegram: "chat-9", zalo: "zu-9" })
-        const { service, delivery } = await build(em)
+        const { service, delivery, em } = await build({ telegram: "chat-9", zalo: "zu-9" })
 
         await expect(service.toStaff("ws-1", { staffId: "p-1", kind: "gap", body: "Open shift" })).resolves.toEqual({
             office: true,
@@ -251,8 +228,11 @@ describe("ShiftsNotifyService toStaff", () => {
     })
 
     it("caps non-Error Office failures and keeps sending through both channels", async () => {
-        const em = answer({ telegram: "chat-9", zalo: "zu-9" })
-        const { service, office, bindings, delivery, logger } = await build(em, true)
+        const { service, office, bindings, delivery, logger, em } = await build(
+            { telegram: "chat-9", zalo: "zu-9" },
+            true,
+        )
+
         const cause = "x".repeat(240)
         office.postOffice.mockRejectedValue(cause)
         bindings.connectionsFor.mockImplementation((_agent, _purpose, options) =>
@@ -280,8 +260,7 @@ describe("ShiftsNotifyService toStaff", () => {
 
 describe("ShiftsNotifyService toManagers", () => {
     it("posts one Office line and records it under its kind", async () => {
-        const em = answer(null)
-        const { service, office } = await build(em)
+        const { service, office, em } = await build(null)
 
         await service.toManagers("ws-1", "Nobody checked in", "no_show", { shiftId: "s-1" })
 
@@ -292,10 +271,9 @@ describe("ShiftsNotifyService toManagers", () => {
     })
 
     it("defaults to a gap alert and logs a failed evidence insert", async () => {
-        const em = answer(null)
+        const { service, office, logger, em } = await build(null)
         const cause = new Error("evidence unavailable")
         em.insert.mockRejectedValue(cause)
-        const { service, office, logger } = await build(em)
 
         await expect(service.toManagers("ws-1", "Open shift")).resolves.toBeUndefined()
 
@@ -310,8 +288,7 @@ describe("ShiftsNotifyService toManagers", () => {
 
 describe("ShiftsNotifyService evidence length", () => {
     it("keeps at most 4000 characters of the line", async () => {
-        const em = answer(null)
-        const { service } = await build(em)
+        const { service, em } = await build(null)
 
         await service.toManagers("ws-1", "m".repeat(4100))
 
@@ -324,15 +301,14 @@ describe("ShiftsNotifyService evidence length", () => {
 
 describe("ShiftsNotifyService hasChannel", () => {
     it("is false without an active shifts agent", async () => {
-        const em = answer(null)
-        const { service } = await build(em)
+        const { service } = await build(null)
 
         await expect(service.hasChannel("ws-1")).resolves.toBe(false)
     })
 
     it("stops searching once Telegram has a bound connection", async () => {
-        const em = answer(null)
-        const { service, bindings } = await build(em, true)
+        const { service, bindings } = await build(null, true)
+
         bindings.connectionsFor.mockResolvedValue([connection("telegram")])
 
         await expect(service.hasChannel("ws-1")).resolves.toBe(true)
@@ -351,8 +327,8 @@ describe("ShiftsNotifyService hasChannel", () => {
     })
 
     it("uses a Zalo binding when Telegram has none", async () => {
-        const em = answer(null)
-        const { service, bindings } = await build(em, true)
+        const { service, bindings } = await build(null, true)
+
         bindings.connectionsFor.mockResolvedValueOnce([]).mockResolvedValueOnce([connection("zalo_oa")])
 
         await expect(service.hasChannel("ws-1")).resolves.toBe(true)

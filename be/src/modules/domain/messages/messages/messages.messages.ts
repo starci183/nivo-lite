@@ -9,5 +9,6 @@ export const MESSAGES_MESSAGES: MessageBundle = {
     en: {
         "errors.MESSAGES_CARD_INVALID": "The result card is invalid: {{reason}}.",
         "errors.MESSAGES_ROOM_INVALID": "There is no room {{room}}.",
+        "errors.MESSAGES_LINE_NOT_STORED": "The message could not be saved.",
     },
 }

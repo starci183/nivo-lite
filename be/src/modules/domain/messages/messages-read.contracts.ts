@@ -6,12 +6,15 @@ export interface LineReader {
     readonly displayName: string
 }
 
+/** The instant a conversation was read up to, as the database renders it; null while nothing was read. */
+export type ReadInstant = string | null
+
 /** The caller's read marker of one conversation: the key of the conversation and when it was read up to (ISO text with microseconds). */
 export interface ReadMark {
     /** The conversation key: a room key or a lead id. */
     readonly key: string
     /** The instant the caller read up to, as the database renders it; null while nothing was read (every line is unread). */
-    readonly readAt: string | null
+    readonly readAt: ReadInstant
 }
 
 /** The unread count and the newest line of a room or of the whole workspace. */
@@ -93,3 +96,6 @@ export interface LineText {
     /** The text. */
     readonly body: string
 }
+
+/** The text of a message, or undefined when the workspace has none by that id. */
+export type OptionalLineText = LineText | undefined

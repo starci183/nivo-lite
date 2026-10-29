@@ -30,7 +30,7 @@ const build = async (entityManager: MockEntityManager, agent: OptionalAgentIdent
     return { service: moduleRef.get(OfficeLinesService), directory, activity }
 }
 
-describe("OfficeLinesService", () => {
+describe("OfficeLinesService > speakers", () => {
     it("keeps the command mirror in the caller's transaction", async () => {
         const primary = mockEntityManager()
         const tx = mockEntityManager({ insert: [MessageEntity, {}] })
@@ -90,7 +90,9 @@ describe("OfficeLinesService", () => {
 
         expect(directory.agentOfDepartment).toHaveBeenCalledWith("ws-1", "sales", null)
     })
+})
 
+describe("OfficeLinesService > without an agent", () => {
     it("stays a NIVO line when the department has no agent", async () => {
         const em = mockEntityManager({ insert: [MessageEntity, {}] })
         const { service } = await build(em, null)

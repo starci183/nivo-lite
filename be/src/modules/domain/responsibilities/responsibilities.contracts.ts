@@ -78,3 +78,27 @@ export interface HandToAccountingParams {
     /** The transaction of the caller. */
     readonly manager: EntityManager
 }
+
+/** A step as the writes answer it, its due date as ISO text. */
+export interface StepRow {
+    /** The id. */
+    readonly id: string
+    /** The customer. */
+    readonly lead_id: string
+    /** What it is. */
+    readonly title: string
+    /** Person or agent. */
+    readonly owner_kind: string
+    /** The owning agent, when an agent owns it. */
+    readonly owner_agent_id: string | null
+    /** The owning member, when a person owns it. */
+    readonly owner_member_id: string | null
+    /** The display name of the owner. */
+    readonly owner_name: string
+    /** The next step. */
+    readonly next_action: string
+    /** When it is due. */
+    readonly due_at: string | null
+    /** Where it stands. */
+    readonly status: string
+}

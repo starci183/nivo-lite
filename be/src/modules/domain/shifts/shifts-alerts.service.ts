@@ -23,8 +23,8 @@ import {
 } from "@modules/queues/shifts"
 import type { ShiftAlertPayload } from "@modules/queues/shifts"
 import { ShiftsShiftEntity, ShiftsSettingsEntity, ShiftsStaffEntity } from "./persistence/entities"
-import type { AlertShiftRead, NameRead, ReminderWorkspaceRead } from "./persistence/shifts-alerts.reads"
-import { selectAlertShifts } from "./persistence/shifts-alert-shift.query"
+import type { AlertShiftRead, NameRead, ReminderWorkspaceRead } from "./persistence/shifts-alerts.contracts"
+import { selectAlertShiftColumns } from "./persistence/shifts-alert-shift.query"
 import { PIPELINES_MAX, REMINDER_TEMPLATE, isReminderOn } from "./persistence/shifts-pipeline.query"
 import { fieldText } from "./policies/gate-fields.policy"
 import { nameOf } from "./policies/labels.policy"
@@ -134,6 +134,7 @@ export class ShiftsAlertsService implements OnModuleInit {
         const rules = await this.entityManager.find(ShiftsSettingsEntity, {
             select: { workspaceId: true, remindMinutes: true, noshowMinutes: true },
             where: { workspaceId: In(enabled.map((pipeline) => pipeline.workspace_id)) },
+            take: PIPELINES_MAX,
         })
         const rulesOf = new Map(rules.map((rule) => [rule.workspaceId, rule]))
         const workspaces = enabled.map((pipeline): ReminderWorkspaceRead => ({
@@ -281,7 +282,11 @@ export class ShiftsAlertsService implements OnModuleInit {
         today: string,
         now: Date,
     ): Promise<AlertScan> {
-        const rows = await selectAlertShifts(this.entityManager, workspaceId, true)
+        const rows = await selectAlertShiftColumns(
+            this.entityManager.createQueryBuilder(ShiftsShiftEntity, "s"),
+            workspaceId,
+            true,
+        )
             .andWhere("s.shift_date BETWEEN :first AND :last", { first: addDays(today, -1), last: addDays(today, 1) })
             .orderBy("s.shift_date", "ASC")
             .addOrderBy("s.start_time", "ASC")
@@ -312,7 +317,11 @@ export class ShiftsAlertsService implements OnModuleInit {
 
     private async alertShift(workspaceId: string, shiftId: string): Promise<AlertShift | undefined> {
         if (shiftId === "") return undefined
-        const row = await selectAlertShifts(this.entityManager, workspaceId, true)
+        const row = await selectAlertShiftColumns(
+            this.entityManager.createQueryBuilder(ShiftsShiftEntity, "s"),
+            workspaceId,
+            true,
+        )
             .andWhere("s.id = :shiftId", { shiftId })
             .limit(1)
             .getRawOne<AlertShiftRead>()

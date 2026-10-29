@@ -17,7 +17,7 @@ import type { AddResponsibilityParams, AssignResponsibilityParams } from "./resp
 import { ResponsibilitiesService } from "./responsibilities.service"
 import type { ResolvedOwner } from "./responsibility-owner.policy"
 import { RESPONSIBILITY_LEAD_DESK } from "./responsibilities.decorators"
-import type { LeadDesk } from "./responsibilities.ports"
+import type { LeadDesk } from "./responsibilities.port"
 import { ResponsibilityOwnersService } from "./responsibility-owners.service"
 
 const MEMBER_ID = "11111111-1111-4111-8111-111111111111"
@@ -74,13 +74,17 @@ const RESULT = {
     status: "open",
 }
 
-/** Whether the lead guard finds the lead of the workspace, set by the test through answerInsert. */
-let leadHeld = true
+/** What the neighbours answer: whether the lead guard finds the lead, and the active Accounting agent of the directory, if any. */
+interface World {
+    readonly leadHeld?: boolean
+    readonly accountingAgent?: { readonly id: string; readonly name: string } | null
+}
 
-/** The active Accounting agent the agent directory answers, or none. */
-let accountingAgent: { readonly id: string; readonly name: string } | null = null
-
-const build = async (entityManager: MockEntityManager, owner: ResolvedOwner | Error = MEMBER_OWNER) => {
+const build = async (
+    entityManager: MockEntityManager,
+    owner: ResolvedOwner | Error = MEMBER_OWNER,
+    world: World = {},
+) => {
     const messages = mock<MessageCatalog>()
     messages.get.mockImplementation((key, params) => `${key}:${JSON.stringify(params)}`)
     const requestLocale = mock<RequestLocale>()
@@ -100,9 +104,9 @@ const build = async (entityManager: MockEntityManager, owner: ResolvedOwner | Er
     if (owner instanceof Error) owners.resolve.mockRejectedValue(owner)
     else owners.resolve.mockResolvedValue(owner)
     const agents = mock<AgentDirectory>()
-    agents.agentOfDepartment.mockImplementation(() => Promise.resolve(accountingAgent))
+    agents.agentOfDepartment.mockImplementation(() => Promise.resolve(world.accountingAgent ?? null))
     const leads = mock<LeadDesk>()
-    leads.hold.mockImplementation(() => Promise.resolve(leadHeld))
+    leads.hold.mockImplementation(() => Promise.resolve(world.leadHeld ?? true))
     const moduleRef = await Test.createTestingModule({
         providers: [
             ResponsibilitiesService,
@@ -132,9 +136,8 @@ const NEW_STEP = {
     ownerMemberId: MEMBER_ID,
 }
 
-/** Primes the lead guard (held `FOR SHARE`) with `lead` and answers the insert with `inserted`. */
-const answerInsert = (em: MockEntityManager, lead: unknown, inserted: ReadonlyArray<unknown>) => {
-    leadHeld = lead !== undefined
+/** Answers the insert with `inserted`. */
+const answerInsert = (em: MockEntityManager, inserted: ReadonlyArray<unknown>) => {
     const write = fakeQueryBuilder({ execute: { raw: inserted } })
     answerQueryBuilders(em, write)
     return { write }
@@ -143,7 +146,7 @@ const answerInsert = (em: MockEntityManager, lead: unknown, inserted: ReadonlyAr
 describe("ResponsibilitiesService > addResponsibility", () => {
     it("writes the step owned by the member and logs who owns it in the same transaction", async () => {
         const em = mockEntityManager()
-        const { write } = answerInsert(em, { id: "lead-1" }, [STEP])
+        const { write } = answerInsert(em, [STEP])
         const tx = fakeTransaction(em)
         const { responsibilities, events, owners, leads } = await build(tx.em)
 
@@ -170,7 +173,7 @@ describe("ResponsibilitiesService > addResponsibility", () => {
     it("writes the step owned by an agent of the workspace, with no member", async () => {
         const agentStep = { ...STEP, owner_kind: "agent", owner_agent_id: AGENT_ID, owner_member_id: null }
         const em = mockEntityManager()
-        const { write } = answerInsert(em, { id: "lead-1" }, [agentStep])
+        const { write } = answerInsert(em, [agentStep])
         const tx = fakeTransaction(em)
         const { responsibilities } = await build(tx.em, AGENT_OWNER)
 
@@ -189,7 +192,7 @@ describe("ResponsibilitiesService > addResponsibility", () => {
 describe("ResponsibilitiesService > addResponsibility without a due date", () => {
     it("writes the step with no due date when none is given", async () => {
         const em = mockEntityManager()
-        const { write } = answerInsert(em, { id: "lead-1" }, [{ ...STEP, due_at: null }])
+        const { write } = answerInsert(em, [{ ...STEP, due_at: null }])
         const tx = fakeTransaction(em)
         const { responsibilities } = await build(tx.em)
 
@@ -217,9 +220,9 @@ describe("ResponsibilitiesService > addResponsibility, refusals", () => {
 
     it("refuses a lead the workspace does not have and inserts nothing", async () => {
         const em = mockEntityManager()
-        const { write } = answerInsert(em, undefined, [])
+        const { write } = answerInsert(em, [])
         const tx = fakeTransaction(em)
-        const { responsibilities, events } = await build(tx.em)
+        const { responsibilities, events } = await build(tx.em, MEMBER_OWNER, { leadHeld: false })
 
         await expect(responsibilities.addResponsibility(addOf())).rejects.toMatchObject({
             code: ResponsibilitiesErrorCode.LeadNotFound,
@@ -235,7 +238,7 @@ describe("ResponsibilitiesService > addResponsibility, refusals", () => {
 describe("ResponsibilitiesService > due dates", () => {
     it("writes a step without a due date as none", async () => {
         const em = mockEntityManager()
-        const { write } = answerInsert(em, { id: "lead-1" }, [{ ...STEP, due_at: null }])
+        const { write } = answerInsert(em, [{ ...STEP, due_at: null }])
         const { responsibilities } = await build(fakeTransaction(em).em)
 
         await expect(responsibilities.addResponsibility(addOf({ dueAt: null }))).resolves.toMatchObject({ dueAt: null })
@@ -385,9 +388,10 @@ describe("ResponsibilitiesService > handToAccounting", () => {
 
     it("hands the deal to the active Accounting agent as a step due the next day and logs it", async () => {
         const manager = mockEntityManager()
-        accountingAgent = ACCOUNTING_AGENT
-        const { write } = answerInsert(manager, { id: "lead-1" }, [])
-        const { responsibilities, events, agents, leads } = await build(manager)
+        const { write } = answerInsert(manager, [])
+        const { responsibilities, events, agents, leads } = await build(manager, MEMBER_OWNER, {
+            accountingAgent: ACCOUNTING_AGENT,
+        })
 
         await expect(responsibilities.handToAccounting(handOf(manager))).resolves.toBe(true)
 
@@ -419,7 +423,6 @@ describe("ResponsibilitiesService > handToAccounting", () => {
 
     it("writes nothing when the workspace has no active Accounting agent", async () => {
         const manager = mockEntityManager()
-        accountingAgent = null
         const { responsibilities, events, leads } = await build(manager)
 
         await expect(responsibilities.handToAccounting(handOf(manager))).resolves.toBe(false)
@@ -430,9 +433,11 @@ describe("ResponsibilitiesService > handToAccounting", () => {
 
     it("writes no step but still records the hand-over when the lead is gone", async () => {
         const manager = mockEntityManager()
-        accountingAgent = ACCOUNTING_AGENT
-        const { write } = answerInsert(manager, undefined, [])
-        const { responsibilities, events } = await build(manager)
+        const { write } = answerInsert(manager, [])
+        const { responsibilities, events } = await build(manager, MEMBER_OWNER, {
+            accountingAgent: ACCOUNTING_AGENT,
+            leadHeld: false,
+        })
 
         await expect(responsibilities.handToAccounting(handOf(manager))).resolves.toBe(true)
 
