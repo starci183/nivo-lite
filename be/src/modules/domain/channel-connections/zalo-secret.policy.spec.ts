@@ -37,10 +37,18 @@ describe("parseZaloSecret", () => {
             appSecret: "s",
             oaSecret: "o",
             accessToken: "at",
-            refreshToken: "rt",
+            renewalToken: "rt",
             refreshExpiresAt: "2027-01-01T00:00:00.000Z",
             pkce: { verifier: "v", nonce: "n", exp: 5 },
         })
+    })
+
+    it("reads the renewal token from either the current or the legacy stored key", async () => {
+        const subject = await buildSubject()
+        const stored = (key: string) => JSON.stringify({ appId: "1", appSecret: "s", [key]: "rt" })
+
+        expect(subject.parseZaloSecret(stored("renewalToken"))).toMatchObject({ renewalToken: "rt" })
+        expect(subject.parseZaloSecret(stored("refreshToken"))).toMatchObject({ renewalToken: "rt" })
     })
 
     it("defaults a missing OA secret to blank and drops malformed optional parts", async () => {
@@ -78,13 +86,13 @@ describe("hasLiveTokens", () => {
         const subject = await buildSubject()
 
         expect(subject.hasLiveTokens(base, NOW)).toBe(false)
-        expect(subject.hasLiveTokens({ ...base, refreshToken: "rt" }, NOW)).toBe(true)
+        expect(subject.hasLiveTokens({ ...base, renewalToken: "rt" }, NOW)).toBe(true)
         expect(
-            subject.hasLiveTokens({ ...base, refreshToken: "rt", refreshExpiresAt: "2027-01-01T00:00:00.000Z" }, NOW),
+            subject.hasLiveTokens({ ...base, renewalToken: "rt", refreshExpiresAt: "2027-01-01T00:00:00.000Z" }, NOW),
         ).toBe(true)
         expect(
-            subject.hasLiveTokens({ ...base, refreshToken: "rt", refreshExpiresAt: "2026-01-01T00:00:00.000Z" }, NOW),
+            subject.hasLiveTokens({ ...base, renewalToken: "rt", refreshExpiresAt: "2026-01-01T00:00:00.000Z" }, NOW),
         ).toBe(false)
-        expect(subject.hasLiveTokens({ ...base, refreshToken: "rt", refreshExpiresAt: "garbage" }, NOW)).toBe(true)
+        expect(subject.hasLiveTokens({ ...base, renewalToken: "rt", refreshExpiresAt: "garbage" }, NOW)).toBe(true)
     })
 })

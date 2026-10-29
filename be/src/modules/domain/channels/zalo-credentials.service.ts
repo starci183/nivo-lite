@@ -114,7 +114,7 @@ export class ZaloCredentialsService {
             input.code,
             pkce.verifier,
         )
-        await this.save(connectionId, this.withTokens(loaded.secret, tokens.accessToken, tokens.refreshToken), {
+        await this.save(connectionId, this.withTokens(loaded.secret, tokens.accessToken, tokens.renewalToken), {
             expiresAt: new Date(this.clock.now().getTime() + tokens.expiresInSeconds * 1000),
         })
         await this.connections.applyZaloAuthorization(connectionId, input.oaId)
@@ -205,7 +205,7 @@ export class ZaloCredentialsService {
                 if (isZaloRefusal(cause)) await this.connections.markFailing(connectionId, ZALO_RECONNECT_REASON)
                 throw cause
             })
-        const next = this.withTokens(again.secret, tokens.accessToken, tokens.refreshToken)
+        const next = this.withTokens(again.secret, tokens.accessToken, tokens.renewalToken)
         const expiresAt = new Date(this.clock.now().getTime() + tokens.expiresInSeconds * 1000)
         // The old refresh token is gone the moment Zalo answers: a failed save would lose the connection, so try twice.
         await this.save(connectionId, next, { expiresAt }).catch((cause: unknown) => {
