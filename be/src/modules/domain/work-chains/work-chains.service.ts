@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
+import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { EventsService } from "@modules/domain/events"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import type { AgentCard } from "@modules/domain/agents"
@@ -12,7 +12,7 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { toChainStep } from "./chain-step.mapper"
+import { firstReturnedId, firstSettledStep, toChainStep } from "./chain-step.mapper"
 import { judgeStep } from "./chain-limits.policy"
 import { summarize } from "./chain-summary.policy"
 import { WorkChainsError, WorkChainsErrorCode } from "./errors/work-chains.error"
@@ -32,7 +32,7 @@ import { MAX_AUTOMATIC_STEPS } from "./work-chains.contracts"
 import { InjectChainOwnerDirectory } from "./work-chains.decorators"
 import type { ChainOwnerDirectory } from "./work-chains.port"
 import { WorkChainEntity } from "./persistence/entities"
-import { readStepById, selectSteps } from "./persistence/work-chain.query"
+import { STEP_COLUMNS } from "./persistence/work-chain.query"
 
 /** The most steps one chain read answers. */
 const CHAIN_STEPS_MAX = 500
@@ -46,16 +46,34 @@ interface Actors {
     readonly members: ReadonlyMap<string, MemberDirectoryEntry>
 }
 
-/** The step with the name and role of whoever acted: an agent name and module, or a member display name and role; empty when gone. */
-const namedBy = (row: ChainStepRead, actors: Actors): ChainStepRecord => {
-    const agent = row.actor_kind === "agent" ? actors.agents.get(row.actor_id) : undefined
-    const member = row.actor_kind === "member" ? actors.members.get(row.actor_id) : undefined
-    return {
-        ...row,
-        actor_name: agent?.name ?? member?.displayName ?? "",
-        actor_role: agent?.module ?? member?.role ?? "",
-    }
+/** What a step shows for whoever acted. */
+interface ActorLabel {
+    /** The name. */
+    readonly name: string
+    /** The role. */
+    readonly role: string
 }
+
+/** The name and role of whoever acted: an agent name and module, or a member display name and role; empty when gone. */
+const actorOf = (row: ChainStepRead, actors: Actors): ActorLabel => {
+    if (row.actor_kind === "agent") {
+        const agent = actors.agents.get(row.actor_id)
+        return { name: agent?.name ?? "", role: agent?.module ?? "" }
+    }
+    const member = actors.members.get(row.actor_id)
+    return { name: member?.displayName ?? "", role: member?.role ?? "" }
+}
+
+/** The step with the name and role of whoever acted. */
+const namedBy = (row: ChainStepRead, actors: Actors): ChainStepRecord => {
+    const actor = actorOf(row, actors)
+    return { ...row, actor_name: actor.name, actor_role: actor.role }
+}
+
+/** The ids of the actors of one kind in some steps, each once. */
+const actorIds = (rows: ReadonlyArray<ChainStepRead>, kind: string): Array<string> => [
+    ...new Set(rows.filter((row) => row.actor_kind === kind).map((row) => row.actor_id)),
+]
 
 /** A step that tags a group is information, not a request one person answers: it ends as it begins. */
 const initialStatusOf = (step: NewChainStep): ChainStepStatus => {
@@ -136,7 +154,7 @@ export class WorkChainsService {
             )
             .returning("thread_id, action")
             .execute()
-        const [settled] = changed.raw as Array<{ thread_id: string; action: string }>
+        const settled = firstSettledStep(changed.raw)
         if (settled === undefined) return
         const thread = await this.threads.findIfAny(outcome.workspaceId, settled.thread_id, manager)
         const decider =
@@ -245,9 +263,9 @@ export class WorkChainsService {
             .setParameter("seqThreadId", step.threadId)
             .returning("id")
             .execute()
-        const [inserted] = result.raw as Array<{ id: string }>
-        if (inserted === undefined) throw new WorkChainsError({ code: WorkChainsErrorCode.NotStored })
-        const read = await readStepById(tx, step.workspaceId, inserted.id)
+        const insertedId = firstReturnedId(result.raw)
+        if (insertedId === undefined) throw new WorkChainsError({ code: WorkChainsErrorCode.NotStored })
+        const read = await this.readStepById(tx, step.workspaceId, insertedId)
         if (read === undefined) throw new WorkChainsError({ code: WorkChainsErrorCode.NotStored })
         const stored = toChainStep(await this.withActor(tx, step.workspaceId, read))
         await this.events.record(
@@ -273,7 +291,7 @@ export class WorkChainsService {
         workspaceId: string,
         threadId: string,
     ): Promise<Array<ChainStepRecord>> {
-        const rows = await selectSteps(manager, workspaceId)
+        const rows = await this.selectSteps(manager, workspaceId)
             .andWhere("s.thread_id = :threadId", { threadId })
             .orderBy("s.seq", "ASC")
             .limit(CHAIN_STEPS_MAX)
@@ -301,16 +319,31 @@ export class WorkChainsService {
         workspaceId: string,
         rows: ReadonlyArray<ChainStepRead>,
     ): Promise<Actors> {
-        const idsOf = (kind: string): Array<string> => [
-            ...new Set(rows.filter((row) => row.actor_kind === kind).map((row) => row.actor_id)),
-        ]
-        const [agents, members] = await Promise.all([
-            this.agents.cardsOf(workspaceId, idsOf("agent")),
-            this.members.byIds(workspaceId, idsOf("member"), manager),
-        ])
+        const agents = await this.agents.cardsOf(workspaceId, actorIds(rows, "agent"))
+        const members = await this.members.byIds(workspaceId, actorIds(rows, "member"), manager)
         return {
             agents: new Map(agents.map((agent) => [agent.id, agent])),
             members: new Map(members.map((member) => [member.id, member])),
         }
+    }
+
+    /** A read of the steps of one workspace; the caller adds its own filter, order and bound and then names whoever acted. */
+    private selectSteps(manager: EntityManager, workspaceId: string): SelectQueryBuilder<WorkChainEntity> {
+        return manager
+            .createQueryBuilder(WorkChainEntity, "s")
+            .select(STEP_COLUMNS)
+            .where("s.workspace_id = :workspaceId", { workspaceId })
+    }
+
+    /** One step of the workspace without the name of whoever acted, or undefined when there is none with that id. */
+    private readStepById(
+        manager: EntityManager,
+        workspaceId: string,
+        stepId: string,
+    ): Promise<ChainStepRead | undefined> {
+        return this.selectSteps(manager, workspaceId)
+            .andWhere("s.id = :stepId", { stepId })
+            .limit(1)
+            .getRawOne<ChainStepRead>()
     }
 }
