@@ -38,7 +38,7 @@ export class LeadFlowStoreService {
     }
 
     /** The installation that owns a flow of the workspace; null when there is no such flow or it names none. */
-    async installationIdOf(workspaceId: string, flowId: string): Promise<string | null> {
+    async installationIdOf(workspaceId: string, flowId: string): Promise<OptionalText> {
         const flow = await this.entityManager.findOne(LeadFlowEntity, {
             select: { installationId: true },
             where: { workspaceId, id: flowId, installationId: Not(IsNull()) },
