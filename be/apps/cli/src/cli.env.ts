@@ -34,8 +34,8 @@ export interface CliAppOptions {
     readonly storage: ReturnType<typeof parseObjectStorageConfig>
     /** The LangChain client the base knowledge is embedded with, through the gateway of the API (`AI_BASE_URL`). */
     readonly ai: ReturnType<typeof parseAiConfig>
-    /** The credential key and the site addresses channels are connected with. */
-    readonly channelConnections: ReturnType<typeof parseConnectionsConfig>
+    /** The credential key and the site addresses channels are connected with; the ports are bound by `compose/modules.ts`. */
+    readonly channelConnections: Omit<ReturnType<typeof parseConnectionsConfig>, "ports">
     /** The provider addresses the channel set-up calls. */
     readonly channelSetup: ReturnType<typeof parseChannelSetupConfig>
     /** The secrets and output of the connect-channel command. */
