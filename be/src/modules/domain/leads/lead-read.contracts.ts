@@ -101,3 +101,9 @@ export interface LeadName {
     /** The company, empty when unknown. */
     readonly company: string
 }
+
+/** The contact of one lead, or null when the workspace has no such lead. */
+export type OptionalLeadContact = LeadContactView | null
+
+/** A stage to filter by, or null for every stage. */
+export type OptionalStageFilter = string | null

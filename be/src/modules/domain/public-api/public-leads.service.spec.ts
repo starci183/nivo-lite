@@ -5,7 +5,7 @@ import { answerQueryBuilders } from "@tests/fixtures/builders/fake-query-builder
 import { ledgerAnswers, ledgerExpected, ledgerWritten } from "@tests/fixtures/builders/public-api-ledger.builder"
 import { ApiKeysService } from "@modules/domain/api-keys"
 import { LeadReadService, LeadRecordsService } from "@modules/domain/leads"
-import type { LeadRecord } from "@modules/domain/leads"
+import type { LeadRecordRow } from "@modules/domain/leads"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { PUBLIC_API_QUEUE, PublicApiQueue } from "@modules/queues/public-api"
 import { PublicApiErrorCode } from "./errors/public-api.error"
@@ -43,7 +43,7 @@ const API_LEAD = {
 }
 
 /** A matched customer as the lead records answer it. */
-const recordOf = (id: string): LeadRecord => ({
+const recordOf = (id: string): LeadRecordRow => ({
     id,
     workspace_id: "workspace-1",
     contact_name: "A",
@@ -58,7 +58,7 @@ const recordOf = (id: string): LeadRecord => ({
 
 const RECORDED = { id: "request-1", lead_id: null, inserted: true }
 
-const build = async (entityManager: MockEntityManager, matched: LeadRecord | null = null) => {
+const build = async (entityManager: MockEntityManager, matched: LeadRecordRow | null = null) => {
     const outbox: RecordingQueueOutbox = recordingQueueOutbox()
     const queue = mock<PublicApiQueue>({
         enqueueRequest: (payload, tx) => outbox.write(tx, PUBLIC_API_QUEUE, payload),
